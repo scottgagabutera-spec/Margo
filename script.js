@@ -63,7 +63,7 @@ artist: "SZA",
 emotions: ["Nostalgia", "Healing"],
 timestamp: Date.now() - 900000,
 vibes: { user_7: true },
-template: "cassette"
+template: "gradient"
 },
 {
 id: Date.now() - 1800000,
@@ -112,7 +112,6 @@ const listenModal = document.getElementById("listenModal");
 const guessModal = document.getElementById("guessModal");
 const storyBuilder = document.getElementById("storyBuilder");
 const storyPreview = document.getElementById("storyPreview");
-
 const closeShare = document.getElementById("closeShare");
 const closeListen = document.getElementById("closeListen");
 const closeGuess = document.getElementById("closeGuess");
@@ -244,7 +243,12 @@ function updatePostCount() {
 postCount.textContent = allPosts.length;
 }
 
-enterBtn.onclick = showFeed;
+// IMPROVED FLOW: "Drop Your Line" button opens composer first
+enterBtn.onclick = () => {
+composer.classList.remove("hidden");
+textInput.focus();
+};
+
 backBtn.onclick = showLanding;
 
 /* ==================== COMPOSER ==================== */
@@ -372,6 +376,8 @@ console.warn("⚠️ Firebase sync failed:", err);
 setLastPostTime(Date.now());
 resetComposer();
 composer.classList.add("hidden");
+
+// IMPROVED: Now go to feed after posting
 showFeed();
 setTimeout(() => feedList.scrollTop = 0, 100);
 } catch (error) {
@@ -410,11 +416,13 @@ const localPosts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
 const allPostsMap = new Map();
 firebasePosts.forEach(post => allPostsMap.set(post.id, post));
 localPosts.forEach(post => allPostsMap.set(post.id, post));
+
 allPosts = Array.from(allPostsMap.values()).sort((a, b) => b.timestamp - a.timestamp);
 
 if (allPosts.length === 0) {
 allPosts = [...SEED_POSTS];
 }
+
 renderFeed();
 updatePostCount();
 });
@@ -432,6 +440,7 @@ userGuesses = JSON.parse(localStorage.getItem("margoUserGuesses") || "{}");
 /* ==================== RENDER FEED ==================== */
 function renderFeed() {
 feedList.innerHTML = "";
+
 if (allPosts.length === 0) {
 feedList.innerHTML = `
 <div class="empty-state">
@@ -453,7 +462,7 @@ card.setAttribute('data-emotion', post.emotions[0]);
 
 const avatar = getAvatar(post.emotions);
 const timeText = timeAgo(post.timestamp);
-const emotionTags = post.emotions.map(e => 
+const emotionTags = post.emotions.map(e =>
 `<span class="feed-emotion" data-emotion="${e}">${e}</span>`
 ).join("");
 
@@ -671,6 +680,7 @@ renderStoryBuilder();
 
 function renderStoryBuilder() {
 storyCards.innerHTML = "";
+
 storyData.forEach((post, index) => {
 const card = document.createElement("div");
 card.className = "story-card-item";
@@ -820,7 +830,7 @@ const y = (dimensions.height - htmlCanvas.height * scale) / 2;
 ctx.drawImage(htmlCanvas, x, y, htmlCanvas.width * scale, htmlCanvas.height * scale);
 
 // Add branding
-ctx.font = '24px Archivo';
+ctx.font = '24px Syne';
 ctx.fillStyle = 'rgba(212, 197, 169, 0.3)';
 ctx.textAlign = 'center';
 ctx.fillText('MARGO', dimensions.width / 2, dimensions.height - 30);
@@ -875,32 +885,32 @@ applyTemplate(post.template);
 }
 }
 
-/* ==================== TEMPLATE SYSTEM ==================== */
+/* ==================== UPDATED TEMPLATE SYSTEM ==================== */
 const templates = {
 vinyl: {
 gradient: "linear-gradient(135deg, #2c1810 0%, #4a2511 100%)",
 textColor: "#f4e4d7",
-font: "DM Serif Display"
+font: "Fraunces"
 },
-cassette: {
-gradient: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)",
-textColor: "#e0e0e0",
-font: "DM Serif Display"
+gradient: {
+gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)",
+textColor: "#ffffff",
+font: "Fraunces"
 },
 neon: {
 gradient: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
 textColor: "#00ffff",
-font: "DM Serif Display"
+font: "Fraunces"
 },
-polaroid: {
-gradient: "linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 100%)",
-textColor: "#333333",
-font: "DM Serif Display"
+minimal: {
+gradient: "linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%)",
+textColor: "#1a1a1a",
+font: "Fraunces"
 },
 emotion: {
 gradient: "dynamic",
 textColor: "#ffffff",
-font: "DM Serif Display"
+font: "Fraunces"
 }
 };
 
@@ -1001,7 +1011,7 @@ ctx.fillRect(0, 0, dimensions.width, dimensions.height);
 ctx.drawImage(htmlCanvas, x, y, htmlCanvas.width * scale, htmlCanvas.height * scale);
 
 // Add subtle branding
-ctx.font = 'bold 20px Archivo';
+ctx.font = 'bold 20px Syne';
 ctx.fillStyle = 'rgba(212, 197, 169, 0.2)';
 ctx.textAlign = 'center';
 ctx.fillText('MARGO', dimensions.width / 2, dimensions.height - 40);
@@ -1131,6 +1141,7 @@ toast.textContent = message;
 document.body.appendChild(toast);
 
 setTimeout(() => toast.classList.add("show"), 10);
+
 setTimeout(() => {
 toast.classList.remove("show");
 setTimeout(() => toast.remove(), 300);
