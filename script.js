@@ -1,54 +1,36 @@
-/* =========================
-   STATE
-========================= */
-
-let posts = [];
-let selectedEmotions = [];
-let hideMode = false;
-
-
-/* =========================
-   ELEMENTS
-========================= */
+/* ELEMENTS */
 
 const landing = document.getElementById("landing");
 const feed = document.getElementById("feed");
 
+const openFeed = document.getElementById("openFeed");
+const backHome = document.getElementById("backHome");
+
 const openComposer = document.getElementById("openComposer");
 const closeComposer = document.getElementById("closeComposer");
-const newPostBtn = document.getElementById("newPostBtn");
 
 const composer = document.getElementById("composer");
-const postBtn = document.getElementById("postBtn");
 
-const backBtn = document.getElementById("backBtn");
+const postBtn = document.getElementById("postBtn");
 
 const textInput = document.getElementById("textInput");
 const songInput = document.getElementById("songInput");
 const artistInput = document.getElementById("artistInput");
-const count = document.getElementById("count");
 
-const hideModeCheck = document.getElementById("hideMode");
+const hideToggle = document.getElementById("hideToggle");
+
+const count = document.getElementById("count");
 
 const feedList = document.getElementById("feedList");
 
 const themeToggle = document.getElementById("themeToggle");
 
-const emotionBtns = document.querySelectorAll(".emotion");
+
+let emotions = [];
+let posts = [];
 
 
-/* =========================
-   INIT
-========================= */
-
-loadPosts();
-showLanding();
-initTheme();
-
-
-/* =========================
-   NAVIGATION
-========================= */
+/* NAV */
 
 function showLanding() {
   landing.classList.add("active");
@@ -61,130 +43,77 @@ function showFeed() {
 }
 
 
-/* =========================
-   THEME
-========================= */
+/* START */
 
-function initTheme() {
+showLanding();
 
-  const saved = localStorage.getItem("margoTheme");
 
-  if (saved) {
-    document.documentElement.setAttribute("data-theme", saved);
-  }
+/* THEME */
 
-}
+let theme = localStorage.getItem("margoTheme") || "dark";
+
+document.body.className = theme;
 
 themeToggle.onclick = () => {
 
-  const current = document.documentElement.getAttribute("data-theme");
+  theme = theme === "dark" ? "light" : "dark";
 
-  const next = current === "dark" ? "light" : "dark";
+  document.body.className = theme;
 
-  document.documentElement.setAttribute("data-theme", next);
-
-  localStorage.setItem("margoTheme", next);
+  localStorage.setItem("margoTheme", theme);
 
 };
 
 
-/* =========================
-   COMPOSER OPEN/CLOSE
-========================= */
+/* NAVIGATION */
 
-openComposer.onclick = () => {
-  showFeed();
-  openComposerModal();
-};
+openFeed.onclick = showFeed;
+backHome.onclick = showLanding;
 
-newPostBtn.onclick = () => {
-  openComposerModal();
-};
 
-function openComposerModal() {
+/* COMPOSER */
+
+function openModal() {
   composer.classList.remove("hidden");
+  document.body.classList.add("modal-open");
   textInput.focus();
 }
 
-closeComposer.onclick = () => {
-  closeComposerModal();
-};
-
-function closeComposerModal() {
+function closeModal() {
   composer.classList.add("hidden");
+  document.body.classList.remove("modal-open");
   resetComposer();
 }
 
-backBtn.onclick = () => {
-  showLanding();
-};
+openComposer.onclick = openModal;
+closeComposer.onclick = closeModal;
 
 
-/* =========================
-   COUNTER
-========================= */
+/* COUNTER */
 
 textInput.oninput = () => {
   count.textContent = textInput.value.length;
 };
 
 
-/* =========================
-   HIDE MODE
-========================= */
+/* EMOTIONS */
 
-hideModeCheck.onchange = () => {
-
-  hideMode = hideModeCheck.checked;
-
-  if (hideMode) {
-
-    songInput.value = "";
-    artistInput.value = "";
-
-    songInput.disabled = true;
-    artistInput.disabled = true;
-
-    songInput.style.opacity = ".4";
-    artistInput.style.opacity = ".4";
-
-    lockEmotions();
-
-  } else {
-
-    songInput.disabled = false;
-    artistInput.disabled = false;
-
-    songInput.style.opacity = "1";
-    artistInput.style.opacity = "1";
-
-    unlockEmotions();
-
-  }
-
-};
-
-
-/* =========================
-   EMOTIONS
-========================= */
-
-emotionBtns.forEach(btn => {
+document.querySelectorAll(".emotion-pill").forEach(btn => {
 
   btn.onclick = () => {
 
-    if (hideMode) return;
+    if (hideToggle.checked) return;
 
     const e = btn.dataset.emotion;
 
-    if (selectedEmotions.includes(e)) {
+    if (emotions.includes(e)) {
 
-      selectedEmotions = selectedEmotions.filter(x => x !== e);
+      emotions = emotions.filter(x => x !== e);
       btn.classList.remove("active");
 
     } else {
 
-      selectedEmotions.push(e);
+      emotions.push(e);
       btn.classList.add("active");
 
     }
@@ -193,90 +122,67 @@ emotionBtns.forEach(btn => {
 
 });
 
-function lockEmotions() {
 
-  selectedEmotions = [];
+/* HIDE MODE */
 
-  emotionBtns.forEach(b => {
-    b.classList.remove("active");
-    b.style.opacity = ".4";
-    b.style.pointerEvents = "none";
-  });
+hideToggle.onchange = () => {
 
-}
+  const disabled = hideToggle.checked;
 
-function unlockEmotions() {
+  songInput.disabled = disabled;
+  artistInput.disabled = disabled;
 
-  emotionBtns.forEach(b => {
-    b.style.opacity = "1";
-    b.style.pointerEvents = "auto";
-  });
+  if (disabled) {
 
-}
+    songInput.value = "";
+    artistInput.value = "";
 
+    emotions = [];
 
-/* =========================
-   POST
-========================= */
-
-postBtn.onclick = () => {
-
-  const text = textInput.value.trim();
-
-  if (!text) {
-    alert("Write something first.");
-    return;
+    document
+      .querySelectorAll(".emotion-pill")
+      .forEach(b => b.classList.remove("active"));
   }
-
-  const post = {
-    id: Date.now(),
-    text: text,
-
-    song: hideMode ? null : songInput.value.trim(),
-    artist: hideMode ? null : artistInput.value.trim(),
-
-    emotions: hideMode ? [] : [...selectedEmotions],
-
-    hide: hideMode,
-
-    time: Date.now()
-  };
-
-  posts.unshift(post);
-
-  savePosts();
-
-  renderFeed();
-
-  closeComposerModal();
 
 };
 
 
-/* =========================
-   STORAGE
-========================= */
+/* POST */
 
-function savePosts() {
+postBtn.onclick = () => {
+
+  if (!textInput.value.trim()) return;
+
+  const post = {
+
+    id: Date.now(),
+
+    text: textInput.value,
+
+    song: hideToggle.checked ? "" : songInput.value,
+
+    artist: hideToggle.checked ? "" : artistInput.value,
+
+    emotions: hideToggle.checked ? [] : emotions,
+
+    hidden: hideToggle.checked,
+
+    time: Date.now()
+  };
+
+
+  posts.unshift(post);
+
   localStorage.setItem("margoPosts", JSON.stringify(posts));
-}
-
-function loadPosts() {
-
-  const saved = localStorage.getItem("margoPosts");
-
-  if (saved) {
-    posts = JSON.parse(saved);
-  }
 
   renderFeed();
 
-}
+  closeModal();
+
+};
 
 
-/* =========================
-   RESET
-========================= */
+/* RESET */
 
 function resetComposer() {
 
@@ -284,41 +190,39 @@ function resetComposer() {
   songInput.value = "";
   artistInput.value = "";
 
+  hideToggle.checked = false;
+
   count.textContent = "0";
 
-  hideMode = false;
-  hideModeCheck.checked = false;
+  emotions = [];
 
-  songInput.disabled = false;
-  artistInput.disabled = false;
-
-  unlockEmotions();
-
-  selectedEmotions = [];
-
-  emotionBtns.forEach(b => b.classList.remove("active"));
+  document
+    .querySelectorAll(".emotion-pill")
+    .forEach(b => b.classList.remove("active"));
 
 }
 
 
-/* =========================
-   FEED RENDER
-========================= */
+/* LOAD */
+
+function loadPosts() {
+
+  const saved = localStorage.getItem("margoPosts");
+
+  if (saved) posts = JSON.parse(saved);
+
+  renderFeed();
+
+}
+
+loadPosts();
+
+
+/* RENDER */
 
 function renderFeed() {
 
   feedList.innerHTML = "";
-
-  if (posts.length === 0) {
-
-    feedList.innerHTML = `
-      <div style="opacity:.6;text-align:center;margin-top:40px;">
-        No posts yet. Be first.
-      </div>
-    `;
-
-    return;
-  }
 
   posts.forEach(post => {
 
@@ -326,56 +230,35 @@ function renderFeed() {
 
     card.className = "feed-card";
 
-    const emotionsHTML = post.emotions
+
+    const emotionHTML = post.emotions
       .map(e => `<span class="feed-emotion">${e}</span>`)
       .join("");
 
-    const songHTML = post.hide
-      ? `<div style="opacity:.6">Hidden inspiration</div>`
+
+    const songHTML = post.hidden
+      ? `<div class="feed-song">Hidden inspiration</div>`
       : `
-        <div>${post.song || "Unknown song"}</div>
-        <div>${post.artist || "Unknown artist"}</div>
+        <div class="feed-song">
+          <div>${post.song || "Unknown song"}</div>
+          <div>${post.artist || "Unknown artist"}</div>
+        </div>
       `;
+
 
     card.innerHTML = `
 
       <p class="feed-text">"${post.text}"</p>
 
-      <div class="feed-emotions">
-        ${emotionsHTML}
-      </div>
+      <div>${emotionHTML}</div>
 
-      <div class="feed-song">
-        ${songHTML}
-      </div>
+      ${songHTML}
 
     `;
+
 
     feedList.appendChild(card);
 
   });
 
 }
-
-
-/* =========================
-   MOBILE SWIPE LANDING
-========================= */
-
-let startY = 0;
-
-document.addEventListener("touchstart", e => {
-  startY = e.touches[0].clientY;
-});
-
-document.addEventListener("touchend", e => {
-
-  const endY = e.changedTouches[0].clientY;
-
-  const diff = startY - endY;
-
-  if (diff > 80 && landing.classList.contains("active")) {
-    showFeed();
-  }
-
-});
