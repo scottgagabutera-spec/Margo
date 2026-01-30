@@ -1,11 +1,11 @@
-/* ========================
-   ELEMENTS
-======================== */
+
+/* ELEMENTS */
 
 const landing = document.getElementById("landing");
 const feed = document.getElementById("feed");
 
 const enterBtn = document.getElementById("enterBtn");
+const backBtn = document.getElementById("backBtn");
 
 const openComposer = document.getElementById("openComposer");
 const closeComposer = document.getElementById("closeComposer");
@@ -17,27 +17,18 @@ const postBtn = document.getElementById("postBtn");
 const textInput = document.getElementById("textInput");
 const songInput = document.getElementById("songInput");
 const artistInput = document.getElementById("artistInput");
-
 const hideCheck = document.getElementById("hideCheck");
 
 const count = document.getElementById("count");
 
 const feedList = document.getElementById("feedList");
 
-const emotionBtns = document.querySelectorAll(".emotion-pill");
-
-
-/* ========================
-   STATE
-======================== */
 
 let emotions = [];
 let posts = [];
 
 
-/* ========================
-   NAVIGATION
-======================== */
+/* SCREENS */
 
 function showLanding() {
   landing.classList.add("active");
@@ -50,59 +41,61 @@ function showFeed() {
 }
 
 
-/* ========================
-   INIT
-======================== */
+/* INIT */
 
 showLanding();
 loadPosts();
 
 
-/* ========================
-   ENTER BUTTON
-======================== */
+/* ENTER */
 
-if (enterBtn) {
-  enterBtn.addEventListener("click", () => {
-    showFeed();
-  });
-}
+enterBtn.onclick = () => {
+
+  showFeed();
+
+  const hasPosted = localStorage.getItem("hasPosted");
+
+  if (!hasPosted) {
+    openComposerModal();
+  }
+
+};
 
 
-/* ========================
-   COMPOSER
-======================== */
+/* BACK */
 
-openComposer.addEventListener("click", () => {
+backBtn.onclick = () => {
+  showLanding();
+};
+
+
+/* COMPOSER */
+
+function openComposerModal() {
   composer.classList.remove("hidden");
-});
-
-closeComposer.addEventListener("click", () => {
-  closeComposerModal();
-});
+}
 
 function closeComposerModal() {
   composer.classList.add("hidden");
   resetComposer();
 }
 
+openComposer.onclick = openComposerModal;
+closeComposer.onclick = closeComposerModal;
 
-/* ========================
-   CHARACTER COUNT
-======================== */
 
-textInput.addEventListener("input", () => {
+/* COUNT */
+
+textInput.oninput = () => {
   count.textContent = textInput.value.length;
-});
+};
 
 
-/* ========================
-   EMOTIONS
-======================== */
+/* EMOTIONS */
 
-emotionBtns.forEach(btn => {
+document.querySelectorAll(".emotion-pill").forEach(btn => {
 
-  btn.addEventListener("click", () => {
+  btn.onclick = () => {
 
     const e = btn.dataset.emotion;
 
@@ -118,16 +111,14 @@ emotionBtns.forEach(btn => {
 
     }
 
-  });
+  };
 
 });
 
 
-/* ========================
-   POST
-======================== */
+/* POST */
 
-postBtn.addEventListener("click", () => {
+postBtn.onclick = () => {
 
   const text = textInput.value.trim();
 
@@ -141,23 +132,43 @@ postBtn.addEventListener("click", () => {
     emotions: [...emotions],
     song: hide ? "" : songInput.value,
     artist: hide ? "" : artistInput.value,
-    hidden: hide,
     time: Date.now()
   };
 
   posts.unshift(post);
 
+  localStorage.setItem("hasPosted", "true");
+
   savePosts();
+
   renderFeed();
 
   closeComposerModal();
 
-});
+};
 
 
-/* ========================
-   STORAGE
-======================== */
+/* RESET */
+
+function resetComposer() {
+
+  textInput.value = "";
+  songInput.value = "";
+  artistInput.value = "";
+  hideCheck.checked = false;
+
+  emotions = [];
+
+  count.textContent = "0";
+
+  document.querySelectorAll(".emotion-pill").forEach(b => {
+    b.classList.remove("active");
+  });
+
+}
+
+
+/* STORAGE */
 
 function savePosts() {
   localStorage.setItem("margoPosts", JSON.stringify(posts));
@@ -175,68 +186,49 @@ function loadPosts() {
 }
 
 
-/* ========================
-   RESET
-======================== */
-
-function resetComposer() {
-
-  textInput.value = "";
-  songInput.value = "";
-  artistInput.value = "";
-
-  hideCheck.checked = false;
-
-  count.textContent = "0";
-
-  emotions = [];
-
-  emotionBtns.forEach(btn => {
-    btn.classList.remove("active");
-  });
-
-}
-
-
-/* ========================
-   RENDER FEED
-======================== */
+/* RENDER */
 
 function renderFeed() {
 
   feedList.innerHTML = "";
 
+  if (!posts.length) {
+
+    feedList.innerHTML = `
+      <div class="empty-feed">
+        Drop your first line to begin ✨
+      </div>
+    `;
+
+    return;
+  }
+
+
   posts.forEach(post => {
 
     const card = document.createElement("div");
+
     card.className = "feed-card";
-
-
-    let songHTML = "";
-
-    if (!post.hidden && (post.song || post.artist)) {
-
-      songHTML = `
-        <div class="feed-song">
-          <div>${post.song || "Unknown song"}</div>
-          <div>${post.artist || "Unknown artist"}</div>
-        </div>
-      `;
-
-    }
-
 
     card.innerHTML = `
 
       <p class="feed-text">"${post.text}"</p>
 
-      <div class="feed-emotions">
-        ${post.emotions
-          .map(e => `<span class="feed-emotion">${e}</span>`)
-          .join("")}
+      <div>
+        ${post.emotions.map(e =>
+          `<span class="feed-emotion">${e}</span>`
+        ).join("")}
       </div>
 
-      ${songHTML}
+      <div class="feed-song">
+
+        ${
+          post.song || post.artist
+            ? `<div>${post.song || "Unknown"} — ${post.artist || "Unknown"}</div>`
+            : `<div>Hidden inspiration</div>`
+        }
+
+      </div>
 
     `;
 
