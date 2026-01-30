@@ -1,55 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>MARGO</title>
-
-<link rel="stylesheet" href="style.css">
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MARGO</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-
 <!-- LANDING -->
 <section id="landing" class="screen active">
-
-  <div class="landing-inner">
-
+  <div class="center">
     <h1>MARGO</h1>
+    <p>When words fail, drop a lyric.</p>
+    <small>Curse. Confess. Quote. Feel.</small>
 
-    <p class="tagline">
-      When words fail, drop a lyric.
-    </p>
-
-    <p class="sub">
-      Curse. Confess. Quote. Feel.
-    </p>
-
-    <button id="enterBtn" class="primary-btn">
-      Enter
-    </button>
-
+    <button id="enterBtn" class="primary-btn">Enter</button>
   </div>
-
 </section>
-
 
 
 <!-- FEED -->
 <section id="feed" class="screen">
 
-  <header class="feed-header">
-
+  <header>
     <button id="backBtn">←</button>
-
     <h2>Live Feed</h2>
-
-    <button id="newPostBtn">＋</button>
-
+    <button id="openComposer">＋</button>
   </header>
 
   <div id="feedList" class="feed-grid"></div>
@@ -57,20 +34,15 @@
 </section>
 
 
-
-<!-- COMPOSER -->
+<!-- COMPOSER MODAL -->
 <div id="composer" class="modal hidden">
 
-  <div class="modal-card">
+  <div class="modal-box">
 
-    <header>
-
+    <div class="modal-header">
       <h3>Drop Your Line</h3>
-
       <button id="closeComposer">✕</button>
-
-    </header>
-
+    </div>
 
     <textarea
       id="textInput"
@@ -78,62 +50,38 @@
       placeholder="Write what you feel..."
     ></textarea>
 
-    <div class="counter">
+    <div class="count">
       <span id="count">0</span>/140
     </div>
 
-
-    <div class="row">
-
-      <input
-        id="songInput"
-        placeholder="Inspired by song"
-      >
-
-      <input
-        id="artistInput"
-        placeholder="Artist"
-      >
-
+    <div class="inputs">
+      <input id="songInput" placeholder="Inspired by song" />
+      <input id="artistInput" placeholder="Artist" />
     </div>
-
 
     <label class="hide-row">
-
-      <input type="checkbox" id="hideCheck">
-
+      <input type="checkbox" id="hideCheck" />
       Hide inspiration
-
     </label>
 
-
-    <div id="emotionPills" class="pills">
-
-      <button data-e="Love">Love</button>
-      <button data-e="Heartbreak">Heartbreak</button>
-      <button data-e="Hope">Hope</button>
-      <button data-e="Healing">Healing</button>
-      <button data-e="Rage">Rage</button>
-      <button data-e="Joy">Joy</button>
-      <button data-e="Loneliness">Loneliness</button>
-      <button data-e="Freedom">Freedom</button>
-      <button data-e="Anxiety">Anxiety</button>
-
+    <div class="emotions">
+      <button class="emotion-pill" data-emotion="Love">Love</button>
+      <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
+      <button class="emotion-pill" data-emotion="Hope">Hope</button>
+      <button class="emotion-pill" data-emotion="Healing">Healing</button>
+      <button class="emotion-pill" data-emotion="Rage">Rage</button>
+      <button class="emotion-pill" data-emotion="Joy">Joy</button>
+      <button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
+      <button class="emotion-pill" data-emotion="Freedom">Freedom</button>
+      <button class="emotion-pill" data-emotion="Anxiety">Anxiety</button>
     </div>
 
-
-    <button id="postBtn" class="primary-btn full">
-      Post
-    </button>
-
+    <button id="postBtn" class="primary-btn full">Post</button>
 
   </div>
-
 </div>
 
 
-
 <script src="script.js"></script>
-
 </body>
 </html>
