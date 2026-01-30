@@ -1,254 +1,395 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MARGO — When words fail, drop a lyric</title>
-<link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>MARGO — Music As Raw Genuine Overflow</title>
+
+<!-- Open Graph Meta Tags -->
+<meta property="og:title" content="MARGO — When words fail, drop a lyric">
+<meta property="og:description" content="Express yourself through the music that moves you. No login. No ads. Just raw feelings.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="./og-image.png">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MARGO — When words fail, drop a lyric">
+<meta name="twitter:description" content="Express yourself through the music that moves you">
+
+<link rel="stylesheet" href="style.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Archivo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-
-<!-- LANDING SCREEN -->
+<!-- LANDING -->
 <section id="landing" class="screen active">
-  <div class="center">
-    <h1 class="logo">MARGO</h1>
-    <p class="tagline">When words fail, drop a lyric.</p>
-    <small class="subtagline">Curse. Confess. Quote. Feel.</small>
-    <button id="enterComposer" class="primary-btn">Drop Your Line</button>
-    <p class="hint">or swipe right to see live posts →</p>
-  </div>
-  <footer class="landing-footer">
-    <p>No login. No ads. Just raw feelings.</p>
-  </footer>
+<div class="vinyl-bg"></div>
+<div class="center">
+<div class="logo-container">
+<h1 class="logo">MARGO</h1>
+<p class="logo-subtitle">Music As Raw Genuine Overflow</p>
+</div>
+<p class="tagline">When words fail, drop a lyric.</p>
+<div class="tagline-grid">
+<span>Curse.</span>
+<span>Confess.</span>
+<span>Quote.</span>
+<span>Feel.</span>
+</div>
+<button id="enterBtn" class="primary-btn">Drop Your Line</button>
+<p class="hint">← swipe to explore live posts</p>
+</div>
+<footer class="landing-footer">
+<div class="footer-line"></div>
+<p>No login. No ads. Just raw feelings set to music.</p>
+</footer>
 </section>
 
-<!-- COMPOSER SCREEN -->
-<section id="composer" class="screen">
-  <header class="composer-header">
-    <button id="composerBackBtn" class="back-btn">←</button>
-    <h2>Drop Your Line</h2>
-    <div></div>
-  </header>
-  <div class="composer-container">
-    <div class="composer-body">
-      <textarea id="textInput" maxlength="140" placeholder="Drop your line..."></textarea>
-      <div class="counter"><span id="count">0</span>/140</div>
-
-      <div class="input-row">
-        <div class="input-wrapper">
-          <label>🎵 What song?</label>
-          <input id="songInput" type="text" placeholder="Song title" autocomplete="off">
-        </div>
-        <div class="input-wrapper">
-          <label>🎤 Who said it?</label>
-          <input id="artistInput" type="text" placeholder="Artist" autocomplete="off">
-        </div>
-      </div>
-
-      <div class="emotion-section">
-        <label class="section-label">Tag the vibe:</label>
-        <div class="emotion-pills">
-          <button class="emotion-pill" data-emotion="Love">Love</button>
-          <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
-          <button class="emotion-pill" data-emotion="Hope">Hope</button>
-          <button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
-          <button class="emotion-pill" data-emotion="Healing">Healing</button>
-          <button class="emotion-pill" data-emotion="Rage">Rage</button>
-          <button class="emotion-pill" data-emotion="Joy">Joy</button>
-          <button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
-          <button class="emotion-pill" data-emotion="Freedom">Freedom</button>
-          <button class="emotion-pill" data-emotion="Anxiety">Anxiety</button>
-        </div>
-      </div>
-
-      <div class="guess-option">
-        <label class="guess-checkbox">
-          <input type="checkbox" id="hideSongCheck">
-          <span class="checkmark"></span>
-          <span class="label-text">🎯 Hide song — let them guess</span>
-        </label>
-      </div>
-
-      <div class="platform-selector">
-        <label class="section-label">📤 Auto-export for (optional):</label>
-        <div class="platform-chips">
-          <button class="platform-chip" data-platform="instagram">📸 Instagram</button>
-          <button class="platform-chip" data-platform="twitter">𝕏 Twitter</button>
-          <button class="platform-chip" data-platform="tiktok">🎵 TikTok</button>
-          <button class="platform-chip" data-platform="facebook">👥 Facebook</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="composer-footer">
-      <button id="postBtn" class="primary-btn full">Post It</button>
-    </div>
-  </div>
-</section>
-
-<!-- FEED SCREEN -->
+<!-- FEED -->
 <section id="feed" class="screen">
-  <header class="feed-header">
-    <button id="feedBackBtn" class="back-btn">←</button>
-    <h2>Live Feed</h2>
-    <button id="feedComposerBtn" class="add-btn">＋</button>
-  </header>
-  <div id="feedList" class="feed-list"></div>
-  <div class="feed-footer">Live posts from everyone</div>
+<header class="feed-header">
+<button id="backBtn" class="back-btn">←</button>
+<div class="header-center">
+<h2>Live Feed</h2>
+<p class="feed-count"><span id="postCount">0</span> vibes</p>
+</div>
+<button id="openComposer" class="add-btn">+</button>
+</header>
+<div id="feedList" class="feed-list"></div>
+<div class="feed-footer">
+<div class="footer-line"></div>
+<p>Live from the soul</p>
+</div>
 </section>
+
+<!-- COMPOSER MODAL -->
+<div id="composer" class="modal hidden">
+<div class="modal-content composer-modal">
+<div class="modal-header">
+<h3>Drop Your Line</h3>
+<button id="closeComposer" class="close-btn">✕</button>
+</div>
+<div class="composer-body">
+<textarea id="textInput" maxlength="140" placeholder="Type the lyric that's stuck in your soul..."></textarea>
+<div class="counter"><span id="count">0</span>/140</div>
+<div class="input-row">
+<div class="input-wrapper">
+<label>🎵 Track Name</label>
+<input id="songInput" type="text" placeholder="Song title" autocomplete="off" />
+</div>
+<div class="input-wrapper">
+<label>🎤 Artist</label>
+<input id="artistInput" type="text" placeholder="Who said it?" autocomplete="off" />
+</div>
+</div>
+<div class="emotion-section">
+<label class="section-label">Tag the energy:</label>
+<div class="emotion-pills" id="emotionPills">
+<button class="emotion-pill" data-emotion="Love">Love</button>
+<button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
+<button class="emotion-pill" data-emotion="Hope">Hope</button>
+<button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
+<button class="emotion-pill" data-emotion="Healing">Healing</button>
+<button class="emotion-pill" data-emotion="Rage">Rage</button>
+<button class="emotion-pill" data-emotion="Joy">Joy</button>
+<button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
+<button class="emotion-pill" data-emotion="Freedom">Freedom</button>
+<button class="emotion-pill" data-emotion="Anxiety">Anxiety</button>
+</div>
+</div>
+<div class="guess-option">
+<label class="guess-checkbox">
+<input type="checkbox" id="hideSongCheck" />
+<span class="checkmark"></span>
+<span class="label-text">🎯 Hide track — let them guess</span>
+</label>
+</div>
+</div>
+<div class="actions">
+<button id="postBtn" class="primary-btn">Drop It</button>
+</div>
+</div>
+</div>
+
+<!-- STORY BUILDER MODAL -->
+<div id="storyBuilder" class="modal hidden">
+<div class="modal-content story-builder-modal">
+<div class="modal-header">
+<h3>Create Story</h3>
+<button id="closeStoryBuilder" class="close-btn">✕</button>
+</div>
+<div class="story-builder-body">
+<p class="story-hint">Combine multiple lyrics into a visual story</p>
+<div id="storyCards" class="story-cards-list"></div>
+<button id="addStoryCard" class="add-story-btn">+ Add Another Lyric</button>
+<div class="story-layout-picker">
+<label class="section-label">Story Layout:</label>
+<div class="layout-options">
+<button class="layout-btn active" data-layout="stack">
+<div class="layout-preview layout-stack"></div>
+<span>Stack</span>
+</button>
+<button class="layout-btn" data-layout="grid">
+<div class="layout-preview layout-grid"></div>
+<span>Grid</span>
+</button>
+<button class="layout-btn" data-layout="carousel">
+<div class="layout-preview layout-carousel"></div>
+<span>Slide</span>
+</button>
+</div>
+</div>
+</div>
+<div class="actions">
+<button id="previewStory" class="primary-btn">Preview Story</button>
+</div>
+</div>
+</div>
 
 <!-- POSTCARD VIEW MODAL -->
 <div id="postcard" class="postcard-overlay hidden">
-  <div class="overlay-bg" id="closePostcard"></div>
-  <div class="postcard-modal">
-    <button id="closePostcardBtn" class="close-btn">✕</button>
-    <div id="postcardCard" class="postcard-card" data-template="minimal">
-      <div class="card-inner">
-        <p id="postcardText" class="card-text"></p>
-        <div id="postcardEmotions" class="emotion-tags"></div>
-        <div class="postcard-song">
-          <div id="postcardSongInfo"></div>
-        </div>
-        <div class="postcard-branding">MARGO</div>
-      </div>
-    </div>
+<div class="overlay-bg" id="closePostcard"></div>
+<div class="postcard-modal">
+<button id="closePostcardBtn" class="close-btn">✕</button>
+<div id="postcardCard" class="postcard-card" data-template="vinyl">
+<div class="card-inner">
+<div class="vinyl-texture"></div>
+<p id="postcardText" class="card-text"></p>
+<div id="postcardEmotions" class="emotion-tags"></div>
+<div class="postcard-song">
+<div id="postcardSongInfo"></div>
+</div>
+<div class="postcard-branding">MARGO</div>
+</div>
+</div>
+<div class="template-picker">
+<p class="picker-label">Vibe Style:</p>
+<div class="template-grid">
+<button class="template-card active" data-template="vinyl">
+<div class="template-preview gradient-vinyl"></div>
+<span>Vinyl</span>
+</button>
+<button class="template-card" data-template="cassette">
+<div class="template-preview gradient-cassette"></div>
+<span>Tape</span>
+</button>
+<button class="template-card" data-template="neon">
+<div class="template-preview gradient-neon"></div>
+<span>Neon</span>
+</button>
+<button class="template-card" data-template="polaroid">
+<div class="template-preview gradient-polaroid"></div>
+<span>Photo</span>
+</button>
+<button class="template-card" data-template="emotion">
+<div class="template-preview gradient-emotion"></div>
+<span>Mood</span>
+</button>
+</div>
+</div>
+<div class="export-section">
+<p class="picker-label">Export For:</p>
+<div class="export-grid">
+<button class="export-btn" data-format="square">
+<span class="format-icon">📷</span>
+<span>Instagram Post</span>
+<small>1080x1080</small>
+</button>
+<button class="export-btn" data-format="story">
+<span class="format-icon">📱</span>
+<span>IG/TikTok Story</span>
+<small>1080x1920</small>
+</button>
+<button class="export-btn" data-format="twitter">
+<span class="format-icon">🐦</span>
+<span>Twitter</span>
+<small>1200x675</small>
+</button>
+<button class="export-btn" data-format="original">
+<span class="format-icon">💾</span>
+<span>Original</span>
+<small>Square</small>
+</button>
+</div>
+</div>
+<div class="postcard-actions">
+<button id="shareBtn" class="action-btn glass-btn">
+<span class="icon">↗</span>
+<span>Share</span>
+</button>
+<button id="listenBtn" class="action-btn glass-btn">
+<span class="icon">♫</span>
+<span>Listen</span>
+</button>
+<button id="createStoryBtn" class="action-btn glass-btn">
+<span class="icon">📖</span>
+<span>Story</span>
+</button>
+</div>
+</div>
+</div>
 
-    <div class="template-picker">
-      <p class="picker-label">Style:</p>
-      <div class="template-grid">
-        <button class="template-card active" data-template="minimal">
-          <div class="template-preview gradient-minimal"></div>
-          <span>Minimal</span>
-        </button>
-        <button class="template-card" data-template="vinyl">
-          <div class="template-preview gradient-vinyl"></div>
-          <span>Vinyl</span>
-        </button>
-        <button class="template-card" data-template="neon">
-          <div class="template-preview gradient-neon"></div>
-          <span>Neon</span>
-        </button>
-        <button class="template-card" data-template="polaroid">
-          <div class="template-preview gradient-polaroid"></div>
-          <span>Photo</span>
-        </button>
-        <button class="template-card" data-template="emotion">
-          <div class="template-preview gradient-emotion"></div>
-          <span>Vibe</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="postcard-actions">
-      <button id="shareBtn" class="action-btn glass-btn">
-        <span class="icon">↗</span>
-        <span>Share</span>
-      </button>
-      <button id="listenBtn" class="action-btn glass-btn">
-        <span class="icon">♫</span>
-        <span>Listen</span>
-      </button>
-      <button id="downloadBtn" class="action-btn glass-btn">
-        <span class="icon">↓</span>
-        <span>Save</span>
-      </button>
-    </div>
-  </div>
+<!-- STORY PREVIEW MODAL -->
+<div id="storyPreview" class="postcard-overlay hidden">
+<div class="overlay-bg" id="closeStoryPreview"></div>
+<div class="postcard-modal">
+<button id="closeStoryPreviewBtn" class="close-btn">✕</button>
+<div id="storyCanvas" class="story-canvas" data-layout="stack">
+<!-- Story cards will be rendered here -->
+</div>
+<div class="export-section">
+<p class="picker-label">Export Story:</p>
+<div class="export-grid">
+<button class="export-story-btn" data-format="square">
+<span class="format-icon">📷</span>
+<span>Instagram Post</span>
+</button>
+<button class="export-story-btn" data-format="story">
+<span class="format-icon">📱</span>
+<span>Story Format</span>
+</button>
+<button class="export-story-btn" data-format="twitter">
+<span class="format-icon">🐦</span>
+<span>Twitter</span>
+</button>
+</div>
+</div>
+<div class="postcard-actions">
+<button id="shareStoryBtn" class="action-btn glass-btn">
+<span class="icon">↗</span>
+<span>Share</span>
+</button>
+<button id="editStoryBtn" class="action-btn glass-btn">
+<span class="icon">✏️</span>
+<span>Edit</span>
+</button>
+</div>
+</div>
 </div>
 
 <!-- GUESS MODAL -->
 <div id="guessModal" class="modal hidden">
-  <div class="modal-content guess-modal">
-    <div class="modal-header">
-      <h3>🎯 Guess the Song</h3>
-      <button id="closeGuess" class="close-btn">✕</button>
-    </div>
-    <div class="guess-body">
-      <p class="guess-prompt">What song is this lyric from?</p>
-      <p class="guess-lyric" id="guessLyric"></p>
-      <div class="input-wrapper">
-        <label>Song Title</label>
-        <input id="guessSongInput" type="text" placeholder="Enter song name" autocomplete="off">
-      </div>
-      <div class="input-wrapper">
-        <label>Artist</label>
-        <input id="guessArtistInput" type="text" placeholder="Enter artist name" autocomplete="off">
-      </div>
-      <button id="submitGuess" class="primary-btn">Submit Guess</button>
-      <div id="guessResult" class="guess-result hidden"></div>
-    </div>
-  </div>
+<div class="modal-content guess-modal">
+<div class="modal-header">
+<h3>🎯 Name That Track</h3>
+<button id="closeGuess" class="close-btn">✕</button>
+</div>
+<div class="guess-body">
+<p class="guess-prompt">What track is this lyric from?</p>
+<p class="guess-lyric" id="guessLyric"></p>
+<div class="input-wrapper">
+<label>Song Title</label>
+<input id="guessSongInput" type="text" placeholder="Enter song name" autocomplete="off" />
+</div>
+<div class="input-wrapper">
+<label>Artist</label>
+<input id="guessArtistInput" type="text" placeholder="Enter artist name" autocomplete="off" />
+</div>
+<button id="submitGuess" class="primary-btn">Submit Guess</button>
+<div id="guessResult" class="guess-result hidden"></div>
+</div>
+</div>
 </div>
 
 <!-- SHARE MODAL -->
 <div id="shareModal" class="modal hidden">
-  <div class="modal-content share-modal">
-    <div class="modal-header">
-      <h3>Share It</h3>
-      <button id="closeShare" class="close-btn">✕</button>
-    </div>
-    <div class="platform-sections">
-      <div class="platform-section">
-        <p class="section-label">📥 Download optimized card</p>
-        <div class="platform-grid">
-          <button class="platform-btn export-btn" data-platform="instagram">📸 Instagram<br><small>1080×1080</small></button>
-          <button class="platform-btn export-btn" data-platform="twitter">𝕏 Twitter<br><small>1200×675</small></button>
-          <button class="platform-btn export-btn" data-platform="tiktok">🎵 TikTok<br><small>1080×1920</small></button>
-          <button class="platform-btn export-btn" data-platform="facebook">👥 Facebook<br><small>1200×630</small></button>
-        </div>
-      </div>
-      <div class="platform-section">
-        <p class="section-label">Share link</p>
-        <div class="platform-grid">
-          <button class="platform-btn glass-platform" data-platform="native">📱 Share</button>
-          <button class="platform-btn glass-platform" data-platform="link">🔗 Copy</button>
-          <button class="platform-btn glass-platform" data-platform="whatsapp">💬 WhatsApp</button>
-          <button class="platform-btn glass-platform" data-platform="telegram">✈️ Telegram</button>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="modal-content share-modal">
+<div class="modal-header">
+<h3>Share The Vibe</h3>
+<button id="closeShare" class="close-btn">✕</button>
+</div>
+<div class="platform-sections">
+<div class="platform-section">
+<p class="section-label">Quick Share</p>
+<div class="platform-grid">
+<button class="platform-btn glass-platform" data-platform="native">
+<span class="platform-icon">📱</span>
+<span>Share</span>
+</button>
+<button class="platform-btn glass-platform" data-platform="link">
+<span class="platform-icon">🔗</span>
+<span>Copy Link</span>
+</button>
+</div>
+</div>
+<div class="platform-section">
+<p class="section-label">Social</p>
+<div class="platform-grid">
+<button class="platform-btn glass-platform" data-platform="twitter">
+<span class="platform-icon">𝕏</span>
+<span>Twitter</span>
+</button>
+<button class="platform-btn glass-platform" data-platform="instagram">
+<span class="platform-icon">📸</span>
+<span>Instagram</span>
+</button>
+<button class="platform-btn glass-platform" data-platform="tiktok">
+<span class="platform-icon">🎵</span>
+<span>TikTok</span>
+</button>
+<button class="platform-btn glass-platform" data-platform="snapchat">
+<span class="platform-icon">👻</span>
+<span>Snapchat</span>
+</button>
+</div>
+</div>
+<div class="platform-section">
+<p class="section-label">Messaging</p>
+<div class="platform-grid">
+<button class="platform-btn glass-platform" data-platform="whatsapp">
+<span class="platform-icon">💬</span>
+<span>WhatsApp</span>
+</button>
+<button class="platform-btn glass-platform" data-platform="telegram">
+<span class="platform-icon">✈️</span>
+<span>Telegram</span>
+</button>
+</div>
+</div>
+</div>
+</div>
 </div>
 
 <!-- LISTEN MODAL -->
 <div id="listenModal" class="modal hidden">
-  <div class="modal-content listen-modal">
-    <div class="modal-header">
-      <h3>Listen Now</h3>
-      <button id="closeListen" class="close-btn">✕</button>
-    </div>
-    <div class="platform-sections">
-      <div class="platform-section">
-        <p class="section-label">Popular</p>
-        <div class="platform-grid">
-          <button class="platform-btn glass-platform" data-platform="spotify">🎵 Spotify</button>
-          <button class="platform-btn glass-platform" data-platform="apple">🍎 Apple</button>
-          <button class="platform-btn glass-platform" data-platform="youtube">▶️ YouTube</button>
-          <button class="platform-btn glass-platform" data-platform="youtubemusic">🎶 YT Music</button>
-        </div>
-      </div>
-      <div class="platform-section">
-        <p class="section-label">More</p>
-        <div class="platform-grid">
-          <button class="platform-btn glass-platform" data-platform="soundcloud">☁️ SoundCloud</button>
-          <button class="platform-btn glass-platform" data-platform="tidal">🌊 Tidal</button>
-          <button class="platform-btn glass-platform" data-platform="deezer">🎧 Deezer</button>
-          <button class="platform-btn glass-platform" data-platform="amazon">📦 Amazon</button>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="modal-content listen-modal">
+<div class="modal-header">
+<h3>Listen Now</h3>
+<button id="closeListen" class="close-btn">✕</button>
+</div>
+<div class="platform-sections">
+<div class="platform-section">
+<p class="section-label">Stream</p>
+<div class="platform-grid">
+<button class="platform-btn glass-platform" data-platform="spotify">
+<span class="platform-icon">🎵</span>
+<span>Spotify</span>
+</button>
+<button class="platform-btn glass-platform" data-platform="apple">
+<span class="platform-icon">🍎</span>
+<span>Apple Music</span>
+</button>
+<button class="platform-btn glass-platform" data-platform="youtube">
+<span class="platform-icon">▶️</span>
+<span>YouTube</span>
+</button>
+<button class="platform-btn glass-platform" data-platform="soundcloud">
+<span class="platform-icon">☁️</span>
+<span>SoundCloud</span>
+</button>
+</div>
+</div>
+</div>
+</div>
 </div>
 
-<!-- Hidden canvas for exports -->
-<canvas id="exportCanvas" style="display:none;"></canvas>
-
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<!-- HTML2Canvas for downloads -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- Main Script -->
 <script src="script.js"></script>
 </body>
 </html>
