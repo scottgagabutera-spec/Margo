@@ -1,42 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MARGO — When words fail, drop a lyric</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<link rel="stylesheet" href="style.css"/>
+  <title>MARGO — Drop Your Line</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
 
-<div id="app">
+<!-- THEME TOGGLE -->
+<button id="themeToggle" class="theme-toggle">🌓</button>
 
 <!-- LANDING -->
 <section id="landing" class="screen active">
 
-<div class="landing-center">
+  <div class="hero">
 
-<h1 class="logo">MARGO</h1>
+    <h1 class="logo">MARGO</h1>
 
-<p class="tagline">When words fail, drop a lyric.</p>
+    <p class="tagline">
+      When words fail, drop a lyric.
+    </p>
 
-<p class="subtagline">Curse. Confess. Quote. Feel.</p>
+    <p class="sub">
+      Curse. Confess. Quote. Feel.
+    </p>
 
-<button id="openComposer" class="cta-btn">
-Drop Your Line
-</button>
+    <button id="openComposer" class="primary-btn">
+      Drop Your Line
+    </button>
 
-<p class="hint">Swipe to explore →</p>
+    <p class="hint">Swipe to explore ↓</p>
 
-</div>
-
-<footer>
-No login. No ads. Just raw feelings.
-</footer>
+  </div>
 
 </section>
 
@@ -44,78 +45,84 @@ No login. No ads. Just raw feelings.
 <!-- FEED -->
 <section id="feed" class="screen">
 
-<header class="feed-header">
+  <header class="feed-header">
 
-<button id="feedBackBtn">←</button>
+    <button id="backBtn">←</button>
 
-<h2>Live Feed</h2>
+    <h2>Live Feed</h2>
 
-</header>
+    <button id="newPostBtn">＋</button>
 
-<div id="feedList" class="feed-grid"></div>
+  </header>
+
+  <div id="feedList" class="feed-grid"></div>
 
 </section>
 
 
+<!-- COMPOSER -->
+<div id="composer" class="composer hidden">
+
+  <div class="composer-card">
+
+    <header>
+      <h3>Drop Your Line</h3>
+      <button id="closeComposer">✕</button>
+    </header>
+
+    <textarea
+      id="textInput"
+      placeholder="Write what you feel..."
+      maxlength="140"
+    ></textarea>
+
+    <div class="counter">
+      <span id="count">0</span>/140
+    </div>
+
+    <div class="row">
+
+      <input
+        id="songInput"
+        placeholder="Inspired by song"
+      />
+
+      <input
+        id="artistInput"
+        placeholder="Artist"
+      />
+
+    </div>
+
+    <!-- HIDE MODE -->
+    <label class="hide-row">
+      <input type="checkbox" id="hideMode" />
+      Hide inspiration
+    </label>
+
+    <!-- EMOTIONS -->
+    <div class="emotions">
+
+      <span class="emotion" data-emotion="Love">Love</span>
+      <span class="emotion" data-emotion="Heartbreak">Heartbreak</span>
+      <span class="emotion" data-emotion="Hope">Hope</span>
+      <span class="emotion" data-emotion="Healing">Healing</span>
+      <span class="emotion" data-emotion="Rage">Rage</span>
+      <span class="emotion" data-emotion="Joy">Joy</span>
+      <span class="emotion" data-emotion="Loneliness">Loneliness</span>
+      <span class="emotion" data-emotion="Freedom">Freedom</span>
+      <span class="emotion" data-emotion="Anxiety">Anxiety</span>
+
+    </div>
+
+    <button id="postBtn" class="primary-btn full">
+      Post
+    </button>
+
+  </div>
+
 </div>
 
-
-<!-- COMPOSER MODAL -->
-<div id="composer" class="modal hidden">
-
-<div class="modal-box">
-
-<header>
-
-<h3>Drop Your Line</h3>
-
-<button id="closeComposer">✕</button>
-
-</header>
-
-<textarea id="textInput" maxlength="140"
-placeholder="Drop your line..."></textarea>
-
-<div class="counter">
-<span id="count">0</span>/140
-</div>
-
-<div class="row">
-
-<input id="songInput" placeholder="Song" />
-
-<input id="artistInput" placeholder="Artist" />
-
-</div>
-
-<div id="emotionPills" class="emotions">
-
-<button data-emotion="Love">Love</button>
-<button data-emotion="Heartbreak">Heartbreak</button>
-<button data-emotion="Hope">Hope</button>
-<button data-emotion="Nostalgia">Nostalgia</button>
-<button data-emotion="Healing">Healing</button>
-<button data-emotion="Rage">Rage</button>
-<button data-emotion="Joy">Joy</button>
-<button data-emotion="Loneliness">Loneliness</button>
-<button data-emotion="Freedom">Freedom</button>
-<button data-emotion="Anxiety">Anxiety</button>
-
-</div>
-
-<button id="postBtn" class="primary">
-Post
-</button>
-
-</div>
-
-</div>
-
-
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
 <script src="script.js"></script>
 
