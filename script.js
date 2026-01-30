@@ -109,7 +109,10 @@ const SEED_POSTS = [
 ];
 
 /* ==================== ELEMENTS ==================== */
-const app = document.getElementById("app");
+const landing = document.getElementById("landing");
+const feed = document.getElementById("feed");
+const enterBtn = document.getElementById("enterBtn");
+const backBtn = document.getElementById("backBtn");
 const openComposer = document.getElementById("openComposer");
 const closeComposer = document.getElementById("closeComposer");
 const composer = document.getElementById("composer");
@@ -157,7 +160,6 @@ const templateBtns = document.querySelectorAll(".template-card");
 let selectedEmotions = [];
 let currentPost = null;
 let currentTemplate = "minimal";
-let currentScreen = 0;
 let allPosts = [];
 let userVibes = {};
 let userGuesses = {};
@@ -208,28 +210,25 @@ return emotionAvatars[emotions[0]] || "🎵";
 }
 
 /* ==================== NAVIGATION ==================== */
-function goTo(screenIndex) {
-currentScreen = screenIndex;
-app.style.transform = `translateX(-${screenIndex * 100}vw)`;
+function showLanding() {
+  landing.classList.add("active");
+  feed.classList.remove("active");
 }
 
-feedBackBtn.onclick = () => goTo(0);
-
-/* ==================== SWIPE ==================== */
-let startX = 0;
-document.addEventListener("touchstart", e => {
-startX = e.touches[0].clientX;
-});
-
-document.addEventListener("touchend", e => {
-const delta = startX - e.changedTouches[0].clientX;
-if (delta > 60 && currentScreen < 1) {
-goTo(1);
+function showFeed() {
+  landing.classList.remove("active");
+  feed.classList.add("active");
 }
-if (delta < -60 && currentScreen > 0) {
-goTo(0);
-}
-});
+
+// Enter button - go to feed
+enterBtn.onclick = () => {
+  showFeed();
+};
+
+// Back button - return to landing
+backBtn.onclick = () => {
+  showLanding();
+};
 
 /* ==================== COMPOSER ==================== */
 openComposer.onclick = () => {
@@ -362,7 +361,7 @@ console.warn("⚠️ Firebase sync failed (but post is saved locally):", err);
 setLastPostTime(Date.now());
 resetComposer();
 composer.classList.add("hidden");
-goTo(1);
+showFeed();
 
 setTimeout(() => {
 feedList.scrollTop = 0;
@@ -931,4 +930,8 @@ setTimeout(() => toast.remove(), 300);
 }
 
 /* ==================== INIT ==================== */
+// Initialize screen state
+showLanding();
+
+// Load feed data
 initFeed();
