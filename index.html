@@ -1,35 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>MARGO</title>
+<title>MARGO — Drop a Lyric</title>
 
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
 
-  <link rel="stylesheet" href="style.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
 </head>
+<body>
 
-<body class="dark">
-
-<!-- Theme Toggle -->
-<button id="themeToggle" class="theme-toggle">🌓</button>
+<div id="app">
 
 <!-- LANDING -->
 <section id="landing" class="screen active">
 
   <div class="landing-inner">
 
-    <h1 class="logo">MARGO</h1>
+    <h1>MARGO</h1>
 
-    <p class="tagline">
-      When words fail, drop a lyric.<br>
-      Curse. Confess. Quote. Feel.
-    </p>
+    <p class="tagline">When words fail, drop a lyric.</p>
 
-    <button id="openFeed" class="primary-btn">
+    <p class="sub">Curse. Confess. Quote. Feel.</p>
+
+    <button id="enterBtn" class="primary-btn">
       Enter
     </button>
 
@@ -41,32 +38,30 @@
 <!-- FEED -->
 <section id="feed" class="screen">
 
-<header class="feed-header">
+  <header class="feed-header">
 
-  <button id="backHome">←</button>
+    <button id="backBtn">←</button>
 
-  <h2>Live Feed</h2>
+    <h2>Live Feed</h2>
 
-  <button id="openComposer" class="plus-btn">＋</button>
+    <button id="openComposer">＋</button>
 
-</header>
+  </header>
 
-
-<div id="feedList" class="feed-grid"></div>
+  <div id="feedList" class="feed-grid"></div>
 
 </section>
 
 
-<!-- COMPOSER MODAL -->
-<div id="composer" class="hidden">
+<!-- COMPOSER -->
+<div id="composer" class="modal hidden">
 
-  <div class="composer-card">
+  <div class="modal-card">
 
     <header>
       <h3>Drop Your Line</h3>
       <button id="closeComposer">✕</button>
     </header>
-
 
     <textarea
       id="textInput"
@@ -78,33 +73,41 @@
       <span id="count">0</span>/140
     </div>
 
-
     <div class="row">
-      <input id="songInput" placeholder="Inspired by song">
-      <input id="artistInput" placeholder="Artist">
-    </div>
 
+      <input
+        id="songInput"
+        placeholder="Inspired by song"
+      />
+
+      <input
+        id="artistInput"
+        placeholder="Artist"
+      />
+
+    </div>
 
     <label class="hide-row">
-      <input type="checkbox" id="hideToggle">
+
+      <input type="checkbox" id="hideCheck" />
+
       Hide inspiration
+
     </label>
 
+    <div id="emotionPills" class="pills">
 
-    <div class="emotions">
-
-      <button class="emotion-pill" data-emotion="Love">Love</button>
-      <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
-      <button class="emotion-pill" data-emotion="Hope">Hope</button>
-      <button class="emotion-pill" data-emotion="Healing">Healing</button>
-      <button class="emotion-pill" data-emotion="Rage">Rage</button>
-      <button class="emotion-pill" data-emotion="Joy">Joy</button>
-      <button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
-      <button class="emotion-pill" data-emotion="Freedom">Freedom</button>
-      <button class="emotion-pill" data-emotion="Anxiety">Anxiety</button>
+      <button data-e="Love">Love</button>
+      <button data-e="Heartbreak">Heartbreak</button>
+      <button data-e="Hope">Hope</button>
+      <button data-e="Healing">Healing</button>
+      <button data-e="Rage">Rage</button>
+      <button data-e="Joy">Joy</button>
+      <button data-e="Loneliness">Loneliness</button>
+      <button data-e="Freedom">Freedom</button>
+      <button data-e="Anxiety">Anxiety</button>
 
     </div>
-
 
     <button id="postBtn" class="primary-btn">
       Post
@@ -114,6 +117,7 @@
 
 </div>
 
+</div>
 
 <script src="script.js"></script>
 </body>
