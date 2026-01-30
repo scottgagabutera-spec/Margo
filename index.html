@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <title>MARGO — Speak Through Music</title>
+
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- Analytics -->
+  <script
+    async
+    defer
+    data-domain="margo.vercel.app"
+    src="https://plausible.io/js/script.js">
+  </script>
+</head>
+
+<body>
+
+<div id="app">
+
+  <!-- LANDING -->
+  <section class="screen">
+
+    <header>
+      <h1>MARGO</h1>
+      <p class="tagline">Speak through music.</p>
+    </header>
+
+    <main>
+      <button id="openComposer">Write a line</button>
+      <p class="hint">Swipe left to explore →</p>
+    </main>
+
+  </section>
+
+
+  <!-- POSTCARD -->
+  <section class="screen">
+
+    <header>
+      <button id="backHome">←</button>
+    </header>
+
+    <main class="postcard">
+
+      <p id="cardText"></p>
+
+      <p id="cardSong"></p>
+
+      <div id="cardEmotions" class="emotion-tags"></div>
+
+      <div class="actions">
+
+        <button id="shareBtn" class="secondary">Share</button>
+        <button id="listenBtn" class="secondary">Listen</button>
+
+      </div>
+
+      <p class="hint">Swipe left to see others →</p>
+
+    </main>
+
+  </section>
+
+
+  <!-- FEED -->
+  <section class="screen">
+
+    <header class="feed-header">
+      <button id="backCard">←</button>
+      <h2>Others felt this</h2>
+    </header>
+
+    <div id="feed" class="feed"></div>
+
+  </section>
+
+</div>
+
+
+<!-- COMPOSER -->
+<div id="composer" class="modal hidden">
+
+  <div class="modal-box">
+
+    <textarea
+      id="textInput"
+      maxlength="140"
+      placeholder="Write what you feel…"></textarea>
+
+    <div class="counter">
+      <span id="count">0</span>/140
+    </div>
+
+    <input
+      id="songInput"
+      placeholder="Song — Artist"/>
+
+    <select id="emotionInput" multiple>
+
+      <option>Love</option>
+      <option>Heartbreak</option>
+      <option>Hope</option>
+      <option>Nostalgia</option>
+      <option>Healing</option>
+      <option>Rage</option>
+
+    </select>
+
+    <div class="composer-actions">
+
+      <button id="postBtn">Create</button>
+      <button id="closeComposer" class="secondary">Cancel</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script src="script.js"></script>
+
+</body>
+</html>
