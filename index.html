@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>MARGO — Drop a Lyric</title>
+<title>MARGO</title>
 
-<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="style.css">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 
 </head>
 <body>
 
-<div id="app">
 
 <!-- LANDING -->
 <section id="landing" class="screen active">
@@ -22,9 +21,13 @@
 
     <h1>MARGO</h1>
 
-    <p class="tagline">When words fail, drop a lyric.</p>
+    <p class="tagline">
+      When words fail, drop a lyric.
+    </p>
 
-    <p class="sub">Curse. Confess. Quote. Feel.</p>
+    <p class="sub">
+      Curse. Confess. Quote. Feel.
+    </p>
 
     <button id="enterBtn" class="primary-btn">
       Enter
@@ -33,6 +36,7 @@
   </div>
 
 </section>
+
 
 
 <!-- FEED -->
@@ -44,7 +48,7 @@
 
     <h2>Live Feed</h2>
 
-    <button id="openComposer">＋</button>
+    <button id="newPostBtn">＋</button>
 
   </header>
 
@@ -53,15 +57,20 @@
 </section>
 
 
+
 <!-- COMPOSER -->
 <div id="composer" class="modal hidden">
 
   <div class="modal-card">
 
     <header>
+
       <h3>Drop Your Line</h3>
+
       <button id="closeComposer">✕</button>
+
     </header>
+
 
     <textarea
       id="textInput"
@@ -73,27 +82,30 @@
       <span id="count">0</span>/140
     </div>
 
+
     <div class="row">
 
       <input
         id="songInput"
         placeholder="Inspired by song"
-      />
+      >
 
       <input
         id="artistInput"
         placeholder="Artist"
-      />
+      >
 
     </div>
 
+
     <label class="hide-row">
 
-      <input type="checkbox" id="hideCheck" />
+      <input type="checkbox" id="hideCheck">
 
       Hide inspiration
 
     </label>
+
 
     <div id="emotionPills" class="pills">
 
@@ -109,16 +121,19 @@
 
     </div>
 
-    <button id="postBtn" class="primary-btn">
+
+    <button id="postBtn" class="primary-btn full">
       Post
     </button>
+
 
   </div>
 
 </div>
 
-</div>
+
 
 <script src="script.js"></script>
+
 </body>
 </html>
