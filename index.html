@@ -1,41 +1,37 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>MARGO — Drop Your Line</title>
+  <title>MARGO</title>
 
   <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
 
-<!-- THEME TOGGLE -->
+<body class="dark">
+
+<!-- Theme Toggle -->
 <button id="themeToggle" class="theme-toggle">🌓</button>
 
 <!-- LANDING -->
 <section id="landing" class="screen active">
 
-  <div class="hero">
+  <div class="landing-inner">
 
     <h1 class="logo">MARGO</h1>
 
     <p class="tagline">
-      When words fail, drop a lyric.
-    </p>
-
-    <p class="sub">
+      When words fail, drop a lyric.<br>
       Curse. Confess. Quote. Feel.
     </p>
 
-    <button id="openComposer" class="primary-btn">
-      Drop Your Line
+    <button id="openFeed" class="primary-btn">
+      Enter
     </button>
-
-    <p class="hint">Swipe to explore ↓</p>
 
   </div>
 
@@ -45,23 +41,24 @@
 <!-- FEED -->
 <section id="feed" class="screen">
 
-  <header class="feed-header">
+<header class="feed-header">
 
-    <button id="backBtn">←</button>
+  <button id="backHome">←</button>
 
-    <h2>Live Feed</h2>
+  <h2>Live Feed</h2>
 
-    <button id="newPostBtn">＋</button>
+  <button id="openComposer" class="plus-btn">＋</button>
 
-  </header>
+</header>
 
-  <div id="feedList" class="feed-grid"></div>
+
+<div id="feedList" class="feed-grid"></div>
 
 </section>
 
 
-<!-- COMPOSER -->
-<div id="composer" class="composer hidden">
+<!-- COMPOSER MODAL -->
+<div id="composer" class="hidden">
 
   <div class="composer-card">
 
@@ -70,52 +67,46 @@
       <button id="closeComposer">✕</button>
     </header>
 
+
     <textarea
       id="textInput"
-      placeholder="Write what you feel..."
       maxlength="140"
+      placeholder="Write what you feel..."
     ></textarea>
 
     <div class="counter">
       <span id="count">0</span>/140
     </div>
 
+
     <div class="row">
-
-      <input
-        id="songInput"
-        placeholder="Inspired by song"
-      />
-
-      <input
-        id="artistInput"
-        placeholder="Artist"
-      />
-
+      <input id="songInput" placeholder="Inspired by song">
+      <input id="artistInput" placeholder="Artist">
     </div>
 
-    <!-- HIDE MODE -->
+
     <label class="hide-row">
-      <input type="checkbox" id="hideMode" />
+      <input type="checkbox" id="hideToggle">
       Hide inspiration
     </label>
 
-    <!-- EMOTIONS -->
+
     <div class="emotions">
 
-      <span class="emotion" data-emotion="Love">Love</span>
-      <span class="emotion" data-emotion="Heartbreak">Heartbreak</span>
-      <span class="emotion" data-emotion="Hope">Hope</span>
-      <span class="emotion" data-emotion="Healing">Healing</span>
-      <span class="emotion" data-emotion="Rage">Rage</span>
-      <span class="emotion" data-emotion="Joy">Joy</span>
-      <span class="emotion" data-emotion="Loneliness">Loneliness</span>
-      <span class="emotion" data-emotion="Freedom">Freedom</span>
-      <span class="emotion" data-emotion="Anxiety">Anxiety</span>
+      <button class="emotion-pill" data-emotion="Love">Love</button>
+      <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
+      <button class="emotion-pill" data-emotion="Hope">Hope</button>
+      <button class="emotion-pill" data-emotion="Healing">Healing</button>
+      <button class="emotion-pill" data-emotion="Rage">Rage</button>
+      <button class="emotion-pill" data-emotion="Joy">Joy</button>
+      <button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
+      <button class="emotion-pill" data-emotion="Freedom">Freedom</button>
+      <button class="emotion-pill" data-emotion="Anxiety">Anxiety</button>
 
     </div>
 
-    <button id="postBtn" class="primary-btn full">
+
+    <button id="postBtn" class="primary-btn">
       Post
     </button>
 
@@ -125,6 +116,5 @@
 
 
 <script src="script.js"></script>
-
 </body>
 </html>
