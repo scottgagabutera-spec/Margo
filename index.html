@@ -4,22 +4,20 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <title>MARGO — Music As Raw Genuine Overflow</title>
-
 <!-- Open Graph Meta Tags -->
 <meta property="og:title" content="MARGO — When words fail, drop a lyric">
 <meta property="og:description" content="Express yourself through the music that moves you. No login. No ads. Just raw feelings.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="./og-image.png">
-
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MARGO — When words fail, drop a lyric">
 <meta name="twitter:description" content="Express yourself through the music that moves you">
-
 <link rel="stylesheet" href="style.css"/>
+<!-- Updated Font Selection: More distinctive and modern -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Archivo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 <!-- LANDING -->
@@ -54,7 +52,10 @@
 <h2>Live Feed</h2>
 <p class="feed-count"><span id="postCount">0</span> vibes</p>
 </div>
-<button id="openComposer" class="add-btn">+</button>
+<button id="openComposer" class="add-btn">
+<span class="plus-icon">✦</span>
+<span class="add-text">Drop</span>
+</button>
 </header>
 <div id="feedList" class="feed-list"></div>
 <div class="feed-footer">
@@ -164,23 +165,23 @@
 </div>
 </div>
 <div class="template-picker">
-<p class="picker-label">Vibe Style:</p>
+<p class="picker-label">Visual Style:</p>
 <div class="template-grid">
 <button class="template-card active" data-template="vinyl">
 <div class="template-preview gradient-vinyl"></div>
 <span>Vinyl</span>
 </button>
-<button class="template-card" data-template="cassette">
-<div class="template-preview gradient-cassette"></div>
-<span>Tape</span>
+<button class="template-card" data-template="gradient">
+<div class="template-preview gradient-modern"></div>
+<span>Gradient</span>
 </button>
 <button class="template-card" data-template="neon">
 <div class="template-preview gradient-neon"></div>
 <span>Neon</span>
 </button>
-<button class="template-card" data-template="polaroid">
-<div class="template-preview gradient-polaroid"></div>
-<span>Photo</span>
+<button class="template-card" data-template="minimal">
+<div class="template-preview gradient-minimal"></div>
+<span>Clean</span>
 </button>
 <button class="template-card" data-template="emotion">
 <div class="template-preview gradient-emotion"></div>
@@ -193,18 +194,18 @@
 <div class="export-grid">
 <button class="export-btn" data-format="square">
 <span class="format-icon">📷</span>
-<span>Instagram Post</span>
-<small>1080x1080</small>
+<span>Instagram</span>
+<small>1080×1080</small>
 </button>
 <button class="export-btn" data-format="story">
 <span class="format-icon">📱</span>
-<span>IG/TikTok Story</span>
-<small>1080x1920</small>
+<span>Story</span>
+<small>1080×1920</small>
 </button>
 <button class="export-btn" data-format="twitter">
-<span class="format-icon">🐦</span>
+<span class="format-icon">𝕏</span>
 <span>Twitter</span>
-<small>1200x675</small>
+<small>1200×675</small>
 </button>
 <button class="export-btn" data-format="original">
 <span class="format-icon">💾</span>
@@ -250,7 +251,7 @@
 <span>Story Format</span>
 </button>
 <button class="export-story-btn" data-format="twitter">
-<span class="format-icon">🐦</span>
+<span class="format-icon">𝕏</span>
 <span>Twitter</span>
 </button>
 </div>
