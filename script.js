@@ -1,45 +1,48 @@
+
 /* ELEMENTS */
 
 const landing = document.getElementById("landing");
 const feed = document.getElementById("feed");
 
-const openFeed = document.getElementById("openFeed");
-const backHome = document.getElementById("backHome");
+const enterBtn = document.getElementById("enterBtn");
+const backBtn = document.getElementById("backBtn");
 
 const openComposer = document.getElementById("openComposer");
 const closeComposer = document.getElementById("closeComposer");
 
 const composer = document.getElementById("composer");
 
-const postBtn = document.getElementById("postBtn");
-
 const textInput = document.getElementById("textInput");
 const songInput = document.getElementById("songInput");
 const artistInput = document.getElementById("artistInput");
 
-const hideToggle = document.getElementById("hideToggle");
+const hideCheck = document.getElementById("hideCheck");
 
+const postBtn = document.getElementById("postBtn");
 const count = document.getElementById("count");
 
 const feedList = document.getElementById("feedList");
 
-const themeToggle = document.getElementById("themeToggle");
 
-
-let emotions = [];
 let posts = [];
+let emotions = [];
 
 
 /* NAV */
 
 function showLanding() {
+
   landing.classList.add("active");
   feed.classList.remove("active");
+
 }
 
+
 function showFeed() {
+
   landing.classList.remove("active");
   feed.classList.add("active");
+
 }
 
 
@@ -48,45 +51,25 @@ function showFeed() {
 showLanding();
 
 
-/* THEME */
+/* BUTTONS */
 
-let theme = localStorage.getItem("margoTheme") || "dark";
+enterBtn.onclick = showFeed;
 
-document.body.className = theme;
+backBtn.onclick = showLanding;
 
-themeToggle.onclick = () => {
-
-  theme = theme === "dark" ? "light" : "dark";
-
-  document.body.className = theme;
-
-  localStorage.setItem("margoTheme", theme);
-
+openComposer.onclick = () => {
+  composer.classList.remove("hidden");
 };
 
+closeComposer.onclick = closeModal;
 
-/* NAVIGATION */
-
-openFeed.onclick = showFeed;
-backHome.onclick = showLanding;
-
-
-/* COMPOSER */
-
-function openModal() {
-  composer.classList.remove("hidden");
-  document.body.classList.add("modal-open");
-  textInput.focus();
-}
 
 function closeModal() {
-  composer.classList.add("hidden");
-  document.body.classList.remove("modal-open");
-  resetComposer();
-}
 
-openComposer.onclick = openModal;
-closeComposer.onclick = closeModal;
+  composer.classList.add("hidden");
+  resetForm();
+
+}
 
 
 /* COUNTER */
@@ -98,13 +81,13 @@ textInput.oninput = () => {
 
 /* EMOTIONS */
 
-document.querySelectorAll(".emotion-pill").forEach(btn => {
+document.querySelectorAll(".pills button").forEach(btn => {
 
   btn.onclick = () => {
 
-    if (hideToggle.checked) return;
+    if (hideCheck.checked) return;
 
-    const e = btn.dataset.emotion;
+    const e = btn.dataset.e;
 
     if (emotions.includes(e)) {
 
@@ -123,25 +106,28 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
 });
 
 
-/* HIDE MODE */
+/* HIDE OPTION */
 
-hideToggle.onchange = () => {
+hideCheck.onchange = () => {
 
-  const disabled = hideToggle.checked;
-
-  songInput.disabled = disabled;
-  artistInput.disabled = disabled;
-
-  if (disabled) {
+  if (hideCheck.checked) {
 
     songInput.value = "";
     artistInput.value = "";
 
+    songInput.disabled = true;
+    artistInput.disabled = true;
+
     emotions = [];
 
-    document
-      .querySelectorAll(".emotion-pill")
+    document.querySelectorAll(".pills button")
       .forEach(b => b.classList.remove("active"));
+
+  } else {
+
+    songInput.disabled = false;
+    artistInput.disabled = false;
+
   }
 
 };
@@ -159,23 +145,22 @@ postBtn.onclick = () => {
 
     text: textInput.value,
 
-    song: hideToggle.checked ? "" : songInput.value,
+    song: hideCheck.checked ? null : songInput.value,
 
-    artist: hideToggle.checked ? "" : artistInput.value,
+    artist: hideCheck.checked ? null : artistInput.value,
 
-    emotions: hideToggle.checked ? [] : emotions,
+    emotions: [...emotions],
 
-    hidden: hideToggle.checked,
+    hidden: hideCheck.checked
 
-    time: Date.now()
   };
 
 
   posts.unshift(post);
 
-  localStorage.setItem("margoPosts", JSON.stringify(posts));
+  save();
 
-  renderFeed();
+  render();
 
   closeModal();
 
@@ -184,78 +169,82 @@ postBtn.onclick = () => {
 
 /* RESET */
 
-function resetComposer() {
+function resetForm() {
 
   textInput.value = "";
   songInput.value = "";
   artistInput.value = "";
 
-  hideToggle.checked = false;
+  hideCheck.checked = false;
+
+  songInput.disabled = false;
+  artistInput.disabled = false;
 
   count.textContent = "0";
 
   emotions = [];
 
-  document
-    .querySelectorAll(".emotion-pill")
+  document.querySelectorAll(".pills button")
     .forEach(b => b.classList.remove("active"));
 
 }
 
 
-/* LOAD */
+/* STORAGE */
 
-function loadPosts() {
+function save() {
+  localStorage.setItem("margoPosts", JSON.stringify(posts));
+}
+
+
+function load() {
 
   const saved = localStorage.getItem("margoPosts");
 
   if (saved) posts = JSON.parse(saved);
 
-  renderFeed();
+  render();
 
 }
 
-loadPosts();
+load();
 
 
 /* RENDER */
 
-function renderFeed() {
+function render() {
 
   feedList.innerHTML = "";
 
-  posts.forEach(post => {
+  posts.forEach(p => {
 
     const card = document.createElement("div");
 
     card.className = "feed-card";
 
-
-    const emotionHTML = post.emotions
-      .map(e => `<span class="feed-emotion">${e}</span>`)
-      .join("");
-
-
-    const songHTML = post.hidden
-      ? `<div class="feed-song">Hidden inspiration</div>`
-      : `
-        <div class="feed-song">
-          <div>${post.song || "Unknown song"}</div>
-          <div>${post.artist || "Unknown artist"}</div>
-        </div>
-      `;
-
-
     card.innerHTML = `
 
-      <p class="feed-text">"${post.text}"</p>
+      <div class="feed-text">
+        "${p.text}"
+      </div>
 
-      <div>${emotionHTML}</div>
+      <div class="feed-tags">
+        ${
+          p.emotions.map(e => `<span>${e}</span>`).join("")
+        }
+      </div>
 
-      ${songHTML}
+      <div class="feed-meta">
+
+        ${
+          p.hidden
+          ? "Hidden inspiration"
+          : `${p.song || "Unknown"} — ${p.artist || "Unknown"}`
+        }
+
+      </div>
 
     `;
-
 
     feedList.appendChild(card);
 
