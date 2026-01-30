@@ -2,16 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>MARGO — When words fail, drop a lyric</title>
 
 <link rel="stylesheet" href="style.css"/>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 </head>
 
@@ -22,18 +18,24 @@
 <!-- LANDING -->
 <section id="landing" class="screen active">
 
-<header class="landing-header">
-  <div class="logo">MARGO</div>
-  <p class="tagline">When words fail, drop a lyric.</p>
-  <p class="subtagline">Curse. Confess. Quote. Feel.</p>
-</header>
+<div class="landing-center">
 
-<main>
-  <button id="openComposer" class="cta-btn">Drop Your Line</button>
-</main>
+<h1 class="logo">MARGO</h1>
 
-<footer class="landing-footer">
-  <p>No login. No ads. Just raw feelings.</p>
+<p class="tagline">When words fail, drop a lyric.</p>
+
+<p class="subtagline">Curse. Confess. Quote. Feel.</p>
+
+<button id="openComposer" class="cta-btn">
+Drop Your Line
+</button>
+
+<p class="hint">Swipe to explore →</p>
+
+</div>
+
+<footer>
+No login. No ads. Just raw feelings.
 </footer>
 
 </section>
@@ -43,7 +45,11 @@
 <section id="feed" class="screen">
 
 <header class="feed-header">
-  <h2>Live Feed</h2>
+
+<button id="feedBackBtn">←</button>
+
+<h2>Live Feed</h2>
+
 </header>
 
 <div id="feedList" class="feed-grid"></div>
@@ -51,61 +57,65 @@
 </section>
 
 
-<!-- COMPOSER -->
+</div>
+
+
+<!-- COMPOSER MODAL -->
 <div id="composer" class="modal hidden">
 
-<div class="modal-content">
+<div class="modal-box">
 
-<div class="modal-header">
+<header>
+
 <h3>Drop Your Line</h3>
-<button id="closeComposer" class="close-btn">✕</button>
+
+<button id="closeComposer">✕</button>
+
+</header>
+
+<textarea id="textInput" maxlength="140"
+placeholder="Drop your line..."></textarea>
+
+<div class="counter">
+<span id="count">0</span>/140
 </div>
 
-<div class="composer-body">
+<div class="row">
 
-<textarea id="textInput" maxlength="140" placeholder="Drop your line..."></textarea>
-<div class="counter"><span id="count">0</span>/140</div>
+<input id="songInput" placeholder="Song" />
 
-<div class="input-row">
-
-<div>
-<label>Song</label>
-<input id="songInput" type="text"/>
-</div>
-
-<div>
-<label>Artist</label>
-<input id="artistInput" type="text"/>
-</div>
-
-</div>
-
-<div class="emotion-pills" id="emotionPills">
-
-<button class="emotion-pill" data-emotion="Love">Love</button>
-<button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
-<button class="emotion-pill" data-emotion="Hope">Hope</button>
-<button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
-<button class="emotion-pill" data-emotion="Healing">Healing</button>
-<button class="emotion-pill" data-emotion="Rage">Rage</button>
-<button class="emotion-pill" data-emotion="Joy">Joy</button>
-<button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
-<button class="emotion-pill" data-emotion="Freedom">Freedom</button>
-<button class="emotion-pill" data-emotion="Anxiety">Anxiety</button>
+<input id="artistInput" placeholder="Artist" />
 
 </div>
 
+<div id="emotionPills" class="emotions">
+
+<button data-emotion="Love">Love</button>
+<button data-emotion="Heartbreak">Heartbreak</button>
+<button data-emotion="Hope">Hope</button>
+<button data-emotion="Nostalgia">Nostalgia</button>
+<button data-emotion="Healing">Healing</button>
+<button data-emotion="Rage">Rage</button>
+<button data-emotion="Joy">Joy</button>
+<button data-emotion="Loneliness">Loneliness</button>
+<button data-emotion="Freedom">Freedom</button>
+<button data-emotion="Anxiety">Anxiety</button>
+
 </div>
 
-<div class="actions">
-<button id="postBtn" class="primary-btn">Post</button>
-</div>
+<button id="postBtn" class="primary">
+Post
+</button>
 
 </div>
 
 </div>
 
-</div>
+
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
 <script src="script.js"></script>
 
