@@ -725,8 +725,9 @@ margin: 8px 0;
 font-size: 1rem;
 }
 
-/* ==================== MODALS ==================== */
-.modal {
+/* ==================== UNIFIED MODAL SYSTEM ==================== */
+.modal,
+.postcard-overlay {
 position: fixed;
 inset: 0;
 background: rgba(0, 0, 0, 0.95);
@@ -737,6 +738,20 @@ z-index: 3000;
 backdrop-filter: blur(20px);
 padding: 20px;
 animation: fadeIn 0.3s ease;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.3s ease;
+}
+
+.modal.active,
+.postcard-overlay.active {
+opacity: 1;
+pointer-events: all;
+}
+
+.modal.hidden,
+.postcard-overlay.hidden {
+display: none;
 }
 
 @keyframes fadeIn {
@@ -744,54 +759,56 @@ from { opacity: 0; }
 to { opacity: 1; }
 }
 
-.modal.hidden {
-display: none;
-}
-
+/* Unified Modal Content */
 .modal-content {
 background: var(--bg-card);
 border: 1px solid var(--border-strong);
 border-radius: 24px;
 width: 100%;
 max-width: 540px;
-max-height: 90vh;
-overflow-y: auto;
+max-height: 85vh;
+overflow: hidden;
 box-shadow: 0 24px 80px rgba(0, 0, 0, 0.8);
 animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+display: flex;
+flex-direction: column;
 }
 
 @keyframes slideUp {
 from {
 opacity: 0;
-transform: translateY(40px);
+transform: translateY(40px) scale(0.95);
 }
 to {
 opacity: 1;
-transform: translateY(0);
+transform: translateY(0) scale(1);
 }
 }
 
+/* Unified Modal Header */
 .modal-header {
 display: flex;
 justify-content: space-between;
 align-items: center;
-padding: 24px 24px 16px;
+padding: 20px 24px;
 border-bottom: 1px solid var(--border);
+flex-shrink: 0;
 }
 
 .modal-header h3 {
 font-family: 'Fraunces', serif;
-font-size: 1.4rem;
+font-size: 1.3rem;
 font-weight: 600;
 letter-spacing: 0.5px;
 margin: 0;
 }
 
+/* Unified Close Button */
 .close-btn {
-background: transparent;
-border: none;
+background: var(--glass-bg);
+border: 1px solid var(--glass-border);
 color: var(--text-secondary);
-font-size: 1.5rem;
+font-size: 1.3rem;
 cursor: pointer;
 padding: 0;
 width: 36px;
@@ -799,20 +816,54 @@ height: 36px;
 display: flex;
 align-items: center;
 justify-content: center;
-border-radius: 8px;
+border-radius: 50%;
 transition: all 0.3s ease;
+flex-shrink: 0;
 }
 
 .close-btn:hover {
-background: var(--glass-bg);
+background: var(--bg-warm);
 color: var(--text-primary);
+border-color: var(--primary);
 transform: rotate(90deg);
 }
 
-/* ==================== COMPOSER ==================== */
-.composer-body {
+/* Unified Modal Body - Scrollable */
+.modal-body,
+.composer-body,
+.story-builder-body,
+.guess-body,
+.platform-sections {
+flex: 1;
+overflow-y: auto;
+overflow-x: hidden;
 padding: 24px;
+scrollbar-width: none;
+-ms-overflow-style: none;
 }
+
+.modal-body::-webkit-scrollbar,
+.composer-body::-webkit-scrollbar,
+.story-builder-body::-webkit-scrollbar,
+.guess-body::-webkit-scrollbar,
+.platform-sections::-webkit-scrollbar {
+display: none;
+}
+
+/* Unified Modal Footer */
+.modal-footer,
+.actions {
+padding: 16px 24px;
+border-top: 1px solid var(--border);
+flex-shrink: 0;
+}
+
+.actions {
+padding: 0 24px 24px;
+border-top: none;
+}
+
+/* ==================== COMPOSER SPECIFIC ==================== */
 
 textarea {
 width: 100%;
@@ -1349,93 +1400,161 @@ border: 1px solid #ff4757;
 color: #ff4757;
 }
 
-/* ==================== IMPROVED POSTCARD MODAL ==================== */
+/* ==================== REDESIGNED POSTCARD MODAL ==================== */
 .postcard-overlay {
-position: fixed;
-inset: 0;
-z-index: 2000;
-display: flex;
-justify-content: center;
-align-items: center;
-padding: 20px;
-animation: fadeIn 0.3s ease;
-}
-
-.postcard-overlay.hidden {
-display: none;
-}
-
-.overlay-bg {
-position: absolute;
-inset: 0;
-background: rgba(0, 0, 0, 0.95);
-backdrop-filter: blur(20px);
+padding: 16px;
 }
 
 .postcard-modal {
 position: relative;
 z-index: 2001;
-max-width: 500px;
 width: 100%;
+max-width: 480px;
 display: flex;
 flex-direction: column;
 gap: 16px;
+animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .postcard-modal .close-btn {
 position: absolute;
-top: -50px;
+top: -48px;
 right: 0;
 background: var(--glass-bg);
 border: 1px solid var(--glass-border);
-color: var(--text-primary);
-width: 40px;
-height: 40px;
-border-radius: 50%;
-font-size: 1.25rem;
-cursor: pointer;
 backdrop-filter: blur(10px);
-transition: all 0.3s ease;
 z-index: 10;
 }
 
 .postcard-card {
 width: 100%;
 aspect-ratio: 1;
-border-radius: 24px;
+border-radius: 20px;
 overflow: hidden;
-box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 transition: transform 0.3s ease;
+cursor: pointer;
 }
 
-.postcard-card:hover {
-transform: scale(1.02);
+.postcard-card:active {
+transform: scale(0.98);
 }
 
-.postcard-quick-actions {
+.card-inner {
+width: 100%;
+height: 100%;
+padding: clamp(32px, 8vw, 48px) clamp(24px, 6vw, 32px);
 display: flex;
-gap: 12px;
+flex-direction: column;
+justify-content: space-between;
+background: linear-gradient(135deg, #2c1810 0%, #4a2511 100%);
+color: #f4e4d7;
+position: relative;
+}
+
+.vinyl-texture {
+position: absolute;
+inset: 0;
+background-image:
+repeating-radial-gradient(circle at center, transparent 0, transparent 2px, rgba(244, 228, 215, 0.03) 2px, rgba(244, 228, 215, 0.03) 4px);
+pointer-events: none;
+opacity: 0.5;
+}
+
+.card-text {
+font-family: 'Fraunces', serif;
+font-size: clamp(1.1rem, 3vw, 1.4rem);
+line-height: 1.5;
+font-weight: 400;
+text-align: center;
+font-style: italic;
+position: relative;
+z-index: 1;
+max-height: 60%;
+overflow: hidden;
+display: flex;
+align-items: center;
 justify-content: center;
 }
 
+.emotion-tags {
+display: flex;
+gap: 8px;
+flex-wrap: wrap;
+justify-content: center;
+position: relative;
+z-index: 1;
+}
+
+.emotion-tag {
+background: rgba(255, 255, 255, 0.15);
+border: 1px solid rgba(255, 255, 255, 0.25);
+padding: 6px 14px;
+border-radius: 20px;
+font-size: 0.7rem;
+font-weight: 600;
+backdrop-filter: blur(10px);
+text-transform: uppercase;
+letter-spacing: 0.5px;
+font-family: 'Syne', sans-serif;
+}
+
+.postcard-song {
+text-align: center;
+padding-top: 16px;
+border-top: 1px solid rgba(255, 255, 255, 0.15);
+position: relative;
+z-index: 1;
+}
+
+.song-title {
+font-size: 1rem;
+font-weight: 700;
+margin-bottom: 4px;
+font-family: 'Syne', sans-serif;
+}
+
+.song-artist {
+font-size: 0.8rem;
+opacity: 0.9;
+font-weight: 500;
+}
+
+.postcard-branding {
+text-align: center;
+font-size: 0.55rem;
+text-transform: uppercase;
+letter-spacing: 3px;
+opacity: 0.3;
+margin-top: 12px;
+position: relative;
+z-index: 1;
+font-family: 'Syne', sans-serif;
+}
+
+/* Quick Actions Bar */
+.postcard-quick-actions {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 10px;
+}
+
 .quick-action-btn {
-flex: 1;
 background: var(--glass-bg);
 border: 1px solid var(--glass-border);
-padding: 14px 16px;
+padding: 14px 12px;
 border-radius: 16px;
-font-size: 0.85rem;
+font-size: 0.8rem;
 font-weight: 600;
 color: var(--text-primary);
 cursor: pointer;
 backdrop-filter: blur(10px);
 display: flex;
+flex-direction: column;
 align-items: center;
-justify-content: center;
-gap: 8px;
+gap: 6px;
 transition: all 0.3s ease;
 font-family: 'Syne', sans-serif;
-max-width: 150px;
 }
 
 .quick-action-btn:hover {
@@ -1445,14 +1564,15 @@ transform: translateY(-2px);
 }
 
 .quick-action-btn .icon {
-font-size: 1.1rem;
+font-size: 1.3rem;
 }
 
+/* Expandable Options */
 .postcard-options-toggle {
 background: var(--glass-bg);
 border: 1px solid var(--glass-border);
-padding: 10px;
-border-radius: 12px;
+padding: 12px;
+border-radius: 14px;
 color: var(--text-secondary);
 cursor: pointer;
 backdrop-filter: blur(10px);
@@ -1471,7 +1591,19 @@ color: var(--primary);
 }
 
 .postcard-expanded-options {
-display: none;
+max-height: 0;
+overflow: hidden;
+opacity: 0;
+transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.postcard-expanded-options.active {
+max-height: 400px;
+opacity: 1;
+}
+
+.expanded-content {
+display: flex;
 flex-direction: column;
 gap: 16px;
 padding: 16px;
@@ -1479,28 +1611,13 @@ background: var(--glass-bg);
 border: 1px solid var(--glass-border);
 border-radius: 16px;
 backdrop-filter: blur(20px);
-animation: slideDown 0.3s ease;
-}
-
-.postcard-expanded-options.active {
-display: flex;
-}
-
-@keyframes slideDown {
-from {
-opacity: 0;
-transform: translateY(-10px);
-}
-to {
-opacity: 1;
-transform: translateY(0);
-}
+margin-top: 10px;
 }
 
 .options-section {
 display: flex;
 flex-direction: column;
-gap: 8px;
+gap: 10px;
 }
 
 .options-section-label {
@@ -1509,12 +1626,12 @@ color: var(--text-secondary);
 font-weight: 600;
 text-transform: uppercase;
 letter-spacing: 1px;
-margin-bottom: 4px;
+font-family: 'Syne', sans-serif;
 }
 
 .options-grid {
 display: grid;
-grid-template-columns: repeat(3, 1fr);
+grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
 gap: 8px;
 }
 
@@ -1522,27 +1639,70 @@ gap: 8px;
 background: var(--bg-dark);
 border: 1px solid var(--border);
 padding: 10px 8px;
-border-radius: 10px;
+border-radius: 12px;
 cursor: pointer;
 transition: all 0.3s ease;
 display: flex;
 flex-direction: column;
 align-items: center;
-gap: 4px;
-font-size: 0.7rem;
+gap: 6px;
+font-size: 0.65rem;
 color: var(--text-secondary);
 font-weight: 600;
+font-family: 'Syne', sans-serif;
 }
 
-.option-btn:hover,
-.option-btn.active {
+.option-btn:hover {
 border-color: var(--primary);
 background: rgba(255, 107, 53, 0.1);
+color: var(--primary);
+transform: translateY(-2px);
+}
+
+.option-btn.active {
+border-color: var(--primary);
+background: rgba(255, 107, 53, 0.15);
 color: var(--primary);
 }
 
 .option-btn .icon {
-font-size: 1.2rem;
+font-size: 1.3rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 480px) {
+.postcard-modal {
+max-width: 100%;
+}
+
+.postcard-card {
+border-radius: 16px;
+}
+
+.card-inner {
+padding: 28px 20px;
+}
+
+.card-text {
+font-size: 1rem;
+}
+
+.postcard-quick-actions {
+gap: 8px;
+}
+
+.quick-action-btn {
+padding: 12px 8px;
+font-size: 0.7rem;
+}
+
+.quick-action-btn .icon {
+font-size: 1.1rem;
+}
+
+.options-grid {
+grid-template-columns: repeat(3, 1fr);
+}
 }
 
 .card-inner {
