@@ -119,6 +119,12 @@ const shareBtn = document.getElementById("shareBtn");
 const listenBtn = document.getElementById("listenBtn");
 const downloadBtn = document.getElementById("downloadBtn");
 
+// Platform link inputs
+const spotifyLink = document.getElementById("spotifyLink");
+const appleLink = document.getElementById("appleLink");
+const youtubeLink = document.getElementById("youtubeLink");
+const soundcloudLink = document.getElementById("soundcloudLink");
+
 // State
 let selectedEmotions = [];
 let currentPost = null;
@@ -178,7 +184,11 @@ function handleSwipe() {
 });
 
 // Button listeners
-enterBtn.onclick = () => showFeed();
+enterBtn.onclick = () => {
+  composer.classList.remove("hidden");
+  textInput.focus();
+};
+
 backBtn.onclick = () => showLanding();
 
 openComposer.onclick = () => {
@@ -252,7 +262,13 @@ postBtn.onclick = async () => {
     emotions: [...selectedEmotions],
     hideSong: hideSongCheck.checked || false,
     timestamp: Date.now(),
-    vibes: {}
+    vibes: {},
+    links: {
+      spotify: spotifyLink.value.trim() || null,
+      apple: appleLink.value.trim() || null,
+      youtube: youtubeLink.value.trim() || null,
+      soundcloud: soundcloudLink.value.trim() || null
+    }
   };
 
   postBtn.disabled = true;
@@ -295,6 +311,10 @@ function resetComposer() {
   textInput.value = "";
   songInput.value = "";
   artistInput.value = "";
+  spotifyLink.value = "";
+  appleLink.value = "";
+  youtubeLink.value = "";
+  soundcloudLink.value = "";
   count.textContent = "0";
   selectedEmotions = [];
   hideSongCheck.checked = false;
@@ -633,30 +653,43 @@ function handleShare(platform) {
 
 // Listen
 listenBtn.onclick = () => {
+  if (!currentPost) return;
+  
   postcardModal.classList.add("hidden");
+  
+  // Update listen buttons based on available links
+  document.querySelectorAll(".listen-btn").forEach(btn => {
+    const platform = btn.dataset.platform;
+    const hasLink = currentPost.links && currentPost.links[platform];
+    
+    if (hasLink) {
+      btn.disabled = false;
+      btn.classList.add("has-link");
+    } else {
+      btn.disabled = true;
+      btn.classList.remove("has-link");
+    }
+  });
+  
   listenModal.classList.remove("hidden");
 };
 
 document.querySelectorAll(".listen-btn").forEach(btn => {
-  btn.onclick = () => handleListen(btn.dataset.platform);
+  btn.onclick = () => {
+    if (btn.disabled) return;
+    handleListen(btn.dataset.platform);
+  };
 });
 
 function handleListen(platform) {
-  if (!currentPost) return;
-
-  const query = encodeURIComponent(`${currentPost.song} ${currentPost.artist}`);
-  
-  const urls = {
-    spotify: `https://open.spotify.com/search/${query}`,
-    apple: `https://music.apple.com/search?term=${query}`,
-    youtube: `https://www.youtube.com/results?search_query=${query}`,
-    soundcloud: `https://soundcloud.com/search?q=${query}`
-  };
-
-  if (urls[platform]) {
-    window.open(urls[platform], "_blank");
-    listenModal.classList.add("hidden");
+  if (!currentPost || !currentPost.links || !currentPost.links[platform]) {
+    showToast("No link available for this platform");
+    return;
   }
+
+  // Open the link that the poster provided
+  window.open(currentPost.links[platform], "_blank");
+  listenModal.classList.add("hidden");
 }
 
 // Download
