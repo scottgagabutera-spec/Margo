@@ -1,4 +1,4 @@
-/* MARGO - Clean, Working Script */
+/* MARGO v3.0 - Complete with all new features */
 
 // Firebase Config
 const firebaseConfig = {
@@ -11,7 +11,6 @@ const firebaseConfig = {
   appId: "1:150183564620:web:a42de7fef39740b551ebe9"
 };
 
-// Initialize Firebase
 let db = null;
 try {
   if (typeof firebase !== 'undefined') {
@@ -33,7 +32,14 @@ const SEED_POSTS = [
     emotions: ["Healing", "Hope"],
     timestamp: Date.now() - 120000,
     vibes: {},
-    hideSong: false
+    hideSong: false,
+    discover: false,
+    links: {
+      spotify: "https://open.spotify.com/track/example1",
+      apple: null,
+      youtube: null,
+      soundcloud: null
+    }
   },
   {
     id: Date.now() - 300000,
@@ -43,7 +49,9 @@ const SEED_POSTS = [
     emotions: ["Loneliness", "Heartbreak"],
     timestamp: Date.now() - 300000,
     vibes: {},
-    hideSong: false
+    hideSong: false,
+    discover: false,
+    links: { spotify: null, apple: null, youtube: null, soundcloud: null }
   },
   {
     id: Date.now() - 600000,
@@ -53,27 +61,9 @@ const SEED_POSTS = [
     emotions: ["Freedom", "Hope"],
     timestamp: Date.now() - 600000,
     vibes: {},
-    hideSong: false
-  },
-  {
-    id: Date.now() - 900000,
-    text: "What if I told you the version of me you fell for was just a draft?",
-    song: "Good Days",
-    artist: "SZA",
-    emotions: ["Nostalgia", "Healing"],
-    timestamp: Date.now() - 900000,
-    vibes: {},
-    hideSong: false
-  },
-  {
-    id: Date.now() - 1800000,
-    text: "I'm not heartless, I just learned how to use my heart less",
-    song: "Heartless",
-    artist: "The Weeknd",
-    emotions: ["Heartbreak", "Rage"],
-    timestamp: Date.now() - 1800000,
-    vibes: {},
-    hideSong: false
+    hideSong: false,
+    discover: false,
+    links: { spotify: null, apple: null, youtube: null, soundcloud: null }
   }
 ];
 
@@ -90,6 +80,7 @@ const textInput = document.getElementById("textInput");
 const songInput = document.getElementById("songInput");
 const artistInput = document.getElementById("artistInput");
 const hideSongCheck = document.getElementById("hideSongCheck");
+const discoverCheck = document.getElementById("discoverCheck");
 const count = document.getElementById("count");
 const feedList = document.getElementById("feedList");
 const postCount = document.getElementById("postCount");
@@ -99,6 +90,8 @@ const postcardModal = document.getElementById("postcard");
 const closePostcardBtn = document.getElementById("closePostcardBtn");
 const guessModal = document.getElementById("guessModal");
 const closeGuess = document.getElementById("closeGuess");
+const discoverModal = document.getElementById("discoverModal");
+const closeDiscover = document.getElementById("closeDiscover");
 const shareModal = document.getElementById("shareModal");
 const closeShare = document.getElementById("closeShare");
 const listenModal = document.getElementById("listenModal");
@@ -110,6 +103,16 @@ const guessSongInput = document.getElementById("guessSongInput");
 const guessArtistInput = document.getElementById("guessArtistInput");
 const submitGuess = document.getElementById("submitGuess");
 const guessResult = document.getElementById("guessResult");
+const guessActions = document.getElementById("guessActions");
+const tryAgainBtn = document.getElementById("tryAgainBtn");
+const revealAnswerBtn = document.getElementById("revealAnswerBtn");
+
+// Discover elements
+const discoverLyric = document.getElementById("discoverLyric");
+const discoverSongInput = document.getElementById("discoverSongInput");
+const discoverArtistInput = document.getElementById("discoverArtistInput");
+const helpDiscoverBtn = document.getElementById("helpDiscoverBtn");
+const remindMeBtn = document.getElementById("remindMeBtn");
 
 // Postcard elements
 const postcardText = document.getElementById("postcardText");
@@ -203,6 +206,7 @@ closeComposer.onclick = () => {
 
 closePostcardBtn.onclick = () => postcardModal.classList.add("hidden");
 closeGuess.onclick = () => guessModal.classList.add("hidden");
+closeDiscover.onclick = () => discoverModal.classList.add("hidden");
 closeShare.onclick = () => shareModal.classList.add("hidden");
 closeListen.onclick = () => listenModal.classList.add("hidden");
 
@@ -238,14 +242,16 @@ postBtn.onclick = async () => {
   const text = textInput.value.trim();
   const song = songInput.value.trim();
   const artist = artistInput.value.trim();
+  const isDiscover = discoverCheck.checked;
+  const isGuess = hideSongCheck.checked;
 
   if (!text) {
-    showToast("✍️ Drop your line first");
+    showToast("✍️ Share your moment first");
     return;
   }
 
-  if (!hideSongCheck.checked && (!song || !artist)) {
-    showToast("🎵 Tag the song");
+  if (!isDiscover && !isGuess && (!song || !artist)) {
+    showToast("🎵 Tag the song or enable Discover mode");
     return;
   }
 
@@ -257,10 +263,11 @@ postBtn.onclick = async () => {
   const post = {
     id: Date.now(),
     text,
-    song: hideSongCheck.checked ? "Hidden" : song,
-    artist: hideSongCheck.checked ? "Mystery Artist" : artist,
+    song: isDiscover ? "Unknown Song" : (isGuess && !song ? "Hidden" : song),
+    artist: isDiscover ? "Help me discover!" : (isGuess && !artist ? "Mystery Artist" : artist),
     emotions: [...selectedEmotions],
-    hideSong: hideSongCheck.checked || false,
+    hideSong: isGuess || false,
+    discover: isDiscover || false,
     timestamp: Date.now(),
     vibes: {},
     links: {
@@ -295,7 +302,7 @@ postBtn.onclick = async () => {
     showToast("❌ Post failed");
   } finally {
     postBtn.disabled = false;
-    postBtn.textContent = "Post It";
+    postBtn.textContent = "Share Moment";
   }
 };
 
@@ -318,6 +325,7 @@ function resetComposer() {
   count.textContent = "0";
   selectedEmotions = [];
   hideSongCheck.checked = false;
+  discoverCheck.checked = false;
   document.querySelectorAll(".emotion-pill").forEach(pill => {
     pill.classList.remove("active");
   });
@@ -372,7 +380,7 @@ function renderFeed() {
   feedList.innerHTML = "";
 
   if (allPosts.length === 0) {
-    feedList.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-tertiary);">No posts yet. Be the first!</div>';
+    feedList.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-tertiary);font-size:0.8rem;">No moments yet. Be the first!</div>';
     return;
   }
 
@@ -386,9 +394,16 @@ function renderFeed() {
     ).join("");
 
     let songSection = '';
-    if (post.hideSong) {
+    
+    if (post.discover) {
+      songSection = `
+        <div class="feed-song discover">
+          <div class="discover-text">🔍 Poster wants to discover this song</div>
+          <button class="help-discover-btn" data-index="${index}">Help Discover</button>
+        </div>
+      `;
+    } else if (post.hideSong) {
       const userGuessed = userGuesses[post.id];
-      const attempts = parseInt(localStorage.getItem(`guessAttempts_${post.id}`) || '0');
 
       if (userGuessed) {
         songSection = `
@@ -402,7 +417,6 @@ function renderFeed() {
           <div class="feed-song mystery">
             <div class="mystery-text">🎯 Can you name this track?</div>
             <button class="guess-btn" data-index="${index}">Take a Guess</button>
-            ${attempts >= 3 ? `<button class="reveal-btn" data-index="${index}">Reveal Answer</button>` : ''}
           </div>
         `;
       }
@@ -417,6 +431,9 @@ function renderFeed() {
 
     const vibeCount = post.vibes ? Object.keys(post.vibes).length : 0;
     const userVibed = userVibes[post.id] || false;
+    
+    // Check if listen should be enabled
+    const hasAnyLink = post.links && (post.links.spotify || post.links.apple || post.links.youtube || post.links.soundcloud);
 
     card.innerHTML = `
       <div class="feed-card-header">
@@ -434,6 +451,7 @@ function renderFeed() {
         </div>
       </div>
       <div class="feed-card-actions">
+        ${hasAnyLink ? `<button class="feed-action" data-index="${index}" data-action="listen"><span>♫</span><span>Listen</span></button>` : ''}
         <button class="feed-action" data-index="${index}" data-action="view">
           <span>👁</span>
           <span>View</span>
@@ -465,6 +483,9 @@ function attachListeners() {
       } else if (action === "share") {
         currentPost = post;
         shareModal.classList.remove("hidden");
+      } else if (action === "listen") {
+        currentPost = post;
+        handleListenFromFeed(post);
       }
     };
   });
@@ -487,15 +508,12 @@ function attachListeners() {
     };
   });
 
-  // Reveal buttons
-  document.querySelectorAll(".reveal-btn").forEach(btn => {
+  // Help discover buttons
+  document.querySelectorAll(".help-discover-btn").forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
       const post = allPosts[btn.dataset.index];
-      userGuesses[post.id] = true;
-      localStorage.setItem("margoUserGuesses", JSON.stringify(userGuesses));
-      showToast("🎵 Answer revealed!");
-      renderFeed();
+      openDiscoverModal(post);
     };
   });
 }
@@ -533,13 +551,15 @@ function getUserId() {
   return userId;
 }
 
-// Guess modal
+// Guess modal - NEW 1-ATTEMPT SYSTEM
 function openGuessModal(post) {
   currentPost = post;
   guessLyric.textContent = post.text;
   guessSongInput.value = "";
   guessArtistInput.value = "";
   guessResult.classList.add("hidden");
+  guessActions.classList.add("hidden");
+  submitGuess.style.display = "block";
   guessModal.classList.remove("hidden");
 }
 
@@ -554,15 +574,13 @@ submitGuess.onclick = () => {
   const songMatch = guessedSong && (guessedSong.includes(actualSong) || actualSong.includes(guessedSong));
   const artistMatch = guessedArtist && (guessedArtist.includes(actualArtist) || actualArtist.includes(guessedArtist));
 
-  const attemptKey = `guessAttempts_${currentPost.id}`;
-  const attempts = parseInt(localStorage.getItem(attemptKey) || '0');
-  localStorage.setItem(attemptKey, (attempts + 1).toString());
-
   guessResult.classList.remove("hidden");
+  submitGuess.style.display = "none";
 
-  if (songMatch || artistMatch) {
+  if (songMatch && artistMatch) {
+    // Both correct
     guessResult.className = "guess-result correct";
-    guessResult.textContent = `🎉 Correct! "${currentPost.song}" by ${currentPost.artist}`;
+    guessResult.textContent = `🎉 Perfect! "${currentPost.song}" by ${currentPost.artist}`;
     userGuesses[currentPost.id] = true;
     localStorage.setItem("margoUserGuesses", JSON.stringify(userGuesses));
 
@@ -570,19 +588,82 @@ submitGuess.onclick = () => {
       guessModal.classList.add("hidden");
       renderFeed();
     }, 2000);
-  } else {
-    guessResult.className = "guess-result incorrect";
-    const remaining = 3 - (attempts + 1);
-    if (remaining > 0) {
-      guessResult.textContent = `❌ Not quite. ${remaining} attempts left.`;
+  } else if (songMatch || artistMatch) {
+    // Partial correct
+    guessResult.className = "guess-result partial";
+    if (songMatch) {
+      guessResult.textContent = `✓ Song is correct! Artist is "${currentPost.artist}"`;
     } else {
-      guessResult.textContent = "❌ Out of attempts. Reveal button now available.";
-      setTimeout(() => {
-        guessModal.classList.add("hidden");
-        renderFeed();
-      }, 2000);
+      guessResult.textContent = `✓ Artist is correct! Song is "${currentPost.song}"`;
     }
+    guessActions.classList.remove("hidden");
+  } else {
+    // Both wrong
+    guessResult.className = "guess-result incorrect";
+    guessResult.textContent = "❌ Not quite!";
+    guessActions.classList.remove("hidden");
   }
+};
+
+tryAgainBtn.onclick = () => {
+  guessSongInput.value = "";
+  guessArtistInput.value = "";
+  guessResult.classList.add("hidden");
+  guessActions.classList.add("hidden");
+  submitGuess.style.display = "block";
+};
+
+revealAnswerBtn.onclick = () => {
+  guessResult.className = "guess-result correct";
+  guessResult.textContent = `The answer is "${currentPost.song}" by ${currentPost.artist}`;
+  userGuesses[currentPost.id] = true;
+  localStorage.setItem("margoUserGuesses", JSON.stringify(userGuesses));
+
+  setTimeout(() => {
+    guessModal.classList.add("hidden");
+    renderFeed();
+  }, 2000);
+};
+
+// Discover modal
+function openDiscoverModal(post) {
+  currentPost = post;
+  discoverLyric.textContent = post.text;
+  discoverSongInput.value = "";
+  discoverArtistInput.value = "";
+  discoverModal.classList.remove("hidden");
+}
+
+helpDiscoverBtn.onclick = () => {
+  const song = discoverSongInput.value.trim();
+  const artist = discoverArtistInput.value.trim();
+
+  if (!song || !artist) {
+    showToast("Please enter both song and artist");
+    return;
+  }
+
+  // Update the post
+  currentPost.song = song;
+  currentPost.artist = artist;
+  currentPost.discover = false;
+
+  // Save to localStorage
+  const posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
+  const postIndex = posts.findIndex(p => p.id === currentPost.id);
+  if (postIndex !== -1) {
+    posts[postIndex] = currentPost;
+    localStorage.setItem("margoPosts", JSON.stringify(posts));
+  }
+
+  showToast("✅ Thanks for helping!");
+  discoverModal.classList.add("hidden");
+  renderFeed();
+};
+
+remindMeBtn.onclick = () => {
+  showToast("We'll remind you when someone discovers it!");
+  discoverModal.classList.add("hidden");
 };
 
 // Postcard
@@ -605,6 +686,27 @@ function showPostcard(post) {
   postcardModal.classList.remove("hidden");
 }
 
+// Listen from feed or postcard
+function handleListenFromFeed(post) {
+  currentPost = post;
+  
+  // Update listen buttons based on available links
+  document.querySelectorAll(".listen-btn").forEach(btn => {
+    const platform = btn.dataset.platform;
+    const hasLink = post.links && post.links[platform];
+    
+    if (hasLink) {
+      btn.disabled = false;
+      btn.classList.add("has-link");
+    } else {
+      btn.disabled = true;
+      btn.classList.remove("has-link");
+    }
+  });
+  
+  listenModal.classList.remove("hidden");
+}
+
 // Share
 shareBtn.onclick = () => {
   postcardModal.classList.add("hidden");
@@ -621,14 +723,13 @@ document.querySelectorAll(".share-btn").forEach(btn => {
 async function handleShare(platform) {
   if (!currentPost) return;
 
-  const text = `"${currentPost.text}"\n\n🎵 ${currentPost.song} — ${currentPost.artist}\n\nShared via MARGO`;
   const postUrl = `${window.location.origin}/?post=${currentPost.id}`;
 
-  // For social platforms, generate image first
+  // For social platforms, generate image with deep link
   if (['instagram', 'tiktok', 'twitter', 'whatsapp'].includes(platform)) {
     try {
       showToast("Generating poster...");
-      const imageDataUrl = await generateSocialImage(platform);
+      const imageDataUrl = await generateSocialImage(platform, postUrl);
       
       // Download the image
       const link = document.createElement('a');
@@ -637,11 +738,11 @@ async function handleShare(platform) {
       link.click();
       
       setTimeout(() => {
-        // Copy link to clipboard for easy pasting
+        // Copy link to clipboard
         navigator.clipboard.writeText(postUrl).then(() => {
-          showToast(`✅ Image saved! Link copied. Share to ${platform}!`);
+          showToast(`✅ Poster saved! Link copied. Click the link in the image to view this exact post.`);
         }).catch(() => {
-          showToast(`✅ Image saved for ${platform}!`);
+          showToast(`✅ Poster saved for ${platform}!`);
         });
       }, 500);
       
@@ -650,7 +751,9 @@ async function handleShare(platform) {
       showToast("❌ Image generation failed");
     }
   } else {
-    // For other platforms, use standard sharing
+    // For other platforms
+    const text = `"${currentPost.text}"\n\n🎵 ${currentPost.song} — ${currentPost.artist}\n\nShared via MARGO`;
+    
     switch(platform) {
       case "native":
         if (navigator.share) {
@@ -660,8 +763,8 @@ async function handleShare(platform) {
         }
         break;
       case "link":
-        navigator.clipboard.writeText(`${text}\n\n${postUrl}`).then(() => {
-          showToast("✅ Copied!");
+        navigator.clipboard.writeText(postUrl).then(() => {
+          showToast("✅ Link copied!");
         });
         break;
     }
@@ -670,21 +773,21 @@ async function handleShare(platform) {
   shareModal.classList.add("hidden");
 }
 
-// Generate social media poster with platform-specific dimensions
-async function generateSocialImage(platform) {
+// Generate social media poster with platform-specific dimensions + deep link
+async function generateSocialImage(platform, deepLink) {
   const card = document.getElementById("postcardCard");
   
   // Platform-specific dimensions
   const dimensions = {
-    instagram: { width: 1080, height: 1080 },  // Square post
-    tiktok: { width: 1080, height: 1920 },     // Story/vertical
-    twitter: { width: 1200, height: 675 },     // Twitter card
-    whatsapp: { width: 1080, height: 1080 }    // Square
+    instagram: { width: 1080, height: 1080 },
+    tiktok: { width: 1080, height: 1920 },
+    twitter: { width: 1200, height: 675 },
+    whatsapp: { width: 1080, height: 1080 }
   };
   
   const dim = dimensions[platform] || dimensions.instagram;
   
-  // Capture the card as canvas
+  // Capture the card
   const htmlCanvas = await html2canvas(card, {
     backgroundColor: null,
     scale: 2,
@@ -692,7 +795,7 @@ async function generateSocialImage(platform) {
     useCORS: true
   });
   
-  // Create final canvas with platform dimensions
+  // Create final canvas
   const canvas = document.createElement('canvas');
   canvas.width = dim.width;
   canvas.height = dim.height;
@@ -702,10 +805,10 @@ async function generateSocialImage(platform) {
   ctx.fillStyle = '#0d0d0d';
   ctx.fillRect(0, 0, dim.width, dim.height);
   
-  // Calculate scaling to fit card in center
+  // Calculate scaling
   const scale = Math.min(
-    (dim.width * 0.9) / htmlCanvas.width,
-    (dim.height * 0.9) / htmlCanvas.height
+    (dim.width * 0.85) / htmlCanvas.width,
+    (dim.height * 0.85) / htmlCanvas.height
   );
   
   const x = (dim.width - htmlCanvas.width * scale) / 2;
@@ -714,16 +817,20 @@ async function generateSocialImage(platform) {
   // Draw the postcard
   ctx.drawImage(htmlCanvas, x, y, htmlCanvas.width * scale, htmlCanvas.height * scale);
   
-  // Add branding at bottom
-  ctx.font = 'bold 24px Inter';
-  ctx.fillStyle = 'rgba(212, 197, 169, 0.3)';
+  // Add deep link prominently at bottom
+  ctx.font = 'bold 32px Inter, Arial';
+  ctx.fillStyle = '#ff6b35';
   ctx.textAlign = 'center';
-  ctx.fillText('MARGO', dim.width / 2, dim.height - 40);
+  ctx.fillText('👆 Click link in bio to view', dim.width / 2, dim.height - 100);
   
-  // Add deep link URL (small, subtle)
-  ctx.font = '18px Inter';
-  ctx.fillStyle = 'rgba(212, 197, 169, 0.2)';
-  ctx.fillText(`margo-silk.vercel.app/?post=${currentPost.id}`, dim.width / 2, dim.height - 15);
+  ctx.font = 'bold 28px Inter, Arial';
+  ctx.fillStyle = 'rgba(255, 107, 53, 0.9)';
+  ctx.fillText(deepLink, dim.width / 2, dim.height - 60);
+  
+  // Add MARGO branding
+  ctx.font = 'bold 24px Inter, Arial';
+  ctx.fillStyle = 'rgba(212, 197, 169, 0.3)';
+  ctx.fillText('MARGO', dim.width / 2, dim.height - 20);
   
   return canvas.toDataURL('image/png');
 }
@@ -733,38 +840,22 @@ listenBtn.onclick = () => {
   if (!currentPost) return;
   
   postcardModal.classList.add("hidden");
-  
-  // Update listen buttons based on available links
-  document.querySelectorAll(".listen-btn").forEach(btn => {
-    const platform = btn.dataset.platform;
-    const hasLink = currentPost.links && currentPost.links[platform];
-    
-    if (hasLink) {
-      btn.disabled = false;
-      btn.classList.add("has-link");
-    } else {
-      btn.disabled = true;
-      btn.classList.remove("has-link");
-    }
-  });
-  
-  listenModal.classList.remove("hidden");
+  handleListenFromFeed(currentPost);
 };
 
 document.querySelectorAll(".listen-btn").forEach(btn => {
   btn.onclick = () => {
     if (btn.disabled) return;
-    handleListen(btn.dataset.platform);
+    handleListenPlatform(btn.dataset.platform);
   };
 });
 
-function handleListen(platform) {
+function handleListenPlatform(platform) {
   if (!currentPost || !currentPost.links || !currentPost.links[platform]) {
-    showToast("No link available for this platform");
+    showToast("No link available");
     return;
   }
 
-  // Open the link that the poster provided
   window.open(currentPost.links[platform], "_blank");
   listenModal.classList.add("hidden");
 }
@@ -819,7 +910,6 @@ window.addEventListener('load', () => {
   const postId = urlParams.get('post');
   
   if (postId) {
-    // Wait for feed to load
     setTimeout(() => {
       const post = allPosts.find(p => p.id == postId);
       if (post) {
