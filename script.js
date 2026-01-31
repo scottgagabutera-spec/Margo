@@ -91,6 +91,13 @@ const songInput = document.getElementById("songInput");
 const artistInput = document.getElementById("artistInput");
 const count = document.getElementById("count");
 const hideSongCheck = document.getElementById("hideSongCheck");
+
+// Platform link inputs
+const spotifyLink = document.getElementById("spotifyLink");
+const appleLink = document.getElementById("appleLink");
+const youtubeLink = document.getElementById("youtubeLink");
+const soundcloudLink = document.getElementById("soundcloudLink");
+
 const postcardText = document.getElementById("postcardText");
 const postcardEmotions = document.getElementById("postcardEmotions");
 const postcardSongInfo = document.getElementById("postcardSongInfo");
@@ -288,6 +295,10 @@ function resetComposer() {
 textInput.value = "";
 songInput.value = "";
 artistInput.value = "";
+spotifyLink.value = "";
+appleLink.value = "";
+youtubeLink.value = "";
+soundcloudLink.value = "";
 count.textContent = "0";
 selectedEmotions = [];
 hideSongCheck.checked = false;
@@ -354,7 +365,13 @@ emotions: selectedEmotions,
 template: currentTemplate,
 hideSong: hideSongCheck.checked || false,
 timestamp: Date.now(),
-vibes: {}
+vibes: {},
+links: {
+spotify: spotifyLink.value.trim() || null,
+apple: appleLink.value.trim() || null,
+youtube: youtubeLink.value.trim() || null,
+soundcloud: soundcloudLink.value.trim() || null
+}
 };
 
 postBtn.disabled = true;
@@ -1044,11 +1061,33 @@ document.querySelectorAll(".share-modal .platform-btn").forEach(btn => {
 btn.onclick = () => handleShare(btn.dataset.platform);
 });
 
-function handleShare(platform) {
+async function handleShare(platform) {
 if (!currentPost) return;
 
 const text = `"${currentPost.text}"\n\n🎵 ${currentPost.song} — ${currentPost.artist}\n\nShared via MARGO`;
 const url = window.location.href;
+
+// For social media platforms, generate and download image
+if (['twitter', 'instagram', 'tiktok', 'snapchat'].includes(platform)) {
+shareModal.classList.add("hidden");
+showToast("Generating image...");
+
+try {
+// Determine format based on platform
+let format = 'square';
+if (platform === 'twitter') format = 'twitter';
+if (platform === 'tiktok') format = 'story';
+
+// Generate the image
+await exportPostcardForShare(format, platform);
+} catch (err) {
+console.error(err);
+showToast("❌ Image generation failed");
+}
+return;
+}
+
+// For other platforms, use standard sharing
 const encodedText = encodeURIComponent(text);
 const encodedUrl = encodeURIComponent(url);
 
@@ -1067,24 +1106,6 @@ showToast("✅ Copied to clipboard!");
 showToast("❌ Copy failed");
 });
 break;
-case "twitter":
-window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, "_blank");
-break;
-case "instagram":
-navigator.clipboard.writeText(text).then(() => {
-showToast("📋 Copied! Paste in Instagram");
-});
-break;
-case "tiktok":
-navigator.clipboard.writeText(text).then(() => {
-showToast("📋 Copied! Paste in TikTok");
-});
-break;
-case "snapchat":
-navigator.clipboard.writeText(text).then(() => {
-showToast("📋 Copied! Share on Snapchat");
-});
-break;
 case "whatsapp":
 window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, "_blank");
 break;
@@ -1096,15 +1117,105 @@ break;
 shareModal.classList.add("hidden");
 }
 
+async function exportPostcardForShare(format, platform) {
+try {
+const dimensions = getExportDimensions(format);
+const htmlCanvas = await html2canvas(postcardCard, {
+backgroundColor: null,
+scale: 2,
+logging: false,
+useCORS: true
+});
+
+// Create final canvas with platform dimensions
+const canvas = document.createElement('canvas');
+canvas.width = dimensions.width;
+canvas.height = dimensions.height;
+const ctx = canvas.getContext('2d');
+
+// Calculate scaling to fit
+const scale = Math.min(
+dimensions.width / htmlCanvas.width,
+dimensions.height / htmlCanvas.height
+);
+const x = (dimensions.width - htmlCanvas.width * scale) / 2;
+const y = (dimensions.height - htmlCanvas.height * scale) / 2;
+
+// Draw black background
+ctx.fillStyle = '#0d0d0d';
+ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+
+// Draw postcard
+ctx.drawImage(htmlCanvas, x, y, htmlCanvas.width * scale, htmlCanvas.height * scale);
+
+// Add subtle branding
+ctx.font = 'bold 20px Syne';
+ctx.fillStyle = 'rgba(212, 197, 169, 0.2)';
+ctx.textAlign = 'center';
+ctx.fillText('MARGO', dimensions.width / 2, dimensions.height - 40);
+
+// Download the image
+const link = document.createElement("a");
+link.download = `margo-${platform}-${currentPost.id}.png`;
+link.href = canvas.toDataURL("image/png");
+link.click();
+
+const platformNames = {
+twitter: 'Twitter/X',
+instagram: 'Instagram',
+tiktok: 'TikTok',
+snapchat: 'Snapchat'
+};
+
+showToast(`✅ Image saved for ${platformNames[platform]}! Upload it to share.`);
+} catch (err) {
+console.error(err);
+throw err;
+}
+}
+
 /* ==================== LISTEN FUNCTIONALITY ==================== */
 listenBtn.onclick = () => {
 if (!currentPost) return;
+renderListenModal(currentPost);
 listenModal.classList.remove("hidden");
 };
 
 closeListen.onclick = () => {
 listenModal.classList.add("hidden");
 };
+
+function renderListenModal(post) {
+const platforms = ['spotify', 'apple', 'youtube', 'soundcloud'];
+const platformNames = {
+spotify: 'Spotify',
+apple: 'Apple Music',
+youtube: 'YouTube',
+soundcloud: 'SoundCloud'
+};
+const platformIcons = {
+spotify: '🎵',
+apple: '🍎',
+youtube: '▶️',
+soundcloud: '☁️'
+};
+
+// Highlight platforms with custom links
+document.querySelectorAll(".listen-modal .platform-btn").forEach(btn => {
+const platform = btn.dataset.platform;
+const hasLink = post.links && post.links[platform];
+
+if (hasLink) {
+btn.classList.add('has-custom-link');
+btn.style.borderColor = 'var(--primary)';
+btn.style.background = 'rgba(255, 107, 53, 0.15)';
+} else {
+btn.classList.remove('has-custom-link');
+btn.style.borderColor = '';
+btn.style.background = '';
+}
+});
+}
 
 document.querySelectorAll(".listen-modal .platform-btn").forEach(btn => {
 btn.onclick = () => handleListen(btn.dataset.platform);
@@ -1113,6 +1224,14 @@ btn.onclick = () => handleListen(btn.dataset.platform);
 function handleListen(platform) {
 if (!currentPost) return;
 
+// Check if there's a custom link for this platform
+if (currentPost.links && currentPost.links[platform]) {
+window.open(currentPost.links[platform], "_blank");
+listenModal.classList.add("hidden");
+return;
+}
+
+// Fallback to search
 const query = `${currentPost.song} ${currentPost.artist}`;
 const encodedQuery = encodeURIComponent(query);
 
