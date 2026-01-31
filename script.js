@@ -612,43 +612,120 @@ shareBtn.onclick = () => {
 };
 
 document.querySelectorAll(".share-btn").forEach(btn => {
-  btn.onclick = () => handleShare(btn.dataset.platform);
+  btn.onclick = async () => {
+    const platform = btn.dataset.platform;
+    await handleShare(platform);
+  };
 });
 
-function handleShare(platform) {
+async function handleShare(platform) {
   if (!currentPost) return;
 
   const text = `"${currentPost.text}"\n\n🎵 ${currentPost.song} — ${currentPost.artist}\n\nShared via MARGO`;
-  const url = window.location.href;
+  const postUrl = `${window.location.origin}/?post=${currentPost.id}`;
 
-  switch(platform) {
-    case "native":
-      if (navigator.share) {
-        navigator.share({ title: "MARGO", text, url }).catch(() => {});
-      } else {
-        showToast("Sharing not supported");
-      }
-      break;
-    case "link":
-      navigator.clipboard.writeText(`${text}\n\n${url}`).then(() => {
-        showToast("✅ Copied!");
-      });
-      break;
-    case "twitter":
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-      break;
-    case "instagram":
-      showToast("📸 Screenshot and share to Instagram!");
-      break;
-    case "tiktok":
-      showToast("🎵 Screenshot and share to TikTok!");
-      break;
-    case "whatsapp":
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-      break;
+  // For social platforms, generate image first
+  if (['instagram', 'tiktok', 'twitter', 'whatsapp'].includes(platform)) {
+    try {
+      showToast("Generating poster...");
+      const imageDataUrl = await generateSocialImage(platform);
+      
+      // Download the image
+      const link = document.createElement('a');
+      link.download = `margo-${platform}-${currentPost.id}.png`;
+      link.href = imageDataUrl;
+      link.click();
+      
+      setTimeout(() => {
+        // Copy link to clipboard for easy pasting
+        navigator.clipboard.writeText(postUrl).then(() => {
+          showToast(`✅ Image saved! Link copied. Share to ${platform}!`);
+        }).catch(() => {
+          showToast(`✅ Image saved for ${platform}!`);
+        });
+      }, 500);
+      
+    } catch (err) {
+      console.error(err);
+      showToast("❌ Image generation failed");
+    }
+  } else {
+    // For other platforms, use standard sharing
+    switch(platform) {
+      case "native":
+        if (navigator.share) {
+          navigator.share({ title: "MARGO", text, url: postUrl }).catch(() => {});
+        } else {
+          showToast("Sharing not supported");
+        }
+        break;
+      case "link":
+        navigator.clipboard.writeText(`${text}\n\n${postUrl}`).then(() => {
+          showToast("✅ Copied!");
+        });
+        break;
+    }
   }
 
   shareModal.classList.add("hidden");
+}
+
+// Generate social media poster with platform-specific dimensions
+async function generateSocialImage(platform) {
+  const card = document.getElementById("postcardCard");
+  
+  // Platform-specific dimensions
+  const dimensions = {
+    instagram: { width: 1080, height: 1080 },  // Square post
+    tiktok: { width: 1080, height: 1920 },     // Story/vertical
+    twitter: { width: 1200, height: 675 },     // Twitter card
+    whatsapp: { width: 1080, height: 1080 }    // Square
+  };
+  
+  const dim = dimensions[platform] || dimensions.instagram;
+  
+  // Capture the card as canvas
+  const htmlCanvas = await html2canvas(card, {
+    backgroundColor: null,
+    scale: 2,
+    logging: false,
+    useCORS: true
+  });
+  
+  // Create final canvas with platform dimensions
+  const canvas = document.createElement('canvas');
+  canvas.width = dim.width;
+  canvas.height = dim.height;
+  const ctx = canvas.getContext('2d');
+  
+  // Fill background
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, dim.width, dim.height);
+  
+  // Calculate scaling to fit card in center
+  const scale = Math.min(
+    (dim.width * 0.9) / htmlCanvas.width,
+    (dim.height * 0.9) / htmlCanvas.height
+  );
+  
+  const x = (dim.width - htmlCanvas.width * scale) / 2;
+  const y = (dim.height - htmlCanvas.height * scale) / 2;
+  
+  // Draw the postcard
+  ctx.drawImage(htmlCanvas, x, y, htmlCanvas.width * scale, htmlCanvas.height * scale);
+  
+  // Add branding at bottom
+  ctx.font = 'bold 24px Inter';
+  ctx.fillStyle = 'rgba(212, 197, 169, 0.3)';
+  ctx.textAlign = 'center';
+  ctx.fillText('MARGO', dim.width / 2, dim.height - 40);
+  
+  // Add deep link URL (small, subtle)
+  ctx.font = '18px Inter';
+  ctx.fillStyle = 'rgba(212, 197, 169, 0.2)';
+  ctx.fillText(`margo-silk.vercel.app/?post=${currentPost.id}`, dim.width / 2, dim.height - 15);
+  
+  return canvas.toDataURL('image/png');
 }
 
 // Listen
@@ -735,3 +812,22 @@ function showToast(message) {
 // Initialize
 showLanding();
 initFeed();
+
+// Deep linking - open specific post if URL has ?post=ID
+window.addEventListener('load', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const postId = urlParams.get('post');
+  
+  if (postId) {
+    // Wait for feed to load
+    setTimeout(() => {
+      const post = allPosts.find(p => p.id == postId);
+      if (post) {
+        showFeed();
+        setTimeout(() => {
+          showPostcard(post);
+        }, 300);
+      }
+    }, 500);
+  }
+});
