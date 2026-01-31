@@ -105,6 +105,9 @@ const postcardCard = document.getElementById("postcardCard");
 const postcardOverlay = document.getElementById("postcard");
 const closePostcard = document.getElementById("closePostcard");
 const closePostcardBtn = document.getElementById("closePostcardBtn");
+const moreOptionsToggle = document.getElementById("moreOptionsToggle");
+const expandedOptions = document.getElementById("expandedOptions");
+const downloadBtn = document.getElementById("downloadBtn");
 const feedList = document.getElementById("feedList");
 const postCount = document.getElementById("postCount");
 
@@ -483,14 +486,34 @@ const emotionTags = post.emotions.map(e =>
 `<span class="feed-emotion" data-emotion="${e}">${e}</span>`
 ).join("");
 
+// Add class for long text (for font size adjustment)
+const textClass = post.text.length > 80 ? 'feed-text long-text' : 'feed-text';
+
 let songSection = '';
-if (post.hideSong && !userGuesses[post.id]) {
+if (post.hideSong) {
+// Check if this user has guessed correctly
+const userGuessed = userGuesses[post.id];
+const guessAttempts = parseInt(localStorage.getItem(`guessAttempts_${post.id}`) || '0');
+
+if (userGuessed) {
+// User guessed correctly - show the answer
+songSection = `
+<div class="feed-song">
+<div class="feed-song-title">${post.song}</div>
+<div class="feed-song-artist">${post.artist}</div>
+<div class="mystery-status">✓ You guessed it!</div>
+</div>
+`;
+} else {
+// Still a mystery - show guess button or reveal option
 songSection = `
 <div class="feed-song mystery">
 <div class="mystery-text">🎯 Can you name this track?</div>
 <button class="guess-btn" data-index="${index}">Take a Guess</button>
+${guessAttempts >= 3 ? `<button class="guess-btn reveal-btn" data-index="${index}" data-action="reveal">Reveal Answer</button>` : ''}
 </div>
 `;
+}
 } else {
 songSection = `
 <div class="feed-song">
@@ -511,7 +534,7 @@ card.innerHTML = `
 </div>
 </div>
 <div class="feed-card-content">
-<p class="feed-text">${post.text}</p>
+<p class="${textClass}">${post.text}</p>
 <div class="feed-emotions">${emotionTags}</div>
 ${songSection}
 <div class="vibe-counter">
@@ -574,7 +597,18 @@ document.querySelectorAll(".guess-btn").forEach(btn => {
 btn.onclick = (e) => {
 e.stopPropagation();
 const post = allPosts[btn.dataset.index];
+const action = btn.dataset.action;
+
+if (action === 'reveal') {
+// Reveal the answer
+userGuesses[post.id] = true;
+localStorage.setItem("margoUserGuesses", JSON.stringify(userGuesses));
+showToast("🎵 Answer revealed!");
+renderFeed();
+} else {
+// Open guess modal
 openGuessModal(post);
+}
 };
 });
 
@@ -658,12 +692,24 @@ const guessedArtist = guessArtistInput.value.trim().toLowerCase();
 const actualSong = currentPost.song.toLowerCase();
 const actualArtist = currentPost.artist.toLowerCase();
 
-const songMatch = guessedSong.includes(actualSong) || actualSong.includes(guessedSong);
-const artistMatch = guessedArtist.includes(actualArtist) || actualArtist.includes(guessedArtist);
+// Flexible matching - either song OR artist can be correct
+// Or both fields match
+const songMatch = guessedSong && (guessedSong.includes(actualSong) || actualSong.includes(guessedSong));
+const artistMatch = guessedArtist && (guessedArtist.includes(actualArtist) || actualArtist.includes(guessedArtist));
+
+// Track attempts
+const attemptKey = `guessAttempts_${currentPost.id}`;
+const attempts = parseInt(localStorage.getItem(attemptKey) || '0');
+localStorage.setItem(attemptKey, (attempts + 1).toString());
 
 guessResult.classList.remove("hidden");
 
-if (songMatch && artistMatch) {
+// Accept if either song or artist is correct (or both)
+if (songMatch || artistMatch) {
+const correctParts = [];
+if (songMatch) correctParts.push('song');
+if (artistMatch) correctParts.push('artist');
+
 guessResult.className = "guess-result correct";
 guessResult.textContent = `🎉 Correct! "${currentPost.song}" by ${currentPost.artist}`;
 userGuesses[currentPost.id] = true;
@@ -674,7 +720,16 @@ renderFeed();
 }, 2000);
 } else {
 guessResult.className = "guess-result incorrect";
-guessResult.textContent = "❌ Not quite. Try again!";
+const remaining = 3 - (attempts + 1);
+if (remaining > 0) {
+guessResult.textContent = `❌ Not quite. ${remaining} attempts left before reveal option appears.`;
+} else {
+guessResult.textContent = "❌ Out of attempts. You can now reveal the answer from the post.";
+setTimeout(() => {
+guessModal.classList.add("hidden");
+renderFeed();
+}, 2000);
+}
 }
 };
 
@@ -876,10 +931,44 @@ postcardOverlay.classList.remove("hidden");
 
 closePostcard.onclick = () => {
 postcardOverlay.classList.add("hidden");
+expandedOptions.classList.remove('active');
 };
 
 closePostcardBtn.onclick = () => {
 postcardOverlay.classList.add("hidden");
+expandedOptions.classList.remove('active');
+};
+
+// More options toggle
+moreOptionsToggle.onclick = () => {
+expandedOptions.classList.toggle('active');
+if (expandedOptions.classList.contains('active')) {
+moreOptionsToggle.textContent = 'Less Options ▲';
+} else {
+moreOptionsToggle.textContent = 'More Options ▼';
+}
+};
+
+// Template options
+document.querySelectorAll(".template-option").forEach(btn => {
+btn.onclick = () => {
+document.querySelectorAll(".template-option").forEach(b => b.classList.remove('active'));
+btn.classList.add('active');
+applyTemplate(btn.dataset.template);
+};
+});
+
+// Export options
+document.querySelectorAll(".export-option").forEach(btn => {
+btn.onclick = async () => {
+const format = btn.dataset.format;
+await exportPostcard(format);
+};
+});
+
+// Download button
+downloadBtn.onclick = async () => {
+await exportPostcard('square');
 };
 
 function renderPostcard(post) {
@@ -949,10 +1038,6 @@ currentTemplate = templateName;
 const template = templates[templateName];
 const card = postcardCard.querySelector(".card-inner");
 
-templateBtns.forEach(btn => {
-btn.classList.toggle("active", btn.dataset.template === templateName);
-});
-
 postcardCard.dataset.template = templateName;
 
 if (templateName === "emotion" && currentPost && currentPost.emotions.length > 0) {
@@ -966,12 +1051,6 @@ card.style.background = template.gradient;
 card.style.color = template.textColor;
 postcardText.style.fontFamily = template.font;
 }
-
-templateBtns.forEach(btn => {
-btn.onclick = () => {
-applyTemplate(btn.dataset.template);
-};
-});
 
 /* ==================== EXPORT WITH PLATFORM-SPECIFIC DIMENSIONS ==================== */
 function getExportDimensions(format) {
@@ -1187,65 +1266,49 @@ listenModal.classList.add("hidden");
 
 function renderListenModal(post) {
 const platforms = ['spotify', 'apple', 'youtube', 'soundcloud'];
-const platformNames = {
-spotify: 'Spotify',
-apple: 'Apple Music',
-youtube: 'YouTube',
-soundcloud: 'SoundCloud'
-};
-const platformIcons = {
-spotify: '🎵',
-apple: '🍎',
-youtube: '▶️',
-soundcloud: '☁️'
-};
 
-// Highlight platforms with custom links
+// Update platform buttons based on available links
 document.querySelectorAll(".listen-modal .platform-btn").forEach(btn => {
 const platform = btn.dataset.platform;
 const hasLink = post.links && post.links[platform];
 
 if (hasLink) {
+// Platform has a custom link - highlight and enable
 btn.classList.add('has-custom-link');
 btn.style.borderColor = 'var(--primary)';
 btn.style.background = 'rgba(255, 107, 53, 0.15)';
+btn.style.cursor = 'pointer';
+btn.style.opacity = '1';
+btn.disabled = false;
 } else {
+// No custom link - disable and gray out
 btn.classList.remove('has-custom-link');
-btn.style.borderColor = '';
-btn.style.background = '';
+btn.style.borderColor = 'var(--border)';
+btn.style.background = 'var(--glass-bg)';
+btn.style.cursor = 'not-allowed';
+btn.style.opacity = '0.4';
+btn.disabled = true;
 }
 });
 }
 
 document.querySelectorAll(".listen-modal .platform-btn").forEach(btn => {
-btn.onclick = () => handleListen(btn.dataset.platform);
+btn.onclick = () => {
+if (!btn.disabled) {
+handleListen(btn.dataset.platform);
+}
+};
 });
 
 function handleListen(platform) {
 if (!currentPost) return;
 
-// Check if there's a custom link for this platform
+// Only use custom links (search fallback removed)
 if (currentPost.links && currentPost.links[platform]) {
 window.open(currentPost.links[platform], "_blank");
 listenModal.classList.add("hidden");
-return;
-}
-
-// Fallback to search
-const query = `${currentPost.song} ${currentPost.artist}`;
-const encodedQuery = encodeURIComponent(query);
-
-const urls = {
-spotify: `https://open.spotify.com/search/${encodedQuery}`,
-apple: `https://music.apple.com/us/search?term=${encodedQuery}`,
-youtube: `https://www.youtube.com/results?search_query=${encodedQuery}`,
-soundcloud: `https://soundcloud.com/search?q=${encodedQuery}`
-};
-
-const url = urls[platform];
-if (url) {
-window.open(url, "_blank");
-listenModal.classList.add("hidden");
+} else {
+showToast("No link available for this platform");
 }
 }
 
