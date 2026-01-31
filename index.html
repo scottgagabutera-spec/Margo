@@ -174,7 +174,8 @@
 <div class="overlay-bg" id="closePostcard"></div>
 <div class="postcard-modal">
 <button id="closePostcardBtn" class="close-btn">✕</button>
-<div class="postcard-content-wrapper">
+
+<!-- Main Postcard -->
 <div id="postcardCard" class="postcard-card" data-template="vinyl">
 <div class="card-inner">
 <div class="vinyl-texture"></div>
@@ -186,69 +187,72 @@
 <div class="postcard-branding">MARGO</div>
 </div>
 </div>
-<div class="template-picker">
-<p class="picker-label">Visual Style:</p>
-<div class="template-grid">
-<button class="template-card active" data-template="vinyl">
-<div class="template-preview gradient-vinyl"></div>
+
+<!-- Quick Actions -->
+<div class="postcard-quick-actions">
+<button id="shareBtn" class="quick-action-btn">
+<span class="icon">↗</span>
+<span>Share</span>
+</button>
+<button id="listenBtn" class="quick-action-btn">
+<span class="icon">♫</span>
+<span>Listen</span>
+</button>
+<button id="downloadBtn" class="quick-action-btn">
+<span class="icon">⬇</span>
+<span>Save</span>
+</button>
+</div>
+
+<!-- More Options Toggle -->
+<div class="postcard-options-toggle" id="moreOptionsToggle">
+More Options ▼
+</div>
+
+<!-- Expanded Options -->
+<div class="postcard-expanded-options" id="expandedOptions">
+<div class="options-section">
+<div class="options-section-label">Visual Style</div>
+<div class="options-grid">
+<button class="option-btn template-option active" data-template="vinyl">
+<span class="icon">💿</span>
 <span>Vinyl</span>
 </button>
-<button class="template-card" data-template="gradient">
-<div class="template-preview gradient-modern"></div>
+<button class="option-btn template-option" data-template="gradient">
+<span class="icon">🌈</span>
 <span>Gradient</span>
 </button>
-<button class="template-card" data-template="neon">
-<div class="template-preview gradient-neon"></div>
+<button class="option-btn template-option" data-template="neon">
+<span class="icon">✨</span>
 <span>Neon</span>
 </button>
-<button class="template-card" data-template="minimal">
-<div class="template-preview gradient-minimal"></div>
+<button class="option-btn template-option" data-template="minimal">
+<span class="icon">⚪</span>
 <span>Clean</span>
 </button>
-<button class="template-card" data-template="emotion">
-<div class="template-preview gradient-emotion"></div>
+<button class="option-btn template-option" data-template="emotion">
+<span class="icon">💭</span>
 <span>Mood</span>
 </button>
 </div>
 </div>
-<div class="export-section">
-<p class="picker-label">Export For:</p>
-<div class="export-grid">
-<button class="export-btn" data-format="square">
-<span class="format-icon">📷</span>
+
+<div class="options-section">
+<div class="options-section-label">Export Format</div>
+<div class="options-grid">
+<button class="option-btn export-option" data-format="square">
+<span class="icon">📷</span>
 <span>Instagram</span>
-<small>1080×1080</small>
 </button>
-<button class="export-btn" data-format="story">
-<span class="format-icon">📱</span>
+<button class="option-btn export-option" data-format="story">
+<span class="icon">📱</span>
 <span>Story</span>
-<small>1080×1920</small>
 </button>
-<button class="export-btn" data-format="twitter">
-<span class="format-icon">𝕏</span>
+<button class="option-btn export-option" data-format="twitter">
+<span class="icon">𝕏</span>
 <span>Twitter</span>
-<small>1200×675</small>
-</button>
-<button class="export-btn" data-format="original">
-<span class="format-icon">💾</span>
-<span>Original</span>
-<small>Square</small>
 </button>
 </div>
-</div>
-<div class="postcard-actions">
-<button id="shareBtn" class="action-btn glass-btn">
-<span class="icon">↗</span>
-<span>Share</span>
-</button>
-<button id="listenBtn" class="action-btn glass-btn">
-<span class="icon">♫</span>
-<span>Listen</span>
-</button>
-<button id="createStoryBtn" class="action-btn glass-btn">
-<span class="icon">📖</span>
-<span>Story</span>
-</button>
 </div>
 </div>
 </div>
