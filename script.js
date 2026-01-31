@@ -1,4 +1,4 @@
-/* MARGO v3.0 - Complete with all new features */
+/* MARGO v3.0 - Clean, No Emojis */
 
 // Firebase Config
 const firebaseConfig = {
@@ -235,7 +235,7 @@ postBtn.onclick = async () => {
   const now = Date.now();
   if (now - lastPostTime < POST_COOLDOWN) {
     const remaining = Math.ceil((POST_COOLDOWN - (now - lastPostTime)) / 1000);
-    showToast(`⏳ Wait ${remaining}s before posting again`);
+    showToast(`Wait ${remaining}s before posting again`);
     return;
   }
 
@@ -246,17 +246,17 @@ postBtn.onclick = async () => {
   const isGuess = hideSongCheck.checked;
 
   if (!text) {
-    showToast("✍️ Share your moment first");
+    showToast("Drop your lyric first");
     return;
   }
 
   if (!isDiscover && !isGuess && (!song || !artist)) {
-    showToast("🎵 Tag the song or enable Discover mode");
+    showToast("Tag the song or enable Discover mode");
     return;
   }
 
   if (selectedEmotions.length === 0) {
-    showToast("💭 Tag the vibe");
+    showToast("Tag the vibe");
     return;
   }
 
@@ -283,7 +283,7 @@ postBtn.onclick = async () => {
 
   try {
     saveToLocalStorage(post);
-    showToast("✅ Posted!");
+    showToast("Posted!");
 
     if (db) {
       db.ref('posts').push(post).catch(err => {
@@ -299,10 +299,10 @@ postBtn.onclick = async () => {
     setTimeout(() => feedList.scrollTop = 0, 100);
   } catch (error) {
     console.error("Post error:", error);
-    showToast("❌ Post failed");
+    showToast("Post failed");
   } finally {
     postBtn.disabled = false;
-    postBtn.textContent = "Share Moment";
+    postBtn.textContent = "Drop It";
   }
 };
 
@@ -340,10 +340,10 @@ function timeAgo(timestamp) {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (seconds < 60) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
+  if (seconds < 60) return 'now';
+  if (minutes < 60) return `${minutes}m`;
+  if (hours < 24) return `${hours}h`;
+  return `${days}d`;
 }
 
 // Init feed
@@ -375,12 +375,12 @@ function initFeed() {
   }
 }
 
-// Render feed
+// Render feed - NO EMOJIS
 function renderFeed() {
   feedList.innerHTML = "";
 
   if (allPosts.length === 0) {
-    feedList.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-tertiary);font-size:0.8rem;">No moments yet. Be the first!</div>';
+    feedList.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-tertiary);font-size:0.8rem;">No posts yet. Be the first!</div>';
     return;
   }
 
@@ -398,7 +398,7 @@ function renderFeed() {
     if (post.discover) {
       songSection = `
         <div class="feed-song discover">
-          <div class="discover-text">🔍 Poster wants to discover this song</div>
+          <div class="discover-text">Wants to discover this song</div>
           <button class="help-discover-btn" data-index="${index}">Help Discover</button>
         </div>
       `;
@@ -415,8 +415,8 @@ function renderFeed() {
       } else {
         songSection = `
           <div class="feed-song mystery">
-            <div class="mystery-text">🎯 Can you name this track?</div>
-            <button class="guess-btn" data-index="${index}">Take a Guess</button>
+            <div class="mystery-text">Can you name this track?</div>
+            <button class="guess-btn" data-index="${index}">Guess</button>
           </div>
         `;
       }
@@ -432,7 +432,7 @@ function renderFeed() {
     const vibeCount = post.vibes ? Object.keys(post.vibes).length : 0;
     const userVibed = userVibes[post.id] || false;
     
-    // Check if listen should be enabled
+    // Check if listen should be shown
     const hasAnyLink = post.links && (post.links.spotify || post.links.apple || post.links.youtube || post.links.soundcloud);
 
     card.innerHTML = `
@@ -445,21 +445,15 @@ function renderFeed() {
         ${songSection}
         <div class="vibe-counter">
           <button class="vibe-btn ${userVibed ? 'active' : ''}" data-index="${index}">
-            <span class="vibe-icon">💚</span>
+            <span class="vibe-icon">♥</span>
             <span class="vibe-count">${vibeCount}</span>
           </button>
         </div>
       </div>
       <div class="feed-card-actions">
-        ${hasAnyLink ? `<button class="feed-action" data-index="${index}" data-action="listen"><span>♫</span><span>Listen</span></button>` : ''}
-        <button class="feed-action" data-index="${index}" data-action="view">
-          <span>👁</span>
-          <span>View</span>
-        </button>
-        <button class="feed-action" data-index="${index}" data-action="share">
-          <span>↗</span>
-          <span>Share</span>
-        </button>
+        ${hasAnyLink ? `<button class="feed-action" data-index="${index}" data-action="listen"><span class="feed-action-icon">♫</span><span>Listen</span></button>` : ''}
+        <button class="feed-action" data-index="${index}" data-action="view"><span class="feed-action-icon">•</span><span>View</span></button>
+        <button class="feed-action" data-index="${index}" data-action="share"><span class="feed-action-icon">↗</span><span>Share</span></button>
       </div>
     `;
 
@@ -533,7 +527,7 @@ function toggleVibe(post, button) {
     userVibes[postId] = true;
     post.vibes[userId] = true;
     button.classList.add('active');
-    showToast("💚 Vibed!");
+    showToast("Vibed!");
   }
 
   localStorage.setItem("margoUserVibes", JSON.stringify(userVibes));
@@ -551,7 +545,7 @@ function getUserId() {
   return userId;
 }
 
-// Guess modal - NEW 1-ATTEMPT SYSTEM
+// Guess modal
 function openGuessModal(post) {
   currentPost = post;
   guessLyric.textContent = post.text;
@@ -578,9 +572,8 @@ submitGuess.onclick = () => {
   submitGuess.style.display = "none";
 
   if (songMatch && artistMatch) {
-    // Both correct
     guessResult.className = "guess-result correct";
-    guessResult.textContent = `🎉 Perfect! "${currentPost.song}" by ${currentPost.artist}`;
+    guessResult.textContent = `Perfect! "${currentPost.song}" by ${currentPost.artist}`;
     userGuesses[currentPost.id] = true;
     localStorage.setItem("margoUserGuesses", JSON.stringify(userGuesses));
 
@@ -589,18 +582,16 @@ submitGuess.onclick = () => {
       renderFeed();
     }, 2000);
   } else if (songMatch || artistMatch) {
-    // Partial correct
     guessResult.className = "guess-result partial";
     if (songMatch) {
-      guessResult.textContent = `✓ Song is correct! Artist is "${currentPost.artist}"`;
+      guessResult.textContent = `Song is correct! Artist is "${currentPost.artist}"`;
     } else {
-      guessResult.textContent = `✓ Artist is correct! Song is "${currentPost.song}"`;
+      guessResult.textContent = `Artist is correct! Song is "${currentPost.song}"`;
     }
     guessActions.classList.remove("hidden");
   } else {
-    // Both wrong
     guessResult.className = "guess-result incorrect";
-    guessResult.textContent = "❌ Not quite!";
+    guessResult.textContent = "Not quite!";
     guessActions.classList.remove("hidden");
   }
 };
@@ -639,16 +630,14 @@ helpDiscoverBtn.onclick = () => {
   const artist = discoverArtistInput.value.trim();
 
   if (!song || !artist) {
-    showToast("Please enter both song and artist");
+    showToast("Enter both song and artist");
     return;
   }
 
-  // Update the post
   currentPost.song = song;
   currentPost.artist = artist;
   currentPost.discover = false;
 
-  // Save to localStorage
   const posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
   const postIndex = posts.findIndex(p => p.id === currentPost.id);
   if (postIndex !== -1) {
@@ -656,13 +645,13 @@ helpDiscoverBtn.onclick = () => {
     localStorage.setItem("margoPosts", JSON.stringify(posts));
   }
 
-  showToast("✅ Thanks for helping!");
+  showToast("Thanks for helping!");
   discoverModal.classList.add("hidden");
   renderFeed();
 };
 
 remindMeBtn.onclick = () => {
-  showToast("We'll remind you when someone discovers it!");
+  showToast("We'll remind you!");
   discoverModal.classList.add("hidden");
 };
 
@@ -686,11 +675,10 @@ function showPostcard(post) {
   postcardModal.classList.remove("hidden");
 }
 
-// Listen from feed or postcard
+// Listen from feed
 function handleListenFromFeed(post) {
   currentPost = post;
   
-  // Update listen buttons based on available links
   document.querySelectorAll(".listen-btn").forEach(btn => {
     const platform = btn.dataset.platform;
     const hasLink = post.links && post.links[platform];
@@ -725,34 +713,30 @@ async function handleShare(platform) {
 
   const postUrl = `${window.location.origin}/?post=${currentPost.id}`;
 
-  // For social platforms, generate image with deep link
   if (['instagram', 'tiktok', 'twitter', 'whatsapp'].includes(platform)) {
     try {
       showToast("Generating poster...");
       const imageDataUrl = await generateSocialImage(platform, postUrl);
       
-      // Download the image
       const link = document.createElement('a');
       link.download = `margo-${platform}-${currentPost.id}.png`;
       link.href = imageDataUrl;
       link.click();
       
       setTimeout(() => {
-        // Copy link to clipboard
         navigator.clipboard.writeText(postUrl).then(() => {
-          showToast(`✅ Poster saved! Link copied. Click the link in the image to view this exact post.`);
+          showToast(`Poster saved! Link copied.`);
         }).catch(() => {
-          showToast(`✅ Poster saved for ${platform}!`);
+          showToast(`Poster saved for ${platform}!`);
         });
       }, 500);
       
     } catch (err) {
       console.error(err);
-      showToast("❌ Image generation failed");
+      showToast("Image generation failed");
     }
   } else {
-    // For other platforms
-    const text = `"${currentPost.text}"\n\n🎵 ${currentPost.song} — ${currentPost.artist}\n\nShared via MARGO`;
+    const text = `"${currentPost.text}"\n\n${currentPost.song} — ${currentPost.artist}\n\nShared via MARGO`;
     
     switch(platform) {
       case "native":
@@ -764,7 +748,7 @@ async function handleShare(platform) {
         break;
       case "link":
         navigator.clipboard.writeText(postUrl).then(() => {
-          showToast("✅ Link copied!");
+          showToast("Link copied!");
         });
         break;
     }
@@ -773,11 +757,9 @@ async function handleShare(platform) {
   shareModal.classList.add("hidden");
 }
 
-// Generate social media poster with platform-specific dimensions + deep link
 async function generateSocialImage(platform, deepLink) {
   const card = document.getElementById("postcardCard");
   
-  // Platform-specific dimensions
   const dimensions = {
     instagram: { width: 1080, height: 1080 },
     tiktok: { width: 1080, height: 1920 },
@@ -787,7 +769,6 @@ async function generateSocialImage(platform, deepLink) {
   
   const dim = dimensions[platform] || dimensions.instagram;
   
-  // Capture the card
   const htmlCanvas = await html2canvas(card, {
     backgroundColor: null,
     scale: 2,
@@ -795,17 +776,14 @@ async function generateSocialImage(platform, deepLink) {
     useCORS: true
   });
   
-  // Create final canvas
   const canvas = document.createElement('canvas');
   canvas.width = dim.width;
   canvas.height = dim.height;
   const ctx = canvas.getContext('2d');
   
-  // Fill background
   ctx.fillStyle = '#0d0d0d';
   ctx.fillRect(0, 0, dim.width, dim.height);
   
-  // Calculate scaling
   const scale = Math.min(
     (dim.width * 0.85) / htmlCanvas.width,
     (dim.height * 0.85) / htmlCanvas.height
@@ -814,20 +792,17 @@ async function generateSocialImage(platform, deepLink) {
   const x = (dim.width - htmlCanvas.width * scale) / 2;
   const y = (dim.height - htmlCanvas.height * scale) / 2;
   
-  // Draw the postcard
   ctx.drawImage(htmlCanvas, x, y, htmlCanvas.width * scale, htmlCanvas.height * scale);
   
-  // Add deep link prominently at bottom
   ctx.font = 'bold 32px Inter, Arial';
   ctx.fillStyle = '#ff6b35';
   ctx.textAlign = 'center';
-  ctx.fillText('👆 Click link in bio to view', dim.width / 2, dim.height - 100);
+  ctx.fillText('Click link to view', dim.width / 2, dim.height - 100);
   
   ctx.font = 'bold 28px Inter, Arial';
   ctx.fillStyle = 'rgba(255, 107, 53, 0.9)';
   ctx.fillText(deepLink, dim.width / 2, dim.height - 60);
   
-  // Add MARGO branding
   ctx.font = 'bold 24px Inter, Arial';
   ctx.fillStyle = 'rgba(212, 197, 169, 0.3)';
   ctx.fillText('MARGO', dim.width / 2, dim.height - 20);
@@ -838,7 +813,6 @@ async function generateSocialImage(platform, deepLink) {
 // Listen
 listenBtn.onclick = () => {
   if (!currentPost) return;
-  
   postcardModal.classList.add("hidden");
   handleListenFromFeed(currentPost);
 };
@@ -876,10 +850,10 @@ downloadBtn.onclick = async () => {
     link.href = canvas.toDataURL("image/png");
     link.click();
     
-    showToast("✅ Downloaded!");
+    showToast("Downloaded!");
   } catch (err) {
     console.error(err);
-    showToast("❌ Download failed");
+    showToast("Download failed");
   }
 };
 
@@ -904,7 +878,7 @@ function showToast(message) {
 showLanding();
 initFeed();
 
-// Deep linking - open specific post if URL has ?post=ID
+// Deep linking
 window.addEventListener('load', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const postId = urlParams.get('post');
