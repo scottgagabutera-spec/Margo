@@ -106,6 +106,27 @@
 <span class="label-text">🎯 Hide track — let them guess</span>
 </label>
 </div>
+<div class="platform-links-section">
+<label class="section-label">🔗 Add Song Links (Optional):</label>
+<div class="platform-links-grid">
+<div class="input-wrapper">
+<label>Spotify</label>
+<input id="spotifyLink" type="url" placeholder="spotify.com/track/..." autocomplete="off" />
+</div>
+<div class="input-wrapper">
+<label>Apple Music</label>
+<input id="appleLink" type="url" placeholder="music.apple.com/..." autocomplete="off" />
+</div>
+<div class="input-wrapper">
+<label>YouTube</label>
+<input id="youtubeLink" type="url" placeholder="youtube.com/watch?v=..." autocomplete="off" />
+</div>
+<div class="input-wrapper">
+<label>SoundCloud</label>
+<input id="soundcloudLink" type="url" placeholder="soundcloud.com/..." autocomplete="off" />
+</div>
+</div>
+</div>
 </div>
 <div class="actions">
 <button id="postBtn" class="primary-btn">Drop It</button>
@@ -153,6 +174,7 @@
 <div class="overlay-bg" id="closePostcard"></div>
 <div class="postcard-modal">
 <button id="closePostcardBtn" class="close-btn">✕</button>
+<div class="postcard-content-wrapper">
 <div id="postcardCard" class="postcard-card" data-template="vinyl">
 <div class="card-inner">
 <div class="vinyl-texture"></div>
@@ -227,6 +249,7 @@
 <span class="icon">📖</span>
 <span>Story</span>
 </button>
+</div>
 </div>
 </div>
 </div>
