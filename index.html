@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <title>MARGO — When words fail, drop a lyric</title>
 <link rel="stylesheet" href="style.css"/>
-<!-- Clean, Professional Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -86,6 +85,29 @@
 <span class="checkbox-text">Hide song — let them guess (3 attempts)</span>
 </label>
 </div>
+
+<!-- PLATFORM LINKS SECTION -->
+<div class="platform-links-section">
+<label class="section-label">Add Song Links (Optional):</label>
+<div class="platform-links-grid">
+<div class="input-group">
+<label>🎵 Spotify</label>
+<input id="spotifyLink" type="url" placeholder="spotify.com/track/..." />
+</div>
+<div class="input-group">
+<label>🍎 Apple Music</label>
+<input id="appleLink" type="url" placeholder="music.apple.com/..." />
+</div>
+<div class="input-group">
+<label>▶️ YouTube</label>
+<input id="youtubeLink" type="url" placeholder="youtube.com/watch?v=..." />
+</div>
+<div class="input-group">
+<label>☁️ SoundCloud</label>
+<input id="soundcloudLink" type="url" placeholder="soundcloud.com/..." />
+</div>
+</div>
+</div>
 </div>
 
 <div class="modal-footer">
@@ -115,15 +137,9 @@
 </div>
 <div class="modal-footer">
 <div class="card-actions">
-<button id="shareBtn" class="action-btn">
-<span>Share</span>
-</button>
-<button id="listenBtn" class="action-btn">
-<span>Listen</span>
-</button>
-<button id="downloadBtn" class="action-btn">
-<span>Save</span>
-</button>
+<button id="shareBtn" class="action-btn">Share</button>
+<button id="listenBtn" class="action-btn">Listen</button>
+<button id="downloadBtn" class="action-btn">Save</button>
 </div>
 </div>
 </div>
@@ -183,11 +199,12 @@
 <button id="closeListen" class="close-btn">×</button>
 </div>
 <div class="modal-body">
+<p class="listen-hint">Buttons are enabled for platforms where you added links.</p>
 <div class="listen-grid">
-<button class="listen-btn" data-platform="spotify">Spotify</button>
-<button class="listen-btn" data-platform="apple">Apple Music</button>
-<button class="listen-btn" data-platform="youtube">YouTube</button>
-<button class="listen-btn" data-platform="soundcloud">SoundCloud</button>
+<button class="listen-btn" data-platform="spotify" disabled>Spotify</button>
+<button class="listen-btn" data-platform="apple" disabled>Apple Music</button>
+<button class="listen-btn" data-platform="youtube" disabled>YouTube</button>
+<button class="listen-btn" data-platform="soundcloud" disabled>SoundCloud</button>
 </div>
 </div>
 </div>
