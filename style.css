@@ -985,6 +985,41 @@ font-weight: 600;
 color: var(--text-primary);
 }
 
+.platform-links-section {
+margin-top: 20px;
+padding-top: 20px;
+border-top: 1px solid var(--border);
+}
+
+.platform-links-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 12px;
+}
+
+.platform-links-grid input[type="url"] {
+width: 100%;
+padding: 12px;
+background: var(--bg-dark);
+border: 1px solid var(--border);
+border-radius: 12px;
+color: var(--text-primary);
+font-size: 0.85rem;
+font-family: 'Syne', sans-serif;
+transition: border-color 0.3s ease;
+}
+
+.platform-links-grid input[type="url"]:focus {
+outline: none;
+border-color: var(--primary);
+box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.platform-links-grid input[type="url"]::placeholder {
+color: var(--text-tertiary);
+font-size: 0.75rem;
+}
+
 .actions {
 padding: 0 24px 24px;
 }
@@ -1320,8 +1355,19 @@ position: relative;
 z-index: 2001;
 max-width: 540px;
 width: 100%;
+max-height: none;
+overflow-y: visible;
+}
+
+.postcard-content-wrapper {
 max-height: 90vh;
 overflow-y: auto;
+scrollbar-width: none;
+-ms-overflow-style: none;
+}
+
+.postcard-content-wrapper::-webkit-scrollbar {
+display: none;
 }
 
 .postcard-modal .close-btn {
@@ -1672,6 +1718,27 @@ border-color: var(--primary);
 transform: translateY(-2px);
 }
 
+.platform-btn.has-custom-link {
+position: relative;
+}
+
+.platform-btn.has-custom-link::after {
+content: "✓";
+position: absolute;
+top: 8px;
+right: 8px;
+width: 18px;
+height: 18px;
+background: var(--primary);
+color: white;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 0.7rem;
+font-weight: 700;
+}
+
 .platform-icon {
 font-size: 1.75rem;
 }
@@ -1701,27 +1768,31 @@ font-family: 'Syne', sans-serif;
 bottom: 40px;
 }
 
-/* ==================== SCROLLBAR ==================== */
+/* ==================== SCROLLBAR - INVISIBLE/MINIMAL ==================== */
+/* Modern invisible scrollbars for WebKit browsers */
 .feed-list::-webkit-scrollbar,
 .modal-content::-webkit-scrollbar,
 .postcard-modal::-webkit-scrollbar,
 .story-cards-list::-webkit-scrollbar {
-width: 6px;
+width: 0px;
+display: none;
 }
 
-.feed-list::-webkit-scrollbar-track,
-.modal-content::-webkit-scrollbar-track,
-.postcard-modal::-webkit-scrollbar-track,
-.story-cards-list::-webkit-scrollbar-track {
-background: transparent;
+/* For Firefox */
+.feed-list,
+.modal-content,
+.postcard-modal,
+.story-cards-list {
+scrollbar-width: none;
+-ms-overflow-style: none;
 }
 
-.feed-list::-webkit-scrollbar-thumb,
-.modal-content::-webkit-scrollbar-thumb,
-.postcard-modal::-webkit-scrollbar-thumb,
-.story-cards-list::-webkit-scrollbar-thumb {
-background: var(--border-strong);
-border-radius: 3px;
+/* Ensure smooth scrolling */
+.feed-list,
+.modal-content,
+.postcard-modal,
+.story-cards-list {
+scroll-behavior: smooth;
 }
 
 /* ==================== SWIPE ANIMATIONS ==================== */
