@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="style.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
 <section id="landing" class="screen active">
 <div class="center">
 <h1 class="logo">MARGO</h1>
-<p class="tagline">Share your moment through music.</p>
+<p class="tagline">When words fail, drop a lyric.</p>
 <button id="enterBtn" class="primary-btn">Share a Moment</button>
 <div class="swipe-indicator">
 <span class="swipe-text">Swipe to explore</span>
@@ -24,6 +24,7 @@
 </div>
 <footer class="landing-footer">
 <p>No login. No ads. Just raw feelings.</p>
+<p class="legal-notice">User-generated song moments • Music via Spotify & Apple Music</p>
 </footer>
 </section>
 
@@ -33,9 +34,9 @@
 <button id="backBtn" class="back-btn">←</button>
 <div class="header-center">
 <h2>Live Feed</h2>
-<p class="post-count"><span id="postCount">0</span> posts</p>
+<p class="post-count"><span id="postCount">0</span> moments</p>
 </div>
-<button id="openComposer" class="drop-btn">Share a Moment</button>
+<button id="openComposer" class="drop-btn">Share</button>
 </header>
 <div id="feedList" class="feed-list"></div>
 </section>
@@ -48,17 +49,17 @@
 <button id="closeComposer" class="close-btn">×</button>
 </div>
 <div class="modal-body">
-<textarea id="textInput" maxlength="140" placeholder="Share the lyric that moved you..."></textarea>
+<textarea id="textInput" maxlength="140" placeholder="Share the song moment that moved you..."></textarea>
 <div class="counter"><span id="count">0</span>/140</div>
 
 <div class="input-row">
 <div class="input-group">
-<label>💫 Inspired by song</label>
-<input id="songInput" type="text" placeholder="Song title" />
+<label>💫 Inspired by (song)</label>
+<input id="songInput" type="text" placeholder="Song title (if you know it)" />
 </div>
 <div class="input-group">
 <label>🎤 Who sang it?</label>
-<input id="artistInput" type="text" placeholder="Artist name" />
+<input id="artistInput" type="text" placeholder="Artist name (if you know it)" />
 </div>
 </div>
 
@@ -82,11 +83,19 @@
 <label class="checkbox-label">
 <input type="checkbox" id="hideSongCheck" />
 <span class="checkbox-custom"></span>
-<span class="checkbox-text">Hide song — let them guess (3 attempts)</span>
+<span class="checkbox-text">🎯 Let others guess (1 attempt)</span>
 </label>
 </div>
 
-<!-- PLATFORM LINKS SECTION -->
+<div class="discover-option">
+<label class="checkbox-label">
+<input type="checkbox" id="discoverCheck" />
+<span class="checkbox-custom"></span>
+<span class="checkbox-text">🔍 I want to discover this song too</span>
+</label>
+</div>
+
+<!-- PLATFORM LINKS -->
 <div class="platform-links-section">
 <label class="section-label">Add Song Links (Optional):</label>
 <div class="platform-links-grid">
@@ -112,6 +121,7 @@
 
 <div class="modal-footer">
 <button id="postBtn" class="primary-btn full-width">Share Moment</button>
+<p class="fair-use-notice">Share short quotes only (fair use) • Attribution required</p>
 </div>
 </div>
 </div>
@@ -120,7 +130,7 @@
 <div id="postcard" class="modal hidden">
 <div class="modal-content postcard-content">
 <div class="modal-header">
-<h3>Your Card</h3>
+<h3>Moment Card</h3>
 <button id="closePostcardBtn" class="close-btn">×</button>
 </div>
 <div class="modal-body">
@@ -154,7 +164,7 @@
 </div>
 <div class="modal-body">
 <p class="guess-lyric" id="guessLyric"></p>
-<p class="guess-hint">You have 3 attempts. After that, you can reveal the answer.</p>
+<p class="guess-hint">You have 1 attempt.</p>
 <div class="input-group">
 <label>Song Title</label>
 <input id="guessSongInput" type="text" placeholder="Enter song name" />
@@ -164,9 +174,39 @@
 <input id="guessArtistInput" type="text" placeholder="Enter artist name" />
 </div>
 <div id="guessResult" class="guess-result hidden"></div>
+<div id="guessActions" class="guess-actions hidden">
+<button id="tryAgainBtn" class="try-again-btn">Try Again</button>
+<button id="revealAnswerBtn" class="reveal-answer-btn">Reveal Answer</button>
+</div>
 </div>
 <div class="modal-footer">
 <button id="submitGuess" class="primary-btn full-width">Submit Guess</button>
+</div>
+</div>
+</div>
+
+<!-- DISCOVER MODAL -->
+<div id="discoverModal" class="modal hidden">
+<div class="modal-content">
+<div class="modal-header">
+<h3>Help Discover This Song</h3>
+<button id="closeDiscover" class="close-btn">×</button>
+</div>
+<div class="modal-body">
+<p class="discover-lyric" id="discoverLyric"></p>
+<p class="discover-hint">Do you know where this moment is from?</p>
+<div class="input-group">
+<label>Song Title</label>
+<input id="discoverSongInput" type="text" placeholder="Enter song name if you know it" />
+</div>
+<div class="input-group">
+<label>Artist</label>
+<input id="discoverArtistInput" type="text" placeholder="Enter artist name if you know it" />
+</div>
+<div class="discover-actions">
+<button id="helpDiscoverBtn" class="primary-btn full-width">Help Them Discover</button>
+<button id="remindMeBtn" class="remind-me-btn">Remind Me Later</button>
+</div>
 </div>
 </div>
 </div>
@@ -179,13 +219,14 @@
 <button id="closeShare" class="close-btn">×</button>
 </div>
 <div class="modal-body">
+<p class="share-hint">Generated images include deep links to this exact post</p>
 <div class="share-grid">
-<button class="share-btn" data-platform="native">Share</button>
+<button class="share-btn" data-platform="instagram">Instagram<br><small>1080×1080</small></button>
+<button class="share-btn" data-platform="tiktok">TikTok<br><small>1080×1920</small></button>
+<button class="share-btn" data-platform="twitter">Twitter<br><small>1200×675</small></button>
+<button class="share-btn" data-platform="whatsapp">WhatsApp<br><small>1080×1080</small></button>
 <button class="share-btn" data-platform="link">Copy Link</button>
-<button class="share-btn" data-platform="twitter">Twitter</button>
-<button class="share-btn" data-platform="instagram">Instagram</button>
-<button class="share-btn" data-platform="tiktok">TikTok</button>
-<button class="share-btn" data-platform="whatsapp">WhatsApp</button>
+<button class="share-btn" data-platform="native">Share</button>
 </div>
 </div>
 </div>
@@ -199,7 +240,7 @@
 <button id="closeListen" class="close-btn">×</button>
 </div>
 <div class="modal-body">
-<p class="listen-hint">Buttons are enabled for platforms where you added links.</p>
+<p class="listen-hint">Links provided by the poster</p>
 <div class="listen-grid">
 <button class="listen-btn" data-platform="spotify" disabled>Spotify</button>
 <button class="listen-btn" data-platform="apple" disabled>Apple Music</button>
@@ -210,7 +251,6 @@
 </div>
 </div>
 
-<!-- Firebase & HTML2Canvas -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
