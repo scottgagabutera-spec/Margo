@@ -16,7 +16,7 @@
 <div class="center">
 <h1 class="logo">MARGO</h1>
 <p class="tagline">When words fail, drop a lyric.</p>
-<button id="enterBtn" class="primary-btn">Share a Moment</button>
+<button id="enterBtn" class="primary-btn">Drop a Lyric</button>
 <div class="swipe-indicator">
 <span class="swipe-text">Swipe to explore</span>
 <span class="swipe-arrow">→</span>
@@ -24,7 +24,7 @@
 </div>
 <footer class="landing-footer">
 <p>No login. No ads. Just raw feelings.</p>
-<p class="legal-notice">User-generated song moments • Music via Spotify & Apple Music</p>
+<p class="legal-notice">User-generated song quotes • Music via Spotify & Apple Music</p>
 </footer>
 </section>
 
@@ -34,9 +34,9 @@
 <button id="backBtn" class="back-btn">←</button>
 <div class="header-center">
 <h2>Live Feed</h2>
-<p class="post-count"><span id="postCount">0</span> moments</p>
+<p class="post-count"><span id="postCount">0</span> posts</p>
 </div>
-<button id="openComposer" class="drop-btn">Share</button>
+<button id="openComposer" class="drop-btn">Drop a Lyric</button>
 </header>
 <div id="feedList" class="feed-list"></div>
 </section>
@@ -45,21 +45,21 @@
 <div id="composer" class="modal hidden">
 <div class="modal-content">
 <div class="modal-header">
-<h3>Share Your Moment</h3>
+<h3>Drop Your Lyric</h3>
 <button id="closeComposer" class="close-btn">×</button>
 </div>
 <div class="modal-body">
-<textarea id="textInput" maxlength="140" placeholder="Share the song moment that moved you..."></textarea>
+<textarea id="textInput" maxlength="140" placeholder="Type the lyric that's stuck in your soul..."></textarea>
 <div class="counter"><span id="count">0</span>/140</div>
 
 <div class="input-row">
 <div class="input-group">
-<label>💫 Inspired by (song)</label>
-<input id="songInput" type="text" placeholder="Song title (if you know it)" />
+<label>Inspired by</label>
+<input id="songInput" type="text" placeholder="Song title" />
 </div>
 <div class="input-group">
-<label>🎤 Who sang it?</label>
-<input id="artistInput" type="text" placeholder="Artist name (if you know it)" />
+<label>Who sang it</label>
+<input id="artistInput" type="text" placeholder="Artist name" />
 </div>
 </div>
 
@@ -79,11 +79,34 @@
 </div>
 </div>
 
+<!-- PLATFORM LINKS - MIDDLE SECTION -->
+<div class="platform-links-section">
+<label class="section-label">Add streaming links (optional):</label>
+<div class="platform-links-grid">
+<div class="input-group">
+<label>Spotify</label>
+<input id="spotifyLink" type="url" placeholder="spotify.com/track/..." />
+</div>
+<div class="input-group">
+<label>Apple Music</label>
+<input id="appleLink" type="url" placeholder="music.apple.com/..." />
+</div>
+<div class="input-group">
+<label>YouTube</label>
+<input id="youtubeLink" type="url" placeholder="youtube.com/watch?v=..." />
+</div>
+<div class="input-group">
+<label>SoundCloud</label>
+<input id="soundcloudLink" type="url" placeholder="soundcloud.com/..." />
+</div>
+</div>
+</div>
+
 <div class="hide-song-option">
 <label class="checkbox-label">
 <input type="checkbox" id="hideSongCheck" />
 <span class="checkbox-custom"></span>
-<span class="checkbox-text">🎯 Let others guess (1 attempt)</span>
+<span class="checkbox-text">Let others guess (1 attempt)</span>
 </label>
 </div>
 
@@ -91,36 +114,13 @@
 <label class="checkbox-label">
 <input type="checkbox" id="discoverCheck" />
 <span class="checkbox-custom"></span>
-<span class="checkbox-text">🔍 I want to discover this song too</span>
+<span class="checkbox-text">I want to discover this song too</span>
 </label>
-</div>
-
-<!-- PLATFORM LINKS -->
-<div class="platform-links-section">
-<label class="section-label">Add Song Links (Optional):</label>
-<div class="platform-links-grid">
-<div class="input-group">
-<label>🎵 Spotify</label>
-<input id="spotifyLink" type="url" placeholder="spotify.com/track/..." />
-</div>
-<div class="input-group">
-<label>🍎 Apple Music</label>
-<input id="appleLink" type="url" placeholder="music.apple.com/..." />
-</div>
-<div class="input-group">
-<label>▶️ YouTube</label>
-<input id="youtubeLink" type="url" placeholder="youtube.com/watch?v=..." />
-</div>
-<div class="input-group">
-<label>☁️ SoundCloud</label>
-<input id="soundcloudLink" type="url" placeholder="soundcloud.com/..." />
-</div>
-</div>
 </div>
 </div>
 
 <div class="modal-footer">
-<button id="postBtn" class="primary-btn full-width">Share Moment</button>
+<button id="postBtn" class="primary-btn full-width">Drop It</button>
 <p class="fair-use-notice">Share short quotes only (fair use) • Attribution required</p>
 </div>
 </div>
@@ -130,7 +130,7 @@
 <div id="postcard" class="modal hidden">
 <div class="modal-content postcard-content">
 <div class="modal-header">
-<h3>Moment Card</h3>
+<h3>Lyric Card</h3>
 <button id="closePostcardBtn" class="close-btn">×</button>
 </div>
 <div class="modal-body">
@@ -194,7 +194,7 @@
 </div>
 <div class="modal-body">
 <p class="discover-lyric" id="discoverLyric"></p>
-<p class="discover-hint">Do you know where this moment is from?</p>
+<p class="discover-hint">Do you know where this is from?</p>
 <div class="input-group">
 <label>Song Title</label>
 <input id="discoverSongInput" type="text" placeholder="Enter song name if you know it" />
