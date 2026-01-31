@@ -23,6 +23,91 @@ console.warn("⚠️ Firebase SDK not loaded");
 console.warn("⚠️ Firebase init failed:", error);
 }
 
+/* ==================== UNIFIED MODAL CONTROLLER ==================== */
+class ModalController {
+constructor() {
+this.modals = new Map();
+this.activeModal = null;
+this.setupGlobalListeners();
+}
+
+register(modalId, closeButtonIds = []) {
+const modal = document.getElementById(modalId);
+if (!modal) return;
+
+const closeButtons = closeButtonIds.map(id => document.getElementById(id)).filter(Boolean);
+
+this.modals.set(modalId, {
+element: modal,
+closeButtons: closeButtons
+});
+
+// Setup close button listeners
+closeButtons.forEach(btn => {
+btn.addEventListener('click', (e) => {
+e.stopPropagation();
+this.close(modalId);
+});
+});
+
+// Close on backdrop click
+modal.addEventListener('click', (e) => {
+if (e.target === modal) {
+this.close(modalId);
+}
+});
+}
+
+open(modalId) {
+const modal = this.modals.get(modalId);
+if (!modal) return;
+
+// Close any active modal first
+if (this.activeModal) {
+this.close(this.activeModal);
+}
+
+modal.element.classList.remove('hidden');
+// Force reflow
+void modal.element.offsetWidth;
+modal.element.classList.add('active');
+
+this.activeModal = modalId;
+}
+
+close(modalId) {
+const modal = this.modals.get(modalId);
+if (!modal) return;
+
+modal.element.classList.remove('active');
+setTimeout(() => {
+modal.element.classList.add('hidden');
+}, 300); // Match CSS transition
+
+if (this.activeModal === modalId) {
+this.activeModal = null;
+}
+}
+
+closeAll() {
+this.modals.forEach((modal, id) => {
+this.close(id);
+});
+}
+
+setupGlobalListeners() {
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+if (e.key === 'Escape' && this.activeModal) {
+this.close(this.activeModal);
+}
+});
+}
+}
+
+// Initialize global modal controller
+const modalController = new ModalController();
+
 /* ==================== SEED POSTS ==================== */
 const SEED_POSTS = [
 {
@@ -103,8 +188,6 @@ const postcardEmotions = document.getElementById("postcardEmotions");
 const postcardSongInfo = document.getElementById("postcardSongInfo");
 const postcardCard = document.getElementById("postcardCard");
 const postcardOverlay = document.getElementById("postcard");
-const closePostcard = document.getElementById("closePostcard");
-const closePostcardBtn = document.getElementById("closePostcardBtn");
 const moreOptionsToggle = document.getElementById("moreOptionsToggle");
 const expandedOptions = document.getElementById("expandedOptions");
 const downloadBtn = document.getElementById("downloadBtn");
@@ -255,21 +338,26 @@ postCount.textContent = allPosts.length;
 
 // IMPROVED FLOW: "Drop Your Line" button opens composer first
 enterBtn.onclick = () => {
-composer.classList.remove("hidden");
+modalController.open('composer');
 textInput.focus();
 };
 
 backBtn.onclick = showLanding;
 
+/* ==================== REGISTER ALL MODALS ==================== */
+// Register modals with their close buttons
+modalController.register('composer', ['closeComposer']);
+modalController.register('storyBuilder', ['closeStoryBuilder']);
+modalController.register('postcard', ['closePostcardBtn']);
+modalController.register('guessModal', ['closeGuess']);
+modalController.register('shareModal', ['closeShare']);
+modalController.register('listenModal', ['closeListen']);
+modalController.register('storyPreview', ['closeStoryPreview', 'closeStoryPreviewBtn']);
+
 /* ==================== COMPOSER ==================== */
 openComposer.onclick = () => {
-composer.classList.remove("hidden");
+modalController.open('composer');
 textInput.focus();
-};
-
-closeComposer.onclick = () => {
-composer.classList.add("hidden");
-resetComposer();
 };
 
 textInput.oninput = () => {
@@ -395,7 +483,7 @@ console.warn("⚠️ Firebase sync failed:", err);
 
 setLastPostTime(Date.now());
 resetComposer();
-composer.classList.add("hidden");
+modalController.close('composer');
 
 // IMPROVED: Now go to feed after posting
 showFeed();
@@ -572,7 +660,8 @@ btn.onclick = (e) => {
 e.stopPropagation();
 const post = allPosts[btn.dataset.index];
 currentPost = post;
-listenModal.classList.remove("hidden");
+renderListenModal(post);
+modalController.open('listenModal');
 };
 });
 
@@ -581,7 +670,7 @@ btn.onclick = (e) => {
 e.stopPropagation();
 const post = allPosts[btn.dataset.index];
 currentPost = post;
-shareModal.classList.remove("hidden");
+modalController.open('shareModal');
 };
 });
 
@@ -677,12 +766,8 @@ guessLyric.textContent = post.text;
 guessSongInput.value = "";
 guessArtistInput.value = "";
 guessResult.classList.add("hidden");
-guessModal.classList.remove("hidden");
+modalController.open('guessModal');
 }
-
-closeGuess.onclick = () => {
-guessModal.classList.add("hidden");
-};
 
 submitGuess.onclick = () => {
 if (!currentPost) return;
@@ -715,7 +800,7 @@ guessResult.textContent = `🎉 Correct! "${currentPost.song}" by ${currentPost.
 userGuesses[currentPost.id] = true;
 localStorage.setItem("margoUserGuesses", JSON.stringify(userGuesses));
 setTimeout(() => {
-guessModal.classList.add("hidden");
+modalController.close('guessModal');
 renderFeed();
 }, 2000);
 } else {
@@ -726,7 +811,7 @@ guessResult.textContent = `❌ Not quite. ${remaining} attempts left before reve
 } else {
 guessResult.textContent = "❌ Out of attempts. You can now reveal the answer from the post.";
 setTimeout(() => {
-guessModal.classList.add("hidden");
+modalController.close('guessModal');
 renderFeed();
 }, 2000);
 }
@@ -735,14 +820,9 @@ renderFeed();
 
 /* ==================== STORY BUILDER ==================== */
 createStoryBtn.onclick = () => {
-postcardOverlay.classList.add("hidden");
-storyBuilder.classList.remove("hidden");
+modalController.close('postcard');
+modalController.open('storyBuilder');
 initStoryBuilder();
-};
-
-closeStoryBuilder.onclick = () => {
-storyBuilder.classList.add("hidden");
-storyData = [];
 };
 
 function initStoryBuilder() {
@@ -819,8 +899,8 @@ showToast("Add at least one lyric to your story");
 return;
 }
 renderStoryPreview();
-storyBuilder.classList.add("hidden");
-storyPreview.classList.remove("hidden");
+modalController.close('storyBuilder');
+modalController.open('storyPreview');
 };
 
 function renderStoryPreview() {
@@ -838,21 +918,13 @@ storyCanvas.appendChild(miniCard);
 });
 }
 
-closeStoryPreview.onclick = () => {
-storyPreview.classList.add("hidden");
-};
-
-closeStoryPreviewBtn.onclick = () => {
-storyPreview.classList.add("hidden");
-};
-
 editStoryBtn.onclick = () => {
-storyPreview.classList.add("hidden");
-storyBuilder.classList.remove("hidden");
+modalController.close('storyPreview');
+modalController.open('storyBuilder');
 };
 
 shareStoryBtn.onclick = () => {
-shareModal.classList.remove("hidden");
+modalController.open('shareModal');
 };
 
 // Export story with specific formats
@@ -926,18 +998,10 @@ event.target.disabled = false;
 function showPostcard(post) {
 currentPost = post;
 renderPostcard(post);
-postcardOverlay.classList.remove("hidden");
+expandedOptions.classList.remove('active');
+moreOptionsToggle.textContent = 'More Options ▼';
+modalController.open('postcard');
 }
-
-closePostcard.onclick = () => {
-postcardOverlay.classList.add("hidden");
-expandedOptions.classList.remove('active');
-};
-
-closePostcardBtn.onclick = () => {
-postcardOverlay.classList.add("hidden");
-expandedOptions.classList.remove('active');
-};
 
 // More options toggle
 moreOptionsToggle.onclick = () => {
@@ -988,7 +1052,17 @@ postcardSongInfo.innerHTML = `
 
 if (post.template) {
 applyTemplate(post.template);
+} else {
+applyTemplate('vinyl');
 }
+
+// Reset template option active states
+document.querySelectorAll(".template-option").forEach(b => {
+b.classList.remove('active');
+if (b.dataset.template === (post.template || 'vinyl')) {
+b.classList.add('active');
+}
+});
 }
 
 /* ==================== UPDATED TEMPLATE SYSTEM ==================== */
@@ -1129,11 +1203,7 @@ event.target.querySelector('span:nth-child(2)').textContent = originalText;
 
 /* ==================== SHARE FUNCTIONALITY ==================== */
 shareBtn.onclick = () => {
-shareModal.classList.remove("hidden");
-};
-
-closeShare.onclick = () => {
-shareModal.classList.add("hidden");
+modalController.open('shareModal');
 };
 
 document.querySelectorAll(".share-modal .platform-btn").forEach(btn => {
@@ -1148,7 +1218,7 @@ const url = window.location.href;
 
 // For social media platforms, generate and download image
 if (['twitter', 'instagram', 'tiktok', 'snapchat'].includes(platform)) {
-shareModal.classList.add("hidden");
+modalController.close('shareModal');
 showToast("Generating image...");
 
 try {
@@ -1193,7 +1263,7 @@ window.open(`https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`, "_bl
 break;
 }
 
-shareModal.classList.add("hidden");
+modalController.close('shareModal');
 }
 
 async function exportPostcardForShare(format, platform) {
@@ -1257,11 +1327,7 @@ throw err;
 listenBtn.onclick = () => {
 if (!currentPost) return;
 renderListenModal(currentPost);
-listenModal.classList.remove("hidden");
-};
-
-closeListen.onclick = () => {
-listenModal.classList.add("hidden");
+modalController.open('listenModal');
 };
 
 function renderListenModal(post) {
@@ -1306,7 +1372,7 @@ if (!currentPost) return;
 // Only use custom links (search fallback removed)
 if (currentPost.links && currentPost.links[platform]) {
 window.open(currentPost.links[platform], "_blank");
-listenModal.classList.add("hidden");
+modalController.close('listenModal');
 } else {
 showToast("No link available for this platform");
 }
