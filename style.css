@@ -1,25 +1,13 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background: #0f0f14;
   color: #f5f5f7;
   font-family: 'Inter', sans-serif;
-  min-height: 100vh;
 }
 
-.screen {
-  display: none;
-  min-height: 100vh;
-}
-
-.screen.active {
-  display: flex;
-  flex-direction: column;
-}
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
 
 .center {
   flex: 1;
@@ -37,16 +25,8 @@ body {
   letter-spacing: 4px;
 }
 
-.subtitle {
-  opacity: 0.6;
-  font-size: 0.8rem;
-  letter-spacing: 2px;
-}
-
-.tagline {
-  font-size: 1.2rem;
-  margin-bottom: 20px;
-}
+.subtitle { opacity: .6; font-size: .8rem; letter-spacing: 2px; }
+.tagline { font-size: 1.2rem; }
 
 .primary-btn {
   background: linear-gradient(135deg, #ff7a7a, #ffb86c);
@@ -59,9 +39,7 @@ body {
   transition: transform .2s;
 }
 
-.primary-btn:hover {
-  transform: scale(1.05);
-}
+.primary-btn:hover { transform: scale(1.05); }
 
 .secondary-btn {
   background: transparent;
@@ -89,33 +67,29 @@ body {
   background: #191922;
   border-radius: 16px;
   padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  cursor: pointer;
+  transition: transform .2s;
 }
+
+.feed-card:hover { transform: translateY(-4px); }
 
 .feed-text {
   font-family: 'Fraunces', serif;
   font-style: italic;
 }
 
-.feed-song {
-  opacity: 0.7;
-  font-size: 0.8rem;
-}
+.feed-song { opacity: .6; font-size: .8rem; }
 
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.8);
+  background: rgba(0,0,0,.85);
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.hidden {
-  display: none;
-}
+.hidden { display: none; }
 
 .modal-card {
   background: #191922;
@@ -136,11 +110,7 @@ textarea, input {
   border-radius: 10px;
 }
 
-.emotion-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+.emotion-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .emotion {
   background: #222;
@@ -151,7 +121,20 @@ textarea, input {
   cursor: pointer;
 }
 
-.emotion.active {
-  background: #ff7a7a;
-  color: white;
+.emotion.active { background: #ff7a7a; color: white; }
+
+.postcard-card {
+  background: linear-gradient(135deg, #191922, #2a2a38);
+  padding: 40px;
+  border-radius: 24px;
+  text-align: center;
+  max-width: 400px;
 }
+
+.postcard-text {
+  font-family: 'Fraunces', serif;
+  font-size: 1.4rem;
+  margin-bottom: 16px;
+}
+
+.postcard-song { opacity: .7; }
