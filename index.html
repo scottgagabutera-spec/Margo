@@ -4,38 +4,45 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MARGO — Music As Raw Genuine Overflow</title>
-  <meta name="description" content="Share emotions through lyrics.">
+  <meta name="description" content="When words fail, drop a lyric.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- LANDING -->
 <section id="landing" class="screen active">
   <div class="center">
     <h1 class="logo">MARGO</h1>
     <p class="tagline">When words fail, drop a lyric.</p>
-
-    <div class="choices">
-      <button class="choice-btn" data-mode="express">
-        Let others guess my emotion
-      </button>
-      <button class="choice-btn" data-mode="discover">
-        I want to discover how others feel
-      </button>
-    </div>
+    <button id="startBtn" class="primary-btn">Drop a line</button>
   </div>
 </section>
 
+<!-- COMPOSER -->
 <section id="composer" class="screen">
   <div class="composer-card">
-    <h2>Drop your line</h2>
-    <p class="hint">A lyric that feels like your current emotion.</p>
-    <textarea id="lyricInput" maxlength="160" placeholder="I'm scared of falling in love again..."></textarea>
-    <input id="songInput" placeholder="Song title">
-    <input id="artistInput" placeholder="Artist">
-    <button id="postBtn" class="primary-btn">Share feeling</button>
+
+    <h2>Do you want people to guess the song?</h2>
+    <div class="mode-choices">
+      <button class="mode-btn" data-mode="guess">Yes, let them guess</button>
+      <button class="mode-btn" data-mode="discover">No, I just want to share</button>
+    </div>
+
+    <div id="form" class="hidden">
+      <textarea id="lyricInput" placeholder="Type a lyric that feels like you..."></textarea>
+
+      <div id="songFields">
+        <input id="songInput" placeholder="Song (optional)">
+        <input id="artistInput" placeholder="Artist (optional)">
+      </div>
+
+      <button id="postBtn" class="primary-btn">Post</button>
+    </div>
+
   </div>
 </section>
 
+<!-- FEED -->
 <section id="feed" class="screen">
   <header class="feed-header">
     <h2>Shared Feelings</h2>
@@ -44,6 +51,7 @@
   <div id="feedList" class="feed-list"></div>
 </section>
 
+<!-- POSTCARD -->
 <div id="postcard" class="modal hidden">
   <div class="postcard-card">
     <p id="pcText" class="pc-text"></p>
