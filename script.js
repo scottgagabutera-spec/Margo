@@ -7,7 +7,6 @@ const screens = {
 const choiceBtns = document.querySelectorAll(".choice-btn");
 const postBtn = document.getElementById("postBtn");
 const newPostBtn = document.getElementById("newPostBtn");
-
 const feedList = document.getElementById("feedList");
 
 const lyricInput = document.getElementById("lyricInput");
@@ -20,8 +19,18 @@ const pcSong = document.getElementById("pcSong");
 const closePcBtn = document.getElementById("closePcBtn");
 const shareBtn = document.getElementById("shareBtn");
 
-let posts = JSON.parse(localStorage.getItem("margoPosts")) || [];
 let mode = null;
+
+// Seed emotional content
+const seedPosts = [
+  { text: "I miss who I was before I met you.", song: "Liability", artist: "Lorde" },
+  { text: "Nobody said it was easy.", song: "The Scientist", artist: "Coldplay" },
+  { text: "I'm scared of falling in love again.", song: "Happier", artist: "Ed Sheeran" },
+  { text: "I gave you my heart, but the very next day you gave it away.", song: "Last Christmas", artist: "Wham!" },
+  { text: "I'm trying to find myself again.", song: "Drivers License", artist: "Olivia Rodrigo" }
+];
+
+let posts = JSON.parse(localStorage.getItem("margoPosts")) || seedPosts;
 
 // FLOW
 choiceBtns.forEach(btn => {
@@ -32,10 +41,12 @@ choiceBtns.forEach(btn => {
 });
 
 postBtn.onclick = () => {
+  if (!lyricInput.value) return;
+
   const post = {
     text: lyricInput.value,
-    song: songInput.value,
-    artist: artistInput.value,
+    song: songInput.value || "Unknown",
+    artist: artistInput.value || "Anonymous",
     time: Date.now()
   };
 
@@ -53,11 +64,14 @@ function renderFeed() {
   feedList.innerHTML = "";
 
   if (posts.length === 0) {
-    feedList.innerHTML = `<p style="opacity:.5">No feelings yet.</p>`;
+    feedList.innerHTML = `
+      <div class="empty">
+        No feelings yet. Be the first to share one.
+      </div>`;
     return;
   }
 
-  posts.forEach((post, index) => {
+  posts.forEach(post => {
     const card = document.createElement("div");
     card.className = "feed-card";
     card.innerHTML = `
