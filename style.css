@@ -7,23 +7,22 @@
 body {
   background: radial-gradient(circle at top, #1c1c2b, #0a0a0f);
   color: white;
-  font-family: system-ui, -apple-system;
+  font-family: system-ui;
 }
 
 .screen {
   min-height: 100vh;
   display: none;
-}
-
-.screen.active {
-  display: flex;
   justify-content: center;
   align-items: center;
 }
 
+.screen.active {
+  display: flex;
+}
+
 .center {
   text-align: center;
-  padding: 32px;
 }
 
 .logo {
@@ -36,40 +35,44 @@ body {
   margin: 12px 0 32px;
 }
 
-.choices {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.choice-btn {
-  background: #1c1c2b;
-  border: 1px solid #333;
+.primary-btn {
+  background: linear-gradient(135deg, #ff7a7a, #ffb86c);
+  border: none;
+  padding: 14px 32px;
+  border-radius: 999px;
   color: white;
-  padding: 18px;
-  border-radius: 18px;
   font-size: 1rem;
 }
 
-.choice-btn:hover {
-  background: #25253a;
+.secondary-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  margin-top: 10px;
 }
 
 .composer-card {
+  background: #151521;
+  padding: 32px;
+  border-radius: 24px;
   width: 90%;
   max-width: 420px;
-  background: #151521;
-  padding: 28px;
-  border-radius: 24px;
+  text-align: center;
 }
 
-.composer-card h2 {
-  margin-bottom: 6px;
+.mode-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
 }
 
-.hint {
-  opacity: 0.6;
-  font-size: 0.9rem;
+.mode-btn {
+  background: #1c1c2b;
+  border: 1px solid #333;
+  color: white;
+  padding: 14px;
+  border-radius: 14px;
 }
 
 textarea, input {
@@ -82,24 +85,6 @@ textarea, input {
   border-radius: 14px;
 }
 
-.primary-btn {
-  width: 100%;
-  margin-top: 22px;
-  background: linear-gradient(135deg, #ff7a7a, #ffb86c);
-  border: none;
-  padding: 14px;
-  border-radius: 999px;
-  color: white;
-  font-size: 1rem;
-}
-
-.secondary-btn {
-  background: transparent;
-  border: none;
-  color: #aaa;
-  margin-top: 10px;
-}
-
 .feed-header {
   position: fixed;
   top: 0;
@@ -108,7 +93,6 @@ textarea, input {
   background: rgba(10,10,15,.9);
   display: flex;
   justify-content: space-between;
-  backdrop-filter: blur(10px);
 }
 
 .feed-list {
@@ -125,23 +109,6 @@ textarea, input {
   padding: 22px;
   border-radius: 22px;
   cursor: pointer;
-}
-
-.feed-card p {
-  font-size: 1.1rem;
-  line-height: 1.4;
-}
-
-.feed-card small {
-  display: block;
-  margin-top: 10px;
-  opacity: 0.6;
-}
-
-.empty {
-  text-align: center;
-  opacity: 0.5;
-  margin-top: 40px;
 }
 
 .modal {
@@ -168,7 +135,6 @@ textarea, input {
 
 .pc-text {
   font-size: 1.4rem;
-  line-height: 1.4;
 }
 
 .pc-song {
