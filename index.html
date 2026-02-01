@@ -53,6 +53,28 @@
   </div>
 </div>
 
-</body>
+<!-- POSTCARD -->
+<div id="postcard" class="modal hidden">
+  <div class="postcard-card">
+    <button id="closePostcard" class="secondary-btn">Close</button>
+    <p id="postcardText" class="postcard-text"></p>
+    <p id="postcardSong" class="postcard-song"></p>
+    <button id="guessBtn" class="primary-btn hidden">Guess Song</button>
+  </div>
+</div>
+
+<!-- GUESS MODAL -->
+<div id="guessModal" class="modal hidden">
+  <div class="modal-card">
+    <h3>Name the track</h3>
+    <input id="guessSongInput" placeholder="Song title">
+    <input id="guessArtistInput" placeholder="Artist">
+    <button id="submitGuess" class="primary-btn">Submit</button>
+    <p id="guessResult"></p>
+    <button id="closeGuess" class="secondary-btn">Close</button>
+  </div>
+</div>
+
 <script src="script.js"></script>
+</body>
 </html>
