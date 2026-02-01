@@ -4,14 +4,18 @@ const screens = {
   feed: document.getElementById("feed")
 };
 
-const choiceBtns = document.querySelectorAll(".choice-btn");
-const postBtn = document.getElementById("postBtn");
-const newPostBtn = document.getElementById("newPostBtn");
-const feedList = document.getElementById("feedList");
+const startBtn = document.getElementById("startBtn");
+const modeBtns = document.querySelectorAll(".mode-btn");
+const form = document.getElementById("form");
+const songFields = document.getElementById("songFields");
 
 const lyricInput = document.getElementById("lyricInput");
 const songInput = document.getElementById("songInput");
 const artistInput = document.getElementById("artistInput");
+
+const postBtn = document.getElementById("postBtn");
+const newPostBtn = document.getElementById("newPostBtn");
+const feedList = document.getElementById("feedList");
 
 const postcard = document.getElementById("postcard");
 const pcText = document.getElementById("pcText");
@@ -20,23 +24,20 @@ const closePcBtn = document.getElementById("closePcBtn");
 const shareBtn = document.getElementById("shareBtn");
 
 let mode = null;
+let posts = JSON.parse(localStorage.getItem("margoPosts")) || [];
 
-// Seed emotional content
-const seedPosts = [
-  { text: "I miss who I was before I met you.", song: "Liability", artist: "Lorde" },
-  { text: "Nobody said it was easy.", song: "The Scientist", artist: "Coldplay" },
-  { text: "I'm scared of falling in love again.", song: "Happier", artist: "Ed Sheeran" },
-  { text: "I gave you my heart, but the very next day you gave it away.", song: "Last Christmas", artist: "Wham!" },
-  { text: "I'm trying to find myself again.", song: "Drivers License", artist: "Olivia Rodrigo" }
-];
+startBtn.onclick = () => goTo("composer");
 
-let posts = JSON.parse(localStorage.getItem("margoPosts")) || seedPosts;
-
-// FLOW
-choiceBtns.forEach(btn => {
+modeBtns.forEach(btn => {
   btn.onclick = () => {
     mode = btn.dataset.mode;
-    goTo("composer");
+    form.classList.remove("hidden");
+
+    if (mode === "guess") {
+      songFields.classList.add("hidden");
+    } else {
+      songFields.classList.remove("hidden");
+    }
   };
 });
 
@@ -45,70 +46,66 @@ postBtn.onclick = () => {
 
   const post = {
     text: lyricInput.value,
-    song: songInput.value || "Unknown",
-    artist: artistInput.value || "Anonymous",
-    time: Date.now()
+    mode,
+    song: songInput.value || null,
+    artist: artistInput.value || null
   };
 
   posts.unshift(post);
   localStorage.setItem("margoPosts", JSON.stringify(posts));
-  resetComposer();
+  resetForm();
   renderFeed();
   goTo("feed");
 };
 
 newPostBtn.onclick = () => goTo("composer");
 
-// FEED
 function renderFeed() {
   feedList.innerHTML = "";
-
-  if (posts.length === 0) {
-    feedList.innerHTML = `
-      <div class="empty">
-        No feelings yet. Be the first to share one.
-      </div>`;
-    return;
-  }
 
   posts.forEach(post => {
     const card = document.createElement("div");
     card.className = "feed-card";
+
+    let meta = post.mode === "guess"
+      ? "Guess the song"
+      : (post.song || "Unknown") + " — " + (post.artist || "Anonymous");
+
     card.innerHTML = `
       <p>"${post.text}"</p>
-      <small>${post.song} — ${post.artist}</small>
+      <small>${meta}</small>
     `;
+
     card.onclick = () => openPostcard(post);
     feedList.appendChild(card);
   });
 }
 
-// POSTCARD
 function openPostcard(post) {
   pcText.textContent = `"${post.text}"`;
-  pcSong.textContent = post.song + " — " + post.artist;
+
+  pcSong.textContent = post.mode === "guess"
+    ? "Guess the song"
+    : (post.song || "Unknown") + " — " + (post.artist || "Anonymous");
+
   postcard.classList.remove("hidden");
 }
 
 closePcBtn.onclick = () => postcard.classList.add("hidden");
 
 shareBtn.onclick = () => {
-  const text = pcText.textContent + "\n" + pcSong.textContent;
-  navigator.clipboard.writeText(text);
-  alert("Copied. Share your feeling.");
+  navigator.clipboard.writeText(pcText.textContent + "\n" + pcSong.textContent);
+  alert("Copied. Share it.");
 };
 
-// UTILS
 function goTo(screen) {
   Object.values(screens).forEach(s => s.classList.remove("active"));
   screens[screen].classList.add("active");
 }
 
-function resetComposer() {
+function resetForm() {
   lyricInput.value = "";
   songInput.value = "";
   artistInput.value = "";
+  form.classList.add("hidden");
 }
-
-// INIT
-renderFeed();
