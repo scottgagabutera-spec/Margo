@@ -1,7 +1,11 @@
+/* =========================
+   DESIGN TOKENS
+========================= */
 :root {
   --bg: #0e0b0a;
   --surface: #151110;
   --accent: #d4af37;
+
   --text-primary: #f5f5f5;
   --text-secondary: #b8b8b8;
   --text-tertiary: #7a7a7a;
@@ -10,18 +14,25 @@
   --max-width: 720px;
 }
 
-* {
+/* =========================
+   RESET
+========================= */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   background: var(--bg);
   color: var(--text-primary);
 }
 
-/* SCREENS */
+/* =========================
+   SCREEN SYSTEM
+========================= */
 .screen {
   display: none;
   min-height: 100vh;
@@ -31,20 +42,25 @@ body {
   display: block;
 }
 
-/* LANDING */
-.landing-center {
-  min-height: 80vh;
+/* =========================
+   LANDING
+========================= */
+#landing {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  justify-content: space-between;
+  padding: 2rem;
+}
+
+.landing-center {
   text-align: center;
+  margin-top: 20vh;
 }
 
 .logo {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-size: 4rem;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   margin-bottom: 0.5rem;
 }
 
@@ -55,35 +71,45 @@ body {
 
 .landing-footer {
   text-align: center;
-  padding: 1rem;
   color: var(--text-tertiary);
+  font-size: 0.85rem;
 }
 
-/* HEADER */
+/* =========================
+   HEADER / NAV
+========================= */
 .app-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: linear-gradient(to bottom, rgba(14,11,10,0.95), transparent);
+  background: linear-gradient(to bottom, rgba(14,11,10,0.95), rgba(14,11,10,0.7));
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1rem;
 }
 
-.header-meta h2 {
-  margin: 0;
-  font-weight: 500;
+.header-center {
+  text-align: center;
 }
 
-/* CONTENT RAIL */
-.content-rail {
+.meta-text {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+/* =========================
+   CONTENT AREA
+========================= */
+.content {
   max-width: var(--max-width);
   margin: 0 auto;
   padding: 1rem;
 }
 
-/* FEED */
+/* =========================
+   FEED
+========================= */
 .feed-list {
   display: flex;
   flex-direction: column;
@@ -96,62 +122,36 @@ body {
   border-radius: var(--radius);
 }
 
-.feed-text {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.3rem;
+.feed-lyric {
+  font-family: "Playfair Display", serif;
+  font-size: 1.1rem;
   line-height: 1.6;
   margin-bottom: 1rem;
 }
 
-/* EMOTIONS */
-.feed-emotions {
+.feed-meta {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.feed-emotion {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
-  background: rgba(212,175,55,0.15);
-  color: var(--accent);
-}
-
-/* SONG */
-.feed-song {
-  margin-top: 1rem;
-  font-size: 0.85rem;
+  justify-content: space-between;
+  font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
-/* ACTIONS */
-.feed-card-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
-}
-
-.feed-action {
-  background: none;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-}
-
-/* BUTTONS */
-.primary-btn {
+/* =========================
+   BUTTONS
+========================= */
+.btn-primary {
   background: var(--accent);
   color: #000;
   border: none;
-  padding: 0.75rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 999px;
   font-weight: 600;
   cursor: pointer;
 }
 
-.primary-btn.small {
-  padding: 0.5rem 0.9rem;
+.btn-primary.small {
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
 }
 
 .icon-btn {
@@ -159,11 +159,24 @@ body {
   border: none;
   color: var(--text-primary);
   font-size: 1.2rem;
+  cursor: pointer;
 }
 
-/* RESPONSIVE */
-@media (min-width: 1024px) {
+/* =========================
+   RESPONSIVE
+========================= */
+@media (min-width: 768px) {
   .logo {
     font-size: 5rem;
+  }
+
+  .feed-lyric {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .content {
+    max-width: 900px;
   }
 }
