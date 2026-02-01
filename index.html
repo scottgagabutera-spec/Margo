@@ -11,7 +11,6 @@
 </head>
 <body>
 
-<!-- LANDING -->
 <section id="landing" class="screen active">
   <div class="center">
     <h1 class="logo">MARGO</h1>
@@ -21,57 +20,50 @@
   </div>
 </section>
 
-<!-- FEED -->
 <section id="feed" class="screen">
   <header class="feed-header">
     <h2>Live Feed</h2>
-    <button id="openComposer" class="add-btn">＋</button>
+    <div>
+      <button id="storyBtn" class="secondary-btn">Story</button>
+      <button id="openComposer" class="add-btn">＋</button>
+    </div>
   </header>
   <div id="feedList" class="feed-list"></div>
 </section>
 
-<!-- COMPOSER -->
 <div id="composer" class="modal hidden">
   <div class="modal-card">
     <h3>Drop Your Line</h3>
-    <textarea id="textInput" maxlength="140" placeholder="Type the lyric that's stuck in your soul..."></textarea>
-    <input id="songInput" type="text" placeholder="Song title">
-    <input id="artistInput" type="text" placeholder="Artist">
-    <label class="checkbox">
-      <input type="checkbox" id="hideSongCheck">
-      Hide track — let them guess
-    </label>
+    <textarea id="textInput" maxlength="140"></textarea>
+    <input id="songInput" placeholder="Song title">
+    <input id="artistInput" placeholder="Artist">
+    <label><input type="checkbox" id="hideSongCheck"> Hide track</label>
     <div class="emotion-row">
       <button class="emotion" data-emotion="Love">Love</button>
       <button class="emotion" data-emotion="Heartbreak">Heartbreak</button>
       <button class="emotion" data-emotion="Hope">Hope</button>
       <button class="emotion" data-emotion="Healing">Healing</button>
-      <button class="emotion" data-emotion="Loneliness">Loneliness</button>
     </div>
     <button id="postBtn" class="primary-btn">Post</button>
     <button id="closeComposer" class="secondary-btn">Cancel</button>
   </div>
 </div>
 
-<!-- POSTCARD -->
 <div id="postcard" class="modal hidden">
-  <div class="postcard-card">
-    <button id="closePostcard" class="secondary-btn">Close</button>
+  <div class="postcard-card" id="swipeArea">
     <p id="postcardText" class="postcard-text"></p>
     <p id="postcardSong" class="postcard-song"></p>
-    <button id="guessBtn" class="primary-btn hidden">Guess Song</button>
+    <p class="hint">Swipe left/right</p>
+    <button id="closePostcard" class="secondary-btn">Close</button>
   </div>
 </div>
 
-<!-- GUESS MODAL -->
-<div id="guessModal" class="modal hidden">
-  <div class="modal-card">
-    <h3>Name the track</h3>
-    <input id="guessSongInput" placeholder="Song title">
-    <input id="guessArtistInput" placeholder="Artist">
-    <button id="submitGuess" class="primary-btn">Submit</button>
-    <p id="guessResult"></p>
-    <button id="closeGuess" class="secondary-btn">Close</button>
+<div id="storyView" class="modal hidden">
+  <div class="postcard-card">
+    <p id="storyText" class="postcard-text"></p>
+    <p id="storySong" class="postcard-song"></p>
+    <p class="hint">Tap to continue</p>
+    <button id="closeStory" class="secondary-btn">Exit Story</button>
   </div>
 </div>
 
