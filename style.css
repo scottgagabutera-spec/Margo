@@ -1,38 +1,26 @@
-/* =========================
-   DESIGN TOKENS
-========================= */
 :root {
   --bg: #0e0b0a;
   --surface: #151110;
   --accent: #d4af37;
-
   --text-primary: #f5f5f5;
   --text-secondary: #b8b8b8;
-  --text-tertiary: #7a7a7a;
-
   --radius: 16px;
-  --max-width: 720px;
 }
 
-/* =========================
-   RESET
-========================= */
-*,
-*::before,
-*::after {
+/* RESET */
+* {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
-  font-family: "DM Sans", sans-serif;
+  font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   color: var(--text-primary);
 }
 
-/* =========================
-   SCREEN SYSTEM
-========================= */
+/* SCREENS */
 .screen {
   display: none;
   min-height: 100vh;
@@ -42,103 +30,35 @@ body {
   display: block;
 }
 
-/* =========================
-   LANDING
-========================= */
-#landing {
+/* LANDING */
+.landing-center {
+  min-height: 80vh;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 2rem;
-}
-
-.landing-center {
+  justify-content: center;
+  align-items: center;
   text-align: center;
-  margin-top: 20vh;
 }
 
 .logo {
-  font-family: "Playfair Display", serif;
-  font-size: 4rem;
-  letter-spacing: 0.08em;
-  margin-bottom: 0.5rem;
+  font-family: 'Playfair Display', serif;
+  font-size: 3.5rem;
+  letter-spacing: 0.05em;
 }
 
 .tagline {
+  margin: 1rem 0 2rem;
   color: var(--text-secondary);
-  margin-bottom: 2rem;
 }
 
 .landing-footer {
   text-align: center;
-  color: var(--text-tertiary);
-  font-size: 0.85rem;
-}
-
-/* =========================
-   HEADER / NAV
-========================= */
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: linear-gradient(to bottom, rgba(14,11,10,0.95), rgba(14,11,10,0.7));
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem;
-}
-
-.header-center {
-  text-align: center;
-}
-
-.meta-text {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-}
-
-/* =========================
-   CONTENT AREA
-========================= */
-.content {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 1rem;
-}
-
-/* =========================
-   FEED
-========================= */
-.feed-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.feed-card {
-  background: var(--surface);
   padding: 1.5rem;
-  border-radius: var(--radius);
-}
-
-.feed-lyric {
-  font-family: "Playfair Display", serif;
-  font-size: 1.1rem;
-  line-height: 1.6;
-  margin-bottom: 1rem;
-}
-
-.feed-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
-/* =========================
-   BUTTONS
-========================= */
+/* BUTTONS */
 .btn-primary {
   background: var(--accent);
   color: #000;
@@ -150,7 +70,7 @@ body {
 }
 
 .btn-primary.small {
-  padding: 0.4rem 1rem;
+  padding: 0.5rem 1rem;
   font-size: 0.85rem;
 }
 
@@ -158,25 +78,79 @@ body {
   background: none;
   border: none;
   color: var(--text-primary);
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   cursor: pointer;
 }
 
-/* =========================
-   RESPONSIVE
-========================= */
-@media (min-width: 768px) {
-  .logo {
-    font-size: 5rem;
-  }
-
-  .feed-lyric {
-    font-size: 1.25rem;
-  }
+/* FEED */
+.feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid #222;
 }
 
-@media (min-width: 1024px) {
-  .content {
-    max-width: 900px;
-  }
+.feed-list {
+  padding: 1rem;
+}
+
+.feed-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.feed-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+}
+
+/* MODAL */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: var(--surface);
+  width: 90%;
+  max-width: 420px;
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+textarea {
+  width: 100%;
+  min-height: 120px;
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: none;
+  background: #1c1715;
+  color: var(--text-primary);
+  resize: none;
+}
+
+.composer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
 }
