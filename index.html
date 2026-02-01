@@ -13,7 +13,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style-improved.css"/>
+  <!-- YOUR CSS FILE - Make sure this matches your filename exactly -->
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
@@ -222,17 +223,17 @@
         <div class="input-group">
           <label>Mode</label>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3);">
-            <button class="btn btn-secondary active" data-mode="normal" style="flex-direction: column; padding: var(--space-4); height: auto;">
+            <button class="btn btn-secondary mode-btn active" data-mode="normal" style="flex-direction: column; padding: var(--space-4); height: auto;">
               <span style="font-size: var(--text-2xl); margin-bottom: var(--space-2);">♫</span>
               <span style="font-weight: var(--font-semibold);">Normal</span>
               <span style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">Share with info</span>
             </button>
-            <button class="btn btn-secondary" data-mode="guess" style="flex-direction: column; padding: var(--space-4); height: auto;">
+            <button class="btn btn-secondary mode-btn" data-mode="guess" style="flex-direction: column; padding: var(--space-4); height: auto;">
               <span style="font-size: var(--text-2xl); margin-bottom: var(--space-2);">?</span>
               <span style="font-weight: var(--font-semibold);">Guess</span>
               <span style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">Challenge others</span>
             </button>
-            <button class="btn btn-secondary" data-mode="discover" style="flex-direction: column; padding: var(--space-4); height: auto;">
+            <button class="btn btn-secondary mode-btn" data-mode="discover" style="flex-direction: column; padding: var(--space-4); height: auto;">
               <span style="font-size: var(--text-2xl); margin-bottom: var(--space-2);">✨</span>
               <span style="font-weight: var(--font-semibold);">Discover</span>
               <span style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">Find the song</span>
@@ -331,15 +332,15 @@
     </div>
   </div>
   
-  <!-- Other modals (Postcard, Guess, Share, etc.) would follow similar pattern -->
-  
   <!-- ===================================
        SCRIPTS
        =================================== -->
   
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-  <script src="script-improved.js"></script>
+  
+  <!-- YOUR JAVASCRIPT FILE - Make sure this matches your filename exactly -->
+  <script src="script.js"></script>
   
 </body>
 </html>
