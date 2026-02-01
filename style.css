@@ -1,1084 +1,2123 @@
-/* MARGO v5.0 - Optimized Flow & Performance */ 
- 
-// Firebase Config 
-const firebaseConfig = { 
-  apiKey: "AIzaSyA1AuUethACF_9aBqbOONjra7X5NbGnfZM", 
-  authDomain: "margo-f6da4.firebaseapp.com", 
-  databaseURL: "https://margo-f6da4-default-rtdb.firebaseio.com", 
-  projectId: "margo-f6da4", 
-  storageBucket: "margo-f6da4.firebasestorage.app", 
-  messagingSenderId: "150183564620", 
-  appId: "1:150183564620:web:a42de7fef39740b551ebe9" 
-}; 
- 
-let db = null; 
-try { 
-  if (typeof firebase !== 'undefined') { 
-    firebase.initializeApp(firebaseConfig); 
-    db = firebase.database(); 
-    console.log("
-✅
- Firebase connected"); 
-  } 
-} catch (error) { 
-  console.warn("
-⚠
- Firebase init failed:", error); 
+/* ==================== RESET ==================== */ 
+* { 
+box-sizing: border-box; 
+margin: 0; 
+padding: 0; 
 } 
- 
-// Seed Posts 
-const SEED_POSTS = [ 
-  { 
-    id: Date.now() - 120000, 
-    text: "I'm still learning to love the parts of me nobody claps for", 
-    song: "Self Love", 
-    artist: "Metro Boomin", 
-    emotions: ["Healing", "Hope"], 
-    timestamp: Date.now() - 120000, 
-    vibes: {}, 
-    mode: "normal", 
-    links: { spotify: null, apple: null, youtube: null, soundcloud: null } 
-  }, 
-  { 
-    id: Date.now() - 300000, 
-    text: "Some nights I don't know if I'm healing or just getting used to the pain", 
-song: "Liability", 
-artist: "Lorde", 
-emotions: ["Loneliness", "Heartbreak"], 
-timestamp: Date.now() - 300000, 
-vibes: {}, 
-mode: "normal", 
-links: { spotify: null, apple: null, youtube: null, soundcloud: null } 
+:root { 
+/* Vinyl/Warm Aesthetic Colors */ --primary: #ff6b35; --primary-dark: #d9531e; --primary-light: #ff8c61; --primary-glow: rgba(255, 107, 53, 0.4); --accent: #f7931e; --accent-warm: #ffd700; --bg-dark: #0d0d0d; --bg-card: #1a1410; --bg-elevated: #2a2117; --bg-warm: #3d2e1f; --text-primary: #fef6e4; --text-secondary: #d4c5a9; --text-tertiary: #8c7851; --border: rgba(212, 197, 169, 0.1); --border-strong: rgba(212, 197, 169, 0.2); --shadow: rgba(0, 0, 0, 0.6); --glass-bg: rgba(61, 46, 31, 0.3); --glass-border: rgba(212, 197, 169, 0.15); 
+/* Emotion Gradients - Warmer Tones */ --emotion-love: linear-gradient(135deg, #ff6b9d 0%, #c06c84 100%); --emotion-heartbreak: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); --emotion-hope: linear-gradient(135deg, #ffd89b 0%, #ff8c61 100%); --emotion-nostalgia: linear-gradient(135deg, #b590ca 0%, #8b7ba8 100%); --emotion-healing: linear-gradient(135deg, #81c784 0%, #66bb6a 100%); --emotion-rage: linear-gradient(135deg, #ff4757 0%, #ff6348 100%); --emotion-joy: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%); --emotion-loneliness: linear-gradient(135deg, #5f6a8f 0%, #48566a 100%); --emotion-freedom: linear-gradient(135deg, #7bed9f 0%, #70a1ff 100%); --emotion-anxiety: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); 
 } 
-]; 
-// Elements 
-const landing = document.getElementById("landing"); 
-const feed = document.getElementById("feed"); 
-const enterBtn = document.getElementById("enterBtn"); 
-const backBtn = document.getElementById("backBtn"); 
-const openComposer = document.getElementById("openComposer"); 
-const composer = document.getElementById("composer"); 
-const closeComposer = document.getElementById("closeComposer"); 
-const postBtn = document.getElementById("postBtn"); 
-const textInput = document.getElementById("textInput"); 
-const count = document.getElementById("count"); 
-const feedList = document.getElementById("feedList"); 
-const postCount = document.getElementById("postCount"); 
-// Step sections 
-const step1 = document.getElementById("step1"); 
-const step2 = document.getElementById("step2"); 
-const step3 = document.getElementById("step3"); 
-const step4 = document.getElementById("step4"); 
-const step5 = document.getElementById("step5"); 
-const toggleLinks = document.getElementById("toggleLinks"); 
-const linksSection = document.getElementById("linksSection"); 
-// Mode elements 
-const modeBtns = document.querySelectorAll(".mode-btn"); 
-const normalInputs = document.getElementById("normalInputs"); 
-const guessInputs = document.getElementById("guessInputs"); 
-const discoverInputs = document.getElementById("discoverInputs"); 
-// Normal mode inputs 
-const songInput = document.getElementById("songInput"); 
-const artistInput = document.getElementById("artistInput"); 
-// Guess mode inputs 
-const guessSongCheck = document.getElementById("guessSongCheck"); 
-const guessArtistCheck = document.getElementById("guessArtistCheck"); 
-const guessSongAnswer = document.getElementById("guessSongAnswer"); 
-const guessArtistAnswer = document.getElementById("guessArtistAnswer"); 
-// Discover mode inputs 
-const discoverSongInput = document.getElementById("discoverSongInput"); 
-const discoverArtistInput = document.getElementById("discoverArtistInput"); 
-// Platform links 
-const spotifyLink = document.getElementById("spotifyLink"); 
-const appleLink = document.getElementById("appleLink"); 
-const youtubeLink = document.getElementById("youtubeLink"); 
-const soundcloudLink = document.getElementById("soundcloudLink"); 
-// Modals 
-const postcardModal = document.getElementById("postcard"); 
-const closePostcardBtn = document.getElementById("closePostcardBtn"); 
-const guessModal = document.getElementById("guessModal"); 
-const closeGuess = document.getElementById("closeGuess"); 
-const discoverModal = document.getElementById("discoverModal"); 
-const closeDiscover = document.getElementById("closeDiscover"); 
-const shareModal = document.getElementById("shareModal"); 
-const closeShare = document.getElementById("closeShare"); 
-const listenModal = document.getElementById("listenModal"); 
-const closeListen = document.getElementById("closeListen"); 
-// Guess modal elements 
-const guessLyric = document.getElementById("guessLyric"); 
-const guessHint = document.getElementById("guessHint"); 
-const guessSongInput = document.getElementById("guessSongInput"); 
-const guessArtistInput = document.getElementById("guessArtistInput"); 
-const guessSongField = document.getElementById("guessSongField"); 
-const guessArtistField = document.getElementById("guessArtistField"); 
-const submitGuess = document.getElementById("submitGuess"); 
-const guessResult = document.getElementById("guessResult"); 
-const guessActions = document.getElementById("guessActions"); 
-const tryAgainBtn = document.getElementById("tryAgainBtn"); 
-const revealAnswerBtn = document.getElementById("revealAnswerBtn"); 
-// Discover modal elements 
-const discoverLyric = document.getElementById("discoverLyric"); 
-const discoverSongInputModal = document.getElementById("discoverSongInputModal"); 
-const discoverArtistInputModal = document.getElementById("discoverArtistInputModal"); 
-const helpDiscoverBtn = document.getElementById("helpDiscoverBtn"); 
-const remindMeBtn = document.getElementById("remindMeBtn"); 
-// Postcard elements 
-const postcardText = document.getElementById("postcardText"); 
-const postcardEmotions = document.getElementById("postcardEmotions"); 
-const postcardSongInfo = document.getElementById("postcardSongInfo"); 
-const shareBtn = document.getElementById("shareBtn"); 
-const listenBtn = document.getElementById("listenBtn"); 
-const downloadBtn = document.getElementById("downloadBtn"); 
-// State 
-let selectedEmotions = []; 
-let currentPost = null; 
-let currentMode = "normal"; 
-let allPosts = []; 
-let userVibes = {}; 
-let userGuesses = {}; 
-// Rate limiting 
-const POST_COOLDOWN = 30000; 
-function getLastPostTime() { 
-return parseInt(localStorage.getItem("margoLastPostTime") || "0"); 
+body { 
+margin: 0; 
+background: var(--bg-dark); 
+color: var(--text-primary); 
+min-height: 100vh; 
+font-family: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
+overflow-x: hidden; 
 } 
-function setLastPostTime(time) { 
-localStorage.setItem("margoLastPostTime", time.toString()); 
+/* ==================== SCREENS ==================== */ 
+.screen { 
+display: none; 
+min-height: 100vh; 
+position: relative; 
 } 
-// Navigation 
-function showLanding() { 
-landing.classList.add("active"); 
-feed.classList.remove("active"); 
+.screen.active { 
+display: flex; 
+f
+lex-direction: column; 
 } 
- 
-function showFeed() { 
-  landing.classList.remove("active"); 
-  feed.classList.add("active"); 
-  updatePostCount(); 
+/* ==================== LANDING ==================== */ 
+#landing { 
+justify-content: space-between; 
+background: linear-gradient(135deg, #1a1410 0%, #0d0d0d 100%); 
+position: relative; 
+overflow: hidden; 
 } 
- 
-function updatePostCount() { 
-  if (postCount) postCount.textContent = allPosts.length; 
+.vinyl-bg { 
+position: absolute; 
+inset: 0; 
+background-image: 
+radial-gradient(circle at 20% 50%, rgba(255, 107, 53, 0.03) 0%, transparent 50%), 
+radial-gradient(circle at 80% 80%, rgba(247, 147, 30, 0.03) 0%, transparent 50%); 
+pointer-events: none; 
 } 
- 
-// Swipe Navigation 
-let touchStartX = 0; 
-let touchEndX = 0; 
- 
-function handleSwipe() { 
-  const delta = touchEndX - touchStartX; 
-  if (Math.abs(delta) > 50) { 
-    if (delta > 0 && landing.classList.contains('active')) { 
-      showFeed(); 
-    } else if (delta < 0 && feed.classList.contains('active')) { 
-      showLanding(); 
-    } 
-  } 
+.vinyl-bg::before { 
+content: ""; 
+position: absolute; 
+inset: 0; 
+background-image: 
+repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(212, 197, 169, 0.02) 2px, 
+rgba(212, 197, 169, 0.02) 4px); 
+pointer-events: none; 
 } 
- 
-[landing, feed].forEach(screen => { 
-  screen.addEventListener('touchstart', e => { 
-    touchStartX = e.changedTouches[0].screenX; 
-  }, { passive: true }); 
-   
-  screen.addEventListener('touchend', e => { 
-    touchEndX = e.changedTouches[0].screenX; 
-    handleSwipe(); 
-  }, { passive: true }); 
-}); 
- 
-// Button listeners 
-enterBtn.onclick = () => { 
-composer.classList.remove("hidden"); 
-textInput.focus(); 
-activateStep(step1); 
-}; 
-backBtn.onclick = () => showLanding(); 
-openComposer.onclick = () => { 
-composer.classList.remove("hidden"); 
-textInput.focus(); 
-activateStep(step1); 
-}; 
-closeComposer.onclick = () => { 
-composer.classList.add("hidden"); 
-resetComposer(); 
-}; 
-closePostcardBtn.onclick = () => postcardModal.classList.add("hidden"); 
-closeGuess.onclick = () => guessModal.classList.add("hidden"); 
-closeDiscover.onclick = () => discoverModal.classList.add("hidden"); 
-closeShare.onclick = () => shareModal.classList.add("hidden"); 
-closeListen.onclick = () => listenModal.classList.add("hidden"); 
-// Toggle streaming links section 
-toggleLinks.onclick = () => { 
-const isActive = linksSection.classList.toggle('active'); 
-toggleLinks.classList.toggle('active'); 
-toggleLinks.querySelector('span').textContent = isActive ?  
-'- Hide Streaming Links' :  
-'+ Add Streaming Links (Optional)'; 
-}; 
-// Character counter & auto-activate next step 
-textInput.oninput = () => { 
-count.textContent = textInput.value.length; 
-if (textInput.value.trim().length > 0) { 
-activateStep(step2); 
+.center { 
+f
+lex: 1; 
+display: flex; 
+f
+lex-direction: column; 
+justify-content: center; 
+align-items: center; 
+text-align: center; 
+gap: 24px; 
+padding: 60px 24px; 
+position: relative; 
+z-index: 1; 
 } 
-}; 
- 
-// Step activation system 
-function activateStep(step) { 
-  step.classList.add('active'); 
+.logo-container { 
+margin-bottom: 8px; 
 } 
- 
-// Emotion pills - activate next step when selected 
-document.querySelectorAll(".emotion-pill").forEach(pill => { 
-  pill.onclick = () => { 
-    const emotion = pill.dataset.emotion; 
-    if (selectedEmotions.includes(emotion)) { 
-      selectedEmotions = selectedEmotions.filter(e => e !== emotion); 
-      pill.classList.remove("active"); 
-    } else { 
-      selectedEmotions.push(emotion); 
-      pill.classList.add("active"); 
-    } 
-     
-    if (selectedEmotions.length > 0) { 
-      activateStep(step3); 
-    } 
-  }; 
-}); 
- 
-// Mode selection - activate next step 
-modeBtns.forEach(btn => { 
-  btn.onclick = () => { 
-    modeBtns.forEach(b => b.classList.remove("active")); 
-    btn.classList.add("active"); 
-     
-    currentMode = btn.dataset.mode; 
-     
-    normalInputs.classList.remove("active"); 
-    guessInputs.classList.remove("active"); 
-    discoverInputs.classList.remove("active"); 
-     
-    if (currentMode === "normal") { 
-      normalInputs.classList.add("active"); 
-    } else if (currentMode === "guess") { 
-      guessInputs.classList.add("active"); 
-    } else if (currentMode === "discover") { 
-      discoverInputs.classList.add("active"); 
-    } 
-     
-    activateStep(step4); 
-  }; 
-}); 
- 
-// Create post 
-postBtn.onclick = async () => { 
-  const lastPostTime = getLastPostTime(); 
-  const now = Date.now(); 
-  if (now - lastPostTime < POST_COOLDOWN) { 
-    const remaining = Math.ceil((POST_COOLDOWN - (now - lastPostTime)) / 1000); 
-    showToast(`Wait ${remaining}s before posting again`); 
-    return; 
-  } 
- 
-  const text = textInput.value.trim(); 
- 
-  if (!text) { 
-    showToast("Drop your lyric first"); 
-    return; 
-  } 
- 
-  if (selectedEmotions.length === 0) { 
-    showToast("Tag the vibe"); 
-    return; 
-  } 
- 
-  let post = { 
-    id: Date.now(), 
-    text, 
-    emotions: [...selectedEmotions], 
-    timestamp: Date.now(), 
-    vibes: {}, 
-    mode: currentMode, 
-    links: { 
-      spotify: spotifyLink.value.trim() || null, 
-      apple: appleLink.value.trim() || null, 
-      youtube: youtubeLink.value.trim() || null, 
-      soundcloud: soundcloudLink.value.trim() || null 
-    } 
-  }; 
- 
-  // Handle different modes 
-  if (currentMode === "normal") { 
-    const song = songInput.value.trim(); 
-    const artist = artistInput.value.trim(); 
-     
-    if (!song || !artist) { 
-      showToast("Enter song title and artist"); 
-      return; 
-    } 
-     
-    post.song = song; 
-    post.artist = artist; 
-     
-  } else if (currentMode === "guess") { 
-    const songAnswer = guessSongAnswer.value.trim(); 
-    const artistAnswer = guessArtistAnswer.value.trim(); 
-    const allowGuessSong = guessSongCheck.checked; 
-    const allowGuessArtist = guessArtistCheck.checked; 
-     
-    if (!allowGuessSong && !allowGuessArtist) { 
-      showToast("Select at least one thing to guess"); 
-      return; 
-    } 
-     
-    if (allowGuessSong && !songAnswer) { 
-      showToast("Enter the song title answer"); 
-      return; 
-    } 
-     
-    if (allowGuessArtist && !artistAnswer) { 
-      showToast("Enter the artist name answer"); 
-      return; 
-    } 
-     
-    post.song = songAnswer; 
-    post.artist = artistAnswer; 
-    post.guessConfig = { 
-      allowGuessSong, 
-      allowGuessArtist 
-    }; 
-     
-  } else if (currentMode === "discover") { 
-    const song = discoverSongInput.value.trim(); 
-    const artist = discoverArtistInput.value.trim(); 
-     
-    post.song = song || "Unknown Song"; 
-    post.artist = artist || "Unknown Artist"; 
-  } 
- 
-  postBtn.disabled = true; 
-  postBtn.textContent = "Posting..."; 
- 
-  try { 
-    saveToLocalStorage(post); 
-    showToast("Posted!"); 
- 
-    if (db) { 
-      db.ref('posts').push(post).catch(err => { 
-        console.warn("Firebase sync failed:", err); 
-      }); 
-    } 
- 
-    setLastPostTime(Date.now()); 
-    resetComposer(); 
-    composer.classList.add("hidden"); 
-    showFeed(); 
- 
-    setTimeout(() => feedList.scrollTop = 0, 100); 
-  } catch (error) { 
-    console.error("Post error:", error); 
-    showToast("Post failed"); 
-  } finally { 
-    postBtn.disabled = false; 
-    postBtn.textContent = "Drop It"; 
-  } 
-}; 
- 
-function saveToLocalStorage(post) { 
-  let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]"); 
-  posts.unshift(post); 
-  localStorage.setItem("margoPosts", JSON.stringify(posts)); 
-  allPosts = posts; 
-  renderFeed(); 
+.logo { 
+font-family: 'Fraunces', serif; 
+font-size: clamp(3.5rem, 12vw, 6rem); 
+font-weight: 600; 
+letter-spacing: 4px; 
+background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+background-clip: text; 
+margin: 0; 
+line-height: 1; 
+f
+ilter: drop-shadow(0 4px 20px rgba(255, 107, 53, 0.3)); 
+animation: glow 4s ease-in-out infinite; 
 } 
- 
-function resetComposer() { 
-  textInput.value = ""; 
-  songInput.value = ""; 
-  artistInput.value = ""; 
-  guessSongAnswer.value = ""; 
-  guessArtistAnswer.value = ""; 
-  discoverSongInput.value = ""; 
-  discoverArtistInput.value = ""; 
-  spotifyLink.value = ""; 
-  appleLink.value = ""; 
-  youtubeLink.value = ""; 
-  soundcloudLink.value = ""; 
-  count.textContent = "0"; 
-  selectedEmotions = []; 
-   
-  // Reset steps 
-  [step1, step2, step3, step4, step5].forEach(step => step.classList.remove('active')); 
-  step1.classList.add('active'); 
-   
-  // Reset links section 
-  linksSection.classList.remove('active'); 
-  toggleLinks.classList.remove('active'); 
-  toggleLinks.querySelector('span').textContent = '+ Add Streaming Links (Optional)'; 
-   
-  // Reset mode to normal 
-  currentMode = "normal"; 
-  modeBtns.forEach(b => b.classList.remove("active")); 
-  modeBtns[0].classList.add("active"); 
-  normalInputs.classList.add("active"); 
-  guessInputs.classList.remove("active"); 
-  discoverInputs.classList.remove("active"); 
-   
-  // Reset checkboxes 
-  guessSongCheck.checked = true; 
-  guessArtistCheck.checked = true; 
-   
-  document.querySelectorAll(".emotion-pill").forEach(pill => { 
-    pill.classList.remove("active"); 
-  }); 
+@keyframes glow { 
+0%, 100% { 
+f
+ilter: drop-shadow(0 4px 20px rgba(255, 107, 53, 0.3)); 
 } 
- 
-// Time ago 
-function timeAgo(timestamp) { 
-  const now = Date.now(); 
-  const diff = now - timestamp; 
-  const seconds = Math.floor(diff / 1000); 
-  const minutes = Math.floor(seconds / 60); 
-  const hours = Math.floor(minutes / 60); 
-  const days = Math.floor(hours / 24); 
- 
-  if (seconds < 60) return 'now'; 
-  if (minutes < 60) return `${minutes}m`; 
-  if (hours < 24) return `${hours}h`; 
-  return `${days}d`; 
+50% { 
+f
+ilter: drop-shadow(0 8px 40px rgba(255, 107, 53, 0.5)); 
 } 
- 
-// Init feed 
-function initFeed() { 
-  const localPosts = JSON.parse(localStorage.getItem("margoPosts") || "[]"); 
-  allPosts = localPosts.length > 0 ? localPosts : [...SEED_POSTS]; 
-  renderFeed(); 
-  updatePostCount(); 
-   
-  userVibes = JSON.parse(localStorage.getItem("margoUserVibes") || "{}"); 
-  userGuesses = JSON.parse(localStorage.getItem("margoUserGuesses") || "{}"); 
- 
-  if (db) { 
-    db.ref('posts').limitToLast(50).on('value', (snapshot) => { 
-      const firebasePosts = []; 
-      snapshot.forEach((child) => { 
-        firebasePosts.push({ firebaseId: child.key, ...child.val() }); 
-      }); 
-      firebasePosts.reverse(); 
- 
-      const allPostsMap = new Map(); 
-      firebasePosts.forEach(post => allPostsMap.set(post.id, post)); 
-      localPosts.forEach(post => allPostsMap.set(post.id, post)); 
-       
-      allPosts = Array.from(allPostsMap.values()).sort((a, b) => b.timestamp - a.timestamp); 
-      renderFeed(); 
-      updatePostCount(); 
-    }); 
-  } 
 } 
- 
-// Render feed 
-function renderFeed() { 
-  feedList.innerHTML = ""; 
- 
-  if (allPosts.length === 0) { 
-    feedList.innerHTML = '<div style="text-align:center;padding:80px 
-20px;color:var(--text-tertiary);font-size:0.9rem;">No posts yet. Be the first!</div>'; 
-    return; 
-  } 
- 
-  allPosts.forEach((post, index) => { 
-    const card = document.createElement("div"); 
-    card.className = "feed-card"; 
- 
-    const timeText = timeAgo(post.timestamp); 
-    const emotionTags = post.emotions.map(e => 
-      `<span class="feed-emotion" data-emotion="${e}">${e}</span>` 
-    ).join(""); 
- 
-    let songSection = ''; 
-     
-    if (post.mode === "discover") { 
-      songSection = ` 
-        <div class="feed-song discover"> 
-          <div class="discover-text">Wants to discover this song</div> 
-          <button class="help-discover-btn" data-index="${index}">Help Discover</button> 
-        </div> 
-      `; 
-    } else if (post.mode === "guess") { 
-      const userGuessed = userGuesses[post.id]; 
- 
-      if (userGuessed) { 
-        songSection = ` 
-          <div class="feed-song"> 
-            <div class="feed-song-title">${post.song}</div> 
-            <div class="feed-song-artist">${post.artist}</div> 
-          </div> 
-        `; 
-      } else { 
-        const guessWhat = []; 
-        if (post.guessConfig.allowGuessSong) guessWhat.push("song"); 
-        if (post.guessConfig.allowGuessArtist) guessWhat.push("artist"); 
-        const guessText = guessWhat.join(" and "); 
-         
-        songSection = ` 
-          <div class="feed-song mystery"> 
-            <div class="mystery-text">Guess the ${guessText}</div> 
-            <button class="guess-btn" data-index="${index}">Take the Challenge</button> 
-          </div> 
-        `; 
-      } 
-    } else { 
-      songSection = ` 
-        <div class="feed-song"> 
-          <div class="feed-song-title">${post.song}</div> 
-          <div class="feed-song-artist">${post.artist}</div> 
-        </div> 
-      `; 
-    } 
- 
-    const vibeCount = post.vibes ? Object.keys(post.vibes).length : 0; 
-    const userVibed = userVibes[post.id] || false; 
-     
-    const hasAnyLink = post.links && (post.links.spotify || post.links.apple || 
-post.links.youtube || post.links.soundcloud); 
- 
-    card.innerHTML = ` 
-      <div class="feed-card-header"> 
-        <div class="feed-time">${timeText}</div> 
-      </div> 
-      <div class="feed-card-content"> 
-        <p class="feed-text">${post.text}</p> 
-        <div class="feed-emotions">${emotionTags}</div> 
-        ${songSection} 
-        <div class="vibe-counter"> 
-          <button class="vibe-btn ${userVibed ? 'active' : ''}" data-index="${index}"> 
-            <span class="vibe-icon">♥</span> 
-            <span class="vibe-count">${vibeCount}</span> 
-          </button> 
-        </div> 
-      </div> 
-      <div class="feed-card-actions"> 
-        ${hasAnyLink ? `<button class="feed-action" data-index="${index}" 
-data-action="listen"><span 
-class="feed-action-icon">♫</span><span>Listen</span></button>` : ''} 
-        <button class="feed-action" data-index="${index}" data-action="view"><span 
-class="feed-action-icon">•</span><span>View</span></button> 
-        <button class="feed-action" data-index="${index}" data-action="share"><span 
-class="feed-action-icon">↗</span><span>Share</span></button> 
-      </div> 
-    `; 
- 
-    feedList.appendChild(card); 
-  }); 
- 
-  attachListeners(); 
+.logo-subtitle { 
+font-size: clamp(0.7rem, 2vw, 0.85rem); 
+color: var(--text-tertiary); 
+font-weight: 500; 
+letter-spacing: 3px; 
+text-transform: uppercase; 
+margin-top: 8px; 
+font-family: 'Syne', sans-serif; 
 } 
- 
-function attachListeners() { 
-  document.querySelectorAll(".feed-action").forEach(btn => { 
-    btn.onclick = (e) => { 
-      e.stopPropagation(); 
-      const index = btn.dataset.index; 
-      const action = btn.dataset.action; 
-      const post = allPosts[index]; 
-       
-      if (action === "view") { 
-        showPostcard(post); 
-      } else if (action === "share") { 
-        currentPost = post; 
-        shareModal.classList.remove("hidden"); 
-      } else if (action === "listen") { 
-        currentPost = post; 
-        handleListenFromFeed(post); 
-      } 
-    }; 
-  }); 
- 
-  document.querySelectorAll(".vibe-btn").forEach(btn => { 
-    btn.onclick = (e) => { 
-      e.stopPropagation(); 
-      const index = btn.dataset.index; 
-      toggleVibe(allPosts[index], btn); 
-    }; 
-  }); 
- 
-  document.querySelectorAll(".guess-btn").forEach(btn => { 
-    btn.onclick = (e) => { 
-      e.stopPropagation(); 
-      const post = allPosts[btn.dataset.index]; 
-      openGuessModal(post); 
-    }; 
-  }); 
- 
-  document.querySelectorAll(".help-discover-btn").forEach(btn => { 
-    btn.onclick = (e) => { 
-      e.stopPropagation(); 
-      const post = allPosts[btn.dataset.index]; 
-      openDiscoverModal(post); 
-    }; 
-  }); 
+.tagline { 
+color: var(--text-primary); 
+font-size: clamp(1.1rem, 3vw, 1.4rem); 
+font-weight: 600; 
+margin: 0; 
+letter-spacing: 0.5px; 
 } 
- 
-// Vibe system 
-function toggleVibe(post, button) { 
-  const postId = post.id; 
-  const userId = getUserId(); 
- 
-  if (!post.vibes) post.vibes = {}; 
- 
-  if (userVibes[postId]) { 
-    delete userVibes[postId]; 
-    delete post.vibes[userId]; 
-    button.classList.remove('active'); 
-  } else { 
-    userVibes[postId] = true; 
-    post.vibes[userId] = true; 
-    button.classList.add('active'); 
-    showToast("Vibed!"); 
-  } 
- 
-  localStorage.setItem("margoUserVibes", JSON.stringify(userVibes)); 
- 
-  const count = Object.keys(post.vibes).length; 
-  button.querySelector('.vibe-count').textContent = count; 
+.tagline-grid { 
+display: flex; 
+gap: 16px; 
+f
+lex-wrap: wrap; 
+justify-content: center; 
 } 
- 
-function getUserId() { 
-  let userId = localStorage.getItem("margoUserId"); 
-  if (!userId) { 
-    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); 
-    localStorage.setItem("margoUserId", userId); 
-  } 
-  return userId; 
+.tagline-grid span { 
+color: var(--text-secondary); 
+font-size: clamp(0.9rem, 2.5vw, 1.1rem); 
+font-weight: 400; 
+padding: 8px 20px; 
+border: 1px solid var(--border-strong); 
+border-radius: 24px; 
+background: var(--glass-bg); 
+backdrop-filter: blur(10px); 
+transition: all 0.3s ease; 
 } 
- 
-// Guess modal 
-function openGuessModal(post) { 
-  currentPost = post; 
-  guessLyric.textContent = post.text; 
-  guessSongInput.value = ""; 
-  guessArtistInput.value = ""; 
-  guessResult.classList.add("hidden"); 
-  guessActions.classList.add("hidden"); 
-  submitGuess.style.display = "block"; 
-   
-  if (post.guessConfig.allowGuessSong) { 
-    guessSongField.style.display = "flex"; 
-  } else { 
-    guessSongField.style.display = "none"; 
-  } 
-   
-  if (post.guessConfig.allowGuessArtist) { 
-    guessArtistField.style.display = "flex"; 
-  } else { 
-    guessArtistField.style.display = "none"; 
-  } 
-   
-  const guessWhat = []; 
-  if (post.guessConfig.allowGuessSong) guessWhat.push("song"); 
-  if (post.guessConfig.allowGuessArtist) guessWhat.push("artist"); 
-  guessHint.textContent = `Guess the ${guessWhat.join(" and ")}. You have 1 attempt!`; 
-   
-  guessModal.classList.remove("hidden"); 
+.tagline-grid span:hover { 
+border-color: var(--primary); 
+color: var(--primary); 
+transform: translateY(-2px); 
 } 
- 
-submitGuess.onclick = () => { 
-  if (!currentPost) return; 
- 
-  const guessedSong = guessSongInput.value.trim().toLowerCase(); 
-  const guessedArtist = guessArtistInput.value.trim().toLowerCase(); 
-  const actualSong = currentPost.song.toLowerCase(); 
-  const actualArtist = currentPost.artist.toLowerCase(); 
- 
-  const allowGuessSong = currentPost.guessConfig.allowGuessSong; 
-  const allowGuessArtist = currentPost.guessConfig.allowGuessArtist; 
- 
-  let songMatch = false; 
-  let artistMatch = false; 
- 
-  if (allowGuessSong) { 
-    songMatch = guessedSong && ( 
-      guessedSong === actualSong ||  
-      guessedSong.includes(actualSong) ||  
-      actualSong.includes(guessedSong) 
-    ); 
-  } else { 
-    songMatch = true; 
-  } 
- 
-  if (allowGuessArtist) { 
-    artistMatch = guessedArtist && ( 
-      guessedArtist === actualArtist ||  
-      guessedArtist.includes(actualArtist) ||  
-      actualArtist.includes(guessedArtist) 
-    ); 
-  } else { 
-    artistMatch = true; 
-  } 
- 
-  guessResult.classList.remove("hidden"); 
-  submitGuess.style.display = "none"; 
- 
-  if (songMatch && artistMatch) { 
-    guessResult.className = "guess-result correct"; 
-    let message = "Perfect! "; 
-    if (allowGuessSong && allowGuessArtist) { 
-      message += `"${currentPost.song}" by ${currentPost.artist}`; 
-    } else if (allowGuessSong) { 
-      message += `The song is "${currentPost.song}"`; 
-    } else { 
-      message += `The artist is ${currentPost.artist}`; 
-    } 
-    guessResult.textContent = message; 
-     
-    userGuesses[currentPost.id] = true; 
-    localStorage.setItem("margoUserGuesses", JSON.stringify(userGuesses)); 
- 
-    setTimeout(() => { 
-      guessModal.classList.add("hidden"); 
-      renderFeed(); 
-    }, 2500); 
-  } else { 
-    guessResult.className = "guess-result incorrect"; 
-    guessResult.textContent = "Not quite! Try again or reveal the answer."; 
-    guessActions.classList.remove("hidden"); 
-  } 
-}; 
- 
-tryAgainBtn.onclick = () => { 
-  guessSongInput.value = ""; 
-  guessArtistInput.value = ""; 
-  guessResult.classList.add("hidden"); 
-  guessActions.classList.add("hidden"); 
-  submitGuess.style.display = "block"; 
-}; 
- 
-revealAnswerBtn.onclick = () => { 
-  const allowGuessSong = currentPost.guessConfig.allowGuessSong; 
-  const allowGuessArtist = currentPost.guessConfig.allowGuessArtist; 
-   
-  let message = "The answer is: "; 
-  if (allowGuessSong && allowGuessArtist) { 
-    message += `"${currentPost.song}" by ${currentPost.artist}`; 
-  } else if (allowGuessSong) { 
-    message += `"${currentPost.song}"`; 
-  } else { 
-    message += `${currentPost.artist}`; 
-  } 
-   
-  guessResult.className = "guess-result correct"; 
-  guessResult.textContent = message; 
-  guessActions.classList.add("hidden"); 
-   
-  userGuesses[currentPost.id] = true; 
-  localStorage.setItem("margoUserGuesses", JSON.stringify(userGuesses)); 
- 
-  setTimeout(() => { 
-    guessModal.classList.add("hidden"); 
-    renderFeed(); 
-  }, 2500); 
-}; 
- 
-// Discover modal 
-function openDiscoverModal(post) { 
-  currentPost = post; 
-  discoverLyric.textContent = post.text; 
-  discoverSongInputModal.value = ""; 
-  discoverArtistInputModal.value = ""; 
-  discoverModal.classList.remove("hidden"); 
+.hint { 
+color: var(--text-tertiary); 
+font-size: clamp(0.8rem, 2vw, 0.9rem); 
+opacity: 0.8; 
+margin-top: 12px; 
+font-weight: 400; 
+animation: pulse 2s ease-in-out infinite; 
 } 
- 
-helpDiscoverBtn.onclick = () => { 
-  const song = discoverSongInputModal.value.trim(); 
-  const artist = discoverArtistInputModal.value.trim(); 
- 
-  if (!song || !artist) { 
-    showToast("Enter both song and artist"); 
-    return; 
-  } 
- 
-  currentPost.song = song; 
-  currentPost.artist = artist; 
-  currentPost.mode = "normal"; 
- 
-  const posts = JSON.parse(localStorage.getItem("margoPosts") || "[]"); 
-  const postIndex = posts.findIndex(p => p.id === currentPost.id); 
-  if (postIndex !== -1) { 
-    posts[postIndex] = currentPost; 
-    localStorage.setItem("margoPosts", JSON.stringify(posts)); 
-  } 
- 
-  showToast("Thanks for helping!"); 
-  discoverModal.classList.add("hidden"); 
-  renderFeed(); 
-}; 
- 
-remindMeBtn.onclick = () => { 
-  showToast("We'll remind you!"); 
-  discoverModal.classList.add("hidden"); 
-}; 
- 
-// Postcard 
-function showPostcard(post) { 
-  currentPost = post; 
-  postcardText.textContent = post.text; 
-   
-  postcardEmotions.innerHTML = ""; 
-  post.emotions.forEach(e => { 
-    const tag = document.createElement("span"); 
-    tag.textContent = e; 
-    postcardEmotions.appendChild(tag); 
-  }); 
- 
-  postcardSongInfo.innerHTML = ` 
-    <div>${post.song}</div> 
-    <div>${post.artist}</div> 
-  `; 
- 
-  postcardModal.classList.remove("hidden"); 
+@keyframes pulse { 
+0%, 100% { opacity: 0.5; } 
+50% { opacity: 1; } 
 } 
- 
-// Listen from feed 
-function handleListenFromFeed(post) { 
-  currentPost = post; 
-   
-  document.querySelectorAll(".listen-btn").forEach(btn => { 
-    const platform = btn.dataset.platform; 
-    const hasLink = post.links && post.links[platform]; 
-     
-    if (hasLink) { 
-      btn.disabled = false; 
-      btn.classList.add("has-link"); 
-    } else { 
-      btn.disabled = true; 
-      btn.classList.remove("has-link"); 
-    } 
-  }); 
-   
-  listenModal.classList.remove("hidden"); 
+.landing-footer { 
+text-align: center; 
+padding: 32px 24px; 
+position: relative; 
+z-index: 1; 
 } 
- 
-// Share 
-shareBtn.onclick = () => { 
-  postcardModal.classList.add("hidden"); 
-  shareModal.classList.remove("hidden"); 
-}; 
- 
-document.querySelectorAll(".share-btn").forEach(btn => { 
-  btn.onclick = async () => { 
-    const platform = btn.dataset.platform; 
-    await handleShare(platform); 
-  }; 
-}); 
- 
-async function handleShare(platform) { 
-  if (!currentPost) return; 
- 
-  const postUrl = `${window.location.origin}/?post=${currentPost.id}`; 
- 
-  if (['instagram', 'twitter'].includes(platform)) { 
-    try { 
-      showToast("Generating image..."); 
-       
-      // Use a simpler, more reliable image generation 
-      const canvas = await createPostcardCanvas(platform); 
-      const imageDataUrl = canvas.toDataURL('image/png', 1.0); 
-       
-      const link = document.createElement('a'); 
-      link.download = `margo-${platform}-${currentPost.id}.png`; 
-      link.href = imageDataUrl; 
-      link.click(); 
-       
-      setTimeout(() => { 
-        navigator.clipboard.writeText(postUrl).then(() => { 
-          showToast(`Image saved! Link copied.`); 
-        }).catch(() => { 
-          showToast(`Image saved for ${platform}!`); 
-        }); 
-      }, 300); 
-       
-    } catch (err) { 
-      console.error("Image generation error:", err); 
-      showToast("Image generation failed - try again"); 
-    } 
-  } else { 
-    const text = `"${currentPost.text}"\n\n${currentPost.song} — 
-${currentPost.artist}\n\nShared via MARGO`; 
-     
-    switch(platform) { 
-      case "native": 
-        if (navigator.share) { 
-          navigator.share({ title: "MARGO", text, url: postUrl }).catch(() => {}); 
-        } else { 
-          showToast("Sharing not supported"); 
-        } 
-        break; 
-      case "link": 
-        navigator.clipboard.writeText(postUrl).then(() => { 
-          showToast("Link copied!"); 
-        }); 
-        break; 
-    } 
-  } 
- 
-  shareModal.classList.add("hidden"); 
+.footer-line { 
+width: 60px; 
+height: 2px; 
+background: linear-gradient(90deg, transparent, var(--primary), transparent); 
+margin: 0 auto 16px; 
 } 
- 
-// Improved image generation function 
-async function createPostcardCanvas(platform) { 
-  const dimensions = { 
-    instagram: { width: 1080, height: 1080 }, 
-    twitter: { width: 1200, height: 675 } 
-  }; 
-   
-  const dim = dimensions[platform] || dimensions.instagram; 
-  const canvas = document.createElement('canvas'); 
-  canvas.width = dim.width; 
-  canvas.height = dim.height; 
-  const ctx = canvas.getContext('2d'); 
-   
-  // Background 
-  const gradient = ctx.createLinearGradient(0, 0, dim.width, dim.height); 
-  gradient.addColorStop(0, '#1a1410'); 
-  gradient.addColorStop(1, '#2c2420'); 
-  ctx.fillStyle = gradient; 
-  ctx.fillRect(0, 0, dim.width, dim.height); 
-   
-  // Header bar 
-  const headerGradient = ctx.createLinearGradient(0, 0, dim.width, 0); 
-  headerGradient.addColorStop(0, '#d4af37'); 
-  headerGradient.addColorStop(1, '#e8c468'); 
-  ctx.fillStyle = headerGradient; 
-  ctx.fillRect(0, 0, dim.width, 80); 
-   
-  // Logo 
-  ctx.fillStyle = '#000'; 
-  ctx.font = 'bold 48px serif'; 
-  ctx.textAlign = 'center'; 
-  ctx.fillText('MARGO', dim.width / 2, 55); 
-   
-  // Quote text 
-  ctx.fillStyle = '#f5f5f5'; 
-  ctx.font = 'italic 42px serif'; 
-  ctx.textAlign = 'center'; 
-   
-  const maxWidth = dim.width - 200; 
-  const lineHeight = 60; 
-  const words = currentPost.text.split(' '); 
-  const lines = []; 
-  let currentLine = ''; 
-   
-  words.forEach(word => { 
-    const testLine = currentLine + word + ' '; 
-    const metrics = ctx.measureText(testLine); 
-    if (metrics.width > maxWidth && currentLine.length > 0) { 
-      lines.push(currentLine); 
-      currentLine = word + ' '; 
-    } else { 
-      currentLine = testLine; 
-    } 
-  }); 
-  lines.push(currentLine); 
-   
-  const startY = (dim.height - (lines.length * lineHeight)) / 2; 
-  lines.forEach((line, i) => { 
-    ctx.fillText(line.trim(), dim.width / 2, startY + (i * lineHeight)); 
-  }); 
-   
-  // Song info at bottom 
-  const bottomY = dim.height - 150; 
-  ctx.fillStyle = '#d4af37'; 
-  ctx.font = 'bold 36px serif'; 
-  ctx.fillText(currentPost.song, dim.width / 2, bottomY); 
-   
-  ctx.fillStyle = '#b8b8b8'; 
-  ctx.font = '28px sans-serif'; 
-  ctx.fillText(currentPost.artist, dim.width / 2, bottomY + 45); 
-   
-  return canvas; 
+.landing-footer p { 
+color: var(--text-tertiary); 
+font-size: clamp(0.75rem, 2vw, 0.85rem); 
+font-weight: 400; 
+margin: 0; 
+letter-spacing: 0.5px; 
 } 
- 
-// Listen 
-listenBtn.onclick = () => { 
-  if (!currentPost) return; 
-  postcardModal.classList.add("hidden"); 
-  handleListenFromFeed(currentPost); 
-}; 
- 
-document.querySelectorAll(".listen-btn").forEach(btn => { 
-  btn.onclick = () => { 
-    if (btn.disabled) return; 
-    handleListenPlatform(btn.dataset.platform); 
-  }; 
-}); 
- 
-function handleListenPlatform(platform) { 
-  if (!currentPost || !currentPost.links || !currentPost.links[platform]) { 
-    showToast("No link available"); 
-    return; 
-  } 
- 
-  window.open(currentPost.links[platform], "_blank"); 
-  listenModal.classList.add("hidden"); 
+/* ==================== BUTTONS ==================== */ 
+.primary-btn { 
+background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); 
+border: none; 
+padding: 18px 48px; 
+border-radius: 50px; 
+font-weight: 700; 
+font-size: clamp(0.9rem, 2.5vw, 1rem); 
+color: white; 
+cursor: pointer; 
+box-shadow: 0 12px 40px var(--primary-glow); 
+transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+text-transform: uppercase; 
+letter-spacing: 2px; 
+margin-top: 8px; 
+position: relative; 
+overflow: hidden; 
+font-family: 'Syne', sans-serif; 
 } 
- 
-// Download 
-downloadBtn.onclick = async () => { 
-  if (!currentPost) return; 
-   
-  try { 
-    showToast("Generating image..."); 
-    const canvas = await createPostcardCanvas('instagram'); 
-    const link = document.createElement("a"); 
-    link.download = `margo-${currentPost.id}.png`; 
-    link.href = canvas.toDataURL("image/png", 1.0); 
-    link.click(); 
-     
-    showToast("Downloaded!"); 
-  } catch (err) { 
-    console.error(err); 
-    showToast("Download failed"); 
-  } 
-}; 
- 
-// Toast 
-function showToast(message) { 
-  const existing = document.querySelector(".toast"); 
-  if (existing) existing.remove(); 
- 
-  const toast = document.createElement("div"); 
-  toast.className = "toast"; 
-  toast.textContent = message; 
-  document.body.appendChild(toast); 
- 
-  setTimeout(() => toast.classList.add("show"), 10); 
-  setTimeout(() => { 
-    toast.classList.remove("show"); 
-    setTimeout(() => toast.remove(), 300); 
-  }, 2500); 
+.primary-btn::before { 
+content: ""; 
+position: absolute; 
+top: 50%; 
+left: 50%; 
+width: 0; 
+height: 0; 
+border-radius: 50%; 
+background: rgba(255, 255, 255, 0.2); 
+transform: translate(-50%, -50%); 
+transition: width 0.6s, height 0.6s; 
 } 
- 
-// Initialize 
-showLanding(); 
-initFeed(); 
- 
-// Deep linking 
-window.addEventListener('load', () => { 
-  const urlParams = new URLSearchParams(window.location.search); 
-  const postId = urlParams.get('post'); 
-   
-  if (postId) { 
-    setTimeout(() => { 
-      const post = allPosts.find(p => p.id == postId); 
-      if (post) { 
-        showFeed(); 
-        setTimeout(() => { 
-          showPostcard(post); 
-        }, 300); 
-      } 
-    }, 500); 
-  } 
-}); 
- 
- 
+.primary-btn:hover::before { 
+width: 300px; 
+height: 300px; 
+} 
+.primary-btn:hover { 
+transform: translateY(-4px); 
+box-shadow: 0 16px 56px var(--primary-glow); 
+} 
+.primary-btn:active { 
+transform: translateY(-2px); 
+} 
+.primary-btn:disabled { 
+opacity: 0.6; 
+cursor: not-allowed; 
+transform: none !important; 
+} 
+/* ==================== FEED HEADER ==================== */ 
+.feed-header { 
+display: flex; 
+justify-content: space-between; 
+align-items: center; 
+padding: 18px 20px; 
+border-bottom: 1px solid var(--border); 
+position: sticky; 
+top: 0; 
+background: rgba(13, 13, 13, 0.95); 
+backdrop-filter: blur(20px); 
+z-index: 100; 
+} 
+.header-center { 
+f
+lex: 1; 
+text-align: center; 
+} 
+.feed-header h2 { 
+font-family: 'Fraunces', serif; 
+font-size: clamp(1.3rem, 3vw, 1.6rem); 
+font-weight: 600; 
+letter-spacing: 1px; 
+margin: 0 0 4px 0; 
+} 
+.feed-count { 
+font-size: 0.75rem; 
+color: var(--text-tertiary); 
+font-weight: 500; 
+letter-spacing: 1px; 
+} 
+.back-btn, 
+.add-btn { 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+height: 44px; 
+border-radius: 12px; 
+font-size: 1.3rem; 
+color: var(--text-primary); 
+cursor: pointer; 
+backdrop-filter: blur(10px); 
+transition: all 0.3s ease; 
+display: flex; 
+align-items: center; 
+justify-content: center; 
+f
+lex-shrink: 0; 
+font-family: 'Syne', sans-serif; 
+font-weight: 600; 
+} 
+.back-btn { 
+width: 44px; 
+} 
+.add-btn { 
+gap: 6px; 
+padding: 0 16px; 
+} 
+.plus-icon { 
+font-size: 1.1rem; 
+line-height: 1; 
+} 
+.add-text { 
+font-size: 0.85rem; 
+text-transform: uppercase; 
+letter-spacing: 1px; 
+} 
+.back-btn:hover, 
+.add-btn:hover { 
+background: var(--bg-warm); 
+border-color: var(--primary); 
+transform: scale(1.05); 
+} 
+/* ==================== FEED LIST - SQUARE COMPACT CARDS ==================== 
+*/ 
+.feed-list { 
+f
+lex: 1; 
+overflow-y: auto; 
+overflow-x: hidden; 
+padding: 16px; 
+display: grid; 
+gap: 16px; 
+/* Responsive square grid */ 
+grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); 
+align-content: start; 
+grid-auto-rows: minmax(280px, auto); 
+} 
+.feed-footer { 
+text-align: center; 
+padding: 20px; 
+border-top: 1px solid var(--border); 
+background: var(--bg-dark); 
+} 
+.feed-footer p { 
+color: var(--text-tertiary); 
+font-size: 0.75rem; 
+margin-top: 8px; 
+} 
+/* ==================== FEED CARDS - COMPACT SQUARE DESIGN 
+==================== */ 
+.feed-card { 
+background: linear-gradient(135deg, rgba(26, 20, 16, 0.95) 0%, rgba(42, 33, 23, 0.95) 100%); 
+border: 1px solid var(--border-strong); 
+border-radius: 16px; 
+padding: 18px; 
+backdrop-filter: blur(20px); 
+box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); 
+transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+position: relative; 
+overflow: hidden; 
+display: flex; 
+f
+lex-direction: column; 
+gap: 12px; 
+cursor: pointer; 
+min-height: 280px; 
+/* Remove fixed aspect ratio to allow dynamic height */ 
+height: auto; 
+} 
+.feed-card::before { 
+content: ""; 
+position: absolute; 
+top: 0; 
+left: 0; 
+right: 0; 
+height: 3px; 
+background: linear-gradient(90deg, transparent, var(--primary), transparent); 
+opacity: 0; 
+transition: opacity 0.3s ease; 
+} 
+.feed-card::after { 
+content: ""; 
+position: absolute; 
+inset: 0; 
+background: repeating-linear-gradient( 
+0deg, 
+transparent, 
+transparent 2px, 
+rgba(212, 197, 169, 0.01) 2px, 
+rgba(212, 197, 169, 0.01) 4px 
+); 
+pointer-events: none; 
+} 
+.feed-card:hover { 
+transform: translateY(-6px); 
+box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7); 
+border-color: var(--primary); 
+} 
+.feed-card:hover::before { 
+opacity: 1; 
+} 
+/* Emotion-based card accents */ 
+.feed-card[data-emotion="Love"]::before { 
+background: linear-gradient(90deg, transparent, #ff6b9d, transparent); 
+} 
+.feed-card[data-emotion="Heartbreak"]::before { 
+background: linear-gradient(90deg, transparent, #4a5568, transparent); 
+} 
+.feed-card[data-emotion="Hope"]::before { 
+background: linear-gradient(90deg, transparent, #ffd89b, transparent); 
+} 
+.feed-card[data-emotion="Rage"]::before { 
+background: linear-gradient(90deg, transparent, #ff4757, transparent); 
+} 
+.feed-card[data-emotion="Joy"]::before { 
+background: linear-gradient(90deg, transparent, #feca57, transparent); 
+} 
+.feed-card[data-emotion="Healing"]::before { 
+background: linear-gradient(90deg, transparent, #81c784, transparent); 
+} 
+.feed-card[data-emotion="Nostalgia"]::before { 
+background: linear-gradient(90deg, transparent, #b590ca, transparent); 
+} 
+.feed-card[data-emotion="Loneliness"]::before { 
+background: linear-gradient(90deg, transparent, #5f6a8f, transparent); 
+} 
+.feed-card[data-emotion="Freedom"]::before { 
+background: linear-gradient(90deg, transparent, #7bed9f, transparent); 
+} 
+.feed-card[data-emotion="Anxiety"]::before { 
+background: linear-gradient(90deg, transparent, #34495e, transparent); 
+} 
+/* Feed Card Header */ 
+.feed-card-header { 
+display: flex; 
+align-items: center; 
+gap: 10px; 
+padding-bottom: 10px; 
+border-bottom: 1px solid var(--border); 
+} 
+.feed-avatar { 
+width: 40px; 
+height: 40px; 
+border-radius: 50%; 
+background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); 
+display: flex; 
+align-items: center; 
+justify-content: center; 
+font-size: 20px; 
+box-shadow: 0 4px 16px var(--primary-glow); 
+f
+lex-shrink: 0; 
+} 
+.feed-meta { 
+f
+lex: 1; 
+} 
+.feed-time { 
+font-size: 0.75rem; 
+color: var(--text-tertiary); 
+font-weight: 500; 
+letter-spacing: 0.5px; 
+} 
+/* Feed Card Content */ 
+.feed-card-content { 
+f
+lex: 1; 
+display: flex; 
+f
+lex-direction: column; 
+gap: 10px; 
+justify-content: space-between; 
+} 
+.feed-text { 
+font-family: 'Fraunces', serif; 
+font-size: clamp(0.85rem, 2vw, 0.95rem); 
+line-height: 1.4; 
+font-weight: 400; 
+color: var(--text-primary); 
+text-align: center; 
+letter-spacing: 0.3px; 
+font-style: italic; 
+display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; 
+overflow: hidden; 
+} 
+.feed-text.long-text { 
+font-size: clamp(0.75rem, 1.8vw, 0.85rem); 
+-webkit-line-clamp: 5; 
+} 
+.feed-text::before, 
+.feed-text::after { 
+content: '"'; 
+color: var(--primary); 
+opacity: 0.6; 
+font-size: 1.1rem; 
+font-style: normal; 
+} 
+/* Emotion Pills - Compact */ 
+.feed-emotions { 
+display: flex; 
+gap: 6px; 
+f
+lex-wrap: wrap; 
+justify-content: center; 
+} 
+.feed-emotion { 
+padding: 4px 10px; 
+border-radius: 12px; 
+font-size: 0.6rem; 
+font-weight: 700; 
+text-transform: uppercase; 
+letter-spacing: 0.8px; 
+border: 1px solid rgba(255, 255, 255, 0.1); 
+color: white; 
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); 
+transition: transform 0.3s ease; 
+} 
+.feed-emotion:hover { 
+transform: translateY(-2px) scale(1.05); 
+} 
+.feed-emotion[data-emotion="Love"] { background: var(--emotion-love); } 
+.feed-emotion[data-emotion="Heartbreak"] { background: var(--emotion-heartbreak); } 
+.feed-emotion[data-emotion="Hope"] { background: var(--emotion-hope); } 
+.feed-emotion[data-emotion="Nostalgia"] { background: var(--emotion-nostalgia); } 
+.feed-emotion[data-emotion="Healing"] { background: var(--emotion-healing); } 
+.feed-emotion[data-emotion="Rage"] { background: var(--emotion-rage); } 
+.feed-emotion[data-emotion="Joy"] { background: var(--emotion-joy); } 
+.feed-emotion[data-emotion="Loneliness"] { background: var(--emotion-loneliness); } 
+.feed-emotion[data-emotion="Freedom"] { background: var(--emotion-freedom); } 
+.feed-emotion[data-emotion="Anxiety"] { background: var(--emotion-anxiety); } 
+.feed-song { 
+padding-top: 10px; 
+border-top: 1px solid var(--border); 
+text-align: center; 
+} 
+.feed-song-title { 
+font-size: 0.85rem; 
+font-weight: 700; 
+margin-bottom: 2px; 
+color: var(--text-primary); 
+} 
+.feed-song-artist { 
+font-size: 0.75rem; 
+color: var(--text-secondary); 
+font-weight: 500; 
+} 
+/* Mystery Card */ 
+.feed-song.mystery { 
+background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(247, 147, 30, 0.1)); 
+padding: 10px; 
+border-radius: 10px; 
+border: 2px dashed var(--primary); 
+margin-top: 8px; 
+} 
+.mystery-text { 
+font-size: 0.75rem; 
+color: var(--primary); 
+font-weight: 600; 
+margin-bottom: 6px; 
+} 
+.mystery-status { 
+font-size: 0.7rem; 
+color: var(--text-secondary); 
+margin-top: 6px; 
+font-style: italic; 
+} 
+.guess-btn { 
+background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); 
+border: none; 
+padding: 6px 14px; 
+border-radius: 10px; 
+color: white; 
+font-weight: 700; 
+font-size: 0.7rem; 
+cursor: pointer; 
+transition: all 0.3s ease; 
+text-transform: uppercase; 
+letter-spacing: 0.5px; 
+box-shadow: 0 4px 16px var(--primary-glow); 
+font-family: 'Syne', sans-serif; 
+width: 100%; 
+} 
+.reveal-btn { 
+background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%); 
+box-shadow: 0 4px 16px rgba(129, 199, 132, 0.4); 
+} 
+.guess-btn:hover, 
+.reveal-btn:hover { 
+transform: translateY(-2px); 
+box-shadow: 0 6px 20px var(--primary-glow); 
+} 
+/* Vibe Counter */ 
+.vibe-counter { 
+display: flex; 
+align-items: center; 
+justify-content: center; 
+gap: 8px; 
+padding-top: 10px; 
+border-top: 1px solid var(--border); 
+} 
+.vibe-btn { 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+padding: 6px 14px; 
+border-radius: 20px; 
+display: flex; 
+align-items: center; 
+gap: 6px; 
+cursor: pointer; 
+backdrop-filter: blur(10px); 
+transition: all 0.3s ease; 
+font-size: 0.8rem; 
+color: var(--text-secondary); 
+} 
+.vibe-btn:hover { 
+background: rgba(255, 107, 53, 0.15); 
+border-color: var(--primary); 
+transform: scale(1.05); 
+} 
+.vibe-btn.active { 
+background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); 
+border-color: var(--primary); 
+color: white; 
+box-shadow: 0 4px 20px var(--primary-glow); 
+} 
+.vibe-icon { 
+font-size: 1rem; 
+} 
+.vibe-count { 
+font-weight: 700; 
+font-size: 0.75rem; 
+} 
+.feed-card-actions { 
+display: flex; 
+gap: 6px; 
+} 
+.feed-action { 
+f
+lex: 1; 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+padding: 8px 10px; 
+border-radius: 10px; 
+display: flex; 
+align-items: center; 
+justify-content: center; 
+gap: 4px; 
+font-size: 0.7rem; 
+font-weight: 600; 
+color: var(--text-primary); 
+cursor: pointer; 
+backdrop-filter: blur(10px); 
+transition: all 0.3s ease; 
+} 
+.feed-action:hover { 
+background: var(--bg-warm); 
+border-color: var(--primary); 
+transform: translateY(-2px); 
+} 
+.feed-action span:first-child { 
+font-size: 0.9rem; 
+} 
+/* Empty State */ 
+.empty-state { 
+text-align: center; 
+padding: 80px 20px; 
+color: var(--text-tertiary); 
+} 
+.empty-state p { 
+margin: 8px 0; 
+font-size: 1rem; 
+} 
+/* ==================== UNIFIED MODAL SYSTEM ==================== */ 
+.modal, 
+.postcard-overlay { 
+position: fixed; 
+inset: 0; 
+background: rgba(0, 0, 0, 0.95); 
+display: flex; 
+justify-content: center; 
+align-items: center; 
+z-index: 3000; 
+backdrop-filter: blur(20px); 
+padding: 20px; 
+animation: fadeIn 0.3s ease; 
+opacity: 0; 
+pointer-events: none; 
+transition: opacity 0.3s ease; 
+} 
+.modal.active, 
+.postcard-overlay.active { 
+opacity: 1; 
+pointer-events: all; 
+} 
+.modal.hidden, 
+.postcard-overlay.hidden { 
+display: none; 
+} 
+@keyframes fadeIn { 
+from { opacity: 0; } 
+to { opacity: 1; } 
+} 
+/* Unified Modal Content */ 
+.modal-content { 
+background: var(--bg-card); 
+border: 1px solid var(--border-strong); 
+border-radius: 24px; 
+width: 100%; 
+max-width: 540px; 
+max-height: 85vh; 
+overflow: hidden; 
+box-shadow: 0 24px 80px rgba(0, 0, 0, 0.8); 
+animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+display: flex; 
+f
+lex-direction: column; 
+} 
+@keyframes slideUp { 
+from { 
+opacity: 0; 
+transform: translateY(40px) scale(0.95); 
+} 
+to { 
+opacity: 1; 
+transform: translateY(0) scale(1); 
+} 
+} 
+/* Unified Modal Header */ 
+.modal-header { 
+display: flex; 
+justify-content: space-between; 
+align-items: center; 
+padding: 20px 24px; 
+border-bottom: 1px solid var(--border); 
+f
+lex-shrink: 0; 
+} 
+.modal-header h3 { 
+font-family: 'Fraunces', serif; 
+font-size: 1.3rem; 
+font-weight: 600; 
+letter-spacing: 0.5px; 
+margin: 0; 
+} 
+/* Unified Close Button */ 
+.close-btn { 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+color: var(--text-secondary); 
+font-size: 1.3rem; 
+cursor: pointer; 
+padding: 0; 
+width: 36px; 
+height: 36px; 
+display: flex; 
+align-items: center; 
+justify-content: center; 
+border-radius: 50%; 
+transition: all 0.3s ease; 
+f
+lex-shrink: 0; 
+} 
+.close-btn:hover { 
+background: var(--bg-warm); 
+color: var(--text-primary); 
+border-color: var(--primary); 
+transform: rotate(90deg); 
+} 
+/* Unified Modal Body - Scrollable */ 
+.modal-body, 
+.composer-body, 
+.story-builder-body, 
+.guess-body, 
+.platform-sections { 
+f
+lex: 1; 
+overflow-y: auto; 
+overflow-x: hidden; 
+padding: 24px; 
+scrollbar-width: none; -ms-overflow-style: none; 
+} 
+.modal-body::-webkit-scrollbar, 
+.composer-body::-webkit-scrollbar, 
+.story-builder-body::-webkit-scrollbar, 
+.guess-body::-webkit-scrollbar, 
+.platform-sections::-webkit-scrollbar { 
+display: none; 
+} 
+/* Unified Modal Footer */ 
+.modal-footer, 
+.actions { 
+padding: 16px 24px; 
+border-top: 1px solid var(--border); 
+f
+lex-shrink: 0; 
+} 
+.actions { 
+padding: 0 24px 24px; 
+border-top: none; 
+} 
+/* ==================== COMPOSER SPECIFIC ==================== */ 
+textarea { 
+width: 100%; 
+height: 120px; 
+background: var(--bg-dark); 
+border: 1px solid var(--border); 
+border-radius: 16px; 
+color: var(--text-primary); 
+padding: 16px; 
+font-size: 1rem; 
+font-family: 'Syne', sans-serif; 
+resize: none; 
+margin-bottom: 8px; 
+transition: border-color 0.3s ease; 
+} 
+textarea:focus { 
+outline: none; 
+border-color: var(--primary); 
+box-shadow: 0 0 0 3px var(--primary-glow); 
+} 
+textarea::placeholder { 
+color: var(--text-tertiary); 
+} 
+.counter { 
+text-align: right; 
+font-size: 0.75rem; 
+color: var(--text-tertiary); 
+margin-bottom: 20px; 
+} 
+.input-row { 
+display: grid; 
+grid-template-columns: 1fr 1fr; 
+gap: 12px; 
+margin-bottom: 20px; 
+} 
+.input-wrapper { 
+display: flex; 
+f
+lex-direction: column; 
+gap: 8px; 
+} 
+.input-wrapper label { 
+font-size: 0.75rem; 
+color: var(--text-secondary); 
+font-weight: 600; 
+text-transform: uppercase; 
+letter-spacing: 0.5px; 
+} 
+input[type="text"] { 
+width: 100%; 
+padding: 12px; 
+background: var(--bg-dark); 
+border: 1px solid var(--border); 
+border-radius: 12px; 
+color: var(--text-primary); 
+font-size: 0.9rem; 
+font-family: 'Syne', sans-serif; 
+transition: border-color 0.3s ease; 
+} 
+input[type="text"]:focus { 
+outline: none; 
+border-color: var(--primary); 
+box-shadow: 0 0 0 3px var(--primary-glow); 
+} 
+input[type="text"]:disabled { 
+cursor: not-allowed; 
+background: var(--bg-elevated); 
+color: var(--text-tertiary); 
+} 
+input[type="text"]::placeholder { 
+color: var(--text-tertiary); 
+} 
+/* ==================== EMOTION PILLS (COMPOSER) ==================== */ 
+.emotion-section { 
+margin-bottom: 20px; 
+} 
+.section-label { 
+display: block; 
+font-size: 0.75rem; 
+color: var(--text-secondary); 
+margin-bottom: 12px; 
+font-weight: 600; 
+text-transform: uppercase; 
+letter-spacing: 0.5px; 
+} 
+.emotion-pills { 
+display: flex; 
+f
+lex-wrap: wrap; 
+gap: 8px; 
+} 
+.emotion-pill { 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+padding: 10px 16px; 
+border-radius: 20px; 
+font-size: 0.8rem; 
+font-weight: 600; 
+color: var(--text-secondary); 
+cursor: pointer; 
+backdrop-filter: blur(10px); 
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+user-select: none; 
+font-family: 'Syne', sans-serif; 
+} 
+.emotion-pill:hover { 
+background: var(--bg-warm); 
+border-color: var(--border-strong); 
+transform: translateY(-2px); 
+} 
+.emotion-pill.active { 
+background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); 
+border-color: var(--primary); 
+color: white; 
+box-shadow: 0 4px 16px var(--primary-glow); 
+transform: scale(1.05); 
+} 
+/* ==================== GUESS CHECKBOX ==================== */ 
+.guess-option { 
+margin-top: 20px; 
+padding-top: 20px; 
+border-top: 1px solid var(--border); 
+} 
+.guess-checkbox { 
+display: flex; 
+align-items: center; 
+gap: 12px; 
+cursor: pointer; 
+padding: 14px; 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+border-radius: 12px; 
+backdrop-filter: blur(10px); 
+transition: all 0.3s ease; 
+} 
+.guess-checkbox:hover { 
+background: var(--bg-warm); 
+border-color: var(--border-strong); 
+} 
+.guess-checkbox input[type="checkbox"] { 
+display: none; 
+} 
+.checkmark { 
+width: 20px; 
+height: 20px; 
+border: 2px solid var(--border-strong); 
+border-radius: 6px; 
+position: relative; 
+transition: all 0.3s ease; 
+f
+lex-shrink: 0; 
+} 
+.guess-checkbox input[type="checkbox"]:checked + .checkmark { 
+background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); 
+border-color: var(--primary); 
+} 
+.guess-checkbox input[type="checkbox"]:checked + .checkmark::after { 
+content: "✓"; 
+position: absolute; 
+top: 50%; 
+left: 50%; 
+transform: translate(-50%, -50%); 
+color: white; 
+font-size: 0.85rem; 
+font-weight: 700; 
+} 
+.label-text { 
+font-size: 0.85rem; 
+font-weight: 600; 
+color: var(--text-primary); 
+} 
+.platform-links-section { 
+margin-top: 20px; 
+padding-top: 20px; 
+border-top: 1px solid var(--border); 
+} 
+.platform-links-grid { 
+display: grid; 
+grid-template-columns: 1fr 1fr; 
+gap: 12px; 
+} 
+.platform-links-grid input[type="url"] { 
+width: 100%; 
+padding: 12px; 
+background: var(--bg-dark); 
+border: 1px solid var(--border); 
+border-radius: 12px; 
+color: var(--text-primary); 
+font-size: 0.85rem; 
+font-family: 'Syne', sans-serif; 
+transition: border-color 0.3s ease; 
+} 
+.platform-links-grid input[type="url"]:focus { 
+outline: none; 
+border-color: var(--primary); 
+box-shadow: 0 0 0 3px var(--primary-glow); 
+} 
+.platform-links-grid input[type="url"]::placeholder { 
+color: var(--text-tertiary); 
+font-size: 0.75rem; 
+} 
+.actions { 
+padding: 0 24px 24px; 
+} 
+/* ==================== STORY BUILDER ==================== */ 
+.story-builder-body { 
+padding: 24px; 
+} 
+.story-hint { 
+font-size: 0.85rem; 
+color: var(--text-secondary); 
+text-align: center; 
+margin-bottom: 20px; 
+} 
+.story-cards-list { 
+display: flex; 
+f
+lex-direction: column; 
+gap: 12px; 
+margin-bottom: 20px; 
+max-height: 400px; 
+overflow-y: auto; 
+} 
+.story-card-item { 
+background: var(--bg-dark); 
+border: 1px solid var(--border); 
+border-radius: 12px; 
+padding: 16px; 
+position: relative; 
+} 
+.story-card-item textarea { 
+height: 80px; 
+margin-bottom: 12px; 
+} 
+.story-card-actions { 
+display: flex; 
+gap: 8px; 
+justify-content: flex-end; 
+} 
+.remove-story-card { 
+background: rgba(255, 71, 87, 0.2); 
+border: 1px solid rgba(255, 71, 87, 0.3); 
+color: #ff4757; 
+padding: 6px 12px; 
+border-radius: 8px; 
+font-size: 0.75rem; 
+cursor: pointer; 
+transition: all 0.3s ease; 
+font-family: 'Syne', sans-serif; 
+font-weight: 600; 
+} 
+.remove-story-card:hover { 
+background: rgba(255, 71, 87, 0.3); 
+} 
+.add-story-btn { 
+background: var(--glass-bg); 
+border: 1px dashed var(--glass-border); 
+padding: 16px; 
+border-radius: 12px; 
+color: var(--text-secondary); 
+cursor: pointer; 
+transition: all 0.3s ease; 
+font-weight: 600; 
+font-size: 0.9rem; 
+width: 100%; 
+font-family: 'Syne', sans-serif; 
+} 
+.add-story-btn:hover { 
+border-color: var(--primary); 
+color: var(--primary); 
+background: rgba(255, 107, 53, 0.1); 
+} 
+.story-layout-picker { 
+margin-top: 24px; 
+} 
+.layout-options { 
+display: grid; 
+grid-template-columns: repeat(3, 1fr); 
+gap: 12px; 
+} 
+.layout-btn { 
+background: var(--glass-bg); 
+border: 2px solid var(--glass-border); 
+padding: 12px; 
+border-radius: 12px; 
+cursor: pointer; 
+transition: all 0.3s ease; 
+display: flex; 
+f
+lex-direction: column; 
+align-items: center; 
+gap: 8px; 
+} 
+.layout-btn:hover { 
+border-color: var(--primary); 
+} 
+.layout-btn.active { 
+border-color: var(--primary); 
+background: rgba(255, 107, 53, 0.1); 
+} 
+.layout-preview { 
+width: 100%; 
+height: 60px; 
+border-radius: 8px; 
+background: var(--bg-dark); 
+position: relative; 
+} 
+.layout-stack::before { 
+content: ""; 
+position: absolute; 
+top: 10px; 
+left: 10px; 
+right: 10px; 
+height: 8px; 
+background: var(--primary); 
+border-radius: 2px; 
+} 
+.layout-stack::after { 
+content: ""; 
+position: absolute; 
+bottom: 10px; 
+left: 10px; 
+right: 10px; 
+height: 8px; 
+background: var(--primary); 
+border-radius: 2px; 
+} 
+.layout-grid::before, 
+.layout-grid::after { 
+content: ""; 
+position: absolute; 
+top: 10px; 
+width: calc(50% - 12px); 
+height: calc(100% - 20px); 
+background: var(--primary); 
+border-radius: 4px; 
+} 
+.layout-grid::before { 
+left: 10px; 
+} 
+.layout-grid::after { 
+right: 10px; 
+} 
+.layout-carousel::before { 
+content: ""; 
+position: absolute; 
+top: 10px; 
+left: 50%; 
+transform: translateX(-50%); 
+width: 60%; 
+height: calc(100% - 20px); 
+background: var(--primary); 
+border-radius: 4px; 
+} 
+.layout-btn span { 
+font-size: 0.75rem; 
+font-weight: 600; 
+color: var(--text-secondary); 
+font-family: 'Syne', sans-serif; 
+} 
+.layout-btn.active span { 
+color: var(--primary); 
+} 
+/* ==================== STORY CANVAS ==================== */ 
+.story-canvas { 
+width: 100%; 
+aspect-ratio: 1; 
+background: var(--bg-card); 
+border-radius: 24px; 
+overflow: hidden; 
+margin-bottom: 20px; 
+position: relative; 
+} 
+.story-canvas[data-layout="stack"] { 
+display: flex; 
+f
+lex-direction: column; 
+padding: 24px; 
+gap: 16px; 
+} 
+.story-canvas[data-layout="grid"] { 
+display: grid; 
+grid-template-columns: repeat(2, 1fr); 
+gap: 12px; 
+padding: 24px; 
+} 
+.story-canvas[data-layout="carousel"] { 
+display: flex; 
+padding: 24px; 
+gap: 16px; 
+overflow-x: auto; 
+} 
+.story-mini-card { 
+background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-warm) 100%); 
+border: 1px solid var(--border-strong); 
+border-radius: 16px; 
+padding: 20px; 
+f
+lex: 1; 
+min-width: 200px; 
+display: flex; 
+f
+lex-direction: column; 
+gap: 12px; 
+} 
+.story-canvas[data-layout="carousel"] .story-mini-card { 
+f
+lex: 0 0 70%; 
+} 
+.story-mini-text { 
+font-family: 'Fraunces', serif; 
+font-size: 0.95rem; 
+line-height: 1.5; 
+color: var(--text-primary); 
+font-style: italic; 
+text-align: center; 
+} 
+.story-mini-song { 
+font-size: 0.7rem; 
+color: var(--text-secondary); 
+text-align: center; 
+padding-top: 8px; 
+border-top: 1px solid var(--border); 
+} 
+/* ==================== GUESS MODAL ==================== */ 
+.guess-body { 
+padding: 24px; 
+} 
+.guess-prompt { 
+font-size: 0.85rem; 
+color: var(--text-secondary); 
+margin-bottom: 12px; 
+text-align: center; 
+} 
+.guess-lyric { 
+font-family: 'Fraunces', serif; 
+font-size: 1.1rem; 
+font-weight: 400; 
+color: var(--text-primary); 
+text-align: center; 
+padding: 20px; 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+border-radius: 16px; 
+margin-bottom: 24px; 
+line-height: 1.6; 
+font-style: italic; 
+} 
+.guess-lyric::before, 
+.guess-lyric::after { 
+content: '"'; 
+color: var(--primary); 
+} 
+.guess-result { 
+margin-top: 20px; 
+padding: 16px; 
+border-radius: 12px; 
+text-align: center; 
+font-weight: 600; 
+font-size: 0.9rem; 
+} 
+.guess-result.hidden { 
+display: none; 
+} 
+.guess-result.correct { 
+background: rgba(129, 199, 132, 0.2); 
+border: 1px solid #81c784; 
+color: #81c784; 
+} 
+.guess-result.incorrect { 
+background: rgba(255, 71, 87, 0.2); 
+border: 1px solid #ff4757; 
+color: #ff4757; 
+} 
+/* ==================== REDESIGNED POSTCARD MODAL ==================== */ 
+.postcard-overlay { 
+padding: 16px; 
+} 
+.postcard-modal { 
+position: relative; 
+z-index: 2001; 
+width: 100%; 
+max-width: 480px; 
+display: flex; 
+f
+lex-direction: column; 
+gap: 16px; 
+animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+} 
+.postcard-modal .close-btn { 
+position: absolute; 
+top: -48px; 
+right: 0; 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+backdrop-filter: blur(10px); 
+z-index: 10; 
+} 
+.postcard-card { 
+width: 100%; 
+aspect-ratio: 1; 
+border-radius: 20px; 
+overflow: hidden; 
+box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); 
+transition: transform 0.3s ease; 
+cursor: pointer; 
+} 
+.postcard-card:active { 
+transform: scale(0.98); 
+} 
+.card-inner { 
+width: 100%; 
+height: 100%; 
+padding: clamp(32px, 8vw, 48px) clamp(24px, 6vw, 32px); 
+display: flex; 
+f
+lex-direction: column; 
+justify-content: space-between; 
+background: linear-gradient(135deg, #2c1810 0%, #4a2511 100%); 
+color: #f4e4d7; 
+position: relative; 
+} 
+.vinyl-texture { 
+position: absolute; 
+inset: 0; 
+background-image: 
+repeating-radial-gradient(circle at center, transparent 0, transparent 2px, rgba(244, 228, 
+215, 0.03) 2px, rgba(244, 228, 215, 0.03) 4px); 
+pointer-events: none; 
+opacity: 0.5; 
+} 
+.card-text { 
+font-family: 'Fraunces', serif; 
+font-size: clamp(1.1rem, 3vw, 1.4rem); 
+line-height: 1.5; 
+font-weight: 400; 
+text-align: center; 
+font-style: italic; 
+position: relative; 
+z-index: 1; 
+max-height: 60%; 
+overflow: hidden; 
+display: flex; 
+align-items: center; 
+justify-content: center; 
+} 
+.emotion-tags { 
+display: flex; 
+gap: 8px; 
+f
+lex-wrap: wrap; 
+justify-content: center; 
+position: relative; 
+z-index: 1; 
+} 
+.emotion-tag { 
+background: rgba(255, 255, 255, 0.15); 
+border: 1px solid rgba(255, 255, 255, 0.25); 
+padding: 6px 14px; 
+border-radius: 20px; 
+font-size: 0.7rem; 
+font-weight: 600; 
+backdrop-filter: blur(10px); 
+text-transform: uppercase; 
+letter-spacing: 0.5px; 
+font-family: 'Syne', sans-serif; 
+} 
+.postcard-song { 
+text-align: center; 
+padding-top: 16px; 
+border-top: 1px solid rgba(255, 255, 255, 0.15); 
+position: relative; 
+z-index: 1; 
+} 
+.song-title { 
+font-size: 1rem; 
+font-weight: 700; 
+margin-bottom: 4px; 
+font-family: 'Syne', sans-serif; 
+} 
+.song-artist { 
+font-size: 0.8rem; 
+opacity: 0.9; 
+font-weight: 500; 
+} 
+.postcard-branding { 
+text-align: center; 
+font-size: 0.55rem; 
+text-transform: uppercase; 
+letter-spacing: 3px; 
+opacity: 0.3; 
+margin-top: 12px; 
+position: relative; 
+z-index: 1; 
+font-family: 'Syne', sans-serif; 
+} 
+/* Quick Actions Bar */ 
+.postcard-quick-actions { 
+display: grid; 
+grid-template-columns: repeat(3, 1fr); 
+gap: 10px; 
+} 
+.quick-action-btn { 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+padding: 14px 12px; 
+border-radius: 16px; 
+font-size: 0.8rem; 
+font-weight: 600; 
+color: var(--text-primary); 
+cursor: pointer; 
+backdrop-filter: blur(10px); 
+display: flex; 
+f
+lex-direction: column; 
+align-items: center; 
+gap: 6px; 
+transition: all 0.3s ease; 
+font-family: 'Syne', sans-serif; 
+} 
+.quick-action-btn:hover { 
+background: var(--bg-warm); 
+border-color: var(--primary); 
+transform: translateY(-2px); 
+} 
+.quick-action-btn .icon { 
+font-size: 1.3rem; 
+} 
+/* Expandable Options */ 
+.postcard-options-toggle { 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+padding: 12px; 
+border-radius: 14px; 
+color: var(--text-secondary); 
+cursor: pointer; 
+backdrop-filter: blur(10px); 
+transition: all 0.3s ease; 
+font-family: 'Syne', sans-serif; 
+font-size: 0.75rem; 
+text-align: center; 
+font-weight: 600; 
+text-transform: uppercase; 
+letter-spacing: 1px; 
+} 
+.postcard-options-toggle:hover { 
+border-color: var(--primary); 
+color: var(--primary); 
+} 
+.postcard-expanded-options { 
+max-height: 0; 
+overflow: hidden; 
+opacity: 0; 
+transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+} 
+.postcard-expanded-options.active { 
+max-height: 400px; 
+opacity: 1; 
+} 
+.expanded-content { 
+display: flex; 
+f
+lex-direction: column; 
+gap: 16px; 
+padding: 16px; 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+border-radius: 16px; 
+backdrop-filter: blur(20px); 
+margin-top: 10px; 
+} 
+.options-section { 
+display: flex; 
+f
+lex-direction: column; 
+gap: 10px; 
+} 
+.options-section-label { 
+font-size: 0.7rem; 
+color: var(--text-secondary); 
+font-weight: 600; 
+text-transform: uppercase; 
+letter-spacing: 1px; 
+font-family: 'Syne', sans-serif; 
+} 
+.options-grid { 
+display: grid; 
+grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); 
+gap: 8px; 
+} 
+.option-btn { 
+background: var(--bg-dark); 
+border: 1px solid var(--border); 
+padding: 10px 8px; 
+border-radius: 12px; 
+cursor: pointer; 
+transition: all 0.3s ease; 
+display: flex; 
+f
+lex-direction: column; 
+align-items: center; 
+gap: 6px; 
+font-size: 0.65rem; 
+color: var(--text-secondary); 
+font-weight: 600; 
+font-family: 'Syne', sans-serif; 
+} 
+.option-btn:hover { 
+border-color: var(--primary); 
+background: rgba(255, 107, 53, 0.1); 
+color: var(--primary); 
+transform: translateY(-2px); 
+} 
+.option-btn.active { 
+border-color: var(--primary); 
+background: rgba(255, 107, 53, 0.15); 
+color: var(--primary); 
+} 
+.option-btn .icon { 
+font-size: 1.3rem; 
+} 
+/* Responsive Adjustments */ 
+@media (max-width: 480px) { 
+.postcard-modal { 
+max-width: 100%; 
+} 
+.postcard-card { 
+border-radius: 16px; 
+} 
+.card-inner { 
+padding: 28px 20px; 
+} 
+.card-text { 
+font-size: 1rem; 
+} 
+.postcard-quick-actions { 
+gap: 8px; 
+} 
+.quick-action-btn { 
+padding: 12px 8px; 
+font-size: 0.7rem; 
+} 
+.quick-action-btn .icon { 
+font-size: 1.1rem; 
+} 
+.options-grid { 
+grid-template-columns: repeat(3, 1fr); 
+} 
+} 
+.card-inner { 
+width: 100%; 
+height: 100%; 
+padding: 48px 32px; 
+display: flex; 
+f
+lex-direction: column; 
+justify-content: space-between; 
+background: linear-gradient(135deg, #2c1810 0%, #4a2511 100%); 
+color: #f4e4d7; 
+position: relative; 
+} 
+.vinyl-texture { 
+position: absolute; 
+inset: 0; 
+background-image: 
+repeating-radial-gradient(circle at center, transparent 0, transparent 2px, rgba(244, 228, 
+215, 0.03) 2px, rgba(244, 228, 215, 0.03) 4px); 
+pointer-events: none; 
+} 
+.card-text { 
+font-family: 'Fraunces', serif; 
+font-size: clamp(1.3rem, 3vw, 1.6rem); 
+line-height: 1.5; 
+font-weight: 400; 
+text-align: center; 
+font-style: italic; 
+position: relative; 
+z-index: 1; 
+} 
+.emotion-tags { 
+display: flex; 
+gap: 10px; 
+f
+lex-wrap: wrap; 
+justify-content: center; 
+position: relative; 
+z-index: 1; 
+} 
+.emotion-tag { 
+background: rgba(255, 255, 255, 0.15); 
+border: 1px solid rgba(255, 255, 255, 0.25); 
+padding: 8px 16px; 
+border-radius: 20px; 
+font-size: 0.75rem; 
+font-weight: 600; 
+backdrop-filter: blur(10px); 
+text-transform: uppercase; 
+letter-spacing: 0.5px; 
+font-family: 'Syne', sans-serif; 
+} 
+.postcard-song { 
+text-align: center; 
+padding-top: 20px; 
+border-top: 1px solid rgba(255, 255, 255, 0.15); 
+position: relative; 
+z-index: 1; 
+} 
+.song-title { 
+font-size: 1.1rem; 
+font-weight: 700; 
+margin-bottom: 4px; 
+font-family: 'Syne', sans-serif; 
+} 
+.song-artist { 
+font-size: 0.85rem; 
+opacity: 0.9; 
+font-weight: 500; 
+} 
+.postcard-branding { 
+text-align: center; 
+font-size: 0.6rem; 
+text-transform: uppercase; 
+letter-spacing: 3px; 
+opacity: 0.4; 
+margin-top: 16px; 
+position: relative; 
+z-index: 1; 
+font-family: 'Syne', sans-serif; 
+} 
+/* ==================== MODERN TEMPLATE VARIATIONS ==================== */ 
+[data-template="vinyl"] .card-inner { 
+background: linear-gradient(135deg, #2c1810 0%, #4a2511 100%); 
+color: #f4e4d7; 
+} 
+[data-template="gradient"] .card-inner { 
+background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); 
+color: #ffffff; 
+} 
+[data-template="neon"] .card-inner { 
+background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); 
+color: #00ffff; 
+text-shadow: 0 0 20px rgba(0, 255, 255, 0.5); 
+} 
+[data-template="minimal"] .card-inner { 
+background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%); 
+color: #1a1a1a; 
+border: 2px solid #e0e0e0; 
+} 
+[data-template="emotion"] .card-inner { 
+/* Will be set dynamically via JS */ 
+} 
+.template-picker { 
+margin-bottom: 24px; 
+} 
+.picker-label { 
+font-size: 0.75rem; 
+color: var(--text-secondary); 
+margin-bottom: 12px; 
+font-weight: 600; 
+text-transform: uppercase; 
+letter-spacing: 1px; 
+} 
+.template-grid { 
+display: grid; 
+grid-template-columns: repeat(5, 1fr); 
+gap: 10px; 
+} 
+.template-card { 
+background: var(--glass-bg); 
+border: 2px solid var(--glass-border); 
+padding: 10px; 
+border-radius: 12px; 
+cursor: pointer; 
+backdrop-filter: blur(10px); 
+transition: all 0.3s ease; 
+display: flex; 
+f
+lex-direction: column; 
+align-items: center; 
+gap: 8px; 
+} 
+.template-card:hover { 
+border-color: var(--primary); 
+transform: translateY(-2px); 
+} 
+.template-card.active { 
+border-color: var(--primary); 
+background: rgba(255, 107, 53, 0.1); 
+} 
+.template-preview { 
+width: 100%; 
+aspect-ratio: 1; 
+border-radius: 8px; 
+} 
+.gradient-vinyl { 
+background: linear-gradient(135deg, #2c1810 0%, #4a2511 100%); 
+} 
+.gradient-modern { 
+background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); 
+} 
+.gradient-neon { 
+background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); 
+} 
+.gradient-minimal { 
+background: linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 100%); 
+} 
+.gradient-emotion { 
+background: linear-gradient(135deg, #ff6b9d 0%, #c06c84 100%); 
+} 
+.template-card span { 
+font-size: 0.65rem; 
+font-weight: 600; 
+color: var(--text-secondary); 
+text-transform: uppercase; 
+letter-spacing: 0.5px; 
+font-family: 'Syne', sans-serif; 
+} 
+.template-card.active span { 
+color: var(--primary); 
+} 
+/* ==================== EXPORT SECTION ==================== */ 
+.export-section { 
+margin-bottom: 24px; 
+} 
+.export-grid { 
+display: grid; 
+grid-template-columns: repeat(2, 1fr); 
+gap: 12px; 
+} 
+.export-btn, 
+.export-story-btn { 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+padding: 16px 12px; 
+border-radius: 16px; 
+display: flex; 
+f
+lex-direction: column; 
+align-items: center; 
+gap: 6px; 
+cursor: pointer; 
+backdrop-filter: blur(10px); 
+transition: all 0.3s ease; 
+} 
+.export-btn:hover, 
+.export-story-btn:hover { 
+background: var(--bg-warm); 
+border-color: var(--primary); 
+transform: translateY(-2px); 
+} 
+.format-icon { 
+font-size: 1.5rem; 
+} 
+.export-btn span:nth-child(2), 
+.export-story-btn span:nth-child(2) { 
+font-size: 0.85rem; 
+font-weight: 600; 
+color: var(--text-primary); 
+font-family: 'Syne', sans-serif; 
+} 
+.export-btn small { 
+font-size: 0.65rem; 
+color: var(--text-tertiary); 
+} 
+.postcard-actions { 
+display: flex; 
+gap: 12px; 
+} 
+.action-btn { 
+f
+lex: 1; 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+padding: 14px 20px; 
+border-radius: 16px; 
+font-size: 0.85rem; 
+font-weight: 600; 
+color: var(--text-primary); 
+cursor: pointer; 
+backdrop-filter: blur(10px); 
+display: flex; 
+f
+lex-direction: column; 
+align-items: center; 
+gap: 6px; 
+transition: all 0.3s ease; 
+font-family: 'Syne', sans-serif; 
+} 
+.action-btn:hover { 
+background: var(--bg-warm); 
+border-color: var(--primary); 
+transform: translateY(-2px); 
+} 
+.action-btn .icon { 
+font-size: 1.25rem; 
+} 
+/* ==================== PLATFORM SECTIONS ==================== */ 
+.platform-sections { 
+padding: 24px; 
+} 
+.platform-section { 
+margin-bottom: 24px; 
+} 
+.platform-section:last-child { 
+margin-bottom: 0; 
+} 
+.platform-grid { 
+display: grid; 
+grid-template-columns: repeat(2, 1fr); 
+gap: 12px; 
+} 
+.platform-btn { 
+background: var(--glass-bg); 
+border: 1px solid var(--glass-border); 
+padding: 16px; 
+border-radius: 16px; 
+display: flex; 
+f
+lex-direction: column; 
+align-items: center; 
+gap: 8px; 
+font-size: 0.85rem; 
+font-weight: 600; 
+color: var(--text-primary); 
+cursor: pointer; 
+backdrop-filter: blur(10px); 
+transition: all 0.3s ease; 
+font-family: 'Syne', sans-serif; 
+} 
+.platform-btn:hover { 
+background: var(--bg-warm); 
+border-color: var(--primary); 
+transform: translateY(-2px); 
+} 
+.platform-btn.has-custom-link { 
+position: relative; 
+} 
+.platform-btn.has-custom-link::after { 
+content: "✓"; 
+position: absolute; 
+top: 8px; 
+right: 8px; 
+width: 18px; 
+height: 18px; 
+background: var(--primary); 
+color: white; 
+border-radius: 50%; 
+display: flex; 
+align-items: center; 
+justify-content: center; 
+font-size: 0.7rem; 
+font-weight: 700; 
+} 
+.platform-icon { 
+font-size: 1.75rem; 
+} 
+/* ==================== TOAST ==================== */ 
+.toast { 
+position: fixed; 
+bottom: -100px; 
+left: 50%; 
+transform: translateX(-50%); 
+background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); 
+color: white; 
+padding: 16px 24px; 
+border-radius: 16px; 
+font-size: 0.85rem; 
+font-weight: 600; 
+box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); 
+z-index: 4000; 
+transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+backdrop-filter: blur(10px); 
+max-width: 90%; 
+text-align: center; 
+font-family: 'Syne', sans-serif; 
+} 
+.toast.show { 
+bottom: 40px; 
+} 
+/* ==================== SCROLLBAR - INVISIBLE/MINIMAL ==================== */ 
+/* Modern invisible scrollbars for WebKit browsers */ 
+.feed-list::-webkit-scrollbar, 
+.modal-content::-webkit-scrollbar, 
+.postcard-modal::-webkit-scrollbar, 
+.story-cards-list::-webkit-scrollbar { 
+width: 0px; 
+display: none; 
+} 
+/* For Firefox */ 
+.feed-list, 
+.modal-content, 
+.postcard-modal, 
+.story-cards-list { 
+scrollbar-width: none; -ms-overflow-style: none; 
+} 
+/* Ensure smooth scrolling */ 
+.feed-list, 
+.modal-content, 
+.postcard-modal, 
+.story-cards-list { 
+scroll-behavior: smooth; 
+} 
+/* ==================== SWIPE ANIMATIONS ==================== */ 
+.swipe-container { 
+position: relative; 
+touch-action: pan-y; 
+} 
+.swiping { 
+transition: none !important; 
+} 
+/* ==================== RESPONSIVE DESIGN ==================== */ 
+/* DESKTOP EXTRA LARGE (1920px+) */ 
+@media (min-width: 1920px) { 
+.feed-list { 
+grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+max-width: 2000px; 
+margin: 0 auto; 
+padding: 32px 80px; 
+gap: 24px; 
+} 
+.feed-card { 
+padding: 20px; 
+min-height: 320px; 
+} 
+.feed-text { 
+font-size: 1.1rem; 
+} 
+} 
+/* DESKTOP LARGE (1600px - 1919px) */ 
+@media (min-width: 1600px) and (max-width: 1919px) { 
+.feed-list { 
+grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+max-width: 1800px; 
+margin: 0 auto; 
+padding: 28px 60px; 
+gap: 20px; 
+} 
+.feed-card { 
+padding: 18px; 
+min-height: 300px; 
+} 
+} 
+/* DESKTOP MEDIUM (1200px - 1599px) */ 
+@media (min-width: 1200px) and (max-width: 1599px) { 
+.feed-list { 
+grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+max-width: 1400px; 
+margin: 0 auto; 
+padding: 24px 40px; 
+gap: 18px; 
+} 
+.hint { 
+display: none; 
+} 
+} 
+/* DESKTOP SMALL (992px - 1199px) */ 
+@media (min-width: 992px) and (max-width: 1199px) { 
+.feed-list { 
+grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); 
+padding: 20px 32px; 
+gap: 16px; 
+} 
+.feed-card { 
+min-height: 260px; 
+} 
+.hint { 
+display: none; 
+} 
+} 
+/* TABLET (768px - 991px) */ 
+@media (min-width: 768px) and (max-width: 991px) { 
+.feed-list { 
+grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
+padding: 18px 24px; 
+gap: 14px; 
+} 
+.feed-card { 
+min-height: 240px; 
+padding: 16px; 
+} 
+.template-grid { 
+grid-template-columns: repeat(5, 1fr); 
+} 
+.export-grid { 
+grid-template-columns: repeat(2, 1fr); 
+} 
+} 
+/* MOBILE LARGE (640px - 767px) */ 
+@media (min-width: 640px) and (max-width: 767px) { 
+.feed-list { 
+grid-template-columns: repeat(2, 1fr); 
+max-width: 600px; 
+margin: 0 auto; 
+padding: 16px; 
+gap: 12px; 
+} 
+.feed-card { 
+min-height: 260px; 
+} 
+.input-row { 
+grid-template-columns: 1fr; 
+} 
+.platform-grid { 
+grid-template-columns: repeat(2, 1fr); 
+} 
+.template-grid { 
+grid-template-columns: repeat(3, 1fr); 
+} 
+.layout-options { 
+grid-template-columns: repeat(3, 1fr); 
+} 
+} 
+/* MOBILE MEDIUM (480px - 639px) */ 
+@media (min-width: 480px) and (max-width: 639px) { 
+.feed-list { 
+grid-template-columns: repeat(2, 1fr); 
+padding: 14px; 
+gap: 10px; 
+} 
+.feed-card { 
+min-height: 220px; 
+padding: 14px; 
+border-radius: 14px; 
+} 
+.input-row { 
+grid-template-columns: 1fr; 
+} 
+.platform-grid { 
+grid-template-columns: 1fr; 
+} 
+.template-grid { 
+grid-template-columns: repeat(3, 1fr); 
+} 
+.export-grid { 
+grid-template-columns: 1fr; 
+} 
+.feed-text { 
+font-size: 0.9rem; 
+} 
+.card-inner { 
+padding: 40px 24px; 
+} 
+} 
+/* MOBILE SMALL (max 479px) */ 
+@media (max-width: 479px) { 
+.logo { 
+font-size: 2.8rem; 
+letter-spacing: 2px; 
+} 
+.tagline { 
+font-size: 1rem; 
+} 
+.tagline-grid { 
+gap: 8px; 
+} 
+.tagline-grid span { 
+font-size: 0.85rem; 
+padding: 6px 16px; 
+} 
+.feed-list { 
+grid-template-columns: 1fr; 
+padding: 12px; 
+gap: 12px; 
+} 
+.feed-card { 
+min-height: 280px; 
+padding: 16px; 
+border-radius: 14px; 
+} 
+.feed-text { 
+font-size: 0.95rem; 
+} 
+.feed-emotion { 
+font-size: 0.55rem; 
+padding: 4px 10px; 
+} 
+.feed-action { 
+font-size: 0.65rem; 
+padding: 7px 8px; 
+} 
+.input-row { 
+grid-template-columns: 1fr; 
+} 
+.platform-grid { 
+grid-template-columns: 1fr; 
+} 
+.template-grid { 
+grid-template-columns: repeat(3, 1fr); 
+gap: 6px; 
+} 
+.template-card { 
+padding: 6px; 
+} 
+.template-card span { 
+font-size: 0.6rem; 
+} 
+.export-grid { 
+grid-template-columns: 1fr; 
+} 
+.card-inner { 
+padding: 32px 20px; 
+} 
+.card-text { 
+font-size: 1.1rem; 
+} 
+.layout-options { 
+grid-template-columns: 1fr; 
+} 
+.modal-content { 
+border-radius: 20px; 
+} 
+.postcard-card { 
+border-radius: 20px; 
+} 
+} 
+/* TOUCH DEVICE OPTIMIZATIONS */ 
+@media (hover: none) and (pointer: coarse) { 
+.feed-card, 
+.platform-btn, 
+.action-btn, 
+.template-card, 
+.export-btn, 
+.emotion-pill { -webkit-tap-highlight-color: transparent; 
+} 
+.primary-btn { 
+padding: 20px 48px; 
+} 
+} 
+/* LANDSCAPE MOBILE */ 
+@media (max-height: 500px) and (orientation: landscape) { 
+.center { 
+padding: 40px 24px; 
+gap: 16px; 
+} 
+.logo { 
+font-size: 2.5rem; 
+} 
+.tagline-grid { 
+display: none; 
+} 
+.modal-content { 
+max-height: 85vh; 
+} 
+} 
+/* REDUCE MOTION */ 
+@media (prefers-reduced-motion: reduce) { 
+*, 
+*::before, 
+*::after { 
+animation-duration: 0.01ms !important; 
+animation-iteration-count: 1 !important; 
+transition-duration: 0.01ms !important; 
+} 
+} 
+/* DARK MODE OVERRIDE (if system prefers light) */ 
+@media (prefers-color-scheme: light) { 
+/* Keep dark theme - this is intentional */ 
+} 
+/* HIGH CONTRAST MODE */ 
+@media (prefers-contrast: high) { 
+:root { --border: rgba(212, 197, 169, 0.3); --border-strong: rgba(212, 197, 169, 0.5); 
+} 
+} 
