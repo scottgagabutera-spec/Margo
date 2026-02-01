@@ -3,29 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MARGO — Drop a Line</title>
 
-  <title>MARGO — When words fail, drop a lyric</title>
+  <link rel="stylesheet" href="style.css" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 </head>
 
 <body>
-
-<!-- APP ROOT -->
 <div id="app">
 
-  <!-- LANDING SCREEN -->
+  <!-- LANDING -->
   <section id="landing" class="screen active">
     <div class="landing-center">
       <h1 class="logo">MARGO</h1>
-      <p class="tagline">When words fail, drop a lyric.</p>
-      <button id="enterBtn" class="btn-primary">Drop a Lyric</button>
+      <p class="tagline">When words fail, drop a line.</p>
+      <button id="enterBtn" class="btn-primary">Drop a Line</button>
     </div>
 
     <footer class="landing-footer">
@@ -34,31 +30,40 @@
     </footer>
   </section>
 
-  <!-- FEED SCREEN -->
+  <!-- FEED -->
   <section id="feed" class="screen">
-    <header class="app-header">
-      <button class="icon-btn" id="backBtn">←</button>
-      <div class="header-center">
-        <h2>Live Feed</h2>
-        <span id="postCount" class="meta-text">0 posts</span>
-      </div>
-      <button class="btn-primary small" id="openComposer">Drop</button>
+    <header class="feed-header">
+      <button id="backBtn" class="icon-btn">←</button>
+      <h2>Live Feed</h2>
+      <button id="openComposer" class="btn-primary small">Drop a Line</button>
     </header>
 
-    <main class="content">
-      <div id="feedList" class="feed-list">
-        <!-- Feed cards injected here -->
-      </div>
-    </main>
+    <div id="feedList" class="feed-list"></div>
   </section>
+
+  <!-- COMPOSER -->
+  <div id="composer" class="modal hidden">
+    <div class="modal-content">
+      <header class="modal-header">
+        <h3>Drop a Line</h3>
+        <button id="closeComposer" class="icon-btn">×</button>
+      </header>
+
+      <textarea
+        id="textInput"
+        maxlength="140"
+        placeholder="Type the line that says what you can’t…"
+      ></textarea>
+
+      <div class="composer-footer">
+        <span id="count">0/140</span>
+        <button id="postBtn" class="btn-primary">Post</button>
+      </div>
+    </div>
+  </div>
 
 </div>
 
-<!-- Scripts -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="script.js"></script>
-
 </body>
 </html>
