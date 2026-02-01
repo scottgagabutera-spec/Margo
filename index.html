@@ -1,47 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MARGO</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
-  <!-- LANDING -->
-  <section id="landing">
-    <div class="logo">MARGO</div>
-    <p class="tagline">If when words feel like songs…</p>
-    <button id="startBtn">Drop a line</button>
-  </section>
+<!-- LANDING -->
+<section id="landing">
+  <div class="logo">MARGO</div>
+  <p class="tagline">Where lyrics become language.</p>
+  <button id="dropBtn">Drop a line</button>
+</section>
 
-  <!-- CREATE -->
-  <section id="create" class="hidden">
-    <div class="card">
-      <textarea id="lyricInput" placeholder="Drop a lyric, a line, or a feeling..."></textarea>
+<!-- CREATE -->
+<section id="create" class="hidden">
+  <div class="card">
 
-      <div id="modeSection" class="hidden">
-        <p class="question">What do you want to do with this line?</p>
-        <button class="modeBtn" data-mode="guess">Let people guess</button>
-        <button class="modeBtn" data-mode="know">I know the song</button>
-        <button class="modeBtn" data-mode="discover">Help me discover</button>
-      </div>
+    <textarea id="lineInput" 
+      placeholder="Drop a lyric, a line, or a feeling..."></textarea>
 
-      <div id="metaSection" class="hidden">
-        <input id="songInput" placeholder="Song (optional)">
-        <input id="artistInput" placeholder="Artist (optional)">
-      </div>
-
-      <button id="postBtn" class="hidden">Post</button>
+    <div id="modeSection" class="hidden">
+      <p class="question">What do you want to do with this?</p>
+      <button class="mode" data-mode="guess">Let people guess</button>
+      <button class="mode" data-mode="share">I know the song</button>
+      <button class="mode" data-mode="discover">Help me discover</button>
     </div>
-  </section>
 
-  <!-- FEED -->
-  <section id="feed" class="hidden">
-    <h2>Shared Feelings</h2>
-    <div id="posts"></div>
-  </section>
+    <div id="metaSection" class="hidden">
+      <input id="songInput" placeholder="Song (optional)">
+      <input id="artistInput" placeholder="Artist (optional)">
+      <input id="linkInput" placeholder="Streaming link (optional)">
+    </div>
 
-  <script src="script.js"></script>
+    <button id="postBtn" class="hidden">Share on MARGO</button>
+  </div>
+</section>
+
+<!-- FEED -->
+<section id="feed" class="hidden">
+  <h2>Shared Feelings</h2>
+  <div id="posts"></div>
+</section>
+
+<script src="script.js"></script>
 </body>
 </html>
