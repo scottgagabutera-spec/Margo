@@ -40,18 +40,20 @@
 </div>
 
 <div id="postcard" class="modal hidden">
-  <div class="postcard-card" id="postcardCard">
+  <div class="postcard-card">
     <p id="postcardText" class="postcard-text"></p>
     <p id="postcardSong" class="postcard-song"></p>
-    <div class="postcard-actions">
-      <button id="downloadBtn" class="primary-btn">Download</button>
-      <button id="shareBtn" class="secondary-btn">Share</button>
-      <button id="closePostcard" class="secondary-btn">Close</button>
+
+    <div class="vibes-row">
+      <button class="vibe-btn" data-vibe="love">❤️ <span></span></button>
+      <button class="vibe-btn" data-vibe="sad">😢 <span></span></button>
+      <button class="vibe-btn" data-vibe="magic">✨ <span></span></button>
+      <button class="vibe-btn" data-vibe="fire">🔥 <span></span></button>
     </div>
+
+    <button id="closePostcard" class="secondary-btn">Close</button>
   </div>
 </div>
-
-<canvas id="exportCanvas" width="1080" height="1920" style="display:none;"></canvas>
 
 <script src="script.js"></script>
 </body>
