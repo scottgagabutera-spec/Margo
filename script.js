@@ -1,6 +1,5 @@
 /* ======================================================
-   MARGO — Expressive Social Music Platform (Stage 1)
-   Cleaned & Structured Script
+   MARGO — Social Expression Platform (Stage 1)
    ====================================================== */
 
 /* ---------------------------
@@ -21,14 +20,13 @@ try {
   if (window.firebase) {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
-    console.log("Firebase connected");
   }
-} catch (e) {
+} catch {
   console.warn("Firebase unavailable (local mode)");
 }
 
 /* ---------------------------
-   Seed Data
+   Seed Posts
 ---------------------------- */
 const SEED_POSTS = [
   {
@@ -38,9 +36,7 @@ const SEED_POSTS = [
     artist: "Metro Boomin",
     emotions: ["Healing", "Hope"],
     timestamp: Date.now() - 100000,
-    vibes: {},
-    mode: "normal",
-    links: {}
+    vibes: {}
   },
   {
     id: Date.now() - 300000,
@@ -49,34 +45,34 @@ const SEED_POSTS = [
     artist: "Lorde",
     emotions: ["Loneliness", "Heartbreak"],
     timestamp: Date.now() - 300000,
-    vibes: {},
-    mode: "normal",
-    links: {}
+    vibes: {}
   }
 ];
 
 /* ---------------------------
-   DOM References
+   DOM
 ---------------------------- */
 const landing = document.getElementById("landing");
 const feed = document.getElementById("feed");
+
 const enterBtn = document.getElementById("enterBtn");
 const backBtn = document.getElementById("backBtn");
 const openComposer = document.getElementById("openComposer");
+
+const composer = document.getElementById("composer");
+const closeComposer = document.getElementById("closeComposer");
+
 const feedList = document.getElementById("feedList");
 const postCount = document.getElementById("postCount");
 
-/* Composer */
-const composer = document.getElementById("composer");
-const closeComposer = document.getElementById("closeComposer");
-const postBtn = document.getElementById("postBtn");
 const textInput = document.getElementById("textInput");
 const count = document.getElementById("count");
 const songInput = document.getElementById("songInput");
 const artistInput = document.getElementById("artistInput");
+const postBtn = document.getElementById("postBtn");
 
-/* Modals */
-const postcardModal = document.getElementById("postcard");
+/* Postcard */
+const postcard = document.getElementById("postcard");
 const postcardText = document.getElementById("postcardText");
 const postcardSongInfo = document.getElementById("postcardSongInfo");
 const postcardEmotions = document.getElementById("postcardEmotions");
@@ -86,9 +82,7 @@ const closePostcardBtn = document.getElementById("closePostcardBtn");
    State
 ---------------------------- */
 let allPosts = [];
-let currentPost = null;
 let selectedEmotions = [];
-let userVibes = JSON.parse(localStorage.getItem("margoUserVibes") || "{}");
 
 /* ---------------------------
    Navigation
@@ -104,29 +98,40 @@ function showFeed() {
   updatePostCount();
 }
 
-enterBtn.onclick = showFeed;
-backBtn.onclick = showLanding;
-
 /* ---------------------------
-   Composer Logic
+   Composer
 ---------------------------- */
-openComposer.onclick = () => {
+function openComposerModal() {
   composer.classList.remove("hidden");
   textInput.focus();
-};
+}
 
-closeComposer.onclick = () => {
+function closeComposerModal() {
   composer.classList.add("hidden");
   resetComposer();
+}
+
+/* Landing CTA = OPEN COMPOSER */
+enterBtn.onclick = () => {
+  showFeed();
+  openComposerModal();
 };
+
+/* Feed header CTA */
+openComposer.onclick = openComposerModal;
+closeComposer.onclick = closeComposerModal;
+backBtn.onclick = showLanding;
 
 textInput.oninput = () => {
   count.textContent = textInput.value.length;
 };
 
+/* ---------------------------
+   Post Submission
+---------------------------- */
 postBtn.onclick = () => {
   const text = textInput.value.trim();
-  if (!text) return toast("Drop a lyric first");
+  if (!text) return toast("Drop a line first");
   if (!songInput.value || !artistInput.value)
     return toast("Add song & artist");
 
@@ -137,29 +142,29 @@ postBtn.onclick = () => {
     artist: artistInput.value.trim(),
     emotions: selectedEmotions.length ? selectedEmotions : ["Unspoken"],
     timestamp: Date.now(),
-    vibes: {},
-    mode: "normal",
-    links: {}
+    vibes: {}
   };
 
-  savePost(post);
-  composer.classList.add("hidden");
-  resetComposer();
-  showFeed();
+  allPosts.unshift(post);
+  saveAllPosts();
+  renderFeed();
+  closeComposerModal();
+
+  if (db) db.ref("posts").push(post).catch(() => {});
 };
 
 /* ---------------------------
-   Feed Rendering
+   Feed
 ---------------------------- */
 function renderFeed() {
   feedList.innerHTML = "";
 
   if (!allPosts.length) {
-    feedList.innerHTML = `<p style="opacity:.5;text-align:center;">No posts yet.</p>`;
+    feedList.innerHTML = `<p style="opacity:.5;text-align:center;">No lines yet.</p>`;
     return;
   }
 
-  allPosts.forEach((post, index) => {
+  allPosts.forEach((post, i) => {
     const card = document.createElement("div");
     card.className = "feed-card";
 
@@ -172,57 +177,38 @@ function renderFeed() {
         <strong>${post.song}</strong> — ${post.artist}
       </div>
       <div class="feed-card-actions">
-        <button data-index="${index}" class="view-btn">View</button>
-        <button data-index="${index}" class="vibe-btn">
-          ♥ ${Object.keys(post.vibes || {}).length}
-        </button>
+        <button class="view-btn" data-i="${i}">View</button>
+        <button class="vibe-btn">♥ ${Object.keys(post.vibes).length}</button>
       </div>
     `;
+
+    card.querySelector(".view-btn").onclick = () => showPostcard(post);
+    card.querySelector(".vibe-btn").onclick = () => toggleVibe(post);
 
     feedList.appendChild(card);
   });
 
-  bindFeedActions();
-}
-
-function bindFeedActions() {
-  document.querySelectorAll(".view-btn").forEach(btn => {
-    btn.onclick = () => showPostcard(allPosts[btn.dataset.index]);
-  });
-
-  document.querySelectorAll(".vibe-btn").forEach(btn => {
-    btn.onclick = () => toggleVibe(allPosts[btn.dataset.index], btn);
-  });
+  updatePostCount();
 }
 
 /* ---------------------------
    Postcard
 ---------------------------- */
 function showPostcard(post) {
-  currentPost = post;
   postcardText.textContent = post.text;
   postcardSongInfo.innerHTML = `<strong>${post.song}</strong><br>${post.artist}`;
   postcardEmotions.innerHTML = post.emotions.map(e => `<span>${e}</span>`).join("");
-  postcardModal.classList.remove("hidden");
+  postcard.classList.remove("hidden");
 }
 
-closePostcardBtn.onclick = () => postcardModal.classList.add("hidden");
+closePostcardBtn.onclick = () => postcard.classList.add("hidden");
 
 /* ---------------------------
    Vibes
 ---------------------------- */
-function toggleVibe(post, btn) {
+function toggleVibe(post) {
   const userId = getUserId();
-  post.vibes = post.vibes || {};
-
-  if (post.vibes[userId]) {
-    delete post.vibes[userId];
-  } else {
-    post.vibes[userId] = true;
-    toast("Vibed");
-  }
-
-  localStorage.setItem("margoUserVibes", JSON.stringify(userVibes));
+  post.vibes[userId] = !post.vibes[userId];
   saveAllPosts();
   renderFeed();
 }
@@ -239,15 +225,6 @@ function getUserId() {
 /* ---------------------------
    Storage
 ---------------------------- */
-function savePost(post) {
-  allPosts.unshift(post);
-  saveAllPosts();
-
-  if (db) {
-    db.ref("posts").push(post).catch(() => {});
-  }
-}
-
 function saveAllPosts() {
   localStorage.setItem("margoPosts", JSON.stringify(allPosts));
 }
