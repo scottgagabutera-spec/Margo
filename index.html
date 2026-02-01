@@ -1,363 +1,169 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>MARGO — When words fail, drop a lyric</title>
-<link rel="stylesheet" href="style.css"/>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-</head>
-<body>
+:root {
+  --bg: #0e0b0a;
+  --surface: #151110;
+  --accent: #d4af37;
+  --text-primary: #f5f5f5;
+  --text-secondary: #b8b8b8;
+  --text-tertiary: #7a7a7a;
 
-<!-- LANDING -->
-<section id="landing" class="screen active">
-<div class="center">
-<h1 class="logo">MARGO</h1>
-<p class="tagline">When words fail, drop a lyric.</p>
-<button id="enterBtn" class="primary-btn">Drop a Lyric</button>
-<div class="swipe-indicator">
-<span class="swipe-text">Swipe to explore</span>
-<span class="swipe-arrow">→</span>
-</div>
-</div>
-<footer class="landing-footer">
-<p>No login. No ads. Just raw feelings.</p>
-<p class="legal-notice">User-generated song quotes • Music via Spotify & Apple Music</p>
-</footer>
-</section>
+  --radius: 16px;
+  --max-width: 720px;
+}
 
-<!-- FEED -->
-<section id="feed" class="screen">
-<header class="feed-header">
-<button id="backBtn" class="back-btn">←</button>
-<div class="header-center">
-<h2>Live Feed</h2>
-<p class="post-count"><span id="postCount">0</span> posts</p>
-</div>
-<button id="openComposer" class="drop-btn">Drop a Lyric</button>
-</header>
-<div id="feedList" class="feed-list"></div>
-</section>
+* {
+  box-sizing: border-box;
+}
 
-<!-- COMPOSER MODAL - OPTIMIZED FLOW -->
-<div id="composer" class="modal hidden">
-<div class="modal-content">
-<div class="modal-header">
-<h3>Drop Your Lyric</h3>
-<button id="closeComposer" class="close-btn">×</button>
-</div>
-<div class="modal-body">
-<!-- STEP 1: THE LYRIC -->
-<div class="step-section active" id="step1">
-<label class="step-label">1. Your Lyric</label>
-<textarea id="textInput" maxlength="140" placeholder="Type the lyric that's stuck in your soul..."></textarea>
-<div class="counter"><span id="count">0</span>/140</div>
-</div>
+body {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+}
 
-<!-- STEP 2: TAG THE VIBE -->
-<div class="step-section" id="step2">
-<label class="step-label">2. Tag the Vibe</label>
-<div class="emotion-pills">
-<button class="emotion-pill" data-emotion="Love">Love</button>
-<button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
-<button class="emotion-pill" data-emotion="Hope">Hope</button>
-<button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
-<button class="emotion-pill" data-emotion="Healing">Healing</button>
-<button class="emotion-pill" data-emotion="Rage">Rage</button>
-<button class="emotion-pill" data-emotion="Joy">Joy</button>
-<button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
-<button class="emotion-pill" data-emotion="Freedom">Freedom</button>
-<button class="emotion-pill" data-emotion="Anxiety">Anxiety</button>
-</div>
-</div>
+/* SCREENS */
+.screen {
+  display: none;
+  min-height: 100vh;
+}
 
-<!-- STEP 3: CHOOSE MODE -->
-<div class="step-section" id="step3">
-<label class="step-label">3. Choose Mode</label>
-<div class="mode-options">
-<button class="mode-btn active" data-mode="normal">
-<span class="mode-icon">♫</span>
-<span class="mode-title">Normal Post</span>
-<span class="mode-desc">Share with song info</span>
-</button>
-<button class="mode-btn" data-mode="guess">
-<span class="mode-icon">?</span>
-<span class="mode-title">Guess Challenge</span>
-<span class="mode-desc">Let others guess</span>
-</button>
-<button class="mode-btn" data-mode="discover">
-<span class="mode-icon">✨</span>
-<span class="mode-title">Help Me Discover</span>
-<span class="mode-desc">You don't know the song</span>
-</button>
-</div>
-</div>
+.screen.active {
+  display: block;
+}
 
-<!-- STEP 4: SONG DETAILS (CHANGES BASED ON MODE) -->
-<div class="step-section" id="step4">
-<label class="step-label">4. Song Details</label>
-<div id="normalInputs" class="conditional-inputs active">
-<div class="input-row">
-<div class="input-group">
-<label>Song Title</label>
-<input id="songInput" type="text" placeholder="Enter song title" />
-</div>
-<div class="input-group">
-<label>Artist Name</label>
-<input id="artistInput" type="text" placeholder="Enter artist name" />
-</div>
-</div>
-</div>
+/* LANDING */
+.landing-center {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
 
-<div id="guessInputs" class="conditional-inputs">
-<p class="mode-explanation">Set what people should guess:</p>
-<div class="guess-options">
-<label class="checkbox-label">
-<input type="checkbox" id="guessSongCheck" checked />
-<span class="checkbox-custom"></span>
-<span class="checkbox-text">Song Title</span>
-</label>
-<label class="checkbox-label">
-<input type="checkbox" id="guessArtistCheck" checked />
-<span class="checkbox-custom"></span>
-<span class="checkbox-text">Artist Name</span>
-</label>
-</div>
-<div class="input-row">
-<div class="input-group">
-<label>Correct Song Title</label>
-<input id="guessSongAnswer" type="text" placeholder="Enter the answer" />
-</div>
-<div class="input-group">
-<label>Correct Artist</label>
-<input id="guessArtistAnswer" type="text" placeholder="Enter the answer" />
-</div>
-</div>
-</div>
+.logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 4rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
 
-<div id="discoverInputs" class="conditional-inputs">
-<p class="mode-explanation">Leave empty if you don't know the song. The community will help!</p>
-<div class="input-row">
-<div class="input-group">
-<label>Song Title (Optional)</label>
-<input id="discoverSongInput" type="text" placeholder="Unknown" />
-</div>
-<div class="input-group">
-<label>Artist (Optional)</label>
-<input id="discoverArtistInput" type="text" placeholder="Unknown" />
-</div>
-</div>
-</div>
-</div>
+.tagline {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
 
-<!-- STEP 5: STREAMING LINKS (OPTIONAL) -->
-<div class="step-section collapsed" id="step5">
-<button class="step-toggle" id="toggleLinks">
-<span>+ Add Streaming Links (Optional)</span>
-</button>
-<div class="step-collapsible" id="linksSection">
-<div class="platform-links-grid">
-<div class="input-group">
-<label>Spotify</label>
-<input id="spotifyLink" type="url" placeholder="spotify.com/track/..." />
-</div>
-<div class="input-group">
-<label>Apple Music</label>
-<input id="appleLink" type="url" placeholder="music.apple.com/..." />
-</div>
-<div class="input-group">
-<label>YouTube</label>
-<input id="youtubeLink" type="url" placeholder="youtube.com/watch?v=..." />
-</div>
-<div class="input-group">
-<label>SoundCloud</label>
-<input id="soundcloudLink" type="url" placeholder="soundcloud.com/..." />
-</div>
-</div>
-</div>
-</div>
-</div>
+.landing-footer {
+  text-align: center;
+  padding: 1rem;
+  color: var(--text-tertiary);
+}
 
-<div class="modal-footer">
-<button id="postBtn" class="primary-btn full-width">Drop It</button>
-<p class="fair-use-notice">Share short quotes only (fair use) • Attribution required</p>
-</div>
-</div>
-</div>
+/* HEADER */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: linear-gradient(to bottom, rgba(14,11,10,0.95), transparent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+}
 
-<!-- POSTCARD MODAL - COMPACT & CLEAR -->
-<div id="postcard" class="modal hidden">
-<div class="modal-content postcard-content">
-<div class="modal-header">
-<h3>Lyric Card</h3>
-<button id="closePostcardBtn" class="close-btn">×</button>
-</div>
-<div class="modal-body postcard-body-wrapper">
-<div id="postcardCard" class="postcard-card">
-<div class="postcard-header">
-<div class="postcard-logo">MARGO</div>
-</div>
-<div class="postcard-main">
-<div class="postcard-quote">
-<p id="postcardText" class="postcard-text"></p>
-</div>
-<div id="postcardEmotions" class="postcard-emotions"></div>
-</div>
-<div class="postcard-footer">
-<div id="postcardSongInfo" class="postcard-song"></div>
-</div>
-</div>
-</div>
-<div class="modal-footer">
-<div class="card-actions">
-<button id="shareBtn" class="action-btn">
-<span class="action-icon">↗</span>
-<span>Share</span>
-</button>
-<button id="listenBtn" class="action-btn">
-<span class="action-icon">♫</span>
-<span>Listen</span>
-</button>
-<button id="downloadBtn" class="action-btn">
-<span class="action-icon">⬇</span>
-<span>Save</span>
-</button>
-</div>
-</div>
-</div>
-</div>
+.header-meta h2 {
+  margin: 0;
+  font-weight: 500;
+}
 
-<!-- GUESS MODAL -->
-<div id="guessModal" class="modal hidden">
-<div class="modal-content">
-<div class="modal-header">
-<h3>Guess the Song</h3>
-<button id="closeGuess" class="close-btn">×</button>
-</div>
-<div class="modal-body">
-<div class="guess-lyric-container">
-<p class="guess-lyric" id="guessLyric"></p>
-</div>
-<p class="guess-hint" id="guessHint">Make your best guess!</p>
-<div id="guessInputFields">
-<div class="input-group" id="guessSongField">
-<label>Song Title</label>
-<input id="guessSongInput" type="text" placeholder="Enter song name" />
-</div>
-<div class="input-group" id="guessArtistField">
-<label>Artist</label>
-<input id="guessArtistInput" type="text" placeholder="Enter artist name" />
-</div>
-</div>
-<div id="guessResult" class="guess-result hidden"></div>
-<div id="guessActions" class="guess-actions hidden">
-<button id="tryAgainBtn" class="try-again-btn">Try Again</button>
-<button id="revealAnswerBtn" class="reveal-answer-btn">Reveal Answer</button>
-</div>
-</div>
-<div class="modal-footer">
-<button id="submitGuess" class="primary-btn full-width">Submit Guess</button>
-</div>
-</div>
-</div>
+/* CONTENT RAIL */
+.content-rail {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 1rem;
+}
 
-<!-- DISCOVER MODAL -->
-<div id="discoverModal" class="modal hidden">
-<div class="modal-content">
-<div class="modal-header">
-<h3>Help Discover This Song</h3>
-<button id="closeDiscover" class="close-btn">×</button>
-</div>
-<div class="modal-body">
-<p class="discover-lyric" id="discoverLyric"></p>
-<p class="discover-hint">Do you know where this is from?</p>
-<div class="input-group">
-<label>Song Title</label>
-<input id="discoverSongInputModal" type="text" placeholder="Enter song name if you know it" />
-</div>
-<div class="input-group">
-<label>Artist</label>
-<input id="discoverArtistInputModal" type="text" placeholder="Enter artist name if you know it" />
-</div>
-<div class="discover-actions">
-<button id="helpDiscoverBtn" class="primary-btn full-width">Help Them Discover</button>
-<button id="remindMeBtn" class="remind-me-btn">Remind Me Later</button>
-</div>
-</div>
-</div>
-</div>
+/* FEED */
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
 
-<!-- SHARE MODAL -->
-<div id="shareModal" class="modal hidden">
-<div class="modal-content">
-<div class="modal-header">
-<h3>Share</h3>
-<button id="closeShare" class="close-btn">×</button>
-</div>
-<div class="modal-body">
-<p class="share-hint">Share as image or link</p>
-<div class="share-grid">
-<button class="share-btn" data-platform="instagram">
-<span class="share-icon">📷</span>
-<span>Instagram</span>
-<small>1080×1080</small>
-</button>
-<button class="share-btn" data-platform="twitter">
-<span class="share-icon">🐦</span>
-<span>Twitter</span>
-<small>1200×675</small>
-</button>
-<button class="share-btn" data-platform="link">
-<span class="share-icon">🔗</span>
-<span>Copy Link</span>
-</button>
-<button class="share-btn" data-platform="native">
-<span class="share-icon">↗</span>
-<span>Share</span>
-</button>
-</div>
-</div>
-</div>
-</div>
+.feed-card {
+  background: var(--surface);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+}
 
-<!-- LISTEN MODAL -->
-<div id="listenModal" class="modal hidden">
-<div class="modal-content">
-<div class="modal-header">
-<h3>Listen Now</h3>
-<button id="closeListen" class="close-btn">×</button>
-</div>
-<div class="modal-body">
-<p class="listen-hint">Links provided by the poster</p>
-<div class="listen-grid">
-<button class="listen-btn" data-platform="spotify" disabled>
-<span class="listen-icon">🎵</span>
-<span>Spotify</span>
-</button>
-<button class="listen-btn" data-platform="apple" disabled>
-<span class="listen-icon">🍎</span>
-<span>Apple Music</span>
-</button>
-<button class="listen-btn" data-platform="youtube" disabled>
-<span class="listen-icon">▶</span>
-<span>YouTube</span>
-</button>
-<button class="listen-btn" data-platform="soundcloud" disabled>
-<span class="listen-icon">☁</span>
-<span>SoundCloud</span>
-</button>
-</div>
-</div>
-</div>
-</div>
+.feed-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="script.js"></script>
-</body>
-</html>
+/* EMOTIONS */
+.feed-emotions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.feed-emotion {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(212,175,55,0.15);
+  color: var(--accent);
+}
+
+/* SONG */
+.feed-song {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* ACTIONS */
+.feed-card-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.feed-action {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+/* BUTTONS */
+.primary-btn {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn.small {
+  padding: 0.5rem 0.9rem;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+}
+
+/* RESPONSIVE */
+@media (min-width: 1024px) {
+  .logo {
+    font-size: 5rem;
+  }
+}
