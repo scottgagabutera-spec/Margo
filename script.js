@@ -1,89 +1,85 @@
-console.log("MARGO loaded");
-
-/* DOM */
 const landing = document.getElementById("landing");
 const feed = document.getElementById("feed");
 const enterBtn = document.getElementById("enterBtn");
-const backBtn = document.getElementById("backBtn");
 const openComposer = document.getElementById("openComposer");
-
 const composer = document.getElementById("composer");
 const closeComposer = document.getElementById("closeComposer");
 const postBtn = document.getElementById("postBtn");
 const textInput = document.getElementById("textInput");
 const count = document.getElementById("count");
-
+const songInput = document.getElementById("songInput");
+const artistInput = document.getElementById("artistInput");
 const feedList = document.getElementById("feedList");
 
-/* STATE */
-let posts = [];
+const postcard = document.getElementById("postcard");
+const postcardText = document.getElementById("postcardText");
+const postcardSong = document.getElementById("postcardSong");
+const closePostcardBtn = document.getElementById("closePostcardBtn");
 
-/* NAVIGATION */
-function showLanding() {
-  landing.classList.add("active");
-  feed.classList.remove("active");
-}
+let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
 
-function showFeed() {
+/* NAV */
+enterBtn.onclick = () => {
   landing.classList.remove("active");
   feed.classList.add("active");
-}
+  renderFeed();
+};
 
-enterBtn.addEventListener("click", () => {
-  console.log("Drop a Line clicked");
-  showFeed();
-});
-
-backBtn.addEventListener("click", showLanding);
-
-/* COMPOSER */
-openComposer.addEventListener("click", () => {
+openComposer.onclick = () => {
   composer.classList.remove("hidden");
   textInput.focus();
-});
+};
 
-closeComposer.addEventListener("click", () => {
-  composer.classList.add("hidden");
-  resetComposer();
-});
+closeComposer.onclick = () => composer.classList.add("hidden");
 
-textInput.addEventListener("input", () => {
-  count.textContent = `${textInput.value.length}/140`;
-});
+/* COMPOSER */
+textInput.oninput = () => count.textContent = textInput.value.length;
 
-postBtn.addEventListener("click", () => {
+postBtn.onclick = () => {
   const text = textInput.value.trim();
   if (!text) return;
 
   const post = {
     id: Date.now(),
-    text
+    text,
+    song: songInput.value.trim(),
+    artist: artistInput.value.trim(),
+    vibes: {}
   };
 
   posts.unshift(post);
-  renderFeed();
+  localStorage.setItem("margoPosts", JSON.stringify(posts));
 
   composer.classList.add("hidden");
-  resetComposer();
-});
+  textInput.value = "";
+  songInput.value = "";
+  artistInput.value = "";
+  count.textContent = "0";
+
+  renderFeed();
+};
 
 /* FEED */
 function renderFeed() {
   feedList.innerHTML = "";
-
-  posts.forEach(post => {
+  posts.forEach((post, i) => {
     const card = document.createElement("div");
     card.className = "feed-card";
-    card.innerHTML = `<p class="feed-text">“${post.text}”</p>`;
+    card.innerHTML = `
+      <p class="feed-text">“${post.text}”</p>
+      ${post.song ? `<div class="feed-song">${post.song} — ${post.artist}</div>` : ""}
+      <button class="vibe-btn">♥ ${Object.keys(post.vibes).length}</button>
+    `;
+    card.onclick = () => showPostcard(post);
     feedList.appendChild(card);
   });
 }
 
-/* UTILS */
-function resetComposer() {
-  textInput.value = "";
-  count.textContent = "0/140";
+/* POSTCARD */
+function showPostcard(post) {
+  postcardText.textContent = post.text;
+  postcardSong.textContent = post.song ? `${post.song} — ${post.artist}` : "";
+  postcard.classList.remove("hidden");
 }
 
-/* INIT */
-showLanding();
+closePostcardBtn.onclick = () => postcard.classList.add("hidden");
