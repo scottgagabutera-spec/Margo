@@ -1,4 +1,4 @@
-/* MARGO v4.0 - Improved Logic & UX */
+/* MARGO v5.0 - Optimized Flow & Performance */
 
 // Firebase Config
 const firebaseConfig = {
@@ -33,12 +33,7 @@ const SEED_POSTS = [
     timestamp: Date.now() - 120000,
     vibes: {},
     mode: "normal",
-    links: {
-      spotify: "https://open.spotify.com/track/example1",
-      apple: null,
-      youtube: null,
-      soundcloud: null
-    }
+    links: { spotify: null, apple: null, youtube: null, soundcloud: null }
   },
   {
     id: Date.now() - 300000,
@@ -66,6 +61,15 @@ const textInput = document.getElementById("textInput");
 const count = document.getElementById("count");
 const feedList = document.getElementById("feedList");
 const postCount = document.getElementById("postCount");
+
+// Step sections
+const step1 = document.getElementById("step1");
+const step2 = document.getElementById("step2");
+const step3 = document.getElementById("step3");
+const step4 = document.getElementById("step4");
+const step5 = document.getElementById("step5");
+const toggleLinks = document.getElementById("toggleLinks");
+const linksSection = document.getElementById("linksSection");
 
 // Mode elements
 const modeBtns = document.querySelectorAll(".mode-btn");
@@ -196,6 +200,7 @@ function handleSwipe() {
 enterBtn.onclick = () => {
   composer.classList.remove("hidden");
   textInput.focus();
+  activateStep(step1);
 };
 
 backBtn.onclick = () => showLanding();
@@ -203,6 +208,7 @@ backBtn.onclick = () => showLanding();
 openComposer.onclick = () => {
   composer.classList.remove("hidden");
   textInput.focus();
+  activateStep(step1);
 };
 
 closeComposer.onclick = () => {
@@ -216,38 +222,29 @@ closeDiscover.onclick = () => discoverModal.classList.add("hidden");
 closeShare.onclick = () => shareModal.classList.add("hidden");
 closeListen.onclick = () => listenModal.classList.add("hidden");
 
-// Character counter
-textInput.oninput = () => {
-  count.textContent = textInput.value.length;
+// Toggle streaming links section
+toggleLinks.onclick = () => {
+  const isActive = linksSection.classList.toggle('active');
+  toggleLinks.classList.toggle('active');
+  toggleLinks.querySelector('span').textContent = isActive ? 
+    '- Hide Streaming Links' : 
+    '+ Add Streaming Links (Optional)';
 };
 
-// Mode selection
-modeBtns.forEach(btn => {
-  btn.onclick = () => {
-    // Remove active from all
-    modeBtns.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    
-    // Get selected mode
-    currentMode = btn.dataset.mode;
-    
-    // Hide all input sections
-    normalInputs.classList.remove("active");
-    guessInputs.classList.remove("active");
-    discoverInputs.classList.remove("active");
-    
-    // Show appropriate section
-    if (currentMode === "normal") {
-      normalInputs.classList.add("active");
-    } else if (currentMode === "guess") {
-      guessInputs.classList.add("active");
-    } else if (currentMode === "discover") {
-      discoverInputs.classList.add("active");
-    }
-  };
-});
+// Character counter & auto-activate next step
+textInput.oninput = () => {
+  count.textContent = textInput.value.length;
+  if (textInput.value.trim().length > 0) {
+    activateStep(step2);
+  }
+};
 
-// Emotion pills
+// Step activation system
+function activateStep(step) {
+  step.classList.add('active');
+}
+
+// Emotion pills - activate next step when selected
 document.querySelectorAll(".emotion-pill").forEach(pill => {
   pill.onclick = () => {
     const emotion = pill.dataset.emotion;
@@ -258,6 +255,34 @@ document.querySelectorAll(".emotion-pill").forEach(pill => {
       selectedEmotions.push(emotion);
       pill.classList.add("active");
     }
+    
+    if (selectedEmotions.length > 0) {
+      activateStep(step3);
+    }
+  };
+});
+
+// Mode selection - activate next step
+modeBtns.forEach(btn => {
+  btn.onclick = () => {
+    modeBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    
+    currentMode = btn.dataset.mode;
+    
+    normalInputs.classList.remove("active");
+    guessInputs.classList.remove("active");
+    discoverInputs.classList.remove("active");
+    
+    if (currentMode === "normal") {
+      normalInputs.classList.add("active");
+    } else if (currentMode === "guess") {
+      guessInputs.classList.add("active");
+    } else if (currentMode === "discover") {
+      discoverInputs.classList.add("active");
+    }
+    
+    activateStep(step4);
   };
 });
 
@@ -398,6 +423,15 @@ function resetComposer() {
   count.textContent = "0";
   selectedEmotions = [];
   
+  // Reset steps
+  [step1, step2, step3, step4, step5].forEach(step => step.classList.remove('active'));
+  step1.classList.add('active');
+  
+  // Reset links section
+  linksSection.classList.remove('active');
+  toggleLinks.classList.remove('active');
+  toggleLinks.querySelector('span').textContent = '+ Add Streaming Links (Optional)';
+  
   // Reset mode to normal
   currentMode = "normal";
   modeBtns.forEach(b => b.classList.remove("active"));
@@ -490,7 +524,6 @@ function renderFeed() {
       const userGuessed = userGuesses[post.id];
 
       if (userGuessed) {
-        // Show the answer after successful guess
         songSection = `
           <div class="feed-song">
             <div class="feed-song-title">${post.song}</div>
@@ -498,7 +531,6 @@ function renderFeed() {
           </div>
         `;
       } else {
-        // Show guess challenge
         const guessWhat = [];
         if (post.guessConfig.allowGuessSong) guessWhat.push("song");
         if (post.guessConfig.allowGuessArtist) guessWhat.push("artist");
@@ -512,7 +544,6 @@ function renderFeed() {
         `;
       }
     } else {
-      // Normal mode
       songSection = `
         <div class="feed-song">
           <div class="feed-song-title">${post.song}</div>
@@ -555,7 +586,6 @@ function renderFeed() {
 }
 
 function attachListeners() {
-  // Feed actions
   document.querySelectorAll(".feed-action").forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
@@ -575,7 +605,6 @@ function attachListeners() {
     };
   });
 
-  // Vibe buttons
   document.querySelectorAll(".vibe-btn").forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
@@ -584,7 +613,6 @@ function attachListeners() {
     };
   });
 
-  // Guess buttons
   document.querySelectorAll(".guess-btn").forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
@@ -593,7 +621,6 @@ function attachListeners() {
     };
   });
 
-  // Help discover buttons
   document.querySelectorAll(".help-discover-btn").forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
@@ -646,7 +673,6 @@ function openGuessModal(post) {
   guessActions.classList.add("hidden");
   submitGuess.style.display = "block";
   
-  // Show/hide input fields based on what needs to be guessed
   if (post.guessConfig.allowGuessSong) {
     guessSongField.style.display = "flex";
   } else {
@@ -659,7 +685,6 @@ function openGuessModal(post) {
     guessArtistField.style.display = "none";
   }
   
-  // Update hint
   const guessWhat = [];
   if (post.guessConfig.allowGuessSong) guessWhat.push("song");
   if (post.guessConfig.allowGuessArtist) guessWhat.push("artist");
@@ -689,7 +714,7 @@ submitGuess.onclick = () => {
       actualSong.includes(guessedSong)
     );
   } else {
-    songMatch = true; // Not being tested
+    songMatch = true;
   }
 
   if (allowGuessArtist) {
@@ -699,14 +724,13 @@ submitGuess.onclick = () => {
       actualArtist.includes(guessedArtist)
     );
   } else {
-    artistMatch = true; // Not being tested
+    artistMatch = true;
   }
 
   guessResult.classList.remove("hidden");
   submitGuess.style.display = "none";
 
   if (songMatch && artistMatch) {
-    // Perfect match!
     guessResult.className = "guess-result correct";
     let message = "Perfect! ";
     if (allowGuessSong && allowGuessArtist) {
@@ -726,7 +750,6 @@ submitGuess.onclick = () => {
       renderFeed();
     }, 2500);
   } else {
-    // Wrong answer
     guessResult.className = "guess-result incorrect";
     guessResult.textContent = "Not quite! Try again or reveal the answer.";
     guessActions.classList.remove("hidden");
@@ -819,8 +842,8 @@ function showPostcard(post) {
   });
 
   postcardSongInfo.innerHTML = `
-    <div class="card-song-title">${post.song}</div>
-    <div class="card-song-artist">${post.artist}</div>
+    <div>${post.song}</div>
+    <div>${post.artist}</div>
   `;
 
   postcardModal.classList.remove("hidden");
@@ -864,10 +887,13 @@ async function handleShare(platform) {
 
   const postUrl = `${window.location.origin}/?post=${currentPost.id}`;
 
-  if (['instagram', 'tiktok', 'twitter', 'whatsapp'].includes(platform)) {
+  if (['instagram', 'twitter'].includes(platform)) {
     try {
-      showToast("Generating poster...");
-      const imageDataUrl = await generateSocialImage(platform, postUrl);
+      showToast("Generating image...");
+      
+      // Use a simpler, more reliable image generation
+      const canvas = await createPostcardCanvas(platform);
+      const imageDataUrl = canvas.toDataURL('image/png', 1.0);
       
       const link = document.createElement('a');
       link.download = `margo-${platform}-${currentPost.id}.png`;
@@ -876,15 +902,15 @@ async function handleShare(platform) {
       
       setTimeout(() => {
         navigator.clipboard.writeText(postUrl).then(() => {
-          showToast(`Poster saved! Link copied.`);
+          showToast(`Image saved! Link copied.`);
         }).catch(() => {
-          showToast(`Poster saved for ${platform}!`);
+          showToast(`Image saved for ${platform}!`);
         });
-      }, 500);
+      }, 300);
       
     } catch (err) {
-      console.error(err);
-      showToast("Image generation failed");
+      console.error("Image generation error:", err);
+      showToast("Image generation failed - try again");
     }
   } else {
     const text = `"${currentPost.text}"\n\n${currentPost.song} — ${currentPost.artist}\n\nShared via MARGO`;
@@ -908,57 +934,78 @@ async function handleShare(platform) {
   shareModal.classList.add("hidden");
 }
 
-async function generateSocialImage(platform, deepLink) {
-  const card = document.getElementById("postcardCard");
-  
+// Improved image generation function
+async function createPostcardCanvas(platform) {
   const dimensions = {
     instagram: { width: 1080, height: 1080 },
-    tiktok: { width: 1080, height: 1920 },
-    twitter: { width: 1200, height: 675 },
-    whatsapp: { width: 1080, height: 1080 }
+    twitter: { width: 1200, height: 675 }
   };
   
   const dim = dimensions[platform] || dimensions.instagram;
-  
-  const htmlCanvas = await html2canvas(card, {
-    backgroundColor: null,
-    scale: 2,
-    logging: false,
-    useCORS: true
-  });
-  
   const canvas = document.createElement('canvas');
   canvas.width = dim.width;
   canvas.height = dim.height;
   const ctx = canvas.getContext('2d');
   
-  ctx.fillStyle = '#0a0a0a';
+  // Background
+  const gradient = ctx.createLinearGradient(0, 0, dim.width, dim.height);
+  gradient.addColorStop(0, '#1a1410');
+  gradient.addColorStop(1, '#2c2420');
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, dim.width, dim.height);
   
-  const scale = Math.min(
-    (dim.width * 0.85) / htmlCanvas.width,
-    (dim.height * 0.85) / htmlCanvas.height
-  );
+  // Header bar
+  const headerGradient = ctx.createLinearGradient(0, 0, dim.width, 0);
+  headerGradient.addColorStop(0, '#d4af37');
+  headerGradient.addColorStop(1, '#e8c468');
+  ctx.fillStyle = headerGradient;
+  ctx.fillRect(0, 0, dim.width, 80);
   
-  const x = (dim.width - htmlCanvas.width * scale) / 2;
-  const y = (dim.height - htmlCanvas.height * scale) / 2;
-  
-  ctx.drawImage(htmlCanvas, x, y, htmlCanvas.width * scale, htmlCanvas.height * scale);
-  
-  ctx.font = 'bold 32px DM Sans, Arial';
-  ctx.fillStyle = '#d4af37';
+  // Logo
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 48px serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Click link to view', dim.width / 2, dim.height - 100);
+  ctx.fillText('MARGO', dim.width / 2, 55);
   
-  ctx.font = 'bold 28px DM Sans, Arial';
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.9)';
-  ctx.fillText(deepLink, dim.width / 2, dim.height - 60);
+  // Quote text
+  ctx.fillStyle = '#f5f5f5';
+  ctx.font = 'italic 42px serif';
+  ctx.textAlign = 'center';
   
-  ctx.font = 'bold 24px DM Sans, Arial';
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.3)';
-  ctx.fillText('MARGO', dim.width / 2, dim.height - 20);
+  const maxWidth = dim.width - 200;
+  const lineHeight = 60;
+  const words = currentPost.text.split(' ');
+  const lines = [];
+  let currentLine = '';
   
-  return canvas.toDataURL('image/png');
+  words.forEach(word => {
+    const testLine = currentLine + word + ' ';
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && currentLine.length > 0) {
+      lines.push(currentLine);
+      currentLine = word + ' ';
+    } else {
+      currentLine = testLine;
+    }
+  });
+  lines.push(currentLine);
+  
+  const startY = (dim.height - (lines.length * lineHeight)) / 2;
+  lines.forEach((line, i) => {
+    ctx.fillText(line.trim(), dim.width / 2, startY + (i * lineHeight));
+  });
+  
+  // Song info at bottom
+  const bottomY = dim.height - 150;
+  ctx.fillStyle = '#d4af37';
+  ctx.font = 'bold 36px serif';
+  ctx.fillText(currentPost.song, dim.width / 2, bottomY);
+  
+  ctx.fillStyle = '#b8b8b8';
+  ctx.font = '28px sans-serif';
+  ctx.fillText(currentPost.artist, dim.width / 2, bottomY + 45);
+  
+  return canvas;
 }
 
 // Listen
@@ -990,15 +1037,11 @@ downloadBtn.onclick = async () => {
   if (!currentPost) return;
   
   try {
-    const card = document.getElementById("postcardCard");
-    const canvas = await html2canvas(card, {
-      backgroundColor: null,
-      scale: 2
-    });
-
+    showToast("Generating image...");
+    const canvas = await createPostcardCanvas('instagram');
     const link = document.createElement("a");
     link.download = `margo-${currentPost.id}.png`;
-    link.href = canvas.toDataURL("image/png");
+    link.href = canvas.toDataURL("image/png", 1.0);
     link.click();
     
     showToast("Downloaded!");
