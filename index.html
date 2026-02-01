@@ -23,10 +23,7 @@
 <section id="feed" class="screen">
   <header class="feed-header">
     <h2>Live Feed</h2>
-    <div>
-      <button id="storyBtn" class="secondary-btn">Story</button>
-      <button id="openComposer" class="add-btn">＋</button>
-    </div>
+    <button id="openComposer" class="add-btn">＋</button>
   </header>
   <div id="feedList" class="feed-list"></div>
 </section>
@@ -34,38 +31,27 @@
 <div id="composer" class="modal hidden">
   <div class="modal-card">
     <h3>Drop Your Line</h3>
-    <textarea id="textInput" maxlength="140"></textarea>
+    <textarea id="textInput" maxlength="160"></textarea>
     <input id="songInput" placeholder="Song title">
     <input id="artistInput" placeholder="Artist">
-    <label><input type="checkbox" id="hideSongCheck"> Hide track</label>
-    <div class="emotion-row">
-      <button class="emotion" data-emotion="Love">Love</button>
-      <button class="emotion" data-emotion="Heartbreak">Heartbreak</button>
-      <button class="emotion" data-emotion="Hope">Hope</button>
-      <button class="emotion" data-emotion="Healing">Healing</button>
-    </div>
     <button id="postBtn" class="primary-btn">Post</button>
     <button id="closeComposer" class="secondary-btn">Cancel</button>
   </div>
 </div>
 
 <div id="postcard" class="modal hidden">
-  <div class="postcard-card" id="swipeArea">
+  <div class="postcard-card" id="postcardCard">
     <p id="postcardText" class="postcard-text"></p>
     <p id="postcardSong" class="postcard-song"></p>
-    <p class="hint">Swipe left/right</p>
-    <button id="closePostcard" class="secondary-btn">Close</button>
+    <div class="postcard-actions">
+      <button id="downloadBtn" class="primary-btn">Download</button>
+      <button id="shareBtn" class="secondary-btn">Share</button>
+      <button id="closePostcard" class="secondary-btn">Close</button>
+    </div>
   </div>
 </div>
 
-<div id="storyView" class="modal hidden">
-  <div class="postcard-card">
-    <p id="storyText" class="postcard-text"></p>
-    <p id="storySong" class="postcard-song"></p>
-    <p class="hint">Tap to continue</p>
-    <button id="closeStory" class="secondary-btn">Exit Story</button>
-  </div>
-</div>
+<canvas id="exportCanvas" width="1080" height="1920" style="display:none;"></canvas>
 
 <script src="script.js"></script>
 </body>
