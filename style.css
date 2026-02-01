@@ -22,11 +22,7 @@ body {
 .logo {
   font-family: 'Fraunces', serif;
   font-size: 4rem;
-  letter-spacing: 4px;
 }
-
-.subtitle { opacity: .6; font-size: .8rem; }
-.tagline { font-size: 1.2rem; }
 
 .primary-btn {
   background: linear-gradient(135deg, #ff7a7a, #ffb86c);
@@ -52,7 +48,6 @@ body {
 }
 
 .feed-list {
-  flex: 1;
   padding: 16px;
   display: grid;
   gap: 16px;
@@ -81,15 +76,23 @@ body {
   padding: 40px;
   border-radius: 24px;
   text-align: center;
-  max-width: 400px;
   width: 90%;
+  max-width: 400px;
 }
 
 .postcard-text {
   font-family: 'Fraunces', serif;
-  font-size: 1.4rem;
+  font-size: clamp(1.2rem, 4vw, 2rem);
   margin-bottom: 16px;
 }
 
-.postcard-song { opacity: .7; }
-.hint { opacity: .4; font-size: .8rem; margin: 10px 0; }
+.postcard-song {
+  opacity: .7;
+  margin-bottom: 20px;
+}
+
+.postcard-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
