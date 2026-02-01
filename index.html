@@ -2,71 +2,344 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MARGO</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  
+  <title>MARGO — When words fail, drop a lyric</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style-improved.css"/>
 </head>
 <body>
 
-<!-- LANDING -->
-<section id="landing" class="screen active">
-  <div class="center">
-    <h1 class="logo">MARGO</h1>
-    <p class="tagline">When words fail, drop a line.</p>
-    <button id="enterBtn" class="primary-btn">
-      <span>Enter</span>
-    </button>
+  <!-- ===================================
+       APP CONTAINER (Responsive Grid)
+       =================================== -->
+  
+  <div class="app-container">
+    
+    <!-- ===================================
+         NAVIGATION (Adaptive)
+         =================================== -->
+    
+    <!-- Desktop: Left Sidebar -->
+    <nav class="app-nav sidebar-nav hide-mobile" aria-label="Main Navigation">
+      <div class="nav-brand">
+        <h1 class="header-brand">MARGO</h1>
+        <p class="tagline" style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-2);">When words fail, drop a lyric</p>
+      </div>
+      
+      <ul class="nav-list" style="margin-top: var(--space-8);">
+        <li>
+          <a href="#" class="nav-item active" data-view="feed">
+            <span class="nav-icon">♫</span>
+            <span class="nav-label">Feed</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-view="explore">
+            <span class="nav-icon">✨</span>
+            <span class="nav-label">Explore</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-view="challenges">
+            <span class="nav-icon">?</span>
+            <span class="nav-label">Challenges</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-view="discover">
+            <span class="nav-icon">🔍</span>
+            <span class="nav-label">Discover</span>
+          </a>
+        </li>
+      </ul>
+      
+      <div style="margin-top: auto; padding-top: var(--space-8);">
+        <button class="btn btn-primary" id="desktopCompose" style="width: 100%;">
+          <span>Drop a Lyric</span>
+        </button>
+      </div>
+    </nav>
+    
+    <!-- Mobile: Bottom Tab Bar -->
+    <nav class="app-nav bottom-nav hide-desktop" aria-label="Main Navigation">
+      <ul class="nav-list">
+        <li>
+          <a href="#" class="nav-item active" data-view="feed">
+            <span class="nav-icon">♫</span>
+            <span class="nav-label">Feed</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-view="explore">
+            <span class="nav-icon">✨</span>
+            <span class="nav-label">Explore</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-view="challenges">
+            <span class="nav-icon">?</span>
+            <span class="nav-label">Guess</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" data-view="discover">
+            <span class="nav-icon">🔍</span>
+            <span class="nav-label">Find</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    
+    <!-- ===================================
+         HEADER / APP BAR
+         =================================== -->
+    
+    <header class="app-header">
+      <div class="header-brand hide-desktop">MARGO</div>
+      
+      <div class="header-center hide-mobile">
+        <h2 style="font-size: var(--text-xl); font-weight: var(--font-semibold);">Live Feed</h2>
+        <p style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">
+          <span id="postCount">0</span> posts
+        </p>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Future: Search, Notifications, Profile -->
+      </div>
+    </header>
+    
+    <!-- ===================================
+         MAIN CONTENT AREA
+         =================================== -->
+    
+    <main class="app-content" id="mainContent">
+      
+      <!-- Feed View -->
+      <div id="feedView" class="content-view active">
+        <div class="content-container">
+          <div id="feedList" class="feed-list"></div>
+        </div>
+      </div>
+      
+      <!-- Explore View (Future) -->
+      <div id="exploreView" class="content-view" style="display: none;">
+        <div class="content-container">
+          <h2>Explore</h2>
+          <p style="color: var(--text-secondary); margin-top: var(--space-4);">Coming soon...</p>
+        </div>
+      </div>
+      
+      <!-- Challenges View (Future) -->
+      <div id="challengesView" class="content-view" style="display: none;">
+        <div class="content-container">
+          <h2>Challenges</h2>
+          <p style="color: var(--text-secondary); margin-top: var(--space-4);">Coming soon...</p>
+        </div>
+      </div>
+      
+      <!-- Discover View (Future) -->
+      <div id="discoverView" class="content-view" style="display: none;">
+        <div class="content-container">
+          <h2>Discover</h2>
+          <p style="color: var(--text-secondary); margin-top: var(--space-4);">Coming soon...</p>
+        </div>
+      </div>
+      
+    </main>
+    
+    <!-- ===================================
+         SECONDARY PANEL (Future)
+         =================================== -->
+    
+    <aside class="app-panel hide-mobile hide-tablet" style="padding: var(--space-6); display: none;">
+      <!-- Future: Trending, Suggestions, etc. -->
+      <div style="background: var(--bg-secondary); border-radius: var(--radius-xl); padding: var(--space-6);">
+        <h3 style="font-size: var(--text-lg); margin-bottom: var(--space-4);">Trending Emotions</h3>
+        <p style="color: var(--text-tertiary); font-size: var(--text-sm);">Coming soon...</p>
+      </div>
+    </aside>
+    
   </div>
-</section>
-
-<!-- FEED -->
-<section id="feed" class="screen">
-  <header class="feed-header">
-    <button id="openComposer" class="drop-btn">Drop a Line</button>
-  </header>
-
-  <div id="feedList" class="feed-list"></div>
-</section>
-
-<!-- COMPOSER -->
-<div id="composer" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Drop a Line</h3>
-      <button id="closeComposer" class="close-btn">×</button>
-    </div>
-
-    <div class="modal-body">
-      <textarea id="textInput" maxlength="160" placeholder="A line that stayed with you…"></textarea>
-      <div class="counter"><span id="count">0</span>/160</div>
-
-      <input id="songInput" type="text" placeholder="Song title (optional)" />
-      <input id="artistInput" type="text" placeholder="Artist (optional)" />
-    </div>
-
-    <div class="modal-footer">
-      <button id="postBtn" class="primary-btn full-width">
-        <span>Post</span>
-      </button>
+  
+  <!-- ===================================
+       FLOATING ACTION BUTTON (Mobile)
+       =================================== -->
+  
+  <button class="fab hide-desktop" id="mobileFab" aria-label="Drop a lyric">
+    +
+  </button>
+  
+  <!-- ===================================
+       MODALS & OVERLAYS
+       =================================== -->
+  
+  <!-- Composer Modal -->
+  <div id="composer" class="modal">
+    <div class="modal-backdrop" onclick="closeComposer()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Drop Your Lyric</h3>
+        <button class="close-btn" onclick="closeComposer()" aria-label="Close">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Step 1: Lyric -->
+        <div class="input-group">
+          <label>Your Lyric</label>
+          <textarea id="textInput" maxlength="140" placeholder="Type the lyric that's stuck in your soul..."></textarea>
+          <div style="text-align: right; margin-top: var(--space-2); font-size: var(--text-xs); color: var(--text-tertiary);">
+            <span id="count">0</span>/140
+          </div>
+        </div>
+        
+        <!-- Step 2: Emotions -->
+        <div class="input-group">
+          <label>Tag the Vibe</label>
+          <div class="emotion-pills">
+            <button class="emotion-pill" data-emotion="Love">Love</button>
+            <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
+            <button class="emotion-pill" data-emotion="Hope">Hope</button>
+            <button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
+            <button class="emotion-pill" data-emotion="Healing">Healing</button>
+            <button class="emotion-pill" data-emotion="Rage">Rage</button>
+            <button class="emotion-pill" data-emotion="Joy">Joy</button>
+            <button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
+            <button class="emotion-pill" data-emotion="Freedom">Freedom</button>
+            <button class="emotion-pill" data-emotion="Anxiety">Anxiety</button>
+          </div>
+        </div>
+        
+        <!-- Step 3: Mode Selection -->
+        <div class="input-group">
+          <label>Mode</label>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3);">
+            <button class="btn btn-secondary active" data-mode="normal" style="flex-direction: column; padding: var(--space-4); height: auto;">
+              <span style="font-size: var(--text-2xl); margin-bottom: var(--space-2);">♫</span>
+              <span style="font-weight: var(--font-semibold);">Normal</span>
+              <span style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">Share with info</span>
+            </button>
+            <button class="btn btn-secondary" data-mode="guess" style="flex-direction: column; padding: var(--space-4); height: auto;">
+              <span style="font-size: var(--text-2xl); margin-bottom: var(--space-2);">?</span>
+              <span style="font-weight: var(--font-semibold);">Guess</span>
+              <span style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">Challenge others</span>
+            </button>
+            <button class="btn btn-secondary" data-mode="discover" style="flex-direction: column; padding: var(--space-4); height: auto;">
+              <span style="font-size: var(--text-2xl); margin-bottom: var(--space-2);">✨</span>
+              <span style="font-weight: var(--font-semibold);">Discover</span>
+              <span style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">Find the song</span>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Mode-Specific Inputs -->
+        <div id="normalInputs" style="display: block;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+            <div class="input-group">
+              <label>Song Title</label>
+              <input id="songInput" type="text" placeholder="Enter song title" />
+            </div>
+            <div class="input-group">
+              <label>Artist Name</label>
+              <input id="artistInput" type="text" placeholder="Enter artist name" />
+            </div>
+          </div>
+        </div>
+        
+        <div id="guessInputs" style="display: none;">
+          <p style="font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-4);">
+            Set what people should guess:
+          </p>
+          <div style="display: flex; gap: var(--space-4); margin-bottom: var(--space-4);">
+            <label style="display: flex; align-items: center; gap: var(--space-2); cursor: pointer;">
+              <input type="checkbox" id="guessSongCheck" checked />
+              <span>Song Title</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: var(--space-2); cursor: pointer;">
+              <input type="checkbox" id="guessArtistCheck" checked />
+              <span>Artist Name</span>
+            </label>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+            <div class="input-group">
+              <label>Correct Song Title</label>
+              <input id="guessSongAnswer" type="text" placeholder="Enter the answer" />
+            </div>
+            <div class="input-group">
+              <label>Correct Artist</label>
+              <input id="guessArtistAnswer" type="text" placeholder="Enter the answer" />
+            </div>
+          </div>
+        </div>
+        
+        <div id="discoverInputs" style="display: none;">
+          <p style="font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-4);">
+            Leave empty if you don't know. The community will help!
+          </p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+            <div class="input-group">
+              <label>Song Title (Optional)</label>
+              <input id="discoverSongInput" type="text" placeholder="Unknown" />
+            </div>
+            <div class="input-group">
+              <label>Artist (Optional)</label>
+              <input id="discoverArtistInput" type="text" placeholder="Unknown" />
+            </div>
+          </div>
+        </div>
+        
+        <!-- Streaming Links (Optional) -->
+        <details style="margin-top: var(--space-6);">
+          <summary style="cursor: pointer; font-weight: var(--font-medium); color: var(--text-secondary); margin-bottom: var(--space-4);">
+            + Add Streaming Links (Optional)
+          </summary>
+          <div style="display: grid; gap: var(--space-3); margin-top: var(--space-4);">
+            <div class="input-group">
+              <label>Spotify</label>
+              <input id="spotifyLink" type="url" placeholder="spotify.com/track/..." />
+            </div>
+            <div class="input-group">
+              <label>Apple Music</label>
+              <input id="appleLink" type="url" placeholder="music.apple.com/..." />
+            </div>
+            <div class="input-group">
+              <label>YouTube</label>
+              <input id="youtubeLink" type="url" placeholder="youtube.com/watch?v=..." />
+            </div>
+            <div class="input-group">
+              <label>SoundCloud</label>
+              <input id="soundcloudLink" type="url" placeholder="soundcloud.com/..." />
+            </div>
+          </div>
+        </details>
+      </div>
+      
+      <div class="modal-footer">
+        <button id="postBtn" class="btn btn-primary" style="width: 100%;">Drop It</button>
+        <p style="font-size: var(--text-xs); color: var(--text-tertiary); text-align: center; margin-top: var(--space-3);">
+          Share short quotes only (fair use) • Attribution required
+        </p>
+      </div>
     </div>
   </div>
-</div>
-
-<!-- POSTCARD -->
-<div id="postcard" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>MARGO</h3>
-      <button id="closePostcardBtn" class="close-btn">×</button>
-    </div>
-    <div class="modal-body postcard">
-      <p id="postcardText"></p>
-      <div id="postcardSong"></div>
-    </div>
-  </div>
-</div>
-
-<script src="script.js"></script>
+  
+  <!-- Other modals (Postcard, Guess, Share, etc.) would follow similar pattern -->
+  
+  <!-- ===================================
+       SCRIPTS
+       =================================== -->
+  
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="script-improved.js"></script>
+  
 </body>
 </html>
