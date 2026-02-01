@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="style.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -52,17 +52,6 @@
 <textarea id="textInput" maxlength="140" placeholder="Type the lyric that's stuck in your soul..."></textarea>
 <div class="counter"><span id="count">0</span>/140</div>
 
-<div class="input-row">
-<div class="input-group">
-<label>Inspired by</label>
-<input id="songInput" type="text" placeholder="Song title" />
-</div>
-<div class="input-group">
-<label>Who sang it</label>
-<input id="artistInput" type="text" placeholder="Artist name" />
-</div>
-</div>
-
 <div class="emotion-section">
 <label>Tag the vibe:</label>
 <div class="emotion-pills">
@@ -79,7 +68,91 @@
 </div>
 </div>
 
-<!-- PLATFORM LINKS - MIDDLE SECTION -->
+<!-- MODE SELECTION -->
+<div class="mode-section">
+<label>Choose posting mode:</label>
+<div class="mode-options">
+<button class="mode-btn active" data-mode="normal">
+<span class="mode-icon">♫</span>
+<span class="mode-title">Normal Post</span>
+<span class="mode-desc">Share with song info</span>
+</button>
+<button class="mode-btn" data-mode="guess">
+<span class="mode-icon">?</span>
+<span class="mode-title">Guess Challenge</span>
+<span class="mode-desc">Let others guess</span>
+</button>
+<button class="mode-btn" data-mode="discover">
+<span class="mode-icon">✨</span>
+<span class="mode-title">Help Me Discover</span>
+<span class="mode-desc">You don't know the song</span>
+</button>
+</div>
+</div>
+
+<!-- NORMAL MODE INPUTS -->
+<div id="normalInputs" class="conditional-inputs active">
+<div class="input-row">
+<div class="input-group">
+<label>Song Title</label>
+<input id="songInput" type="text" placeholder="Enter song title" />
+</div>
+<div class="input-group">
+<label>Artist Name</label>
+<input id="artistInput" type="text" placeholder="Enter artist name" />
+</div>
+</div>
+</div>
+
+<!-- GUESS MODE INPUTS -->
+<div id="guessInputs" class="conditional-inputs">
+<div class="guess-config">
+<p class="mode-explanation">Set up your guessing challenge. Choose what you want people to guess:</p>
+<div class="guess-options">
+<label class="checkbox-label">
+<input type="checkbox" id="guessSongCheck" checked />
+<span class="checkbox-custom"></span>
+<span class="checkbox-text">Let them guess the Song Title</span>
+</label>
+<label class="checkbox-label">
+<input type="checkbox" id="guessArtistCheck" checked />
+<span class="checkbox-custom"></span>
+<span class="checkbox-text">Let them guess the Artist</span>
+</label>
+</div>
+<div class="input-row">
+<div class="input-group">
+<label>Song Title (Answer)</label>
+<input id="guessSongAnswer" type="text" placeholder="Enter the correct song title" />
+</div>
+<div class="input-group">
+<label>Artist Name (Answer)</label>
+<input id="guessArtistAnswer" type="text" placeholder="Enter the correct artist name" />
+</div>
+</div>
+<p class="guess-note">Users get 1 attempt. After that, they can choose to try again or reveal the answer.</p>
+</div>
+</div>
+
+<!-- DISCOVER MODE INPUTS -->
+<div id="discoverInputs" class="conditional-inputs">
+<div class="discover-config">
+<p class="mode-explanation">You don't know this song? No problem! Post the lyric and the community will help you discover it.</p>
+<p class="discover-note">You can leave song and artist fields empty. Others will help identify the track!</p>
+<div class="input-row">
+<div class="input-group">
+<label>Song Title (Optional)</label>
+<input id="discoverSongInput" type="text" placeholder="Leave empty if unknown" />
+</div>
+<div class="input-group">
+<label>Artist Name (Optional)</label>
+<input id="discoverArtistInput" type="text" placeholder="Leave empty if unknown" />
+</div>
+</div>
+</div>
+</div>
+
+<!-- PLATFORM LINKS -->
 <div class="platform-links-section">
 <label class="section-label">Add streaming links (optional):</label>
 <div class="platform-links-grid">
@@ -101,22 +174,6 @@
 </div>
 </div>
 </div>
-
-<div class="hide-song-option">
-<label class="checkbox-label">
-<input type="checkbox" id="hideSongCheck" />
-<span class="checkbox-custom"></span>
-<span class="checkbox-text">Let others guess (1 attempt)</span>
-</label>
-</div>
-
-<div class="discover-option">
-<label class="checkbox-label">
-<input type="checkbox" id="discoverCheck" />
-<span class="checkbox-custom"></span>
-<span class="checkbox-text">I want to discover this song too</span>
-</label>
-</div>
 </div>
 
 <div class="modal-footer">
@@ -135,14 +192,19 @@
 </div>
 <div class="modal-body">
 <div id="postcardCard" class="postcard-card">
+<div class="card-decorative-top"></div>
 <div class="card-inner">
+<div class="quote-mark-top">"</div>
 <p id="postcardText" class="card-text"></p>
+<div class="quote-mark-bottom">"</div>
 <div id="postcardEmotions" class="card-emotions"></div>
+<div class="card-divider"></div>
 <div class="card-song">
 <div id="postcardSongInfo"></div>
 </div>
 <div class="card-branding">MARGO</div>
 </div>
+<div class="card-decorative-bottom"></div>
 </div>
 </div>
 <div class="modal-footer">
@@ -163,15 +225,19 @@
 <button id="closeGuess" class="close-btn">×</button>
 </div>
 <div class="modal-body">
+<div class="guess-lyric-container">
 <p class="guess-lyric" id="guessLyric"></p>
-<p class="guess-hint">You have 1 attempt.</p>
-<div class="input-group">
+</div>
+<p class="guess-hint" id="guessHint">Make your best guess!</p>
+<div id="guessInputFields">
+<div class="input-group" id="guessSongField">
 <label>Song Title</label>
 <input id="guessSongInput" type="text" placeholder="Enter song name" />
 </div>
-<div class="input-group">
+<div class="input-group" id="guessArtistField">
 <label>Artist</label>
 <input id="guessArtistInput" type="text" placeholder="Enter artist name" />
+</div>
 </div>
 <div id="guessResult" class="guess-result hidden"></div>
 <div id="guessActions" class="guess-actions hidden">
@@ -197,11 +263,11 @@
 <p class="discover-hint">Do you know where this is from?</p>
 <div class="input-group">
 <label>Song Title</label>
-<input id="discoverSongInput" type="text" placeholder="Enter song name if you know it" />
+<input id="discoverSongInputModal" type="text" placeholder="Enter song name if you know it" />
 </div>
 <div class="input-group">
 <label>Artist</label>
-<input id="discoverArtistInput" type="text" placeholder="Enter artist name if you know it" />
+<input id="discoverArtistInputModal" type="text" placeholder="Enter artist name if you know it" />
 </div>
 <div class="discover-actions">
 <button id="helpDiscoverBtn" class="primary-btn full-width">Help Them Discover</button>
