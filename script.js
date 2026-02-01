@@ -1,38 +1,39 @@
-const startBtn = document.getElementById("startBtn");
+const dropBtn = document.getElementById("dropBtn");
 const landing = document.getElementById("landing");
 const create = document.getElementById("create");
 const feed = document.getElementById("feed");
 
-const lyricInput = document.getElementById("lyricInput");
+const lineInput = document.getElementById("lineInput");
 const modeSection = document.getElementById("modeSection");
 const metaSection = document.getElementById("metaSection");
 const postBtn = document.getElementById("postBtn");
 
 const songInput = document.getElementById("songInput");
 const artistInput = document.getElementById("artistInput");
+const linkInput = document.getElementById("linkInput");
 
 const postsDiv = document.getElementById("posts");
 
-let selectedMode = null;
+let mode = null;
 let posts = [];
 
-startBtn.onclick = () => {
+dropBtn.onclick = () => {
   landing.classList.add("hidden");
   create.classList.remove("hidden");
 };
 
-lyricInput.oninput = () => {
-  if (lyricInput.value.trim().length > 3) {
+lineInput.oninput = () => {
+  if (lineInput.value.trim().length > 3) {
     modeSection.classList.remove("hidden");
   }
 };
 
-document.querySelectorAll(".modeBtn").forEach(btn => {
+document.querySelectorAll(".mode").forEach(btn => {
   btn.onclick = () => {
-    selectedMode = btn.dataset.mode;
+    mode = btn.dataset.mode;
     metaSection.classList.add("hidden");
 
-    if (selectedMode === "know" || selectedMode === "discover") {
+    if (mode === "share" || mode === "discover") {
       metaSection.classList.remove("hidden");
     }
 
@@ -42,10 +43,11 @@ document.querySelectorAll(".modeBtn").forEach(btn => {
 
 postBtn.onclick = () => {
   const post = {
-    lyric: lyricInput.value,
-    mode: selectedMode,
+    line: lineInput.value,
+    mode,
     song: songInput.value,
     artist: artistInput.value,
+    link: linkInput.value,
     replies: []
   };
 
@@ -59,29 +61,28 @@ postBtn.onclick = () => {
 function renderFeed() {
   postsDiv.innerHTML = "";
 
-  posts.forEach((post, index) => {
-    const div = document.createElement("div");
-    div.className = "post";
+  posts.forEach((p, i) => {
+    let meta = "";
 
-    let metaText = "";
-    if (post.mode === "guess") metaText = "Guess the song";
-    if (post.mode === "know") metaText = `${post.song || "Unknown"} — ${post.artist || ""}`;
-    if (post.mode === "discover") metaText = "Help identify this song";
+    if (p.mode === "guess") meta = "Guess the song";
+    if (p.mode === "share") meta = `${p.song || "Unknown"} — ${p.artist || ""}`;
+    if (p.mode === "discover") meta = "Help identify this song";
 
-    div.innerHTML = `
-      <div class="lyric">"${post.lyric}"</div>
-      <div class="meta">${metaText}</div>
-      <input class="replyInput" placeholder="Reply / guess..." 
-        onkeydown="if(event.key==='Enter') addReply(${index}, this.value)">
-      <div class="meta">${post.replies.join("<br>")}</div>
+    postsDiv.innerHTML += `
+      <div class="post">
+        <div class="line">"${p.line}"</div>
+        <div class="meta">${meta}</div>
+        ${p.link ? `<div class="meta">🎧 Listen</div>` : ""}
+        <input class="reply" placeholder="Reply / guess..." 
+          onkeydown="if(event.key==='Enter') reply(${i}, this.value)">
+        <div class="meta">${p.replies.join("<br>")}</div>
+      </div>
     `;
-
-    postsDiv.appendChild(div);
   });
 }
 
-function addReply(index, text) {
+function reply(i, text) {
   if (!text.trim()) return;
-  posts[index].replies.push(text);
+  posts[i].replies.push(text);
   renderFeed();
 }
