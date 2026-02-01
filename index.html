@@ -1,57 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MARGO — Music As Raw Genuine Overflow</title>
-  <link rel="stylesheet" href="style.css"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <meta name="description" content="Share emotions through lyrics.">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <section id="landing" class="screen active">
   <div class="center">
     <h1 class="logo">MARGO</h1>
-    <p class="subtitle">Music As Raw Genuine Overflow</p>
     <p class="tagline">When words fail, drop a lyric.</p>
-    <button id="enterBtn" class="primary-btn">Drop Your Line</button>
+
+    <div class="choices">
+      <button class="choice-btn" data-mode="express">
+        Let others guess my emotion
+      </button>
+      <button class="choice-btn" data-mode="discover">
+        I want to discover how others feel
+      </button>
+    </div>
+  </div>
+</section>
+
+<section id="composer" class="screen">
+  <div class="composer-card">
+    <h2>Drop your line</h2>
+    <textarea id="lyricInput" maxlength="160" placeholder="A lyric that feels like you..."></textarea>
+    <input id="songInput" placeholder="Song title">
+    <input id="artistInput" placeholder="Artist">
+    <button id="postBtn" class="primary-btn">Post</button>
   </div>
 </section>
 
 <section id="feed" class="screen">
   <header class="feed-header">
-    <h2>Live Feed</h2>
-    <button id="openComposer" class="add-btn">＋</button>
+    <h2>Shared Feelings</h2>
+    <button id="newPostBtn">＋</button>
   </header>
   <div id="feedList" class="feed-list"></div>
 </section>
 
-<div id="composer" class="modal hidden">
-  <div class="modal-card">
-    <h3>Drop Your Line</h3>
-    <textarea id="textInput" maxlength="160"></textarea>
-    <input id="songInput" placeholder="Song title">
-    <input id="artistInput" placeholder="Artist">
-    <button id="postBtn" class="primary-btn">Post</button>
-    <button id="closeComposer" class="secondary-btn">Cancel</button>
-  </div>
-</div>
-
 <div id="postcard" class="modal hidden">
   <div class="postcard-card">
-    <p id="postcardText" class="postcard-text"></p>
-    <p id="postcardSong" class="postcard-song"></p>
-
-    <div class="vibes-row">
-      <button class="vibe-btn" data-vibe="love">❤️ <span></span></button>
-      <button class="vibe-btn" data-vibe="sad">😢 <span></span></button>
-      <button class="vibe-btn" data-vibe="magic">✨ <span></span></button>
-      <button class="vibe-btn" data-vibe="fire">🔥 <span></span></button>
-    </div>
-
-    <button id="closePostcard" class="secondary-btn">Close</button>
+    <p id="pcText"></p>
+    <p id="pcSong"></p>
+    <button id="shareBtn" class="primary-btn">Share</button>
+    <button id="closePcBtn" class="secondary-btn">Close</button>
   </div>
 </div>
 
