@@ -3,49 +3,32 @@
 <head> 
 <meta charset="UTF-8" /> 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, 
-user-scalable=no"/> 
-<title>MARGO — Music As Raw Genuine Overflow</title> 
-<!-- Open Graph Meta Tags --> 
-<meta property="og:title" content="MARGO — When words fail, drop a lyric"> 
-<meta property="og:description" content="Express yourself through the music that moves 
-you. No login. No ads. Just raw feelings."> 
-<meta property="og:type" content="website"> 
-<meta property="og:image" content="./og-image.png"> 
-<!-- Twitter Card --> 
-<meta name="twitter:card" content="summary_large_image"> 
-<meta name="twitter:title" content="MARGO — When words fail, drop a lyric"> 
-<meta name="twitter:description" content="Express yourself through the music that 
-moves you"> 
+maximum-scale=1.0, user-scalable=no"/> 
+<meta name="mobile-web-app-capable" content="yes"> 
+<meta name="apple-mobile-web-app-capable" content="yes"> 
+<title>MARGO — When words fail, drop a lyric</title> 
 <link rel="stylesheet" href="style.css"/> 
-<!-- Updated Font Selection: More distinctive and modern --> 
 <link rel="preconnect" href="https://fonts.googleapis.com"> 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> 
 <link 
-href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400&fa
-mily=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"> 
+href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&fami
+ly=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"> 
 </head> 
 <body> 
 <!-- LANDING --> 
 <section id="landing" class="screen active"> 
-<div class="vinyl-bg"></div> 
 <div class="center"> 
-<div class="logo-container"> 
 <h1 class="logo">MARGO</h1> 
-<p class="logo-subtitle">Music As Raw Genuine Overflow</p> 
-</div> 
 <p class="tagline">When words fail, drop a lyric.</p> 
-<div class="tagline-grid"> 
-<span>Curse.</span> 
-<span>Confess.</span> 
-<span>Quote.</span> 
-<span>Feel.</span> 
+<button id="enterBtn" class="primary-btn">Drop a Lyric</button> 
+<div class="swipe-indicator"> 
+<span class="swipe-text">Swipe to explore</span> 
+<span class="swipe-arrow">→</span> 
 </div> 
-<button id="enterBtn" class="primary-btn">Drop Your Line</button> 
-<p class="hint">← swipe to explore live posts</p> 
 </div> 
 <footer class="landing-footer"> 
-<div class="footer-line"></div> 
-<p>No login. No ads. Just raw feelings set to music.</p> 
+<p>No login. No ads. Just raw feelings.</p> 
+<p class="legal-notice">User-generated song quotes • Music via Spotify & Apple Music</p> 
 </footer> 
 </section> 
 <!-- FEED --> 
@@ -54,47 +37,31 @@ mily=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <button id="backBtn" class="back-btn">←</button> 
 <div class="header-center"> 
 <h2>Live Feed</h2> 
-<p class="feed-count"><span id="postCount">0</span> vibes</p> 
+<p class="post-count"><span id="postCount">0</span> posts</p> 
 </div> 
-<button id="openComposer" class="add-btn"> 
-<span class="plus-icon">✦</span> 
-<span class="add-text">Drop</span> 
-</button> 
+<button id="openComposer" class="drop-btn">Drop a Lyric</button> 
 </header> 
 <div id="feedList" class="feed-list"></div> 
-<div class="feed-footer"> 
-<div class="footer-line"></div> 
-<p>Live from the soul</p> 
-</div> 
 </section> 
-<!-- COMPOSER MODAL --> 
+<!-- COMPOSER MODAL - OPTIMIZED FLOW --> 
 <div id="composer" class="modal hidden"> 
-<div class="modal-content composer-modal"> 
+<div class="modal-content"> 
 <div class="modal-header"> 
-<h3>Drop Your Line</h3> 
-<button id="closeComposer" class="close-btn">✕</button> 
+<h3>Drop Your Lyric</h3> 
+<button id="closeComposer" class="close-btn">×</button> 
 </div> 
-<div class="composer-body"> 
+<div class="modal-body"> 
+<!-- STEP 1: THE LYRIC --> 
+<div class="step-section active" id="step1"> 
+<label class="step-label">1. Your Lyric</label> 
 <textarea id="textInput" maxlength="140" placeholder="Type the lyric that's stuck in your 
 soul..."></textarea> 
 <div class="counter"><span id="count">0</span>/140</div> 
-<div class="input-row"> 
-<div class="input-wrapper"> 
-<label>
-🎵
- Track Name</label> 
-<input id="songInput" type="text" placeholder="Song title" autocomplete="off" /> 
 </div> 
-<div class="input-wrapper"> 
-<label>
-🎤
- Artist</label> 
-<input id="artistInput" type="text" placeholder="Who said it?" autocomplete="off" /> 
-</div> 
-</div> 
-<div class="emotion-section"> 
-<label class="section-label">Tag the energy:</label> 
-<div class="emotion-pills" id="emotionPills"> 
+<!-- STEP 2: TAG THE VIBE --> 
+<div class="step-section" id="step2"> 
+<label class="step-label">2. Tag the Vibe</label> 
+<div class="emotion-pills"> 
 <button class="emotion-pill" data-emotion="Love">Love</button> 
 <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button> 
 <button class="emotion-pill" data-emotion="Hope">Hope</button> 
@@ -107,373 +74,298 @@ soul..."></textarea>
 <button class="emotion-pill" data-emotion="Anxiety">Anxiety</button> 
 </div> 
 </div> 
-<div class="guess-option"> 
-<label class="guess-checkbox"> 
-<input type="checkbox" id="hideSongCheck" /> 
-<span class="checkmark"></span> 
-<span class="label-text">
-🎯
- Hide track — let them guess</span> 
+<!-- STEP 3: CHOOSE MODE --> 
+<div class="step-section" id="step3"> 
+<label class="step-label">3. Choose Mode</label> 
+<div class="mode-options"> 
+<button class="mode-btn active" data-mode="normal"> 
+<span class="mode-icon">♫</span> 
+<span class="mode-title">Normal Post</span> 
+<span class="mode-desc">Share with song info</span> 
+</button> 
+<button class="mode-btn" data-mode="guess"> 
+<span class="mode-icon">?</span> 
+<span class="mode-title">Guess Challenge</span> 
+<span class="mode-desc">Let others guess</span> 
+</button> 
+<button class="mode-btn" data-mode="discover"> 
+<span class="mode-icon">
+✨
+</span> 
+<span class="mode-title">Help Me Discover</span> 
+<span class="mode-desc">You don't know the song</span> 
+</button> 
+</div> 
+</div> 
+<!-- STEP 4: SONG DETAILS (CHANGES BASED ON MODE) --> 
+<div class="step-section" id="step4"> 
+<label class="step-label">4. Song Details</label> 
+<div id="normalInputs" class="conditional-inputs active"> 
+<div class="input-row"> 
+<div class="input-group"> 
+<label>Song Title</label> 
+<input id="songInput" type="text" placeholder="Enter song title" /> 
+</div> 
+<div class="input-group"> 
+<label>Artist Name</label> 
+<input id="artistInput" type="text" placeholder="Enter artist name" /> 
+</div> 
+</div> 
+</div> 
+<div id="guessInputs" class="conditional-inputs"> 
+<p class="mode-explanation">Set what people should guess:</p> 
+<div class="guess-options"> 
+<label class="checkbox-label"> 
+<input type="checkbox" id="guessSongCheck" checked /> 
+<span class="checkbox-custom"></span> 
+<span class="checkbox-text">Song Title</span> 
+</label> 
+<label class="checkbox-label"> 
+<input type="checkbox" id="guessArtistCheck" checked /> 
+<span class="checkbox-custom"></span> 
+<span class="checkbox-text">Artist Name</span> 
 </label> 
 </div> 
-<div class="platform-links-section"> 
-<label class="section-label">
-🔗
- Add Song Links (Optional):</label> 
+<div class="input-row"> 
+<div class="input-group"> 
+<label>Correct Song Title</label> 
+<input id="guessSongAnswer" type="text" placeholder="Enter the answer" /> 
+</div> 
+<div class="input-group"> 
+<label>Correct Artist</label> 
+<input id="guessArtistAnswer" type="text" placeholder="Enter the answer" /> 
+</div> 
+</div> 
+</div> 
+<div id="discoverInputs" class="conditional-inputs"> 
+<p class="mode-explanation">Leave empty if you don't know the song. The community will 
+help!</p> 
+<div class="input-row"> 
+<div class="input-group"> 
+<label>Song Title (Optional)</label> 
+<input id="discoverSongInput" type="text" placeholder="Unknown" /> 
+</div> 
+<div class="input-group"> 
+<label>Artist (Optional)</label> 
+<input id="discoverArtistInput" type="text" placeholder="Unknown" /> 
+</div> 
+</div> 
+</div> 
+</div> 
+<!-- STEP 5: STREAMING LINKS (OPTIONAL) --> 
+<div class="step-section collapsed" id="step5"> 
+<button class="step-toggle" id="toggleLinks"> 
+<span>+ Add Streaming Links (Optional)</span> 
+</button> 
+<div class="step-collapsible" id="linksSection"> 
 <div class="platform-links-grid"> 
-<div class="input-wrapper"> 
+<div class="input-group"> 
 <label>Spotify</label> 
-<input id="spotifyLink" type="url" placeholder="spotify.com/track/..." autocomplete="off" 
-/> 
+<input id="spotifyLink" type="url" placeholder="spotify.com/track/..." /> 
 </div> 
-<div class="input-wrapper"> 
+<div class="input-group"> 
 <label>Apple Music</label> 
-<input id="appleLink" type="url" placeholder="music.apple.com/..." autocomplete="off" /> 
+<input id="appleLink" type="url" placeholder="music.apple.com/..." /> 
 </div> 
-<div class="input-wrapper"> 
+<div class="input-group"> 
 <label>YouTube</label> 
-<input id="youtubeLink" type="url" placeholder="youtube.com/watch?v=..." 
-autocomplete="off" /> 
+<input id="youtubeLink" type="url" placeholder="youtube.com/watch?v=..." /> 
 </div> 
-<div class="input-wrapper"> 
+<div class="input-group"> 
 <label>SoundCloud</label> 
-<input id="soundcloudLink" type="url" placeholder="soundcloud.com/..." 
-autocomplete="off" /> 
+<input id="soundcloudLink" type="url" placeholder="soundcloud.com/..." /> 
 </div> 
 </div> 
 </div> 
 </div> 
-<div class="actions"> 
-<button id="postBtn" class="primary-btn">Drop It</button> 
+</div> 
+<div class="modal-footer"> 
+<button id="postBtn" class="primary-btn full-width">Drop It</button> 
+<p class="fair-use-notice">Share short quotes only (fair use) • Attribution required</p> 
 </div> 
 </div> 
 </div> 
-<!-- STORY BUILDER MODAL --> 
-<div id="storyBuilder" class="modal hidden"> 
-<div class="modal-content story-builder-modal"> 
+<!-- POSTCARD MODAL - COMPACT & CLEAR --> 
+<div id="postcard" class="modal hidden"> 
+<div class="modal-content postcard-content"> 
 <div class="modal-header"> 
-<h3>Create Story</h3> 
-<button id="closeStoryBuilder" class="close-btn">✕</button> 
+<h3>Lyric Card</h3> 
+<button id="closePostcardBtn" class="close-btn">×</button> 
 </div> 
-<div class="story-builder-body"> 
-<p class="story-hint">Combine multiple lyrics into a visual story</p> 
-<div id="storyCards" class="story-cards-list"></div> 
-<button id="addStoryCard" class="add-story-btn">+ Add Another Lyric</button> 
-<div class="story-layout-picker"> 
-<label class="section-label">Story Layout:</label> 
-<div class="layout-options"> 
-<button class="layout-btn active" data-layout="stack"> 
-<div class="layout-preview layout-stack"></div> 
-<span>Stack</span> 
-</button> 
-<button class="layout-btn" data-layout="grid"> 
-<div class="layout-preview layout-grid"></div> 
-<span>Grid</span> 
-</button> 
-<button class="layout-btn" data-layout="carousel"> 
-<div class="layout-preview layout-carousel"></div> 
-<span>Slide</span> 
-</button> 
+<div class="modal-body postcard-body-wrapper"> 
+<div id="postcardCard" class="postcard-card"> 
+<div class="postcard-header"> 
+<div class="postcard-logo">MARGO</div> 
+</div> 
+<div class="postcard-main"> 
+<div class="postcard-quote"> 
+<p id="postcardText" class="postcard-text"></p> 
+</div> 
+<div id="postcardEmotions" class="postcard-emotions"></div> 
+</div> 
+<div class="postcard-footer"> 
+<div id="postcardSongInfo" class="postcard-song"></div> 
 </div> 
 </div> 
 </div> 
-<div class="actions"> 
-<button id="previewStory" class="primary-btn">Preview Story</button> 
-</div> 
-</div> 
-</div> 
-<!-- POSTCARD VIEW MODAL --> 
-<div id="postcard" class="postcard-overlay hidden"> 
-<div class="postcard-modal"> 
-<button id="closePostcardBtn" class="close-btn">✕</button> 
-<!-- Main Postcard --> 
-<div id="postcardCard" class="postcard-card" data-template="vinyl"> 
-<div class="card-inner"> 
-<div class="vinyl-texture"></div> 
-<p id="postcardText" class="card-text"></p> 
-<div id="postcardEmotions" class="emotion-tags"></div> 
-<div class="postcard-song"> 
-<div id="postcardSongInfo"></div> 
-</div> 
-<div class="postcard-branding">MARGO</div> 
-</div> 
-</div> 
-<!-- Quick Actions --> 
-<div class="postcard-quick-actions"> 
-<button id="shareBtn" class="quick-action-btn"> 
-<span class="icon">↗</span> 
+<div class="modal-footer"> 
+<div class="card-actions"> 
+<button id="shareBtn" class="action-btn"> 
+<span class="action-icon">↗</span> 
 <span>Share</span> 
 </button> 
-<button id="listenBtn" class="quick-action-btn"> 
-<span class="icon">♫</span> 
+<button id="listenBtn" class="action-btn"> 
+<span class="action-icon">♫</span> 
 <span>Listen</span> 
 </button> 
-<button id="downloadBtn" class="quick-action-btn"> 
-<span class="icon">⬇</span> 
+<button id="downloadBtn" class="action-btn"> 
+<span class="action-icon">⬇</span> 
 <span>Save</span> 
 </button> 
 </div> 
-<!-- More Options Toggle --> 
-<div class="postcard-options-toggle" id="moreOptionsToggle"> 
-More Options ▼ 
-</div> 
-<!-- Expanded Options --> 
-<div class="postcard-expanded-options" id="expandedOptions"> 
-<div class="expanded-content"> 
-<div class="options-section"> 
-<div class="options-section-label">Visual Style</div> 
-<div class="options-grid"> 
-<button class="option-btn template-option active" data-template="vinyl"> 
-<span class="icon">
-💿
-</span> 
-<span>Vinyl</span> 
-</button> 
-<button class="option-btn template-option" data-template="gradient"> 
-<span class="icon">
-🌈
-</span> 
-<span>Gradient</span> 
-</button> 
-<button class="option-btn template-option" data-template="neon"> 
-<span class="icon">
-✨
-</span> 
-<span>Neon</span> 
-</button> 
-<button class="option-btn template-option" data-template="minimal"> 
-<span class="icon">
-⚪
-</span> 
-<span>Clean</span> 
-</button> 
-<button class="option-btn template-option" data-template="emotion"> 
-<span class="icon">
-💭
-</span> 
-<span>Mood</span> 
-</button> 
-</div> 
-</div> 
-<div class="options-section"> 
-<div class="options-section-label">Export Format</div> 
-<div class="options-grid"> 
-<button class="option-btn export-option" data-format="square"> 
-<span class="icon">
-📷
-</span> 
-<span>Instagram</span> 
-</button> 
-<button class="option-btn export-option" data-format="story"> 
-<span class="icon">
-📱
-</span> 
-<span>Story</span> 
-</button> 
-<button class="option-btn export-option" data-format="twitter"> 
-<span class="icon">𝕏</span> 
-<span>Twitter</span> 
-</button> 
-</div> 
-</div> 
-</div> 
-</div> 
-</div> 
-</div> 
-<!-- STORY PREVIEW MODAL --> 
-<div id="storyPreview" class="postcard-overlay hidden"> 
-<div class="overlay-bg" id="closeStoryPreview"></div> 
-<div class="postcard-modal"> 
-<button id="closeStoryPreviewBtn" class="close-btn">✕</button> 
-<div id="storyCanvas" class="story-canvas" data-layout="stack"> 
-<!-- Story cards will be rendered here --> 
-</div> 
-<div class="export-section"> 
-<p class="picker-label">Export Story:</p> 
-<div class="export-grid"> 
-<button class="export-story-btn" data-format="square"> 
-<span class="format-icon">
-📷
-</span> 
-<span>Instagram Post</span> 
-</button> 
-<button class="export-story-btn" data-format="story"> 
-<span class="format-icon">
-📱
-</span> 
-<span>Story Format</span> 
-</button> 
-<button class="export-story-btn" data-format="twitter"> 
-<span class="format-icon">𝕏</span> 
-<span>Twitter</span> 
-</button> 
-</div> 
-</div> 
-<div class="postcard-actions"> 
-<button id="shareStoryBtn" class="action-btn glass-btn"> 
-<span class="icon">↗</span> 
-<span>Share</span> 
-</button> 
-<button id="editStoryBtn" class="action-btn glass-btn"> 
-<span class="icon">
-✏
-</span> 
-<span>Edit</span> 
-</button> 
 </div> 
 </div> 
 </div> 
 <!-- GUESS MODAL --> 
 <div id="guessModal" class="modal hidden"> 
-<div class="modal-content guess-modal"> 
+<div class="modal-content"> 
 <div class="modal-header"> 
-<h3>
-🎯
- Name That Track</h3> 
-<button id="closeGuess" class="close-btn">✕</button> 
+<h3>Guess the Song</h3> 
+<button id="closeGuess" class="close-btn">×</button> 
 </div> 
-<div class="guess-body"> 
-<p class="guess-prompt">What track is this lyric from?</p> 
+<div class="modal-body"> 
+<div class="guess-lyric-container"> 
 <p class="guess-lyric" id="guessLyric"></p> 
-<div class="input-wrapper"> 
+</div> 
+<p class="guess-hint" id="guessHint">Make your best guess!</p> 
+<div id="guessInputFields"> 
+<div class="input-group" id="guessSongField"> 
 <label>Song Title</label> 
-<input id="guessSongInput" type="text" placeholder="Enter song name" autocomplete="off" 
-/> 
+<input id="guessSongInput" type="text" placeholder="Enter song name" /> 
 </div> 
-<div class="input-wrapper"> 
+<div class="input-group" id="guessArtistField"> 
 <label>Artist</label> 
-<input id="guessArtistInput" type="text" placeholder="Enter artist name" 
-autocomplete="off" /> 
+<input id="guessArtistInput" type="text" placeholder="Enter artist name" /> 
 </div> 
-<button id="submitGuess" class="primary-btn">Submit Guess</button> 
+</div> 
 <div id="guessResult" class="guess-result hidden"></div> 
+<div id="guessActions" class="guess-actions hidden"> 
+<button id="tryAgainBtn" class="try-again-btn">Try Again</button> 
+<button id="revealAnswerBtn" class="reveal-answer-btn">Reveal Answer</button> 
+</div> 
+</div> 
+<div class="modal-footer"> 
+<button id="submitGuess" class="primary-btn full-width">Submit Guess</button> 
+</div> 
+</div> 
+</div> 
+<!-- DISCOVER MODAL --> 
+<div id="discoverModal" class="modal hidden"> 
+<div class="modal-content"> 
+<div class="modal-header"> 
+<h3>Help Discover This Song</h3> 
+<button id="closeDiscover" class="close-btn">×</button> 
+</div> 
+<div class="modal-body"> 
+<p class="discover-lyric" id="discoverLyric"></p> 
+<p class="discover-hint">Do you know where this is from?</p> 
+<div class="input-group"> 
+<label>Song Title</label> 
+<input id="discoverSongInputModal" type="text" placeholder="Enter song name if you 
+know it" /> 
+</div> 
+<div class="input-group"> 
+<label>Artist</label> 
+<input id="discoverArtistInputModal" type="text" placeholder="Enter artist name if you 
+know it" /> 
+</div> 
+<div class="discover-actions"> 
+<button id="helpDiscoverBtn" class="primary-btn full-width">Help Them 
+Discover</button> 
+<button id="remindMeBtn" class="remind-me-btn">Remind Me Later</button> 
+</div> 
 </div> 
 </div> 
 </div> 
 <!-- SHARE MODAL --> 
 <div id="shareModal" class="modal hidden"> 
-<div class="modal-content share-modal"> 
+<div class="modal-content"> 
 <div class="modal-header"> 
-<h3>Share The Vibe</h3> 
-<button id="closeShare" class="close-btn">✕</button> 
+<h3>Share</h3> 
+<button id="closeShare" class="close-btn">×</button> 
 </div> 
-<div class="platform-sections"> 
-<div class="platform-section"> 
-<p class="section-label">Quick Share</p> 
-<div class="platform-grid"> 
-<button class="platform-btn glass-platform" data-platform="native"> 
-<span class="platform-icon">
-📱
+<div class="modal-body"> 
+<p class="share-hint">Share as image or link</p> 
+<div class="share-grid"> 
+<button class="share-btn" data-platform="instagram"> 
+<span class="share-icon">
+📷
 </span> 
-<span>Share</span> 
+<span>Instagram</span> 
+<small>1080×1080</small> 
 </button> 
-<button class="platform-btn glass-platform" data-platform="link"> 
-<span class="platform-icon">
+<button class="share-btn" data-platform="twitter"> 
+<span class="share-icon">
+🐦
+</span> 
+<span>Twitter</span> 
+<small>1200×675</small> 
+</button> 
+<button class="share-btn" data-platform="link"> 
+<span class="share-icon">
 🔗
 </span> 
 <span>Copy Link</span> 
 </button> 
-</div> 
-</div> 
-<div class="platform-section"> 
-<p class="section-label">Social</p> 
-<div class="platform-grid"> 
-<button class="platform-btn glass-platform" data-platform="twitter"> 
-<span class="platform-icon">𝕏</span> 
-<span>Twitter</span> 
+<button class="share-btn" data-platform="native"> 
+<span class="share-icon">↗</span> 
+<span>Share</span> 
 </button> 
-<button class="platform-btn glass-platform" data-platform="instagram"> 
-<span class="platform-icon">
-📸
-</span> 
-<span>Instagram</span> 
-</button> 
-<button class="platform-btn glass-platform" data-platform="tiktok"> 
-<span class="platform-icon">
-🎵
-</span> 
-<span>TikTok</span> 
-</button> 
-<button class="platform-btn glass-platform" data-platform="snapchat"> 
-<span class="platform-icon">
-👻
-</span> 
-<span>Snapchat</span> 
-</button> 
-</div> 
-</div> 
-<div class="platform-section"> 
-<p class="section-label">Messaging</p> 
-<div class="platform-grid"> 
-<button class="platform-btn glass-platform" data-platform="whatsapp"> 
-<span class="platform-icon">
-💬
-</span> 
-<span>WhatsApp</span> 
-</button> 
-<button class="platform-btn glass-platform" data-platform="telegram"> 
-<span class="platform-icon">
-✈
-</span> 
-<span>Telegram</span> 
-</button> 
-</div> 
 </div> 
 </div> 
 </div> 
 </div> 
 <!-- LISTEN MODAL --> 
 <div id="listenModal" class="modal hidden"> 
-<div class="modal-content listen-modal"> 
+<div class="modal-content"> 
 <div class="modal-header"> 
 <h3>Listen Now</h3> 
-<button id="closeListen" class="close-btn">✕</button> 
+<button id="closeListen" class="close-btn">×</button> 
 </div> 
-<div class="platform-sections"> 
-<div class="platform-section"> 
-<p class="section-label">Stream</p> 
-<div class="platform-grid"> 
-<button class="platform-btn glass-platform" data-platform="spotify"> 
-<span class="platform-icon">
+<div class="modal-body"> 
+<p class="listen-hint">Links provided by the poster</p> 
+<div class="listen-grid"> 
+<button class="listen-btn" data-platform="spotify" disabled> 
+<span class="listen-icon">
 🎵
 </span> 
 <span>Spotify</span> 
 </button> 
-<button class="platform-btn glass-platform" data-platform="apple"> 
-<span class="platform-icon">
+<button class="listen-btn" data-platform="apple" disabled> 
+<span class="listen-icon">
 🍎
 </span> 
 <span>Apple Music</span> 
 </button> 
-<button class="platform-btn glass-platform" data-platform="youtube"> 
-<span class="platform-icon">
-▶
-</span> 
+<button class="listen-btn" data-platform="youtube" disabled> 
+<span class="listen-icon">▶</span> 
 <span>YouTube</span> 
 </button> 
-<button class="platform-btn glass-platform" data-platform="soundcloud"> 
-<span class="platform-icon">
-☁
-</span> 
+<button class="listen-btn" data-platform="soundcloud" disabled> 
+<span class="listen-icon">☁</span> 
 <span>SoundCloud</span> 
 </button> 
 </div> 
 </div> 
 </div> 
 </div> 
-</div> 
-<!-- Firebase SDK --> 
 <script 
 src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script> 
 <script 
 src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script> 
-<!-- HTML2Canvas for downloads --> 
 <script 
 src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></sc
 ript> 
-<!-- Main Script --> 
 <script src="script.js"></script> 
 </body> 
 </html> 
- 
- 
