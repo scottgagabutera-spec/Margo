@@ -1,4 +1,4 @@
-/* MARGO v3.0 - Clean, No Emojis */
+/* MARGO v4.0 - Improved Logic & UX */
 
 // Firebase Config
 const firebaseConfig = {
@@ -32,8 +32,7 @@ const SEED_POSTS = [
     emotions: ["Healing", "Hope"],
     timestamp: Date.now() - 120000,
     vibes: {},
-    hideSong: false,
-    discover: false,
+    mode: "normal",
     links: {
       spotify: "https://open.spotify.com/track/example1",
       apple: null,
@@ -49,20 +48,7 @@ const SEED_POSTS = [
     emotions: ["Loneliness", "Heartbreak"],
     timestamp: Date.now() - 300000,
     vibes: {},
-    hideSong: false,
-    discover: false,
-    links: { spotify: null, apple: null, youtube: null, soundcloud: null }
-  },
-  {
-    id: Date.now() - 600000,
-    text: "They tried to bury me but they didn't know I was a seed",
-    song: "HUMBLE.",
-    artist: "Kendrick Lamar",
-    emotions: ["Freedom", "Hope"],
-    timestamp: Date.now() - 600000,
-    vibes: {},
-    hideSong: false,
-    discover: false,
+    mode: "normal",
     links: { spotify: null, apple: null, youtube: null, soundcloud: null }
   }
 ];
@@ -77,13 +63,35 @@ const composer = document.getElementById("composer");
 const closeComposer = document.getElementById("closeComposer");
 const postBtn = document.getElementById("postBtn");
 const textInput = document.getElementById("textInput");
-const songInput = document.getElementById("songInput");
-const artistInput = document.getElementById("artistInput");
-const hideSongCheck = document.getElementById("hideSongCheck");
-const discoverCheck = document.getElementById("discoverCheck");
 const count = document.getElementById("count");
 const feedList = document.getElementById("feedList");
 const postCount = document.getElementById("postCount");
+
+// Mode elements
+const modeBtns = document.querySelectorAll(".mode-btn");
+const normalInputs = document.getElementById("normalInputs");
+const guessInputs = document.getElementById("guessInputs");
+const discoverInputs = document.getElementById("discoverInputs");
+
+// Normal mode inputs
+const songInput = document.getElementById("songInput");
+const artistInput = document.getElementById("artistInput");
+
+// Guess mode inputs
+const guessSongCheck = document.getElementById("guessSongCheck");
+const guessArtistCheck = document.getElementById("guessArtistCheck");
+const guessSongAnswer = document.getElementById("guessSongAnswer");
+const guessArtistAnswer = document.getElementById("guessArtistAnswer");
+
+// Discover mode inputs
+const discoverSongInput = document.getElementById("discoverSongInput");
+const discoverArtistInput = document.getElementById("discoverArtistInput");
+
+// Platform links
+const spotifyLink = document.getElementById("spotifyLink");
+const appleLink = document.getElementById("appleLink");
+const youtubeLink = document.getElementById("youtubeLink");
+const soundcloudLink = document.getElementById("soundcloudLink");
 
 // Modals
 const postcardModal = document.getElementById("postcard");
@@ -97,20 +105,23 @@ const closeShare = document.getElementById("closeShare");
 const listenModal = document.getElementById("listenModal");
 const closeListen = document.getElementById("closeListen");
 
-// Guess elements
+// Guess modal elements
 const guessLyric = document.getElementById("guessLyric");
+const guessHint = document.getElementById("guessHint");
 const guessSongInput = document.getElementById("guessSongInput");
 const guessArtistInput = document.getElementById("guessArtistInput");
+const guessSongField = document.getElementById("guessSongField");
+const guessArtistField = document.getElementById("guessArtistField");
 const submitGuess = document.getElementById("submitGuess");
 const guessResult = document.getElementById("guessResult");
 const guessActions = document.getElementById("guessActions");
 const tryAgainBtn = document.getElementById("tryAgainBtn");
 const revealAnswerBtn = document.getElementById("revealAnswerBtn");
 
-// Discover elements
+// Discover modal elements
 const discoverLyric = document.getElementById("discoverLyric");
-const discoverSongInput = document.getElementById("discoverSongInput");
-const discoverArtistInput = document.getElementById("discoverArtistInput");
+const discoverSongInputModal = document.getElementById("discoverSongInputModal");
+const discoverArtistInputModal = document.getElementById("discoverArtistInputModal");
 const helpDiscoverBtn = document.getElementById("helpDiscoverBtn");
 const remindMeBtn = document.getElementById("remindMeBtn");
 
@@ -122,15 +133,10 @@ const shareBtn = document.getElementById("shareBtn");
 const listenBtn = document.getElementById("listenBtn");
 const downloadBtn = document.getElementById("downloadBtn");
 
-// Platform link inputs
-const spotifyLink = document.getElementById("spotifyLink");
-const appleLink = document.getElementById("appleLink");
-const youtubeLink = document.getElementById("youtubeLink");
-const soundcloudLink = document.getElementById("soundcloudLink");
-
 // State
 let selectedEmotions = [];
 let currentPost = null;
+let currentMode = "normal";
 let allPosts = [];
 let userVibes = {};
 let userGuesses = {};
@@ -215,6 +221,32 @@ textInput.oninput = () => {
   count.textContent = textInput.value.length;
 };
 
+// Mode selection
+modeBtns.forEach(btn => {
+  btn.onclick = () => {
+    // Remove active from all
+    modeBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    
+    // Get selected mode
+    currentMode = btn.dataset.mode;
+    
+    // Hide all input sections
+    normalInputs.classList.remove("active");
+    guessInputs.classList.remove("active");
+    discoverInputs.classList.remove("active");
+    
+    // Show appropriate section
+    if (currentMode === "normal") {
+      normalInputs.classList.add("active");
+    } else if (currentMode === "guess") {
+      guessInputs.classList.add("active");
+    } else if (currentMode === "discover") {
+      discoverInputs.classList.add("active");
+    }
+  };
+});
+
 // Emotion pills
 document.querySelectorAll(".emotion-pill").forEach(pill => {
   pill.onclick = () => {
@@ -240,18 +272,9 @@ postBtn.onclick = async () => {
   }
 
   const text = textInput.value.trim();
-  const song = songInput.value.trim();
-  const artist = artistInput.value.trim();
-  const isDiscover = discoverCheck.checked;
-  const isGuess = hideSongCheck.checked;
 
   if (!text) {
     showToast("Drop your lyric first");
-    return;
-  }
-
-  if (!isDiscover && !isGuess && (!song || !artist)) {
-    showToast("Tag the song or enable Discover mode");
     return;
   }
 
@@ -260,16 +283,13 @@ postBtn.onclick = async () => {
     return;
   }
 
-  const post = {
+  let post = {
     id: Date.now(),
     text,
-    song: isDiscover ? "Unknown Song" : (isGuess && !song ? "Hidden" : song),
-    artist: isDiscover ? "Help me discover!" : (isGuess && !artist ? "Mystery Artist" : artist),
     emotions: [...selectedEmotions],
-    hideSong: isGuess || false,
-    discover: isDiscover || false,
     timestamp: Date.now(),
     vibes: {},
+    mode: currentMode,
     links: {
       spotify: spotifyLink.value.trim() || null,
       apple: appleLink.value.trim() || null,
@@ -277,6 +297,55 @@ postBtn.onclick = async () => {
       soundcloud: soundcloudLink.value.trim() || null
     }
   };
+
+  // Handle different modes
+  if (currentMode === "normal") {
+    const song = songInput.value.trim();
+    const artist = artistInput.value.trim();
+    
+    if (!song || !artist) {
+      showToast("Enter song title and artist");
+      return;
+    }
+    
+    post.song = song;
+    post.artist = artist;
+    
+  } else if (currentMode === "guess") {
+    const songAnswer = guessSongAnswer.value.trim();
+    const artistAnswer = guessArtistAnswer.value.trim();
+    const allowGuessSong = guessSongCheck.checked;
+    const allowGuessArtist = guessArtistCheck.checked;
+    
+    if (!allowGuessSong && !allowGuessArtist) {
+      showToast("Select at least one thing to guess");
+      return;
+    }
+    
+    if (allowGuessSong && !songAnswer) {
+      showToast("Enter the song title answer");
+      return;
+    }
+    
+    if (allowGuessArtist && !artistAnswer) {
+      showToast("Enter the artist name answer");
+      return;
+    }
+    
+    post.song = songAnswer;
+    post.artist = artistAnswer;
+    post.guessConfig = {
+      allowGuessSong,
+      allowGuessArtist
+    };
+    
+  } else if (currentMode === "discover") {
+    const song = discoverSongInput.value.trim();
+    const artist = discoverArtistInput.value.trim();
+    
+    post.song = song || "Unknown Song";
+    post.artist = artist || "Unknown Artist";
+  }
 
   postBtn.disabled = true;
   postBtn.textContent = "Posting...";
@@ -318,14 +387,29 @@ function resetComposer() {
   textInput.value = "";
   songInput.value = "";
   artistInput.value = "";
+  guessSongAnswer.value = "";
+  guessArtistAnswer.value = "";
+  discoverSongInput.value = "";
+  discoverArtistInput.value = "";
   spotifyLink.value = "";
   appleLink.value = "";
   youtubeLink.value = "";
   soundcloudLink.value = "";
   count.textContent = "0";
   selectedEmotions = [];
-  hideSongCheck.checked = false;
-  discoverCheck.checked = false;
+  
+  // Reset mode to normal
+  currentMode = "normal";
+  modeBtns.forEach(b => b.classList.remove("active"));
+  modeBtns[0].classList.add("active");
+  normalInputs.classList.add("active");
+  guessInputs.classList.remove("active");
+  discoverInputs.classList.remove("active");
+  
+  // Reset checkboxes
+  guessSongCheck.checked = true;
+  guessArtistCheck.checked = true;
+  
   document.querySelectorAll(".emotion-pill").forEach(pill => {
     pill.classList.remove("active");
   });
@@ -375,12 +459,12 @@ function initFeed() {
   }
 }
 
-// Render feed - NO EMOJIS
+// Render feed
 function renderFeed() {
   feedList.innerHTML = "";
 
   if (allPosts.length === 0) {
-    feedList.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-tertiary);font-size:0.8rem;">No posts yet. Be the first!</div>';
+    feedList.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-tertiary);font-size:0.9rem;">No posts yet. Be the first!</div>';
     return;
   }
 
@@ -395,17 +479,18 @@ function renderFeed() {
 
     let songSection = '';
     
-    if (post.discover) {
+    if (post.mode === "discover") {
       songSection = `
         <div class="feed-song discover">
           <div class="discover-text">Wants to discover this song</div>
           <button class="help-discover-btn" data-index="${index}">Help Discover</button>
         </div>
       `;
-    } else if (post.hideSong) {
+    } else if (post.mode === "guess") {
       const userGuessed = userGuesses[post.id];
 
       if (userGuessed) {
+        // Show the answer after successful guess
         songSection = `
           <div class="feed-song">
             <div class="feed-song-title">${post.song}</div>
@@ -413,14 +498,21 @@ function renderFeed() {
           </div>
         `;
       } else {
+        // Show guess challenge
+        const guessWhat = [];
+        if (post.guessConfig.allowGuessSong) guessWhat.push("song");
+        if (post.guessConfig.allowGuessArtist) guessWhat.push("artist");
+        const guessText = guessWhat.join(" and ");
+        
         songSection = `
           <div class="feed-song mystery">
-            <div class="mystery-text">Can you name this track?</div>
-            <button class="guess-btn" data-index="${index}">Guess</button>
+            <div class="mystery-text">Guess the ${guessText}</div>
+            <button class="guess-btn" data-index="${index}">Take the Challenge</button>
           </div>
         `;
       }
     } else {
+      // Normal mode
       songSection = `
         <div class="feed-song">
           <div class="feed-song-title">${post.song}</div>
@@ -432,7 +524,6 @@ function renderFeed() {
     const vibeCount = post.vibes ? Object.keys(post.vibes).length : 0;
     const userVibed = userVibes[post.id] || false;
     
-    // Check if listen should be shown
     const hasAnyLink = post.links && (post.links.spotify || post.links.apple || post.links.youtube || post.links.soundcloud);
 
     card.innerHTML = `
@@ -554,6 +645,26 @@ function openGuessModal(post) {
   guessResult.classList.add("hidden");
   guessActions.classList.add("hidden");
   submitGuess.style.display = "block";
+  
+  // Show/hide input fields based on what needs to be guessed
+  if (post.guessConfig.allowGuessSong) {
+    guessSongField.style.display = "flex";
+  } else {
+    guessSongField.style.display = "none";
+  }
+  
+  if (post.guessConfig.allowGuessArtist) {
+    guessArtistField.style.display = "flex";
+  } else {
+    guessArtistField.style.display = "none";
+  }
+  
+  // Update hint
+  const guessWhat = [];
+  if (post.guessConfig.allowGuessSong) guessWhat.push("song");
+  if (post.guessConfig.allowGuessArtist) guessWhat.push("artist");
+  guessHint.textContent = `Guess the ${guessWhat.join(" and ")}. You have 1 attempt!`;
+  
   guessModal.classList.remove("hidden");
 }
 
@@ -565,33 +676,59 @@ submitGuess.onclick = () => {
   const actualSong = currentPost.song.toLowerCase();
   const actualArtist = currentPost.artist.toLowerCase();
 
-  const songMatch = guessedSong && (guessedSong.includes(actualSong) || actualSong.includes(guessedSong));
-  const artistMatch = guessedArtist && (guessedArtist.includes(actualArtist) || actualArtist.includes(guessedArtist));
+  const allowGuessSong = currentPost.guessConfig.allowGuessSong;
+  const allowGuessArtist = currentPost.guessConfig.allowGuessArtist;
+
+  let songMatch = false;
+  let artistMatch = false;
+
+  if (allowGuessSong) {
+    songMatch = guessedSong && (
+      guessedSong === actualSong || 
+      guessedSong.includes(actualSong) || 
+      actualSong.includes(guessedSong)
+    );
+  } else {
+    songMatch = true; // Not being tested
+  }
+
+  if (allowGuessArtist) {
+    artistMatch = guessedArtist && (
+      guessedArtist === actualArtist || 
+      guessedArtist.includes(actualArtist) || 
+      actualArtist.includes(guessedArtist)
+    );
+  } else {
+    artistMatch = true; // Not being tested
+  }
 
   guessResult.classList.remove("hidden");
   submitGuess.style.display = "none";
 
   if (songMatch && artistMatch) {
+    // Perfect match!
     guessResult.className = "guess-result correct";
-    guessResult.textContent = `Perfect! "${currentPost.song}" by ${currentPost.artist}`;
+    let message = "Perfect! ";
+    if (allowGuessSong && allowGuessArtist) {
+      message += `"${currentPost.song}" by ${currentPost.artist}`;
+    } else if (allowGuessSong) {
+      message += `The song is "${currentPost.song}"`;
+    } else {
+      message += `The artist is ${currentPost.artist}`;
+    }
+    guessResult.textContent = message;
+    
     userGuesses[currentPost.id] = true;
     localStorage.setItem("margoUserGuesses", JSON.stringify(userGuesses));
 
     setTimeout(() => {
       guessModal.classList.add("hidden");
       renderFeed();
-    }, 2000);
-  } else if (songMatch || artistMatch) {
-    guessResult.className = "guess-result partial";
-    if (songMatch) {
-      guessResult.textContent = `Song is correct! Artist is "${currentPost.artist}"`;
-    } else {
-      guessResult.textContent = `Artist is correct! Song is "${currentPost.song}"`;
-    }
-    guessActions.classList.remove("hidden");
+    }, 2500);
   } else {
+    // Wrong answer
     guessResult.className = "guess-result incorrect";
-    guessResult.textContent = "Not quite!";
+    guessResult.textContent = "Not quite! Try again or reveal the answer.";
     guessActions.classList.remove("hidden");
   }
 };
@@ -605,29 +742,43 @@ tryAgainBtn.onclick = () => {
 };
 
 revealAnswerBtn.onclick = () => {
+  const allowGuessSong = currentPost.guessConfig.allowGuessSong;
+  const allowGuessArtist = currentPost.guessConfig.allowGuessArtist;
+  
+  let message = "The answer is: ";
+  if (allowGuessSong && allowGuessArtist) {
+    message += `"${currentPost.song}" by ${currentPost.artist}`;
+  } else if (allowGuessSong) {
+    message += `"${currentPost.song}"`;
+  } else {
+    message += `${currentPost.artist}`;
+  }
+  
   guessResult.className = "guess-result correct";
-  guessResult.textContent = `The answer is "${currentPost.song}" by ${currentPost.artist}`;
+  guessResult.textContent = message;
+  guessActions.classList.add("hidden");
+  
   userGuesses[currentPost.id] = true;
   localStorage.setItem("margoUserGuesses", JSON.stringify(userGuesses));
 
   setTimeout(() => {
     guessModal.classList.add("hidden");
     renderFeed();
-  }, 2000);
+  }, 2500);
 };
 
 // Discover modal
 function openDiscoverModal(post) {
   currentPost = post;
   discoverLyric.textContent = post.text;
-  discoverSongInput.value = "";
-  discoverArtistInput.value = "";
+  discoverSongInputModal.value = "";
+  discoverArtistInputModal.value = "";
   discoverModal.classList.remove("hidden");
 }
 
 helpDiscoverBtn.onclick = () => {
-  const song = discoverSongInput.value.trim();
-  const artist = discoverArtistInput.value.trim();
+  const song = discoverSongInputModal.value.trim();
+  const artist = discoverArtistInputModal.value.trim();
 
   if (!song || !artist) {
     showToast("Enter both song and artist");
@@ -636,7 +787,7 @@ helpDiscoverBtn.onclick = () => {
 
   currentPost.song = song;
   currentPost.artist = artist;
-  currentPost.discover = false;
+  currentPost.mode = "normal";
 
   const posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
   const postIndex = posts.findIndex(p => p.id === currentPost.id);
@@ -781,7 +932,7 @@ async function generateSocialImage(platform, deepLink) {
   canvas.height = dim.height;
   const ctx = canvas.getContext('2d');
   
-  ctx.fillStyle = '#0d0d0d';
+  ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, dim.width, dim.height);
   
   const scale = Math.min(
@@ -794,17 +945,17 @@ async function generateSocialImage(platform, deepLink) {
   
   ctx.drawImage(htmlCanvas, x, y, htmlCanvas.width * scale, htmlCanvas.height * scale);
   
-  ctx.font = 'bold 32px Inter, Arial';
-  ctx.fillStyle = '#ff6b35';
+  ctx.font = 'bold 32px DM Sans, Arial';
+  ctx.fillStyle = '#d4af37';
   ctx.textAlign = 'center';
   ctx.fillText('Click link to view', dim.width / 2, dim.height - 100);
   
-  ctx.font = 'bold 28px Inter, Arial';
-  ctx.fillStyle = 'rgba(255, 107, 53, 0.9)';
+  ctx.font = 'bold 28px DM Sans, Arial';
+  ctx.fillStyle = 'rgba(212, 175, 55, 0.9)';
   ctx.fillText(deepLink, dim.width / 2, dim.height - 60);
   
-  ctx.font = 'bold 24px Inter, Arial';
-  ctx.fillStyle = 'rgba(212, 197, 169, 0.3)';
+  ctx.font = 'bold 24px DM Sans, Arial';
+  ctx.fillStyle = 'rgba(212, 175, 55, 0.3)';
   ctx.fillText('MARGO', dim.width / 2, dim.height - 20);
   
   return canvas.toDataURL('image/png');
