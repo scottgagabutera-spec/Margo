@@ -25,7 +25,7 @@ body {
   letter-spacing: 4px;
 }
 
-.subtitle { opacity: .6; font-size: .8rem; letter-spacing: 2px; }
+.subtitle { opacity: .6; font-size: .8rem; }
 .tagline { font-size: 1.2rem; }
 
 .primary-btn {
@@ -35,11 +35,7 @@ body {
   border-radius: 999px;
   color: white;
   font-weight: 600;
-  cursor: pointer;
-  transition: transform .2s;
 }
-
-.primary-btn:hover { transform: scale(1.05); }
 
 .secondary-btn {
   background: transparent;
@@ -47,7 +43,6 @@ body {
   color: #aaa;
   padding: 10px 24px;
   border-radius: 999px;
-  cursor: pointer;
 }
 
 .feed-header {
@@ -68,22 +63,12 @@ body {
   border-radius: 16px;
   padding: 16px;
   cursor: pointer;
-  transition: transform .2s;
 }
-
-.feed-card:hover { transform: translateY(-4px); }
-
-.feed-text {
-  font-family: 'Fraunces', serif;
-  font-style: italic;
-}
-
-.feed-song { opacity: .6; font-size: .8rem; }
 
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.85);
+  background: rgba(0,0,0,.9);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -91,44 +76,13 @@ body {
 
 .hidden { display: none; }
 
-.modal-card {
-  background: #191922;
-  padding: 24px;
-  border-radius: 20px;
-  width: 90%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-textarea, input {
-  background: #0f0f14;
-  border: 1px solid #333;
-  color: white;
-  padding: 10px;
-  border-radius: 10px;
-}
-
-.emotion-row { display: flex; flex-wrap: wrap; gap: 8px; }
-
-.emotion {
-  background: #222;
-  border: none;
-  padding: 6px 14px;
-  border-radius: 999px;
-  color: #aaa;
-  cursor: pointer;
-}
-
-.emotion.active { background: #ff7a7a; color: white; }
-
-.postcard-card {
+.modal-card, .postcard-card {
   background: linear-gradient(135deg, #191922, #2a2a38);
   padding: 40px;
   border-radius: 24px;
   text-align: center;
   max-width: 400px;
+  width: 90%;
 }
 
 .postcard-text {
@@ -138,3 +92,4 @@ textarea, input {
 }
 
 .postcard-song { opacity: .7; }
+.hint { opacity: .4; font-size: .8rem; margin: 10px 0; }
