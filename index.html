@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>MARGO — When words fail, drop a lyric</title>
 <link rel="stylesheet" href="style.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,7 +43,7 @@
 <div id="feedList" class="feed-list"></div>
 </section>
 
-<!-- COMPOSER MODAL -->
+<!-- COMPOSER MODAL - OPTIMIZED FLOW -->
 <div id="composer" class="modal hidden">
 <div class="modal-content">
 <div class="modal-header">
@@ -49,11 +51,16 @@
 <button id="closeComposer" class="close-btn">×</button>
 </div>
 <div class="modal-body">
+<!-- STEP 1: THE LYRIC -->
+<div class="step-section active" id="step1">
+<label class="step-label">1. Your Lyric</label>
 <textarea id="textInput" maxlength="140" placeholder="Type the lyric that's stuck in your soul..."></textarea>
 <div class="counter"><span id="count">0</span>/140</div>
+</div>
 
-<div class="emotion-section">
-<label>Tag the vibe:</label>
+<!-- STEP 2: TAG THE VIBE -->
+<div class="step-section" id="step2">
+<label class="step-label">2. Tag the Vibe</label>
 <div class="emotion-pills">
 <button class="emotion-pill" data-emotion="Love">Love</button>
 <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
@@ -68,9 +75,9 @@
 </div>
 </div>
 
-<!-- MODE SELECTION -->
-<div class="mode-section">
-<label>Choose posting mode:</label>
+<!-- STEP 3: CHOOSE MODE -->
+<div class="step-section" id="step3">
+<label class="step-label">3. Choose Mode</label>
 <div class="mode-options">
 <button class="mode-btn active" data-mode="normal">
 <span class="mode-icon">♫</span>
@@ -90,7 +97,9 @@
 </div>
 </div>
 
-<!-- NORMAL MODE INPUTS -->
+<!-- STEP 4: SONG DETAILS (CHANGES BASED ON MODE) -->
+<div class="step-section" id="step4">
+<label class="step-label">4. Song Details</label>
 <div id="normalInputs" class="conditional-inputs active">
 <div class="input-row">
 <div class="input-group">
@@ -104,57 +113,53 @@
 </div>
 </div>
 
-<!-- GUESS MODE INPUTS -->
 <div id="guessInputs" class="conditional-inputs">
-<div class="guess-config">
-<p class="mode-explanation">Set up your guessing challenge. Choose what you want people to guess:</p>
+<p class="mode-explanation">Set what people should guess:</p>
 <div class="guess-options">
 <label class="checkbox-label">
 <input type="checkbox" id="guessSongCheck" checked />
 <span class="checkbox-custom"></span>
-<span class="checkbox-text">Let them guess the Song Title</span>
+<span class="checkbox-text">Song Title</span>
 </label>
 <label class="checkbox-label">
 <input type="checkbox" id="guessArtistCheck" checked />
 <span class="checkbox-custom"></span>
-<span class="checkbox-text">Let them guess the Artist</span>
+<span class="checkbox-text">Artist Name</span>
 </label>
 </div>
 <div class="input-row">
 <div class="input-group">
-<label>Song Title (Answer)</label>
-<input id="guessSongAnswer" type="text" placeholder="Enter the correct song title" />
+<label>Correct Song Title</label>
+<input id="guessSongAnswer" type="text" placeholder="Enter the answer" />
 </div>
 <div class="input-group">
-<label>Artist Name (Answer)</label>
-<input id="guessArtistAnswer" type="text" placeholder="Enter the correct artist name" />
+<label>Correct Artist</label>
+<input id="guessArtistAnswer" type="text" placeholder="Enter the answer" />
 </div>
-</div>
-<p class="guess-note">Users get 1 attempt. After that, they can choose to try again or reveal the answer.</p>
 </div>
 </div>
 
-<!-- DISCOVER MODE INPUTS -->
 <div id="discoverInputs" class="conditional-inputs">
-<div class="discover-config">
-<p class="mode-explanation">You don't know this song? No problem! Post the lyric and the community will help you discover it.</p>
-<p class="discover-note">You can leave song and artist fields empty. Others will help identify the track!</p>
+<p class="mode-explanation">Leave empty if you don't know the song. The community will help!</p>
 <div class="input-row">
 <div class="input-group">
 <label>Song Title (Optional)</label>
-<input id="discoverSongInput" type="text" placeholder="Leave empty if unknown" />
+<input id="discoverSongInput" type="text" placeholder="Unknown" />
 </div>
 <div class="input-group">
-<label>Artist Name (Optional)</label>
-<input id="discoverArtistInput" type="text" placeholder="Leave empty if unknown" />
+<label>Artist (Optional)</label>
+<input id="discoverArtistInput" type="text" placeholder="Unknown" />
 </div>
 </div>
 </div>
 </div>
 
-<!-- PLATFORM LINKS -->
-<div class="platform-links-section">
-<label class="section-label">Add streaming links (optional):</label>
+<!-- STEP 5: STREAMING LINKS (OPTIONAL) -->
+<div class="step-section collapsed" id="step5">
+<button class="step-toggle" id="toggleLinks">
+<span>+ Add Streaming Links (Optional)</span>
+</button>
+<div class="step-collapsible" id="linksSection">
 <div class="platform-links-grid">
 <div class="input-group">
 <label>Spotify</label>
@@ -175,6 +180,7 @@
 </div>
 </div>
 </div>
+</div>
 
 <div class="modal-footer">
 <button id="postBtn" class="primary-btn full-width">Drop It</button>
@@ -183,35 +189,43 @@
 </div>
 </div>
 
-<!-- POSTCARD MODAL -->
+<!-- POSTCARD MODAL - COMPACT & CLEAR -->
 <div id="postcard" class="modal hidden">
 <div class="modal-content postcard-content">
 <div class="modal-header">
 <h3>Lyric Card</h3>
 <button id="closePostcardBtn" class="close-btn">×</button>
 </div>
-<div class="modal-body">
+<div class="modal-body postcard-body-wrapper">
 <div id="postcardCard" class="postcard-card">
-<div class="card-decorative-top"></div>
-<div class="card-inner">
-<div class="quote-mark-top">"</div>
-<p id="postcardText" class="card-text"></p>
-<div class="quote-mark-bottom">"</div>
-<div id="postcardEmotions" class="card-emotions"></div>
-<div class="card-divider"></div>
-<div class="card-song">
-<div id="postcardSongInfo"></div>
+<div class="postcard-header">
+<div class="postcard-logo">MARGO</div>
 </div>
-<div class="card-branding">MARGO</div>
+<div class="postcard-main">
+<div class="postcard-quote">
+<p id="postcardText" class="postcard-text"></p>
 </div>
-<div class="card-decorative-bottom"></div>
+<div id="postcardEmotions" class="postcard-emotions"></div>
+</div>
+<div class="postcard-footer">
+<div id="postcardSongInfo" class="postcard-song"></div>
+</div>
 </div>
 </div>
 <div class="modal-footer">
 <div class="card-actions">
-<button id="shareBtn" class="action-btn">Share</button>
-<button id="listenBtn" class="action-btn">Listen</button>
-<button id="downloadBtn" class="action-btn">Save</button>
+<button id="shareBtn" class="action-btn">
+<span class="action-icon">↗</span>
+<span>Share</span>
+</button>
+<button id="listenBtn" class="action-btn">
+<span class="action-icon">♫</span>
+<span>Listen</span>
+</button>
+<button id="downloadBtn" class="action-btn">
+<span class="action-icon">⬇</span>
+<span>Save</span>
+</button>
 </div>
 </div>
 </div>
@@ -285,14 +299,26 @@
 <button id="closeShare" class="close-btn">×</button>
 </div>
 <div class="modal-body">
-<p class="share-hint">Generated images include deep links to this exact post</p>
+<p class="share-hint">Share as image or link</p>
 <div class="share-grid">
-<button class="share-btn" data-platform="instagram">Instagram<br><small>1080×1080</small></button>
-<button class="share-btn" data-platform="tiktok">TikTok<br><small>1080×1920</small></button>
-<button class="share-btn" data-platform="twitter">Twitter<br><small>1200×675</small></button>
-<button class="share-btn" data-platform="whatsapp">WhatsApp<br><small>1080×1080</small></button>
-<button class="share-btn" data-platform="link">Copy Link</button>
-<button class="share-btn" data-platform="native">Share</button>
+<button class="share-btn" data-platform="instagram">
+<span class="share-icon">📷</span>
+<span>Instagram</span>
+<small>1080×1080</small>
+</button>
+<button class="share-btn" data-platform="twitter">
+<span class="share-icon">🐦</span>
+<span>Twitter</span>
+<small>1200×675</small>
+</button>
+<button class="share-btn" data-platform="link">
+<span class="share-icon">🔗</span>
+<span>Copy Link</span>
+</button>
+<button class="share-btn" data-platform="native">
+<span class="share-icon">↗</span>
+<span>Share</span>
+</button>
 </div>
 </div>
 </div>
@@ -308,10 +334,22 @@
 <div class="modal-body">
 <p class="listen-hint">Links provided by the poster</p>
 <div class="listen-grid">
-<button class="listen-btn" data-platform="spotify" disabled>Spotify</button>
-<button class="listen-btn" data-platform="apple" disabled>Apple Music</button>
-<button class="listen-btn" data-platform="youtube" disabled>YouTube</button>
-<button class="listen-btn" data-platform="soundcloud" disabled>SoundCloud</button>
+<button class="listen-btn" data-platform="spotify" disabled>
+<span class="listen-icon">🎵</span>
+<span>Spotify</span>
+</button>
+<button class="listen-btn" data-platform="apple" disabled>
+<span class="listen-icon">🍎</span>
+<span>Apple Music</span>
+</button>
+<button class="listen-btn" data-platform="youtube" disabled>
+<span class="listen-icon">▶</span>
+<span>YouTube</span>
+</button>
+<button class="listen-btn" data-platform="soundcloud" disabled>
+<span class="listen-icon">☁</span>
+<span>SoundCloud</span>
+</button>
 </div>
 </div>
 </div>
