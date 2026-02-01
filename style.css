@@ -1,53 +1,100 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: #0f0f14;
-  color: #f5f5f7;
-  font-family: 'Inter', sans-serif;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-.screen { display: none; min-height: 100vh; }
-.screen.active { display: flex; flex-direction: column; }
+body {
+  background: radial-gradient(circle at top, #1c1c2b, #0a0a0f);
+  color: white;
+  font-family: system-ui, -apple-system;
+}
 
-.center {
-  flex: 1;
+.screen {
+  min-height: 100vh;
+  display: none;
+}
+
+.screen.active {
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 16px;
+}
+
+.center {
   text-align: center;
+  padding: 32px;
 }
 
 .logo {
-  font-family: 'Fraunces', serif;
   font-size: 4rem;
+  letter-spacing: 6px;
+}
+
+.tagline {
+  opacity: 0.7;
+  margin: 12px 0 32px;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.choice-btn {
+  background: #1c1c2b;
+  border: 1px solid #333;
+  color: white;
+  padding: 16px;
+  border-radius: 16px;
+  font-size: 1rem;
+}
+
+.choice-btn:hover {
+  background: #25253a;
+}
+
+.composer-card {
+  width: 90%;
+  max-width: 400px;
+  background: #151521;
+  padding: 24px;
+  border-radius: 20px;
+}
+
+textarea, input {
+  width: 100%;
+  margin-top: 12px;
+  background: #0f0f14;
+  border: 1px solid #333;
+  color: white;
+  padding: 12px;
+  border-radius: 12px;
 }
 
 .primary-btn {
+  width: 100%;
+  margin-top: 20px;
   background: linear-gradient(135deg, #ff7a7a, #ffb86c);
   border: none;
-  padding: 14px 32px;
+  padding: 14px;
   border-radius: 999px;
   color: white;
-  font-weight: 600;
-}
-
-.secondary-btn {
-  background: transparent;
-  border: 1px solid #333;
-  color: #aaa;
-  padding: 10px 24px;
-  border-radius: 999px;
 }
 
 .feed-header {
+  position: fixed;
+  top: 0;
+  width: 100%;
   padding: 16px;
+  background: #0a0a0f;
   display: flex;
   justify-content: space-between;
 }
 
 .feed-list {
+  margin-top: 80px;
   padding: 16px;
   display: grid;
   gap: 16px;
@@ -55,56 +102,28 @@ body {
 
 .feed-card {
   background: #191922;
-  border-radius: 16px;
   padding: 16px;
-  cursor: pointer;
+  border-radius: 16px;
 }
 
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.9);
+  background: rgba(0,0,0,.85);
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.hidden { display: none; }
+.hidden {
+  display: none;
+}
 
-.modal-card, .postcard-card {
-  background: linear-gradient(135deg, #191922, #2a2a38);
-  padding: 40px;
-  border-radius: 24px;
-  text-align: center;
+.postcard-card {
+  background: #191922;
+  padding: 28px;
+  border-radius: 20px;
   width: 90%;
-  max-width: 400px;
-}
-
-.postcard-text {
-  font-family: 'Fraunces', serif;
-  font-size: 1.5rem;
-  margin-bottom: 16px;
-}
-
-.postcard-song { opacity: .7; margin-bottom: 20px; }
-
-.vibes-row {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 20px;
-}
-
-.vibe-btn {
-  background: #222;
-  border: none;
-  border-radius: 999px;
-  padding: 8px 14px;
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: transform .2s;
-}
-
-.vibe-btn:hover {
-  transform: scale(1.2);
+  max-width: 360px;
+  text-align: center;
 }
