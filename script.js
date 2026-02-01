@@ -1,95 +1,100 @@
-const landing = document.getElementById("landing");
-const feed = document.getElementById("feed");
-const enterBtn = document.getElementById("enterBtn");
-const openComposer = document.getElementById("openComposer");
-const composer = document.getElementById("composer");
-const closeComposer = document.getElementById("closeComposer");
+const screens = {
+  landing: document.getElementById("landing"),
+  composer: document.getElementById("composer"),
+  feed: document.getElementById("feed")
+};
+
+const choiceBtns = document.querySelectorAll(".choice-btn");
 const postBtn = document.getElementById("postBtn");
+const newPostBtn = document.getElementById("newPostBtn");
 
 const feedList = document.getElementById("feedList");
-const postcard = document.getElementById("postcard");
-const closePostcard = document.getElementById("closePostcard");
-const postcardText = document.getElementById("postcardText");
-const postcardSong = document.getElementById("postcardSong");
 
-const vibeButtons = document.querySelectorAll(".vibe-btn");
-
-const textInput = document.getElementById("textInput");
+const lyricInput = document.getElementById("lyricInput");
 const songInput = document.getElementById("songInput");
 const artistInput = document.getElementById("artistInput");
 
-let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
-let currentPostIndex = null;
+const postcard = document.getElementById("postcard");
+const pcText = document.getElementById("pcText");
+const pcSong = document.getElementById("pcSong");
+const closePcBtn = document.getElementById("closePcBtn");
+const shareBtn = document.getElementById("shareBtn");
 
-enterBtn.onclick = () => {
-  landing.classList.remove("active");
-  composer.classList.remove("hidden");
-};
+let posts = JSON.parse(localStorage.getItem("margoPosts")) || [];
+let mode = null;
 
-openComposer.onclick = () => composer.classList.remove("hidden");
-closeComposer.onclick = () => composer.classList.add("hidden");
+// FLOW
+choiceBtns.forEach(btn => {
+  btn.onclick = () => {
+    mode = btn.dataset.mode;
+    goTo("composer");
+  };
+});
 
 postBtn.onclick = () => {
   const post = {
-    text: textInput.value,
+    text: lyricInput.value,
     song: songInput.value,
     artist: artistInput.value,
-    vibes: { love: 0, sad: 0, magic: 0, fire: 0 }
+    time: Date.now()
   };
+
   posts.unshift(post);
   localStorage.setItem("margoPosts", JSON.stringify(posts));
-  composer.classList.add("hidden");
-  feed.classList.add("active");
-  renderFeed();
   resetComposer();
+  renderFeed();
+  goTo("feed");
 };
 
+newPostBtn.onclick = () => goTo("composer");
+
+// FEED
 function renderFeed() {
   feedList.innerHTML = "";
+
+  if (posts.length === 0) {
+    feedList.innerHTML = `<p style="opacity:.5">No feelings yet.</p>`;
+    return;
+  }
+
   posts.forEach((post, index) => {
     const card = document.createElement("div");
     card.className = "feed-card";
     card.innerHTML = `
-      <div>"${post.text}"</div>
-      <small>❤️ ${post.vibes.love} 😢 ${post.vibes.sad} ✨ ${post.vibes.magic} 🔥 ${post.vibes.fire}</small>
+      <p>"${post.text}"</p>
+      <small>${post.song} — ${post.artist}</small>
     `;
-    card.onclick = () => openPostcard(index);
+    card.onclick = () => openPostcard(post);
     feedList.appendChild(card);
   });
 }
 
-function openPostcard(index) {
-  currentPostIndex = index;
-  const post = posts[index];
-  postcardText.textContent = `"${post.text}"`;
-  postcardSong.textContent = post.song + " — " + post.artist;
-  updateVibes(post);
+// POSTCARD
+function openPostcard(post) {
+  pcText.textContent = `"${post.text}"`;
+  pcSong.textContent = post.song + " — " + post.artist;
   postcard.classList.remove("hidden");
 }
 
-function updateVibes(post) {
-  vibeButtons.forEach(btn => {
-    const type = btn.dataset.vibe;
-    btn.querySelector("span").textContent = post.vibes[type];
-  });
+closePcBtn.onclick = () => postcard.classList.add("hidden");
+
+shareBtn.onclick = () => {
+  const text = pcText.textContent + "\n" + pcSong.textContent;
+  navigator.clipboard.writeText(text);
+  alert("Copied. Share your feeling.");
+};
+
+// UTILS
+function goTo(screen) {
+  Object.values(screens).forEach(s => s.classList.remove("active"));
+  screens[screen].classList.add("active");
 }
 
-vibeButtons.forEach(btn => {
-  btn.onclick = () => {
-    const type = btn.dataset.vibe;
-    posts[currentPostIndex].vibes[type]++;
-    localStorage.setItem("margoPosts", JSON.stringify(posts));
-    updateVibes(posts[currentPostIndex]);
-    renderFeed();
-  };
-});
-
-closePostcard.onclick = () => postcard.classList.add("hidden");
-
 function resetComposer() {
-  textInput.value = "";
+  lyricInput.value = "";
   songInput.value = "";
   artistInput.value = "";
 }
 
+// INIT
 renderFeed();
