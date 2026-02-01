@@ -46,8 +46,8 @@ body {
   background: #1c1c2b;
   border: 1px solid #333;
   color: white;
-  padding: 16px;
-  border-radius: 16px;
+  padding: 18px;
+  border-radius: 18px;
   font-size: 1rem;
 }
 
@@ -57,53 +57,91 @@ body {
 
 .composer-card {
   width: 90%;
-  max-width: 400px;
+  max-width: 420px;
   background: #151521;
-  padding: 24px;
-  border-radius: 20px;
+  padding: 28px;
+  border-radius: 24px;
+}
+
+.composer-card h2 {
+  margin-bottom: 6px;
+}
+
+.hint {
+  opacity: 0.6;
+  font-size: 0.9rem;
 }
 
 textarea, input {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 14px;
   background: #0f0f14;
   border: 1px solid #333;
   color: white;
-  padding: 12px;
-  border-radius: 12px;
+  padding: 14px;
+  border-radius: 14px;
 }
 
 .primary-btn {
   width: 100%;
-  margin-top: 20px;
+  margin-top: 22px;
   background: linear-gradient(135deg, #ff7a7a, #ffb86c);
   border: none;
   padding: 14px;
   border-radius: 999px;
   color: white;
+  font-size: 1rem;
+}
+
+.secondary-btn {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  margin-top: 10px;
 }
 
 .feed-header {
   position: fixed;
   top: 0;
   width: 100%;
-  padding: 16px;
-  background: #0a0a0f;
+  padding: 16px 24px;
+  background: rgba(10,10,15,.9);
   display: flex;
   justify-content: space-between;
+  backdrop-filter: blur(10px);
 }
 
 .feed-list {
-  margin-top: 80px;
-  padding: 16px;
+  margin-top: 90px;
+  padding: 24px;
+  width: 100%;
+  max-width: 720px;
   display: grid;
-  gap: 16px;
+  gap: 20px;
 }
 
 .feed-card {
-  background: #191922;
-  padding: 16px;
-  border-radius: 16px;
+  background: linear-gradient(180deg, #1b1b28, #141420);
+  padding: 22px;
+  border-radius: 22px;
+  cursor: pointer;
+}
+
+.feed-card p {
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.feed-card small {
+  display: block;
+  margin-top: 10px;
+  opacity: 0.6;
+}
+
+.empty {
+  text-align: center;
+  opacity: 0.5;
+  margin-top: 40px;
 }
 
 .modal {
@@ -120,10 +158,20 @@ textarea, input {
 }
 
 .postcard-card {
-  background: #191922;
-  padding: 28px;
-  border-radius: 20px;
+  background: linear-gradient(180deg, #1c1c2b, #12121a);
+  padding: 32px;
+  border-radius: 28px;
   width: 90%;
-  max-width: 360px;
+  max-width: 380px;
   text-align: center;
+}
+
+.pc-text {
+  font-size: 1.4rem;
+  line-height: 1.4;
+}
+
+.pc-song {
+  margin-top: 12px;
+  opacity: 0.7;
 }
