@@ -7,38 +7,31 @@ body {
   margin: 0;
   background: radial-gradient(circle at top, #1a1f3a, #05070f);
   color: white;
-  min-height: 100vh;
 }
 
-.hidden {
-  display: none;
-}
+.hidden { display: none; }
 
 section {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-#landing {
   flex-direction: column;
-  text-align: center;
 }
 
 .logo {
   font-size: 64px;
   font-weight: 700;
-  letter-spacing: 4px;
+  letter-spacing: 6px;
 }
 
 .tagline {
   opacity: 0.7;
-  margin: 12px 0 30px;
+  margin: 16px 0 32px;
 }
 
 button {
-  padding: 14px 28px;
+  padding: 14px 30px;
   border-radius: 999px;
   border: none;
   cursor: pointer;
@@ -48,11 +41,11 @@ button {
 }
 
 .card {
-  width: 360px;
-  background: rgba(255,255,255,0.05);
+  width: 380px;
+  background: rgba(255,255,255,0.06);
   padding: 24px;
   border-radius: 20px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -60,9 +53,9 @@ button {
 
 textarea {
   resize: none;
-  height: 100px;
+  height: 110px;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: none;
   background: rgba(0,0,0,0.4);
   color: white;
@@ -76,18 +69,17 @@ input {
   color: white;
 }
 
-.modeBtn {
-  background: rgba(255,255,255,0.1);
+.mode {
+  background: rgba(255,255,255,0.12);
   color: white;
 }
 
 .question {
-  opacity: 0.8;
   text-align: center;
+  opacity: 0.8;
 }
 
 #feed {
-  flex-direction: column;
   padding: 40px;
 }
 
@@ -95,25 +87,29 @@ input {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  width: 100%;
   max-width: 500px;
 }
 
 .post {
-  background: rgba(255,255,255,0.06);
-  padding: 16px;
-  border-radius: 14px;
+  background: rgba(255,255,255,0.07);
+  padding: 18px;
+  border-radius: 16px;
 }
 
-.post .lyric {
+.post .line {
   font-size: 18px;
 }
 
 .post .meta {
-  opacity: 0.6;
   margin-top: 6px;
+  opacity: 0.6;
 }
 
-.replyInput {
+.reply {
   margin-top: 10px;
   width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
 }
