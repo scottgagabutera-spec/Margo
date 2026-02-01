@@ -28,10 +28,11 @@
 <section id="composer" class="screen">
   <div class="composer-card">
     <h2>Drop your line</h2>
-    <textarea id="lyricInput" maxlength="160" placeholder="A lyric that feels like you..."></textarea>
+    <p class="hint">A lyric that feels like your current emotion.</p>
+    <textarea id="lyricInput" maxlength="160" placeholder="I'm scared of falling in love again..."></textarea>
     <input id="songInput" placeholder="Song title">
     <input id="artistInput" placeholder="Artist">
-    <button id="postBtn" class="primary-btn">Post</button>
+    <button id="postBtn" class="primary-btn">Share feeling</button>
   </div>
 </section>
 
@@ -45,9 +46,9 @@
 
 <div id="postcard" class="modal hidden">
   <div class="postcard-card">
-    <p id="pcText"></p>
-    <p id="pcSong"></p>
-    <button id="shareBtn" class="primary-btn">Share</button>
+    <p id="pcText" class="pc-text"></p>
+    <p id="pcSong" class="pc-song"></p>
+    <button id="shareBtn" class="primary-btn">Copy & Share</button>
     <button id="closePcBtn" class="secondary-btn">Close</button>
   </div>
 </div>
