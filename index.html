@@ -1,169 +1,64 @@
-:root {
-  --bg: #0e0b0a;
-  --surface: #151110;
-  --accent: #d4af37;
-  --text-primary: #f5f5f5;
-  --text-secondary: #b8b8b8;
-  --text-tertiary: #7a7a7a;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  --radius: 16px;
-  --max-width: 720px;
-}
+  <title>MARGO — When words fail, drop a lyric</title>
 
-* {
-  box-sizing: border-box;
-}
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
 
-body {
-  margin: 0;
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text-primary);
-}
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
 
-/* SCREENS */
-.screen {
-  display: none;
-  min-height: 100vh;
-}
+<body>
 
-.screen.active {
-  display: block;
-}
+<!-- APP ROOT -->
+<div id="app">
 
-/* LANDING */
-.landing-center {
-  min-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-}
+  <!-- LANDING SCREEN -->
+  <section id="landing" class="screen active">
+    <div class="landing-center">
+      <h1 class="logo">MARGO</h1>
+      <p class="tagline">When words fail, drop a lyric.</p>
+      <button id="enterBtn" class="btn-primary">Drop a Lyric</button>
+    </div>
 
-.logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 4rem;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.5rem;
-}
+    <footer class="landing-footer">
+      <p>No login. No ads. Just raw feelings.</p>
+      <small>User-generated quotes • Music via Spotify & Apple Music</small>
+    </footer>
+  </section>
 
-.tagline {
-  color: var(--text-secondary);
-  margin-bottom: 2rem;
-}
+  <!-- FEED SCREEN -->
+  <section id="feed" class="screen">
+    <header class="app-header">
+      <button class="icon-btn" id="backBtn">←</button>
+      <div class="header-center">
+        <h2>Live Feed</h2>
+        <span id="postCount" class="meta-text">0 posts</span>
+      </div>
+      <button class="btn-primary small" id="openComposer">Drop</button>
+    </header>
 
-.landing-footer {
-  text-align: center;
-  padding: 1rem;
-  color: var(--text-tertiary);
-}
+    <main class="content">
+      <div id="feedList" class="feed-list">
+        <!-- Feed cards injected here -->
+      </div>
+    </main>
+  </section>
 
-/* HEADER */
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: linear-gradient(to bottom, rgba(14,11,10,0.95), transparent);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem;
-}
+</div>
 
-.header-meta h2 {
-  margin: 0;
-  font-weight: 500;
-}
+<!-- Scripts -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="script.js"></script>
 
-/* CONTENT RAIL */
-.content-rail {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 1rem;
-}
-
-/* FEED */
-.feed-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.feed-card {
-  background: var(--surface);
-  padding: 1.5rem;
-  border-radius: var(--radius);
-}
-
-.feed-text {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.3rem;
-  line-height: 1.6;
-  margin-bottom: 1rem;
-}
-
-/* EMOTIONS */
-.feed-emotions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.feed-emotion {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
-  background: rgba(212,175,55,0.15);
-  color: var(--accent);
-}
-
-/* SONG */
-.feed-song {
-  margin-top: 1rem;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-/* ACTIONS */
-.feed-card-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
-}
-
-.feed-action {
-  background: none;
-  border: none;
-  color: var(--text-tertiary);
-  cursor: pointer;
-}
-
-/* BUTTONS */
-.primary-btn {
-  background: var(--accent);
-  color: #000;
-  border: none;
-  padding: 0.75rem 1.25rem;
-  border-radius: 999px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.primary-btn.small {
-  padding: 0.5rem 0.9rem;
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-size: 1.2rem;
-}
-
-/* RESPONSIVE */
-@media (min-width: 1024px) {
-  .logo {
-    font-size: 5rem;
-  }
-}
+</body>
+</html>
