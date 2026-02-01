@@ -2,66 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>MARGO</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MARGO — Drop a Line</title>
-
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 </head>
-
 <body>
-<div id="app">
 
-  <!-- LANDING -->
-  <section id="landing" class="screen active">
-    <div class="landing-center">
-      <h1 class="logo">MARGO</h1>
-      <p class="tagline">When words fail, drop a line.</p>
-      <button id="enterBtn" class="btn-primary">Drop a Line</button>
+<!-- LANDING -->
+<section id="landing" class="screen active">
+  <div class="center">
+    <h1 class="logo">MARGO</h1>
+    <p class="tagline">When words fail, drop a line.</p>
+    <button id="enterBtn" class="primary-btn">
+      <span>Enter</span>
+    </button>
+  </div>
+</section>
+
+<!-- FEED -->
+<section id="feed" class="screen">
+  <header class="feed-header">
+    <button id="openComposer" class="drop-btn">Drop a Line</button>
+  </header>
+
+  <div id="feedList" class="feed-list"></div>
+</section>
+
+<!-- COMPOSER -->
+<div id="composer" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Drop a Line</h3>
+      <button id="closeComposer" class="close-btn">×</button>
     </div>
 
-    <footer class="landing-footer">
-      <p>No login. No ads. Just raw feelings.</p>
-      <small>User-generated quotes • Music via Spotify & Apple Music</small>
-    </footer>
-  </section>
+    <div class="modal-body">
+      <textarea id="textInput" maxlength="160" placeholder="A line that stayed with you…"></textarea>
+      <div class="counter"><span id="count">0</span>/160</div>
 
-  <!-- FEED -->
-  <section id="feed" class="screen">
-    <header class="feed-header">
-      <button id="backBtn" class="icon-btn">←</button>
-      <h2>Live Feed</h2>
-      <button id="openComposer" class="btn-primary small">Drop a Line</button>
-    </header>
+      <input id="songInput" type="text" placeholder="Song title (optional)" />
+      <input id="artistInput" type="text" placeholder="Artist (optional)" />
+    </div>
 
-    <div id="feedList" class="feed-list"></div>
-  </section>
-
-  <!-- COMPOSER -->
-  <div id="composer" class="modal hidden">
-    <div class="modal-content">
-      <header class="modal-header">
-        <h3>Drop a Line</h3>
-        <button id="closeComposer" class="icon-btn">×</button>
-      </header>
-
-      <textarea
-        id="textInput"
-        maxlength="140"
-        placeholder="Type the line that says what you can’t…"
-      ></textarea>
-
-      <div class="composer-footer">
-        <span id="count">0/140</span>
-        <button id="postBtn" class="btn-primary">Post</button>
-      </div>
+    <div class="modal-footer">
+      <button id="postBtn" class="primary-btn full-width">
+        <span>Post</span>
+      </button>
     </div>
   </div>
+</div>
 
+<!-- POSTCARD -->
+<div id="postcard" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>MARGO</h3>
+      <button id="closePostcardBtn" class="close-btn">×</button>
+    </div>
+    <div class="modal-body postcard">
+      <p id="postcardText"></p>
+      <div id="postcardSong"></div>
+    </div>
+  </div>
 </div>
 
 <script src="script.js"></script>
