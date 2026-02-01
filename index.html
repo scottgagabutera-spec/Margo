@@ -8,6 +8,9 @@
 
   <title>MARGO — When words fail, drop a lyric</title>
 
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css"/>
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,32 +18,31 @@
     href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
     rel="stylesheet"
   />
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="style.css"/>
 </head>
 
 <body>
 
-<!-- ========================= -->
+<!-- ================================================= -->
 <!-- ENTRY / LANDING LAYER -->
-<!-- ========================= -->
+<!-- ================================================= -->
 <section id="landing" class="screen active" data-layer="entry">
-  <div class="layout center">
-    <h1 class="logo">MARGO</h1>
-    <p class="tagline">When words fail, drop a lyric.</p>
+  <div class="center" data-component="landing-center">
+    <h1 class="logo" data-typography="display">MARGO</h1>
+    <p class="tagline" data-typography="tagline">
+      When words fail, drop a lyric.
+    </p>
 
-    <button id="enterBtn" class="primary-btn btn btn--primary">
+    <button id="enterBtn" class="primary-btn" data-component="primary-action">
       Drop a Lyric
     </button>
 
-    <div class="swipe-indicator">
+    <div class="swipe-indicator" data-component="swipe-hint">
       <span class="swipe-text">Swipe to explore</span>
       <span class="swipe-arrow">→</span>
     </div>
   </div>
 
-  <footer class="landing-footer">
+  <footer class="landing-footer" data-component="landing-footer">
     <p>No login. No ads. Just raw feelings.</p>
     <p class="legal-notice">
       User-generated song quotes • Music via Spotify & Apple Music
@@ -48,53 +50,52 @@
   </footer>
 </section>
 
-<!-- ========================= -->
+<!-- ================================================= -->
 <!-- MAIN CONTENT / FEED -->
-<!-- ========================= -->
+<!-- ================================================= -->
 <section id="feed" class="screen" data-layer="content">
 
   <!-- APP BAR -->
-  <header class="app-bar feed-header">
-    <div class="layout app-bar-inner">
-      <button id="backBtn" class="back-btn btn btn--icon">←</button>
+  <header class="feed-header" data-component="app-bar">
+    <button id="backBtn" class="back-btn" data-action="navigate-back">←</button>
 
-      <div class="header-center">
-        <h2>Live Feed</h2>
-        <p class="post-count">
-          <span id="postCount">0</span> posts
-        </p>
-      </div>
-
-      <button id="openComposer" class="drop-btn btn btn--primary">
-        Drop a Lyric
-      </button>
+    <div class="header-center" data-component="header-center">
+      <h2>Live Feed</h2>
+      <p class="post-count">
+        <span id="postCount">0</span> posts
+      </p>
     </div>
+
+    <button
+      id="openComposer"
+      class="drop-btn"
+      data-action="open-composer"
+    >
+      Drop a Lyric
+    </button>
   </header>
 
-  <!-- CONTENT AREA -->
-  <main class="content-area layout">
-    <div id="feedList" class="feed-list"></div>
-  </main>
-
+  <!-- FEED LIST -->
+  <div id="feedList" class="feed-list" data-component="content-feed"></div>
 </section>
 
-<!-- ========================= -->
+<!-- ================================================= -->
 <!-- COMPOSER / CREATION FLOW -->
-<!-- ========================= -->
+<!-- ================================================= -->
 <div id="composer" class="modal hidden" data-layer="create">
   <div class="modal-content">
 
-    <!-- MODAL HEADER -->
+    <!-- HEADER -->
     <div class="modal-header">
       <h3>Drop Your Lyric</h3>
-      <button id="closeComposer" class="close-btn btn btn--icon">×</button>
+      <button id="closeComposer" class="close-btn">×</button>
     </div>
 
-    <!-- MODAL BODY -->
+    <!-- BODY -->
     <div class="modal-body">
 
       <!-- STEP 1 -->
-      <div class="step-section active" id="step1">
+      <div class="step-section active" id="step1" data-step="lyric">
         <label class="step-label">1. Your Lyric</label>
         <textarea
           id="textInput"
@@ -107,7 +108,7 @@
       </div>
 
       <!-- STEP 2 -->
-      <div class="step-section" id="step2">
+      <div class="step-section" id="step2" data-step="emotion">
         <label class="step-label">2. Tag the Vibe</label>
         <div class="emotion-pills">
           <button class="emotion-pill" data-emotion="Love">Love</button>
@@ -124,53 +125,46 @@
       </div>
 
       <!-- STEP 3 -->
-      <div class="step-section" id="step3">
+      <div class="step-section" id="step3" data-step="mode">
         <label class="step-label">3. Choose Mode</label>
         <div class="mode-options">
-
           <button class="mode-btn active" data-mode="normal">
             <span class="mode-icon">♫</span>
             <span class="mode-title">Normal Post</span>
             <span class="mode-desc">Share with song info</span>
           </button>
-
           <button class="mode-btn" data-mode="guess">
             <span class="mode-icon">?</span>
             <span class="mode-title">Guess Challenge</span>
             <span class="mode-desc">Let others guess</span>
           </button>
-
           <button class="mode-btn" data-mode="discover">
             <span class="mode-icon">✨</span>
             <span class="mode-title">Help Me Discover</span>
             <span class="mode-desc">You don't know the song</span>
           </button>
-
         </div>
       </div>
 
       <!-- STEP 4 -->
-      <div class="step-section" id="step4">
+      <div class="step-section" id="step4" data-step="details">
         <label class="step-label">4. Song Details</label>
 
-        <!-- NORMAL -->
         <div id="normalInputs" class="conditional-inputs active">
           <div class="input-row">
             <div class="input-group">
               <label>Song Title</label>
-              <input id="songInput" type="text" placeholder="Enter song title" />
+              <input id="songInput" type="text" />
             </div>
             <div class="input-group">
               <label>Artist Name</label>
-              <input id="artistInput" type="text" placeholder="Enter artist name" />
+              <input id="artistInput" type="text" />
             </div>
           </div>
         </div>
 
-        <!-- GUESS -->
         <div id="guessInputs" class="conditional-inputs">
           <p class="mode-explanation">Set what people should guess:</p>
-
           <div class="guess-options">
             <label class="checkbox-label">
               <input type="checkbox" id="guessSongCheck" checked />
@@ -183,20 +177,18 @@
               <span class="checkbox-text">Artist Name</span>
             </label>
           </div>
-
           <div class="input-row">
             <div class="input-group">
               <label>Correct Song Title</label>
-              <input id="guessSongAnswer" type="text" placeholder="Enter the answer" />
+              <input id="guessSongAnswer" type="text" />
             </div>
             <div class="input-group">
               <label>Correct Artist</label>
-              <input id="guessArtistAnswer" type="text" placeholder="Enter the answer" />
+              <input id="guessArtistAnswer" type="text" />
             </div>
           </div>
         </div>
 
-        <!-- DISCOVER -->
         <div id="discoverInputs" class="conditional-inputs">
           <p class="mode-explanation">
             Leave empty if you don't know the song. The community will help!
@@ -204,39 +196,38 @@
           <div class="input-row">
             <div class="input-group">
               <label>Song Title (Optional)</label>
-              <input id="discoverSongInput" type="text" placeholder="Unknown" />
+              <input id="discoverSongInput" type="text" />
             </div>
             <div class="input-group">
               <label>Artist (Optional)</label>
-              <input id="discoverArtistInput" type="text" placeholder="Unknown" />
+              <input id="discoverArtistInput" type="text" />
             </div>
           </div>
         </div>
       </div>
 
       <!-- STEP 5 -->
-      <div class="step-section collapsed" id="step5">
+      <div class="step-section collapsed" id="step5" data-step="links">
         <button class="step-toggle" id="toggleLinks">
           <span>+ Add Streaming Links (Optional)</span>
         </button>
-
         <div class="step-collapsible" id="linksSection">
           <div class="platform-links-grid">
             <div class="input-group">
               <label>Spotify</label>
-              <input id="spotifyLink" type="url" placeholder="spotify.com/track/..." />
+              <input id="spotifyLink" type="url" />
             </div>
             <div class="input-group">
               <label>Apple Music</label>
-              <input id="appleLink" type="url" placeholder="music.apple.com/..." />
+              <input id="appleLink" type="url" />
             </div>
             <div class="input-group">
               <label>YouTube</label>
-              <input id="youtubeLink" type="url" placeholder="youtube.com/watch?v=..." />
+              <input id="youtubeLink" type="url" />
             </div>
             <div class="input-group">
               <label>SoundCloud</label>
-              <input id="soundcloudLink" type="url" placeholder="soundcloud.com/..." />
+              <input id="soundcloudLink" type="url" />
             </div>
           </div>
         </div>
@@ -244,11 +235,9 @@
 
     </div>
 
-    <!-- MODAL FOOTER -->
+    <!-- FOOTER -->
     <div class="modal-footer">
-      <button id="postBtn" class="primary-btn btn btn--primary full-width">
-        Drop It
-      </button>
+      <button id="postBtn" class="primary-btn full-width">Drop It</button>
       <p class="fair-use-notice">
         Share short quotes only (fair use) • Attribution required
       </p>
@@ -257,13 +246,15 @@
   </div>
 </div>
 
-<!-- ========================= -->
-<!-- OTHER MODALS (UNCHANGED IDS) -->
-<!-- ========================= -->
-<!-- Postcard, Guess, Discover, Share, Listen modals remain structurally identical -->
-<!-- We will refactor them safely in later steps -->
+<!-- ================================================= -->
+<!-- OTHER MODALS (UNCHANGED STRUCTURE) -->
+<!-- ================================================= -->
+<!-- Postcard, Guess, Discover, Share, Listen modals remain identical -->
 
 <!-- Scripts -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="script.js"></script>
 
 </body>
