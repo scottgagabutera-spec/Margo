@@ -718,64 +718,124 @@ textarea:focus, input:focus {
   font-size: 2rem;
 }
 
-/* ===== POSTCARD ===== */
+/* ===== POSTCARD - BEAUTIFUL REDESIGN ===== */
 .postcard {
-  background: linear-gradient(135deg, #1a1410 0%, #2c2420 100%);
-  border: 3px solid var(--gold);
-  border-radius: 16px;
+  background: linear-gradient(135deg, #1f1812 0%, #2d2115 50%, #1f1812 100%);
+  border-radius: 20px;
   padding: 0;
   overflow: hidden;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(212, 175, 55, 0.1);
+  position: relative;
+}
+
+.postcard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .postcard-header {
-  background: var(--gold);
+  background: linear-gradient(135deg, var(--gold) 0%, #c49a2e 100%);
   color: #000;
   text-align: center;
-  padding: 12px;
+  padding: 16px;
   font-family: 'Playfair Display', serif;
   font-weight: 700;
-  font-size: 1.1rem;
-  letter-spacing: 3px;
+  font-size: 0.85rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 
 .postcard-lyric {
   font-family: 'Playfair Display', serif;
   font-style: italic;
-  font-size: 1.3rem;
-  line-height: 1.7;
+  font-size: 1.4rem;
+  line-height: 1.8;
   text-align: center;
-  padding: 32px 24px;
+  padding: 40px 32px;
   color: #f5f5f5;
+  position: relative;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.postcard-lyric::before {
+  content: open-quote;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 4rem;
+  color: var(--gold);
+  opacity: 0.15;
+  font-family: 'Playfair Display', serif;
+}
+
+.postcard-lyric::after {
+  content: close-quote;
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  font-size: 4rem;
+  color: var(--gold);
+  opacity: 0.15;
+  font-family: 'Playfair Display', serif;
 }
 
 .postcard-emotion {
   text-align: center;
-  padding: 12px;
-  background: rgba(212, 175, 55, 0.2);
-  border-top: 1px solid rgba(212, 175, 55, 0.3);
-  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 16px;
+  background: rgba(212, 175, 55, 0.12);
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
   font-weight: 600;
   color: var(--gold);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .postcard-song {
   text-align: center;
-  padding: 20px 24px;
-  background: rgba(0, 0, 0, 0.3);
-  border-top: 2px solid var(--gold);
+  padding: 28px 32px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
+  position: relative;
+}
+
+.postcard-song::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
 .postcard-song div:first-child {
   font-family: 'Playfair Display', serif;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   color: var(--gold);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
 }
 
 .postcard-song div:last-child {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  font-size: 0.95rem;
+  color: rgba(212, 175, 55, 0.7);
+  font-weight: 500;
 }
 
 /* ===== TOAST ===== */
