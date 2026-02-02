@@ -1,4 +1,4 @@
-/* MARGO - Modern Clean Design with Improved Borders */
+/* MARGO - Improved Design with Better Borders */
 
 * { 
   box-sizing: border-box; 
@@ -336,7 +336,7 @@ button:active {
   font-weight: 600;
 }
 
-/* ===== MODALS - FIXED SCROLL ===== */
+/* ===== MODALS ===== */
 .modal {
   position: fixed;
   inset: 0;
@@ -1044,7 +1044,7 @@ textarea:focus, input:focus {
   background: var(--bg-elevated);
 }
 
-/* ===== POSTER MODAL - DESIGN SELECTION WITH LIVE PREVIEW ===== */
+/* ===== POSTER MODAL - LIVE PREVIEW ===== */
 .poster-step {
   display: none;
 }
