@@ -2,134 +2,199 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MARGO</title>
-
-  <!-- Mobile -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-
-  <!-- Fonts -->
+  <title>MARGO — When words fail, drop a line</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
 <!-- LANDING -->
-<div id="landing" class="screen active">
+<section id="landing" class="screen active">
   <div class="center">
-    <div class="logo">MARGO</div>
-    <button id="enterBtn" class="primary-btn">Enter</button>
+    <h1 class="logo">MARGO</h1>
+    <p class="tagline">When words fail, drop a line.</p>
+    <button id="enterBtn" class="primary-btn">Drop a line</button>
   </div>
-</div>
+</section>
 
 <!-- FEED -->
-<div id="feed" class="screen">
-  <div class="feed-header">
-    <button id="openComposer" class="primary-btn">Drop a line</button>
-    <div class="post-count"><span id="postCount">0</span> posts</div>
-  </div>
+<section id="feed" class="screen">
+  <header class="feed-header">
+    <button id="backBtn" class="header-btn">←</button>
+    <div class="header-center">
+      <h2>Live Feed</h2>
+      <p class="post-count"><span id="postCount">0</span> posts</p>
+    </div>
+    <button id="openComposer" class="header-btn">+ Drop</button>
+  </header>
   <div id="feedList" class="feed-list"></div>
-</div>
+</section>
 
-<!-- COMPOSER -->
+<!-- COMPOSER MODAL -->
 <div id="composer" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
       <h3>Drop a line</h3>
-      <button onclick="closeComposer()">×</button>
+      <button id="closeComposer" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-      <textarea id="textInput" placeholder="Write a lyric or thought..."></textarea>
+      <!-- STEP 1: Lyric -->
+      <label>Lyric</label>
+      <textarea id="textInput" maxlength="140" placeholder="The line stuck in your head..."></textarea>
+      <div class="char-count"><span id="charCount">0</span>/140</div>
 
+      <!-- STEP 2: Mode -->
+      <label>What's your intention?</label>
       <div class="mode-options">
-        <button class="mode-btn active" data-mode="share">Share</button>
-        <button class="mode-btn" data-mode="guess">Guess</button>
-        <button class="mode-btn" data-mode="discover">Discover</button>
+        <button class="mode-btn active" data-mode="share">
+          <span class="mode-icon">♫</span>
+          <span>Share</span>
+        </button>
+        <button class="mode-btn" data-mode="guess">
+          <span class="mode-icon">?</span>
+          <span>Guess</span>
+        </button>
+        <button class="mode-btn" data-mode="discover">
+          <span class="mode-icon">✨</span>
+          <span>Discover</span>
+        </button>
       </div>
 
-      <div id="shareFields" class="conditional active">
-        <input id="songInput" placeholder="Song">
-        <input id="artistInput" placeholder="Artist">
+      <!-- STEP 3: Mode-specific inputs -->
+      <div id="shareInputs" class="conditional active">
+        <input id="songInput" placeholder="Song title" required/>
+        <input id="artistInput" placeholder="Artist" required/>
       </div>
 
-      <div id="guessFields" class="conditional">
-        <input id="guessSongAnswer" placeholder="Correct song">
-        <input id="guessArtistAnswer" placeholder="Correct artist">
+      <div id="guessInputs" class="conditional">
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="guessSongCheck" checked>
+            <span>Let them guess the song</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="guessArtistCheck" checked>
+            <span>Let them guess the artist</span>
+          </label>
+        </div>
+        <input id="guessSongAnswer" placeholder="Correct song title"/>
+        <input id="guessArtistAnswer" placeholder="Correct artist"/>
       </div>
 
+      <div id="discoverInputs" class="conditional">
+        <p class="hint">Don't know the song? The community will help you discover it!</p>
+        <input id="discoverSongInput" placeholder="Maybe song? (optional)"/>
+        <input id="discoverArtistInput" placeholder="Maybe artist? (optional)"/>
+      </div>
+
+      <!-- STEP 4: Emotion -->
+      <label>Emotion</label>
       <div class="emotion-pills">
-        <button class="emotion-pill">Love</button>
-        <button class="emotion-pill">Hope</button>
-        <button class="emotion-pill">Heartbreak</button>
-        <button class="emotion-pill">Joy</button>
-        <button class="emotion-pill">Loneliness</button>
+        <button class="emotion-pill" data-emotion="Love">Love</button>
+        <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
+        <button class="emotion-pill" data-emotion="Hope">Hope</button>
+        <button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
+        <button class="emotion-pill" data-emotion="Healing">Healing</button>
+        <button class="emotion-pill" data-emotion="Joy">Joy</button>
+        <button class="emotion-pill" data-emotion="Rage">Rage</button>
+        <button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
       </div>
     </div>
     <div class="modal-footer">
-      <button id="postBtn" class="primary-btn">Post</button>
+      <button id="postBtn" class="primary-btn full">Post</button>
     </div>
   </div>
 </div>
 
-<!-- POSTCARD -->
-<div id="postcardModal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Postcard</h3>
-      <button onclick="closePostcard()">×</button>
-    </div>
-    <div id="postcardBody" class="modal-body"></div>
-  </div>
-</div>
-
-<!-- GUESS -->
+<!-- GUESS MODAL -->
 <div id="guessModal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>Guess</h3>
-      <button onclick="closeGuess()">×</button>
+      <h3>Guess the Song</h3>
+      <button id="closeGuess" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-      <input id="userGuessSong" placeholder="Song">
-      <input id="userGuessArtist" placeholder="Artist">
-      <button onclick="submitGuess()" class="primary-btn">Submit</button>
-      <div id="guessResult"></div>
+      <div class="lyric-display" id="guessLyric"></div>
+      <p class="hint" id="guessHint"></p>
+      <div id="guessInputFields">
+        <input id="guessSongInput" placeholder="Song title" class="guess-field"/>
+        <input id="guessArtistInput" placeholder="Artist" class="guess-field"/>
+      </div>
+      <div id="guessResult" class="result-message hidden"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="submitGuess" class="primary-btn full">Submit Guess</button>
+      <button id="revealAnswer" class="secondary-btn full hidden">Reveal Answer</button>
     </div>
   </div>
 </div>
 
-<!-- DISCOVER -->
+<!-- DISCOVER MODAL -->
 <div id="discoverModal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>Help discover</h3>
-      <button onclick="closeDiscover()">×</button>
+      <h3>Help Discover</h3>
+      <button id="closeDiscover" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-      <input id="discoverSong" placeholder="Song">
-      <input id="discoverArtist" placeholder="Artist">
-      <button onclick="submitDiscover()" class="primary-btn">Submit</button>
+      <div class="lyric-display" id="discoverLyric"></div>
+      <p class="hint">Know this song? Help them out!</p>
+      <input id="discoverSongAnswer" placeholder="Song title"/>
+      <input id="discoverArtistAnswer" placeholder="Artist"/>
+    </div>
+    <div class="modal-footer">
+      <button id="submitDiscover" class="primary-btn full">Help Them Discover</button>
     </div>
   </div>
 </div>
 
-<!-- SHARE -->
+<!-- SHARE MODAL -->
 <div id="shareModal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
       <h3>Share</h3>
-      <button onclick="closeShare()">×</button>
+      <button id="closeShare" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-      <button onclick="copyShareLink()" class="primary-btn">Copy link</button>
+      <div class="share-options">
+        <button class="share-btn" data-action="copy">
+          <span class="share-icon">🔗</span>
+          <span>Copy Link</span>
+        </button>
+        <button class="share-btn" data-action="native">
+          <span class="share-icon">↗</span>
+          <span>Share</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
-<div id="toast" class="toast"></div>
+<!-- POSTCARD MODAL -->
+<div id="postcardModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Post</h3>
+      <button id="closePostcard" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="postcard">
+        <div class="postcard-header">MARGO</div>
+        <div class="postcard-lyric" id="postcardLyric"></div>
+        <div class="postcard-emotion" id="postcardEmotion"></div>
+        <div class="postcard-song" id="postcardSong"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="sharePostcard" class="primary-btn full">Share</button>
+    </div>
+  </div>
+</div>
 
 <script src="script.js"></script>
 </body>
