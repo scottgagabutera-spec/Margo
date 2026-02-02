@@ -1,7 +1,6 @@
 body {
-  margin:0;
   background:#0a0a0a;
-  color:#f5f5f5;
+  color:white;
   font-family:'DM Sans',sans-serif;
 }
 
@@ -14,30 +13,10 @@ body {
   flex-direction:column;
   justify-content:center;
   align-items:center;
-  gap:20px;
 }
 
-.logo {
-  font-family:'Playfair Display',serif;
-  font-size:4rem;
-  color:#d4af37;
-}
-
-.primary-btn {
-  padding:14px 32px;
-  border-radius:30px;
-  background:#d4af37;
-  color:#000;
-  font-weight:600;
-  border:none;
-}
-
-.feed-header {
-  display:flex;
-  justify-content:space-between;
-  padding:16px;
-  border-bottom:1px solid #333;
-}
+.logo { color:#d4af37; font-size:4rem; }
+.primary-btn { padding:14px 30px; border-radius:30px; }
 
 .feed-list {
   padding:20px;
@@ -50,93 +29,30 @@ body {
   background:#141414;
   padding:16px;
   border-radius:12px;
-  border:1px solid #333;
-}
-
-.feed-text {
-  font-family:'Playfair Display';
-  font-style:italic;
-  text-align:center;
-  font-size:1.2rem;
-}
-
-.feed-links {
-  display:flex;
-  justify-content:center;
-  gap:10px;
-  margin-top:10px;
-}
-
-.feed-links a {
-  background:#d4af37;
-  color:#000;
-  padding:6px 12px;
-  border-radius:20px;
-  text-decoration:none;
-  font-size:0.8rem;
 }
 
 .modal {
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,0.9);
+  background:rgba(0,0,0,.9);
   display:flex;
   justify-content:center;
   align-items:center;
 }
-
 .modal.hidden { display:none; }
 
 .modal-content {
   background:#141414;
-  width:100%;
+  width:90%;
   max-width:480px;
   border-radius:16px;
-  overflow:hidden;
 }
 
-.modal-body {
-  padding:20px;
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-textarea,input {
+.listen-link {
+  display:block;
   padding:12px;
-  border-radius:8px;
-  background:#0a0a0a;
   border:1px solid #333;
+  margin:8px 0;
   color:white;
-}
-
-.mode-options { display:flex; gap:8px; }
-
-.mode-btn {
-  flex:1;
-  padding:10px;
-  border-radius:8px;
-  background:#1a1a1a;
-  color:white;
-}
-
-.mode-btn.active {
-  background:#d4af37;
-  color:black;
-}
-
-.conditional { display:none; }
-.conditional.active { display:flex; flex-direction:column; gap:8px; }
-
-.emotion-pill {
-  padding:8px 14px;
-  border-radius:20px;
-  border:1px solid #333;
-  background:#1a1a1a;
-  color:white;
-}
-
-.emotion-pill.active {
-  background:#d4af37;
-  color:black;
+  text-decoration:none;
 }
