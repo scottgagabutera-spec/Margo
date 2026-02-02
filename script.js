@@ -1,4 +1,4 @@
-/* MARGO - Fixed JavaScript - No More Infinite Loading */
+/* MARGO - Debug Version with Error Logging */
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
