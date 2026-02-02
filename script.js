@@ -1,4 +1,4 @@
-/* MARGO - Enhanced Version with Analytics & Posters */
+/* MARGO - Enhanced Version with All Improvements */
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
@@ -6,11 +6,10 @@ const feed = document.getElementById("feed");
 const composer = document.getElementById("composer");
 const guessModal = document.getElementById("guessModal");
 const discoverModal = document.getElementById("discoverModal");
-const shareModal = document.getElementById("shareModal");
 const postcardModal = document.getElementById("postcardModal");
 const listenModal = document.getElementById("listenModal");
 const analyticsModal = document.getElementById("analyticsModal");
-const posterModal = document.getElementById("posterModal");
+const sharePosterModal = document.getElementById("sharePosterModal");
 
 const enterBtn = document.getElementById("enterBtn");
 const backBtn = document.getElementById("backBtn");
@@ -76,18 +75,14 @@ const discoverSoundcloudLink = document.getElementById("discoverSoundcloudLink")
 const closeListen = document.getElementById("closeListen");
 const listenLinks = document.getElementById("listenLinks");
 
-// Share modal
-const closeShare = document.getElementById("closeShare");
-
 // Postcard modal
 const closePostcard = document.getElementById("closePostcard");
 const postcardLyric = document.getElementById("postcardLyric");
 const postcardEmotion = document.getElementById("postcardEmotion");
 const postcardSong = document.getElementById("postcardSong");
-const sharePostcard = document.getElementById("sharePostcard");
+const sharePosterBtn = document.getElementById("sharePosterBtn");
 const listenPostcard = document.getElementById("listenPostcard");
 const analyticsBtn = document.getElementById("analyticsBtn");
-const createPosterBtn = document.getElementById("createPosterBtn");
 
 // Analytics modal
 const closeAnalytics = document.getElementById("closeAnalytics");
@@ -99,8 +94,8 @@ const helpsSection = document.getElementById("helpsSection");
 const guessesList = document.getElementById("guessesList");
 const helpsList = document.getElementById("helpsList");
 
-// Poster modal
-const closePoster = document.getElementById("closePoster");
+// Share Poster modal
+const closeSharePoster = document.getElementById("closeSharePoster");
 const posterCanvas = document.getElementById("posterCanvas");
 const posterPreview = document.getElementById("posterPreview");
 const downloadPoster = document.getElementById("downloadPoster");
@@ -125,6 +120,53 @@ posts.forEach(post => {
       helps: []
     };
   }
+});
+
+// ===== SWIPE NAVIGATION =====
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+
+const handleSwipe = () => {
+  const diffX = touchStartX - touchEndX;
+  const diffY = Math.abs(touchStartY - touchEndY);
+  
+  // Only trigger if horizontal swipe is more significant than vertical
+  if (Math.abs(diffX) > diffY && Math.abs(diffX) > 100) {
+    if (diffX > 0 && landing.classList.contains("active")) {
+      // Swipe left on landing - go to feed
+      landing.classList.remove("active");
+      feed.classList.add("active");
+      renderFeed();
+    } else if (diffX < 0 && feed.classList.contains("active")) {
+      // Swipe right on feed - go to landing
+      feed.classList.remove("active");
+      landing.classList.add("active");
+    }
+  }
+};
+
+landing.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+});
+
+landing.addEventListener('touchend', e => {
+  touchEndX = e.changedTouches[0].clientX;
+  touchEndY = e.changedTouches[0].clientY;
+  handleSwipe();
+});
+
+feed.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+});
+
+feed.addEventListener('touchend', e => {
+  touchEndX = e.changedTouches[0].clientX;
+  touchEndY = e.changedTouches[0].clientY;
+  handleSwipe();
 });
 
 // ===== NAVIGATION =====
@@ -166,11 +208,6 @@ closeDiscover.onclick = () => {
   document.body.classList.remove("modal-open");
 };
 
-closeShare.onclick = () => {
-  shareModal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
-};
-
 closePostcard.onclick = () => {
   postcardModal.classList.add("hidden");
   document.body.classList.remove("modal-open");
@@ -186,9 +223,11 @@ closeAnalytics.onclick = () => {
   document.body.classList.remove("modal-open");
 };
 
-closePoster.onclick = () => {
-  posterModal.classList.add("hidden");
+closeSharePoster.onclick = () => {
+  sharePosterModal.classList.add("hidden");
   document.body.classList.remove("modal-open");
+  posterPreview.classList.add("hidden");
+  downloadPoster.classList.add("hidden");
 };
 
 // ===== CHARACTER COUNTER =====
@@ -418,6 +457,7 @@ function renderFeed() {
       post.links.soundcloud
     );
     
+    // CRITICAL: Guess and Discover posts NEVER change in the feed
     if (post.mode === "share") {
       songSection = `
         <div class="feed-song">
@@ -428,54 +468,34 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="viewPost(${index})">View</button>
-          ${hasLinks ? `<button class="feed-action" onclick="openListen(${index})">Listen</button>` : ''}
           <button class="feed-action" onclick="sharePost(${index})">Share</button>
         </div>
       `;
     } 
     else if (post.mode === "guess") {
-      // Check if THIS user has guessed correctly
-      const hasGuessed = userGuesses[post.id];
-      
-      if (hasGuessed) {
-        // Only show answer to users who guessed correctly
-        songSection = `
-          <div class="feed-song">
-            <div class="feed-song-title">${post.knowledge.song}</div>
-            <div class="feed-song-artist">${post.knowledge.artist}</div>
-          </div>
-        `;
-        actionsSection = `
-          <div class="feed-actions">
-            <button class="feed-action" onclick="viewPost(${index})">View</button>
-            ${hasLinks ? `<button class="feed-action" onclick="openListen(${index})">Listen</button>` : ''}
-            <button class="feed-action" onclick="sharePost(${index})">Share</button>
-          </div>
-        `;
-      } else {
-        // Keep it a mystery for everyone else
-        const guessWhat = [];
-        if (post.guessConfig?.guessSong) guessWhat.push("song");
-        if (post.guessConfig?.guessArtist) guessWhat.push("artist");
-        if (guessWhat.length === 0) {
-          guessWhat.push("song", "artist");
-        }
-        const guessText = guessWhat.join(" & ");
-        
-        songSection = `
-          <div class="mystery-badge">
-            Guess the ${guessText}
-          </div>
-        `;
-        actionsSection = `
-          <div class="feed-actions">
-            <button class="feed-action" onclick="openGuess(${index})">Guess</button>
-            <button class="feed-action" onclick="sharePost(${index})">Share</button>
-          </div>
-        `;
+      // ALWAYS show as mystery - never reveal in feed
+      const guessWhat = [];
+      if (post.guessConfig?.guessSong) guessWhat.push("song");
+      if (post.guessConfig?.guessArtist) guessWhat.push("artist");
+      if (guessWhat.length === 0) {
+        guessWhat.push("song", "artist");
       }
+      const guessText = guessWhat.join(" & ");
+      
+      songSection = `
+        <div class="mystery-badge">
+          Guess the ${guessText}
+        </div>
+      `;
+      actionsSection = `
+        <div class="feed-actions">
+          <button class="feed-action" onclick="openGuess(${index})">Guess</button>
+          <button class="feed-action" onclick="sharePost(${index})">Share</button>
+        </div>
+      `;
     } 
     else if (post.mode === "discover") {
+      // ALWAYS show as discover - never convert to share in feed
       songSection = `
         <div class="discover-badge">
           ${post.knowledge.song || post.knowledge.artist ? 
@@ -629,6 +649,7 @@ submitGuess.onclick = () => {
     guessResult.className = "result-message success";
     guessResult.textContent = `🎉 Correct! "${currentPost.knowledge.song}" by ${currentPost.knowledge.artist}`;
     
+    // Track personal success (but don't change feed)
     userGuesses[currentPost.id] = true;
     localStorage.setItem("margoGuesses", JSON.stringify(userGuesses));
     
@@ -639,7 +660,7 @@ submitGuess.onclick = () => {
       guessModal.classList.add("hidden");
       document.body.classList.remove("modal-open");
       currentGuessAttempts = 0;
-      renderFeed();
+      // Feed stays unchanged - still shows as "Guess"
     }, 2000);
   }
   else if (currentGuessAttempts >= MAX_GUESS_ATTEMPTS) {
@@ -680,7 +701,7 @@ revealAnswer.onclick = () => {
     guessModal.classList.add("hidden");
     document.body.classList.remove("modal-open");
     currentGuessAttempts = 0;
-    renderFeed();
+    // Feed stays unchanged - still shows as "Guess"
   }, 2000);
 };
 
@@ -712,7 +733,7 @@ submitDiscover.onclick = () => {
     return;
   }
   
-  // Track help attempt
+  // Track help attempt - store ALL community answers
   if (!postAnalytics[currentPost.id]) {
     postAnalytics[currentPost.id] = { views: 0, guesses: [], helps: [] };
   }
@@ -729,26 +750,14 @@ submitDiscover.onclick = () => {
   });
   localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
   
-  currentPost.knowledge.song = song;
-  currentPost.knowledge.artist = artist;
-  currentPost.mode = "share";
-  currentPost.links = {
-    spotify: discoverSpotifyLink.value.trim() || null,
-    apple: discoverAppleLink.value.trim() || null,
-    youtube: discoverYoutubeLink.value.trim() || null,
-    soundcloud: discoverSoundcloudLink.value.trim() || null
-  };
-  
-  const postIndex = posts.findIndex(p => p.id === currentPost.id);
-  if (postIndex !== -1) {
-    posts[postIndex] = currentPost;
-    localStorage.setItem("margoPosts", JSON.stringify(posts));
-  }
+  // CRITICAL: Do NOT change post mode - keep it as "discover"
+  // Just save analytics and keep collecting community suggestions
   
   showToast("Thanks for helping! 🎵");
   discoverModal.classList.add("hidden");
   document.body.classList.remove("modal-open");
-  renderFeed();
+  
+  // Feed stays unchanged - still shows as "Discover"
 };
 
 // ===== OPEN LISTEN MODAL =====
@@ -907,12 +916,12 @@ analyticsBtn.onclick = () => {
   document.body.classList.add("modal-open");
 };
 
-// ===== POSTER GENERATION =====
+// ===== SHARE POSTER - INTEGRATED FLOW =====
 let selectedPosterSize = null;
 
-createPosterBtn.onclick = () => {
+sharePosterBtn.onclick = () => {
   postcardModal.classList.add("hidden");
-  posterModal.classList.remove("hidden");
+  sharePosterModal.classList.remove("hidden");
   posterPreview.classList.add("hidden");
   downloadPoster.classList.add("hidden");
   document.body.classList.add("modal-open");
@@ -1023,10 +1032,7 @@ function generatePoster(size) {
   ctx.font = `500 ${baseFontSize * 0.85}px sans-serif`;
   ctx.fillText(currentPost.knowledge.artist || 'Unknown Artist', dims.width / 2, y);
   
-  // Footer - subtle and small
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.4)';
-  ctx.font = `${baseFontSize * 0.6}px sans-serif`;
-  ctx.fillText('margo-silk.vercel.app', dims.width / 2, dims.height * 0.96);
+  // NO FOOTER - removed domain completely for cleaner design
   
   posterPreview.classList.remove("hidden");
   downloadPoster.classList.remove("hidden");
@@ -1046,48 +1052,31 @@ downloadPoster.onclick = () => {
 // ===== SHARE POST =====
 function sharePost(index) {
   currentPost = posts[index];
-  shareModal.classList.remove("hidden");
-  document.body.classList.add("modal-open");
+  
+  if (navigator.share) {
+    const text = `"${currentPost.text}"\n\n${currentPost.knowledge.song || 'Unknown'} — ${currentPost.knowledge.artist || 'Unknown'}\n\nShared via MARGO`;
+    navigator.share({
+      title: "MARGO",
+      text: text,
+      url: window.location.origin + "/?post=" + currentPost.id
+    }).catch(() => {
+      // Fallback to copy link
+      copyShareLink(index);
+    });
+  } else {
+    copyShareLink(index);
+  }
 }
 
-sharePostcard.onclick = () => {
-  postcardModal.classList.add("hidden");
-  shareModal.classList.remove("hidden");
-  document.body.classList.add("modal-open");
-};
-
-document.querySelectorAll(".share-btn").forEach(btn => {
-  btn.onclick = () => {
-    const action = btn.dataset.action;
-    
-    if (action === "copy") {
-      const url = window.location.origin + "/?post=" + currentPost.id;
-      navigator.clipboard.writeText(url).then(() => {
-        showToast("Link copied! 🔗");
-        shareModal.classList.add("hidden");
-        document.body.classList.remove("modal-open");
-      });
-    } 
-    else if (action === "native") {
-      if (navigator.share) {
-        const text = `"${currentPost.text}"\n\n${currentPost.knowledge.song || 'Unknown'} — ${currentPost.knowledge.artist || 'Unknown'}\n\nShared via MARGO`;
-        navigator.share({
-          title: "MARGO",
-          text: text,
-          url: window.location.origin + "/?post=" + currentPost.id
-        }).then(() => {
-          shareModal.classList.add("hidden");
-          document.body.classList.remove("modal-open");
-        }).catch(() => {
-          shareModal.classList.add("hidden");
-          document.body.classList.remove("modal-open");
-        });
-      } else {
-        showToast("Sharing not supported on this device");
-      }
-    }
-  };
-});
+function copyShareLink(index) {
+  const post = posts[index];
+  const url = window.location.origin + "/?post=" + post.id;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast("Link copied! 🔗");
+  }).catch(() => {
+    showToast("Could not copy link");
+  });
+}
 
 // ===== TOAST NOTIFICATION =====
 function showToast(message) {
