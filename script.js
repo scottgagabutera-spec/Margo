@@ -1,4 +1,4 @@
-/* MARGO - Enhanced Version with All Improvements */
+/* MARGO - Final Enhanced Version with All Improvements */
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
@@ -96,8 +96,12 @@ const helpsList = document.getElementById("helpsList");
 
 // Share Poster modal
 const closeSharePoster = document.getElementById("closeSharePoster");
+const designStep = document.getElementById("designStep");
+const platformStep = document.getElementById("platformStep");
+const previewStep = document.getElementById("previewStep");
+const nextToPlatform = document.getElementById("nextToPlatform");
+const backToDesign = document.getElementById("backToDesign");
 const posterCanvas = document.getElementById("posterCanvas");
-const posterPreview = document.getElementById("posterPreview");
 const downloadPoster = document.getElementById("downloadPoster");
 
 // ===== STATE =====
@@ -106,6 +110,9 @@ let selectedEmotion = null;
 let currentPost = null;
 let currentGuessAttempts = 0;
 const MAX_GUESS_ATTEMPTS = 2;
+
+let selectedDesign = "gold-gradient";
+let selectedPosterSize = null;
 
 let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
 let userGuesses = JSON.parse(localStorage.getItem("margoGuesses") || "{}");
@@ -122,6 +129,25 @@ posts.forEach(post => {
   }
 });
 
+// ===== MODAL SCROLL FIX =====
+function openModal(modal) {
+  modal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  // Prevent background scroll on mobile
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
+}
+
+function closeModal(modal) {
+  modal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+  // Restore background scroll
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
+}
+
 // ===== SWIPE NAVIGATION =====
 let touchStartX = 0;
 let touchStartY = 0;
@@ -132,15 +158,12 @@ const handleSwipe = () => {
   const diffX = touchStartX - touchEndX;
   const diffY = Math.abs(touchStartY - touchEndY);
   
-  // Only trigger if horizontal swipe is more significant than vertical
   if (Math.abs(diffX) > diffY && Math.abs(diffX) > 100) {
     if (diffX > 0 && landing.classList.contains("active")) {
-      // Swipe left on landing - go to feed
       landing.classList.remove("active");
       feed.classList.add("active");
       renderFeed();
     } else if (diffX < 0 && feed.classList.contains("active")) {
-      // Swipe right on feed - go to landing
       feed.classList.remove("active");
       landing.classList.add("active");
     }
@@ -172,8 +195,7 @@ feed.addEventListener('touchend', e => {
 // ===== NAVIGATION =====
 enterBtn.onclick = () => {
   landing.classList.remove("active");
-  composer.classList.remove("hidden");
-  document.body.classList.add("modal-open");
+  openModal(composer);
   textInput.focus();
 };
 
@@ -183,14 +205,12 @@ backBtn.onclick = () => {
 };
 
 openComposer.onclick = () => {
-  composer.classList.remove("hidden");
-  document.body.classList.add("modal-open");
+  openModal(composer);
   textInput.focus();
 };
 
 closeComposer.onclick = () => {
-  composer.classList.add("hidden");
-  document.body.classList.remove("modal-open");
+  closeModal(composer);
   resetComposer();
   if (!feed.classList.contains("active")) {
     landing.classList.add("active");
@@ -198,36 +218,29 @@ closeComposer.onclick = () => {
 };
 
 closeGuess.onclick = () => {
-  guessModal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
+  closeModal(guessModal);
   currentGuessAttempts = 0;
 };
 
 closeDiscover.onclick = () => {
-  discoverModal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
+  closeModal(discoverModal);
 };
 
 closePostcard.onclick = () => {
-  postcardModal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
+  closeModal(postcardModal);
 };
 
 closeListen.onclick = () => {
-  listenModal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
+  closeModal(listenModal);
 };
 
 closeAnalytics.onclick = () => {
-  analyticsModal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
+  closeModal(analyticsModal);
 };
 
 closeSharePoster.onclick = () => {
-  sharePosterModal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
-  posterPreview.classList.add("hidden");
-  downloadPoster.classList.add("hidden");
+  closeModal(sharePosterModal);
+  resetPosterModal();
 };
 
 // ===== CHARACTER COUNTER =====
@@ -246,7 +259,6 @@ modeBtns.forEach(btn => {
     guessInputs.classList.remove("active");
     discoverInputs.classList.remove("active");
 
-    // Show/hide streaming section based on mode
     if (currentMode === "discover") {
       streamingSection.style.display = "none";
     } else {
@@ -362,7 +374,6 @@ postBtn.onclick = async () => {
     
     posts.unshift(newPost);
     
-    // Initialize analytics
     postAnalytics[newPost.id] = {
       views: 0,
       guesses: [],
@@ -388,7 +399,7 @@ postBtn.onclick = async () => {
     renderFeed();
 
     resetComposer();
-    composer.classList.add("hidden");
+    closeModal(composer);
 
   } catch (err) {
     console.error("Posting failed:", err);
@@ -457,7 +468,6 @@ function renderFeed() {
       post.links.soundcloud
     );
     
-    // CRITICAL: Guess and Discover posts NEVER change in the feed
     if (post.mode === "share") {
       songSection = `
         <div class="feed-song">
@@ -468,12 +478,10 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="viewPost(${index})">View</button>
-          <button class="feed-action" onclick="sharePost(${index})">Share</button>
         </div>
       `;
     } 
     else if (post.mode === "guess") {
-      // ALWAYS show as mystery - never reveal in feed
       const guessWhat = [];
       if (post.guessConfig?.guessSong) guessWhat.push("song");
       if (post.guessConfig?.guessArtist) guessWhat.push("artist");
@@ -490,12 +498,10 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="openGuess(${index})">Guess</button>
-          <button class="feed-action" onclick="sharePost(${index})">Share</button>
         </div>
       `;
     } 
     else if (post.mode === "discover") {
-      // ALWAYS show as discover - never convert to share in feed
       songSection = `
         <div class="discover-badge">
           ${post.knowledge.song || post.knowledge.artist ? 
@@ -506,7 +512,6 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="openDiscover(${index})">Help</button>
-          <button class="feed-action" onclick="sharePost(${index})">Share</button>
         </div>
       `;
     }
@@ -586,8 +591,7 @@ function openGuess(index) {
   if (guessArtist) guessWhat.push("artist");
   guessHint.textContent = `You have ${MAX_GUESS_ATTEMPTS} attempts to guess the ${guessWhat.join(" and ")}!`;
   
-  guessModal.classList.remove("hidden");
-  document.body.classList.add("modal-open");
+  openModal(guessModal);
 }
 
 // ===== SUBMIT GUESS =====
@@ -631,7 +635,6 @@ submitGuess.onclick = () => {
     artistMatch = true;
   }
   
-  // Track guess attempt
   if (!postAnalytics[currentPost.id]) {
     postAnalytics[currentPost.id] = { views: 0, guesses: [], helps: [] };
   }
@@ -647,9 +650,8 @@ submitGuess.onclick = () => {
   
   if (songMatch && artistMatch) {
     guessResult.className = "result-message success";
-    guessResult.textContent = `🎉 Correct! "${currentPost.knowledge.song}" by ${currentPost.knowledge.artist}`;
+    guessResult.textContent = `Correct! "${currentPost.knowledge.song}" by ${currentPost.knowledge.artist}`;
     
-    // Track personal success (but don't change feed)
     userGuesses[currentPost.id] = true;
     localStorage.setItem("margoGuesses", JSON.stringify(userGuesses));
     
@@ -657,15 +659,13 @@ submitGuess.onclick = () => {
     guessInputFields.classList.add("hidden");
     
     setTimeout(() => {
-      guessModal.classList.add("hidden");
-      document.body.classList.remove("modal-open");
+      closeModal(guessModal);
       currentGuessAttempts = 0;
-      // Feed stays unchanged - still shows as "Guess"
     }, 2000);
   }
   else if (currentGuessAttempts >= MAX_GUESS_ATTEMPTS) {
     guessResult.className = "result-message error";
-    guessResult.textContent = `❌ Out of attempts! That was your ${MAX_GUESS_ATTEMPTS} tries.`;
+    guessResult.textContent = `Out of attempts! That was your ${MAX_GUESS_ATTEMPTS} tries.`;
     submitGuess.classList.add("hidden");
     guessInputFields.classList.add("hidden");
     revealAnswer.classList.remove("hidden");
@@ -675,12 +675,12 @@ submitGuess.onclick = () => {
     const attemptsLeft = MAX_GUESS_ATTEMPTS - currentGuessAttempts;
     if (songCorrect || artistCorrect) {
       if (songCorrect) {
-        guessResult.textContent = `🎵 Song is correct! But not the artist. ${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} left.`;
+        guessResult.textContent = `Song is correct! But not the artist. ${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} left.`;
       } else {
-        guessResult.textContent = `🎤 Artist is correct! But not the song. ${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} left.`;
+        guessResult.textContent = `Artist is correct! But not the song. ${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} left.`;
       }
     } else {
-      guessResult.textContent = `❌ Not quite! ${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining.`;
+      guessResult.textContent = `Not quite! ${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining.`;
     }
     guessSongInput.value = "";
     guessArtistInput.value = "";
@@ -698,10 +698,8 @@ revealAnswer.onclick = () => {
   revealAnswer.classList.add("hidden");
   
   setTimeout(() => {
-    guessModal.classList.add("hidden");
-    document.body.classList.remove("modal-open");
+    closeModal(guessModal);
     currentGuessAttempts = 0;
-    // Feed stays unchanged - still shows as "Guess"
   }, 2000);
 };
 
@@ -719,8 +717,7 @@ function openDiscover(index) {
   discoverYoutubeLink.value = "";
   discoverSoundcloudLink.value = "";
   
-  discoverModal.classList.remove("hidden");
-  document.body.classList.add("modal-open");
+  openModal(discoverModal);
 }
 
 // ===== SUBMIT DISCOVER =====
@@ -733,7 +730,6 @@ submitDiscover.onclick = () => {
     return;
   }
   
-  // Track help attempt - store ALL community answers
   if (!postAnalytics[currentPost.id]) {
     postAnalytics[currentPost.id] = { views: 0, guesses: [], helps: [] };
   }
@@ -750,14 +746,8 @@ submitDiscover.onclick = () => {
   });
   localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
   
-  // CRITICAL: Do NOT change post mode - keep it as "discover"
-  // Just save analytics and keep collecting community suggestions
-  
-  showToast("Thanks for helping! 🎵");
-  discoverModal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
-  
-  // Feed stays unchanged - still shows as "Discover"
+  showToast("Thanks for helping!");
+  closeModal(discoverModal);
 };
 
 // ===== OPEN LISTEN MODAL =====
@@ -772,10 +762,10 @@ function openListen(index) {
   listenLinks.innerHTML = "";
   
   const platforms = [
-    { name: 'Spotify', key: 'spotify', icon: '🎵' },
-    { name: 'Apple Music', key: 'apple', icon: '🍎' },
-    { name: 'YouTube', key: 'youtube', icon: '▶' },
-    { name: 'SoundCloud', key: 'soundcloud', icon: '☁' }
+    { name: 'Spotify', key: 'spotify' },
+    { name: 'Apple Music', key: 'apple' },
+    { name: 'YouTube', key: 'youtube' },
+    { name: 'SoundCloud', key: 'soundcloud' }
   ];
   
   let hasAnyLink = false;
@@ -787,10 +777,7 @@ function openListen(index) {
       link.className = "listen-link";
       link.href = currentPost.links[platform.key];
       link.target = "_blank";
-      link.innerHTML = `
-        <span class="listen-icon">${platform.icon}</span>
-        <span>${platform.name}</span>
-      `;
+      link.innerHTML = `<span>${platform.name}</span>`;
       listenLinks.appendChild(link);
     }
   });
@@ -799,8 +786,7 @@ function openListen(index) {
     listenLinks.innerHTML = '<p class="hint">No streaming links available</p>';
   }
   
-  listenModal.classList.remove("hidden");
-  document.body.classList.add("modal-open");
+  openModal(listenModal);
 }
 
 // ===== VIEW POST (POSTCARD) =====
@@ -829,14 +815,13 @@ function viewPost(index) {
     listenPostcard.style.display = 'none';
   }
   
-  postcardModal.classList.remove("hidden");
-  document.body.classList.add("modal-open");
+  openModal(postcardModal);
 }
 
 listenPostcard.onclick = () => {
   const postIndex = posts.findIndex(p => p.id === currentPost.id);
   if (postIndex !== -1) {
-    postcardModal.classList.add("hidden");
+    closeModal(postcardModal);
     openListen(postIndex);
   }
 };
@@ -865,7 +850,7 @@ analyticsBtn.onclick = () => {
           ${guess.artist ? `<br>Artist: ${guess.artist}` : ''}
         </div>
         <div class="activity-result ${guess.correct ? 'correct' : 'incorrect'}">
-          ${guess.correct ? '✓ Correct' : '✗ Incorrect'}
+          ${guess.correct ? 'Correct' : 'Incorrect'}
         </div>
         <div class="activity-time">${timeAgo(guess.timestamp)}</div>
       `;
@@ -875,7 +860,7 @@ analyticsBtn.onclick = () => {
     guessesSection.classList.add("hidden");
   }
   
-  // Render helps
+  // Render helps - SHOW ALL COMMUNITY ANSWERS WITH LINKS
   if (analytics.helps.length > 0) {
     helpsSection.classList.remove("hidden");
     helpsList.innerHTML = "";
@@ -888,7 +873,7 @@ analyticsBtn.onclick = () => {
       if (help.links) {
         const linksList = [];
         if (help.links.spotify) linksList.push(`<a href="${help.links.spotify}" target="_blank" class="activity-link">Spotify</a>`);
-        if (help.links.apple) linksList.push(`<a href="${help.links.apple}" target="_blank" class="activity-link">Apple</a>`);
+        if (help.links.apple) linksList.push(`<a href="${help.links.apple}" target="_blank" class="activity-link">Apple Music</a>`);
         if (help.links.youtube) linksList.push(`<a href="${help.links.youtube}" target="_blank" class="activity-link">YouTube</a>`);
         if (help.links.soundcloud) linksList.push(`<a href="${help.links.soundcloud}" target="_blank" class="activity-link">SoundCloud</a>`);
         
@@ -899,8 +884,8 @@ analyticsBtn.onclick = () => {
       
       item.innerHTML = `
         <div class="activity-guess">
-          Song: ${help.song}<br>
-          Artist: ${help.artist}
+          <strong>Song:</strong> ${help.song}<br>
+          <strong>Artist:</strong> ${help.artist}
         </div>
         ${linksHTML}
         <div class="activity-time">${timeAgo(help.timestamp)}</div>
@@ -911,32 +896,42 @@ analyticsBtn.onclick = () => {
     helpsSection.classList.add("hidden");
   }
   
-  postcardModal.classList.add("hidden");
-  analyticsModal.classList.remove("hidden");
-  document.body.classList.add("modal-open");
+  closeModal(postcardModal);
+  openModal(analyticsModal);
 };
 
-// ===== SHARE POSTER - INTEGRATED FLOW =====
-let selectedPosterSize = null;
-
-sharePosterBtn.onclick = () => {
-  postcardModal.classList.add("hidden");
-  sharePosterModal.classList.remove("hidden");
-  posterPreview.classList.add("hidden");
-  downloadPoster.classList.add("hidden");
-  document.body.classList.add("modal-open");
-};
-
-document.querySelectorAll(".poster-size-btn").forEach(btn => {
+// ===== POSTER DESIGN SELECTION =====
+document.querySelectorAll(".design-btn").forEach(btn => {
   btn.onclick = () => {
-    document.querySelectorAll(".poster-size-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".design-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    selectedPosterSize = btn.dataset.size;
-    generatePoster(selectedPosterSize);
+    selectedDesign = btn.dataset.design;
   };
 });
 
-function generatePoster(size) {
+nextToPlatform.onclick = () => {
+  designStep.classList.remove("active");
+  platformStep.classList.add("active");
+};
+
+backToDesign.onclick = () => {
+  platformStep.classList.remove("active");
+  designStep.classList.add("active");
+};
+
+// ===== PLATFORM SELECTION & POSTER GENERATION =====
+document.querySelectorAll(".platform-btn").forEach(btn => {
+  btn.onclick = () => {
+    selectedPosterSize = btn.dataset.size;
+    generatePoster(selectedPosterSize, selectedDesign);
+    platformStep.classList.remove("active");
+    previewStep.classList.add("active");
+    downloadPoster.classList.remove("hidden");
+  };
+});
+
+// ===== POSTER GENERATION WITH DESIGN OPTIONS =====
+function generatePoster(size, design) {
   if (!currentPost) return;
   
   const sizes = {
@@ -947,7 +942,47 @@ function generatePoster(size) {
     'pinterest': { width: 1000, height: 1500 }
   };
   
+  const designs = {
+    'gold-gradient': {
+      bg: ['#1f1812', '#2d2115', '#1f1812'],
+      primary: '#d4af37',
+      secondary: 'rgba(212, 175, 55, 0.8)',
+      text: '#f5f5f5'
+    },
+    'dark-minimal': {
+      bg: ['#0a0a0a', '#1a1a1a', '#0a0a0a'],
+      primary: '#ffffff',
+      secondary: 'rgba(255, 255, 255, 0.6)',
+      text: '#f5f5f5'
+    },
+    'vibrant-purple': {
+      bg: ['#1a0a2e', '#3d1e6d', '#1a0a2e'],
+      primary: '#b565d8',
+      secondary: 'rgba(181, 101, 216, 0.8)',
+      text: '#f5f5f5'
+    },
+    'ocean-blue': {
+      bg: ['#0a1929', '#1e3a5f', '#0a1929'],
+      primary: '#4fc3f7',
+      secondary: 'rgba(79, 195, 247, 0.8)',
+      text: '#f5f5f5'
+    },
+    'sunset-orange': {
+      bg: ['#2e1a0a', '#5f3a1e', '#2e1a0a'],
+      primary: '#ff9800',
+      secondary: 'rgba(255, 152, 0, 0.8)',
+      text: '#f5f5f5'
+    },
+    'forest-green': {
+      bg: ['#0a2e1a', '#1e5f3a', '#0a2e1a'],
+      primary: '#66bb6a',
+      secondary: 'rgba(102, 187, 106, 0.8)',
+      text: '#f5f5f5'
+    }
+  };
+  
   const dims = sizes[size];
+  const colors = designs[design];
   const canvas = posterCanvas;
   const ctx = canvas.getContext('2d');
   
@@ -956,26 +991,23 @@ function generatePoster(size) {
   
   // Background gradient
   const gradient = ctx.createLinearGradient(0, 0, 0, dims.height);
-  gradient.addColorStop(0, '#1f1812');
-  gradient.addColorStop(0.5, '#2d2115');
-  gradient.addColorStop(1, '#1f1812');
+  gradient.addColorStop(0, colors.bg[0]);
+  gradient.addColorStop(0.5, colors.bg[1]);
+  gradient.addColorStop(1, colors.bg[2]);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, dims.width, dims.height);
   
-  // Calculate responsive sizing based on canvas width
   const baseFontSize = dims.width * 0.04;
   
-  // MARGO header - smaller and more elegant
-  ctx.fillStyle = '#d4af37';
+  // MARGO header
+  ctx.fillStyle = colors.primary;
   ctx.font = `bold ${baseFontSize * 1.2}px serif`;
   ctx.textAlign = 'center';
-  ctx.letterSpacing = '4px';
   ctx.fillText('MARGO', dims.width / 2, dims.height * 0.08);
   
-  // Lyric (main content) - with better spacing
-  ctx.fillStyle = '#f5f5f5';
+  // Lyric
+  ctx.fillStyle = colors.text;
   ctx.font = `italic ${baseFontSize * 1.3}px serif`;
-  ctx.letterSpacing = '0px';
   
   const maxWidth = dims.width * 0.85;
   const lineHeight = baseFontSize * 2;
@@ -983,7 +1015,6 @@ function generatePoster(size) {
   let line = '';
   let y = dims.height * 0.35;
   
-  // Center the lyric text
   for (let i = 0; i < words.length; i++) {
     const testLine = line + words[i] + ' ';
     const metrics = ctx.measureText(testLine);
@@ -998,44 +1029,38 @@ function generatePoster(size) {
   }
   ctx.fillText(line, dims.width / 2, y);
   
-  // Emotion as hashtag - clear and separated
+  // Emotion
   y += baseFontSize * 2.5;
-  ctx.fillStyle = '#d4af37';
+  ctx.fillStyle = colors.primary;
   ctx.font = `600 ${baseFontSize * 0.85}px sans-serif`;
   ctx.fillText(`#${currentPost.emotion}`, dims.width / 2, y);
   
-  // Divider line
+  // Divider
   y += baseFontSize * 1.5;
-  ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
+  ctx.strokeStyle = colors.secondary;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(dims.width * 0.3, y);
   ctx.lineTo(dims.width * 0.7, y);
   ctx.stroke();
   
-  // Song title - well spaced
+  // Song title
   y += baseFontSize * 2;
-  ctx.fillStyle = '#d4af37';
+  ctx.fillStyle = colors.primary;
   ctx.font = `bold ${baseFontSize * 1.1}px serif`;
   
   const songTitle = currentPost.knowledge.song || 'Unknown Song';
   const songMetrics = ctx.measureText(songTitle);
   if (songMetrics.width > maxWidth) {
-    // If song title too long, use smaller font
     ctx.font = `bold ${baseFontSize * 0.9}px serif`;
   }
   ctx.fillText(songTitle, dims.width / 2, y);
   
-  // Artist - smaller and distinct
+  // Artist
   y += baseFontSize * 1.5;
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.8)';
+  ctx.fillStyle = colors.secondary;
   ctx.font = `500 ${baseFontSize * 0.85}px sans-serif`;
   ctx.fillText(currentPost.knowledge.artist || 'Unknown Artist', dims.width / 2, y);
-  
-  // NO FOOTER - removed domain completely for cleaner design
-  
-  posterPreview.classList.remove("hidden");
-  downloadPoster.classList.remove("hidden");
 }
 
 downloadPoster.onclick = () => {
@@ -1046,36 +1071,26 @@ downloadPoster.onclick = () => {
   link.href = posterCanvas.toDataURL('image/png');
   link.click();
   
-  showToast("Poster downloaded! 📥");
+  showToast("Poster downloaded!");
 };
 
-// ===== SHARE POST =====
-function sharePost(index) {
-  currentPost = posts[index];
-  
-  if (navigator.share) {
-    const text = `"${currentPost.text}"\n\n${currentPost.knowledge.song || 'Unknown'} — ${currentPost.knowledge.artist || 'Unknown'}\n\nShared via MARGO`;
-    navigator.share({
-      title: "MARGO",
-      text: text,
-      url: window.location.origin + "/?post=" + currentPost.id
-    }).catch(() => {
-      // Fallback to copy link
-      copyShareLink(index);
-    });
-  } else {
-    copyShareLink(index);
-  }
-}
+// ===== SHARE POSTER BUTTON =====
+sharePosterBtn.onclick = () => {
+  closeModal(postcardModal);
+  resetPosterModal();
+  openModal(sharePosterModal);
+};
 
-function copyShareLink(index) {
-  const post = posts[index];
-  const url = window.location.origin + "/?post=" + post.id;
-  navigator.clipboard.writeText(url).then(() => {
-    showToast("Link copied! 🔗");
-  }).catch(() => {
-    showToast("Could not copy link");
-  });
+function resetPosterModal() {
+  designStep.classList.add("active");
+  platformStep.classList.remove("active");
+  previewStep.classList.remove("active");
+  downloadPoster.classList.add("hidden");
+  selectedDesign = "gold-gradient";
+  selectedPosterSize = null;
+  
+  document.querySelectorAll(".design-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".design-btn")[0].classList.add("active");
 }
 
 // ===== TOAST NOTIFICATION =====
