@@ -1,368 +1,404 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>MARGO — When words fail, drop a line</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MARGO - Music & Lyrics Social</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="margo-improved.css">
 </head>
 <body>
 
-<!-- LANDING -->
-<section id="landing" class="screen active">
-  <div class="center">
-    <h1 class="logo">MARGO</h1>
-    <p class="tagline">When words fail, drop a line.</p>
-    <button id="enterBtn" class="primary-btn">Drop a line</button>
+  <!-- ===== LANDING SCREEN ===== -->
+  <div id="landing" class="screen active">
+    <div class="center">
+      <h1 class="logo">MARGO</h1>
+      <p class="tagline">Share lyrics. Feel emotions. Discover music.</p>
+      <button id="enterBtn" class="primary-btn">Get Started</button>
+    </div>
     <div class="swipe-hint">
-      <span class="swipe-arrow">←</span>
-      <span>Swipe to explore</span>
+      <span>Swipe left to explore</span>
+      <span class="swipe-arrow">→</span>
     </div>
   </div>
-</section>
 
-<!-- FEED -->
-<section id="feed" class="screen">
-  <header class="feed-header">
-    <button id="backBtn" class="header-btn">
-      <span class="btn-icon">←</span>
-    </button>
-    <div class="header-center">
-      <h2>Live Feed</h2>
-      <p class="post-count"><span id="postCount">0</span> posts</p>
+  <!-- ===== FEED SCREEN ===== -->
+  <div id="feed" class="screen">
+    <div class="feed-header">
+      <button id="backBtn" class="header-btn">← Back</button>
+      <div class="header-center">
+        <h2>MARGO</h2>
+        <div class="post-count"><span id="postCount">0</span> posts</div>
+      </div>
+      <button id="openComposer" class="header-btn primary">+ Post</button>
     </div>
-    <button id="openComposer" class="header-btn primary">Drop your line</button>
-  </header>
-  <div id="feedList" class="feed-list"></div>
-</section>
+    <div id="feedList" class="feed-list"></div>
+  </div>
 
-<!-- COMPOSER MODAL -->
-<div id="composer" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Drop a line</h3>
-      <button id="closeComposer" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <label>Lyric</label>
-      <textarea id="textInput" maxlength="140" placeholder="The line stuck in your head..." required></textarea>
-      <div class="char-count"><span id="charCount">0</span>/140</div>
-
-      <label>Emotion</label>
-      <div class="emotion-pills">
-        <button class="emotion-pill" data-emotion="Love" type="button">Love</button>
-        <button class="emotion-pill" data-emotion="Heartbreak" type="button">Heartbreak</button>
-        <button class="emotion-pill" data-emotion="Hope" type="button">Hope</button>
-        <button class="emotion-pill" data-emotion="Nostalgia" type="button">Nostalgia</button>
-        <button class="emotion-pill" data-emotion="Healing" type="button">Healing</button>
-        <button class="emotion-pill" data-emotion="Joy" type="button">Joy</button>
-        <button class="emotion-pill" data-emotion="Rage" type="button">Rage</button>
-        <button class="emotion-pill" data-emotion="Loneliness" type="button">Loneliness</button>
+  <!-- ===== COMPOSER MODAL ===== -->
+  <div id="composer" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Create Post</h3>
+        <button id="closeComposer" class="close-btn">×</button>
       </div>
+      <div class="modal-body">
+        <!-- Lyric Input -->
+        <label>Your Lyric</label>
+        <textarea id="textInput" placeholder="Write a powerful lyric..."></textarea>
+        <div class="char-count"><span id="charCount">0</span>/500</div>
 
-      <label>What's your intention?</label>
-      <div class="mode-options">
-        <button class="mode-btn active" data-mode="share" type="button">
-          <span class="mode-label">Share</span>
-        </button>
-        <button class="mode-btn" data-mode="guess" type="button">
-          <span class="mode-label">Guess</span>
-        </button>
-        <button class="mode-btn" data-mode="discover" type="button">
-          <span class="mode-label">Discover</span>
-        </button>
-      </div>
-
-      <div id="shareInputs" class="conditional active">
-        <label>Song Details</label>
-        <input id="songInput" placeholder="Song title" required/>
-        <input id="artistInput" placeholder="Artist" required/>
-      </div>
-
-      <div id="guessInputs" class="conditional">
-        <label>Answer Key</label>
-        <div class="checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="guessSongCheck" checked>
-            <span>Let them guess the song</span>
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" id="guessArtistCheck" checked>
-            <span>Let them guess the artist</span>
-          </label>
+        <!-- Emotion Selection -->
+        <label>Emotion</label>
+        <div class="emotion-pills">
+          <button class="emotion-pill" data-emotion="Joy">Joy</button>
+          <button class="emotion-pill" data-emotion="Sadness">Sadness</button>
+          <button class="emotion-pill" data-emotion="Love">Love</button>
+          <button class="emotion-pill" data-emotion="Anger">Anger</button>
+          <button class="emotion-pill" data-emotion="Hope">Hope</button>
+          <button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
+          <button class="emotion-pill" data-emotion="Peace">Peace</button>
+          <button class="emotion-pill" data-emotion="Energy">Energy</button>
         </div>
-        <input id="guessSongAnswer" placeholder="Correct song title"/>
-        <input id="guessArtistAnswer" placeholder="Correct artist"/>
-      </div>
 
-      <div id="discoverInputs" class="conditional">
-        <p class="hint">Don't know the song? The community will help you discover it!</p>
-        <p class="hint-small">Optional: Add any clues you remember</p>
-        <input id="discoverSongInput" placeholder="Maybe song? (optional)"/>
-        <input id="discoverArtistInput" placeholder="Maybe artist? (optional)"/>
-      </div>
-
-      <details class="streaming-section" id="streamingSection">
-        <summary>Add Streaming Links (Optional)</summary>
-        <div class="streaming-links">
-          <div class="input-group-small">
-            <label>Spotify</label>
-            <input id="spotifyLink" type="url" placeholder="https://open.spotify.com/track/..."/>
-          </div>
-          <div class="input-group-small">
-            <label>Apple Music</label>
-            <input id="appleLink" type="url" placeholder="https://music.apple.com/..."/>
-          </div>
-          <div class="input-group-small">
-            <label>YouTube</label>
-            <input id="youtubeLink" type="url" placeholder="https://youtube.com/watch?v=..."/>
-          </div>
-          <div class="input-group-small">
-            <label>SoundCloud</label>
-            <input id="soundcloudLink" type="url" placeholder="https://soundcloud.com/..."/>
-          </div>
-        </div>
-      </details>
-    </div>
-    <div class="modal-footer">
-      <button id="postBtn" class="primary-btn full">Post</button>
-    </div>
-  </div>
-</div>
-
-<!-- GUESS MODAL -->
-<div id="guessModal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Guess the Song</h3>
-      <button id="closeGuess" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="lyric-display" id="guessLyric"></div>
-      <p class="hint" id="guessHint"></p>
-      <div id="guessInputFields">
-        <input id="guessSongInput" placeholder="Song title" class="guess-field"/>
-        <input id="guessArtistInput" placeholder="Artist" class="guess-field"/>
-      </div>
-      <div id="guessResult" class="result-message hidden"></div>
-    </div>
-    <div class="modal-footer">
-      <button id="submitGuess" class="primary-btn full">Submit Guess</button>
-      <button id="revealAnswer" class="secondary-btn full hidden">Reveal Answer</button>
-    </div>
-  </div>
-</div>
-
-<!-- DISCOVER MODAL -->
-<div id="discoverModal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Help Discover</h3>
-      <button id="closeDiscover" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="lyric-display" id="discoverLyric"></div>
-      <p class="hint">Know this song? Help them out!</p>
-      <input id="discoverSongAnswer" placeholder="Song title" required/>
-      <input id="discoverArtistAnswer" placeholder="Artist" required/>
-      
-      <details class="streaming-section">
-        <summary>Add Streaming Links (Optional)</summary>
-        <div class="streaming-links">
-          <div class="input-group-small">
-            <label>Spotify</label>
-            <input id="discoverSpotifyLink" type="url" placeholder="https://open.spotify.com/track/..."/>
-          </div>
-          <div class="input-group-small">
-            <label>Apple Music</label>
-            <input id="discoverAppleLink" type="url" placeholder="https://music.apple.com/..."/>
-          </div>
-          <div class="input-group-small">
-            <label>YouTube</label>
-            <input id="discoverYoutubeLink" type="url" placeholder="https://youtube.com/watch?v=..."/>
-          </div>
-          <div class="input-group-small">
-            <label>SoundCloud</label>
-            <input id="discoverSoundcloudLink" type="url" placeholder="https://soundcloud.com/..."/>
-          </div>
-        </div>
-      </details>
-    </div>
-    <div class="modal-footer">
-      <button id="submitDiscover" class="primary-btn full">Help Them Discover</button>
-    </div>
-  </div>
-</div>
-
-<!-- LISTEN MODAL -->
-<div id="listenModal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Listen</h3>
-      <button id="closeListen" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <p class="hint">Available streaming links:</p>
-      <div class="listen-links" id="listenLinks"></div>
-    </div>
-  </div>
-</div>
-
-<!-- POSTCARD MODAL - VIEW POST -->
-<div id="postcardModal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Post</h3>
-      <button id="closePostcard" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="postcard">
-        <div class="postcard-header">MARGO</div>
-        <div class="postcard-lyric" id="postcardLyric"></div>
-        <div class="postcard-emotion" id="postcardEmotion"></div>
-        <div class="postcard-song" id="postcardSong"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button id="analyticsBtn" class="secondary-btn full">View Analytics</button>
-      <button id="listenPostcard" class="secondary-btn full">Listen</button>
-      <button id="sharePosterBtn" class="primary-btn full">Share Poster</button>
-    </div>
-  </div>
-</div>
-
-<!-- ANALYTICS MODAL - UPDATED WITH HELP ANSWERS -->
-<div id="analyticsModal" class="modal hidden">
-  <div class="modal-content analytics-modal">
-    <div class="modal-header">
-      <h3>Post Analytics</h3>
-      <button id="closeAnalytics" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="analytics-stats">
-        <div class="stat-card">
-          <div class="stat-number" id="statViews">0</div>
-          <div class="stat-label">Views</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" id="statGuesses">0</div>
-          <div class="stat-label">Guess Attempts</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" id="statHelps">0</div>
-          <div class="stat-label">Help Attempts</div>
-        </div>
-      </div>
-      
-      <div id="guessesSection" class="activity-section hidden">
-        <h4>Guess Attempts</h4>
-        <div id="guessesList" class="activity-list"></div>
-      </div>
-      
-      <div id="helpsSection" class="activity-section hidden">
-        <h4>Community Answers</h4>
-        <div id="helpsList" class="activity-list"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- SHARE POSTER MODAL - DESIGN + PLATFORM SELECTION -->
-<div id="sharePosterModal" class="modal hidden">
-  <div class="modal-content poster-modal">
-    <div class="modal-header">
-      <h3>Share Poster</h3>
-      <button id="closeSharePoster" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <!-- Step 1: Choose Design -->
-      <div id="designStep" class="poster-step active">
-        <label>Choose Design Style</label>
-        <div class="design-options">
-          <button class="design-btn active" data-design="gold-gradient">
-            <div class="design-preview gold-gradient-preview"></div>
-            <span class="design-name">Classic Gold</span>
+        <!-- Mode Selection -->
+        <label>Mode</label>
+        <div class="mode-options">
+          <button class="mode-btn active" data-mode="share">
+            <span class="btn-icon">📢</span>
+            <span class="mode-label">Share</span>
           </button>
-          <button class="design-btn" data-design="dark-minimal">
-            <div class="design-preview dark-minimal-preview"></div>
-            <span class="design-name">Dark Minimal</span>
+          <button class="mode-btn" data-mode="guess">
+            <span class="btn-icon">🎯</span>
+            <span class="mode-label">Guess</span>
           </button>
-          <button class="design-btn" data-design="vibrant-purple">
-            <div class="design-preview vibrant-purple-preview"></div>
-            <span class="design-name">Vibrant Purple</span>
-          </button>
-          <button class="design-btn" data-design="ocean-blue">
-            <div class="design-preview ocean-blue-preview"></div>
-            <span class="design-name">Ocean Blue</span>
-          </button>
-          <button class="design-btn" data-design="sunset-orange">
-            <div class="design-preview sunset-orange-preview"></div>
-            <span class="design-name">Sunset Orange</span>
-          </button>
-          <button class="design-btn" data-design="forest-green">
-            <div class="design-preview forest-green-preview"></div>
-            <span class="design-name">Forest Green</span>
+          <button class="mode-btn" data-mode="discover">
+            <span class="btn-icon">🔍</span>
+            <span class="mode-label">Discover</span>
           </button>
         </div>
-        <button id="nextToPlatform" class="primary-btn full">Continue</button>
-      </div>
 
-      <!-- Step 2: Choose Platform -->
-      <div id="platformStep" class="poster-step">
-        <label>Choose Platform</label>
-        <div class="platform-options">
-          <button class="platform-btn" data-size="instagram-square">
-            <div class="platform-info">
-              <span class="platform-name">Instagram Square</span>
-              <span class="platform-dim">1080×1080</span>
+        <!-- Share Mode Inputs -->
+        <div id="shareInputs" class="conditional active">
+          <label>Song Title</label>
+          <input type="text" id="songInput" placeholder="Enter song title" />
+          
+          <label>Artist</label>
+          <input type="text" id="artistInput" placeholder="Enter artist name" />
+        </div>
+
+        <!-- Guess Mode Inputs -->
+        <div id="guessInputs" class="conditional">
+          <label>What can people guess?</label>
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="guessSongCheck" checked />
+              <span>Song title</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="guessArtistCheck" checked />
+              <span>Artist name</span>
+            </label>
+          </div>
+
+          <label>Song Title (Answer)</label>
+          <input type="text" id="guessSongAnswer" placeholder="Correct song title" />
+          
+          <label>Artist (Answer)</label>
+          <input type="text" id="guessArtistAnswer" placeholder="Correct artist name" />
+        </div>
+
+        <!-- Discover Mode Inputs -->
+        <div id="discoverInputs" class="conditional">
+          <p class="hint">Leave blank if you don't know the song/artist</p>
+          
+          <label>Song Title (Optional)</label>
+          <input type="text" id="discoverSongInput" placeholder="Maybe it's..." />
+          
+          <label>Artist (Optional)</label>
+          <input type="text" id="discoverArtistInput" placeholder="Possibly by..." />
+        </div>
+
+        <!-- Streaming Links (Share & Guess modes only) -->
+        <details id="streamingSection" class="streaming-section">
+          <summary>Add Streaming Links (Optional)</summary>
+          <div class="streaming-links">
+            <div class="input-group-small">
+              <label>Spotify</label>
+              <input type="url" id="spotifyLink" placeholder="https://open.spotify.com/..." />
             </div>
-          </button>
-          <button class="platform-btn" data-size="instagram-story">
-            <div class="platform-info">
-              <span class="platform-name">Instagram Story</span>
-              <span class="platform-dim">1080×1920</span>
+            <div class="input-group-small">
+              <label>Apple Music</label>
+              <input type="url" id="appleLink" placeholder="https://music.apple.com/..." />
             </div>
-          </button>
-          <button class="platform-btn" data-size="twitter">
-            <div class="platform-info">
-              <span class="platform-name">Twitter / X</span>
-              <span class="platform-dim">1200×675</span>
+            <div class="input-group-small">
+              <label>YouTube</label>
+              <input type="url" id="youtubeLink" placeholder="https://youtube.com/..." />
             </div>
-          </button>
-          <button class="platform-btn" data-size="facebook">
-            <div class="platform-info">
-              <span class="platform-name">Facebook</span>
-              <span class="platform-dim">1200×630</span>
+            <div class="input-group-small">
+              <label>SoundCloud</label>
+              <input type="url" id="soundcloudLink" placeholder="https://soundcloud.com/..." />
             </div>
-          </button>
-          <button class="platform-btn" data-size="pinterest">
-            <div class="platform-info">
-              <span class="platform-name">Pinterest</span>
-              <span class="platform-dim">1000×1500</span>
-            </div>
-          </button>
-        </div>
-        <button id="backToDesign" class="secondary-btn full">Back</button>
+          </div>
+        </details>
       </div>
-
-      <!-- Step 3: Preview & Download -->
-      <div id="previewStep" class="poster-step">
-        <div class="poster-preview">
-          <canvas id="posterCanvas"></canvas>
-        </div>
+      <div class="modal-footer">
+        <button id="postBtn" class="primary-btn full">Post</button>
       </div>
-    </div>
-    <div class="modal-footer" id="posterFooter">
-      <button id="downloadPoster" class="primary-btn full hidden">Download</button>
     </div>
   </div>
-</div>
 
-<script src="script.js"></script>
+  <!-- ===== GUESS MODAL ===== -->
+  <div id="guessModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Guess the Song</h3>
+        <button id="closeGuess" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="lyric-display" id="guessLyric"></div>
+        <p class="hint" id="guessHint">You have 2 attempts!</p>
+        
+        <div id="guessInputFields">
+          <input type="text" id="guessSongInput" placeholder="Song title..." />
+          <input type="text" id="guessArtistInput" placeholder="Artist name..." />
+        </div>
+        
+        <div id="guessResult" class="result-message hidden"></div>
+        
+        <!-- NEW: Links appear for 5 seconds after reveal -->
+        <div id="guessLinksSection" class="guess-links-section hidden">
+          <p>Stream this song:</p>
+          <div id="guessLinksContainer" class="listen-links"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="submitGuess" class="primary-btn full">Submit Guess</button>
+        <button id="revealAnswer" class="secondary-btn full hidden">Reveal Answer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DISCOVER MODAL ===== -->
+  <div id="discoverModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Help Discover</h3>
+        <button id="closeDiscover" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="lyric-display" id="discoverLyric"></div>
+        <p class="hint">Know this song? Help the community!</p>
+        
+        <label>Song Title</label>
+        <input type="text" id="discoverSongAnswer" placeholder="What's the song?" />
+        
+        <label>Artist</label>
+        <input type="text" id="discoverArtistAnswer" placeholder="Who's the artist?" />
+        
+        <details class="streaming-section">
+          <summary>Add Streaming Links (Optional)</summary>
+          <div class="streaming-links">
+            <div class="input-group-small">
+              <label>Spotify</label>
+              <input type="url" id="discoverSpotifyLink" placeholder="https://open.spotify.com/..." />
+            </div>
+            <div class="input-group-small">
+              <label>Apple Music</label>
+              <input type="url" id="discoverAppleLink" placeholder="https://music.apple.com/..." />
+            </div>
+            <div class="input-group-small">
+              <label>YouTube</label>
+              <input type="url" id="discoverYoutubeLink" placeholder="https://youtube.com/..." />
+            </div>
+            <div class="input-group-small">
+              <label>SoundCloud</label>
+              <input type="url" id="discoverSoundcloudLink" placeholder="https://soundcloud.com/..." />
+            </div>
+          </div>
+        </details>
+      </div>
+      <div class="modal-footer">
+        <button id="submitDiscover" class="primary-btn full">Submit Answer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== POSTCARD MODAL (VIEW) ===== -->
+  <div id="postcardModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>View Post</h3>
+        <button id="closePostcard" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="postcard">
+          <div class="postcard-header">MARGO</div>
+          <div class="postcard-lyric" id="postcardLyric"></div>
+          <div class="postcard-emotion" id="postcardEmotion"></div>
+          <div class="postcard-song" id="postcardSong"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="sharePosterBtn" class="primary-btn full">Share as Poster</button>
+        <button id="listenPostcard" class="secondary-btn full">Listen</button>
+        <button id="analyticsBtn" class="secondary-btn full">View Analytics</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LISTEN MODAL ===== -->
+  <div id="listenModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Listen</h3>
+        <button id="closeListen" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="listenLinks" class="listen-links"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ANALYTICS MODAL ===== -->
+  <div id="analyticsModal" class="modal hidden analytics-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Analytics</h3>
+        <button id="closeAnalytics" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="analytics-stats">
+          <div class="stat-card">
+            <div class="stat-number" id="statViews">0</div>
+            <div class="stat-label">Views</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statGuesses">0</div>
+            <div class="stat-label">Guesses</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statHelps">0</div>
+            <div class="stat-label">Helps</div>
+          </div>
+        </div>
+
+        <div id="guessesSection" class="activity-section hidden">
+          <h4>Guess Attempts</h4>
+          <div id="guessesList" class="activity-list"></div>
+        </div>
+
+        <div id="helpsSection" class="activity-section hidden">
+          <h4>Community Answers</h4>
+          <div id="helpsList" class="activity-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SHARE POSTER MODAL ===== -->
+  <div id="sharePosterModal" class="modal hidden poster-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Share as Poster</h3>
+        <button id="closeSharePoster" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Step 1: Design Selection with LIVE PREVIEW -->
+        <div id="designStep" class="poster-step active">
+          <h4>Choose a Design</h4>
+          
+          <!-- NEW: Live preview that updates as you select designs -->
+          <div class="poster-preview-container">
+            <canvas id="posterPreviewCanvas"></canvas>
+          </div>
+          
+          <!-- Design options (now 3 columns) -->
+          <div class="design-options">
+            <button class="design-btn active" data-design="gold-gradient">
+              <div class="design-preview gold-gradient-preview"></div>
+              <span class="design-name">Gold</span>
+            </button>
+            <button class="design-btn" data-design="dark-minimal">
+              <div class="design-preview dark-minimal-preview"></div>
+              <span class="design-name">Dark</span>
+            </button>
+            <button class="design-btn" data-design="vibrant-purple">
+              <div class="design-preview vibrant-purple-preview"></div>
+              <span class="design-name">Purple</span>
+            </button>
+            <button class="design-btn" data-design="ocean-blue">
+              <div class="design-preview ocean-blue-preview"></div>
+              <span class="design-name">Blue</span>
+            </button>
+            <button class="design-btn" data-design="sunset-orange">
+              <div class="design-preview sunset-orange-preview"></div>
+              <span class="design-name">Orange</span>
+            </button>
+            <button class="design-btn" data-design="forest-green">
+              <div class="design-preview forest-green-preview"></div>
+              <span class="design-name">Green</span>
+            </button>
+          </div>
+          
+          <button id="nextToPlatform" class="primary-btn full">Next: Choose Platform</button>
+        </div>
+
+        <!-- Step 2: Platform Selection -->
+        <div id="platformStep" class="poster-step">
+          <h4>Choose Platform</h4>
+          <div class="platform-options">
+            <button class="platform-btn" data-size="instagram-square">
+              <div class="platform-info">
+                <span class="platform-name">Instagram Square</span>
+                <span class="platform-dim">1080×1080</span>
+              </div>
+            </button>
+            <button class="platform-btn" data-size="instagram-story">
+              <div class="platform-info">
+                <span class="platform-name">Instagram Story</span>
+                <span class="platform-dim">1080×1920</span>
+              </div>
+            </button>
+            <button class="platform-btn" data-size="twitter">
+              <div class="platform-info">
+                <span class="platform-name">Twitter/X</span>
+                <span class="platform-dim">1200×675</span>
+              </div>
+            </button>
+            <button class="platform-btn" data-size="facebook">
+              <div class="platform-info">
+                <span class="platform-name">Facebook</span>
+                <span class="platform-dim">1200×630</span>
+              </div>
+            </button>
+            <button class="platform-btn" data-size="pinterest">
+              <div class="platform-info">
+                <span class="platform-name">Pinterest</span>
+                <span class="platform-dim">1000×1500</span>
+              </div>
+            </button>
+          </div>
+          <button id="backToDesign" class="secondary-btn full">← Back to Design</button>
+        </div>
+
+        <!-- Step 3: Preview & Download -->
+        <div id="previewStep" class="poster-step">
+          <h4>Your Poster</h4>
+          <div class="poster-preview">
+            <canvas id="posterCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="downloadPoster" class="primary-btn full hidden">Download Poster</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="margo-improved.js"></script>
 </body>
 </html>
