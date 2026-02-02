@@ -8,7 +8,7 @@
   <title>MARGO — When words fail, drop a line</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -19,24 +19,29 @@
     <h1 class="logo">MARGO</h1>
     <p class="tagline">When words fail, drop a line.</p>
     <button id="enterBtn" class="primary-btn">Drop a line</button>
-    <div class="swipe-hint">← Swipe to explore</div>
+    <div class="swipe-hint">
+      <span class="swipe-arrow">←</span>
+      <span>Swipe to explore</span>
+    </div>
   </div>
 </section>
 
 <!-- FEED -->
 <section id="feed" class="screen">
   <header class="feed-header">
-    <button id="backBtn" class="header-btn">←</button>
+    <button id="backBtn" class="header-btn">
+      <span class="btn-icon">←</span>
+    </button>
     <div class="header-center">
       <h2>Live Feed</h2>
       <p class="post-count"><span id="postCount">0</span> posts</p>
     </div>
-    <button id="openComposer" class="header-btn">Drop your line</button>
+    <button id="openComposer" class="header-btn primary">Drop your line</button>
   </header>
   <div id="feedList" class="feed-list"></div>
 </section>
 
-<!-- COMPOSER MODAL - FIXED ORDER -->
+<!-- COMPOSER MODAL -->
 <div id="composer" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
@@ -44,13 +49,11 @@
       <button id="closeComposer" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-      <!-- STEP 1: Lyric -->
-      <label>Lyric *</label>
+      <label>Lyric</label>
       <textarea id="textInput" maxlength="140" placeholder="The line stuck in your head..." required></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
 
-      <!-- STEP 2: Emotion -->
-      <label>Emotion *</label>
+      <label>Emotion</label>
       <div class="emotion-pills">
         <button class="emotion-pill" data-emotion="Love" type="button">Love</button>
         <button class="emotion-pill" data-emotion="Heartbreak" type="button">Heartbreak</button>
@@ -62,26 +65,21 @@
         <button class="emotion-pill" data-emotion="Loneliness" type="button">Loneliness</button>
       </div>
 
-      <!-- STEP 3: Mode -->
       <label>What's your intention?</label>
       <div class="mode-options">
         <button class="mode-btn active" data-mode="share" type="button">
-          <span class="mode-icon">♫</span>
-          <span>Share</span>
+          <span class="mode-label">Share</span>
         </button>
         <button class="mode-btn" data-mode="guess" type="button">
-          <span class="mode-icon">?</span>
-          <span>Guess</span>
+          <span class="mode-label">Guess</span>
         </button>
         <button class="mode-btn" data-mode="discover" type="button">
-          <span class="mode-icon">✨</span>
-          <span>Discover</span>
+          <span class="mode-label">Discover</span>
         </button>
       </div>
 
-      <!-- STEP 4: Mode-specific inputs -->
       <div id="shareInputs" class="conditional active">
-        <label>Song Details *</label>
+        <label>Song Details</label>
         <input id="songInput" placeholder="Song title" required/>
         <input id="artistInput" placeholder="Artist" required/>
       </div>
@@ -109,9 +107,8 @@
         <input id="discoverArtistInput" placeholder="Maybe artist? (optional)"/>
       </div>
 
-      <!-- STEP 5: Streaming Links (Optional) - Only for Share and Guess modes -->
       <details class="streaming-section" id="streamingSection">
-        <summary>+ Add Streaming Links (Optional)</summary>
+        <summary>Add Streaming Links (Optional)</summary>
         <div class="streaming-links">
           <div class="input-group-small">
             <label>Spotify</label>
@@ -131,8 +128,6 @@
           </div>
         </div>
       </details>
-
-
     </div>
     <div class="modal-footer">
       <button id="postBtn" class="primary-btn full">Post</button>
@@ -173,11 +168,11 @@
     <div class="modal-body">
       <div class="lyric-display" id="discoverLyric"></div>
       <p class="hint">Know this song? Help them out!</p>
-      <input id="discoverSongAnswer" placeholder="Song title *" required/>
-      <input id="discoverArtistAnswer" placeholder="Artist *" required/>
+      <input id="discoverSongAnswer" placeholder="Song title" required/>
+      <input id="discoverArtistAnswer" placeholder="Artist" required/>
       
       <details class="streaming-section">
-        <summary>+ Add Streaming Links (Optional)</summary>
+        <summary>Add Streaming Links (Optional)</summary>
         <div class="streaming-links">
           <div class="input-group-small">
             <label>Spotify</label>
@@ -218,7 +213,7 @@
   </div>
 </div>
 
-<!-- POSTCARD MODAL - UPDATED WITH ONLY ANALYTICS & SHARE POSTER -->
+<!-- POSTCARD MODAL - VIEW POST -->
 <div id="postcardModal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
@@ -234,14 +229,14 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button id="analyticsBtn" class="secondary-btn full">📊 View Analytics</button>
-      <button id="listenPostcard" class="secondary-btn full">🎵 Listen</button>
-      <button id="sharePosterBtn" class="primary-btn full">🎨 Share Poster</button>
+      <button id="analyticsBtn" class="secondary-btn full">View Analytics</button>
+      <button id="listenPostcard" class="secondary-btn full">Listen</button>
+      <button id="sharePosterBtn" class="primary-btn full">Share Poster</button>
     </div>
   </div>
 </div>
 
-<!-- ANALYTICS MODAL -->
+<!-- ANALYTICS MODAL - UPDATED WITH HELP ANSWERS -->
 <div id="analyticsModal" class="modal hidden">
   <div class="modal-content analytics-modal">
     <div class="modal-header">
@@ -270,55 +265,100 @@
       </div>
       
       <div id="helpsSection" class="activity-section hidden">
-        <h4>Help Attempts</h4>
+        <h4>Community Answers</h4>
         <div id="helpsList" class="activity-list"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- SHARE POSTER MODAL - NEW INTEGRATED FLOW -->
+<!-- SHARE POSTER MODAL - DESIGN + PLATFORM SELECTION -->
 <div id="sharePosterModal" class="modal hidden">
-  <div class="modal-content">
+  <div class="modal-content poster-modal">
     <div class="modal-header">
       <h3>Share Poster</h3>
       <button id="closeSharePoster" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-      <p class="hint">Choose platform size:</p>
-      <div class="poster-sizes">
-        <button class="poster-size-btn" data-size="instagram-square">
-          <span class="platform-icon">📷</span>
-          <span class="platform-name">Instagram Square</span>
-          <span class="platform-dim">1080x1080</span>
-        </button>
-        <button class="poster-size-btn" data-size="instagram-story">
-          <span class="platform-icon">📱</span>
-          <span class="platform-name">Instagram Story</span>
-          <span class="platform-dim">1080x1920</span>
-        </button>
-        <button class="poster-size-btn" data-size="twitter">
-          <span class="platform-icon">🐦</span>
-          <span class="platform-name">Twitter/X</span>
-          <span class="platform-dim">1200x675</span>
-        </button>
-        <button class="poster-size-btn" data-size="facebook">
-          <span class="platform-icon">📘</span>
-          <span class="platform-name">Facebook</span>
-          <span class="platform-dim">1200x630</span>
-        </button>
-        <button class="poster-size-btn" data-size="pinterest">
-          <span class="platform-icon">📌</span>
-          <span class="platform-name">Pinterest</span>
-          <span class="platform-dim">1000x1500</span>
-        </button>
+      <!-- Step 1: Choose Design -->
+      <div id="designStep" class="poster-step active">
+        <label>Choose Design Style</label>
+        <div class="design-options">
+          <button class="design-btn active" data-design="gold-gradient">
+            <div class="design-preview gold-gradient-preview"></div>
+            <span class="design-name">Classic Gold</span>
+          </button>
+          <button class="design-btn" data-design="dark-minimal">
+            <div class="design-preview dark-minimal-preview"></div>
+            <span class="design-name">Dark Minimal</span>
+          </button>
+          <button class="design-btn" data-design="vibrant-purple">
+            <div class="design-preview vibrant-purple-preview"></div>
+            <span class="design-name">Vibrant Purple</span>
+          </button>
+          <button class="design-btn" data-design="ocean-blue">
+            <div class="design-preview ocean-blue-preview"></div>
+            <span class="design-name">Ocean Blue</span>
+          </button>
+          <button class="design-btn" data-design="sunset-orange">
+            <div class="design-preview sunset-orange-preview"></div>
+            <span class="design-name">Sunset Orange</span>
+          </button>
+          <button class="design-btn" data-design="forest-green">
+            <div class="design-preview forest-green-preview"></div>
+            <span class="design-name">Forest Green</span>
+          </button>
+        </div>
+        <button id="nextToPlatform" class="primary-btn full">Continue</button>
       </div>
-      <div id="posterPreview" class="poster-preview hidden">
-        <canvas id="posterCanvas"></canvas>
+
+      <!-- Step 2: Choose Platform -->
+      <div id="platformStep" class="poster-step">
+        <label>Choose Platform</label>
+        <div class="platform-options">
+          <button class="platform-btn" data-size="instagram-square">
+            <div class="platform-info">
+              <span class="platform-name">Instagram Square</span>
+              <span class="platform-dim">1080×1080</span>
+            </div>
+          </button>
+          <button class="platform-btn" data-size="instagram-story">
+            <div class="platform-info">
+              <span class="platform-name">Instagram Story</span>
+              <span class="platform-dim">1080×1920</span>
+            </div>
+          </button>
+          <button class="platform-btn" data-size="twitter">
+            <div class="platform-info">
+              <span class="platform-name">Twitter / X</span>
+              <span class="platform-dim">1200×675</span>
+            </div>
+          </button>
+          <button class="platform-btn" data-size="facebook">
+            <div class="platform-info">
+              <span class="platform-name">Facebook</span>
+              <span class="platform-dim">1200×630</span>
+            </div>
+          </button>
+          <button class="platform-btn" data-size="pinterest">
+            <div class="platform-info">
+              <span class="platform-name">Pinterest</span>
+              <span class="platform-dim">1000×1500</span>
+            </div>
+          </button>
+        </div>
+        <button id="backToDesign" class="secondary-btn full">Back</button>
+      </div>
+
+      <!-- Step 3: Preview & Download -->
+      <div id="previewStep" class="poster-step">
+        <div class="poster-preview">
+          <canvas id="posterCanvas"></canvas>
+        </div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button id="downloadPoster" class="primary-btn full hidden">Download Poster</button>
+    <div class="modal-footer" id="posterFooter">
+      <button id="downloadPoster" class="primary-btn full hidden">Download</button>
     </div>
   </div>
 </div>
