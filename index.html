@@ -48,7 +48,20 @@
       <textarea id="textInput" maxlength="140" placeholder="The line stuck in your head..."></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
 
-      <!-- STEP 2: Mode -->
+      <!-- STEP 2: Emotion -->
+      <label>Emotion</label>
+      <div class="emotion-pills">
+        <button class="emotion-pill" data-emotion="Love">Love</button>
+        <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
+        <button class="emotion-pill" data-emotion="Hope">Hope</button>
+        <button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
+        <button class="emotion-pill" data-emotion="Healing">Healing</button>
+        <button class="emotion-pill" data-emotion="Joy">Joy</button>
+        <button class="emotion-pill" data-emotion="Rage">Rage</button>
+        <button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
+      </div>
+
+      <!-- STEP 3: Mode -->
       <label>What's your intention?</label>
       <div class="mode-options">
         <button class="mode-btn active" data-mode="share">
@@ -65,7 +78,7 @@
         </button>
       </div>
 
-      <!-- STEP 3: Mode-specific inputs -->
+      <!-- STEP 4: Mode-specific inputs -->
       <div id="shareInputs" class="conditional active">
         <input id="songInput" placeholder="Song title" required/>
         <input id="artistInput" placeholder="Artist" required/>
@@ -92,18 +105,28 @@
         <input id="discoverArtistInput" placeholder="Maybe artist? (optional)"/>
       </div>
 
-      <!-- STEP 4: Emotion -->
-      <label>Emotion</label>
-      <div class="emotion-pills">
-        <button class="emotion-pill" data-emotion="Love">Love</button>
-        <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
-        <button class="emotion-pill" data-emotion="Hope">Hope</button>
-        <button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
-        <button class="emotion-pill" data-emotion="Healing">Healing</button>
-        <button class="emotion-pill" data-emotion="Joy">Joy</button>
-        <button class="emotion-pill" data-emotion="Rage">Rage</button>
-        <button class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
-      </div>
+      <!-- STEP 5: Streaming Links (Optional) -->
+      <details class="streaming-section">
+        <summary>+ Add Streaming Links (Optional)</summary>
+        <div class="streaming-links">
+          <div class="input-group-small">
+            <label>Spotify</label>
+            <input id="spotifyLink" type="url" placeholder="https://open.spotify.com/track/..."/>
+          </div>
+          <div class="input-group-small">
+            <label>Apple Music</label>
+            <input id="appleLink" type="url" placeholder="https://music.apple.com/..."/>
+          </div>
+          <div class="input-group-small">
+            <label>YouTube</label>
+            <input id="youtubeLink" type="url" placeholder="https://youtube.com/watch?v=..."/>
+          </div>
+          <div class="input-group-small">
+            <label>SoundCloud</label>
+            <input id="soundcloudLink" type="url" placeholder="https://soundcloud.com/..."/>
+          </div>
+        </div>
+      </details>
     </div>
     <div class="modal-footer">
       <button id="postBtn" class="primary-btn full">Post</button>
@@ -149,6 +172,20 @@
     </div>
     <div class="modal-footer">
       <button id="submitDiscover" class="primary-btn full">Help Them Discover</button>
+    </div>
+  </div>
+</div>
+
+<!-- LISTEN MODAL -->
+<div id="listenModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Listen</h3>
+      <button id="closeListen" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint">Available streaming links:</p>
+      <div class="listen-links" id="listenLinks"></div>
     </div>
   </div>
 </div>
