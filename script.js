@@ -1,4 +1,4 @@
-/* MARGO - Complete & Fixed JavaScript */
+/* MARGO - Fixed JavaScript - No More Infinite Loading */
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
@@ -88,7 +88,6 @@ let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
 let userGuesses = JSON.parse(localStorage.getItem("margoGuesses") || "{}");
 
 // ===== NAVIGATION =====
-// Landing → Composer (not feed directly!)
 enterBtn.onclick = () => {
   landing.classList.remove("active");
   composer.classList.remove("hidden");
@@ -108,7 +107,6 @@ openComposer.onclick = () => {
 closeComposer.onclick = () => {
   composer.classList.add("hidden");
   resetComposer();
-  // Fix black screen - restore landing if no feed is showing
   if (!feed.classList.contains("active")) {
     landing.classList.add("active");
   }
@@ -151,19 +149,22 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
   };
 });
 
-// ===== CREATE POST =====
+// ===== CREATE POST - FIXED =====
 postBtn.onclick = () => {
+  // Prevent double-click
+  if (postBtn.disabled) return;
+
   const text = textInput.value.trim();
 
   // Validation
   if (!text) {
     showToast("Please enter a lyric");
-    return; // Button never gets disabled, so it's fine
+    return;
   }
 
   if (!selectedEmotion) {
     showToast("Please select an emotion");
-    return; // Button never gets disabled, so it's fine
+    return;
   }
 
   let post = {
@@ -189,7 +190,7 @@ postBtn.onclick = () => {
     
     if (!song || !artist) {
       showToast("Please enter song and artist");
-      return; // Button never gets disabled, so it's fine
+      return;
     }
     
     post.knowledge = { song, artist };
@@ -203,17 +204,17 @@ postBtn.onclick = () => {
     
     if (!allowSong && !allowArtist) {
       showToast("Select at least one thing to guess");
-      return; // Button never gets disabled, so it's fine
+      return;
     }
     
     if (allowSong && !songAnswer) {
       showToast("Enter the correct song title");
-      return; // Button never gets disabled, so it's fine
+      return;
     }
     
     if (allowArtist && !artistAnswer) {
       showToast("Enter the correct artist");
-      return; // Button never gets disabled, so it's fine
+      return;
     }
     
     post.knowledge = {
@@ -234,27 +235,40 @@ postBtn.onclick = () => {
     };
   }
 
-  // ONLY disable button AFTER all validation passes
+  // DISABLE BUTTON IMMEDIATELY
   postBtn.disabled = true;
   postBtn.textContent = "Posting...";
 
-  setTimeout(() => {
+  // Use try-catch to ensure button always gets re-enabled
+  try {
+    // Save post
     posts.unshift(post);
     localStorage.setItem("margoPosts", JSON.stringify(posts));
     
-    // Go to feed after posting
+    // Show success toast
+    showToast("Posted!");
+    
+    // Navigate to feed
     landing.classList.remove("active");
     feed.classList.add("active");
     
-    renderFeed(); // CRITICAL - Actually render the feed!
+    // Render feed
+    renderFeed();
+    
+    // Reset and close composer
     resetComposer();
     composer.classList.add("hidden");
     
-    postBtn.disabled = false;
-    postBtn.textContent = "Post";
-    
-    showToast("Posted!");
-  }, 300);
+  } catch (error) {
+    console.error("Error posting:", error);
+    showToast("Error posting. Please try again.");
+  } finally {
+    // ALWAYS re-enable button - this is the critical fix
+    setTimeout(() => {
+      postBtn.disabled = false;
+      postBtn.textContent = "Post";
+    }, 500);
+  }
 };
 
 // ===== RESET COMPOSER =====
@@ -324,7 +338,6 @@ function renderFeed() {
           <div class="feed-song-artist">${post.knowledge.artist}</div>
         </div>
       `;
-      // Listen button shows if poster added links
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="viewPost(${index})">View</button>
@@ -343,7 +356,6 @@ function renderFeed() {
             <div class="feed-song-artist">${post.knowledge.artist}</div>
           </div>
         `;
-        // AFTER revealing - Listen button shows if poster added links
         actionsSection = `
           <div class="feed-actions">
             <button class="feed-action" onclick="viewPost(${index})">View</button>
@@ -362,7 +374,6 @@ function renderFeed() {
             Guess the ${guessText}
           </div>
         `;
-        // BEFORE revealing - no Listen button shown yet
         actionsSection = `
           <div class="feed-actions">
             <button class="feed-action" onclick="openGuess(${index})">Guess</button>
@@ -379,7 +390,6 @@ function renderFeed() {
             'Help discover this song!'}
         </div>
       `;
-      // Discover mode - no Listen (they don't know the song)
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="openDiscover(${index})">Help</button>
@@ -453,7 +463,7 @@ function openGuess(index) {
   guessModal.classList.remove("hidden");
 }
 
-// ===== SUBMIT GUESS (1 ATTEMPT ONLY) =====
+// ===== SUBMIT GUESS =====
 submitGuess.onclick = () => {
   if (!currentPost) return;
   
@@ -467,7 +477,6 @@ submitGuess.onclick = () => {
   let songCorrect = false;
   let artistCorrect = false;
   
-  // Check song if required
   if (currentPost.guessConfig.guessSong) {
     songCorrect = guessedSong && (
       guessedSong === actualSong ||
@@ -476,10 +485,9 @@ submitGuess.onclick = () => {
     );
     songMatch = songCorrect;
   } else {
-    songMatch = true; // Not being tested
+    songMatch = true;
   }
   
-  // Check artist if required
   if (currentPost.guessConfig.guessArtist) {
     artistCorrect = guessedArtist && (
       guessedArtist === actualArtist ||
@@ -488,14 +496,12 @@ submitGuess.onclick = () => {
     );
     artistMatch = artistCorrect;
   } else {
-    artistMatch = true; // Not being tested
+    artistMatch = true;
   }
   
-  // Show result
   guessResult.classList.remove("hidden");
   submitGuess.classList.add("hidden");
   
-  // BOTH CORRECT
   if (songMatch && artistMatch) {
     guessResult.className = "result-message success";
     guessResult.textContent = `🎉 Correct! "${currentPost.knowledge.song}" by ${currentPost.knowledge.artist}`;
@@ -510,7 +516,6 @@ submitGuess.onclick = () => {
       renderFeed();
     }, 2000);
   }
-  // PARTIAL CORRECT (one right, one wrong)
   else if (songCorrect || artistCorrect) {
     guessResult.className = "result-message error";
     if (songCorrect) {
@@ -521,7 +526,6 @@ submitGuess.onclick = () => {
     guessInputFields.classList.add("hidden");
     revealAnswer.classList.remove("hidden");
   }
-  // BOTH WRONG
   else {
     guessResult.className = "result-message error";
     guessResult.textContent = "❌ Not quite! That was your only attempt.";
@@ -635,7 +639,6 @@ function viewPost(index) {
     <div>${currentPost.knowledge.artist || 'Unknown Artist'}</div>
   `;
   
-  // Show/hide Listen button based on whether links exist
   const hasLinks = currentPost.links && (
     currentPost.links.spotify || 
     currentPost.links.apple || 
@@ -652,7 +655,6 @@ function viewPost(index) {
   postcardModal.classList.remove("hidden");
 }
 
-// Listen from postcard
 listenPostcard.onclick = () => {
   const postIndex = posts.findIndex(p => p.id === currentPost.id);
   if (postIndex !== -1) {
@@ -672,7 +674,6 @@ sharePostcard.onclick = () => {
   shareModal.classList.remove("hidden");
 };
 
-// Share actions
 document.querySelectorAll(".share-btn").forEach(btn => {
   btn.onclick = () => {
     const action = btn.dataset.action;
@@ -735,18 +736,4 @@ window.addEventListener('load', () => {
       setTimeout(() => viewPost(postIndex), 500);
     }
   }
-});
-
-// Emergency fix: If button gets stuck, click it again to reset
-document.addEventListener('DOMContentLoaded', () => {
-  // Double-click protection
-  let clicking = false;
-  const originalClick = postBtn.onclick;
-  
-  postBtn.onclick = () => {
-    if (clicking) return;
-    clicking = true;
-    originalClick();
-    setTimeout(() => { clicking = false; }, 1000);
-  };
 });
