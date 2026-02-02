@@ -107,7 +107,7 @@
         <input id="discoverArtistInput" placeholder="Maybe artist? (optional)"/>
       </div>
 
-      <!-- STEP 5: Streaming Links (Optional) - ALWAYS LAST -->
+      <!-- STEP 5: Streaming Links (Optional) -->
       <details class="streaming-section">
         <summary>+ Add Streaming Links (Optional)</summary>
         <div class="streaming-links">
@@ -126,6 +126,19 @@
           <div class="input-group-small">
             <label>SoundCloud</label>
             <input id="soundcloudLink" type="url" placeholder="https://soundcloud.com/..."/>
+          </div>
+        </div>
+      </details>
+
+      <!-- STEP 6: FILE ATTACHMENTS (NEW!) -->
+      <details class="streaming-section">
+        <summary>+ Add Files (Optional)</summary>
+        <div class="attachments-section">
+          <p class="hint">Add up to 3 files (audio/image/pdf, max 10MB each)</p>
+          <div class="file-inputs">
+            <input type="file" id="file1" accept="audio/*,image/*,.pdf" />
+            <input type="file" id="file2" accept="audio/*,image/*,.pdf" />
+            <input type="file" id="file3" accept="audio/*,image/*,.pdf" />
           </div>
         </div>
       </details>
