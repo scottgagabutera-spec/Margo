@@ -3,130 +3,158 @@ const feed = document.getElementById("feed");
 const composer = document.getElementById("composer");
 
 const enterBtn = document.getElementById("enterBtn");
-const backBtn = document.getElementById("backBtn");
-const openComposer = document.getElementById("openComposer");
-const closeComposer = document.getElementById("closeComposer");
+const openComposerBtn = document.getElementById("openComposer");
 const postBtn = document.getElementById("postBtn");
 
-const textInput = document.getElementById("textInput");
-const feedList = document.getElementById("feedList");
-
-const modeBtns = document.querySelectorAll(".mode-btn");
-const shareInputs = document.getElementById("shareInputs");
-const guessInputs = document.getElementById("guessInputs");
-const discoverInputs = document.getElementById("discoverInputs");
-
-const songInput = document.getElementById("songInput");
-const artistInput = document.getElementById("artistInput");
-
-const guessSongCheck = document.getElementById("guessSongCheck");
-const guessArtistCheck = document.getElementById("guessArtistCheck");
-const guessSongAnswer = document.getElementById("guessSongAnswer");
-const guessArtistAnswer = document.getElementById("guessArtistAnswer");
-
-const discoverSongInput = document.getElementById("discoverSongInput");
-const discoverArtistInput = document.getElementById("discoverArtistInput");
-
+let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
 let currentMode = "share";
 let selectedEmotion = null;
-let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
+let activePost = null;
 
 enterBtn.onclick = () => {
   landing.classList.remove("active");
   feed.classList.add("active");
+  renderFeed();
 };
 
-backBtn.onclick = () => {
-  feed.classList.remove("active");
-  landing.classList.add("active");
-};
+openComposerBtn.onclick = () => composer.classList.remove("hidden");
+function closeComposer(){ composer.classList.add("hidden"); }
 
-openComposer.onclick = () => composer.classList.remove("hidden");
-closeComposer.onclick = () => composer.classList.add("hidden");
-
-modeBtns.forEach(btn => {
-  btn.onclick = () => {
-    modeBtns.forEach(b => b.classList.remove("active"));
+document.querySelectorAll(".mode-btn").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
     currentMode = btn.dataset.mode;
-
-    shareInputs.classList.remove("active");
-    guessInputs.classList.remove("active");
-    discoverInputs.classList.remove("active");
-
-    if (currentMode === "share") shareInputs.classList.add("active");
-    if (currentMode === "guess") guessInputs.classList.add("active");
-    if (currentMode === "discover") discoverInputs.classList.add("active");
-  };
-});
-
-document.querySelectorAll(".emotion-pills button").forEach(btn=>{
-  btn.onclick = ()=>{
-    document.querySelectorAll(".emotion-pills button").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    selectedEmotion = btn.dataset.emotion;
+    updateConditional();
   }
 });
 
-postBtn.onclick = () => {
-  const text = textInput.value.trim();
-  if (!text || !selectedEmotion) return alert("Add lyric + emotion");
+function updateConditional(){
+  document.querySelectorAll(".conditional").forEach(c=>c.classList.remove("active"));
+  if(currentMode==="share") shareFields.classList.add("active");
+  if(currentMode==="guess") guessFields.classList.add("active");
+}
 
-  let post = {
+document.querySelectorAll(".emotion-pill").forEach(p=>{
+  p.onclick=()=>{
+    document.querySelectorAll(".emotion-pill").forEach(e=>e.classList.remove("active"));
+    p.classList.add("active");
+    selectedEmotion = p.textContent;
+  }
+});
+
+postBtn.onclick = ()=>{
+  const text = textInput.value.trim();
+  if(!text) return toast("Write something");
+  if(!selectedEmotion) return toast("Pick emotion");
+
+  const post = {
     id: Date.now(),
     text,
-    emotion: selectedEmotion,
-    mode: currentMode,
-    knowledge: {},
-    guessConfig: null,
-    timestamp: Date.now()
+    emotion:selectedEmotion,
+    mode:currentMode,
+    song:songInput.value,
+    artist:artistInput.value,
+    answerSong:guessSongAnswer.value,
+    answerArtist:guessArtistAnswer.value,
+    time:Date.now()
   };
-
-  if (currentMode === "share") {
-    post.knowledge = { song:songInput.value, artist:artistInput.value };
-  }
-
-  if (currentMode === "guess") {
-    post.knowledge = {
-      song: guessSongAnswer.value,
-      artist: guessArtistAnswer.value,
-      hidden:true
-    };
-    post.guessConfig = {
-      guessSong: guessSongCheck.checked,
-      guessArtist: guessArtistCheck.checked
-    };
-  }
-
-  if (currentMode === "discover") {
-    post.knowledge = {
-      song: discoverSongInput.value || null,
-      artist: discoverArtistInput.value || null
-    };
-  }
 
   posts.unshift(post);
   localStorage.setItem("margoPosts", JSON.stringify(posts));
+  resetComposer();
+  closeComposer();
   renderFeed();
-  composer.classList.add("hidden");
+  toast("Posted");
 };
 
-function renderFeed() {
-  feedList.innerHTML = "";
+function resetComposer(){
+  textInput.value="";
+  songInput.value="";
+  artistInput.value="";
+  guessSongAnswer.value="";
+  guessArtistAnswer.value="";
+  selectedEmotion=null;
+  document.querySelectorAll(".emotion-pill").forEach(e=>e.classList.remove("active"));
+}
+
+function renderFeed(){
+  feedList.innerHTML="";
+  postCount.textContent = posts.length;
   posts.forEach(p=>{
-    const card = document.createElement("div");
+    const card=document.createElement("div");
     card.className="feed-card";
-    card.innerHTML = `
+    card.innerHTML=`
       <div class="feed-text">"${p.text}"</div>
-      <div style="text-align:center;color:#d4af37">${p.emotion}</div>
-      <div style="text-align:center;font-size:.8rem">
-        ${p.mode==="share" ? `${p.knowledge.song} — ${p.knowledge.artist}` :
-          p.mode==="guess" ? "Guess the song" :
-          "Help discover this song"}
+      <div>${p.emotion}</div>
+      <div class="feed-actions">
+        ${p.mode==="guess"?`<button onclick="openGuess(${p.id})">Guess</button>`:""}
+        ${p.mode==="discover"?`<button onclick="openDiscover(${p.id})">Help</button>`:""}
+        <button onclick="openPostcard(${p.id})">View</button>
+        <button onclick="openShare(${p.id})">Share</button>
       </div>
     `;
     feedList.appendChild(card);
   });
 }
 
-renderFeed();
+function openPostcard(id){
+  activePost = posts.find(p=>p.id===id);
+  postcardBody.innerHTML=`
+    <div class="feed-text">"${activePost.text}"</div>
+    <div>${activePost.emotion}</div>
+    <div>${activePost.song || "Unknown"} - ${activePost.artist || ""}</div>
+  `;
+  postcardModal.classList.remove("hidden");
+}
+function closePostcard(){ postcardModal.classList.add("hidden"); }
+
+function openGuess(id){
+  activePost = posts.find(p=>p.id===id);
+  guessModal.classList.remove("hidden");
+}
+function closeGuess(){ guessModal.classList.add("hidden"); }
+
+function submitGuess(){
+  if(
+    userGuessSong.value.toLowerCase()===activePost.answerSong.toLowerCase() &&
+    userGuessArtist.value.toLowerCase()===activePost.answerArtist.toLowerCase()
+  ){
+    guessResult.textContent="Correct!";
+  } else {
+    guessResult.textContent="Wrong";
+  }
+}
+
+function openDiscover(id){
+  activePost = posts.find(p=>p.id===id);
+  discoverModal.classList.remove("hidden");
+}
+function closeDiscover(){ discoverModal.classList.add("hidden"); }
+
+function submitDiscover(){
+  activePost.song = discoverSong.value;
+  activePost.artist = discoverArtist.value;
+  localStorage.setItem("margoPosts", JSON.stringify(posts));
+  closeDiscover();
+  renderFeed();
+  toast("Thanks!");
+}
+
+function openShare(id){
+  activePost = posts.find(p=>p.id===id);
+  shareModal.classList.remove("hidden");
+}
+function closeShare(){ shareModal.classList.add("hidden"); }
+
+function copyShareLink(){
+  navigator.clipboard.writeText(activePost.text);
+  toast("Copied");
+}
+
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
+}
