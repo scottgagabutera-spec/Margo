@@ -424,9 +424,14 @@ function renderFeed() {
           </div>
         `;
       } else {
+        // Handle old posts that might not have guessConfig
         const guessWhat = [];
-        if (post.guessConfig.guessSong) guessWhat.push("song");
-        if (post.guessConfig.guessArtist) guessWhat.push("artist");
+        if (post.guessConfig?.guessSong) guessWhat.push("song");
+        if (post.guessConfig?.guessArtist) guessWhat.push("artist");
+        // If no guessConfig at all, default to both
+        if (guessWhat.length === 0) {
+          guessWhat.push("song", "artist");
+        }
         const guessText = guessWhat.join(" & ");
         
         songSection = `
@@ -502,13 +507,17 @@ function openGuess(index) {
   const songField = document.querySelector('#guessSongInput');
   const artistField = document.querySelector('#guessArtistInput');
   
-  if (currentPost.guessConfig.guessSong) {
+  // Handle old posts without guessConfig - default to both
+  const guessSong = currentPost.guessConfig?.guessSong ?? true;
+  const guessArtist = currentPost.guessConfig?.guessArtist ?? true;
+  
+  if (guessSong) {
     songField.style.display = 'block';
   } else {
     songField.style.display = 'none';
   }
   
-  if (currentPost.guessConfig.guessArtist) {
+  if (guessArtist) {
     artistField.style.display = 'block';
   } else {
     artistField.style.display = 'none';
@@ -516,8 +525,8 @@ function openGuess(index) {
   
   // Update hint
   const guessWhat = [];
-  if (currentPost.guessConfig.guessSong) guessWhat.push("song");
-  if (currentPost.guessConfig.guessArtist) guessWhat.push("artist");
+  if (guessSong) guessWhat.push("song");
+  if (guessArtist) guessWhat.push("artist");
   guessHint.textContent = `You have ONE attempt to guess the ${guessWhat.join(" and ")}!`;
   
   guessModal.classList.remove("hidden");
@@ -537,7 +546,11 @@ submitGuess.onclick = () => {
   let songCorrect = false;
   let artistCorrect = false;
   
-  if (currentPost.guessConfig.guessSong) {
+  // Handle old posts without guessConfig - default to both
+  const guessSong = currentPost.guessConfig?.guessSong ?? true;
+  const guessArtist = currentPost.guessConfig?.guessArtist ?? true;
+  
+  if (guessSong) {
     songCorrect = guessedSong && (
       guessedSong === actualSong ||
       guessedSong.includes(actualSong) ||
@@ -548,7 +561,7 @@ submitGuess.onclick = () => {
     songMatch = true;
   }
   
-  if (currentPost.guessConfig.guessArtist) {
+  if (guessArtist) {
     artistCorrect = guessedArtist && (
       guessedArtist === actualArtist ||
       guessedArtist.includes(actualArtist) ||
