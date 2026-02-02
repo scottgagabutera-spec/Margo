@@ -68,6 +68,29 @@ body {
   text-align: center;
 }
 
+.swipe-hint {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--gold);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: bounce 2s infinite;
+  opacity: 0.8;
+}
+
+@keyframes bounce {
+  0%, 100% { 
+    transform: translateX(-50%) translateY(0); 
+  }
+  50% { 
+    transform: translateX(-50%) translateY(-10px); 
+  }
+}
+
 /* ===== BUTTONS ===== */
 button {
   cursor: pointer;
@@ -496,51 +519,6 @@ textarea:focus, input:focus {
   padding: 10px;
 }
 
-/* ===== FILE ATTACHMENTS SECTION (NEW!) ===== */
-.attachments-section {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.file-inputs {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.file-inputs input[type="file"] {
-  padding: 10px;
-  background: var(--bg-dark);
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: all 0.2s ease;
-}
-
-.file-inputs input[type="file"]:hover {
-  border-color: var(--gold);
-  background: var(--bg-elevated);
-}
-
-.file-inputs input[type="file"]::file-selector-button {
-  background: var(--gold);
-  color: #000;
-  border: none;
-  padding: 6px 14px;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.8rem;
-  margin-right: 10px;
-  cursor: pointer;
-}
-
-.file-inputs input[type="file"]::file-selector-button:hover {
-  background: var(--gold-hover);
-}
-
 /* ===== MODE OPTIONS ===== */
 .mode-options {
   display: flex;
@@ -744,36 +722,6 @@ textarea:focus, input:focus {
   font-size: 1.5rem;
 }
 
-/* ===== SHARE OPTIONS ===== */
-.share-options {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.share-btn {
-  padding: 20px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.share-btn:hover {
-  border-color: var(--gold);
-  color: var(--gold);
-}
-
-.share-icon {
-  font-size: 2rem;
-}
-
 /* ===== POSTCARD - BEAUTIFUL REDESIGN ===== */
 .postcard {
   background: linear-gradient(135deg, #1f1812 0%, #2d2115 50%, #1f1812 100%);
@@ -917,41 +865,6 @@ textarea:focus, input:focus {
   bottom: 32px;
 }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 480px) {
-  .feed-list {
-    grid-template-columns: 1fr;
-    padding: 16px;
-    gap: 12px;
-  }
-  
-  .mode-options {
-    flex-direction: column;
-  }
-  
-  .share-options {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (min-width: 481px) and (max-width: 768px) {
-  .feed-list {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  .feed-list {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 1025px) {
-  .feed-list {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
 /* ===== ANALYTICS MODAL ===== */
 .analytics-modal .modal-content {
   max-width: 600px;
@@ -1082,7 +995,7 @@ textarea:focus, input:focus {
   border-color: var(--gold);
 }
 
-/* ===== POSTER MODAL ===== */
+/* ===== SHARE POSTER MODAL ===== */
 .poster-sizes {
   display: flex;
   flex-direction: column;
@@ -1091,26 +1004,51 @@ textarea:focus, input:focus {
 }
 
 .poster-size-btn {
-  padding: 14px;
+  padding: 16px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--text);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .poster-size-btn:hover {
   border-color: var(--gold);
-  color: var(--gold);
+  transform: translateY(-2px);
 }
 
 .poster-size-btn.active {
   background: var(--gold);
   color: #000;
   border-color: var(--gold);
+}
+
+.platform-icon {
+  font-size: 2rem;
+  min-width: 40px;
+  text-align: center;
+}
+
+.platform-name {
+  flex: 1;
+  text-align: left;
+  font-size: 1rem;
+}
+
+.platform-dim {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.poster-size-btn.active .platform-dim {
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .poster-preview {
@@ -1136,14 +1074,42 @@ textarea:focus, input:focus {
   margin: -12px 0 8px 0;
 }
 
-/* ===== GUESS ATTEMPTS COUNTER ===== */
-.attempts-remaining {
-  text-align: center;
-  padding: 12px;
-  background: rgba(212, 175, 55, 0.1);
-  border: 1px solid var(--gold);
-  border-radius: 8px;
-  margin-bottom: 16px;
-  font-weight: 600;
-  color: var(--gold);
+/* ===== RESPONSIVE ===== */
+@media (max-width: 480px) {
+  .feed-list {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .mode-options {
+    flex-direction: column;
+  }
+  
+  .analytics-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .swipe-hint {
+    font-size: 0.8rem;
+    bottom: 30px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .feed-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .feed-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1025px) {
+  .feed-list {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
