@@ -4,7 +4,6 @@
   box-sizing: border-box; 
   margin: 0; 
   padding: 0;
-  /* Remove 300ms tap delay on mobile */
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
@@ -175,6 +174,17 @@ button:active {
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  flex: 1;
+}
+
+/* Empty state */
+.feed-list:empty::after {
+  content: 'No posts yet. Be the first!';
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
 }
 
 .feed-card {
@@ -183,7 +193,6 @@ button:active {
   border-radius: 12px;
   border: 1px solid var(--border);
   transition: all 0.2s ease;
-  cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -430,6 +439,62 @@ textarea:focus, input:focus {
   margin: -8px 0;
 }
 
+/* ===== STREAMING LINKS SECTION ===== */
+.streaming-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0;
+  background: var(--bg-elevated);
+}
+
+.streaming-section summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  list-style: none;
+}
+
+.streaming-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.streaming-section summary:hover {
+  color: var(--gold);
+}
+
+.streaming-section[open] summary {
+  border-bottom: 1px solid var(--border);
+  color: var(--gold);
+}
+
+.streaming-links {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.input-group-small {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-group-small label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.input-group-small input {
+  font-size: 0.85rem;
+  padding: 10px;
+}
+
 /* ===== MODE OPTIONS ===== */
 .mode-options {
   display: flex;
@@ -601,6 +666,36 @@ textarea:focus, input:focus {
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== LISTEN LINKS ===== */
+.listen-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.listen-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.listen-link:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.listen-icon {
+  font-size: 1.5rem;
 }
 
 /* ===== SHARE OPTIONS ===== */
