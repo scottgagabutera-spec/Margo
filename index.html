@@ -150,6 +150,7 @@
         <input id="guessArtistInput" placeholder="Artist" class="guess-field"/>
       </div>
       <div id="guessResult" class="result-message hidden"></div>
+      <div id="guessLinksSection" class="guess-links-section hidden"></div>
     </div>
     <div class="modal-footer">
       <button id="submitGuess" class="primary-btn full">Submit Guess</button>
@@ -236,7 +237,7 @@
   </div>
 </div>
 
-<!-- ANALYTICS MODAL - UPDATED WITH HELP ANSWERS -->
+<!-- ANALYTICS MODAL -->
 <div id="analyticsModal" class="modal hidden">
   <div class="modal-content analytics-modal">
     <div class="modal-header">
@@ -272,7 +273,7 @@
   </div>
 </div>
 
-<!-- SHARE POSTER MODAL - DESIGN + PLATFORM SELECTION -->
+<!-- SHARE POSTER MODAL -->
 <div id="sharePosterModal" class="modal hidden">
   <div class="modal-content poster-modal">
     <div class="modal-header">
@@ -280,8 +281,11 @@
       <button id="closeSharePoster" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-      <!-- Step 1: Choose Design -->
+      <!-- Step 1: Choose Design with Live Preview -->
       <div id="designStep" class="poster-step active">
+        <div class="live-preview-container">
+          <canvas id="posterPreviewCanvas"></canvas>
+        </div>
         <label>Choose Design Style</label>
         <div class="design-options">
           <button class="design-btn active" data-design="gold-gradient">
@@ -366,5 +370,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-
-
