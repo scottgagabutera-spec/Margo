@@ -177,16 +177,6 @@ button:active {
   flex: 1;
 }
 
-/* Empty state */
-.feed-list:empty::after {
-  content: 'No posts yet. Be the first!';
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-}
-
 .feed-card {
   background: var(--bg-card);
   padding: 20px;
