@@ -1,61 +1,84 @@
-// MARGO - Improved & Fixed
+/* MARGO - Complete & Fixed JavaScript */
 
 // ===== ELEMENTS =====
-const elements = {
-  landing: document.getElementById("landing"),
-  feed: document.getElementById("feed"),
-  composer: document.getElementById("composer"),
-  guessModal: document.getElementById("guessModal"),
-  discoverModal: document.getElementById("discoverModal"),
-  shareModal: document.getElementById("shareModal"),
-  postcardModal: document.getElementById("postcardModal"),
-  listenModal: document.getElementById("listenModal"),
+const landing = document.getElementById("landing");
+const feed = document.getElementById("feed");
+const composer = document.getElementById("composer");
+const guessModal = document.getElementById("guessModal");
+const discoverModal = document.getElementById("discoverModal");
+const shareModal = document.getElementById("shareModal");
+const postcardModal = document.getElementById("postcardModal");
+const listenModal = document.getElementById("listenModal");
 
-  enterBtn: document.getElementById("enterBtn"),
-  backBtn: document.getElementById("backBtn"),
-  openComposer: document.getElementById("openComposer"),
-  closeComposer: document.getElementById("closeComposer"),
-  postBtn: document.getElementById("postBtn"),
+const enterBtn = document.getElementById("enterBtn");
+const backBtn = document.getElementById("backBtn");
+const openComposer = document.getElementById("openComposer");
+const closeComposer = document.getElementById("closeComposer");
+const postBtn = document.getElementById("postBtn");
 
-  textInput: document.getElementById("textInput"),
-  charCount: document.getElementById("charCount"),
-  feedList: document.getElementById("feedList"),
-  postCount: document.getElementById("postCount"),
+const textInput = document.getElementById("textInput");
+const charCount = document.getElementById("charCount");
+const feedList = document.getElementById("feedList");
+const postCount = document.getElementById("postCount");
 
-  modeBtns: document.querySelectorAll(".mode-btn"),
-  shareInputs: document.getElementById("shareInputs"),
-  guessInputs: document.getElementById("guessInputs"),
-  discoverInputs: document.getElementById("discoverInputs"),
+// Mode
+const modeBtns = document.querySelectorAll(".mode-btn");
+const shareInputs = document.getElementById("shareInputs");
+const guessInputs = document.getElementById("guessInputs");
+const discoverInputs = document.getElementById("discoverInputs");
 
-  songInput: document.getElementById("songInput"),
-  artistInput: document.getElementById("artistInput"),
+// Share mode inputs
+const songInput = document.getElementById("songInput");
+const artistInput = document.getElementById("artistInput");
 
-  guessSongCheck: document.getElementById("guessSongCheck"),
-  guessArtistCheck: document.getElementById("guessArtistCheck"),
-  guessSongAnswer: document.getElementById("guessSongAnswer"),
-  guessArtistAnswer: document.getElementById("guessArtistAnswer"),
+// Guess mode inputs
+const guessSongCheck = document.getElementById("guessSongCheck");
+const guessArtistCheck = document.getElementById("guessArtistCheck");
+const guessSongAnswer = document.getElementById("guessSongAnswer");
+const guessArtistAnswer = document.getElementById("guessArtistAnswer");
 
-  discoverSongInput: document.getElementById("discoverSongInput"),
-  discoverArtistInput: document.getElementById("discoverArtistInput"),
+// Discover mode inputs
+const discoverSongInput = document.getElementById("discoverSongInput");
+const discoverArtistInput = document.getElementById("discoverArtistInput");
 
-  spotifyLink: document.getElementById("spotifyLink"),
-  appleLink: document.getElementById("appleLink"),
-  youtubeLink: document.getElementById("youtubeLink"),
-  soundcloudLink: document.getElementById("soundcloudLink"),
+// Streaming links
+const spotifyLink = document.getElementById("spotifyLink");
+const appleLink = document.getElementById("appleLink");
+const youtubeLink = document.getElementById("youtubeLink");
+const soundcloudLink = document.getElementById("soundcloudLink");
 
-  // ... (rest of modal elements same as before)
-};
+// Guess modal
+const closeGuess = document.getElementById("closeGuess");
+const guessLyric = document.getElementById("guessLyric");
+const guessHint = document.getElementById("guessHint");
+const guessSongInput = document.getElementById("guessSongInput");
+const guessArtistInput = document.getElementById("guessArtistInput");
+const submitGuess = document.getElementById("submitGuess");
+const revealAnswer = document.getElementById("revealAnswer");
+const guessResult = document.getElementById("guessResult");
+const guessInputFields = document.getElementById("guessInputFields");
 
-// Destructure for cleaner code
-const {
-  landing, feed, composer, guessModal, discoverModal, postcardModal, listenModal,
-  enterBtn, backBtn, openComposer, closeComposer, postBtn,
-  textInput, charCount, feedList, postCount,
-  modeBtns, shareInputs, guessInputs, discoverInputs,
-  songInput, artistInput, guessSongCheck, guessArtistCheck,
-  guessSongAnswer, guessArtistAnswer, discoverSongInput, discoverArtistInput,
-  spotifyLink, appleLink, youtubeLink, soundcloudLink,
-} = elements;
+// Discover modal
+const closeDiscover = document.getElementById("closeDiscover");
+const discoverLyric = document.getElementById("discoverLyric");
+const discoverSongAnswer = document.getElementById("discoverSongAnswer");
+const discoverArtistAnswer = document.getElementById("discoverArtistAnswer");
+const submitDiscover = document.getElementById("submitDiscover");
+
+// Listen modal
+const closeListen = document.getElementById("closeListen");
+const listenLinks = document.getElementById("listenLinks");
+
+// Share modal
+const closeShare = document.getElementById("closeShare");
+
+// Postcard modal
+const closePostcard = document.getElementById("closePostcard");
+const postcardLyric = document.getElementById("postcardLyric");
+const postcardEmotion = document.getElementById("postcardEmotion");
+const postcardSong = document.getElementById("postcardSong");
+const sharePostcard = document.getElementById("sharePostcard");
+const listenPostcard = document.getElementById("listenPostcard");
 
 // ===== STATE =====
 let currentMode = "share";
@@ -64,67 +87,86 @@ let currentPost = null;
 let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
 let userGuesses = JSON.parse(localStorage.getItem("margoGuesses") || "{}");
 
-// ===== EVENT DELEGATION FOR FEED ACTIONS =====
-feedList.addEventListener("click", e => {
-  const btn = e.target.closest(".feed-action");
-  if (!btn) return;
-  const card = btn.closest(".feed-card");
-  if (!card) return;
-
-  const index = Array.from(feedList.children).indexOf(card);
-  const action = btn.dataset.action;
-
-  if (action === "view")      viewPost(index);
-  if (action === "guess")     openGuess(index);
-  if (action === "discover")  openDiscover(index);
-  if (action === "listen")    openListen(index);
-  if (action === "share")     sharePost(index);
-});
-
 // ===== NAVIGATION =====
-enterBtn.addEventListener("click", () => {
+// Landing → Composer (not feed directly!)
+enterBtn.onclick = () => {
   landing.classList.remove("active");
   composer.classList.remove("hidden");
   textInput.focus();
-});
+};
 
-backBtn.addEventListener("click", () => {
+backBtn.onclick = () => {
   feed.classList.remove("active");
   landing.classList.add("active");
-});
+};
 
-openComposer.addEventListener("click", () => {
+openComposer.onclick = () => {
   composer.classList.remove("hidden");
   textInput.focus();
-});
+};
 
-closeComposer.addEventListener("click", () => {
+closeComposer.onclick = () => {
   composer.classList.add("hidden");
   resetComposer();
+  // Fix black screen - restore landing if no feed is showing
   if (!feed.classList.contains("active")) {
     landing.classList.add("active");
   }
-});
+};
 
-// Close other modals (add similar listeners for closeGuess, closeDiscover, etc.)
+closeGuess.onclick = () => guessModal.classList.add("hidden");
+closeDiscover.onclick = () => discoverModal.classList.add("hidden");
+closeShare.onclick = () => shareModal.classList.add("hidden");
+closePostcard.onclick = () => postcardModal.classList.add("hidden");
+closeListen.onclick = () => listenModal.classList.add("hidden");
 
 // ===== CHARACTER COUNTER =====
-textInput.addEventListener("input", () => {
+textInput.oninput = () => {
   charCount.textContent = textInput.value.length;
+};
+
+// ===== MODE SELECTION =====
+modeBtns.forEach(btn => {
+  btn.onclick = () => {
+    modeBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentMode = btn.dataset.mode;
+
+    shareInputs.classList.remove("active");
+    guessInputs.classList.remove("active");
+    discoverInputs.classList.remove("active");
+
+    if (currentMode === "share") shareInputs.classList.add("active");
+    if (currentMode === "guess") guessInputs.classList.add("active");
+    if (currentMode === "discover") discoverInputs.classList.add("active");
+  };
 });
 
-// ===== MODE & EMOTION SELECTION =====
-// (same as before, but you can add aria-checked later if desired)
+// ===== EMOTION SELECTION =====
+document.querySelectorAll(".emotion-pill").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".emotion-pill").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedEmotion = btn.dataset.emotion;
+  };
+});
 
-// ===== POSTING - FIXED VERSION =====
-postBtn.addEventListener("click", async () => {
-  if (postBtn.disabled) return;
-
+// ===== CREATE POST =====
+postBtn.addEventListener('click', async () => {
   const text = textInput.value.trim();
-  if (!text) return showToast("Please enter a lyric");
-  if (!selectedEmotion) return showToast("Please select an emotion");
 
-  const post = {
+  // Validation
+  if (!text) {
+    showToast("Please enter a lyric");
+    return;
+  }
+
+  if (!selectedEmotion) {
+    showToast("Please select an emotion");
+    return;
+  }
+
+  let post = {
     id: Date.now(),
     text,
     emotion: selectedEmotion,
@@ -136,139 +178,216 @@ postBtn.addEventListener("click", async () => {
       spotify: spotifyLink.value.trim() || null,
       apple: appleLink.value.trim() || null,
       youtube: youtubeLink.value.trim() || null,
-      soundcloud: soundcloudLink.value.trim() || null,
-    },
+      soundcloud: soundcloudLink.value.trim() || null
+    }
   };
 
-  // Mode-specific logic (keep your existing if-blocks here)
+  // Mode-specific validation and data
+  if (currentMode === "share") {
+    const song = songInput.value.trim();
+    const artist = artistInput.value.trim();
+    
+    if (!song || !artist) {
+      showToast("Please enter song and artist");
+      return;
+    }
+    
+    post.knowledge = { song, artist };
+  }
+
+  if (currentMode === "guess") {
+    const songAnswer = guessSongAnswer.value.trim();
+    const artistAnswer = guessArtistAnswer.value.trim();
+    const allowSong = guessSongCheck.checked;
+    const allowArtist = guessArtistCheck.checked;
+    
+    if (!allowSong && !allowArtist) {
+      showToast("Select at least one thing to guess");
+      return;
+    }
+    
+    if (allowSong && !songAnswer) {
+      showToast("Enter the correct song title");
+      return;
+    }
+    
+    if (allowArtist && !artistAnswer) {
+      showToast("Enter the correct artist");
+      return;
+    }
+    
+    post.knowledge = {
+      song: songAnswer,
+      artist: artistAnswer,
+      hidden: true
+    };
+    post.guessConfig = {
+      guessSong: allowSong,
+      guessArtist: allowArtist
+    };
+  }
+
+  if (currentMode === "discover") {
+    post.knowledge = {
+      song: discoverSongInput.value.trim() || null,
+      artist: discoverArtistInput.value.trim() || null
+    };
+  }
+
+  // Safety: prevent double-click
+  if (postBtn.disabled) return;
 
   postBtn.disabled = true;
   postBtn.textContent = "Posting...";
 
   try {
-    // Fake delay
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     posts.unshift(post);
-
-    // Safety limit
-    if (posts.length > 300) posts = posts.slice(0, 300);
-
     localStorage.setItem("margoPosts", JSON.stringify(posts));
-
+    
     landing.classList.remove("active");
     feed.classList.add("active");
+    
     renderFeed();
     resetComposer();
     composer.classList.add("hidden");
-
+    
     showToast("Posted!");
   } catch (err) {
-    console.error("Post failed:", err);
-    showToast("Error posting – try again");
+    console.error("Posting failed:", err);
+    showToast("Error posting");
   } finally {
     postBtn.disabled = false;
     postBtn.textContent = "Post";
   }
 });
 
-// ===== RENDER FEED - DELEGATED EVENTS, SAFER =====
+// ===== RESET COMPOSER =====
+function resetComposer() {
+  textInput.value = "";
+  songInput.value = "";
+  artistInput.value = "";
+  guessSongAnswer.value = "";
+  guessArtistAnswer.value = "";
+  discoverSongInput.value = "";
+  discoverArtistInput.value = "";
+  spotifyLink.value = "";
+  appleLink.value = "";
+  youtubeLink.value = "";
+  soundcloudLink.value = "";
+  charCount.textContent = "0";
+  selectedEmotion = null;
+  
+  document.querySelectorAll(".emotion-pill").forEach(b => b.classList.remove("active"));
+  
+  // Reset to share mode
+  currentMode = "share";
+  modeBtns.forEach(b => b.classList.remove("active"));
+  modeBtns[0].classList.add("active");
+  shareInputs.classList.add("active");
+  guessInputs.classList.remove("active");
+  discoverInputs.classList.remove("active");
+  
+  // Reset checkboxes
+  guessSongCheck.checked = true;
+  guessArtistCheck.checked = true;
+}
+
+// ===== RENDER FEED =====
 function renderFeed() {
   feedList.innerHTML = "";
-  postCount.textContent = posts.length;
-
+  
   if (posts.length === 0) {
-    feedList.innerHTML = '<div class="empty-feed">No posts yet. Be the first!</div>';
+    postCount.textContent = "0";
+    feedList.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:60px 20px; color:var(--text-secondary);">No posts yet. Be the first!</div>';
     return;
   }
+  
+  postCount.textContent = posts.length;
 
   posts.forEach((post, index) => {
     const card = document.createElement("div");
     card.className = "feed-card";
-    card.dataset.postId = post.id;
-
-    const time = timeAgo(post.timestamp);
-    const hasLinks = Object.values(post.links || {}).some(Boolean);
-
-    let songSection = "";
-    let actionsHTML = "";
-
-    // ... (your existing logic for share/guess/discover sections)
-
-    card.innerHTML = `
-      <div class="feed-text">${post.text}</div>
-      <div class="feed-emotion">${post.emotion}</div>
-      ${songSection}
-      <div class="feed-time">${time}</div>
-      <div class="feed-actions">
-        ${actionsHTML}
-      </div>
-    `;
-
-    // Add data-action to buttons inside the template
-    // Example for share mode:
-    // <button class="feed-action" data-action="view">View</button>
-    // <button class="feed-action" data-action="listen" ${hasLinks ? '' : 'disabled'}>Listen</button>
-    // etc.
-
-    feedList.appendChild(card);
-  });
-}
-
-// ===== OTHER FUNCTIONS =====
-// Keep your timeAgo, openGuess, submitGuess, etc.
-// Update viewPost to prevent spoilers:
-
-function viewPost(index) {
-  currentPost = posts[index];
-  if (!currentPost) return;
-
-  postcardLyric.textContent = currentPost.text;
-  postcardEmotion.textContent = currentPost.emotion;
-
-  let songDisplay = "Unknown Song";
-  let artistDisplay = "Unknown Artist";
-
-  const isRevealed = currentPost.mode !== "guess" || userGuesses[currentPost.id];
-
-  if (isRevealed) {
-    songDisplay = currentPost.knowledge.song || "Unknown Song";
-    artistDisplay = currentPost.knowledge.artist || "Unknown Artist";
-  } else if (currentPost.mode === "guess") {
-    const parts = [];
-    if (currentPost.guessConfig?.guessSong) parts.push("song");
-    if (currentPost.guessConfig?.guessArtist) parts.push("artist");
-    songDisplay = `Guess the ${parts.join(" & ")}`;
-  }
-
-  postcardSong.innerHTML = `
-    <div>${songDisplay}</div>
-    <div>${artistDisplay}</div>
-  `;
-
-  listenPostcard.style.display = Object.values(currentPost.links || {}).some(Boolean) ? "block" : "none";
-
-  postcardModal.classList.remove("hidden");
-}
-
-// ===== INIT =====
-function init() {
-  renderFeed();
-
-  // Deep link support (your existing code)
-  const params = new URLSearchParams(location.search);
-  const postId = params.get("post");
-  if (postId) {
-    const idx = posts.findIndex(p => p.id == postId);
-    if (idx !== -1) {
-      landing.classList.remove("active");
-      feed.classList.add("active");
-      renderFeed();
-      setTimeout(() => viewPost(idx), 300);
+    
+    const timeText = timeAgo(post.timestamp);
+    
+    let songSection = '';
+    let actionsSection = '';
+    
+    // Check if post has streaming links
+    const hasLinks = post.links && (
+      post.links.spotify || 
+      post.links.apple || 
+      post.links.youtube || 
+      post.links.soundcloud
+    );
+    
+    if (post.mode === "share") {
+      songSection = `
+        <div class="feed-song">
+          <div class="feed-song-title">${post.knowledge.song}</div>
+          <div class="feed-song-artist">${post.knowledge.artist}</div>
+        </div>
+      `;
+      actionsSection = `
+        <div class="feed-actions">
+          <button class="feed-action" data-action="view">View</button>
+          ${hasLinks ? `<button class="feed-action" data-action="listen">Listen</button>` : ''}
+          <button class="feed-action" data-action="share">Share</button>
+        </div>
+      `;
+    } 
+    else if (post.mode === "guess") {
+      const hasGuessed = userGuesses[post.id];
+      
+      if (hasGuessed) {
+        songSection = `
+          <div class="feed-song">
+            <div class="feed-song-title">${post.knowledge.song}</div>
+            <div class="feed-song-artist">${post.knowledge.artist}</div>
+          </div>
+        `;
+        actionsSection = `
+          <div class="feed-actions">
+            <button class="feed-action" data-action="view">View</button>
+            ${hasLinks ? `<button class="feed-action" data-action="listen">Listen</button>` : ''}
+            <button class="feed-action" data-action="share">Share</button>
+          </div>
+        `;
+      } else {
+        const guessWhat = [];
+        if (post.guessConfig.guessSong) guessWhat.push("song");
+        if (post.guessConfig.guessArtist) guessWhat.push("artist");
+        const guessText = guessWhat.join(" & ");
+        
+        songSection = `
+          <div class="mystery-badge">
+            Guess the ${guessText}
+          </div>
+        `;
+        actionsSection = `
+          <div class="feed-actions">
+            <button class="feed-action" data-action="guess">Guess</button>
+            <button class="feed-action" data-action="share">Share</button>
+          </div>
+        `;
+      }
+    } 
+    else if (post.mode === "discover") {
+      songSection = `
+        <div class="discover-badge">
+          ${post.knowledge.song || post.knowledge.artist ? 
+            'Maybe: ' + (post.knowledge.song || '?') + ' — ' + (post.knowledge.artist || '?') :
+            'Help discover this song!'}
+        </div>
+      `;
+      actionsSection = `
+        <div class="feed-actions">
+          <button class="feed-action" data-action="discover">Help</button>
+          <button class="feed-action" data-action="share">Share</button>
+        </div>
+      `;
     }
-  }
-}
 
-init();
-
-// Reset composer, showToast, etc. remain similar
+    card
