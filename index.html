@@ -19,6 +19,7 @@
     <h1 class="logo">MARGO</h1>
     <p class="tagline">When words fail, drop a line.</p>
     <button id="enterBtn" class="primary-btn">Drop a line</button>
+    <div class="swipe-hint">← Swipe to explore</div>
   </div>
 </section>
 
@@ -30,7 +31,7 @@
       <h2>Live Feed</h2>
       <p class="post-count"><span id="postCount">0</span> posts</p>
     </div>
-    <button id="openComposer" class="header-btn">+ Drop</button>
+    <button id="openComposer" class="header-btn">Drop your line</button>
   </header>
   <div id="feedList" class="feed-list"></div>
 </section>
@@ -217,29 +218,7 @@
   </div>
 </div>
 
-<!-- SHARE MODAL -->
-<div id="shareModal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Share</h3>
-      <button id="closeShare" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="share-options">
-        <button class="share-btn" data-action="copy">
-          <span class="share-icon">🔗</span>
-          <span>Copy Link</span>
-        </button>
-        <button class="share-btn" data-action="native">
-          <span class="share-icon">↗</span>
-          <span>Share</span>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- POSTCARD MODAL -->
+<!-- POSTCARD MODAL - UPDATED WITH ONLY ANALYTICS & SHARE POSTER -->
 <div id="postcardModal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
@@ -256,9 +235,8 @@
     </div>
     <div class="modal-footer">
       <button id="analyticsBtn" class="secondary-btn full">📊 View Analytics</button>
-      <button id="listenPostcard" class="secondary-btn full">Listen</button>
-      <button id="createPosterBtn" class="primary-btn full">🎨 Create Poster</button>
-      <button id="sharePostcard" class="primary-btn full">Share</button>
+      <button id="listenPostcard" class="secondary-btn full">🎵 Listen</button>
+      <button id="sharePosterBtn" class="primary-btn full">🎨 Share Poster</button>
     </div>
   </div>
 </div>
@@ -299,21 +277,41 @@
   </div>
 </div>
 
-<!-- POSTER MODAL -->
-<div id="posterModal" class="modal hidden">
+<!-- SHARE POSTER MODAL - NEW INTEGRATED FLOW -->
+<div id="sharePosterModal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>Create Poster</h3>
-      <button id="closePoster" class="close-btn">×</button>
+      <h3>Share Poster</h3>
+      <button id="closeSharePoster" class="close-btn">×</button>
     </div>
     <div class="modal-body">
       <p class="hint">Choose platform size:</p>
       <div class="poster-sizes">
-        <button class="poster-size-btn" data-size="instagram-square">Instagram Square (1080x1080)</button>
-        <button class="poster-size-btn" data-size="instagram-story">Instagram Story (1080x1920)</button>
-        <button class="poster-size-btn" data-size="twitter">Twitter/X (1200x675)</button>
-        <button class="poster-size-btn" data-size="facebook">Facebook (1200x630)</button>
-        <button class="poster-size-btn" data-size="pinterest">Pinterest (1000x1500)</button>
+        <button class="poster-size-btn" data-size="instagram-square">
+          <span class="platform-icon">📷</span>
+          <span class="platform-name">Instagram Square</span>
+          <span class="platform-dim">1080x1080</span>
+        </button>
+        <button class="poster-size-btn" data-size="instagram-story">
+          <span class="platform-icon">📱</span>
+          <span class="platform-name">Instagram Story</span>
+          <span class="platform-dim">1080x1920</span>
+        </button>
+        <button class="poster-size-btn" data-size="twitter">
+          <span class="platform-icon">🐦</span>
+          <span class="platform-name">Twitter/X</span>
+          <span class="platform-dim">1200x675</span>
+        </button>
+        <button class="poster-size-btn" data-size="facebook">
+          <span class="platform-icon">📘</span>
+          <span class="platform-name">Facebook</span>
+          <span class="platform-dim">1200x630</span>
+        </button>
+        <button class="poster-size-btn" data-size="pinterest">
+          <span class="platform-icon">📌</span>
+          <span class="platform-name">Pinterest</span>
+          <span class="platform-dim">1000x1500</span>
+        </button>
       </div>
       <div id="posterPreview" class="poster-preview hidden">
         <canvas id="posterCanvas"></canvas>
