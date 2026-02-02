@@ -78,6 +78,7 @@ const postcardLyric = document.getElementById("postcardLyric");
 const postcardEmotion = document.getElementById("postcardEmotion");
 const postcardSong = document.getElementById("postcardSong");
 const sharePostcard = document.getElementById("sharePostcard");
+const listenPostcard = document.getElementById("listenPostcard");
 
 // ===== STATE =====
 let currentMode = "share";
@@ -107,6 +108,10 @@ openComposer.onclick = () => {
 closeComposer.onclick = () => {
   composer.classList.add("hidden");
   resetComposer();
+  // Fix black screen - restore landing if no feed is showing
+  if (!feed.classList.contains("active")) {
+    landing.classList.add("active");
+  }
 };
 
 closeGuess.onclick = () => guessModal.classList.add("hidden");
@@ -319,6 +324,7 @@ function renderFeed() {
           <div class="feed-song-artist">${post.knowledge.artist}</div>
         </div>
       `;
+      // Listen button shows if poster added links
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="viewPost(${index})">View</button>
@@ -337,7 +343,7 @@ function renderFeed() {
             <div class="feed-song-artist">${post.knowledge.artist}</div>
           </div>
         `;
-        // Listen button ONLY available AFTER revealing answer
+        // AFTER revealing - Listen button shows if poster added links
         actionsSection = `
           <div class="feed-actions">
             <button class="feed-action" onclick="viewPost(${index})">View</button>
@@ -356,7 +362,7 @@ function renderFeed() {
             Guess the ${guessText}
           </div>
         `;
-        // NO Listen button before revealing
+        // BEFORE revealing - no Listen button shown yet
         actionsSection = `
           <div class="feed-actions">
             <button class="feed-action" onclick="openGuess(${index})">Guess</button>
@@ -373,7 +379,7 @@ function renderFeed() {
             'Help discover this song!'}
         </div>
       `;
-      // NO Listen button in discover mode (they don't know the song!)
+      // Discover mode - no Listen (they don't know the song)
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="openDiscover(${index})">Help</button>
@@ -629,8 +635,31 @@ function viewPost(index) {
     <div>${currentPost.knowledge.artist || 'Unknown Artist'}</div>
   `;
   
+  // Show/hide Listen button based on whether links exist
+  const hasLinks = currentPost.links && (
+    currentPost.links.spotify || 
+    currentPost.links.apple || 
+    currentPost.links.youtube || 
+    currentPost.links.soundcloud
+  );
+  
+  if (hasLinks) {
+    listenPostcard.style.display = 'block';
+  } else {
+    listenPostcard.style.display = 'none';
+  }
+  
   postcardModal.classList.remove("hidden");
 }
+
+// Listen from postcard
+listenPostcard.onclick = () => {
+  const postIndex = posts.findIndex(p => p.id === currentPost.id);
+  if (postIndex !== -1) {
+    postcardModal.classList.add("hidden");
+    openListen(postIndex);
+  }
+};
 
 // ===== SHARE POST =====
 function sharePost(index) {
