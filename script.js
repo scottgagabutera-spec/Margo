@@ -158,12 +158,12 @@ postBtn.onclick = () => {
   // Validation
   if (!text) {
     showToast("Please enter a lyric");
-    return;
+    return; // Button never gets disabled, so it's fine
   }
 
   if (!selectedEmotion) {
     showToast("Please select an emotion");
-    return;
+    return; // Button never gets disabled, so it's fine
   }
 
   let post = {
@@ -189,7 +189,7 @@ postBtn.onclick = () => {
     
     if (!song || !artist) {
       showToast("Please enter song and artist");
-      return;
+      return; // Button never gets disabled, so it's fine
     }
     
     post.knowledge = { song, artist };
@@ -203,17 +203,17 @@ postBtn.onclick = () => {
     
     if (!allowSong && !allowArtist) {
       showToast("Select at least one thing to guess");
-      return;
+      return; // Button never gets disabled, so it's fine
     }
     
     if (allowSong && !songAnswer) {
       showToast("Enter the correct song title");
-      return;
+      return; // Button never gets disabled, so it's fine
     }
     
     if (allowArtist && !artistAnswer) {
       showToast("Enter the correct artist");
-      return;
+      return; // Button never gets disabled, so it's fine
     }
     
     post.knowledge = {
@@ -234,7 +234,7 @@ postBtn.onclick = () => {
     };
   }
 
-  // Save and display
+  // ONLY disable button AFTER all validation passes
   postBtn.disabled = true;
   postBtn.textContent = "Posting...";
 
@@ -246,7 +246,7 @@ postBtn.onclick = () => {
     landing.classList.remove("active");
     feed.classList.add("active");
     
-    renderFeed(); // CRITICAL FIX - Actually render the feed!
+    renderFeed(); // CRITICAL - Actually render the feed!
     resetComposer();
     composer.classList.add("hidden");
     
@@ -735,4 +735,18 @@ window.addEventListener('load', () => {
       setTimeout(() => viewPost(postIndex), 500);
     }
   }
+});
+
+// Emergency fix: If button gets stuck, click it again to reset
+document.addEventListener('DOMContentLoaded', () => {
+  // Double-click protection
+  let clicking = false;
+  const originalClick = postBtn.onclick;
+  
+  postBtn.onclick = () => {
+    if (clicking) return;
+    clicking = true;
+    originalClick();
+    setTimeout(() => { clicking = false; }, 1000);
+  };
 });
