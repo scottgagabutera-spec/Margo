@@ -1,4 +1,4 @@
-/* MARGO - Complete & Clean JavaScript */
+/* MARGO - Complete & Fixed JavaScript */
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
@@ -8,6 +8,7 @@ const guessModal = document.getElementById("guessModal");
 const discoverModal = document.getElementById("discoverModal");
 const shareModal = document.getElementById("shareModal");
 const postcardModal = document.getElementById("postcardModal");
+const listenModal = document.getElementById("listenModal");
 
 const enterBtn = document.getElementById("enterBtn");
 const backBtn = document.getElementById("backBtn");
@@ -40,6 +41,12 @@ const guessArtistAnswer = document.getElementById("guessArtistAnswer");
 const discoverSongInput = document.getElementById("discoverSongInput");
 const discoverArtistInput = document.getElementById("discoverArtistInput");
 
+// Streaming links
+const spotifyLink = document.getElementById("spotifyLink");
+const appleLink = document.getElementById("appleLink");
+const youtubeLink = document.getElementById("youtubeLink");
+const soundcloudLink = document.getElementById("soundcloudLink");
+
 // Guess modal
 const closeGuess = document.getElementById("closeGuess");
 const guessLyric = document.getElementById("guessLyric");
@@ -57,6 +64,10 @@ const discoverLyric = document.getElementById("discoverLyric");
 const discoverSongAnswer = document.getElementById("discoverSongAnswer");
 const discoverArtistAnswer = document.getElementById("discoverArtistAnswer");
 const submitDiscover = document.getElementById("submitDiscover");
+
+// Listen modal
+const closeListen = document.getElementById("closeListen");
+const listenLinks = document.getElementById("listenLinks");
 
 // Share modal
 const closeShare = document.getElementById("closeShare");
@@ -76,10 +87,11 @@ let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
 let userGuesses = JSON.parse(localStorage.getItem("margoGuesses") || "{}");
 
 // ===== NAVIGATION =====
+// Landing → Composer (not feed directly!)
 enterBtn.onclick = () => {
   landing.classList.remove("active");
-  feed.classList.add("active");
-  renderFeed();
+  composer.classList.remove("hidden");
+  textInput.focus();
 };
 
 backBtn.onclick = () => {
@@ -101,6 +113,7 @@ closeGuess.onclick = () => guessModal.classList.add("hidden");
 closeDiscover.onclick = () => discoverModal.classList.add("hidden");
 closeShare.onclick = () => shareModal.classList.add("hidden");
 closePostcard.onclick = () => postcardModal.classList.add("hidden");
+closeListen.onclick = () => listenModal.classList.add("hidden");
 
 // ===== CHARACTER COUNTER =====
 textInput.oninput = () => {
@@ -155,7 +168,13 @@ postBtn.onclick = () => {
     mode: currentMode,
     knowledge: {},
     guessConfig: null,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    links: {
+      spotify: spotifyLink.value.trim() || null,
+      apple: appleLink.value.trim() || null,
+      youtube: youtubeLink.value.trim() || null,
+      soundcloud: soundcloudLink.value.trim() || null
+    }
   };
 
   // Mode-specific validation and data
@@ -218,6 +237,10 @@ postBtn.onclick = () => {
     posts.unshift(post);
     localStorage.setItem("margoPosts", JSON.stringify(posts));
     
+    // Go to feed after posting
+    landing.classList.remove("active");
+    feed.classList.add("active");
+    
     renderFeed();
     resetComposer();
     composer.classList.add("hidden");
@@ -238,6 +261,10 @@ function resetComposer() {
   guessArtistAnswer.value = "";
   discoverSongInput.value = "";
   discoverArtistInput.value = "";
+  spotifyLink.value = "";
+  appleLink.value = "";
+  youtubeLink.value = "";
+  soundcloudLink.value = "";
   charCount.textContent = "0";
   selectedEmotion = null;
   
@@ -261,7 +288,6 @@ function renderFeed() {
   feedList.innerHTML = "";
   
   if (posts.length === 0) {
-    feedList.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#999;">No posts yet. Be the first!</div>';
     postCount.textContent = "0";
     return;
   }
@@ -277,6 +303,14 @@ function renderFeed() {
     let songSection = '';
     let actionsSection = '';
     
+    // Check if post has streaming links
+    const hasLinks = post.links && (
+      post.links.spotify || 
+      post.links.apple || 
+      post.links.youtube || 
+      post.links.soundcloud
+    );
+    
     if (post.mode === "share") {
       songSection = `
         <div class="feed-song">
@@ -287,6 +321,7 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="viewPost(${index})">View</button>
+          ${hasLinks ? `<button class="feed-action" onclick="openListen(${index})">Listen</button>` : ''}
           <button class="feed-action" onclick="sharePost(${index})">Share</button>
         </div>
       `;
@@ -304,6 +339,7 @@ function renderFeed() {
         actionsSection = `
           <div class="feed-actions">
             <button class="feed-action" onclick="viewPost(${index})">View</button>
+            ${hasLinks ? `<button class="feed-action" onclick="openListen(${index})">Listen</button>` : ''}
             <button class="feed-action" onclick="sharePost(${index})">Share</button>
           </div>
         `;
@@ -427,7 +463,7 @@ submitGuess.onclick = () => {
       actualSong.includes(guessedSong)
     );
   } else {
-    songMatch = true; // Not being tested
+    songMatch = true;
   }
   
   // Check artist if required
@@ -438,37 +474,31 @@ submitGuess.onclick = () => {
       actualArtist.includes(guessedArtist)
     );
   } else {
-    artistMatch = true; // Not being tested
+    artistMatch = true;
   }
   
   // Show result
   guessResult.classList.remove("hidden");
   
   if (songMatch && artistMatch) {
-    // Correct!
     guessResult.className = "result-message success";
     guessResult.textContent = `Correct! "${currentPost.knowledge.song}" by ${currentPost.knowledge.artist}`;
     
-    // Mark as guessed
     userGuesses[currentPost.id] = true;
     localStorage.setItem("margoGuesses", JSON.stringify(userGuesses));
     
-    // Hide inputs and submit button
     submitGuess.classList.add("hidden");
     guessInputFields.classList.add("hidden");
     
-    // Re-render feed after delay
     setTimeout(() => {
       guessModal.classList.add("hidden");
       renderFeed();
     }, 2000);
     
   } else {
-    // Incorrect
     guessResult.className = "result-message error";
     guessResult.textContent = "Not quite! Try again or reveal the answer.";
     
-    // Show reveal button
     submitGuess.classList.add("hidden");
     revealAnswer.classList.remove("hidden");
   }
@@ -479,7 +509,6 @@ revealAnswer.onclick = () => {
   guessResult.className = "result-message success";
   guessResult.textContent = `The answer is "${currentPost.knowledge.song}" by ${currentPost.knowledge.artist}`;
   
-  // Mark as guessed
   userGuesses[currentPost.id] = true;
   localStorage.setItem("margoGuesses", JSON.stringify(userGuesses));
   
@@ -513,12 +542,10 @@ submitDiscover.onclick = () => {
     return;
   }
   
-  // Update the post
   currentPost.knowledge.song = song;
   currentPost.knowledge.artist = artist;
-  currentPost.mode = "share"; // Convert to share mode
+  currentPost.mode = "share";
   
-  // Save
   const postIndex = posts.findIndex(p => p.id === currentPost.id);
   if (postIndex !== -1) {
     posts[postIndex] = currentPost;
@@ -529,6 +556,48 @@ submitDiscover.onclick = () => {
   discoverModal.classList.add("hidden");
   renderFeed();
 };
+
+// ===== OPEN LISTEN MODAL =====
+function openListen(index) {
+  currentPost = posts[index];
+  
+  if (!currentPost.links) {
+    showToast("No streaming links available");
+    return;
+  }
+  
+  listenLinks.innerHTML = "";
+  
+  const platforms = [
+    { name: 'Spotify', key: 'spotify', icon: '🎵' },
+    { name: 'Apple Music', key: 'apple', icon: '🍎' },
+    { name: 'YouTube', key: 'youtube', icon: '▶' },
+    { name: 'SoundCloud', key: 'soundcloud', icon: '☁' }
+  ];
+  
+  let hasAnyLink = false;
+  
+  platforms.forEach(platform => {
+    if (currentPost.links[platform.key]) {
+      hasAnyLink = true;
+      const link = document.createElement("a");
+      link.className = "listen-link";
+      link.href = currentPost.links[platform.key];
+      link.target = "_blank";
+      link.innerHTML = `
+        <span class="listen-icon">${platform.icon}</span>
+        <span>${platform.name}</span>
+      `;
+      listenLinks.appendChild(link);
+    }
+  });
+  
+  if (!hasAnyLink) {
+    listenLinks.innerHTML = '<p class="hint">No streaming links available</p>';
+  }
+  
+  listenModal.classList.remove("hidden");
+}
 
 // ===== VIEW POST (POSTCARD) =====
 function viewPost(index) {
@@ -602,9 +671,10 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-renderFeed();
+// Don't render feed on load - wait until user posts or goes to feed
+console.log("MARGO loaded. Posts:", posts.length);
 
-// Deep linking (if someone shares a specific post)
+// Deep linking
 window.addEventListener('load', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const postId = urlParams.get('post');
@@ -612,7 +682,9 @@ window.addEventListener('load', () => {
   if (postId) {
     const postIndex = posts.findIndex(p => p.id == postId);
     if (postIndex !== -1) {
-      enterBtn.click();
+      landing.classList.remove("active");
+      feed.classList.add("active");
+      renderFeed();
       setTimeout(() => viewPost(postIndex), 500);
     }
   }
