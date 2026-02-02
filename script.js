@@ -1,4 +1,4 @@
-/* MARGO - Debug Version with Error Logging */
+/* MARGO - Fixed Version with Server POST and File Upload */
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
@@ -149,8 +149,8 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
   };
 });
 
-// ===== CREATE POST - FIXED =====
-postBtn.onclick = () => {
+// ===== CREATE POST - COMPLETELY REWRITTEN WITH SERVER POST + FILE UPLOAD =====
+postBtn.onclick = async () => {
   // Prevent double-click
   if (postBtn.disabled) return;
 
@@ -168,13 +168,11 @@ postBtn.onclick = () => {
   }
 
   let post = {
-    id: Date.now(),
     text,
     emotion: selectedEmotion,
     mode: currentMode,
     knowledge: {},
     guessConfig: null,
-    timestamp: Date.now(),
     links: {
       spotify: spotifyLink.value.trim() || null,
       apple: appleLink.value.trim() || null,
@@ -184,90 +182,144 @@ postBtn.onclick = () => {
   };
 
   // Mode-specific validation and data
-  if (currentMode === "share") {
-    const song = songInput.value.trim();
-    const artist = artistInput.value.trim();
-    
-    if (!song || !artist) {
-      showToast("Please enter song and artist");
-      return;
+  try {
+    if (currentMode === "share") {
+      const song = songInput.value.trim();
+      const artist = artistInput.value.trim();
+      
+      if (!song || !artist) {
+        throw new Error("Please enter song and artist");
+      }
+      
+      post.knowledge = { song, artist };
     }
-    
-    post.knowledge = { song, artist };
+
+    if (currentMode === "guess") {
+      const songAnswer = guessSongAnswer.value.trim();
+      const artistAnswer = guessArtistAnswer.value.trim();
+      const allowSong = guessSongCheck.checked;
+      const allowArtist = guessArtistCheck.checked;
+      
+      if (!allowSong && !allowArtist) {
+        throw new Error("Select at least one thing to guess");
+      }
+      
+      if (allowSong && !songAnswer) {
+        throw new Error("Enter the correct song title");
+      }
+      
+      if (allowArtist && !artistAnswer) {
+        throw new Error("Enter the correct artist");
+      }
+      
+      post.knowledge = {
+        song: songAnswer,
+        artist: artistAnswer,
+        hidden: true
+      };
+      post.guessConfig = {
+        guessSong: allowSong,
+        guessArtist: allowArtist
+      };
+    }
+
+    if (currentMode === "discover") {
+      post.knowledge = {
+        song: discoverSongInput.value.trim() || null,
+        artist: discoverArtistInput.value.trim() || null
+      };
+    }
+  } catch (err) {
+    showToast(err.message);
+    return;
   }
 
-  if (currentMode === "guess") {
-    const songAnswer = guessSongAnswer.value.trim();
-    const artistAnswer = guessArtistAnswer.value.trim();
-    const allowSong = guessSongCheck.checked;
-    const allowArtist = guessArtistCheck.checked;
-    
-    if (!allowSong && !allowArtist) {
-      showToast("Select at least one thing to guess");
-      return;
-    }
-    
-    if (allowSong && !songAnswer) {
-      showToast("Enter the correct song title");
-      return;
-    }
-    
-    if (allowArtist && !artistAnswer) {
-      showToast("Enter the correct artist");
-      return;
-    }
-    
-    post.knowledge = {
-      song: songAnswer,
-      artist: artistAnswer,
-      hidden: true
-    };
-    post.guessConfig = {
-      guessSong: allowSong,
-      guessArtist: allowArtist
-    };
-  }
+  // ── Prepare FormData ─────────────────────────────────────────────
+  const formData = new FormData();
+  formData.append("json", JSON.stringify(post));
 
-  if (currentMode === "discover") {
-    post.knowledge = {
-      song: discoverSongInput.value.trim() || null,
-      artist: discoverArtistInput.value.trim() || null
-    };
-  }
+  // Add files if any
+  const files = [
+    document.getElementById("file1")?.files[0],
+    document.getElementById("file2")?.files[0],
+    document.getElementById("file3")?.files[0]
+  ].filter(Boolean);
 
-  // DISABLE BUTTON IMMEDIATELY
+  files.forEach((file, i) => {
+    formData.append(`file${i + 1}`, file);
+  });
+
+  // ── Send to server ───────────────────────────────────────────────
   postBtn.disabled = true;
   postBtn.textContent = "Posting...";
 
-  // Use try-catch to ensure button always gets re-enabled
   try {
-    // Save post
-    posts.unshift(post);
-    localStorage.setItem("margoPosts", JSON.stringify(posts));
+    const response = await fetch("https://margo-silk.vercel.app/api/posts", {
+      method: "POST",
+      body: formData,
+      // NO Content-Type header → browser sets multipart/form-data + boundary
+    });
+
+    if (!response.ok) {
+      let errText = await response.text().catch(() => "");
+      throw new Error(`Server error ${response.status}${errText ? `: ${errText}` : ""}`);
+    }
+
+    const result = await response.json();
+    console.log("Server response:", result);
+
+    // Add to local cache for immediate display
+    const newPost = {
+      ...post,
+      id: result.id || Date.now(),
+      timestamp: Date.now(),
+      files: files.map(f => f.name)
+    };
     
-    // Show success toast
-    showToast("Posted!");
+    posts.unshift(newPost);
     
-    // Navigate to feed
-    landing.classList.remove("active");
+    // Keep localStorage light - only cache last 50 posts
+    if (posts.length > 50) {
+      posts = posts.slice(0, 50);
+    }
+    
+    try {
+      localStorage.setItem("margoPosts", JSON.stringify(posts));
+    } catch (storageErr) {
+      console.warn("LocalStorage full, clearing old posts:", storageErr);
+      // If storage fails, keep only last 10 posts
+      posts = posts.slice(0, 10);
+      localStorage.setItem("margoPosts", JSON.stringify(posts));
+    }
+
+    showToast("Posted successfully!");
     feed.classList.add("active");
-    
-    // Render feed
+    landing.classList.remove("active");
     renderFeed();
-    
-    // Reset and close composer
+
     resetComposer();
     composer.classList.add("hidden");
+
+  } catch (err) {
+    console.error("Posting failed:", err);
     
-  } catch (error) {
-    console.error("Error posting:", error);
-    showToast("Error posting. Please try again.");
+    let msg = "Error posting. Please try again.";
+    
+    if (err.message.includes("QuotaExceededError")) {
+      msg = "Browser storage full – try clearing data or use fewer posts.";
+    } else if (err.message.includes("NetworkError") || err.message.includes("Failed to fetch")) {
+      msg = "Cannot reach server. Check your internet connection.";
+    } else if (err.message.includes("Server error")) {
+      msg = err.message;
+    } else {
+      msg = err.message || "Error posting. Please try again.";
+    }
+    
+    showToast(msg);
+    
   } finally {
-    // ALWAYS re-enable button - this is the critical fix
-    setTimeout(() => {
-      postBtn.disabled = false;
-      postBtn.textContent = "Post";
-    }, 500);
+    postBtn.disabled = false;
+    postBtn.textContent = "Post";
   }
 };
 
@@ -286,6 +338,14 @@ function resetComposer() {
   soundcloudLink.value = "";
   charCount.textContent = "0";
   selectedEmotion = null;
+  
+  // Clear file inputs
+  const file1 = document.getElementById("file1");
+  const file2 = document.getElementById("file2");
+  const file3 = document.getElementById("file3");
+  if (file1) file1.value = "";
+  if (file2) file2.value = "";
+  if (file3) file3.value = "";
   
   document.querySelectorAll(".emotion-pill").forEach(b => b.classList.remove("active"));
   
