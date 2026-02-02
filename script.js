@@ -1,4 +1,4 @@
-/* MARGO - Final Enhanced Version with All Improvements */
+/* MARGO - Enhanced Version with All Improvements */
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
@@ -59,6 +59,7 @@ const submitGuess = document.getElementById("submitGuess");
 const revealAnswer = document.getElementById("revealAnswer");
 const guessResult = document.getElementById("guessResult");
 const guessInputFields = document.getElementById("guessInputFields");
+const guessLinksSection = document.getElementById("guessLinksSection");
 
 // Discover modal
 const closeDiscover = document.getElementById("closeDiscover");
@@ -102,6 +103,7 @@ const previewStep = document.getElementById("previewStep");
 const nextToPlatform = document.getElementById("nextToPlatform");
 const backToDesign = document.getElementById("backToDesign");
 const posterCanvas = document.getElementById("posterCanvas");
+const posterPreviewCanvas = document.getElementById("posterPreviewCanvas");
 const downloadPoster = document.getElementById("downloadPoster");
 
 // ===== STATE =====
@@ -133,7 +135,6 @@ posts.forEach(post => {
 function openModal(modal) {
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
-  // Prevent background scroll on mobile
   document.body.style.overflow = 'hidden';
   document.body.style.position = 'fixed';
   document.body.style.width = '100%';
@@ -142,7 +143,6 @@ function openModal(modal) {
 function closeModal(modal) {
   modal.classList.add("hidden");
   document.body.classList.remove("modal-open");
-  // Restore background scroll
   document.body.style.overflow = '';
   document.body.style.position = '';
   document.body.style.width = '';
@@ -478,6 +478,7 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="viewPost(${index})">View</button>
+          ${hasLinks ? `<button class="feed-action" onclick="openListen(${index})">Listen</button>` : ''}
         </div>
       `;
     } 
@@ -498,6 +499,7 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="openGuess(${index})">Guess</button>
+          <button class="feed-action" onclick="viewPost(${index})">View</button>
         </div>
       `;
     } 
@@ -512,6 +514,7 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="openDiscover(${index})">Help</button>
+          <button class="feed-action" onclick="viewPost(${index})">View</button>
         </div>
       `;
     }
@@ -567,6 +570,7 @@ function openGuess(index) {
   revealAnswer.classList.add("hidden");
   submitGuess.classList.remove("hidden");
   guessInputFields.classList.remove("hidden");
+  guessLinksSection.classList.add("hidden");
   
   const songField = document.querySelector('#guessSongInput');
   const artistField = document.querySelector('#guessArtistInput');
@@ -658,10 +662,13 @@ submitGuess.onclick = () => {
     submitGuess.classList.add("hidden");
     guessInputFields.classList.add("hidden");
     
+    // Show links if available
+    showGuessLinks();
+    
     setTimeout(() => {
       closeModal(guessModal);
       currentGuessAttempts = 0;
-    }, 2000);
+    }, 5000);
   }
   else if (currentGuessAttempts >= MAX_GUESS_ATTEMPTS) {
     guessResult.className = "result-message error";
@@ -687,6 +694,43 @@ submitGuess.onclick = () => {
   }
 };
 
+// ===== SHOW GUESS LINKS (5 SECONDS) =====
+function showGuessLinks() {
+  if (!currentPost.links) return;
+  
+  const hasLinks = currentPost.links.spotify || currentPost.links.apple || 
+                   currentPost.links.youtube || currentPost.links.soundcloud;
+  
+  if (!hasLinks) return;
+  
+  guessLinksSection.classList.remove("hidden");
+  const linksContainer = document.getElementById("guessLinksContainer");
+  linksContainer.innerHTML = "";
+  
+  const platforms = [
+    { name: 'Spotify', key: 'spotify' },
+    { name: 'Apple Music', key: 'apple' },
+    { name: 'YouTube', key: 'youtube' },
+    { name: 'SoundCloud', key: 'soundcloud' }
+  ];
+  
+  platforms.forEach(platform => {
+    if (currentPost.links[platform.key]) {
+      const link = document.createElement("a");
+      link.className = "listen-link";
+      link.href = currentPost.links[platform.key];
+      link.target = "_blank";
+      link.innerHTML = `<span>${platform.name}</span>`;
+      linksContainer.appendChild(link);
+    }
+  });
+  
+  // Hide after 5 seconds
+  setTimeout(() => {
+    guessLinksSection.classList.add("hidden");
+  }, 5000);
+}
+
 // ===== REVEAL ANSWER =====
 revealAnswer.onclick = () => {
   guessResult.className = "result-message success";
@@ -697,10 +741,13 @@ revealAnswer.onclick = () => {
   
   revealAnswer.classList.add("hidden");
   
+  // Show links if available
+  showGuessLinks();
+  
   setTimeout(() => {
     closeModal(guessModal);
     currentGuessAttempts = 0;
-  }, 2000);
+  }, 5000);
 };
 
 // ===== OPEN DISCOVER MODAL =====
@@ -860,7 +907,7 @@ analyticsBtn.onclick = () => {
     guessesSection.classList.add("hidden");
   }
   
-  // Render helps - SHOW ALL COMMUNITY ANSWERS WITH LINKS
+  // Render helps
   if (analytics.helps.length > 0) {
     helpsSection.classList.remove("hidden");
     helpsList.innerHTML = "";
@@ -900,14 +947,21 @@ analyticsBtn.onclick = () => {
   openModal(analyticsModal);
 };
 
-// ===== POSTER DESIGN SELECTION =====
+// ===== POSTER DESIGN SELECTION WITH LIVE PREVIEW =====
 document.querySelectorAll(".design-btn").forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll(".design-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     selectedDesign = btn.dataset.design;
+    updatePosterPreview();
   };
 });
+
+// Update preview when design changes
+function updatePosterPreview() {
+  if (!currentPost) return;
+  generatePosterOnCanvas(posterPreviewCanvas, 'preview', selectedDesign);
+}
 
 nextToPlatform.onclick = () => {
   designStep.classList.remove("active");
@@ -923,7 +977,7 @@ backToDesign.onclick = () => {
 document.querySelectorAll(".platform-btn").forEach(btn => {
   btn.onclick = () => {
     selectedPosterSize = btn.dataset.size;
-    generatePoster(selectedPosterSize, selectedDesign);
+    generatePosterOnCanvas(posterCanvas, selectedPosterSize, selectedDesign);
     platformStep.classList.remove("active");
     previewStep.classList.add("active");
     downloadPoster.classList.remove("hidden");
@@ -931,10 +985,11 @@ document.querySelectorAll(".platform-btn").forEach(btn => {
 });
 
 // ===== POSTER GENERATION WITH DESIGN OPTIONS =====
-function generatePoster(size, design) {
+function generatePosterOnCanvas(canvas, size, design) {
   if (!currentPost) return;
   
   const sizes = {
+    'preview': { width: 400, height: 400 },
     'instagram-square': { width: 1080, height: 1080 },
     'instagram-story': { width: 1080, height: 1920 },
     'twitter': { width: 1200, height: 675 },
@@ -983,7 +1038,6 @@ function generatePoster(size, design) {
   
   const dims = sizes[size];
   const colors = designs[design];
-  const canvas = posterCanvas;
   const ctx = canvas.getContext('2d');
   
   canvas.width = dims.width;
@@ -1079,6 +1133,7 @@ sharePosterBtn.onclick = () => {
   closeModal(postcardModal);
   resetPosterModal();
   openModal(sharePosterModal);
+  updatePosterPreview();
 };
 
 function resetPosterModal() {
