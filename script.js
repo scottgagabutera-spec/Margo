@@ -241,7 +241,7 @@ postBtn.onclick = () => {
     landing.classList.remove("active");
     feed.classList.add("active");
     
-    renderFeed();
+    renderFeed(); // CRITICAL FIX - Actually render the feed!
     resetComposer();
     composer.classList.add("hidden");
     
@@ -289,6 +289,7 @@ function renderFeed() {
   
   if (posts.length === 0) {
     postCount.textContent = "0";
+    feedList.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:60px 20px; color:var(--text-secondary);">No posts yet. Be the first!</div>';
     return;
   }
   
@@ -336,6 +337,7 @@ function renderFeed() {
             <div class="feed-song-artist">${post.knowledge.artist}</div>
           </div>
         `;
+        // Listen button ONLY available AFTER revealing answer
         actionsSection = `
           <div class="feed-actions">
             <button class="feed-action" onclick="viewPost(${index})">View</button>
@@ -354,6 +356,7 @@ function renderFeed() {
             Guess the ${guessText}
           </div>
         `;
+        // NO Listen button before revealing
         actionsSection = `
           <div class="feed-actions">
             <button class="feed-action" onclick="openGuess(${index})">Guess</button>
@@ -370,6 +373,7 @@ function renderFeed() {
             'Help discover this song!'}
         </div>
       `;
+      // NO Listen button in discover mode (they don't know the song!)
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="openDiscover(${index})">Help</button>
@@ -438,12 +442,12 @@ function openGuess(index) {
   const guessWhat = [];
   if (currentPost.guessConfig.guessSong) guessWhat.push("song");
   if (currentPost.guessConfig.guessArtist) guessWhat.push("artist");
-  guessHint.textContent = `Try to guess the ${guessWhat.join(" and ")}!`;
+  guessHint.textContent = `You have ONE attempt to guess the ${guessWhat.join(" and ")}!`;
   
   guessModal.classList.remove("hidden");
 }
 
-// ===== SUBMIT GUESS =====
+// ===== SUBMIT GUESS (1 ATTEMPT ONLY) =====
 submitGuess.onclick = () => {
   if (!currentPost) return;
   
@@ -454,52 +458,68 @@ submitGuess.onclick = () => {
   
   let songMatch = false;
   let artistMatch = false;
+  let songCorrect = false;
+  let artistCorrect = false;
   
   // Check song if required
   if (currentPost.guessConfig.guessSong) {
-    songMatch = guessedSong && (
+    songCorrect = guessedSong && (
       guessedSong === actualSong ||
       guessedSong.includes(actualSong) ||
       actualSong.includes(guessedSong)
     );
+    songMatch = songCorrect;
   } else {
-    songMatch = true;
+    songMatch = true; // Not being tested
   }
   
   // Check artist if required
   if (currentPost.guessConfig.guessArtist) {
-    artistMatch = guessedArtist && (
+    artistCorrect = guessedArtist && (
       guessedArtist === actualArtist ||
       guessedArtist.includes(actualArtist) ||
       actualArtist.includes(guessedArtist)
     );
+    artistMatch = artistCorrect;
   } else {
-    artistMatch = true;
+    artistMatch = true; // Not being tested
   }
   
   // Show result
   guessResult.classList.remove("hidden");
+  submitGuess.classList.add("hidden");
   
+  // BOTH CORRECT
   if (songMatch && artistMatch) {
     guessResult.className = "result-message success";
-    guessResult.textContent = `Correct! "${currentPost.knowledge.song}" by ${currentPost.knowledge.artist}`;
+    guessResult.textContent = `🎉 Correct! "${currentPost.knowledge.song}" by ${currentPost.knowledge.artist}`;
     
     userGuesses[currentPost.id] = true;
     localStorage.setItem("margoGuesses", JSON.stringify(userGuesses));
     
-    submitGuess.classList.add("hidden");
     guessInputFields.classList.add("hidden");
     
     setTimeout(() => {
       guessModal.classList.add("hidden");
       renderFeed();
     }, 2000);
-    
-  } else {
+  }
+  // PARTIAL CORRECT (one right, one wrong)
+  else if (songCorrect || artistCorrect) {
     guessResult.className = "result-message error";
-    guessResult.textContent = "Not quite! Try again or reveal the answer.";
-    
-    submitGuess.classList.add("hidden");
+    if (songCorrect) {
+      guessResult.textContent = `🎵 Song is correct! But not the artist.`;
+    } else {
+      guessResult.textContent = `🎤 Artist is correct! But not the song.`;
+    }
+    guessInputFields.classList.add("hidden");
+    revealAnswer.classList.remove("hidden");
+  }
+  // BOTH WRONG
+  else {
+    guessResult.className = "result-message error";
+    guessResult.textContent = "❌ Not quite! That was your only attempt.";
+    guessInputFields.classList.add("hidden");
     revealAnswer.classList.remove("hidden");
   }
 };
@@ -513,7 +533,6 @@ revealAnswer.onclick = () => {
   localStorage.setItem("margoGuesses", JSON.stringify(userGuesses));
   
   revealAnswer.classList.add("hidden");
-  guessInputFields.classList.add("hidden");
   
   setTimeout(() => {
     guessModal.classList.add("hidden");
@@ -671,7 +690,6 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-// Don't render feed on load - wait until user posts or goes to feed
 console.log("MARGO loaded. Posts:", posts.length);
 
 // Deep linking
