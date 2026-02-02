@@ -485,6 +485,51 @@ textarea:focus, input:focus {
   padding: 10px;
 }
 
+/* ===== FILE ATTACHMENTS SECTION (NEW!) ===== */
+.attachments-section {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-inputs input[type="file"] {
+  padding: 10px;
+  background: var(--bg-dark);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.file-inputs input[type="file"]:hover {
+  border-color: var(--gold);
+  background: var(--bg-elevated);
+}
+
+.file-inputs input[type="file"]::file-selector-button {
+  background: var(--gold);
+  color: #000;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.file-inputs input[type="file"]::file-selector-button:hover {
+  background: var(--gold-hover);
+}
+
 /* ===== MODE OPTIONS ===== */
 .mode-options {
   display: flex;
