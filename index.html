@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>MARGO — When words fail, drop a line</title>
@@ -25,7 +25,7 @@
 <!-- FEED -->
 <section id="feed" class="screen">
   <header class="feed-header">
-    <button id="backBtn" type="button" class="header-btn">← Back</button>
+    <button id="backBtn" type="button" class="header-btn">←</button>
     <div class="header-center">
       <h2>Live Feed</h2>
       <p class="post-count"><span id="postCount">0</span> posts</p>
@@ -40,41 +40,48 @@
   <div class="modal-content">
     <div class="modal-header">
       <h3>Drop a line</h3>
-      <button id="closeComposer" type="button" class="close-btn" aria-label="Close">×</button>
+      <button id="closeComposer" type="button" class="close-btn">×</button>
     </div>
     <div class="modal-body">
+      <!-- STEP 1: Lyric -->
       <label for="textInput">Lyric</label>
-      <textarea id="textInput" maxlength="140" placeholder="The line stuck in your head..." aria-describedby="charCountDesc"></textarea>
-      <div class="char-count" id="charCountDesc"><span id="charCount">0</span>/140</div>
+      <textarea id="textInput" maxlength="140" placeholder="The line stuck in your head..."></textarea>
+      <div class="char-count"><span id="charCount">0</span>/140</div>
 
+      <!-- STEP 2: Emotion -->
       <label>Emotion</label>
-      <div class="emotion-pills" role="radiogroup" aria-label="Select emotion">
-        <button class="emotion-pill" data-emotion="Love" type="button">Love</button>
-        <button class="emotion-pill" data-emotion="Heartbreak" type="button">Heartbreak</button>
-        <button class="emotion-pill" data-emotion="Hope" type="button">Hope</button>
-        <button class="emotion-pill" data-emotion="Nostalgia" type="button">Nostalgia</button>
-        <button class="emotion-pill" data-emotion="Healing" type="button">Healing</button>
-        <button class="emotion-pill" data-emotion="Joy" type="button">Joy</button>
-        <button class="emotion-pill" data-emotion="Rage" type="button">Rage</button>
-        <button class="emotion-pill" data-emotion="Loneliness" type="button">Loneliness</button>
+      <div class="emotion-pills">
+        <button type="button" class="emotion-pill" data-emotion="Love">Love</button>
+        <button type="button" class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
+        <button type="button" class="emotion-pill" data-emotion="Hope">Hope</button>
+        <button type="button" class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
+        <button type="button" class="emotion-pill" data-emotion="Healing">Healing</button>
+        <button type="button" class="emotion-pill" data-emotion="Joy">Joy</button>
+        <button type="button" class="emotion-pill" data-emotion="Rage">Rage</button>
+        <button type="button" class="emotion-pill" data-emotion="Loneliness">Loneliness</button>
       </div>
 
+      <!-- STEP 3: Mode -->
       <label>What's your intention?</label>
-      <div class="mode-options" role="radiogroup" aria-label="Post mode">
-        <button class="mode-btn active" data-mode="share" type="button">
-          <span class="mode-icon">♫</span><span>Share</span>
+      <div class="mode-options">
+        <button type="button" class="mode-btn active" data-mode="share">
+          <span class="mode-icon">♫</span>
+          <span>Share</span>
         </button>
-        <button class="mode-btn" data-mode="guess" type="button">
-          <span class="mode-icon">?</span><span>Guess</span>
+        <button type="button" class="mode-btn" data-mode="guess">
+          <span class="mode-icon">?</span>
+          <span>Guess</span>
         </button>
-        <button class="mode-btn" data-mode="discover" type="button">
-          <span class="mode-icon">✨</span><span>Discover</span>
+        <button type="button" class="mode-btn" data-mode="discover">
+          <span class="mode-icon">✨</span>
+          <span>Discover</span>
         </button>
       </div>
 
+      <!-- STEP 4: Mode-specific inputs -->
       <div id="shareInputs" class="conditional active">
-        <input id="songInput" placeholder="Song title" required type="text"/>
-        <input id="artistInput" placeholder="Artist" required type="text"/>
+        <input id="songInput" placeholder="Song title" required/>
+        <input id="artistInput" placeholder="Artist" required/>
       </div>
 
       <div id="guessInputs" class="conditional">
@@ -88,33 +95,34 @@
             <span>Let them guess the artist</span>
           </label>
         </div>
-        <input id="guessSongAnswer" placeholder="Correct song title" type="text"/>
-        <input id="guessArtistAnswer" placeholder="Correct artist" type="text"/>
+        <input id="guessSongAnswer" placeholder="Correct song title"/>
+        <input id="guessArtistAnswer" placeholder="Correct artist"/>
       </div>
 
       <div id="discoverInputs" class="conditional">
         <p class="hint">Don't know the song? The community will help you discover it!</p>
-        <input id="discoverSongInput" placeholder="Maybe song? (optional)" type="text"/>
-        <input id="discoverArtistInput" placeholder="Maybe artist? (optional)" type="text"/>
+        <input id="discoverSongInput" placeholder="Maybe song? (optional)"/>
+        <input id="discoverArtistInput" placeholder="Maybe artist? (optional)"/>
       </div>
 
+      <!-- STEP 5: Streaming Links (Optional) -->
       <details class="streaming-section">
         <summary>+ Add Streaming Links (Optional)</summary>
         <div class="streaming-links">
           <div class="input-group-small">
-            <label for="spotifyLink">Spotify</label>
+            <label>Spotify</label>
             <input id="spotifyLink" type="url" placeholder="https://open.spotify.com/track/..."/>
           </div>
           <div class="input-group-small">
-            <label for="appleLink">Apple Music</label>
+            <label>Apple Music</label>
             <input id="appleLink" type="url" placeholder="https://music.apple.com/..."/>
           </div>
           <div class="input-group-small">
-            <label for="youtubeLink">YouTube</label>
+            <label>YouTube</label>
             <input id="youtubeLink" type="url" placeholder="https://youtube.com/watch?v=..."/>
           </div>
           <div class="input-group-small">
-            <label for="soundcloudLink">SoundCloud</label>
+            <label>SoundCloud</label>
             <input id="soundcloudLink" type="url" placeholder="https://soundcloud.com/..."/>
           </div>
         </div>
@@ -131,14 +139,14 @@
   <div class="modal-content">
     <div class="modal-header">
       <h3>Guess the Song</h3>
-      <button id="closeGuess" type="button" class="close-btn" aria-label="Close">×</button>
+      <button id="closeGuess" type="button" class="close-btn">×</button>
     </div>
     <div class="modal-body">
       <div class="lyric-display" id="guessLyric"></div>
       <p class="hint" id="guessHint"></p>
       <div id="guessInputFields">
-        <input id="guessSongInput" placeholder="Song title" class="guess-field" type="text"/>
-        <input id="guessArtistInput" placeholder="Artist" class="guess-field" type="text"/>
+        <input id="guessSongInput" placeholder="Song title" class="guess-field"/>
+        <input id="guessArtistInput" placeholder="Artist" class="guess-field"/>
       </div>
       <div id="guessResult" class="result-message hidden"></div>
     </div>
@@ -149,7 +157,82 @@
   </div>
 </div>
 
-<!-- other modals remain mostly the same, just added type="button" and aria-label where useful -->
+<!-- DISCOVER MODAL -->
+<div id="discoverModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Help Discover</h3>
+      <button id="closeDiscover" type="button" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="lyric-display" id="discoverLyric"></div>
+      <p class="hint">Know this song? Help them out!</p>
+      <input id="discoverSongAnswer" placeholder="Song title"/>
+      <input id="discoverArtistAnswer" placeholder="Artist"/>
+    </div>
+    <div class="modal-footer">
+      <button id="submitDiscover" type="button" class="primary-btn full">Help Them Discover</button>
+    </div>
+  </div>
+</div>
+
+<!-- LISTEN MODAL -->
+<div id="listenModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Listen</h3>
+      <button id="closeListen" type="button" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint">Available streaming links:</p>
+      <div class="listen-links" id="listenLinks"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div id="shareModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Share</h3>
+      <button id="closeShare" type="button" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="share-options">
+        <button type="button" class="share-btn" data-action="copy">
+          <span class="share-icon">🔗</span>
+          <span>Copy Link</span>
+        </button>
+        <button type="button" class="share-btn" data-action="native">
+          <span class="share-icon">↗</span>
+          <span>Share</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POSTCARD MODAL -->
+<div id="postcardModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Post</h3>
+      <button id="closePostcard" type="button" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="postcard">
+        <div class="postcard-header">MARGO</div>
+        <div class="postcard-lyric" id="postcardLyric"></div>
+        <div class="postcard-emotion" id="postcardEmotion"></div>
+        <div class="postcard-song" id="postcardSong"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="listenPostcard" type="button" class="secondary-btn full">Listen</button>
+      <button id="sharePostcard" type="button" class="primary-btn full">Share</button>
+    </div>
+  </div>
+</div>
 
 <script src="script.js"></script>
 </body>
