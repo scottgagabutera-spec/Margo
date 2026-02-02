@@ -38,11 +38,18 @@
       <h3>Drop a line</h3>
       <button id="closeComposer" class="close-btn">×</button>
     </div>
-
     <div class="modal-body">
       <label>Lyric</label>
-      <textarea id="textInput" maxlength="140" placeholder="The line stuck in your head..."></textarea>
+      <textarea id="textInput" maxlength="140"></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
+
+      <label>Emotion</label>
+      <div class="emotion-pills">
+        <button class="emotion-pill" data-emotion="Love">Love</button>
+        <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
+        <button class="emotion-pill" data-emotion="Hope">Hope</button>
+        <button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
+      </div>
 
       <label>Mode</label>
       <div class="mode-options">
@@ -51,42 +58,46 @@
         <button class="mode-btn" data-mode="discover">Discover</button>
       </div>
 
-      <!-- SHARE -->
       <div id="shareInputs" class="conditional active">
         <input id="songInput" placeholder="Song title"/>
         <input id="artistInput" placeholder="Artist"/>
-        <label>Listen links (optional)</label>
-        <input id="spotifyLink" placeholder="Spotify link"/>
-        <input id="appleLink" placeholder="Apple Music link"/>
-        <input id="youtubeLink" placeholder="YouTube link"/>
       </div>
 
-      <!-- GUESS -->
       <div id="guessInputs" class="conditional">
+        <label><input type="checkbox" id="guessSongCheck" checked> Guess song</label>
+        <label><input type="checkbox" id="guessArtistCheck" checked> Guess artist</label>
         <input id="guessSongAnswer" placeholder="Correct song"/>
         <input id="guessArtistAnswer" placeholder="Correct artist"/>
       </div>
 
-      <!-- DISCOVER -->
       <div id="discoverInputs" class="conditional">
-        <p class="hint">Let the community help identify this song</p>
         <input id="discoverSongInput" placeholder="Maybe song?"/>
         <input id="discoverArtistInput" placeholder="Maybe artist?"/>
       </div>
 
-      <label>Emotion</label>
-      <div class="emotion-pills">
-        <button class="emotion-pill" data-emotion="Love">Love</button>
-        <button class="emotion-pill" data-emotion="Heartbreak">Heartbreak</button>
-        <button class="emotion-pill" data-emotion="Hope">Hope</button>
-        <button class="emotion-pill" data-emotion="Nostalgia">Nostalgia</button>
-        <button class="emotion-pill" data-emotion="Healing">Healing</button>
-        <button class="emotion-pill" data-emotion="Joy">Joy</button>
-      </div>
+      <details class="streaming-section">
+        <summary>+ Streaming links</summary>
+        <input id="spotifyLink" placeholder="Spotify URL"/>
+        <input id="appleLink" placeholder="Apple Music URL"/>
+        <input id="youtubeLink" placeholder="YouTube URL"/>
+        <input id="soundcloudLink" placeholder="SoundCloud URL"/>
+      </details>
     </div>
-
     <div class="modal-footer">
       <button id="postBtn" class="primary-btn full">Post</button>
+    </div>
+  </div>
+</div>
+
+<!-- LISTEN -->
+<div id="listenModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Listen</h3>
+      <button id="closeListen" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="listenLinks" class="listen-links"></div>
     </div>
   </div>
 </div>
