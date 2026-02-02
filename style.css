@@ -1,4 +1,4 @@
-/* MARGO - Improved Design with Better Borders */
+* MARGO - Modern Clean Design */
 
 * { 
   box-sizing: border-box; 
@@ -16,8 +16,7 @@
   --bg-elevated: #1a1a1a;
   --text: #f5f5f5;
   --text-secondary: #999;
-  --border: #2a2a2a;
-  --border-light: rgba(212, 175, 55, 0.2);
+  --border: #333;
   --success: #4caf50;
   --error: #f44336;
 }
@@ -208,12 +207,12 @@ button:active {
   font-size: 1.2rem;
 }
 
-/* ===== FEED LIST - IMPROVED BORDERS ===== */
+/* ===== FEED LIST ===== */
 .feed-list {
   padding: 20px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  gap: 16px;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -224,18 +223,17 @@ button:active {
   background: var(--bg-card);
   padding: 20px;
   border-radius: 12px;
-  border: 2px solid var(--border);
+  border: 1px solid var(--border);
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .feed-card:hover {
   transform: translateY(-2px);
-  border-color: var(--border-light);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  border-color: var(--gold);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .feed-text {
@@ -336,7 +334,7 @@ button:active {
   font-weight: 600;
 }
 
-/* ===== MODALS ===== */
+/* ===== MODALS - FIXED SCROLL ===== */
 .modal {
   position: fixed;
   inset: 0;
@@ -354,6 +352,7 @@ button:active {
   display: none; 
 }
 
+/* Prevent body scroll when modal is open */
 body.modal-open {
   overflow: hidden !important;
   position: fixed !important;
@@ -723,27 +722,6 @@ textarea:focus, input:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== GUESS LINKS SECTION (5 SECONDS) ===== */
-.guess-links-section {
-  padding: 16px;
-  background: rgba(212, 175, 55, 0.1);
-  border: 1px solid var(--gold);
-  border-radius: 8px;
-  animation: fadeIn 0.3s ease;
-}
-
-.guess-links-section.hidden {
-  display: none;
-}
-
-.guess-links-section p {
-  text-align: center;
-  color: var(--gold);
-  font-weight: 600;
-  margin-bottom: 12px;
-  font-size: 0.9rem;
-}
-
 /* ===== LISTEN LINKS ===== */
 .listen-links {
   display: flex;
@@ -1044,7 +1022,7 @@ textarea:focus, input:focus {
   background: var(--bg-elevated);
 }
 
-/* ===== POSTER MODAL - LIVE PREVIEW ===== */
+/* ===== POSTER MODAL - DESIGN SELECTION ===== */
 .poster-step {
   display: none;
 }
@@ -1055,40 +1033,22 @@ textarea:focus, input:focus {
   gap: 20px;
 }
 
-.poster-preview-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-  background: var(--bg-elevated);
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  min-height: 300px;
-}
-
-.poster-preview-container canvas {
-  max-width: 100%;
-  height: auto;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
 .design-options {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
 }
 
 .design-btn {
   background: var(--bg-elevated);
   border: 2px solid var(--border);
   border-radius: 12px;
-  padding: 10px;
+  padding: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -1104,8 +1064,8 @@ textarea:focus, input:focus {
 
 .design-preview {
   width: 100%;
-  height: 50px;
-  border-radius: 6px;
+  height: 80px;
+  border-radius: 8px;
   position: relative;
   overflow: hidden;
 }
@@ -1135,10 +1095,9 @@ textarea:focus, input:focus {
 }
 
 .design-name {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text);
-  text-align: center;
 }
 
 /* ===== PLATFORM SELECTION ===== */
@@ -1201,7 +1160,7 @@ textarea:focus, input:focus {
   .feed-list {
     grid-template-columns: 1fr;
     padding: 16px;
-    gap: 16px;
+    gap: 12px;
   }
   
   .mode-options {
@@ -1218,7 +1177,7 @@ textarea:focus, input:focus {
   }
   
   .design-options {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
 }
 
