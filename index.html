@@ -1,49 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MARGO</title>
+  <title>MARGO — When words fail, drop a line</title>
   <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <!-- LANDING -->
-<section id="landing">
-  <div class="logo">MARGO</div>
-  <p class="tagline">Where lyrics become language.</p>
-  <button id="dropBtn">Drop a line</button>
-</section>
-
-<!-- CREATE -->
-<section id="create" class="hidden">
-  <div class="card">
-
-    <textarea id="lineInput" 
-      placeholder="Drop a lyric, a line, or a feeling..."></textarea>
-
-    <div id="modeSection" class="hidden">
-      <p class="question">What do you want to do with this?</p>
-      <button class="mode" data-mode="guess">Let people guess</button>
-      <button class="mode" data-mode="share">I know the song</button>
-      <button class="mode" data-mode="discover">Help me discover</button>
-    </div>
-
-    <div id="metaSection" class="hidden">
-      <input id="songInput" placeholder="Song (optional)">
-      <input id="artistInput" placeholder="Artist (optional)">
-      <input id="linkInput" placeholder="Streaming link (optional)">
-    </div>
-
-    <button id="postBtn" class="hidden">Share on MARGO</button>
+<section id="landing" class="screen active">
+  <div class="center">
+    <h1 class="logo">MARGO</h1>
+    <p class="tagline">When words fail, drop a line.</p>
+    <button id="enterBtn" class="primary-btn">Drop a line</button>
   </div>
 </section>
 
 <!-- FEED -->
-<section id="feed" class="hidden">
-  <h2>Shared Feelings</h2>
-  <div id="posts"></div>
+<section id="feed" class="screen">
+  <header class="feed-header">
+    <button id="backBtn">←</button>
+    <h2>Live Feed</h2>
+    <button id="openComposer">Drop a line</button>
+  </header>
+  <div id="feedList" class="feed-list"></div>
 </section>
+
+<!-- COMPOSER -->
+<div id="composer" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Drop a line</h3>
+      <button id="closeComposer">×</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- STEP 1 -->
+      <label>Lyric</label>
+      <textarea id="textInput" placeholder="The line stuck in your head..."></textarea>
+
+      <!-- STEP 2 -->
+      <label>What’s your intention?</label>
+      <div class="mode-options">
+        <button class="mode-btn active" data-mode="share">Share</button>
+        <button class="mode-btn" data-mode="guess">Guess</button>
+        <button class="mode-btn" data-mode="discover">Discover</button>
+      </div>
+
+      <!-- STEP 3 -->
+      <div id="shareInputs" class="conditional active">
+        <input id="songInput" placeholder="Song title"/>
+        <input id="artistInput" placeholder="Artist"/>
+      </div>
+
+      <div id="guessInputs" class="conditional">
+        <label><input type="checkbox" id="guessSongCheck" checked> Guess song</label>
+        <label><input type="checkbox" id="guessArtistCheck" checked> Guess artist</label>
+        <input id="guessSongAnswer" placeholder="Correct song"/>
+        <input id="guessArtistAnswer" placeholder="Correct artist"/>
+      </div>
+
+      <div id="discoverInputs" class="conditional">
+        <input id="discoverSongInput" placeholder="Maybe song? (optional)"/>
+        <input id="discoverArtistInput" placeholder="Maybe artist? (optional)"/>
+      </div>
+
+      <!-- STEP 4 -->
+      <label>Emotion</label>
+      <div class="emotion-pills">
+        <button data-emotion="Love">Love</button>
+        <button data-emotion="Heartbreak">Heartbreak</button>
+        <button data-emotion="Hope">Hope</button>
+        <button data-emotion="Nostalgia">Nostalgia</button>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button id="postBtn" class="primary-btn full">Post</button>
+    </div>
+  </div>
+</div>
 
 <script src="script.js"></script>
 </body>
