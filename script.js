@@ -131,6 +131,7 @@ posts.forEach(post => {
 enterBtn.onclick = () => {
   landing.classList.remove("active");
   composer.classList.remove("hidden");
+  document.body.classList.add("modal-open");
   textInput.focus();
 };
 
@@ -141,11 +142,13 @@ backBtn.onclick = () => {
 
 openComposer.onclick = () => {
   composer.classList.remove("hidden");
+  document.body.classList.add("modal-open");
   textInput.focus();
 };
 
 closeComposer.onclick = () => {
   composer.classList.add("hidden");
+  document.body.classList.remove("modal-open");
   resetComposer();
   if (!feed.classList.contains("active")) {
     landing.classList.add("active");
@@ -154,15 +157,39 @@ closeComposer.onclick = () => {
 
 closeGuess.onclick = () => {
   guessModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
   currentGuessAttempts = 0;
 };
 
-closeDiscover.onclick = () => discoverModal.classList.add("hidden");
-closeShare.onclick = () => shareModal.classList.add("hidden");
-closePostcard.onclick = () => postcardModal.classList.add("hidden");
-closeListen.onclick = () => listenModal.classList.add("hidden");
-closeAnalytics.onclick = () => analyticsModal.classList.add("hidden");
-closePoster.onclick = () => posterModal.classList.add("hidden");
+closeDiscover.onclick = () => {
+  discoverModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+};
+
+closeShare.onclick = () => {
+  shareModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+};
+
+closePostcard.onclick = () => {
+  postcardModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+};
+
+closeListen.onclick = () => {
+  listenModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+};
+
+closeAnalytics.onclick = () => {
+  analyticsModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+};
+
+closePoster.onclick = () => {
+  posterModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+};
 
 // ===== CHARACTER COUNTER =====
 textInput.oninput = () => {
@@ -407,9 +434,11 @@ function renderFeed() {
       `;
     } 
     else if (post.mode === "guess") {
+      // Check if THIS user has guessed correctly
       const hasGuessed = userGuesses[post.id];
       
       if (hasGuessed) {
+        // Only show answer to users who guessed correctly
         songSection = `
           <div class="feed-song">
             <div class="feed-song-title">${post.knowledge.song}</div>
@@ -424,6 +453,7 @@ function renderFeed() {
           </div>
         `;
       } else {
+        // Keep it a mystery for everyone else
         const guessWhat = [];
         if (post.guessConfig?.guessSong) guessWhat.push("song");
         if (post.guessConfig?.guessArtist) guessWhat.push("artist");
@@ -537,6 +567,7 @@ function openGuess(index) {
   guessHint.textContent = `You have ${MAX_GUESS_ATTEMPTS} attempts to guess the ${guessWhat.join(" and ")}!`;
   
   guessModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
 }
 
 // ===== SUBMIT GUESS =====
@@ -606,6 +637,7 @@ submitGuess.onclick = () => {
     
     setTimeout(() => {
       guessModal.classList.add("hidden");
+      document.body.classList.remove("modal-open");
       currentGuessAttempts = 0;
       renderFeed();
     }, 2000);
@@ -646,6 +678,7 @@ revealAnswer.onclick = () => {
   
   setTimeout(() => {
     guessModal.classList.add("hidden");
+    document.body.classList.remove("modal-open");
     currentGuessAttempts = 0;
     renderFeed();
   }, 2000);
@@ -666,6 +699,7 @@ function openDiscover(index) {
   discoverSoundcloudLink.value = "";
   
   discoverModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
 }
 
 // ===== SUBMIT DISCOVER =====
@@ -713,6 +747,7 @@ submitDiscover.onclick = () => {
   
   showToast("Thanks for helping! 🎵");
   discoverModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
   renderFeed();
 };
 
@@ -756,6 +791,7 @@ function openListen(index) {
   }
   
   listenModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
 }
 
 // ===== VIEW POST (POSTCARD) =====
@@ -785,6 +821,7 @@ function viewPost(index) {
   }
   
   postcardModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
 }
 
 listenPostcard.onclick = () => {
@@ -867,6 +904,7 @@ analyticsBtn.onclick = () => {
   
   postcardModal.classList.add("hidden");
   analyticsModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
 };
 
 // ===== POSTER GENERATION =====
@@ -877,6 +915,7 @@ createPosterBtn.onclick = () => {
   posterModal.classList.remove("hidden");
   posterPreview.classList.add("hidden");
   downloadPoster.classList.add("hidden");
+  document.body.classList.add("modal-open");
 };
 
 document.querySelectorAll(".poster-size-btn").forEach(btn => {
@@ -914,22 +953,28 @@ function generatePoster(size) {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, dims.width, dims.height);
   
-  // MARGO header
+  // Calculate responsive sizing based on canvas width
+  const baseFontSize = dims.width * 0.04;
+  
+  // MARGO header - smaller and more elegant
   ctx.fillStyle = '#d4af37';
-  ctx.font = `bold ${dims.width * 0.06}px "Playfair Display", serif`;
+  ctx.font = `bold ${baseFontSize * 1.2}px serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('MARGO', dims.width / 2, dims.height * 0.12);
+  ctx.letterSpacing = '4px';
+  ctx.fillText('MARGO', dims.width / 2, dims.height * 0.08);
   
-  // Lyric (main content)
+  // Lyric (main content) - with better spacing
   ctx.fillStyle = '#f5f5f5';
-  ctx.font = `italic ${dims.width * 0.05}px "Playfair Display", serif`;
+  ctx.font = `italic ${baseFontSize * 1.3}px serif`;
+  ctx.letterSpacing = '0px';
   
-  const maxWidth = dims.width * 0.8;
-  const lineHeight = dims.width * 0.07;
+  const maxWidth = dims.width * 0.85;
+  const lineHeight = baseFontSize * 2;
   const words = currentPost.text.split(' ');
   let line = '';
-  let y = dims.height * 0.4;
+  let y = dims.height * 0.35;
   
+  // Center the lyric text
   for (let i = 0; i < words.length; i++) {
     const testLine = line + words[i] + ' ';
     const metrics = ctx.measureText(testLine);
@@ -944,27 +989,44 @@ function generatePoster(size) {
   }
   ctx.fillText(line, dims.width / 2, y);
   
-  // Emotion
-  y += dims.height * 0.1;
+  // Emotion as hashtag - clear and separated
+  y += baseFontSize * 2.5;
   ctx.fillStyle = '#d4af37';
-  ctx.font = `600 ${dims.width * 0.035}px sans-serif`;
-  ctx.fillText(currentPost.emotion, dims.width / 2, y);
+  ctx.font = `600 ${baseFontSize * 0.85}px sans-serif`;
+  ctx.fillText(`#${currentPost.emotion}`, dims.width / 2, y);
   
-  // Song info
-  y += dims.height * 0.08;
+  // Divider line
+  y += baseFontSize * 1.5;
+  ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(dims.width * 0.3, y);
+  ctx.lineTo(dims.width * 0.7, y);
+  ctx.stroke();
+  
+  // Song title - well spaced
+  y += baseFontSize * 2;
   ctx.fillStyle = '#d4af37';
-  ctx.font = `bold ${dims.width * 0.04}px "Playfair Display", serif`;
-  ctx.fillText(currentPost.knowledge.song || 'Unknown Song', dims.width / 2, y);
+  ctx.font = `bold ${baseFontSize * 1.1}px serif`;
   
-  y += dims.height * 0.05;
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.7)';
-  ctx.font = `${dims.width * 0.03}px sans-serif`;
+  const songTitle = currentPost.knowledge.song || 'Unknown Song';
+  const songMetrics = ctx.measureText(songTitle);
+  if (songMetrics.width > maxWidth) {
+    // If song title too long, use smaller font
+    ctx.font = `bold ${baseFontSize * 0.9}px serif`;
+  }
+  ctx.fillText(songTitle, dims.width / 2, y);
+  
+  // Artist - smaller and distinct
+  y += baseFontSize * 1.5;
+  ctx.fillStyle = 'rgba(212, 175, 55, 0.8)';
+  ctx.font = `500 ${baseFontSize * 0.85}px sans-serif`;
   ctx.fillText(currentPost.knowledge.artist || 'Unknown Artist', dims.width / 2, y);
   
-  // Footer
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.5)';
-  ctx.font = `${dims.width * 0.025}px sans-serif`;
-  ctx.fillText('margo-silk.vercel.app', dims.width / 2, dims.height * 0.95);
+  // Footer - subtle and small
+  ctx.fillStyle = 'rgba(212, 175, 55, 0.4)';
+  ctx.font = `${baseFontSize * 0.6}px sans-serif`;
+  ctx.fillText('margo-silk.vercel.app', dims.width / 2, dims.height * 0.96);
   
   posterPreview.classList.remove("hidden");
   downloadPoster.classList.remove("hidden");
@@ -985,11 +1047,13 @@ downloadPoster.onclick = () => {
 function sharePost(index) {
   currentPost = posts[index];
   shareModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
 }
 
 sharePostcard.onclick = () => {
   postcardModal.classList.add("hidden");
   shareModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
 };
 
 document.querySelectorAll(".share-btn").forEach(btn => {
@@ -1001,6 +1065,7 @@ document.querySelectorAll(".share-btn").forEach(btn => {
       navigator.clipboard.writeText(url).then(() => {
         showToast("Link copied! 🔗");
         shareModal.classList.add("hidden");
+        document.body.classList.remove("modal-open");
       });
     } 
     else if (action === "native") {
@@ -1010,8 +1075,13 @@ document.querySelectorAll(".share-btn").forEach(btn => {
           title: "MARGO",
           text: text,
           url: window.location.origin + "/?post=" + currentPost.id
-        }).catch(() => {});
-        shareModal.classList.add("hidden");
+        }).then(() => {
+          shareModal.classList.add("hidden");
+          document.body.classList.remove("modal-open");
+        }).catch(() => {
+          shareModal.classList.add("hidden");
+          document.body.classList.remove("modal-open");
+        });
       } else {
         showToast("Sharing not supported on this device");
       }
