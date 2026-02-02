@@ -1,4 +1,4 @@
-/* MARGO - Modern Clean Design */
+/* MARGO - Clean & Complete CSS */
 
 * { 
   box-sizing: border-box; 
@@ -80,10 +80,6 @@ body {
   gap: 8px;
   animation: bounce 2s infinite;
   opacity: 0.8;
-}
-
-.swipe-arrow {
-  font-size: 1.2rem;
 }
 
 @keyframes bounce {
@@ -187,24 +183,9 @@ button:active {
   font-size: 0.9rem;
 }
 
-.header-btn.primary {
-  background: var(--gold);
-  color: #000;
-  border-color: var(--gold);
-}
-
 .header-btn:hover {
   border-color: var(--gold);
   color: var(--gold);
-}
-
-.header-btn.primary:hover {
-  background: var(--gold-hover);
-  color: #000;
-}
-
-.btn-icon {
-  font-size: 1.2rem;
 }
 
 /* ===== FEED LIST ===== */
@@ -309,11 +290,11 @@ button:active {
 
 .feed-action {
   flex: 1;
-  padding: 10px;
+  padding: 8px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text);
 }
@@ -334,7 +315,7 @@ button:active {
   font-weight: 600;
 }
 
-/* ===== MODALS - FIXED SCROLL ===== */
+/* ===== MODALS ===== */
 .modal {
   position: fixed;
   inset: 0;
@@ -354,10 +335,10 @@ button:active {
 
 /* Prevent body scroll when modal is open */
 body.modal-open {
-  overflow: hidden !important;
-  position: fixed !important;
-  width: 100% !important;
-  height: 100% !important;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
 }
 
 .modal-content {
@@ -371,10 +352,6 @@ body.modal-open {
   flex-direction: column;
   max-height: 90vh;
   position: relative;
-}
-
-.poster-modal .modal-content {
-  max-width: 600px;
 }
 
 .modal-header {
@@ -486,13 +463,6 @@ textarea:focus, input:focus {
   margin: -8px 0;
 }
 
-.hint-small {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-style: italic;
-  margin: -12px 0 8px 0;
-}
-
 /* ===== STREAMING LINKS SECTION ===== */
 .streaming-section {
   border: 1px solid var(--border);
@@ -580,8 +550,8 @@ textarea:focus, input:focus {
   border-color: var(--gold);
 }
 
-.mode-label {
-  font-size: 0.9rem;
+.mode-icon {
+  font-size: 1.5rem;
 }
 
 /* ===== CONDITIONAL SECTIONS ===== */
@@ -732,6 +702,7 @@ textarea:focus, input:focus {
 .listen-link {
   display: flex;
   align-items: center;
+  gap: 12px;
   padding: 14px 16px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -747,7 +718,11 @@ textarea:focus, input:focus {
   color: var(--gold);
 }
 
-/* ===== POSTCARD ===== */
+.listen-icon {
+  font-size: 1.5rem;
+}
+
+/* ===== POSTCARD - BEAUTIFUL REDESIGN ===== */
 .postcard {
   background: linear-gradient(135deg, #1f1812 0%, #2d2115 50%, #1f1812 100%);
   border-radius: 20px;
@@ -1003,134 +978,67 @@ textarea:focus, input:focus {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .activity-link {
   font-size: 0.75rem;
-  padding: 6px 12px;
+  padding: 4px 8px;
   background: var(--bg-dark);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 4px;
   color: var(--gold);
   text-decoration: none;
-  font-weight: 500;
 }
 
 .activity-link:hover {
   border-color: var(--gold);
-  background: var(--bg-elevated);
 }
 
-/* ===== POSTER MODAL - DESIGN SELECTION ===== */
-.poster-step {
-  display: none;
-}
-
-.poster-step.active {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.design-options {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.design-btn {
-  background: var(--bg-elevated);
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+/* ===== SHARE POSTER MODAL ===== */
+.poster-sizes {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  align-items: center;
+  margin: 16px 0;
 }
 
-.design-btn:hover {
-  border-color: var(--gold);
-  transform: translateY(-2px);
-}
-
-.design-btn.active {
-  border-color: var(--gold);
-  background: rgba(212, 175, 55, 0.1);
-}
-
-.design-preview {
-  width: 100%;
-  height: 80px;
-  border-radius: 8px;
-  position: relative;
-  overflow: hidden;
-}
-
-.gold-gradient-preview {
-  background: linear-gradient(135deg, #1f1812 0%, #2d2115 50%, #1f1812 100%);
-}
-
-.dark-minimal-preview {
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
-}
-
-.vibrant-purple-preview {
-  background: linear-gradient(135deg, #1a0a2e 0%, #3d1e6d 50%, #1a0a2e 100%);
-}
-
-.ocean-blue-preview {
-  background: linear-gradient(135deg, #0a1929 0%, #1e3a5f 50%, #0a1929 100%);
-}
-
-.sunset-orange-preview {
-  background: linear-gradient(135deg, #2e1a0a 0%, #5f3a1e 50%, #2e1a0a 100%);
-}
-
-.forest-green-preview {
-  background: linear-gradient(135deg, #0a2e1a 0%, #1e5f3a 50%, #0a2e1a 100%);
-}
-
-.design-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-/* ===== PLATFORM SELECTION ===== */
-.platform-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.platform-btn {
+.poster-size-btn {
   padding: 16px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text);
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.platform-btn:hover {
+.poster-size-btn:hover {
   border-color: var(--gold);
   transform: translateY(-2px);
 }
 
-.platform-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.poster-size-btn.active {
+  background: var(--gold);
+  color: #000;
+  border-color: var(--gold);
+}
+
+.platform-icon {
+  font-size: 2rem;
+  min-width: 40px;
+  text-align: center;
 }
 
 .platform-name {
-  font-size: 0.95rem;
+  flex: 1;
+  text-align: left;
+  font-size: 1rem;
 }
 
 .platform-dim {
@@ -1139,8 +1047,12 @@ textarea:focus, input:focus {
   font-weight: 500;
 }
 
-/* ===== POSTER PREVIEW ===== */
+.poster-size-btn.active .platform-dim {
+  color: rgba(0, 0, 0, 0.6);
+}
+
 .poster-preview {
+  margin-top: 20px;
   text-align: center;
   padding: 20px;
   background: var(--bg-elevated);
@@ -1153,6 +1065,13 @@ textarea:focus, input:focus {
   height: auto;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.hint-small {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: -12px 0 8px 0;
 }
 
 /* ===== RESPONSIVE ===== */
@@ -1174,10 +1093,6 @@ textarea:focus, input:focus {
   .swipe-hint {
     font-size: 0.8rem;
     bottom: 30px;
-  }
-  
-  .design-options {
-    grid-template-columns: 1fr;
   }
 }
 
