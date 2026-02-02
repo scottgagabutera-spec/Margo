@@ -940,3 +940,199 @@ textarea:focus, input:focus {
     grid-template-columns: repeat(4, 1fr);
   }
 }
+
+/* ===== ANALYTICS MODAL ===== */
+.analytics-modal .modal-content {
+  max-width: 600px;
+}
+
+.analytics-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gold);
+  font-family: 'Playfair Display', serif;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.activity-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.activity-section h4 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.activity-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.activity-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.activity-item.correct {
+  border-color: var(--success);
+  background: rgba(76, 175, 80, 0.05);
+}
+
+.activity-item.incorrect {
+  border-color: var(--error);
+  background: rgba(244, 67, 54, 0.05);
+}
+
+.activity-guess {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.activity-result {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.activity-result.correct {
+  color: var(--success);
+}
+
+.activity-result.incorrect {
+  color: var(--error);
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.activity-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.activity-link {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.activity-link:hover {
+  border-color: var(--gold);
+}
+
+/* ===== POSTER MODAL ===== */
+.poster-sizes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.poster-size-btn {
+  padding: 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.poster-size-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.poster-size-btn.active {
+  background: var(--gold);
+  color: #000;
+  border-color: var(--gold);
+}
+
+.poster-preview {
+  margin-top: 20px;
+  text-align: center;
+  padding: 20px;
+  background: var(--bg-elevated);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.poster-preview canvas {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.hint-small {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: -12px 0 8px 0;
+}
+
+/* ===== GUESS ATTEMPTS COUNTER ===== */
+.attempts-remaining {
+  text-align: center;
+  padding: 12px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: var(--gold);
+}
