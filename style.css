@@ -444,12 +444,12 @@ body.modal-open {
 }
 
 .modal-body {
-  padding: 18px 20px;
+  padding: 16px 18px;
   overflow-y: auto;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .modal-body::-webkit-scrollbar {
@@ -466,12 +466,12 @@ body.modal-open {
 }
 
 .modal-footer {
-  padding: 18px 20px;
+  padding: 16px 18px;
   border-top: 2px solid var(--border);
   background: var(--bg-elevated);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   flex-shrink: 0;
 }
 
@@ -521,18 +521,18 @@ textarea:focus, input:focus {
 }
 
 .hint {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   font-style: italic;
-  margin: -8px 0;
-  line-height: 1.4;
+  margin: -6px 0;
+  line-height: 1.3;
 }
 
 .hint-small {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-secondary);
   font-style: italic;
-  margin: -10px 0 8px 0;
+  margin: -8px 0 6px 0;
 }
 
 /* ===== STREAMING SECTION ===== */
@@ -715,51 +715,54 @@ textarea:focus, input:focus {
   box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
 }
 
-/* ===== LYRIC DISPLAY - COMPACT ===== */
+/* ===== LYRIC DISPLAY - MORE COMPACT ===== */
 .lyric-display {
   font-family: 'Playfair Display', serif;
   font-style: italic;
-  font-size: 1.15rem;
-  line-height: 1.7;
+  font-size: 1.05rem;
+  line-height: 1.6;
   text-align: center;
-  padding: 18px 16px;
+  padding: 14px;
   background: var(--bg-elevated);
   border: 2px solid var(--border);
-  border-radius: 14px;
+  border-radius: 12px;
   color: var(--text);
   letter-spacing: 0.3px;
   position: relative;
+  max-height: 120px;
+  overflow-y: auto;
 }
 
 .lyric-display::before {
   content: open-quote;
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   color: var(--gold);
   opacity: 0.2;
   position: absolute;
-  top: 8px;
-  left: 10px;
+  top: 6px;
+  left: 8px;
 }
 
 .lyric-display::after {
   content: close-quote;
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   color: var(--gold);
   opacity: 0.2;
   position: absolute;
-  bottom: 8px;
-  right: 10px;
+  bottom: 6px;
+  right: 8px;
 }
 
-/* ===== RESULT MESSAGE - COMPACT ===== */
+/* ===== RESULT MESSAGE - MORE COMPACT ===== */
 .result-message {
-  padding: 14px;
+  padding: 12px;
   border-radius: 10px;
   text-align: center;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   animation: slideIn 0.3s ease;
   letter-spacing: 0.3px;
+  line-height: 1.4;
 }
 
 .result-message.hidden {
@@ -785,16 +788,16 @@ textarea:focus, input:focus {
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateY(-12px); }
+  from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== GUESS LINKS - COMPACT ===== */
+/* ===== GUESS LINKS - MORE COMPACT ===== */
 .guess-links-section {
-  padding: 14px;
+  padding: 12px;
   background: var(--bg-elevated);
   border: 2px solid var(--gold);
-  border-radius: 12px;
+  border-radius: 10px;
   animation: slideIn 0.3s ease;
 }
 
@@ -803,34 +806,34 @@ textarea:focus, input:focus {
 }
 
 .guess-links-title {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--gold);
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   text-align: center;
 }
 
 .guess-links-container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 
 .guess-link {
   display: block;
-  padding: 11px 14px;
+  padding: 9px 12px;
   background: var(--bg-dark);
   border: 2px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   color: var(--gold);
   text-decoration: none;
   font-weight: 700;
   text-align: center;
   transition: all 0.2s ease;
   letter-spacing: 0.4px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .guess-link:hover {
@@ -1163,60 +1166,61 @@ textarea:focus, input:focus {
   background: rgba(212, 175, 55, 0.05);
 }
 
-/* ===== COLOR PICKER - COMPACT ===== */
+/* ===== COLOR PICKER - MORE COMPACT ===== */
 .live-preview-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
+  padding: 16px;
   background: var(--bg-dark);
-  border-radius: 16px;
+  border-radius: 14px;
   border: 2px solid var(--border);
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 #posterPreviewCanvas {
   max-width: 100%;
+  max-height: 280px;
   height: auto;
-  border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
 }
 
 .color-picker-section {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .color-dots {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
-  padding: 14px;
+  padding: 10px;
   background: var(--bg-elevated);
-  border-radius: 14px;
+  border-radius: 12px;
   border: 2px solid var(--border);
 }
 
 .color-dot {
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  border: 3px solid var(--border);
+  border: 2.5px solid var(--border);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
 }
 
 .color-dot:hover {
-  transform: scale(1.12);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  transform: scale(1.1);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.4);
 }
 
 .color-dot.active {
   border-color: var(--gold);
-  border-width: 4px;
-  transform: scale(1.18);
-  box-shadow: 0 8px 20px rgba(212, 175, 55, 0.4);
+  border-width: 3px;
+  transform: scale(1.15);
+  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4);
 }
 
 /* ===== POSTER STEPS ===== */
