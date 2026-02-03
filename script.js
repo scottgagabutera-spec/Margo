@@ -1,4 +1,4 @@
-/* MARGO - Final Enhanced Version with All Improvements */
+/* MARGO - Final Complete Version with All Improvements */
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
@@ -59,6 +59,7 @@ const submitGuess = document.getElementById("submitGuess");
 const revealAnswer = document.getElementById("revealAnswer");
 const guessResult = document.getElementById("guessResult");
 const guessInputFields = document.getElementById("guessInputFields");
+const guessLinksSection = document.getElementById("guessLinksSection");
 
 // Discover modal
 const closeDiscover = document.getElementById("closeDiscover");
@@ -102,6 +103,7 @@ const previewStep = document.getElementById("previewStep");
 const nextToPlatform = document.getElementById("nextToPlatform");
 const backToDesign = document.getElementById("backToDesign");
 const posterCanvas = document.getElementById("posterCanvas");
+const posterPreviewCanvas = document.getElementById("posterPreviewCanvas");
 const downloadPoster = document.getElementById("downloadPoster");
 
 // ===== STATE =====
@@ -111,7 +113,7 @@ let currentPost = null;
 let currentGuessAttempts = 0;
 const MAX_GUESS_ATTEMPTS = 2;
 
-let selectedDesign = "gold-gradient";
+let selectedDesign = "midnight-gold";
 let selectedPosterSize = null;
 
 let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
@@ -129,11 +131,56 @@ posts.forEach(post => {
   }
 });
 
+// ===== MODERN COLOR DESIGNS =====
+const POSTER_DESIGNS = {
+  'midnight-gold': {
+    name: 'Midnight Gold',
+    bg: ['#0d0d0d', '#1a1410', '#0d0d0d'],
+    primary: '#d4af37',
+    secondary: 'rgba(212, 175, 55, 0.7)',
+    text: '#f8f8f8'
+  },
+  'royal-purple': {
+    name: 'Royal Purple',
+    bg: ['#1a0033', '#2d1b4e', '#1a0033'],
+    primary: '#c77dff',
+    secondary: 'rgba(199, 125, 255, 0.7)',
+    text: '#f8f8f8'
+  },
+  'neon-cyan': {
+    name: 'Neon Cyan',
+    bg: ['#0a1420', '#142838', '#0a1420'],
+    primary: '#00e5ff',
+    secondary: 'rgba(0, 229, 255, 0.7)',
+    text: '#f8f8f8'
+  },
+  'sunset-coral': {
+    name: 'Sunset Coral',
+    bg: ['#1a0a0a', '#2d1416', '#1a0a0a'],
+    primary: '#ff6b6b',
+    secondary: 'rgba(255, 107, 107, 0.7)',
+    text: '#f8f8f8'
+  },
+  'emerald-night': {
+    name: 'Emerald Night',
+    bg: ['#051a0d', '#0d2e1a', '#051a0d'],
+    primary: '#50fa7b',
+    secondary: 'rgba(80, 250, 123, 0.7)',
+    text: '#f8f8f8'
+  },
+  'rose-gold': {
+    name: 'Rose Gold',
+    bg: ['#1a0d0f', '#2d1a1f', '#1a0d0f'],
+    primary: '#f4a4c0',
+    secondary: 'rgba(244, 164, 192, 0.7)',
+    text: '#f8f8f8'
+  }
+};
+
 // ===== MODAL SCROLL FIX =====
 function openModal(modal) {
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
-  // Prevent background scroll on mobile
   document.body.style.overflow = 'hidden';
   document.body.style.position = 'fixed';
   document.body.style.width = '100%';
@@ -142,7 +189,6 @@ function openModal(modal) {
 function closeModal(modal) {
   modal.classList.add("hidden");
   document.body.classList.remove("modal-open");
-  // Restore background scroll
   document.body.style.overflow = '';
   document.body.style.position = '';
   document.body.style.width = '';
@@ -478,6 +524,7 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="viewPost(${index})">View</button>
+          ${hasLinks ? '<button class="feed-action" onclick="openListen(' + index + ')">Listen</button>' : ''}
         </div>
       `;
     } 
@@ -498,6 +545,7 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="openGuess(${index})">Guess</button>
+          <button class="feed-action" onclick="viewPost(${index})">View</button>
         </div>
       `;
     } 
@@ -511,7 +559,8 @@ function renderFeed() {
       `;
       actionsSection = `
         <div class="feed-actions">
-          <button class="feed-action" onclick="openDiscover(${index})">Help</button>
+          <button class="feed-action" onclick="openDiscover(${index})">Help Discover</button>
+          <button class="feed-action" onclick="viewPost(${index})">View</button>
         </div>
       `;
     }
@@ -568,6 +617,10 @@ function openGuess(index) {
   submitGuess.classList.remove("hidden");
   guessInputFields.classList.remove("hidden");
   
+  if (guessLinksSection) {
+    guessLinksSection.classList.add("hidden");
+  }
+  
   const songField = document.querySelector('#guessSongInput');
   const artistField = document.querySelector('#guessArtistInput');
   
@@ -592,6 +645,48 @@ function openGuess(index) {
   guessHint.textContent = `You have ${MAX_GUESS_ATTEMPTS} attempts to guess the ${guessWhat.join(" and ")}!`;
   
   openModal(guessModal);
+}
+
+// ===== SHOW LINKS IN GUESS MODAL (5 SECONDS) =====
+function showGuessLinks() {
+  if (!currentPost || !currentPost.links || !guessLinksSection) return;
+  
+  const hasLinks = currentPost.links.spotify || 
+                   currentPost.links.apple || 
+                   currentPost.links.youtube || 
+                   currentPost.links.soundcloud;
+  
+  if (!hasLinks) return;
+  
+  const linksHTML = [];
+  
+  if (currentPost.links.spotify) {
+    linksHTML.push(`<a href="${currentPost.links.spotify}" target="_blank" class="guess-link">🎵 Spotify</a>`);
+  }
+  if (currentPost.links.apple) {
+    linksHTML.push(`<a href="${currentPost.links.apple}" target="_blank" class="guess-link">🍎 Apple Music</a>`);
+  }
+  if (currentPost.links.youtube) {
+    linksHTML.push(`<a href="${currentPost.links.youtube}" target="_blank" class="guess-link">▶️ YouTube</a>`);
+  }
+  if (currentPost.links.soundcloud) {
+    linksHTML.push(`<a href="${currentPost.links.soundcloud}" target="_blank" class="guess-link">☁️ SoundCloud</a>`);
+  }
+  
+  guessLinksSection.innerHTML = `
+    <div class="guess-links-title">Listen to the song:</div>
+    <div class="guess-links-container">
+      ${linksHTML.join('')}
+    </div>
+  `;
+  guessLinksSection.classList.remove("hidden");
+  
+  // Auto-hide after 5 seconds
+  setTimeout(() => {
+    if (guessLinksSection) {
+      guessLinksSection.classList.add("hidden");
+    }
+  }, 5000);
 }
 
 // ===== SUBMIT GUESS =====
@@ -658,10 +753,13 @@ submitGuess.onclick = () => {
     submitGuess.classList.add("hidden");
     guessInputFields.classList.add("hidden");
     
+    // Show links for 5 seconds if available
+    showGuessLinks();
+    
     setTimeout(() => {
       closeModal(guessModal);
       currentGuessAttempts = 0;
-    }, 2000);
+    }, 5000);
   }
   else if (currentGuessAttempts >= MAX_GUESS_ATTEMPTS) {
     guessResult.className = "result-message error";
@@ -697,10 +795,13 @@ revealAnswer.onclick = () => {
   
   revealAnswer.classList.add("hidden");
   
+  // Show links for 5 seconds if available
+  showGuessLinks();
+  
   setTimeout(() => {
     closeModal(guessModal);
     currentGuessAttempts = 0;
-  }, 2000);
+  }, 5000);
 };
 
 // ===== OPEN DISCOVER MODAL =====
@@ -836,7 +937,6 @@ analyticsBtn.onclick = () => {
   statGuesses.textContent = analytics.guesses.length;
   statHelps.textContent = analytics.helps.length;
   
-  // Render guesses
   if (analytics.guesses.length > 0) {
     guessesSection.classList.remove("hidden");
     guessesList.innerHTML = "";
@@ -860,7 +960,6 @@ analyticsBtn.onclick = () => {
     guessesSection.classList.add("hidden");
   }
   
-  // Render helps - SHOW ALL COMMUNITY ANSWERS WITH LINKS
   if (analytics.helps.length > 0) {
     helpsSection.classList.remove("hidden");
     helpsList.innerHTML = "";
@@ -900,14 +999,98 @@ analyticsBtn.onclick = () => {
   openModal(analyticsModal);
 };
 
-// ===== POSTER DESIGN SELECTION =====
-document.querySelectorAll(".design-btn").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".design-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    selectedDesign = btn.dataset.design;
+// ===== COLOR DOT SELECTION WITH LIVE PREVIEW =====
+document.querySelectorAll(".color-dot").forEach(dot => {
+  dot.onclick = () => {
+    document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+    dot.classList.add("active");
+    selectedDesign = dot.dataset.design;
+    updateLivePreview();
   };
 });
+
+// ===== UPDATE LIVE PREVIEW =====
+function updateLivePreview() {
+  if (!currentPost || !posterPreviewCanvas) return;
+  
+  const ctx = posterPreviewCanvas.getContext('2d');
+  const previewWidth = 320;
+  const previewHeight = 320;
+  
+  posterPreviewCanvas.width = previewWidth;
+  posterPreviewCanvas.height = previewHeight;
+  
+  const colors = POSTER_DESIGNS[selectedDesign];
+  
+  const gradient = ctx.createLinearGradient(0, 0, 0, previewHeight);
+  gradient.addColorStop(0, colors.bg[0]);
+  gradient.addColorStop(0.5, colors.bg[1]);
+  gradient.addColorStop(1, colors.bg[2]);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, previewWidth, previewHeight);
+  
+  const baseFontSize = 14;
+  
+  ctx.fillStyle = colors.primary;
+  ctx.font = `bold ${baseFontSize * 1.4}px serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('MARGO', previewWidth / 2, 45);
+  
+  ctx.fillStyle = colors.text;
+  ctx.font = `italic ${baseFontSize * 1.1}px serif`;
+  const lyricPreview = currentPost.text.length > 35 ? currentPost.text.substring(0, 35) + '...' : currentPost.text;
+  wrapText(ctx, lyricPreview, previewWidth / 2, previewHeight / 2 - 20, previewWidth * 0.8, baseFontSize * 1.6);
+  
+  ctx.fillStyle = colors.primary;
+  ctx.font = `600 ${baseFontSize * 0.9}px sans-serif`;
+  ctx.fillText(`#${currentPost.emotion}`, previewWidth / 2, previewHeight / 2 + 45);
+  
+  ctx.strokeStyle = colors.secondary;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(previewWidth * 0.3, previewHeight / 2 + 65);
+  ctx.lineTo(previewWidth * 0.7, previewHeight / 2 + 65);
+  ctx.stroke();
+  
+  ctx.fillStyle = colors.primary;
+  ctx.font = `bold ${baseFontSize}px serif`;
+  const songTitle = (currentPost.knowledge.song || 'Song').length > 20 ? 
+    (currentPost.knowledge.song || 'Song').substring(0, 20) + '...' : 
+    (currentPost.knowledge.song || 'Song');
+  ctx.fillText(songTitle, previewWidth / 2, previewHeight / 2 + 95);
+  
+  ctx.fillStyle = colors.secondary;
+  ctx.font = `500 ${baseFontSize * 0.85}px sans-serif`;
+  const artistName = (currentPost.knowledge.artist || 'Artist').length > 25 ? 
+    (currentPost.knowledge.artist || 'Artist').substring(0, 25) + '...' : 
+    (currentPost.knowledge.artist || 'Artist');
+  ctx.fillText(artistName, previewWidth / 2, previewHeight / 2 + 115);
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  let testLine = '';
+  let lineArray = [];
+
+  for (let n = 0; n < words.length; n++) {
+    testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+    if (testWidth > maxWidth && n > 0) {
+      lineArray.push(line);
+      line = words[n] + ' ';
+    } else {
+      line = testLine;
+    }
+  }
+  lineArray.push(line);
+  
+  const startY = y - ((lineArray.length - 1) * lineHeight) / 2;
+  for (let k = 0; k < lineArray.length; k++) {
+    ctx.fillText(lineArray[k], x, startY + (k * lineHeight));
+  }
+}
 
 nextToPlatform.onclick = () => {
   designStep.classList.remove("active");
@@ -930,7 +1113,7 @@ document.querySelectorAll(".platform-btn").forEach(btn => {
   };
 });
 
-// ===== POSTER GENERATION WITH DESIGN OPTIONS =====
+// ===== POSTER GENERATION =====
 function generatePoster(size, design) {
   if (!currentPost) return;
   
@@ -942,54 +1125,14 @@ function generatePoster(size, design) {
     'pinterest': { width: 1000, height: 1500 }
   };
   
-  const designs = {
-    'gold-gradient': {
-      bg: ['#1f1812', '#2d2115', '#1f1812'],
-      primary: '#d4af37',
-      secondary: 'rgba(212, 175, 55, 0.8)',
-      text: '#f5f5f5'
-    },
-    'dark-minimal': {
-      bg: ['#0a0a0a', '#1a1a1a', '#0a0a0a'],
-      primary: '#ffffff',
-      secondary: 'rgba(255, 255, 255, 0.6)',
-      text: '#f5f5f5'
-    },
-    'vibrant-purple': {
-      bg: ['#1a0a2e', '#3d1e6d', '#1a0a2e'],
-      primary: '#b565d8',
-      secondary: 'rgba(181, 101, 216, 0.8)',
-      text: '#f5f5f5'
-    },
-    'ocean-blue': {
-      bg: ['#0a1929', '#1e3a5f', '#0a1929'],
-      primary: '#4fc3f7',
-      secondary: 'rgba(79, 195, 247, 0.8)',
-      text: '#f5f5f5'
-    },
-    'sunset-orange': {
-      bg: ['#2e1a0a', '#5f3a1e', '#2e1a0a'],
-      primary: '#ff9800',
-      secondary: 'rgba(255, 152, 0, 0.8)',
-      text: '#f5f5f5'
-    },
-    'forest-green': {
-      bg: ['#0a2e1a', '#1e5f3a', '#0a2e1a'],
-      primary: '#66bb6a',
-      secondary: 'rgba(102, 187, 106, 0.8)',
-      text: '#f5f5f5'
-    }
-  };
-  
   const dims = sizes[size];
-  const colors = designs[design];
+  const colors = POSTER_DESIGNS[design];
   const canvas = posterCanvas;
   const ctx = canvas.getContext('2d');
   
   canvas.width = dims.width;
   canvas.height = dims.height;
   
-  // Background gradient
   const gradient = ctx.createLinearGradient(0, 0, 0, dims.height);
   gradient.addColorStop(0, colors.bg[0]);
   gradient.addColorStop(0.5, colors.bg[1]);
@@ -997,70 +1140,35 @@ function generatePoster(size, design) {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, dims.width, dims.height);
   
-  const baseFontSize = dims.width * 0.04;
+  const baseFontSize = dims.width * 0.038;
   
-  // MARGO header
   ctx.fillStyle = colors.primary;
-  ctx.font = `bold ${baseFontSize * 1.2}px serif`;
+  ctx.font = `bold ${baseFontSize * 1.5}px serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('MARGO', dims.width / 2, dims.height * 0.08);
+  ctx.fillText('MARGO', dims.width / 2, dims.height * 0.12);
   
-  // Lyric
   ctx.fillStyle = colors.text;
-  ctx.font = `italic ${baseFontSize * 1.3}px serif`;
+  ctx.font = `italic ${baseFontSize * 1.4}px serif`;
+  wrapText(ctx, currentPost.text, dims.width / 2, dims.height * 0.42, dims.width * 0.82, baseFontSize * 2.2);
   
-  const maxWidth = dims.width * 0.85;
-  const lineHeight = baseFontSize * 2;
-  const words = currentPost.text.split(' ');
-  let line = '';
-  let y = dims.height * 0.35;
-  
-  for (let i = 0; i < words.length; i++) {
-    const testLine = line + words[i] + ' ';
-    const metrics = ctx.measureText(testLine);
-    
-    if (metrics.width > maxWidth && i > 0) {
-      ctx.fillText(line, dims.width / 2, y);
-      line = words[i] + ' ';
-      y += lineHeight;
-    } else {
-      line = testLine;
-    }
-  }
-  ctx.fillText(line, dims.width / 2, y);
-  
-  // Emotion
-  y += baseFontSize * 2.5;
   ctx.fillStyle = colors.primary;
-  ctx.font = `600 ${baseFontSize * 0.85}px sans-serif`;
-  ctx.fillText(`#${currentPost.emotion}`, dims.width / 2, y);
+  ctx.font = `600 ${baseFontSize}px sans-serif`;
+  ctx.fillText(`#${currentPost.emotion}`, dims.width / 2, dims.height * 0.65);
   
-  // Divider
-  y += baseFontSize * 1.5;
   ctx.strokeStyle = colors.secondary;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(dims.width * 0.3, y);
-  ctx.lineTo(dims.width * 0.7, y);
+  ctx.moveTo(dims.width * 0.3, dims.height * 0.7);
+  ctx.lineTo(dims.width * 0.7, dims.height * 0.7);
   ctx.stroke();
   
-  // Song title
-  y += baseFontSize * 2;
   ctx.fillStyle = colors.primary;
-  ctx.font = `bold ${baseFontSize * 1.1}px serif`;
+  ctx.font = `bold ${baseFontSize * 1.2}px serif`;
+  ctx.fillText(currentPost.knowledge.song || 'Unknown Song', dims.width / 2, dims.height * 0.8);
   
-  const songTitle = currentPost.knowledge.song || 'Unknown Song';
-  const songMetrics = ctx.measureText(songTitle);
-  if (songMetrics.width > maxWidth) {
-    ctx.font = `bold ${baseFontSize * 0.9}px serif`;
-  }
-  ctx.fillText(songTitle, dims.width / 2, y);
-  
-  // Artist
-  y += baseFontSize * 1.5;
   ctx.fillStyle = colors.secondary;
-  ctx.font = `500 ${baseFontSize * 0.85}px sans-serif`;
-  ctx.fillText(currentPost.knowledge.artist || 'Unknown Artist', dims.width / 2, y);
+  ctx.font = `500 ${baseFontSize}px sans-serif`;
+  ctx.fillText(currentPost.knowledge.artist || 'Unknown Artist', dims.width / 2, dims.height * 0.87);
 }
 
 downloadPoster.onclick = () => {
@@ -1074,10 +1182,12 @@ downloadPoster.onclick = () => {
   showToast("Poster downloaded!");
 };
 
-// ===== SHARE POSTER BUTTON =====
 sharePosterBtn.onclick = () => {
   closeModal(postcardModal);
   resetPosterModal();
+  setTimeout(() => {
+    updateLivePreview();
+  }, 100);
   openModal(sharePosterModal);
 };
 
@@ -1086,11 +1196,11 @@ function resetPosterModal() {
   platformStep.classList.remove("active");
   previewStep.classList.remove("active");
   downloadPoster.classList.add("hidden");
-  selectedDesign = "gold-gradient";
+  selectedDesign = "midnight-gold";
   selectedPosterSize = null;
   
-  document.querySelectorAll(".design-btn").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".design-btn")[0].classList.add("active");
+  document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+  document.querySelectorAll(".color-dot")[0].classList.add("active");
 }
 
 // ===== TOAST NOTIFICATION =====
@@ -1112,7 +1222,7 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Enhanced loaded. Posts:", posts.length);
+console.log("MARGO Final loaded. Posts:", posts.length);
 
 window.addEventListener('load', () => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -1128,4 +1238,3 @@ window.addEventListener('load', () => {
     }
   }
 });
-
