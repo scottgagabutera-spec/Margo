@@ -150,6 +150,7 @@
         <input id="guessArtistInput" placeholder="Artist" class="guess-field"/>
       </div>
       <div id="guessResult" class="result-message hidden"></div>
+      <div id="guessLinksSection" class="guess-links-section hidden"></div>
     </div>
     <div class="modal-footer">
       <button id="submitGuess" class="primary-btn full">Submit Guess</button>
@@ -213,7 +214,7 @@
   </div>
 </div>
 
-<!-- POSTCARD MODAL - VIEW POST -->
+<!-- POSTCARD MODAL -->
 <div id="postcardModal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
@@ -236,7 +237,7 @@
   </div>
 </div>
 
-<!-- ANALYTICS MODAL - UPDATED WITH HELP ANSWERS -->
+<!-- ANALYTICS MODAL -->
 <div id="analyticsModal" class="modal hidden">
   <div class="modal-content analytics-modal">
     <div class="modal-header">
@@ -272,7 +273,7 @@
   </div>
 </div>
 
-<!-- SHARE POSTER MODAL - DESIGN + PLATFORM SELECTION -->
+<!-- SHARE POSTER MODAL - MODERN VERSION -->
 <div id="sharePosterModal" class="modal hidden">
   <div class="modal-content poster-modal">
     <div class="modal-header">
@@ -280,39 +281,30 @@
       <button id="closeSharePoster" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-      <!-- Step 1: Choose Design -->
+      <!-- Step 1: Design with Live Preview -->
       <div id="designStep" class="poster-step active">
-        <label>Choose Design Style</label>
-        <div class="design-options">
-          <button class="design-btn active" data-design="gold-gradient">
-            <div class="design-preview gold-gradient-preview"></div>
-            <span class="design-name">Classic Gold</span>
-          </button>
-          <button class="design-btn" data-design="dark-minimal">
-            <div class="design-preview dark-minimal-preview"></div>
-            <span class="design-name">Dark Minimal</span>
-          </button>
-          <button class="design-btn" data-design="vibrant-purple">
-            <div class="design-preview vibrant-purple-preview"></div>
-            <span class="design-name">Vibrant Purple</span>
-          </button>
-          <button class="design-btn" data-design="ocean-blue">
-            <div class="design-preview ocean-blue-preview"></div>
-            <span class="design-name">Ocean Blue</span>
-          </button>
-          <button class="design-btn" data-design="sunset-orange">
-            <div class="design-preview sunset-orange-preview"></div>
-            <span class="design-name">Sunset Orange</span>
-          </button>
-          <button class="design-btn" data-design="forest-green">
-            <div class="design-preview forest-green-preview"></div>
-            <span class="design-name">Forest Green</span>
-          </button>
+        <!-- Live Preview -->
+        <div class="live-preview-container">
+          <canvas id="posterPreviewCanvas"></canvas>
         </div>
-        <button id="nextToPlatform" class="primary-btn full">Continue</button>
+        
+        <!-- Color Picker - Always Visible -->
+        <div class="color-picker-section">
+          <label>Choose Color</label>
+          <div class="color-dots">
+            <button class="color-dot active" data-design="midnight-gold" style="background: linear-gradient(135deg, #0d0d0d, #d4af37);" title="Midnight Gold"></button>
+            <button class="color-dot" data-design="royal-purple" style="background: linear-gradient(135deg, #1a0033, #c77dff);" title="Royal Purple"></button>
+            <button class="color-dot" data-design="neon-cyan" style="background: linear-gradient(135deg, #0a1420, #00e5ff);" title="Neon Cyan"></button>
+            <button class="color-dot" data-design="sunset-coral" style="background: linear-gradient(135deg, #1a0a0a, #ff6b6b);" title="Sunset Coral"></button>
+            <button class="color-dot" data-design="emerald-night" style="background: linear-gradient(135deg, #051a0d, #50fa7b);" title="Emerald Night"></button>
+            <button class="color-dot" data-design="rose-gold" style="background: linear-gradient(135deg, #1a0d0f, #f4a4c0);" title="Rose Gold"></button>
+          </div>
+        </div>
+        
+        <button id="nextToPlatform" class="primary-btn full">Continue to Platform</button>
       </div>
 
-      <!-- Step 2: Choose Platform -->
+      <!-- Step 2: Platform -->
       <div id="platformStep" class="poster-step">
         <label>Choose Platform</label>
         <div class="platform-options">
@@ -350,15 +342,15 @@
         <button id="backToDesign" class="secondary-btn full">Back</button>
       </div>
 
-      <!-- Step 3: Preview & Download -->
+      <!-- Step 3: Final Preview -->
       <div id="previewStep" class="poster-step">
         <div class="poster-preview">
           <canvas id="posterCanvas"></canvas>
         </div>
       </div>
     </div>
-    <div class="modal-footer" id="posterFooter">
-      <button id="downloadPoster" class="primary-btn full hidden">Download</button>
+    <div class="modal-footer">
+      <button id="downloadPoster" class="primary-btn full hidden">Download Poster</button>
     </div>
   </div>
 </div>
@@ -366,4 +358,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-
