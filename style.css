@@ -1,4 +1,4 @@
-/* MARGO - Modern 2025 Design */
+/* MARGO - Improved Design with Better Postcard & Partial Feedback */
 
 * { 
   box-sizing: border-box; 
@@ -20,6 +20,7 @@
   --border-subtle: #2a2a2a;
   --success: #50fa7b;
   --error: #ff6b6b;
+  --partial: #ffa500;
 }
 
 body {
@@ -216,7 +217,7 @@ button:active {
   font-size: 1.2rem;
 }
 
-/* ===== FEED LIST - BETTER MOBILE BORDERS ===== */
+/* ===== FEED LIST ===== */
 .feed-list {
   padding: 24px 20px;
   display: grid;
@@ -740,7 +741,7 @@ textarea:focus, input:focus {
   opacity: 0.25;
 }
 
-/* ===== RESULT MESSAGE ===== */
+/* ===== RESULT MESSAGE - IMPROVED WITH PARTIAL ===== */
 .result-message {
   padding: 18px;
   border-radius: 12px;
@@ -765,6 +766,12 @@ textarea:focus, input:focus {
   background: rgba(255, 107, 107, 0.12);
   border: 2px solid var(--error);
   color: var(--error);
+}
+
+.result-message.partial {
+  background: rgba(255, 165, 0, 0.12);
+  border: 2px solid var(--partial);
+  color: var(--partial);
 }
 
 @keyframes slideIn {
@@ -848,7 +855,7 @@ textarea:focus, input:focus {
   transform: translateX(4px);
 }
 
-/* ===== POSTCARD ===== */
+/* ===== IMPROVED POSTCARD - BETTER LAYOUT ===== */
 .postcard {
   background: linear-gradient(135deg, #0d0d0d 0%, #1a1410 50%, #0d0d0d 100%);
   border-radius: 24px;
@@ -858,6 +865,9 @@ textarea:focus, input:focus {
     0 24px 70px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(212, 175, 55, 0.1);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
 }
 
 .postcard::before {
@@ -875,26 +885,27 @@ textarea:focus, input:focus {
   background: linear-gradient(135deg, var(--gold) 0%, #f0c24a 100%);
   color: #000;
   text-align: center;
-  padding: 18px;
+  padding: 16px;
   font-family: 'Playfair Display', serif;
   font-weight: 700;
-  font-size: 0.9rem;
-  letter-spacing: 6px;
+  font-size: 0.85rem;
+  letter-spacing: 5px;
   text-transform: uppercase;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
   position: relative;
+  flex-shrink: 0;
 }
 
 .postcard-lyric {
   font-family: 'Playfair Display', serif;
   font-style: italic;
-  font-size: 1.5rem;
-  line-height: 1.9;
+  font-size: 1.3rem;
+  line-height: 1.8;
   text-align: center;
-  padding: 48px 36px;
+  padding: 32px 28px;
   color: #f8f8f8;
   position: relative;
-  min-height: 200px;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -904,43 +915,45 @@ textarea:focus, input:focus {
 .postcard-lyric::before {
   content: open-quote;
   position: absolute;
-  top: 24px;
-  left: 24px;
-  font-size: 4.5rem;
+  top: 16px;
+  left: 16px;
+  font-size: 3.5rem;
   color: var(--gold);
-  opacity: 0.12;
+  opacity: 0.15;
   font-family: 'Playfair Display', serif;
 }
 
 .postcard-lyric::after {
   content: close-quote;
   position: absolute;
-  bottom: 24px;
-  right: 24px;
-  font-size: 4.5rem;
+  bottom: 16px;
+  right: 16px;
+  font-size: 3.5rem;
   color: var(--gold);
-  opacity: 0.12;
+  opacity: 0.15;
   font-family: 'Playfair Display', serif;
 }
 
 .postcard-emotion {
   text-align: center;
-  padding: 18px;
+  padding: 14px;
   background: rgba(212, 175, 55, 0.1);
   border-top: 1px solid rgba(212, 175, 55, 0.2);
   border-bottom: 1px solid rgba(212, 175, 55, 0.2);
   font-weight: 700;
   color: var(--gold);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
+  flex-shrink: 0;
 }
 
 .postcard-song {
   text-align: center;
-  padding: 32px 36px;
-  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.5) 100%);
+  padding: 24px 28px 28px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
   position: relative;
+  flex-shrink: 0;
 }
 
 .postcard-song::before {
@@ -949,7 +962,7 @@ textarea:focus, input:focus {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 70px;
+  width: 60px;
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
@@ -957,17 +970,19 @@ textarea:focus, input:focus {
 .postcard-song div:first-child {
   font-family: 'Playfair Display', serif;
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: var(--gold);
-  margin-bottom: 10px;
-  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  word-wrap: break-word;
 }
 
 .postcard-song div:last-child {
-  font-size: 1rem;
-  color: rgba(212, 175, 55, 0.65);
+  font-size: 0.95rem;
+  color: rgba(212, 175, 55, 0.7);
   font-weight: 500;
   letter-spacing: 0.3px;
+  word-wrap: break-word;
 }
 
 /* ===== TOAST ===== */
@@ -1136,7 +1151,7 @@ textarea:focus, input:focus {
   background: rgba(212, 175, 55, 0.05);
 }
 
-/* ===== MODERN COLOR PICKER ===== */
+/* ===== COLOR PICKER ===== */
 .live-preview-container {
   display: flex;
   justify-content: center;
@@ -1290,7 +1305,6 @@ textarea:focus, input:focus {
     height: 48px;
   }
   
-  /* Enhanced mobile borders */
   .feed-card {
     border-width: 3px;
     box-shadow: 
@@ -1300,6 +1314,19 @@ textarea:focus, input:focus {
   
   .modal-content {
     border-radius: 20px;
+  }
+  
+  .postcard-lyric {
+    font-size: 1.15rem;
+    padding: 28px 20px;
+  }
+  
+  .postcard-song div:first-child {
+    font-size: 1rem;
+  }
+  
+  .postcard-song div:last-child {
+    font-size: 0.85rem;
   }
 }
 
