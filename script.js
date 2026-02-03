@@ -1222,6 +1222,7 @@ analyticsBtn.onclick = () => {
       guessesSection.classList.add("hidden");
     }
     
+    // FIXED: Hide helps section for guess mode
     helpsSection.classList.add("hidden");
   } 
   else if (currentPost.mode === 'discover') {
@@ -1270,6 +1271,7 @@ analyticsBtn.onclick = () => {
       helpsSection.classList.add("hidden");
     }
     
+    // FIXED: Hide guesses section for discover mode
     guessesSection.classList.add("hidden");
   } 
   else {
