@@ -334,7 +334,8 @@ closeComposer.onclick = () => {
 
 closeGuess.onclick = () => {
   closeModal(guessModal);
-  currentGuessAttempts = 0;
+  // FIXED: Reset the modal state completely when closing
+  resetGuessModal();
 };
 
 closeDiscover.onclick = () => {
@@ -576,6 +577,25 @@ function resetComposer() {
   guessArtistCheck.checked = true;
 }
 
+// ===== RESET GUESS MODAL - NEW FUNCTION =====
+function resetGuessModal() {
+  // Clear input fields
+  guessSongInput.value = "";
+  guessArtistInput.value = "";
+  
+  // Hide result message
+  guessResult.classList.add("hidden");
+  
+  // Hide links section
+  if (guessLinksSection) {
+    guessLinksSection.classList.add("hidden");
+  }
+  
+  // Reset current post reference
+  currentPost = null;
+  currentGuessAttempts = 0;
+}
+
 // ===== RENDER FEED - FIXED =====
 function renderFeed() {
   feedList.innerHTML = "";
@@ -704,7 +724,7 @@ function trackView(postId) {
   }
 }
 
-// ===== GET USER GUESS STATE =====
+// ===== GET USER GUESS STATE - FIXED =====
 function getUserGuessState(postId) {
   if (!userGuessStates[postId]) {
     userGuessStates[postId] = {
@@ -722,15 +742,17 @@ function saveUserGuessState(postId, state) {
   localStorage.setItem("margoUserGuessStates", JSON.stringify(userGuessStates));
 }
 
-// ===== OPEN GUESS MODAL =====
+// ===== OPEN GUESS MODAL - FIXED =====
 function openGuess(index) {
   currentPost = posts[index];
   
   trackView(currentPost.id);
   
+  // FIXED: Always get fresh state from localStorage when opening modal
   const userState = getUserGuessState(currentPost.id);
   currentGuessAttempts = userState.attempts;
   
+  // FIXED: Clear the modal state first
   guessLyric.textContent = currentPost.text;
   guessSongInput.value = "";
   guessArtistInput.value = "";
@@ -742,6 +764,7 @@ function openGuess(index) {
   const guessSong = currentPost.guessConfig?.guessSong ?? true;
   const guessArtist = currentPost.guessConfig?.guessArtist ?? true;
   
+  // Show/hide appropriate fields
   if (guessSong) {
     songField.style.display = 'block';
   } else {
@@ -754,9 +777,12 @@ function openGuess(index) {
     artistField.style.display = 'none';
   }
   
+  // FIXED: Determine what state to show based on saved user state
   if (userState.revealed || userState.correct) {
+    // User has already revealed or guessed correctly - show answer
     showAnswerState(userState);
   } else if (userState.attempts >= MAX_GUESS_ATTEMPTS) {
+    // User has exhausted attempts - show reveal button
     guessInputFields.classList.add("hidden");
     submitGuess.classList.add("hidden");
     revealAnswer.classList.remove("hidden");
@@ -767,6 +793,7 @@ function openGuess(index) {
       guessLinksSection.classList.add("hidden");
     }
   } else {
+    // User can still attempt guesses - show input fields
     guessInputFields.classList.remove("hidden");
     submitGuess.classList.remove("hidden");
     revealAnswer.classList.add("hidden");
@@ -1514,5 +1541,3 @@ window.addEventListener('load', () => {
     }
   }
 });
-
-
