@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition - FIXED ANALYTICS + SCROLL PRESERVATION */
+* MARGO - Firebase Real-Time Sync Edition - FIXED ANALYTICS */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -26,9 +26,6 @@ try {
   console.warn('⚠ Firebase not configured. Using localStorage only.', error.message);
   isFirebaseEnabled = false;
 }
-
-// ===== SCROLL POSITION PRESERVATION =====
-let feedScrollPosition = 0;
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
@@ -249,23 +246,8 @@ const POSTER_DESIGNS = {
   }
 };
 
-// ===== MODAL SCROLL FIX + SCROLL PRESERVATION =====
-function saveScrollPosition() {
-  if (feed && feed.classList.contains('active')) {
-    feedScrollPosition = window.scrollY || document.documentElement.scrollTop;
-  }
-}
-
-function restoreScrollPosition() {
-  if (feed && feed.classList.contains('active')) {
-    requestAnimationFrame(() => {
-      window.scrollTo(0, feedScrollPosition);
-    });
-  }
-}
-
+// ===== MODAL SCROLL FIX =====
 function openModal(modal) {
-  saveScrollPosition(); // Save position before opening modal
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
   document.body.style.overflow = 'hidden';
@@ -279,28 +261,57 @@ function closeModal(modal) {
   document.body.style.overflow = '';
   document.body.style.position = '';
   document.body.style.width = '';
+}
+
+// ===== SWIPE NAVIGATION =====
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+
+const handleSwipe = () => {
+  const diffX = touchStartX - touchEndX;
+  const diffY = Math.abs(touchStartY - touchEndY);
   
-  // Restore scroll position after a tiny delay
-  setTimeout(restoreScrollPosition, 50);
-}
-
-// Continuously track scroll position on feed
-if (feed) {
-  window.addEventListener('scroll', function() {
-    if (feed.classList.contains('active')) {
-      feedScrollPosition = window.scrollY || document.documentElement.scrollTop;
+  if (Math.abs(diffX) > diffY && Math.abs(diffX) > 100) {
+    if (diffX > 0 && landing.classList.contains("active")) {
+      landing.classList.remove("active");
+      feed.classList.add("active");
+      renderFeed();
+    } else if (diffX < 0 && feed.classList.contains("active")) {
+      feed.classList.remove("active");
+      landing.classList.add("active");
     }
-  }, { passive: true });
-}
+  }
+};
 
-// ===== TAP NAVIGATION (SWIPE REMOVED) =====
-// Tap to explore now handled by enterBtn click event
+landing.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+});
+
+landing.addEventListener('touchend', e => {
+  touchEndX = e.changedTouches[0].clientX;
+  touchEndY = e.changedTouches[0].clientY;
+  handleSwipe();
+});
+
+feed.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+});
+
+feed.addEventListener('touchend', e => {
+  touchEndX = e.changedTouches[0].clientX;
+  touchEndY = e.changedTouches[0].clientY;
+  handleSwipe();
+});
 
 // ===== NAVIGATION =====
 enterBtn.onclick = () => {
   landing.classList.remove("active");
-  feed.classList.add("active");
-  renderFeed();
+  openModal(composer);
+  textInput.focus();
 };
 
 backBtn.onclick = () => {
@@ -364,8 +375,11 @@ modeBtns.forEach(btn => {
     guessInputs.classList.remove("active");
     discoverInputs.classList.remove("active");
 
-    // All modes now show streaming section
-    streamingSection.style.display = "block";
+    if (currentMode === "discover") {
+      streamingSection.style.display = "none";
+    } else {
+      streamingSection.style.display = "block";
+    }
 
     if (currentMode === "share") shareInputs.classList.add("active");
     if (currentMode === "guess") guessInputs.classList.add("active");
@@ -398,7 +412,7 @@ postBtn.onclick = async () => {
     return;
   }
 
-  // Initialize with default knowledge structure and links for ALL modes
+  // Initialize with default knowledge structure
   let post = {
     text,
     emotion: selectedEmotion,
@@ -408,12 +422,12 @@ postBtn.onclick = async () => {
       artist: "Unknown Artist"
     },
     guessConfig: null,
-    links: {
+    links: currentMode !== "discover" ? {
       spotify: spotifyLink.value.trim() || null,
       apple: appleLink.value.trim() || null,
       youtube: youtubeLink.value.trim() || null,
       soundcloud: soundcloudLink.value.trim() || null
-    },
+    } : null,
     timestamp: firebase.database.ServerValue.TIMESTAMP
   };
 
@@ -459,7 +473,7 @@ postBtn.onclick = async () => {
     }
 
     if (currentMode === "discover") {
-      // Set values for discover mode
+      // Always set default values for discover mode
       post.knowledge = {
         song: discoverSongInput.value.trim() || "Unknown Song",
         artist: discoverArtistInput.value.trim() || "Unknown Artist"
@@ -1079,10 +1093,10 @@ function openListen(index) {
   listenLinks.innerHTML = "";
   
   const platforms = [
-    { name: 'Spotify', key: 'spotify', emoji: '🎵' },
-    { name: 'Apple Music', key: 'apple', emoji: '🍎' },
-    { name: 'YouTube', key: 'youtube', emoji: '▶️' },
-    { name: 'SoundCloud', key: 'soundcloud', emoji: '☁️' }
+    { name: 'Spotify', key: 'spotify' },
+    { name: 'Apple Music', key: 'apple' },
+    { name: 'YouTube', key: 'youtube' },
+    { name: 'SoundCloud', key: 'soundcloud' }
   ];
   
   let hasAnyLink = false;
@@ -1094,7 +1108,7 @@ function openListen(index) {
       link.className = "listen-link";
       link.href = currentPost.links[platform.key];
       link.target = "_blank";
-      link.innerHTML = `<span>${platform.emoji} ${platform.name}</span>`;
+      link.innerHTML = `<span>${platform.name}</span>`;
       listenLinks.appendChild(link);
     }
   });
@@ -1509,7 +1523,7 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded - ANALYTICS FIXED + SCROLL PRESERVATION");
+console.log("MARGO Firebase Edition loaded - ANALYTICS FIXED");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
 
