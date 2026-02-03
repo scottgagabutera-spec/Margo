@@ -1135,6 +1135,7 @@ analyticsBtn.onclick = () => {
   
   const analytics = postAnalytics[currentPost.id];
   
+  // Always show views
   statViews.textContent = analytics.views || 0;
   
   // Handle Firebase array format
@@ -1143,64 +1144,93 @@ analyticsBtn.onclick = () => {
   const helps = analytics.helps ? 
     (Array.isArray(analytics.helps) ? analytics.helps : Object.values(analytics.helps)) : [];
   
-  statGuesses.textContent = guesses.length;
-  statHelps.textContent = helps.length;
+  // Show/hide stats based on post mode
+  const guessesStatCard = document.querySelector('.stat-card:nth-child(2)');
+  const helpsStatCard = document.querySelector('.stat-card:nth-child(3)');
   
-  if (guesses.length > 0) {
-    guessesSection.classList.remove("hidden");
-    guessesList.innerHTML = "";
+  if (currentPost.mode === 'guess') {
+    // Show guesses stat, hide helps stat
+    guessesStatCard.style.display = 'block';
+    helpsStatCard.style.display = 'none';
+    statGuesses.textContent = guesses.length;
     
-    guesses.forEach(guess => {
-      const item = document.createElement("div");
-      item.className = `activity-item ${guess.correct ? 'correct' : 'incorrect'}`;
-      item.innerHTML = `
-        <div class="activity-guess">
-          ${guess.song ? `Song: ${guess.song}` : ''}
-          ${guess.artist ? `<br>Artist: ${guess.artist}` : ''}
-        </div>
-        <div class="activity-result ${guess.correct ? 'correct' : 'incorrect'}">
-          ${guess.correct ? 'Correct' : 'Incorrect'}
-        </div>
-        <div class="activity-time">${timeAgo(guess.timestamp)}</div>
-      `;
-      guessesList.appendChild(item);
-    });
-  } else {
-    guessesSection.classList.add("hidden");
-  }
-  
-  if (helps.length > 0) {
-    helpsSection.classList.remove("hidden");
-    helpsList.innerHTML = "";
-    
-    helps.forEach(help => {
-      const item = document.createElement("div");
-      item.className = "activity-item";
+    // Show guesses section if there are any
+    if (guesses.length > 0) {
+      guessesSection.classList.remove("hidden");
+      guessesList.innerHTML = "";
       
-      let linksHTML = '';
-      if (help.links) {
-        const linksList = [];
-        if (help.links.spotify) linksList.push(`<a href="${help.links.spotify}" target="_blank" class="activity-link">Spotify</a>`);
-        if (help.links.apple) linksList.push(`<a href="${help.links.apple}" target="_blank" class="activity-link">Apple Music</a>`);
-        if (help.links.youtube) linksList.push(`<a href="${help.links.youtube}" target="_blank" class="activity-link">YouTube</a>`);
-        if (help.links.soundcloud) linksList.push(`<a href="${help.links.soundcloud}" target="_blank" class="activity-link">SoundCloud</a>`);
+      guesses.forEach(guess => {
+        const item = document.createElement("div");
+        item.className = `activity-item ${guess.correct ? 'correct' : 'incorrect'}`;
+        item.innerHTML = `
+          <div class="activity-guess">
+            ${guess.song ? `Song: ${guess.song}` : ''}
+            ${guess.artist ? `<br>Artist: ${guess.artist}` : ''}
+          </div>
+          <div class="activity-result ${guess.correct ? 'correct' : 'incorrect'}">
+            ${guess.correct ? 'Correct' : 'Incorrect'}
+          </div>
+          <div class="activity-time">${timeAgo(guess.timestamp)}</div>
+        `;
+        guessesList.appendChild(item);
+      });
+    } else {
+      guessesSection.classList.add("hidden");
+    }
+    
+    // Always hide helps section for guess posts
+    helpsSection.classList.add("hidden");
+  } 
+  else if (currentPost.mode === 'discover') {
+    // Show helps stat, hide guesses stat
+    guessesStatCard.style.display = 'none';
+    helpsStatCard.style.display = 'block';
+    statHelps.textContent = helps.length;
+    
+    // Show helps section if there are any
+    if (helps.length > 0) {
+      helpsSection.classList.remove("hidden");
+      helpsList.innerHTML = "";
+      
+      helps.forEach(help => {
+        const item = document.createElement("div");
+        item.className = "activity-item";
         
-        if (linksList.length > 0) {
-          linksHTML = `<div class="activity-links">${linksList.join('')}</div>`;
+        let linksHTML = '';
+        if (help.links) {
+          const linksList = [];
+          if (help.links.spotify) linksList.push(`<a href="${help.links.spotify}" target="_blank" class="activity-link">Spotify</a>`);
+          if (help.links.apple) linksList.push(`<a href="${help.links.apple}" target="_blank" class="activity-link">Apple Music</a>`);
+          if (help.links.youtube) linksList.push(`<a href="${help.links.youtube}" target="_blank" class="activity-link">YouTube</a>`);
+          if (help.links.soundcloud) linksList.push(`<a href="${help.links.soundcloud}" target="_blank" class="activity-link">SoundCloud</a>`);
+          
+          if (linksList.length > 0) {
+            linksHTML = `<div class="activity-links">${linksList.join('')}</div>`;
+          }
         }
-      }
-      
-      item.innerHTML = `
-        <div class="activity-guess">
-          <strong>Song:</strong> ${help.song}<br>
-          <strong>Artist:</strong> ${help.artist}
-        </div>
-        ${linksHTML}
-        <div class="activity-time">${timeAgo(help.timestamp)}</div>
-      `;
-      helpsList.appendChild(item);
-    });
-  } else {
+        
+        item.innerHTML = `
+          <div class="activity-guess">
+            <strong>Song:</strong> ${help.song}<br>
+            <strong>Artist:</strong> ${help.artist}
+          </div>
+          ${linksHTML}
+          <div class="activity-time">${timeAgo(help.timestamp)}</div>
+        `;
+        helpsList.appendChild(item);
+      });
+    } else {
+      helpsSection.classList.add("hidden");
+    }
+    
+    // Always hide guesses section for discover posts
+    guessesSection.classList.add("hidden");
+  } 
+  else {
+    // Share mode - hide both guess and help stats, only show views
+    guessesStatCard.style.display = 'none';
+    helpsStatCard.style.display = 'none';
+    guessesSection.classList.add("hidden");
     helpsSection.classList.add("hidden");
   }
   
