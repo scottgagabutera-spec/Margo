@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition - FIXED ANALYTICS */
+/* MARGO - Firebase Real-Time Sync Edition - FIXED ANALYTICS + SCROLL PRESERVATION */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -26,6 +26,9 @@ try {
   console.warn('⚠ Firebase not configured. Using localStorage only.', error.message);
   isFirebaseEnabled = false;
 }
+
+// ===== SCROLL POSITION PRESERVATION =====
+let feedScrollPosition = 0;
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
@@ -246,8 +249,23 @@ const POSTER_DESIGNS = {
   }
 };
 
-// ===== MODAL SCROLL FIX =====
+// ===== MODAL SCROLL FIX + SCROLL PRESERVATION =====
+function saveScrollPosition() {
+  if (feed && feed.classList.contains('active')) {
+    feedScrollPosition = window.scrollY || document.documentElement.scrollTop;
+  }
+}
+
+function restoreScrollPosition() {
+  if (feed && feed.classList.contains('active')) {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, feedScrollPosition);
+    });
+  }
+}
+
 function openModal(modal) {
+  saveScrollPosition(); // Save position before opening modal
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
   document.body.style.overflow = 'hidden';
@@ -261,6 +279,18 @@ function closeModal(modal) {
   document.body.style.overflow = '';
   document.body.style.position = '';
   document.body.style.width = '';
+  
+  // Restore scroll position after a tiny delay
+  setTimeout(restoreScrollPosition, 50);
+}
+
+// Continuously track scroll position on feed
+if (feed) {
+  window.addEventListener('scroll', function() {
+    if (feed.classList.contains('active')) {
+      feedScrollPosition = window.scrollY || document.documentElement.scrollTop;
+    }
+  }, { passive: true });
 }
 
 // ===== SWIPE NAVIGATION =====
@@ -1523,7 +1553,7 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded - ANALYTICS FIXED");
+console.log("MARGO Firebase Edition loaded - ANALYTICS FIXED + SCROLL PRESERVATION");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
 
