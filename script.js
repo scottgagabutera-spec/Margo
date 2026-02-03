@@ -333,9 +333,9 @@ closeComposer.onclick = () => {
 };
 
 closeGuess.onclick = () => {
-  closeModal(guessModal);
-  // FIXED: Reset the modal state completely when closing
+  // FIXED: Reset the modal state BEFORE closing
   resetGuessModal();
+  closeModal(guessModal);
 };
 
 closeDiscover.onclick = () => {
@@ -585,11 +585,18 @@ function resetGuessModal() {
   
   // Hide result message
   guessResult.classList.add("hidden");
+  guessResult.innerHTML = ""; // FIXED: Also clear the content
   
   // Hide links section
   if (guessLinksSection) {
     guessLinksSection.classList.add("hidden");
+    guessLinksSection.innerHTML = ""; // FIXED: Clear content
   }
+  
+  // FIXED: Reset button visibility to default state
+  submitGuess.classList.remove("hidden");
+  revealAnswer.classList.add("hidden");
+  guessInputFields.classList.remove("hidden");
   
   // Reset current post reference
   currentPost = null;
