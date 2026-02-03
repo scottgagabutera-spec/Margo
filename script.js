@@ -10,6 +10,17 @@ const firebaseConfig = {
   messagingSenderId: "150183564620",
   appId: "1:150183564620:web:a42de7fef39740b551ebe9"
 };
+
+let isFirebaseEnabled = false;
+let postsRef = null;
+let analyticsRef = null;
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+  postsRef = database.ref('posts');
+  analyticsRef = database.ref('analytics');
+  isFirebaseEnabled = true;
   console.log('✓ Firebase initialized successfully');
 } catch (error) {
   console.warn('⚠ Firebase not configured. Using localStorage only.', error.message);
