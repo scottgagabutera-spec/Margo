@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition */
+/* MARGO - Firebase Real-Time Sync Edition - FIXED */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -395,7 +395,7 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
   };
 });
 
-// ===== CREATE POST =====
+// ===== CREATE POST - FIXED =====
 postBtn.onclick = async () => {
   if (postBtn.disabled) return;
 
@@ -411,11 +411,15 @@ postBtn.onclick = async () => {
     return;
   }
 
+  // Initialize with default knowledge structure
   let post = {
     text,
     emotion: selectedEmotion,
     mode: currentMode,
-    knowledge: {},
+    knowledge: {
+      song: "Unknown Song",
+      artist: "Unknown Artist"
+    },
     guessConfig: null,
     links: currentMode !== "discover" ? {
       spotify: spotifyLink.value.trim() || null,
@@ -468,9 +472,10 @@ postBtn.onclick = async () => {
     }
 
     if (currentMode === "discover") {
+      // Always set default values for discover mode
       post.knowledge = {
-        song: discoverSongInput.value.trim() || null,
-        artist: discoverArtistInput.value.trim() || null
+        song: discoverSongInput.value.trim() || "Unknown Song",
+        artist: discoverArtistInput.value.trim() || "Unknown Artist"
       };
     }
   } catch (err) {
@@ -571,7 +576,7 @@ function resetComposer() {
   guessArtistCheck.checked = true;
 }
 
-// ===== RENDER FEED =====
+// ===== RENDER FEED - FIXED =====
 function renderFeed() {
   feedList.innerHTML = "";
   
@@ -599,11 +604,14 @@ function renderFeed() {
       post.links.soundcloud
     );
     
+    // Ensure knowledge object exists
+    const knowledge = post.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+    
     if (post.mode === "share") {
       songSection = `
         <div class="feed-song">
-          <div class="feed-song-title">${post.knowledge.song}</div>
-          <div class="feed-song-artist">${post.knowledge.artist}</div>
+          <div class="feed-song-title">${knowledge.song}</div>
+          <div class="feed-song-artist">${knowledge.artist}</div>
         </div>
       `;
       actionsSection = `
@@ -635,10 +643,11 @@ function renderFeed() {
       `;
     } 
     else if (post.mode === "discover") {
+      const hasClues = knowledge.song !== "Unknown Song" || knowledge.artist !== "Unknown Artist";
       songSection = `
         <div class="discover-badge">
-          ${post.knowledge.song || post.knowledge.artist ? 
-            'Maybe: ' + (post.knowledge.song || '?') + ' — ' + (post.knowledge.artist || '?') :
+          ${hasClues ? 
+            'Maybe: ' + knowledge.song + ' — ' + knowledge.artist :
             'Help discover this song!'}
         </div>
       `;
@@ -782,11 +791,13 @@ function showAnswerState(userState) {
   submitGuess.classList.add("hidden");
   revealAnswer.classList.add("hidden");
   
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  
   guessResult.className = "result-message success";
   guessResult.innerHTML = `
     <div style="margin-bottom: 10px; font-size: 1.1rem;">✓ Answer</div>
-    <div style="font-size: 0.95rem;"><strong>Song:</strong> ${currentPost.knowledge.song}</div>
-    <div style="font-size: 0.95rem;"><strong>Artist:</strong> ${currentPost.knowledge.artist}</div>
+    <div style="font-size: 0.95rem;"><strong>Song:</strong> ${knowledge.song}</div>
+    <div style="font-size: 0.95rem;"><strong>Artist:</strong> ${knowledge.artist}</div>
   `;
   guessResult.classList.remove("hidden");
   
@@ -846,8 +857,10 @@ submitGuess.onclick = () => {
   
   const guessedSong = guessSongInput.value.trim().toLowerCase();
   const guessedArtist = guessArtistInput.value.trim().toLowerCase();
-  const actualSong = currentPost.knowledge.song.toLowerCase();
-  const actualArtist = currentPost.knowledge.artist.toLowerCase();
+  
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  const actualSong = knowledge.song.toLowerCase();
+  const actualArtist = knowledge.artist.toLowerCase();
   
   const guessSong = currentPost.guessConfig?.guessSong ?? true;
   const guessArtist = currentPost.guessConfig?.guessArtist ?? true;
@@ -907,7 +920,7 @@ submitGuess.onclick = () => {
     guessResult.className = "result-message success";
     guessResult.innerHTML = `
       <div style="margin-bottom: 10px; font-size: 1.1rem;">✓ Correct!</div>
-      <div style="font-size: 0.95rem;">"${currentPost.knowledge.song}" by ${currentPost.knowledge.artist}</div>
+      <div style="font-size: 0.95rem;">"${knowledge.song}" by ${knowledge.artist}</div>
     `;
     
     submitGuess.classList.add("hidden");
@@ -1078,7 +1091,7 @@ function openListen(index) {
   openModal(listenModal);
 }
 
-// ===== VIEW POST (POSTCARD) =====
+// ===== VIEW POST (POSTCARD) - FIXED =====
 function viewPost(index) {
   currentPost = posts[index];
   
@@ -1094,10 +1107,12 @@ function viewPost(index) {
     canSeeSong = userState.correct || userState.revealed;
   }
   
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  
   if (canSeeSong) {
     postcardSong.innerHTML = `
-      <div>${currentPost.knowledge.song || 'Unknown Song'}</div>
-      <div>${currentPost.knowledge.artist || 'Unknown Artist'}</div>
+      <div>${knowledge.song}</div>
+      <div>${knowledge.artist}</div>
     `;
   } else {
     postcardSong.innerHTML = `
@@ -1291,18 +1306,20 @@ function updateLivePreview() {
   ctx.lineTo(previewWidth * 0.7, previewHeight / 2 + 65);
   ctx.stroke();
   
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  
   ctx.fillStyle = colors.primary;
   ctx.font = `bold ${baseFontSize}px serif`;
-  const songTitle = (currentPost.knowledge.song || 'Song').length > 20 ? 
-    (currentPost.knowledge.song || 'Song').substring(0, 20) + '...' : 
-    (currentPost.knowledge.song || 'Song');
+  const songTitle = knowledge.song.length > 20 ? 
+    knowledge.song.substring(0, 20) + '...' : 
+    knowledge.song;
   ctx.fillText(songTitle, previewWidth / 2, previewHeight / 2 + 95);
   
   ctx.fillStyle = colors.secondary;
   ctx.font = `500 ${baseFontSize * 0.85}px sans-serif`;
-  const artistName = (currentPost.knowledge.artist || 'Artist').length > 25 ? 
-    (currentPost.knowledge.artist || 'Artist').substring(0, 25) + '...' : 
-    (currentPost.knowledge.artist || 'Artist');
+  const artistName = knowledge.artist.length > 25 ? 
+    knowledge.artist.substring(0, 25) + '...' : 
+    knowledge.artist;
   ctx.fillText(artistName, previewWidth / 2, previewHeight / 2 + 115);
 }
 
@@ -1401,13 +1418,15 @@ function generatePoster(size, design) {
   ctx.lineTo(dims.width * 0.7, dims.height * 0.7);
   ctx.stroke();
   
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  
   ctx.fillStyle = colors.primary;
   ctx.font = `bold ${baseFontSize * 1.2}px serif`;
-  ctx.fillText(currentPost.knowledge.song || 'Unknown Song', dims.width / 2, dims.height * 0.8);
+  ctx.fillText(knowledge.song, dims.width / 2, dims.height * 0.8);
   
   ctx.fillStyle = colors.secondary;
   ctx.font = `500 ${baseFontSize}px sans-serif`;
-  ctx.fillText(currentPost.knowledge.artist || 'Unknown Artist', dims.width / 2, dims.height * 0.87);
+  ctx.fillText(knowledge.artist, dims.width / 2, dims.height * 0.87);
 }
 
 downloadPoster.onclick = () => {
@@ -1461,7 +1480,7 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded");
+console.log("MARGO Firebase Edition loaded - FIXED VERSION");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
 
