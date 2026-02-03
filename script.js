@@ -1,4 +1,4 @@
-* MARGO - Firebase Real-Time Sync Edition - FIXED ANALYTICS */
+/* MARGO - Firebase Real-Time Sync Edition - FIXED ANALYTICS */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
