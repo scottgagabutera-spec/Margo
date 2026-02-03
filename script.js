@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition */
+/* MARGO - Firebase Real-Time Sync Edition - FIXED */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -395,7 +395,7 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
   };
 });
 
-// ===== CREATE POST =====
+// ===== CREATE POST - FIXED =====
 postBtn.onclick = async () => {
   if (postBtn.disabled) return;
 
@@ -411,11 +411,15 @@ postBtn.onclick = async () => {
     return;
   }
 
+  // Initialize with default knowledge structure
   let post = {
     text,
     emotion: selectedEmotion,
     mode: currentMode,
-    knowledge: {},
+    knowledge: {
+      song: "Unknown Song",
+      artist: "Unknown Artist"
+    },
     guessConfig: null,
     links: currentMode !== "discover" ? {
       spotify: spotifyLink.value.trim() || null,
@@ -468,9 +472,10 @@ postBtn.onclick = async () => {
     }
 
     if (currentMode === "discover") {
+      // Always set default values for discover mode
       post.knowledge = {
-        song: discoverSongInput.value.trim() || null,
-        artist: discoverArtistInput.value.trim() || null
+        song: discoverSongInput.value.trim() || "Unknown Song",
+        artist: discoverArtistInput.value.trim() || "Unknown Artist"
       };
     }
   } catch (err) {
@@ -571,7 +576,7 @@ function resetComposer() {
   guessArtistCheck.checked = true;
 }
 
-// ===== RENDER FEED =====
+// ===== RENDER FEED - FIXED =====
 function renderFeed() {
   feedList.innerHTML = "";
   
@@ -599,11 +604,14 @@ function renderFeed() {
       post.links.soundcloud
     );
     
+    // Ensure knowledge object exists
+    const knowledge = post.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+    
     if (post.mode === "share") {
       songSection = `
         <div class="feed-song">
-          <div class="feed-song-title">${post.knowledge.song}</div>
-          <div class="feed-song-artist">${post.knowledge.artist}</div>
+          <div class="feed-song-title">${knowledge.song}</div>
+          <div class="feed-song-artist">${knowledge.artist}</div>
         </div>
       `;
       actionsSection = `
@@ -635,10 +643,11 @@ function renderFeed() {
       `;
     } 
     else if (post.mode === "discover") {
+      const hasClues = knowledge.song !== "Unknown Song" || knowledge.artist !== "Unknown Artist";
       songSection = `
         <div class="discover-badge">
-          ${post.knowledge.song || post.knowledge.artist ? 
-            'Maybe: ' + (post.knowledge.song || '?') + ' — ' + (post.knowledge.artist || '?') :
+          ${hasClues ? 
+            'Maybe: ' + knowledge.song + ' — ' + knowledge.artist :
             'Help discover this song!'}
         </div>
       `;
@@ -782,11 +791,13 @@ function showAnswerState(userState) {
   submitGuess.classList.add("hidden");
   revealAnswer.classList.add("hidden");
   
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  
   guessResult.className = "result-message success";
   guessResult.innerHTML = `
     <div style="margin-bottom: 10px; font-size: 1.1rem;">✓ Answer</div>
-    <div style="font-size: 0.95rem;"><strong>Song:</strong> ${currentPost.knowledge.song}</div>
-    <div style="font-size: 0.95rem;"><strong>Artist:</strong> ${currentPost.knowledge.artist}</div>
+    <div style="font-size: 0.95rem;"><strong>Song:</strong> ${knowledge.song}</div>
+    <div style="font-size: 0.95rem;"><strong>Artist:</strong> ${knowledge.artist}</div>
   `;
   guessResult.classList.remove("hidden");
   
@@ -846,8 +857,10 @@ submitGuess.onclick = () => {
   
   const guessedSong = guessSongInput.value.trim().toLowerCase();
   const guessedArtist = guessArtistInput.value.trim().toLowerCase();
-  const actualSong = currentPost.knowledge.song.toLowerCase();
-  const actualArtist = currentPost.knowledge.artist.toLowerCase();
+  
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  const actualSong = knowledge.song.toLowerCase();
+  const actualArtist = knowledge.artist.toLowerCase();
   
   const guessSong = currentPost.guessConfig?.guessSong ?? true;
   const guessArtist = currentPost.guessConfig?.guessArtist ?? true;
@@ -906,12 +919,32 @@ submitGuess.onclick = () => {
     
     guessResult.className = "result-message success";
     guessResult.innerHTML = `
-      <div style="margin-bottom: 10px; font-size: 1.1rem;">✓ Correct!</div>
-      <div style="font-size: 0.95rem;">"${currentPost.knowledge.song}" by ${currentPost.knowledge.artist}</div>
+      <div style="margin-bottom: 8px; font-size: 1rem;">✓ Correct!</div>
+      <div style="font-size: 0.85rem;">"${knowledge.song}" by ${knowledge.artist}</div>
     `;
     
     submitGuess.classList.add("hidden");
     guessInputFields.classList.add("hidden");
+    revealAnswer.classList.add("hidden");
+    
+    showGuessLinks(true);
+  }
+  // After 2 attempts - auto reveal
+  else if (userState.attempts >= MAX_GUESS_ATTEMPTS) {
+    userState.revealed = true;
+    saveUserGuessState(currentPost.id, userState);
+    
+    guessResult.className = "result-message error";
+    guessResult.innerHTML = `
+      <div style="margin-bottom: 8px; font-size: 1rem;">✗ Out of attempts</div>
+      <div style="font-size: 0.85rem; margin-top: 8px;"><strong>Answer:</strong></div>
+      <div style="font-size: 0.85rem;">Song: ${knowledge.song}</div>
+      <div style="font-size: 0.85rem;">Artist: ${knowledge.artist}</div>
+    `;
+    
+    submitGuess.classList.add("hidden");
+    guessInputFields.classList.add("hidden");
+    revealAnswer.classList.add("hidden");
     
     showGuessLinks(true);
   }
@@ -921,30 +954,21 @@ submitGuess.onclick = () => {
     
     guessResult.className = "result-message partial";
     
-    let feedbackHTML = '<div style="margin-bottom: 10px; font-size: 1.1rem;">Partial Correct</div>';
+    let feedbackHTML = '<div style="margin-bottom: 8px; font-size: 1rem;">Partial Correct</div>';
     
     if (guessSong) {
-      feedbackHTML += `<div style="font-size: 0.9rem;">${songCorrect ? '✓' : '✗'} Song: ${guessedSong || '(empty)'}</div>`;
+      feedbackHTML += `<div style="font-size: 0.8rem;">${songCorrect ? '✓' : '✗'} Song: ${guessedSong || '(empty)'}</div>`;
     }
     if (guessArtist) {
-      feedbackHTML += `<div style="font-size: 0.9rem;">${artistCorrect ? '✓' : '✗'} Artist: ${guessedArtist || '(empty)'}</div>`;
+      feedbackHTML += `<div style="font-size: 0.8rem;">${artistCorrect ? '✓' : '✗'} Artist: ${guessedArtist || '(empty)'}</div>`;
     }
     
     const attemptsLeft = MAX_GUESS_ATTEMPTS - userState.attempts;
-    if (attemptsLeft > 0) {
-      feedbackHTML += `<div style="margin-top: 10px; font-size: 0.85rem;">${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining</div>`;
-    }
+    feedbackHTML += `<div style="margin-top: 8px; font-size: 0.75rem;">${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining</div>`;
     
     guessResult.innerHTML = feedbackHTML;
-    
-    if (userState.attempts >= MAX_GUESS_ATTEMPTS) {
-      submitGuess.classList.add("hidden");
-      guessInputFields.classList.add("hidden");
-      revealAnswer.classList.remove("hidden");
-    } else {
-      guessSongInput.value = "";
-      guessArtistInput.value = "";
-    }
+    guessSongInput.value = "";
+    guessArtistInput.value = "";
   }
   // Both wrong
   else {
@@ -952,28 +976,21 @@ submitGuess.onclick = () => {
     
     guessResult.className = "result-message error";
     
-    let feedbackHTML = '<div style="margin-bottom: 10px; font-size: 1.1rem;">✗ Incorrect</div>';
+    let feedbackHTML = '<div style="margin-bottom: 8px; font-size: 1rem;">✗ Incorrect</div>';
     
     if (guessSong && guessedSong) {
-      feedbackHTML += `<div style="font-size: 0.9rem;">✗ Song: ${guessedSong}</div>`;
+      feedbackHTML += `<div style="font-size: 0.8rem;">✗ Song: ${guessedSong}</div>`;
     }
     if (guessArtist && guessedArtist) {
-      feedbackHTML += `<div style="font-size: 0.9rem;">✗ Artist: ${guessedArtist}</div>`;
+      feedbackHTML += `<div style="font-size: 0.8rem;">✗ Artist: ${guessedArtist}</div>`;
     }
     
     const attemptsLeft = MAX_GUESS_ATTEMPTS - userState.attempts;
-    if (attemptsLeft > 0) {
-      feedbackHTML += `<div style="margin-top: 10px; font-size: 0.85rem;">${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining</div>`;
-      guessResult.innerHTML = feedbackHTML;
-      guessSongInput.value = "";
-      guessArtistInput.value = "";
-    } else {
-      feedbackHTML += `<div style="margin-top: 10px; font-size: 0.85rem;">Out of attempts!</div>`;
-      guessResult.innerHTML = feedbackHTML;
-      submitGuess.classList.add("hidden");
-      guessInputFields.classList.add("hidden");
-      revealAnswer.classList.remove("hidden");
-    }
+    feedbackHTML += `<div style="margin-top: 8px; font-size: 0.75rem;">${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining</div>`;
+    
+    guessResult.innerHTML = feedbackHTML;
+    guessSongInput.value = "";
+    guessArtistInput.value = "";
   }
 };
 
@@ -1078,7 +1095,7 @@ function openListen(index) {
   openModal(listenModal);
 }
 
-// ===== VIEW POST (POSTCARD) =====
+// ===== VIEW POST (POSTCARD) - FIXED =====
 function viewPost(index) {
   currentPost = posts[index];
   
@@ -1094,10 +1111,12 @@ function viewPost(index) {
     canSeeSong = userState.correct || userState.revealed;
   }
   
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  
   if (canSeeSong) {
     postcardSong.innerHTML = `
-      <div>${currentPost.knowledge.song || 'Unknown Song'}</div>
-      <div>${currentPost.knowledge.artist || 'Unknown Artist'}</div>
+      <div>${knowledge.song}</div>
+      <div>${knowledge.artist}</div>
     `;
   } else {
     postcardSong.innerHTML = `
@@ -1149,7 +1168,7 @@ analyticsBtn.onclick = () => {
   const helpsStatCard = document.querySelector('.stat-card:nth-child(3)');
   
   if (currentPost.mode === 'guess') {
-    // Show guesses stat, hide helps stat
+    // GUESS MODE: Show only Views and Guess Attempts
     guessesStatCard.style.display = 'block';
     helpsStatCard.style.display = 'none';
     statGuesses.textContent = guesses.length;
@@ -1178,18 +1197,21 @@ analyticsBtn.onclick = () => {
       guessesSection.classList.add("hidden");
     }
     
-    // Always hide helps section for guess posts
     helpsSection.classList.add("hidden");
   } 
   else if (currentPost.mode === 'discover') {
-    // Show helps stat, hide guesses stat
+    // DISCOVER MODE: Show only Views and Discovery Helps
     guessesStatCard.style.display = 'none';
     helpsStatCard.style.display = 'block';
     statHelps.textContent = helps.length;
     
+    // Change label to "Discovery Helps"
+    helpsStatCard.querySelector('.stat-label').textContent = 'Discovery Helps';
+    
     // Show helps section if there are any
     if (helps.length > 0) {
       helpsSection.classList.remove("hidden");
+      helpsSection.querySelector('h4').textContent = 'Discovery Suggestions';
       helpsList.innerHTML = "";
       
       helps.forEach(help => {
@@ -1223,11 +1245,10 @@ analyticsBtn.onclick = () => {
       helpsSection.classList.add("hidden");
     }
     
-    // Always hide guesses section for discover posts
     guessesSection.classList.add("hidden");
   } 
   else {
-    // Share mode - hide both guess and help stats, only show views
+    // SHARE MODE: Show only Views
     guessesStatCard.style.display = 'none';
     helpsStatCard.style.display = 'none';
     guessesSection.classList.add("hidden");
@@ -1268,42 +1289,49 @@ function updateLivePreview() {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, previewWidth, previewHeight);
   
-  const baseFontSize = 14;
+  const baseFontSize = 13;
   
   ctx.fillStyle = colors.primary;
-  ctx.font = `bold ${baseFontSize * 1.4}px serif`;
+  ctx.font = `bold ${baseFontSize * 1.3}px serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('MARGO', previewWidth / 2, 45);
+  ctx.fillText('MARGO', previewWidth / 2, 40);
   
+  // Lyric with better wrapping
   ctx.fillStyle = colors.text;
-  ctx.font = `italic ${baseFontSize * 1.1}px serif`;
-  const lyricPreview = currentPost.text.length > 35 ? currentPost.text.substring(0, 35) + '...' : currentPost.text;
-  wrapText(ctx, lyricPreview, previewWidth / 2, previewHeight / 2 - 20, previewWidth * 0.8, baseFontSize * 1.6);
+  ctx.font = `italic ${baseFontSize * 0.95}px serif`;
+  const lyricPreview = currentPost.text.length > 80 ? currentPost.text.substring(0, 80) + '...' : currentPost.text;
+  wrapText(ctx, lyricPreview, previewWidth / 2, previewHeight / 2 - 30, previewWidth * 0.85, baseFontSize * 1.3);
   
+  // Emotion
   ctx.fillStyle = colors.primary;
-  ctx.font = `600 ${baseFontSize * 0.9}px sans-serif`;
-  ctx.fillText(`#${currentPost.emotion}`, previewWidth / 2, previewHeight / 2 + 45);
+  ctx.font = `600 ${baseFontSize * 0.75}px sans-serif`;
+  ctx.fillText(`#${currentPost.emotion}`, previewWidth / 2, previewHeight / 2 + 35);
   
+  // Separator
   ctx.strokeStyle = colors.secondary;
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(previewWidth * 0.3, previewHeight / 2 + 65);
-  ctx.lineTo(previewWidth * 0.7, previewHeight / 2 + 65);
+  ctx.moveTo(previewWidth * 0.3, previewHeight / 2 + 50);
+  ctx.lineTo(previewWidth * 0.7, previewHeight / 2 + 50);
   ctx.stroke();
   
-  ctx.fillStyle = colors.primary;
-  ctx.font = `bold ${baseFontSize}px serif`;
-  const songTitle = (currentPost.knowledge.song || 'Song').length > 20 ? 
-    (currentPost.knowledge.song || 'Song').substring(0, 20) + '...' : 
-    (currentPost.knowledge.song || 'Song');
-  ctx.fillText(songTitle, previewWidth / 2, previewHeight / 2 + 95);
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
   
+  // Song title
+  ctx.fillStyle = colors.primary;
+  ctx.font = `bold ${baseFontSize * 0.9}px serif`;
+  const songTitle = knowledge.song.length > 25 ? 
+    knowledge.song.substring(0, 25) + '...' : 
+    knowledge.song;
+  ctx.fillText(songTitle, previewWidth / 2, previewHeight / 2 + 75);
+  
+  // Artist
   ctx.fillStyle = colors.secondary;
-  ctx.font = `500 ${baseFontSize * 0.85}px sans-serif`;
-  const artistName = (currentPost.knowledge.artist || 'Artist').length > 25 ? 
-    (currentPost.knowledge.artist || 'Artist').substring(0, 25) + '...' : 
-    (currentPost.knowledge.artist || 'Artist');
-  ctx.fillText(artistName, previewWidth / 2, previewHeight / 2 + 115);
+  ctx.font = `500 ${baseFontSize * 0.75}px sans-serif`;
+  const artistName = knowledge.artist.length > 30 ? 
+    knowledge.artist.substring(0, 30) + '...' : 
+    knowledge.artist;
+  ctx.fillText(artistName, previewWidth / 2, previewHeight / 2 + 92);
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
@@ -1379,35 +1407,42 @@ function generatePoster(size, design) {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, dims.width, dims.height);
   
-  const baseFontSize = dims.width * 0.038;
+  const baseFontSize = dims.width * 0.032;
   
   ctx.fillStyle = colors.primary;
-  ctx.font = `bold ${baseFontSize * 1.5}px serif`;
+  ctx.font = `bold ${baseFontSize * 1.4}px serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('MARGO', dims.width / 2, dims.height * 0.12);
+  ctx.fillText('MARGO', dims.width / 2, dims.height * 0.11);
   
+  // Lyric with controlled wrapping
   ctx.fillStyle = colors.text;
-  ctx.font = `italic ${baseFontSize * 1.4}px serif`;
-  wrapText(ctx, currentPost.text, dims.width / 2, dims.height * 0.42, dims.width * 0.82, baseFontSize * 2.2);
+  ctx.font = `italic ${baseFontSize * 1.15}px serif`;
+  wrapText(ctx, currentPost.text, dims.width / 2, dims.height * 0.38, dims.width * 0.85, baseFontSize * 1.7);
   
+  // Emotion
   ctx.fillStyle = colors.primary;
-  ctx.font = `600 ${baseFontSize}px sans-serif`;
-  ctx.fillText(`#${currentPost.emotion}`, dims.width / 2, dims.height * 0.65);
+  ctx.font = `600 ${baseFontSize * 0.85}px sans-serif`;
+  ctx.fillText(`#${currentPost.emotion}`, dims.width / 2, dims.height * 0.62);
   
+  // Separator
   ctx.strokeStyle = colors.secondary;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 2.2;
   ctx.beginPath();
-  ctx.moveTo(dims.width * 0.3, dims.height * 0.7);
-  ctx.lineTo(dims.width * 0.7, dims.height * 0.7);
+  ctx.moveTo(dims.width * 0.3, dims.height * 0.68);
+  ctx.lineTo(dims.width * 0.7, dims.height * 0.68);
   ctx.stroke();
   
-  ctx.fillStyle = colors.primary;
-  ctx.font = `bold ${baseFontSize * 1.2}px serif`;
-  ctx.fillText(currentPost.knowledge.song || 'Unknown Song', dims.width / 2, dims.height * 0.8);
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
   
+  // Song title
+  ctx.fillStyle = colors.primary;
+  ctx.font = `bold ${baseFontSize * 1.1}px serif`;
+  ctx.fillText(knowledge.song, dims.width / 2, dims.height * 0.78);
+  
+  // Artist
   ctx.fillStyle = colors.secondary;
-  ctx.font = `500 ${baseFontSize}px sans-serif`;
-  ctx.fillText(currentPost.knowledge.artist || 'Unknown Artist', dims.width / 2, dims.height * 0.87);
+  ctx.font = `500 ${baseFontSize * 0.9}px sans-serif`;
+  ctx.fillText(knowledge.artist, dims.width / 2, dims.height * 0.85);
 }
 
 downloadPoster.onclick = () => {
@@ -1461,7 +1496,7 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded");
+console.log("MARGO Firebase Edition loaded - FIXED VERSION");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
 
@@ -1479,3 +1514,5 @@ window.addEventListener('load', () => {
     }
   }
 });
+
+
