@@ -1479,5 +1479,3 @@ window.addEventListener('load', () => {
     }
   }
 });
-
-
