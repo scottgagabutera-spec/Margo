@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition - FIXED */
+/* MARGO - Firebase Real-Time Sync Edition - FIXED INDEPENDENT USER STATES */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -147,13 +147,16 @@ let selectedPosterSize = null;
 let posts = [];
 let postAnalytics = {};
 
-// ===== PER-USER TRACKING =====
+// ===== PER-USER TRACKING (LOCAL TO THIS DEVICE/BROWSER) =====
+// Each user has their own unique ID stored in their browser
 let userId = localStorage.getItem("margoUserId");
 if (!userId) {
   userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   localStorage.setItem("margoUserId", userId);
 }
 
+// User's personal guess/discover states (stored ONLY on their device)
+// This means each user has completely independent experience
 let userGuessStates = JSON.parse(localStorage.getItem("margoUserGuessStates") || "{}");
 
 // ===== FIREBASE REAL-TIME SYNC =====
@@ -704,8 +707,10 @@ function trackView(postId) {
   }
 }
 
-// ===== GET USER GUESS STATE =====
+// ===== GET USER GUESS STATE (LOCAL TO THIS USER'S DEVICE) =====
 function getUserGuessState(postId) {
+  // This function gets the guess state for THIS user ONLY (stored in their browser)
+  // Each user has their own independent state
   if (!userGuessStates[postId]) {
     userGuessStates[postId] = {
       attempts: 0,
@@ -716,18 +721,23 @@ function getUserGuessState(postId) {
   return userGuessStates[postId];
 }
 
-// ===== SAVE USER GUESS STATE =====
+// ===== SAVE USER GUESS STATE (LOCAL TO THIS USER'S DEVICE) =====
 function saveUserGuessState(postId, state) {
+  // This saves the state ONLY for THIS user in their browser
+  // Other users won't see this state
   userGuessStates[postId] = state;
   localStorage.setItem("margoUserGuessStates", JSON.stringify(userGuessStates));
 }
 
-// ===== OPEN GUESS MODAL =====
+// ===== OPEN GUESS MODAL (INDEPENDENT FOR EACH USER) =====
 function openGuess(index) {
   currentPost = posts[index];
   
+  // Track that this user viewed the post (shared analytics)
   trackView(currentPost.id);
   
+  // Get THIS USER's personal guess state (stored locally on their device)
+  // This is completely independent from other users
   const userState = getUserGuessState(currentPost.id);
   currentGuessAttempts = userState.attempts;
   
@@ -742,6 +752,7 @@ function openGuess(index) {
   const guessSong = currentPost.guessConfig?.guessSong ?? true;
   const guessArtist = currentPost.guessConfig?.guessArtist ?? true;
   
+  // Show/hide input fields based on what can be guessed
   if (guessSong) {
     songField.style.display = 'block';
   } else {
@@ -754,9 +765,13 @@ function openGuess(index) {
     artistField.style.display = 'none';
   }
   
+  // Check ONLY this user's local state
+  // What other users have done doesn't affect this user's experience
   if (userState.revealed || userState.correct) {
+    // This user has already revealed or guessed correctly
     showAnswerState(userState);
   } else if (userState.attempts >= MAX_GUESS_ATTEMPTS) {
+    // This user has used all their attempts
     guessInputFields.classList.add("hidden");
     submitGuess.classList.add("hidden");
     revealAnswer.classList.remove("hidden");
@@ -767,6 +782,7 @@ function openGuess(index) {
       guessLinksSection.classList.add("hidden");
     }
   } else {
+    // This user can still guess (fresh start or has attempts left)
     guessInputFields.classList.remove("hidden");
     submitGuess.classList.remove("hidden");
     revealAnswer.classList.add("hidden");
@@ -847,10 +863,11 @@ function showGuessLinks(permanent = false) {
   }
 }
 
-// ===== SUBMIT GUESS WITH PARTIAL FEEDBACK =====
+// ===== SUBMIT GUESS WITH PARTIAL FEEDBACK (INDEPENDENT FOR EACH USER) =====
 submitGuess.onclick = () => {
   if (!currentPost) return;
   
+  // Get this user's personal state and increment their attempts
   const userState = getUserGuessState(currentPost.id);
   userState.attempts++;
   currentGuessAttempts = userState.attempts;
@@ -892,7 +909,7 @@ submitGuess.onclick = () => {
     artistMatch = true;
   }
   
-  // Track the guess
+  // Track the guess in shared analytics (so post creator can see all attempts)
   const guessData = {
     song: guessedSong || null,
     artist: guessedArtist || null,
@@ -994,8 +1011,9 @@ submitGuess.onclick = () => {
   }
 };
 
-// ===== REVEAL ANSWER =====
+// ===== REVEAL ANSWER (INDEPENDENT FOR EACH USER) =====
 revealAnswer.onclick = () => {
+  // Mark that THIS user chose to reveal (saved locally on their device)
   const userState = getUserGuessState(currentPost.id);
   userState.revealed = true;
   saveUserGuessState(currentPost.id, userState);
@@ -1003,7 +1021,7 @@ revealAnswer.onclick = () => {
   showAnswerState(userState);
 };
 
-// ===== OPEN DISCOVER MODAL =====
+// ===== OPEN DISCOVER MODAL (INDEPENDENT FOR EACH USER) =====
 function openDiscover(index) {
   currentPost = posts[index];
   
@@ -1020,7 +1038,7 @@ function openDiscover(index) {
   openModal(discoverModal);
 }
 
-// ===== SUBMIT DISCOVER =====
+// ===== SUBMIT DISCOVER (SHARED WITH EVERYONE) =====
 submitDiscover.onclick = () => {
   const song = discoverSongAnswer.value.trim();
   const artist = discoverArtistAnswer.value.trim();
@@ -1030,6 +1048,7 @@ submitDiscover.onclick = () => {
     return;
   }
   
+  // This help is shared with everyone (stored in Firebase analytics)
   const helpData = {
     song,
     artist,
@@ -1107,6 +1126,7 @@ function viewPost(index) {
   let canSeeSong = true;
   
   if (currentPost.mode === "guess") {
+    // Check if THIS user has revealed or guessed correctly
     const userState = getUserGuessState(currentPost.id);
     canSeeSong = userState.correct || userState.revealed;
   }
@@ -1496,9 +1516,10 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded - FIXED VERSION");
+console.log("MARGO Firebase Edition loaded - INDEPENDENT USER STATES VERSION");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
+console.log("User ID:", userId);
 
 window.addEventListener('load', () => {
   const urlParams = new URLSearchParams(window.location.search);
