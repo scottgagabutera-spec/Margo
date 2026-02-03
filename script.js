@@ -1,4 +1,20 @@
-/* MARGO - Improved with Per-User Tracking & Partial Correct Feedback */
+/* MARGO - Firebase Real-Time Sync Edition */
+
+// ===== FIREBASE CONFIGURATION =====
+const firebaseConfig = {
+  apiKey: "AIzaSyA1AuUethACF_9aBqbOONjra7X5NbGnfZM",
+  authDomain: "margo-f6da4.firebaseapp.com",
+  databaseURL: "https://margo-f6da4-default-rtdb.firebaseio.com",
+  projectId: "margo-f6da4",
+  storageBucket: "margo-f6da4.firebasestorage.app",
+  messagingSenderId: "150183564620",
+  appId: "1:150183564620:web:a42de7fef39740b551ebe9"
+};
+  console.log('✓ Firebase initialized successfully');
+} catch (error) {
+  console.warn('⚠ Firebase not configured. Using localStorage only.', error.message);
+  isFirebaseEnabled = false;
+}
 
 // ===== ELEMENTS =====
 const landing = document.getElementById("landing");
@@ -116,30 +132,62 @@ const MAX_GUESS_ATTEMPTS = 2;
 let selectedDesign = "midnight-gold";
 let selectedPosterSize = null;
 
-let posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
-let postAnalytics = JSON.parse(localStorage.getItem("margoAnalytics") || "{}");
+// Local data (will sync with Firebase)
+let posts = [];
+let postAnalytics = {};
 
 // ===== PER-USER TRACKING =====
-// Generate unique user ID if not exists
 let userId = localStorage.getItem("margoUserId");
 if (!userId) {
   userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   localStorage.setItem("margoUserId", userId);
 }
 
-// Track per-user guess states: { postId: { attempts: number, revealed: boolean, correct: boolean } }
 let userGuessStates = JSON.parse(localStorage.getItem("margoUserGuessStates") || "{}");
 
-// Initialize analytics for existing posts
-posts.forEach(post => {
-  if (!postAnalytics[post.id]) {
-    postAnalytics[post.id] = {
-      views: 0,
-      guesses: [],
-      helps: []
-    };
-  }
-});
+// ===== FIREBASE REAL-TIME SYNC =====
+if (isFirebaseEnabled) {
+  // Listen for posts changes
+  postsRef.orderByChild('timestamp').limitToLast(50).on('value', (snapshot) => {
+    posts = [];
+    snapshot.forEach((childSnapshot) => {
+      const post = childSnapshot.val();
+      post.id = childSnapshot.key;
+      posts.unshift(post); // Add to beginning
+    });
+    
+    // Sort by timestamp descending
+    posts.sort((a, b) => b.timestamp - a.timestamp);
+    
+    console.log('📡 Posts synced from Firebase:', posts.length);
+    
+    // Update feed if visible
+    if (feed.classList.contains('active')) {
+      renderFeed();
+    }
+  });
+  
+  // Listen for analytics changes
+  analyticsRef.on('value', (snapshot) => {
+    postAnalytics = snapshot.val() || {};
+    console.log('📊 Analytics synced from Firebase');
+  });
+} else {
+  // Fallback to localStorage
+  posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
+  postAnalytics = JSON.parse(localStorage.getItem("margoAnalytics") || "{}");
+  
+  // Initialize analytics for existing posts
+  posts.forEach(post => {
+    if (!postAnalytics[post.id]) {
+      postAnalytics[post.id] = {
+        views: 0,
+        guesses: [],
+        helps: []
+      };
+    }
+  });
+}
 
 // ===== MODERN COLOR DESIGNS =====
 const POSTER_DESIGNS = {
@@ -363,7 +411,8 @@ postBtn.onclick = async () => {
       apple: appleLink.value.trim() || null,
       youtube: youtubeLink.value.trim() || null,
       soundcloud: soundcloudLink.value.trim() || null
-    } : null
+    } : null,
+    timestamp: firebase.database.ServerValue.TIMESTAMP
   };
 
   try {
@@ -422,31 +471,46 @@ postBtn.onclick = async () => {
   postBtn.textContent = "Posting...";
 
   try {
-    const newPost = {
-      ...post,
-      id: Date.now(),
-      timestamp: Date.now()
-    };
-    
-    posts.unshift(newPost);
-    
-    postAnalytics[newPost.id] = {
-      views: 0,
-      guesses: [],
-      helps: []
-    };
-    
-    if (posts.length > 50) {
-      posts = posts.slice(0, 50);
-    }
-    
-    try {
-      localStorage.setItem("margoPosts", JSON.stringify(posts));
-      localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
-    } catch (storageErr) {
-      console.warn("LocalStorage full:", storageErr);
-      posts = posts.slice(0, 10);
-      localStorage.setItem("margoPosts", JSON.stringify(posts));
+    if (isFirebaseEnabled) {
+      // Push to Firebase
+      const newPostRef = await postsRef.push(post);
+      
+      // Initialize analytics for this post
+      await analyticsRef.child(newPostRef.key).set({
+        views: 0,
+        guesses: [],
+        helps: []
+      });
+      
+      console.log('✓ Posted to Firebase:', newPostRef.key);
+    } else {
+      // Fallback to localStorage
+      const newPost = {
+        ...post,
+        id: Date.now(),
+        timestamp: Date.now()
+      };
+      
+      posts.unshift(newPost);
+      
+      postAnalytics[newPost.id] = {
+        views: 0,
+        guesses: [],
+        helps: []
+      };
+      
+      if (posts.length > 50) {
+        posts = posts.slice(0, 50);
+      }
+      
+      try {
+        localStorage.setItem("margoPosts", JSON.stringify(posts));
+        localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
+      } catch (storageErr) {
+        console.warn("LocalStorage full:", storageErr);
+        posts = posts.slice(0, 10);
+        localStorage.setItem("margoPosts", JSON.stringify(posts));
+      }
     }
 
     showToast("Posted successfully!");
@@ -605,11 +669,19 @@ function timeAgo(timestamp) {
 
 // ===== TRACK VIEW =====
 function trackView(postId) {
-  if (!postAnalytics[postId]) {
-    postAnalytics[postId] = { views: 0, guesses: [], helps: [] };
+  if (isFirebaseEnabled) {
+    // Increment view count in Firebase
+    analyticsRef.child(postId).child('views').transaction((currentViews) => {
+      return (currentViews || 0) + 1;
+    });
+  } else {
+    // Fallback to localStorage
+    if (!postAnalytics[postId]) {
+      postAnalytics[postId] = { views: 0, guesses: [], helps: [] };
+    }
+    postAnalytics[postId].views++;
+    localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
   }
-  postAnalytics[postId].views++;
-  localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
 }
 
 // ===== GET USER GUESS STATE =====
@@ -662,12 +734,9 @@ function openGuess(index) {
     artistField.style.display = 'none';
   }
   
-  // Check if user has already revealed or guessed correctly
   if (userState.revealed || userState.correct) {
-    // Show the answer immediately
     showAnswerState(userState);
   } else if (userState.attempts >= MAX_GUESS_ATTEMPTS) {
-    // Out of attempts, show reveal option
     guessInputFields.classList.add("hidden");
     submitGuess.classList.add("hidden");
     revealAnswer.classList.remove("hidden");
@@ -678,7 +747,6 @@ function openGuess(index) {
       guessLinksSection.classList.add("hidden");
     }
   } else {
-    // Still has attempts
     guessInputFields.classList.remove("hidden");
     submitGuess.classList.remove("hidden");
     revealAnswer.classList.add("hidden");
@@ -711,7 +779,6 @@ function showAnswerState(userState) {
   `;
   guessResult.classList.remove("hidden");
   
-  // Show links permanently
   showGuessLinks(true);
 }
 
@@ -749,7 +816,6 @@ function showGuessLinks(permanent = false) {
   `;
   guessLinksSection.classList.remove("hidden");
   
-  // Auto-hide after 5 seconds only if not permanent
   if (!permanent) {
     setTimeout(() => {
       if (guessLinksSection && !permanent) {
@@ -803,16 +869,22 @@ submitGuess.onclick = () => {
   }
   
   // Track the guess
-  if (!postAnalytics[currentPost.id]) {
-    postAnalytics[currentPost.id] = { views: 0, guesses: [], helps: [] };
-  }
-  postAnalytics[currentPost.id].guesses.push({
+  const guessData = {
     song: guessedSong || null,
     artist: guessedArtist || null,
     correct: songMatch && artistMatch,
     timestamp: Date.now()
-  });
-  localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
+  };
+  
+  if (isFirebaseEnabled) {
+    analyticsRef.child(currentPost.id).child('guesses').push(guessData);
+  } else {
+    if (!postAnalytics[currentPost.id]) {
+      postAnalytics[currentPost.id] = { views: 0, guesses: [], helps: [] };
+    }
+    postAnalytics[currentPost.id].guesses.push(guessData);
+    localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
+  }
   
   guessResult.classList.remove("hidden");
   
@@ -930,10 +1002,7 @@ submitDiscover.onclick = () => {
     return;
   }
   
-  if (!postAnalytics[currentPost.id]) {
-    postAnalytics[currentPost.id] = { views: 0, guesses: [], helps: [] };
-  }
-  postAnalytics[currentPost.id].helps.push({
+  const helpData = {
     song,
     artist,
     links: {
@@ -943,8 +1012,17 @@ submitDiscover.onclick = () => {
       soundcloud: discoverSoundcloudLink.value.trim() || null
     },
     timestamp: Date.now()
-  });
-  localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
+  };
+  
+  if (isFirebaseEnabled) {
+    analyticsRef.child(currentPost.id).child('helps').push(helpData);
+  } else {
+    if (!postAnalytics[currentPost.id]) {
+      postAnalytics[currentPost.id] = { views: 0, guesses: [], helps: [] };
+    }
+    postAnalytics[currentPost.id].helps.push(helpData);
+    localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
+  }
   
   showToast("Thanks for helping!");
   closeModal(discoverModal);
@@ -998,7 +1076,6 @@ function viewPost(index) {
   postcardLyric.textContent = currentPost.text;
   postcardEmotion.textContent = currentPost.emotion;
   
-  // Check if user has access to see the song details
   let canSeeSong = true;
   
   if (currentPost.mode === "guess") {
@@ -1047,15 +1124,22 @@ analyticsBtn.onclick = () => {
   
   const analytics = postAnalytics[currentPost.id];
   
-  statViews.textContent = analytics.views;
-  statGuesses.textContent = analytics.guesses.length;
-  statHelps.textContent = analytics.helps.length;
+  statViews.textContent = analytics.views || 0;
   
-  if (analytics.guesses.length > 0) {
+  // Handle Firebase array format
+  const guesses = analytics.guesses ? 
+    (Array.isArray(analytics.guesses) ? analytics.guesses : Object.values(analytics.guesses)) : [];
+  const helps = analytics.helps ? 
+    (Array.isArray(analytics.helps) ? analytics.helps : Object.values(analytics.helps)) : [];
+  
+  statGuesses.textContent = guesses.length;
+  statHelps.textContent = helps.length;
+  
+  if (guesses.length > 0) {
     guessesSection.classList.remove("hidden");
     guessesList.innerHTML = "";
     
-    analytics.guesses.forEach(guess => {
+    guesses.forEach(guess => {
       const item = document.createElement("div");
       item.className = `activity-item ${guess.correct ? 'correct' : 'incorrect'}`;
       item.innerHTML = `
@@ -1074,11 +1158,11 @@ analyticsBtn.onclick = () => {
     guessesSection.classList.add("hidden");
   }
   
-  if (analytics.helps.length > 0) {
+  if (helps.length > 0) {
     helpsSection.classList.remove("hidden");
     helpsList.innerHTML = "";
     
-    analytics.helps.forEach(help => {
+    helps.forEach(help => {
       const item = document.createElement("div");
       item.className = "activity-item";
       
@@ -1336,7 +1420,9 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Improved loaded. Posts:", posts.length);
+console.log("MARGO Firebase Edition loaded");
+console.log("Firebase enabled:", isFirebaseEnabled);
+console.log("Posts loaded:", posts.length);
 
 window.addEventListener('load', () => {
   const urlParams = new URLSearchParams(window.location.search);
