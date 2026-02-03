@@ -293,55 +293,14 @@ if (feed) {
   }, { passive: true });
 }
 
-// ===== SWIPE NAVIGATION =====
-let touchStartX = 0;
-let touchStartY = 0;
-let touchEndX = 0;
-let touchEndY = 0;
-
-const handleSwipe = () => {
-  const diffX = touchStartX - touchEndX;
-  const diffY = Math.abs(touchStartY - touchEndY);
-  
-  if (Math.abs(diffX) > diffY && Math.abs(diffX) > 100) {
-    if (diffX > 0 && landing.classList.contains("active")) {
-      landing.classList.remove("active");
-      feed.classList.add("active");
-      renderFeed();
-    } else if (diffX < 0 && feed.classList.contains("active")) {
-      feed.classList.remove("active");
-      landing.classList.add("active");
-    }
-  }
-};
-
-landing.addEventListener('touchstart', e => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-});
-
-landing.addEventListener('touchend', e => {
-  touchEndX = e.changedTouches[0].clientX;
-  touchEndY = e.changedTouches[0].clientY;
-  handleSwipe();
-});
-
-feed.addEventListener('touchstart', e => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-});
-
-feed.addEventListener('touchend', e => {
-  touchEndX = e.changedTouches[0].clientX;
-  touchEndY = e.changedTouches[0].clientY;
-  handleSwipe();
-});
+// ===== TAP NAVIGATION (SWIPE REMOVED) =====
+// Tap to explore now handled by enterBtn click event
 
 // ===== NAVIGATION =====
 enterBtn.onclick = () => {
   landing.classList.remove("active");
-  openModal(composer);
-  textInput.focus();
+  feed.classList.add("active");
+  renderFeed();
 };
 
 backBtn.onclick = () => {
@@ -405,11 +364,8 @@ modeBtns.forEach(btn => {
     guessInputs.classList.remove("active");
     discoverInputs.classList.remove("active");
 
-    if (currentMode === "discover") {
-      streamingSection.style.display = "none";
-    } else {
-      streamingSection.style.display = "block";
-    }
+    // All modes now show streaming section
+    streamingSection.style.display = "block";
 
     if (currentMode === "share") shareInputs.classList.add("active");
     if (currentMode === "guess") guessInputs.classList.add("active");
@@ -442,7 +398,7 @@ postBtn.onclick = async () => {
     return;
   }
 
-  // Initialize with default knowledge structure
+  // Initialize with default knowledge structure and links for ALL modes
   let post = {
     text,
     emotion: selectedEmotion,
@@ -452,12 +408,12 @@ postBtn.onclick = async () => {
       artist: "Unknown Artist"
     },
     guessConfig: null,
-    links: currentMode !== "discover" ? {
+    links: {
       spotify: spotifyLink.value.trim() || null,
       apple: appleLink.value.trim() || null,
       youtube: youtubeLink.value.trim() || null,
       soundcloud: soundcloudLink.value.trim() || null
-    } : null,
+    },
     timestamp: firebase.database.ServerValue.TIMESTAMP
   };
 
@@ -503,7 +459,7 @@ postBtn.onclick = async () => {
     }
 
     if (currentMode === "discover") {
-      // Always set default values for discover mode
+      // Set values for discover mode
       post.knowledge = {
         song: discoverSongInput.value.trim() || "Unknown Song",
         artist: discoverArtistInput.value.trim() || "Unknown Artist"
@@ -1123,10 +1079,10 @@ function openListen(index) {
   listenLinks.innerHTML = "";
   
   const platforms = [
-    { name: 'Spotify', key: 'spotify' },
-    { name: 'Apple Music', key: 'apple' },
-    { name: 'YouTube', key: 'youtube' },
-    { name: 'SoundCloud', key: 'soundcloud' }
+    { name: 'Spotify', key: 'spotify', emoji: '🎵' },
+    { name: 'Apple Music', key: 'apple', emoji: '🍎' },
+    { name: 'YouTube', key: 'youtube', emoji: '▶️' },
+    { name: 'SoundCloud', key: 'soundcloud', emoji: '☁️' }
   ];
   
   let hasAnyLink = false;
@@ -1138,7 +1094,7 @@ function openListen(index) {
       link.className = "listen-link";
       link.href = currentPost.links[platform.key];
       link.target = "_blank";
-      link.innerHTML = `<span>${platform.name}</span>`;
+      link.innerHTML = `<span>${platform.emoji} ${platform.name}</span>`;
       listenLinks.appendChild(link);
     }
   });
