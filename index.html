@@ -21,7 +21,7 @@
     <button id="enterBtn" class="primary-btn">Drop a line</button>
     <div class="swipe-hint">
       <span class="swipe-arrow">←</span>
-      <span>Swipe to explore</span>
+      <span>Tap to explore</span>
     </div>
   </div>
 </section>
@@ -360,5 +360,53 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
 <script src="script.js"></script>
+
+<!-- SCROLL PRESERVATION ENHANCEMENT -->
+<script>
+/* MARGO - Scroll Position Preservation Enhancement
+   Preserves scroll position when modals close for native app-like UX */
+(function() {
+  let feedScrollPosition = 0;
+  const feedElement = document.getElementById('feed');
+  
+  function saveScrollPosition() {
+    if (feedElement && feedElement.classList.contains('active')) {
+      feedScrollPosition = window.scrollY || document.documentElement.scrollTop;
+    }
+  }
+  
+  function restoreScrollPosition() {
+    if (feedElement && feedElement.classList.contains('active')) {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, feedScrollPosition);
+      });
+    }
+  }
+  
+  const originalOpenModal = window.openModal;
+  if (originalOpenModal) {
+    window.openModal = function(modal) {
+      saveScrollPosition();
+      originalOpenModal(modal);
+    };
+  }
+  
+  const originalCloseModal = window.closeModal;
+  if (originalCloseModal) {
+    window.closeModal = function(modal) {
+      originalCloseModal(modal);
+      setTimeout(restoreScrollPosition, 50);
+    };
+  }
+  
+  if (feedElement) {
+    window.addEventListener('scroll', function() {
+      if (feedElement.classList.contains('active')) {
+        feedScrollPosition = window.scrollY || document.documentElement.scrollTop;
+      }
+    }, { passive: true });
+  }
+})();
+</script>
 </body>
 </html>
