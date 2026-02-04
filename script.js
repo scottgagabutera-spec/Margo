@@ -147,14 +147,12 @@ let selectedPosterSize = null;
 let posts = [];
 let postAnalytics = {};
 
-// ===== PER-USER TRACKING =====
+// ===== PER-USER TRACKING - REMOVED FOR INDEPENDENT SESSIONS =====
 let userId = localStorage.getItem("margoUserId");
 if (!userId) {
   userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   localStorage.setItem("margoUserId", userId);
 }
-
-let userGuessStates = JSON.parse(localStorage.getItem("margoUserGuessStates") || "{}");
 
 // ===== FIREBASE REAL-TIME SYNC =====
 if (isFirebaseEnabled) {
@@ -334,7 +332,17 @@ closeComposer.onclick = () => {
 
 closeGuess.onclick = () => {
   closeModal(guessModal);
+  // Reset all guess state for next person
   currentGuessAttempts = 0;
+  guessSongInput.value = "";
+  guessArtistInput.value = "";
+  guessResult.classList.add("hidden");
+  guessInputFields.classList.remove("hidden");
+  submitGuess.classList.remove("hidden");
+  revealAnswer.classList.add("hidden");
+  if (guessLinksSection) {
+    guessLinksSection.classList.add("hidden");
+  }
 };
 
 closeDiscover.onclick = () => {
@@ -704,32 +712,14 @@ function trackView(postId) {
   }
 }
 
-// ===== GET USER GUESS STATE =====
-function getUserGuessState(postId) {
-  if (!userGuessStates[postId]) {
-    userGuessStates[postId] = {
-      attempts: 0,
-      revealed: false,
-      correct: false
-    };
-  }
-  return userGuessStates[postId];
-}
-
-// ===== SAVE USER GUESS STATE =====
-function saveUserGuessState(postId, state) {
-  userGuessStates[postId] = state;
-  localStorage.setItem("margoUserGuessStates", JSON.stringify(userGuessStates));
-}
-
 // ===== OPEN GUESS MODAL =====
 function openGuess(index) {
   currentPost = posts[index];
   
   trackView(currentPost.id);
   
-  const userState = getUserGuessState(currentPost.id);
-  currentGuessAttempts = userState.attempts;
+  // Always start fresh - no persistent state
+  currentGuessAttempts = 0;
   
   guessLyric.textContent = currentPost.text;
   guessSongInput.value = "";
@@ -754,55 +744,177 @@ function openGuess(index) {
     artistField.style.display = 'none';
   }
   
-  if (userState.revealed || userState.correct) {
-    showAnswerState(userState);
-  } else if (userState.attempts >= MAX_GUESS_ATTEMPTS) {
-    guessInputFields.classList.add("hidden");
-    submitGuess.classList.add("hidden");
-    revealAnswer.classList.remove("hidden");
-    guessResult.className = "result-message error";
-    guessResult.textContent = `You've used all ${MAX_GUESS_ATTEMPTS} attempts.`;
-    guessResult.classList.remove("hidden");
-    if (guessLinksSection) {
-      guessLinksSection.classList.add("hidden");
-    }
-  } else {
-    guessInputFields.classList.remove("hidden");
-    submitGuess.classList.remove("hidden");
-    revealAnswer.classList.add("hidden");
-    
-    const guessWhat = [];
-    if (guessSong) guessWhat.push("song");
-    if (guessArtist) guessWhat.push("artist");
-    const attemptsLeft = MAX_GUESS_ATTEMPTS - userState.attempts;
-    guessHint.textContent = `You have ${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} left to guess the ${guessWhat.join(" and ")}!`;
-    
-    if (guessLinksSection) {
-      guessLinksSection.classList.add("hidden");
-    }
+  // Always show fresh inputs
+  guessInputFields.classList.remove("hidden");
+  submitGuess.classList.remove("hidden");
+  revealAnswer.classList.add("hidden");
+  
+  const guessWhat = [];
+  if (guessSong) guessWhat.push("song");
+  if (guessArtist) guessWhat.push("artist");
+  guessHint.textContent = `You have ${MAX_GUESS_ATTEMPTS} attempts to guess the ${guessWhat.join(" and ")}!`;
+  
+  if (guessLinksSection) {
+    guessLinksSection.classList.add("hidden");
   }
   
   openModal(guessModal);
 }
 
-// ===== SHOW ANSWER STATE =====
-function showAnswerState(userState) {
+// ===== SUBMIT GUESS WITH PARTIAL FEEDBACK =====
+submitGuess.onclick = () => {
+  if (!currentPost) return;
+  
+  // Increment attempts (session only - not saved)
+  currentGuessAttempts++;
+  
+  const guessedSong = guessSongInput.value.trim().toLowerCase();
+  const guessedArtist = guessArtistInput.value.trim().toLowerCase();
+  
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  const actualSong = knowledge.song.toLowerCase();
+  const actualArtist = knowledge.artist.toLowerCase();
+  
+  const guessSong = currentPost.guessConfig?.guessSong ?? true;
+  const guessArtist = currentPost.guessConfig?.guessArtist ?? true;
+  
+  let songMatch = false;
+  let artistMatch = false;
+  let songCorrect = false;
+  let artistCorrect = false;
+  
+  if (guessSong) {
+    songCorrect = guessedSong && (
+      guessedSong === actualSong ||
+      guessedSong.includes(actualSong) ||
+      actualSong.includes(guessedSong)
+    );
+    songMatch = songCorrect;
+  } else {
+    songMatch = true;
+  }
+  
+  if (guessArtist) {
+    artistCorrect = guessedArtist && (
+      guessedArtist === actualArtist ||
+      guessedArtist.includes(actualArtist) ||
+      actualArtist.includes(guessedArtist)
+    );
+    artistMatch = artistCorrect;
+  } else {
+    artistMatch = true;
+  }
+  
+  // Track the guess in analytics only
+  const guessData = {
+    song: guessedSong || null,
+    artist: guessedArtist || null,
+    correct: songMatch && artistMatch,
+    timestamp: Date.now()
+  };
+  
+  if (isFirebaseEnabled) {
+    analyticsRef.child(currentPost.id).child('guesses').push(guessData);
+  } else {
+    if (!postAnalytics[currentPost.id]) {
+      postAnalytics[currentPost.id] = { views: 0, guesses: [], helps: [] };
+    }
+    postAnalytics[currentPost.id].guesses.push(guessData);
+    localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
+  }
+  
+  guessResult.classList.remove("hidden");
+  
+  // Both correct
+  if (songMatch && artistMatch) {
+    guessResult.className = "result-message success";
+    guessResult.innerHTML = `
+      <div style="margin-bottom: 8px; font-size: 1rem;">✓ Correct!</div>
+      <div style="font-size: 0.85rem;">"${knowledge.song}" by ${knowledge.artist}</div>
+    `;
+    
+    submitGuess.classList.add("hidden");
+    guessInputFields.classList.add("hidden");
+    revealAnswer.classList.add("hidden");
+    
+    showGuessLinks(true);
+  }
+  // After 2 attempts - auto reveal
+  else if (currentGuessAttempts >= MAX_GUESS_ATTEMPTS) {
+    guessResult.className = "result-message error";
+    guessResult.innerHTML = `
+      <div style="margin-bottom: 8px; font-size: 1rem;">✗ Out of attempts</div>
+      <div style="font-size: 0.85rem; margin-top: 8px;"><strong>Answer:</strong></div>
+      <div style="font-size: 0.85rem;">Song: ${knowledge.song}</div>
+      <div style="font-size: 0.85rem;">Artist: ${knowledge.artist}</div>
+    `;
+    
+    submitGuess.classList.add("hidden");
+    guessInputFields.classList.add("hidden");
+    revealAnswer.classList.add("hidden");
+    
+    showGuessLinks(true);
+  }
+  // Partial correct
+  else if (songCorrect || artistCorrect) {
+    guessResult.className = "result-message partial";
+    
+    let feedbackHTML = '<div style="margin-bottom: 8px; font-size: 1rem;">Partial Correct</div>';
+    
+    if (guessSong) {
+      feedbackHTML += `<div style="font-size: 0.8rem;">${songCorrect ? '✓' : '✗'} Song: ${guessedSong || '(empty)'}</div>`;
+    }
+    if (guessArtist) {
+      feedbackHTML += `<div style="font-size: 0.8rem;">${artistCorrect ? '✓' : '✗'} Artist: ${guessedArtist || '(empty)'}</div>`;
+    }
+    
+    const attemptsLeft = MAX_GUESS_ATTEMPTS - currentGuessAttempts;
+    feedbackHTML += `<div style="margin-top: 8px; font-size: 0.75rem;">${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining</div>`;
+    
+    guessResult.innerHTML = feedbackHTML;
+    guessSongInput.value = "";
+    guessArtistInput.value = "";
+  }
+  // Both wrong
+  else {
+    guessResult.className = "result-message error";
+    
+    let feedbackHTML = '<div style="margin-bottom: 8px; font-size: 1rem;">✗ Incorrect</div>';
+    
+    if (guessSong && guessedSong) {
+      feedbackHTML += `<div style="font-size: 0.8rem;">✗ Song: ${guessedSong}</div>`;
+    }
+    if (guessArtist && guessedArtist) {
+      feedbackHTML += `<div style="font-size: 0.8rem;">✗ Artist: ${guessedArtist}</div>`;
+    }
+    
+    const attemptsLeft = MAX_GUESS_ATTEMPTS - currentGuessAttempts;
+    feedbackHTML += `<div style="margin-top: 8px; font-size: 0.75rem;">${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining</div>`;
+    
+    guessResult.innerHTML = feedbackHTML;
+    guessSongInput.value = "";
+    guessArtistInput.value = "";
+  }
+};
+
+// ===== REVEAL ANSWER =====
+revealAnswer.onclick = () => {
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  
   guessInputFields.classList.add("hidden");
   submitGuess.classList.add("hidden");
   revealAnswer.classList.add("hidden");
   
-  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
-  
   guessResult.className = "result-message success";
   guessResult.innerHTML = `
-    <div style="margin-bottom: 10px; font-size: 1.1rem;">✓ Answer</div>
-    <div style="font-size: 0.95rem;"><strong>Song:</strong> ${knowledge.song}</div>
-    <div style="font-size: 0.95rem;"><strong>Artist:</strong> ${knowledge.artist}</div>
+    <div style="margin-bottom: 8px; font-size: 1rem;">✓ Answer</div>
+    <div style="font-size: 0.85rem;"><strong>Song:</strong> ${knowledge.song}</div>
+    <div style="font-size: 0.85rem;"><strong>Artist:</strong> ${knowledge.artist}</div>
   `;
   guessResult.classList.remove("hidden");
   
   showGuessLinks(true);
-}
+};
 
 // ===== SHOW LINKS IN GUESS MODAL =====
 function showGuessLinks(permanent = false) {
@@ -846,162 +958,6 @@ function showGuessLinks(permanent = false) {
     }, 5000);
   }
 }
-
-// ===== SUBMIT GUESS WITH PARTIAL FEEDBACK =====
-submitGuess.onclick = () => {
-  if (!currentPost) return;
-  
-  const userState = getUserGuessState(currentPost.id);
-  userState.attempts++;
-  currentGuessAttempts = userState.attempts;
-  
-  const guessedSong = guessSongInput.value.trim().toLowerCase();
-  const guessedArtist = guessArtistInput.value.trim().toLowerCase();
-  
-  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
-  const actualSong = knowledge.song.toLowerCase();
-  const actualArtist = knowledge.artist.toLowerCase();
-  
-  const guessSong = currentPost.guessConfig?.guessSong ?? true;
-  const guessArtist = currentPost.guessConfig?.guessArtist ?? true;
-  
-  let songMatch = false;
-  let artistMatch = false;
-  let songCorrect = false;
-  let artistCorrect = false;
-  
-  if (guessSong) {
-    songCorrect = guessedSong && (
-      guessedSong === actualSong ||
-      guessedSong.includes(actualSong) ||
-      actualSong.includes(guessedSong)
-    );
-    songMatch = songCorrect;
-  } else {
-    songMatch = true;
-  }
-  
-  if (guessArtist) {
-    artistCorrect = guessedArtist && (
-      guessedArtist === actualArtist ||
-      guessedArtist.includes(actualArtist) ||
-      actualArtist.includes(guessedArtist)
-    );
-    artistMatch = artistCorrect;
-  } else {
-    artistMatch = true;
-  }
-  
-  // Track the guess
-  const guessData = {
-    song: guessedSong || null,
-    artist: guessedArtist || null,
-    correct: songMatch && artistMatch,
-    timestamp: Date.now()
-  };
-  
-  if (isFirebaseEnabled) {
-    analyticsRef.child(currentPost.id).child('guesses').push(guessData);
-  } else {
-    if (!postAnalytics[currentPost.id]) {
-      postAnalytics[currentPost.id] = { views: 0, guesses: [], helps: [] };
-    }
-    postAnalytics[currentPost.id].guesses.push(guessData);
-    localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
-  }
-  
-  guessResult.classList.remove("hidden");
-  
-  // Both correct
-  if (songMatch && artistMatch) {
-    userState.correct = true;
-    saveUserGuessState(currentPost.id, userState);
-    
-    guessResult.className = "result-message success";
-    guessResult.innerHTML = `
-      <div style="margin-bottom: 8px; font-size: 1rem;">✓ Correct!</div>
-      <div style="font-size: 0.85rem;">"${knowledge.song}" by ${knowledge.artist}</div>
-    `;
-    
-    submitGuess.classList.add("hidden");
-    guessInputFields.classList.add("hidden");
-    revealAnswer.classList.add("hidden");
-    
-    showGuessLinks(true);
-  }
-  // After 2 attempts - auto reveal
-  else if (userState.attempts >= MAX_GUESS_ATTEMPTS) {
-    userState.revealed = true;
-    saveUserGuessState(currentPost.id, userState);
-    
-    guessResult.className = "result-message error";
-    guessResult.innerHTML = `
-      <div style="margin-bottom: 8px; font-size: 1rem;">✗ Out of attempts</div>
-      <div style="font-size: 0.85rem; margin-top: 8px;"><strong>Answer:</strong></div>
-      <div style="font-size: 0.85rem;">Song: ${knowledge.song}</div>
-      <div style="font-size: 0.85rem;">Artist: ${knowledge.artist}</div>
-    `;
-    
-    submitGuess.classList.add("hidden");
-    guessInputFields.classList.add("hidden");
-    revealAnswer.classList.add("hidden");
-    
-    showGuessLinks(true);
-  }
-  // Partial correct
-  else if (songCorrect || artistCorrect) {
-    saveUserGuessState(currentPost.id, userState);
-    
-    guessResult.className = "result-message partial";
-    
-    let feedbackHTML = '<div style="margin-bottom: 8px; font-size: 1rem;">Partial Correct</div>';
-    
-    if (guessSong) {
-      feedbackHTML += `<div style="font-size: 0.8rem;">${songCorrect ? '✓' : '✗'} Song: ${guessedSong || '(empty)'}</div>`;
-    }
-    if (guessArtist) {
-      feedbackHTML += `<div style="font-size: 0.8rem;">${artistCorrect ? '✓' : '✗'} Artist: ${guessedArtist || '(empty)'}</div>`;
-    }
-    
-    const attemptsLeft = MAX_GUESS_ATTEMPTS - userState.attempts;
-    feedbackHTML += `<div style="margin-top: 8px; font-size: 0.75rem;">${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining</div>`;
-    
-    guessResult.innerHTML = feedbackHTML;
-    guessSongInput.value = "";
-    guessArtistInput.value = "";
-  }
-  // Both wrong
-  else {
-    saveUserGuessState(currentPost.id, userState);
-    
-    guessResult.className = "result-message error";
-    
-    let feedbackHTML = '<div style="margin-bottom: 8px; font-size: 1rem;">✗ Incorrect</div>';
-    
-    if (guessSong && guessedSong) {
-      feedbackHTML += `<div style="font-size: 0.8rem;">✗ Song: ${guessedSong}</div>`;
-    }
-    if (guessArtist && guessedArtist) {
-      feedbackHTML += `<div style="font-size: 0.8rem;">✗ Artist: ${guessedArtist}</div>`;
-    }
-    
-    const attemptsLeft = MAX_GUESS_ATTEMPTS - userState.attempts;
-    feedbackHTML += `<div style="margin-top: 8px; font-size: 0.75rem;">${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining</div>`;
-    
-    guessResult.innerHTML = feedbackHTML;
-    guessSongInput.value = "";
-    guessArtistInput.value = "";
-  }
-};
-
-// ===== REVEAL ANSWER =====
-revealAnswer.onclick = () => {
-  const userState = getUserGuessState(currentPost.id);
-  userState.revealed = true;
-  saveUserGuessState(currentPost.id, userState);
-  
-  showAnswerState(userState);
-};
 
 // ===== OPEN DISCOVER MODAL =====
 function openDiscover(index) {
@@ -1104,23 +1060,18 @@ function viewPost(index) {
   postcardLyric.textContent = currentPost.text;
   postcardEmotion.textContent = currentPost.emotion;
   
-  let canSeeSong = true;
-  
-  if (currentPost.mode === "guess") {
-    const userState = getUserGuessState(currentPost.id);
-    canSeeSong = userState.correct || userState.revealed;
-  }
-  
   const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
   
-  if (canSeeSong) {
+  // For guess mode, hide song info (user must guess)
+  // For share/discover, always show
+  if (currentPost.mode === "guess") {
     postcardSong.innerHTML = `
-      <div>${knowledge.song}</div>
-      <div>${knowledge.artist}</div>
+      <div style="font-style: italic; color: var(--text-secondary);">Guess correctly to reveal</div>
     `;
   } else {
     postcardSong.innerHTML = `
-      <div style="font-style: italic; color: var(--text-secondary);">Guess correctly to reveal</div>
+      <div>${knowledge.song}</div>
+      <div>${knowledge.artist}</div>
     `;
   }
   
@@ -1131,7 +1082,8 @@ function viewPost(index) {
     currentPost.links.soundcloud
   );
   
-  if (hasLinks && canSeeSong) {
+  // Show listen button for share/discover modes with links
+  if (hasLinks && currentPost.mode !== "guess") {
     listenPostcard.style.display = 'block';
   } else {
     listenPostcard.style.display = 'none';
