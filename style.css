@@ -1,4 +1,4 @@
-/* MARGO - Improved Design with Compact Modals & NEW SHARING UI */
+/* MARGO - Enhanced with Scroll Improvements & Live Updates */
 
 * { 
   box-sizing: border-box; 
@@ -217,7 +217,93 @@ button:active {
   font-size: 1.2rem;
 }
 
-/* ===== FEED LIST ===== */
+/* ===== NEW: NEW POSTS INDICATOR ===== */
+.new-posts-indicator {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: linear-gradient(135deg, var(--gold), var(--gold-hover));
+  color: #000;
+  padding: 12px 24px;
+  border-radius: 50px;
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+  z-index: 99;
+  cursor: pointer;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+}
+
+.new-posts-indicator.visible {
+  transform: translateX(-50%) translateY(0);
+  animation: pulse 2s infinite;
+}
+
+.new-posts-indicator:hover {
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.6);
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.new-posts-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.new-posts-icon {
+  font-size: 1.1rem;
+  animation: sparkle 1.5s infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.2); }
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); }
+  50% { box-shadow: 0 6px 25px rgba(212, 175, 55, 0.7); }
+}
+
+/* ===== NEW: SCROLL TO TOP BUTTON ===== */
+.scroll-to-top {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), var(--gold-hover));
+  color: #000;
+  font-size: 1.5rem;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+  z-index: 99;
+  opacity: 0;
+  transform: translateY(100px) scale(0.8);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.scroll-to-top.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
+}
+
+.scroll-to-top:hover {
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.6);
+  transform: translateY(-4px) scale(1.05);
+}
+
+.scroll-to-top span {
+  display: block;
+  line-height: 1;
+}
+
+/* ===== FEED LIST - ENHANCED SCROLL ===== */
 .feed-list {
   padding: 24px 20px;
   display: grid;
@@ -227,6 +313,27 @@ button:active {
   margin: 0 auto;
   width: 100%;
   flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* Enhanced scrollbar */
+.feed-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.feed-list::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+  border-left: 1px solid var(--border);
+}
+
+.feed-list::-webkit-scrollbar-thumb {
+  background: var(--gold);
+  border-radius: 4px;
+}
+
+.feed-list::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-hover);
 }
 
 .feed-card {
@@ -242,11 +349,24 @@ button:active {
   flex-direction: column;
   gap: 12px;
   
-  /* UNIFORM HEIGHT - All cards same size */
+  /* UNIFORM HEIGHT */
   height: 420px;
   
-  /* Ensure proper layout */
   position: relative;
+  
+  /* NEW: Subtle animation on render */
+  animation: cardFadeIn 0.4s ease-out;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .feed-card:hover {
@@ -270,13 +390,11 @@ button:active {
   letter-spacing: 0.3px;
   position: relative;
   
-  /* FIXED HEIGHT - Takes up main space */
   flex: 1;
   min-height: 140px;
   max-height: 180px;
   overflow: hidden;
   
-  /* Dynamic font size will be set via inline style in JS */
   font-size: 1.1rem;
 }
 
@@ -343,7 +461,6 @@ button:active {
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
   
-  /* Pin to bottom of card */
   margin-top: auto;
 }
 
@@ -378,7 +495,7 @@ button:active {
   letter-spacing: 0.5px;
 }
 
-/* ===== MODALS - COMPACT VERSION ===== */
+/* ===== MODALS ===== */
 .modal {
   position: fixed;
   inset: 0;
@@ -492,7 +609,7 @@ body.modal-open {
   flex-shrink: 0;
 }
 
-/* ===== FORM ELEMENTS - COMPACT ===== */
+/* ===== FORM ELEMENTS ===== */
 label {
   font-size: 0.75rem;
   font-weight: 700;
@@ -609,7 +726,7 @@ textarea:focus, input:focus {
   padding: 10px;
 }
 
-/* ===== MODE OPTIONS - COMPACT ===== */
+/* ===== MODE OPTIONS ===== */
 .mode-options {
   display: flex;
   gap: 10px;
@@ -664,7 +781,7 @@ textarea:focus, input:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== CHECKBOXES - COMPACT ===== */
+/* ===== CHECKBOXES ===== */
 .checkbox-group {
   display: flex;
   flex-direction: column;
@@ -702,7 +819,7 @@ textarea:focus, input:focus {
   letter-spacing: 0;
 }
 
-/* ===== EMOTION PILLS - COMPACT ===== */
+/* ===== EMOTION PILLS ===== */
 .emotion-pills {
   display: flex;
   gap: 8px;
@@ -732,7 +849,7 @@ textarea:focus, input:focus {
   box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
 }
 
-/* ===== LYRIC DISPLAY - MORE COMPACT ===== */
+/* ===== LYRIC DISPLAY ===== */
 .lyric-display {
   font-family: 'Playfair Display', serif;
   font-style: italic;
@@ -770,7 +887,7 @@ textarea:focus, input:focus {
   right: 8px;
 }
 
-/* ===== RESULT MESSAGE - MORE COMPACT ===== */
+/* ===== RESULT MESSAGE ===== */
 .result-message {
   padding: 12px;
   border-radius: 10px;
@@ -809,7 +926,7 @@ textarea:focus, input:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== GUESS LINKS - MORE COMPACT ===== */
+/* ===== GUESS LINKS ===== */
 .guess-links-section {
   padding: 12px;
   background: var(--bg-elevated);
@@ -887,7 +1004,7 @@ textarea:focus, input:focus {
   transform: translateX(4px);
 }
 
-/* ===== IMPROVED POSTCARD - COMPACT ===== */
+/* ===== POSTCARD ===== */
 .postcard {
   background: linear-gradient(135deg, #0d0d0d 0%, #1a1410 50%, #0d0d0d 100%);
   border-radius: 20px;
@@ -1041,7 +1158,7 @@ textarea:focus, input:focus {
   bottom: 32px;
 }
 
-/* ===== ANALYTICS - COMPACT ===== */
+/* ===== ANALYTICS ===== */
 .analytics-modal .modal-content {
   max-width: 600px;
 }
@@ -1183,7 +1300,7 @@ textarea:focus, input:focus {
   background: rgba(212, 175, 55, 0.05);
 }
 
-/* ===== COLOR PICKER - MORE COMPACT ===== */
+/* ===== COLOR PICKER ===== */
 .live-preview-container {
   display: flex;
   justify-content: center;
@@ -1251,7 +1368,7 @@ textarea:focus, input:focus {
   gap: 18px;
 }
 
-/* ===== PLATFORM OPTIONS - COMPACT ===== */
+/* ===== PLATFORM OPTIONS ===== */
 .platform-options {
   display: flex;
   flex-direction: column;
@@ -1308,7 +1425,7 @@ textarea:focus, input:focus {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-/* ===== SHARE LINK SECTION - NEW ===== */
+/* ===== SHARE LINK SECTION ===== */
 .share-link-section {
   padding: 16px;
   background: var(--bg-elevated);
@@ -1362,7 +1479,7 @@ textarea:focus, input:focus {
   transform: scale(1.05);
 }
 
-/* ===== SHARE ACTIONS - NEW ===== */
+/* ===== SHARE ACTIONS ===== */
 .share-actions {
   display: flex;
   flex-direction: column;
@@ -1377,7 +1494,6 @@ textarea:focus, input:focus {
     gap: 18px;
   }
   
-  /* Slightly shorter cards on mobile */
   .feed-card {
     height: 380px;
   }
@@ -1453,6 +1569,20 @@ textarea:focus, input:focus {
   
   .copy-link-btn {
     width: 100%;
+  }
+  
+  .scroll-to-top {
+    bottom: 20px;
+    right: 20px;
+    width: 45px;
+    height: 45px;
+    font-size: 1.3rem;
+  }
+  
+  .new-posts-indicator {
+    top: 70px;
+    padding: 10px 20px;
+    font-size: 0.85rem;
   }
 }
 
