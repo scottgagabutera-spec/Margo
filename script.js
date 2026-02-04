@@ -1,4 +1,5 @@
 /* MARGO - Firebase Real-Time Sync Edition - WITH SCROLL PRESERVATION & LIVE UPDATES - IMPROVED */
+/* CONTENT MODERATION: Two-tier system with partial censoring and zero-tolerance blocking */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -28,6 +29,113 @@ try {
 } catch (error) {
   console.warn('⚠ Firebase not configured. Using localStorage only.', error.message);
   isFirebaseEnabled = false;
+}
+
+// ===== CONTENT MODERATION SYSTEM =====
+
+// Partial censor list - middle letters replaced with **
+const autoCensorList = [
+  'fuck', 'fucking', 'fucked', 'fucker', 'fucks',
+  'shit', 'shitting', 'shitty', 'shits',
+  'ass', 'asshole', 'asses',
+  'bitch', 'bitches', 'bitching',
+  'damn', 'damned',
+  'hell',
+  'crap', 'crappy',
+  'dick', 'dicks',
+  'cock', 'cocks',
+  'pussy', 'pussies',
+  'whore', 'whores',
+  'slut', 'sluts', 'slutty',
+  'bastard', 'bastards',
+  'piss', 'pissed', 'pissing'
+];
+
+// Zero-tolerance list - blocks post entirely (no explicit display in code)
+const zeroToleranceList = [
+  'nigger', 'nigga', 'nig', 'negro',
+  'faggot', 'fag', 'dyke',
+  'tranny', 'trannie', 'shemale',
+  'retard', 'retarded', 'retards',
+  'chink', 'gook', 'zipperhead',
+  'spic', 'beaner', 'wetback',
+  'kike', 'hymie',
+  'towelhead', 'sandnigger', 'raghead',
+  'coon', 'jigaboo', 'porch monkey',
+  'cracker', 'honkey', 'whitey'
+];
+
+/**
+ * Normalizes text to catch variations and bypass attempts
+ */
+function normalizeText(text) {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, '') // Remove all spaces
+    .replace(/1/g, 'i')
+    .replace(/3/g, 'e')
+    .replace(/4/g, 'a')
+    .replace(/5/g, 's')
+    .replace(/0/g, 'o')
+    .replace(/@/g, 'a')
+    .replace(/\$/g, 's')
+    .replace(/!/g, 'i')
+    .replace(/\*/g, '') // Remove existing asterisks
+    .replace(/[^a-z]/g, ''); // Remove all non-letter characters
+}
+
+/**
+ * Partially censors a word by keeping first and last letter
+ */
+function partialCensor(word) {
+  if (word.length <= 2) return '**';
+  if (word.length === 3) return word[0] + '*' + word[2];
+  
+  const firstLetter = word[0];
+  const lastLetter = word[word.length - 1];
+  return firstLetter + '**' + lastLetter;
+}
+
+/**
+ * Main moderation function
+ * Returns: { allowed: boolean, cleanText: string, reason?: string }
+ */
+function moderateText(text) {
+  // Check zero-tolerance words first
+  const normalized = normalizeText(text);
+  
+  for (const slur of zeroToleranceList) {
+    if (normalized.includes(slur)) {
+      return {
+        allowed: false,
+        cleanText: text,
+        reason: 'Please keep MARGO respectful and inclusive.'
+      };
+    }
+  }
+  
+  // Apply partial censoring to profanity
+  let cleanText = text;
+  const words = text.split(/\b/); // Split on word boundaries
+  
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const normalizedWord = normalizeText(word);
+    
+    for (const profanity of autoCensorList) {
+      if (normalizedWord === profanity || normalizedWord.includes(profanity)) {
+        words[i] = partialCensor(word);
+        break;
+      }
+    }
+  }
+  
+  cleanText = words.join('');
+  
+  return {
+    allowed: true,
+    cleanText: cleanText
+  };
 }
 
 // ===== ELEMENTS =====
@@ -559,7 +667,7 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
   };
 });
 
-// ===== CREATE POST =====
+// ===== CREATE POST WITH MODERATION =====
 postBtn.onclick = async () => {
   if (postBtn.disabled) return;
 
@@ -575,8 +683,20 @@ postBtn.onclick = async () => {
     return;
   }
 
+  // ===== MODERATION CHECK =====
+  const moderation = moderateText(text);
+  
+  if (!moderation.allowed) {
+    showToast(moderation.reason);
+    return;
+  }
+  
+  // Use the cleaned text from moderation
+  const cleanedText = moderation.cleanText;
+  // ===== END MODERATION =====
+
   let post = {
-    text,
+    text: cleanedText, // Use moderated text
     emotion: selectedEmotion,
     mode: currentMode,
     knowledge: {
