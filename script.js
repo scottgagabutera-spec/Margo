@@ -281,11 +281,10 @@ function saveScrollPosition() {
 
 function restoreScrollPosition() {
   if (feedList && savedScrollPosition > 0) {
-    setTimeout(() => {
-      feedList.scrollTop = savedScrollPosition;
-      window.scrollTo(0, savedScrollPosition);
-      console.log('📍 Restored scroll position:', savedScrollPosition);
-    }, 50);
+    // Immediate restore without animation for seamless experience
+    feedList.scrollTop = savedScrollPosition;
+    window.scrollTo(0, savedScrollPosition);
+    console.log('📍 Restored scroll position:', savedScrollPosition);
   }
 }
 
@@ -293,8 +292,14 @@ function restoreScrollPosition() {
 function setupScrollToTop() {
   if (!feedList || !scrollToTopBtn) return;
   
+  let scrollTimeout;
+  
   feedList.addEventListener('scroll', () => {
-    if (feedList.scrollTop > 500) {
+    // Clear existing timeout
+    clearTimeout(scrollTimeout);
+    
+    // Show/hide button based on scroll position
+    if (feedList.scrollTop > 300) {
       scrollToTopBtn.classList.add('visible');
     } else {
       scrollToTopBtn.classList.remove('visible');
@@ -307,6 +312,11 @@ function setupScrollToTop() {
       behavior: 'smooth'
     });
     savedScrollPosition = 0;
+    
+    // Hide button after scrolling
+    setTimeout(() => {
+      scrollToTopBtn.classList.remove('visible');
+    }, 600);
   };
 }
 
@@ -342,22 +352,44 @@ function openModal(modal) {
   // Save scroll position before opening modal
   saveScrollPosition();
   
-  modal.classList.remove("hidden");
-  document.body.classList.add("modal-open");
-  document.body.style.overflow = 'hidden';
-  document.body.style.position = 'fixed';
-  document.body.style.width = '100%';
+  // Smooth fade in for modal
+  modal.style.display = 'flex';
+  modal.style.opacity = '0';
+  
+  requestAnimationFrame(() => {
+    modal.classList.remove("hidden");
+    modal.style.opacity = '';
+    
+    document.body.classList.add("modal-open");
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = `-${savedScrollPosition}px`;
+  });
 }
 
 function closeModal(modal) {
-  modal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
-  document.body.style.overflow = '';
-  document.body.style.position = '';
-  document.body.style.width = '';
+  // Smooth fade out
+  modal.style.opacity = '0';
   
-  // Restore scroll position after closing modal
-  restoreScrollPosition();
+  setTimeout(() => {
+    modal.classList.add("hidden");
+    modal.style.display = '';
+    modal.style.opacity = '';
+    
+    document.body.classList.remove("modal-open");
+    const scrollY = document.body.style.top;
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.top = '';
+    
+    // Restore scroll position immediately and smoothly
+    if (feedList && savedScrollPosition > 0) {
+      feedList.scrollTop = savedScrollPosition;
+      window.scrollTo(0, savedScrollPosition);
+    }
+  }, 200);
 }
 
 // ===== SWIPE NAVIGATION =====
@@ -694,6 +726,11 @@ function getDynamicFontSize(text) {
 
 // ===== RENDER FEED =====
 function renderFeed() {
+  // Add subtle transition class
+  if (feedList) {
+    feedList.classList.add('transitioning');
+  }
+  
   feedList.innerHTML = "";
   
   if (!postsLoaded) {
@@ -713,6 +750,9 @@ function renderFeed() {
   posts.forEach((post, index) => {
     const card = document.createElement("div");
     card.className = "feed-card";
+    
+    // Stagger animation slightly for each card
+    card.style.animationDelay = `${index * 0.03}s`;
     
     const timeText = timeAgo(post.timestamp);
     const emotion = post.emotion || "Nostalgia";
@@ -791,6 +831,13 @@ function renderFeed() {
 
     feedList.appendChild(card);
   });
+  
+  // Remove transition class after a brief moment
+  setTimeout(() => {
+    if (feedList) {
+      feedList.classList.remove('transitioning');
+    }
+  }, 100);
 }
 
 // ===== TIME AGO =====
