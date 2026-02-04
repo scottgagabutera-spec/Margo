@@ -588,6 +588,18 @@ function resetComposer() {
   guessArtistCheck.checked = true;
 }
 
+// ===== DYNAMIC FONT SIZING =====
+function getDynamicFontSize(text) {
+  const length = text.length;
+  
+  // Dynamic font sizing based on character count
+  if (length < 50) return '1.15rem';      // Very short - large
+  if (length < 80) return '1.05rem';      // Short - medium-large
+  if (length < 110) return '0.95rem';     // Medium - medium
+  if (length < 140) return '0.85rem';     // Long - small
+  return '0.75rem';                       // Very long - very small
+}
+
 // ===== RENDER FEED =====
 function renderFeed() {
   feedList.innerHTML = "";
@@ -678,7 +690,7 @@ function renderFeed() {
     }
 
     card.innerHTML = `
-      <div class="feed-text">${post.text}</div>
+      <div class="feed-text" style="font-size: ${getDynamicFontSize(post.text)}">${post.text}</div>
       <div class="feed-emotion">${emotion}</div>
       ${songSection}
       <div class="feed-time">${timeText}</div>
