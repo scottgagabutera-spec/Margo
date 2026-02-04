@@ -12,8 +12,9 @@ const firebaseConfig = {
   appId: "1:150183564620:web:a42de7fef39740b551ebe9"
 };
 
-// ===== APP BASE URL (UPDATE THIS WITH YOUR ACTUAL DOMAIN) =====
-const APP_BASE_URL = window.location.origin;
+// ===== APP BASE URL - PRODUCTION DOMAIN =====
+// ✅ UPDATED: Now uses your actual Vercel domain for consistent sharing
+const APP_BASE_URL = 'https://margo-silk.vercel.app';
 
 let isFirebaseEnabled = false;
 let postsRef = null;
@@ -1727,9 +1728,8 @@ async function generatePoster(size, design) {
   ctx.font = `500 ${baseFontSize * 0.6}px sans-serif`;
   ctx.textAlign = 'center';
   
-  // Get domain without protocol
-  const domain = APP_BASE_URL.replace(/^https?:\/\//, '');
-  ctx.fillText(domain, dims.width / 2, dims.height * 0.95);
+  // Use the domain name as watermark
+  ctx.fillText('margo-silk.vercel.app', dims.width / 2, dims.height * 0.95);
   
   // Convert canvas to blob for sharing
   return new Promise((resolve) => {
@@ -1855,6 +1855,7 @@ function showToast(message) {
 console.log("MARGO Firebase Edition loaded - WITH SCROLL PRESERVATION & LIVE UPDATES - IMPROVED");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
+console.log("🌐 App Base URL:", APP_BASE_URL);
 
 // Setup scroll to top button
 setupScrollToTop();
