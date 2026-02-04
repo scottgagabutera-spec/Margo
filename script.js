@@ -1086,6 +1086,17 @@ function viewPost(index) {
     listenPostcard.style.display = 'none';
   }
   
+  // Check if this was opened from a shared link
+  const urlParams = new URLSearchParams(window.location.search);
+  const sharedPostId = urlParams.get('post');
+  
+  if (sharedPostId && sharedPostId == currentPost.id) {
+    // Show a subtle indicator that this is a shared post
+    setTimeout(() => {
+      showToast("📬 Viewing shared post");
+    }, 500);
+  }
+  
   openModal(postcardModal);
 }
 
@@ -1548,17 +1559,73 @@ console.log("MARGO Firebase Edition loaded - WITH IMPROVED SHARING");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
 
-window.addEventListener('load', () => {
+// ===== HANDLE SHARED POST LINKS =====
+function handleSharedPostLink() {
   const urlParams = new URLSearchParams(window.location.search);
   const postId = urlParams.get('post');
   
-  if (postId) {
-    const postIndex = posts.findIndex(p => p.id == postId);
-    if (postIndex !== -1) {
+  if (!postId) return;
+  
+  console.log('📍 Shared post link detected:', postId);
+  
+  // Find the post
+  const postIndex = posts.findIndex(p => p.id == postId);
+  
+  if (postIndex !== -1) {
+    console.log('✓ Post found, opening directly');
+    
+    // Hide landing, show feed
+    landing.classList.remove("active");
+    feed.classList.add("active");
+    
+    // Render feed
+    renderFeed();
+    
+    // Open the specific post immediately
+    setTimeout(() => {
+      viewPost(postIndex);
+    }, 300);
+  } else {
+    console.log('⚠ Post not found yet, waiting for Firebase sync...');
+    
+    // If using Firebase, posts might not be loaded yet
+    // Set up a one-time listener to open post when it loads
+    if (isFirebaseEnabled) {
+      const checkInterval = setInterval(() => {
+        const foundIndex = posts.findIndex(p => p.id == postId);
+        if (foundIndex !== -1) {
+          clearInterval(checkInterval);
+          console.log('✓ Post loaded from Firebase, opening now');
+          
+          landing.classList.remove("active");
+          feed.classList.add("active");
+          renderFeed();
+          
+          setTimeout(() => {
+            viewPost(foundIndex);
+          }, 300);
+        }
+      }, 500);
+      
+      // Stop checking after 10 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        console.log('⚠ Post not found after 10s, showing feed instead');
+        landing.classList.remove("active");
+        feed.classList.add("active");
+        renderFeed();
+      }, 10000);
+    } else {
+      // Not using Firebase and post not found - just show feed
+      console.log('Post not found, showing feed');
       landing.classList.remove("active");
       feed.classList.add("active");
       renderFeed();
-      setTimeout(() => viewPost(postIndex), 500);
     }
   }
+}
+
+// Check for shared post link when page loads
+window.addEventListener('load', () => {
+  handleSharedPostLink();
 });
