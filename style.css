@@ -1,4 +1,4 @@
-/* MARGO - Improved Design with Uniform Card Heights */
+/* MARGO - Improved Design with Compact Modals */
 
 * { 
   box-sizing: border-box; 
@@ -217,7 +217,7 @@ button:active {
   font-size: 1.2rem;
 }
 
-/* ===== FEED LIST - FIXED UNIFORM HEIGHTS ===== */
+/* ===== FEED LIST ===== */
 .feed-list {
   padding: 24px 20px;
   display: grid;
@@ -241,9 +241,6 @@ button:active {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  /* FIXED: Set minimum height for uniformity */
-  min-height: 380px;
-  height: 380px;
 }
 
 .feed-card:hover {
@@ -254,7 +251,6 @@ button:active {
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* FIXED: Lyric text container with fixed height and scrolling */
 .feed-text {
   font-family: 'Playfair Display', serif;
   font-style: italic;
@@ -263,28 +259,11 @@ button:active {
   text-align: center;
   color: var(--text);
   padding: 14px 8px;
-  /* FIXED: Set fixed height and enable scrolling for long lyrics */
-  height: 120px;
+  min-height: 85px;
   display: flex;
   align-items: center;
   justify-content: center;
   letter-spacing: 0.3px;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-/* Hide scrollbar but keep functionality */
-.feed-text::-webkit-scrollbar {
-  width: 4px;
-}
-
-.feed-text::-webkit-scrollbar-thumb {
-  background: rgba(212, 175, 55, 0.3);
-  border-radius: 2px;
-}
-
-.feed-text::-webkit-scrollbar-track {
-  background: transparent;
 }
 
 .feed-text::before {
@@ -294,7 +273,6 @@ button:active {
   opacity: 0.25;
   margin-right: 6px;
   line-height: 1;
-  flex-shrink: 0;
 }
 
 .feed-text::after {
@@ -304,7 +282,6 @@ button:active {
   opacity: 0.25;
   margin-left: 6px;
   line-height: 1;
-  flex-shrink: 0;
 }
 
 .feed-emotion {
@@ -318,19 +295,12 @@ button:active {
   align-self: center;
   text-transform: uppercase;
   letter-spacing: 1px;
-  flex-shrink: 0;
 }
 
-/* FIXED: Song section with fixed height */
 .feed-song {
   text-align: center;
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
-  height: 60px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .feed-song-title {
@@ -338,18 +308,12 @@ button:active {
   font-size: 0.9rem;
   margin-bottom: 5px;
   letter-spacing: 0.3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .feed-song-artist {
   font-size: 0.8rem;
   color: var(--text-secondary);
   letter-spacing: 0.2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .feed-time {
@@ -357,18 +321,13 @@ button:active {
   color: var(--text-secondary);
   text-align: center;
   font-weight: 500;
-  flex-shrink: 0;
-  margin-top: auto;
 }
 
-/* FIXED: Actions section pinned to bottom */
 .feed-actions {
   display: flex;
   gap: 10px;
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
-  flex-shrink: 0;
-  margin-top: auto;
 }
 
 .feed-action {
@@ -390,7 +349,6 @@ button:active {
   transform: translateY(-2px);
 }
 
-/* FIXED: Mystery and discover badges with fixed height */
 .mystery-badge, .discover-badge {
   background: rgba(212, 175, 55, 0.08);
   border: 2px dashed var(--gold);
@@ -401,12 +359,6 @@ button:active {
   color: var(--gold);
   font-weight: 700;
   letter-spacing: 0.5px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
 }
 
 /* ===== MODALS - COMPACT VERSION ===== */
@@ -973,9 +925,6 @@ textarea:focus, input:focus {
   align-items: center;
   justify-content: center;
   letter-spacing: 0.4px;
-  /* FIXED: Allow scrolling for long lyrics */
-  overflow-y: auto;
-  max-height: 200px;
 }
 
 .postcard-lyric::before {
@@ -1350,12 +1299,6 @@ textarea:focus, input:focus {
     gap: 18px;
   }
   
-  /* FIXED: Maintain uniform height on mobile */
-  .feed-card {
-    height: 400px;
-    min-height: 400px;
-  }
-  
   .mode-options {
     flex-direction: column;
   }
@@ -1434,5 +1377,3 @@ textarea:focus, input:focus {
     grid-template-columns: repeat(4, 1fr);
   }
 }
-
-
