@@ -38,6 +38,20 @@
     </div>
     <button id="openComposer" class="header-btn primary">Drop your line</button>
   </header>
+  
+  <!-- NEW: New Posts Indicator -->
+  <div id="newPostsIndicator" class="new-posts-indicator">
+    <div class="new-posts-content">
+      <span class="new-posts-icon">✨</span>
+      <span class="new-posts-text"><span class="new-posts-count">0</span> new</span>
+    </div>
+  </div>
+  
+  <!-- NEW: Scroll to Top Button -->
+  <button id="scrollToTopBtn" class="scroll-to-top">
+    <span>↑</span>
+  </button>
+  
   <div id="feedList" class="feed-list"></div>
 </section>
 
@@ -273,7 +287,7 @@
   </div>
 </div>
 
-<!-- SHARE POSTER MODAL - UPDATED -->
+<!-- SHARE POSTER MODAL -->
 <div id="sharePosterModal" class="modal hidden">
   <div class="modal-content poster-modal">
     <div class="modal-header">
@@ -342,7 +356,7 @@
         <button id="backToDesign" class="secondary-btn full">Back</button>
       </div>
 
-      <!-- Step 3: Share Options - NEW -->
+      <!-- Step 3: Share Options -->
       <div id="shareStep" class="poster-step">
         <div class="poster-preview">
           <canvas id="posterCanvas"></canvas>
