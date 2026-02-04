@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition - WITH IMPROVED SHARING */
+/* MARGO - IMPROVED MOBILE EXPERIENCE */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -11,7 +11,7 @@ const firebaseConfig = {
   appId: "1:150183564620:web:a42de7fef39740b551ebe9"
 };
 
-// ===== APP BASE URL (UPDATE THIS WITH YOUR ACTUAL DOMAIN) =====
+// ===== APP BASE URL =====
 const APP_BASE_URL = window.location.origin;
 
 let isFirebaseEnabled = false;
@@ -51,6 +51,7 @@ const textInput = document.getElementById("textInput");
 const charCount = document.getElementById("charCount");
 const feedList = document.getElementById("feedList");
 const postCount = document.getElementById("postCount");
+const newPostsIndicator = document.getElementById("newPostsIndicator");
 
 // Mode
 const modeBtns = document.querySelectorAll(".mode-btn");
@@ -125,7 +126,7 @@ const helpsSection = document.getElementById("helpsSection");
 const guessesList = document.getElementById("guessesList");
 const helpsList = document.getElementById("helpsList");
 
-// Share Poster modal - UPDATED
+// Share Poster modal
 const closeSharePoster = document.getElementById("closeSharePoster");
 const designStep = document.getElementById("designStep");
 const platformStep = document.getElementById("platformStep");
@@ -151,9 +152,16 @@ let selectedDesign = "midnight-gold";
 let selectedPosterSize = null;
 let generatedPosterBlob = null;
 
-// Local data (will sync with Firebase)
+// Local data
 let posts = [];
 let postAnalytics = {};
+
+// ===== NEW: SCROLL POSITION TRACKING =====
+let savedScrollPosition = 0;
+
+// ===== NEW: NEW POSTS TRACKING =====
+let lastSeenPostCount = 0;
+let newPostsCount = 0;
 
 // ===== PER-USER TRACKING =====
 let userId = localStorage.getItem("margoUserId");
@@ -166,8 +174,8 @@ if (!userId) {
 let postsLoaded = false;
 
 if (isFirebaseEnabled) {
-  // Listen for posts changes
   postsRef.orderByChild('timestamp').limitToLast(50).on('value', (snapshot) => {
+    const oldPostCount = posts.length;
     posts = [];
     snapshot.forEach((childSnapshot) => {
       const post = childSnapshot.val();
@@ -179,6 +187,14 @@ if (isFirebaseEnabled) {
     
     console.log('📡 Posts synced from Firebase:', posts.length);
     
+    // Check for new posts
+    if (postsLoaded && posts.length > oldPostCount) {
+      newPostsCount = posts.length - lastSeenPostCount;
+      if (newPostsCount > 0 && feed.classList.contains('active')) {
+        showNewPostsIndicator();
+      }
+    }
+    
     postsLoaded = true;
     
     if (feed.classList.contains('active')) {
@@ -186,13 +202,11 @@ if (isFirebaseEnabled) {
     }
   });
   
-  // Listen for analytics changes
   analyticsRef.on('value', (snapshot) => {
     postAnalytics = snapshot.val() || {};
     console.log('📊 Analytics synced from Firebase');
   });
 } else {
-  // Fallback to localStorage
   posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
   postAnalytics = JSON.parse(localStorage.getItem("margoAnalytics") || "{}");
   postsLoaded = true;
@@ -254,21 +268,58 @@ const POSTER_DESIGNS = {
   }
 };
 
-// ===== MODAL SCROLL FIX =====
+// ===== IMPROVED MODAL HANDLING - FIXES DOUBLE SCROLLING =====
 function openModal(modal) {
+  // Save current scroll position BEFORE opening modal
+  savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+  
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
+  
+  // Lock background scroll
   document.body.style.overflow = 'hidden';
   document.body.style.position = 'fixed';
+  document.body.style.top = `-${savedScrollPosition}px`;
   document.body.style.width = '100%';
 }
 
 function closeModal(modal) {
   modal.classList.add("hidden");
   document.body.classList.remove("modal-open");
+  
+  // Restore background scroll
   document.body.style.overflow = '';
   document.body.style.position = '';
+  document.body.style.top = '';
   document.body.style.width = '';
+  
+  // Restore scroll position
+  window.scrollTo(0, savedScrollPosition);
+}
+
+// ===== NEW: NEW POSTS INDICATOR =====
+function showNewPostsIndicator() {
+  if (newPostsIndicator) {
+    newPostsIndicator.textContent = `${newPostsCount} new post${newPostsCount > 1 ? 's' : ''}`;
+    newPostsIndicator.classList.add('visible');
+  }
+}
+
+function hideNewPostsIndicator() {
+  if (newPostsIndicator) {
+    newPostsIndicator.classList.remove('visible');
+    lastSeenPostCount = posts.length;
+    newPostsCount = 0;
+  }
+}
+
+// Click indicator to scroll to top and refresh
+if (newPostsIndicator) {
+  newPostsIndicator.onclick = () => {
+    feedList.scrollTo({ top: 0, behavior: 'smooth' });
+    renderFeed();
+    hideNewPostsIndicator();
+  };
 }
 
 // ===== SWIPE NAVIGATION =====
@@ -286,6 +337,7 @@ const handleSwipe = () => {
       landing.classList.remove("active");
       feed.classList.add("active");
       renderFeed();
+      lastSeenPostCount = posts.length;
     } else if (diffX < 0 && feed.classList.contains("active")) {
       feed.classList.remove("active");
       landing.classList.add("active");
@@ -545,6 +597,9 @@ postBtn.onclick = async () => {
     feed.classList.add("active");
     landing.classList.remove("active");
     renderFeed();
+    
+    // Reset last seen count after posting
+    lastSeenPostCount = posts.length;
 
     resetComposer();
     closeModal(composer);
@@ -592,12 +647,11 @@ function resetComposer() {
 function getDynamicFontSize(text) {
   const length = text.length;
   
-  // Dynamic font sizing based on character count
-  if (length < 50) return '1.15rem';      // Very short - large
-  if (length < 80) return '1.05rem';      // Short - medium-large
-  if (length < 110) return '0.95rem';     // Medium - medium
-  if (length < 140) return '0.85rem';     // Long - small
-  return '0.75rem';                       // Very long - very small
+  if (length < 50) return '1.15rem';
+  if (length < 80) return '1.05rem';
+  if (length < 110) return '0.95rem';
+  if (length < 140) return '0.85rem';
+  return '0.75rem';
 }
 
 // ===== RENDER FEED =====
@@ -1098,12 +1152,10 @@ function viewPost(index) {
     listenPostcard.style.display = 'none';
   }
   
-  // Check if this was opened from a shared link
   const urlParams = new URLSearchParams(window.location.search);
   const sharedPostId = urlParams.get('post');
   
   if (sharedPostId && sharedPostId == currentPost.id) {
-    // Show a subtle indicator that this is a shared post
     setTimeout(() => {
       showToast("📬 Viewing shared post");
     }, 500);
@@ -1351,25 +1403,22 @@ backToPlatform.onclick = () => {
   platformStep.classList.add("active");
 };
 
-// ===== PLATFORM SELECTION & POSTER GENERATION - UPDATED =====
+// ===== PLATFORM SELECTION & POSTER GENERATION =====
 document.querySelectorAll(".platform-btn").forEach(btn => {
   btn.onclick = async () => {
     selectedPosterSize = btn.dataset.size;
     
-    // Generate poster with watermark
     await generatePoster(selectedPosterSize, selectedDesign);
     
-    // Generate shareable link
     const shareLink = `${APP_BASE_URL}?post=${currentPost.id}`;
     shareableLink.value = shareLink;
     
-    // Move to share step
     platformStep.classList.remove("active");
     shareStep.classList.add("active");
   };
 });
 
-// ===== POSTER GENERATION WITH WATERMARK - UPDATED =====
+// ===== POSTER GENERATION WITH WATERMARK =====
 async function generatePoster(size, design) {
   if (!currentPost) return;
   
@@ -1389,7 +1438,6 @@ async function generatePoster(size, design) {
   canvas.width = dims.width;
   canvas.height = dims.height;
   
-  // Background gradient
   const gradient = ctx.createLinearGradient(0, 0, 0, dims.height);
   gradient.addColorStop(0, colors.bg[0]);
   gradient.addColorStop(0.5, colors.bg[1]);
@@ -1399,24 +1447,20 @@ async function generatePoster(size, design) {
   
   const baseFontSize = dims.width * 0.032;
   
-  // MARGO header
   ctx.fillStyle = colors.primary;
   ctx.font = `bold ${baseFontSize * 1.4}px serif`;
   ctx.textAlign = 'center';
   ctx.fillText('MARGO', dims.width / 2, dims.height * 0.11);
   
-  // Lyric
   ctx.fillStyle = colors.text;
   ctx.font = `italic ${baseFontSize * 1.15}px serif`;
   wrapText(ctx, currentPost.text, dims.width / 2, dims.height * 0.38, dims.width * 0.85, baseFontSize * 1.7);
   
-  // Emotion
   const emotion = currentPost.emotion || "Nostalgia";
   ctx.fillStyle = colors.primary;
   ctx.font = `600 ${baseFontSize * 0.85}px sans-serif`;
   ctx.fillText(`#${emotion}`, dims.width / 2, dims.height * 0.62);
   
-  // Separator
   ctx.strokeStyle = colors.secondary;
   ctx.lineWidth = 2.2;
   ctx.beginPath();
@@ -1426,27 +1470,21 @@ async function generatePoster(size, design) {
   
   const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
   
-  // Song title
   ctx.fillStyle = colors.primary;
   ctx.font = `bold ${baseFontSize * 1.1}px serif`;
   ctx.fillText(knowledge.song, dims.width / 2, dims.height * 0.78);
   
-  // Artist
   ctx.fillStyle = colors.secondary;
   ctx.font = `500 ${baseFontSize * 0.9}px sans-serif`;
   ctx.fillText(knowledge.artist, dims.width / 2, dims.height * 0.85);
   
-  // ===== WATERMARK - NEW =====
-  // Add MARGO URL at the bottom
   ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
   ctx.font = `500 ${baseFontSize * 0.6}px sans-serif`;
   ctx.textAlign = 'center';
   
-  // Get domain without protocol
   const domain = APP_BASE_URL.replace(/^https?:\/\//, '');
   ctx.fillText(domain, dims.width / 2, dims.height * 0.95);
   
-  // Convert canvas to blob for sharing
   return new Promise((resolve) => {
     canvas.toBlob((blob) => {
       generatedPosterBlob = blob;
@@ -1475,7 +1513,7 @@ copyLinkBtn.onclick = async () => {
   }
 };
 
-// ===== WEB SHARE API - NEW =====
+// ===== WEB SHARE API =====
 shareNativeBtn.onclick = async () => {
   if (!generatedPosterBlob) {
     showToast("Please wait, generating poster...");
@@ -1497,7 +1535,6 @@ shareNativeBtn.onclick = async () => {
       await navigator.share(shareData);
       showToast("Shared successfully!");
     } else {
-      // Fallback: just download
       downloadPosterFile();
       showToast("Poster downloaded! Share it manually.");
     }
@@ -1510,7 +1547,7 @@ shareNativeBtn.onclick = async () => {
   }
 };
 
-// ===== MANUAL DOWNLOAD - NEW =====
+// ===== MANUAL DOWNLOAD =====
 downloadManualBtn.onclick = () => {
   downloadPosterFile();
 };
@@ -1566,10 +1603,39 @@ function showToast(message) {
   }, 2500);
 }
 
+// ===== MOBILE KEYBOARD FIX - Auto-scroll focused inputs into view =====
+function setupMobileKeyboardFix() {
+  const allInputs = document.querySelectorAll('input, textarea');
+  
+  allInputs.forEach(input => {
+    input.addEventListener('focus', () => {
+      setTimeout(() => {
+        // Scroll the focused element into view with offset
+        const modalBody = input.closest('.modal-body');
+        if (modalBody) {
+          const inputRect = input.getBoundingClientRect();
+          const modalRect = modalBody.getBoundingClientRect();
+          
+          // If input is below viewport, scroll it into view
+          if (inputRect.bottom > window.innerHeight - 100) {
+            modalBody.scrollTo({
+              top: modalBody.scrollTop + (inputRect.top - modalRect.top) - 100,
+              behavior: 'smooth'
+            });
+          }
+        }
+      }, 300); // Wait for keyboard to appear
+    });
+  });
+}
+
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded - WITH IMPROVED SHARING");
+console.log("MARGO - IMPROVED MOBILE EXPERIENCE");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
+
+// Setup mobile keyboard fixes
+setupMobileKeyboardFix();
 
 // ===== HANDLE SHARED POST LINKS =====
 function handleSharedPostLink() {
@@ -1580,28 +1646,22 @@ function handleSharedPostLink() {
   
   console.log('📍 Shared post link detected:', postId);
   
-  // Find the post
   const postIndex = posts.findIndex(p => p.id == postId);
   
   if (postIndex !== -1) {
     console.log('✓ Post found, opening directly');
     
-    // Hide landing, show feed
     landing.classList.remove("active");
     feed.classList.add("active");
     
-    // Render feed
     renderFeed();
     
-    // Open the specific post immediately
     setTimeout(() => {
       viewPost(postIndex);
     }, 300);
   } else {
     console.log('⚠ Post not found yet, waiting for Firebase sync...');
     
-    // If using Firebase, posts might not be loaded yet
-    // Set up a one-time listener to open post when it loads
     if (isFirebaseEnabled) {
       const checkInterval = setInterval(() => {
         const foundIndex = posts.findIndex(p => p.id == postId);
@@ -1619,7 +1679,6 @@ function handleSharedPostLink() {
         }
       }, 500);
       
-      // Stop checking after 10 seconds
       setTimeout(() => {
         clearInterval(checkInterval);
         console.log('⚠ Post not found after 10s, showing feed instead');
@@ -1628,7 +1687,6 @@ function handleSharedPostLink() {
         renderFeed();
       }, 10000);
     } else {
-      // Not using Firebase and post not found - just show feed
       console.log('Post not found, showing feed');
       landing.classList.remove("active");
       feed.classList.add("active");
@@ -1637,7 +1695,11 @@ function handleSharedPostLink() {
   }
 }
 
-// Check for shared post link when page loads
 window.addEventListener('load', () => {
   handleSharedPostLink();
+  
+  // Initialize last seen count
+  if (feed.classList.contains('active')) {
+    lastSeenPostCount = posts.length;
+  }
 });
