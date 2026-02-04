@@ -333,9 +333,8 @@ closeComposer.onclick = () => {
 };
 
 closeGuess.onclick = () => {
-  // FIXED: Reset the modal state BEFORE closing
-  resetGuessModal();
   closeModal(guessModal);
+  currentGuessAttempts = 0;
 };
 
 closeDiscover.onclick = () => {
@@ -577,32 +576,6 @@ function resetComposer() {
   guessArtistCheck.checked = true;
 }
 
-// ===== RESET GUESS MODAL - NEW FUNCTION =====
-function resetGuessModal() {
-  // Clear input fields
-  guessSongInput.value = "";
-  guessArtistInput.value = "";
-  
-  // Hide result message
-  guessResult.classList.add("hidden");
-  guessResult.innerHTML = ""; // FIXED: Also clear the content
-  
-  // Hide links section
-  if (guessLinksSection) {
-    guessLinksSection.classList.add("hidden");
-    guessLinksSection.innerHTML = ""; // FIXED: Clear content
-  }
-  
-  // FIXED: Reset button visibility to default state
-  submitGuess.classList.remove("hidden");
-  revealAnswer.classList.add("hidden");
-  guessInputFields.classList.remove("hidden");
-  
-  // Reset current post reference
-  currentPost = null;
-  currentGuessAttempts = 0;
-}
-
 // ===== RENDER FEED - FIXED =====
 function renderFeed() {
   feedList.innerHTML = "";
@@ -731,7 +704,7 @@ function trackView(postId) {
   }
 }
 
-// ===== GET USER GUESS STATE - FIXED =====
+// ===== GET USER GUESS STATE =====
 function getUserGuessState(postId) {
   if (!userGuessStates[postId]) {
     userGuessStates[postId] = {
@@ -749,34 +722,19 @@ function saveUserGuessState(postId, state) {
   localStorage.setItem("margoUserGuessStates", JSON.stringify(userGuessStates));
 }
 
-// ===== OPEN GUESS MODAL - FIXED WITH FRESH START =====
+// ===== OPEN GUESS MODAL =====
 function openGuess(index) {
   currentPost = posts[index];
   
   trackView(currentPost.id);
   
-  // FIXED: Get state and RESET it for fresh start every time
   const userState = getUserGuessState(currentPost.id);
+  currentGuessAttempts = userState.attempts;
   
-  // FRESH START MODE: Reset state every time modal opens
-  userState.attempts = 0;
-  userState.revealed = false;
-  userState.correct = false;
-  saveUserGuessState(currentPost.id, userState);
-  
-  currentGuessAttempts = 0;
-  
-  // FIXED: Clear the modal state first
   guessLyric.textContent = currentPost.text;
   guessSongInput.value = "";
   guessArtistInput.value = "";
   guessResult.classList.add("hidden");
-  guessResult.innerHTML = "";
-  
-  if (guessLinksSection) {
-    guessLinksSection.classList.add("hidden");
-    guessLinksSection.innerHTML = "";
-  }
   
   const songField = document.querySelector('#guessSongInput');
   const artistField = document.querySelector('#guessArtistInput');
@@ -784,7 +742,6 @@ function openGuess(index) {
   const guessSong = currentPost.guessConfig?.guessSong ?? true;
   const guessArtist = currentPost.guessConfig?.guessArtist ?? true;
   
-  // Show/hide appropriate fields
   if (guessSong) {
     songField.style.display = 'block';
   } else {
@@ -797,15 +754,33 @@ function openGuess(index) {
     artistField.style.display = 'none';
   }
   
-  // Always show fresh guess inputs (since we reset state above)
-  guessInputFields.classList.remove("hidden");
-  submitGuess.classList.remove("hidden");
-  revealAnswer.classList.add("hidden");
-  
-  const guessWhat = [];
-  if (guessSong) guessWhat.push("song");
-  if (guessArtist) guessWhat.push("artist");
-  guessHint.textContent = `You have 2 attempts to guess the ${guessWhat.join(" and ")}!`;
+  if (userState.revealed || userState.correct) {
+    showAnswerState(userState);
+  } else if (userState.attempts >= MAX_GUESS_ATTEMPTS) {
+    guessInputFields.classList.add("hidden");
+    submitGuess.classList.add("hidden");
+    revealAnswer.classList.remove("hidden");
+    guessResult.className = "result-message error";
+    guessResult.textContent = `You've used all ${MAX_GUESS_ATTEMPTS} attempts.`;
+    guessResult.classList.remove("hidden");
+    if (guessLinksSection) {
+      guessLinksSection.classList.add("hidden");
+    }
+  } else {
+    guessInputFields.classList.remove("hidden");
+    submitGuess.classList.remove("hidden");
+    revealAnswer.classList.add("hidden");
+    
+    const guessWhat = [];
+    if (guessSong) guessWhat.push("song");
+    if (guessArtist) guessWhat.push("artist");
+    const attemptsLeft = MAX_GUESS_ATTEMPTS - userState.attempts;
+    guessHint.textContent = `You have ${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} left to guess the ${guessWhat.join(" and ")}!`;
+    
+    if (guessLinksSection) {
+      guessLinksSection.classList.add("hidden");
+    }
+  }
   
   openModal(guessModal);
 }
@@ -1539,5 +1514,3 @@ window.addEventListener('load', () => {
     }
   }
 });
-
-
