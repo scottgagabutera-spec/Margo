@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition - FIXED ANALYTICS */
+/* MARGO - Firebase Real-Time Sync Edition - STREAMING LINKS FIX */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -70,7 +70,7 @@ const guessArtistAnswer = document.getElementById("guessArtistAnswer");
 const discoverSongInput = document.getElementById("discoverSongInput");
 const discoverArtistInput = document.getElementById("discoverArtistInput");
 
-// Streaming links
+// Streaming links in composer (for share and guess modes)
 const spotifyLink = document.getElementById("spotifyLink");
 const appleLink = document.getElementById("appleLink");
 const youtubeLink = document.getElementById("youtubeLink");
@@ -88,7 +88,7 @@ const guessResult = document.getElementById("guessResult");
 const guessInputFields = document.getElementById("guessInputFields");
 const guessLinksSection = document.getElementById("guessLinksSection");
 
-// Discover modal
+// Discover modal (with streaming links for helpers)
 const closeDiscover = document.getElementById("closeDiscover");
 const discoverLyric = document.getElementById("discoverLyric");
 const discoverSongAnswer = document.getElementById("discoverSongAnswer");
@@ -333,7 +333,7 @@ closeComposer.onclick = () => {
 };
 
 closeGuess.onclick = () => {
-  // FIXED: Reset the modal state BEFORE closing
+  // Reset the modal state BEFORE closing
   resetGuessModal();
   closeModal(guessModal);
 };
@@ -364,7 +364,7 @@ textInput.oninput = () => {
   charCount.textContent = textInput.value.length;
 };
 
-// ===== MODE SELECTION =====
+// ===== MODE SELECTION - UPDATED =====
 modeBtns.forEach(btn => {
   btn.onclick = () => {
     modeBtns.forEach(b => b.classList.remove("active"));
@@ -375,9 +375,12 @@ modeBtns.forEach(btn => {
     guessInputs.classList.remove("active");
     discoverInputs.classList.remove("active");
 
+    // FIXED: Hide streaming section for discover mode
+    // In discover mode, helpers add links, not the original poster
     if (currentMode === "discover") {
       streamingSection.style.display = "none";
     } else {
+      // Show for share and guess modes
       streamingSection.style.display = "block";
     }
 
@@ -396,7 +399,7 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
   };
 });
 
-// ===== CREATE POST - FIXED =====
+// ===== CREATE POST - UPDATED =====
 postBtn.onclick = async () => {
   if (postBtn.disabled) return;
 
@@ -422,12 +425,7 @@ postBtn.onclick = async () => {
       artist: "Unknown Artist"
     },
     guessConfig: null,
-    links: currentMode !== "discover" ? {
-      spotify: spotifyLink.value.trim() || null,
-      apple: appleLink.value.trim() || null,
-      youtube: youtubeLink.value.trim() || null,
-      soundcloud: soundcloudLink.value.trim() || null
-    } : null,
+    links: null, // Will be set based on mode
     timestamp: firebase.database.ServerValue.TIMESTAMP
   };
 
@@ -441,6 +439,14 @@ postBtn.onclick = async () => {
       }
       
       post.knowledge = { song, artist };
+      
+      // Add streaming links for share mode
+      post.links = {
+        spotify: spotifyLink.value.trim() || null,
+        apple: appleLink.value.trim() || null,
+        youtube: youtubeLink.value.trim() || null,
+        soundcloud: soundcloudLink.value.trim() || null
+      };
     }
 
     if (currentMode === "guess") {
@@ -470,14 +476,23 @@ postBtn.onclick = async () => {
         guessSong: allowSong,
         guessArtist: allowArtist
       };
+      
+      // Add streaming links for guess mode (shown after correct answer)
+      post.links = {
+        spotify: spotifyLink.value.trim() || null,
+        apple: appleLink.value.trim() || null,
+        youtube: youtubeLink.value.trim() || null,
+        soundcloud: soundcloudLink.value.trim() || null
+      };
     }
 
     if (currentMode === "discover") {
-      // Always set default values for discover mode
+      // Discover mode: NO links from poster (helpers will add them)
       post.knowledge = {
         song: discoverSongInput.value.trim() || "Unknown Song",
         artist: discoverArtistInput.value.trim() || "Unknown Artist"
       };
+      post.links = null; // No links from poster
     }
   } catch (err) {
     showToast(err.message);
@@ -577,7 +592,7 @@ function resetComposer() {
   guessArtistCheck.checked = true;
 }
 
-// ===== RESET GUESS MODAL - NEW FUNCTION =====
+// ===== RESET GUESS MODAL =====
 function resetGuessModal() {
   // Clear input fields
   guessSongInput.value = "";
@@ -585,15 +600,15 @@ function resetGuessModal() {
   
   // Hide result message
   guessResult.classList.add("hidden");
-  guessResult.innerHTML = ""; // FIXED: Also clear the content
+  guessResult.innerHTML = "";
   
   // Hide links section
   if (guessLinksSection) {
     guessLinksSection.classList.add("hidden");
-    guessLinksSection.innerHTML = ""; // FIXED: Clear content
+    guessLinksSection.innerHTML = "";
   }
   
-  // FIXED: Reset button visibility to default state
+  // Reset button visibility to default state
   submitGuess.classList.remove("hidden");
   revealAnswer.classList.add("hidden");
   guessInputFields.classList.remove("hidden");
@@ -603,7 +618,7 @@ function resetGuessModal() {
   currentGuessAttempts = 0;
 }
 
-// ===== RENDER FEED - FIXED =====
+// ===== RENDER FEED =====
 function renderFeed() {
   feedList.innerHTML = "";
   
@@ -624,6 +639,7 @@ function renderFeed() {
     let songSection = '';
     let actionsSection = '';
     
+    // FIXED: Check if post has links (only share and guess modes will have links)
     const hasLinks = post.links && (
       post.links.spotify || 
       post.links.apple || 
@@ -662,6 +678,7 @@ function renderFeed() {
           Guess the ${guessText}
         </div>
       `;
+      // No Listen button in feed for guess mode - only shown after guessing
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="openGuess(${index})">Guess</button>
@@ -678,6 +695,7 @@ function renderFeed() {
             'Help discover this song!'}
         </div>
       `;
+      // No Listen button for discover mode in feed
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="openDiscover(${index})">Help Discover</button>
@@ -731,7 +749,7 @@ function trackView(postId) {
   }
 }
 
-// ===== GET USER GUESS STATE - FIXED =====
+// ===== GET USER GUESS STATE =====
 function getUserGuessState(postId) {
   if (!userGuessStates[postId]) {
     userGuessStates[postId] = {
@@ -749,16 +767,14 @@ function saveUserGuessState(postId, state) {
   localStorage.setItem("margoUserGuessStates", JSON.stringify(userGuessStates));
 }
 
-// ===== OPEN GUESS MODAL - FIXED WITH FRESH START =====
+// ===== OPEN GUESS MODAL - UPDATED =====
 function openGuess(index) {
   currentPost = posts[index];
   
   trackView(currentPost.id);
   
-  // FIXED: Get state and RESET it for fresh start every time
+  // Get state and reset for fresh start
   const userState = getUserGuessState(currentPost.id);
-  
-  // FRESH START MODE: Reset state every time modal opens
   userState.attempts = 0;
   userState.revealed = false;
   userState.correct = false;
@@ -766,13 +782,14 @@ function openGuess(index) {
   
   currentGuessAttempts = 0;
   
-  // FIXED: Clear the modal state first
+  // Clear the modal state
   guessLyric.textContent = currentPost.text;
   guessSongInput.value = "";
   guessArtistInput.value = "";
   guessResult.classList.add("hidden");
   guessResult.innerHTML = "";
   
+  // FIXED: Always hide links initially in guess mode
   if (guessLinksSection) {
     guessLinksSection.classList.add("hidden");
     guessLinksSection.innerHTML = "";
@@ -797,7 +814,7 @@ function openGuess(index) {
     artistField.style.display = 'none';
   }
   
-  // Always show fresh guess inputs (since we reset state above)
+  // Show fresh guess inputs
   guessInputFields.classList.remove("hidden");
   submitGuess.classList.remove("hidden");
   revealAnswer.classList.add("hidden");
@@ -810,7 +827,7 @@ function openGuess(index) {
   openModal(guessModal);
 }
 
-// ===== SHOW ANSWER STATE =====
+// ===== SHOW ANSWER STATE - UPDATED =====
 function showAnswerState(userState) {
   guessInputFields.classList.add("hidden");
   submitGuess.classList.add("hidden");
@@ -826,10 +843,11 @@ function showAnswerState(userState) {
   `;
   guessResult.classList.remove("hidden");
   
+  // FIXED: Show links permanently after revealing/guessing correctly
   showGuessLinks(true);
 }
 
-// ===== SHOW LINKS IN GUESS MODAL =====
+// ===== SHOW LINKS IN GUESS MODAL - UPDATED =====
 function showGuessLinks(permanent = false) {
   if (!currentPost || !currentPost.links || !guessLinksSection) return;
   
@@ -863,6 +881,7 @@ function showGuessLinks(permanent = false) {
   `;
   guessLinksSection.classList.remove("hidden");
   
+  // If not permanent, hide after 5 seconds
   if (!permanent) {
     setTimeout(() => {
       if (guessLinksSection && !permanent) {
@@ -872,7 +891,7 @@ function showGuessLinks(permanent = false) {
   }
 }
 
-// ===== SUBMIT GUESS WITH PARTIAL FEEDBACK =====
+// ===== SUBMIT GUESS - UPDATED =====
 submitGuess.onclick = () => {
   if (!currentPost) return;
   
@@ -937,7 +956,7 @@ submitGuess.onclick = () => {
   
   guessResult.classList.remove("hidden");
   
-  // Both correct
+  // Both correct - SHOW LINKS PERMANENTLY
   if (songMatch && artistMatch) {
     userState.correct = true;
     saveUserGuessState(currentPost.id, userState);
@@ -952,9 +971,10 @@ submitGuess.onclick = () => {
     guessInputFields.classList.add("hidden");
     revealAnswer.classList.add("hidden");
     
+    // FIXED: Show links permanently after correct guess
     showGuessLinks(true);
   }
-  // After 2 attempts - auto reveal
+  // After 2 attempts - auto reveal and SHOW LINKS PERMANENTLY
   else if (userState.attempts >= MAX_GUESS_ATTEMPTS) {
     userState.revealed = true;
     saveUserGuessState(currentPost.id, userState);
@@ -971,9 +991,10 @@ submitGuess.onclick = () => {
     guessInputFields.classList.add("hidden");
     revealAnswer.classList.add("hidden");
     
+    // FIXED: Show links permanently after running out of attempts
     showGuessLinks(true);
   }
-  // Partial correct
+  // Partial correct - NO LINKS YET
   else if (songCorrect || artistCorrect) {
     saveUserGuessState(currentPost.id, userState);
     
@@ -995,7 +1016,7 @@ submitGuess.onclick = () => {
     guessSongInput.value = "";
     guessArtistInput.value = "";
   }
-  // Both wrong
+  // Both wrong - NO LINKS YET
   else {
     saveUserGuessState(currentPost.id, userState);
     
@@ -1019,12 +1040,13 @@ submitGuess.onclick = () => {
   }
 };
 
-// ===== REVEAL ANSWER =====
+// ===== REVEAL ANSWER - UPDATED =====
 revealAnswer.onclick = () => {
   const userState = getUserGuessState(currentPost.id);
   userState.revealed = true;
   saveUserGuessState(currentPost.id, userState);
   
+  // FIXED: Show links permanently after revealing
   showAnswerState(userState);
 };
 
@@ -1045,7 +1067,7 @@ function openDiscover(index) {
   openModal(discoverModal);
 }
 
-// ===== SUBMIT DISCOVER =====
+// ===== SUBMIT DISCOVER - UPDATED =====
 submitDiscover.onclick = () => {
   const song = discoverSongAnswer.value.trim();
   const artist = discoverArtistAnswer.value.trim();
@@ -1055,6 +1077,7 @@ submitDiscover.onclick = () => {
     return;
   }
   
+  // FIXED: Helpers can now add streaming links
   const helpData = {
     song,
     artist,
@@ -1081,7 +1104,7 @@ submitDiscover.onclick = () => {
   closeModal(discoverModal);
 };
 
-// ===== OPEN LISTEN MODAL =====
+// ===== OPEN LISTEN MODAL - UPDATED =====
 function openListen(index) {
   currentPost = posts[index];
   
@@ -1120,7 +1143,7 @@ function openListen(index) {
   openModal(listenModal);
 }
 
-// ===== VIEW POST (POSTCARD) - FIXED =====
+// ===== VIEW POST (POSTCARD) - UPDATED =====
 function viewPost(index) {
   currentPost = posts[index];
   
@@ -1149,6 +1172,7 @@ function viewPost(index) {
     `;
   }
   
+  // FIXED: Only show listen button if post has links AND user can see the song
   const hasLinks = currentPost.links && (
     currentPost.links.spotify || 
     currentPost.links.apple || 
@@ -1173,7 +1197,7 @@ listenPostcard.onclick = () => {
   }
 };
 
-// ===== ANALYTICS - FIXED TO SHOW ONLY RELEVANT STATS =====
+// ===== ANALYTICS - UPDATED =====
 analyticsBtn.onclick = () => {
   if (!currentPost || !postAnalytics[currentPost.id]) return;
   
@@ -1523,7 +1547,7 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded - ANALYTICS FIXED");
+console.log("MARGO Firebase Edition loaded - STREAMING LINKS FIXED");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
 
