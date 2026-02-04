@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition - WITH SCROLL PRESERVATION & LIVE UPDATES */
+/* MARGO - Firebase Real-Time Sync Edition - WITH SCROLL PRESERVATION & LIVE UPDATES - IMPROVED */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -288,29 +288,41 @@ function restoreScrollPosition() {
   }
 }
 
-// ===== NEW: SCROLL TO TOP FUNCTIONALITY =====
+// ===== IMPROVED: SCROLL TO TOP FUNCTIONALITY (FIXED FOR MOBILE) =====
 function setupScrollToTop() {
   if (!feedList || !scrollToTopBtn) return;
   
   let scrollTimeout;
   
-  feedList.addEventListener('scroll', () => {
-    // Clear existing timeout
-    clearTimeout(scrollTimeout);
+  // Create a function to check scroll position
+  const checkScrollPosition = () => {
+    // Get scroll position - check both feedList and window
+    const scrollTop = feedList.scrollTop || window.pageYOffset || document.documentElement.scrollTop;
     
     // Show/hide button based on scroll position
-    if (feedList.scrollTop > 300) {
+    if (scrollTop > 300) {
       scrollToTopBtn.classList.add('visible');
     } else {
       scrollToTopBtn.classList.remove('visible');
     }
-  });
+  };
+  
+  // Listen to BOTH feedList scroll AND window scroll (for mobile)
+  feedList.addEventListener('scroll', checkScrollPosition);
+  window.addEventListener('scroll', checkScrollPosition);
   
   scrollToTopBtn.onclick = () => {
+    // Scroll both feedList and window to top
     feedList.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
+    
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+    
     savedScrollPosition = 0;
     
     // Hide button after scrolling
@@ -340,7 +352,13 @@ if (newPostsIndicator) {
     savedScrollPosition = 0;
     renderFeed();
     hideNewPostsIndicator();
+    
+    // Scroll both to top
     feedList.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+    window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
@@ -440,7 +458,11 @@ feed.addEventListener('touchend', e => {
 enterBtn.onclick = () => {
   landing.classList.remove("active");
   openModal(composer);
-  textInput.focus();
+  
+  // IMPROVED: Delay focus on mobile to avoid keyboard covering content
+  setTimeout(() => {
+    textInput.focus();
+  }, 300);
 };
 
 backBtn.onclick = () => {
@@ -450,7 +472,11 @@ backBtn.onclick = () => {
 
 openComposer.onclick = () => {
   openModal(composer);
-  textInput.focus();
+  
+  // IMPROVED: Delay focus on mobile
+  setTimeout(() => {
+    textInput.focus();
+  }, 300);
 };
 
 closeComposer.onclick = () => {
@@ -1706,7 +1732,7 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded - WITH SCROLL PRESERVATION & LIVE UPDATES");
+console.log("MARGO Firebase Edition loaded - WITH SCROLL PRESERVATION & LIVE UPDATES - IMPROVED");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
 
