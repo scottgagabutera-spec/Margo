@@ -1,7 +1,7 @@
 /* ============================================
    MARGO - Production Social App
    Premium Creator-First UI
-   AGGRESSIVE DARK INPUT FIX
+   AGGRESSIVE DARK INPUT FIX + MODAL SCROLL FIX
    ============================================ */
 
 /* ===== DESIGN SYSTEM ===== */
@@ -762,7 +762,7 @@ button:active:not(:disabled) {
   line-height: 1.4;
 }
 
-/* ===== MODAL SYSTEM ===== */
+/* ===== MODAL SYSTEM - FIXED SCROLL ===== */
 .modal {
   position: fixed;
   inset: 0;
@@ -793,8 +793,8 @@ body.modal-open {
   border-bottom: none;
   display: flex;
   flex-direction: column;
-  max-height: 85vh;
-  max-height: 85dvh;
+  max-height: 90vh;
+  max-height: 90dvh;
   position: relative;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: var(--shadow-xl);
@@ -874,11 +874,13 @@ body.modal-open {
   transform: translateY(-50%) scale(0.9);
 }
 
+/* CRITICAL FIX: Modal Body Must Scroll */
 .modal-body {
   padding: var(--space-4);
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
+  min-height: 0; /* CRITICAL: Allows flex child to shrink below content size */
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -1629,8 +1631,8 @@ body.modal-open {
   }
   
   .modal-content {
-    max-height: 88vh;
-    max-height: 88dvh;
+    max-height: 92vh;
+    max-height: 92dvh;
   }
   
   .feed-text {
