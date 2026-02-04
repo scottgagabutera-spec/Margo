@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition - WITH IMPROVED SHARING */
+/* MARGO - Firebase Real-Time Sync Edition - WITH SCROLL PRESERVATION & LIVE UPDATES */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -51,6 +51,10 @@ const textInput = document.getElementById("textInput");
 const charCount = document.getElementById("charCount");
 const feedList = document.getElementById("feedList");
 const postCount = document.getElementById("postCount");
+
+// NEW: Live feed elements
+const newPostsIndicator = document.getElementById("newPostsIndicator");
+const scrollToTopBtn = document.getElementById("scrollToTopBtn");
 
 // Mode
 const modeBtns = document.querySelectorAll(".mode-btn");
@@ -125,7 +129,7 @@ const helpsSection = document.getElementById("helpsSection");
 const guessesList = document.getElementById("guessesList");
 const helpsList = document.getElementById("helpsList");
 
-// Share Poster modal - UPDATED
+// Share Poster modal
 const closeSharePoster = document.getElementById("closeSharePoster");
 const designStep = document.getElementById("designStep");
 const platformStep = document.getElementById("platformStep");
@@ -155,6 +159,11 @@ let generatedPosterBlob = null;
 let posts = [];
 let postAnalytics = {};
 
+// NEW: Scroll position tracking
+let savedScrollPosition = 0;
+let lastPostCount = 0;
+let newPostsAvailable = false;
+
 // ===== PER-USER TRACKING =====
 let userId = localStorage.getItem("margoUserId");
 if (!userId) {
@@ -168,6 +177,7 @@ let postsLoaded = false;
 if (isFirebaseEnabled) {
   // Listen for posts changes
   postsRef.orderByChild('timestamp').limitToLast(50).on('value', (snapshot) => {
+    const previousPostCount = posts.length;
     posts = [];
     snapshot.forEach((childSnapshot) => {
       const post = childSnapshot.val();
@@ -179,9 +189,16 @@ if (isFirebaseEnabled) {
     
     console.log('📡 Posts synced from Firebase:', posts.length);
     
+    // NEW: Check for new posts
+    if (postsLoaded && posts.length > previousPostCount && feed.classList.contains('active')) {
+      const newPostsCount = posts.length - previousPostCount;
+      showNewPostsIndicator(newPostsCount);
+      newPostsAvailable = true;
+    }
+    
     postsLoaded = true;
     
-    if (feed.classList.contains('active')) {
+    if (feed.classList.contains('active') && !newPostsAvailable) {
       renderFeed();
     }
   });
@@ -254,8 +271,77 @@ const POSTER_DESIGNS = {
   }
 };
 
+// ===== NEW: SCROLL POSITION MANAGEMENT =====
+function saveScrollPosition() {
+  if (feedList) {
+    savedScrollPosition = feedList.scrollTop || window.pageYOffset;
+    console.log('💾 Saved scroll position:', savedScrollPosition);
+  }
+}
+
+function restoreScrollPosition() {
+  if (feedList && savedScrollPosition > 0) {
+    setTimeout(() => {
+      feedList.scrollTop = savedScrollPosition;
+      window.scrollTo(0, savedScrollPosition);
+      console.log('📍 Restored scroll position:', savedScrollPosition);
+    }, 50);
+  }
+}
+
+// ===== NEW: SCROLL TO TOP FUNCTIONALITY =====
+function setupScrollToTop() {
+  if (!feedList || !scrollToTopBtn) return;
+  
+  feedList.addEventListener('scroll', () => {
+    if (feedList.scrollTop > 500) {
+      scrollToTopBtn.classList.add('visible');
+    } else {
+      scrollToTopBtn.classList.remove('visible');
+    }
+  });
+  
+  scrollToTopBtn.onclick = () => {
+    feedList.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+    savedScrollPosition = 0;
+  };
+}
+
+// ===== NEW: NEW POSTS INDICATOR =====
+function showNewPostsIndicator(count) {
+  if (!newPostsIndicator) return;
+  
+  newPostsIndicator.querySelector('.new-posts-count').textContent = count;
+  newPostsIndicator.classList.add('visible');
+}
+
+function hideNewPostsIndicator() {
+  if (!newPostsIndicator) return;
+  newPostsIndicator.classList.remove('visible');
+}
+
+// Setup new posts indicator click
+if (newPostsIndicator) {
+  newPostsIndicator.onclick = () => {
+    newPostsAvailable = false;
+    savedScrollPosition = 0;
+    renderFeed();
+    hideNewPostsIndicator();
+    feedList.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+}
+
 // ===== MODAL SCROLL FIX =====
 function openModal(modal) {
+  // Save scroll position before opening modal
+  saveScrollPosition();
+  
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
   document.body.style.overflow = 'hidden';
@@ -269,6 +355,9 @@ function closeModal(modal) {
   document.body.style.overflow = '';
   document.body.style.position = '';
   document.body.style.width = '';
+  
+  // Restore scroll position after closing modal
+  restoreScrollPosition();
 }
 
 // ===== SWIPE NAVIGATION =====
@@ -544,6 +633,9 @@ postBtn.onclick = async () => {
     showToast("Posted successfully!");
     feed.classList.add("active");
     landing.classList.remove("active");
+    
+    // Reset scroll position for new post
+    savedScrollPosition = 0;
     renderFeed();
 
     resetComposer();
@@ -1351,7 +1443,7 @@ backToPlatform.onclick = () => {
   platformStep.classList.add("active");
 };
 
-// ===== PLATFORM SELECTION & POSTER GENERATION - UPDATED =====
+// ===== PLATFORM SELECTION & POSTER GENERATION =====
 document.querySelectorAll(".platform-btn").forEach(btn => {
   btn.onclick = async () => {
     selectedPosterSize = btn.dataset.size;
@@ -1369,7 +1461,7 @@ document.querySelectorAll(".platform-btn").forEach(btn => {
   };
 });
 
-// ===== POSTER GENERATION WITH WATERMARK - UPDATED =====
+// ===== POSTER GENERATION WITH WATERMARK =====
 async function generatePoster(size, design) {
   if (!currentPost) return;
   
@@ -1436,7 +1528,7 @@ async function generatePoster(size, design) {
   ctx.font = `500 ${baseFontSize * 0.9}px sans-serif`;
   ctx.fillText(knowledge.artist, dims.width / 2, dims.height * 0.85);
   
-  // ===== WATERMARK - NEW =====
+  // ===== WATERMARK =====
   // Add MARGO URL at the bottom
   ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
   ctx.font = `500 ${baseFontSize * 0.6}px sans-serif`;
@@ -1475,7 +1567,7 @@ copyLinkBtn.onclick = async () => {
   }
 };
 
-// ===== WEB SHARE API - NEW =====
+// ===== WEB SHARE API =====
 shareNativeBtn.onclick = async () => {
   if (!generatedPosterBlob) {
     showToast("Please wait, generating poster...");
@@ -1510,7 +1602,7 @@ shareNativeBtn.onclick = async () => {
   }
 };
 
-// ===== MANUAL DOWNLOAD - NEW =====
+// ===== MANUAL DOWNLOAD =====
 downloadManualBtn.onclick = () => {
   downloadPosterFile();
 };
@@ -1567,9 +1659,12 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded - WITH IMPROVED SHARING");
+console.log("MARGO Firebase Edition loaded - WITH SCROLL PRESERVATION & LIVE UPDATES");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
+
+// Setup scroll to top button
+setupScrollToTop();
 
 // ===== HANDLE SHARED POST LINKS =====
 function handleSharedPostLink() {
