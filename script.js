@@ -260,6 +260,9 @@ let currentPost = null;
 let currentGuessAttempts = 0;
 const MAX_GUESS_ATTEMPTS = 2;
 
+// FIX #1: Add posting flag to prevent duplicates
+let isPosting = false;
+
 let selectedDesign = "midnight-gold";
 let selectedPosterSize = null;
 let generatedPosterBlob = null;
@@ -670,7 +673,11 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
 
 // ===== CREATE POST WITH MODERATION =====
 postBtn.onclick = async () => {
-  if (postBtn.disabled) return;
+  // FIX #2: Prevent duplicate submissions
+  if (isPosting) {
+    console.log('⚠️ Already posting, please wait...');
+    return;
+  }
 
   const text = textInput.value.trim();
 
@@ -766,6 +773,8 @@ postBtn.onclick = async () => {
     return;
   }
 
+  // FIX #3: Set posting flag and disable button
+  isPosting = true;
   postBtn.disabled = true;
   postBtn.textContent = "Posting...";
 
@@ -773,11 +782,17 @@ postBtn.onclick = async () => {
     if (isFirebaseEnabled) {
       const newPostRef = await postsRef.push(post);
       
-      await analyticsRef.child(newPostRef.key).set({
-        views: 0,
-        guesses: [],
-        helps: []
-      });
+      // FIX #4: Use try-catch for analytics to prevent blocking posts
+      try {
+        await analyticsRef.child(newPostRef.key).set({
+          views: 0,
+          guesses: [],
+          helps: []
+        });
+      } catch (analyticsError) {
+        // If analytics fails, log it but don't block the post
+        console.warn('⚠️ Analytics write failed (non-critical):', analyticsError);
+      }
       
       console.log('✓ Posted to Firebase:', newPostRef.key);
     } else {
@@ -824,6 +839,8 @@ postBtn.onclick = async () => {
     console.error("Posting failed:", err);
     showToast(err.message || "Error posting. Please try again.");
   } finally {
+    // FIX #5: Always reset posting state
+    isPosting = false;
     postBtn.disabled = false;
     postBtn.textContent = "Post";
   }
