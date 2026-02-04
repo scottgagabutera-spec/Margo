@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="style-improved.css"/>
 </head>
 <body>
 
@@ -28,6 +28,11 @@
 
 <!-- FEED -->
 <section id="feed" class="screen">
+  <!-- NEW POSTS INDICATOR -->
+  <div id="newPostsIndicator" class="new-posts-indicator">
+    <span>New posts available</span>
+  </div>
+  
   <header class="feed-header">
     <button id="backBtn" class="header-btn">
       <span class="btn-icon">←</span>
@@ -273,7 +278,7 @@
   </div>
 </div>
 
-<!-- SHARE POSTER MODAL - UPDATED -->
+<!-- SHARE POSTER MODAL -->
 <div id="sharePosterModal" class="modal hidden">
   <div class="modal-content poster-modal">
     <div class="modal-header">
@@ -342,7 +347,7 @@
         <button id="backToDesign" class="secondary-btn full">Back</button>
       </div>
 
-      <!-- Step 3: Share Options - NEW -->
+      <!-- Step 3: Share Options -->
       <div id="shareStep" class="poster-step">
         <div class="poster-preview">
           <canvas id="posterCanvas"></canvas>
@@ -374,6 +379,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
-<script src="script.js"></script>
+<script src="script-improved.js"></script>
 </body>
 </html>
