@@ -1,4 +1,4 @@
-/* MARGO - IMPROVED MOBILE EXPERIENCE CSS */
+/* MARGO - Improved Design with Compact Modals & NEW SHARING UI */
 
 * { 
   box-sizing: border-box; 
@@ -31,9 +31,6 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* IMPROVED: Ensure body can scroll properly */
-  min-height: 100vh;
-  position: relative;
 }
 
 /* ===== SCREENS ===== */
@@ -45,38 +42,6 @@ body {
 .screen.active { 
   display: flex; 
   flex-direction: column; 
-}
-
-/* ===== NEW POSTS INDICATOR - LIKE X/TWITTER ===== */
-.new-posts-indicator {
-  position: fixed;
-  top: 70px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-120%);
-  background: linear-gradient(135deg, var(--gold), var(--gold-hover));
-  color: #000;
-  padding: 12px 24px;
-  border-radius: 50px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
-  z-index: 999;
-  cursor: pointer;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  letter-spacing: 0.4px;
-}
-
-.new-posts-indicator.visible {
-  transform: translateX(-50%) translateY(0);
-}
-
-.new-posts-indicator:hover {
-  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.6);
-  transform: translateX(-50%) translateY(0) scale(1.05);
-}
-
-.new-posts-indicator:active {
-  transform: translateX(-50%) translateY(0) scale(0.98);
 }
 
 /* ===== LANDING ===== */
@@ -276,7 +241,11 @@ button:active {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  
+  /* UNIFORM HEIGHT - All cards same size */
   height: 420px;
+  
+  /* Ensure proper layout */
   position: relative;
 }
 
@@ -300,10 +269,14 @@ button:active {
   justify-content: center;
   letter-spacing: 0.3px;
   position: relative;
+  
+  /* FIXED HEIGHT - Takes up main space */
   flex: 1;
   min-height: 140px;
   max-height: 180px;
   overflow: hidden;
+  
+  /* Dynamic font size will be set via inline style in JS */
   font-size: 1.1rem;
 }
 
@@ -369,6 +342,8 @@ button:active {
   gap: 10px;
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
+  
+  /* Pin to bottom of card */
   margin-top: auto;
 }
 
@@ -403,7 +378,7 @@ button:active {
   letter-spacing: 0.5px;
 }
 
-/* ===== MODALS - IMPROVED FOR MOBILE ===== */
+/* ===== MODALS - COMPACT VERSION ===== */
 .modal {
   position: fixed;
   inset: 0;
@@ -413,7 +388,6 @@ button:active {
   align-items: center;
   z-index: 1000;
   padding: 15px;
-  /* CRITICAL: Only modal should scroll, not background */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   backdrop-filter: blur(4px);
@@ -423,13 +397,11 @@ button:active {
   display: none; 
 }
 
-/* CRITICAL: Prevent background scroll when modal is open */
 body.modal-open {
   overflow: hidden !important;
   position: fixed !important;
   width: 100% !important;
   height: 100% !important;
-  /* This prevents the "double scroll" issue */
 }
 
 .modal-content {
@@ -441,8 +413,7 @@ body.modal-open {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* IMPROVED: Better max-height for mobile */
-  max-height: 90vh;
+  max-height: 92vh;
   position: relative;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
@@ -491,15 +462,11 @@ body.modal-open {
 
 .modal-body {
   padding: 16px 18px;
-  /* CRITICAL: This should scroll, not the background */
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  /* IMPROVED: Extra padding at bottom for keyboard on mobile */
-  padding-bottom: 100px;
 }
 
 .modal-body::-webkit-scrollbar {
@@ -525,7 +492,7 @@ body.modal-open {
   flex-shrink: 0;
 }
 
-/* ===== FORM ELEMENTS - IMPROVED FOR MOBILE ===== */
+/* ===== FORM ELEMENTS - COMPACT ===== */
 label {
   font-size: 0.75rem;
   font-weight: 700;
@@ -545,9 +512,6 @@ textarea, input {
   font-family: inherit;
   font-size: 0.9rem;
   transition: all 0.2s ease;
-  /* IMPROVED: Better mobile input handling */
-  -webkit-appearance: none;
-  appearance: none;
 }
 
 textarea {
@@ -645,7 +609,7 @@ textarea:focus, input:focus {
   padding: 10px;
 }
 
-/* ===== MODE OPTIONS ===== */
+/* ===== MODE OPTIONS - COMPACT ===== */
 .mode-options {
   display: flex;
   gap: 10px;
@@ -700,7 +664,7 @@ textarea:focus, input:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== CHECKBOXES ===== */
+/* ===== CHECKBOXES - COMPACT ===== */
 .checkbox-group {
   display: flex;
   flex-direction: column;
@@ -738,7 +702,7 @@ textarea:focus, input:focus {
   letter-spacing: 0;
 }
 
-/* ===== EMOTION PILLS ===== */
+/* ===== EMOTION PILLS - COMPACT ===== */
 .emotion-pills {
   display: flex;
   gap: 8px;
@@ -768,7 +732,7 @@ textarea:focus, input:focus {
   box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
 }
 
-/* ===== LYRIC DISPLAY ===== */
+/* ===== LYRIC DISPLAY - MORE COMPACT ===== */
 .lyric-display {
   font-family: 'Playfair Display', serif;
   font-style: italic;
@@ -806,7 +770,7 @@ textarea:focus, input:focus {
   right: 8px;
 }
 
-/* ===== RESULT MESSAGE ===== */
+/* ===== RESULT MESSAGE - MORE COMPACT ===== */
 .result-message {
   padding: 12px;
   border-radius: 10px;
@@ -845,7 +809,7 @@ textarea:focus, input:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== GUESS LINKS ===== */
+/* ===== GUESS LINKS - MORE COMPACT ===== */
 .guess-links-section {
   padding: 12px;
   background: var(--bg-elevated);
@@ -923,7 +887,7 @@ textarea:focus, input:focus {
   transform: translateX(4px);
 }
 
-/* ===== POSTCARD ===== */
+/* ===== IMPROVED POSTCARD - COMPACT ===== */
 .postcard {
   background: linear-gradient(135deg, #0d0d0d 0%, #1a1410 50%, #0d0d0d 100%);
   border-radius: 20px;
@@ -1077,7 +1041,7 @@ textarea:focus, input:focus {
   bottom: 32px;
 }
 
-/* ===== ANALYTICS ===== */
+/* ===== ANALYTICS - COMPACT ===== */
 .analytics-modal .modal-content {
   max-width: 600px;
 }
@@ -1219,7 +1183,7 @@ textarea:focus, input:focus {
   background: rgba(212, 175, 55, 0.05);
 }
 
-/* ===== COLOR PICKER ===== */
+/* ===== COLOR PICKER - MORE COMPACT ===== */
 .live-preview-container {
   display: flex;
   justify-content: center;
@@ -1287,7 +1251,7 @@ textarea:focus, input:focus {
   gap: 18px;
 }
 
-/* ===== PLATFORM OPTIONS ===== */
+/* ===== PLATFORM OPTIONS - COMPACT ===== */
 .platform-options {
   display: flex;
   flex-direction: column;
@@ -1344,7 +1308,7 @@ textarea:focus, input:focus {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-/* ===== SHARE LINK SECTION ===== */
+/* ===== SHARE LINK SECTION - NEW ===== */
 .share-link-section {
   padding: 16px;
   background: var(--bg-elevated);
@@ -1398,14 +1362,14 @@ textarea:focus, input:focus {
   transform: scale(1.05);
 }
 
-/* ===== SHARE ACTIONS ===== */
+/* ===== SHARE ACTIONS - NEW ===== */
 .share-actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-/* ===== RESPONSIVE - MOBILE IMPROVEMENTS ===== */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 480px) {
   .feed-list {
     grid-template-columns: 1fr;
@@ -1413,6 +1377,7 @@ textarea:focus, input:focus {
     gap: 18px;
   }
   
+  /* Slightly shorter cards on mobile */
   .feed-card {
     height: 380px;
   }
@@ -1451,15 +1416,9 @@ textarea:focus, input:focus {
       inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   }
   
-  /* IMPROVED: Better modal sizing on mobile */
   .modal-content {
     border-radius: 18px;
-    max-height: 92vh;
-  }
-  
-  /* IMPROVED: More bottom padding for keyboard */
-  .modal-body {
-    padding-bottom: 150px;
+    max-height: 94vh;
   }
   
   .postcard-lyric {
@@ -1476,7 +1435,7 @@ textarea:focus, input:focus {
   }
   
   .modal-body {
-    padding: 16px 18px 150px;
+    padding: 16px 18px;
     gap: 12px;
   }
   
@@ -1494,13 +1453,6 @@ textarea:focus, input:focus {
   
   .copy-link-btn {
     width: 100%;
-  }
-  
-  /* NEW: Better new posts indicator on mobile */
-  .new-posts-indicator {
-    top: 60px;
-    padding: 10px 20px;
-    font-size: 0.8rem;
   }
 }
 
