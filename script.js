@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition - FIXED */
+/* MARGO - Firebase Real-Time Sync Edition - WITH IMPROVED SHARING */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -10,6 +10,9 @@ const firebaseConfig = {
   messagingSenderId: "150183564620",
   appId: "1:150183564620:web:a42de7fef39740b551ebe9"
 };
+
+// ===== APP BASE URL (UPDATE THIS WITH YOUR ACTUAL DOMAIN) =====
+const APP_BASE_URL = window.location.origin;
 
 let isFirebaseEnabled = false;
 let postsRef = null;
@@ -122,16 +125,20 @@ const helpsSection = document.getElementById("helpsSection");
 const guessesList = document.getElementById("guessesList");
 const helpsList = document.getElementById("helpsList");
 
-// Share Poster modal
+// Share Poster modal - UPDATED
 const closeSharePoster = document.getElementById("closeSharePoster");
 const designStep = document.getElementById("designStep");
 const platformStep = document.getElementById("platformStep");
-const previewStep = document.getElementById("previewStep");
+const shareStep = document.getElementById("shareStep");
 const nextToPlatform = document.getElementById("nextToPlatform");
 const backToDesign = document.getElementById("backToDesign");
+const backToPlatform = document.getElementById("backToPlatform");
 const posterCanvas = document.getElementById("posterCanvas");
 const posterPreviewCanvas = document.getElementById("posterPreviewCanvas");
-const downloadPoster = document.getElementById("downloadPoster");
+const shareableLink = document.getElementById("shareableLink");
+const copyLinkBtn = document.getElementById("copyLinkBtn");
+const shareNativeBtn = document.getElementById("shareNativeBtn");
+const downloadManualBtn = document.getElementById("downloadManualBtn");
 
 // ===== STATE =====
 let currentMode = "share";
@@ -142,12 +149,13 @@ const MAX_GUESS_ATTEMPTS = 2;
 
 let selectedDesign = "midnight-gold";
 let selectedPosterSize = null;
+let generatedPosterBlob = null;
 
 // Local data (will sync with Firebase)
 let posts = [];
 let postAnalytics = {};
 
-// ===== PER-USER TRACKING - REMOVED FOR INDEPENDENT SESSIONS =====
+// ===== PER-USER TRACKING =====
 let userId = localStorage.getItem("margoUserId");
 if (!userId) {
   userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -164,17 +172,15 @@ if (isFirebaseEnabled) {
     snapshot.forEach((childSnapshot) => {
       const post = childSnapshot.val();
       post.id = childSnapshot.key;
-      posts.unshift(post); // Add to beginning
+      posts.unshift(post);
     });
     
-    // Sort by timestamp descending
     posts.sort((a, b) => b.timestamp - a.timestamp);
     
     console.log('📡 Posts synced from Firebase:', posts.length);
     
     postsLoaded = true;
     
-    // Update feed if visible
     if (feed.classList.contains('active')) {
       renderFeed();
     }
@@ -191,7 +197,6 @@ if (isFirebaseEnabled) {
   postAnalytics = JSON.parse(localStorage.getItem("margoAnalytics") || "{}");
   postsLoaded = true;
   
-  // Initialize analytics for existing posts
   posts.forEach(post => {
     if (!postAnalytics[post.id]) {
       postAnalytics[post.id] = {
@@ -337,7 +342,6 @@ closeComposer.onclick = () => {
 
 closeGuess.onclick = () => {
   closeModal(guessModal);
-  // Reset all guess state for next person
   currentGuessAttempts = 0;
   guessSongInput.value = "";
   guessArtistInput.value = "";
@@ -408,7 +412,7 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
   };
 });
 
-// ===== CREATE POST - FIXED =====
+// ===== CREATE POST =====
 postBtn.onclick = async () => {
   if (postBtn.disabled) return;
 
@@ -424,7 +428,6 @@ postBtn.onclick = async () => {
     return;
   }
 
-  // Initialize with default knowledge structure
   let post = {
     text,
     emotion: selectedEmotion,
@@ -485,7 +488,6 @@ postBtn.onclick = async () => {
     }
 
     if (currentMode === "discover") {
-      // Always set default values for discover mode
       post.knowledge = {
         song: discoverSongInput.value.trim() || "Unknown Song",
         artist: discoverArtistInput.value.trim() || "Unknown Artist"
@@ -501,10 +503,8 @@ postBtn.onclick = async () => {
 
   try {
     if (isFirebaseEnabled) {
-      // Push to Firebase
       const newPostRef = await postsRef.push(post);
       
-      // Initialize analytics for this post
       await analyticsRef.child(newPostRef.key).set({
         views: 0,
         guesses: [],
@@ -513,7 +513,6 @@ postBtn.onclick = async () => {
       
       console.log('✓ Posted to Firebase:', newPostRef.key);
     } else {
-      // Fallback to localStorage
       const newPost = {
         ...post,
         id: Date.now(),
@@ -589,11 +588,10 @@ function resetComposer() {
   guessArtistCheck.checked = true;
 }
 
-// ===== RENDER FEED - FIXED =====
+// ===== RENDER FEED =====
 function renderFeed() {
   feedList.innerHTML = "";
   
-  // Show loading state if posts not loaded yet
   if (!postsLoaded) {
     postCount.textContent = "...";
     feedList.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:60px 20px; color:var(--gold);"><div style="font-size: 1.5rem; margin-bottom: 10px;">⏳</div><div>Loading posts...</div></div>';
@@ -613,8 +611,6 @@ function renderFeed() {
     card.className = "feed-card";
     
     const timeText = timeAgo(post.timestamp);
-    
-    // Handle old posts without emotion
     const emotion = post.emotion || "Nostalgia";
     
     let songSection = '';
@@ -627,7 +623,6 @@ function renderFeed() {
       post.links.soundcloud
     );
     
-    // Ensure knowledge object exists
     const knowledge = post.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
     
     if (post.mode === "share") {
@@ -713,12 +708,10 @@ function timeAgo(timestamp) {
 // ===== TRACK VIEW =====
 function trackView(postId) {
   if (isFirebaseEnabled) {
-    // Increment view count in Firebase
     analyticsRef.child(postId).child('views').transaction((currentViews) => {
       return (currentViews || 0) + 1;
     });
   } else {
-    // Fallback to localStorage
     if (!postAnalytics[postId]) {
       postAnalytics[postId] = { views: 0, guesses: [], helps: [] };
     }
@@ -733,7 +726,6 @@ function openGuess(index) {
   
   trackView(currentPost.id);
   
-  // Always start fresh - no persistent state
   currentGuessAttempts = 0;
   
   guessLyric.textContent = currentPost.text;
@@ -759,7 +751,6 @@ function openGuess(index) {
     artistField.style.display = 'none';
   }
   
-  // Always show fresh inputs
   guessInputFields.classList.remove("hidden");
   submitGuess.classList.remove("hidden");
   revealAnswer.classList.add("hidden");
@@ -823,7 +814,6 @@ function showGuessLinks(permanent = false) {
 submitGuess.onclick = () => {
   if (!currentPost) return;
   
-  // Increment attempts (session only - not saved)
   currentGuessAttempts++;
   
   const guessedSong = guessSongInput.value.trim().toLowerCase();
@@ -863,7 +853,6 @@ submitGuess.onclick = () => {
     artistMatch = true;
   }
   
-  // Track the guess in analytics only
   const guessData = {
     song: guessedSong || null,
     artist: guessedArtist || null,
@@ -883,7 +872,6 @@ submitGuess.onclick = () => {
   
   guessResult.classList.remove("hidden");
   
-  // Both correct
   if (songMatch && artistMatch) {
     guessResult.className = "result-message success";
     guessResult.innerHTML = `
@@ -897,7 +885,6 @@ submitGuess.onclick = () => {
     
     showGuessLinks(true);
   }
-  // After 2 attempts - auto reveal
   else if (currentGuessAttempts >= MAX_GUESS_ATTEMPTS) {
     guessResult.className = "result-message error";
     guessResult.innerHTML = `
@@ -913,7 +900,6 @@ submitGuess.onclick = () => {
     
     showGuessLinks(true);
   }
-  // Partial correct
   else if (songCorrect || artistCorrect) {
     guessResult.className = "result-message partial";
     
@@ -933,7 +919,6 @@ submitGuess.onclick = () => {
     guessSongInput.value = "";
     guessArtistInput.value = "";
   }
-  // Both wrong
   else {
     guessResult.className = "result-message error";
     
@@ -973,49 +958,6 @@ revealAnswer.onclick = () => {
   
   showGuessLinks(true);
 };
-
-// ===== SHOW LINKS IN GUESS MODAL =====
-function showGuessLinks(permanent = false) {
-  if (!currentPost || !currentPost.links || !guessLinksSection) return;
-  
-  const hasLinks = currentPost.links.spotify || 
-                   currentPost.links.apple || 
-                   currentPost.links.youtube || 
-                   currentPost.links.soundcloud;
-  
-  if (!hasLinks) return;
-  
-  const linksHTML = [];
-  
-  if (currentPost.links.spotify) {
-    linksHTML.push(`<a href="${currentPost.links.spotify}" target="_blank" class="guess-link">🎵 Spotify</a>`);
-  }
-  if (currentPost.links.apple) {
-    linksHTML.push(`<a href="${currentPost.links.apple}" target="_blank" class="guess-link">🍎 Apple Music</a>`);
-  }
-  if (currentPost.links.youtube) {
-    linksHTML.push(`<a href="${currentPost.links.youtube}" target="_blank" class="guess-link">▶️ YouTube</a>`);
-  }
-  if (currentPost.links.soundcloud) {
-    linksHTML.push(`<a href="${currentPost.links.soundcloud}" target="_blank" class="guess-link">☁️ SoundCloud</a>`);
-  }
-  
-  guessLinksSection.innerHTML = `
-    <div class="guess-links-title">Listen to the song:</div>
-    <div class="guess-links-container">
-      ${linksHTML.join('')}
-    </div>
-  `;
-  guessLinksSection.classList.remove("hidden");
-  
-  if (!permanent) {
-    setTimeout(() => {
-      if (guessLinksSection && !permanent) {
-        guessLinksSection.classList.add("hidden");
-      }
-    }, 5000);
-  }
-}
 
 // ===== OPEN DISCOVER MODAL =====
 function openDiscover(index) {
@@ -1109,7 +1051,7 @@ function openListen(index) {
   openModal(listenModal);
 }
 
-// ===== VIEW POST (POSTCARD) - FIXED =====
+// ===== VIEW POST (POSTCARD) =====
 function viewPost(index) {
   currentPost = posts[index];
   
@@ -1120,8 +1062,6 @@ function viewPost(index) {
   
   const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
   
-  // For guess mode, hide song info (user must guess)
-  // For share/discover, always show
   if (currentPost.mode === "guess") {
     postcardSong.innerHTML = `
       <div style="font-style: italic; color: var(--text-secondary);">Guess correctly to reveal</div>
@@ -1140,7 +1080,6 @@ function viewPost(index) {
     currentPost.links.soundcloud
   );
   
-  // Show listen button for share/discover modes with links
   if (hasLinks && currentPost.mode !== "guess") {
     listenPostcard.style.display = 'block';
   } else {
@@ -1164,21 +1103,14 @@ analyticsBtn.onclick = () => {
   
   const analytics = postAnalytics[currentPost.id];
   
-  // Handle Firebase array format
   const guesses = analytics.guesses ? 
     (Array.isArray(analytics.guesses) ? analytics.guesses : Object.values(analytics.guesses)) : [];
   const helps = analytics.helps ? 
     (Array.isArray(analytics.helps) ? analytics.helps : Object.values(analytics.helps)) : [];
   
-  // Get stats container
-  const statsContainer = document.querySelector('.analytics-stats');
-  
-  // Get the modal body to rebuild everything
   const modalBody = document.querySelector('#analyticsModal .modal-body');
   
   if (currentPost.mode === 'guess') {
-    // ===== GUESS MODE =====
-    // Completely rebuild modal body with ONLY relevant content
     modalBody.innerHTML = `
       <div class="analytics-stats">
         <div class="stat-card">
@@ -1199,7 +1131,6 @@ analyticsBtn.onclick = () => {
       ` : ''}
     `;
     
-    // Populate guesses if any
     if (guesses.length > 0) {
       const newGuessesList = document.getElementById('guessesList');
       guesses.forEach(guess => {
@@ -1220,8 +1151,6 @@ analyticsBtn.onclick = () => {
     }
   } 
   else if (currentPost.mode === 'discover') {
-    // ===== DISCOVER MODE =====
-    // Completely rebuild modal body with ONLY relevant content
     modalBody.innerHTML = `
       <div class="analytics-stats">
         <div class="stat-card">
@@ -1242,7 +1171,6 @@ analyticsBtn.onclick = () => {
       ` : ''}
     `;
     
-    // Populate helps if any
     if (helps.length > 0) {
       const newHelpsList = document.getElementById('helpsList');
       helps.forEach(help => {
@@ -1275,8 +1203,6 @@ analyticsBtn.onclick = () => {
     }
   } 
   else {
-    // ===== SHARE MODE =====
-    // Completely rebuild modal body with ONLY views
     modalBody.innerHTML = `
       <div class="analytics-stats">
         <div class="stat-card">
@@ -1328,19 +1254,16 @@ function updateLivePreview() {
   ctx.textAlign = 'center';
   ctx.fillText('MARGO', previewWidth / 2, 40);
   
-  // Lyric with better wrapping
   ctx.fillStyle = colors.text;
   ctx.font = `italic ${baseFontSize * 0.95}px serif`;
   const lyricPreview = currentPost.text.length > 80 ? currentPost.text.substring(0, 80) + '...' : currentPost.text;
   wrapText(ctx, lyricPreview, previewWidth / 2, previewHeight / 2 - 30, previewWidth * 0.85, baseFontSize * 1.3);
   
-  // Emotion with fallback
   const emotion = currentPost.emotion || "Nostalgia";
   ctx.fillStyle = colors.primary;
   ctx.font = `600 ${baseFontSize * 0.75}px sans-serif`;
   ctx.fillText(`#${emotion}`, previewWidth / 2, previewHeight / 2 + 35);
   
-  // Separator
   ctx.strokeStyle = colors.secondary;
   ctx.lineWidth = 1.2;
   ctx.beginPath();
@@ -1350,7 +1273,6 @@ function updateLivePreview() {
   
   const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
   
-  // Song title
   ctx.fillStyle = colors.primary;
   ctx.font = `bold ${baseFontSize * 0.9}px serif`;
   const songTitle = knowledge.song.length > 25 ? 
@@ -1358,7 +1280,6 @@ function updateLivePreview() {
     knowledge.song;
   ctx.fillText(songTitle, previewWidth / 2, previewHeight / 2 + 75);
   
-  // Artist
   ctx.fillStyle = colors.secondary;
   ctx.font = `500 ${baseFontSize * 0.75}px sans-serif`;
   const artistName = knowledge.artist.length > 30 ? 
@@ -1402,19 +1323,31 @@ backToDesign.onclick = () => {
   designStep.classList.add("active");
 };
 
-// ===== PLATFORM SELECTION & POSTER GENERATION =====
+backToPlatform.onclick = () => {
+  shareStep.classList.remove("active");
+  platformStep.classList.add("active");
+};
+
+// ===== PLATFORM SELECTION & POSTER GENERATION - UPDATED =====
 document.querySelectorAll(".platform-btn").forEach(btn => {
-  btn.onclick = () => {
+  btn.onclick = async () => {
     selectedPosterSize = btn.dataset.size;
-    generatePoster(selectedPosterSize, selectedDesign);
+    
+    // Generate poster with watermark
+    await generatePoster(selectedPosterSize, selectedDesign);
+    
+    // Generate shareable link
+    const shareLink = `${APP_BASE_URL}?post=${currentPost.id}`;
+    shareableLink.value = shareLink;
+    
+    // Move to share step
     platformStep.classList.remove("active");
-    previewStep.classList.add("active");
-    downloadPoster.classList.remove("hidden");
+    shareStep.classList.add("active");
   };
 });
 
-// ===== POSTER GENERATION =====
-function generatePoster(size, design) {
+// ===== POSTER GENERATION WITH WATERMARK - UPDATED =====
+async function generatePoster(size, design) {
   if (!currentPost) return;
   
   const sizes = {
@@ -1433,6 +1366,7 @@ function generatePoster(size, design) {
   canvas.width = dims.width;
   canvas.height = dims.height;
   
+  // Background gradient
   const gradient = ctx.createLinearGradient(0, 0, 0, dims.height);
   gradient.addColorStop(0, colors.bg[0]);
   gradient.addColorStop(0.5, colors.bg[1]);
@@ -1442,17 +1376,18 @@ function generatePoster(size, design) {
   
   const baseFontSize = dims.width * 0.032;
   
+  // MARGO header
   ctx.fillStyle = colors.primary;
   ctx.font = `bold ${baseFontSize * 1.4}px serif`;
   ctx.textAlign = 'center';
   ctx.fillText('MARGO', dims.width / 2, dims.height * 0.11);
   
-  // Lyric with controlled wrapping
+  // Lyric
   ctx.fillStyle = colors.text;
   ctx.font = `italic ${baseFontSize * 1.15}px serif`;
   wrapText(ctx, currentPost.text, dims.width / 2, dims.height * 0.38, dims.width * 0.85, baseFontSize * 1.7);
   
-  // Emotion with fallback
+  // Emotion
   const emotion = currentPost.emotion || "Nostalgia";
   ctx.fillStyle = colors.primary;
   ctx.font = `600 ${baseFontSize * 0.85}px sans-serif`;
@@ -1477,9 +1412,87 @@ function generatePoster(size, design) {
   ctx.fillStyle = colors.secondary;
   ctx.font = `500 ${baseFontSize * 0.9}px sans-serif`;
   ctx.fillText(knowledge.artist, dims.width / 2, dims.height * 0.85);
+  
+  // ===== WATERMARK - NEW =====
+  // Add MARGO URL at the bottom
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.font = `500 ${baseFontSize * 0.6}px sans-serif`;
+  ctx.textAlign = 'center';
+  
+  // Get domain without protocol
+  const domain = APP_BASE_URL.replace(/^https?:\/\//, '');
+  ctx.fillText(domain, dims.width / 2, dims.height * 0.95);
+  
+  // Convert canvas to blob for sharing
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      generatedPosterBlob = blob;
+      resolve();
+    }, 'image/png');
+  });
 }
 
-downloadPoster.onclick = () => {
+// ===== COPY LINK BUTTON =====
+copyLinkBtn.onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(shareableLink.value);
+    copyLinkBtn.textContent = "Copied!";
+    copyLinkBtn.style.background = "var(--success)";
+    
+    setTimeout(() => {
+      copyLinkBtn.textContent = "Copy";
+      copyLinkBtn.style.background = "";
+    }, 2000);
+    
+    showToast("Link copied to clipboard!");
+  } catch (err) {
+    console.error("Failed to copy:", err);
+    shareableLink.select();
+    showToast("Please copy the link manually");
+  }
+};
+
+// ===== WEB SHARE API - NEW =====
+shareNativeBtn.onclick = async () => {
+  if (!generatedPosterBlob) {
+    showToast("Please wait, generating poster...");
+    return;
+  }
+  
+  const shareData = {
+    title: `MARGO - ${currentPost.text.substring(0, 50)}...`,
+    text: `Check out this lyric on MARGO!\n\n"${currentPost.text}"\n\n${shareableLink.value}`,
+    files: [
+      new File([generatedPosterBlob], `margo-poster-${Date.now()}.png`, {
+        type: 'image/png'
+      })
+    ]
+  };
+  
+  try {
+    if (navigator.canShare && navigator.canShare(shareData)) {
+      await navigator.share(shareData);
+      showToast("Shared successfully!");
+    } else {
+      // Fallback: just download
+      downloadPosterFile();
+      showToast("Poster downloaded! Share it manually.");
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error("Share failed:", err);
+      downloadPosterFile();
+      showToast("Sharing not supported. Poster downloaded instead.");
+    }
+  }
+};
+
+// ===== MANUAL DOWNLOAD - NEW =====
+downloadManualBtn.onclick = () => {
+  downloadPosterFile();
+};
+
+function downloadPosterFile() {
   if (!selectedPosterSize) return;
   
   const link = document.createElement('a');
@@ -1488,8 +1501,9 @@ downloadPoster.onclick = () => {
   link.click();
   
   showToast("Poster downloaded!");
-};
+}
 
+// ===== SHARE POSTER BUTTON =====
 sharePosterBtn.onclick = () => {
   closeModal(postcardModal);
   resetPosterModal();
@@ -1502,10 +1516,10 @@ sharePosterBtn.onclick = () => {
 function resetPosterModal() {
   designStep.classList.add("active");
   platformStep.classList.remove("active");
-  previewStep.classList.remove("active");
-  downloadPoster.classList.add("hidden");
+  shareStep.classList.remove("active");
   selectedDesign = "midnight-gold";
   selectedPosterSize = null;
+  generatedPosterBlob = null;
   
   document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
   document.querySelectorAll(".color-dot")[0].classList.add("active");
@@ -1530,7 +1544,7 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded - FIXED VERSION");
+console.log("MARGO Firebase Edition loaded - WITH IMPROVED SHARING");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
 
