@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>MARGO — When words fail, drop a line</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,14 +59,14 @@
 
 <!-- COMPOSER MODAL -->
 <div id="composer" class="modal hidden">
-  <div class="modal-content">
+  <div class="modal-content composer-modal">
     <div class="modal-header">
       <h3>Drop a line</h3>
       <button id="closeComposer" class="close-btn">×</button>
     </div>
     <div class="modal-body">
       <label>Lyric</label>
-      <textarea id="textInput" maxlength="140" placeholder="The line stuck in your head..." required></textarea>
+      <textarea id="textInput" maxlength="140" placeholder="The line stuck in your head..." required inputmode="text"></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
 
       <label>Emotion</label>
@@ -95,8 +96,8 @@
 
       <div id="shareInputs" class="conditional active">
         <label>Song Details</label>
-        <input id="songInput" placeholder="Song title" required/>
-        <input id="artistInput" placeholder="Artist" required/>
+        <input id="songInput" placeholder="Song title" required inputmode="text"/>
+        <input id="artistInput" placeholder="Artist" required inputmode="text"/>
       </div>
 
       <div id="guessInputs" class="conditional">
@@ -111,15 +112,15 @@
             <span>Let them guess the artist</span>
           </label>
         </div>
-        <input id="guessSongAnswer" placeholder="Correct song title"/>
-        <input id="guessArtistAnswer" placeholder="Correct artist"/>
+        <input id="guessSongAnswer" placeholder="Correct song title" inputmode="text"/>
+        <input id="guessArtistAnswer" placeholder="Correct artist" inputmode="text"/>
       </div>
 
       <div id="discoverInputs" class="conditional">
         <p class="hint">Don't know the song? The community will help you discover it!</p>
         <p class="hint-small">Optional: Add any clues you remember</p>
-        <input id="discoverSongInput" placeholder="Maybe song? (optional)"/>
-        <input id="discoverArtistInput" placeholder="Maybe artist? (optional)"/>
+        <input id="discoverSongInput" placeholder="Maybe song? (optional)" inputmode="text"/>
+        <input id="discoverArtistInput" placeholder="Maybe artist? (optional)" inputmode="text"/>
       </div>
 
       <details class="streaming-section" id="streamingSection">
@@ -127,19 +128,19 @@
         <div class="streaming-links">
           <div class="input-group-small">
             <label>Spotify</label>
-            <input id="spotifyLink" type="url" placeholder="https://open.spotify.com/track/..."/>
+            <input id="spotifyLink" type="url" placeholder="https://open.spotify.com/track/..." inputmode="url"/>
           </div>
           <div class="input-group-small">
             <label>Apple Music</label>
-            <input id="appleLink" type="url" placeholder="https://music.apple.com/..."/>
+            <input id="appleLink" type="url" placeholder="https://music.apple.com/..." inputmode="url"/>
           </div>
           <div class="input-group-small">
             <label>YouTube</label>
-            <input id="youtubeLink" type="url" placeholder="https://youtube.com/watch?v=..."/>
+            <input id="youtubeLink" type="url" placeholder="https://youtube.com/watch?v=..." inputmode="url"/>
           </div>
           <div class="input-group-small">
             <label>SoundCloud</label>
-            <input id="soundcloudLink" type="url" placeholder="https://soundcloud.com/..."/>
+            <input id="soundcloudLink" type="url" placeholder="https://soundcloud.com/..." inputmode="url"/>
           </div>
         </div>
       </details>
@@ -161,8 +162,8 @@
       <div class="lyric-display" id="guessLyric"></div>
       <p class="hint" id="guessHint"></p>
       <div id="guessInputFields">
-        <input id="guessSongInput" placeholder="Song title" class="guess-field"/>
-        <input id="guessArtistInput" placeholder="Artist" class="guess-field"/>
+        <input id="guessSongInput" placeholder="Song title" class="guess-field" inputmode="text"/>
+        <input id="guessArtistInput" placeholder="Artist" class="guess-field" inputmode="text"/>
       </div>
       <div id="guessResult" class="result-message hidden"></div>
       <div id="guessLinksSection" class="guess-links-section hidden"></div>
@@ -184,27 +185,27 @@
     <div class="modal-body">
       <div class="lyric-display" id="discoverLyric"></div>
       <p class="hint">Know this song? Help them out!</p>
-      <input id="discoverSongAnswer" placeholder="Song title" required/>
-      <input id="discoverArtistAnswer" placeholder="Artist" required/>
+      <input id="discoverSongAnswer" placeholder="Song title" required inputmode="text"/>
+      <input id="discoverArtistAnswer" placeholder="Artist" required inputmode="text"/>
       
       <details class="streaming-section">
         <summary>Add Streaming Links (Optional)</summary>
         <div class="streaming-links">
           <div class="input-group-small">
             <label>Spotify</label>
-            <input id="discoverSpotifyLink" type="url" placeholder="https://open.spotify.com/track/..."/>
+            <input id="discoverSpotifyLink" type="url" placeholder="https://open.spotify.com/track/..." inputmode="url"/>
           </div>
           <div class="input-group-small">
             <label>Apple Music</label>
-            <input id="discoverAppleLink" type="url" placeholder="https://music.apple.com/..."/>
+            <input id="discoverAppleLink" type="url" placeholder="https://music.apple.com/..." inputmode="url"/>
           </div>
           <div class="input-group-small">
             <label>YouTube</label>
-            <input id="discoverYoutubeLink" type="url" placeholder="https://youtube.com/watch?v=..."/>
+            <input id="discoverYoutubeLink" type="url" placeholder="https://youtube.com/watch?v=..." inputmode="url"/>
           </div>
           <div class="input-group-small">
             <label>SoundCloud</label>
-            <input id="discoverSoundcloudLink" type="url" placeholder="https://soundcloud.com/..."/>
+            <input id="discoverSoundcloudLink" type="url" placeholder="https://soundcloud.com/..." inputmode="url"/>
           </div>
         </div>
       </details>
