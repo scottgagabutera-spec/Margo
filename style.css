@@ -1,4 +1,4 @@
-/* MARGO - Enhanced with Scroll Improvements & Live Updates */
+/* MARGO - Enhanced with Scroll Improvements, Live Updates & Mobile Optimization */
 
 * { 
   box-sizing: border-box; 
@@ -21,6 +21,12 @@
   --success: #50fa7b;
   --error: #ff6b6b;
   --partial: #ffa500;
+  
+  /* NEW: Safe area insets for notched devices */
+  --safe-area-top: env(safe-area-inset-top);
+  --safe-area-bottom: env(safe-area-inset-bottom);
+  --safe-area-left: env(safe-area-inset-left);
+  --safe-area-right: env(safe-area-inset-right);
 }
 
 body {
@@ -31,12 +37,28 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  
+  /* NEW: Better mobile handling */
+  overscroll-behavior: none;
+  position: relative;
+}
+
+/* NEW: iOS Safe Area Support */
+@supports(padding: max(0px)) {
+  body {
+    padding-top: max(0px, var(--safe-area-top));
+    padding-bottom: max(0px, var(--safe-area-bottom));
+    padding-left: max(0px, var(--safe-area-left));
+    padding-right: max(0px, var(--safe-area-right));
+  }
 }
 
 /* ===== SCREENS ===== */
 .screen { 
   display: none; 
-  min-height: 100vh; 
+  min-height: 100vh;
+  /* NEW: Better mobile viewport handling */
+  min-height: 100dvh; /* Dynamic viewport height */
 }
 
 .screen.active { 
@@ -378,6 +400,9 @@ button:active {
   scroll-behavior: smooth;
   opacity: 1;
   transition: opacity 0.3s ease-out;
+  
+  /* NEW: Better mobile scrolling */
+  -webkit-overflow-scrolling: touch;
 }
 
 .feed-list.transitioning {
@@ -563,7 +588,7 @@ button:active {
   letter-spacing: 0.5px;
 }
 
-/* ===== MODALS ===== */
+/* ===== MODALS - IMPROVED FOR MOBILE KEYBOARD ===== */
 .modal {
   position: fixed;
   inset: 0;
@@ -586,6 +611,10 @@ button:active {
 
 body.modal-open {
   overflow: hidden !important;
+  /* NEW: Prevent bounce on iOS */
+  position: fixed;
+  width: 100%;
+  height: 100%;
 }
 
 .modal-content {
@@ -598,10 +627,18 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   max-height: 92vh;
+  /* NEW: Better mobile keyboard handling */
+  max-height: 92dvh; /* Dynamic viewport height */
   position: relative;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   transform: scale(1);
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* NEW: Special handling for composer modal on mobile */
+.composer-modal {
+  /* On mobile, when keyboard appears, position towards top */
+  margin: auto auto 20px auto;
 }
 
 .poster-modal .modal-content {
@@ -649,6 +686,7 @@ body.modal-open {
 .modal-body {
   padding: 16px 18px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -678,7 +716,7 @@ body.modal-open {
   flex-shrink: 0;
 }
 
-/* ===== FORM ELEMENTS ===== */
+/* ===== FORM ELEMENTS - IMPROVED INPUT MODES ===== */
 label {
   font-size: 0.75rem;
   font-weight: 700;
@@ -698,6 +736,10 @@ textarea, input {
   font-family: inherit;
   font-size: 0.9rem;
   transition: all 0.2s ease;
+  
+  /* NEW: Better mobile input handling */
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 textarea {
@@ -713,6 +755,13 @@ textarea:focus, input:focus {
   border-color: var(--gold);
   background: var(--bg-elevated);
   box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+/* NEW: Prevent iOS zoom on focus */
+@media screen and (max-width: 768px) {
+  textarea, input {
+    font-size: 16px; /* Prevents iOS auto-zoom */
+  }
 }
 
 .char-count {
@@ -1604,6 +1653,7 @@ textarea:focus, input:focus {
   .modal-content {
     border-radius: 18px;
     max-height: 94vh;
+    max-height: 94dvh;
   }
   
   .postcard-lyric {
@@ -1672,5 +1722,22 @@ textarea:focus, input:focus {
 @media (min-width: 1025px) {
   .feed-list {
     grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* NEW: Landscape mobile optimization */
+@media (max-height: 600px) and (orientation: landscape) {
+  .composer-modal {
+    max-height: 85vh;
+    max-height: 85dvh;
+  }
+  
+  .modal-body {
+    padding: 12px 18px;
+    gap: 10px;
+  }
+  
+  textarea {
+    min-height: 60px;
   }
 }
