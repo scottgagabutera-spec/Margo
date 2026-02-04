@@ -1,4 +1,4 @@
-/* MARGO - Firebase Real-Time Sync Edition - FIXED ANALYTICS */
+/* MARGO - Firebase Real-Time Sync Edition - FIXED */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -1173,7 +1173,7 @@ listenPostcard.onclick = () => {
   }
 };
 
-// ===== ANALYTICS - FIXED TO SHOW ONLY RELEVANT STATS =====
+// ===== ANALYTICS =====
 analyticsBtn.onclick = () => {
   if (!currentPost || !postAnalytics[currentPost.id]) return;
   
@@ -1188,12 +1188,12 @@ analyticsBtn.onclick = () => {
   const helps = analytics.helps ? 
     (Array.isArray(analytics.helps) ? analytics.helps : Object.values(analytics.helps)) : [];
   
-  // Get stat card elements
+  // Show/hide stats based on post mode
   const guessesStatCard = document.querySelector('.stat-card:nth-child(2)');
   const helpsStatCard = document.querySelector('.stat-card:nth-child(3)');
   
   if (currentPost.mode === 'guess') {
-    // GUESS MODE: Show ONLY Views and Guess Attempts
+    // GUESS MODE: Show only Views and Guess Attempts
     guessesStatCard.style.display = 'block';
     helpsStatCard.style.display = 'none';
     statGuesses.textContent = guesses.length;
@@ -1222,11 +1222,10 @@ analyticsBtn.onclick = () => {
       guessesSection.classList.add("hidden");
     }
     
-    // Hide helps section completely for guess mode
     helpsSection.classList.add("hidden");
   } 
   else if (currentPost.mode === 'discover') {
-    // DISCOVER MODE: Show ONLY Views and Discovery Helps
+    // DISCOVER MODE: Show only Views and Discovery Helps
     guessesStatCard.style.display = 'none';
     helpsStatCard.style.display = 'block';
     statHelps.textContent = helps.length;
@@ -1271,11 +1270,10 @@ analyticsBtn.onclick = () => {
       helpsSection.classList.add("hidden");
     }
     
-    // Hide guesses section completely for discover mode
     guessesSection.classList.add("hidden");
   } 
   else {
-    // SHARE MODE: Show ONLY Views (no guesses, no helps)
+    // SHARE MODE: Show only Views
     guessesStatCard.style.display = 'none';
     helpsStatCard.style.display = 'none';
     guessesSection.classList.add("hidden");
@@ -1523,7 +1521,7 @@ function showToast(message) {
 }
 
 // ===== INITIALIZE =====
-console.log("MARGO Firebase Edition loaded - ANALYTICS FIXED");
+console.log("MARGO Firebase Edition loaded - FIXED VERSION");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
 
@@ -1541,3 +1539,5 @@ window.addEventListener('load', () => {
     }
   }
 });
+
+
