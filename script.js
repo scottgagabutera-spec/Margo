@@ -155,6 +155,8 @@ if (!userId) {
 }
 
 // ===== FIREBASE REAL-TIME SYNC =====
+let postsLoaded = false;
+
 if (isFirebaseEnabled) {
   // Listen for posts changes
   postsRef.orderByChild('timestamp').limitToLast(50).on('value', (snapshot) => {
@@ -169,6 +171,8 @@ if (isFirebaseEnabled) {
     posts.sort((a, b) => b.timestamp - a.timestamp);
     
     console.log('📡 Posts synced from Firebase:', posts.length);
+    
+    postsLoaded = true;
     
     // Update feed if visible
     if (feed.classList.contains('active')) {
@@ -185,6 +189,7 @@ if (isFirebaseEnabled) {
   // Fallback to localStorage
   posts = JSON.parse(localStorage.getItem("margoPosts") || "[]");
   postAnalytics = JSON.parse(localStorage.getItem("margoAnalytics") || "{}");
+  postsLoaded = true;
   
   // Initialize analytics for existing posts
   posts.forEach(post => {
@@ -587,6 +592,13 @@ function resetComposer() {
 // ===== RENDER FEED - FIXED =====
 function renderFeed() {
   feedList.innerHTML = "";
+  
+  // Show loading state if posts not loaded yet
+  if (!postsLoaded) {
+    postCount.textContent = "...";
+    feedList.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:60px 20px; color:var(--gold);"><div style="font-size: 1.5rem; margin-bottom: 10px;">⏳</div><div>Loading posts...</div></div>';
+    return;
+  }
   
   if (posts.length === 0) {
     postCount.textContent = "0";
