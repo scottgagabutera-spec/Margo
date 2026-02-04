@@ -602,6 +602,9 @@ function renderFeed() {
     
     const timeText = timeAgo(post.timestamp);
     
+    // Handle old posts without emotion
+    const emotion = post.emotion || "Nostalgia";
+    
     let songSection = '';
     let actionsSection = '';
     
@@ -669,7 +672,7 @@ function renderFeed() {
 
     card.innerHTML = `
       <div class="feed-text">${post.text}</div>
-      <div class="feed-emotion">${post.emotion}</div>
+      <div class="feed-emotion">${emotion}</div>
       ${songSection}
       <div class="feed-time">${timeText}</div>
       ${actionsSection}
@@ -759,6 +762,49 @@ function openGuess(index) {
   }
   
   openModal(guessModal);
+}
+
+// ===== SHOW LINKS IN GUESS MODAL =====
+function showGuessLinks(permanent = false) {
+  if (!currentPost || !currentPost.links || !guessLinksSection) return;
+  
+  const hasLinks = currentPost.links.spotify || 
+                   currentPost.links.apple || 
+                   currentPost.links.youtube || 
+                   currentPost.links.soundcloud;
+  
+  if (!hasLinks) return;
+  
+  const linksHTML = [];
+  
+  if (currentPost.links.spotify) {
+    linksHTML.push(`<a href="${currentPost.links.spotify}" target="_blank" class="guess-link">🎵 Spotify</a>`);
+  }
+  if (currentPost.links.apple) {
+    linksHTML.push(`<a href="${currentPost.links.apple}" target="_blank" class="guess-link">🍎 Apple Music</a>`);
+  }
+  if (currentPost.links.youtube) {
+    linksHTML.push(`<a href="${currentPost.links.youtube}" target="_blank" class="guess-link">▶️ YouTube</a>`);
+  }
+  if (currentPost.links.soundcloud) {
+    linksHTML.push(`<a href="${currentPost.links.soundcloud}" target="_blank" class="guess-link">☁️ SoundCloud</a>`);
+  }
+  
+  guessLinksSection.innerHTML = `
+    <div class="guess-links-title">Listen to the song:</div>
+    <div class="guess-links-container">
+      ${linksHTML.join('')}
+    </div>
+  `;
+  guessLinksSection.classList.remove("hidden");
+  
+  if (!permanent) {
+    setTimeout(() => {
+      if (guessLinksSection && !permanent) {
+        guessLinksSection.classList.add("hidden");
+      }
+    }, 5000);
+  }
 }
 
 // ===== SUBMIT GUESS WITH PARTIAL FEEDBACK =====
@@ -1058,7 +1104,7 @@ function viewPost(index) {
   trackView(currentPost.id);
   
   postcardLyric.textContent = currentPost.text;
-  postcardEmotion.textContent = currentPost.emotion;
+  postcardEmotion.textContent = currentPost.emotion || "Nostalgia";
   
   const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
   
@@ -1115,33 +1161,35 @@ analyticsBtn.onclick = () => {
   // Get stats container
   const statsContainer = document.querySelector('.analytics-stats');
   
-  // IMPORTANT: First hide ALL sections
-  guessesSection.classList.add("hidden");
-  helpsSection.classList.add("hidden");
-  
-  // Clear existing lists
-  guessesList.innerHTML = "";
-  helpsList.innerHTML = "";
+  // Get the modal body to rebuild everything
+  const modalBody = document.querySelector('#analyticsModal .modal-body');
   
   if (currentPost.mode === 'guess') {
     // ===== GUESS MODE =====
-    // Rebuild stats: ONLY Views and Guess Attempts
-    statsContainer.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-number">${analytics.views || 0}</div>
-        <div class="stat-label">Views</div>
+    // Completely rebuild modal body with ONLY relevant content
+    modalBody.innerHTML = `
+      <div class="analytics-stats">
+        <div class="stat-card">
+          <div class="stat-number">${analytics.views || 0}</div>
+          <div class="stat-label">Views</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">${guesses.length}</div>
+          <div class="stat-label">Guess Attempts</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-number">${guesses.length}</div>
-        <div class="stat-label">Guess Attempts</div>
-      </div>
+      
+      ${guesses.length > 0 ? `
+        <div class="activity-section">
+          <h4>Guess Attempts</h4>
+          <div class="activity-list" id="guessesList"></div>
+        </div>
+      ` : ''}
     `;
     
-    // Show ONLY guesses section if there are any
+    // Populate guesses if any
     if (guesses.length > 0) {
-      guessesSection.classList.remove("hidden");
-      guessesSection.querySelector('h4').textContent = 'Guess Attempts';
-      
+      const newGuessesList = document.getElementById('guessesList');
       guesses.forEach(guess => {
         const item = document.createElement("div");
         item.className = `activity-item ${guess.correct ? 'correct' : 'incorrect'}`;
@@ -1155,30 +1203,36 @@ analyticsBtn.onclick = () => {
           </div>
           <div class="activity-time">${timeAgo(guess.timestamp)}</div>
         `;
-        guessesList.appendChild(item);
+        newGuessesList.appendChild(item);
       });
     }
-    // Keep helpsSection hidden (already done above)
   } 
   else if (currentPost.mode === 'discover') {
     // ===== DISCOVER MODE =====
-    // Rebuild stats: ONLY Views and Discovery Helps
-    statsContainer.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-number">${analytics.views || 0}</div>
-        <div class="stat-label">Views</div>
+    // Completely rebuild modal body with ONLY relevant content
+    modalBody.innerHTML = `
+      <div class="analytics-stats">
+        <div class="stat-card">
+          <div class="stat-number">${analytics.views || 0}</div>
+          <div class="stat-label">Views</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">${helps.length}</div>
+          <div class="stat-label">Discovery Helps</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-number">${helps.length}</div>
-        <div class="stat-label">Discovery Helps</div>
-      </div>
+      
+      ${helps.length > 0 ? `
+        <div class="activity-section">
+          <h4>Discovery Suggestions</h4>
+          <div class="activity-list" id="helpsList"></div>
+        </div>
+      ` : ''}
     `;
     
-    // Show ONLY helps section if there are any
+    // Populate helps if any
     if (helps.length > 0) {
-      helpsSection.classList.remove("hidden");
-      helpsSection.querySelector('h4').textContent = 'Discovery Suggestions';
-      
+      const newHelpsList = document.getElementById('helpsList');
       helps.forEach(help => {
         const item = document.createElement("div");
         item.className = "activity-item";
@@ -1204,21 +1258,21 @@ analyticsBtn.onclick = () => {
           ${linksHTML}
           <div class="activity-time">${timeAgo(help.timestamp)}</div>
         `;
-        helpsList.appendChild(item);
+        newHelpsList.appendChild(item);
       });
     }
-    // Keep guessesSection hidden (already done above)
   } 
   else {
     // ===== SHARE MODE =====
-    // Rebuild stats: ONLY Views
-    statsContainer.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-number">${analytics.views || 0}</div>
-        <div class="stat-label">Views</div>
+    // Completely rebuild modal body with ONLY views
+    modalBody.innerHTML = `
+      <div class="analytics-stats">
+        <div class="stat-card">
+          <div class="stat-number">${analytics.views || 0}</div>
+          <div class="stat-label">Views</div>
+        </div>
       </div>
     `;
-    // Both sections stay hidden (already done above)
   }
   
   closeModal(postcardModal);
@@ -1268,10 +1322,11 @@ function updateLivePreview() {
   const lyricPreview = currentPost.text.length > 80 ? currentPost.text.substring(0, 80) + '...' : currentPost.text;
   wrapText(ctx, lyricPreview, previewWidth / 2, previewHeight / 2 - 30, previewWidth * 0.85, baseFontSize * 1.3);
   
-  // Emotion
+  // Emotion with fallback
+  const emotion = currentPost.emotion || "Nostalgia";
   ctx.fillStyle = colors.primary;
   ctx.font = `600 ${baseFontSize * 0.75}px sans-serif`;
-  ctx.fillText(`#${currentPost.emotion}`, previewWidth / 2, previewHeight / 2 + 35);
+  ctx.fillText(`#${emotion}`, previewWidth / 2, previewHeight / 2 + 35);
   
   // Separator
   ctx.strokeStyle = colors.secondary;
@@ -1385,10 +1440,11 @@ function generatePoster(size, design) {
   ctx.font = `italic ${baseFontSize * 1.15}px serif`;
   wrapText(ctx, currentPost.text, dims.width / 2, dims.height * 0.38, dims.width * 0.85, baseFontSize * 1.7);
   
-  // Emotion
+  // Emotion with fallback
+  const emotion = currentPost.emotion || "Nostalgia";
   ctx.fillStyle = colors.primary;
   ctx.font = `600 ${baseFontSize * 0.85}px sans-serif`;
-  ctx.fillText(`#${currentPost.emotion}`, dims.width / 2, dims.height * 0.62);
+  ctx.fillText(`#${emotion}`, dims.width / 2, dims.height * 0.62);
   
   // Separator
   ctx.strokeStyle = colors.secondary;
