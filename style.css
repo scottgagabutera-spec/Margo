@@ -241,6 +241,12 @@ button:active {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  
+  /* UNIFORM HEIGHT - All cards same size */
+  height: 420px;
+  
+  /* Ensure proper layout */
+  position: relative;
 }
 
 .feed-card:hover {
@@ -254,16 +260,24 @@ button:active {
 .feed-text {
   font-family: 'Playfair Display', serif;
   font-style: italic;
-  font-size: 1.1rem;
   line-height: 1.6;
   text-align: center;
   color: var(--text);
   padding: 14px 8px;
-  min-height: 85px;
   display: flex;
   align-items: center;
   justify-content: center;
   letter-spacing: 0.3px;
+  position: relative;
+  
+  /* FIXED HEIGHT - Takes up main space */
+  flex: 1;
+  min-height: 140px;
+  max-height: 180px;
+  overflow: hidden;
+  
+  /* Dynamic font size will be set via inline style in JS */
+  font-size: 1.1rem;
 }
 
 .feed-text::before {
@@ -328,6 +342,9 @@ button:active {
   gap: 10px;
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
+  
+  /* Pin to bottom of card */
+  margin-top: auto;
 }
 
 .feed-action {
@@ -1358,6 +1375,16 @@ textarea:focus, input:focus {
     grid-template-columns: 1fr;
     padding: 18px 14px;
     gap: 18px;
+  }
+  
+  /* Slightly shorter cards on mobile */
+  .feed-card {
+    height: 380px;
+  }
+  
+  .feed-text {
+    min-height: 120px;
+    max-height: 160px;
   }
   
   .mode-options {
