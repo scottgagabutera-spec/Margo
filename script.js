@@ -1115,19 +1115,28 @@ analyticsBtn.onclick = () => {
   const helps = analytics.helps ? 
     (Array.isArray(analytics.helps) ? analytics.helps : Object.values(analytics.helps)) : [];
   
-  // Show/hide stats based on post mode
-  const guessesStatCard = document.querySelector('.stat-card:nth-child(2)');
-  const helpsStatCard = document.querySelector('.stat-card:nth-child(3)');
+  // Get all stat cards
+  const statsContainer = document.querySelector('.analytics-stats');
+  const allStatCards = statsContainer.querySelectorAll('.stat-card');
   
+  // Clear and rebuild stat cards based on mode
   if (currentPost.mode === 'guess') {
     // GUESS MODE: Show only Views and Guess Attempts
-    guessesStatCard.style.display = 'block';
-    helpsStatCard.style.display = 'none';
-    statGuesses.textContent = guesses.length;
+    statsContainer.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-number">${analytics.views || 0}</div>
+        <div class="stat-label">Views</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${guesses.length}</div>
+        <div class="stat-label">Guess Attempts</div>
+      </div>
+    `;
     
     // Show guesses section if there are any
     if (guesses.length > 0) {
       guessesSection.classList.remove("hidden");
+      guessesSection.querySelector('h4').textContent = 'Guess Attempts';
       guessesList.innerHTML = "";
       
       guesses.forEach(guess => {
@@ -1153,12 +1162,16 @@ analyticsBtn.onclick = () => {
   } 
   else if (currentPost.mode === 'discover') {
     // DISCOVER MODE: Show only Views and Discovery Helps
-    guessesStatCard.style.display = 'none';
-    helpsStatCard.style.display = 'block';
-    statHelps.textContent = helps.length;
-    
-    // Change label to "Discovery Helps"
-    helpsStatCard.querySelector('.stat-label').textContent = 'Discovery Helps';
+    statsContainer.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-number">${analytics.views || 0}</div>
+        <div class="stat-label">Views</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${helps.length}</div>
+        <div class="stat-label">Discovery Helps</div>
+      </div>
+    `;
     
     // Show helps section if there are any
     if (helps.length > 0) {
@@ -1201,8 +1214,13 @@ analyticsBtn.onclick = () => {
   } 
   else {
     // SHARE MODE: Show only Views
-    guessesStatCard.style.display = 'none';
-    helpsStatCard.style.display = 'none';
+    statsContainer.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-number">${analytics.views || 0}</div>
+        <div class="stat-label">Views</div>
+      </div>
+    `;
+    
     guessesSection.classList.add("hidden");
     helpsSection.classList.add("hidden");
   }
