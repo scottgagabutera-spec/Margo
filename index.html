@@ -273,7 +273,7 @@
   </div>
 </div>
 
-<!-- SHARE POSTER MODAL -->
+<!-- SHARE POSTER MODAL - UPDATED -->
 <div id="sharePosterModal" class="modal hidden">
   <div class="modal-content poster-modal">
     <div class="modal-header">
@@ -301,7 +301,7 @@
           </div>
         </div>
         
-        <button id="nextToPlatform" class="primary-btn full">Share to Platform</button>
+        <button id="nextToPlatform" class="primary-btn full">Choose Platform</button>
       </div>
 
       <!-- Step 2: Platform -->
@@ -342,15 +342,30 @@
         <button id="backToDesign" class="secondary-btn full">Back</button>
       </div>
 
-      <!-- Step 3: Final Preview -->
-      <div id="previewStep" class="poster-step">
+      <!-- Step 3: Share Options - NEW -->
+      <div id="shareStep" class="poster-step">
         <div class="poster-preview">
           <canvas id="posterCanvas"></canvas>
         </div>
+        
+        <!-- Shareable Link Section -->
+        <div class="share-link-section">
+          <label>Share This Post</label>
+          <div class="share-link-container">
+            <input id="shareableLink" type="text" readonly class="share-link-input"/>
+            <button id="copyLinkBtn" class="copy-link-btn">Copy</button>
+          </div>
+          <p class="hint-small">Anyone with this link can view your post on MARGO</p>
+        </div>
+        
+        <!-- Share Buttons -->
+        <div class="share-actions">
+          <button id="shareNativeBtn" class="primary-btn full">Share Poster</button>
+          <button id="downloadManualBtn" class="secondary-btn full">Save to Device</button>
+        </div>
+        
+        <button id="backToPlatform" class="secondary-btn full">Back</button>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button id="downloadPoster" class="primary-btn full hidden">Download Poster</button>
     </div>
   </div>
 </div>
