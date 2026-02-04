@@ -1106,22 +1106,26 @@ analyticsBtn.onclick = () => {
   
   const analytics = postAnalytics[currentPost.id];
   
-  // Always show views
-  statViews.textContent = analytics.views || 0;
-  
   // Handle Firebase array format
   const guesses = analytics.guesses ? 
     (Array.isArray(analytics.guesses) ? analytics.guesses : Object.values(analytics.guesses)) : [];
   const helps = analytics.helps ? 
     (Array.isArray(analytics.helps) ? analytics.helps : Object.values(analytics.helps)) : [];
   
-  // Get all stat cards
+  // Get stats container
   const statsContainer = document.querySelector('.analytics-stats');
-  const allStatCards = statsContainer.querySelectorAll('.stat-card');
   
-  // Clear and rebuild stat cards based on mode
+  // IMPORTANT: First hide ALL sections
+  guessesSection.classList.add("hidden");
+  helpsSection.classList.add("hidden");
+  
+  // Clear existing lists
+  guessesList.innerHTML = "";
+  helpsList.innerHTML = "";
+  
   if (currentPost.mode === 'guess') {
-    // GUESS MODE: Show only Views and Guess Attempts
+    // ===== GUESS MODE =====
+    // Rebuild stats: ONLY Views and Guess Attempts
     statsContainer.innerHTML = `
       <div class="stat-card">
         <div class="stat-number">${analytics.views || 0}</div>
@@ -1133,11 +1137,10 @@ analyticsBtn.onclick = () => {
       </div>
     `;
     
-    // Show guesses section if there are any
+    // Show ONLY guesses section if there are any
     if (guesses.length > 0) {
       guessesSection.classList.remove("hidden");
       guessesSection.querySelector('h4').textContent = 'Guess Attempts';
-      guessesList.innerHTML = "";
       
       guesses.forEach(guess => {
         const item = document.createElement("div");
@@ -1154,14 +1157,12 @@ analyticsBtn.onclick = () => {
         `;
         guessesList.appendChild(item);
       });
-    } else {
-      guessesSection.classList.add("hidden");
     }
-    
-    helpsSection.classList.add("hidden");
+    // Keep helpsSection hidden (already done above)
   } 
   else if (currentPost.mode === 'discover') {
-    // DISCOVER MODE: Show only Views and Discovery Helps
+    // ===== DISCOVER MODE =====
+    // Rebuild stats: ONLY Views and Discovery Helps
     statsContainer.innerHTML = `
       <div class="stat-card">
         <div class="stat-number">${analytics.views || 0}</div>
@@ -1173,11 +1174,10 @@ analyticsBtn.onclick = () => {
       </div>
     `;
     
-    // Show helps section if there are any
+    // Show ONLY helps section if there are any
     if (helps.length > 0) {
       helpsSection.classList.remove("hidden");
       helpsSection.querySelector('h4').textContent = 'Discovery Suggestions';
-      helpsList.innerHTML = "";
       
       helps.forEach(help => {
         const item = document.createElement("div");
@@ -1206,23 +1206,19 @@ analyticsBtn.onclick = () => {
         `;
         helpsList.appendChild(item);
       });
-    } else {
-      helpsSection.classList.add("hidden");
     }
-    
-    guessesSection.classList.add("hidden");
+    // Keep guessesSection hidden (already done above)
   } 
   else {
-    // SHARE MODE: Show only Views
+    // ===== SHARE MODE =====
+    // Rebuild stats: ONLY Views
     statsContainer.innerHTML = `
       <div class="stat-card">
         <div class="stat-number">${analytics.views || 0}</div>
         <div class="stat-label">Views</div>
       </div>
     `;
-    
-    guessesSection.classList.add("hidden");
-    helpsSection.classList.add("hidden");
+    // Both sections stay hidden (already done above)
   }
   
   closeModal(postcardModal);
