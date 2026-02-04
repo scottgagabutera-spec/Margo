@@ -1,4 +1,4 @@
-/* MARGO - Improved Design with Compact Modals */
+/* MARGO - Improved Design with Compact Modals & NEW SHARING UI */
 
 * { 
   box-sizing: border-box; 
@@ -1291,6 +1291,67 @@ textarea:focus, input:focus {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
+/* ===== SHARE LINK SECTION - NEW ===== */
+.share-link-section {
+  padding: 16px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.share-link-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.share-link-input {
+  flex: 1;
+  padding: 12px;
+  background: var(--bg-dark);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: 'DM Sans', monospace;
+  user-select: all;
+}
+
+.share-link-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+.copy-link-btn {
+  padding: 12px 20px;
+  background: var(--bg-dark);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.copy-link-btn:hover {
+  border-color: var(--gold);
+  background: rgba(212, 175, 55, 0.1);
+  transform: scale(1.05);
+}
+
+/* ===== SHARE ACTIONS - NEW ===== */
+.share-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 480px) {
   .feed-list {
@@ -1357,6 +1418,14 @@ textarea:focus, input:focus {
   
   .modal-footer {
     padding: 16px 18px;
+  }
+  
+  .share-link-container {
+    flex-direction: column;
+  }
+  
+  .copy-link-btn {
+    width: 100%;
   }
 }
 
