@@ -1,40 +1,397 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Plausible Analytics -->
-  <script defer data-domain="margo-silk.vercel.app" src="https://plausible.io/js/script.js"></script>
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
-  <!-- Enhanced PWA Meta Tags -->
-  <meta name="theme-color" content="#d4af37">
-  <meta name="description" content="MARGO - A social platform for sharing music lyrics with emotion. When words fail, drop a line.">
-  
-  <!-- Open Graph / Social Media Meta Tags -->
-  <meta property="og:title" content="MARGO — When words fail, drop a line">
-  <meta property="og:description" content="Share music lyrics with emotion. Discover, guess, and connect through the power of music.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://margo-silk.vercel.app">
-  <meta property="og:image" content="https://margo-silk.vercel.app/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  
-  <!-- Twitter Card Meta Tags -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="MARGO — When words fail, drop a line">
-  <meta name="twitter:description" content="Share music lyrics with emotion">
-  <meta name="twitter:image" content="https://margo-silk.vercel.app/og-image.png">
-  
   <title>MARGO — When words fail, drop a line</title>
-  
-  <!-- Font Preloading for Performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
   <link rel="stylesheet" href="style.css"/>
 </head>
+<body>
+
+<!-- LANDING -->
+<section id="landing" class="screen active">
+  <div class="center">
+    <h1 class="logo">MARGO</h1>
+    <p class="tagline">When words fail, drop a line.</p>
+    <button id="enterBtn" class="primary-btn">Drop a line</button>
+    <div class="swipe-hint">
+      <span class="swipe-arrow">←</span>
+      <span>Swipe to explore</span>
+    </div>
+  </div>
+</section>
+
+<!-- FEED -->
+<section id="feed" class="screen">
+  <header class="feed-header">
+    <button id="backBtn" class="header-btn">
+      <span class="btn-icon">←</span>
+    </button>
+    <div class="header-center">
+      <h2>Live Feed</h2>
+      <p class="post-count"><span id="postCount">0</span> posts</p>
+    </div>
+    <button id="openComposer" class="header-btn primary">Drop your line</button>
+  </header>
+  
+  <!-- NEW: New Posts Indicator -->
+  <div id="newPostsIndicator" class="new-posts-indicator">
+    <div class="new-posts-content">
+      <span class="new-posts-icon">✨</span>
+      <span class="new-posts-text"><span class="new-posts-count">0</span> new</span>
+    </div>
+  </div>
+  
+  <!-- NEW: Scroll to Top Button -->
+  <button id="scrollToTopBtn" class="scroll-to-top">
+    <span class="scroll-arrow">↑</span>
+    <span>Back to top</span>
+  </button>
+  
+  <div id="feedList" class="feed-list"></div>
+</section>
+
+<!-- COMPOSER MODAL -->
+<div id="composer" class="modal hidden">
+  <div class="modal-content composer-modal">
+    <div class="modal-header">
+      <h3>Drop a line</h3>
+      <button id="closeComposer" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <label>Lyric</label>
+      <textarea id="textInput" maxlength="140" placeholder="The line stuck in your head..." required inputmode="text"></textarea>
+      <div class="char-count"><span id="charCount">0</span>/140</div>
+
+      <label>Emotion</label>
+      <div class="emotion-pills">
+        <button class="emotion-pill" data-emotion="Love" type="button">Love</button>
+        <button class="emotion-pill" data-emotion="Heartbreak" type="button">Heartbreak</button>
+        <button class="emotion-pill" data-emotion="Hope" type="button">Hope</button>
+        <button class="emotion-pill" data-emotion="Nostalgia" type="button">Nostalgia</button>
+        <button class="emotion-pill" data-emotion="Healing" type="button">Healing</button>
+        <button class="emotion-pill" data-emotion="Joy" type="button">Joy</button>
+        <button class="emotion-pill" data-emotion="Rage" type="button">Rage</button>
+        <button class="emotion-pill" data-emotion="Loneliness" type="button">Loneliness</button>
+      </div>
+
+      <label>What's your intention?</label>
+      <div class="mode-options">
+        <button class="mode-btn active" data-mode="share" type="button">
+          <span class="mode-label">Share</span>
+        </button>
+        <button class="mode-btn" data-mode="guess" type="button">
+          <span class="mode-label">Guess</span>
+        </button>
+        <button class="mode-btn" data-mode="discover" type="button">
+          <span class="mode-label">Discover</span>
+        </button>
+      </div>
+
+      <div id="shareInputs" class="conditional active">
+        <label>Song Details</label>
+        <input id="songInput" placeholder="Song title" required inputmode="text"/>
+        <input id="artistInput" placeholder="Artist" required inputmode="text"/>
+      </div>
+
+      <div id="guessInputs" class="conditional">
+        <label>Answer Key</label>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="guessSongCheck" checked>
+            <span>Let them guess the song</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="guessArtistCheck" checked>
+            <span>Let them guess the artist</span>
+          </label>
+        </div>
+        <input id="guessSongAnswer" placeholder="Correct song title" inputmode="text"/>
+        <input id="guessArtistAnswer" placeholder="Correct artist" inputmode="text"/>
+      </div>
+
+      <div id="discoverInputs" class="conditional">
+        <p class="hint">Don't know the song? The community will help you discover it!</p>
+        <p class="hint-small">Optional: Add any clues you remember</p>
+        <input id="discoverSongInput" placeholder="Maybe song? (optional)" inputmode="text"/>
+        <input id="discoverArtistInput" placeholder="Maybe artist? (optional)" inputmode="text"/>
+      </div>
+
+      <details class="streaming-section" id="streamingSection">
+        <summary>Add Streaming Links (Optional)</summary>
+        <div class="streaming-links">
+          <div class="input-group-small">
+            <label>Spotify</label>
+            <input id="spotifyLink" type="url" placeholder="https://open.spotify.com/track/..." inputmode="url"/>
+          </div>
+          <div class="input-group-small">
+            <label>Apple Music</label>
+            <input id="appleLink" type="url" placeholder="https://music.apple.com/..." inputmode="url"/>
+          </div>
+          <div class="input-group-small">
+            <label>YouTube</label>
+            <input id="youtubeLink" type="url" placeholder="https://youtube.com/watch?v=..." inputmode="url"/>
+          </div>
+          <div class="input-group-small">
+            <label>SoundCloud</label>
+            <input id="soundcloudLink" type="url" placeholder="https://soundcloud.com/..." inputmode="url"/>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="modal-footer">
+      <button id="postBtn" class="primary-btn full">Post</button>
+    </div>
+  </div>
+</div>
+
+<!-- GUESS MODAL -->
+<div id="guessModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Guess the Song</h3>
+      <button id="closeGuess" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="lyric-display" id="guessLyric"></div>
+      <p class="hint" id="guessHint"></p>
+      <div id="guessInputFields">
+        <input id="guessSongInput" placeholder="Song title" class="guess-field" inputmode="text"/>
+        <input id="guessArtistInput" placeholder="Artist" class="guess-field" inputmode="text"/>
+      </div>
+      <div id="guessResult" class="result-message hidden"></div>
+      <div id="guessLinksSection" class="guess-links-section hidden"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="submitGuess" class="primary-btn full">Submit Guess</button>
+      <button id="revealAnswer" class="secondary-btn full hidden">Reveal Answer</button>
+    </div>
+  </div>
+</div>
+
+<!-- DISCOVER MODAL -->
+<div id="discoverModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Help Discover</h3>
+      <button id="closeDiscover" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="lyric-display" id="discoverLyric"></div>
+      <p class="hint">Know this song? Help them out!</p>
+      <input id="discoverSongAnswer" placeholder="Song title" required inputmode="text"/>
+      <input id="discoverArtistAnswer" placeholder="Artist" required inputmode="text"/>
+      
+      <details class="streaming-section">
+        <summary>Add Streaming Links (Optional)</summary>
+        <div class="streaming-links">
+          <div class="input-group-small">
+            <label>Spotify</label>
+            <input id="discoverSpotifyLink" type="url" placeholder="https://open.spotify.com/track/..." inputmode="url"/>
+          </div>
+          <div class="input-group-small">
+            <label>Apple Music</label>
+            <input id="discoverAppleLink" type="url" placeholder="https://music.apple.com/..." inputmode="url"/>
+          </div>
+          <div class="input-group-small">
+            <label>YouTube</label>
+            <input id="discoverYoutubeLink" type="url" placeholder="https://youtube.com/watch?v=..." inputmode="url"/>
+          </div>
+          <div class="input-group-small">
+            <label>SoundCloud</label>
+            <input id="discoverSoundcloudLink" type="url" placeholder="https://soundcloud.com/..." inputmode="url"/>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="modal-footer">
+      <button id="submitDiscover" class="primary-btn full">Help Them Discover</button>
+    </div>
+  </div>
+</div>
+
+<!-- LISTEN MODAL -->
+<div id="listenModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Listen</h3>
+      <button id="closeListen" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint">Available streaming links:</p>
+      <div class="listen-links" id="listenLinks"></div>
+    </div>
+  </div>
+</div>
+
+<!-- POSTCARD MODAL -->
+<div id="postcardModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Post</h3>
+      <button id="closePostcard" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="postcard">
+        <div class="postcard-header">MARGO</div>
+        <div class="postcard-lyric" id="postcardLyric"></div>
+        <div class="postcard-emotion" id="postcardEmotion"></div>
+        <div class="postcard-song" id="postcardSong"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="analyticsBtn" class="secondary-btn full">View Analytics</button>
+      <button id="listenPostcard" class="secondary-btn full">Listen</button>
+      <button id="sharePosterBtn" class="primary-btn full">Share Poster</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANALYTICS MODAL -->
+<div id="analyticsModal" class="modal hidden">
+  <div class="modal-content analytics-modal">
+    <div class="modal-header">
+      <h3>Post Analytics</h3>
+      <button id="closeAnalytics" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="analytics-stats">
+        <div class="stat-card">
+          <div class="stat-number" id="statViews">0</div>
+          <div class="stat-label">Views</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="statGuesses">0</div>
+          <div class="stat-label">Guess Attempts</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="statHelps">0</div>
+          <div class="stat-label">Help Attempts</div>
+        </div>
+      </div>
+      
+      <div id="guessesSection" class="activity-section hidden">
+        <h4>Guess Attempts</h4>
+        <div id="guessesList" class="activity-list"></div>
+      </div>
+      
+      <div id="helpsSection" class="activity-section hidden">
+        <h4>Community Answers</h4>
+        <div id="helpsList" class="activity-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE POSTER MODAL -->
+<div id="sharePosterModal" class="modal hidden">
+  <div class="modal-content poster-modal">
+    <div class="modal-header">
+      <h3>Share Poster</h3>
+      <button id="closeSharePoster" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- Step 1: Design with Live Preview -->
+      <div id="designStep" class="poster-step active">
+        <!-- Live Preview -->
+        <div class="live-preview-container">
+          <canvas id="posterPreviewCanvas"></canvas>
+        </div>
+        
+        <!-- Color Picker -->
+        <div class="color-picker-section">
+          <label>Choose Color</label>
+          <div class="color-dots">
+            <button class="color-dot active" data-design="midnight-gold" style="background: linear-gradient(135deg, #0d0d0d, #d4af37);" title="Midnight Gold"></button>
+            <button class="color-dot" data-design="royal-purple" style="background: linear-gradient(135deg, #1a0033, #c77dff);" title="Royal Purple"></button>
+            <button class="color-dot" data-design="neon-cyan" style="background: linear-gradient(135deg, #0a1420, #00e5ff);" title="Neon Cyan"></button>
+            <button class="color-dot" data-design="sunset-coral" style="background: linear-gradient(135deg, #1a0a0a, #ff6b6b);" title="Sunset Coral"></button>
+            <button class="color-dot" data-design="emerald-night" style="background: linear-gradient(135deg, #051a0d, #50fa7b);" title="Emerald Night"></button>
+            <button class="color-dot" data-design="rose-gold" style="background: linear-gradient(135deg, #1a0d0f, #f4a4c0);" title="Rose Gold"></button>
+          </div>
+        </div>
+        
+        <button id="nextToPlatform" class="primary-btn full">Choose Platform</button>
+      </div>
+
+      <!-- Step 2: Platform -->
+      <div id="platformStep" class="poster-step">
+        <label>Choose Platform</label>
+        <div class="platform-options">
+          <button class="platform-btn" data-size="instagram-square">
+            <div class="platform-info">
+              <span class="platform-name">Instagram Square</span>
+              <span class="platform-dim">1080×1080</span>
+            </div>
+          </button>
+          <button class="platform-btn" data-size="instagram-story">
+            <div class="platform-info">
+              <span class="platform-name">Instagram Story</span>
+              <span class="platform-dim">1080×1920</span>
+            </div>
+          </button>
+          <button class="platform-btn" data-size="twitter">
+            <div class="platform-info">
+              <span class="platform-name">Twitter / X</span>
+              <span class="platform-dim">1200×675</span>
+            </div>
+          </button>
+          <button class="platform-btn" data-size="facebook">
+            <div class="platform-info">
+              <span class="platform-name">Facebook</span>
+              <span class="platform-dim">1200×630</span>
+            </div>
+          </button>
+          <button class="platform-btn" data-size="pinterest">
+            <div class="platform-info">
+              <span class="platform-name">Pinterest</span>
+              <span class="platform-dim">1000×1500</span>
+            </div>
+          </button>
+        </div>
+        <button id="backToDesign" class="secondary-btn full">Back</button>
+      </div>
+
+      <!-- Step 3: Share Options -->
+      <div id="shareStep" class="poster-step">
+        <div class="poster-preview">
+          <canvas id="posterCanvas"></canvas>
+        </div>
+        
+        <!-- Shareable Link Section -->
+        <div class="share-link-section">
+          <label>Share This Post</label>
+          <div class="share-link-container">
+            <input id="shareableLink" type="text" readonly class="share-link-input"/>
+            <button id="copyLinkBtn" class="copy-link-btn">Copy</button>
+          </div>
+          <p class="hint-small">Anyone with this link can view your post on MARGO</p>
+        </div>
+        
+        <!-- Share Buttons -->
+        <div class="share-actions">
+          <button id="shareNativeBtn" class="primary-btn full">Share Poster</button>
+          <button id="downloadManualBtn" class="secondary-btn full">Save to Device</button>
+        </div>
+        
+        <button id="backToPlatform" class="secondary-btn full">Back</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<script src="script.js"></script>
+</body>
+</html>
+
+
