@@ -19,6 +19,8 @@
   <div class="center">
     <h1 class="logo">MARGO</h1>
     <p class="tagline">When words fail, drop a line.</p>
+    <!-- ===== NEW: Export + Discord tagline (Feb 2026) ===== -->
+    <p class="tagline-sub">Export to Instagram • Share on Discord • Go Viral</p>
     <button id="enterBtn" class="primary-btn">Drop a line</button>
     <div class="swipe-hint">
       <span class="swipe-arrow">←</span>
@@ -37,6 +39,10 @@
       <h2>Live Feed</h2>
       <p class="post-count"><span id="postCount">0</span> posts</p>
     </div>
+    <!-- ===== NEW: Discord button (Feb 2026) ===== -->
+    <button id="openDiscordInfo" class="header-btn" title="Margo on Discord">
+      <span class="btn-icon">🤖</span>
+    </button>
     <button id="openComposer" class="header-btn primary">Drop your line</button>
   </header>
   
@@ -386,6 +392,67 @@
   </div>
 </div>
 
+<!-- ===== NEW: DISCORD MODAL (Feb 2026) ===== -->
+<div id="discordModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>🤖 Margo on Discord</h3>
+      <button id="closeDiscordModal" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: var(--gold);">
+          Add Margo Bot to Your Server
+        </p>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">
+          Help your Discord community discover music through lyrics
+        </p>
+      </div>
+      
+      <div style="background: var(--bg-elevated); padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 2px solid var(--border);">
+        <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px;">
+          <span style="font-size: 1.8rem; line-height: 1;">🎵</span>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px;">Auto-Recognize Lyrics</div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">Bot detects when someone posts lyrics in chat</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px;">
+          <span style="font-size: 1.8rem; line-height: 1;">🔍</span>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px;">Instant Song Finder</div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">Identifies songs and artists automatically</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 14px;">
+          <span style="font-size: 1.8rem; line-height: 1;">💬</span>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px;">Community Discovery</div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">Members share and discover music together</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="background: rgba(212, 175, 55, 0.1); padding: 14px; border-radius: 10px; border: 2px solid var(--gold); text-align: center; margin-bottom: 18px;">
+        <p style="font-size: 0.85rem; color: var(--gold); font-weight: 600; margin-bottom: 6px;">
+          🚀 Coming Soon
+        </p>
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">
+          Perfect for Filipino gaming, music, and community servers
+        </p>
+      </div>
+      
+      <button class="secondary-btn full" onclick="closeModal(discordModal)">
+        Got it! Keep me updated
+      </button>
+      
+      <p class="hint-small" style="text-align: center; margin-top: 14px; line-height: 1.4;">
+        Want early access? Post on Margo and we'll reach out when the bot is ready!
+      </p>
+    </div>
+  </div>
+</div>
+
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
@@ -393,5 +460,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-
-
