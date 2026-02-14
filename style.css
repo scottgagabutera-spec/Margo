@@ -1,5 +1,5 @@
-/* MARGO - Sky-Inspired Theme with Premium Typography */
-/* ===== FINAL VERSION: Feb 2026 ===== */
+/* MARGO - SAFE VERSION with Sky Theme */
+/* Minimal changes to your working version */
 
 * { 
   box-sizing: border-box; 
@@ -13,20 +13,19 @@
   --gold: #d4af37;
   --gold-hover: #f0c24a;
   
-  /* ===== NEW: Sky-Inspired Color Palette ===== */
-  --bg-dark: #0f1419;        /* Deep twilight sky */
-  --bg-card: #1a1f26;        /* Darker cloud layer */
-  --bg-elevated: #22272e;    /* Elevated cloud */
-  --text: #e6edf3;           /* Bright stars/moonlight */
-  --text-secondary: #8b949e; /* Dim stars */
-  --border: #30363d;         /* Subtle horizon line */
-  --border-subtle: #21262d;  /* Very subtle divide */
+  /* Sky Theme Colors - Changed from pure black */
+  --bg-dark: #0f1419;
+  --bg-card: #1a1f26;
+  --bg-elevated: #22272e;
+  --text: #e6edf3;
+  --text-secondary: #8b949e;
+  --border: #30363d;
+  --border-subtle: #21262d;
   
   --success: #50fa7b;
   --error: #ff6b6b;
   --partial: #ffa500;
   
-  /* Safe area insets for notched devices */
   --safe-area-top: env(safe-area-inset-top);
   --safe-area-bottom: env(safe-area-inset-bottom);
   --safe-area-left: env(safe-area-inset-left);
@@ -34,7 +33,7 @@
 }
 
 body {
-  background: #0f1419 !important;
+  background: var(--bg-dark);
   color: var(--text);
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;
@@ -45,7 +44,6 @@ body {
   position: relative;
 }
 
-/* iOS Safe Area Support */
 @supports(padding: max(0px)) {
   body {
     padding-top: max(0px, var(--safe-area-top));
@@ -55,7 +53,6 @@ body {
   }
 }
 
-/* ===== SCREENS ===== */
 .screen { 
   display: none; 
   min-height: 100vh;
@@ -67,7 +64,6 @@ body {
   flex-direction: column; 
 }
 
-/* ===== LANDING ===== */
 .center {
   flex: 1;
   display: flex;
@@ -147,7 +143,6 @@ body {
   }
 }
 
-/* ===== BUTTONS ===== */
 button {
   cursor: pointer;
   border: none;
@@ -199,14 +194,13 @@ button:active {
   width: 100%;
 }
 
-/* ===== FEED HEADER ===== */
 .feed-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
   border-bottom: 2px solid var(--border);
-  background: #0f1419 !important;
+  background: var(--bg-dark);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -264,7 +258,6 @@ button:active {
   font-size: 1.2rem;
 }
 
-/* ===== NEW POSTS INDICATOR ===== */
 .new-posts-indicator {
   position: fixed;
   top: 90px;
@@ -292,7 +285,7 @@ button:active {
 
 .new-posts-indicator.visible {
   transform: translateX(-50%) translateY(0);
-  opacity: 0;
+  opacity: 1;
   pointer-events: all;
   animation: gentlePulse 3s ease-in-out infinite;
 }
@@ -331,7 +324,6 @@ button:active {
   }
 }
 
-/* ===== SCROLL TO TOP BUTTON ===== */
 .scroll-to-top {
   position: fixed;
   bottom: 32px;
@@ -361,7 +353,7 @@ button:active {
 }
 
 .scroll-to-top.visible {
-  opacity: 0;
+  opacity: 1;
   transform: translateX(-50%) translateY(0);
   pointer-events: all;
   animation: gentleBounce 3s ease-in-out infinite;
@@ -401,7 +393,6 @@ button:active {
   }
 }
 
-/* ===== FEED LIST ===== */
 .feed-list {
   padding: 24px 20px;
   display: grid;
@@ -413,7 +404,7 @@ button:active {
   flex: 1;
   overflow-y: auto;
   scroll-behavior: smooth;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.3s ease-out;
   -webkit-overflow-scrolling: touch;
 }
@@ -464,7 +455,7 @@ button:active {
     transform: translateY(10px);
   }
   to {
-    opacity: 0;
+    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -592,13 +583,10 @@ button:active {
   letter-spacing: 0.5px;
 }
 
-/* ===== MODALS ===== */
 .modal {
-  visibility: hidden;
-  transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
   position: fixed;
   inset: 0;
-  background: rgba(15, 20, 25, 0.96);
+  background: rgba(10, 10, 10, 0.96);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -607,13 +595,8 @@ button:active {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   backdrop-filter: blur(4px);
-  opacity: 0;
-  transition: opacity 0.2s ease-out;
-}
-
-.modal:not(.hidden) {
   opacity: 1;
-  visibility: visible;
+  transition: opacity 0.2s ease-out;
 }
 
 .modal.hidden { 
@@ -723,7 +706,6 @@ body.modal-open {
   flex-shrink: 0;
 }
 
-/* ===== FORM ELEMENTS ===== */
 label {
   font-size: 0.75rem;
   font-weight: 700;
@@ -738,7 +720,7 @@ textarea, input {
   padding: 12px;
   border-radius: 10px;
   border: 2px solid var(--border);
-  background: #0f1419 !important;
+  background: var(--bg-dark);
   color: var(--text);
   font-family: inherit;
   font-size: 0.9rem;
@@ -791,7 +773,6 @@ textarea:focus, input:focus {
   margin: -8px 0 6px 0;
 }
 
-/* ===== STREAMING SECTION ===== */
 .streaming-section {
   border: 2px solid var(--border);
   border-radius: 10px;
@@ -848,7 +829,6 @@ textarea:focus, input:focus {
   padding: 10px;
 }
 
-/* ===== MODE OPTIONS ===== */
 .mode-options {
   display: flex;
   gap: 10px;
@@ -886,7 +866,6 @@ textarea:focus, input:focus {
   font-size: 0.85rem;
 }
 
-/* ===== CONDITIONAL ===== */
 .conditional {
   display: none;
   animation: fadeIn 0.3s ease;
@@ -903,7 +882,6 @@ textarea:focus, input:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== CHECKBOXES ===== */
 .checkbox-group {
   display: flex;
   flex-direction: column;
@@ -941,7 +919,6 @@ textarea:focus, input:focus {
   letter-spacing: 0;
 }
 
-/* ===== EMOTION PILLS ===== */
 .emotion-pills {
   display: flex;
   gap: 8px;
@@ -971,7 +948,6 @@ textarea:focus, input:focus {
   box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
 }
 
-/* ===== LYRIC DISPLAY ===== */
 .lyric-display {
   font-family: 'Playfair Display', serif;
   font-style: italic;
@@ -1009,7 +985,6 @@ textarea:focus, input:focus {
   right: 8px;
 }
 
-/* ===== RESULT MESSAGE ===== */
 .result-message {
   padding: 12px;
   border-radius: 10px;
@@ -1048,7 +1023,6 @@ textarea:focus, input:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== GUESS LINKS ===== */
 .guess-links-section {
   padding: 12px;
   background: var(--bg-elevated);
@@ -1080,7 +1054,7 @@ textarea:focus, input:focus {
 .guess-link {
   display: block;
   padding: 9px 12px;
-  background: #0f1419 !important;
+  background: var(--bg-dark);
   border: 2px solid var(--border);
   border-radius: 8px;
   color: var(--gold);
@@ -1098,7 +1072,6 @@ textarea:focus, input:focus {
   transform: translateX(4px);
 }
 
-/* ===== LISTEN LINKS ===== */
 .listen-links {
   display: flex;
   flex-direction: column;
@@ -1126,7 +1099,6 @@ textarea:focus, input:focus {
   transform: translateX(4px);
 }
 
-/* ===== POSTCARD ===== */
 .postcard {
   background: linear-gradient(135deg, #0d0d0d 0%, #1a1410 50%, #0d0d0d 100%);
   border-radius: 20px;
@@ -1256,7 +1228,6 @@ textarea:focus, input:focus {
   word-wrap: break-word;
 }
 
-/* ===== TOAST ===== */
 .toast {
   position: fixed;
   bottom: -100px;
@@ -1280,7 +1251,6 @@ textarea:focus, input:focus {
   bottom: 32px;
 }
 
-/* ===== ANALYTICS ===== */
 .analytics-modal .modal-content {
   max-width: 600px;
 }
@@ -1408,7 +1378,7 @@ textarea:focus, input:focus {
 .activity-link {
   font-size: 0.7rem;
   padding: 7px 12px;
-  background: #0f1419 !important;
+  background: var(--bg-dark);
   border: 2px solid var(--border);
   border-radius: 8px;
   color: var(--gold);
@@ -1422,13 +1392,12 @@ textarea:focus, input:focus {
   background: rgba(212, 175, 55, 0.05);
 }
 
-/* ===== COLOR PICKER ===== */
 .live-preview-container {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 16px;
-  background: #0f1419 !important;
+  background: var(--bg-dark);
   border-radius: 14px;
   border: 2px solid var(--border);
   margin-bottom: 14px;
@@ -1479,7 +1448,6 @@ textarea:focus, input:focus {
   box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4);
 }
 
-/* ===== POSTER STEPS ===== */
 .poster-step {
   display: none;
 }
@@ -1490,7 +1458,6 @@ textarea:focus, input:focus {
   gap: 18px;
 }
 
-/* ===== PLATFORM OPTIONS ===== */
 .platform-options {
   display: flex;
   flex-direction: column;
@@ -1531,11 +1498,10 @@ textarea:focus, input:focus {
   font-weight: 600;
 }
 
-/* ===== POSTER PREVIEW ===== */
 .poster-preview {
   text-align: center;
   padding: 20px;
-  background: #0f1419 !important;
+  background: var(--bg-dark);
   border-radius: 16px;
   border: 2px solid var(--border);
 }
@@ -1547,7 +1513,6 @@ textarea:focus, input:focus {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-/* ===== SHARE LINK SECTION ===== */
 .share-link-section {
   padding: 16px;
   background: var(--bg-elevated);
@@ -1567,7 +1532,7 @@ textarea:focus, input:focus {
 .share-link-input {
   flex: 1;
   padding: 12px;
-  background: #0f1419 !important;
+  background: var(--bg-dark);
   border: 2px solid var(--border);
   border-radius: 10px;
   color: var(--text);
@@ -1584,7 +1549,7 @@ textarea:focus, input:focus {
 
 .copy-link-btn {
   padding: 12px 20px;
-  background: #0f1419 !important;
+  background: var(--bg-dark);
   border: 2px solid var(--border);
   border-radius: 10px;
   color: var(--gold);
@@ -1601,14 +1566,12 @@ textarea:focus, input:focus {
   transform: scale(1.05);
 }
 
-/* ===== SHARE ACTIONS ===== */
 .share-actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-/* ===== RESPONSIVE ===== */
 @media (max-width: 480px) {
   .feed-list {
     grid-template-columns: 1fr;
