@@ -1,5 +1,6 @@
 /* MARGO - Firebase Real-Time Sync Edition - WITH SCROLL PRESERVATION & LIVE UPDATES - IMPROVED */
 /* CONTENT MODERATION: Two-tier system with partial censoring and zero-tolerance blocking */
+/* ===== UPDATED FEB 2026: Added Discord modal + Quick Export functionality ===== */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -252,6 +253,11 @@ const shareableLink = document.getElementById("shareableLink");
 const copyLinkBtn = document.getElementById("copyLinkBtn");
 const shareNativeBtn = document.getElementById("shareNativeBtn");
 const downloadManualBtn = document.getElementById("downloadManualBtn");
+
+// ===== NEW: Discord modal elements (Feb 2026) =====
+const discordModal = document.getElementById("discordModal");
+const closeDiscordModal = document.getElementById("closeDiscordModal");
+const openDiscordInfo = document.getElementById("openDiscordInfo");
 
 // ===== STATE =====
 let currentMode = "share";
@@ -634,6 +640,15 @@ closeSharePoster.onclick = () => {
   resetPosterModal();
 };
 
+// ===== NEW: Discord modal handlers (Feb 2026) =====
+openDiscordInfo.onclick = () => {
+  openModal(discordModal);
+};
+
+closeDiscordModal.onclick = () => {
+  closeModal(discordModal);
+};
+
 // ===== CHARACTER COUNTER =====
 textInput.oninput = () => {
   charCount.textContent = textInput.value.length;
@@ -940,9 +955,11 @@ function renderFeed() {
           <div class="feed-song-artist">${knowledge.artist}</div>
         </div>
       `;
+      // ===== UPDATED: Added Export button (Feb 2026) =====
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="viewPost(${index})">View</button>
+          <button class="feed-action" onclick="quickExport(${index})">📤 Export</button>
           ${hasLinks ? '<button class="feed-action" onclick="openListen(' + index + ')">Listen</button>' : ''}
         </div>
       `;
@@ -1757,6 +1774,31 @@ async function generatePoster(size, design) {
   });
 }
 
+// ===== NEW: QUICK EXPORT FUNCTION (Feb 2026) =====
+// One-click export with default settings (midnight-gold + Instagram Square)
+function quickExport(index) {
+  currentPost = posts[index];
+  
+  // Use default settings for instant export
+  selectedDesign = "midnight-gold";
+  selectedPosterSize = "instagram-square";
+  
+  // Generate poster immediately
+  generatePoster(selectedPosterSize, selectedDesign).then(() => {
+    // Generate shareable link
+    const shareLink = `${APP_BASE_URL}?post=${currentPost.id}`;
+    shareableLink.value = shareLink;
+    
+    // Skip directly to share step (bypass design and platform selection)
+    designStep.classList.remove("active");
+    platformStep.classList.remove("active");
+    shareStep.classList.add("active");
+    
+    // Open the poster modal at share step
+    openModal(sharePosterModal);
+  });
+}
+
 // ===== COPY LINK BUTTON =====
 copyLinkBtn.onclick = async () => {
   try {
@@ -1870,6 +1912,7 @@ function showToast(message) {
 
 // ===== INITIALIZE =====
 console.log("MARGO Firebase Edition loaded - WITH SCROLL PRESERVATION & LIVE UPDATES - IMPROVED");
+console.log("✅ FEB 2026 UPDATE: Discord modal + Quick Export added");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
 console.log("🌐 App Base URL:", APP_BASE_URL);
