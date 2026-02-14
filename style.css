@@ -34,7 +34,7 @@
 }
 
 body {
-  background: var(--bg-dark);
+  background: #0f1419 !important;
   color: var(--text);
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;
@@ -206,7 +206,7 @@ button:active {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 2px solid var(--border);
-  background: var(--bg-dark);
+  background: #0f1419 !important;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -292,7 +292,7 @@ button:active {
 
 .new-posts-indicator.visible {
   transform: translateX(-50%) translateY(0);
-  opacity: 1;
+  opacity: 0;
   pointer-events: all;
   animation: gentlePulse 3s ease-in-out infinite;
 }
@@ -361,7 +361,7 @@ button:active {
 }
 
 .scroll-to-top.visible {
-  opacity: 1;
+  opacity: 0;
   transform: translateX(-50%) translateY(0);
   pointer-events: all;
   animation: gentleBounce 3s ease-in-out infinite;
@@ -413,7 +413,7 @@ button:active {
   flex: 1;
   overflow-y: auto;
   scroll-behavior: smooth;
-  opacity: 1;
+  opacity: 0;
   transition: opacity 0.3s ease-out;
   -webkit-overflow-scrolling: touch;
 }
@@ -464,7 +464,7 @@ button:active {
     transform: translateY(10px);
   }
   to {
-    opacity: 1;
+    opacity: 0;
     transform: translateY(0);
   }
 }
@@ -594,6 +594,8 @@ button:active {
 
 /* ===== MODALS ===== */
 .modal {
+  visibility: hidden;
+  transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
   position: fixed;
   inset: 0;
   background: rgba(15, 20, 25, 0.96);
@@ -605,8 +607,13 @@ button:active {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   backdrop-filter: blur(4px);
-  opacity: 1;
+  opacity: 0;
   transition: opacity 0.2s ease-out;
+}
+
+.modal:not(.hidden) {
+  opacity: 1;
+  visibility: visible;
 }
 
 .modal.hidden { 
@@ -731,7 +738,7 @@ textarea, input {
   padding: 12px;
   border-radius: 10px;
   border: 2px solid var(--border);
-  background: var(--bg-dark);
+  background: #0f1419 !important;
   color: var(--text);
   font-family: inherit;
   font-size: 0.9rem;
@@ -1073,7 +1080,7 @@ textarea:focus, input:focus {
 .guess-link {
   display: block;
   padding: 9px 12px;
-  background: var(--bg-dark);
+  background: #0f1419 !important;
   border: 2px solid var(--border);
   border-radius: 8px;
   color: var(--gold);
@@ -1401,7 +1408,7 @@ textarea:focus, input:focus {
 .activity-link {
   font-size: 0.7rem;
   padding: 7px 12px;
-  background: var(--bg-dark);
+  background: #0f1419 !important;
   border: 2px solid var(--border);
   border-radius: 8px;
   color: var(--gold);
@@ -1421,7 +1428,7 @@ textarea:focus, input:focus {
   justify-content: center;
   align-items: center;
   padding: 16px;
-  background: var(--bg-dark);
+  background: #0f1419 !important;
   border-radius: 14px;
   border: 2px solid var(--border);
   margin-bottom: 14px;
@@ -1528,7 +1535,7 @@ textarea:focus, input:focus {
 .poster-preview {
   text-align: center;
   padding: 20px;
-  background: var(--bg-dark);
+  background: #0f1419 !important;
   border-radius: 16px;
   border: 2px solid var(--border);
 }
@@ -1560,7 +1567,7 @@ textarea:focus, input:focus {
 .share-link-input {
   flex: 1;
   padding: 12px;
-  background: var(--bg-dark);
+  background: #0f1419 !important;
   border: 2px solid var(--border);
   border-radius: 10px;
   color: var(--text);
@@ -1577,7 +1584,7 @@ textarea:focus, input:focus {
 
 .copy-link-btn {
   padding: 12px 20px;
-  background: var(--bg-dark);
+  background: #0f1419 !important;
   border: 2px solid var(--border);
   border-radius: 10px;
   color: var(--gold);
