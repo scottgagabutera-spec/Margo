@@ -959,7 +959,7 @@ function renderFeed() {
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="viewPost(${index})">View</button>
-          <button class="feed-action" onclick="quickExport(${index})">📤 Export</button>
+          <button class="feed-action" onclick="quickExport(${index})">Share</button>
           ${hasLinks ? '<button class="feed-action" onclick="openListen(' + index + ')">Listen</button>' : ''}
         </div>
       `;
