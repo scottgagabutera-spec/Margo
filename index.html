@@ -6,14 +6,11 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
-  <!-- Open Graph Meta Tags for Social Sharing -->
   <meta property="og:title" content="MARGO — When words fail, drop a lyric">
   <meta property="og:description" content="Share lyrics that express your emotions. Create beautiful posters for Instagram, TikTok, and Twitter.">
   <meta property="og:image" content="https://margo-silk.vercel.app/og-image.png">
   <meta property="og:url" content="https://margo-silk.vercel.app">
   <meta property="og:type" content="website">
-  
   <title>MARGO — When words fail, drop a lyric</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,6 +26,33 @@
     <p class="tagline">When words fail, drop a lyric.</p>
     <p class="tagline-sub">Share Everywhere • Discord Bot • Go Viral</p>
     <button id="enterBtn" class="primary-btn">Drop a lyric</button>
+
+    <!-- NEW: Community Chips on landing -->
+    <div class="community-chips-landing">
+      <span class="chip-label">Join as:</span>
+      <button class="community-chip" data-community="artist">🎤 Artist</button>
+      <button class="community-chip" data-community="fandom">💜 Fandom</button>
+      <button class="community-chip" data-community="student">📚 Student</button>
+    </div>
+
+    <!-- NEW: Quick stats strip -->
+    <div class="landing-stats">
+      <div class="landing-stat">
+        <span class="landing-stat-num" id="landingPostCount">—</span>
+        <span class="landing-stat-label">lyrics dropped</span>
+      </div>
+      <div class="landing-stat-divider"></div>
+      <div class="landing-stat">
+        <span class="landing-stat-num">🇵🇭</span>
+        <span class="landing-stat-label">PH community</span>
+      </div>
+      <div class="landing-stat-divider"></div>
+      <div class="landing-stat">
+        <span class="landing-stat-num">🤖</span>
+        <span class="landing-stat-label">Discord bot soon</span>
+      </div>
+    </div>
+
     <div class="swipe-hint">
       <span class="swipe-arrow">←</span>
       <span>Swipe to explore</span>
@@ -51,20 +75,26 @@
     </button>
     <button id="openComposer" class="header-btn primary">Drop your lyric</button>
   </header>
-  
-  <!-- NEW: New Posts Indicator -->
+
+  <!-- NEW: Community filter bar -->
+  <div class="community-filter-bar">
+    <button class="filter-pill active" data-filter="all">All</button>
+    <button class="filter-pill" data-filter="artist">🎤 Artists</button>
+    <button class="filter-pill" data-filter="fandom">💜 Fandoms</button>
+    <button class="filter-pill" data-filter="student">📚 Students</button>
+  </div>
+
   <div id="newPostsIndicator" class="new-posts-indicator">
     <div class="new-posts-content">
       <span class="new-posts-count">0</span> new
     </div>
   </div>
-  
-  <!-- NEW: Scroll to Top Button -->
+
   <button id="scrollToTopBtn" class="scroll-to-top">
     <span class="scroll-arrow">↑</span>
     <span>Back to top</span>
   </button>
-  
+
   <div id="feedList" class="feed-list"></div>
 </section>
 
@@ -90,6 +120,15 @@
         <button class="emotion-pill" data-emotion="Joy" type="button">Joy</button>
         <button class="emotion-pill" data-emotion="Rage" type="button">Rage</button>
         <button class="emotion-pill" data-emotion="Loneliness" type="button">Loneliness</button>
+      </div>
+
+      <!-- NEW: Community tag selector -->
+      <label>Your Community</label>
+      <div class="community-selector">
+        <button class="community-select-btn" data-community="artist" type="button">🎤 Artist</button>
+        <button class="community-select-btn" data-community="fandom" type="button">💜 Fandom</button>
+        <button class="community-select-btn" data-community="student" type="button">📚 Student</button>
+        <button class="community-select-btn" data-community="general" type="button">🌐 General</button>
       </div>
 
       <label>What's your intention?</label>
@@ -198,7 +237,6 @@
       <p class="hint">Know this song? Help them out!</p>
       <input id="discoverSongAnswer" placeholder="Song title" required inputmode="text"/>
       <input id="discoverArtistAnswer" placeholder="Artist" required inputmode="text"/>
-      
       <details class="streaming-section">
         <summary>Add Streaming Links (Optional)</summary>
         <div class="streaming-links">
@@ -254,6 +292,8 @@
         <div class="postcard-lyric" id="postcardLyric"></div>
         <div class="postcard-emotion" id="postcardEmotion"></div>
         <div class="postcard-song" id="postcardSong"></div>
+        <!-- NEW: community badge in postcard -->
+        <div class="postcard-community" id="postcardCommunity"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -286,12 +326,10 @@
           <div class="stat-label">Help Attempts</div>
         </div>
       </div>
-      
       <div id="guessesSection" class="activity-section hidden">
         <h4>Guess Attempts</h4>
         <div id="guessesList" class="activity-list"></div>
       </div>
-      
       <div id="helpsSection" class="activity-section hidden">
         <h4>Community Answers</h4>
         <div id="helpsList" class="activity-list"></div>
@@ -308,14 +346,12 @@
       <button id="closeSharePoster" class="close-btn">×</button>
     </div>
     <div class="modal-body">
+
       <!-- Step 1: Design with Live Preview -->
       <div id="designStep" class="poster-step active">
-        <!-- Live Preview -->
         <div class="live-preview-container">
           <canvas id="posterPreviewCanvas"></canvas>
         </div>
-        
-        <!-- Color Picker -->
         <div class="color-picker-section">
           <label>Choose Color</label>
           <div class="color-dots">
@@ -327,13 +363,15 @@
             <button class="color-dot" data-design="rose-gold" style="background: linear-gradient(135deg, #1a0d0f, #f4a4c0);" title="Rose Gold"></button>
           </div>
         </div>
-        
         <button id="nextToPlatform" class="primary-btn full">Choose Platform</button>
       </div>
 
       <!-- Step 2: Platform -->
       <div id="platformStep" class="poster-step">
         <label>Choose Platform</label>
+
+        <!-- NEW: TikTok / Video export section -->
+        <div class="export-section-label">📸 Image Formats</div>
         <div class="platform-options">
           <button class="platform-btn" data-size="instagram-square">
             <div class="platform-info">
@@ -366,6 +404,19 @@
             </div>
           </button>
         </div>
+
+        <!-- NEW: TikTok video export -->
+        <div class="export-section-label tiktok-label">🎬 Video Formats</div>
+        <div class="platform-options">
+          <button class="platform-btn tiktok-btn" data-size="tiktok">
+            <div class="platform-info">
+              <span class="platform-name">TikTok / Reels</span>
+              <span class="platform-dim">1080×1920 · Animated</span>
+            </div>
+            <span class="platform-badge">NEW</span>
+          </button>
+        </div>
+
         <button id="backToDesign" class="secondary-btn full">Back</button>
       </div>
 
@@ -374,8 +425,6 @@
         <div class="poster-preview">
           <canvas id="posterCanvas"></canvas>
         </div>
-        
-        <!-- Shareable Link Section -->
         <div class="share-link-section">
           <label>Share This Post</label>
           <div class="share-link-container">
@@ -384,77 +433,104 @@
           </div>
           <p class="hint-small">Anyone with this link can view your post on MARGO</p>
         </div>
-        
-        <!-- Share Buttons -->
+
+        <!-- NEW: Platform-specific share hints -->
+        <div id="platformShareHint" class="platform-share-hint"></div>
+
         <div class="share-actions">
           <button id="shareNativeBtn" class="primary-btn full">Share Poster</button>
           <button id="downloadManualBtn" class="secondary-btn full">Save to Device</button>
         </div>
-        
         <button id="backToPlatform" class="secondary-btn full">Back</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- DISCORD MODAL -->
+<!-- DISCORD MODAL — UPGRADED -->
 <div id="discordModal" class="modal hidden">
-  <div class="modal-content">
+  <div class="modal-content discord-modal-content">
     <div class="modal-header">
       <h3>Margo on Discord</h3>
       <button id="closeDiscordModal" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <div style="font-size: 3rem; margin-bottom: 12px;">🤖</div>
-        <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: var(--gold);">
-          Add Margo Bot to Your Server
-        </p>
-        <p style="color: var(--modal-text); font-size: 0.95rem; line-height: 1.6;">
-          Help your Discord community discover music through lyrics
-        </p>
+
+      <div class="discord-hero">
+        <div class="discord-bot-avatar">🤖</div>
+        <p class="discord-hero-title">Add Margo Bot to Your Server</p>
+        <p class="discord-hero-sub">Help your Discord community discover music through lyrics</p>
       </div>
-      
-      <div style="background: var(--modal-card-bg); padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 2px solid var(--modal-border);">
-        <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px;">
-          <span style="font-size: 1.8rem; line-height: 1;">🎵</span>
-          <div>
-            <div style="font-weight: 600; margin-bottom: 4px; color: var(--modal-text);">Auto-Recognize Lyrics</div>
-            <div style="font-size: 0.85rem; color: var(--modal-text-secondary);">Bot detects when someone posts lyrics in chat</div>
-          </div>
+
+      <!-- NEW: Community types Discord targets -->
+      <div class="discord-communities">
+        <div class="discord-community-card">
+          <span class="dc-icon">🎤</span>
+          <span class="dc-label">Artist servers</span>
         </div>
-        <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px;">
-          <span style="font-size: 1.8rem; line-height: 1;">🔍</span>
-          <div>
-            <div style="font-weight: 600; margin-bottom: 4px; color: var(--modal-text);">Instant Song Finder</div>
-            <div style="font-size: 0.85rem; color: var(--modal-text-secondary);">Identifies songs and artists automatically</div>
-          </div>
+        <div class="discord-community-card">
+          <span class="dc-icon">💜</span>
+          <span class="dc-label">Fandom servers</span>
         </div>
-        <div style="display: flex; align-items: flex-start; gap: 14px;">
-          <span style="font-size: 1.8rem; line-height: 1;">💬</span>
-          <div>
-            <div style="font-weight: 600; margin-bottom: 4px; color: var(--modal-text);">Community Discovery</div>
-            <div style="font-size: 0.85rem; color: var(--modal-text-secondary);">Members share and discover music together</div>
-          </div>
+        <div class="discord-community-card">
+          <span class="dc-icon">📚</span>
+          <span class="dc-label">Student orgs</span>
+        </div>
+        <div class="discord-community-card">
+          <span class="dc-icon">🎮</span>
+          <span class="dc-label">Gaming servers</span>
         </div>
       </div>
-      
-      <div style="background: rgba(184, 134, 11, 0.1); padding: 14px; border-radius: 10px; border: 2px solid var(--gold); text-align: center; margin-bottom: 18px;">
-        <p style="font-size: 0.85rem; color: var(--gold); font-weight: 600; margin-bottom: 6px;">
-          Coming Soon
-        </p>
-        <p style="font-size: 0.8rem; color: var(--modal-text-secondary);">
-          Perfect for Filipino gaming, music, and community servers
-        </p>
+
+      <div class="discord-features">
+        <div class="discord-feature">
+          <span class="discord-feature-icon">🎵</span>
+          <div>
+            <div class="discord-feature-title">Auto-Recognize Lyrics</div>
+            <div class="discord-feature-sub">Bot detects when someone posts lyrics in chat</div>
+          </div>
+        </div>
+        <div class="discord-feature">
+          <span class="discord-feature-icon">🔍</span>
+          <div>
+            <div class="discord-feature-title">Instant Song Finder</div>
+            <div class="discord-feature-sub">Identifies songs and artists automatically</div>
+          </div>
+        </div>
+        <div class="discord-feature">
+          <span class="discord-feature-icon">💬</span>
+          <div>
+            <div class="discord-feature-title">Community Discovery</div>
+            <div class="discord-feature-sub">Members share and discover music together</div>
+          </div>
+        </div>
+        <div class="discord-feature">
+          <span class="discord-feature-icon">📤</span>
+          <div>
+            <div class="discord-feature-title">Auto-Generate Posters</div>
+            <div class="discord-feature-sub">Instantly creates shareable IG/TikTok images</div>
+          </div>
+        </div>
       </div>
-      
-      <button class="secondary-btn full" onclick="closeModal(discordModal)">
+
+      <div class="discord-coming-soon">
+        <p class="discord-soon-title">Coming Soon</p>
+        <p class="discord-soon-sub">Perfect for Filipino gaming, music, and community servers</p>
+      </div>
+
+      <!-- NEW: Early access form -->
+      <div class="discord-early-access">
+        <label>Get Early Access</label>
+        <div class="discord-input-row">
+          <input id="discordServerInput" placeholder="Your Discord server name or invite link" inputmode="text"/>
+          <button id="discordNotifyBtn" class="primary-btn">Notify Me</button>
+        </div>
+        <p class="hint-small" style="text-align:center; margin-top: 6px;">We'll reach out when the bot is ready for your server</p>
+      </div>
+
+      <button class="secondary-btn full" onclick="closeModal(discordModal)" style="margin-top: 4px;">
         Got it! Keep me updated
       </button>
-      
-      <p class="hint-small" style="text-align: center; margin-top: 14px; line-height: 1.4; color: var(--modal-text-secondary);">
-        Want early access? Post on Margo and we'll reach out when the bot is ready!
-      </p>
     </div>
   </div>
 </div>
@@ -462,7 +538,6 @@
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
 <script src="script.js"></script>
 </body>
 </html>
