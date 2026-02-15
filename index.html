@@ -6,15 +6,10 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta property="og:title" content="MARGO — When words fail, drop a lyric">
-  <meta property="og:description" content="Share lyrics that express your emotions. Create beautiful posters for Instagram, TikTok, and Twitter.">
-  <meta property="og:image" content="https://margo-silk.vercel.app/og-image.png">
-  <meta property="og:url" content="https://margo-silk.vercel.app">
-  <meta property="og:type" content="website">
-  <title>MARGO — When words fail, drop a lyric</title>
+  <title>MARGO — When words fail, drop a line</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -23,34 +18,8 @@
 <section id="landing" class="screen active">
   <div class="center">
     <h1 class="logo">MARGO</h1>
-    <p class="tagline">When words fail, drop a lyric.</p>
-    <p class="tagline-sub">Share Everywhere · Discord Bot · Go Viral</p>
-    <button id="enterBtn" class="primary-btn">Drop a lyric</button>
-
-    <div class="community-chips-landing">
-      <span class="chip-label">Join as:</span>
-      <button class="community-chip" data-community="artist">🎤 Artist</button>
-      <button class="community-chip" data-community="fandom">💜 Fandom</button>
-      <button class="community-chip" data-community="student">📚 Student</button>
-    </div>
-
-    <div class="landing-stats">
-      <div class="landing-stat">
-        <span class="landing-stat-num" id="landingPostCount">—</span>
-        <span class="landing-stat-label">lyrics dropped</span>
-      </div>
-      <div class="landing-stat-divider"></div>
-      <div class="landing-stat">
-        <span class="landing-stat-num">🇵🇭</span>
-        <span class="landing-stat-label">PH community</span>
-      </div>
-      <div class="landing-stat-divider"></div>
-      <div class="landing-stat">
-        <span class="landing-stat-num">🤖</span>
-        <span class="landing-stat-label">Discord bot soon</span>
-      </div>
-    </div>
-
+    <p class="tagline">When words fail, drop a line.</p>
+    <button id="enterBtn" class="primary-btn">Drop a line</button>
     <div class="swipe-hint">
       <span class="swipe-arrow">←</span>
       <span>Swipe to explore</span>
@@ -61,31 +30,30 @@
 <!-- FEED -->
 <section id="feed" class="screen">
   <header class="feed-header">
-    <button id="backBtn" class="header-btn"><span class="btn-icon">←</span></button>
+    <button id="backBtn" class="header-btn">
+      <span class="btn-icon">←</span>
+    </button>
     <div class="header-center">
       <h2>Live Feed</h2>
       <p class="post-count"><span id="postCount">0</span> posts</p>
     </div>
-    <button id="openDiscordInfo" class="header-btn" title="Margo on Discord"><span class="btn-icon">🤖</span></button>
-    <button id="openComposer" class="header-btn primary">Drop your lyric</button>
+    <button id="openComposer" class="header-btn primary">Drop your line</button>
   </header>
-
-  <div class="community-filter-bar">
-    <button class="filter-pill active" data-filter="all">All</button>
-    <button class="filter-pill" data-filter="artist">🎤 Artists</button>
-    <button class="filter-pill" data-filter="fandom">💜 Fandoms</button>
-    <button class="filter-pill" data-filter="student">📚 Students</button>
-  </div>
-
+  
+  <!-- NEW: New Posts Indicator -->
   <div id="newPostsIndicator" class="new-posts-indicator">
-    <div class="new-posts-content"><span class="new-posts-count">0</span> new</div>
+    <div class="new-posts-content">
+      <span class="new-posts-icon">✨</span>
+      <span class="new-posts-text"><span class="new-posts-count">0</span> new</span>
+    </div>
   </div>
-
+  
+  <!-- NEW: Scroll to Top Button -->
   <button id="scrollToTopBtn" class="scroll-to-top">
     <span class="scroll-arrow">↑</span>
     <span>Back to top</span>
   </button>
-
+  
   <div id="feedList" class="feed-list"></div>
 </section>
 
@@ -93,7 +61,7 @@
 <div id="composer" class="modal hidden">
   <div class="modal-content composer-modal">
     <div class="modal-header">
-      <h3>Drop a lyric</h3>
+      <h3>Drop a line</h3>
       <button id="closeComposer" class="close-btn">×</button>
     </div>
     <div class="modal-body">
@@ -113,19 +81,17 @@
         <button class="emotion-pill" data-emotion="Loneliness" type="button">Loneliness</button>
       </div>
 
-      <label>Your Community</label>
-      <div class="community-selector">
-        <button class="community-select-btn" data-community="artist" type="button">🎤 Artist</button>
-        <button class="community-select-btn" data-community="fandom" type="button">💜 Fandom</button>
-        <button class="community-select-btn" data-community="student" type="button">📚 Student</button>
-        <button class="community-select-btn active" data-community="general" type="button">🌐 General</button>
-      </div>
-
       <label>What's your intention?</label>
       <div class="mode-options">
-        <button class="mode-btn active" data-mode="share" type="button"><span class="mode-label">Share</span></button>
-        <button class="mode-btn" data-mode="guess" type="button"><span class="mode-label">Guess</span></button>
-        <button class="mode-btn" data-mode="discover" type="button"><span class="mode-label">Discover</span></button>
+        <button class="mode-btn active" data-mode="share" type="button">
+          <span class="mode-label">Share</span>
+        </button>
+        <button class="mode-btn" data-mode="guess" type="button">
+          <span class="mode-label">Guess</span>
+        </button>
+        <button class="mode-btn" data-mode="discover" type="button">
+          <span class="mode-label">Discover</span>
+        </button>
       </div>
 
       <div id="shareInputs" class="conditional active">
@@ -221,13 +187,26 @@
       <p class="hint">Know this song? Help them out!</p>
       <input id="discoverSongAnswer" placeholder="Song title" required inputmode="text"/>
       <input id="discoverArtistAnswer" placeholder="Artist" required inputmode="text"/>
+      
       <details class="streaming-section">
         <summary>Add Streaming Links (Optional)</summary>
         <div class="streaming-links">
-          <div class="input-group-small"><label>Spotify</label><input id="discoverSpotifyLink" type="url" placeholder="https://open.spotify.com/track/..." inputmode="url"/></div>
-          <div class="input-group-small"><label>Apple Music</label><input id="discoverAppleLink" type="url" placeholder="https://music.apple.com/..." inputmode="url"/></div>
-          <div class="input-group-small"><label>YouTube</label><input id="discoverYoutubeLink" type="url" placeholder="https://youtube.com/watch?v=..." inputmode="url"/></div>
-          <div class="input-group-small"><label>SoundCloud</label><input id="discoverSoundcloudLink" type="url" placeholder="https://soundcloud.com/..." inputmode="url"/></div>
+          <div class="input-group-small">
+            <label>Spotify</label>
+            <input id="discoverSpotifyLink" type="url" placeholder="https://open.spotify.com/track/..." inputmode="url"/>
+          </div>
+          <div class="input-group-small">
+            <label>Apple Music</label>
+            <input id="discoverAppleLink" type="url" placeholder="https://music.apple.com/..." inputmode="url"/>
+          </div>
+          <div class="input-group-small">
+            <label>YouTube</label>
+            <input id="discoverYoutubeLink" type="url" placeholder="https://youtube.com/watch?v=..." inputmode="url"/>
+          </div>
+          <div class="input-group-small">
+            <label>SoundCloud</label>
+            <input id="discoverSoundcloudLink" type="url" placeholder="https://soundcloud.com/..." inputmode="url"/>
+          </div>
         </div>
       </details>
     </div>
@@ -264,7 +243,6 @@
         <div class="postcard-lyric" id="postcardLyric"></div>
         <div class="postcard-emotion" id="postcardEmotion"></div>
         <div class="postcard-song" id="postcardSong"></div>
-        <div class="postcard-community" id="postcardCommunity"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -284,14 +262,25 @@
     </div>
     <div class="modal-body">
       <div class="analytics-stats">
-        <div class="stat-card"><div class="stat-number" id="statViews">0</div><div class="stat-label">Views</div></div>
-        <div class="stat-card"><div class="stat-number" id="statGuesses">0</div><div class="stat-label">Guess Attempts</div></div>
-        <div class="stat-card"><div class="stat-number" id="statHelps">0</div><div class="stat-label">Help Attempts</div></div>
+        <div class="stat-card">
+          <div class="stat-number" id="statViews">0</div>
+          <div class="stat-label">Views</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="statGuesses">0</div>
+          <div class="stat-label">Guess Attempts</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="statHelps">0</div>
+          <div class="stat-label">Help Attempts</div>
+        </div>
       </div>
+      
       <div id="guessesSection" class="activity-section hidden">
         <h4>Guess Attempts</h4>
         <div id="guessesList" class="activity-list"></div>
       </div>
+      
       <div id="helpsSection" class="activity-section hidden">
         <h4>Community Answers</h4>
         <div id="helpsList" class="activity-list"></div>
@@ -308,12 +297,14 @@
       <button id="closeSharePoster" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-
-      <!-- Step 1: Design -->
+      <!-- Step 1: Design with Live Preview -->
       <div id="designStep" class="poster-step active">
+        <!-- Live Preview -->
         <div class="live-preview-container">
           <canvas id="posterPreviewCanvas"></canvas>
         </div>
+        
+        <!-- Color Picker -->
         <div class="color-picker-section">
           <label>Choose Color</label>
           <div class="color-dots">
@@ -325,50 +316,55 @@
             <button class="color-dot" data-design="rose-gold" style="background: linear-gradient(135deg, #1a0d0f, #f4a4c0);" title="Rose Gold"></button>
           </div>
         </div>
+        
         <button id="nextToPlatform" class="primary-btn full">Choose Platform</button>
       </div>
 
       <!-- Step 2: Platform -->
       <div id="platformStep" class="poster-step">
-        <div class="export-section-label">📸 Image Exports</div>
+        <label>Choose Platform</label>
         <div class="platform-options">
           <button class="platform-btn" data-size="instagram-square">
-            <div class="platform-info"><span class="platform-name">Instagram Square</span><span class="platform-dim">1080×1080</span></div>
+            <div class="platform-info">
+              <span class="platform-name">Instagram Square</span>
+              <span class="platform-dim">1080×1080</span>
+            </div>
           </button>
           <button class="platform-btn" data-size="instagram-story">
-            <div class="platform-info"><span class="platform-name">Instagram / TikTok Story</span><span class="platform-dim">1080×1920</span></div>
+            <div class="platform-info">
+              <span class="platform-name">Instagram Story</span>
+              <span class="platform-dim">1080×1920</span>
+            </div>
           </button>
           <button class="platform-btn" data-size="twitter">
-            <div class="platform-info"><span class="platform-name">Twitter / X</span><span class="platform-dim">1200×675</span></div>
+            <div class="platform-info">
+              <span class="platform-name">Twitter / X</span>
+              <span class="platform-dim">1200×675</span>
+            </div>
           </button>
           <button class="platform-btn" data-size="facebook">
-            <div class="platform-info"><span class="platform-name">Facebook</span><span class="platform-dim">1200×630</span></div>
+            <div class="platform-info">
+              <span class="platform-name">Facebook</span>
+              <span class="platform-dim">1200×630</span>
+            </div>
           </button>
           <button class="platform-btn" data-size="pinterest">
-            <div class="platform-info"><span class="platform-name">Pinterest</span><span class="platform-dim">1000×1500</span></div>
-          </button>
-        </div>
-
-        <!-- Camera / Video section — honest label -->
-        <div class="export-section-label camera-label">📹 Record a Video</div>
-        <div class="platform-options">
-          <button class="platform-btn camera-btn" id="openCameraBtn">
             <div class="platform-info">
-              <span class="platform-name">Record with your camera</span>
-              <span class="platform-dim">Lyric overlay · effects · save & share</span>
+              <span class="platform-name">Pinterest</span>
+              <span class="platform-dim">1000×1500</span>
             </div>
-            <span class="platform-badge purple">LIVE</span>
           </button>
         </div>
-
         <button id="backToDesign" class="secondary-btn full">Back</button>
       </div>
 
-      <!-- Step 3: Share -->
+      <!-- Step 3: Share Options -->
       <div id="shareStep" class="poster-step">
         <div class="poster-preview">
           <canvas id="posterCanvas"></canvas>
         </div>
+        
+        <!-- Shareable Link Section -->
         <div class="share-link-section">
           <label>Share This Post</label>
           <div class="share-link-container">
@@ -377,107 +373,15 @@
           </div>
           <p class="hint-small">Anyone with this link can view your post on MARGO</p>
         </div>
-        <div id="platformShareHint" class="platform-share-hint"></div>
+        
+        <!-- Share Buttons -->
         <div class="share-actions">
           <button id="shareNativeBtn" class="primary-btn full">Share Poster</button>
           <button id="downloadManualBtn" class="secondary-btn full">Save to Device</button>
         </div>
+        
         <button id="backToPlatform" class="secondary-btn full">Back</button>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- CAMERA / VIDEO CAPTURE MODAL -->
-<div id="cameraModal" class="modal hidden">
-  <div class="modal-content camera-modal-content">
-    <div class="modal-header">
-      <h3>Record a Video</h3>
-      <button id="closeCameraModal" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-
-      <!-- Live viewfinder -->
-      <div class="camera-viewport">
-        <video id="cameraVideo" autoplay muted playsinline></video>
-        <canvas id="cameraCanvas"></canvas>
-        <!-- Lyric overlay rendered on canvas, mirrored here for feel -->
-        <div class="camera-overlay-lyrics" id="cameraOverlayLyrics">
-          <div class="camera-lyric-text" id="cameraLyricText"></div>
-          <div class="camera-lyric-meta" id="cameraLyricMeta"></div>
-        </div>
-      </div>
-
-      <div id="cameraNoSupport" class="camera-no-support" style="display:none;">
-        <span class="camera-no-support-icon">📷</span>
-        <span>Camera access not available in this browser.<br>Try Chrome or Safari on your phone.</span>
-      </div>
-
-      <!-- Effects -->
-      <label>Overlay Effect</label>
-      <div class="camera-effects-row">
-        <button class="effect-btn active" data-effect="gradient">🌅 Gradient</button>
-        <button class="effect-btn" data-effect="dark">🌑 Dark</button>
-        <button class="effect-btn" data-effect="blur">🌫️ Frosted</button>
-        <button class="effect-btn" data-effect="gold">✨ Gold</button>
-        <button class="effect-btn" data-effect="none">◻️ None</button>
-      </div>
-
-      <!-- Controls -->
-      <div class="camera-timer" id="cameraTimer"></div>
-      <div class="camera-controls">
-        <button class="cam-ctrl-btn" id="flipCameraBtn" title="Flip camera">🔄</button>
-        <button class="cam-record-btn" id="recordBtn" title="Record">⏺</button>
-        <button class="cam-ctrl-btn" id="downloadVideoBtn" title="Save video" style="display:none;">💾</button>
-      </div>
-      <p class="camera-download-hint" id="cameraHint">Tap ⏺ to start recording · up to 30s</p>
-    </div>
-  </div>
-</div>
-
-<!-- DISCORD MODAL -->
-<div id="discordModal" class="modal hidden">
-  <div class="modal-content discord-modal-content">
-    <div class="modal-header">
-      <h3>Margo on Discord</h3>
-      <button id="closeDiscordModal" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="discord-hero">
-        <span class="discord-bot-avatar">🤖</span>
-        <p class="discord-hero-title">Add Margo Bot to Your Server</p>
-        <p class="discord-hero-sub">Help your Discord community discover music through lyrics</p>
-      </div>
-
-      <div class="discord-communities">
-        <div class="discord-community-card"><span class="dc-icon">🎤</span><span class="dc-label">Artist servers</span></div>
-        <div class="discord-community-card"><span class="dc-icon">💜</span><span class="dc-label">Fandom servers</span></div>
-        <div class="discord-community-card"><span class="dc-icon">📚</span><span class="dc-label">Student orgs</span></div>
-        <div class="discord-community-card"><span class="dc-icon">🎮</span><span class="dc-label">Gaming servers</span></div>
-      </div>
-
-      <div class="discord-features">
-        <div class="discord-feature"><span class="discord-feature-icon">🎵</span><div><div class="discord-feature-title">Auto-Recognize Lyrics</div><div class="discord-feature-sub">Bot detects when someone posts lyrics in chat</div></div></div>
-        <div class="discord-feature"><span class="discord-feature-icon">🔍</span><div><div class="discord-feature-title">Instant Song Finder</div><div class="discord-feature-sub">Identifies songs and artists automatically</div></div></div>
-        <div class="discord-feature"><span class="discord-feature-icon">💬</span><div><div class="discord-feature-title">Community Discovery</div><div class="discord-feature-sub">Members share and discover music together</div></div></div>
-        <div class="discord-feature"><span class="discord-feature-icon">📤</span><div><div class="discord-feature-title">Auto-Generate Posters</div><div class="discord-feature-sub">Instantly creates shareable IG/TikTok images</div></div></div>
-      </div>
-
-      <div class="discord-coming-soon">
-        <p class="discord-soon-title">Coming Soon</p>
-        <p class="discord-soon-sub">Perfect for Filipino gaming, music, and community servers</p>
-      </div>
-
-      <div class="discord-early-access">
-        <label>Get Early Access</label>
-        <div class="discord-input-row">
-          <input id="discordServerInput" placeholder="Your Discord server name or invite link" inputmode="text"/>
-          <button id="discordNotifyBtn" class="primary-btn">Notify Me</button>
-        </div>
-        <p class="hint-small" style="text-align:center; margin-top: 4px;">We'll reach out when the bot is ready for your server</p>
-      </div>
-
-      <button class="secondary-btn full" onclick="closeModal(discordModal)">Got it! Keep me updated</button>
     </div>
   </div>
 </div>
@@ -485,6 +389,9 @@
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
 <script src="script.js"></script>
 </body>
 </html>
+
+
