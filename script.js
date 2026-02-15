@@ -1,6 +1,4 @@
 /* MARGO - Firebase Real-Time Sync Edition - WITH SCROLL PRESERVATION & LIVE UPDATES - IMPROVED */
-/* CONTENT MODERATION: Two-tier system with partial censoring and zero-tolerance blocking */
-/* ===== UPDATED FEB 2026: Added Discord modal + Quick Export functionality ===== */
 
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -13,9 +11,8 @@ const firebaseConfig = {
   appId: "1:150183564620:web:a42de7fef39740b551ebe9"
 };
 
-// ===== APP BASE URL - PRODUCTION DOMAIN =====
-// ✅ UPDATED: Now uses your actual Vercel domain for consistent sharing
-const APP_BASE_URL = 'https://margo-silk.vercel.app';
+// ===== APP BASE URL (UPDATE THIS WITH YOUR ACTUAL DOMAIN) =====
+const APP_BASE_URL = window.location.origin;
 
 let isFirebaseEnabled = false;
 let postsRef = null;
@@ -31,113 +28,6 @@ try {
 } catch (error) {
   console.warn('⚠ Firebase not configured. Using localStorage only.', error.message);
   isFirebaseEnabled = false;
-}
-
-// ===== CONTENT MODERATION SYSTEM =====
-
-// Partial censor list - middle letters replaced with **
-const autoCensorList = [
-  'fuck', 'fucking', 'fucked', 'fucker', 'fucks',
-  'shit', 'shitting', 'shitty', 'shits',
-  'ass', 'asshole', 'asses',
-  'bitch', 'bitches', 'bitching',
-  'damn', 'damned',
-  'hell',
-  'crap', 'crappy',
-  'dick', 'dicks',
-  'cock', 'cocks',
-  'pussy', 'pussies',
-  'whore', 'whores',
-  'slut', 'sluts', 'slutty',
-  'bastard', 'bastards',
-  'piss', 'pissed', 'pissing'
-];
-
-// Zero-tolerance list - blocks post entirely (no explicit display in code)
-const zeroToleranceList = [
-  'nigger', 'nigga', 'nig', 'negro',
-  'faggot', 'fag', 'dyke',
-  'tranny', 'trannie', 'shemale',
-  'retard', 'retarded', 'retards',
-  'chink', 'gook', 'zipperhead',
-  'spic', 'beaner', 'wetback',
-  'kike', 'hymie',
-  'towelhead', 'sandnigger', 'raghead',
-  'coon', 'jigaboo', 'porch monkey',
-  'cracker', 'honkey', 'whitey'
-];
-
-/**
- * Normalizes text to catch variations and bypass attempts
- */
-function normalizeText(text) {
-  return text
-    .toLowerCase()
-    .replace(/\s+/g, '') // Remove all spaces
-    .replace(/1/g, 'i')
-    .replace(/3/g, 'e')
-    .replace(/4/g, 'a')
-    .replace(/5/g, 's')
-    .replace(/0/g, 'o')
-    .replace(/@/g, 'a')
-    .replace(/\$/g, 's')
-    .replace(/!/g, 'i')
-    .replace(/\*/g, '') // Remove existing asterisks
-    .replace(/[^a-z]/g, ''); // Remove all non-letter characters
-}
-
-/**
- * Partially censors a word by keeping first and last letter
- */
-function partialCensor(word) {
-  if (word.length <= 2) return '**';
-  if (word.length === 3) return word[0] + '*' + word[2];
-  
-  const firstLetter = word[0];
-  const lastLetter = word[word.length - 1];
-  return firstLetter + '**' + lastLetter;
-}
-
-/**
- * Main moderation function
- * Returns: { allowed: boolean, cleanText: string, reason?: string }
- */
-function moderateText(text) {
-  // Check zero-tolerance words first
-  const normalized = normalizeText(text);
-  
-  for (const slur of zeroToleranceList) {
-    if (normalized.includes(slur)) {
-      return {
-        allowed: false,
-        cleanText: text,
-        reason: 'Please keep MARGO respectful and inclusive.'
-      };
-    }
-  }
-  
-  // Apply partial censoring to profanity
-  let cleanText = text;
-  const words = text.split(/\b/); // Split on word boundaries
-  
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    const normalizedWord = normalizeText(word);
-    
-    for (const profanity of autoCensorList) {
-      if (normalizedWord === profanity || normalizedWord.includes(profanity)) {
-        words[i] = partialCensor(word);
-        break;
-      }
-    }
-  }
-  
-  cleanText = words.join('');
-  
-  return {
-    allowed: true,
-    cleanText: cleanText
-  };
 }
 
 // ===== ELEMENTS =====
@@ -254,20 +144,12 @@ const copyLinkBtn = document.getElementById("copyLinkBtn");
 const shareNativeBtn = document.getElementById("shareNativeBtn");
 const downloadManualBtn = document.getElementById("downloadManualBtn");
 
-// ===== NEW: Discord modal elements (Feb 2026) =====
-const discordModal = document.getElementById("discordModal");
-const closeDiscordModal = document.getElementById("closeDiscordModal");
-const openDiscordInfo = document.getElementById("openDiscordInfo");
-
 // ===== STATE =====
 let currentMode = "share";
 let selectedEmotion = null;
 let currentPost = null;
 let currentGuessAttempts = 0;
 const MAX_GUESS_ATTEMPTS = 2;
-
-// FIX #1: Add posting flag to prevent duplicates
-let isPosting = false;
 
 let selectedDesign = "midnight-gold";
 let selectedPosterSize = null;
@@ -640,15 +522,6 @@ closeSharePoster.onclick = () => {
   resetPosterModal();
 };
 
-// ===== NEW: Discord modal handlers (Feb 2026) =====
-openDiscordInfo.onclick = () => {
-  openModal(discordModal);
-};
-
-closeDiscordModal.onclick = () => {
-  closeModal(discordModal);
-};
-
 // ===== CHARACTER COUNTER =====
 textInput.oninput = () => {
   charCount.textContent = textInput.value.length;
@@ -686,13 +559,9 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
   };
 });
 
-// ===== CREATE POST WITH MODERATION =====
+// ===== CREATE POST =====
 postBtn.onclick = async () => {
-  // FIX #2: Prevent duplicate submissions
-  if (isPosting) {
-    console.log('⚠️ Already posting, please wait...');
-    return;
-  }
+  if (postBtn.disabled) return;
 
   const text = textInput.value.trim();
 
@@ -706,20 +575,8 @@ postBtn.onclick = async () => {
     return;
   }
 
-  // ===== MODERATION CHECK =====
-  const moderation = moderateText(text);
-  
-  if (!moderation.allowed) {
-    showToast(moderation.reason);
-    return;
-  }
-  
-  // Use the cleaned text from moderation
-  const cleanedText = moderation.cleanText;
-  // ===== END MODERATION =====
-
   let post = {
-    text: cleanedText, // Use moderated text
+    text,
     emotion: selectedEmotion,
     mode: currentMode,
     knowledge: {
@@ -788,8 +645,6 @@ postBtn.onclick = async () => {
     return;
   }
 
-  // FIX #3: Set posting flag and disable button
-  isPosting = true;
   postBtn.disabled = true;
   postBtn.textContent = "Posting...";
 
@@ -797,17 +652,11 @@ postBtn.onclick = async () => {
     if (isFirebaseEnabled) {
       const newPostRef = await postsRef.push(post);
       
-      // FIX #4: Use try-catch for analytics to prevent blocking posts
-      try {
-        await analyticsRef.child(newPostRef.key).set({
-          views: 0,
-          guesses: [],
-          helps: []
-        });
-      } catch (analyticsError) {
-        // If analytics fails, log it but don't block the post
-        console.warn('⚠️ Analytics write failed (non-critical):', analyticsError);
-      }
+      await analyticsRef.child(newPostRef.key).set({
+        views: 0,
+        guesses: [],
+        helps: []
+      });
       
       console.log('✓ Posted to Firebase:', newPostRef.key);
     } else {
@@ -854,8 +703,6 @@ postBtn.onclick = async () => {
     console.error("Posting failed:", err);
     showToast(err.message || "Error posting. Please try again.");
   } finally {
-    // FIX #5: Always reset posting state
-    isPosting = false;
     postBtn.disabled = false;
     postBtn.textContent = "Post";
   }
@@ -955,11 +802,9 @@ function renderFeed() {
           <div class="feed-song-artist">${knowledge.artist}</div>
         </div>
       `;
-      // ===== UPDATED: Added Export button (Feb 2026) =====
       actionsSection = `
         <div class="feed-actions">
           <button class="feed-action" onclick="viewPost(${index})">View</button>
-          <button class="feed-action" onclick="quickExport(${index})">Share</button>
           ${hasLinks ? '<button class="feed-action" onclick="openListen(' + index + ')">Listen</button>' : ''}
         </div>
       `;
@@ -1762,8 +1607,9 @@ async function generatePoster(size, design) {
   ctx.font = `500 ${baseFontSize * 0.6}px sans-serif`;
   ctx.textAlign = 'center';
   
-  // Use the domain name as watermark
-  ctx.fillText('margo-silk.vercel.app', dims.width / 2, dims.height * 0.95);
+  // Get domain without protocol
+  const domain = APP_BASE_URL.replace(/^https?:\/\//, '');
+  ctx.fillText(domain, dims.width / 2, dims.height * 0.95);
   
   // Convert canvas to blob for sharing
   return new Promise((resolve) => {
@@ -1771,31 +1617,6 @@ async function generatePoster(size, design) {
       generatedPosterBlob = blob;
       resolve();
     }, 'image/png');
-  });
-}
-
-// ===== NEW: QUICK EXPORT FUNCTION (Feb 2026) =====
-// One-click export with default settings (midnight-gold + Instagram Square)
-function quickExport(index) {
-  currentPost = posts[index];
-  
-  // Use default settings for instant export
-  selectedDesign = "midnight-gold";
-  selectedPosterSize = "instagram-square";
-  
-  // Generate poster immediately
-  generatePoster(selectedPosterSize, selectedDesign).then(() => {
-    // Generate shareable link
-    const shareLink = `${APP_BASE_URL}?post=${currentPost.id}`;
-    shareableLink.value = shareLink;
-    
-    // Skip directly to share step (bypass design and platform selection)
-    designStep.classList.remove("active");
-    platformStep.classList.remove("active");
-    shareStep.classList.add("active");
-    
-    // Open the poster modal at share step
-    openModal(sharePosterModal);
   });
 }
 
@@ -1912,10 +1733,8 @@ function showToast(message) {
 
 // ===== INITIALIZE =====
 console.log("MARGO Firebase Edition loaded - WITH SCROLL PRESERVATION & LIVE UPDATES - IMPROVED");
-console.log("✅ FEB 2026 UPDATE: Discord modal + Quick Export added");
 console.log("Firebase enabled:", isFirebaseEnabled);
 console.log("Posts loaded:", posts.length);
-console.log("🌐 App Base URL:", APP_BASE_URL);
 
 // Setup scroll to top button
 setupScrollToTop();
@@ -1990,3 +1809,5 @@ function handleSharedPostLink() {
 window.addEventListener('load', () => {
   handleSharedPostLink();
 });
+
+
