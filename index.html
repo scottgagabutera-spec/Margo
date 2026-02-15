@@ -6,7 +6,15 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>MARGO — When words fail, drop a line</title>
+  
+  <!-- Open Graph Meta Tags for Social Sharing -->
+  <meta property="og:title" content="MARGO — When words fail, drop a lyric">
+  <meta property="og:description" content="Share lyrics that express your emotions. Create beautiful posters for Instagram, TikTok, and Twitter.">
+  <meta property="og:image" content="https://margo-silk.vercel.app/og-image.png">
+  <meta property="og:url" content="https://margo-silk.vercel.app">
+  <meta property="og:type" content="website">
+  
+  <title>MARGO — When words fail, drop a lyric</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,8 +26,9 @@
 <section id="landing" class="screen active">
   <div class="center">
     <h1 class="logo">MARGO</h1>
-    <p class="tagline">When words fail, drop a line.</p>
-    <button id="enterBtn" class="primary-btn">Drop a line</button>
+    <p class="tagline">When words fail, drop a lyric.</p>
+    <p class="tagline-sub">Share Everywhere • Discord Bot • Go Viral</p>
+    <button id="enterBtn" class="primary-btn">Drop a lyric</button>
     <div class="swipe-hint">
       <span class="swipe-arrow">←</span>
       <span>Swipe to explore</span>
@@ -37,14 +46,16 @@
       <h2>Live Feed</h2>
       <p class="post-count"><span id="postCount">0</span> posts</p>
     </div>
-    <button id="openComposer" class="header-btn primary">Drop your line</button>
+    <button id="openDiscordInfo" class="header-btn" title="Margo on Discord">
+      <span class="btn-icon">🤖</span>
+    </button>
+    <button id="openComposer" class="header-btn primary">Drop your lyric</button>
   </header>
   
   <!-- NEW: New Posts Indicator -->
   <div id="newPostsIndicator" class="new-posts-indicator">
     <div class="new-posts-content">
-      <span class="new-posts-icon">✨</span>
-      <span class="new-posts-text"><span class="new-posts-count">0</span> new</span>
+      <span class="new-posts-count">0</span> new
     </div>
   </div>
   
@@ -61,7 +72,7 @@
 <div id="composer" class="modal hidden">
   <div class="modal-content composer-modal">
     <div class="modal-header">
-      <h3>Drop a line</h3>
+      <h3>Drop a lyric</h3>
       <button id="closeComposer" class="close-btn">×</button>
     </div>
     <div class="modal-body">
@@ -386,6 +397,68 @@
   </div>
 </div>
 
+<!-- DISCORD MODAL -->
+<div id="discordModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Margo on Discord</h3>
+      <button id="closeDiscordModal" class="close-btn">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="font-size: 3rem; margin-bottom: 12px;">🤖</div>
+        <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: var(--gold);">
+          Add Margo Bot to Your Server
+        </p>
+        <p style="color: var(--modal-text); font-size: 0.95rem; line-height: 1.6;">
+          Help your Discord community discover music through lyrics
+        </p>
+      </div>
+      
+      <div style="background: var(--modal-card-bg); padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 2px solid var(--modal-border);">
+        <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px;">
+          <span style="font-size: 1.8rem; line-height: 1;">🎵</span>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px; color: var(--modal-text);">Auto-Recognize Lyrics</div>
+            <div style="font-size: 0.85rem; color: var(--modal-text-secondary);">Bot detects when someone posts lyrics in chat</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px;">
+          <span style="font-size: 1.8rem; line-height: 1;">🔍</span>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px; color: var(--modal-text);">Instant Song Finder</div>
+            <div style="font-size: 0.85rem; color: var(--modal-text-secondary);">Identifies songs and artists automatically</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 14px;">
+          <span style="font-size: 1.8rem; line-height: 1;">💬</span>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px; color: var(--modal-text);">Community Discovery</div>
+            <div style="font-size: 0.85rem; color: var(--modal-text-secondary);">Members share and discover music together</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="background: rgba(184, 134, 11, 0.1); padding: 14px; border-radius: 10px; border: 2px solid var(--gold); text-align: center; margin-bottom: 18px;">
+        <p style="font-size: 0.85rem; color: var(--gold); font-weight: 600; margin-bottom: 6px;">
+          Coming Soon
+        </p>
+        <p style="font-size: 0.8rem; color: var(--modal-text-secondary);">
+          Perfect for Filipino gaming, music, and community servers
+        </p>
+      </div>
+      
+      <button class="secondary-btn full" onclick="closeModal(discordModal)">
+        Got it! Keep me updated
+      </button>
+      
+      <p class="hint-small" style="text-align: center; margin-top: 14px; line-height: 1.4; color: var(--modal-text-secondary);">
+        Want early access? Post on Margo and we'll reach out when the bot is ready!
+      </p>
+    </div>
+  </div>
+</div>
+
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
@@ -393,5 +466,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-
-
