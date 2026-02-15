@@ -14,14 +14,14 @@
   --gold: #b8860b;  /* Dark goldenrod - readable on light! */
   --gold-hover: #daa520;  /* Goldenrod */
   
-  /* Storm Sky Theme - Light colors */
-  --bg-dark: #c8d4e0;        /* Main background - pre-storm sky */
-  --bg-card: #dfe6ed;         /* Cards - lighter clouds */
-  --bg-elevated: #e8eef5;     /* Elevated elements */
+  /* Storm Sky Theme - LIGHTER (bright cloudy day) */
+  --bg-dark: #d8e4f0;        /* Lighter sky - bright before rain */
+  --bg-card: #e8eef5;         /* Cards - very light clouds */
+  --bg-elevated: #f0f4f8;     /* Elevated elements - almost white */
   --text: #1a2332;            /* Dark text */
   --text-secondary: #4a5568;  /* Secondary text */
-  --border: #b0bac9;          /* Borders */
-  --border-subtle: #c0cad9;   /* Subtle borders */
+  --border: #c0cad9;          /* Borders */
+  --border-subtle: #d0dae5;   /* Subtle borders */
   
   /* Modal overlay - keep dark */
   --modal-bg: rgba(10, 10, 10, 0.85);
