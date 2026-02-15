@@ -1512,6 +1512,207 @@ function resetPosterModal() {
   document.querySelectorAll(".color-dot")[0].classList.add("active");
 }
 
+// ===== CAMERA / VIDEO RECORDING =====
+const cameraModal      = document.getElementById("cameraModal");
+const closeCameraModal = document.getElementById("closeCameraModal");
+const cameraVideo      = document.getElementById("cameraVideo");
+const cameraCanvas     = document.getElementById("cameraCanvas");
+const cameraOverlay    = document.getElementById("cameraOverlayLyrics");
+const cameraLyricText  = document.getElementById("cameraLyricText");
+const cameraLyricMeta  = document.getElementById("cameraLyricMeta");
+const cameraNoSupport  = document.getElementById("cameraNoSupport");
+const recordBtn        = document.getElementById("recordBtn");
+const flipCameraBtn    = document.getElementById("flipCameraBtn");
+const downloadVideoBtn = document.getElementById("downloadVideoBtn");
+const cameraTimer      = document.getElementById("cameraTimer");
+const cameraHint       = document.getElementById("cameraHint");
+const openCameraBtn    = document.getElementById("openCameraBtn");
+
+let cameraStream     = null;
+let mediaRecorder    = null;
+let recordedChunks   = [];
+let isRecording      = false;
+let recordingTimer   = null;
+let recordingSeconds = 0;
+let useFrontCamera   = true;
+let activeEffect     = "gradient";
+
+const CAMERA_EFFECTS = {
+  gradient: (ctx, w, h) => {
+    const g = ctx.createLinearGradient(0, h * 0.55, 0, h);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,0.72)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  },
+  dark: (ctx, w, h) => {
+    ctx.fillStyle = "rgba(0,0,0,0.42)";
+    ctx.fillRect(0, 0, w, h);
+  },
+  blur: (ctx, w, h) => {
+    ctx.fillStyle = "rgba(255,255,255,0.1)";
+    ctx.fillRect(0, h * 0.6, w, h * 0.4);
+    const g = ctx.createLinearGradient(0, h * 0.55, 0, h);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  },
+  gold: (ctx, w, h) => {
+    const g = ctx.createLinearGradient(0, h * 0.5, 0, h);
+    g.addColorStop(0, "rgba(180,130,0,0)");
+    g.addColorStop(1, "rgba(140,100,0,0.68)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  },
+  none: () => {}
+};
+
+document.querySelectorAll(".effect-btn").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".effect-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeEffect = btn.dataset.effect;
+  };
+});
+
+if (openCameraBtn) {
+  openCameraBtn.onclick = () => {
+    closeModal(sharePosterModal);
+    setTimeout(() => { openCameraModal(); }, 280);
+  };
+}
+
+async function openCameraModal() {
+  if (!currentPost) { showToast("Select a post first"); return; }
+  const knowledge = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+  const lyricShort = currentPost.text.length > 80 ? currentPost.text.substring(0, 77) + "..." : currentPost.text;
+  if (cameraLyricText) cameraLyricText.textContent = `"${lyricShort}"`;
+  if (cameraLyricMeta) {
+    cameraLyricMeta.textContent = currentPost.mode !== "guess"
+      ? `${knowledge.song} — ${knowledge.artist}`
+      : "MARGO · margo-silk.vercel.app";
+  }
+  openModal(cameraModal);
+  await startCamera();
+}
+
+async function startCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showCameraUnsupported(); return; }
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: useFrontCamera ? "user" : "environment", width: { ideal: 1080 }, height: { ideal: 1920 } },
+      audio: true
+    });
+    cameraVideo.srcObject = cameraStream;
+    cameraVideo.style.display = "block";
+    if (cameraNoSupport) cameraNoSupport.style.display = "none";
+    if (cameraOverlay) cameraOverlay.style.display = "block";
+    requestAnimationFrame(drawCameraOverlay);
+  } catch (err) {
+    console.warn("Camera error:", err);
+    if (err.name === "NotAllowedError") {
+      showToast("Camera permission denied. Please allow camera access.");
+    } else {
+      showCameraUnsupported();
+    }
+  }
+}
+
+function showCameraUnsupported() {
+  if (cameraVideo) cameraVideo.style.display = "none";
+  if (cameraNoSupport) cameraNoSupport.style.display = "flex";
+  if (cameraOverlay) cameraOverlay.style.display = "none";
+}
+
+function drawCameraOverlay() {
+  if (!cameraStream || !cameraCanvas || !cameraVideo) return;
+  const viewport = cameraCanvas.parentElement;
+  const w = viewport ? viewport.offsetWidth : 320;
+  const h = viewport ? viewport.offsetHeight : 568;
+  if (cameraCanvas.width !== w || cameraCanvas.height !== h) { cameraCanvas.width = w; cameraCanvas.height = h; }
+  const ctx = cameraCanvas.getContext("2d");
+  ctx.clearRect(0, 0, w, h);
+  const effectFn = CAMERA_EFFECTS[activeEffect] || CAMERA_EFFECTS.gradient;
+  effectFn(ctx, w, h);
+  // MARGO watermark
+  ctx.save();
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.font = "bold 13px serif";
+  ctx.textAlign = "center";
+  ctx.fillText("MARGO", w / 2, 22);
+  ctx.restore();
+  if (cameraStream && cameraStream.active) requestAnimationFrame(drawCameraOverlay);
+}
+
+if (flipCameraBtn) {
+  flipCameraBtn.onclick = () => { useFrontCamera = !useFrontCamera; startCamera(); };
+}
+
+if (recordBtn) {
+  recordBtn.onclick = () => { if (!isRecording) startRecording(); else stopRecording(); };
+}
+
+function startRecording() {
+  if (!cameraStream) { showToast("Camera not ready"); return; }
+  recordedChunks = [];
+  const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+    ? "video/webm;codecs=vp9,opus"
+    : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "video/mp4";
+  try {
+    mediaRecorder = new MediaRecorder(cameraStream, { mimeType });
+  } catch (e) {
+    mediaRecorder = new MediaRecorder(cameraStream);
+  }
+  mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "video/webm" });
+    const url = URL.createObjectURL(blob);
+    if (downloadVideoBtn) {
+      downloadVideoBtn.style.display = "flex";
+      downloadVideoBtn.onclick = () => {
+        const ext = (mediaRecorder.mimeType || "video/webm").includes("mp4") ? "mp4" : "webm";
+        const a = document.createElement("a");
+        a.href = url; a.download = `margo-lyric-${Date.now()}.${ext}`; a.click();
+        showToast("Video saved! Upload it to TikTok or Reels.");
+      };
+    }
+    if (cameraHint) cameraHint.textContent = "Done — tap 💾 to save your video";
+  };
+  mediaRecorder.start(100);
+  isRecording = true;
+  recordingSeconds = 0;
+  if (recordBtn) { recordBtn.textContent = "⏹"; recordBtn.classList.add("recording"); }
+  if (cameraHint) cameraHint.textContent = "Recording… tap ⏹ to stop";
+  recordingTimer = setInterval(() => {
+    recordingSeconds++;
+    if (cameraTimer) { cameraTimer.textContent = `● REC 0:${String(recordingSeconds).padStart(2, "0")}`; }
+    if (recordingSeconds >= 30) stopRecording();
+  }, 1000);
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+  isRecording = false;
+  clearInterval(recordingTimer);
+  if (recordBtn) { recordBtn.textContent = "⏺"; recordBtn.classList.remove("recording"); }
+  if (cameraTimer) cameraTimer.textContent = "";
+}
+
+function stopCamera() {
+  stopRecording();
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  if (cameraVideo) cameraVideo.srcObject = null;
+  if (downloadVideoBtn) downloadVideoBtn.style.display = "none";
+  if (cameraHint) cameraHint.textContent = "Tap ⏺ to start recording · up to 30s";
+  if (cameraTimer) cameraTimer.textContent = "";
+}
+
+if (closeCameraModal) {
+  closeCameraModal.onclick = () => { stopCamera(); closeModal(cameraModal); };
+}
+
 // ===== TOAST =====
 function showToast(message) {
   const existing = document.querySelector(".toast");
