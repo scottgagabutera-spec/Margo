@@ -16,14 +16,12 @@ const APP_BASE_URL = window.location.origin;
 let isFirebaseEnabled = false;
 let postsRef = null;
 let analyticsRef = null;
-let earlyAccessRef = null;
 
 try {
   firebase.initializeApp(firebaseConfig);
   const database = firebase.database();
   postsRef       = database.ref('posts');
   analyticsRef   = database.ref('analytics');
-  earlyAccessRef = database.ref('earlyAccess');
   isFirebaseEnabled = true;
   console.log('Firebase OK');
 } catch (e) {
@@ -41,7 +39,6 @@ const listenModal     = document.getElementById("listenModal");
 const analyticsModal  = document.getElementById("analyticsModal");
 const sharePosterModal= document.getElementById("sharePosterModal");
 const cameraModal     = document.getElementById("cameraModal");
-const discordModal    = document.getElementById("discordModal");
 
 const enterBtn        = document.getElementById("enterBtn");
 const backBtn         = document.getElementById("backBtn");
@@ -317,31 +314,6 @@ closeComposerBtn.onclick = () => {
   closeModal(composer);
   resetComposer();
 };
-
-// ===== COMMUNITY CHIPS — LANDING =====
-document.querySelectorAll(".community-chip").forEach(chip => {
-  chip.onclick = () => {
-    document.querySelectorAll(".community-chip").forEach(c => c.classList.remove("active"));
-    chip.classList.add("active");
-    selectedCommunity = chip.dataset.community;
-    // Go straight to composer with community pre-selected
-    landing.classList.remove("active");
-    feed.classList.add("active");
-    renderFeed();
-    activeCommunityFilter = chip.dataset.community;
-    document.querySelectorAll(".filter-pill").forEach(p => {
-      p.classList.toggle("active", p.dataset.filter === activeCommunityFilter);
-    });
-    setTimeout(() => {
-      openModal(composer);
-      // Pre-select the community in composer
-      document.querySelectorAll(".community-select-btn").forEach(b => {
-        b.classList.toggle("active", b.dataset.community === selectedCommunity);
-      });
-      setTimeout(() => textInput.focus(), 280);
-    }, 50);
-  };
-});
 
 // ===== COMMUNITY FILTER BAR =====
 document.querySelectorAll(".filter-pill").forEach(pill => {
@@ -933,152 +905,6 @@ document.getElementById("closeListen").onclick    = () => closeModal(listenModal
 document.getElementById("closeAnalytics").onclick = () => closeModal(analyticsModal);
 document.getElementById("closeSharePoster").onclick = () => { closeModal(sharePosterModal); resetPosterModal(); };
 
-// ===== DISCORD MODAL =====
-document.getElementById("openDiscordInfo").onclick   = () => openModal(discordModal);
-document.getElementById("closeDiscordModal").onclick = () => closeModal(discordModal);
-document.getElementById("closeDiscordBottom").onclick= () => closeModal(discordModal);
-
-document.getElementById("discordNotifyBtn").onclick = () => {
-  const input = document.getElementById("discordServerInput");
-  const val   = input.value.trim();
-  if (!val) { showToast("Please enter your server name or link"); return; }
-
-  const data = { server: val, userId, timestamp: Date.now() };
-  if (isFirebaseEnabled && earlyAccessRef) {
-    earlyAccessRef.push(data)
-      .then(() => { showToast("You're on the early access list!"); input.value = ""; })
-      .catch(() => { showToast("Saved! We'll be in touch."); input.value = ""; });
-  } else {
-    showToast("Got it! We'll be in touch.");
-    input.value = "";
-  }
-};
-
-// ===== POSTER: COLOR DOTS =====
-document.querySelectorAll(".color-dot").forEach(dot => {
-  dot.onclick = () => {
-    document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
-    dot.classList.add("active");
-    selectedDesign = dot.dataset.design;
-    updateLivePreview();
-  };
-});
-
-// ===== POSTER: LIVE PREVIEW =====
-function updateLivePreview() {
-  if (!currentPost || !posterPreviewCanvas) return;
-  const ctx = posterPreviewCanvas.getContext('2d');
-  const W = 320, H = 320;
-  posterPreviewCanvas.width = W;
-  posterPreviewCanvas.height = H;
-  const c = POSTER_DESIGNS[selectedDesign];
-
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-
-  const fs = 13;
-  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*1.3}px serif`; ctx.textAlign = 'center';
-  ctx.fillText('MARGO', W/2, 38);
-
-  ctx.fillStyle = c.text; ctx.font = `italic ${fs*0.95}px serif`;
-  const prev = currentPost.text.length > 80 ? currentPost.text.substring(0,77)+'…' : currentPost.text;
-  wrapText(ctx, prev, W/2, H/2 - 28, W*0.85, fs*1.3);
-
-  ctx.fillStyle = c.primary; ctx.font = `600 ${fs*0.74}px sans-serif`;
-  ctx.fillText(`#${currentPost.emotion||'Nostalgia'}`, W/2, H/2 + 36);
-
-  ctx.strokeStyle = c.secondary; ctx.lineWidth = 1.1;
-  ctx.beginPath(); ctx.moveTo(W*0.3, H/2+50); ctx.lineTo(W*0.7, H/2+50); ctx.stroke();
-
-  const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
-  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*0.9}px serif`;
-  ctx.fillText(k.song.length > 26 ? k.song.substring(0,26)+'…' : k.song, W/2, H/2+72);
-  ctx.fillStyle = c.secondary; ctx.font = `500 ${fs*0.74}px sans-serif`;
-  ctx.fillText(k.artist.length > 30 ? k.artist.substring(0,30)+'…' : k.artist, W/2, H/2+88);
-}
-
-function wrapText(ctx, text, x, y, maxW, lh) {
-  const words = text.split(' ');
-  let line = '', lines = [];
-  for (let n = 0; n < words.length; n++) {
-    const test = line + words[n] + ' ';
-    if (ctx.measureText(test).width > maxW && n > 0) { lines.push(line); line = words[n] + ' '; }
-    else line = test;
-  }
-  lines.push(line);
-  const startY = y - ((lines.length - 1) * lh) / 2;
-  lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lh));
-}
-
-// ===== POSTER: STEPS =====
-nextToPlatform.onclick = () => { designStep.classList.remove("active"); platformStep.classList.add("active"); };
-backToDesign.onclick   = () => { platformStep.classList.remove("active"); designStep.classList.add("active"); };
-backToPlatform.onclick = () => { shareStep.classList.remove("active"); platformStep.classList.add("active"); };
-
-// ===== POSTER: PLATFORM SELECTION =====
-document.querySelectorAll(".platform-btn:not(.camera-btn)").forEach(btn => {
-  btn.onclick = async () => {
-    selectedPosterSize = btn.dataset.size;
-    await generatePoster(selectedPosterSize, selectedDesign);
-    shareableLink.value = `${APP_BASE_URL}?post=${currentPost.id}`;
-    const hints = {
-      'instagram-square': 'Save and post to Instagram feed',
-      'instagram-story':  'Save and post to Instagram or TikTok Stories',
-      'twitter':          'Save and post to Twitter / X',
-      'facebook':         'Save and post to Facebook',
-      'pinterest':        'Save and pin to Pinterest'
-    };
-    if (platformShareHint) platformShareHint.textContent = hints[selectedPosterSize] || '';
-    platformStep.classList.remove("active");
-    shareStep.classList.add("active");
-  };
-});
-
-// ===== GENERATE POSTER =====
-async function generatePoster(size, design) {
-  if (!currentPost) return;
-  const sizes = {
-    'instagram-square': { w:1080, h:1080 },
-    'instagram-story':  { w:1080, h:1920 },
-    'twitter':          { w:1200, h:675  },
-    'facebook':         { w:1200, h:630  },
-    'pinterest':        { w:1000, h:1500 }
-  };
-  const d   = sizes[size];
-  const c   = POSTER_DESIGNS[design];
-  const ctx = posterCanvas.getContext('2d');
-  posterCanvas.width  = d.w;
-  posterCanvas.height = d.h;
-
-  const g = ctx.createLinearGradient(0, 0, 0, d.h);
-  g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, d.w, d.h);
-
-  const fs = d.w * 0.032;
-  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*1.4}px serif`; ctx.textAlign = 'center';
-  ctx.fillText('MARGO', d.w/2, d.h*0.11);
-
-  ctx.fillStyle = c.text; ctx.font = `italic ${fs*1.15}px serif`;
-  wrapText(ctx, currentPost.text, d.w/2, d.h*0.38, d.w*0.85, fs*1.7);
-
-  ctx.fillStyle = c.primary; ctx.font = `600 ${fs*0.85}px sans-serif`;
-  ctx.fillText(`#${currentPost.emotion||'Nostalgia'}`, d.w/2, d.h*0.62);
-
-  ctx.strokeStyle = c.secondary; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(d.w*0.3, d.h*0.68); ctx.lineTo(d.w*0.7, d.h*0.68); ctx.stroke();
-
-  const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
-  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*1.1}px serif`;
-  ctx.fillText(k.song, d.w/2, d.h*0.78);
-  ctx.fillStyle = c.secondary; ctx.font = `500 ${fs*0.9}px sans-serif`;
-  ctx.fillText(k.artist, d.w/2, d.h*0.85);
-
-  ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = `500 ${fs*0.6}px sans-serif`;
-  ctx.fillText(APP_BASE_URL.replace(/^https?:\/\//, ''), d.w/2, d.h*0.95);
-
-  return new Promise(res => posterCanvas.toBlob(blob => { generatedPosterBlob = blob; res(); }, 'image/png'));
-}
 
 // ===== SHARE POSTER BUTTON =====
 sharePosterBtn.onclick = () => {
@@ -1145,18 +971,18 @@ function downloadPosterFile() {
 }
 
 // ===== CAMERA =====
-const cameraVideo     = document.getElementById("cameraVideo");
-const cameraCanvas    = document.getElementById("cameraCanvas");
-const cameraOverlay   = document.getElementById("cameraOverlayLyrics");
-const cameraLyricText = document.getElementById("cameraLyricText");
-const cameraLyricMeta = document.getElementById("cameraLyricMeta");
-const cameraNoSupport = document.getElementById("cameraNoSupport");
-const recordBtn       = document.getElementById("recordBtn");
-const flipCameraBtn   = document.getElementById("flipCameraBtn");
-const downloadVideoBtn= document.getElementById("downloadVideoBtn");
-const cameraTimer     = document.getElementById("cameraTimer");
-const cameraHint      = document.getElementById("cameraHint");
-const openCameraBtn   = document.getElementById("openCameraBtn");
+const cameraVideo      = document.getElementById("cameraVideo");
+const cameraCanvas     = document.getElementById("cameraCanvas");
+const cameraOverlay    = document.getElementById("cameraOverlayLyrics");
+const cameraLyricText  = document.getElementById("cameraLyricText");
+const cameraLyricMeta  = document.getElementById("cameraLyricMeta");
+const cameraNoSupport  = document.getElementById("cameraNoSupport");
+const recordBtn        = document.getElementById("recordBtn");
+const flipCameraBtn    = document.getElementById("flipCameraBtn");
+const downloadVideoBtn = document.getElementById("downloadVideoBtn");
+const cameraTimer      = document.getElementById("cameraTimer");
+const cameraHint       = document.getElementById("cameraHint");
+const openCameraBtn    = document.getElementById("openCameraBtn");
 
 let cameraStream     = null;
 let mediaRecorder    = null;
@@ -1216,7 +1042,6 @@ async function openCameraModal() {
 async function startCamera() {
   if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showCameraUnsupported(); return; }
-
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: useFrontCamera ? "user" : "environment", width:{ideal:1080}, height:{ideal:1920} },
@@ -1234,9 +1059,9 @@ async function startCamera() {
 }
 
 function showCameraUnsupported() {
-  if (cameraVideo)    { cameraVideo.style.display    = "none"; }
-  if (cameraNoSupport){ cameraNoSupport.style.display = "flex"; }
-  if (cameraOverlay)  { cameraOverlay.style.display   = "none"; }
+  if (cameraVideo)     cameraVideo.style.display     = "none";
+  if (cameraNoSupport) cameraNoSupport.style.display = "flex";
+  if (cameraOverlay)   cameraOverlay.style.display   = "none";
 }
 
 function drawCameraOverlay() {
@@ -1258,8 +1083,7 @@ function drawCameraOverlay() {
 }
 
 flipCameraBtn.onclick = () => { useFrontCamera = !useFrontCamera; startCamera(); };
-
-recordBtn.onclick = () => { if (!isRecording) startRecording(); else stopRecording(); };
+recordBtn.onclick     = () => { if (!isRecording) startRecording(); else stopRecording(); };
 
 function startRecording() {
   if (!cameraStream) { showToast("Camera not ready"); return; }
@@ -1277,7 +1101,7 @@ function startRecording() {
     if (downloadVideoBtn) {
       downloadVideoBtn.style.display = "flex";
       downloadVideoBtn.onclick = () => {
-        const ext = (mediaRecorder.mimeType || "video/webm").includes("mp4") ? "mp4" : "webm";
+        const ext = (mediaRecorder.mimeType||"video/webm").includes("mp4") ? "mp4" : "webm";
         const a = document.createElement("a");
         a.href = url; a.download = `margo-${Date.now()}.${ext}`; a.click();
         showToast("Video saved! Upload to TikTok or Reels.");
