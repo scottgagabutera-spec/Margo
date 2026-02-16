@@ -123,6 +123,22 @@ let currentPost       = null;
 let currentGuessAttempts = 0;
 const MAX_GUESS_ATTEMPTS = 2;
 
+
+// ===== FONT SYSTEM =====
+const FONT_FAMILIES = {
+  'playfair':     { family: "'Playfair Display', serif", style: 'italic' },
+  'lora':         { family: "'Lora', serif", style: 'italic' },
+  'merriweather': { family: "'Merriweather', serif", style: 'normal' },
+  'inter':        { family: "'Inter', sans-serif", style: 'normal' },
+  'space':        { family: "'Space Grotesk', sans-serif", style: 'normal' },
+  'bebas':        { family: "'Bebas Neue', sans-serif", style: 'normal' },
+  'raleway':      { family: "'Raleway', sans-serif", style: 'normal' },
+  'crimson':      { family: "'Crimson Text', serif", style: 'italic' }
+};
+
+let selectedFont = 'playfair';
+let uploadedBgImage = null;
+
 let selectedDesign     = "midnight-gold";
 let selectedPosterSize = null;
 let generatedPosterBlob= null;
@@ -887,6 +903,17 @@ document.getElementById("closeSharePoster").onclick = () => { closeModal(sharePo
 
 
 
+
+// ===== FONT PICKER =====
+document.querySelectorAll(".font-option").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".font-option").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedFont = btn.dataset.font;
+    updateLivePreview();
+  };
+});
+
 // ===== POSTER: COLOR DOTS =====
 document.querySelectorAll(".color-dot").forEach(dot => {
   dot.onclick = () => {
@@ -896,6 +923,36 @@ document.querySelectorAll(".color-dot").forEach(dot => {
     updateLivePreview();
   };
 });
+
+
+// ===== BACKGROUND UPLOAD =====
+const uploadBgBtn = document.getElementById("uploadBgBtn");
+const bgUploadInput = document.getElementById("bgUploadInput");
+
+if (uploadBgBtn) {
+  uploadBgBtn.onclick = () => bgUploadInput.click();
+}
+
+if (bgUploadInput) {
+  bgUploadInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showToast("Please upload an image"); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast("File too large. Max 10MB"); return; }
+    
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        uploadedBgImage = img;
+        showToast("Background uploaded! Preview updating...");
+        updateLivePreview();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+}
 
 // ===== POSTER: LIVE PREVIEW =====
 function updateLivePreview() {
@@ -977,32 +1034,48 @@ async function generatePoster(size, design) {
     'twitter':          { w:1200, h:675  },
     'facebook':         { w:1200, h:630  },
     'pinterest':        { w:1000, h:1500 },
-    'discord':          { w:1280, h:720  }
+    'discord':          { w:1280, h:720  },
+    'reddit':           { w:1200, h:1200 }
   };
   const d   = sizes[size];
   const c   = POSTER_DESIGNS[design];
   const ctx = posterCanvas.getContext('2d');
   posterCanvas.width  = d.w;
   posterCanvas.height = d.h;
-  const g = ctx.createLinearGradient(0, 0, 0, d.h);
-  g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, d.w, d.h);
+  
+  if (uploadedBgImage) {
+    const scale = Math.max(d.w / uploadedBgImage.width, d.h / uploadedBgImage.height);
+    const sw = uploadedBgImage.width * scale;
+    const sh = uploadedBgImage.height * scale;
+    const sx = (d.w - sw) / 2;
+    const sy = (d.h - sh) / 2;
+    ctx.drawImage(uploadedBgImage, sx, sy, sw, sh);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, 0, d.w, d.h);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, d.h);
+    g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, d.w, d.h);
+  }
   const fs = d.w * 0.032;
   ctx.fillStyle = c.primary; const headerFont = c.font === 'sans-bold' ? `900 ${fs*1.6}px sans-serif` : c.font === 'sans' ? `700 ${fs*1.4}px sans-serif` : `bold ${fs*1.4}px serif`;
   ctx.font = headerFont; ctx.textAlign = 'center';
   ctx.fillText('MARGO', d.w/2, d.h*0.11);
   ctx.fillStyle = c.text; ctx.font = `italic ${fs*1.15}px serif`;
   wrapText(ctx, currentPost.text, d.w/2, d.h*0.38, d.w*0.85, fs*1.7);
-  ctx.fillStyle = c.primary; ctx.font = `600 ${fs*0.85}px sans-serif`;
+  ctx.shadowBlur = uploadedBgImage ? 8 : 0;
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary; ctx.font = `600 ${fs*0.85}px sans-serif`;
   ctx.fillText(`#${currentPost.emotion||'Nostalgia'}`, d.w/2, d.h*0.62);
-  ctx.strokeStyle = c.secondary; ctx.lineWidth = 2;
+  ctx.strokeStyle = uploadedBgImage ? 'rgba(255,255,255,0.6)' : c.secondary; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(d.w*0.3, d.h*0.68); ctx.lineTo(d.w*0.7, d.h*0.68); ctx.stroke();
   const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
-  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*1.1}px serif`;
+  ctx.shadowBlur = uploadedBgImage ? 8 : 0;
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary; ctx.font = `bold ${fs*1.1}px ${fontData.family}`;
   ctx.fillText(k.song, d.w/2, d.h*0.78);
-  ctx.fillStyle = c.secondary; ctx.font = `500 ${fs*0.9}px sans-serif`;
+  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.85)' : c.secondary; ctx.font = `500 ${fs*0.9}px sans-serif`;
   ctx.fillText(k.artist, d.w/2, d.h*0.85);
-  ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = `500 ${fs*0.6}px sans-serif`;
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.25)'; ctx.font = `500 ${fs*0.6}px sans-serif`;
   ctx.fillText(APP_BASE_URL.replace(/^https?:\/\//, ''), d.w/2, d.h*0.95);
   return new Promise(res => posterCanvas.toBlob(blob => { generatedPosterBlob = blob; res(); }, 'image/png'));
 }
@@ -1093,198 +1166,16 @@ function downloadPosterFile() {
 
 
 // ===== UPLOAD MEDIA MODAL =====
-const uploadModal = document.getElementById("uploadModal");
-const uploadZone = document.getElementById("uploadZone");
-const mediaUploadInput = document.getElementById("mediaUploadInput");
-const uploadPreviewSection = document.getElementById("uploadPreviewSection");
-const uploadPreviewCanvas = document.getElementById("uploadPreviewCanvas");
-const downloadOverlayBtn = document.getElementById("downloadOverlayBtn");
-const uploadAnotherBtn = document.getElementById("uploadAnotherBtn");
-const openUploadBtn = document.getElementById("openUploadBtn");
 
-let uploadedImage = null;
-let uploadActiveEffect = "gradient";
 
-const OVERLAY_EFFECTS = {
-  gradient: (ctx, w, h) => {
-    const g = ctx.createLinearGradient(0, h*0.6, 0, h);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.85)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-  },
-  dark: (ctx, w, h) => {
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, 0, w, h);
-  },
-  blur: (ctx, w, h) => {
-    ctx.filter = 'blur(12px)';
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = w;
-    tempCanvas.height = h;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(ctx.canvas, 0, 0);
-    ctx.filter = 'none';
-    ctx.drawImage(tempCanvas, 0, 0);
-    const g = ctx.createLinearGradient(0, h*0.6, 0, h);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.7)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-  },
-  saturate: (ctx, w, h) => {
-    ctx.filter = 'saturate(1.5) contrast(1.1)';
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = w;
-    tempCanvas.height = h;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(ctx.canvas, 0, 0);
-    ctx.filter = 'none';
-    ctx.drawImage(tempCanvas, 0, 0);
-    const g = ctx.createLinearGradient(0, h*0.6, 0, h);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.75)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-  },
-  none: () => {}
-};
 
-if (openUploadBtn) {
-  openUploadBtn.onclick = () => {
-    if (!currentPost) { showToast("Open a post first"); return; }
-    closeModal(sharePosterModal);
-    setTimeout(() => openModal(uploadModal), 100);
-  };
-}
 
-if (uploadZone) {
-  uploadZone.onclick = () => mediaUploadInput.click();
-  
-  uploadZone.ondragover = (e) => {
-    e.preventDefault();
-    uploadZone.classList.add('dragover');
-  };
-  
-  uploadZone.ondragleave = () => uploadZone.classList.remove('dragover');
-  
-  uploadZone.ondrop = (e) => {
-    e.preventDefault();
-    uploadZone.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]);
-  };
-}
 
-if (mediaUploadInput) {
-  mediaUploadInput.onchange = (e) => {
-    if (e.target.files[0]) handleUpload(e.target.files[0]);
-  };
-}
 
-function handleUpload(file) {
-  if (!file.type.startsWith('image/')) {
-    showToast("Please upload an image file");
-    return;
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    showToast("File too large. Max 10MB");
-    return;
-  }
-  
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      uploadedImage = img;
-      renderUploadPreview();
-      uploadZone.parentElement.style.display = 'none';
-      uploadPreviewSection.style.display = 'flex';
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
 
-function renderUploadPreview() {
-  if (!uploadedImage || !currentPost) return;
-  
-  const canvas = uploadPreviewCanvas;
-  const ctx = canvas.getContext('2d');
-  
-  const maxW = 1080;
-  const maxH = 1920;
-  let w = uploadedImage.width;
-  let h = uploadedImage.height;
-  
-  if (w > maxW || h > maxH) {
-    const ratio = Math.min(maxW / w, maxH / h);
-    w *= ratio;
-    h *= ratio;
-  }
-  
-  canvas.width = w;
-  canvas.height = h;
-  
-  ctx.drawImage(uploadedImage, 0, 0, w, h);
-  
-  (OVERLAY_EFFECTS[uploadActiveEffect] || OVERLAY_EFFECTS.gradient)(ctx, w, h);
-  
-  const lyric = currentPost.text.length > 100 ? currentPost.text.substring(0,97)+'…' : currentPost.text;
-  const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
-  
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.font = `900 ${w*0.018}px sans-serif`;
-  ctx.fillText('MARGO', w/2, h*0.08);
-  
-  ctx.font = `italic ${w*0.026}px serif`;
-  ctx.shadowColor = 'rgba(0,0,0,0.8)';
-  ctx.shadowBlur = 8;
-  wrapText(ctx, `"${lyric}"`, w/2, h*0.85, w*0.88, w*0.04);
-  
-  ctx.shadowBlur = 0;
-  ctx.font = `700 ${w*0.018}px sans-serif`;
-  ctx.fillText(`${k.song} — ${k.artist}`, w/2, h*0.96);
-}
 
-if (uploadPreviewSection) {
-  uploadPreviewSection.querySelectorAll('.effect-btn').forEach(btn => {
-    btn.onclick = () => {
-      uploadPreviewSection.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      uploadActiveEffect = btn.dataset.effect;
-      renderUploadPreview();
-    };
-  });
-}
 
-if (downloadOverlayBtn) {
-  downloadOverlayBtn.onclick = () => {
-    const a = document.createElement('a');
-    a.download = `margo-overlay-${Date.now()}.png`;
-    a.href = uploadPreviewCanvas.toDataURL('image/png');
-    a.click();
-    showToast("Image saved!");
-  };
-}
 
-if (uploadAnotherBtn) {
-  uploadAnotherBtn.onclick = () => {
-    uploadedImage = null;
-    uploadActiveEffect = "gradient";
-    mediaUploadInput.value = '';
-    uploadZone.parentElement.style.display = 'block';
-    uploadPreviewSection.style.display = 'none';
-    uploadPreviewSection.querySelectorAll('.effect-btn').forEach((b, i) => {
-      b.classList.toggle('active', i === 0);
-    });
-  };
-}
-
-document.getElementById("closeUploadModal").onclick = () => {
-  closeModal(uploadModal);
-  uploadAnotherBtn.click();
-};
 
 // ===== TOAST =====
 function showToast(msg) {
