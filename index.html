@@ -27,14 +27,7 @@
 
     <button id="enterBtn" class="primary-btn">Drop a line</button>
 
-    <div class="community-chips-landing">
-      <span class="chip-label">Join as</span>
-      <button class="community-chip" data-community="artist">Artist</button>
-      <button class="community-chip" data-community="fandom">Fandom</button>
-      <button class="community-chip" data-community="student">Student</button>
-    </div>
-
-    <div class="landing-stats">
+        <div class="landing-stats">
       <div class="landing-stat">
         <span class="landing-stat-num" id="landingPostCount">—</span>
         <span class="landing-stat-label">lyrics dropped</span>
@@ -44,11 +37,7 @@
         <span class="landing-stat-num">PH</span>
         <span class="landing-stat-label">Community</span>
       </div>
-      <div class="landing-stat-divider"></div>
-      <div class="landing-stat">
-        <span class="landing-stat-num">Bot</span>
-        <span class="landing-stat-label">Discord soon</span>
-      </div>
+
     </div>
 
     <div class="swipe-hint">
@@ -66,7 +55,7 @@
       <h2>Live Feed</h2>
       <p class="post-count"><span id="postCount">0</span> posts</p>
     </div>
-    <button id="openDiscordInfo" class="header-btn" title="Discord Bot">Bot</button>
+    <a id="discordInviteBtn" href="https://discord.gg/REPLACE_WITH_YOUR_LINK" target="_blank" rel="noopener noreferrer" class="header-btn" style="text-decoration:none;display:inline-flex;align-items:center;">Discord</a>
     <button id="openComposer" class="header-btn primary">Drop a line</button>
   </header>
 
@@ -429,20 +418,6 @@
     </div>
   </div>
 </div>
-
-<!-- ===== DISCORD MODAL ===== -->
-<div id="discordModal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Margo on Discord</h3>
-      <button id="closeDiscordModal" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="discord-hero">
-        <span class="discord-bot-icon">&#129302;</span>
-        <p class="discord-hero-title">Add Margo Bot to Your Server</p>
-        <p class="discord-hero-sub">Help your Discord community discover music through lyrics</p>
-      </div>
 
       <div class="discord-communities">
         <div class="discord-community-card"><div class="dc-name">&#127908;</div><span class="dc-label">Artists</span></div>
