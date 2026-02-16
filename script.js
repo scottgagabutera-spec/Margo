@@ -881,6 +881,119 @@ document.getElementById("closeAnalytics").onclick = () => closeModal(analyticsMo
 document.getElementById("closeSharePoster").onclick = () => { closeModal(sharePosterModal); resetPosterModal(); };
 
 
+
+// ===== POSTER: COLOR DOTS =====
+document.querySelectorAll(".color-dot").forEach(dot => {
+  dot.onclick = () => {
+    document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+    dot.classList.add("active");
+    selectedDesign = dot.dataset.design;
+    updateLivePreview();
+  };
+});
+
+// ===== POSTER: LIVE PREVIEW =====
+function updateLivePreview() {
+  if (!currentPost || !posterPreviewCanvas) return;
+  const ctx = posterPreviewCanvas.getContext('2d');
+  const W = 320, H = 320;
+  posterPreviewCanvas.width = W;
+  posterPreviewCanvas.height = H;
+  const c = POSTER_DESIGNS[selectedDesign];
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const fs = 13;
+  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*1.3}px serif`; ctx.textAlign = 'center';
+  ctx.fillText('MARGO', W/2, 38);
+  ctx.fillStyle = c.text; ctx.font = `italic ${fs*0.95}px serif`;
+  const prev = currentPost.text.length > 80 ? currentPost.text.substring(0,77)+'…' : currentPost.text;
+  wrapText(ctx, prev, W/2, H/2 - 28, W*0.85, fs*1.3);
+  ctx.fillStyle = c.primary; ctx.font = `600 ${fs*0.74}px sans-serif`;
+  ctx.fillText(`#${currentPost.emotion||'Nostalgia'}`, W/2, H/2 + 36);
+  ctx.strokeStyle = c.secondary; ctx.lineWidth = 1.1;
+  ctx.beginPath(); ctx.moveTo(W*0.3, H/2+50); ctx.lineTo(W*0.7, H/2+50); ctx.stroke();
+  const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
+  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*0.9}px serif`;
+  ctx.fillText(k.song.length > 26 ? k.song.substring(0,26)+'…' : k.song, W/2, H/2+72);
+  ctx.fillStyle = c.secondary; ctx.font = `500 ${fs*0.74}px sans-serif`;
+  ctx.fillText(k.artist.length > 30 ? k.artist.substring(0,30)+'…' : k.artist, W/2, H/2+88);
+}
+
+function wrapText(ctx, text, x, y, maxW, lh) {
+  const words = text.split(' ');
+  let line = '', lines = [];
+  for (let n = 0; n < words.length; n++) {
+    const test = line + words[n] + ' ';
+    if (ctx.measureText(test).width > maxW && n > 0) { lines.push(line); line = words[n] + ' '; }
+    else line = test;
+  }
+  lines.push(line);
+  const startY = y - ((lines.length - 1) * lh) / 2;
+  lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lh));
+}
+
+// ===== POSTER: STEP NAVIGATION =====
+nextToPlatform.onclick = () => { designStep.classList.remove("active"); platformStep.classList.add("active"); };
+backToDesign.onclick   = () => { platformStep.classList.remove("active"); designStep.classList.add("active"); };
+backToPlatform.onclick = () => { shareStep.classList.remove("active"); platformStep.classList.add("active"); };
+
+// ===== POSTER: PLATFORM SELECTION =====
+document.querySelectorAll(".platform-btn:not(.camera-btn)").forEach(btn => {
+  btn.onclick = async () => {
+    selectedPosterSize = btn.dataset.size;
+    await generatePoster(selectedPosterSize, selectedDesign);
+    shareableLink.value = `${APP_BASE_URL}?post=${currentPost.id}`;
+    const hints = {
+      'instagram-square': 'Save and post to Instagram feed',
+      'instagram-story':  'Save and post to Instagram or TikTok Stories',
+      'twitter':          'Save and post to Twitter / X',
+      'facebook':         'Save and post to Facebook',
+      'pinterest':        'Save and pin to Pinterest'
+    };
+    if (platformShareHint) platformShareHint.textContent = hints[selectedPosterSize] || '';
+    platformStep.classList.remove("active");
+    shareStep.classList.add("active");
+  };
+});
+
+// ===== GENERATE POSTER =====
+async function generatePoster(size, design) {
+  if (!currentPost) return;
+  const sizes = {
+    'instagram-square': { w:1080, h:1080 },
+    'instagram-story':  { w:1080, h:1920 },
+    'twitter':          { w:1200, h:675  },
+    'facebook':         { w:1200, h:630  },
+    'pinterest':        { w:1000, h:1500 }
+  };
+  const d   = sizes[size];
+  const c   = POSTER_DESIGNS[design];
+  const ctx = posterCanvas.getContext('2d');
+  posterCanvas.width  = d.w;
+  posterCanvas.height = d.h;
+  const g = ctx.createLinearGradient(0, 0, 0, d.h);
+  g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, d.w, d.h);
+  const fs = d.w * 0.032;
+  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*1.4}px serif`; ctx.textAlign = 'center';
+  ctx.fillText('MARGO', d.w/2, d.h*0.11);
+  ctx.fillStyle = c.text; ctx.font = `italic ${fs*1.15}px serif`;
+  wrapText(ctx, currentPost.text, d.w/2, d.h*0.38, d.w*0.85, fs*1.7);
+  ctx.fillStyle = c.primary; ctx.font = `600 ${fs*0.85}px sans-serif`;
+  ctx.fillText(`#${currentPost.emotion||'Nostalgia'}`, d.w/2, d.h*0.62);
+  ctx.strokeStyle = c.secondary; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(d.w*0.3, d.h*0.68); ctx.lineTo(d.w*0.7, d.h*0.68); ctx.stroke();
+  const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
+  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*1.1}px serif`;
+  ctx.fillText(k.song, d.w/2, d.h*0.78);
+  ctx.fillStyle = c.secondary; ctx.font = `500 ${fs*0.9}px sans-serif`;
+  ctx.fillText(k.artist, d.w/2, d.h*0.85);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = `500 ${fs*0.6}px sans-serif`;
+  ctx.fillText(APP_BASE_URL.replace(/^https?:\/\//, ''), d.w/2, d.h*0.95);
+  return new Promise(res => posterCanvas.toBlob(blob => { generatedPosterBlob = blob; res(); }, 'image/png'));
+}
+
 // ===== SHARE POSTER BUTTON =====
 sharePosterBtn.onclick = () => {
   closeModal(postcardModal);
