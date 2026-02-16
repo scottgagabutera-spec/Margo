@@ -307,12 +307,18 @@
         <div class="color-picker-section">
           <label>Color</label>
           <div class="color-dots">
-            <button class="color-dot active" data-design="midnight-gold"  style="background:linear-gradient(135deg,#0d0d0d,#d4af37);"  title="Midnight Gold"></button>
-            <button class="color-dot"        data-design="royal-purple"   style="background:linear-gradient(135deg,#1a0033,#c77dff);"  title="Royal Purple"></button>
-            <button class="color-dot"        data-design="neon-cyan"      style="background:linear-gradient(135deg,#0a1420,#00e5ff);"  title="Neon Cyan"></button>
-            <button class="color-dot"        data-design="sunset-coral"   style="background:linear-gradient(135deg,#1a0a0a,#ff6b6b);"  title="Sunset Coral"></button>
-            <button class="color-dot"        data-design="emerald-night"  style="background:linear-gradient(135deg,#051a0d,#50fa7b);"  title="Emerald Night"></button>
-            <button class="color-dot"        data-design="rose-gold"      style="background:linear-gradient(135deg,#1a0d0f,#f4a4c0);"  title="Rose Gold"></button>
+            <button class="color-dot active" data-design="midnight-gold"    style="background:linear-gradient(135deg,#0d0d0d,#d4af37);"   title="Midnight Gold"></button>
+            <button class="color-dot"        data-design="royal-purple"     style="background:linear-gradient(135deg,#1a0033,#c77dff);"   title="Royal Purple"></button>
+            <button class="color-dot"        data-design="neon-cyan"        style="background:linear-gradient(135deg,#0a1420,#00e5ff);"   title="Neon Cyan"></button>
+            <button class="color-dot"        data-design="sunset-coral"     style="background:linear-gradient(135deg,#1a0a0a,#ff6b6b);"   title="Sunset Coral"></button>
+            <button class="color-dot"        data-design="emerald-night"    style="background:linear-gradient(135deg,#051a0d,#50fa7b);"   title="Emerald Night"></button>
+            <button class="color-dot"        data-design="rose-gold"        style="background:linear-gradient(135deg,#1a0d0f,#f4a4c0);"   title="Rose Gold"></button>
+            <button class="color-dot"        data-design="brutalist"        style="background:linear-gradient(135deg,#ffffff,#000000);"   title="Brutalist"></button>
+            <button class="color-dot"        data-design="y2k-chrome"       style="background:linear-gradient(135deg,#000033,#00ffff);"   title="Y2K Chrome"></button>
+            <button class="color-dot"        data-design="vaporwave"        style="background:linear-gradient(135deg,#ff71ce,#05ffa1);"   title="Vaporwave"></button>
+            <button class="color-dot"        data-design="neon-dark"        style="background:linear-gradient(135deg,#0a0a0a,#ff00ff);"   title="Neon Dark"></button>
+            <button class="color-dot"        data-design="cream-editorial"  style="background:linear-gradient(135deg,#f5f1e8,#2a2520);"   title="Cream Editorial"></button>
+            <button class="color-dot"        data-design="monochrome"       style="background:linear-gradient(135deg,#000000,#ffffff);"   title="Monochrome"></button>
           </div>
         </div>
         <button id="nextToPlatform" class="primary-btn full">Choose Platform</button>
@@ -343,14 +349,14 @@
           </button>
         </div>
 
-        <div class="export-section-label camera-export-label" style="margin-top:6px;">Record a Video</div>
+        <div class="export-section-label camera-export-label" style="margin-top:6px;">Add Your Media</div>
         <div class="platform-options">
-          <button class="platform-btn camera-btn" id="openCameraBtn">
+          <button class="platform-btn camera-btn" id="openUploadBtn">
             <div class="platform-info">
-              <span class="platform-name">Record with your camera</span>
+              <span class="platform-name">Upload your photo</span>
               <span class="platform-dim">Lyric overlay · effects · save</span>
             </div>
-            <span class="platform-badge purple">Live</span>
+            <span class="platform-badge purple">New</span>
           </button>
         </div>
 
@@ -382,47 +388,43 @@
   </div>
 </div>
 
-<!-- ===== CAMERA MODAL ===== -->
-<div id="cameraModal" class="modal hidden">
-  <div class="modal-content camera-modal-content">
+
+<!-- ===== UPLOAD MEDIA MODAL ===== -->
+<div id="uploadModal" class="modal hidden">
+  <div class="modal-content">
     <div class="modal-header">
-      <h3>Record a Video</h3>
-      <button id="closeCameraModal" class="close-btn">×</button>
+      <h3>Add Your Photo</h3>
+      <button id="closeUploadModal" class="close-btn">×</button>
     </div>
     <div class="modal-body">
-      <div class="camera-viewport">
-        <video id="cameraVideo" autoplay muted playsinline></video>
-        <canvas id="cameraCanvas"></canvas>
-        <div class="camera-overlay-lyrics" id="cameraOverlayLyrics">
-          <div class="camera-lyric-text" id="cameraLyricText"></div>
-          <div class="camera-lyric-meta" id="cameraLyricMeta"></div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="mediaUploadInput" accept="image/*" style="display:none;">
+        <div class="upload-prompt">
+          <span class="upload-icon">📷</span>
+          <p class="upload-text">Tap to upload or drag image here</p>
+          <p class="upload-hint">Your lyric will overlay on your photo</p>
+          <p class="upload-limit">Max 10MB · JPG, PNG, WEBP</p>
         </div>
       </div>
-      <div id="cameraNoSupport" class="camera-no-support" style="display:none;">
-        <span class="camera-no-support-icon">&#128247;</span>
-        <span>Camera access not available.<br>Try Chrome or Safari on your phone.</span>
+      
+      <div id="uploadPreviewSection" class="upload-preview-section" style="display:none;">
+        <canvas id="uploadPreviewCanvas"></canvas>
+        
+        <label>Overlay Effect</label>
+        <div class="camera-effects-row">
+          <button class="effect-btn active" data-effect="gradient">Gradient</button>
+          <button class="effect-btn"        data-effect="dark">Dark</button>
+          <button class="effect-btn"        data-effect="blur">Blur BG</button>
+          <button class="effect-btn"        data-effect="saturate">Vibrant</button>
+          <button class="effect-btn"        data-effect="none">None</button>
+        </div>
+        
+        <button id="downloadOverlayBtn" class="primary-btn full">Save Image</button>
+        <button id="uploadAnotherBtn" class="secondary-btn full">Upload Another</button>
       </div>
-
-      <label>Overlay Effect</label>
-      <div class="camera-effects-row">
-        <button class="effect-btn active" data-effect="gradient">Gradient</button>
-        <button class="effect-btn"        data-effect="dark">Dark</button>
-        <button class="effect-btn"        data-effect="frosted">Frosted</button>
-        <button class="effect-btn"        data-effect="gold">Gold</button>
-        <button class="effect-btn"        data-effect="none">None</button>
-      </div>
-
-      <div class="camera-timer" id="cameraTimer"></div>
-      <div class="camera-controls">
-        <button class="cam-ctrl-btn" id="flipCameraBtn" title="Flip camera">&#8635;</button>
-        <button class="cam-record-btn" id="recordBtn" title="Record">&#9210;</button>
-        <button class="cam-ctrl-btn" id="downloadVideoBtn" title="Save video" style="display:none;">&#128190;</button>
-      </div>
-      <p class="camera-download-hint" id="cameraHint">Tap record to start — up to 30 seconds</p>
     </div>
   </div>
 </div>
-
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
