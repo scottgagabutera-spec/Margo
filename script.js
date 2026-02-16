@@ -179,12 +179,18 @@ function updateLandingCount() {
 
 // ===== POSTER DESIGNS =====
 const POSTER_DESIGNS = {
-  'midnight-gold':  { bg:['#0d0d0d','#1a1410','#0d0d0d'], primary:'#d4af37', secondary:'rgba(212,175,55,0.65)', text:'#f8f8f8' },
-  'royal-purple':   { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff', secondary:'rgba(199,125,255,0.65)', text:'#f8f8f8' },
-  'neon-cyan':      { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff', secondary:'rgba(0,229,255,0.65)',   text:'#f8f8f8' },
-  'sunset-coral':   { bg:['#1a0a0a','#2d1416','#1a0a0a'], primary:'#ff6b6b', secondary:'rgba(255,107,107,0.65)',text:'#f8f8f8' },
-  'emerald-night':  { bg:['#051a0d','#0d2e1a','#051a0d'], primary:'#50fa7b', secondary:'rgba(80,250,123,0.65)',  text:'#f8f8f8' },
-  'rose-gold':      { bg:['#1a0d0f','#2d1a1f','#1a0d0f'], primary:'#f4a4c0', secondary:'rgba(244,164,192,0.65)',text:'#f8f8f8' }
+  'midnight-gold':    { bg:['#0d0d0d','#1a1410','#0d0d0d'], primary:'#d4af37', secondary:'rgba(212,175,55,0.65)', text:'#f8f8f8', font:'serif' },
+  'royal-purple':     { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff', secondary:'rgba(199,125,255,0.65)', text:'#f8f8f8', font:'serif' },
+  'neon-cyan':        { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff', secondary:'rgba(0,229,255,0.65)', text:'#f8f8f8', font:'sans' },
+  'sunset-coral':     { bg:['#1a0a0a','#2d1416','#1a0a0a'], primary:'#ff6b6b', secondary:'rgba(255,107,107,0.65)', text:'#f8f8f8', font:'serif' },
+  'emerald-night':    { bg:['#051a0d','#0d2e1a','#051a0d'], primary:'#50fa7b', secondary:'rgba(80,250,123,0.65)', text:'#f8f8f8', font:'sans' },
+  'rose-gold':        { bg:['#1a0d0f','#2d1a1f','#1a0d0f'], primary:'#f4a4c0', secondary:'rgba(244,164,192,0.65)', text:'#f8f8f8', font:'serif' },
+  'brutalist':        { bg:['#ffffff','#f5f5f5','#ffffff'], primary:'#000000', secondary:'rgba(0,0,0,0.6)', text:'#000000', font:'sans-bold' },
+  'y2k-chrome':       { bg:['#000033','#1a1a4d','#000033'], primary:'#00ffff', secondary:'rgba(255,0,255,0.65)', text:'#ffffff', font:'sans-bold' },
+  'vaporwave':        { bg:['#ff71ce','#b967ff','#05ffa1'], primary:'#ffffff', secondary:'rgba(255,255,255,0.8)', text:'#ffffff', font:'sans' },
+  'neon-dark':        { bg:['#0a0a0a','#0f0f0f','#0a0a0a'], primary:'#ff00ff', secondary:'rgba(0,255,255,0.7)', text:'#00ffff', font:'sans-bold' },
+  'cream-editorial':  { bg:['#f5f1e8','#ebe3d5','#f5f1e8'], primary:'#2a2520', secondary:'rgba(42,37,32,0.6)', text:'#2a2520', font:'serif' },
+  'monochrome':       { bg:['#000000','#000000','#000000'], primary:'#ffffff', secondary:'rgba(255,255,255,0.7)', text:'#ffffff', font:'sans' }
 };
 
 // ===== COMMUNITY CONFIG =====
@@ -903,7 +909,8 @@ function updateLivePreview() {
   g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   const fs = 13;
-  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*1.3}px serif`; ctx.textAlign = 'center';
+  ctx.fillStyle = c.primary; const headerFont = c.font === 'sans-bold' ? `900 ${fs*1.4}px sans-serif` : c.font === 'sans' ? `700 ${fs*1.3}px sans-serif` : `bold ${fs*1.3}px serif`;
+  ctx.font = headerFont; ctx.textAlign = 'center';
   ctx.fillText('MARGO', W/2, 38);
   ctx.fillStyle = c.text; ctx.font = `italic ${fs*0.95}px serif`;
   const prev = currentPost.text.length > 80 ? currentPost.text.substring(0,77)+'…' : currentPost.text;
@@ -981,7 +988,8 @@ async function generatePoster(size, design) {
   g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
   ctx.fillStyle = g; ctx.fillRect(0, 0, d.w, d.h);
   const fs = d.w * 0.032;
-  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*1.4}px serif`; ctx.textAlign = 'center';
+  ctx.fillStyle = c.primary; const headerFont = c.font === 'sans-bold' ? `900 ${fs*1.6}px sans-serif` : c.font === 'sans' ? `700 ${fs*1.4}px sans-serif` : `bold ${fs*1.4}px serif`;
+  ctx.font = headerFont; ctx.textAlign = 'center';
   ctx.fillText('MARGO', d.w/2, d.h*0.11);
   ctx.fillStyle = c.text; ctx.font = `italic ${fs*1.15}px serif`;
   wrapText(ctx, currentPost.text, d.w/2, d.h*0.38, d.w*0.85, fs*1.7);
@@ -1083,179 +1091,200 @@ function downloadPosterFile() {
   showToast("Poster saved!");
 }
 
-// ===== CAMERA =====
-const cameraVideo      = document.getElementById("cameraVideo");
-const cameraCanvas     = document.getElementById("cameraCanvas");
-const cameraOverlay    = document.getElementById("cameraOverlayLyrics");
-const cameraLyricText  = document.getElementById("cameraLyricText");
-const cameraLyricMeta  = document.getElementById("cameraLyricMeta");
-const cameraNoSupport  = document.getElementById("cameraNoSupport");
-const recordBtn        = document.getElementById("recordBtn");
-const flipCameraBtn    = document.getElementById("flipCameraBtn");
-const downloadVideoBtn = document.getElementById("downloadVideoBtn");
-const cameraTimer      = document.getElementById("cameraTimer");
-const cameraHint       = document.getElementById("cameraHint");
-const openCameraBtn    = document.getElementById("openCameraBtn");
 
-let cameraStream     = null;
-let mediaRecorder    = null;
-let recordedChunks   = [];
-let isRecording      = false;
-let recordingTimer   = null;
-let recordingSeconds = 0;
-let useFrontCamera   = true;
-let activeEffect     = "gradient";
+// ===== UPLOAD MEDIA MODAL =====
+const uploadModal = document.getElementById("uploadModal");
+const uploadZone = document.getElementById("uploadZone");
+const mediaUploadInput = document.getElementById("mediaUploadInput");
+const uploadPreviewSection = document.getElementById("uploadPreviewSection");
+const uploadPreviewCanvas = document.getElementById("uploadPreviewCanvas");
+const downloadOverlayBtn = document.getElementById("downloadOverlayBtn");
+const uploadAnotherBtn = document.getElementById("uploadAnotherBtn");
+const openUploadBtn = document.getElementById("openUploadBtn");
 
-const CAMERA_EFFECTS = {
-  gradient: (ctx,w,h) => {
-    const g = ctx.createLinearGradient(0,h*0.55,0,h);
-    g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.74)');
-    ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+let uploadedImage = null;
+let uploadActiveEffect = "gradient";
+
+const OVERLAY_EFFECTS = {
+  gradient: (ctx, w, h) => {
+    const g = ctx.createLinearGradient(0, h*0.6, 0, h);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.85)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
   },
-  dark:    (ctx,w,h) => { ctx.fillStyle='rgba(0,0,0,0.44)'; ctx.fillRect(0,0,w,h); },
-  frosted: (ctx,w,h) => {
-    ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(0,h*0.62,w,h*0.38);
-    const g = ctx.createLinearGradient(0,h*0.55,0,h);
-    g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.58)');
-    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  dark: (ctx, w, h) => {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, w, h);
   },
-  gold:    (ctx,w,h) => {
-    const g = ctx.createLinearGradient(0,h*0.5,0,h);
-    g.addColorStop(0,'rgba(180,130,0,0)'); g.addColorStop(1,'rgba(140,100,0,0.7)');
-    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  blur: (ctx, w, h) => {
+    ctx.filter = 'blur(12px)';
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = w;
+    tempCanvas.height = h;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(ctx.canvas, 0, 0);
+    ctx.filter = 'none';
+    ctx.drawImage(tempCanvas, 0, 0);
+    const g = ctx.createLinearGradient(0, h*0.6, 0, h);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.7)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  },
+  saturate: (ctx, w, h) => {
+    ctx.filter = 'saturate(1.5) contrast(1.1)';
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = w;
+    tempCanvas.height = h;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(ctx.canvas, 0, 0);
+    ctx.filter = 'none';
+    ctx.drawImage(tempCanvas, 0, 0);
+    const g = ctx.createLinearGradient(0, h*0.6, 0, h);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.75)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
   },
   none: () => {}
 };
 
-document.querySelectorAll(".effect-btn").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".effect-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    activeEffect = btn.dataset.effect;
-  };
-});
-
-if (openCameraBtn) {
-  openCameraBtn.onclick = () => {
+if (openUploadBtn) {
+  openUploadBtn.onclick = () => {
+    if (!currentPost) { showToast("Open a post first"); return; }
     closeModal(sharePosterModal);
-    setTimeout(openCameraModal, 250);
+    setTimeout(() => openModal(uploadModal), 100);
   };
 }
 
-async function openCameraModal() {
-  if (!currentPost) { showToast("Open a post first"); return; }
-  const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
-  const lyric = currentPost.text.length > 78 ? currentPost.text.substring(0,75)+'…' : currentPost.text;
-  if (cameraLyricText) cameraLyricText.textContent = `"${lyric}"`;
-  if (cameraLyricMeta) cameraLyricMeta.textContent = currentPost.mode !== "guess" ? `${k.song} — ${k.artist}` : 'MARGO · margo-silk.vercel.app';
-  openModal(cameraModal);
-  await startCamera();
+if (uploadZone) {
+  uploadZone.onclick = () => mediaUploadInput.click();
+  
+  uploadZone.ondragover = (e) => {
+    e.preventDefault();
+    uploadZone.classList.add('dragover');
+  };
+  
+  uploadZone.ondragleave = () => uploadZone.classList.remove('dragover');
+  
+  uploadZone.ondrop = (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]);
+  };
 }
 
-async function startCamera() {
-  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showCameraUnsupported(); return; }
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: useFrontCamera ? "user" : "environment", width:{ideal:1080}, height:{ideal:1920} },
-      audio: true
-    });
-    cameraVideo.srcObject = cameraStream;
-    cameraVideo.style.display = "block";
-    if (cameraNoSupport) cameraNoSupport.style.display = "none";
-    if (cameraOverlay)  cameraOverlay.style.display  = "block";
-    requestAnimationFrame(drawCameraOverlay);
-  } catch (err) {
-    if (err.name === "NotAllowedError") showToast("Camera permission denied. Please allow camera access.");
-    else showCameraUnsupported();
+if (mediaUploadInput) {
+  mediaUploadInput.onchange = (e) => {
+    if (e.target.files[0]) handleUpload(e.target.files[0]);
+  };
+}
+
+function handleUpload(file) {
+  if (!file.type.startsWith('image/')) {
+    showToast("Please upload an image file");
+    return;
   }
-}
-
-function showCameraUnsupported() {
-  if (cameraVideo)     cameraVideo.style.display     = "none";
-  if (cameraNoSupport) cameraNoSupport.style.display = "flex";
-  if (cameraOverlay)   cameraOverlay.style.display   = "none";
-}
-
-function drawCameraOverlay() {
-  if (!cameraStream || !cameraCanvas) return;
-  const vp = cameraCanvas.parentElement;
-  const w  = vp ? vp.offsetWidth  : 320;
-  const h  = vp ? vp.offsetHeight : 568;
-  if (cameraCanvas.width !== w || cameraCanvas.height !== h) { cameraCanvas.width = w; cameraCanvas.height = h; }
-  const ctx = cameraCanvas.getContext('2d');
-  ctx.clearRect(0,0,w,h);
-  (CAMERA_EFFECTS[activeEffect] || CAMERA_EFFECTS.gradient)(ctx,w,h);
-  ctx.save();
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = 'bold 12px serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('MARGO', w/2, 20);
-  ctx.restore();
-  if (cameraStream && cameraStream.active) requestAnimationFrame(drawCameraOverlay);
-}
-
-flipCameraBtn.onclick = () => { useFrontCamera = !useFrontCamera; startCamera(); };
-recordBtn.onclick     = () => { if (!isRecording) startRecording(); else stopRecording(); };
-
-function startRecording() {
-  if (!cameraStream) { showToast("Camera not ready"); return; }
-  recordedChunks = [];
-  const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-    ? "video/webm;codecs=vp9,opus"
-    : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "video/mp4";
-  try { mediaRecorder = new MediaRecorder(cameraStream, { mimeType: mime }); }
-  catch (e) { mediaRecorder = new MediaRecorder(cameraStream); }
-
-  mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
-  mediaRecorder.onstop = () => {
-    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "video/webm" });
-    const url  = URL.createObjectURL(blob);
-    if (downloadVideoBtn) {
-      downloadVideoBtn.style.display = "flex";
-      downloadVideoBtn.onclick = () => {
-        const ext = (mediaRecorder.mimeType||"video/webm").includes("mp4") ? "mp4" : "webm";
-        const a = document.createElement("a");
-        a.href = url; a.download = `margo-${Date.now()}.${ext}`; a.click();
-        showToast("Video saved! Upload to TikTok or Reels.");
-      };
-    }
-    if (cameraHint) cameraHint.textContent = "Done — tap the save button to download";
+  if (file.size > 10 * 1024 * 1024) {
+    showToast("File too large. Max 10MB");
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      uploadedImage = img;
+      renderUploadPreview();
+      uploadZone.parentElement.style.display = 'none';
+      uploadPreviewSection.style.display = 'flex';
+    };
+    img.src = e.target.result;
   };
-
-  mediaRecorder.start(100);
-  isRecording = true;
-  recordingSeconds = 0;
-  recordBtn.textContent = "⏹";
-  recordBtn.classList.add("recording");
-  if (cameraHint) cameraHint.textContent = "Recording… tap to stop";
-
-  recordingTimer = setInterval(() => {
-    recordingSeconds++;
-    if (cameraTimer) cameraTimer.textContent = `● REC 0:${String(recordingSeconds).padStart(2,'0')}`;
-    if (recordingSeconds >= 30) stopRecording();
-  }, 1000);
+  reader.readAsDataURL(file);
 }
 
-function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
-  isRecording = false;
-  clearInterval(recordingTimer);
-  recordBtn.textContent = "⏺";
-  recordBtn.classList.remove("recording");
-  if (cameraTimer) cameraTimer.textContent = "";
+function renderUploadPreview() {
+  if (!uploadedImage || !currentPost) return;
+  
+  const canvas = uploadPreviewCanvas;
+  const ctx = canvas.getContext('2d');
+  
+  const maxW = 1080;
+  const maxH = 1920;
+  let w = uploadedImage.width;
+  let h = uploadedImage.height;
+  
+  if (w > maxW || h > maxH) {
+    const ratio = Math.min(maxW / w, maxH / h);
+    w *= ratio;
+    h *= ratio;
+  }
+  
+  canvas.width = w;
+  canvas.height = h;
+  
+  ctx.drawImage(uploadedImage, 0, 0, w, h);
+  
+  (OVERLAY_EFFECTS[uploadActiveEffect] || OVERLAY_EFFECTS.gradient)(ctx, w, h);
+  
+  const lyric = currentPost.text.length > 100 ? currentPost.text.substring(0,97)+'…' : currentPost.text;
+  const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
+  
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.font = `900 ${w*0.018}px sans-serif`;
+  ctx.fillText('MARGO', w/2, h*0.08);
+  
+  ctx.font = `italic ${w*0.026}px serif`;
+  ctx.shadowColor = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur = 8;
+  wrapText(ctx, `"${lyric}"`, w/2, h*0.85, w*0.88, w*0.04);
+  
+  ctx.shadowBlur = 0;
+  ctx.font = `700 ${w*0.018}px sans-serif`;
+  ctx.fillText(`${k.song} — ${k.artist}`, w/2, h*0.96);
 }
 
-function stopCamera() {
-  stopRecording();
-  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
-  if (cameraVideo) cameraVideo.srcObject = null;
-  if (downloadVideoBtn) downloadVideoBtn.style.display = "none";
-  if (cameraHint) cameraHint.textContent = "Tap record to start — up to 30 seconds";
-  if (cameraTimer) cameraTimer.textContent = "";
+if (uploadPreviewSection) {
+  uploadPreviewSection.querySelectorAll('.effect-btn').forEach(btn => {
+    btn.onclick = () => {
+      uploadPreviewSection.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      uploadActiveEffect = btn.dataset.effect;
+      renderUploadPreview();
+    };
+  });
 }
 
-document.getElementById("closeCameraModal").onclick = () => { stopCamera(); closeModal(cameraModal); };
+if (downloadOverlayBtn) {
+  downloadOverlayBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.download = `margo-overlay-${Date.now()}.png`;
+    a.href = uploadPreviewCanvas.toDataURL('image/png');
+    a.click();
+    showToast("Image saved!");
+  };
+}
+
+if (uploadAnotherBtn) {
+  uploadAnotherBtn.onclick = () => {
+    uploadedImage = null;
+    uploadActiveEffect = "gradient";
+    mediaUploadInput.value = '';
+    uploadZone.parentElement.style.display = 'block';
+    uploadPreviewSection.style.display = 'none';
+    uploadPreviewSection.querySelectorAll('.effect-btn').forEach((b, i) => {
+      b.classList.toggle('active', i === 0);
+    });
+  };
+}
+
+document.getElementById("closeUploadModal").onclick = () => {
+  closeModal(uploadModal);
+  uploadAnotherBtn.click();
+};
 
 // ===== TOAST =====
 function showToast(msg) {
