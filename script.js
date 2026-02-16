@@ -1002,7 +1002,7 @@ backToDesign.onclick   = () => { platformStep.classList.remove("active"); design
 backToPlatform.onclick = () => { shareStep.classList.remove("active"); platformStep.classList.add("active"); };
 
 // ===== POSTER: PLATFORM SELECTION =====
-document.querySelectorAll(".platform-btn:not(.camera-btn)").forEach(btn => {
+document.querySelectorAll(".platform-btn[data-size]").forEach(btn => {
   btn.onclick = async () => {
     selectedPosterSize = btn.dataset.size;
     await generatePoster(selectedPosterSize, selectedDesign);
