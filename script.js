@@ -114,7 +114,6 @@ const shareableLink  = document.getElementById("shareableLink");
 const copyLinkBtn    = document.getElementById("copyLinkBtn");
 const shareNativeBtn = document.getElementById("shareNativeBtn");
 const downloadManualBtn = document.getElementById("downloadManualBtn");
-const platformShareHint = document.getElementById("platformShareHint");
 
 // ===== STATE =====
 let currentMode       = "share";
@@ -944,16 +943,21 @@ document.querySelectorAll(".platform-btn:not(.camera-btn)").forEach(btn => {
     selectedPosterSize = btn.dataset.size;
     await generatePoster(selectedPosterSize, selectedDesign);
     shareableLink.value = `${APP_BASE_URL}?post=${currentPost.id}`;
-    const hints = {
-      'instagram-square': 'Save and post to Instagram feed',
-      'instagram-story':  'Save and post to Instagram or TikTok Stories',
-      'twitter':          'Save and post to Twitter / X',
-      'facebook':         'Save and post to Facebook',
-      'pinterest':        'Save and pin to Pinterest'
-    };
-    if (platformShareHint) platformShareHint.textContent = hints[selectedPosterSize] || '';
     platformStep.classList.remove("active");
     shareStep.classList.add("active");
+    // For Discord: auto-highlight the copy button
+    const copyDiscordBtn = document.getElementById("copyForDiscordBtn");
+    if (copyDiscordBtn) {
+      if (selectedPosterSize === 'discord') {
+        copyDiscordBtn.style.background = 'linear-gradient(135deg,#5865f2,#404eed)';
+        copyDiscordBtn.style.color = '#fff';
+        copyDiscordBtn.textContent = 'Copy for Discord (Recommended)';
+      } else {
+        copyDiscordBtn.style.background = '';
+        copyDiscordBtn.style.color = '';
+        copyDiscordBtn.textContent = 'Copy for Discord';
+      }
+    }
   };
 });
 
@@ -965,7 +969,8 @@ async function generatePoster(size, design) {
     'instagram-story':  { w:1080, h:1920 },
     'twitter':          { w:1200, h:675  },
     'facebook':         { w:1200, h:630  },
-    'pinterest':        { w:1000, h:1500 }
+    'pinterest':        { w:1000, h:1500 },
+    'discord':          { w:1280, h:720  }
   };
   const d   = sizes[size];
   const c   = POSTER_DESIGNS[design];
@@ -1010,7 +1015,6 @@ function resetPosterModal() {
   selectedPosterSize = null;
   generatedPosterBlob = null;
   document.querySelectorAll(".color-dot").forEach((d,i) => d.classList.toggle("active", i===0));
-  if (platformShareHint) platformShareHint.textContent = '';
 }
 
 // ===== COPY LINK =====
@@ -1027,6 +1031,27 @@ copyLinkBtn.onclick = async () => {
 };
 
 // ===== SHARE NATIVE =====
+
+// ===== COPY FOR DISCORD =====
+const copyForDiscordBtn = document.getElementById("copyForDiscordBtn");
+if (copyForDiscordBtn) {
+  copyForDiscordBtn.onclick = async () => {
+    if (!generatedPosterBlob) { showToast("Generating poster…"); return; }
+    try {
+      // Try Clipboard API (works in Chrome/Edge)
+      const item = new ClipboardItem({ "image/png": generatedPosterBlob });
+      await navigator.clipboard.write([item]);
+      copyForDiscordBtn.textContent = "Copied! Now paste in Discord";
+      setTimeout(() => { copyForDiscordBtn.textContent = "Copy for Discord"; }, 3000);
+      showToast("Image copied — paste directly in Discord!");
+    } catch (err) {
+      // Fallback: download and instruct
+      downloadPosterFile();
+      showToast("Saved to device — drag the image into Discord");
+    }
+  };
+}
+
 shareNativeBtn.onclick = async () => {
   if (!generatedPosterBlob) { showToast("Generating poster…"); return; }
   const sd = {
