@@ -13,7 +13,7 @@
   <title>MARGO — When words fail, drop a line</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,600;1,600&family=Merriweather:wght@700&family=Inter:wght@700&family=Space+Grotesk:wght@700&family=Bebas+Neue&family=Raleway:wght@700&family=Crimson+Text:wght@600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -321,6 +321,17 @@
             <button class="color-dot"        data-design="monochrome"       style="background:linear-gradient(135deg,#000000,#ffffff);"   title="Monochrome"></button>
           </div>
         </div>
+        <label>Font Style</label>
+        <div class="font-picker">
+          <button class="font-option active" data-font="playfair">Playfair</button>
+          <button class="font-option" data-font="lora">Lora</button>
+          <button class="font-option" data-font="merriweather">Merriweather</button>
+          <button class="font-option" data-font="inter">Inter</button>
+          <button class="font-option" data-font="space">Space</button>
+          <button class="font-option" data-font="bebas">Bebas</button>
+          <button class="font-option" data-font="raleway">Raleway</button>
+          <button class="font-option" data-font="crimson">Crimson</button>
+        </div>
         <button id="nextToPlatform" class="primary-btn full">Choose Platform</button>
       </div>
 
@@ -347,18 +358,19 @@
             <div class="platform-info"><span class="platform-name">Discord</span><span class="platform-dim">1280 × 720</span></div>
             <span class="platform-badge" style="background:linear-gradient(135deg,#5865f2,#404eed);color:#fff;">Paste</span>
           </button>
+          <button class="platform-btn" data-size="reddit">
+            <div class="platform-info"><span class="platform-name">Reddit</span><span class="platform-dim">1200 × 1200</span></div>
+          </button>
         </div>
 
-        <div class="export-section-label camera-export-label" style="margin-top:6px;">Add Your Media</div>
+        <div class="export-section-label" style="margin-top:10px;">Custom Background</div>
         <div class="platform-options">
-          <button class="platform-btn camera-btn" id="openUploadBtn">
-            <div class="platform-info">
-              <span class="platform-name">Upload your photo</span>
-              <span class="platform-dim">Lyric overlay · effects · save</span>
-            </div>
+          <button class="platform-btn" id="uploadBgBtn">
+            <div class="platform-info"><span class="platform-name">Upload your photo</span><span class="platform-dim">Use as poster background</span></div>
             <span class="platform-badge purple">New</span>
           </button>
         </div>
+        <input type="file" id="bgUploadInput" accept="image/*" style="display:none;">
 
         <button id="backToDesign" class="secondary-btn full">Back</button>
       </div>
@@ -388,43 +400,6 @@
   </div>
 </div>
 
-
-<!-- ===== UPLOAD MEDIA MODAL ===== -->
-<div id="uploadModal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Add Your Photo</h3>
-      <button id="closeUploadModal" class="close-btn">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="upload-zone" id="uploadZone">
-        <input type="file" id="mediaUploadInput" accept="image/*" style="display:none;">
-        <div class="upload-prompt">
-          <span class="upload-icon">📷</span>
-          <p class="upload-text">Tap to upload or drag image here</p>
-          <p class="upload-hint">Your lyric will overlay on your photo</p>
-          <p class="upload-limit">Max 10MB · JPG, PNG, WEBP</p>
-        </div>
-      </div>
-      
-      <div id="uploadPreviewSection" class="upload-preview-section" style="display:none;">
-        <canvas id="uploadPreviewCanvas"></canvas>
-        
-        <label>Overlay Effect</label>
-        <div class="camera-effects-row">
-          <button class="effect-btn active" data-effect="gradient">Gradient</button>
-          <button class="effect-btn"        data-effect="dark">Dark</button>
-          <button class="effect-btn"        data-effect="blur">Blur BG</button>
-          <button class="effect-btn"        data-effect="saturate">Vibrant</button>
-          <button class="effect-btn"        data-effect="none">None</button>
-        </div>
-        
-        <button id="downloadOverlayBtn" class="primary-btn full">Save Image</button>
-        <button id="uploadAnotherBtn" class="secondary-btn full">Upload Another</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
