@@ -10,6 +10,7 @@
 
 :root {
   --gold:        #d4af37;
+  --gold-glow-3d: rgba(212,175,55,0.4);
   --gold-hover:  #f0c24a;
   --gold-dim:    rgba(212,175,55,0.65);
   --gold-glow:   rgba(212,175,55,0.1);
@@ -79,8 +80,10 @@ body {
   justify-content: center;
   align-items: center;
   gap: 26px;
-  padding: 48px 24px 88px;
+  padding: 48px 20px 88px;
   position: relative;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .center::before {
@@ -100,7 +103,7 @@ body {
   letter-spacing: 8px;
   color: var(--gold);
   text-align: center;
-  text-shadow: 0 4px 24px rgba(212,175,55,0.3);
+  text-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 4px 16px rgba(212,175,55,0.6), 0 8px 40px rgba(212,175,55,0.4), 0 0 80px rgba(212,175,55,0.2);
 }
 
 .tagline {
@@ -199,12 +202,14 @@ button:active { transform: scale(0.97); }
 .primary-btn {
   padding: 14px 32px;
   border-radius: 50px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-hover));
+  background: linear-gradient(135deg, #e5c158 0%, #d4af37 50%, #c4941f 100%);
   color: #000;
   font-weight: 700;
   font-size: 0.9rem;
   letter-spacing: 0.4px;
-  box-shadow: 0 4px 16px rgba(212,175,55,0.28);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25), 0 4px 24px rgba(212,175,55,0.5), 0 8px 48px rgba(212,175,55,0.3), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.2);
+  position: relative;
+  transition: all 0.25s ease;
 }
 .primary-btn:hover { box-shadow: 0 6px 22px rgba(212,175,55,0.4); transform: translateY(-2px); }
 .primary-btn.full { width: 100%; }
@@ -381,7 +386,7 @@ button:active { transform: scale(0.97); }
 
 @keyframes cardFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-.feed-card:hover { transform: translateY(-4px); border-color: var(--gold); box-shadow: 0 8px 24px rgba(212,175,55,0.12), inset 0 1px 0 rgba(255,255,255,0.04); }
+.feed-card:hover { transform: translateY(-6px); border-color: var(--gold); box-shadow: 0 4px 8px rgba(0,0,0,0.15), 0 10px 28px rgba(212,175,55,0.18), inset 0 1px 0 rgba(255,255,255,0.05); }
 
 .feed-card-top { display: flex; justify-content: space-between; align-items: center; }
 
@@ -401,8 +406,8 @@ button:active { transform: scale(0.97); }
   flex: 1; min-height: 115px; max-height: 165px;
   overflow: hidden; position: relative;
 }
-.feed-text::before { content: open-quote; font-size: 2rem; color: var(--gold); opacity: 0.2; position: absolute; top: -2px; left: -2px; line-height: 1; font-family: 'Playfair Display', serif; }
-.feed-text::after  { content: close-quote; font-size: 2rem; color: var(--gold); opacity: 0.2; position: absolute; bottom: -2px; right: -2px; line-height: 1; font-family: 'Playfair Display', serif; }
+.feed-text::before { content: open-quote; font-size: 2rem; color: var(--gold); opacity: 0.2; position: absolute; top: 10px; left: 10px; line-height: 1; font-family: 'Playfair Display', serif; }
+.feed-text::after  { content: close-quote; font-size: 2rem; color: var(--gold); opacity: 0.2; position: absolute; bottom: 10px; right: 10px; line-height: 1; font-family: 'Playfair Display', serif; }
 
 .feed-emotion {
   text-align: center; padding: 5px 12px;
@@ -581,7 +586,7 @@ textarea::placeholder, input::placeholder { color: var(--text-muted); }
   color: var(--text); font-size: 0.77rem; font-weight: 700; font-family: inherit;
 }
 .emotion-pill:hover { border-color: var(--gold); background: var(--gold-glow); }
-.emotion-pill.active { background: linear-gradient(135deg, var(--gold), var(--gold-hover)); color: #000; border-color: transparent; box-shadow: 0 3px 12px rgba(212,175,55,0.28); }
+.emotion-pill.active { background: linear-gradient(135deg, var(--gold), var(--gold-hover)); color: #000; border-color: transparent; box-shadow: 0 2px 4px rgba(0,0,0,0.15), 0 4px 14px rgba(212,175,55,0.4), inset 0 1px 0 rgba(255,255,255,0.25); }
 
 /* ===== LYRIC DISPLAY ===== */
 .lyric-display {
