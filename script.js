@@ -169,9 +169,7 @@ if (isFirebaseEnabled) {
     postAnalytics = snapshot.val() || {};
   });
 } else {
-  posts         = JSON.parse(localStorage.getItem("margoPosts")     || "[]");
-  postAnalytics = JSON.parse(localStorage.getItem("margoAnalytics") || "{}");
-  postsLoaded   = true;
+  postsLoaded = true;
   updateLandingCount();
 }
 
@@ -427,17 +425,6 @@ postBtn.onclick = async () => {
       const ref = await postsRef.push(post);
       await analyticsRef.child(ref.key).set({ views: 0, guesses: [], helps: [] });
     } else {
-      const np = { ...post, id: Date.now(), timestamp: Date.now() };
-      posts.unshift(np);
-      postAnalytics[np.id] = { views: 0, guesses: [], helps: [] };
-      if (posts.length > 50) posts = posts.slice(0, 50);
-      try {
-        localStorage.setItem("margoPosts",     JSON.stringify(posts));
-        localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
-      } catch (e) {
-        posts = posts.slice(0, 10);
-        localStorage.setItem("margoPosts", JSON.stringify(posts));
-      }
     }
 
     showToast("Posted!");
@@ -592,10 +579,6 @@ function timeAgo(ts) {
 function trackView(postId) {
   if (isFirebaseEnabled) {
     analyticsRef.child(postId).child('views').transaction(v => (v || 0) + 1);
-  } else {
-    if (!postAnalytics[postId]) postAnalytics[postId] = { views:0, guesses:[], helps:[] };
-    postAnalytics[postId].views++;
-    localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
   }
 }
 
@@ -730,10 +713,6 @@ submitGuess.onclick = () => {
   const guessData = { song: gs||null, artist: ga||null, correct, timestamp: Date.now() };
   if (isFirebaseEnabled) {
     analyticsRef.child(currentPost.id).child('guesses').push(guessData);
-  } else {
-    if (!postAnalytics[currentPost.id]) postAnalytics[currentPost.id] = { views:0, guesses:[], helps:[] };
-    postAnalytics[currentPost.id].guesses.push(guessData);
-    localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
   }
 
   guessResult.classList.remove("hidden");
@@ -829,10 +808,6 @@ submitDiscover.onclick = () => {
 
   if (isFirebaseEnabled) {
     analyticsRef.child(currentPost.id).child('helps').push(helpData);
-  } else {
-    if (!postAnalytics[currentPost.id]) postAnalytics[currentPost.id] = { views:0, guesses:[], helps:[] };
-    postAnalytics[currentPost.id].helps.push(helpData);
-    localStorage.setItem("margoAnalytics", JSON.stringify(postAnalytics));
   }
 
   showToast("Thanks for helping!");
