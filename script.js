@@ -1,4 +1,4 @@
-/* MARGO — Enhanced with Image Effects */
+/* MARGO — Full working script */
 
 // ===== FIREBASE =====
 const firebaseConfig = {
@@ -12,7 +12,6 @@ const firebaseConfig = {
 };
 
 const APP_BASE_URL = window.location.origin;
-
 let isFirebaseEnabled = false;
 let postsRef = null;
 let analyticsRef = null;
@@ -20,32 +19,47 @@ let analyticsRef = null;
 try {
   firebase.initializeApp(firebaseConfig);
   const database = firebase.database();
-  postsRef       = database.ref('posts');
-  analyticsRef   = database.ref('analytics');
+  postsRef = database.ref('posts');
+  analyticsRef = database.ref('analytics');
   isFirebaseEnabled = true;
   console.log('Firebase OK');
 } catch (e) {
-  console.warn('Firebase failed, using localStorage', e.message);
+  console.warn('Firebase failed:', e.message);
 }
 
 // ===== STATE =====
-let currentMode       = "share";
-let selectedEmotion   = null;
+let currentMode = "share";
+let selectedEmotion = null;
 let selectedCommunity = "general";
-let currentPost       = null;
+let currentPost = null;
 let currentGuessAttempts = 0;
 const MAX_GUESS_ATTEMPTS = 2;
+let activeCommunityFilter = "all";
+let posts = [];
+let postAnalytics = {};
+let postsLoaded = false;
+let savedScrollPosition = 0;
+let newPostsAvailable = false;
 
 // ===== POSTER STATE =====
+// Extended font list with artistic fonts
 const FONT_FAMILIES = {
-  'playfair':     { family: "'Playfair Display', serif", style: 'italic' },
-  'lora':         { family: "'Lora', serif", style: 'italic' },
-  'merriweather': { family: "'Merriweather', serif", style: 'normal' },
-  'inter':        { family: "'Inter', sans-serif", style: 'normal' },
-  'space':        { family: "'Space Grotesk', sans-serif", style: 'normal' },
-  'bebas':        { family: "'Bebas Neue', sans-serif", style: 'normal' },
-  'raleway':      { family: "'Raleway', sans-serif", style: 'normal' },
-  'crimson':      { family: "'Crimson Text', serif", style: 'italic' }
+  'playfair':    { family: "'Playfair Display', serif",     style: 'italic',  label: 'Playfair' },
+  'lora':        { family: "'Lora', serif",                 style: 'italic',  label: 'Lora' },
+  'crimson':     { family: "'Crimson Text', serif",         style: 'italic',  label: 'Crimson' },
+  'merriweather':{ family: "'Merriweather', serif",         style: 'normal',  label: 'Merri' },
+  'pacifico':    { family: "'Pacifico', cursive",           style: 'normal',  label: 'Pacifico' },
+  'lobster':     { family: "'Lobster', cursive",            style: 'normal',  label: 'Lobster' },
+  'raleway':     { family: "'Raleway', sans-serif",         style: 'normal',  label: 'Raleway' },
+  'inter':       { family: "'Inter', sans-serif",           style: 'normal',  label: 'Inter' },
+  'bebas':       { family: "'Bebas Neue', sans-serif",      style: 'normal',  label: 'Bebas' },
+  'space':       { family: "'Space Grotesk', sans-serif",   style: 'normal',  label: 'Space' },
+  'roboto':      { family: "'Roboto', sans-serif",          style: 'normal',  label: 'Roboto' },
+  'oswald':      { family: "'Oswald', sans-serif",          style: 'normal',  label: 'Oswald' },
+  'permanent':   { family: "'Permanent Marker', cursive",   style: 'normal',  label: 'Marker' },
+  'dancing':     { family: "'Dancing Script', cursive",     style: 'normal',  label: 'Dancing' },
+  'abril':       { family: "'Abril Fatface', cursive",      style: 'normal',  label: 'Abril' },
+  'satisfy':     { family: "'Satisfy', cursive",            style: 'normal',  label: 'Satisfy' },
 };
 
 let selectedFont = 'playfair';
@@ -54,43 +68,22 @@ let selectedDesign = "midnight-gold";
 let selectedPosterSize = null;
 let generatedPosterBlob = null;
 
-// Image effects state
-let imageEffects = {
-  brightness: 100,
-  darkness: 50,
-  blur: 0,
-  contrast: 100,
-  filter: 'none'
-};
+let imageEffects = { brightness: 100, darkness: 50, blur: 0, contrast: 100, filter: 'none' };
 
 const POSTER_DESIGNS = {
-  'midnight-gold':    { bg:['#0d0d0d','#1a1410','#0d0d0d'], primary:'#d4af37', secondary:'rgba(212,175,55,0.65)', text:'#f8f8f8', font:'serif' },
-  'royal-purple':     { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff', secondary:'rgba(199,125,255,0.65)', text:'#f8f8f8', font:'serif' },
-  'neon-cyan':        { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff', secondary:'rgba(0,229,255,0.65)', text:'#f8f8f8', font:'sans' },
-  'sunset-coral':     { bg:['#1a0a0a','#2d1416','#1a0a0a'], primary:'#ff6b6b', secondary:'rgba(255,107,107,0.65)', text:'#f8f8f8', font:'serif' },
-  'emerald-night':    { bg:['#051a0d','#0d2e1a','#051a0d'], primary:'#50fa7b', secondary:'rgba(80,250,123,0.65)', text:'#f8f8f8', font:'sans' },
-  'rose-gold':        { bg:['#1a0d0f','#2d1a1f','#1a0d0f'], primary:'#f4a4c0', secondary:'rgba(244,164,192,0.65)', text:'#f8f8f8', font:'serif' },
-  'brutalist':        { bg:['#ffffff','#f5f5f5','#ffffff'], primary:'#000000', secondary:'rgba(0,0,0,0.6)', text:'#000000', font:'sans-bold' },
-  'y2k-chrome':       { bg:['#000033','#1a1a4d','#000033'], primary:'#00ffff', secondary:'rgba(255,0,255,0.65)', text:'#ffffff', font:'sans-bold' },
-  'vaporwave':        { bg:['#ff71ce','#b967ff','#05ffa1'], primary:'#ffffff', secondary:'rgba(255,255,255,0.8)', text:'#ffffff', font:'sans' },
-  'neon-dark':        { bg:['#0a0a0a','#0f0f0f','#0a0a0a'], primary:'#ff00ff', secondary:'rgba(0,255,255,0.7)', text:'#00ffff', font:'sans-bold' },
-  'cream-editorial':  { bg:['#f5f1e8','#ebe3d5','#f5f1e8'], primary:'#2a2520', secondary:'rgba(42,37,32,0.6)', text:'#2a2520', font:'serif' },
-  'monochrome':       { bg:['#000000','#000000','#000000'], primary:'#ffffff', secondary:'rgba(255,255,255,0.7)', text:'#ffffff', font:'sans' }
+  'midnight-gold':   { bg:['#0d0d0d','#1a1410','#0d0d0d'], primary:'#d4af37', secondary:'rgba(212,175,55,0.65)', text:'#f8f8f8' },
+  'royal-purple':    { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff', secondary:'rgba(199,125,255,0.65)', text:'#f8f8f8' },
+  'neon-cyan':       { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff', secondary:'rgba(0,229,255,0.65)',   text:'#f8f8f8' },
+  'sunset-coral':    { bg:['#1a0a0a','#2d1416','#1a0a0a'], primary:'#ff6b6b', secondary:'rgba(255,107,107,0.65)',text:'#f8f8f8' },
+  'emerald-night':   { bg:['#051a0d','#0d2e1a','#051a0d'], primary:'#50fa7b', secondary:'rgba(80,250,123,0.65)', text:'#f8f8f8' },
+  'rose-gold':       { bg:['#1a0d0f','#2d1a1f','#1a0d0f'], primary:'#f4a4c0', secondary:'rgba(244,164,192,0.65)',text:'#f8f8f8' },
+  'brutalist':       { bg:['#ffffff','#f0f0f0','#ffffff'],  primary:'#000000', secondary:'rgba(0,0,0,0.6)',       text:'#000000' },
+  'y2k-chrome':      { bg:['#000033','#1a1a4d','#000033'], primary:'#00ffff', secondary:'rgba(255,0,255,0.65)',  text:'#ffffff' },
+  'vaporwave':       { bg:['#ff71ce','#b967ff','#05ffa1'], primary:'#ffffff', secondary:'rgba(255,255,255,0.8)', text:'#ffffff' },
+  'neon-dark':       { bg:['#0a0a0a','#0f0f0f','#0a0a0a'], primary:'#ff00ff', secondary:'rgba(0,255,255,0.7)',   text:'#00ffff' },
+  'cream-editorial': { bg:['#f5f1e8','#ebe3d5','#f5f1e8'], primary:'#2a2520', secondary:'rgba(42,37,32,0.6)',    text:'#2a2520' },
+  'monochrome':      { bg:['#000000','#111111','#000000'], primary:'#ffffff', secondary:'rgba(255,255,255,0.7)', text:'#ffffff' },
 };
-
-const COMMUNITY_CONFIG = {
-  artist:  { label:'Artist',  color:'#ff6b6b', bg:'rgba(255,107,107,0.12)' },
-  fandom:  { label:'Fandom',  color:'#c77dff', bg:'rgba(199,125,255,0.12)' },
-  student: { label:'Student', color:'#50fa7b', bg:'rgba(80,250,123,0.12)'  },
-  general: { label:'General', color:'#d4af37', bg:'rgba(212,175,55,0.12)'  }
-};
-
-let activeCommunityFilter = "all";
-let posts = [];
-let postAnalytics = {};
-let postsLoaded = false;
-let savedScrollPosition = 0;
-let newPostsAvailable = false;
 
 // ===== USER ID =====
 let userId = localStorage.getItem("margoUserId");
@@ -99,120 +92,153 @@ if (!userId) {
   localStorage.setItem("margoUserId", userId);
 }
 
-// ===== GET ELEMENTS =====
-const landing = document.getElementById("landing");
-const feed = document.getElementById("feed");
-const composer = document.getElementById("composer");
-const guessModal = document.getElementById("guessModal");
-const discoverModal = document.getElementById("discoverModal");
-const postcardModal = document.getElementById("postcardModal");
-const listenModal = document.getElementById("listenModal");
-const analyticsModal = document.getElementById("analyticsModal");
+// ===== ELEMENTS =====
+const landing          = document.getElementById("landing");
+const feed             = document.getElementById("feed");
+const composer         = document.getElementById("composer");
+const guessModal       = document.getElementById("guessModal");
+const discoverModal    = document.getElementById("discoverModal");
+const postcardModal    = document.getElementById("postcardModal");
+const listenModal      = document.getElementById("listenModal");
+const analyticsModal   = document.getElementById("analyticsModal");
 const sharePosterModal = document.getElementById("sharePosterModal");
 
-const enterBtn = document.getElementById("enterBtn");
-const backBtn = document.getElementById("backBtn");
-const openComposerBtn = document.getElementById("openComposer");
-const closeComposerBtn = document.getElementById("closeComposer");
-const postBtn = document.getElementById("postBtn");
-
-const textInput = document.getElementById("textInput");
-const charCount = document.getElementById("charCount");
-const feedList = document.getElementById("feedList");
-const postCount = document.getElementById("postCount");
-
+const enterBtn       = document.getElementById("enterBtn");
+const backBtn        = document.getElementById("backBtn");
+const openComposerBtn= document.getElementById("openComposer");
+const closeComposerBtn=document.getElementById("closeComposer");
+const postBtn        = document.getElementById("postBtn");
+const textInput      = document.getElementById("textInput");
+const charCount      = document.getElementById("charCount");
+const feedList       = document.getElementById("feedList");
 const newPostsIndicator = document.getElementById("newPostsIndicator");
 const scrollToTopBtn = document.getElementById("scrollToTopBtn");
 
-const modeBtns = document.querySelectorAll(".mode-btn");
-const shareInputs = document.getElementById("shareInputs");
-const guessInputs = document.getElementById("guessInputs");
-const discoverInputs = document.getElementById("discoverInputs");
+const modeBtns         = document.querySelectorAll(".mode-btn");
+const shareInputs      = document.getElementById("shareInputs");
+const guessInputs      = document.getElementById("guessInputs");
+const discoverInputs   = document.getElementById("discoverInputs");
 const streamingSection = document.getElementById("streamingSection");
 
-const songInput = document.getElementById("songInput");
-const artistInput = document.getElementById("artistInput");
-const guessSongCheck = document.getElementById("guessSongCheck");
+const songInput        = document.getElementById("songInput");
+const artistInput      = document.getElementById("artistInput");
+const guessSongCheck   = document.getElementById("guessSongCheck");
 const guessArtistCheck = document.getElementById("guessArtistCheck");
-const guessSongAnswer = document.getElementById("guessSongAnswer");
-const guessArtistAnswer = document.getElementById("guessArtistAnswer");
-const discoverSongInput = document.getElementById("discoverSongInput");
+const guessSongAnswer  = document.getElementById("guessSongAnswer");
+const guessArtistAnswer= document.getElementById("guessArtistAnswer");
+const discoverSongInput= document.getElementById("discoverSongInput");
 const discoverArtistInput = document.getElementById("discoverArtistInput");
 
-const spotifyLink = document.getElementById("spotifyLink");
-const appleLink = document.getElementById("appleLink");
-const youtubeLink = document.getElementById("youtubeLink");
+const spotifyLink    = document.getElementById("spotifyLink");
+const appleLink      = document.getElementById("appleLink");
+const youtubeLink    = document.getElementById("youtubeLink");
 const soundcloudLink = document.getElementById("soundcloudLink");
 
-const sharePosterBtn = document.getElementById("sharePosterBtn");
-const listenPostcard = document.getElementById("listenPostcard");
-const analyticsBtn = document.getElementById("analyticsBtn");
-
-const designStep = document.getElementById("designStep");
-const platformStep = document.getElementById("platformStep");
-const shareStep = document.getElementById("shareStep");
-const nextToPlatform = document.getElementById("nextToPlatform");
-const backToDesign = document.getElementById("backToDesign");
-const backToPlatform = document.getElementById("backToPlatform");
-const posterCanvas = document.getElementById("posterCanvas");
+const sharePosterBtn   = document.getElementById("sharePosterBtn");
+const listenPostcard   = document.getElementById("listenPostcard");
+const analyticsBtn     = document.getElementById("analyticsBtn");
+const designStep       = document.getElementById("designStep");
+const platformStep     = document.getElementById("platformStep");
+const shareStep        = document.getElementById("shareStep");
+const nextToPlatform   = document.getElementById("nextToPlatform");
+const backToDesign     = document.getElementById("backToDesign");
+const backToPlatform   = document.getElementById("backToPlatform");
+const posterCanvas     = document.getElementById("posterCanvas");
 const posterPreviewCanvas = document.getElementById("posterPreviewCanvas");
-const shareableLink = document.getElementById("shareableLink");
-const copyLinkBtn = document.getElementById("copyLinkBtn");
-const shareNativeBtn = document.getElementById("shareNativeBtn");
-const downloadManualBtn = document.getElementById("downloadManualBtn");
+const shareableLink    = document.getElementById("shareableLink");
+const copyLinkBtn      = document.getElementById("copyLinkBtn");
+const shareNativeBtn   = document.getElementById("shareNativeBtn");
+const downloadManualBtn= document.getElementById("downloadManualBtn");
 
-// ===== LYRIC STREAM SAMPLE DATA =====
+// ===== LYRIC STREAM SAMPLES =====
 const STREAM_SAMPLES = [
-  { text: "I gave you all I had and still you left", emotion: "Heartbreak", song: "Unknown" },
-  { text: "Some nights I still hear your voice in the quiet", emotion: "Nostalgia", song: "Unknown" },
-  { text: "Dancing alone was better than lying beside you", emotion: "Healing", song: "Unknown" },
-  { text: "The city never sleeps but I always dream of you", emotion: "Love", song: "Unknown" },
-  { text: "Rage is just grief that forgot how to cry", emotion: "Rage", song: "Unknown" },
-  { text: "Every sunrise is a permission to start over", emotion: "Hope", song: "Unknown" },
-  { text: "I carry your memory like a song I can't name", emotion: "Loneliness", song: "Unknown" },
-  { text: "Nothing gold can stay, but gold can glow forever", emotion: "Nostalgia", song: "Unknown" },
-  { text: "You were thunder and I was the calm after", emotion: "Love", song: "Unknown" },
-  { text: "Joy is not the absence of pain, it's dancing anyway", emotion: "Joy", song: "Unknown" },
-  { text: "Missing someone is just love with nowhere to go", emotion: "Loneliness", song: "Unknown" },
-  { text: "I built a home in your chest and you moved out", emotion: "Heartbreak", song: "Unknown" },
+  { text: "I gave you all I had and still you left",            emotion: "Heartbreak" },
+  { text: "Some nights I still hear your voice in the quiet",   emotion: "Nostalgia" },
+  { text: "Dancing alone was better than lying beside you",     emotion: "Healing" },
+  { text: "The city never sleeps but I always dream of you",    emotion: "Love" },
+  { text: "Rage is just grief that forgot how to cry",          emotion: "Rage" },
+  { text: "Every sunrise is a permission to start over",        emotion: "Hope" },
+  { text: "I carry your memory like a song I can't name",       emotion: "Loneliness" },
+  { text: "Nothing gold can stay but gold can glow forever",    emotion: "Nostalgia" },
+  { text: "You were thunder and I was the calm after",          emotion: "Love" },
+  { text: "Joy is not the absence of pain, it's dancing anyway",emotion: "Joy" },
+  { text: "Missing someone is just love with nowhere to go",    emotion: "Loneliness" },
+  { text: "I built a home in your chest and you moved out",     emotion: "Heartbreak" },
 ];
 
 function buildLyricStream() {
   const track1 = document.getElementById("track1");
   const track2 = document.getElementById("track2");
   if (!track1 || !track2) return;
+  track1.innerHTML = '';
+  track2.innerHTML = '';
 
-  // Use real posts if available, otherwise samples
-  const source = posts.length >= 4 ? posts : STREAM_SAMPLES;
-  const doubled1 = [...source, ...source];
-  const doubled2 = [...source.slice(Math.floor(source.length/2)), ...source, ...source.slice(0, Math.floor(source.length/2))];
+  const source = posts.length >= 6 ? posts : STREAM_SAMPLES;
+  const doubled = [...source, ...source, ...source]; // triple for seamless loop
 
   const buildCard = (item) => {
-    const emotionClass = 'emotion-' + ((item.emotion || 'nostalgia').toLowerCase());
-    const text = item.text || '';
-    const display = text.length > 42 ? text.substring(0, 42) + '…' : text;
-    const card = document.createElement('div');
-    card.className = 'lyric-card' + (Math.random() > 0.7 ? ' featured' : '');
-    card.innerHTML = `
-      <div class="lyric-card-text">${display}</div>
+    const emotion = item.emotion || 'Nostalgia';
+    const eClass  = 'emotion-' + emotion.toLowerCase();
+    const text    = item.text || '';
+    const display = text.length > 44 ? text.substring(0, 44) + '…' : text;
+    const card    = document.createElement('div');
+    card.className = 'lyric-card' + (Math.random() > 0.65 ? ' featured' : '');
+    card.innerHTML = `<div class="lyric-card-text">${display}</div>
       <div class="lyric-card-meta">
-        <span class="lyric-card-emotion ${emotionClass}">${item.emotion || 'Nostalgia'}</span>
-      </div>
-    `;
+        <span class="lyric-card-emotion ${eClass}">${emotion}</span>
+      </div>`;
     return card;
   };
 
-  doubled1.forEach(item => track1.appendChild(buildCard(item)));
-  doubled2.forEach(item => track2.appendChild(buildCard(item)));
+  doubled.forEach((item, i) => {
+    const card = buildCard(item);
+    if (i < doubled.length / 2 + 1) track1.appendChild(card);
+    else track2.appendChild(buildCard(item));
+  });
+  // second track offset
+  [...source.slice(Math.floor(source.length/2)), ...source, ...source].forEach(item => track2.appendChild(buildCard(item)));
 }
 
-// Rebuild stream after posts load
-function refreshStream() {
-  const track1 = document.getElementById("track1");
-  const track2 = document.getElementById("track2");
-  if (track1) track1.innerHTML = '';
-  if (track2) track2.innerHTML = '';
-  buildLyricStream();
+// ===== LIVE STATS for landing =====
+const EMOTION_COUNTS = {};
+const SONG_COUNTS    = {};
+
+function calcStats() {
+  posts.forEach(p => {
+    const e = p.emotion || 'Nostalgia';
+    EMOTION_COUNTS[e] = (EMOTION_COUNTS[e] || 0) + 1;
+    const song = p.knowledge?.song;
+    if (song && song !== 'Unknown Song') SONG_COUNTS[song] = (SONG_COUNTS[song] || 0) + 1;
+  });
+}
+
+function updateLandingStats() {
+  const n = posts.length || 0;
+  const lc = document.getElementById("liveCount");
+  const st = document.getElementById("statTotal");
+  const pc = document.getElementById("postCount");
+  if (lc) lc.textContent = n;
+  if (st) st.textContent = n || '—';
+  if (pc) pc.textContent = n;
+
+  calcStats();
+
+  // Top emotion
+  const topEmotionEl = document.getElementById("topEmotion");
+  if (topEmotionEl) {
+    const top = Object.entries(EMOTION_COUNTS).sort((a,b) => b[1]-a[1])[0];
+    topEmotionEl.textContent = top ? `${top[0]} (${top[1]})` : '—';
+  }
+  // Top song
+  const topSongEl = document.getElementById("topSong");
+  if (topSongEl) {
+    const top = Object.entries(SONG_COUNTS).sort((a,b) => b[1]-a[1])[0];
+    topSongEl.textContent = top ? top[0].substring(0, 18) : '—';
+  }
+  // Unique artists
+  const artistSet = new Set(posts.map(p => p.knowledge?.artist).filter(a => a && a !== 'Unknown Artist'));
+  const artistEl = document.getElementById("artistCount");
+  if (artistEl) artistEl.textContent = artistSet.size || '—';
 }
 
 // ===== FIREBASE SYNC =====
@@ -221,14 +247,11 @@ if (isFirebaseEnabled) {
     const prevCount = posts.length;
     posts = [];
     snapshot.forEach(child => {
-      const p = child.val();
-      p.id = child.key;
-      posts.unshift(p);
+      const p = child.val(); p.id = child.key; posts.unshift(p);
     });
     posts.sort((a,b) => b.timestamp - a.timestamp);
-
-    updateLandingCount();
-    if (posts.length > 0 && !postsLoaded) refreshStream();
+    updateLandingStats();
+    buildLyricStream();
 
     if (postsLoaded && posts.length > prevCount && feed.classList.contains('active')) {
       showNewPostsIndicator(posts.length - prevCount);
@@ -238,28 +261,16 @@ if (isFirebaseEnabled) {
     if (feed.classList.contains('active') && !newPostsAvailable) renderFeed();
   });
 
-  analyticsRef.on('value', snapshot => {
-    postAnalytics = snapshot.val() || {};
-  });
+  analyticsRef.on('value', snapshot => { postAnalytics = snapshot.val() || {}; });
 } else {
   postsLoaded = true;
-  updateLandingCount();
+  updateLandingStats();
   buildLyricStream();
 }
 
-function updateLandingCount() {
-  const liveCount = document.getElementById("liveCount");
-  const statTotal = document.getElementById("statTotal");
-  const pc = document.getElementById("postCount");
-  const n = posts.length || 0;
-  if (liveCount) liveCount.textContent = n;
-  if (statTotal) statTotal.textContent = n || '—';
-  if (pc) pc.textContent = n;
-}
-
-// ===== MODAL FUNCTIONS =====
+// ===== MODAL HELPERS =====
 function openModal(modal) {
-  saveScrollPosition();
+  savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
   modal.classList.remove("hidden");
   document.body.classList.add("modal-open");
   document.body.style.top = `-${savedScrollPosition}px`;
@@ -269,43 +280,28 @@ function closeModal(modal) {
   modal.classList.add("hidden");
   document.body.classList.remove("modal-open");
   document.body.style.top = '';
-  if (feedList && savedScrollPosition > 0) {
-    feedList.scrollTop = savedScrollPosition;
-    window.scrollTo(0, savedScrollPosition);
-  }
+  window.scrollTo(0, savedScrollPosition);
 }
 
-function saveScrollPosition() {
-  savedScrollPosition = feedList ? (feedList.scrollTop || window.pageYOffset) : 0;
-}
-
-// ===== SWIPE NAVIGATION =====
-let tStartX = 0, tStartY = 0, tEndX = 0, tEndY = 0;
-
-function handleSwipe() {
-  const dx = tStartX - tEndX;
-  const dy = Math.abs(tStartY - tEndY);
-  if (Math.abs(dx) > dy && Math.abs(dx) > 100) {
-    if (dx > 0 && landing.classList.contains("active")) {
-      landing.classList.remove("active");
-      feed.classList.add("active");
-      renderFeed();
-    } else if (dx < 0 && feed.classList.contains("active")) {
-      feed.classList.remove("active");
-      landing.classList.add("active");
+// ===== SWIPE =====
+let tSX = 0, tSY = 0;
+[landing, feed].forEach(s => {
+  s.addEventListener('touchstart', e => { tSX = e.touches[0].clientX; tSY = e.touches[0].clientY; });
+  s.addEventListener('touchend', e => {
+    const dx = tSX - e.changedTouches[0].clientX;
+    const dy = Math.abs(tSY - e.changedTouches[0].clientY);
+    if (Math.abs(dx) > dy && Math.abs(dx) > 100) {
+      if (dx > 0 && landing.classList.contains("active")) goToFeed();
+      if (dx < 0 && feed.classList.contains("active")) goToLanding();
     }
-  }
-}
-
-[landing, feed].forEach(screen => {
-  screen.addEventListener('touchstart', e => { tStartX = e.touches[0].clientX; tStartY = e.touches[0].clientY; });
-  screen.addEventListener('touchend', e => { tEndX = e.changedTouches[0].clientX; tEndY = e.changedTouches[0].clientY; handleSwipe(); });
+  });
 });
 
 // ===== NAVIGATION =====
 function goToFeed() {
   landing.classList.remove("active");
   feed.classList.add("active");
+  window.scrollTo({ top: 0 });
   renderFeed();
 }
 function goToLanding() {
@@ -315,67 +311,48 @@ function goToLanding() {
 
 enterBtn.onclick = () => {
   goToFeed();
-  openModal(composer);
-  setTimeout(() => textInput.focus(), 280);
+  setTimeout(() => { openModal(composer); setTimeout(() => textInput.focus(), 200); }, 100);
 };
 
-const enterFeedBtn = document.getElementById("enterFeedBtn");
-const enterFeedBtn2 = document.getElementById("enterFeedBtn2");
-if (enterFeedBtn) enterFeedBtn.onclick = goToFeed;
-if (enterFeedBtn2) enterFeedBtn2.onclick = goToFeed;
-
+const efb1 = document.getElementById("enterFeedBtn");
+const efb2 = document.getElementById("enterFeedBtn2");
+if (efb1) efb1.onclick = () => {
+  goToFeed();
+  // smooth scroll to feed list
+  setTimeout(() => feedList?.scrollIntoView({ behavior: 'smooth' }), 150);
+};
+if (efb2) efb2.onclick = () => {
+  goToFeed();
+  setTimeout(() => feedList?.scrollIntoView({ behavior: 'smooth' }), 150);
+};
 backBtn.onclick = goToLanding;
 
-openComposerBtn.onclick = () => {
-  openModal(composer);
-  setTimeout(() => textInput.focus(), 280);
-};
-
-closeComposerBtn.onclick = () => {
-  closeModal(composer);
-  resetComposer();
-};
-
-// Init stream on load
-buildLyricStream();
-
-// ===== COMMUNITY FILTER =====
-document.querySelectorAll(".filter-pill").forEach(pill => {
-  pill.onclick = () => {
-    document.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
-    pill.classList.add("active");
-    activeCommunityFilter = pill.dataset.filter;
-    renderFeed();
-  };
-});
-
-// Community selector removed - defaulting to general
+openComposerBtn.onclick = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
+closeComposerBtn.onclick  = () => { closeModal(composer); resetComposer(); };
 
 // ===== CHAR COUNTER =====
 textInput.oninput = () => { charCount.textContent = textInput.value.length; };
 
-// ===== MODE SELECTION =====
+// ===== MODE SELECTOR =====
 modeBtns.forEach(btn => {
   btn.onclick = () => {
     modeBtns.forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     currentMode = btn.dataset.mode;
-
-    shareInputs.classList.remove("active");
-    guessInputs.classList.remove("active");
-    discoverInputs.classList.remove("active");
+    shareInputs.classList.remove("show");
+    guessInputs.classList.remove("show");
+    discoverInputs.classList.remove("show");
     streamingSection.style.display = currentMode === "discover" ? "none" : "block";
-
-    if (currentMode === "share") shareInputs.classList.add("active");
-    if (currentMode === "guess") guessInputs.classList.add("active");
-    if (currentMode === "discover") discoverInputs.classList.add("active");
+    if (currentMode === "share")    shareInputs.classList.add("show");
+    if (currentMode === "guess")    guessInputs.classList.add("show");
+    if (currentMode === "discover") discoverInputs.classList.add("show");
   };
 });
 
 // ===== EMOTION PILLS =====
-document.querySelectorAll(".emotion-pill").forEach(btn => {
+document.querySelectorAll(".emotion-btn").forEach(btn => {
   btn.onclick = () => {
-    document.querySelectorAll(".emotion-pill").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".emotion-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     selectedEmotion = btn.dataset.emotion;
   };
@@ -384,16 +361,12 @@ document.querySelectorAll(".emotion-pill").forEach(btn => {
 // ===== POST =====
 postBtn.onclick = async () => {
   if (postBtn.disabled) return;
-
   const text = textInput.value.trim();
   if (!text) { showToast("Please enter a lyric"); return; }
   if (!selectedEmotion) { showToast("Please select an emotion"); return; }
 
   let post = {
-    text,
-    emotion: selectedEmotion,
-    mode: currentMode,
-    community: selectedCommunity || "general",
+    text, emotion: selectedEmotion, mode: currentMode, community: "general",
     knowledge: { song: "Unknown Song", artist: "Unknown Artist" },
     guessConfig: null,
     links: currentMode !== "discover" ? {
@@ -407,133 +380,102 @@ postBtn.onclick = async () => {
 
   try {
     if (currentMode === "share") {
-      const song = songInput.value.trim();
-      const artist = artistInput.value.trim();
-      if (!song || !artist) throw new Error("Please enter song and artist");
-      post.knowledge = { song, artist };
+      if (!songInput.value.trim() || !artistInput.value.trim()) throw new Error("Please enter song and artist");
+      post.knowledge = { song: songInput.value.trim(), artist: artistInput.value.trim() };
     }
-
     if (currentMode === "guess") {
-      const songA = guessSongAnswer.value.trim();
-      const artistA = guessArtistAnswer.value.trim();
-      const doSong = guessSongCheck.checked;
-      const doArtist = guessArtistCheck.checked;
+      const doSong = guessSongCheck.checked, doArtist = guessArtistCheck.checked;
       if (!doSong && !doArtist) throw new Error("Select at least one thing to guess");
-      if (doSong && !songA) throw new Error("Enter the correct song title");
-      if (doArtist && !artistA) throw new Error("Enter the correct artist");
-      post.knowledge = { song: songA, artist: artistA, hidden: true };
+      if (doSong && !guessSongAnswer.value.trim()) throw new Error("Enter the correct song title");
+      if (doArtist && !guessArtistAnswer.value.trim()) throw new Error("Enter the correct artist");
+      post.knowledge = { song: guessSongAnswer.value.trim(), artist: guessArtistAnswer.value.trim(), hidden: true };
       post.guessConfig = { guessSong: doSong, guessArtist: doArtist };
     }
-
     if (currentMode === "discover") {
       post.knowledge = {
-        song: discoverSongInput.value.trim() || "Unknown Song",
+        song:   discoverSongInput.value.trim() || "Unknown Song",
         artist: discoverArtistInput.value.trim() || "Unknown Artist"
       };
     }
-  } catch (err) {
-    showToast(err.message);
-    return;
-  }
+  } catch(err) { showToast(err.message); return; }
 
-  postBtn.disabled = true;
-  postBtn.textContent = "Posting…";
-
+  postBtn.disabled = true; postBtn.textContent = "Posting…";
   try {
     if (isFirebaseEnabled) {
       const ref = await postsRef.push(post);
       await analyticsRef.child(ref.key).set({ views: 0, guesses: [], helps: [] });
     }
-
     showToast("Posted!");
-    savedScrollPosition = 0;
     newPostsAvailable = false;
     renderFeed();
     resetComposer();
     closeModal(composer);
-
-  } catch (err) {
-    console.error(err);
-    showToast(err.message || "Error posting. Please try again.");
+  } catch(err) {
+    console.error(err); showToast(err.message || "Error posting.");
   } finally {
-    postBtn.disabled = false;
-    postBtn.textContent = "Post";
+    postBtn.disabled = false; postBtn.textContent = "Post";
   }
 };
 
 function resetComposer() {
-  textInput.value = "";
-  songInput.value = "";
-  artistInput.value = "";
-  guessSongAnswer.value = "";
-  guessArtistAnswer.value = "";
-  discoverSongInput.value = "";
-  discoverArtistInput.value = "";
-  spotifyLink.value = "";
-  appleLink.value = "";
-  youtubeLink.value = "";
-  soundcloudLink.value = "";
+  textInput.value = ""; songInput.value = ""; artistInput.value = "";
+  guessSongAnswer.value = ""; guessArtistAnswer.value = "";
+  discoverSongInput.value = ""; discoverArtistInput.value = "";
+  if (spotifyLink) spotifyLink.value = "";
+  if (appleLink)   appleLink.value = "";
+  if (youtubeLink) youtubeLink.value = "";
+  if (soundcloudLink) soundcloudLink.value = "";
   charCount.textContent = "0";
   selectedEmotion = null;
-
-  document.querySelectorAll(".emotion-pill").forEach(b => b.classList.remove("active"));
-  modeBtns.forEach(b => b.classList.remove("active"));
-  modeBtns[0].classList.add("active");
+  document.querySelectorAll(".emotion-btn").forEach(b => b.classList.remove("active"));
+  modeBtns.forEach((b,i) => b.classList.toggle("active", i === 0));
   currentMode = "share";
-  shareInputs.classList.add("active");
-  guessInputs.classList.remove("active");
-  discoverInputs.classList.remove("active");
+  shareInputs.classList.add("show");
+  guessInputs.classList.remove("show");
+  discoverInputs.classList.remove("show");
   streamingSection.style.display = "block";
-  guessSongCheck.checked = true;
-  guessArtistCheck.checked = true;
+  guessSongCheck.checked = true; guessArtistCheck.checked = true;
 }
 
+// ===== RENDER FEED =====
 function getDynamicFontSize(len) {
-  if (len < 50) return '1.08rem';
-  if (len < 80) return '0.98rem';
-  if (len < 120) return '0.9rem';
-  return '0.84rem';
+  if (len < 50) return '1.05rem';
+  if (len < 90) return '0.95rem';
+  return '0.86rem';
 }
+
+const EMOTION_COLORS = {
+  Love:'rgba(255,107,157,0.12)', Heartbreak:'rgba(255,80,80,0.1)',
+  Hope:'rgba(107,140,255,0.12)', Nostalgia:'rgba(232,197,71,0.1)',
+  Healing:'rgba(74,222,128,0.12)', Joy:'rgba(255,200,71,0.1)',
+  Rage:'rgba(255,100,100,0.12)', Loneliness:'rgba(160,160,255,0.1)'
+};
+const EMOTION_TEXT = {
+  Love:'#FF6B9D', Heartbreak:'#ff5050', Hope:'#6B8CFF', Nostalgia:'#E8C547',
+  Healing:'#4ade80', Joy:'#ffc847', Rage:'#FF6464', Loneliness:'#a0a0ff'
+};
 
 function renderFeed() {
   feedList.innerHTML = "";
-  updateLandingCount();
-
+  updateLandingStats();
   if (!postsLoaded) {
-    feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--gold);">Loading…</div>';
+    feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--gold)">Loading…</div>';
+    return;
+  }
+  if (!posts.length) {
+    feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-2)">No lyrics yet — be the first to drop one.</div>';
     return;
   }
 
-  let filtered = posts;
-  if (activeCommunityFilter !== "all") {
-    filtered = posts.filter(p => (p.community || "general") === activeCommunityFilter);
-  }
-
-  if (filtered.length === 0) {
-    feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-2);">No lyrics yet — be the first to drop one.</div>';
-    return;
-  }
-
-  const EMOTION_COLORS = {
-    Love: 'rgba(255,107,157,0.12)', Heartbreak: 'rgba(255,80,80,0.1)',
-    Hope: 'rgba(107,140,255,0.12)', Nostalgia: 'rgba(232,197,71,0.1)',
-    Healing: 'rgba(74,222,128,0.12)', Joy: 'rgba(255,200,71,0.1)',
-    Rage: 'rgba(255,100,100,0.12)', Loneliness: 'rgba(160,160,255,0.1)'
-  };
-  const EMOTION_TEXT = {
-    Love: '#FF6B9D', Heartbreak: '#ff5050', Hope: '#6B8CFF', Nostalgia: 'var(--gold)',
-    Healing: '#4ade80', Joy: '#ffc847', Rage: '#FF6464', Loneliness: '#a0a0ff'
-  };
-
-  filtered.forEach((post, i) => {
+  posts.forEach((post, i) => {
     const card = document.createElement("div");
     card.className = "feed-card";
     card.style.animationDelay = `${i * 0.03}s`;
 
-    const k = post.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+    const k = post.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
     const emotion = post.emotion || "Nostalgia";
-    const eBg = EMOTION_COLORS[emotion] || 'rgba(232,197,71,0.1)';
-    const eColor = EMOTION_TEXT[emotion] || 'var(--gold)';
+    const eBg    = EMOTION_COLORS[emotion] || 'rgba(232,197,71,0.1)';
+    const eColor = EMOTION_TEXT[emotion]  || 'var(--gold)';
 
     const modeBadge = post.mode === 'guess'
       ? '<span class="card-mode-badge mode-guess">Guess</span>'
@@ -541,32 +483,32 @@ function renderFeed() {
       ? '<span class="card-mode-badge mode-discover">Discover</span>'
       : '<span class="card-mode-badge mode-share">Share</span>';
 
-    let songSection = '', actionsSection = '';
-    const hasLinks = post.links && (post.links.spotify || post.links.apple || post.links.youtube || post.links.soundcloud);
-    const postIdx = posts.indexOf(post);
+    const hasLinks = post.links && (post.links.spotify||post.links.apple||post.links.youtube||post.links.soundcloud);
+    const idx = i;
 
+    let songSection = '', actionsSection = '';
     if (post.mode === "share") {
       songSection = `<div class="card-song"><div class="card-song-title">${k.song}</div><div class="card-song-artist">${k.artist}</div></div>`;
       actionsSection = `<div class="card-actions">
-        <button class="card-btn" onclick="window.viewPost(${postIdx})">View</button>
-        ${hasLinks ? `<button class="card-btn" onclick="window.openListen(${postIdx})">Listen</button>` : ''}
+        <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
+        ${hasLinks ? `<button class="card-btn" onclick="window.openListen(${idx})">Listen</button>` : ''}
       </div>`;
     } else if (post.mode === "guess") {
       const what = [];
-      if (post.guessConfig?.guessSong) what.push("song");
+      if (post.guessConfig?.guessSong)   what.push("song");
       if (post.guessConfig?.guessArtist) what.push("artist");
-      if (!what.length) what.push("song", "artist");
+      if (!what.length) what.push("song","artist");
       songSection = `<div class="card-mystery">Guess the ${what.join(" & ")} →</div>`;
       actionsSection = `<div class="card-actions">
-        <button class="card-btn" onclick="window.openGuess(${postIdx})">Guess</button>
-        <button class="card-btn" onclick="window.viewPost(${postIdx})">View</button>
+        <button class="card-btn" onclick="window.openGuess(${idx})">Guess</button>
+        <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
       </div>`;
-    } else if (post.mode === "discover") {
+    } else {
       const hasClue = k.song !== "Unknown Song" || k.artist !== "Unknown Artist";
       songSection = `<div class="card-discover">${hasClue ? `Maybe: ${k.song} — ${k.artist}` : 'Help discover this song'}</div>`;
       actionsSection = `<div class="card-actions">
-        <button class="card-btn" onclick="window.openDiscover(${postIdx})">Help</button>
-        <button class="card-btn" onclick="window.viewPost(${postIdx})">View</button>
+        <button class="card-btn" onclick="window.openDiscover(${idx})">Help</button>
+        <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
       </div>`;
     }
 
@@ -576,7 +518,7 @@ function renderFeed() {
         ${modeBadge}
       </div>
       <div class="card-lyric" style="font-size:${getDynamicFontSize(post.text.length)}">${post.text}</div>
-      <span class="card-emotion-tag" style="background:${eBg};color:${eColor};">${emotion}</span>
+      <span class="card-emotion-tag" style="background:${eBg};color:${eColor}">${emotion}</span>
       ${songSection}
       ${actionsSection}
     `;
@@ -588,76 +530,53 @@ function timeAgo(ts) {
   const m = Math.floor((Date.now() - ts) / 60000);
   if (m < 1) return 'now';
   if (m < 60) return m + 'm';
-  const h = Math.floor(m / 60);
+  const h = Math.floor(m/60);
   if (h < 24) return h + 'h';
-  return Math.floor(h / 24) + 'd';
+  return Math.floor(h/24) + 'd';
 }
 
 function trackView(postId) {
-  if (isFirebaseEnabled) {
-    analyticsRef.child(postId).child('views').transaction(v => (v || 0) + 1);
-  }
+  if (isFirebaseEnabled && postId) analyticsRef.child(postId).child('views').transaction(v => (v||0)+1);
 }
 
-// ===== VIEW POST, GUESS, DISCOVER, LISTEN - GLOBAL FUNCTIONS =====
+// ===== VIEW / GUESS / DISCOVER / LISTEN =====
 window.viewPost = function(index) {
   currentPost = posts[index];
   if (!currentPost) return;
   trackView(currentPost.id);
 
-  const postcardLyric = document.getElementById("postcardLyric");
-  const postcardEmotion = document.getElementById("postcardEmotion");
-  const postcardSong = document.getElementById("postcardSong");
-  const postcardCommunity = document.getElementById("postcardCommunity");
+  document.getElementById("postcardLyric").textContent   = currentPost.text;
+  document.getElementById("postcardEmotion").textContent = currentPost.emotion || "Nostalgia";
 
-  postcardLyric.textContent = currentPost.text;
-  postcardEmotion.textContent = currentPost.emotion || "Nostalgia";
-
-  const k = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
-
+  const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
+  const songEl = document.getElementById("postcardSong");
   if (currentPost.mode === "guess") {
-    postcardSong.innerHTML = `<div style="font-style:italic;color:var(--text-secondary)">Guess correctly to reveal</div>`;
+    songEl.innerHTML = `<div style="font-style:italic;color:var(--text-2)">Guess correctly to reveal</div>`;
   } else {
-    postcardSong.innerHTML = `<div>${k.song}</div><div>${k.artist}</div>`;
+    songEl.innerHTML = `<div>${k.song}</div><div>${k.artist}</div>`;
   }
+  document.getElementById("postcardCommunity").innerHTML = '';
 
-  const comm = currentPost.community || "general";
-  const cfg = COMMUNITY_CONFIG[comm] || COMMUNITY_CONFIG.general;
-  postcardCommunity.innerHTML = `<span style="font-size:0.7rem;font-weight:700;color:${cfg.color};text-transform:uppercase;letter-spacing:1px;">${cfg.label}</span>`;
-
-  const hasLinks = currentPost.links && (currentPost.links.spotify || currentPost.links.apple || currentPost.links.youtube || currentPost.links.soundcloud);
+  const hasLinks = currentPost.links && (currentPost.links.spotify||currentPost.links.apple||currentPost.links.youtube||currentPost.links.soundcloud);
   listenPostcard.style.display = (hasLinks && currentPost.mode !== "guess") ? 'block' : 'none';
-
   openModal(postcardModal);
 };
 
 window.openListen = function(index) {
   currentPost = posts[index];
-  if (!currentPost || !currentPost.links) { showToast("No streaming links available"); return; }
-
-  const listenLinks = document.getElementById("listenLinks");
-  listenLinks.innerHTML = "";
-  const platforms = [
-    { name: 'Spotify', key: 'spotify' },
-    { name: 'Apple Music', key: 'apple' },
-    { name: 'YouTube', key: 'youtube' },
-    { name: 'SoundCloud', key: 'soundcloud' }
-  ];
-
+  if (!currentPost?.links) { showToast("No streaming links"); return; }
+  const ll = document.getElementById("listenLinks");
+  ll.innerHTML = "";
   let has = false;
-  platforms.forEach(p => {
-    if (currentPost.links[p.key]) {
+  [['Spotify','spotify'],['Apple Music','apple'],['YouTube','youtube'],['SoundCloud','soundcloud']].forEach(([name,key]) => {
+    if (currentPost.links[key]) {
       has = true;
       const a = document.createElement("a");
-      a.className = "listen-link";
-      a.href = currentPost.links[p.key];
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.textContent = p.name;
-      listenLinks.appendChild(a);
+      a.className = "listen-link"; a.href = currentPost.links[key];
+      a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = name;
+      ll.appendChild(a);
     }
   });
-
   if (!has) { showToast("No streaming links available"); return; }
   openModal(listenModal);
 };
@@ -668,35 +587,23 @@ window.openGuess = function(index) {
   trackView(currentPost.id);
   currentGuessAttempts = 0;
 
-  const guessLyric = document.getElementById("guessLyric");
-  const guessSongInput = document.getElementById("guessSongInput");
-  const guessArtistInput = document.getElementById("guessArtistInput");
-  const guessResult = document.getElementById("guessResult");
-  const guessLinksSection = document.getElementById("guessLinksSection");
-  const guessInputFields = document.getElementById("guessInputFields");
-  const submitGuess = document.getElementById("submitGuess");
-  const revealAnswer = document.getElementById("revealAnswer");
-  const guessHint = document.getElementById("guessHint");
+  document.getElementById("guessLyric").textContent = currentPost.text;
+  document.getElementById("guessSongInput").value   = "";
+  document.getElementById("guessArtistInput").value = "";
+  document.getElementById("guessResult").className  = "result-msg hidden";
+  document.getElementById("guessLinksSection").className = "guess-links hidden";
+  document.getElementById("guessInputFields").style.display = "";
+  document.getElementById("submitGuess").style.display    = "";
+  document.getElementById("revealAnswer").style.display   = "none";
 
-  guessLyric.textContent = currentPost.text;
-  guessSongInput.value = "";
-  guessArtistInput.value = "";
-  guessResult.classList.add("hidden");
-  guessLinksSection.classList.add("hidden");
-  guessInputFields.classList.remove("hidden");
-  submitGuess.classList.remove("hidden");
-  revealAnswer.classList.add("hidden");
-
-  const doSong = currentPost.guessConfig?.guessSong ?? true;
+  const doSong   = currentPost.guessConfig?.guessSong   ?? true;
   const doArtist = currentPost.guessConfig?.guessArtist ?? true;
-  guessSongInput.style.display = doSong ? 'block' : 'none';
-  guessArtistInput.style.display = doArtist ? 'block' : 'none';
+  document.getElementById("guessSongInput").style.display   = doSong   ? 'block' : 'none';
+  document.getElementById("guessArtistInput").style.display = doArtist ? 'block' : 'none';
 
   const what = [];
-  if (doSong) what.push("song");
-  if (doArtist) what.push("artist");
-  guessHint.textContent = `You have ${MAX_GUESS_ATTEMPTS} attempt${MAX_GUESS_ATTEMPTS > 1 ? 's' : ''} to guess the ${what.join(" and ")}.`;
-
+  if (doSong) what.push("song"); if (doArtist) what.push("artist");
+  document.getElementById("guessHint").textContent = `${MAX_GUESS_ATTEMPTS} attempts to guess the ${what.join(" and ")}.`;
   openModal(guessModal);
 };
 
@@ -704,894 +611,506 @@ window.openDiscover = function(index) {
   currentPost = posts[index];
   if (!currentPost) return;
   trackView(currentPost.id);
-
-  const discoverLyric = document.getElementById("discoverLyric");
-  const discoverSongAnswer = document.getElementById("discoverSongAnswer");
-  const discoverArtistAnswer = document.getElementById("discoverArtistAnswer");
-  const discoverSpotifyLink = document.getElementById("discoverSpotifyLink");
-  const discoverAppleLink = document.getElementById("discoverAppleLink");
-  const discoverYoutubeLink = document.getElementById("discoverYoutubeLink");
-  const discoverSoundcloudLink = document.getElementById("discoverSoundcloudLink");
-
-  discoverLyric.textContent = currentPost.text;
-  discoverSongAnswer.value = "";
-  discoverArtistAnswer.value = "";
-  discoverSpotifyLink.value = "";
-  discoverAppleLink.value = "";
-  discoverYoutubeLink.value = "";
-  discoverSoundcloudLink.value = "";
-
+  ['discoverLyric','discoverSongAnswer','discoverArtistAnswer','discoverSpotifyLink','discoverAppleLink','discoverYoutubeLink','discoverSoundcloudLink'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { if (id === 'discoverLyric') el.textContent = currentPost.text; else el.value = ''; }
+  });
   openModal(discoverModal);
 };
 
+// ===== GUESS SUBMISSION =====
+document.getElementById("submitGuess").onclick = () => {
+  if (!currentPost) return;
+  currentGuessAttempts++;
+  const k = currentPost.knowledge || {};
+  const doSong   = currentPost.guessConfig?.guessSong   ?? true;
+  const doArtist = currentPost.guessConfig?.guessArtist ?? true;
+  const gs  = document.getElementById("guessSongInput").value.trim().toLowerCase();
+  const ga  = document.getElementById("guessArtistInput").value.trim().toLowerCase();
+  const as  = (k.song   ||'').toLowerCase();
+  const aa  = (k.artist ||'').toLowerCase();
+  const songOk   = !doSong   || (gs && (gs===as || gs.includes(as) || as.includes(gs)));
+  const artistOk = !doArtist || (ga && (ga===aa || ga.includes(aa) || aa.includes(ga)));
+  const correct  = songOk && artistOk;
+
+  if (isFirebaseEnabled) analyticsRef.child(currentPost.id).child('guesses').push({ song:gs||null, artist:ga||null, correct, timestamp:Date.now() });
+
+  const resultEl = document.getElementById("guessResult");
+  resultEl.classList.remove("hidden","result-success","result-error","result-partial");
+
+  if (correct) {
+    resultEl.className = "result-msg result-success";
+    resultEl.innerHTML = `Correct! 🎉<br><span style="font-size:0.8rem">"${k.song}" by ${k.artist}</span>`;
+    document.getElementById("submitGuess").style.display    = "none";
+    document.getElementById("guessInputFields").style.display = "none";
+    if (currentPost.links) {
+      const links = currentPost.links;
+      const ll = document.getElementById("guessLinksSection");
+      let html = '<div class="guess-links-title">Listen</div>';
+      if (links.spotify)    html += `<a href="${links.spotify}"    target="_blank" class="guess-link">Spotify</a>`;
+      if (links.apple)      html += `<a href="${links.apple}"      target="_blank" class="guess-link">Apple Music</a>`;
+      if (links.youtube)    html += `<a href="${links.youtube}"    target="_blank" class="guess-link">YouTube</a>`;
+      if (links.soundcloud) html += `<a href="${links.soundcloud}" target="_blank" class="guess-link">SoundCloud</a>`;
+      ll.innerHTML = html; ll.classList.remove("hidden");
+    }
+    return;
+  }
+
+  const left = MAX_GUESS_ATTEMPTS - currentGuessAttempts;
+  if (left <= 0) {
+    resultEl.className = "result-msg result-error";
+    resultEl.innerHTML = `Out of attempts<br><span style="font-size:0.8rem">It was: "${k.song}" by ${k.artist}</span>`;
+    document.getElementById("submitGuess").style.display    = "none";
+    document.getElementById("guessInputFields").style.display = "none";
+    return;
+  }
+
+  const ps = doSong   && gs && (gs===as||gs.includes(as)||as.includes(gs));
+  const pa = doArtist && ga && (ga===aa||ga.includes(aa)||aa.includes(ga));
+  resultEl.className = `result-msg ${(ps||pa) ? 'result-partial' : 'result-error'}`;
+  let msg = (ps||pa) ? 'Partially correct — ' : 'Incorrect — ';
+  if (doSong)   msg += `Song: ${ps?'✓':'✗'} `;
+  if (doArtist) msg += `Artist: ${pa?'✓':'✗'} `;
+  msg += `(${left} left)`;
+  resultEl.innerHTML = msg;
+  document.getElementById("guessSongInput").value = "";
+  document.getElementById("guessArtistInput").value = "";
+};
+
+// ===== DISCOVER SUBMISSION =====
+document.getElementById("submitDiscover").onclick = () => {
+  const song   = document.getElementById("discoverSongAnswer").value.trim();
+  const artist = document.getElementById("discoverArtistAnswer").value.trim();
+  if (!song || !artist) { showToast("Please enter both song and artist"); return; }
+  const helpData = {
+    song, artist,
+    links: {
+      spotify:    document.getElementById("discoverSpotifyLink").value.trim()    || null,
+      apple:      document.getElementById("discoverAppleLink").value.trim()      || null,
+      youtube:    document.getElementById("discoverYoutubeLink").value.trim()    || null,
+      soundcloud: document.getElementById("discoverSoundcloudLink").value.trim() || null
+    },
+    timestamp: Date.now()
+  };
+  if (isFirebaseEnabled) analyticsRef.child(currentPost.id).child('helps').push(helpData);
+  showToast("Thanks for helping!");
+  closeModal(discoverModal);
+};
+
+// ===== ANALYTICS =====
+analyticsBtn.onclick = () => {
+  if (!currentPost) return;
+  const an = postAnalytics[currentPost.id] || { views:0 };
+  const guesses = Object.values(an.guesses||{});
+  const helps   = Object.values(an.helps  ||{});
+  const body = document.getElementById("analyticsBody");
+
+  let html = `<div class="analytics-grid">
+    <div class="stat-card"><div class="stat-num">${an.views||0}</div><div class="stat-label">Views</div></div>`;
+  if (currentPost.mode==='guess')    html += `<div class="stat-card"><div class="stat-num">${guesses.length}</div><div class="stat-label">Guesses</div></div>`;
+  if (currentPost.mode==='discover') html += `<div class="stat-card"><div class="stat-num">${helps.length}</div><div class="stat-label">Helps</div></div>`;
+  html += '</div>';
+  body.innerHTML = html;
+
+  if (currentPost.mode==='guess' && guesses.length) {
+    let sec = '<div class="activity-section"><h4>Guesses</h4><div class="activity-list">';
+    guesses.forEach(g => {
+      sec += `<div class="activity-item ${g.correct?'correct':'incorrect'}">
+        <div class="activity-guess">${g.song?'Song: '+g.song:''} ${g.artist?'• Artist: '+g.artist:''}</div>
+        <div class="activity-result ${g.correct?'correct':'incorrect'}">${g.correct?'Correct':'Incorrect'}</div>
+        <div class="activity-time">${timeAgo(g.timestamp)}</div>
+      </div>`;
+    });
+    body.innerHTML += sec + '</div></div>';
+  }
+
+  closeModal(postcardModal);
+  openModal(analyticsModal);
+};
+
+// Listen from postcard
+listenPostcard.onclick = () => {
+  const idx = posts.findIndex(p => p.id === currentPost?.id);
+  if (idx !== -1) { closeModal(postcardModal); window.openListen(idx); }
+};
+
 // ===== SCROLL MANAGEMENT =====
-function setupScrollToTop() {
-  if (!feedList || !scrollToTopBtn) return;
-
-  const check = () => {
-    const top = feedList.scrollTop || window.pageYOffset;
-    scrollToTopBtn.classList.toggle('visible', top > 300);
-  };
-
-  feedList.addEventListener('scroll', check);
-  window.addEventListener('scroll', check);
-
-  scrollToTopBtn.onclick = () => {
-    feedList.scrollTo({ top: 0, behavior: 'smooth' });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    savedScrollPosition = 0;
-    setTimeout(() => scrollToTopBtn.classList.remove('visible'), 600);
-  };
+window.addEventListener('scroll', () => {
+  scrollToTopBtn?.classList.toggle('visible', window.pageYOffset > 300);
+});
+if (scrollToTopBtn) {
+  scrollToTopBtn.onclick = () => { window.scrollTo({top:0,behavior:'smooth'}); };
 }
-
-function showNewPostsIndicator(count) {
-  if (!newPostsIndicator) return;
-  newPostsIndicator.querySelector('.new-posts-count').textContent = count;
-  newPostsIndicator.classList.add('visible');
-}
-
-function hideNewPostsIndicator() {
-  if (newPostsIndicator) newPostsIndicator.classList.remove('visible');
-}
-
 if (newPostsIndicator) {
   newPostsIndicator.onclick = () => {
     newPostsAvailable = false;
-    savedScrollPosition = 0;
     renderFeed();
-    hideNewPostsIndicator();
-    feedList.scrollTo({ top: 0, behavior: 'smooth' });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    newPostsIndicator.classList.remove('visible');
+    window.scrollTo({top:0,behavior:'smooth'});
   };
 }
+function showNewPostsIndicator(count) {
+  const c = document.getElementById("newPostsCount");
+  if (c) c.textContent = count;
+  newPostsIndicator?.classList.add('visible');
+}
 
-// ===== POSTER DESIGN - ENHANCED =====
-
-// Update live preview with image effects
+// ===== POSTER: LIVE PREVIEW =====
 function updateLivePreview() {
   if (!currentPost || !posterPreviewCanvas) return;
-
   const ctx = posterPreviewCanvas.getContext('2d');
-  const W = 320, H = 320;
+  const W = 300, H = 300;
   posterPreviewCanvas.width = W;
   posterPreviewCanvas.height = H;
-
-  const c = POSTER_DESIGNS[selectedDesign];
-  const fontData = FONT_FAMILIES[selectedFont];
-
-  // Background with image effects
-  if (uploadedBgImage) {
-    // Apply effects via canvas
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = W;
-    tempCanvas.height = H;
-
-    // Draw image
-    const scale = Math.max(W / uploadedBgImage.width, H / uploadedBgImage.height);
-    const sw = uploadedBgImage.width * scale;
-    const sh = uploadedBgImage.height * scale;
-    const sx = (W - sw) / 2;
-    const sy = (H - sh) / 2;
-
-    // Apply brightness, contrast filters
-    tempCtx.filter = getImageFilter();
-    tempCtx.drawImage(uploadedBgImage, sx, sy, sw, sh);
-    tempCtx.filter = 'none';
-
-    // Apply blur if needed
-    if (imageEffects.blur > 0) {
-      ctx.filter = `blur(${imageEffects.blur}px)`;
-      ctx.drawImage(tempCanvas, 0, 0);
-      ctx.filter = 'none';
-    } else {
-      ctx.drawImage(tempCanvas, 0, 0);
-    }
-
-    // Darkness overlay
-    const darknessAlpha = imageEffects.darkness / 100;
-    ctx.fillStyle = `rgba(0,0,0,${darknessAlpha})`;
-    ctx.fillRect(0, 0, W, H);
-  } else {
-    // Gradient background
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, c.bg[0]);
-    g.addColorStop(0.5, c.bg[1]);
-    g.addColorStop(1, c.bg[2]);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-  }
-
-  const fs = 13;
-
-  // Header
-  ctx.shadowColor = 'rgba(0,0,0,0.3)';
-  ctx.shadowBlur = uploadedBgImage ? 8 : 0;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = uploadedBgImage ? 2 : 0;
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
-  const headerFont = c.font === 'sans-bold' ? `900 ${fs * 1.4}px sans-serif` : c.font === 'sans' ? `700 ${fs * 1.3}px sans-serif` : `bold ${fs * 1.3}px serif`;
-  ctx.font = headerFont;
-  ctx.textAlign = 'center';
-  ctx.fillText('MARGO', W / 2, 38);
-
-  // Lyric
-  ctx.shadowBlur = uploadedBgImage ? 6 : 0;
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.text;
-  ctx.font = `${fontData.style} ${fs * 0.95}px ${fontData.family}`;
-  const prev = currentPost.text.length > 80 ? currentPost.text.substring(0, 77) + '…' : currentPost.text;
-  wrapText(ctx, prev, W / 2, H / 2 - 28, W * 0.85, fs * 1.3);
-
-  // Emotion
-  ctx.shadowBlur = uploadedBgImage ? 6 : 0;
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
-  ctx.font = `600 ${fs * 0.74}px sans-serif`;
-  ctx.fillText(`#${currentPost.emotion || 'Nostalgia'}`, W / 2, H / 2 + 36);
-
-  // Line
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = uploadedBgImage ? 'rgba(255,255,255,0.6)' : c.secondary;
-  ctx.lineWidth = 1.1;
-  ctx.beginPath();
-  ctx.moveTo(W * 0.3, H / 2 + 50);
-  ctx.lineTo(W * 0.7, H / 2 + 50);
-  ctx.stroke();
-
-  // Song info
-  const k = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
-  ctx.shadowBlur = uploadedBgImage ? 6 : 0;
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
-  ctx.font = `bold ${fs * 0.9}px ${fontData.family}`;
-  ctx.fillText(k.song.length > 26 ? k.song.substring(0, 26) + '…' : k.song, W / 2, H / 2 + 72);
-
-  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.85)' : c.secondary;
-  ctx.font = `500 ${fs * 0.74}px sans-serif`;
-  ctx.fillText(k.artist.length > 30 ? k.artist.substring(0, 30) + '…' : k.artist, W / 2, H / 2 + 88);
+  drawPosterToCtx(ctx, W, H, 12);
 }
 
 function getImageFilter() {
-  let filter = `brightness(${imageEffects.brightness}%) contrast(${imageEffects.contrast}%)`;
+  let f = `brightness(${imageEffects.brightness}%) contrast(${imageEffects.contrast}%)`;
+  const map = {
+    warm:     ' sepia(0.3) saturate(1.3) hue-rotate(-10deg)',
+    cool:     ' saturate(0.85) hue-rotate(15deg)',
+    vintage:  ' sepia(0.5) contrast(1.2)',
+    dramatic: ' contrast(1.5) saturate(1.2) brightness(0.9)',
+    ethereal: ' brightness(1.1) saturate(0.75)',
+    sunset:   ' sepia(0.4) saturate(1.4) hue-rotate(-20deg)',
+    arctic:   ' saturate(0.6) brightness(1.1) hue-rotate(190deg)',
+  };
+  if (map[imageEffects.filter]) f += map[imageEffects.filter];
+  return f;
+}
 
-  // Add color filter
-  switch (imageEffects.filter) {
-    case 'warm':
-      filter += ' sepia(0.3) saturate(1.3) hue-rotate(-10deg)';
-      break;
-    case 'cool':
-      filter += ' saturate(0.9) hue-rotate(10deg)';
-      break;
-    case 'vintage':
-      filter += ' sepia(0.5) contrast(1.2) brightness(0.95)';
-      break;
-    case 'dramatic':
-      filter += ' contrast(1.5) saturate(1.2) brightness(0.9)';
-      break;
-    case 'ethereal':
-      filter += ' brightness(1.1) saturate(0.8) blur(0.5px)';
-      break;
-    case 'sunset':
-      filter += ' sepia(0.4) saturate(1.4) hue-rotate(-15deg)';
-      break;
-    case 'arctic':
-      filter += ' saturate(0.7) brightness(1.1) hue-rotate(180deg)';
-      break;
+function drawPosterToCtx(ctx, W, H, baseFontSize) {
+  const c = POSTER_DESIGNS[selectedDesign] || POSTER_DESIGNS['midnight-gold'];
+  const fd = FONT_FAMILIES[selectedFont]   || FONT_FAMILIES['playfair'];
+  const fs = baseFontSize;
+
+  // ── Background ──
+  if (uploadedBgImage) {
+    const tmp = document.createElement('canvas');
+    const tc  = tmp.getContext('2d');
+    tmp.width = W; tmp.height = H;
+    const scale = Math.max(W/uploadedBgImage.width, H/uploadedBgImage.height);
+    const sw = uploadedBgImage.width*scale, sh = uploadedBgImage.height*scale;
+    tc.filter = getImageFilter();
+    tc.drawImage(uploadedBgImage, (W-sw)/2, (H-sh)/2, sw, sh);
+    tc.filter = 'none';
+    if (imageEffects.blur > 0) { ctx.filter = `blur(${imageEffects.blur}px)`; }
+    ctx.drawImage(tmp, 0, 0);
+    ctx.filter = 'none';
+    ctx.fillStyle = `rgba(0,0,0,${imageEffects.darkness/100})`;
+    ctx.fillRect(0,0,W,H);
+  } else {
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
   }
 
-  return filter;
+  const textColor = uploadedBgImage ? '#ffffff' : c.text;
+  const accentColor = uploadedBgImage ? '#ffffff' : c.primary;
+
+  ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = uploadedBgImage ? 8 : 0;
+  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+
+  // MARGO header
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
+  ctx.font = `700 ${fs*1.3}px sans-serif`;
+  ctx.fillText('MARGO', W/2, fs*2.2);
+
+  // Lyric
+  ctx.fillStyle = textColor;
+  ctx.font = `${fd.style === 'italic' ? 'italic ' : ''}${fs*0.95}px ${fd.family}`;
+  const lyricText = currentPost.text.length > 90 ? currentPost.text.substring(0,87)+'…' : currentPost.text;
+  wrapText(ctx, lyricText, W/2, H*0.42, W*0.84, fs*1.4);
+
+  // Emotion
+  ctx.fillStyle = accentColor;
+  ctx.font = `600 ${fs*0.72}px sans-serif`;
+  ctx.fillText(`#${currentPost.emotion||'Nostalgia'}`, W/2, H*0.64);
+
+  // Divider
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = uploadedBgImage ? 'rgba(255,255,255,0.5)' : c.secondary;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(W*0.3, H*0.7); ctx.lineTo(W*0.7, H*0.7); ctx.stroke();
+
+  // Song
+  const k = currentPost.knowledge || { song:'Unknown Song', artist:'Unknown Artist' };
+  ctx.fillStyle = accentColor;
+  ctx.font = `bold ${fs*0.85}px ${fd.family}`;
+  ctx.fillText(k.song.length>28 ? k.song.substring(0,28)+'…' : k.song, W/2, H*0.78);
+  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.75)' : c.secondary;
+  ctx.font = `500 ${fs*0.7}px sans-serif`;
+  ctx.fillText(k.artist.length>32 ? k.artist.substring(0,32)+'…' : k.artist, W/2, H*0.85);
+
+  // Footer
+  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.2)';
+  ctx.font = `400 ${fs*0.55}px sans-serif`;
+  ctx.fillText(APP_BASE_URL.replace(/^https?:\/\//,''), W/2, H*0.94);
 }
 
 function wrapText(ctx, text, x, y, maxW, lh) {
   const words = text.split(' ');
   let line = '', lines = [];
-  for (let n = 0; n < words.length; n++) {
-    const test = line + words[n] + ' ';
-    if (ctx.measureText(test).width > maxW && n > 0) {
-      lines.push(line);
-      line = words[n] + ' ';
-    } else {
-      line = test;
-    }
-  }
-  lines.push(line);
-  const startY = y - ((lines.length - 1) * lh) / 2;
-  lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lh));
+  words.forEach(word => {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = word + ' '; }
+    else line = test;
+  });
+  if (line.trim()) lines.push(line.trim());
+  const startY = y - ((lines.length-1)*lh)/2;
+  lines.forEach((l,i) => ctx.fillText(l, x, startY + i*lh));
 }
 
-// Setup image upload
-function wireUploadBg() {
-  const uploadBgBtn = document.getElementById("uploadBgBtn");
-  const bgUploadInput = document.getElementById("bgUploadInput");
-  const imageControlsSection = document.getElementById("imageControlsSection");
-  const uploadStatus = document.getElementById("uploadStatus");
-
-  if (!uploadBgBtn || !bgUploadInput) return;
-
-  uploadBgBtn.onclick = () => bgUploadInput.click();
-
-  bgUploadInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      showToast("Please upload an image");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      showToast("File too large. Max 10MB");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        uploadedBgImage = img;
-        imageControlsSection.style.display = 'block';
-        uploadStatus.textContent = file.name;
-        showToast("Photo uploaded!");
-        updateLivePreview();
-      };
-      img.onerror = () => {
-        showToast("Failed to load image");
-      };
-      img.src = ev.target.result;
-    };
-    reader.onerror = () => {
-      showToast("Failed to read file");
-    };
-    reader.readAsDataURL(file);
-  };
-}
-
-// Wire image effect controls
-function wireImageEffects() {
-  const brightnessSlider = document.getElementById("brightnessSlider");
-  const darknessSlider = document.getElementById("darknessSlider");
-  const blurSlider = document.getElementById("blurSlider");
-  const contrastSlider = document.getElementById("contrastSlider");
-
-  const brightnessValue = document.getElementById("brightnessValue");
-  const darknessValue = document.getElementById("darknessValue");
-  const blurValue = document.getElementById("blurValue");
-  const contrastValue = document.getElementById("contrastValue");
-
-  const resetEffectsBtn = document.getElementById("resetEffectsBtn");
-  const removeBgBtn = document.getElementById("removeBgBtn");
-
-  if (brightnessSlider) {
-    brightnessSlider.oninput = () => {
-      imageEffects.brightness = parseInt(brightnessSlider.value);
-      if (brightnessValue) brightnessValue.textContent = imageEffects.brightness + '%';
+// ===== POSTER: WIRE CONTROLS =====
+function wirePosterControls() {
+  // Color dots — class is "clr-dot"
+  document.querySelectorAll(".clr-dot").forEach(dot => {
+    dot.onclick = () => {
+      document.querySelectorAll(".clr-dot").forEach(d => d.classList.remove("active"));
+      dot.classList.add("active");
+      selectedDesign = dot.dataset.design;
       updateLivePreview();
     };
-  }
+  });
 
-  if (darknessSlider) {
-    darknessSlider.oninput = () => {
-      imageEffects.darkness = parseInt(darknessSlider.value);
-      if (darknessValue) darknessValue.textContent = imageEffects.darkness + '%';
-      updateLivePreview();
-    };
-  }
-
-  if (blurSlider) {
-    blurSlider.oninput = () => {
-      imageEffects.blur = parseInt(blurSlider.value);
-      if (blurValue) blurValue.textContent = imageEffects.blur;
-      updateLivePreview();
-    };
-  }
-
-  if (contrastSlider) {
-    contrastSlider.oninput = () => {
-      imageEffects.contrast = parseInt(contrastSlider.value);
-      if (contrastValue) contrastValue.textContent = imageEffects.contrast + '%';
-      updateLivePreview();
-    };
-  }
-
-  // Filter buttons
-  document.querySelectorAll(".filter-btn").forEach(btn => {
+  // Font chips — class is "font-chip"
+  document.querySelectorAll(".font-chip").forEach(btn => {
     btn.onclick = () => {
-      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".font-chip").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedFont = btn.dataset.font;
+      updateLivePreview();
+    };
+  });
+
+  // Filter chips — class is "filter-chip"
+  document.querySelectorAll(".filter-chip").forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".filter-chip").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       imageEffects.filter = btn.dataset.filter;
       updateLivePreview();
     };
   });
 
+  // Effect sliders
+  const sliderDefs = [
+    ['brightnessSlider','brightnessValue','brightness','%'],
+    ['darknessSlider',  'darknessValue',  'darkness',  '%'],
+    ['blurSlider',      'blurValue',      'blur',      ''],
+    ['contrastSlider',  'contrastValue',  'contrast',  '%'],
+  ];
+  sliderDefs.forEach(([sliderId, valId, key, unit]) => {
+    const slider = document.getElementById(sliderId);
+    const valEl  = document.getElementById(valId);
+    if (!slider) return;
+    slider.oninput = () => {
+      imageEffects[key] = parseInt(slider.value);
+      if (valEl) valEl.textContent = slider.value + unit;
+      updateLivePreview();
+    };
+  });
+
   // Reset effects
-  if (resetEffectsBtn) {
-    resetEffectsBtn.onclick = () => {
-      imageEffects = { brightness: 100, darkness: 50, blur: 0, contrast: 100, filter: 'none' };
-      if (brightnessSlider) brightnessSlider.value = 100;
-      if (darknessSlider) darknessSlider.value = 50;
-      if (blurSlider) blurSlider.value = 0;
-      if (contrastSlider) contrastSlider.value = 100;
-      if (brightnessValue) brightnessValue.textContent = '100%';
-      if (darknessValue) darknessValue.textContent = '50%';
-      if (blurValue) blurValue.textContent = '0';
-      if (contrastValue) contrastValue.textContent = '100%';
-      document.querySelectorAll(".filter-btn").forEach((b, i) => b.classList.toggle("active", i === 0));
-      updateLivePreview();
-    };
-  }
-
-  // Remove background
-  if (removeBgBtn) {
-    removeBgBtn.onclick = () => {
-      uploadedBgImage = null;
-      const imageControlsSection = document.getElementById("imageControlsSection");
-      const uploadStatus = document.getElementById("uploadStatus");
-      if (imageControlsSection) imageControlsSection.style.display = 'none';
-      if (uploadStatus) uploadStatus.textContent = "Tap to add background image";
-      const bgUploadInput = document.getElementById("bgUploadInput");
-      if (bgUploadInput) bgUploadInput.value = '';
-      updateLivePreview();
-    };
-  }
-}
-
-// Wire color and font pickers
-function wireColorPicker() {
-  document.querySelectorAll(".color-dot").forEach(dot => {
-    dot.onclick = () => {
-      document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
-      dot.classList.add("active");
-      selectedDesign = dot.dataset.design;
-      updateLivePreview();
-    };
-  });
-}
-
-function wireFontPicker() {
-  document.querySelectorAll(".font-btn").forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll(".font-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      selectedFont = btn.dataset.font;
-      updateLivePreview();
-    };
-  });
-}
-
-// Poster generation
-async function generatePoster(size, design) {
-  if (!currentPost) return;
-
-  const sizes = {
-    'instagram-square': { w: 1080, h: 1080 },
-    'instagram-story': { w: 1080, h: 1920 },
-    'twitter': { w: 1200, h: 675 },
-    'facebook': { w: 1200, h: 630 },
-    'pinterest': { w: 1000, h: 1500 },
-    'discord': { w: 1280, h: 720 },
-    'reddit': { w: 1200, h: 1200 }
+  const resetBtn = document.getElementById("resetEffectsBtn");
+  if (resetBtn) resetBtn.onclick = () => {
+    imageEffects = { brightness:100, darkness:50, blur:0, contrast:100, filter:'none' };
+    const resets = {brightnessSlider:100, darknessSlider:50, blurSlider:0, contrastSlider:100};
+    Object.entries(resets).forEach(([id,val]) => { const el=document.getElementById(id); if(el) el.value=val; });
+    const labels = {brightnessValue:'100%', darknessValue:'50%', blurValue:'0', contrastValue:'100%'};
+    Object.entries(labels).forEach(([id,val]) => { const el=document.getElementById(id); if(el) el.textContent=val; });
+    document.querySelectorAll(".filter-chip").forEach((b,i) => b.classList.toggle("active", i===0));
+    updateLivePreview();
   };
 
-  const d = sizes[size];
-  if (!d) return;
-
-  const c = POSTER_DESIGNS[design];
-  const fontData = FONT_FAMILIES[selectedFont];
-  const ctx = posterCanvas.getContext('2d');
-
-  posterCanvas.width = d.w;
-  posterCanvas.height = d.h;
-
-  // Background with effects
-  if (uploadedBgImage) {
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = d.w;
-    tempCanvas.height = d.h;
-
-    const scale = Math.max(d.w / uploadedBgImage.width, d.h / uploadedBgImage.height);
-    const sw = uploadedBgImage.width * scale;
-    const sh = uploadedBgImage.height * scale;
-    const sx = (d.w - sw) / 2;
-    const sy = (d.h - sh) / 2;
-
-    tempCtx.filter = getImageFilter();
-    tempCtx.drawImage(uploadedBgImage, sx, sy, sw, sh);
-    tempCtx.filter = 'none';
-
-    if (imageEffects.blur > 0) {
-      ctx.filter = `blur(${imageEffects.blur * 2}px)`;
-      ctx.drawImage(tempCanvas, 0, 0);
-      ctx.filter = 'none';
-    } else {
-      ctx.drawImage(tempCanvas, 0, 0);
-    }
-
-    const darknessAlpha = imageEffects.darkness / 100;
-    ctx.fillStyle = `rgba(0,0,0,${darknessAlpha})`;
-    ctx.fillRect(0, 0, d.w, d.h);
-  } else {
-    const g = ctx.createLinearGradient(0, 0, 0, d.h);
-    g.addColorStop(0, c.bg[0]);
-    g.addColorStop(0.5, c.bg[1]);
-    g.addColorStop(1, c.bg[2]);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, d.w, d.h);
+  // Upload bg
+  const uploadBtn = document.getElementById("uploadBgBtn");
+  const uploadInput = document.getElementById("bgUploadInput");
+  if (uploadBtn && uploadInput) {
+    uploadBtn.onclick = () => uploadInput.click();
+    uploadInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) { showToast("Please upload an image"); return; }
+      if (file.size > 10*1024*1024) { showToast("File too large (max 10MB)"); return; }
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          uploadedBgImage = img;
+          const sec = document.getElementById("imageControlsSection");
+          const stat = document.getElementById("uploadStatus");
+          if (sec) sec.style.display = 'block';
+          if (stat) stat.textContent = file.name;
+          showToast("Photo uploaded!");
+          updateLivePreview();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
   }
 
-  const fs = d.w * 0.032;
-
-  // Header
-  ctx.shadowColor = 'rgba(0,0,0,0.3)';
-  ctx.shadowBlur = uploadedBgImage ? 12 : 0;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = uploadedBgImage ? 2 : 0;
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
-  const headerFont = c.font === 'sans-bold' ? `900 ${fs * 1.6}px sans-serif` : c.font === 'sans' ? `700 ${fs * 1.4}px sans-serif` : `bold ${fs * 1.4}px serif`;
-  ctx.font = headerFont;
-  ctx.textAlign = 'center';
-  ctx.fillText('MARGO', d.w / 2, d.h * 0.11);
-
-  // Lyric
-  ctx.shadowBlur = uploadedBgImage ? 8 : 0;
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.text;
-  ctx.font = `${fontData.style} ${fs * 1.15}px ${fontData.family}`;
-  wrapText(ctx, currentPost.text, d.w / 2, d.h * 0.38, d.w * 0.85, fs * 1.7);
-
-  // Emotion
-  ctx.shadowBlur = uploadedBgImage ? 8 : 0;
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
-  ctx.font = `600 ${fs * 0.85}px sans-serif`;
-  ctx.fillText(`#${currentPost.emotion || 'Nostalgia'}`, d.w / 2, d.h * 0.62);
-
-  // Line
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = uploadedBgImage ? 'rgba(255,255,255,0.6)' : c.secondary;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(d.w * 0.3, d.h * 0.68);
-  ctx.lineTo(d.w * 0.7, d.h * 0.68);
-  ctx.stroke();
-
-  // Song
-  const k = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
-  ctx.shadowBlur = uploadedBgImage ? 8 : 0;
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
-  ctx.font = `bold ${fs * 1.1}px ${fontData.family}`;
-  ctx.fillText(k.song, d.w / 2, d.h * 0.78);
-
-  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.85)' : c.secondary;
-  ctx.font = `500 ${fs * 0.9}px sans-serif`;
-  ctx.fillText(k.artist, d.w / 2, d.h * 0.85);
-
-  // Footer
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.25)';
-  ctx.font = `500 ${fs * 0.6}px sans-serif`;
-  ctx.fillText(APP_BASE_URL.replace(/^https?:\/\//, ''), d.w / 2, d.h * 0.95);
-
-  return new Promise(res => {
-    posterCanvas.toBlob(blob => {
-      generatedPosterBlob = blob;
-      res();
-    }, 'image/png');
-  });
+  // Remove bg
+  const removeBtn = document.getElementById("removeBgBtn");
+  if (removeBtn) removeBtn.onclick = () => {
+    uploadedBgImage = null;
+    const sec  = document.getElementById("imageControlsSection");
+    const stat = document.getElementById("uploadStatus");
+    const inp  = document.getElementById("bgUploadInput");
+    if (sec)  sec.style.display = 'none';
+    if (stat) stat.textContent  = 'Tap to add your image';
+    if (inp)  inp.value = '';
+    updateLivePreview();
+  };
 }
 
-// Poster modal setup
+// ===== POSTER MODAL =====
+const EMOTION_DESIGN_MAP = {
+  Love:'rose-gold', Heartbreak:'sunset-coral', Hope:'emerald-night',
+  Nostalgia:'midnight-gold', Healing:'cream-editorial', Joy:'vaporwave',
+  Rage:'neon-dark', Loneliness:'royal-purple'
+};
+
 sharePosterBtn.onclick = () => {
   closeModal(postcardModal);
-  resetPosterModal();
+  // reset state
+  uploadedBgImage = null;
+  selectedFont    = 'playfair';
+  imageEffects    = { brightness:100, darkness:50, blur:0, contrast:100, filter:'none' };
+  generatedPosterBlob = null;
+  selectedPosterSize  = null;
 
-  // Auto-select design based on emotion
-  if (currentPost && currentPost.emotion) {
-    const emotionDesignMap = {
-      'Love': 'rose-gold',
-      'Heartbreak': 'sunset-coral',
-      'Hope': 'emerald-night',
-      'Nostalgia': 'midnight-gold',
-      'Healing': 'cream-editorial',
-      'Joy': 'vaporwave',
-      'Rage': 'neon-dark',
-      'Loneliness': 'royal-purple'
-    };
-    selectedDesign = emotionDesignMap[currentPost.emotion] || 'midnight-gold';
-
-    document.querySelectorAll(".color-dot").forEach(dot => {
-      dot.classList.toggle("active", dot.dataset.design === selectedDesign);
-    });
+  // auto design by emotion
+  if (currentPost?.emotion) {
+    selectedDesign = EMOTION_DESIGN_MAP[currentPost.emotion] || 'midnight-gold';
+  } else {
+    selectedDesign = 'midnight-gold';
   }
 
-  uploadedBgImage = null;
-  selectedFont = 'playfair';
-  imageEffects = { brightness: 100, darkness: 50, blur: 0, contrast: 100, filter: 'none' };
+  // reset steps
+  designStep.classList.add("active");
+  platformStep.classList.remove("active");
+  shareStep.classList.remove("active");
 
-  document.querySelectorAll(".font-btn").forEach((btn, i) => {
-    btn.classList.toggle("active", i === 0);
-  });
-
-  const imageControlsSection = document.getElementById("imageControlsSection");
-  if (imageControlsSection) imageControlsSection.style.display = 'none';
+  // reset UI
+  document.querySelectorAll(".clr-dot").forEach(d => d.classList.toggle("active", d.dataset.design === selectedDesign));
+  document.querySelectorAll(".font-chip").forEach((b,i) => b.classList.toggle("active", i===0));
+  document.querySelectorAll(".filter-chip").forEach((b,i) => b.classList.toggle("active", i===0));
+  const sec = document.getElementById("imageControlsSection");
+  if (sec) sec.style.display = 'none';
+  const stat = document.getElementById("uploadStatus");
+  if (stat) stat.textContent = 'Tap to add your image';
 
   openModal(sharePosterModal);
-
   setTimeout(() => {
+    wirePosterControls();
     updateLivePreview();
-    wireColorPicker();
-    wireFontPicker();
-    wireUploadBg();
-    wireImageEffects();
-  }, 100);
+  }, 80);
 };
 
-nextToPlatform.onclick = () => {
-  designStep.classList.remove("active");
-  platformStep.classList.add("active");
-};
+nextToPlatform.onclick = () => { designStep.classList.remove("active"); platformStep.classList.add("active"); };
+backToDesign.onclick   = () => { platformStep.classList.remove("active"); designStep.classList.add("active"); };
+backToPlatform.onclick = () => { shareStep.classList.remove("active"); platformStep.classList.add("active"); };
 
-backToDesign.onclick = () => {
-  platformStep.classList.remove("active");
-  designStep.classList.add("active");
-};
+// Platform buttons — use "plat-btn" class
+document.querySelectorAll(".plat-btn[data-size]").forEach(btn => {
+  btn.onclick = async () => {
+    selectedPosterSize = btn.dataset.size;
+    showToast("Generating poster…");
+    try {
+      await generatePoster(selectedPosterSize);
+      shareableLink.value = `${APP_BASE_URL}?post=${currentPost?.id||''}`;
+      platformStep.classList.remove("active");
+      shareStep.classList.add("active");
+      showToast("Poster ready!");
+    } catch(err) {
+      console.error(err); showToast("Error generating poster");
+    }
+  };
+});
 
-backToPlatform.onclick = () => {
-  shareStep.classList.remove("active");
-  platformStep.classList.add("active");
-};
-
-// Platform buttons
-setTimeout(() => {
-  document.querySelectorAll(".platform-btn[data-size]").forEach(btn => {
-    btn.onclick = async () => {
-      selectedPosterSize = btn.dataset.size;
-      showToast("Generating poster...");
-
-      try {
-        await generatePoster(selectedPosterSize, selectedDesign);
-        shareableLink.value = `${APP_BASE_URL}?post=${currentPost.id}`;
-
-        platformStep.classList.remove("active");
-        shareStep.classList.add("active");
-
-        showToast("Poster ready!");
-      } catch (error) {
-        console.error("Poster generation error:", error);
-        showToast("Error generating poster");
-      }
-    };
-  });
-}, 1000);
-
-function resetPosterModal() {
-  designStep.classList.add("active");
-  platformStep.classList.remove("active");
-  shareStep.classList.remove("active");
-  selectedDesign = "midnight-gold";
-  selectedPosterSize = null;
-  generatedPosterBlob = null;
-  uploadedBgImage = null;
-  selectedFont = 'playfair';
-  imageEffects = { brightness: 100, darkness: 50, blur: 0, contrast: 100, filter: 'none' };
-  document.querySelectorAll(".color-dot").forEach((d, i) => d.classList.toggle("active", i === 0));
-  document.querySelectorAll(".font-btn").forEach((b, i) => b.classList.toggle("active", i === 0));
+async function generatePoster(size) {
+  if (!currentPost) return;
+  const SIZES = {
+    'instagram-square': {w:1080,h:1080},
+    'instagram-story':  {w:1080,h:1920},
+    'twitter':          {w:1200,h:675},
+    'facebook':         {w:1200,h:630},
+    'pinterest':        {w:1000,h:1500},
+    'reddit':           {w:1200,h:1200},
+  };
+  const d = SIZES[size]; if (!d) return;
+  posterCanvas.width = d.w; posterCanvas.height = d.h;
+  const ctx = posterCanvas.getContext('2d');
+  const fs  = d.w * 0.028;
+  drawPosterToCtx(ctx, d.w, d.h, fs);
+  return new Promise(res => posterCanvas.toBlob(blob => { generatedPosterBlob = blob; res(); }, 'image/png'));
 }
 
-// Share buttons
+// ===== SHARE BUTTONS =====
 copyLinkBtn.onclick = async () => {
   try {
     await navigator.clipboard.writeText(shareableLink.value);
     copyLinkBtn.textContent = "Copied!";
-    setTimeout(() => { copyLinkBtn.textContent = "Copy"; }, 2000);
+    setTimeout(() => copyLinkBtn.textContent = "Copy", 2000);
     showToast("Link copied!");
-  } catch {
-    shareableLink.select();
-    showToast("Copy the link manually");
-  }
+  } catch { shareableLink.select(); showToast("Copy the link manually"); }
 };
 
-const copyForDiscordBtn = document.getElementById("copyForDiscordBtn");
-if (copyForDiscordBtn) {
-  copyForDiscordBtn.onclick = async () => {
-    if (!generatedPosterBlob) {
-      showToast("Please wait, generating poster…");
-      return;
-    }
-
-    try {
-      const item = new ClipboardItem({ "image/png": generatedPosterBlob });
-      await navigator.clipboard.write([item]);
-      copyForDiscordBtn.textContent = "Copied! Paste in Discord";
-      setTimeout(() => { copyForDiscordBtn.textContent = "Copy for Discord"; }, 3000);
-      showToast("Image copied — paste in Discord!");
-    } catch (err) {
-      downloadPosterFile();
-      showToast("Downloaded — drag into Discord");
-    }
-  };
-}
-
 shareNativeBtn.onclick = async () => {
-  if (!generatedPosterBlob) {
-    showToast("Please wait, generating poster…");
-    return;
-  }
-
-  const filename = `margo-poster-${selectedPosterSize || 'image'}-${Date.now()}.png`;
-  const file = new File([generatedPosterBlob], filename, { type: 'image/png' });
-
-  const sd = {
-    title: `MARGO — ${currentPost.text.substring(0, 50)}`,
-    text: `"${currentPost.text}"\n\n${shareableLink.value}`,
-    files: [file]
-  };
-
+  if (!generatedPosterBlob) { showToast("Generating…"); return; }
+  const file = new File([generatedPosterBlob], `margo-poster-${Date.now()}.png`, {type:'image/png'});
+  const sd = { title:`MARGO — ${currentPost.text.substring(0,50)}`, text:`"${currentPost.text}"\n\n${shareableLink.value}`, files:[file] };
   try {
-    if (navigator.canShare && navigator.canShare(sd)) {
-      await navigator.share(sd);
-      showToast("Shared!");
-    } else {
-      downloadPosterFile();
-      showToast("Poster saved");
-    }
-  } catch (e) {
-    if (e.name !== 'AbortError') {
-      downloadPosterFile();
-      showToast("Poster saved");
-    }
-  }
+    if (navigator.canShare?.(sd)) { await navigator.share(sd); showToast("Shared!"); }
+    else downloadPosterFile();
+  } catch(e) { if (e.name!=='AbortError') downloadPosterFile(); }
 };
 
 downloadManualBtn.onclick = downloadPosterFile;
 
 function downloadPosterFile() {
-  if (!generatedPosterBlob) {
-    showToast("No poster generated yet");
-    return;
-  }
-
+  if (!generatedPosterBlob) { showToast("No poster yet"); return; }
   const a = document.createElement('a');
   const url = URL.createObjectURL(generatedPosterBlob);
-  a.href = url;
-  a.download = `margo-poster-${selectedPosterSize || 'image'}-${Date.now()}.png`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
+  a.href = url; a.download = `margo-poster-${Date.now()}.png`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
   showToast("Poster downloaded!");
 }
 
-// Toast
+// ===== MODAL CLOSE BUTTONS =====
+document.getElementById("closeGuess").onclick    = () => { closeModal(guessModal);       currentGuessAttempts = 0; };
+document.getElementById("closeDiscover").onclick = () => closeModal(discoverModal);
+document.getElementById("closePostcard").onclick = () => closeModal(postcardModal);
+document.getElementById("closeListen").onclick   = () => closeModal(listenModal);
+document.getElementById("closeAnalytics").onclick= () => closeModal(analyticsModal);
+document.getElementById("closeSharePoster").onclick = () => {
+  closeModal(sharePosterModal);
+  designStep.classList.add("active"); platformStep.classList.remove("active"); shareStep.classList.remove("active");
+};
+
+// ===== TOAST =====
 function showToast(msg) {
-  const ex = document.querySelector(".toast");
-  if (ex) ex.remove();
+  document.querySelectorAll(".toast").forEach(t => t.remove());
   const t = document.createElement("div");
-  t.className = "toast";
-  t.textContent = msg;
+  t.className = "toast"; t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.classList.add("show"), 10);
   setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 300); }, 2600);
 }
 
-// Modal close buttons
-document.getElementById("closeGuess").onclick = () => { closeModal(guessModal); currentGuessAttempts = 0; };
-document.getElementById("closeDiscover").onclick = () => closeModal(discoverModal);
-document.getElementById("closePostcard").onclick = () => closeModal(postcardModal);
-document.getElementById("closeListen").onclick = () => closeModal(listenModal);
-document.getElementById("closeAnalytics").onclick = () => closeModal(analyticsModal);
-document.getElementById("closeSharePoster").onclick = () => { closeModal(sharePosterModal); resetPosterModal(); };
-
-// Init
+// ===== INIT =====
 setupScrollToTop();
+buildLyricStream();
 console.log("MARGO loaded. Firebase:", isFirebaseEnabled);
 
-// ===== GUESS SUBMISSION =====
-const submitGuessBtn = document.getElementById("submitGuess");
-if (submitGuessBtn) {
-  submitGuessBtn.onclick = () => {
-    if (!currentPost) return;
-    currentGuessAttempts++;
-
-    const k = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
-    const doSong = currentPost.guessConfig?.guessSong ?? true;
-    const doArtist = currentPost.guessConfig?.guessArtist ?? true;
-
-    const guessSongInput = document.getElementById("guessSongInput");
-    const guessArtistInput = document.getElementById("guessArtistInput");
-    const guessResult = document.getElementById("guessResult");
-    const guessLinksSection = document.getElementById("guessLinksSection");
-    const guessInputFields = document.getElementById("guessInputFields");
-    const submitGuess = document.getElementById("submitGuess");
-    const revealAnswer = document.getElementById("revealAnswer");
-
-    const gs = guessSongInput.value.trim().toLowerCase();
-    const ga = guessArtistInput.value.trim().toLowerCase();
-    const as = k.song.toLowerCase();
-    const aa = k.artist.toLowerCase();
-
-    const songOk = !doSong || (gs && (gs === as || gs.includes(as) || as.includes(gs)));
-    const artistOk = !doArtist || (ga && (ga === aa || ga.includes(aa) || aa.includes(ga)));
-    const correct = songOk && artistOk;
-
-    const guessData = { song: gs || null, artist: ga || null, correct, timestamp: Date.now() };
-    if (isFirebaseEnabled) {
-      analyticsRef.child(currentPost.id).child('guesses').push(guessData);
-    }
-
-    guessResult.classList.remove("hidden");
-
-    if (correct) {
-      guessResult.className = "result-message success";
-      guessResult.innerHTML = `<div style="margin-bottom:6px">Correct!</div><div style="font-size:0.83rem">"${k.song}" by ${k.artist}</div>`;
-      submitGuess.classList.add("hidden");
-      guessInputFields.classList.add("hidden");
-      revealAnswer.classList.add("hidden");
-      
-      // Show links if available
-      if (currentPost.links) {
-        const links = currentPost.links;
-        if (links.spotify || links.apple || links.youtube || links.soundcloud) {
-          let html = '<div class="guess-links-title">Listen to the song</div><div class="guess-links-container">';
-          if (links.spotify) html += `<a href="${links.spotify}" target="_blank" rel="noopener noreferrer" class="guess-link">Spotify</a>`;
-          if (links.apple) html += `<a href="${links.apple}" target="_blank" rel="noopener noreferrer" class="guess-link">Apple Music</a>`;
-          if (links.youtube) html += `<a href="${links.youtube}" target="_blank" rel="noopener noreferrer" class="guess-link">YouTube</a>`;
-          if (links.soundcloud) html += `<a href="${links.soundcloud}" target="_blank" rel="noopener noreferrer" class="guess-link">SoundCloud</a>`;
-          html += '</div>';
-          guessLinksSection.innerHTML = html;
-          guessLinksSection.classList.remove("hidden");
-        }
-      }
-      return;
-    }
-
-    if (currentGuessAttempts >= MAX_GUESS_ATTEMPTS) {
-      guessResult.className = "result-message error";
-      guessResult.innerHTML = `<div style="margin-bottom:6px">Out of attempts</div><div style="font-size:0.82rem">Song: ${k.song}<br>Artist: ${k.artist}</div>`;
-      submitGuess.classList.add("hidden");
-      guessInputFields.classList.add("hidden");
-      revealAnswer.classList.add("hidden");
-      return;
-    }
-
-    const partialSong = doSong && gs && (gs === as || gs.includes(as) || as.includes(gs));
-    const partialArtist = doArtist && ga && (ga === aa || ga.includes(aa) || aa.includes(ga));
-    const left = MAX_GUESS_ATTEMPTS - currentGuessAttempts;
-
-    if (partialSong || partialArtist) {
-      guessResult.className = "result-message partial";
-      let fb = '<div style="margin-bottom:6px">Partially correct</div>';
-      if (doSong) fb += `<div style="font-size:0.8rem">${partialSong ? '✓' : '✗'} Song: ${gs || '(empty)'}</div>`;
-      if (doArtist) fb += `<div style="font-size:0.8rem">${partialArtist ? '✓' : '✗'} Artist: ${ga || '(empty)'}</div>`;
-      fb += `<div style="font-size:0.74rem;margin-top:6px">${left} attempt${left > 1 ? 's' : ''} left</div>`;
-      guessResult.innerHTML = fb;
-    } else {
-      guessResult.className = "result-message error";
-      let fb = '<div style="margin-bottom:6px">Incorrect</div>';
-      fb += `<div style="font-size:0.74rem;margin-top:6px">${left} attempt${left > 1 ? 's' : ''} left</div>`;
-      guessResult.innerHTML = fb;
-    }
-
-    guessSongInput.value = "";
-    guessArtistInput.value = "";
-  };
-}
-
-// ===== DISCOVER SUBMISSION =====
-const submitDiscoverBtn = document.getElementById("submitDiscover");
-if (submitDiscoverBtn) {
-  submitDiscoverBtn.onclick = () => {
-    const discoverSongAnswer = document.getElementById("discoverSongAnswer");
-    const discoverArtistAnswer = document.getElementById("discoverArtistAnswer");
-    const discoverSpotifyLink = document.getElementById("discoverSpotifyLink");
-    const discoverAppleLink = document.getElementById("discoverAppleLink");
-    const discoverYoutubeLink = document.getElementById("discoverYoutubeLink");
-    const discoverSoundcloudLink = document.getElementById("discoverSoundcloudLink");
-
-    const song = discoverSongAnswer.value.trim();
-    const artist = discoverArtistAnswer.value.trim();
-    if (!song || !artist) { showToast("Please enter both song and artist"); return; }
-
-    const helpData = {
-      song, artist,
-      links: {
-        spotify: discoverSpotifyLink.value.trim() || null,
-        apple: discoverAppleLink.value.trim() || null,
-        youtube: discoverYoutubeLink.value.trim() || null,
-        soundcloud: discoverSoundcloudLink.value.trim() || null
-      },
-      timestamp: Date.now()
-    };
-
-    if (isFirebaseEnabled) {
-      analyticsRef.child(currentPost.id).child('helps').push(helpData);
-    }
-
-    showToast("Thanks for helping!");
-    closeModal(discoverModal);
-  };
-}
-
-// ===== ANALYTICS =====
-if (analyticsBtn) {
-  analyticsBtn.onclick = () => {
-    if (!currentPost) return;
-    const an = postAnalytics[currentPost.id] || { views: 0 };
-    const guesses = Array.isArray(an.guesses) ? an.guesses : Object.values(an.guesses || {});
-    const helps = Array.isArray(an.helps) ? an.helps : Object.values(an.helps || {});
-
-    const body = document.querySelector('#analyticsModal .modal-body');
-
-    let statsHTML = `<div class="analytics-stats">
-      <div class="stat-card"><div class="stat-number">${an.views || 0}</div><div class="stat-label">Views</div></div>`;
-    if (currentPost.mode === 'guess') statsHTML += `<div class="stat-card"><div class="stat-number">${guesses.length}</div><div class="stat-label">Guesses</div></div>`;
-    if (currentPost.mode === 'discover') statsHTML += `<div class="stat-card"><div class="stat-number">${helps.length}</div><div class="stat-label">Helps</div></div>`;
-    statsHTML += '</div>';
-
-    body.innerHTML = statsHTML;
-
-    if (currentPost.mode === 'guess' && guesses.length > 0) {
-      const sec = document.createElement('div');
-      sec.className = 'activity-section';
-      sec.innerHTML = '<h4>Guess Attempts</h4><div class="activity-list" id="guessesList2"></div>';
-      body.appendChild(sec);
-      const list = sec.querySelector('#guessesList2');
-      guesses.forEach(g => {
-        const item = document.createElement('div');
-        item.className = `activity-item ${g.correct ? 'correct' : 'incorrect'}`;
-        item.innerHTML = `<div class="activity-guess">${g.song ? 'Song: ' + g.song : ''}${g.artist ? '<br>Artist: ' + g.artist : ''}</div><div class="activity-result ${g.correct ? 'correct' : 'incorrect'}">${g.correct ? 'Correct' : 'Incorrect'}</div><div class="activity-time">${timeAgo(g.timestamp)}</div>`;
-        list.appendChild(item);
-      });
-    }
-
-    if (currentPost.mode === 'discover' && helps.length > 0) {
-      const sec = document.createElement('div');
-      sec.className = 'activity-section';
-      sec.innerHTML = '<h4>Community Answers</h4><div class="activity-list" id="helpsList2"></div>';
-      body.appendChild(sec);
-      const list = sec.querySelector('#helpsList2');
-      helps.forEach(h => {
-        const item = document.createElement('div');
-        item.className = 'activity-item';
-        let linksHTML = '';
-        if (h.links) {
-          const ll = [];
-          if (h.links.spotify) ll.push(`<a href="${h.links.spotify}" target="_blank" class="activity-link">Spotify</a>`);
-          if (h.links.apple) ll.push(`<a href="${h.links.apple}" target="_blank" class="activity-link">Apple Music</a>`);
-          if (h.links.youtube) ll.push(`<a href="${h.links.youtube}" target="_blank" class="activity-link">YouTube</a>`);
-          if (h.links.soundcloud) ll.push(`<a href="${h.links.soundcloud}" target="_blank" class="activity-link">SoundCloud</a>`);
-          if (ll.length) linksHTML = `<div class="activity-links">${ll.join('')}</div>`;
-        }
-        item.innerHTML = `<div class="activity-guess"><strong>Song:</strong> ${h.song}<br><strong>Artist:</strong> ${h.artist}</div>${linksHTML}<div class="activity-time">${timeAgo(h.timestamp)}</div>`;
-        list.appendChild(item);
-      });
-    }
-
-    closeModal(postcardModal);
-    openModal(analyticsModal);
-  };
-}
-
-// Listen from postcard
-if (listenPostcard) {
-  listenPostcard.onclick = () => {
-    const idx = posts.findIndex(p => p.id === currentPost.id);
-    if (idx !== -1) { closeModal(postcardModal); openListen(idx); }
-  };
+function setupScrollToTop() {
+  window.addEventListener('scroll', () => {
+    scrollToTopBtn?.classList.toggle('visible', window.pageYOffset > 350);
+  });
 }
