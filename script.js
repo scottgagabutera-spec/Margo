@@ -225,8 +225,8 @@ function getTickerPosts() {
 
 // ===== FEATURED STATS =====
 function calcFeatured() {
-  const artistCounts  = {};
-  const songCounts    = {};
+  const artistSet    = new Set();
+  const songSet      = new Set();
   const emotionCounts = {};
 
   posts.forEach(p => {
@@ -234,26 +234,26 @@ function calcFeatured() {
     const song    = p.knowledge?.song;
     const emotion = p.emotion || 'Nostalgia';
 
-    if (artist && artist !== 'Unknown Artist') {
-      artistCounts[artist] = (artistCounts[artist] || 0) + 1;
-    }
-    if (song && song !== 'Unknown Song') {
-      songCounts[song] = (songCounts[song] || 0) + 1;
-    }
+    // Count unique artists
+    if (artist && artist !== 'Unknown Artist') artistSet.add(artist.toLowerCase().trim());
+    // Count unique songs
+    if (song && song !== 'Unknown Song') songSet.add(song.toLowerCase().trim());
+    // Count emotion frequency
     emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
   });
 
-  const topArtist  = Object.entries(artistCounts).sort((a,b) => b[1]-a[1])[0];
-  const topSong    = Object.entries(songCounts).sort((a,b) => b[1]-a[1])[0];
   const topEmotion = Object.entries(emotionCounts).sort((a,b) => b[1]-a[1])[0];
 
-  return { topArtist, topSong, topEmotion };
+  return {
+    uniqueArtists: artistSet.size,
+    uniqueSongs:   songSet.size,
+    topEmotion
+  };
 }
 
 function updateLandingStats() {
   const n = posts.length || 0;
 
-  // Counts
   const lc = document.getElementById("liveCount");
   const st = document.getElementById("statTotal");
   const pc = document.getElementById("postCount");
@@ -261,17 +261,22 @@ function updateLandingStats() {
   if (st) st.textContent = n || '—';
   if (pc) pc.textContent = n;
 
-  if (!n) return;
-
-  const { topArtist, topSong, topEmotion } = calcFeatured();
-
   const artistEl  = document.getElementById("featuredArtist");
   const songEl    = document.getElementById("featuredSong");
   const emotionEl = document.getElementById("topEmotion");
 
-  if (artistEl)  artistEl.textContent  = topArtist  ? topArtist[0]  : '—';
-  if (songEl)    songEl.textContent    = topSong    ? topSong[0]    : '—';
-  if (emotionEl) emotionEl.textContent = topEmotion ? `${topEmotion[0]}` : '—';
+  if (!n) {
+    if (artistEl)  artistEl.textContent  = '—';
+    if (songEl)    songEl.textContent    = '—';
+    if (emotionEl) emotionEl.textContent = '—';
+    return;
+  }
+
+  const { uniqueArtists, uniqueSongs, topEmotion } = calcFeatured();
+
+  if (artistEl)  artistEl.textContent  = uniqueArtists || '—';
+  if (songEl)    songEl.textContent    = uniqueSongs   || '—';
+  if (emotionEl) emotionEl.textContent = topEmotion ? topEmotion[0] : '—';
 }
 
 // ===== FIREBASE SYNC =====
