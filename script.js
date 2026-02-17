@@ -29,18 +29,6 @@ try {
   console.warn('Firebase failed:', e.message);
 }
 
-// ===== PASSCODE HASHING =====
-// SHA-256 with a static salt. Not crypto-grade security but
-// plenty for a "don't accidentally edit someone else's lyric" use case.
-async function hashPin(pin) {
-  const enc  = new TextEncoder();
-  const data = enc.encode(pin + "margoSalt_2025");
-  const buf  = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(buf))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 // ===== STATE =====
 let currentMode = "share";
 let selectedEmotion = null;
@@ -53,7 +41,6 @@ let postsLoaded = false;
 let savedScrollPosition = 0;
 let newPostsAvailable = false;
 let searchQuery = "";
-let pendingEditPostId = null;
 
 // ===== STUDIO STATE =====
 const FONT_FAMILIES = {
@@ -122,8 +109,6 @@ const discoverModal     = document.getElementById("discoverModal");
 const postcardModal     = document.getElementById("postcardModal");
 const listenModal       = document.getElementById("listenModal");
 const analyticsModal    = document.getElementById("analyticsModal");
-const editModal         = document.getElementById("editModal");
-const passcodeModal     = document.getElementById("passcodeModal");
 
 const enterBtn          = document.getElementById("enterBtn");
 const backBtn           = document.getElementById("backBtn");
@@ -382,9 +367,9 @@ modeBtns.forEach(btn => {
 });
 
 // ===== EMOTION PILLS =====
-document.querySelectorAll(".emotion-btn:not(.edit-emotion-btn)").forEach(btn => {
+document.querySelectorAll(".emotion-btn").forEach(btn => {
   btn.onclick = () => {
-    document.querySelectorAll(".emotion-btn:not(.edit-emotion-btn)").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".emotion-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     selectedEmotion = btn.dataset.emotion;
   };
@@ -397,14 +382,6 @@ postBtn.onclick = async () => {
   if (!text)          { showToast("Please enter a lyric"); return; }
   if (!selectedEmotion) { showToast("Please select an emotion"); return; }
 
-  // Passcode
-  const passcodeRaw = document.getElementById("composerPasscode")?.value.trim();
-  let passcodeHash  = null;
-  if (passcodeRaw) {
-    if (!/^\d{4,6}$/.test(passcodeRaw)) { showToast("Passcode must be 4–6 digits"); return; }
-    passcodeHash = await hashPin(passcodeRaw);
-  }
-
   let post = {
     text, emotion: selectedEmotion, mode: currentMode, community: "general",
     knowledge: { song: "Unknown Song", artist: "Unknown Artist" },
@@ -415,7 +392,6 @@ postBtn.onclick = async () => {
       youtube:    youtubeLink.value.trim()    || null,
       soundcloud: soundcloudLink.value.trim() || null
     } : null,
-    passcodeHash: passcodeHash || null,
     authorId: userId,
     timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now()
   };
@@ -471,11 +447,9 @@ function resetComposer() {
   if (appleLink)      appleLink.value   = "";
   if (youtubeLink)    youtubeLink.value = "";
   if (soundcloudLink) soundcloudLink.value = "";
-  const pc = document.getElementById("composerPasscode");
-  if (pc) pc.value = "";
   charCount.textContent = "0";
   selectedEmotion = null;
-  document.querySelectorAll(".emotion-btn:not(.edit-emotion-btn)").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".emotion-btn").forEach(b => b.classList.remove("active"));
   modeBtns.forEach((b,i) => b.classList.toggle("active", i === 0));
   currentMode = "share";
   shareInputs.classList.add("show");
@@ -587,7 +561,6 @@ function renderFeed() {
     const eBg     = EMOTION_COLORS[emotion] || 'rgba(232,197,71,0.1)';
     const eColor  = EMOTION_TEXT[emotion]   || 'var(--gold)';
     const hasLinks= post.links && (post.links.spotify||post.links.apple||post.links.youtube||post.links.soundcloud);
-    const hasLock = !!post.passcodeHash;
 
     // Index in original array (for actions)
     const idx = posts.findIndex(p => p.id === post.id);
@@ -598,7 +571,6 @@ function renderFeed() {
       ? '<span class="card-mode-badge mode-discover">Discover</span>'
       : '<span class="card-mode-badge mode-share">Share</span>';
 
-    const lockBadge = hasLock ? '<span class="card-lock-badge" title="Editable with passcode">🔒</span>' : '';
     const lyricHTML = highlightMatch(post.text, searchQuery);
 
     let songSection = '', actionsSection = '';
@@ -611,7 +583,6 @@ function renderFeed() {
       actionsSection = `<div class="card-actions">
         <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
         ${hasLinks ? `<button class="card-btn" onclick="window.openListen(${idx})">Listen</button>` : ''}
-        <button class="card-btn card-btn-edit" onclick="window.initiateEdit(${idx})">Edit</button>
       </div>`;
     } else if (post.mode === "guess") {
       const what = [];
@@ -622,7 +593,6 @@ function renderFeed() {
       actionsSection = `<div class="card-actions">
         <button class="card-btn" onclick="window.openGuess(${idx})">Guess</button>
         <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
-        <button class="card-btn card-btn-edit" onclick="window.initiateEdit(${idx})">Edit</button>
       </div>`;
     } else {
       const hasClue = k.song !== "Unknown Song" || k.artist !== "Unknown Artist";
@@ -633,14 +603,13 @@ function renderFeed() {
       actionsSection = `<div class="card-actions">
         <button class="card-btn" onclick="window.openDiscover(${idx})">Help</button>
         <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
-        <button class="card-btn card-btn-edit" onclick="window.initiateEdit(${idx})">Edit</button>
       </div>`;
     }
 
     card.innerHTML = `
       <div class="card-top">
         <span class="card-time">${timeAgo(post.timestamp)}</span>
-        <div class="card-top-right">${lockBadge}${modeBadge}</div>
+        ${modeBadge}
       </div>
       <div class="card-lyric" style="font-size:${getDynamicFontSize(post.text.length)}">${lyricHTML}</div>
       <span class="card-emotion-tag" style="background:${eBg};color:${eColor}">${highlightMatch(emotion, searchQuery)}</span>
@@ -664,145 +633,6 @@ function trackView(postId) {
   if (isFirebaseEnabled && postId)
     analyticsRef.child(postId).child('views').transaction(v => (v || 0) + 1);
 }
-
-// ═══════════════════════════════════════════════════
-// PASSCODE + EDIT SYSTEM
-// ═══════════════════════════════════════════════════
-
-// Called when user clicks Edit on any card
-window.initiateEdit = function(index) {
-  const post = posts[index];
-  if (!post) return;
-  pendingEditPostId = post.id;
-
-  if (post.passcodeHash) {
-    // Post has a passcode — prompt for it first
-    openPasscodePrompt(async (pin) => {
-      const hash = await hashPin(pin);
-      if (hash === post.passcodeHash) {
-        closeModal(passcodeModal);
-        openEditModal(post);
-      } else {
-        showPasscodeError("Wrong passcode — try again.");
-      }
-    });
-  } else {
-    // No passcode — open edit directly
-    openEditModal(post);
-  }
-};
-
-function openPasscodePrompt(onSubmit) {
-  const input     = document.getElementById("passcodeInput");
-  const errEl     = document.getElementById("passcodeError");
-  const submitBtn = document.getElementById("passcodeSubmitBtn");
-
-  if (input)  { input.value = ""; setTimeout(() => input.focus(), 200); }
-  if (errEl)  { errEl.textContent = ""; errEl.classList.add("hidden"); }
-
-  // Fresh click handler each time
-  submitBtn.onclick = null;
-  submitBtn.onclick = () => {
-    const val = (input?.value || "").trim();
-    if (!/^\d{4,6}$/.test(val)) { showPasscodeError("Enter your 4–6 digit passcode."); return; }
-    onSubmit(val);
-  };
-  if (input) input.onkeydown = e => { if (e.key === "Enter") submitBtn.click(); };
-
-  openModal(passcodeModal);
-}
-
-function showPasscodeError(msg) {
-  const el = document.getElementById("passcodeError");
-  if (el) { el.textContent = msg; el.classList.remove("hidden"); }
-}
-
-document.getElementById("closePasscode")?.addEventListener("click", () => closeModal(passcodeModal));
-
-// Pre-fill and open the edit modal
-function openEditModal(post) {
-  const $ = id => document.getElementById(id);
-
-  $("editLyricInput").value          = post.text || "";
-  $("editCharCount").textContent     = (post.text || "").length;
-  $("editSongInput").value           = (post.knowledge?.song   !== "Unknown Song"   ? post.knowledge?.song   : "") || "";
-  $("editArtistInput").value         = (post.knowledge?.artist !== "Unknown Artist" ? post.knowledge?.artist : "") || "";
-  $("editSpotifyLink").value         = post.links?.spotify    || "";
-  $("editAppleLink").value           = post.links?.apple      || "";
-  $("editYoutubeLink").value         = post.links?.youtube    || "";
-  $("editSoundcloudLink").value      = post.links?.soundcloud || "";
-
-  document.querySelectorAll(".edit-emotion-btn").forEach(b => {
-    b.classList.toggle("active", b.dataset.emotion === post.emotion);
-  });
-
-  openModal(editModal);
-}
-
-// Edit modal emotion buttons
-document.querySelectorAll(".edit-emotion-btn").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".edit-emotion-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-  };
-});
-
-// Edit char counter
-document.getElementById("editLyricInput")?.addEventListener("input", function() {
-  document.getElementById("editCharCount").textContent = this.value.length;
-});
-
-// Save edited post
-document.getElementById("saveEditBtn")?.addEventListener("click", async () => {
-  if (!pendingEditPostId) return;
-  const $ = id => document.getElementById(id);
-
-  const newText    = $("editLyricInput").value.trim();
-  const newSong    = $("editSongInput").value.trim()   || "Unknown Song";
-  const newArtist  = $("editArtistInput").value.trim() || "Unknown Artist";
-  const newEmotion = document.querySelector(".edit-emotion-btn.active")?.dataset.emotion;
-
-  if (!newText)    { showToast("Lyric can't be empty"); return; }
-  if (!newEmotion) { showToast("Please select an emotion"); return; }
-
-  const updates = {
-    text:               newText,
-    emotion:            newEmotion,
-    "knowledge/song":   newSong,
-    "knowledge/artist": newArtist,
-    "links/spotify":    $("editSpotifyLink").value.trim()    || null,
-    "links/apple":      $("editAppleLink").value.trim()      || null,
-    "links/youtube":    $("editYoutubeLink").value.trim()    || null,
-    "links/soundcloud": $("editSoundcloudLink").value.trim() || null,
-  };
-
-  const btn = $("saveEditBtn");
-  btn.disabled = true;
-  btn.textContent = "Saving…";
-
-  try {
-    if (isFirebaseEnabled) {
-      await postsRef.child(pendingEditPostId).update(updates);
-    } else {
-      const idx = posts.findIndex(p => p.id === pendingEditPostId);
-      if (idx !== -1) {
-        Object.assign(posts[idx], { text: newText, emotion: newEmotion });
-        posts[idx].knowledge = { song: newSong, artist: newArtist };
-      }
-    }
-    showToast("Updated!");
-    closeModal(editModal);
-    renderFeed();
-  } catch(err) {
-    showToast("Error saving: " + err.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Save Changes";
-  }
-});
-
-document.getElementById("closeEdit")?.addEventListener("click",   () => closeModal(editModal));
-document.getElementById("cancelEditBtn")?.addEventListener("click", () => closeModal(editModal));
 
 // ===== VIEW / GUESS / DISCOVER / LISTEN =====
 window.viewPost = function(index) {
