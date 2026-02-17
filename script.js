@@ -12,7 +12,7 @@ const firebaseConfig = {
 };
 
 const APP_BASE_URL = window.location.origin;
-const APP_DOMAIN   = "trymargo.com"; // shown on all generated posters
+const APP_DOMAIN   = "trymargo.com";
 
 let isFirebaseEnabled = false;
 let postsRef = null;
@@ -228,6 +228,10 @@ function getTickerPosts() {
   return [...recent, ...byViews, ...random];
 }
 
+// ===== FEATURED STATS =====
+// FIX: topArtist and topSong only show when the same name appears
+// in 2+ posts. With all unique entries every count is 1, so we
+// return null and the UI shows "—" instead of a misleading winner.
 function calcFeatured() {
   const artistCounts = {}, songCounts = {}, emotionCounts = {};
   posts.forEach(p => {
@@ -244,8 +248,9 @@ function calcFeatured() {
   return {
     uniqueArtistCount: Object.keys(artistCounts).length,
     uniqueSongCount:   Object.keys(songCounts).length,
-    topArtist:  artistEntries[0]?.[0] || null,
-    topSong:    songEntries[0]?.[0]   || null,
+    // Require at least 2 posts with the same artist/song to call it "top"
+    topArtist: (artistEntries[0]?.[1] >= 2) ? artistEntries[0][0] : null,
+    topSong:   (songEntries[0]?.[1]   >= 2) ? songEntries[0][0]   : null,
     topEmotion
   };
 }
@@ -460,10 +465,7 @@ function resetComposer() {
   guessArtistCheck.checked = true;
 }
 
-// ═══════════════════════════════════════════════════
-// SEARCH
-// ═══════════════════════════════════════════════════
-
+// ===== SEARCH =====
 function getFilteredPosts() {
   if (!searchQuery) return posts;
   const q = searchQuery.toLowerCase();
@@ -525,8 +527,8 @@ function renderFeed() {
   feedList.innerHTML = "";
   updateLandingStats();
 
-  const filtered       = getFilteredPosts();
-  const resultCountEl  = document.getElementById("searchResultCount");
+  const filtered      = getFilteredPosts();
+  const resultCountEl = document.getElementById("searchResultCount");
 
   if (!postsLoaded) {
     feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--gold)">Loading…</div>';
@@ -562,7 +564,6 @@ function renderFeed() {
     const eColor  = EMOTION_TEXT[emotion]   || 'var(--gold)';
     const hasLinks= post.links && (post.links.spotify||post.links.apple||post.links.youtube||post.links.soundcloud);
 
-    // Index in original array (for actions)
     const idx = posts.findIndex(p => p.id === post.id);
 
     const modeBadge = post.mode === 'guess'
@@ -839,10 +840,7 @@ function showNewPostsIndicator(count) {
   newPostsIndicator?.classList.add('visible');
 }
 
-// ═══════════════════════════════════════════════════
-// MARGO STUDIO — Poster creator
-// ═══════════════════════════════════════════════════
-
+// ===== MARGO STUDIO =====
 function getPhotoFilter() {
   let f = `brightness(${studioBrightness}%)`;
   const filters = {
@@ -862,7 +860,7 @@ function drawPosterToCtx(ctx, W, H) {
 
   ctx.filter = 'none';
 
-  // ── Background ──────────────────────────────────────
+  // ── Background ──
   if (studioBgImage) {
     const tmp = document.createElement('canvas');
     tmp.width = W; tmp.height = H;
@@ -911,7 +909,7 @@ function drawPosterToCtx(ctx, W, H) {
     ctx.shadowOffsetY = 2 * scale;
   }
 
-  // ── MARGO mark top-left ──
+  // MARGO mark
   ctx.textAlign = 'left';
   ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
   ctx.fillStyle = studioBgImage ? 'rgba(255,255,255,0.32)' : (c.primary + '88');
@@ -920,7 +918,7 @@ function drawPosterToCtx(ctx, W, H) {
 
   ctx.textAlign = 'center';
 
-  // ── Lyric ──
+  // Lyric
   const lyricText = currentPost.text.length > 100
     ? currentPost.text.substring(0, 97) + '…'
     : currentPost.text;
@@ -928,7 +926,7 @@ function drawPosterToCtx(ctx, W, H) {
   if (studioBgImage) { ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 18 * scale; }
   ctx.fillStyle = textColor;
 
-  const lyricLen = lyricText.length;
+  const lyricLen  = lyricText.length;
   const lyricSize = lyricLen < 40 ? 82 * scale
     : lyricLen < 65 ? 64 * scale
     : lyricLen < 90 ? 52 * scale
@@ -938,7 +936,7 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.font = `${fd.style === 'italic' ? 'italic ' : ''}${isBold ? '700' : '600'} ${lyricSize}px ${fd.family}`;
   wrapTextCenter(ctx, lyricText, W / 2, H * 0.46, W * 0.82, lyricSize * 1.18);
 
-  // ── Song & Artist ──
+  // Song & Artist
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   ctx.filter = 'none'; ctx.textAlign = 'center';
@@ -969,7 +967,7 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.font = `500 ${artSize}px 'DM Sans', sans-serif`;
   ctx.fillText(k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist, W / 2, artistY);
 
-  // ── Domain watermark (trymargo.com) ──
+  // Domain watermark
   ctx.fillStyle = markColor;
   ctx.font = `500 ${markSize}px 'DM Sans', sans-serif`;
   ctx.fillText(APP_DOMAIN, W / 2, H * 0.94);
