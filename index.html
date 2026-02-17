@@ -8,7 +8,7 @@
   <title>MARGO — Drop a Lyric</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,300;1,9..40,400&family=Syne:wght@700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Syne:wght@700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Lora:ital,wght@0,600;1,400;1,600&family=Crimson+Text:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Pacifico&family=Lobster&family=Raleway:wght@400;600;700&family=Inter:wght@400;600;700&family=Bebas+Neue&family=Space+Grotesk:wght@400;600;700&family=Roboto:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;600;700&family=Permanent+Marker&family=Dancing+Script:wght@400;700&family=Abril+Fatface&family=Satisfy&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -31,12 +31,12 @@
       <span class="headline-word">Drop a lyric.</span>
       <span class="headline-word accent">Say everything.</span>
     </div>
+    <p class="tagline">When words fail, drop a lyric.</p>
     <div class="mode-row">
       <span class="mode-tag active-mode">Share</span>
       <span class="mode-tag">Guess</span>
       <span class="mode-tag">Discover</span>
     </div>
-    <p class="tagline">The lyrics you can't say out loud,<br>posted for the world to feel.</p>
     <div class="cta-group">
       <button class="btn-primary" id="enterBtn">Drop a Lyric</button>
       <button class="btn-secondary" id="enterFeedBtn2">Browse the Feed →</button>
@@ -49,9 +49,9 @@
   <div class="stats-bar">
     <div class="stat-item"><span class="stat-num" id="statTotal">—</span><span class="stat-label">Lyrics</span></div>
     <div class="stat-divider"></div>
-    <div class="stat-item"><span class="stat-num">3</span><span class="stat-label">Modes</span></div>
+    <div class="stat-item"><span class="stat-num" id="artistCount">—</span><span class="stat-label">Artists</span></div>
     <div class="stat-divider"></div>
-    <div class="stat-item"><span class="stat-num">8</span><span class="stat-label">Emotions</span></div>
+    <div class="stat-item top-emotion-stat"><span class="stat-num" id="topEmotion">—</span><span class="stat-label">Top Emotion</span></div>
   </div>
 </section>
 
@@ -267,12 +267,20 @@
             <div class="font-grid-compact">
               <button class="font-chip active" data-font="playfair">Playfair</button>
               <button class="font-chip" data-font="lora">Lora</button>
-              <button class="font-chip" data-font="merriweather">Merri</button>
-              <button class="font-chip" data-font="inter">Inter</button>
-              <button class="font-chip" data-font="space">Space</button>
-              <button class="font-chip" data-font="bebas">Bebas</button>
-              <button class="font-chip" data-font="raleway">Raleway</button>
               <button class="font-chip" data-font="crimson">Crimson</button>
+              <button class="font-chip" data-font="merriweather">Merri</button>
+              <button class="font-chip" data-font="pacifico">Pacifico</button>
+              <button class="font-chip" data-font="lobster">Lobster</button>
+              <button class="font-chip" data-font="dancing">Dancing</button>
+              <button class="font-chip" data-font="satisfy">Satisfy</button>
+              <button class="font-chip" data-font="abril">Abril</button>
+              <button class="font-chip" data-font="permanent">Marker</button>
+              <button class="font-chip" data-font="raleway">Raleway</button>
+              <button class="font-chip" data-font="inter">Inter</button>
+              <button class="font-chip" data-font="bebas">Bebas</button>
+              <button class="font-chip" data-font="roboto">Roboto</button>
+              <button class="font-chip" data-font="oswald">Oswald</button>
+              <button class="font-chip" data-font="space">Space</button>
             </div>
           </div>
         </div>
