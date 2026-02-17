@@ -71,13 +71,13 @@
   <div class="new-posts-bar" id="newPostsIndicator"><span id="newPostsCount">0</span> new lyrics — tap to see</div>
   <button class="scroll-top" id="scrollToTopBtn">↑ Back to top</button>
 
-  <!-- SEARCH BAR — sits in normal flow above the grid, scrolls with content -->
+  <!-- SEARCH: type="text" prevents browser native clear button and AI suggestion popups -->
   <div class="feed-search-wrap">
     <div class="feed-search-inner">
       <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <input id="feedSearchInput" type="search" placeholder="Search lyrics, artists, emotions…" autocomplete="off" inputmode="search"/>
+      <input id="feedSearchInput" type="text" placeholder="Search lyrics, artists, emotions…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <button class="search-clear-btn" id="searchClearBtn" style="display:none" aria-label="Clear search">×</button>
       <span class="search-result-count" id="searchResultCount"></span>
     </div>
