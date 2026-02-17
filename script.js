@@ -805,15 +805,18 @@ function drawPosterToCtx(ctx, W, H) {
   // Scale everything relative to canvas width
   const scale = W / 1080;
 
-  // ── Background ──────────────────────────────────
+  // ── CRITICAL: always reset filter before drawing ────
+  // Never let a filter from a previous draw bleed into text
+  ctx.filter = 'none';
+
+  // ── Background ──────────────────────────────────────
   if (studioBgImage) {
-    // Draw photo to offscreen canvas (so blur never touches text layer)
+    // Step 1: Photo with color filter → offscreen tmp canvas
     const tmp = document.createElement('canvas');
     tmp.width  = W;
     tmp.height = H;
     const tc = tmp.getContext('2d');
 
-    // Cover-fit using naturalWidth/naturalHeight
     const iw = studioBgImage.naturalWidth  || studioBgImage.width;
     const ih = studioBgImage.naturalHeight || studioBgImage.height;
     const imgScale = Math.max(W / iw, H / ih);
@@ -824,25 +827,30 @@ function drawPosterToCtx(ctx, W, H) {
     tc.drawImage(studioBgImage, (W - sw) / 2, (H - sh) / 2, sw, sh);
     tc.filter = 'none';
 
-    // Apply blur on top of photo in offscreen canvas
+    // Step 2: If blur, composite through a second offscreen with blur filter
     if (studioBlur > 0) {
       const tmp2 = document.createElement('canvas');
-      tmp2.width = W; tmp2.height = H;
+      tmp2.width  = W;
+      tmp2.height = H;
       const tc2 = tmp2.getContext('2d');
-      tc2.filter = `blur(${studioBlur * scale * 2}px)`;
+      tc2.filter = `blur(${Math.max(1, studioBlur) * 2}px)`;
       tc2.drawImage(tmp, 0, 0);
       tc2.filter = 'none';
+      // Draw blurred photo onto MAIN ctx — but first ensure main ctx has no filter
+      ctx.filter = 'none';
       ctx.drawImage(tmp2, 0, 0);
     } else {
+      ctx.filter = 'none';
       ctx.drawImage(tmp, 0, 0);
     }
 
     // Dim overlay
+    ctx.filter = 'none';
     ctx.fillStyle = `rgba(0,0,0,${studioDim / 100})`;
     ctx.fillRect(0, 0, W, H);
 
   } else {
-    // Gradient background
+    ctx.filter = 'none';
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, c.bg[0]);
     g.addColorStop(0.5, c.bg[1]);
@@ -851,29 +859,34 @@ function drawPosterToCtx(ctx, W, H) {
     ctx.fillRect(0, 0, W, H);
   }
 
+  // ── CRITICAL: reset filter AGAIN before any text ────
+  ctx.filter      = 'none';
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur  = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
   const textColor   = studioBgImage ? '#ffffff' : c.text;
   const accentColor = studioBgImage ? '#ffffff' : c.primary;
 
-  // ── Text shadow for readability ──────────────────
+  // ── Optional shadow for text over photos ────────────
   if (studioBgImage) {
-    ctx.shadowColor   = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur    = 18 * scale;
+    ctx.shadowColor   = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur    = 14 * scale;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 2 * scale;
-  } else {
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur  = 0;
   }
 
   ctx.textAlign = 'center';
 
   // ── MARGO mark (top-left, small, intentional) ──────
-  ctx.textAlign  = 'left';
-  ctx.shadowBlur = 0;
-  ctx.fillStyle  = studioBgImage ? 'rgba(255,255,255,0.35)' : (c.primary + '88');
+  ctx.textAlign     = 'left';
+  ctx.shadowBlur    = 0;
+  ctx.shadowColor   = 'transparent';
+  ctx.fillStyle     = studioBgImage ? 'rgba(255,255,255,0.32)' : (c.primary + '88');
   const markSize = 22 * scale;
   ctx.font = `700 ${markSize}px 'Syne', sans-serif`;
-  ctx.fillText('MARGO', 56 * scale, 60 * scale);
+  ctx.fillText('MARGO', 52 * scale, 58 * scale);
 
   ctx.textAlign = 'center';
 
@@ -906,7 +919,14 @@ function drawPosterToCtx(ctx, W, H) {
   wrapTextCenter(ctx, lyricText, W / 2, lyricY, lyricMaxW, lyricLH);
 
   // ── Song & Artist (bottom section) ──────────────────
-  ctx.shadowBlur = 0;
+  // Reset ALL shadow state before metadata text
+  ctx.shadowColor   = 'transparent';
+  ctx.shadowBlur    = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.filter        = 'none';
+  ctx.textAlign     = 'center';
+
   const k = currentPost.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
 
   // Song title: 40% weight relative to lyric
@@ -930,7 +950,7 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.fillText(artistTrunc, W / 2, artistY);
 
   // Subtle bottom mark
-  ctx.fillStyle = studioBgImage ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.15)';
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
   ctx.font = `500 ${14 * scale}px 'DM Sans', sans-serif`;
   ctx.fillText('margo.app', W / 2, H * 0.94);
 }
@@ -957,19 +977,33 @@ function wrapTextCenter(ctx, text, x, centerY, maxW, lineHeight) {
 // ── Live preview on the stage canvas ──────────────────
 function refreshStageCanvas() {
   if (!currentPost || !studioCanvas) return;
-  // We draw the preview at a comfortable screen size
-  const container = studioCanvas.parentElement;
-  const maxW = container.clientWidth  - 32;
-  const maxH = container.clientHeight - 32;
 
-  // Default square; actual export dimensions are applied separately
-  const previewW = Math.min(maxW, maxH, 560);
-  studioCanvas.width  = previewW;
-  studioCanvas.height = previewW; // always square preview
+  const stage  = studioCanvas.parentElement;
+  const dpr    = window.devicePixelRatio || 1;
+
+  // Available space after topbar padding
+  const availW = stage.clientWidth  - 40;
+  const availH = stage.clientHeight - 40;
+
+  // We always show a square preview; pick the smaller dimension
+  const displaySize = Math.max(80, Math.min(availW, availH, 700));
+
+  // Set CSS display size
+  studioCanvas.style.width  = displaySize + 'px';
+  studioCanvas.style.height = displaySize + 'px';
+
+  // Set actual canvas resolution at full DPR for sharpness
+  const res = Math.round(displaySize * dpr);
+  studioCanvas.width  = res;
+  studioCanvas.height = res;
 
   const ctx = studioCanvas.getContext('2d');
+  // Scale all drawing by dpr so text/lines are crisp
+  ctx.scale(dpr, dpr);
+
   document.fonts.ready.then(() => {
-    drawPosterToCtx(ctx, previewW, previewW);
+    // Re-check size in case it changed while fonts were loading
+    drawPosterToCtx(ctx, displaySize, displaySize);
   });
 }
 
@@ -995,12 +1029,17 @@ async function generateFinalPoster(sizeKey) {
 
 // ── Ceremony thumbnail ────────────────────────────────
 function drawCeremonyThumb() {
-  const size = 200;
-  ceremonyThumb.width  = size;
-  ceremonyThumb.height = size;
+  const dpr     = window.devicePixelRatio || 1;
+  const cssSize = 200;
+  ceremonyThumb.style.width  = cssSize + 'px';
+  ceremonyThumb.style.height = cssSize + 'px';
+  const res = Math.round(cssSize * dpr);
+  ceremonyThumb.width  = res;
+  ceremonyThumb.height = res;
   const ctx = ceremonyThumb.getContext('2d');
+  ctx.scale(dpr, dpr);
   document.fonts.ready.then(() => {
-    drawPosterToCtx(ctx, size, size);
+    drawPosterToCtx(ctx, cssSize, cssSize);
   });
 }
 
