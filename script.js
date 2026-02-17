@@ -41,49 +41,56 @@ let postsLoaded = false;
 let savedScrollPosition = 0;
 let newPostsAvailable = false;
 
-// ===== POSTER STATE =====
-// Extended font list with artistic fonts
+// ===== STUDIO STATE =====
 const FONT_FAMILIES = {
-  'playfair':    { family: "'Playfair Display', serif",     style: 'italic',  label: 'Playfair' },
-  'lora':        { family: "'Lora', serif",                 style: 'italic',  label: 'Lora' },
-  'crimson':     { family: "'Crimson Text', serif",         style: 'italic',  label: 'Crimson' },
-  'merriweather':{ family: "'Merriweather', serif",         style: 'normal',  label: 'Merri' },
-  'pacifico':    { family: "'Pacifico', cursive",           style: 'normal',  label: 'Pacifico' },
-  'lobster':     { family: "'Lobster', cursive",            style: 'normal',  label: 'Lobster' },
-  'raleway':     { family: "'Raleway', sans-serif",         style: 'normal',  label: 'Raleway' },
-  'inter':       { family: "'Inter', sans-serif",           style: 'normal',  label: 'Inter' },
-  'bebas':       { family: "'Bebas Neue', sans-serif",      style: 'normal',  label: 'Bebas' },
-  'space':       { family: "'Space Grotesk', sans-serif",   style: 'normal',  label: 'Space' },
-  'roboto':      { family: "'Roboto', sans-serif",          style: 'normal',  label: 'Roboto' },
-  'oswald':      { family: "'Oswald', sans-serif",          style: 'normal',  label: 'Oswald' },
-  'permanent':   { family: "'Permanent Marker', cursive",   style: 'normal',  label: 'Marker' },
-  'dancing':     { family: "'Dancing Script', cursive",     style: 'normal',  label: 'Dancing' },
-  'abril':       { family: "'Abril Fatface', cursive",      style: 'normal',  label: 'Abril' },
-  'satisfy':     { family: "'Satisfy', cursive",            style: 'normal',  label: 'Satisfy' },
+  'playfair':    { family: "'Playfair Display', serif",       style: 'italic',  label: 'Playfair' },
+  'cormorant':   { family: "'Cormorant Garamond', serif",     style: 'italic',  label: 'Cormorant' },
+  'lora':        { family: "'Lora', serif",                   style: 'italic',  label: 'Lora' },
+  'merriweather':{ family: "'Merriweather', serif",           style: 'normal',  label: 'Merriweather' },
+  'josefin':     { family: "'Josefin Sans', sans-serif",      style: 'normal',  label: 'Josefin' },
+  'bebas':       { family: "'Bebas Neue', sans-serif",        style: 'normal',  label: 'Bebas' },
+  'oswald':      { family: "'Oswald', sans-serif",            style: 'normal',  label: 'Oswald' },
+  'dancing':     { family: "'Dancing Script', cursive",       style: 'normal',  label: 'Dancing' },
 };
-
-let selectedFont = 'playfair';
-let uploadedBgImage = null;
-let selectedDesign = "midnight-gold";
-let selectedPosterSize = null;
-let generatedPosterBlob = null;
-
-let imageEffects = { brightness: 100, darkness: 50, blur: 0, contrast: 100, filter: 'none' };
 
 const POSTER_DESIGNS = {
-  'midnight-gold':   { bg:['#0d0d0d','#1a1410','#0d0d0d'], primary:'#d4af37', secondary:'rgba(212,175,55,0.65)', text:'#f8f8f8' },
-  'royal-purple':    { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff', secondary:'rgba(199,125,255,0.65)', text:'#f8f8f8' },
-  'neon-cyan':       { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff', secondary:'rgba(0,229,255,0.65)',   text:'#f8f8f8' },
-  'sunset-coral':    { bg:['#1a0a0a','#2d1416','#1a0a0a'], primary:'#ff6b6b', secondary:'rgba(255,107,107,0.65)',text:'#f8f8f8' },
-  'emerald-night':   { bg:['#051a0d','#0d2e1a','#051a0d'], primary:'#50fa7b', secondary:'rgba(80,250,123,0.65)', text:'#f8f8f8' },
-  'rose-gold':       { bg:['#1a0d0f','#2d1a1f','#1a0d0f'], primary:'#f4a4c0', secondary:'rgba(244,164,192,0.65)',text:'#f8f8f8' },
-  'brutalist':       { bg:['#ffffff','#f0f0f0','#ffffff'],  primary:'#000000', secondary:'rgba(0,0,0,0.6)',       text:'#000000' },
-  'y2k-chrome':      { bg:['#000033','#1a1a4d','#000033'], primary:'#00ffff', secondary:'rgba(255,0,255,0.65)',  text:'#ffffff' },
-  'vaporwave':       { bg:['#ff71ce','#b967ff','#05ffa1'], primary:'#ffffff', secondary:'rgba(255,255,255,0.8)', text:'#ffffff' },
+  'midnight-gold':   { bg:['#0d0d0d','#1a1410','#0d0d0d'], primary:'#d4af37', secondary:'rgba(212,175,55,0.55)', text:'#f8f8f8' },
+  'royal-purple':    { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff', secondary:'rgba(199,125,255,0.55)', text:'#f8f8f8' },
+  'neon-cyan':       { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff', secondary:'rgba(0,229,255,0.55)',   text:'#f8f8f8' },
+  'sunset-coral':    { bg:['#1a0a0a','#2d1416','#1a0a0a'], primary:'#ff6b6b', secondary:'rgba(255,107,107,0.55)',text:'#f8f8f8' },
+  'emerald-night':   { bg:['#051a0d','#0d2e1a','#051a0d'], primary:'#50fa7b', secondary:'rgba(80,250,123,0.55)', text:'#f8f8f8' },
+  'rose-gold':       { bg:['#1a0d0f','#2d1a1f','#1a0d0f'], primary:'#f4a4c0', secondary:'rgba(244,164,192,0.55)',text:'#f8f8f8' },
+  'cream-editorial': { bg:['#f5f1e8','#ebe3d5','#f5f1e8'], primary:'#2a2520', secondary:'rgba(42,37,32,0.5)',    text:'#2a2520' },
+  'monochrome':      { bg:['#000000','#111111','#000000'], primary:'#ffffff', secondary:'rgba(255,255,255,0.6)', text:'#ffffff' },
+  'vaporwave':       { bg:['#ff71ce','#b967ff','#05ffa1'], primary:'#ffffff', secondary:'rgba(255,255,255,0.7)', text:'#ffffff' },
   'neon-dark':       { bg:['#0a0a0a','#0f0f0f','#0a0a0a'], primary:'#ff00ff', secondary:'rgba(0,255,255,0.7)',   text:'#00ffff' },
-  'cream-editorial': { bg:['#f5f1e8','#ebe3d5','#f5f1e8'], primary:'#2a2520', secondary:'rgba(42,37,32,0.6)',    text:'#2a2520' },
-  'monochrome':      { bg:['#000000','#111111','#000000'], primary:'#ffffff', secondary:'rgba(255,255,255,0.7)', text:'#ffffff' },
+  'y2k-chrome':      { bg:['#000033','#1a1a4d','#000033'], primary:'#00ffff', secondary:'rgba(255,0,255,0.6)',  text:'#ffffff' },
+  'brutalist':       { bg:['#ffffff','#f0f0f0','#ffffff'],  primary:'#000000', secondary:'rgba(0,0,0,0.55)',     text:'#000000' },
 };
+
+const EMOTION_DESIGN_MAP = {
+  Love:'rose-gold', Heartbreak:'sunset-coral', Hope:'emerald-night',
+  Nostalgia:'midnight-gold', Healing:'cream-editorial', Joy:'vaporwave',
+  Rage:'neon-dark', Loneliness:'royal-purple'
+};
+
+const POSTER_SIZES = {
+  'instagram-square': { w:1080, h:1080 },
+  'instagram-story':  { w:1080, h:1920 },
+  'reddit':           { w:1200, h:1200 },
+  'twitter':          { w:1200, h:675 },
+  'pinterest':        { w:1000, h:1500 },
+};
+
+let studioFont    = 'playfair';
+let studioDesign  = 'midnight-gold';
+let studioBgImage = null;
+let studioBrightness = 100;
+let studioBlur    = 0;
+let studioDim     = 50;
+let studioFilter  = 'none';
+let generatedBlob = null;
+let selectedSize  = null;
 
 // ===== USER ID =====
 let userId = localStorage.getItem("margoUserId");
@@ -101,7 +108,6 @@ const discoverModal    = document.getElementById("discoverModal");
 const postcardModal    = document.getElementById("postcardModal");
 const listenModal      = document.getElementById("listenModal");
 const analyticsModal   = document.getElementById("analyticsModal");
-const sharePosterModal = document.getElementById("sharePosterModal");
 
 const enterBtn       = document.getElementById("enterBtn");
 const backBtn        = document.getElementById("backBtn");
@@ -137,18 +143,46 @@ const soundcloudLink = document.getElementById("soundcloudLink");
 const sharePosterBtn   = document.getElementById("sharePosterBtn");
 const listenPostcard   = document.getElementById("listenPostcard");
 const analyticsBtn     = document.getElementById("analyticsBtn");
-const designStep       = document.getElementById("designStep");
-const platformStep     = document.getElementById("platformStep");
-const shareStep        = document.getElementById("shareStep");
-const nextToPlatform   = document.getElementById("nextToPlatform");
-const backToDesign     = document.getElementById("backToDesign");
-const backToPlatform   = document.getElementById("backToPlatform");
-const posterCanvas     = document.getElementById("posterCanvas");
-const posterPreviewCanvas = document.getElementById("posterPreviewCanvas");
-const shareableLink    = document.getElementById("shareableLink");
-const copyLinkBtn      = document.getElementById("copyLinkBtn");
-const shareNativeBtn   = document.getElementById("shareNativeBtn");
-const downloadManualBtn= document.getElementById("downloadManualBtn");
+
+// Studio elements
+const studioOverlay   = document.getElementById("studioOverlay");
+const studioCanvas    = document.getElementById("studioCanvas");
+const closeStudio     = document.getElementById("closeStudio");
+const studioExportBtn = document.getElementById("studioExportBtn");
+const sizePicker      = document.getElementById("sizePicker");
+const sizeCancelBtn   = document.getElementById("sizeCancelBtn");
+const ceremonyOverlay = document.getElementById("ceremonyOverlay");
+const ceremonyThumb   = document.getElementById("ceremonyThumb");
+const cerDownload     = document.getElementById("cerDownload");
+const cerShare        = document.getElementById("cerShare");
+const ceremonyBack    = document.getElementById("ceremonyBack");
+const photoDropText   = document.getElementById("photoDropText");
+const photoDropZone   = document.getElementById("photoUploadZone");
+const studioPhotoInput= document.getElementById("studioPhotoInput");
+const photoControls   = document.getElementById("photoControls");
+
+// ===== FONT PRELOAD =====
+// Critical: load fonts into browser cache BEFORE any canvas draw
+function preloadStudioFonts() {
+  const fontsToLoad = [
+    "700 16px 'Playfair Display'",
+    "italic 16px 'Playfair Display'",
+    "600 16px 'Cormorant Garamond'",
+    "italic 16px 'Cormorant Garamond'",
+    "600 16px 'Lora'",
+    "italic 16px 'Lora'",
+    "700 16px 'Merriweather'",
+    "700 16px 'Josefin Sans'",
+    "400 16px 'Bebas Neue'",
+    "600 16px 'Oswald'",
+    "700 16px 'Dancing Script'",
+    "700 16px 'Syne'",
+    "700 16px 'DM Sans'",
+  ];
+  fontsToLoad.forEach(f => {
+    document.fonts.load(f).catch(() => {});
+  });
+}
 
 // ===== LYRIC STREAM SAMPLES =====
 const STREAM_SAMPLES = [
@@ -172,13 +206,8 @@ function buildLyricStream() {
   if (!track1 || !track2) return;
   track1.innerHTML = '';
   track2.innerHTML = '';
-
-  // Smart selection: recent + popular + random
   const source = getTickerPosts();
-
-  // Triple for seamless infinite loop
   const fill = [...source, ...source, ...source];
-
   const buildCard = (item) => {
     const emotion = item.emotion || 'Nostalgia';
     const eClass  = 'emotion-' + emotion.toLowerCase();
@@ -192,70 +221,51 @@ function buildLyricStream() {
       </div>`;
     return card;
   };
-
-  // Track 1: left scroll, Track 2: right scroll with offset start
   const offset = Math.floor(source.length / 2);
   fill.forEach(item => track1.appendChild(buildCard(item)));
   [...source.slice(offset), ...source, ...source, ...source.slice(0, offset)]
     .forEach(item => track2.appendChild(buildCard(item)));
 }
 
-// ===== SMART TICKER SELECTION =====
-// 4 most recent + 4 most viewed + 4 random = 12 for the ticker
 function getTickerPosts() {
   if (posts.length < 6) return STREAM_SAMPLES;
-
   const sorted = [...posts];
-
-  // 4 most recent
   const recent = sorted.slice(0, 4);
-
-  // 4 most viewed (by analytics)
   const byViews = [...posts]
     .filter(p => !recent.includes(p))
     .sort((a, b) => (postAnalytics[b.id]?.views || 0) - (postAnalytics[a.id]?.views || 0))
     .slice(0, 4);
-
-  // 4 random from the rest
   const rest = posts.filter(p => !recent.includes(p) && !byViews.includes(p));
   const random = rest.sort(() => Math.random() - 0.5).slice(0, 4);
-
   return [...recent, ...byViews, ...random];
 }
 
-// ===== FEATURED STATS =====
 function calcFeatured() {
   const artistCounts  = {};
   const songCounts    = {};
   const emotionCounts = {};
-
   posts.forEach(p => {
     const artist  = p.knowledge?.artist;
     const song    = p.knowledge?.song;
     const emotion = p.emotion || 'Nostalgia';
-
-    // Count how many times each artist appears (for top artist + unique count)
     if (artist && artist !== 'Unknown Artist') {
       const key = artist.trim();
       artistCounts[key] = (artistCounts[key] || 0) + 1;
     }
-    // Count how many times each song appears (for top song + unique count)
     if (song && song !== 'Unknown Song') {
       const key = song.trim();
       songCounts[key] = (songCounts[key] || 0) + 1;
     }
     emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
   });
-
   const artistEntries = Object.entries(artistCounts).sort((a,b) => b[1]-a[1]);
   const songEntries   = Object.entries(songCounts).sort((a,b) => b[1]-a[1]);
   const topEmotion    = Object.entries(emotionCounts).sort((a,b) => b[1]-a[1])[0];
-
   return {
-    uniqueArtistCount: Object.keys(artistCounts).length,  // how many different artists
-    uniqueSongCount:   Object.keys(songCounts).length,    // how many different songs
-    topArtist:  artistEntries[0]?.[0] || null,            // most mentioned artist name
-    topSong:    songEntries[0]?.[0]   || null,            // most mentioned song name
+    uniqueArtistCount: Object.keys(artistCounts).length,
+    uniqueSongCount:   Object.keys(songCounts).length,
+    topArtist:  artistEntries[0]?.[0] || null,
+    topSong:    songEntries[0]?.[0]   || null,
     topEmotion
   };
 }
@@ -268,22 +278,14 @@ function updateLandingStats() {
   if (lc) lc.textContent = n;
   if (st) st.textContent = n || '—';
   if (pc) pc.textContent = n;
-
   const artistCountEl = document.getElementById("featuredArtistCount");
   const songCountEl   = document.getElementById("featuredSongCount");
   const topArtistEl   = document.getElementById("topArtistName");
   const topSongEl     = document.getElementById("topSongName");
   const emotionEl     = document.getElementById("topEmotion");
-
   const allEls = [artistCountEl, songCountEl, topArtistEl, topSongEl, emotionEl];
-
-  if (!n) {
-    allEls.forEach(el => { if (el) el.textContent = '—'; });
-    return;
-  }
-
+  if (!n) { allEls.forEach(el => { if (el) el.textContent = '—'; }); return; }
   const { uniqueArtistCount, uniqueSongCount, topArtist, topSong, topEmotion } = calcFeatured();
-
   if (artistCountEl) artistCountEl.textContent = uniqueArtistCount || '—';
   if (songCountEl)   songCountEl.textContent   = uniqueSongCount   || '—';
   if (topArtistEl)   topArtistEl.textContent   = topArtist         || '—';
@@ -302,7 +304,6 @@ if (isFirebaseEnabled) {
     posts.sort((a,b) => b.timestamp - a.timestamp);
     updateLandingStats();
     buildLyricStream();
-
     if (postsLoaded && posts.length > prevCount && feed.classList.contains('active')) {
       showNewPostsIndicator(posts.length - prevCount);
       newPostsAvailable = true;
@@ -310,10 +311,8 @@ if (isFirebaseEnabled) {
     postsLoaded = true;
     if (feed.classList.contains('active') && !newPostsAvailable) renderFeed();
   });
-
   analyticsRef.on('value', snapshot => {
     postAnalytics = snapshot.val() || {};
-    // Rebuild ticker now that view counts are available
     buildLyricStream();
   });
 } else {
@@ -370,15 +369,8 @@ enterBtn.onclick = () => {
 
 const efb1 = document.getElementById("enterFeedBtn");
 const efb2 = document.getElementById("enterFeedBtn2");
-if (efb1) efb1.onclick = () => {
-  goToFeed();
-  // smooth scroll to feed list
-  setTimeout(() => feedList?.scrollIntoView({ behavior: 'smooth' }), 150);
-};
-if (efb2) efb2.onclick = () => {
-  goToFeed();
-  setTimeout(() => feedList?.scrollIntoView({ behavior: 'smooth' }), 150);
-};
+if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(() => feedList?.scrollIntoView({ behavior: 'smooth' }), 150); };
+if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(() => feedList?.scrollIntoView({ behavior: 'smooth' }), 150); };
 backBtn.onclick = goToLanding;
 
 openComposerBtn.onclick = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
@@ -520,26 +512,21 @@ function renderFeed() {
     feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-2)">No lyrics yet — be the first to drop one.</div>';
     return;
   }
-
   posts.forEach((post, i) => {
     const card = document.createElement("div");
     card.className = "feed-card";
     card.style.animationDelay = `${i * 0.03}s`;
-
     const k = post.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
     const emotion = post.emotion || "Nostalgia";
     const eBg    = EMOTION_COLORS[emotion] || 'rgba(232,197,71,0.1)';
     const eColor = EMOTION_TEXT[emotion]  || 'var(--gold)';
-
     const modeBadge = post.mode === 'guess'
       ? '<span class="card-mode-badge mode-guess">Guess</span>'
       : post.mode === 'discover'
       ? '<span class="card-mode-badge mode-discover">Discover</span>'
       : '<span class="card-mode-badge mode-share">Share</span>';
-
     const hasLinks = post.links && (post.links.spotify||post.links.apple||post.links.youtube||post.links.soundcloud);
     const idx = i;
-
     let songSection = '', actionsSection = '';
     if (post.mode === "share") {
       songSection = `<div class="card-song"><div class="card-song-title">${k.song}</div><div class="card-song-artist">${k.artist}</div></div>`;
@@ -565,7 +552,6 @@ function renderFeed() {
         <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
       </div>`;
     }
-
     card.innerHTML = `
       <div class="card-top">
         <span class="card-time">${timeAgo(post.timestamp)}</span>
@@ -598,10 +584,8 @@ window.viewPost = function(index) {
   currentPost = posts[index];
   if (!currentPost) return;
   trackView(currentPost.id);
-
   document.getElementById("postcardLyric").textContent   = currentPost.text;
   document.getElementById("postcardEmotion").textContent = currentPost.emotion || "Nostalgia";
-
   const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
   const songEl = document.getElementById("postcardSong");
   if (currentPost.mode === "guess") {
@@ -610,7 +594,6 @@ window.viewPost = function(index) {
     songEl.innerHTML = `<div>${k.song}</div><div>${k.artist}</div>`;
   }
   document.getElementById("postcardCommunity").innerHTML = '';
-
   const hasLinks = currentPost.links && (currentPost.links.spotify||currentPost.links.apple||currentPost.links.youtube||currentPost.links.soundcloud);
   listenPostcard.style.display = (hasLinks && currentPost.mode !== "guess") ? 'block' : 'none';
   openModal(postcardModal);
@@ -640,7 +623,6 @@ window.openGuess = function(index) {
   if (!currentPost) return;
   trackView(currentPost.id);
   currentGuessAttempts = 0;
-
   document.getElementById("guessLyric").textContent = currentPost.text;
   document.getElementById("guessSongInput").value   = "";
   document.getElementById("guessArtistInput").value = "";
@@ -649,12 +631,10 @@ window.openGuess = function(index) {
   document.getElementById("guessInputFields").style.display = "";
   document.getElementById("submitGuess").style.display    = "";
   document.getElementById("revealAnswer").style.display   = "none";
-
   const doSong   = currentPost.guessConfig?.guessSong   ?? true;
   const doArtist = currentPost.guessConfig?.guessArtist ?? true;
   document.getElementById("guessSongInput").style.display   = doSong   ? 'block' : 'none';
   document.getElementById("guessArtistInput").style.display = doArtist ? 'block' : 'none';
-
   const what = [];
   if (doSong) what.push("song"); if (doArtist) what.push("artist");
   document.getElementById("guessHint").textContent = `${MAX_GUESS_ATTEMPTS} attempts to guess the ${what.join(" and ")}.`;
@@ -686,12 +666,9 @@ document.getElementById("submitGuess").onclick = () => {
   const songOk   = !doSong   || (gs && (gs===as || gs.includes(as) || as.includes(gs)));
   const artistOk = !doArtist || (ga && (ga===aa || ga.includes(aa) || aa.includes(ga)));
   const correct  = songOk && artistOk;
-
   if (isFirebaseEnabled) analyticsRef.child(currentPost.id).child('guesses').push({ song:gs||null, artist:ga||null, correct, timestamp:Date.now() });
-
   const resultEl = document.getElementById("guessResult");
   resultEl.classList.remove("hidden","result-success","result-error","result-partial");
-
   if (correct) {
     resultEl.className = "result-msg result-success";
     resultEl.innerHTML = `Correct! 🎉<br><span style="font-size:0.8rem">"${k.song}" by ${k.artist}</span>`;
@@ -709,7 +686,6 @@ document.getElementById("submitGuess").onclick = () => {
     }
     return;
   }
-
   const left = MAX_GUESS_ATTEMPTS - currentGuessAttempts;
   if (left <= 0) {
     resultEl.className = "result-msg result-error";
@@ -718,7 +694,6 @@ document.getElementById("submitGuess").onclick = () => {
     document.getElementById("guessInputFields").style.display = "none";
     return;
   }
-
   const ps = doSong   && gs && (gs===as||gs.includes(as)||as.includes(gs));
   const pa = doArtist && ga && (ga===aa||ga.includes(aa)||aa.includes(ga));
   resultEl.className = `result-msg ${(ps||pa) ? 'result-partial' : 'result-error'}`;
@@ -758,14 +733,12 @@ analyticsBtn.onclick = () => {
   const guesses = Object.values(an.guesses||{});
   const helps   = Object.values(an.helps  ||{});
   const body = document.getElementById("analyticsBody");
-
   let html = `<div class="analytics-grid">
     <div class="stat-card"><div class="stat-num">${an.views||0}</div><div class="stat-label">Views</div></div>`;
   if (currentPost.mode==='guess')    html += `<div class="stat-card"><div class="stat-num">${guesses.length}</div><div class="stat-label">Guesses</div></div>`;
   if (currentPost.mode==='discover') html += `<div class="stat-card"><div class="stat-num">${helps.length}</div><div class="stat-label">Helps</div></div>`;
   html += '</div>';
   body.innerHTML = html;
-
   if (currentPost.mode==='guess' && guesses.length) {
     let sec = '<div class="activity-section"><h4>Guesses</h4><div class="activity-list">';
     guesses.forEach(g => {
@@ -777,18 +750,16 @@ analyticsBtn.onclick = () => {
     });
     body.innerHTML += sec + '</div></div>';
   }
-
   closeModal(postcardModal);
   openModal(analyticsModal);
 };
 
-// Listen from postcard
 listenPostcard.onclick = () => {
   const idx = posts.findIndex(p => p.id === currentPost?.id);
   if (idx !== -1) { closeModal(postcardModal); window.openListen(idx); }
 };
 
-// ===== SCROLL MANAGEMENT =====
+// ===== SCROLL =====
 window.addEventListener('scroll', () => {
   scrollToTopBtn?.classList.toggle('visible', window.pageYOffset > 300);
 });
@@ -809,373 +780,502 @@ function showNewPostsIndicator(count) {
   newPostsIndicator?.classList.add('visible');
 }
 
-// ===== POSTER: LIVE PREVIEW =====
-function updateLivePreview() {
-  if (!currentPost || !posterPreviewCanvas) return;
-  const ctx = posterPreviewCanvas.getContext('2d');
-  const W = 300, H = 300;
-  posterPreviewCanvas.width = W;
-  posterPreviewCanvas.height = H;
-  drawPosterToCtx(ctx, W, H, 12);
-}
+// ═══════════════════════════════════════════════════
+// MARGO STUDIO — Poster creator
+// ═══════════════════════════════════════════════════
 
-function getImageFilter() {
-  let f = `brightness(${imageEffects.brightness}%) contrast(${imageEffects.contrast}%)`;
-  const map = {
+// ── Canvas drawing ──────────────────────────────────
+
+function getPhotoFilter() {
+  let f = `brightness(${studioBrightness}%)`;
+  const filters = {
     warm:     ' sepia(0.3) saturate(1.3) hue-rotate(-10deg)',
     cool:     ' saturate(0.85) hue-rotate(15deg)',
-    vintage:  ' sepia(0.5) contrast(1.2)',
     dramatic: ' contrast(1.5) saturate(1.2) brightness(0.9)',
-    ethereal: ' brightness(1.1) saturate(0.75)',
-    sunset:   ' sepia(0.4) saturate(1.4) hue-rotate(-20deg)',
-    arctic:   ' saturate(0.6) brightness(1.1) hue-rotate(190deg)',
+    vintage:  ' sepia(0.5) contrast(1.2)',
   };
-  if (map[imageEffects.filter]) f += map[imageEffects.filter];
+  if (filters[studioFilter]) f += filters[studioFilter];
   return f;
 }
 
-function drawPosterToCtx(ctx, W, H, baseFontSize) {
-  const c = POSTER_DESIGNS[selectedDesign] || POSTER_DESIGNS['midnight-gold'];
-  const fd = FONT_FAMILIES[selectedFont]   || FONT_FAMILIES['playfair'];
-  const fs = baseFontSize;
+function drawPosterToCtx(ctx, W, H) {
+  const c  = POSTER_DESIGNS[studioDesign] || POSTER_DESIGNS['midnight-gold'];
+  const fd = FONT_FAMILIES[studioFont]    || FONT_FAMILIES['playfair'];
 
-  // ── Background ──
-  if (uploadedBgImage) {
+  // Scale everything relative to canvas width
+  const scale = W / 1080;
+
+  // ── Background ──────────────────────────────────
+  if (studioBgImage) {
+    // Draw photo to offscreen canvas (so blur never touches text layer)
     const tmp = document.createElement('canvas');
-    const tc  = tmp.getContext('2d');
-    tmp.width = W; tmp.height = H;
-    const scale = Math.max(W/uploadedBgImage.width, H/uploadedBgImage.height);
-    const sw = uploadedBgImage.width*scale, sh = uploadedBgImage.height*scale;
-    tc.filter = getImageFilter();
-    tc.drawImage(uploadedBgImage, (W-sw)/2, (H-sh)/2, sw, sh);
+    tmp.width  = W;
+    tmp.height = H;
+    const tc = tmp.getContext('2d');
+
+    // Cover-fit using naturalWidth/naturalHeight
+    const iw = studioBgImage.naturalWidth  || studioBgImage.width;
+    const ih = studioBgImage.naturalHeight || studioBgImage.height;
+    const imgScale = Math.max(W / iw, H / ih);
+    const sw = iw * imgScale;
+    const sh = ih * imgScale;
+
+    tc.filter = getPhotoFilter();
+    tc.drawImage(studioBgImage, (W - sw) / 2, (H - sh) / 2, sw, sh);
     tc.filter = 'none';
-    if (imageEffects.blur > 0) { ctx.filter = `blur(${imageEffects.blur}px)`; }
-    ctx.drawImage(tmp, 0, 0);
-    ctx.filter = 'none';
-    ctx.fillStyle = `rgba(0,0,0,${imageEffects.darkness/100})`;
-    ctx.fillRect(0,0,W,H);
+
+    // Apply blur on top of photo in offscreen canvas
+    if (studioBlur > 0) {
+      const tmp2 = document.createElement('canvas');
+      tmp2.width = W; tmp2.height = H;
+      const tc2 = tmp2.getContext('2d');
+      tc2.filter = `blur(${studioBlur * scale * 2}px)`;
+      tc2.drawImage(tmp, 0, 0);
+      tc2.filter = 'none';
+      ctx.drawImage(tmp2, 0, 0);
+    } else {
+      ctx.drawImage(tmp, 0, 0);
+    }
+
+    // Dim overlay
+    ctx.fillStyle = `rgba(0,0,0,${studioDim / 100})`;
+    ctx.fillRect(0, 0, W, H);
+
   } else {
-    const g = ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
-    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    // Gradient background
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, c.bg[0]);
+    g.addColorStop(0.5, c.bg[1]);
+    g.addColorStop(1, c.bg[2]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
   }
 
-  const textColor = uploadedBgImage ? '#ffffff' : c.text;
-  const accentColor = uploadedBgImage ? '#ffffff' : c.primary;
+  const textColor   = studioBgImage ? '#ffffff' : c.text;
+  const accentColor = studioBgImage ? '#ffffff' : c.primary;
+
+  // ── Text shadow for readability ──────────────────
+  if (studioBgImage) {
+    ctx.shadowColor   = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur    = 18 * scale;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2 * scale;
+  } else {
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur  = 0;
+  }
 
   ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.4)';
-  ctx.shadowBlur = uploadedBgImage ? 8 : 0;
-  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
 
-  // MARGO header
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
-  ctx.font = `700 ${fs*1.3}px sans-serif`;
-  ctx.fillText('MARGO', W/2, fs*2.2);
-
-  // Lyric
-  ctx.fillStyle = textColor;
-  ctx.font = `${fd.style === 'italic' ? 'italic ' : ''}${fs*0.95}px ${fd.family}`;
-  const lyricText = currentPost.text.length > 90 ? currentPost.text.substring(0,87)+'…' : currentPost.text;
-  wrapText(ctx, lyricText, W/2, H*0.42, W*0.84, fs*1.4);
-
-  // Emotion
-  ctx.fillStyle = accentColor;
-  ctx.font = `600 ${fs*0.72}px sans-serif`;
-  ctx.fillText(`#${currentPost.emotion||'Nostalgia'}`, W/2, H*0.64);
-
-  // Divider
+  // ── MARGO mark (top-left, small, intentional) ──────
+  ctx.textAlign  = 'left';
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = uploadedBgImage ? 'rgba(255,255,255,0.5)' : c.secondary;
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(W*0.3, H*0.7); ctx.lineTo(W*0.7, H*0.7); ctx.stroke();
+  ctx.fillStyle  = studioBgImage ? 'rgba(255,255,255,0.35)' : (c.primary + '88');
+  const markSize = 22 * scale;
+  ctx.font = `700 ${markSize}px 'Syne', sans-serif`;
+  ctx.fillText('MARGO', 56 * scale, 60 * scale);
+
+  ctx.textAlign = 'center';
+
+  // ── Lyric (dominant, center) ─────────────────────
+  const lyricText = currentPost.text.length > 100
+    ? currentPost.text.substring(0, 97) + '…'
+    : currentPost.text;
+
+  if (studioBgImage) {
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur  = 18 * scale;
+  }
+
+  ctx.fillStyle = textColor;
+
+  // Dynamic lyric font size: shorter = bigger
+  const lyricLen = lyricText.length;
+  let lyricSize;
+  if (lyricLen < 40)       lyricSize = 82 * scale;
+  else if (lyricLen < 65)  lyricSize = 64 * scale;
+  else if (lyricLen < 90)  lyricSize = 52 * scale;
+  else                     lyricSize = 42 * scale;
+
+  const isBold = ['bebas','josefin','oswald'].includes(studioFont);
+  ctx.font = `${fd.style === 'italic' ? 'italic ' : ''}${isBold ? '700' : '600'} ${lyricSize}px ${fd.family}`;
+
+  const lyricY    = H * 0.46;
+  const lyricMaxW = W * 0.82;
+  const lyricLH   = lyricSize * 1.18;
+  wrapTextCenter(ctx, lyricText, W / 2, lyricY, lyricMaxW, lyricLH);
+
+  // ── Song & Artist (bottom section) ──────────────────
+  ctx.shadowBlur = 0;
+  const k = currentPost.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
+
+  // Song title: 40% weight relative to lyric
+  const songSize   = Math.round(lyricSize * 0.38);
+  const artistSize = Math.round(lyricSize * 0.26);
+
+  // Vertical placement: from 74% down
+  const songY   = H * 0.76;
+  const artistY = songY + songSize + (14 * scale);
 
   // Song
-  const k = currentPost.knowledge || { song:'Unknown Song', artist:'Unknown Artist' };
   ctx.fillStyle = accentColor;
-  ctx.font = `bold ${fs*0.85}px ${fd.family}`;
-  ctx.fillText(k.song.length>28 ? k.song.substring(0,28)+'…' : k.song, W/2, H*0.78);
-  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.75)' : c.secondary;
-  ctx.font = `500 ${fs*0.7}px sans-serif`;
-  ctx.fillText(k.artist.length>32 ? k.artist.substring(0,32)+'…' : k.artist, W/2, H*0.85);
+  ctx.font = `700 ${songSize}px ${fd.family}`;
+  const songTrunc = k.song.length > 30 ? k.song.substring(0, 30) + '…' : k.song;
+  ctx.fillText(songTrunc, W / 2, songY);
 
-  // Footer
-  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.2)';
-  ctx.font = `400 ${fs*0.55}px sans-serif`;
-  ctx.fillText(APP_BASE_URL.replace(/^https?:\/\//,''), W/2, H*0.94);
+  // Artist
+  ctx.fillStyle = studioBgImage ? 'rgba(255,255,255,0.6)' : c.secondary;
+  ctx.font = `400 ${artistSize}px 'DM Sans', sans-serif`;
+  const artistTrunc = k.artist.length > 36 ? k.artist.substring(0, 36) + '…' : k.artist;
+  ctx.fillText(artistTrunc, W / 2, artistY);
+
+  // Subtle bottom mark
+  ctx.fillStyle = studioBgImage ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.15)';
+  ctx.font = `500 ${14 * scale}px 'DM Sans', sans-serif`;
+  ctx.fillText('margo.app', W / 2, H * 0.94);
 }
 
-function wrapText(ctx, text, x, y, maxW, lh) {
+function wrapTextCenter(ctx, text, x, centerY, maxW, lineHeight) {
   const words = text.split(' ');
-  let line = '', lines = [];
+  let line  = '';
+  const lines = [];
   words.forEach(word => {
     const test = line + word + ' ';
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = word + ' '; }
-    else line = test;
+    if (ctx.measureText(test).width > maxW && line) {
+      lines.push(line.trim());
+      line = word + ' ';
+    } else {
+      line = test;
+    }
   });
   if (line.trim()) lines.push(line.trim());
-  const startY = y - ((lines.length-1)*lh)/2;
-  lines.forEach((l,i) => ctx.fillText(l, x, startY + i*lh));
+  const totalH = (lines.length - 1) * lineHeight;
+  const startY = centerY - totalH / 2;
+  lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
 }
 
-// ===== POSTER: WIRE CONTROLS =====
-function wirePosterControls() {
-  // Color dots — class is "clr-dot"
-  document.querySelectorAll(".clr-dot").forEach(dot => {
-    dot.onclick = () => {
-      document.querySelectorAll(".clr-dot").forEach(d => d.classList.remove("active"));
-      dot.classList.add("active");
-      selectedDesign = dot.dataset.design;
-      updateLivePreview();
-    };
+// ── Live preview on the stage canvas ──────────────────
+function refreshStageCanvas() {
+  if (!currentPost || !studioCanvas) return;
+  // We draw the preview at a comfortable screen size
+  const container = studioCanvas.parentElement;
+  const maxW = container.clientWidth  - 32;
+  const maxH = container.clientHeight - 32;
+
+  // Default square; actual export dimensions are applied separately
+  const previewW = Math.min(maxW, maxH, 560);
+  studioCanvas.width  = previewW;
+  studioCanvas.height = previewW; // always square preview
+
+  const ctx = studioCanvas.getContext('2d');
+  document.fonts.ready.then(() => {
+    drawPosterToCtx(ctx, previewW, previewW);
   });
-
-  // Font chips — class is "font-chip"
-  document.querySelectorAll(".font-chip").forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll(".font-chip").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      selectedFont = btn.dataset.font;
-      updateLivePreview();
-    };
-  });
-
-  // Filter chips — class is "filter-chip"
-  document.querySelectorAll(".filter-chip").forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll(".filter-chip").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      imageEffects.filter = btn.dataset.filter;
-      updateLivePreview();
-    };
-  });
-
-  // Effect sliders
-  const sliderDefs = [
-    ['brightnessSlider','brightnessValue','brightness','%'],
-    ['darknessSlider',  'darknessValue',  'darkness',  '%'],
-    ['blurSlider',      'blurValue',      'blur',      ''],
-    ['contrastSlider',  'contrastValue',  'contrast',  '%'],
-  ];
-  sliderDefs.forEach(([sliderId, valId, key, unit]) => {
-    const slider = document.getElementById(sliderId);
-    const valEl  = document.getElementById(valId);
-    if (!slider) return;
-    slider.oninput = () => {
-      imageEffects[key] = parseInt(slider.value);
-      if (valEl) valEl.textContent = slider.value + unit;
-      updateLivePreview();
-    };
-  });
-
-  // Reset effects
-  const resetBtn = document.getElementById("resetEffectsBtn");
-  if (resetBtn) resetBtn.onclick = () => {
-    imageEffects = { brightness:100, darkness:50, blur:0, contrast:100, filter:'none' };
-    const resets = {brightnessSlider:100, darknessSlider:50, blurSlider:0, contrastSlider:100};
-    Object.entries(resets).forEach(([id,val]) => { const el=document.getElementById(id); if(el) el.value=val; });
-    const labels = {brightnessValue:'100%', darknessValue:'50%', blurValue:'0', contrastValue:'100%'};
-    Object.entries(labels).forEach(([id,val]) => { const el=document.getElementById(id); if(el) el.textContent=val; });
-    document.querySelectorAll(".filter-chip").forEach((b,i) => b.classList.toggle("active", i===0));
-    updateLivePreview();
-  };
-
-  // Upload zone — drag-and-drop + click
-  const uploadZone  = document.getElementById("uploadBgBtn");
-  const uploadInput = document.getElementById("bgUploadInput");
-
-  if (uploadZone && uploadInput) {
-    // Click to browse
-    uploadZone.onclick = () => uploadInput.click();
-
-    // Drag events
-    uploadZone.addEventListener('dragover', e => {
-      e.preventDefault();
-      uploadZone.classList.add('drag-over');
-    });
-    uploadZone.addEventListener('dragleave', e => {
-      if (!uploadZone.contains(e.relatedTarget)) uploadZone.classList.remove('drag-over');
-    });
-    uploadZone.addEventListener('drop', e => {
-      e.preventDefault();
-      uploadZone.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file) handleImageFile(file);
-    });
-
-    // File input change
-    uploadInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) handleImageFile(file);
-    };
-  }
-
-  function handleImageFile(file) {
-    if (!file.type.startsWith('image/')) { showToast("Please upload an image"); return; }
-    if (file.size > 10 * 1024 * 1024)   { showToast("File too large (max 10MB)"); return; }
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        uploadedBgImage = img;
-        const sec  = document.getElementById("imageControlsSection");
-        const zone = document.getElementById("uploadBgBtn");
-        const stat = document.getElementById("uploadStatus");
-        if (sec) sec.style.display = 'block';
-        if (stat) stat.textContent = `${file.name} · ${(file.size/1024).toFixed(0)}KB`;
-        if (zone) {
-          zone.classList.add('has-image');
-          const titleEl = zone.querySelector('.upload-zone-title');
-          if (titleEl) titleEl.textContent = 'Photo uploaded';
-        }
-        showToast("Photo added!");
-        updateLivePreview();
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  // Remove bg
-  const removeBtn = document.getElementById("removeBgBtn");
-  if (removeBtn) removeBtn.onclick = () => {
-    uploadedBgImage = null;
-    const sec   = document.getElementById("imageControlsSection");
-    const stat  = document.getElementById("uploadStatus");
-    const inp   = document.getElementById("bgUploadInput");
-    const zone  = document.getElementById("uploadBgBtn");
-    if (sec)  sec.style.display  = 'none';
-    if (stat) stat.textContent   = 'or tap to browse files';
-    if (inp)  inp.value          = '';
-    if (zone) {
-      zone.classList.remove('has-image');
-      const titleEl = zone.querySelector('.upload-zone-title');
-      if (titleEl) titleEl.textContent = 'Drop your photo here';
-    }
-    updateLivePreview();
-  };
 }
 
-// ===== POSTER MODAL =====
-const EMOTION_DESIGN_MAP = {
-  Love:'rose-gold', Heartbreak:'sunset-coral', Hope:'emerald-night',
-  Nostalgia:'midnight-gold', Healing:'cream-editorial', Joy:'vaporwave',
-  Rage:'neon-dark', Loneliness:'royal-purple'
-};
+// ── Generate final poster at export dimensions ──────────
+async function generateFinalPoster(sizeKey) {
+  const dim = POSTER_SIZES[sizeKey];
+  if (!dim || !currentPost) return null;
 
+  // Use an offscreen canvas at full resolution
+  const offscreen = document.createElement('canvas');
+  offscreen.width  = dim.w;
+  offscreen.height = dim.h;
+  const ctx = offscreen.getContext('2d');
+
+  // Wait for fonts to be ready
+  await document.fonts.ready;
+  drawPosterToCtx(ctx, dim.w, dim.h);
+
+  return new Promise(resolve => {
+    offscreen.toBlob(blob => resolve(blob), 'image/png');
+  });
+}
+
+// ── Ceremony thumbnail ────────────────────────────────
+function drawCeremonyThumb() {
+  const size = 200;
+  ceremonyThumb.width  = size;
+  ceremonyThumb.height = size;
+  const ctx = ceremonyThumb.getContext('2d');
+  document.fonts.ready.then(() => {
+    drawPosterToCtx(ctx, size, size);
+  });
+}
+
+// ── Open studio ──────────────────────────────────────
 sharePosterBtn.onclick = () => {
   closeModal(postcardModal);
-  // reset state
-  uploadedBgImage = null;
-  selectedFont    = 'playfair';
-  imageEffects    = { brightness:100, darkness:50, blur:0, contrast:100, filter:'none' };
-  generatedPosterBlob = null;
-  selectedPosterSize  = null;
 
-  // auto design by emotion
-  if (currentPost?.emotion) {
-    selectedDesign = EMOTION_DESIGN_MAP[currentPost.emotion] || 'midnight-gold';
-  } else {
-    selectedDesign = 'midnight-gold';
-  }
+  // Reset state
+  studioBgImage    = null;
+  studioFont       = 'playfair';
+  studioBrightness = 100;
+  studioBlur       = 0;
+  studioDim        = 50;
+  studioFilter     = 'none';
+  generatedBlob    = null;
+  selectedSize     = null;
 
-  // reset steps
-  designStep.classList.add("active");
-  platformStep.classList.remove("active");
-  shareStep.classList.remove("active");
+  // Auto pick design from post emotion
+  studioDesign = EMOTION_DESIGN_MAP[currentPost?.emotion] || 'midnight-gold';
 
-  // reset UI
-  document.querySelectorAll(".clr-dot").forEach(d => d.classList.toggle("active", d.dataset.design === selectedDesign));
-  document.querySelectorAll(".font-chip").forEach((b,i) => b.classList.toggle("active", i===0));
-  document.querySelectorAll(".filter-chip").forEach((b,i) => b.classList.toggle("active", i===0));
-  const sec = document.getElementById("imageControlsSection");
-  if (sec) sec.style.display = 'none';
-  const stat = document.getElementById("uploadStatus");
-  if (stat) stat.textContent = 'or tap to browse files';
-  const zone = document.getElementById("uploadBgBtn");
-  if (zone) {
-    zone.classList.remove('has-image');
-    const titleEl = zone.querySelector('.upload-zone-title');
-    if (titleEl) titleEl.textContent = 'Drop your photo here';
-  }
+  // Open overlay
+  studioOverlay.classList.remove('hidden');
+  document.body.classList.add('modal-open');
 
-  openModal(sharePosterModal);
-  setTimeout(() => {
-    wirePosterControls();
-    updateLivePreview();
-  }, 80);
+  // Reset UI state
+  resetStudioUI();
+
+  // Draw after a tick (lets layout settle)
+  setTimeout(refreshStageCanvas, 60);
 };
 
-nextToPlatform.onclick = () => { designStep.classList.remove("active"); platformStep.classList.add("active"); };
-backToDesign.onclick   = () => { platformStep.classList.remove("active"); designStep.classList.add("active"); };
-backToPlatform.onclick = () => { shareStep.classList.remove("active"); platformStep.classList.add("active"); };
+function resetStudioUI() {
+  // Tab: always start on color
+  document.querySelectorAll('.dock-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  document.querySelectorAll('.dock-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
 
-// Platform buttons — use "plat-btn" class
-document.querySelectorAll(".plat-btn[data-size]").forEach(btn => {
-  btn.onclick = async () => {
-    selectedPosterSize = btn.dataset.size;
-    showToast("Generating poster…");
-    try {
-      await generatePoster(selectedPosterSize);
-      shareableLink.value = `${APP_BASE_URL}?post=${currentPost?.id||''}`;
-      platformStep.classList.remove("active");
-      shareStep.classList.add("active");
-      showToast("Poster ready!");
-    } catch(err) {
-      console.error(err); showToast("Error generating poster");
-    }
+  // Scene swatches
+  document.querySelectorAll('.scene-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.design === studioDesign);
+  });
+
+  // Font cards
+  document.querySelectorAll('.font-card').forEach((fc, i) => {
+    fc.classList.toggle('active', i === 0);
+  });
+
+  // Brightness
+  const bSlider = document.getElementById('studiobrightness');
+  const bVal    = document.getElementById('studioBrightnessVal');
+  if (bSlider) { bSlider.value = 100; }
+  if (bVal)    { bVal.textContent = '100%'; }
+
+  // Photo
+  if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
+  if (photoDropZone) photoDropZone.classList.remove('has-photo');
+  if (photoControls) photoControls.classList.add('hidden');
+  if (studioPhotoInput) studioPhotoInput.value = '';
+
+  const blurSlider = document.getElementById('studioBlur');
+  const dimSlider  = document.getElementById('studioDim');
+  const blurVal    = document.getElementById('studioBlurVal');
+  const dimVal     = document.getElementById('studioDimVal');
+  if (blurSlider) blurSlider.value = 0;
+  if (dimSlider)  dimSlider.value  = 50;
+  if (blurVal)    blurVal.textContent  = '0';
+  if (dimVal)     dimVal.textContent   = '50%';
+
+  document.querySelectorAll('.photo-filter').forEach((f, i) => f.classList.toggle('active', i === 0));
+
+  // Hide sub-overlays
+  sizePicker.classList.add('hidden');
+  ceremonyOverlay.classList.add('hidden');
+}
+
+// ── Close studio ─────────────────────────────────────
+closeStudio.onclick = () => {
+  studioOverlay.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+};
+
+// ── Dock tabs ────────────────────────────────────────
+document.querySelectorAll('.dock-tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.dock-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.dock-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    const panel = document.getElementById('panel-' + tab.dataset.tab);
+    if (panel) panel.classList.add('active');
   };
 });
 
-async function generatePoster(size) {
-  if (!currentPost) return;
-  const SIZES = {
-    'instagram-square': {w:1080,h:1080},
-    'instagram-story':  {w:1080,h:1920},
-    'twitter':          {w:1200,h:675},
-    'facebook':         {w:1200,h:630},
-    'pinterest':        {w:1000,h:1500},
-    'reddit':           {w:1200,h:1200},
+// ── Color scenes ──────────────────────────────────────
+document.querySelectorAll('.scene-swatch').forEach(swatch => {
+  swatch.onclick = () => {
+    document.querySelectorAll('.scene-swatch').forEach(s => s.classList.remove('active'));
+    swatch.classList.add('active');
+    studioDesign = swatch.dataset.design;
+    refreshStageCanvas();
   };
-  const d = SIZES[size]; if (!d) return;
-  posterCanvas.width = d.w; posterCanvas.height = d.h;
-  const ctx = posterCanvas.getContext('2d');
-  const fs  = d.w * 0.028;
-  drawPosterToCtx(ctx, d.w, d.h, fs);
-  return new Promise(res => posterCanvas.toBlob(blob => { generatedPosterBlob = blob; res(); }, 'image/png'));
+});
+
+// ── Brightness ───────────────────────────────────────
+const brightnessSlider = document.getElementById('studiobrightness');
+const brightnessValEl  = document.getElementById('studioBrightnessVal');
+if (brightnessSlider) {
+  brightnessSlider.oninput = () => {
+    studioBrightness = parseInt(brightnessSlider.value);
+    if (brightnessValEl) brightnessValEl.textContent = studioBrightness + '%';
+    refreshStageCanvas();
+  };
 }
 
-// ===== SHARE BUTTONS =====
-copyLinkBtn.onclick = async () => {
-  try {
-    await navigator.clipboard.writeText(shareableLink.value);
-    copyLinkBtn.textContent = "Copied!";
-    setTimeout(() => copyLinkBtn.textContent = "Copy", 2000);
-    showToast("Link copied!");
-  } catch { shareableLink.select(); showToast("Copy the link manually"); }
-};
+// ── Font cards ────────────────────────────────────────
+document.querySelectorAll('.font-card').forEach(card => {
+  card.onclick = () => {
+    document.querySelectorAll('.font-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    studioFont = card.dataset.font;
+    refreshStageCanvas();
+  };
+});
 
-shareNativeBtn.onclick = async () => {
-  if (!generatedPosterBlob) { showToast("Generating…"); return; }
-  const file = new File([generatedPosterBlob], `margo-poster-${Date.now()}.png`, {type:'image/png'});
-  const sd = { title:`MARGO — ${currentPost.text.substring(0,50)}`, text:`"${currentPost.text}"\n\n${shareableLink.value}`, files:[file] };
-  try {
-    if (navigator.canShare?.(sd)) { await navigator.share(sd); showToast("Shared!"); }
-    else downloadPosterFile();
-  } catch(e) { if (e.name!=='AbortError') downloadPosterFile(); }
-};
+// ── Photo upload ─────────────────────────────────────
+if (photoDropZone) {
+  photoDropZone.onclick = () => studioPhotoInput?.click();
 
-downloadManualBtn.onclick = downloadPosterFile;
-
-function downloadPosterFile() {
-  if (!generatedPosterBlob) { showToast("No poster yet"); return; }
-  const a = document.createElement('a');
-  const url = URL.createObjectURL(generatedPosterBlob);
-  a.href = url; a.download = `margo-poster-${Date.now()}.png`;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-  showToast("Poster downloaded!");
+  photoDropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    photoDropZone.classList.add('has-photo');
+  });
+  photoDropZone.addEventListener('dragleave', e => {
+    if (!photoDropZone.contains(e.relatedTarget)) photoDropZone.classList.remove('has-photo');
+  });
+  photoDropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) handleStudioPhoto(file);
+  });
 }
+
+if (studioPhotoInput) {
+  studioPhotoInput.onchange = e => {
+    const file = e.target.files[0];
+    if (file) handleStudioPhoto(file);
+  };
+}
+
+function handleStudioPhoto(file) {
+  if (!file.type.startsWith('image/')) { showToast("Please upload an image"); return; }
+  if (file.size > 15 * 1024 * 1024)   { showToast("File too large (max 15MB)"); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      studioBgImage = img;
+      if (photoDropText)  photoDropText.textContent = file.name;
+      if (photoDropZone)  photoDropZone.classList.add('has-photo');
+      if (photoControls)  photoControls.classList.remove('hidden');
+      showToast("Photo added");
+      refreshStageCanvas();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Photo controls ───────────────────────────────────
+const blurSlider = document.getElementById('studioBlur');
+const dimSlider  = document.getElementById('studioDim');
+const blurValEl  = document.getElementById('studioBlurVal');
+const dimValEl   = document.getElementById('studioDimVal');
+
+if (blurSlider) blurSlider.oninput = () => {
+  studioBlur = parseInt(blurSlider.value);
+  if (blurValEl) blurValEl.textContent = studioBlur;
+  refreshStageCanvas();
+};
+
+if (dimSlider) dimSlider.oninput = () => {
+  studioDim = parseInt(dimSlider.value);
+  if (dimValEl) dimValEl.textContent = studioDim + '%';
+  refreshStageCanvas();
+};
+
+document.querySelectorAll('.photo-filter').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.photo-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    studioFilter = btn.dataset.filter;
+    refreshStageCanvas();
+  };
+});
+
+const studioRemovePhoto = document.getElementById('studioRemovePhoto');
+if (studioRemovePhoto) studioRemovePhoto.onclick = () => {
+  studioBgImage = null;
+  if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
+  if (photoDropZone) photoDropZone.classList.remove('has-photo');
+  if (photoControls) photoControls.classList.add('hidden');
+  if (studioPhotoInput) studioPhotoInput.value = '';
+  refreshStageCanvas();
+};
+
+// ── Export flow ──────────────────────────────────────
+studioExportBtn.onclick = () => {
+  sizePicker.classList.remove('hidden');
+};
+
+sizeCancelBtn.onclick = () => {
+  sizePicker.classList.add('hidden');
+};
+
+document.querySelectorAll('.size-opt').forEach(btn => {
+  btn.onclick = async () => {
+    selectedSize = btn.dataset.size;
+    sizePicker.classList.add('hidden');
+
+    // Animate canvas zoom
+    studioCanvas.classList.add('zoom-in');
+    showToast("Generating…");
+
+    try {
+      generatedBlob = await generateFinalPoster(selectedSize);
+    } catch (err) {
+      console.error(err);
+      showToast("Error generating poster");
+      studioCanvas.classList.remove('zoom-in');
+      return;
+    }
+
+    // Short delay then show ceremony
+    setTimeout(() => {
+      studioCanvas.classList.remove('zoom-in');
+      drawCeremonyThumb();
+      ceremonyOverlay.classList.remove('hidden');
+    }, 400);
+  };
+});
+
+ceremonyBack.onclick = () => {
+  ceremonyOverlay.classList.add('hidden');
+};
+
+cerDownload.onclick = () => {
+  if (!generatedBlob) { showToast("No poster yet"); return; }
+  const a   = document.createElement('a');
+  const url = URL.createObjectURL(generatedBlob);
+  a.href     = url;
+  a.download = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("Saved!");
+};
+
+cerShare.onclick = async () => {
+  if (!generatedBlob) { showToast("Generating…"); return; }
+  const file = new File([generatedBlob], `margo-poster-${Date.now()}.png`, { type: 'image/png' });
+  const shareData = {
+    title: `MARGO — ${currentPost?.text?.substring(0, 50) || 'Lyric'}`,
+    text:  `"${currentPost?.text || ''}"`,
+    files: [file]
+  };
+  try {
+    if (navigator.canShare?.(shareData)) {
+      await navigator.share(shareData);
+      showToast("Shared!");
+    } else {
+      cerDownload.click(); // fallback to download
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') cerDownload.click();
+  }
+};
 
 // ===== MODAL CLOSE BUTTONS =====
 document.getElementById("closeGuess").onclick    = () => { closeModal(guessModal);       currentGuessAttempts = 0; };
@@ -1183,10 +1283,6 @@ document.getElementById("closeDiscover").onclick = () => closeModal(discoverModa
 document.getElementById("closePostcard").onclick = () => closeModal(postcardModal);
 document.getElementById("closeListen").onclick   = () => closeModal(listenModal);
 document.getElementById("closeAnalytics").onclick= () => closeModal(analyticsModal);
-document.getElementById("closeSharePoster").onclick = () => {
-  closeModal(sharePosterModal);
-  designStep.classList.add("active"); platformStep.classList.remove("active"); shareStep.classList.remove("active");
-};
 
 // ===== TOAST =====
 function showToast(msg) {
@@ -1201,6 +1297,7 @@ function showToast(msg) {
 // ===== INIT =====
 setupScrollToTop();
 buildLyricStream();
+preloadStudioFonts(); // preload all fonts immediately on page load
 console.log("MARGO loaded. Firebase:", isFirebaseEnabled);
 
 function setupScrollToTop() {
