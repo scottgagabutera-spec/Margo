@@ -225,35 +225,39 @@ function getTickerPosts() {
 
 // ===== FEATURED STATS =====
 function calcFeatured() {
-  const artistSet     = new Set();
-  const songSet       = new Set();
+  const artistCounts  = {};
+  const songCounts    = {};
   const emotionCounts = {};
-  const now           = Date.now();
-  const oneDayMs      = 24 * 60 * 60 * 1000;
-  let   activeToday   = 0;
-  let   solved        = 0;
 
   posts.forEach(p => {
     const artist  = p.knowledge?.artist;
     const song    = p.knowledge?.song;
     const emotion = p.emotion || 'Nostalgia';
 
-    if (artist && artist !== 'Unknown Artist') artistSet.add(artist.toLowerCase().trim());
-    if (song   && song   !== 'Unknown Song')   songSet.add(song.toLowerCase().trim());
-    emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
-
-    // Active today: posted within last 24h
-    if (p.timestamp && (now - p.timestamp) < oneDayMs) activeToday++;
-
-    // Solved: discover posts that received at least one help entry
-    if (p.mode === 'discover') {
-      const an = postAnalytics[p.id];
-      if (an && an.helps && Object.keys(an.helps).length > 0) solved++;
+    // Count how many times each artist appears (for top artist + unique count)
+    if (artist && artist !== 'Unknown Artist') {
+      const key = artist.trim();
+      artistCounts[key] = (artistCounts[key] || 0) + 1;
     }
+    // Count how many times each song appears (for top song + unique count)
+    if (song && song !== 'Unknown Song') {
+      const key = song.trim();
+      songCounts[key] = (songCounts[key] || 0) + 1;
+    }
+    emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
   });
 
-  const topEmotion = Object.entries(emotionCounts).sort((a,b) => b[1]-a[1])[0];
-  return { uniqueArtists: artistSet.size, uniqueSongs: songSet.size, topEmotion, activeToday, solved };
+  const artistEntries = Object.entries(artistCounts).sort((a,b) => b[1]-a[1]);
+  const songEntries   = Object.entries(songCounts).sort((a,b) => b[1]-a[1]);
+  const topEmotion    = Object.entries(emotionCounts).sort((a,b) => b[1]-a[1])[0];
+
+  return {
+    uniqueArtistCount: Object.keys(artistCounts).length,  // how many different artists
+    uniqueSongCount:   Object.keys(songCounts).length,    // how many different songs
+    topArtist:  artistEntries[0]?.[0] || null,            // most mentioned artist name
+    topSong:    songEntries[0]?.[0]   || null,            // most mentioned song name
+    topEmotion
+  };
 }
 
 function updateLandingStats() {
@@ -265,24 +269,26 @@ function updateLandingStats() {
   if (st) st.textContent = n || '—';
   if (pc) pc.textContent = n;
 
-  const artistEl      = document.getElementById("featuredArtist");
-  const songEl        = document.getElementById("featuredSong");
+  const artistCountEl = document.getElementById("featuredArtistCount");
+  const songCountEl   = document.getElementById("featuredSongCount");
+  const topArtistEl   = document.getElementById("topArtistName");
+  const topSongEl     = document.getElementById("topSongName");
   const emotionEl     = document.getElementById("topEmotion");
-  const activeTodayEl = document.getElementById("statActiveToday");
-  const solvedEl      = document.getElementById("statSolved");
+
+  const allEls = [artistCountEl, songCountEl, topArtistEl, topSongEl, emotionEl];
 
   if (!n) {
-    [artistEl, songEl, emotionEl, activeTodayEl, solvedEl].forEach(el => { if (el) el.textContent = '—'; });
+    allEls.forEach(el => { if (el) el.textContent = '—'; });
     return;
   }
 
-  const { uniqueArtists, uniqueSongs, topEmotion, activeToday, solved } = calcFeatured();
+  const { uniqueArtistCount, uniqueSongCount, topArtist, topSong, topEmotion } = calcFeatured();
 
-  if (artistEl)      artistEl.textContent      = uniqueArtists || '—';
-  if (songEl)        songEl.textContent        = uniqueSongs   || '—';
-  if (emotionEl)     emotionEl.textContent     = topEmotion    ? topEmotion[0] : '—';
-  if (activeTodayEl) activeTodayEl.textContent = activeToday   || '0';
-  if (solvedEl)      solvedEl.textContent      = solved        || '0';
+  if (artistCountEl) artistCountEl.textContent = uniqueArtistCount || '—';
+  if (songCountEl)   songCountEl.textContent   = uniqueSongCount   || '—';
+  if (topArtistEl)   topArtistEl.textContent   = topArtist         || '—';
+  if (topSongEl)     topSongEl.textContent     = topSong           || '—';
+  if (emotionEl)     emotionEl.textContent     = topEmotion        ? topEmotion[0] : '—';
 }
 
 // ===== FIREBASE SYNC =====
