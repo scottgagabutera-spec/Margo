@@ -54,18 +54,18 @@ const FONT_FAMILIES = {
 };
 
 const POSTER_DESIGNS = {
-  'midnight-gold':   { bg:['#0d0d0d','#1a1410','#0d0d0d'], primary:'#d4af37', secondary:'rgba(212,175,55,0.55)', text:'#f8f8f8' },
-  'royal-purple':    { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff', secondary:'rgba(199,125,255,0.55)', text:'#f8f8f8' },
-  'neon-cyan':       { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff', secondary:'rgba(0,229,255,0.55)',   text:'#f8f8f8' },
-  'sunset-coral':    { bg:['#1a0a0a','#2d1416','#1a0a0a'], primary:'#ff6b6b', secondary:'rgba(255,107,107,0.55)',text:'#f8f8f8' },
-  'emerald-night':   { bg:['#051a0d','#0d2e1a','#051a0d'], primary:'#50fa7b', secondary:'rgba(80,250,123,0.55)', text:'#f8f8f8' },
-  'rose-gold':       { bg:['#1a0d0f','#2d1a1f','#1a0d0f'], primary:'#f4a4c0', secondary:'rgba(244,164,192,0.55)',text:'#f8f8f8' },
-  'cream-editorial': { bg:['#f5f1e8','#ebe3d5','#f5f1e8'], primary:'#2a2520', secondary:'rgba(42,37,32,0.5)',    text:'#2a2520' },
-  'monochrome':      { bg:['#000000','#111111','#000000'], primary:'#ffffff', secondary:'rgba(255,255,255,0.6)', text:'#ffffff' },
-  'vaporwave':       { bg:['#ff71ce','#b967ff','#05ffa1'], primary:'#ffffff', secondary:'rgba(255,255,255,0.7)', text:'#ffffff' },
-  'neon-dark':       { bg:['#0a0a0a','#0f0f0f','#0a0a0a'], primary:'#ff00ff', secondary:'rgba(0,255,255,0.7)',   text:'#00ffff' },
-  'y2k-chrome':      { bg:['#000033','#1a1a4d','#000033'], primary:'#00ffff', secondary:'rgba(255,0,255,0.6)',  text:'#ffffff' },
-  'brutalist':       { bg:['#ffffff','#f0f0f0','#ffffff'],  primary:'#000000', secondary:'rgba(0,0,0,0.55)',     text:'#000000' },
+  'midnight-gold':   { bg:['#0d0d0d','#1a1410','#0d0d0d'], primary:'#d4af37',  secondary:'rgba(212,175,55,0.7)',  text:'#f8f8f8', light:false },
+  'royal-purple':    { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff',  secondary:'rgba(199,125,255,0.7)', text:'#f8f8f8', light:false },
+  'neon-cyan':       { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff',  secondary:'rgba(255,255,255,0.7)', text:'#f8f8f8', light:false },
+  'sunset-coral':    { bg:['#1a0a0a','#2d1416','#1a0a0a'], primary:'#ff8080',  secondary:'rgba(255,255,255,0.65)',text:'#f8f8f8', light:false },
+  'emerald-night':   { bg:['#051a0d','#0d2e1a','#051a0d'], primary:'#50fa7b',  secondary:'rgba(255,255,255,0.65)',text:'#f8f8f8', light:false },
+  'rose-gold':       { bg:['#1a0d0f','#2d1a1f','#1a0d0f'], primary:'#f4a4c0',  secondary:'rgba(255,255,255,0.65)',text:'#f8f8f8', light:false },
+  'cream-editorial': { bg:['#f5f1e8','#ebe3d5','#f5f1e8'], primary:'#2a2520',  secondary:'rgba(42,37,32,0.6)',    text:'#2a2520', light:true  },
+  'monochrome':      { bg:['#000000','#111111','#000000'], primary:'#ffffff',  secondary:'rgba(255,255,255,0.65)',text:'#ffffff', light:false },
+  'vaporwave':       { bg:['#2d0a3d','#6b1fa8','#1a0d3d'], primary:'#ff71ce',  secondary:'rgba(255,255,255,0.75)',text:'#ffffff', light:false },
+  'neon-dark':       { bg:['#0a0a0a','#0f0f0f','#0a0a0a'], primary:'#ff00ff',  secondary:'rgba(255,255,255,0.7)', text:'#00ffff', light:false },
+  'y2k-chrome':      { bg:['#000033','#1a1a4d','#000033'], primary:'#00ffff',  secondary:'rgba(255,255,255,0.7)', text:'#ffffff', light:false },
+  'brutalist':       { bg:['#ffffff','#f0f0f0','#ffffff'],  primary:'#000000',  secondary:'rgba(0,0,0,0.6)',       text:'#000000', light:true  },
 };
 
 const EMOTION_DESIGN_MAP = {
@@ -929,29 +929,55 @@ function drawPosterToCtx(ctx, W, H) {
 
   const k = currentPost.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
 
-  // Song title: 40% weight relative to lyric
-  const songSize   = Math.round(lyricSize * 0.38);
-  const artistSize = Math.round(lyricSize * 0.26);
+  // Sizes: bigger minimums so they're always readable
+  const songSize   = Math.max(Math.round(lyricSize * 0.42), 28 * scale);
+  const artistSize = Math.max(Math.round(lyricSize * 0.30), 20 * scale);
+  const markSize2  = Math.max(13 * scale, 11);
 
   // Vertical placement: from 74% down
   const songY   = H * 0.76;
-  const artistY = songY + songSize + (14 * scale);
+  const artistY = songY + songSize + (16 * scale);
 
-  // Song
-  ctx.fillStyle = accentColor;
+  // ── Determine text colors that always contrast ──────
+  const isLightBg = c.light === true;
+
+  let songColor, artistColor, markColor;
+  if (studioBgImage) {
+    // Over photo: white text + drop shadow for readability on any photo
+    songColor   = '#ffffff';
+    artistColor = 'rgba(255,255,255,0.82)';
+    markColor   = 'rgba(255,255,255,0.28)';
+    ctx.shadowColor   = 'rgba(0,0,0,0.65)';
+    ctx.shadowBlur    = 14 * scale;
+    ctx.shadowOffsetY = 1 * scale;
+  } else if (isLightBg) {
+    // Light backgrounds: use dark text — always legible
+    songColor   = c.primary;
+    artistColor = 'rgba(42,37,32,0.7)';
+    markColor   = 'rgba(42,37,32,0.35)';
+  } else {
+    // Dark backgrounds: bright accent for song, solid white-ish for artist
+    songColor   = c.primary;
+    artistColor = 'rgba(255,255,255,0.72)';
+    markColor   = 'rgba(255,255,255,0.25)';
+  }
+
+  // Song title
+  ctx.fillStyle = songColor;
   ctx.font = `700 ${songSize}px ${fd.family}`;
-  const songTrunc = k.song.length > 30 ? k.song.substring(0, 30) + '…' : k.song;
+  const songTrunc = k.song.length > 32 ? k.song.substring(0, 32) + '…' : k.song;
   ctx.fillText(songTrunc, W / 2, songY);
 
   // Artist
-  ctx.fillStyle = studioBgImage ? 'rgba(255,255,255,0.6)' : c.secondary;
-  ctx.font = `400 ${artistSize}px 'DM Sans', sans-serif`;
-  const artistTrunc = k.artist.length > 36 ? k.artist.substring(0, 36) + '…' : k.artist;
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.fillStyle = artistColor;
+  ctx.font = `500 ${artistSize}px 'DM Sans', sans-serif`;
+  const artistTrunc = k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist;
   ctx.fillText(artistTrunc, W / 2, artistY);
 
-  // Subtle bottom mark
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  ctx.font = `500 ${14 * scale}px 'DM Sans', sans-serif`;
+  // Bottom mark — always readable with soft contrast
+  ctx.fillStyle = markColor;
+  ctx.font = `500 ${markSize2}px 'DM Sans', sans-serif`;
   ctx.fillText('margo.app', W / 2, H * 0.94);
 }
 
@@ -1029,17 +1055,19 @@ async function generateFinalPoster(sizeKey) {
 
 // ── Ceremony thumbnail ────────────────────────────────
 function drawCeremonyThumb() {
-  const dpr     = window.devicePixelRatio || 1;
-  const cssSize = 200;
-  ceremonyThumb.style.width  = cssSize + 'px';
-  ceremonyThumb.style.height = cssSize + 'px';
-  const res = Math.round(cssSize * dpr);
-  ceremonyThumb.width  = res;
-  ceremonyThumb.height = res;
+  const dpr = window.devicePixelRatio || 1;
+  // Draw at high internal resolution — CSS max-height will scale it down to fit
+  // Use 600px as the internal square so it's always sharp no matter screen size
+  const internalSize = 600;
+  ceremonyThumb.width  = Math.round(internalSize * dpr);
+  ceremonyThumb.height = Math.round(internalSize * dpr);
+  // Remove any inline style constraints — let CSS handle display sizing
+  ceremonyThumb.style.width  = '';
+  ceremonyThumb.style.height = '';
   const ctx = ceremonyThumb.getContext('2d');
   ctx.scale(dpr, dpr);
   document.fonts.ready.then(() => {
-    drawPosterToCtx(ctx, cssSize, cssSize);
+    drawPosterToCtx(ctx, internalSize, internalSize);
   });
 }
 
@@ -1285,14 +1313,7 @@ ceremonyBack.onclick = () => {
 
 cerDownload.onclick = () => {
   if (!generatedBlob) { showToast("No poster yet"); return; }
-  const a   = document.createElement('a');
-  const url = URL.createObjectURL(generatedBlob);
-  a.href     = url;
-  a.download = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadPosterBlob();
   showToast("Saved!");
 };
 
@@ -1304,17 +1325,37 @@ cerShare.onclick = async () => {
     text:  `"${currentPost?.text || ''}"`,
     files: [file]
   };
+  // Try native share (works on mobile with apps installed)
+  // If not available or user cancels — fallback to download
+  let shared = false;
   try {
-    if (navigator.canShare?.(shareData)) {
+    if (navigator.canShare && navigator.canShare(shareData)) {
       await navigator.share(shareData);
+      shared = true;
       showToast("Shared!");
-    } else {
-      cerDownload.click(); // fallback to download
     }
   } catch (e) {
-    if (e.name !== 'AbortError') cerDownload.click();
+    // AbortError = user cancelled — don't download
+    if (e.name === 'AbortError') return;
+  }
+  // No native share support or file share not supported — just download
+  if (!shared) {
+    downloadPosterBlob();
+    showToast("Saved to device!");
   }
 };
+
+function downloadPosterBlob() {
+  if (!generatedBlob) return;
+  const a   = document.createElement('a');
+  const url = URL.createObjectURL(generatedBlob);
+  a.href     = url;
+  a.download = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 // ===== MODAL CLOSE BUTTONS =====
 document.getElementById("closeGuess").onclick    = () => { closeModal(guessModal);       currentGuessAttempts = 0; };
@@ -1336,11 +1377,32 @@ function showToast(msg) {
 // ===== INIT =====
 setupScrollToTop();
 buildLyricStream();
-preloadStudioFonts(); // preload all fonts immediately on page load
+preloadStudioFonts();
+setupStatsBar();
 console.log("MARGO loaded. Firebase:", isFirebaseEnabled);
 
 function setupScrollToTop() {
   window.addEventListener('scroll', () => {
     scrollToTopBtn?.classList.toggle('visible', window.pageYOffset > 350);
   });
+}
+
+// Center stats bar on desktop, left-align on mobile
+function setupStatsBar() {
+  const bar = document.querySelector('.stats-bar');
+  if (!bar) return;
+  function alignStats() {
+    if (window.innerWidth >= 769) {
+      // On desktop: center if content fits, else scroll from left
+      bar.style.justifyContent = bar.scrollWidth <= bar.clientWidth
+        ? 'center'
+        : 'flex-start';
+    } else {
+      // On mobile: always left so first stat is immediately visible
+      bar.style.justifyContent = 'flex-start';
+      bar.scrollLeft = 0;
+    }
+  }
+  alignStats();
+  window.addEventListener('resize', alignStats);
 }
