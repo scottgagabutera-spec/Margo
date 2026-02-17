@@ -332,7 +332,10 @@ let tSX = 0, tSY = 0;
 function goToFeed() {
   landing.classList.remove("active");
   feed.classList.add("active");
-  window.scrollTo({ top: 0 });
+  // Force scroll to absolute top so the first cards are fully visible
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  window.scrollTo(0, 0);
   renderFeed();
 }
 function goToLanding() {
@@ -483,25 +486,35 @@ function highlightMatch(text, query) {
   return String(text).replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="search-highlight">$1</mark>');
 }
 
+function clearSearch() {
+  const input    = document.getElementById("feedSearchInput");
+  const clearBtn = document.getElementById("searchClearBtn");
+  searchQuery = "";
+  if (input)    input.value = "";
+  if (clearBtn) clearBtn.style.display = 'none';
+  renderFeed();
+}
+
 function initSearch() {
   const input    = document.getElementById("feedSearchInput");
   const clearBtn = document.getElementById("searchClearBtn");
   if (!input) return;
 
+  // typing — update query and re-render feed (no popups, no suggestions)
   input.oninput = () => {
     searchQuery = input.value.trim();
     if (clearBtn) clearBtn.style.display = searchQuery ? 'flex' : 'none';
     renderFeed();
   };
 
+  // Escape key — clear search and restore full feed
+  input.onkeydown = (e) => {
+    if (e.key === 'Escape') { clearSearch(); input.blur(); }
+  };
+
+  // clear button
   if (clearBtn) {
-    clearBtn.onclick = () => {
-      searchQuery = "";
-      input.value = "";
-      clearBtn.style.display = 'none';
-      renderFeed();
-      input.focus();
-    };
+    clearBtn.onclick = () => { clearSearch(); input.focus(); };
   }
 }
 
@@ -792,25 +805,53 @@ analyticsBtn.onclick = () => {
   const guesses = Object.values(an.guesses || {});
   const helps   = Object.values(an.helps   || {});
   const body    = document.getElementById("analyticsBody");
+
   let html = `<div class="analytics-grid">
     <div class="stat-card"><div class="stat-num">${an.views||0}</div><div class="stat-label">Views</div></div>`;
   if (currentPost.mode === 'guess')    html += `<div class="stat-card"><div class="stat-num">${guesses.length}</div><div class="stat-label">Guesses</div></div>`;
-  if (currentPost.mode === 'discover') html += `<div class="stat-card"><div class="stat-num">${helps.length}</div><div class="stat-label">Helps</div></div>`;
+  if (currentPost.mode === 'discover') html += `<div class="stat-card"><div class="stat-num">${helps.length}</div><div class="stat-label">Identifications</div></div>`;
   html += '</div>';
   body.innerHTML = html;
+
+  // Guess mode — show each guess attempt
   if (currentPost.mode === 'guess' && guesses.length) {
     let sec = '<div class="activity-section"><h4>Guesses</h4><div class="activity-list">';
     guesses.forEach(g => {
       sec += `<div class="activity-item ${g.correct ? 'correct' : 'incorrect'}">
-        <div class="activity-guess">${g.song ? 'Song: ' + g.song : ''} ${g.artist ? '• Artist: ' + g.artist : ''}</div>
-        <div class="activity-result ${g.correct ? 'correct' : 'incorrect'}">${g.correct ? 'Correct' : 'Incorrect'}</div>
+        <div class="activity-guess">${g.song ? 'Song: ' + g.song : ''}${g.artist ? (g.song ? ' · ' : '') + 'Artist: ' + g.artist : ''}</div>
+        <div class="activity-result ${g.correct ? 'correct' : 'incorrect'}">${g.correct ? '✓ Correct' : '✗ Incorrect'}</div>
         <div class="activity-time">${timeAgo(g.timestamp)}</div>
       </div>`;
     });
     body.innerHTML += sec + '</div></div>';
   }
+
+  // Discover mode — show each identification suggestion with links
+  if (currentPost.mode === 'discover' && helps.length) {
+    let sec = '<div class="activity-section"><h4>Community Identifications</h4><div class="activity-list">';
+    helps.forEach(h => {
+      const linkParts = [];
+      if (h.links?.spotify)    linkParts.push(`<a href="${h.links.spotify}"    target="_blank" class="help-link">Spotify</a>`);
+      if (h.links?.apple)      linkParts.push(`<a href="${h.links.apple}"      target="_blank" class="help-link">Apple</a>`);
+      if (h.links?.youtube)    linkParts.push(`<a href="${h.links.youtube}"    target="_blank" class="help-link">YouTube</a>`);
+      if (h.links?.soundcloud) linkParts.push(`<a href="${h.links.soundcloud}" target="_blank" class="help-link">SoundCloud</a>`);
+      sec += `<div class="activity-item">
+        <div class="activity-guess"><strong>${h.song || '?'}</strong> — ${h.artist || '?'}</div>
+        ${linkParts.length ? `<div class="help-links-row">${linkParts.join('')}</div>` : ''}
+        <div class="activity-time">${timeAgo(h.timestamp)}</div>
+      </div>`;
+    });
+    body.innerHTML += sec + '</div></div>';
+  }
+
   closeModal(postcardModal);
   openModal(analyticsModal);
+};
+
+// Analytics back → return to postcard
+document.getElementById("closeAnalytics").onclick = () => {
+  closeModal(analyticsModal);
+  openModal(postcardModal);
 };
 
 listenPostcard.onclick = () => {
@@ -894,6 +935,16 @@ function drawPosterToCtx(ctx, W, H) {
     g.addColorStop(1, c.bg[2]);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+    // Apply brightness to gradient via overlay: <100 darkens (black overlay), >100 lightens (white overlay)
+    if (studioBrightness !== 100) {
+      const bDelta = (studioBrightness - 100) / 100; // -0.5 to +0.5
+      if (bDelta < 0) {
+        ctx.fillStyle = `rgba(0,0,0,${Math.abs(bDelta) * 0.9})`;
+      } else {
+        ctx.fillStyle = `rgba(255,255,255,${bDelta * 0.6})`;
+      }
+      ctx.fillRect(0, 0, W, H);
+    }
   }
 
   ctx.filter = 'none';
@@ -943,18 +994,17 @@ function drawPosterToCtx(ctx, W, H) {
   const k        = currentPost.knowledge || { song:'Unknown Song', artist:'Unknown Artist' };
   const songSize  = Math.max(Math.round(lyricSize * 0.42), 28 * scale);
   const artSize   = Math.max(Math.round(lyricSize * 0.30), 20 * scale);
-  const markSize  = Math.max(13 * scale, 11);
   const songY     = H * 0.76;
   const artistY   = songY + songSize + 16 * scale;
 
-  let songColor, artistColor, markColor;
+  let songColor, artistColor;
   if (studioBgImage) {
-    songColor = '#ffffff'; artistColor = 'rgba(255,255,255,0.82)'; markColor = 'rgba(255,255,255,0.28)';
+    songColor = '#ffffff'; artistColor = 'rgba(255,255,255,0.82)';
     ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = 14 * scale; ctx.shadowOffsetY = 1 * scale;
   } else if (c.light) {
-    songColor = c.primary; artistColor = 'rgba(42,37,32,0.7)'; markColor = 'rgba(42,37,32,0.35)';
+    songColor = c.primary; artistColor = 'rgba(42,37,32,0.7)';
   } else {
-    songColor = c.primary; artistColor = 'rgba(255,255,255,0.72)'; markColor = 'rgba(255,255,255,0.25)';
+    songColor = c.primary; artistColor = 'rgba(255,255,255,0.72)';
   }
 
   ctx.fillStyle = songColor;
@@ -966,9 +1016,22 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.font = `500 ${artSize}px 'DM Sans', sans-serif`;
   ctx.fillText(k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist, W / 2, artistY);
 
-  // Domain watermark
+  // Domain watermark — readable size and color that adapts per design
+  const markSize  = Math.max(Math.round(18 * scale), 14);
+  // On light designs use dark color; on photo use white; on dark use accent color
+  let markColor;
+  if (studioBgImage) {
+    markColor = 'rgba(255,255,255,0.75)';
+  } else if (c.light) {
+    markColor = 'rgba(42,37,32,0.6)';
+  } else {
+    // Use the design's primary/accent color at good opacity so it's readable but not overpowering
+    markColor = c.primary + 'cc'; // ~80% opacity
+  }
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.fillStyle = markColor;
-  ctx.font = `500 ${markSize}px 'DM Sans', sans-serif`;
+  ctx.font = `700 ${markSize}px 'DM Sans', sans-serif`;
+  ctx.textAlign = 'center';
   ctx.fillText(APP_DOMAIN, W / 2, H * 0.94);
 }
 
@@ -1059,7 +1122,12 @@ function resetStudioUI() {
   ceremonyOverlay.classList.add('hidden');
 }
 
-closeStudio.onclick = () => { studioOverlay.classList.add('hidden'); document.body.classList.remove('modal-open'); };
+closeStudio.onclick = () => {
+  studioOverlay.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  // Go back to postcard view — not to landing/feed
+  openModal(postcardModal);
+};
 
 document.querySelectorAll('.dock-tab').forEach(tab => {
   tab.onclick = () => {
@@ -1218,7 +1286,7 @@ document.getElementById("closeGuess").onclick     = () => { closeModal(guessModa
 document.getElementById("closeDiscover").onclick  = () => closeModal(discoverModal);
 document.getElementById("closePostcard").onclick  = () => closeModal(postcardModal);
 document.getElementById("closeListen").onclick    = () => closeModal(listenModal);
-document.getElementById("closeAnalytics").onclick = () => closeModal(analyticsModal);
+// closeAnalytics is handled above (returns to postcard)
 
 // ===== TOAST =====
 function showToast(msg) {
