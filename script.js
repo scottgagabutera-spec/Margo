@@ -275,13 +275,7 @@ document.querySelectorAll(".filter-pill").forEach(pill => {
   };
 });
 
-document.querySelectorAll(".community-select-btn").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".community-select-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    selectedCommunity = btn.dataset.community;
-  };
-});
+// Community selector removed - defaulting to general
 
 // ===== CHAR COUNTER =====
 textInput.oninput = () => { charCount.textContent = textInput.value.length; };
@@ -418,11 +412,6 @@ function resetComposer() {
   streamingSection.style.display = "block";
   guessSongCheck.checked = true;
   guessArtistCheck.checked = true;
-
-  selectedCommunity = "general";
-  document.querySelectorAll(".community-select-btn").forEach(b => {
-    b.classList.toggle("active", b.dataset.community === "general");
-  });
 }
 
 // ===== RENDER FEED =====
