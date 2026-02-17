@@ -267,22 +267,16 @@ body::before {
 .header-btn.primary { background: var(--gold); color: #0C0C0E; border-color: transparent; font-weight: 700; }
 .header-btn.primary:hover { box-shadow: 0 4px 16px rgba(232,197,71,0.2); transform: translateY(-1px); }
 
-/* ── SEARCH BAR ── */
+/* ── SEARCH BAR — flows with content, never sticky ── */
 .feed-search-wrap {
-  padding: 10px 14px;
-  background: rgba(12,12,14,0.92);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 57px;   /* height of feed-header */
-  z-index: 99;
-  flex-shrink: 0;
+  padding: 14px 14px 0;
+  /* NOT sticky — scrolls away naturally so cards are never hidden */
 }
 .feed-search-inner {
   display: flex; align-items: center; gap: 8px;
-  background: var(--surface-2);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px; padding: 9px 12px;
+  border-radius: 12px; padding: 10px 14px;
   transition: border-color 0.18s, box-shadow 0.18s;
 }
 .feed-search-inner:focus-within {
@@ -294,12 +288,11 @@ body::before {
   flex: 1; min-width: 0;
   background: none; border: none; outline: none;
   color: var(--text); font-family: var(--font-ui);
-  font-size: 0.875rem;
-  padding: 0;
+  font-size: 0.875rem; padding: 0;
 }
 #feedSearchInput::placeholder { color: var(--text-3); }
 .search-clear-btn {
-  background: var(--surface); border: 1px solid var(--border);
+  background: var(--surface-2); border: 1px solid var(--border);
   color: var(--text-2); width: 20px; height: 20px;
   border-radius: 50%; font-size: 0.9rem;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
@@ -308,7 +301,8 @@ body::before {
 .search-clear-btn:hover { color: var(--text); border-color: var(--gold-border); }
 .search-result-count {
   font-size: 0.6rem; font-weight: 700; color: var(--gold);
-  white-space: nowrap; min-width: 52px; text-align: right;
+  white-space: nowrap; min-width: 48px; text-align: right;
+  opacity: 0.8;
 }
 mark.search-highlight {
   background: rgba(232,197,71,0.18);
@@ -344,13 +338,11 @@ mark.search-highlight {
 @keyframes cardIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
 .card-top { display: flex; justify-content: space-between; align-items: center; }
-.card-top-right { display: flex; align-items: center; gap: 6px; }
 .card-time { font-size: 0.63rem; color: var(--text-2); font-weight: 500; }
 .card-mode-badge { font-size: 0.58rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
 .mode-share    { background: rgba(232,197,71,0.08);  color: var(--gold); }
 .mode-guess    { background: rgba(107,140,255,0.1);  color: #6B8CFF; }
 .mode-discover { background: rgba(74,222,128,0.1);   color: #4ade80; }
-.card-lock-badge { font-size: 0.7rem; opacity: 0.45; }
 
 .card-lyric { font-family: var(--font-lyric); font-style: italic; font-size: 1rem; line-height: 1.58; color: var(--text); flex: 1; display: flex; align-items: center; padding: 2px 0; font-weight: 400; }
 .card-emotion-tag { align-self: flex-start; font-size: 0.63rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
@@ -367,8 +359,6 @@ mark.search-highlight {
   font-weight: 600; color: var(--text-2); cursor: pointer; transition: all 0.18s;
 }
 .card-btn:hover { border-color: var(--gold-border); color: var(--gold); background: var(--gold-faint); }
-.card-btn-edit { color: var(--text-3); }
-.card-btn-edit:hover { border-color: var(--gold-border); color: var(--gold); background: var(--gold-faint); }
 
 /* ══════════════════════
    MODALS
@@ -388,7 +378,6 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
   overflow: hidden; display: flex; flex-direction: column;
   max-height: 92dvh; box-shadow: 0 24px 60px rgba(0,0,0,0.55);
 }
-.passcode-sheet { max-width: 360px; }
 .modal-top {
   padding: 16px 18px; border-bottom: 1px solid var(--border);
   display: flex; justify-content: space-between; align-items: center;
@@ -419,15 +408,8 @@ textarea { min-height: 80px; resize: vertical; font-family: var(--font-lyric); f
 @media(max-width:768px){ input,textarea{font-size:16px!important;} }
 .char-count { text-align: right; font-size: 0.63rem; color: var(--text-3); margin-top: -8px; font-weight: 600; }
 
-/* PASSCODE INPUT */
-.passcode-input {
-  font-size: 1.6rem !important;
-  letter-spacing: 10px;
-  text-align: center;
-  font-weight: 700;
-}
-
-/* EMOTION GRID */
+/* HINT */
+.hint { font-size: 0.78rem; color: var(--text-2); font-style: italic; line-height: 1.55; }
 .emotion-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
 .emotion-btn { padding: 9px 4px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg); color: var(--text-2); font-family: var(--font-ui); font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: all 0.18s; text-align: center; }
 .emotion-btn:hover { border-color: var(--gold-border); color: var(--text); }
