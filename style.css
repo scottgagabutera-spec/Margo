@@ -516,7 +516,6 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
 
 /* ════════════════════════════════════════════════
    MARGO STUDIO — Full-screen poster creator
-   Replaces old .poster-step / .plat-btn system
 ════════════════════════════════════════════════ */
 
 .studio-overlay {
@@ -540,16 +539,22 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
   overflow: hidden;
   background: #080808;
   min-height: 0;
+  /* Padding so canvas never goes behind topbar */
+  padding: 72px 20px 16px;
 }
 
+/* Canvas: CSS display size is set by JS, internal resolution is higher for sharpness */
 #studioCanvas {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
   display: block;
   border-radius: 6px;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 24px 80px rgba(0,0,0,0.7);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 20px 60px rgba(0,0,0,0.8);
   transition: transform 0.4s cubic-bezier(0.34,1.2,0.64,1);
+  /* JS sets width/height inline; these are max constraints */
+  max-width: 100%;
+  max-height: 100%;
+  /* Disable browser smoothing blur — canvas should be crisp */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 #studioCanvas.zoom-in {
   transform: scale(1.04);
@@ -671,18 +676,18 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
-@media(min-width: 480px) {
-  .color-scenes { grid-template-columns: repeat(8, 1fr); }
+@media(min-width: 600px) {
+  .color-scenes { grid-template-columns: repeat(12, 1fr); }
 }
 
 .scene-swatch {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   background: none;
   border: none;
   cursor: pointer;
@@ -692,30 +697,35 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
 .swatch-preview {
   display: block;
   width: 100%;
+  /* Fixed height so they're always small compact circles-ish */
   aspect-ratio: 1;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 2px solid transparent;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
 }
 .scene-swatch:hover .swatch-preview {
-  transform: scale(1.08);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  transform: scale(1.1);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
 }
 .scene-swatch.active .swatch-preview {
   border-color: var(--gold);
-  transform: scale(1.1);
-  box-shadow: 0 0 0 3px rgba(232,197,71,0.2), 0 4px 16px rgba(0,0,0,0.5);
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px rgba(232,197,71,0.22), 0 4px 14px rgba(0,0,0,0.5);
 }
 
 .swatch-label {
   font-family: var(--font-ui);
-  font-size: 0.52rem;
+  font-size: 0.48rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.35);
+  color: rgba(255,255,255,0.28);
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   transition: color 0.18s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .scene-swatch.active .swatch-label { color: var(--gold); }
 
@@ -911,18 +921,20 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
 .size-picker {
   position: absolute;
   inset: 0;
-  background: rgba(8,8,8,0.92);
-  backdrop-filter: blur(16px);
+  background: rgba(8,8,8,0.94);
+  backdrop-filter: blur(20px);
   z-index: 20;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: center;
   animation: fadeIn 0.2s ease;
 }
 .size-picker.hidden { display: none; }
 
 .size-picker-inner {
   width: 100%;
-  padding: 28px 20px 32px;
+  max-width: 480px;
+  padding: 32px 24px;
   padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
   animation: slideUp 0.3s cubic-bezier(0.34,1.2,0.64,1);
 }
