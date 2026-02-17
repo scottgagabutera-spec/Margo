@@ -267,11 +267,8 @@ body::before {
 .header-btn.primary { background: var(--gold); color: #0C0C0E; border-color: transparent; font-weight: 700; }
 .header-btn.primary:hover { box-shadow: 0 4px 16px rgba(232,197,71,0.2); transform: translateY(-1px); }
 
-/* ── SEARCH BAR — flows with content, never sticky ── */
-.feed-search-wrap {
-  padding: 14px 14px 0;
-  /* NOT sticky — scrolls away naturally so cards are never hidden */
-}
+/* ── SEARCH BAR ── */
+.feed-search-wrap { padding: 14px 14px 0; }
 .feed-search-inner {
   display: flex; align-items: center; gap: 8px;
   background: var(--surface);
@@ -312,18 +309,27 @@ mark.search-highlight {
   font-style: inherit;
 }
 
+/* ══════════════════════════════════════
+   FIX 1 — Feed grid & card sizing
+   align-items:start → cards don't
+   stretch to fill the row height.
+   min-height:0 → card height is
+   determined by content, not the grid.
+══════════════════════════════════════ */
 #feedList {
   padding: 18px 14px;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 14px; max-width: 1400px; margin: 0 auto; width: 100%; flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  max-width: 1400px; margin: 0 auto; width: 100%; flex: 1;
+  align-items: start; /* ← FIX: prevents single card from stretching tall */
 }
 
-/* ── FEED CARDS ── */
 .feed-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 16px;
   display: flex; flex-direction: column; gap: 11px;
-  min-height: 220px;
+  min-height: 0; /* ← FIX: was 220px, caused ballooning on search results */
   transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
   opacity: 0; animation: cardIn 0.35s ease forwards;
   position: relative; overflow: hidden;
@@ -344,14 +350,19 @@ mark.search-highlight {
 .mode-guess    { background: rgba(107,140,255,0.1);  color: #6B8CFF; }
 .mode-discover { background: rgba(74,222,128,0.1);   color: #4ade80; }
 
-.card-lyric { font-family: var(--font-lyric); font-style: italic; font-size: 1rem; line-height: 1.58; color: var(--text); flex: 1; display: flex; align-items: center; padding: 2px 0; font-weight: 400; }
+.card-lyric {
+  font-family: var(--font-lyric); font-style: italic; font-size: 1rem;
+  line-height: 1.58; color: var(--text);
+  /* Removed flex:1 — that was another cause of vertical stretch */
+  padding: 2px 0; font-weight: 400;
+}
 .card-emotion-tag { align-self: flex-start; font-size: 0.63rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
 .card-song { padding-top: 9px; border-top: 1px solid var(--border); }
 .card-song-title { font-size: 0.8rem; font-weight: 600; color: var(--text); margin-bottom: 2px; }
 .card-song-artist { font-size: 0.7rem; color: var(--text-2); }
 .card-mystery { padding: 9px 12px; background: rgba(107,140,255,0.05); border: 1px dashed rgba(107,140,255,0.18); border-radius: 9px; font-size: 0.73rem; color: #6B8CFF; font-weight: 600; }
 .card-discover { padding: 9px 12px; background: rgba(74,222,128,0.05); border: 1px dashed rgba(74,222,128,0.18); border-radius: 9px; font-size: 0.73rem; color: #4ade80; font-weight: 600; }
-.card-actions { display: flex; gap: 6px; margin-top: auto; padding-top: 9px; border-top: 1px solid var(--border); }
+.card-actions { display: flex; gap: 6px; padding-top: 9px; border-top: 1px solid var(--border); margin-top: auto; }
 .card-btn {
   flex: 1; padding: 8px 6px;
   background: var(--surface-2); border: 1px solid var(--border);
@@ -408,14 +419,12 @@ textarea { min-height: 80px; resize: vertical; font-family: var(--font-lyric); f
 @media(max-width:768px){ input,textarea{font-size:16px!important;} }
 .char-count { text-align: right; font-size: 0.63rem; color: var(--text-3); margin-top: -8px; font-weight: 600; }
 
-/* HINT */
 .hint { font-size: 0.78rem; color: var(--text-2); font-style: italic; line-height: 1.55; }
 .emotion-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
 .emotion-btn { padding: 9px 4px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg); color: var(--text-2); font-family: var(--font-ui); font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: all 0.18s; text-align: center; }
 .emotion-btn:hover { border-color: var(--gold-border); color: var(--text); }
 .emotion-btn.active { background: var(--gold-faint); border-color: var(--gold-border); color: var(--gold); }
 
-/* MODE SELECTOR */
 .mode-row-form { display: flex; gap: 7px; }
 .mode-btn { flex: 1; padding: 10px 6px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg); color: var(--text-2); font-family: var(--font-ui); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.18s; }
 .mode-btn:hover { border-color: var(--gold-border); color: var(--text); }
@@ -423,7 +432,6 @@ textarea { min-height: 80px; resize: vertical; font-family: var(--font-lyric); f
 .conditional { display: none; }
 .conditional.show { display: flex; flex-direction: column; gap: 9px; animation: fadeIn 0.2s ease; }
 
-/* STREAMING / DETAILS */
 .stream-toggle { padding: 10px 13px; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; cursor: pointer; font-size: 0.66rem; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.8px; list-style: none; transition: color 0.18s; font-family: var(--font-ui); }
 .stream-toggle:hover { color: var(--gold); }
 details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-border); }
@@ -431,23 +439,17 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
 .stream-field { display: flex; flex-direction: column; gap: 4px; }
 .stream-field input { font-size: 0.78rem!important; padding: 8px 10px; }
 
-/* CHECK ROW */
 .check-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; cursor: pointer; transition: border-color 0.18s; }
 .check-row:hover { border-color: var(--gold-border); }
 .check-row input[type="checkbox"] { width: auto; accent-color: var(--gold); }
 .check-row span { font-size: 0.82rem; font-weight: 500; color: var(--text); }
 
-/* HINT */
-.hint { font-size: 0.78rem; color: var(--text-2); font-style: italic; line-height: 1.55; }
-
-/* RESULT MESSAGES */
 .result-msg { padding: 12px; border-radius: 10px; font-weight: 600; font-size: 0.82rem; line-height: 1.4; text-align: center; }
 .result-msg.hidden { display: none; }
 .result-success { background: rgba(74,222,128,0.07);  border: 1px solid rgba(74,222,128,0.28);  color: #4ade80; }
 .result-error   { background: rgba(255,100,100,0.07); border: 1px solid rgba(255,100,100,0.28); color: #ff6464; }
 .result-partial { background: rgba(255,200,71,0.07);  border: 1px solid rgba(255,200,71,0.28);  color: #ffc847; }
 
-/* POSTCARD */
 .postcard { background: var(--bg); border-radius: 13px; overflow: hidden; border: 1px solid var(--border); }
 .postcard-header { padding: 11px 16px; background: var(--gold); color: #0C0C0E; font-family: var(--font-display); font-weight: 800; font-size: 0.62rem; letter-spacing: 4px; text-transform: uppercase; }
 .postcard-lyric { font-family: var(--font-lyric); font-style: italic; font-size: 1.08rem; line-height: 1.6; padding: 22px 18px; color: var(--text); text-align: center; min-height: 100px; display: flex; align-items: center; justify-content: center; font-weight: 400; }
@@ -457,11 +459,9 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
 .postcard-song div:last-child  { font-size: 0.72rem; color: var(--text-2); }
 .postcard-community { padding: 0 18px 12px; text-align: center; }
 
-/* LISTEN LINKS */
 .listen-link { display: block; padding: 11px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; color: var(--text); text-decoration: none; font-weight: 600; font-size: 0.83rem; transition: all 0.18s; font-family: var(--font-ui); }
 .listen-link:hover { border-color: var(--gold-border); color: var(--gold); }
 
-/* GUESS */
 .guess-links { padding: 11px; background: var(--bg); border: 1px solid var(--gold-border); border-radius: 10px; }
 .guess-links.hidden { display: none; }
 .guess-links-title { font-size: 0.63rem; color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; font-family: var(--font-ui); }
@@ -471,7 +471,6 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
 .guess-field:focus { outline: none; border-color: var(--gold-border); box-shadow: 0 0 0 3px rgba(232,197,71,0.07); }
 .lyric-display { font-family: var(--font-lyric); font-style: italic; font-size: 0.97rem; line-height: 1.6; text-align: center; padding: 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 11px; color: var(--text); max-height: 110px; overflow-y: auto; font-weight: 400; }
 
-/* ANALYTICS */
 .analytics-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
 .stat-card { background: var(--bg); border: 1px solid var(--border); border-radius: 11px; padding: 14px; text-align: center; }
 .stat-card .stat-num { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--gold); }
