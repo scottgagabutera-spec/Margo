@@ -932,10 +932,7 @@ setTimeout(() => {
   });
 }, 1000);
 
-// ===== POSTER: COLOR DOTS =====
-document.querySelectorAll(".color-dot").forEach(dot => {
-  dot.onclick = () => {
-    document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+
     dot.classList.add("active");
     selectedDesign = dot.dataset.design;
     updateLivePreview();
@@ -944,34 +941,6 @@ document.querySelectorAll(".color-dot").forEach(dot => {
 
 
 // ===== BACKGROUND UPLOAD =====
-const uploadBgBtn = document.getElementById("uploadBgBtn");
-const bgUploadInput = document.getElementById("bgUploadInput");
-
-if (uploadBgBtn) {
-  uploadBgBtn.onclick = () => bgUploadInput.click();
-}
-
-if (bgUploadInput) {
-  bgUploadInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { showToast("Please upload an image"); return; }
-    if (file.size > 10 * 1024 * 1024) { showToast("File too large. Max 10MB"); return; }
-    
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        uploadedBgImage = img;
-        showToast("Background uploaded! Preview updating...");
-        updateLivePreview();
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-}
-
 // ===== POSTER: LIVE PREVIEW =====
 function updateLivePreview() {
   if (!currentPost || !posterPreviewCanvas) return;
@@ -1054,6 +1023,7 @@ setTimeout(() => {
 
 // ===== GENERATE POSTER =====
 async function generatePoster(size, design) {
+  console.log("[MARGO] generatePoster called:", size, design);
   if (!currentPost) return;
   const sizes = {
     'instagram-square': { w:1080, h:1080 },
@@ -1104,16 +1074,116 @@ async function generatePoster(size, design) {
   ctx.shadowBlur = 0;
   ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.25)'; ctx.font = `500 ${fs*0.6}px sans-serif`;
   ctx.fillText(APP_BASE_URL.replace(/^https?:\/\//, ''), d.w/2, d.h*0.95);
-  return new Promise(res => posterCanvas.toBlob(blob => { generatedPosterBlob = blob; res(); }, 'image/png'));
+  return new Promise(res => posterCanvas.toBlob(blob => { 
+    generatedPosterBlob = blob; 
+    console.log("[MARGO] Poster generated, blob size:", blob ? blob.size : 0);
+    res(); 
+  }, 'image/png'));
 }
 
 // ===== SHARE POSTER BUTTON =====
 sharePosterBtn.onclick = () => {
   closeModal(postcardModal);
   resetPosterModal();
-  setTimeout(updateLivePreview, 80);
+  
+  // Auto-select design based on emotion
+  if (currentPost && currentPost.emotion) {
+    const emotionDesignMap = {
+      'Love':       'rose-gold',
+      'Heartbreak': 'sunset-coral',
+      'Hope':       'emerald-night',
+      'Nostalgia':  'midnight-gold',
+      'Healing':    'cream-editorial',
+      'Joy':        'vaporwave',
+      'Rage':       'neon-dark',
+      'Loneliness': 'royal-purple'
+    };
+    selectedDesign = emotionDesignMap[currentPost.emotion] || 'midnight-gold';
+    
+    document.querySelectorAll(".color-dot").forEach(dot => {
+      dot.classList.toggle("active", dot.dataset.design === selectedDesign);
+    });
+  }
+  
   openModal(sharePosterModal);
+  
+  setTimeout(() => {
+    updateLivePreview();
+    wireColorPicker();
+    wireFontPicker();
+    wireUploadBg();
+  }, 100);
 };
+
+// Wire upload background button
+function wireUploadBg() {
+  const uploadBgBtn = document.getElementById("uploadBgBtn");
+  const bgUploadInput = document.getElementById("bgUploadInput");
+  
+  if (uploadBgBtn && bgUploadInput) {
+    uploadBgBtn.onclick = () => {
+      console.log("[MARGO] Upload button clicked");
+      bgUploadInput.click();
+    };
+    
+    bgUploadInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      console.log("[MARGO] File selected:", file.name, file.size);
+      
+      if (!file.type.startsWith('image/')) {
+        showToast("Please upload an image");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast("File too large. Max 10MB");
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          uploadedBgImage = img;
+          console.log("[MARGO] Image loaded:", img.width, "x", img.height);
+          showToast("Background uploaded! Preview updating...");
+          updateLivePreview();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+  } else {
+    console.log("[MARGO] Upload elements not found");
+  }
+}
+
+// Wire color picker dynamically
+function wireColorPicker() {
+  document.querySelectorAll(".color-dot").forEach(dot => {
+    dot.onclick = () => {
+      document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+      dot.classList.add("active");
+      selectedDesign = dot.dataset.design;
+      console.log("[MARGO] Design changed to:", selectedDesign);
+      updateLivePreview();
+    };
+  });
+}
+
+// Wire font picker dynamically
+function wireFontPicker() {
+  document.querySelectorAll(".font-option").forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".font-option").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedFont = btn.dataset.font;
+      console.log("[MARGO] Font changed to:", selectedFont);
+      updateLivePreview();
+    };
+  });
+}
 
 function resetPosterModal() {
   designStep.classList.add("active");
@@ -1184,6 +1254,7 @@ shareNativeBtn.onclick = async () => {
 downloadManualBtn.onclick = downloadPosterFile;
 
 function downloadPosterFile() {
+  console.log("[MARGO] downloadPosterFile called, blob exists:", !!generatedPosterBlob);
   const a = document.createElement('a');
   a.download = `margo-poster-${selectedPosterSize||'image'}-${Date.now()}.png`;
   a.href = posterCanvas.toDataURL('image/png');
