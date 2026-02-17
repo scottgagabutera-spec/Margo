@@ -68,7 +68,10 @@
     <button class="header-btn primary" id="openComposer">Drop Lyric</button>
   </header>
 
-  <!-- SEARCH BAR -->
+  <div class="new-posts-bar" id="newPostsIndicator"><span id="newPostsCount">0</span> new lyrics — tap to see</div>
+  <button class="scroll-top" id="scrollToTopBtn">↑ Back to top</button>
+
+  <!-- SEARCH BAR — sits in normal flow above the grid, scrolls with content -->
   <div class="feed-search-wrap">
     <div class="feed-search-inner">
       <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -80,8 +83,6 @@
     </div>
   </div>
 
-  <div class="new-posts-bar" id="newPostsIndicator"><span id="newPostsCount">0</span> new lyrics — tap to see</div>
-  <button class="scroll-top" id="scrollToTopBtn">↑ Back to top</button>
   <div id="feedList"></div>
 </section>
 
@@ -134,14 +135,6 @@
           <div class="stream-field"><span class="field-label">Apple Music</span><input id="appleLink" type="url" inputmode="url"/></div>
           <div class="stream-field"><span class="field-label">YouTube</span><input id="youtubeLink" type="url" inputmode="url"/></div>
           <div class="stream-field"><span class="field-label">SoundCloud</span><input id="soundcloudLink" type="url" inputmode="url"/></div>
-        </div>
-      </details>
-      <!-- PASSCODE (optional) -->
-      <details id="passcodeSection">
-        <summary class="stream-toggle">🔒 Set Edit Passcode (optional)</summary>
-        <div style="padding:10px 0 2px;display:flex;flex-direction:column;gap:8px;">
-          <p class="hint">Set a 4–6 digit PIN so only you can edit this post later. <strong>There is no recovery — don't forget it.</strong></p>
-          <input id="composerPasscode" type="tel" inputmode="numeric" maxlength="6" placeholder="e.g. 1234" style="letter-spacing:4px;text-align:center;" autocomplete="off"/>
         </div>
       </details>
     </div>
@@ -230,67 +223,6 @@
   <div class="modal-sheet">
     <div class="modal-top"><span class="modal-title">Analytics</span><button class="modal-close" id="closeAnalytics">×</button></div>
     <div class="modal-body" id="analyticsBody"></div>
-  </div>
-</div>
-
-<!-- EDIT MODAL -->
-<div id="editModal" class="modal hidden">
-  <div class="modal-sheet">
-    <div class="modal-top">
-      <span class="modal-title">Edit Post</span>
-      <button class="modal-close" id="closeEdit">×</button>
-    </div>
-    <div class="modal-body">
-      <span class="field-label">Lyric</span>
-      <textarea id="editLyricInput" maxlength="140" inputmode="text" placeholder="The line living in your head…"></textarea>
-      <div class="char-count"><span id="editCharCount">0</span>/140</div>
-      <span class="field-label">Emotion</span>
-      <div class="emotion-grid">
-        <button class="emotion-btn edit-emotion-btn" data-emotion="Love">Love</button>
-        <button class="emotion-btn edit-emotion-btn" data-emotion="Heartbreak">Heartbreak</button>
-        <button class="emotion-btn edit-emotion-btn" data-emotion="Hope">Hope</button>
-        <button class="emotion-btn edit-emotion-btn" data-emotion="Nostalgia">Nostalgia</button>
-        <button class="emotion-btn edit-emotion-btn" data-emotion="Healing">Healing</button>
-        <button class="emotion-btn edit-emotion-btn" data-emotion="Joy">Joy</button>
-        <button class="emotion-btn edit-emotion-btn" data-emotion="Rage">Rage</button>
-        <button class="emotion-btn edit-emotion-btn" data-emotion="Loneliness">Loneliness</button>
-      </div>
-      <span class="field-label">Song Details</span>
-      <input id="editSongInput" placeholder="Song title" inputmode="text"/>
-      <input id="editArtistInput" placeholder="Artist" inputmode="text"/>
-      <details>
-        <summary class="stream-toggle">Streaming Links (optional)</summary>
-        <div class="stream-grid">
-          <div class="stream-field"><span class="field-label">Spotify</span><input id="editSpotifyLink" type="url" inputmode="url"/></div>
-          <div class="stream-field"><span class="field-label">Apple Music</span><input id="editAppleLink" type="url" inputmode="url"/></div>
-          <div class="stream-field"><span class="field-label">YouTube</span><input id="editYoutubeLink" type="url" inputmode="url"/></div>
-          <div class="stream-field"><span class="field-label">SoundCloud</span><input id="editSoundcloudLink" type="url" inputmode="url"/></div>
-        </div>
-      </details>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-primary full-btn" id="saveEditBtn">Save Changes</button>
-      <button class="btn-secondary full-btn" id="cancelEditBtn">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- PASSCODE MODAL -->
-<div id="passcodeModal" class="modal hidden">
-  <div class="modal-sheet passcode-sheet">
-    <div class="modal-top">
-      <span class="modal-title" id="passcodeTitle">Enter Passcode</span>
-      <button class="modal-close" id="closePasscode">×</button>
-    </div>
-    <div class="modal-body">
-      <p class="hint" style="text-align:center">Enter your 4–6 digit passcode to edit this post.</p>
-      <input id="passcodeInput" type="tel" inputmode="numeric" maxlength="6"
-             placeholder="· · · ·" class="passcode-input" autocomplete="off"/>
-      <div id="passcodeError" class="result-msg result-error hidden"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-primary full-btn" id="passcodeSubmitBtn">Unlock &amp; Edit</button>
-    </div>
   </div>
 </div>
 
