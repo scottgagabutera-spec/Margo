@@ -286,16 +286,22 @@ body::before {
   background: none; border: none; outline: none;
   color: var(--text); font-family: var(--font-ui);
   font-size: 0.875rem; padding: 0;
+  /* Kill browser autocomplete / suggestions styling */
+  -webkit-appearance: none; appearance: none;
 }
 #feedSearchInput::placeholder { color: var(--text-3); }
+/* Hide browser's built-in search clear button (the native X on type=search) */
+#feedSearchInput::-webkit-search-cancel-button,
+#feedSearchInput::-webkit-search-decoration,
+#feedSearchInput::-ms-clear { display: none; }
 .search-clear-btn {
-  background: var(--surface-2); border: 1px solid var(--border);
-  color: var(--text-2); width: 20px; height: 20px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-2); width: 22px; height: 22px;
   border-radius: 50%; font-size: 0.9rem;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; transition: all 0.15s; line-height: 1;
 }
-.search-clear-btn:hover { color: var(--text); border-color: var(--gold-border); }
+.search-clear-btn:hover { color: var(--text); border-color: var(--gold-border); background: var(--gold-faint); }
 .search-result-count {
   font-size: 0.6rem; font-weight: 700; color: var(--gold);
   white-space: nowrap; min-width: 48px; text-align: right;
@@ -534,6 +540,14 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
 .activity-result.correct   { color: #4ade80; }
 .activity-result.incorrect { color: #ff6464; }
 .activity-time { font-size: 0.6rem; color: var(--text-2); font-weight: 600; }
+.help-links-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.help-link {
+  font-size: 0.6rem; font-weight: 700; padding: 3px 8px;
+  background: var(--gold-faint); border: 1px solid var(--gold-border);
+  border-radius: 20px; color: var(--gold); text-decoration: none;
+  transition: all 0.15s;
+}
+.help-link:hover { background: rgba(232,197,71,0.15); }
 
 /* ── FLOATING UI ── */
 .new-posts-bar {
