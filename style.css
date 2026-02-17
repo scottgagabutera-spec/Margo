@@ -310,11 +310,9 @@ mark.search-highlight {
 }
 
 /* ══════════════════════════════════════
-   FIX 1 — Feed grid & card sizing
-   align-items:start → cards don't
-   stretch to fill the row height.
-   min-height:0 → card height is
-   determined by content, not the grid.
+   FEED GRID — uniform card heights
+   Every card is identical in size.
+   Content is clamped, not expanded.
 ══════════════════════════════════════ */
 #feedList {
   padding: 18px 14px;
@@ -322,17 +320,19 @@ mark.search-highlight {
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 14px;
   max-width: 1400px; margin: 0 auto; width: 100%; flex: 1;
-  align-items: start; /* ← FIX: prevents single card from stretching tall */
+  align-items: start;
 }
 
+/* Fixed height card — every card exactly 260px tall, no exceptions */
 .feed-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 16px;
-  display: flex; flex-direction: column; gap: 11px;
-  min-height: 0; /* ← FIX: was 220px, caused ballooning on search results */
+  display: flex; flex-direction: column; gap: 0;
+  height: 260px; /* fixed — all cards identical */
+  overflow: hidden;
   transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
   opacity: 0; animation: cardIn 0.35s ease forwards;
-  position: relative; overflow: hidden;
+  position: relative;
 }
 .feed-card::after {
   content: ''; position: absolute; inset: 0;
@@ -343,26 +343,74 @@ mark.search-highlight {
 .feed-card:hover::after { opacity: 1; }
 @keyframes cardIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
-.card-top { display: flex; justify-content: space-between; align-items: center; }
+/* Top row: time + badge — fixed height */
+.card-top {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0; height: 22px; margin-bottom: 10px;
+}
 .card-time { font-size: 0.63rem; color: var(--text-2); font-weight: 500; }
 .card-mode-badge { font-size: 0.58rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
 .mode-share    { background: rgba(232,197,71,0.08);  color: var(--gold); }
 .mode-guess    { background: rgba(107,140,255,0.1);  color: #6B8CFF; }
 .mode-discover { background: rgba(74,222,128,0.1);   color: #4ade80; }
 
+/* Lyric — fixed height, 3-line clamp, no overflow */
 .card-lyric {
-  font-family: var(--font-lyric); font-style: italic; font-size: 1rem;
-  line-height: 1.58; color: var(--text);
-  /* Removed flex:1 — that was another cause of vertical stretch */
-  padding: 2px 0; font-weight: 400;
+  font-family: var(--font-lyric); font-style: italic;
+  font-size: 0.95rem; line-height: 1.5; color: var(--text);
+  height: 4.5em; /* exactly 3 lines (1.5 × 3) */
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  flex-shrink: 0;
+  margin-bottom: 10px;
+  font-weight: 400;
 }
-.card-emotion-tag { align-self: flex-start; font-size: 0.63rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
-.card-song { padding-top: 9px; border-top: 1px solid var(--border); }
-.card-song-title { font-size: 0.8rem; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-.card-song-artist { font-size: 0.7rem; color: var(--text-2); }
-.card-mystery { padding: 9px 12px; background: rgba(107,140,255,0.05); border: 1px dashed rgba(107,140,255,0.18); border-radius: 9px; font-size: 0.73rem; color: #6B8CFF; font-weight: 600; }
-.card-discover { padding: 9px 12px; background: rgba(74,222,128,0.05); border: 1px dashed rgba(74,222,128,0.18); border-radius: 9px; font-size: 0.73rem; color: #4ade80; font-weight: 600; }
-.card-actions { display: flex; gap: 6px; padding-top: 9px; border-top: 1px solid var(--border); margin-top: auto; }
+
+/* Emotion tag — fixed height */
+.card-emotion-tag {
+  align-self: flex-start; font-size: 0.63rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.4px;
+  flex-shrink: 0; margin-bottom: 10px;
+}
+
+/* Middle section (song / mystery / discover) — fixed height, no overflow */
+.card-song {
+  padding-top: 9px; border-top: 1px solid var(--border);
+  flex-shrink: 0; height: 52px; overflow: hidden;
+}
+.card-song-title {
+  font-size: 0.8rem; font-weight: 600; color: var(--text);
+  margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-song-artist {
+  font-size: 0.7rem; color: var(--text-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-mystery {
+  padding: 9px 12px; height: 52px;
+  background: rgba(107,140,255,0.05); border: 1px dashed rgba(107,140,255,0.18);
+  border-radius: 9px; font-size: 0.73rem; color: #6B8CFF; font-weight: 600;
+  display: flex; align-items: center;
+  overflow: hidden; flex-shrink: 0;
+}
+.card-discover {
+  padding: 9px 12px; height: 52px;
+  background: rgba(74,222,128,0.05); border: 1px dashed rgba(74,222,128,0.18);
+  border-radius: 9px; font-size: 0.73rem; color: #4ade80; font-weight: 600;
+  display: flex; align-items: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;
+}
+
+/* Actions row — always pinned to bottom via margin-top:auto */
+.card-actions {
+  display: flex; gap: 6px;
+  padding-top: 9px; border-top: 1px solid var(--border);
+  margin-top: auto; flex-shrink: 0;
+}
 .card-btn {
   flex: 1; padding: 8px 6px;
   background: var(--surface-2); border: 1px solid var(--border);
