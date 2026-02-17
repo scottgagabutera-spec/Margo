@@ -508,6 +508,18 @@ function getDynamicFontSize(text) {
 }
 
 // ===== RENDER FEED =====
+
+// ===== DYNAMIC TEXT SIZING =====
+function getDynamicFontSize(textLength) {
+  // Short lyrics (< 60 chars) = large text
+  // Medium lyrics (60-100 chars) = normal text  
+  // Long lyrics (> 100 chars) = small text
+  if (textLength < 50) return '1.35rem';
+  if (textLength < 80) return '1.2rem';
+  if (textLength < 120) return '1.08rem';
+  return '0.98rem';
+}
+
 function renderFeed() {
   feedList.innerHTML = "";
 
@@ -905,14 +917,20 @@ document.getElementById("closeSharePoster").onclick = () => { closeModal(sharePo
 
 
 // ===== FONT PICKER =====
-document.querySelectorAll(".font-option").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".font-option").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    selectedFont = btn.dataset.font;
-    updateLivePreview();
-  };
-});
+setTimeout(() => {
+  const fontBtns = document.querySelectorAll(".font-option");
+  console.log("[MARGO] Found font options:", fontBtns.length);
+  
+  fontBtns.forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".font-option").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedFont = btn.dataset.font;
+      console.log("[MARGO] Font changed to:", selectedFont);
+      updateLivePreview();
+    };
+  });
+}, 1000);
 
 // ===== POSTER: COLOR DOTS =====
 document.querySelectorAll(".color-dot").forEach(dot => {
@@ -1002,28 +1020,37 @@ backToDesign.onclick   = () => { platformStep.classList.remove("active"); design
 backToPlatform.onclick = () => { shareStep.classList.remove("active"); platformStep.classList.add("active"); };
 
 // ===== POSTER: PLATFORM SELECTION =====
-document.querySelectorAll(".platform-btn[data-size]").forEach(btn => {
-  btn.onclick = async () => {
-    selectedPosterSize = btn.dataset.size;
-    await generatePoster(selectedPosterSize, selectedDesign);
-    shareableLink.value = `${APP_BASE_URL}?post=${currentPost.id}`;
-    platformStep.classList.remove("active");
-    shareStep.classList.add("active");
-    // For Discord: auto-highlight the copy button
-    const copyDiscordBtn = document.getElementById("copyForDiscordBtn");
-    if (copyDiscordBtn) {
-      if (selectedPosterSize === 'discord') {
-        copyDiscordBtn.style.background = 'linear-gradient(135deg,#5865f2,#404eed)';
-        copyDiscordBtn.style.color = '#fff';
-        copyDiscordBtn.textContent = 'Copy for Discord (Recommended)';
-      } else {
-        copyDiscordBtn.style.background = '';
-        copyDiscordBtn.style.color = '';
-        copyDiscordBtn.textContent = 'Copy for Discord';
+setTimeout(() => {
+  const platformBtns = document.querySelectorAll(".platform-btn[data-size]");
+  console.log("[MARGO] Found platform buttons:", platformBtns.length);
+  
+  platformBtns.forEach(btn => {
+    btn.onclick = async () => {
+      selectedPosterSize = btn.dataset.size;
+      console.log("[MARGO] Platform clicked:", selectedPosterSize);
+      
+      await generatePoster(selectedPosterSize, selectedDesign);
+      shareableLink.value = `${APP_BASE_URL}?post=${currentPost.id}`;
+      
+      platformStep.classList.remove("active");
+      shareStep.classList.add("active");
+      console.log("[MARGO] Navigated to share step");
+      
+      const copyDiscordBtn = document.getElementById("copyForDiscordBtn");
+      if (copyDiscordBtn) {
+        if (selectedPosterSize === 'discord') {
+          copyDiscordBtn.style.background = 'linear-gradient(135deg,#5865f2,#404eed)';
+          copyDiscordBtn.style.color = '#fff';
+          copyDiscordBtn.textContent = 'Copy for Discord (Recommended)';
+        } else {
+          copyDiscordBtn.style.background = '';
+          copyDiscordBtn.style.color = '';
+          copyDiscordBtn.textContent = 'Copy for Discord';
+        }
       }
-    }
-  };
-});
+    };
+  });
+}, 1000);
 
 // ===== GENERATE POSTER =====
 async function generatePoster(size, design) {
