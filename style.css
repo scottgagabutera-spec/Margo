@@ -79,8 +79,8 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 26px;
-  padding: 48px 20px 88px;
+  gap: 20px;
+  padding: 40px 20px 80px;
   position: relative;
   max-width: 100%;
   margin: 0 auto;
@@ -89,10 +89,10 @@ body {
 .center::before {
   content: '';
   position: absolute;
-  top: 18%; left: 50%;
+  top: 20%; left: 50%;
   transform: translateX(-50%);
-  width: 440px; height: 440px;
-  background: radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 68%);
+  width: 360px; height: 360px;
+  background: radial-gradient(circle, rgba(212,175,55,0.06) 0%, transparent 70%);
   pointer-events: none; border-radius: 50%;
   animation: pulseGlow 4s ease-in-out infinite;
 }
@@ -102,42 +102,39 @@ body {
   50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
 }
 
-/* ===== PROPER 3D GOLD LOGO ===== */
+/* ===== ELEGANT 3D GOLD LOGO ===== */
 .logo-3d {
   font-family: 'Playfair Display', serif;
-  font-size: clamp(4rem, 14vw, 7rem);
+  font-size: clamp(3rem, 10vw, 5.2rem);
   font-weight: 900;
-  letter-spacing: 12px;
+  letter-spacing: 18px;
+  text-indent: 18px;
   text-align: center;
   position: relative;
-  color: #d4af37;
-  
-  /* Solid bright gold text */
+  line-height: 1;
+
   background: linear-gradient(
-    180deg,
-    #ffeaa8 0%,
-    #f5d168 20%,
-    #d4af37 50%,
-    #b8862a 80%,
+    175deg,
+    #fff8dc 0%,
+    #fde98a 18%,
+    #d4af37 45%,
+    #b8922a 68%,
     #8b6709 100%
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  
-  /* 3D depth shadow - dark edges */
+
   text-shadow:
     0 1px 0 #c4941f,
     0 2px 0 #b8862a,
     0 3px 0 #a07810,
     0 4px 0 #8b6709,
-    0 5px 0 #6d4f05,
-    0 6px 1px rgba(0,0,0,0.1),
-    0 8px 3px rgba(0,0,0,0.2),
-    0 12px 5px rgba(0,0,0,0.3),
-    0 16px 8px rgba(0,0,0,0.3),
-    0 0 40px rgba(212,175,55,0.3);
-  
+    0 5px 2px rgba(0,0,0,0.25),
+    0 8px 6px rgba(0,0,0,0.2),
+    0 14px 10px rgba(0,0,0,0.15),
+    0 0 30px rgba(212,175,55,0.2);
+
   animation: goldPulse 3s ease-in-out infinite;
 }
 
@@ -150,23 +147,28 @@ body {
   }
 }
 
-/* Logo depth layer removed - using text-shadow instead */
+/* Logo thin gold divider */
+.logo-divider {
+  width: 60px;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, #d4af37, transparent);
+  margin: -8px auto 0;
+  opacity: 0.7;
+}
 
+/* ===== TAGLINE ===== */
 .tagline-3d {
-  font-size: clamp(1.1rem, 3.5vw, 1.4rem);
-  color: var(--text);
+  font-size: clamp(0.9rem, 2.5vw, 1.05rem);
   font-style: italic;
   text-align: center;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #fffaeb 0%, #f5d168 30%, #d4af37 50%, #f5d168 70%, #fffaeb 100%);
+  letter-spacing: 0.3px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #ffe9a0 0%, #d4af37 50%, #ffe9a0 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: 
-    drop-shadow(0 2px 4px rgba(0,0,0,0.6))
-    drop-shadow(0 4px 8px rgba(212,175,55,0.5))
-    drop-shadow(0 0 20px rgba(245,209,104,0.4));
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+  margin-top: -4px;
 }
 
 .tagline-sub {
