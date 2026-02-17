@@ -1,4 +1,4 @@
-/* MARGO — Definitive Edition */
+/* MARGO — FIXED VERSION */
 
 // ===== FIREBASE =====
 const firebaseConfig = {
@@ -38,7 +38,6 @@ const postcardModal   = document.getElementById("postcardModal");
 const listenModal     = document.getElementById("listenModal");
 const analyticsModal  = document.getElementById("analyticsModal");
 const sharePosterModal= document.getElementById("sharePosterModal");
-const cameraModal     = document.getElementById("cameraModal");
 
 const enterBtn        = document.getElementById("enterBtn");
 const backBtn         = document.getElementById("backBtn");
@@ -122,7 +121,6 @@ let selectedCommunity = "general";
 let currentPost       = null;
 let currentGuessAttempts = 0;
 const MAX_GUESS_ATTEMPTS = 2;
-
 
 // ===== FONT SYSTEM =====
 const FONT_FAMILIES = {
@@ -259,14 +257,16 @@ function hideNewPostsIndicator() {
   if (newPostsIndicator) newPostsIndicator.classList.remove('visible');
 }
 
-newPostsIndicator.onclick = () => {
-  newPostsAvailable = false;
-  savedScrollPosition = 0;
-  renderFeed();
-  hideNewPostsIndicator();
-  feedList.scrollTo({ top: 0, behavior: 'smooth' });
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
+if (newPostsIndicator) {
+  newPostsIndicator.onclick = () => {
+    newPostsAvailable = false;
+    savedScrollPosition = 0;
+    renderFeed();
+    hideNewPostsIndicator();
+    feedList.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+}
 
 // ===== MODAL OPEN / CLOSE =====
 function openModal(modal) {
@@ -310,7 +310,6 @@ function handleSwipe() {
 });
 
 // ===== NAVIGATION =====
-// enterBtn → straight to composer, no delay
 enterBtn.onclick = () => {
   landing.classList.remove("active");
   feed.classList.add("active");
@@ -445,7 +444,6 @@ postBtn.onclick = async () => {
     if (isFirebaseEnabled) {
       const ref = await postsRef.push(post);
       await analyticsRef.child(ref.key).set({ views: 0, guesses: [], helps: [] });
-    } else {
     }
 
     showToast("Posted!");
@@ -498,28 +496,14 @@ function resetComposer() {
 }
 
 // ===== DYNAMIC FONT SIZE =====
-function getDynamicFontSize(text) {
-  const l = text.length;
-  if (l < 50)  return '1.12rem';
-  if (l < 80)  return '1.02rem';
-  if (l < 110) return '0.92rem';
-  if (l < 140) return '0.83rem';
-  return '0.74rem';
-}
-
-// ===== RENDER FEED =====
-
-// ===== DYNAMIC TEXT SIZING =====
 function getDynamicFontSize(textLength) {
-  // Short lyrics (< 60 chars) = large text
-  // Medium lyrics (60-100 chars) = normal text  
-  // Long lyrics (> 100 chars) = small text
   if (textLength < 50) return '1.35rem';
   if (textLength < 80) return '1.2rem';
   if (textLength < 120) return '1.08rem';
   return '0.98rem';
 }
 
+// ===== RENDER FEED =====
 function renderFeed() {
   feedList.innerHTML = "";
 
@@ -588,7 +572,7 @@ function renderFeed() {
         <div class="feed-time">${timeAgo(post.timestamp)}</div>
         <div class="feed-community-tag" style="color:${cfg.color};background:${cfg.bg};border-color:${cfg.color}44;">${cfg.label}</div>
       </div>
-      <div class="feed-text" style="font-size:${getDynamicFontSize(post.text)}">${post.text}</div>
+      <div class="feed-text" style="font-size:${getDynamicFontSize(post.text.length)}">${post.text}</div>
       <div class="feed-emotion">${post.emotion || "Nostalgia"}</div>
       ${songSection}
       ${actionsSection}
@@ -770,7 +754,6 @@ submitGuess.onclick = () => {
     return;
   }
 
-  // Partial or wrong — show feedback, keep going
   const partialSong   = doSong   && gs && (gs === as || gs.includes(as) || as.includes(gs));
   const partialArtist = doArtist && ga && (ga === aa || ga.includes(aa) || aa.includes(ga));
   const left = MAX_GUESS_ATTEMPTS - currentGuessAttempts;
@@ -913,60 +896,81 @@ document.getElementById("closeListen").onclick    = () => closeModal(listenModal
 document.getElementById("closeAnalytics").onclick = () => closeModal(analyticsModal);
 document.getElementById("closeSharePoster").onclick = () => { closeModal(sharePosterModal); resetPosterModal(); };
 
-
-
-
-// ===== FONT PICKER =====
-setTimeout(() => {
-  const fontBtns = document.querySelectorAll(".font-option");
-  console.log("[MARGO] Found font options:", fontBtns.length);
-  
-  fontBtns.forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll(".font-option").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      selectedFont = btn.dataset.font;
-      console.log("[MARGO] Font changed to:", selectedFont);
-      updateLivePreview();
-    };
-  });
-}, 1000);
-
-
-    dot.classList.add("active");
-    selectedDesign = dot.dataset.design;
-    updateLivePreview();
-  };
-});
-
-
-// ===== BACKGROUND UPLOAD =====
-// ===== POSTER: LIVE PREVIEW =====
+// ===== POSTER: LIVE PREVIEW - FIXED =====
 function updateLivePreview() {
   if (!currentPost || !posterPreviewCanvas) return;
+  
   const ctx = posterPreviewCanvas.getContext('2d');
   const W = 320, H = 320;
   posterPreviewCanvas.width = W;
   posterPreviewCanvas.height = H;
+  
   const c = POSTER_DESIGNS[selectedDesign];
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const fontData = FONT_FAMILIES[selectedFont];
+  
+  // Background
+  if (uploadedBgImage) {
+    const scale = Math.max(W / uploadedBgImage.width, H / uploadedBgImage.height);
+    const sw = uploadedBgImage.width * scale;
+    const sh = uploadedBgImage.height * scale;
+    const sx = (W - sw) / 2;
+    const sy = (H - sh) / 2;
+    ctx.drawImage(uploadedBgImage, sx, sy, sw, sh);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, c.bg[0]); 
+    g.addColorStop(0.5, c.bg[1]); 
+    g.addColorStop(1, c.bg[2]);
+    ctx.fillStyle = g; 
+    ctx.fillRect(0, 0, W, H);
+  }
+  
   const fs = 13;
-  ctx.fillStyle = c.primary; const headerFont = c.font === 'sans-bold' ? `900 ${fs*1.4}px sans-serif` : c.font === 'sans' ? `700 ${fs*1.3}px sans-serif` : `bold ${fs*1.3}px serif`;
-  ctx.font = headerFont; ctx.textAlign = 'center';
+  
+  // Header
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = uploadedBgImage ? 8 : 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = uploadedBgImage ? 2 : 0;
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
+  const headerFont = c.font === 'sans-bold' ? `900 ${fs*1.4}px sans-serif` : c.font === 'sans' ? `700 ${fs*1.3}px sans-serif` : `bold ${fs*1.3}px serif`;
+  ctx.font = headerFont; 
+  ctx.textAlign = 'center';
   ctx.fillText('MARGO', W/2, 38);
-  ctx.fillStyle = c.text; ctx.font = `italic ${fs*0.95}px serif`;
+  
+  // Lyric with selected font
+  ctx.shadowBlur = uploadedBgImage ? 6 : 0;
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.text;
+  ctx.font = `${fontData.style} ${fs*0.95}px ${fontData.family}`;
   const prev = currentPost.text.length > 80 ? currentPost.text.substring(0,77)+'…' : currentPost.text;
   wrapText(ctx, prev, W/2, H/2 - 28, W*0.85, fs*1.3);
-  ctx.fillStyle = c.primary; ctx.font = `600 ${fs*0.74}px sans-serif`;
+  
+  // Emotion
+  ctx.shadowBlur = uploadedBgImage ? 6 : 0;
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
+  ctx.font = `600 ${fs*0.74}px sans-serif`;
   ctx.fillText(`#${currentPost.emotion||'Nostalgia'}`, W/2, H/2 + 36);
-  ctx.strokeStyle = c.secondary; ctx.lineWidth = 1.1;
-  ctx.beginPath(); ctx.moveTo(W*0.3, H/2+50); ctx.lineTo(W*0.7, H/2+50); ctx.stroke();
+  
+  // Line
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = uploadedBgImage ? 'rgba(255,255,255,0.6)' : c.secondary;
+  ctx.lineWidth = 1.1;
+  ctx.beginPath(); 
+  ctx.moveTo(W*0.3, H/2+50); 
+  ctx.lineTo(W*0.7, H/2+50); 
+  ctx.stroke();
+  
+  // Song info
   const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
-  ctx.fillStyle = c.primary; ctx.font = `bold ${fs*0.9}px serif`;
+  ctx.shadowBlur = uploadedBgImage ? 6 : 0;
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
+  ctx.font = `bold ${fs*0.9}px ${fontData.family}`;
   ctx.fillText(k.song.length > 26 ? k.song.substring(0,26)+'…' : k.song, W/2, H/2+72);
-  ctx.fillStyle = c.secondary; ctx.font = `500 ${fs*0.74}px sans-serif`;
+  
+  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.85)' : c.secondary;
+  ctx.font = `500 ${fs*0.74}px sans-serif`;
   ctx.fillText(k.artist.length > 30 ? k.artist.substring(0,30)+'…' : k.artist, W/2, H/2+88);
 }
 
@@ -975,8 +979,12 @@ function wrapText(ctx, text, x, y, maxW, lh) {
   let line = '', lines = [];
   for (let n = 0; n < words.length; n++) {
     const test = line + words[n] + ' ';
-    if (ctx.measureText(test).width > maxW && n > 0) { lines.push(line); line = words[n] + ' '; }
-    else line = test;
+    if (ctx.measureText(test).width > maxW && n > 0) { 
+      lines.push(line); 
+      line = words[n] + ' '; 
+    } else {
+      line = test;
+    }
   }
   lines.push(line);
   const startY = y - ((lines.length - 1) * lh) / 2;
@@ -984,11 +992,22 @@ function wrapText(ctx, text, x, y, maxW, lh) {
 }
 
 // ===== POSTER: STEP NAVIGATION =====
-nextToPlatform.onclick = () => { designStep.classList.remove("active"); platformStep.classList.add("active"); };
-backToDesign.onclick   = () => { platformStep.classList.remove("active"); designStep.classList.add("active"); };
-backToPlatform.onclick = () => { shareStep.classList.remove("active"); platformStep.classList.add("active"); };
+nextToPlatform.onclick = () => { 
+  designStep.classList.remove("active"); 
+  platformStep.classList.add("active"); 
+};
 
-// ===== POSTER: PLATFORM SELECTION =====
+backToDesign.onclick = () => { 
+  platformStep.classList.remove("active"); 
+  designStep.classList.add("active"); 
+};
+
+backToPlatform.onclick = () => { 
+  shareStep.classList.remove("active"); 
+  platformStep.classList.add("active"); 
+};
+
+// ===== POSTER: PLATFORM SELECTION - FIXED =====
 setTimeout(() => {
   const platformBtns = document.querySelectorAll(".platform-btn[data-size]");
   console.log("[MARGO] Found platform buttons:", platformBtns.length);
@@ -996,35 +1015,47 @@ setTimeout(() => {
   platformBtns.forEach(btn => {
     btn.onclick = async () => {
       selectedPosterSize = btn.dataset.size;
-      console.log("[MARGO] Platform clicked:", selectedPosterSize);
+      console.log("[MARGO] Generating poster for:", selectedPosterSize);
       
-      await generatePoster(selectedPosterSize, selectedDesign);
-      shareableLink.value = `${APP_BASE_URL}?post=${currentPost.id}`;
+      showToast("Generating poster...");
       
-      platformStep.classList.remove("active");
-      shareStep.classList.add("active");
-      console.log("[MARGO] Navigated to share step");
-      
-      const copyDiscordBtn = document.getElementById("copyForDiscordBtn");
-      if (copyDiscordBtn) {
-        if (selectedPosterSize === 'discord') {
-          copyDiscordBtn.style.background = 'linear-gradient(135deg,#5865f2,#404eed)';
-          copyDiscordBtn.style.color = '#fff';
-          copyDiscordBtn.textContent = 'Copy for Discord (Recommended)';
-        } else {
-          copyDiscordBtn.style.background = '';
-          copyDiscordBtn.style.color = '';
-          copyDiscordBtn.textContent = 'Copy for Discord';
+      try {
+        await generatePoster(selectedPosterSize, selectedDesign);
+        shareableLink.value = `${APP_BASE_URL}?post=${currentPost.id}`;
+        
+        platformStep.classList.remove("active");
+        shareStep.classList.add("active");
+        
+        const copyDiscordBtn = document.getElementById("copyForDiscordBtn");
+        if (copyDiscordBtn) {
+          if (selectedPosterSize === 'discord') {
+            copyDiscordBtn.style.background = 'linear-gradient(135deg,#5865f2,#404eed)';
+            copyDiscordBtn.style.color = '#fff';
+            copyDiscordBtn.textContent = 'Copy for Discord (Recommended)';
+          } else {
+            copyDiscordBtn.style.background = '';
+            copyDiscordBtn.style.color = '';
+            copyDiscordBtn.textContent = 'Copy for Discord';
+          }
         }
+        
+        showToast("Poster ready!");
+      } catch (error) {
+        console.error("Poster generation error:", error);
+        showToast("Error generating poster");
       }
     };
   });
 }, 1000);
 
-// ===== GENERATE POSTER =====
+// ===== GENERATE POSTER - COMPLETELY FIXED =====
 async function generatePoster(size, design) {
   console.log("[MARGO] generatePoster called:", size, design);
-  if (!currentPost) return;
+  if (!currentPost) {
+    console.error("[MARGO] No current post!");
+    return;
+  }
+  
   const sizes = {
     'instagram-square': { w:1080, h:1080 },
     'instagram-story':  { w:1080, h:1920 },
@@ -1034,12 +1065,21 @@ async function generatePoster(size, design) {
     'discord':          { w:1280, h:720  },
     'reddit':           { w:1200, h:1200 }
   };
-  const d   = sizes[size];
-  const c   = POSTER_DESIGNS[design];
+  
+  const d = sizes[size];
+  if (!d) {
+    console.error("[MARGO] Invalid size:", size);
+    return;
+  }
+  
+  const c = POSTER_DESIGNS[design];
+  const fontData = FONT_FAMILIES[selectedFont];
   const ctx = posterCanvas.getContext('2d');
+  
   posterCanvas.width  = d.w;
   posterCanvas.height = d.h;
   
+  // Background
   if (uploadedBgImage) {
     const scale = Math.max(d.w / uploadedBgImage.width, d.h / uploadedBgImage.height);
     const sw = uploadedBgImage.width * scale;
@@ -1047,41 +1087,82 @@ async function generatePoster(size, design) {
     const sx = (d.w - sw) / 2;
     const sy = (d.h - sh) / 2;
     ctx.drawImage(uploadedBgImage, sx, sy, sw, sh);
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, 0, d.w, d.h);
   } else {
     const g = ctx.createLinearGradient(0, 0, 0, d.h);
-    g.addColorStop(0, c.bg[0]); g.addColorStop(0.5, c.bg[1]); g.addColorStop(1, c.bg[2]);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, d.w, d.h);
+    g.addColorStop(0, c.bg[0]); 
+    g.addColorStop(0.5, c.bg[1]); 
+    g.addColorStop(1, c.bg[2]);
+    ctx.fillStyle = g; 
+    ctx.fillRect(0, 0, d.w, d.h);
   }
+  
   const fs = d.w * 0.032;
-  ctx.fillStyle = c.primary; const headerFont = c.font === 'sans-bold' ? `900 ${fs*1.6}px sans-serif` : c.font === 'sans' ? `700 ${fs*1.4}px sans-serif` : `bold ${fs*1.4}px serif`;
-  ctx.font = headerFont; ctx.textAlign = 'center';
+  
+  // Header with shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = uploadedBgImage ? 12 : 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = uploadedBgImage ? 2 : 0;
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
+  const headerFont = c.font === 'sans-bold' ? `900 ${fs*1.6}px sans-serif` : c.font === 'sans' ? `700 ${fs*1.4}px sans-serif` : `bold ${fs*1.4}px serif`;
+  ctx.font = headerFont; 
+  ctx.textAlign = 'center';
   ctx.fillText('MARGO', d.w/2, d.h*0.11);
-  ctx.fillStyle = c.text; ctx.font = `italic ${fs*1.15}px serif`;
-  wrapText(ctx, currentPost.text, d.w/2, d.h*0.38, d.w*0.85, fs*1.7);
+  
+  // Lyric text with selected font
   ctx.shadowBlur = uploadedBgImage ? 8 : 0;
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary; ctx.font = `600 ${fs*0.85}px sans-serif`;
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.text;
+  ctx.font = `${fontData.style} ${fs*1.15}px ${fontData.family}`;
+  wrapText(ctx, currentPost.text, d.w/2, d.h*0.38, d.w*0.85, fs*1.7);
+  
+  // Emotion tag
+  ctx.shadowBlur = uploadedBgImage ? 8 : 0;
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
+  ctx.font = `600 ${fs*0.85}px sans-serif`;
   ctx.fillText(`#${currentPost.emotion||'Nostalgia'}`, d.w/2, d.h*0.62);
-  ctx.strokeStyle = uploadedBgImage ? 'rgba(255,255,255,0.6)' : c.secondary; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(d.w*0.3, d.h*0.68); ctx.lineTo(d.w*0.7, d.h*0.68); ctx.stroke();
+  
+  // Divider line
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = uploadedBgImage ? 'rgba(255,255,255,0.6)' : c.secondary;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); 
+  ctx.moveTo(d.w*0.3, d.h*0.68); 
+  ctx.lineTo(d.w*0.7, d.h*0.68); 
+  ctx.stroke();
+  
+  // Song info
   const k = currentPost.knowledge || { song:"Unknown Song", artist:"Unknown Artist" };
   ctx.shadowBlur = uploadedBgImage ? 8 : 0;
-  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary; ctx.font = `bold ${fs*1.1}px ${fontData.family}`;
+  ctx.fillStyle = uploadedBgImage ? '#ffffff' : c.primary;
+  ctx.font = `bold ${fs*1.1}px ${fontData.family}`;
   ctx.fillText(k.song, d.w/2, d.h*0.78);
-  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.85)' : c.secondary; ctx.font = `500 ${fs*0.9}px sans-serif`;
+  
+  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.85)' : c.secondary;
+  ctx.font = `500 ${fs*0.9}px sans-serif`;
   ctx.fillText(k.artist, d.w/2, d.h*0.85);
+  
+  // Footer
   ctx.shadowBlur = 0;
-  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.25)'; ctx.font = `500 ${fs*0.6}px sans-serif`;
+  ctx.fillStyle = uploadedBgImage ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.25)';
+  ctx.font = `500 ${fs*0.6}px sans-serif`;
   ctx.fillText(APP_BASE_URL.replace(/^https?:\/\//, ''), d.w/2, d.h*0.95);
-  return new Promise(res => posterCanvas.toBlob(blob => { 
-    generatedPosterBlob = blob; 
-    console.log("[MARGO] Poster generated, blob size:", blob ? blob.size : 0);
-    res(); 
-  }, 'image/png'));
+  
+  return new Promise(res => {
+    posterCanvas.toBlob(blob => { 
+      if (blob) {
+        generatedPosterBlob = blob; 
+        console.log("[MARGO] Poster generated successfully, blob size:", blob.size);
+      } else {
+        console.error("[MARGO] Failed to generate blob");
+      }
+      res(); 
+    }, 'image/png');
+  });
 }
 
-// ===== SHARE POSTER BUTTON =====
+// ===== SHARE POSTER BUTTON - WITH AUTO-SELECT =====
 sharePosterBtn.onclick = () => {
   closeModal(postcardModal);
   resetPosterModal();
@@ -1105,6 +1186,15 @@ sharePosterBtn.onclick = () => {
     });
   }
   
+  // Reset upload and font
+  uploadedBgImage = null;
+  selectedFont = 'playfair';
+  
+  // Reset font buttons
+  document.querySelectorAll(".font-option").forEach((btn, i) => {
+    btn.classList.toggle("active", i === 0);
+  });
+  
   openModal(sharePosterModal);
   
   setTimeout(() => {
@@ -1115,51 +1205,67 @@ sharePosterBtn.onclick = () => {
   }, 100);
 };
 
-// Wire upload background button
+// ===== WIRE UPLOAD BACKGROUND - FIXED =====
 function wireUploadBg() {
   const uploadBgBtn = document.getElementById("uploadBgBtn");
   const bgUploadInput = document.getElementById("bgUploadInput");
   
-  if (uploadBgBtn && bgUploadInput) {
-    uploadBgBtn.onclick = () => {
-      console.log("[MARGO] Upload button clicked");
-      bgUploadInput.click();
-    };
-    
-    bgUploadInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      console.log("[MARGO] File selected:", file.name, file.size);
-      
-      if (!file.type.startsWith('image/')) {
-        showToast("Please upload an image");
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        showToast("File too large. Max 10MB");
-        return;
-      }
-      
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const img = new Image();
-        img.onload = () => {
-          uploadedBgImage = img;
-          console.log("[MARGO] Image loaded:", img.width, "x", img.height);
-          showToast("Background uploaded! Preview updating...");
-          updateLivePreview();
-        };
-        img.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
-    };
-  } else {
+  if (!uploadBgBtn || !bgUploadInput) {
     console.log("[MARGO] Upload elements not found");
+    return;
   }
+  
+  // Remove old event listeners by cloning
+  const newUploadBtn = uploadBgBtn.cloneNode(true);
+  uploadBgBtn.parentNode.replaceChild(newUploadBtn, uploadBgBtn);
+  
+  const newBgInput = bgUploadInput.cloneNode(true);
+  bgUploadInput.parentNode.replaceChild(newBgInput, bgUploadInput);
+  
+  newUploadBtn.onclick = () => {
+    console.log("[MARGO] Upload button clicked");
+    newBgInput.click();
+  };
+  
+  newBgInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    console.log("[MARGO] File selected:", file.name, file.size);
+    
+    if (!file.type.startsWith('image/')) {
+      showToast("Please upload an image");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showToast("File too large. Max 10MB");
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        uploadedBgImage = img;
+        console.log("[MARGO] Image loaded:", img.width, "x", img.height);
+        showToast("Background uploaded!");
+        updateLivePreview();
+      };
+      img.onerror = () => {
+        console.error("[MARGO] Image failed to load");
+        showToast("Failed to load image");
+      };
+      img.src = ev.target.result;
+    };
+    reader.onerror = () => {
+      console.error("[MARGO] FileReader error");
+      showToast("Failed to read file");
+    };
+    reader.readAsDataURL(file);
+  };
 }
 
-// Wire color picker dynamically
+// ===== WIRE COLOR PICKER =====
 function wireColorPicker() {
   document.querySelectorAll(".color-dot").forEach(dot => {
     dot.onclick = () => {
@@ -1172,7 +1278,7 @@ function wireColorPicker() {
   });
 }
 
-// Wire font picker dynamically
+// ===== WIRE FONT PICKER - FIXED =====
 function wireFontPicker() {
   document.querySelectorAll(".font-option").forEach(btn => {
     btn.onclick = () => {
@@ -1192,7 +1298,10 @@ function resetPosterModal() {
   selectedDesign = "midnight-gold";
   selectedPosterSize = null;
   generatedPosterBlob = null;
+  uploadedBgImage = null;
+  selectedFont = 'playfair';
   document.querySelectorAll(".color-dot").forEach((d,i) => d.classList.toggle("active", i===0));
+  document.querySelectorAll(".font-option").forEach((b,i) => b.classList.toggle("active", i===0));
 }
 
 // ===== COPY LINK =====
@@ -1208,72 +1317,84 @@ copyLinkBtn.onclick = async () => {
   }
 };
 
-// ===== SHARE NATIVE =====
-
-// ===== COPY FOR DISCORD =====
+// ===== COPY FOR DISCORD - FIXED =====
 const copyForDiscordBtn = document.getElementById("copyForDiscordBtn");
 if (copyForDiscordBtn) {
   copyForDiscordBtn.onclick = async () => {
-    if (!generatedPosterBlob) { showToast("Generating poster…"); return; }
+    if (!generatedPosterBlob) { 
+      showToast("Please wait, generating poster…"); 
+      return; 
+    }
+    
     try {
-      // Try Clipboard API (works in Chrome/Edge)
       const item = new ClipboardItem({ "image/png": generatedPosterBlob });
       await navigator.clipboard.write([item]);
-      copyForDiscordBtn.textContent = "Copied! Now paste in Discord";
+      copyForDiscordBtn.textContent = "Copied! Paste in Discord";
       setTimeout(() => { copyForDiscordBtn.textContent = "Copy for Discord"; }, 3000);
-      showToast("Image copied — paste directly in Discord!");
+      showToast("Image copied — paste in Discord!");
     } catch (err) {
-      // Fallback: download and instruct
+      console.log("[MARGO] Clipboard API failed, downloading instead:", err);
       downloadPosterFile();
-      showToast("Saved to device — drag the image into Discord");
+      showToast("Downloaded — drag into Discord");
     }
   };
 }
 
+// ===== SHARE NATIVE - FIXED =====
 shareNativeBtn.onclick = async () => {
-  if (!generatedPosterBlob) { showToast("Generating poster…"); return; }
+  if (!generatedPosterBlob) { 
+    showToast("Please wait, generating poster…"); 
+    return; 
+  }
+  
+  const filename = `margo-poster-${selectedPosterSize||'image'}-${Date.now()}.png`;
+  const file = new File([generatedPosterBlob], filename, { type:'image/png' });
+  
   const sd = {
     title: `MARGO — ${currentPost.text.substring(0,50)}`,
     text: `"${currentPost.text}"\n\n${shareableLink.value}`,
-    files: [ new File([generatedPosterBlob], `margo-${Date.now()}.png`, { type:'image/png' }) ]
+    files: [file]
   };
+  
   try {
     if (navigator.canShare && navigator.canShare(sd)) {
       await navigator.share(sd);
       showToast("Shared!");
     } else {
       downloadPosterFile();
-      showToast("Poster saved. Share it manually.");
+      showToast("Poster saved");
     }
   } catch (e) {
-    if (e.name !== 'AbortError') { downloadPosterFile(); showToast("Sharing failed. Poster saved."); }
+    if (e.name !== 'AbortError') { 
+      console.log("[MARGO] Share failed:", e);
+      downloadPosterFile(); 
+      showToast("Poster saved"); 
+    }
   }
 };
 
-// ===== DOWNLOAD POSTER =====
+// ===== DOWNLOAD POSTER - FIXED =====
 downloadManualBtn.onclick = downloadPosterFile;
 
 function downloadPosterFile() {
-  console.log("[MARGO] downloadPosterFile called, blob exists:", !!generatedPosterBlob);
+  if (!generatedPosterBlob) {
+    showToast("No poster generated yet");
+    return;
+  }
+  
+  console.log("[MARGO] Downloading poster, blob size:", generatedPosterBlob.size);
+  
   const a = document.createElement('a');
+  const url = URL.createObjectURL(generatedPosterBlob);
+  a.href = url;
   a.download = `margo-poster-${selectedPosterSize||'image'}-${Date.now()}.png`;
-  a.href = posterCanvas.toDataURL('image/png');
+  document.body.appendChild(a);
   a.click();
-  showToast("Poster saved!");
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  showToast("Poster downloaded!");
 }
-
-
-// ===== UPLOAD MEDIA MODAL =====
-
-
-
-
-
-
-
-
-
-
 
 // ===== TOAST =====
 function showToast(msg) {
