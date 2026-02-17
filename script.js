@@ -225,35 +225,39 @@ function getTickerPosts() {
 
 // ===== FEATURED STATS =====
 function calcFeatured() {
-  const artistSet    = new Set();
-  const songSet      = new Set();
+  const artistSet     = new Set();
+  const songSet       = new Set();
   const emotionCounts = {};
+  const now           = Date.now();
+  const oneDayMs      = 24 * 60 * 60 * 1000;
+  let   activeToday   = 0;
+  let   solved        = 0;
 
   posts.forEach(p => {
     const artist  = p.knowledge?.artist;
     const song    = p.knowledge?.song;
     const emotion = p.emotion || 'Nostalgia';
 
-    // Count unique artists
     if (artist && artist !== 'Unknown Artist') artistSet.add(artist.toLowerCase().trim());
-    // Count unique songs
-    if (song && song !== 'Unknown Song') songSet.add(song.toLowerCase().trim());
-    // Count emotion frequency
+    if (song   && song   !== 'Unknown Song')   songSet.add(song.toLowerCase().trim());
     emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
+
+    // Active today: posted within last 24h
+    if (p.timestamp && (now - p.timestamp) < oneDayMs) activeToday++;
+
+    // Solved: discover posts that received at least one help entry
+    if (p.mode === 'discover') {
+      const an = postAnalytics[p.id];
+      if (an && an.helps && Object.keys(an.helps).length > 0) solved++;
+    }
   });
 
   const topEmotion = Object.entries(emotionCounts).sort((a,b) => b[1]-a[1])[0];
-
-  return {
-    uniqueArtists: artistSet.size,
-    uniqueSongs:   songSet.size,
-    topEmotion
-  };
+  return { uniqueArtists: artistSet.size, uniqueSongs: songSet.size, topEmotion, activeToday, solved };
 }
 
 function updateLandingStats() {
-  const n = posts.length || 0;
-
+  const n  = posts.length || 0;
   const lc = document.getElementById("liveCount");
   const st = document.getElementById("statTotal");
   const pc = document.getElementById("postCount");
@@ -261,22 +265,24 @@ function updateLandingStats() {
   if (st) st.textContent = n || '—';
   if (pc) pc.textContent = n;
 
-  const artistEl  = document.getElementById("featuredArtist");
-  const songEl    = document.getElementById("featuredSong");
-  const emotionEl = document.getElementById("topEmotion");
+  const artistEl      = document.getElementById("featuredArtist");
+  const songEl        = document.getElementById("featuredSong");
+  const emotionEl     = document.getElementById("topEmotion");
+  const activeTodayEl = document.getElementById("statActiveToday");
+  const solvedEl      = document.getElementById("statSolved");
 
   if (!n) {
-    if (artistEl)  artistEl.textContent  = '—';
-    if (songEl)    songEl.textContent    = '—';
-    if (emotionEl) emotionEl.textContent = '—';
+    [artistEl, songEl, emotionEl, activeTodayEl, solvedEl].forEach(el => { if (el) el.textContent = '—'; });
     return;
   }
 
-  const { uniqueArtists, uniqueSongs, topEmotion } = calcFeatured();
+  const { uniqueArtists, uniqueSongs, topEmotion, activeToday, solved } = calcFeatured();
 
-  if (artistEl)  artistEl.textContent  = uniqueArtists || '—';
-  if (songEl)    songEl.textContent    = uniqueSongs   || '—';
-  if (emotionEl) emotionEl.textContent = topEmotion ? topEmotion[0] : '—';
+  if (artistEl)      artistEl.textContent      = uniqueArtists || '—';
+  if (songEl)        songEl.textContent        = uniqueSongs   || '—';
+  if (emotionEl)     emotionEl.textContent     = topEmotion    ? topEmotion[0] : '—';
+  if (activeTodayEl) activeTodayEl.textContent = activeToday   || '0';
+  if (solvedEl)      solvedEl.textContent      = solved        || '0';
 }
 
 // ===== FIREBASE SYNC =====
@@ -968,44 +974,78 @@ function wirePosterControls() {
     updateLivePreview();
   };
 
-  // Upload bg
-  const uploadBtn = document.getElementById("uploadBgBtn");
+  // Upload zone — drag-and-drop + click
+  const uploadZone  = document.getElementById("uploadBgBtn");
   const uploadInput = document.getElementById("bgUploadInput");
-  if (uploadBtn && uploadInput) {
-    uploadBtn.onclick = () => uploadInput.click();
+
+  if (uploadZone && uploadInput) {
+    // Click to browse
+    uploadZone.onclick = () => uploadInput.click();
+
+    // Drag events
+    uploadZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
+    });
+    uploadZone.addEventListener('dragleave', e => {
+      if (!uploadZone.contains(e.relatedTarget)) uploadZone.classList.remove('drag-over');
+    });
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) handleImageFile(file);
+    });
+
+    // File input change
     uploadInput.onchange = (e) => {
       const file = e.target.files[0];
-      if (!file) return;
-      if (!file.type.startsWith('image/')) { showToast("Please upload an image"); return; }
-      if (file.size > 10*1024*1024) { showToast("File too large (max 10MB)"); return; }
-      const reader = new FileReader();
-      reader.onload = ev => {
-        const img = new Image();
-        img.onload = () => {
-          uploadedBgImage = img;
-          const sec = document.getElementById("imageControlsSection");
-          const stat = document.getElementById("uploadStatus");
-          if (sec) sec.style.display = 'block';
-          if (stat) stat.textContent = file.name;
-          showToast("Photo uploaded!");
-          updateLivePreview();
-        };
-        img.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
+      if (file) handleImageFile(file);
     };
+  }
+
+  function handleImageFile(file) {
+    if (!file.type.startsWith('image/')) { showToast("Please upload an image"); return; }
+    if (file.size > 10 * 1024 * 1024)   { showToast("File too large (max 10MB)"); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        uploadedBgImage = img;
+        const sec  = document.getElementById("imageControlsSection");
+        const zone = document.getElementById("uploadBgBtn");
+        const stat = document.getElementById("uploadStatus");
+        if (sec) sec.style.display = 'block';
+        if (stat) stat.textContent = `${file.name} · ${(file.size/1024).toFixed(0)}KB`;
+        if (zone) {
+          zone.classList.add('has-image');
+          const titleEl = zone.querySelector('.upload-zone-title');
+          if (titleEl) titleEl.textContent = 'Photo uploaded';
+        }
+        showToast("Photo added!");
+        updateLivePreview();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
   }
 
   // Remove bg
   const removeBtn = document.getElementById("removeBgBtn");
   if (removeBtn) removeBtn.onclick = () => {
     uploadedBgImage = null;
-    const sec  = document.getElementById("imageControlsSection");
-    const stat = document.getElementById("uploadStatus");
-    const inp  = document.getElementById("bgUploadInput");
-    if (sec)  sec.style.display = 'none';
-    if (stat) stat.textContent  = 'Tap to add your image';
-    if (inp)  inp.value = '';
+    const sec   = document.getElementById("imageControlsSection");
+    const stat  = document.getElementById("uploadStatus");
+    const inp   = document.getElementById("bgUploadInput");
+    const zone  = document.getElementById("uploadBgBtn");
+    if (sec)  sec.style.display  = 'none';
+    if (stat) stat.textContent   = 'or tap to browse files';
+    if (inp)  inp.value          = '';
+    if (zone) {
+      zone.classList.remove('has-image');
+      const titleEl = zone.querySelector('.upload-zone-title');
+      if (titleEl) titleEl.textContent = 'Drop your photo here';
+    }
     updateLivePreview();
   };
 }
@@ -1045,7 +1085,13 @@ sharePosterBtn.onclick = () => {
   const sec = document.getElementById("imageControlsSection");
   if (sec) sec.style.display = 'none';
   const stat = document.getElementById("uploadStatus");
-  if (stat) stat.textContent = 'Tap to add your image';
+  if (stat) stat.textContent = 'or tap to browse files';
+  const zone = document.getElementById("uploadBgBtn");
+  if (zone) {
+    zone.classList.remove('has-image');
+    const titleEl = zone.querySelector('.upload-zone-title');
+    if (titleEl) titleEl.textContent = 'Drop your photo here';
+  }
 
   openModal(sharePosterModal);
   setTimeout(() => {
