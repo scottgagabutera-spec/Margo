@@ -193,12 +193,16 @@ body::before {
 
 /* ── LYRIC STREAM ── */
 .lyric-stream {
-  width: 100%; overflow: hidden;
+  width: 100%;
+  overflow: hidden;
   animation: fadeUp 0.6s ease 0.38s both;
   position: relative;
+  /* Ensure cards aren't clipped on mobile */
+  margin-left: 0;
+  margin-right: 0;
 }
 .lyric-stream::before, .lyric-stream::after {
-  content: ''; position: absolute; top: 0; bottom: 0; width: 55px;
+  content: ''; position: absolute; top: 0; bottom: 0; width: 40px;
   z-index: 2; pointer-events: none;
 }
 .lyric-stream::before { left: 0; background: linear-gradient(to right, var(--bg), transparent); }
@@ -244,18 +248,71 @@ body::before {
 .lyric-card-song { font-size: 0.61rem; color: var(--text-2); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── STATS BAR ── */
+.stats-bar-wrap {
+  position: relative;
+  width: 100%;
+  /* clip-path clips the fade pseudo-elements without blocking touch scroll */
+  isolation: isolate;
+}
+/* Fade edges hint that content scrolls */
+.stats-bar-wrap::before,
+.stats-bar-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 32px;
+  z-index: 3;
+  pointer-events: none;
+}
+.stats-bar-wrap::before { left: 0;  background: linear-gradient(to right, var(--bg) 40%, transparent); }
+.stats-bar-wrap::after  { right: 0; background: linear-gradient(to left,  var(--bg) 40%, transparent); }
+
 .stats-bar {
-  padding: 14px 16px 26px; display: flex;
-  justify-content: center; gap: 0;
-  animation: fadeUp 0.6s ease 0.44s both; flex-shrink: 0;
-  overflow-x: auto; scrollbar-width: none;
+  position: relative;
+  z-index: 2;
+  padding: 14px 0 26px;
+  display: flex;
+  justify-content: flex-start;
+  gap: 0;
+  animation: fadeUp 0.6s ease 0.44s both;
+  flex-shrink: 0;
+  /* Horizontal scroll — no overflow hidden anywhere in the chain */
+  overflow-x: scroll;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  /* Smooth momentum scroll on iOS */
+  scroll-behavior: smooth;
 }
 .stats-bar::-webkit-scrollbar { display: none; }
-.stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 14px; flex-shrink: 0; }
-.stat-num { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--text); white-space: nowrap; }
-.stat-num.stat-sm { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--gold); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0 14px;
+  flex-shrink: 0;
+}
+.stat-item:first-child { padding-left: 20px; }
+.stat-item:last-child  { padding-right: 20px; }
+
+.stat-num {
+  font-family: var(--font-display); font-size: 1rem;
+  font-weight: 700; color: var(--text); white-space: nowrap;
+}
+.stat-num.stat-sm {
+  font-family: var(--font-display); font-size: 1rem;
+  font-weight: 700; color: var(--gold);
+  max-width: 110px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
 #topEmotion { font-family: var(--font-ui); font-size: 0.72rem; font-weight: 700; }
-.stat-label { font-size: 0.58rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; white-space: nowrap; }
+.stat-label {
+  font-size: 0.58rem; color: var(--text-2);
+  text-transform: uppercase; letter-spacing: 0.8px;
+  font-weight: 600; white-space: nowrap;
+}
 .stat-divider { width: 1px; background: var(--border); align-self: stretch; flex-shrink: 0; }
 
 /* ══════════════════════
@@ -505,13 +562,53 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
 /* ── RESPONSIVE ── */
 @media(max-width:480px) {
   #feedList { grid-template-columns:1fr; padding:12px 10px; }
+
+  /* Hero tighter on small screens */
+  .hero { padding: 12px 16px 0; }
+  .tagline { max-width: 260px; }
+  .cta-group { max-width: 100%; padding: 0 4px; }
+  .btn-secondary { font-size: 0.82rem; }
+
+  /* Stats: slightly smaller text on tiny screens */
+  .stat-num { font-size: 0.9rem; }
+  .stat-item { padding: 0 10px; }
+  .stat-item:first-child { padding-left: 16px; }
+  .stat-item:last-child  { padding-right: 16px; }
+
+  /* Feed header compact */
+  .feed-logo { font-size: 0.8rem; letter-spacing: 3px; }
+  .header-btn { padding: 7px 10px; font-size: 0.72rem; }
+
+  /* Studio dock compact */
+  .dock-tab { padding: 8px 4px; font-size: 0.55rem; }
+  .dock-panel { padding: 12px 14px; }
+  .font-cards { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .font-card { padding: 10px 6px; }
+  .font-card-preview { font-size: 0.78rem; }
+
+  /* Ceremony compact */
+  .ceremony-inner { padding: 24px 18px; gap: 18px; }
+  .ceremony-headline { font-size: 1.1rem; }
+  .ceremony-thumb-wrap { max-width: 160px; }
 }
+
 @media(min-width:481px) and (max-width:768px) {
   #feedList { grid-template-columns:repeat(2,1fr); }
+  .font-cards { grid-template-columns: repeat(4, 1fr); }
+  .color-scenes { grid-template-columns: repeat(8, 1fr); }
 }
+
 @media(min-width:769px) {
   #feedList { grid-template-columns:repeat(3,1fr); }
   .hero { max-width:560px; margin:0 auto; }
+
+  /* Stats bar centered on desktop since there's enough room */
+  .stats-bar { justify-content: center; }
+  .font-cards { grid-template-columns: repeat(4, 1fr); }
+  .color-scenes { grid-template-columns: repeat(12, 1fr); }
+
+  /* Studio: wider canvas on desktop */
+  .studio-stage { padding: 80px 40px 24px; }
 }
 
 /* ════════════════════════════════════════════════
@@ -1019,13 +1116,16 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
 .ceremony-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(6,6,8,0.96);
-  backdrop-filter: blur(20px);
+  background: #060608;
   z-index: 30;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  animation: fadeIn 0.3s ease;
+  gap: 0;
+  animation: fadeIn 0.35s ease;
+  padding: 24px 20px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
 }
 .ceremony-overlay.hidden { display: none; }
 
@@ -1033,65 +1133,79 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
-  padding: 32px 24px;
-  max-width: 340px;
+  justify-content: center;
+  gap: 22px;
   width: 100%;
+  max-width: 440px;
+  flex: 1;
   animation: slideUp 0.4s cubic-bezier(0.34,1.2,0.64,1);
 }
 
+/* Poster preview — as large as possible */
 .ceremony-thumb-wrap {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-  max-width: 200px;
+  flex: 1;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
 }
 .ceremony-thumb-wrap canvas {
   display: block;
-  width: 100%;
-  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 20px 70px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.07);
+  /* JS sets inline width/height; CSS just ensures it never overflows */
+  max-width: 100%;
+  max-height: calc(100vh - 220px);
+  width: auto !important;
+  height: auto !important;
 }
 
 .ceremony-headline {
   font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #fff;
   text-align: center;
   line-height: 1.3;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
+  flex-shrink: 0;
 }
 
 .ceremony-actions {
   display: flex;
   gap: 10px;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .ceremony-btn {
   flex: 1;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.8);
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
   font-family: var(--font-ui);
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  white-space: nowrap;
+  min-height: 52px;
 }
 .ceremony-btn:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.12);
   color: #fff;
-  border-color: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.2);
   transform: translateY(-1px);
 }
+.ceremony-btn:active { transform: scale(0.98); }
+
 .ceremony-btn.ceremony-share {
   background: var(--gold);
   color: #0C0C0E;
@@ -1099,24 +1213,61 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
   font-weight: 700;
 }
 .ceremony-btn.ceremony-share:hover {
-  box-shadow: 0 6px 24px rgba(232,197,71,0.3);
+  box-shadow: 0 6px 24px rgba(232,197,71,0.35);
   background: #f0ce50;
+  transform: translateY(-1px);
 }
 
-.ceremony-btn-icon {
-  font-size: 1rem;
-  line-height: 1;
-}
+.ceremony-btn-icon { font-size: 1rem; line-height: 1; }
 
 .ceremony-back {
   background: none;
   border: none;
-  color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.22);
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
   transition: color 0.18s;
   padding: 4px 12px;
+  flex-shrink: 0;
+  letter-spacing: 0.2px;
 }
 .ceremony-back:hover { color: rgba(255,255,255,0.5); }
+
+/* ── RESPONSIVE ── */
+@media(max-width: 480px) {
+  #feedList { grid-template-columns: 1fr; padding: 12px 10px; }
+
+  .hero { padding: 12px 16px 0; }
+  .tagline { max-width: 100%; }
+  .cta-group { max-width: 100%; }
+  /* Make secondary CTA pop more on mobile */
+  .btn-secondary {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    border-color: rgba(255,255,255,0.18);
+  }
+
+  .feed-logo { font-size: 0.8rem; letter-spacing: 3px; }
+  .header-btn { padding: 7px 10px; font-size: 0.72rem; }
+
+  .font-cards { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .font-card { padding: 10px 6px; }
+  .dock-tab { padding: 8px 4px; font-size: 0.55rem; }
+
+  .ceremony-inner { gap: 16px; }
+  .ceremony-headline { font-size: 1.05rem; }
+}
+
+@media(min-width: 481px) and (max-width: 768px) {
+  #feedList { grid-template-columns: repeat(2, 1fr); }
+  .font-cards { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media(min-width: 769px) {
+  #feedList { grid-template-columns: repeat(3, 1fr); }
+  .hero { max-width: 560px; margin: 0 auto; }
+  .studio-stage { padding: 80px 40px 24px; }
+}
