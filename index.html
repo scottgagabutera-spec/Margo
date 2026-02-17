@@ -48,6 +48,10 @@
     <div class="stat-divider"></div>
     <div class="stat-item"><span class="stat-num stat-sm" id="featuredSong">—</span><span class="stat-label">Songs Featured</span></div>
     <div class="stat-divider"></div>
+    <div class="stat-item"><span class="stat-num stat-sm" id="statActiveToday">—</span><span class="stat-label">Active Today</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat-item"><span class="stat-num stat-sm" id="statSolved">—</span><span class="stat-label">Solved</span></div>
+    <div class="stat-divider"></div>
     <div class="stat-item"><span class="stat-num stat-sm" id="topEmotion">—</span><span class="stat-label">Trending Feeling</span></div>
   </div>
 </section>
@@ -213,10 +217,19 @@
     <div class="modal-body">
       <div id="designStep" class="poster-step active">
         <div class="preview-box"><canvas id="posterPreviewCanvas"></canvas></div>
-        <button class="upload-btn" id="uploadBgBtn">
-          <span style="font-size:1.8rem;">📸</span>
-          <div><div style="font-size:0.88rem;font-weight:600;color:var(--text);">Upload background photo</div><div style="font-size:0.7rem;color:var(--text-3);" id="uploadStatus">Tap to add your image</div></div>
-        </button>
+        <div class="upload-zone" id="uploadBgBtn">
+          <div class="upload-zone-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="upload-zone-text">
+            <span class="upload-zone-title">Drop your photo here</span>
+            <span class="upload-zone-sub" id="uploadStatus">or tap to browse files</span>
+          </div>
+        </div>
         <input type="file" id="bgUploadInput" accept="image/*" style="display:none;">
         <div id="imageControlsSection" style="display:none;">
           <div class="effects-box">
