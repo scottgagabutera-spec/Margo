@@ -506,10 +506,9 @@ function initSearch() {
 }
 
 // ===== RENDER FEED =====
+// Font size is uniform — CSS .card-lyric handles clamping to 3 lines
 function getDynamicFontSize(len) {
-  if (len < 50) return '1.05rem';
-  if (len < 90) return '0.95rem';
-  return '0.86rem';
+  return '0.95rem';
 }
 
 const EMOTION_COLORS = {
