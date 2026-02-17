@@ -515,8 +515,8 @@ function trackView(postId) {
   }
 }
 
-// ===== VIEW POST, GUESS, DISCOVER, LISTEN (keeping existing code) =====
-function viewPost(index) {
+// ===== VIEW POST, GUESS, DISCOVER, LISTEN - GLOBAL FUNCTIONS =====
+window.viewPost = function(index) {
   currentPost = posts[index];
   if (!currentPost) return;
   trackView(currentPost.id);
@@ -545,9 +545,9 @@ function viewPost(index) {
   listenPostcard.style.display = (hasLinks && currentPost.mode !== "guess") ? 'block' : 'none';
 
   openModal(postcardModal);
-}
+};
 
-function openListen(index) {
+window.openListen = function(index) {
   currentPost = posts[index];
   if (!currentPost || !currentPost.links) { showToast("No streaming links available"); return; }
 
@@ -576,9 +576,9 @@ function openListen(index) {
 
   if (!has) { showToast("No streaming links available"); return; }
   openModal(listenModal);
-}
+};
 
-function openGuess(index) {
+window.openGuess = function(index) {
   currentPost = posts[index];
   if (!currentPost) return;
   trackView(currentPost.id);
@@ -614,9 +614,9 @@ function openGuess(index) {
   guessHint.textContent = `You have ${MAX_GUESS_ATTEMPTS} attempt${MAX_GUESS_ATTEMPTS > 1 ? 's' : ''} to guess the ${what.join(" and ")}.`;
 
   openModal(guessModal);
-}
+};
 
-function openDiscover(index) {
+window.openDiscover = function(index) {
   currentPost = posts[index];
   if (!currentPost) return;
   trackView(currentPost.id);
@@ -638,7 +638,7 @@ function openDiscover(index) {
   discoverSoundcloudLink.value = "";
 
   openModal(discoverModal);
-}
+};
 
 // ===== SCROLL MANAGEMENT =====
 function setupScrollToTop() {
@@ -1317,3 +1317,197 @@ document.getElementById("closeSharePoster").onclick = () => { closeModal(sharePo
 // Init
 setupScrollToTop();
 console.log("MARGO loaded. Firebase:", isFirebaseEnabled);
+
+// ===== GUESS SUBMISSION =====
+const submitGuessBtn = document.getElementById("submitGuess");
+if (submitGuessBtn) {
+  submitGuessBtn.onclick = () => {
+    if (!currentPost) return;
+    currentGuessAttempts++;
+
+    const k = currentPost.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
+    const doSong = currentPost.guessConfig?.guessSong ?? true;
+    const doArtist = currentPost.guessConfig?.guessArtist ?? true;
+
+    const guessSongInput = document.getElementById("guessSongInput");
+    const guessArtistInput = document.getElementById("guessArtistInput");
+    const guessResult = document.getElementById("guessResult");
+    const guessLinksSection = document.getElementById("guessLinksSection");
+    const guessInputFields = document.getElementById("guessInputFields");
+    const submitGuess = document.getElementById("submitGuess");
+    const revealAnswer = document.getElementById("revealAnswer");
+
+    const gs = guessSongInput.value.trim().toLowerCase();
+    const ga = guessArtistInput.value.trim().toLowerCase();
+    const as = k.song.toLowerCase();
+    const aa = k.artist.toLowerCase();
+
+    const songOk = !doSong || (gs && (gs === as || gs.includes(as) || as.includes(gs)));
+    const artistOk = !doArtist || (ga && (ga === aa || ga.includes(aa) || aa.includes(ga)));
+    const correct = songOk && artistOk;
+
+    const guessData = { song: gs || null, artist: ga || null, correct, timestamp: Date.now() };
+    if (isFirebaseEnabled) {
+      analyticsRef.child(currentPost.id).child('guesses').push(guessData);
+    }
+
+    guessResult.classList.remove("hidden");
+
+    if (correct) {
+      guessResult.className = "result-message success";
+      guessResult.innerHTML = `<div style="margin-bottom:6px">Correct!</div><div style="font-size:0.83rem">"${k.song}" by ${k.artist}</div>`;
+      submitGuess.classList.add("hidden");
+      guessInputFields.classList.add("hidden");
+      revealAnswer.classList.add("hidden");
+      
+      // Show links if available
+      if (currentPost.links) {
+        const links = currentPost.links;
+        if (links.spotify || links.apple || links.youtube || links.soundcloud) {
+          let html = '<div class="guess-links-title">Listen to the song</div><div class="guess-links-container">';
+          if (links.spotify) html += `<a href="${links.spotify}" target="_blank" rel="noopener noreferrer" class="guess-link">Spotify</a>`;
+          if (links.apple) html += `<a href="${links.apple}" target="_blank" rel="noopener noreferrer" class="guess-link">Apple Music</a>`;
+          if (links.youtube) html += `<a href="${links.youtube}" target="_blank" rel="noopener noreferrer" class="guess-link">YouTube</a>`;
+          if (links.soundcloud) html += `<a href="${links.soundcloud}" target="_blank" rel="noopener noreferrer" class="guess-link">SoundCloud</a>`;
+          html += '</div>';
+          guessLinksSection.innerHTML = html;
+          guessLinksSection.classList.remove("hidden");
+        }
+      }
+      return;
+    }
+
+    if (currentGuessAttempts >= MAX_GUESS_ATTEMPTS) {
+      guessResult.className = "result-message error";
+      guessResult.innerHTML = `<div style="margin-bottom:6px">Out of attempts</div><div style="font-size:0.82rem">Song: ${k.song}<br>Artist: ${k.artist}</div>`;
+      submitGuess.classList.add("hidden");
+      guessInputFields.classList.add("hidden");
+      revealAnswer.classList.add("hidden");
+      return;
+    }
+
+    const partialSong = doSong && gs && (gs === as || gs.includes(as) || as.includes(gs));
+    const partialArtist = doArtist && ga && (ga === aa || ga.includes(aa) || aa.includes(ga));
+    const left = MAX_GUESS_ATTEMPTS - currentGuessAttempts;
+
+    if (partialSong || partialArtist) {
+      guessResult.className = "result-message partial";
+      let fb = '<div style="margin-bottom:6px">Partially correct</div>';
+      if (doSong) fb += `<div style="font-size:0.8rem">${partialSong ? '✓' : '✗'} Song: ${gs || '(empty)'}</div>`;
+      if (doArtist) fb += `<div style="font-size:0.8rem">${partialArtist ? '✓' : '✗'} Artist: ${ga || '(empty)'}</div>`;
+      fb += `<div style="font-size:0.74rem;margin-top:6px">${left} attempt${left > 1 ? 's' : ''} left</div>`;
+      guessResult.innerHTML = fb;
+    } else {
+      guessResult.className = "result-message error";
+      let fb = '<div style="margin-bottom:6px">Incorrect</div>';
+      fb += `<div style="font-size:0.74rem;margin-top:6px">${left} attempt${left > 1 ? 's' : ''} left</div>`;
+      guessResult.innerHTML = fb;
+    }
+
+    guessSongInput.value = "";
+    guessArtistInput.value = "";
+  };
+}
+
+// ===== DISCOVER SUBMISSION =====
+const submitDiscoverBtn = document.getElementById("submitDiscover");
+if (submitDiscoverBtn) {
+  submitDiscoverBtn.onclick = () => {
+    const discoverSongAnswer = document.getElementById("discoverSongAnswer");
+    const discoverArtistAnswer = document.getElementById("discoverArtistAnswer");
+    const discoverSpotifyLink = document.getElementById("discoverSpotifyLink");
+    const discoverAppleLink = document.getElementById("discoverAppleLink");
+    const discoverYoutubeLink = document.getElementById("discoverYoutubeLink");
+    const discoverSoundcloudLink = document.getElementById("discoverSoundcloudLink");
+
+    const song = discoverSongAnswer.value.trim();
+    const artist = discoverArtistAnswer.value.trim();
+    if (!song || !artist) { showToast("Please enter both song and artist"); return; }
+
+    const helpData = {
+      song, artist,
+      links: {
+        spotify: discoverSpotifyLink.value.trim() || null,
+        apple: discoverAppleLink.value.trim() || null,
+        youtube: discoverYoutubeLink.value.trim() || null,
+        soundcloud: discoverSoundcloudLink.value.trim() || null
+      },
+      timestamp: Date.now()
+    };
+
+    if (isFirebaseEnabled) {
+      analyticsRef.child(currentPost.id).child('helps').push(helpData);
+    }
+
+    showToast("Thanks for helping!");
+    closeModal(discoverModal);
+  };
+}
+
+// ===== ANALYTICS =====
+if (analyticsBtn) {
+  analyticsBtn.onclick = () => {
+    if (!currentPost) return;
+    const an = postAnalytics[currentPost.id] || { views: 0 };
+    const guesses = Array.isArray(an.guesses) ? an.guesses : Object.values(an.guesses || {});
+    const helps = Array.isArray(an.helps) ? an.helps : Object.values(an.helps || {});
+
+    const body = document.querySelector('#analyticsModal .modal-body');
+
+    let statsHTML = `<div class="analytics-stats">
+      <div class="stat-card"><div class="stat-number">${an.views || 0}</div><div class="stat-label">Views</div></div>`;
+    if (currentPost.mode === 'guess') statsHTML += `<div class="stat-card"><div class="stat-number">${guesses.length}</div><div class="stat-label">Guesses</div></div>`;
+    if (currentPost.mode === 'discover') statsHTML += `<div class="stat-card"><div class="stat-number">${helps.length}</div><div class="stat-label">Helps</div></div>`;
+    statsHTML += '</div>';
+
+    body.innerHTML = statsHTML;
+
+    if (currentPost.mode === 'guess' && guesses.length > 0) {
+      const sec = document.createElement('div');
+      sec.className = 'activity-section';
+      sec.innerHTML = '<h4>Guess Attempts</h4><div class="activity-list" id="guessesList2"></div>';
+      body.appendChild(sec);
+      const list = sec.querySelector('#guessesList2');
+      guesses.forEach(g => {
+        const item = document.createElement('div');
+        item.className = `activity-item ${g.correct ? 'correct' : 'incorrect'}`;
+        item.innerHTML = `<div class="activity-guess">${g.song ? 'Song: ' + g.song : ''}${g.artist ? '<br>Artist: ' + g.artist : ''}</div><div class="activity-result ${g.correct ? 'correct' : 'incorrect'}">${g.correct ? 'Correct' : 'Incorrect'}</div><div class="activity-time">${timeAgo(g.timestamp)}</div>`;
+        list.appendChild(item);
+      });
+    }
+
+    if (currentPost.mode === 'discover' && helps.length > 0) {
+      const sec = document.createElement('div');
+      sec.className = 'activity-section';
+      sec.innerHTML = '<h4>Community Answers</h4><div class="activity-list" id="helpsList2"></div>';
+      body.appendChild(sec);
+      const list = sec.querySelector('#helpsList2');
+      helps.forEach(h => {
+        const item = document.createElement('div');
+        item.className = 'activity-item';
+        let linksHTML = '';
+        if (h.links) {
+          const ll = [];
+          if (h.links.spotify) ll.push(`<a href="${h.links.spotify}" target="_blank" class="activity-link">Spotify</a>`);
+          if (h.links.apple) ll.push(`<a href="${h.links.apple}" target="_blank" class="activity-link">Apple Music</a>`);
+          if (h.links.youtube) ll.push(`<a href="${h.links.youtube}" target="_blank" class="activity-link">YouTube</a>`);
+          if (h.links.soundcloud) ll.push(`<a href="${h.links.soundcloud}" target="_blank" class="activity-link">SoundCloud</a>`);
+          if (ll.length) linksHTML = `<div class="activity-links">${ll.join('')}</div>`;
+        }
+        item.innerHTML = `<div class="activity-guess"><strong>Song:</strong> ${h.song}<br><strong>Artist:</strong> ${h.artist}</div>${linksHTML}<div class="activity-time">${timeAgo(h.timestamp)}</div>`;
+        list.appendChild(item);
+      });
+    }
+
+    closeModal(postcardModal);
+    openModal(analyticsModal);
+  };
+}
+
+// Listen from postcard
+if (listenPostcard) {
+  listenPostcard.onclick = () => {
+    const idx = posts.findIndex(p => p.id === currentPost.id);
+    if (idx !== -1) { closeModal(postcardModal); openListen(idx); }
+  };
+}
