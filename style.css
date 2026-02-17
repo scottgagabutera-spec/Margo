@@ -101,9 +101,26 @@ body {
   font-size: clamp(3.5rem, 12vw, 5rem);
   font-weight: 700;
   letter-spacing: 8px;
-  color: var(--gold);
+  background: linear-gradient(145deg, #f5d168 0%, #d4af37 40%, #c4941f 70%, #a07810 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   text-align: center;
-  text-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 4px 16px rgba(212,175,55,0.6), 0 8px 40px rgba(212,175,55,0.4), 0 0 80px rgba(212,175,55,0.2);
+  position: relative;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)) drop-shadow(0 4px 16px rgba(212,175,55,0.6)) drop-shadow(0 8px 40px rgba(212,175,55,0.4)) drop-shadow(0 0 80px rgba(212,175,55,0.2));
+}
+.logo::before {
+  content: 'MARGO';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  z-index: -1;
+  width: 100%;
+  background: linear-gradient(145deg, #a07810 0%, #8b6709 50%, #6d4f05 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: 0.7;
 }
 
 .tagline {
@@ -379,7 +396,7 @@ button:active { transform: scale(0.97); }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 420px; height: auto;
+  height: 420px;
   opacity: 0;
   animation: cardFadeIn 0.55s ease-out forwards;
 }
@@ -785,7 +802,7 @@ textarea::placeholder, input::placeholder { color: var(--text-muted); }
 /* ===== RESPONSIVE ===== */
 @media (max-width: 480px) {
   .feed-list { grid-template-columns: 1fr; padding: 14px 12px; gap: 14px; }
-  .feed-card { min-height: 440px; height: auto; }
+  .feed-card { height: 420px; }
   .feed-text { min-height: 106px; max-height: 150px; }
   .mode-options { flex-direction: column; }
   .analytics-stats { grid-template-columns: 1fr; }
