@@ -161,6 +161,60 @@ const copyLinkBtn = document.getElementById("copyLinkBtn");
 const shareNativeBtn = document.getElementById("shareNativeBtn");
 const downloadManualBtn = document.getElementById("downloadManualBtn");
 
+// ===== LYRIC STREAM SAMPLE DATA =====
+const STREAM_SAMPLES = [
+  { text: "I gave you all I had and still you left", emotion: "Heartbreak", song: "Unknown" },
+  { text: "Some nights I still hear your voice in the quiet", emotion: "Nostalgia", song: "Unknown" },
+  { text: "Dancing alone was better than lying beside you", emotion: "Healing", song: "Unknown" },
+  { text: "The city never sleeps but I always dream of you", emotion: "Love", song: "Unknown" },
+  { text: "Rage is just grief that forgot how to cry", emotion: "Rage", song: "Unknown" },
+  { text: "Every sunrise is a permission to start over", emotion: "Hope", song: "Unknown" },
+  { text: "I carry your memory like a song I can't name", emotion: "Loneliness", song: "Unknown" },
+  { text: "Nothing gold can stay, but gold can glow forever", emotion: "Nostalgia", song: "Unknown" },
+  { text: "You were thunder and I was the calm after", emotion: "Love", song: "Unknown" },
+  { text: "Joy is not the absence of pain, it's dancing anyway", emotion: "Joy", song: "Unknown" },
+  { text: "Missing someone is just love with nowhere to go", emotion: "Loneliness", song: "Unknown" },
+  { text: "I built a home in your chest and you moved out", emotion: "Heartbreak", song: "Unknown" },
+];
+
+function buildLyricStream() {
+  const track1 = document.getElementById("track1");
+  const track2 = document.getElementById("track2");
+  if (!track1 || !track2) return;
+
+  // Use real posts if available, otherwise samples
+  const source = posts.length >= 4 ? posts : STREAM_SAMPLES;
+  const doubled1 = [...source, ...source];
+  const doubled2 = [...source.slice(Math.floor(source.length/2)), ...source, ...source.slice(0, Math.floor(source.length/2))];
+
+  const buildCard = (item) => {
+    const emotionClass = 'emotion-' + ((item.emotion || 'nostalgia').toLowerCase());
+    const text = item.text || '';
+    const display = text.length > 42 ? text.substring(0, 42) + '…' : text;
+    const card = document.createElement('div');
+    card.className = 'lyric-card' + (Math.random() > 0.7 ? ' featured' : '');
+    card.innerHTML = `
+      <div class="lyric-card-text">${display}</div>
+      <div class="lyric-card-meta">
+        <span class="lyric-card-emotion ${emotionClass}">${item.emotion || 'Nostalgia'}</span>
+      </div>
+    `;
+    return card;
+  };
+
+  doubled1.forEach(item => track1.appendChild(buildCard(item)));
+  doubled2.forEach(item => track2.appendChild(buildCard(item)));
+}
+
+// Rebuild stream after posts load
+function refreshStream() {
+  const track1 = document.getElementById("track1");
+  const track2 = document.getElementById("track2");
+  if (track1) track1.innerHTML = '';
+  if (track2) track2.innerHTML = '';
+  buildLyricStream();
+}
+
 // ===== FIREBASE SYNC =====
 if (isFirebaseEnabled) {
   postsRef.orderByChild('timestamp').limitToLast(50).on('value', snapshot => {
@@ -174,6 +228,7 @@ if (isFirebaseEnabled) {
     posts.sort((a,b) => b.timestamp - a.timestamp);
 
     updateLandingCount();
+    if (posts.length > 0 && !postsLoaded) refreshStream();
 
     if (postsLoaded && posts.length > prevCount && feed.classList.contains('active')) {
       showNewPostsIndicator(posts.length - prevCount);
@@ -189,11 +244,17 @@ if (isFirebaseEnabled) {
 } else {
   postsLoaded = true;
   updateLandingCount();
+  buildLyricStream();
 }
 
 function updateLandingCount() {
-  const el = document.getElementById("landingPostCount");
-  if (el) el.textContent = posts.length || "—";
+  const liveCount = document.getElementById("liveCount");
+  const statTotal = document.getElementById("statTotal");
+  const pc = document.getElementById("postCount");
+  const n = posts.length || 0;
+  if (liveCount) liveCount.textContent = n;
+  if (statTotal) statTotal.textContent = n || '—';
+  if (pc) pc.textContent = n;
 }
 
 // ===== MODAL FUNCTIONS =====
@@ -242,18 +303,28 @@ function handleSwipe() {
 });
 
 // ===== NAVIGATION =====
-enterBtn.onclick = () => {
+function goToFeed() {
   landing.classList.remove("active");
   feed.classList.add("active");
   renderFeed();
+}
+function goToLanding() {
+  feed.classList.remove("active");
+  landing.classList.add("active");
+}
+
+enterBtn.onclick = () => {
+  goToFeed();
   openModal(composer);
   setTimeout(() => textInput.focus(), 280);
 };
 
-backBtn.onclick = () => {
-  feed.classList.remove("active");
-  landing.classList.add("active");
-};
+const enterFeedBtn = document.getElementById("enterFeedBtn");
+const enterFeedBtn2 = document.getElementById("enterFeedBtn2");
+if (enterFeedBtn) enterFeedBtn.onclick = goToFeed;
+if (enterFeedBtn2) enterFeedBtn2.onclick = goToFeed;
+
+backBtn.onclick = goToLanding;
 
 openComposerBtn.onclick = () => {
   openModal(composer);
@@ -264,6 +335,9 @@ closeComposerBtn.onclick = () => {
   closeModal(composer);
   resetComposer();
 };
+
+// Init stream on load
+buildLyricStream();
 
 // ===== COMMUNITY FILTER =====
 document.querySelectorAll(".filter-pill").forEach(pill => {
@@ -414,19 +488,18 @@ function resetComposer() {
   guessArtistCheck.checked = true;
 }
 
-// ===== RENDER FEED =====
-function getDynamicFontSize(textLength) {
-  if (textLength < 50) return '1.35rem';
-  if (textLength < 80) return '1.2rem';
-  if (textLength < 120) return '1.08rem';
-  return '0.98rem';
+function getDynamicFontSize(len) {
+  if (len < 50) return '1.08rem';
+  if (len < 80) return '0.98rem';
+  if (len < 120) return '0.9rem';
+  return '0.84rem';
 }
 
 function renderFeed() {
   feedList.innerHTML = "";
+  updateLandingCount();
 
   if (!postsLoaded) {
-    postCount.textContent = "…";
     feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--gold);">Loading…</div>';
     return;
   }
@@ -436,66 +509,77 @@ function renderFeed() {
     filtered = posts.filter(p => (p.community || "general") === activeCommunityFilter);
   }
 
-  postCount.textContent = posts.length;
-  updateLandingCount();
-
   if (filtered.length === 0) {
-    feedList.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-secondary);">${
-      activeCommunityFilter !== "all"
-        ? `No ${COMMUNITY_CONFIG[activeCommunityFilter]?.label || activeCommunityFilter} posts yet. Be the first!`
-        : "No posts yet. Be the first!"
-    }</div>`;
+    feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-2);">No lyrics yet — be the first to drop one.</div>';
     return;
   }
+
+  const EMOTION_COLORS = {
+    Love: 'rgba(255,107,157,0.12)', Heartbreak: 'rgba(255,80,80,0.1)',
+    Hope: 'rgba(107,140,255,0.12)', Nostalgia: 'rgba(232,197,71,0.1)',
+    Healing: 'rgba(74,222,128,0.12)', Joy: 'rgba(255,200,71,0.1)',
+    Rage: 'rgba(255,100,100,0.12)', Loneliness: 'rgba(160,160,255,0.1)'
+  };
+  const EMOTION_TEXT = {
+    Love: '#FF6B9D', Heartbreak: '#ff5050', Hope: '#6B8CFF', Nostalgia: 'var(--gold)',
+    Healing: '#4ade80', Joy: '#ffc847', Rage: '#FF6464', Loneliness: '#a0a0ff'
+  };
 
   filtered.forEach((post, i) => {
     const card = document.createElement("div");
     card.className = "feed-card";
     card.style.animationDelay = `${i * 0.03}s`;
 
-    const comm = post.community || "general";
-    const cfg = COMMUNITY_CONFIG[comm] || COMMUNITY_CONFIG.general;
     const k = post.knowledge || { song: "Unknown Song", artist: "Unknown Artist" };
-    const hasLinks = post.links && (post.links.spotify || post.links.apple || post.links.youtube || post.links.soundcloud);
+    const emotion = post.emotion || "Nostalgia";
+    const eBg = EMOTION_COLORS[emotion] || 'rgba(232,197,71,0.1)';
+    const eColor = EMOTION_TEXT[emotion] || 'var(--gold)';
+
+    const modeBadge = post.mode === 'guess'
+      ? '<span class="card-mode-badge mode-guess">Guess</span>'
+      : post.mode === 'discover'
+      ? '<span class="card-mode-badge mode-discover">Discover</span>'
+      : '<span class="card-mode-badge mode-share">Share</span>';
 
     let songSection = '', actionsSection = '';
+    const hasLinks = post.links && (post.links.spotify || post.links.apple || post.links.youtube || post.links.soundcloud);
+    const postIdx = posts.indexOf(post);
 
     if (post.mode === "share") {
-      songSection = `<div class="feed-song"><div class="feed-song-title">${k.song}</div><div class="feed-song-artist">${k.artist}</div></div>`;
-      actionsSection = `<div class="feed-actions">
-        <button class="feed-action" onclick="viewPost(${posts.indexOf(post)})">View</button>
-        ${hasLinks ? `<button class="feed-action" onclick="openListen(${posts.indexOf(post)})">Listen</button>` : ''}
+      songSection = `<div class="card-song"><div class="card-song-title">${k.song}</div><div class="card-song-artist">${k.artist}</div></div>`;
+      actionsSection = `<div class="card-actions">
+        <button class="card-btn" onclick="window.viewPost(${postIdx})">View</button>
+        ${hasLinks ? `<button class="card-btn" onclick="window.openListen(${postIdx})">Listen</button>` : ''}
       </div>`;
     } else if (post.mode === "guess") {
       const what = [];
       if (post.guessConfig?.guessSong) what.push("song");
       if (post.guessConfig?.guessArtist) what.push("artist");
       if (!what.length) what.push("song", "artist");
-      songSection = `<div class="mystery-badge">Guess the ${what.join(" & ")}</div>`;
-      actionsSection = `<div class="feed-actions">
-        <button class="feed-action" onclick="openGuess(${posts.indexOf(post)})">Guess</button>
-        <button class="feed-action" onclick="viewPost(${posts.indexOf(post)})">View</button>
+      songSection = `<div class="card-mystery">Guess the ${what.join(" & ")} →</div>`;
+      actionsSection = `<div class="card-actions">
+        <button class="card-btn" onclick="window.openGuess(${postIdx})">Guess</button>
+        <button class="card-btn" onclick="window.viewPost(${postIdx})">View</button>
       </div>`;
     } else if (post.mode === "discover") {
       const hasClue = k.song !== "Unknown Song" || k.artist !== "Unknown Artist";
-      songSection = `<div class="discover-badge">${hasClue ? `Maybe: ${k.song} — ${k.artist}` : 'Help discover this song'}</div>`;
-      actionsSection = `<div class="feed-actions">
-        <button class="feed-action" onclick="openDiscover(${posts.indexOf(post)})">Help</button>
-        <button class="feed-action" onclick="viewPost(${posts.indexOf(post)})">View</button>
+      songSection = `<div class="card-discover">${hasClue ? `Maybe: ${k.song} — ${k.artist}` : 'Help discover this song'}</div>`;
+      actionsSection = `<div class="card-actions">
+        <button class="card-btn" onclick="window.openDiscover(${postIdx})">Help</button>
+        <button class="card-btn" onclick="window.viewPost(${postIdx})">View</button>
       </div>`;
     }
 
     card.innerHTML = `
-      <div class="feed-card-top">
-        <div class="feed-time">${timeAgo(post.timestamp)}</div>
-        <div class="feed-community-tag" style="color:${cfg.color};background:${cfg.bg};border-color:${cfg.color}44;">${cfg.label}</div>
+      <div class="card-top">
+        <span class="card-time">${timeAgo(post.timestamp)}</span>
+        ${modeBadge}
       </div>
-      <div class="feed-text" style="font-size:${getDynamicFontSize(post.text.length)}">${post.text}</div>
-      <div class="feed-emotion">${post.emotion || "Nostalgia"}</div>
+      <div class="card-lyric" style="font-size:${getDynamicFontSize(post.text.length)}">${post.text}</div>
+      <span class="card-emotion-tag" style="background:${eBg};color:${eColor};">${emotion}</span>
       ${songSection}
       ${actionsSection}
     `;
-
     feedList.appendChild(card);
   });
 }
