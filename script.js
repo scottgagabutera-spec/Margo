@@ -173,8 +173,11 @@ function buildLyricStream() {
   track1.innerHTML = '';
   track2.innerHTML = '';
 
-  const source = posts.length >= 6 ? posts : STREAM_SAMPLES;
-  const doubled = [...source, ...source, ...source]; // triple for seamless loop
+  // Smart selection: recent + popular + random
+  const source = getTickerPosts();
+
+  // Triple for seamless infinite loop
+  const fill = [...source, ...source, ...source];
 
   const buildCard = (item) => {
     const emotion = item.emotion || 'Nostalgia';
@@ -190,30 +193,67 @@ function buildLyricStream() {
     return card;
   };
 
-  doubled.forEach((item, i) => {
-    const card = buildCard(item);
-    if (i < doubled.length / 2 + 1) track1.appendChild(card);
-    else track2.appendChild(buildCard(item));
-  });
-  // second track offset
-  [...source.slice(Math.floor(source.length/2)), ...source, ...source].forEach(item => track2.appendChild(buildCard(item)));
+  // Track 1: left scroll, Track 2: right scroll with offset start
+  const offset = Math.floor(source.length / 2);
+  fill.forEach(item => track1.appendChild(buildCard(item)));
+  [...source.slice(offset), ...source, ...source, ...source.slice(0, offset)]
+    .forEach(item => track2.appendChild(buildCard(item)));
 }
 
-// ===== LIVE STATS for landing =====
-const EMOTION_COUNTS = {};
-const SONG_COUNTS    = {};
+// ===== SMART TICKER SELECTION =====
+// 4 most recent + 4 most viewed + 4 random = 12 for the ticker
+function getTickerPosts() {
+  if (posts.length < 6) return STREAM_SAMPLES;
 
-function calcStats() {
+  const sorted = [...posts];
+
+  // 4 most recent
+  const recent = sorted.slice(0, 4);
+
+  // 4 most viewed (by analytics)
+  const byViews = [...posts]
+    .filter(p => !recent.includes(p))
+    .sort((a, b) => (postAnalytics[b.id]?.views || 0) - (postAnalytics[a.id]?.views || 0))
+    .slice(0, 4);
+
+  // 4 random from the rest
+  const rest = posts.filter(p => !recent.includes(p) && !byViews.includes(p));
+  const random = rest.sort(() => Math.random() - 0.5).slice(0, 4);
+
+  return [...recent, ...byViews, ...random];
+}
+
+// ===== FEATURED STATS =====
+function calcFeatured() {
+  const artistCounts  = {};
+  const songCounts    = {};
+  const emotionCounts = {};
+
   posts.forEach(p => {
-    const e = p.emotion || 'Nostalgia';
-    EMOTION_COUNTS[e] = (EMOTION_COUNTS[e] || 0) + 1;
-    const song = p.knowledge?.song;
-    if (song && song !== 'Unknown Song') SONG_COUNTS[song] = (SONG_COUNTS[song] || 0) + 1;
+    const artist  = p.knowledge?.artist;
+    const song    = p.knowledge?.song;
+    const emotion = p.emotion || 'Nostalgia';
+
+    if (artist && artist !== 'Unknown Artist') {
+      artistCounts[artist] = (artistCounts[artist] || 0) + 1;
+    }
+    if (song && song !== 'Unknown Song') {
+      songCounts[song] = (songCounts[song] || 0) + 1;
+    }
+    emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
   });
+
+  const topArtist  = Object.entries(artistCounts).sort((a,b) => b[1]-a[1])[0];
+  const topSong    = Object.entries(songCounts).sort((a,b) => b[1]-a[1])[0];
+  const topEmotion = Object.entries(emotionCounts).sort((a,b) => b[1]-a[1])[0];
+
+  return { topArtist, topSong, topEmotion };
 }
 
 function updateLandingStats() {
   const n = posts.length || 0;
+
+  // Counts
   const lc = document.getElementById("liveCount");
   const st = document.getElementById("statTotal");
   const pc = document.getElementById("postCount");
@@ -221,24 +261,17 @@ function updateLandingStats() {
   if (st) st.textContent = n || '—';
   if (pc) pc.textContent = n;
 
-  calcStats();
+  if (!n) return;
 
-  // Top emotion
-  const topEmotionEl = document.getElementById("topEmotion");
-  if (topEmotionEl) {
-    const top = Object.entries(EMOTION_COUNTS).sort((a,b) => b[1]-a[1])[0];
-    topEmotionEl.textContent = top ? `${top[0]} (${top[1]})` : '—';
-  }
-  // Top song
-  const topSongEl = document.getElementById("topSong");
-  if (topSongEl) {
-    const top = Object.entries(SONG_COUNTS).sort((a,b) => b[1]-a[1])[0];
-    topSongEl.textContent = top ? top[0].substring(0, 18) : '—';
-  }
-  // Unique artists
-  const artistSet = new Set(posts.map(p => p.knowledge?.artist).filter(a => a && a !== 'Unknown Artist'));
-  const artistEl = document.getElementById("artistCount");
-  if (artistEl) artistEl.textContent = artistSet.size || '—';
+  const { topArtist, topSong, topEmotion } = calcFeatured();
+
+  const artistEl  = document.getElementById("featuredArtist");
+  const songEl    = document.getElementById("featuredSong");
+  const emotionEl = document.getElementById("topEmotion");
+
+  if (artistEl)  artistEl.textContent  = topArtist  ? topArtist[0]  : '—';
+  if (songEl)    songEl.textContent    = topSong    ? topSong[0]    : '—';
+  if (emotionEl) emotionEl.textContent = topEmotion ? `${topEmotion[0]}` : '—';
 }
 
 // ===== FIREBASE SYNC =====
@@ -261,7 +294,11 @@ if (isFirebaseEnabled) {
     if (feed.classList.contains('active') && !newPostsAvailable) renderFeed();
   });
 
-  analyticsRef.on('value', snapshot => { postAnalytics = snapshot.val() || {}; });
+  analyticsRef.on('value', snapshot => {
+    postAnalytics = snapshot.val() || {};
+    // Rebuild ticker now that view counts are available
+    buildLyricStream();
+  });
 } else {
   postsLoaded = true;
   updateLandingStats();
