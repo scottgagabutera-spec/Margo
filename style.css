@@ -73,56 +73,96 @@ body::before {
 }
 
 /* ══════════════════════════════════════════
-   UNIFIED LOGO MARK
-   Gold circle + SVG M path + ripple rings
-   Used in nav, feed header, and brand kit.
-   The M is an SVG path — sharp at all sizes.
+   NAV LOGO — Ripple ring mark  ✦ FIXED ✦
+   .logo-circle  = the gold filled circle
+                   housing the M SVG
+   .logo-ring    = the three ripple rings
+                   that expand outward
 ══════════════════════════════════════════ */
-
-/* ── NAV LOGO ── */
 .nav-logo {
   display: flex; align-items: center; gap: 10px;
   text-decoration: none; user-select: none;
 }
-/* ═══════════════════════════════════════════════════
-   NAV LOGO MARK — M-in-gold-circle, rings CLIPPED.
-   overflow:hidden on the container is the key —
-   rings animate inside it and never touch the text.
-═══════════════════════════════════════════════════ */
-.nav-logo-mark {
+
+/* Outer container — clips nothing, just centres children */
+.nav-logo-mark,
+.feed-logo-mark {
   position: relative;
-  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  overflow: hidden;     /* ← rings clipped here, never bleed into wordmark */
-  border-radius: 50%;
 }
+.nav-logo-mark  { width: 30px; height: 30px; }
+.feed-logo-mark { width: 22px; height: 22px; }
+
+/* ── Gold filled circle with M inside (the centre anchor) ── */
 .nav-logo-mark .logo-circle {
-  position: absolute; inset: 0;
+  position: relative;
+  z-index: 2;
+  width: 26px; height: 26px;
   border-radius: 50%;
   background: var(--gold);
   display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(232,197,71,0.8);
+  animation: core-breathe 3s ease-in-out infinite;
+}
+.feed-logo-mark .logo-circle {
+  position: relative;
   z-index: 2;
-  animation: circle-glow 3s ease-in-out infinite;
-}
-.nav-logo-mark .logo-circle svg { width: 58%; height: 58%; display: block; }
-@keyframes circle-glow {
-  0%,100% { box-shadow: inset 0 0 0 0 rgba(255,255,255,0); }
-  50%      { box-shadow: inset 0 0 8px rgba(255,255,255,0.15); }
-}
-.nav-logo-mark .logo-ring {
-  position: absolute; inset: 0;
+  width: 20px; height: 20px;
   border-radius: 50%;
-  border: 1.5px solid rgba(232,197,71,0.8);
-  animation: ring-in-circle 2.4s ease-out infinite;
-  z-index: 1;
+  background: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(232,197,71,0.8);
+  animation: core-breathe 3s ease-in-out infinite;
 }
-.nav-logo-mark .logo-ring:nth-child(1) { animation-delay: 0s;   }
-.nav-logo-mark .logo-ring:nth-child(2) { animation-delay: 0.8s; }
-.nav-logo-mark .logo-ring:nth-child(3) { animation-delay: 1.6s; }
-@keyframes ring-in-circle {
-  0%   { transform: scale(0.2); opacity: 1;  border-color: rgba(232,197,71,0.9); }
-  100% { transform: scale(1.8); opacity: 0;  border-color: rgba(232,197,71,0);   }
+
+/* The SVG M inside the gold circle */
+.nav-logo-mark .logo-circle svg,
+.feed-logo-mark .logo-circle svg {
+  width: 100%; height: 100%;
+  display: block;
 }
+
+/* Breathing glow on the circle */
+@keyframes core-breathe {
+  0%,100% { box-shadow: 0 0 8px rgba(232,197,71,0.7); }
+  50%      { box-shadow: 0 0 16px rgba(232,197,71,1);  }
+}
+
+/* ── Ripple rings — expand outward from the circle ── */
+.nav-logo-mark .logo-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(232,197,71,0.65);
+  /* Start same size as .logo-circle so they radiate from it */
+  width: 26px; height: 26px;
+  animation: nav-ripple 2.4s ease-out infinite;
+}
+.feed-logo-mark .logo-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(232,197,71,0.65);
+  width: 20px; height: 20px;
+  animation: nav-ripple 2.4s ease-out infinite;
+}
+
+.nav-logo-mark  .logo-ring:nth-child(1),
+.feed-logo-mark .logo-ring:nth-child(1) { animation-delay: 0s;   }
+.nav-logo-mark  .logo-ring:nth-child(2),
+.feed-logo-mark .logo-ring:nth-child(2) { animation-delay: 0.8s; }
+.nav-logo-mark  .logo-ring:nth-child(3),
+.feed-logo-mark .logo-ring:nth-child(3) { animation-delay: 1.6s; }
+
+@keyframes nav-ripple {
+  0%   { transform: scale(1);   opacity: 1; border-color: rgba(232,197,71,0.7); }
+  100% { transform: scale(3.2); opacity: 0; border-color: rgba(232,197,71,0);   }
+}
+
+/* ── Nav wordmark ── */
 .nav-logo-text {
   font-family: var(--font-display);
   font-weight: 800; font-size: 1rem;
@@ -219,30 +259,22 @@ body::before {
 .full-btn { width: 100%; border-radius: 12px; }
 
 /* ══════════════════════
-   LYRIC STREAM — FIXED CUTOFF
-   Key changes:
-   1. overflow:hidden moved to wrapper, NOT the stream itself
-   2. lyric-track gets px-2 padding so edge cards aren't flush-clipped
-   3. fade gradients use pointer-events:none and are wider (60px) to
-      give a softer fade — the actual clip boundary is on .lyric-stream
-   4. Cards use overflow:visible so descenders/ascenders render fully
+   LYRIC STREAM
 ══════════════════════ */
 .lyric-stream {
   width: 100%;
-  overflow: hidden;          /* clip happens HERE */
+  overflow: hidden;
   animation: fadeUp 0.6s ease 0.38s both;
   position: relative;
-  /* Extra vertical room so tall cards / descenders don't get cut */
   padding: 6px 0;
 }
 
-/* Fade gradients — wider (60px) for a gentler edge */
 .lyric-stream::before,
 .lyric-stream::after {
   content: '';
   position: absolute;
   top: 0; bottom: 0;
-  width: 60px;          /* was 40px — wider fade = less harsh clip */
+  width: 60px;
   z-index: 2;
   pointer-events: none;
 }
@@ -258,11 +290,8 @@ body::before {
 .lyric-track {
   display: flex;
   gap: 9px;
-  /* Horizontal padding so the first/last card is never flush against
-     the overflow clip boundary — this is the main cutoff fix */
   padding: 7px 8px;
   width: max-content;
-  /* No overflow:hidden here — let the parent clip */
 }
 .lyric-track:first-child  { animation: scrollL 30s linear infinite; }
 .lyric-track:nth-child(2) { animation: scrollR 36s linear infinite; }
@@ -278,7 +307,6 @@ body::before {
   padding: 10px 13px;
   display: flex; flex-direction: column; gap: 5px;
   min-width: 190px; max-width: 230px;
-  /* Remove overflow:hidden from individual cards so letters aren't clipped */
   overflow: visible;
 }
 .lyric-card.featured { border-color: rgba(232,197,71,0.15); }
@@ -346,36 +374,10 @@ body::before {
   position: sticky; top: 0; z-index: 100; flex-shrink: 0;
 }
 
-/* Feed header logo — M-in-circle ripple (smaller) */
+/* Feed header logo wordmark */
 .feed-logo-wrap {
   display: flex; align-items: center; gap: 8px;
 }
-.feed-logo-mark {
-  position: relative;
-  width: 26px; height: 26px;
-  flex-shrink: 0;
-  overflow: hidden;     /* rings clipped — never touch the wordmark */
-  border-radius: 50%;
-}
-.feed-logo-mark .logo-circle {
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  background: var(--gold);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 2;
-  animation: circle-glow 3s ease-in-out infinite;
-}
-.feed-logo-mark .logo-circle svg { width: 58%; height: 58%; display: block; }
-.feed-logo-mark .logo-ring {
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(232,197,71,0.8);
-  animation: ring-in-circle 2.4s ease-out infinite;
-  z-index: 1;
-}
-.feed-logo-mark .logo-ring:nth-child(1) { animation-delay: 0s;   }
-.feed-logo-mark .logo-ring:nth-child(2) { animation-delay: 0.8s; }
-.feed-logo-mark .logo-ring:nth-child(3) { animation-delay: 1.6s; }
 .feed-logo { font-family: var(--font-display); font-weight: 800; font-size: 0.95rem; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; }
 .feed-center { display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .post-count { font-size: 0.58rem; color: var(--text-2); font-weight: 600; }
