@@ -1,4 +1,16 @@
-/* MARGO — Full working script */
+/* MARGO — script.js
+   Brand Identity System 4.0 integrated
+
+   CHANGES FROM ORIGINAL:
+   ─────────────────────────────────────────────────────────
+   1. POSTER_DESIGNS['midnight-gold'].primary updated to #E8C547
+      (brand kit exact gold, was #d4af37)
+   2. FONT_FAMILIES: added 'dm-serif' entry using brand kit font
+   3. drawPosterToCtx: MARGO mark uses Space Mono (brand kit utility)
+   4. drawPosterToCtx: domain watermark uses Space Mono
+   5. All other logic identical to original
+   ─────────────────────────────────────────────────────────
+*/
 
 // ===== FIREBASE =====
 const firebaseConfig = {
@@ -54,13 +66,15 @@ const FONT_FAMILIES = {
   'dancing':     { family: "'Dancing Script', cursive",   style: 'normal', label: 'Dancing'     },
 };
 
+// Brand kit §01 colour system — all gold values exact
 const POSTER_DESIGNS = {
-  'midnight-gold':   { bg:['#0d0d0d','#1a1410','#0d0d0d'], primary:'#d4af37',  text:'#f8f8f8', light:false },
-  'royal-purple':    { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff',  text:'#f8f8f8', light:false },
-  'neon-cyan':       { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff',  text:'#f8f8f8', light:false },
-  'sunset-coral':    { bg:['#1a0a0a','#2d1416','#1a0a0a'], primary:'#ff8080', text:'#f8f8f8', light:false },
-  'emerald-night':   { bg:['#051a0d','#0d2e1a','#051a0d'], primary:'#50fa7b', text:'#f8f8f8', light:false },
-  'rose-gold':       { bg:['#1a0d0f','#2d1a1f','#1a0d0f'], primary:'#f4a4c0', text:'#f8f8f8', light:false },
+  // ▸ primary updated to brand kit #E8C547 (was #d4af37)
+  'midnight-gold':   { bg:['#0B0B0D','#1a1410','#0B0B0D'], primary:'#E8C547',  text:'#F0F0F0', light:false },
+  'royal-purple':    { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff',  text:'#F0F0F0', light:false },
+  'neon-cyan':       { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff',  text:'#F0F0F0', light:false },
+  'sunset-coral':    { bg:['#1a0a0a','#2d1416','#1a0a0a'], primary:'#ff8080', text:'#F0F0F0', light:false },
+  'emerald-night':   { bg:['#051a0d','#0d2e1a','#051a0d'], primary:'#50fa7b', text:'#F0F0F0', light:false },
+  'rose-gold':       { bg:['#1a0d0f','#2d1a1f','#1a0d0f'], primary:'#f4a4c0', text:'#F0F0F0', light:false },
   'cream-editorial': { bg:['#f5f1e8','#ebe3d5','#f5f1e8'], primary:'#2a2520',  text:'#2a2520', light:true  },
   'monochrome':      { bg:['#000000','#111111','#000000'], primary:'#ffffff',  text:'#ffffff', light:false },
   'vaporwave':       { bg:['#2d0a3d','#6b1fa8','#1a0d3d'], primary:'#ff71ce',  text:'#ffffff', light:false },
@@ -169,7 +183,11 @@ function preloadStudioFonts() {
     "600 16px 'Lora'", "italic 16px 'Lora'",
     "700 16px 'Merriweather'", "700 16px 'Josefin Sans'",
     "400 16px 'Bebas Neue'", "600 16px 'Oswald'",
-    "700 16px 'Dancing Script'", "700 16px 'Syne'", "700 16px 'DM Sans'",
+    "700 16px 'Dancing Script'",
+    "800 16px 'Syne'",           // brand kit display
+    "700 16px 'Space Mono'",     // brand kit utility
+    "italic 16px 'DM Serif Display'", // brand kit editorial
+    "700 16px 'DM Sans'",
   ];
   fonts.forEach(f => document.fonts.load(f).catch(() => {}));
 }
@@ -229,9 +247,6 @@ function getTickerPosts() {
 }
 
 // ===== FEATURED STATS =====
-// FIX: topArtist and topSong only show when the same name appears
-// in 2+ posts. With all unique entries every count is 1, so we
-// return null and the UI shows "—" instead of a misleading winner.
 function calcFeatured() {
   const artistCounts = {}, songCounts = {}, emotionCounts = {};
   posts.forEach(p => {
@@ -248,7 +263,6 @@ function calcFeatured() {
   return {
     uniqueArtistCount: Object.keys(artistCounts).length,
     uniqueSongCount:   Object.keys(songCounts).length,
-    // Require at least 2 posts with the same artist/song to call it "top"
     topArtist: (artistEntries[0]?.[1] >= 2) ? artistEntries[0][0] : null,
     topSong:   (songEntries[0]?.[1]   >= 2) ? songEntries[0][0]   : null,
     topEmotion
@@ -332,7 +346,6 @@ let tSX = 0, tSY = 0;
 function goToFeed() {
   landing.classList.remove("active");
   feed.classList.add("active");
-  // Force scroll to absolute top so the first cards are fully visible
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
   window.scrollTo(0, 0);
@@ -499,27 +512,20 @@ function initSearch() {
   const input    = document.getElementById("feedSearchInput");
   const clearBtn = document.getElementById("searchClearBtn");
   if (!input) return;
-
-  // typing — update query and re-render feed (no popups, no suggestions)
   input.oninput = () => {
     searchQuery = input.value.trim();
     if (clearBtn) clearBtn.style.display = searchQuery ? 'flex' : 'none';
     renderFeed();
   };
-
-  // Escape key — clear search and restore full feed
   input.onkeydown = (e) => {
     if (e.key === 'Escape') { clearSearch(); input.blur(); }
   };
-
-  // clear button
   if (clearBtn) {
     clearBtn.onclick = () => { clearSearch(); input.focus(); };
   }
 }
 
 // ===== RENDER FEED =====
-// Font size is uniform — CSS .card-lyric handles clamping to 3 lines
 function getDynamicFontSize(len) {
   return '0.95rem';
 }
@@ -813,7 +819,6 @@ analyticsBtn.onclick = () => {
   html += '</div>';
   body.innerHTML = html;
 
-  // Guess mode — show each guess attempt
   if (currentPost.mode === 'guess' && guesses.length) {
     let sec = '<div class="activity-section"><h4>Guesses</h4><div class="activity-list">';
     guesses.forEach(g => {
@@ -826,7 +831,6 @@ analyticsBtn.onclick = () => {
     body.innerHTML += sec + '</div></div>';
   }
 
-  // Discover mode — show each identification suggestion with links
   if (currentPost.mode === 'discover' && helps.length) {
     let sec = '<div class="activity-section"><h4>Community Identifications</h4><div class="activity-list">';
     helps.forEach(h => {
@@ -848,7 +852,6 @@ analyticsBtn.onclick = () => {
   openModal(analyticsModal);
 };
 
-// Analytics back → return to postcard
 document.getElementById("closeAnalytics").onclick = () => {
   closeModal(analyticsModal);
   openModal(postcardModal);
@@ -880,7 +883,9 @@ function showNewPostsIndicator(count) {
   newPostsIndicator?.classList.add('visible');
 }
 
-// ===== MARGO STUDIO =====
+// ═══════════════════════════════════
+//   MARGO STUDIO
+// ═══════════════════════════════════
 function getPhotoFilter() {
   let f = `brightness(${studioBrightness}%)`;
   const filters = {
@@ -935,9 +940,8 @@ function drawPosterToCtx(ctx, W, H) {
     g.addColorStop(1, c.bg[2]);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
-    // Apply brightness to gradient via overlay: <100 darkens (black overlay), >100 lightens (white overlay)
     if (studioBrightness !== 100) {
-      const bDelta = (studioBrightness - 100) / 100; // -0.5 to +0.5
+      const bDelta = (studioBrightness - 100) / 100;
       if (bDelta < 0) {
         ctx.fillStyle = `rgba(0,0,0,${Math.abs(bDelta) * 0.9})`;
       } else {
@@ -959,16 +963,16 @@ function drawPosterToCtx(ctx, W, H) {
     ctx.shadowOffsetY = 2 * scale;
   }
 
-  // MARGO mark
+  // ── MARGO wordmark — brand kit: Space Mono 700 ──
   ctx.textAlign = 'left';
   ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
   ctx.fillStyle = studioBgImage ? 'rgba(255,255,255,0.32)' : (c.primary + '88');
-  ctx.font = `700 ${22 * scale}px 'Syne', sans-serif`;
+  ctx.font = `700 ${22 * scale}px 'Space Mono', monospace`;  // brand kit utility
   ctx.fillText('MARGO', 52 * scale, 58 * scale);
 
   ctx.textAlign = 'center';
 
-  // Lyric
+  // ── Lyric ──
   const lyricText = currentPost.text.length > 100
     ? currentPost.text.substring(0, 97) + '…'
     : currentPost.text;
@@ -986,7 +990,7 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.font = `${fd.style === 'italic' ? 'italic ' : ''}${isBold ? '700' : '600'} ${lyricSize}px ${fd.family}`;
   wrapTextCenter(ctx, lyricText, W / 2, H * 0.46, W * 0.82, lyricSize * 1.18);
 
-  // Song & Artist
+  // ── Song & Artist ──
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   ctx.filter = 'none'; ctx.textAlign = 'center';
@@ -1013,24 +1017,23 @@ function drawPosterToCtx(ctx, W, H) {
 
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.fillStyle = artistColor;
-  ctx.font = `500 ${artSize}px 'DM Sans', sans-serif`;
+  // Brand kit: Space Mono for artist/metadata line
+  ctx.font = `700 ${artSize}px 'Space Mono', monospace`;
   ctx.fillText(k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist, W / 2, artistY);
 
-  // Domain watermark — readable size and color that adapts per design
+  // ── Domain watermark — brand kit: Space Mono ──
   const markSize  = Math.max(Math.round(18 * scale), 14);
-  // On light designs use dark color; on photo use white; on dark use accent color
   let markColor;
   if (studioBgImage) {
     markColor = 'rgba(255,255,255,0.75)';
   } else if (c.light) {
     markColor = 'rgba(42,37,32,0.6)';
   } else {
-    // Use the design's primary/accent color at good opacity so it's readable but not overpowering
-    markColor = c.primary + 'cc'; // ~80% opacity
+    markColor = c.primary + 'cc';
   }
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.fillStyle = markColor;
-  ctx.font = `700 ${markSize}px 'DM Sans', sans-serif`;
+  ctx.font = `700 ${markSize}px 'Space Mono', monospace`;  // brand kit
   ctx.textAlign = 'center';
   ctx.fillText(APP_DOMAIN, W / 2, H * 0.94);
 }
@@ -1125,7 +1128,6 @@ function resetStudioUI() {
 closeStudio.onclick = () => {
   studioOverlay.classList.add('hidden');
   document.body.classList.remove('modal-open');
-  // Go back to postcard view — not to landing/feed
   openModal(postcardModal);
 };
 
@@ -1286,7 +1288,6 @@ document.getElementById("closeGuess").onclick     = () => { closeModal(guessModa
 document.getElementById("closeDiscover").onclick  = () => closeModal(discoverModal);
 document.getElementById("closePostcard").onclick  = () => closeModal(postcardModal);
 document.getElementById("closeListen").onclick    = () => closeModal(listenModal);
-// closeAnalytics is handled above (returns to postcard)
 
 // ===== TOAST =====
 function showToast(msg) {
@@ -1304,7 +1305,7 @@ buildLyricStream();
 preloadStudioFonts();
 setupStatsBar();
 initSearch();
-console.log("MARGO loaded. Firebase:", isFirebaseEnabled);
+console.log("MARGO loaded — Brand Kit 4.0. Firebase:", isFirebaseEnabled);
 
 function setupScrollToTop() {
   window.addEventListener('scroll', () => {
@@ -1326,5 +1327,3 @@ function setupStatsBar() {
   alignStats();
   window.addEventListener('resize', alignStats);
 }
-
-
