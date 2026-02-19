@@ -18,7 +18,14 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Syne:wght@700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Lora:ital,wght@0,600;1,400;1,600&family=Crimson+Text:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Pacifico&family=Lobster&family=Raleway:wght@400;600;700&family=Inter:wght@400;600;700&family=Bebas+Neue&family=Space+Grotesk:wght@400;600;700&family=Roboto:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;600;700&family=Permanent+Marker&family=Dancing+Script:wght@400;700&family=Abril+Fatface&family=Satisfy&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Josefin+Sans:wght@300;400;700&family=Righteous&display=swap" rel="stylesheet">
+  <!--
+    Brand kit typography:
+      Syne 700/800        — Display / Wordmark
+      DM Serif Display    — Lyric / Editorial (italic)
+      Space Mono 400/700  — Utility / Metadata
+    App-specific extras kept for Studio font panel
+  -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&family=Space+Mono:wght@400;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Lora:ital,wght@0,600;1,400;1,600&family=Crimson+Text:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Pacifico&family=Lobster&family=Raleway:wght@400;600;700&family=Inter:wght@400;600;700&family=Bebas+Neue&family=Space+Grotesk:wght@400;600;700&family=Roboto:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;600;700&family=Permanent+Marker&family=Dancing+Script:wght@400;700&family=Abril+Fatface&family=Satisfy&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Josefin+Sans:wght@300;400;700&family=Righteous&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -27,20 +34,35 @@
 
 <section id="landing">
   <nav class="nav">
-    <!-- LOGO: M-in-circle + ripple rings clipped inside container -->
+    <!--
+      LOGO — brand kit M-waveform icon (circle + M-path + lyric-dash rect)
+      Three ripple rings animate outward from the gold circle.
+      Matches brand kit §01 Primary Gold exactly.
+    -->
     <a class="nav-logo" href="/" aria-label="Margo home">
       <span class="nav-logo-mark">
         <span class="logo-ring"></span>
         <span class="logo-ring"></span>
         <span class="logo-ring"></span>
-        <span class="logo-circle"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M28 68L28 32L50 56L72 32L72 68" fill="none" stroke="#0C0C0E" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/></svg></span>
+        <!-- Brand-kit SVG icon — viewBox "-4 -4 88 88" with breathing room -->
+        <span class="logo-circle">
+          <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="40" cy="40" r="36" fill="#E8C547"/>
+            <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
+                  fill="none" stroke="#0B0B0D" stroke-width="5"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="35" y="60" width="10" height="3.5" rx="1.75"
+                  fill="#0B0B0D" opacity=".55"/>
+          </svg>
+        </span>
       </span>
-      <span class="nav-logo-text">Margo</span>
+      <span class="nav-logo-text">MARGO</span>
     </a>
     <div class="nav-right">
       <button class="nav-pill" id="enterFeedBtn">Read the room →</button>
     </div>
   </nav>
+
   <div class="hero">
     <div class="status-pill">
       <span class="status-dot"></span>
@@ -60,6 +82,7 @@
       <div class="lyric-track" id="track2"></div>
     </div>
   </div>
+
   <div class="stats-bar-wrap">
     <div class="stats-bar">
       <div class="stat-item"><span class="stat-num" id="statTotal">—</span><span class="stat-label">Lyrics</span></div>
@@ -77,19 +100,29 @@
   </div>
 </section>
 
+<!-- ═══════════ FEED ═══════════ -->
 <section id="feed">
   <header class="feed-header">
     <button class="header-btn" id="backBtn">← Back</button>
     <div class="feed-center">
-      <!-- Feed header logo — M-in-circle ripple clipped inside container -->
+      <!-- Feed logo — brand kit mark, smaller scale -->
       <div class="feed-logo-wrap">
         <span class="feed-logo-mark">
           <span class="logo-ring"></span>
           <span class="logo-ring"></span>
           <span class="logo-ring"></span>
-          <span class="logo-circle"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M28 68L28 32L50 56L72 32L72 68" fill="none" stroke="#0C0C0E" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/></svg></span>
+          <span class="logo-circle">
+            <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="40" cy="40" r="36" fill="#E8C547"/>
+              <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
+                    fill="none" stroke="#0B0B0D" stroke-width="5"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="35" y="60" width="10" height="3.5" rx="1.75"
+                    fill="#0B0B0D" opacity=".55"/>
+            </svg>
+          </span>
         </span>
-        <span class="feed-logo">Margo</span>
+        <span class="feed-logo">MARGO</span>
       </div>
       <span class="post-count"><span id="postCount">0</span> posts</span>
     </div>
@@ -113,7 +146,7 @@
   <div id="feedList"></div>
 </section>
 
-<!-- COMPOSER -->
+<!-- ═══════════ COMPOSER ═══════════ -->
 <div id="composer" class="modal hidden">
   <div class="modal-sheet">
     <div class="modal-top"><span class="modal-title">Drop a Lyric</span><button class="modal-close" id="closeComposer">×</button></div>
@@ -169,7 +202,7 @@
   </div>
 </div>
 
-<!-- GUESS -->
+<!-- ═══════════ GUESS ═══════════ -->
 <div id="guessModal" class="modal hidden">
   <div class="modal-sheet">
     <div class="modal-top"><span class="modal-title">Guess the Song</span><button class="modal-close" id="closeGuess">×</button></div>
@@ -190,7 +223,7 @@
   </div>
 </div>
 
-<!-- DISCOVER -->
+<!-- ═══════════ DISCOVER ═══════════ -->
 <div id="discoverModal" class="modal hidden">
   <div class="modal-sheet">
     <div class="modal-top"><span class="modal-title">Help Identify</span><button class="modal-close" id="closeDiscover">×</button></div>
@@ -213,7 +246,7 @@
   </div>
 </div>
 
-<!-- LISTEN -->
+<!-- ═══════════ LISTEN ═══════════ -->
 <div id="listenModal" class="modal hidden">
   <div class="modal-sheet">
     <div class="modal-top"><span class="modal-title">Listen</span><button class="modal-close" id="closeListen">×</button></div>
@@ -224,13 +257,26 @@
   </div>
 </div>
 
-<!-- POSTCARD -->
+<!-- ═══════════ POSTCARD ═══════════ -->
 <div id="postcardModal" class="modal hidden">
   <div class="modal-sheet">
     <div class="modal-top"><span class="modal-title">Post</span><button class="modal-close" id="closePostcard">×</button></div>
     <div class="modal-body">
       <div class="postcard">
-        <div class="postcard-header">MARGO</div>
+        <!-- Brand-kit postcard header: MARGO wordmark with gold bar -->
+        <div class="postcard-header">
+          <span class="postcard-header-mark">
+            <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
+              <circle cx="40" cy="40" r="36" fill="#0B0B0D"/>
+              <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
+                    fill="none" stroke="#E8C547" stroke-width="5"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="35" y="60" width="10" height="3.5" rx="1.75"
+                    fill="#E8C547" opacity=".7"/>
+            </svg>
+          </span>
+          MARGO
+        </div>
         <div class="postcard-lyric" id="postcardLyric"></div>
         <div class="postcard-emotion" id="postcardEmotion"></div>
         <div class="postcard-song" id="postcardSong"></div>
@@ -245,7 +291,7 @@
   </div>
 </div>
 
-<!-- ANALYTICS -->
+<!-- ═══════════ ANALYTICS ═══════════ -->
 <div id="analyticsModal" class="modal hidden">
   <div class="modal-sheet">
     <div class="modal-top"><span class="modal-title">Analytics</span><button class="modal-close" id="closeAnalytics">×</button></div>
@@ -253,7 +299,10 @@
   </div>
 </div>
 
-<!-- MARGO STUDIO -->
+<!-- ═════════════════════════════════
+     MARGO STUDIO
+     (unchanged structure — script.js handles all logic)
+════════════════════════════════════ -->
 <div id="studioOverlay" class="studio-overlay hidden">
   <div class="studio-stage">
     <canvas id="studioCanvas"></canvas>
@@ -261,7 +310,17 @@
       <button class="studio-back-btn" id="closeStudio">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
       </button>
-      <span class="studio-title">MARGO · Studio</span>
+      <!-- Studio topbar uses full brand wordmark lockup -->
+      <span class="studio-title">
+        <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="14" height="14" style="vertical-align:middle;margin-right:5px">
+          <circle cx="40" cy="40" r="36" fill="#E8C547"/>
+          <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
+                fill="none" stroke="#0B0B0D" stroke-width="5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/>
+        </svg>
+        MARGO · Studio
+      </span>
       <button class="studio-export-btn" id="studioExportBtn">Export →</button>
     </div>
   </div>
@@ -286,7 +345,7 @@
     <div class="dock-panel active" id="panel-color">
       <div class="color-scenes">
         <button class="scene-swatch active" data-design="midnight-gold">
-          <span class="swatch-preview" style="background:linear-gradient(135deg,#0d0d0d 0%,#d4af37 100%)"></span>
+          <span class="swatch-preview" style="background:linear-gradient(135deg,#0d0d0d 0%,#E8C547 100%)"></span>
           <span class="swatch-label">Gold</span>
         </button>
         <button class="scene-swatch" data-design="royal-purple">
@@ -477,5 +536,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-
-
