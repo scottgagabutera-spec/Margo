@@ -1326,3 +1326,5 @@ function setupStatsBar() {
   alignStats();
   window.addEventListener('resize', alignStats);
 }
+
+
