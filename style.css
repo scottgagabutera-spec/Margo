@@ -20,6 +20,16 @@
   5. Postcard header: matches brand kit postcard-header pattern
   6. Studio midnight-gold swatch: primary updated to #E8C547
   ─────────────────────────────────────────────────────────────
+
+  v4.1 ADDITIONS (surgical — zero visual change to existing UI):
+  ─────────────────────────────────────────────────────────────
+  A. Spacing token system added to :root (--space-1 through --space-8)
+     Nothing migrated yet — tokens available for future use
+  B. prefers-reduced-motion: disables all animations/transitions for
+     users who have requested reduced motion in their OS settings
+  C. Emotion room tab bar styles (.room-tabs, .room-tab)
+     Sits below the search bar, above the feed grid
+  ─────────────────────────────────────────────────────────────
 */
 
 *, *::before, *::after {
@@ -58,6 +68,19 @@
   --font-ui:      'DM Sans', sans-serif;       /* Interface                    */
 
   --radius: 14px;
+
+  /* ── v4.1: Spacing Token System ──────────────────────────
+     Available for future use. Nothing in the existing UI
+     has been migrated — add to new components going forward.
+  ──────────────────────────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
 }
 
 html { height: 100%; }
@@ -69,6 +92,19 @@ body {
   min-height: 100%;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ── v4.1: REDUCED MOTION — respects OS accessibility setting ──
+   Disables all animations and transitions for users who have
+   "Reduce Motion" enabled. Zero visual change for everyone else.
+──────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── NOISE OVERLAY — brand kit opacity 0.025 ── */
@@ -480,6 +516,64 @@ body::before {
 mark.search-highlight {
   background: rgba(232,197,71,0.18); color: var(--gold);
   border-radius: 2px; padding: 0 1px; font-style: inherit;
+}
+
+/* ══════════════════════════════════════
+   v4.1: EMOTION ROOM TABS
+   Sits between search bar and feed grid.
+   Uses Space Mono (brand kit utility).
+   Active tab glows gold; "All" is default.
+══════════════════════════════════════ */
+.room-tabs-wrap {
+  padding: 12px 14px 0;
+  position: relative;
+}
+/* Fade edges on mobile scroll */
+.room-tabs-wrap::before,
+.room-tabs-wrap::after {
+  content: ''; position: absolute;
+  top: 0; bottom: 0; width: 20px; z-index: 2; pointer-events: none;
+}
+.room-tabs-wrap::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg) 30%, transparent);
+}
+.room-tabs-wrap::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg) 30%, transparent);
+}
+
+.room-tabs {
+  display: flex; gap: 6px;
+  overflow-x: auto; overflow-y: visible;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px; /* prevent clip on active border */
+}
+.room-tabs::-webkit-scrollbar { display: none; }
+
+.room-tab {
+  flex-shrink: 0;
+  padding: 6px 13px;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 0.55rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.room-tab:hover {
+  border-color: var(--gold-border);
+  color: var(--text-2);
+}
+.room-tab.active {
+  background: var(--gold-faint);
+  border-color: var(--gold-border);
+  color: var(--gold);
+  box-shadow: 0 0 10px rgba(232,197,71,0.08);
 }
 
 /* ══════════════════════════════════════
@@ -1189,22 +1283,13 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
 
 /* ═══════════════════════════════════════════════════════════
    SEO H1 — visually hidden from hero but present for Google
-   Matches headline typography, sits above the visual headline
 ════════════════════════════════════════════════════════════ */
 .seo-h1 {
   font-family: var(--font-display);
-  font-size: 0;
-  line-height: 0;
-  height: 0;
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
-  color: transparent;
-  /* Accessible to screen readers and crawlers, invisible visually */
-  position: absolute;
-  width: 1px;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  font-size: 0; line-height: 0; height: 0; overflow: hidden;
+  margin: 0; padding: 0; color: transparent;
+  position: absolute; width: 1px;
+  clip: rect(0 0 0 0); white-space: nowrap;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1216,36 +1301,22 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
   margin-top: 0;
 }
 .footer-inner {
-  max-width: 640px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
+  max-width: 640px; margin: 0 auto;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
 }
 .footer-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 20px;
+  display: flex; flex-wrap: wrap;
+  justify-content: center; gap: 6px 20px;
 }
 .footer-link {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(240, 240, 240, 0.4);
-  text-decoration: none;
+  font-family: var(--font-mono); font-size: 0.68rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(240, 240, 240, 0.4); text-decoration: none;
   transition: color 0.2s ease;
 }
-.footer-link:hover {
-  color: var(--gold);
-}
+.footer-link:hover { color: var(--gold); }
 .footer-copy {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.05em;
-  color: rgba(240, 240, 240, 0.2);
-  text-align: center;
-  margin: 0;
+  font-family: var(--font-mono); font-size: 0.6rem;
+  letter-spacing: 0.05em; color: rgba(240, 240, 240, 0.2);
+  text-align: center; margin: 0;
 }
