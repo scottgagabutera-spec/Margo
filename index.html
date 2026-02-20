@@ -19,7 +19,6 @@
 
   <!-- ═══════════════════════════════════════════════════════════
        OPEN GRAPH — WhatsApp, Facebook, Telegram, LinkedIn previews
-       This is what gives you the rich card with image + title
   ════════════════════════════════════════════════════════════ -->
   <meta property="og:type"         content="website"/>
   <meta property="og:site_name"    content="MARGO"/>
@@ -35,8 +34,7 @@
   <meta property="og:locale"       content="en_US"/>
 
   <!-- ═══════════════════════════════════════════════════════════
-       TWITTER / X CARD — shows rich card when shared on X
-       "summary_large_image" = big image like Spotify uses
+       TWITTER / X CARD
   ════════════════════════════════════════════════════════════ -->
   <meta name="twitter:card"        content="summary_large_image"/>
   <meta name="twitter:site"        content="@trymargo"/>
@@ -47,30 +45,27 @@
   <meta name="twitter:image:alt"   content="MARGO — Drop a Lyric"/>
 
   <!-- ═══════════════════════════════════════════════════════════
-       BROWSER / OS UI — tab colour, theme, app name
+       BROWSER / OS UI
   ════════════════════════════════════════════════════════════ -->
   <meta name="theme-color" content="#E8C547" media="(prefers-color-scheme: light)"/>
   <meta name="theme-color" content="#0B0B0D" media="(prefers-color-scheme: dark)"/>
   <meta name="color-scheme" content="dark light"/>
   <meta name="application-name" content="MARGO"/>
   <meta name="mobile-web-app-capable" content="yes">
-
-  <!-- iOS standalone app -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MARGO">
-
-  <!-- Windows tile -->
   <meta name="msapplication-TileColor" content="#E8C547"/>
   <meta name="msapplication-TileImage" content="/mstile-150x150.png"/>
   <meta name="msapplication-config"    content="/browserconfig.xml"/>
 
   <!-- ═══════════════════════════════════════════════════════════
-       FAVICONS — every platform covered
-       Order matters: browser reads top-to-bottom and picks best
+       FAVICONS
   ════════════════════════════════════════════════════════════ -->
   <!-- SVG favicon — modern browsers, scales perfectly at any size -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Inline favicon — works immediately even before favicon.svg is on the server -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 88 88'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23E8C547'/%3E%3Cpath d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57' fill='none' stroke='%230B0B0D' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='35' y='60' width='10' height='3.5' rx='1.75' fill='%230B0B0D' opacity='.55'/%3E%3C/svg%3E">
   <!-- ICO fallback — older browsers, Windows -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <!-- PNG fallbacks -->
@@ -86,8 +81,6 @@
 
   <!-- ═══════════════════════════════════════════════════════════
        JSON-LD STRUCTURED DATA
-       This is what tells Google *exactly* what MARGO is —
-       enables rich results in search (like Spotify's app card)
   ════════════════════════════════════════════════════════════ -->
   <script type="application/ld+json">
   {
@@ -111,11 +104,7 @@
         "applicationSubCategory": "Music-Based Communication Platform",
         "operatingSystem": "Web, iOS, Android",
         "description": "Margo is a social platform where people communicate through song lyrics and discover others through music. Drop a lyric that says what you feel, explore what others are sharing, and connect through the songs that matter.",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
         "screenshot": "https://trymargo.com/og-image.png",
         "featureList": [
           "Communicate through song lyrics",
@@ -139,23 +128,18 @@
           "width": 512,
           "height": 512
         },
-        "sameAs": [
-          "https://www.linkedin.com/company/trymargo"
-        ]
+        "sameAs": ["https://www.linkedin.com/company/trymargo"]
       }
     ]
   }
   </script>
 
   <!-- ═══════════════════════════════════════════════════════════
-       FONTS — brand kit typography stack
+       FONTS
   ════════════════════════════════════════════════════════════ -->
-  <!-- CRITICAL fonts — loads immediately (only what the page actually shows) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-
-  <!-- STUDIO fonts — loads on demand via preload -->
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Josefin+Sans:wght@300;400;700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 
   <link rel="stylesheet" href="style.css"/>
@@ -223,7 +207,6 @@
       <div class="stat-item"><span class="stat-num stat-sm" id="topEmotion">—</span><span class="stat-label">Trending Feeling</span></div>
     </div>
   </div>
-
 </section>
 
 <section id="feed">
@@ -252,10 +235,8 @@
     </div>
     <button class="header-btn primary" id="openComposer">Drop Lyric</button>
   </header>
-
   <div class="new-posts-bar" id="newPostsIndicator"><span id="newPostsCount">0</span> new lyrics — tap to see</div>
   <button class="scroll-top" id="scrollToTopBtn">↑ Back to top</button>
-
   <div class="feed-search-wrap">
     <div class="feed-search-inner">
       <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -266,9 +247,7 @@
       <span class="search-result-count" id="searchResultCount"></span>
     </div>
   </div>
-
   <div id="feedList"></div>
-
 </section>
 
 <footer class="site-footer">
@@ -277,7 +256,7 @@
       <a href="/about" class="footer-link">About</a>
       <a href="/privacy" class="footer-link">Privacy</a>
       <a href="/terms" class="footer-link">Terms</a>
-      <a href="/cdn-cgi/l/email-protection#9af2fff6f6f5daeee8e3f7fbe8fdf5b4f9f5f7" class="footer-link">Contact</a>
+      <a href="mailto:hello@trymargo.com" class="footer-link">Contact</a>
       <a href="https://linkedin.com/company/trymargo" class="footer-link" target="_blank" rel="noopener">LinkedIn</a>
     </nav>
     <p class="footer-copy">© 2025 Margo. A social platform for communicating through song lyrics.</p>
@@ -457,14 +436,12 @@
       <button class="studio-export-btn" id="studioExportBtn">Export →</button>
     </div>
   </div>
-
   <div class="studio-dock">
     <div class="dock-tabs">
       <button class="dock-tab active" data-tab="color"><span class="dock-tab-icon">◑</span><span>Color</span></button>
       <button class="dock-tab" data-tab="font"><span class="dock-tab-icon">Aa</span><span>Font</span></button>
       <button class="dock-tab" data-tab="photo"><span class="dock-tab-icon">⊙</span><span>Photo</span></button>
     </div>
-
     <div class="dock-panel active" id="panel-color">
       <div class="color-scenes">
         <button class="scene-swatch active" data-design="midnight-gold"><span class="swatch-preview" style="background:linear-gradient(135deg,#0d0d0d 0%,#E8C547 100%)"></span><span class="swatch-label">Gold</span></button>
@@ -486,7 +463,6 @@
         <span class="studio-slider-val" id="studioBrightnessVal">100%</span>
       </div>
     </div>
-
     <div class="dock-panel" id="panel-font">
       <div class="font-cards">
         <button class="font-card active" data-font="playfair"><span class="font-card-preview" style="font-family:'Playfair Display',serif;font-style:italic">Say everything</span><span class="font-card-name">Playfair</span></button>
@@ -499,7 +475,6 @@
         <button class="font-card" data-font="dancing"><span class="font-card-preview" style="font-family:'Dancing Script',cursive">Say everything</span><span class="font-card-name">Dancing</span></button>
       </div>
     </div>
-
     <div class="dock-panel" id="panel-photo">
       <div id="photoUploadZone" class="photo-drop-zone">
         <div class="photo-drop-icon">
@@ -525,7 +500,6 @@
       </div>
     </div>
   </div>
-
   <div class="size-picker hidden" id="sizePicker">
     <div class="size-picker-inner">
       <div class="size-picker-title">Choose your canvas</div>
@@ -539,7 +513,6 @@
       <button class="size-cancel" id="sizeCancelBtn">Cancel</button>
     </div>
   </div>
-
   <div class="ceremony-overlay hidden" id="ceremonyOverlay">
     <div class="ceremony-inner">
       <div class="ceremony-thumb-wrap"><canvas id="ceremonyThumb"></canvas></div>
