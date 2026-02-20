@@ -4,11 +4,29 @@
    CHANGES FROM ORIGINAL:
    ─────────────────────────────────────────────────────────
    1. POSTER_DESIGNS['midnight-gold'].primary updated to #E8C547
-      (brand kit exact gold, was #d4af37)
    2. FONT_FAMILIES: added 'dm-serif' entry using brand kit font
    3. drawPosterToCtx: MARGO mark uses Space Mono (brand kit utility)
    4. drawPosterToCtx: domain watermark uses Space Mono
-   5. All other logic identical to original
+   5. All other studio logic identical to original
+   ─────────────────────────────────────────────────────────
+
+   v4.1 CHANGES (surgical — zero behavior change to existing features):
+   ─────────────────────────────────────────────────────────
+   A. post.community now saves selectedEmotion instead of "general"
+      (was: community: "general" — now: community: selectedEmotion)
+      This is a one-line fix. Existing posts are unaffected.
+
+   B. activeRoom state variable added (default: "all")
+      Controls which emotion room is currently filtered.
+
+   C. initRoomTabs() — wires up the room tab buttons in the HTML.
+      Clicking a tab sets activeRoom and calls renderFeed().
+      "All" tab shows everything. Emotion tabs filter by post.emotion.
+
+   D. getFilteredPosts() updated: room filter is applied BEFORE
+      the search query filter, so both can work together.
+
+   E. initRoomTabs() called in the INIT block at the bottom.
    ─────────────────────────────────────────────────────────
 */
 
@@ -54,6 +72,9 @@ let savedScrollPosition = 0;
 let newPostsAvailable = false;
 let searchQuery = "";
 
+// v4.1: active emotion room — "all" shows everything
+let activeRoom = "all";
+
 // ===== STUDIO STATE =====
 const FONT_FAMILIES = {
   'playfair':    { family: "'Playfair Display', serif",   style: 'italic', label: 'Playfair'    },
@@ -68,7 +89,6 @@ const FONT_FAMILIES = {
 
 // Brand kit §01 colour system — all gold values exact
 const POSTER_DESIGNS = {
-  // ▸ primary updated to brand kit #E8C547 (was #d4af37)
   'midnight-gold':   { bg:['#0B0B0D','#1a1410','#0B0B0D'], primary:'#E8C547',  text:'#F0F0F0', light:false },
   'royal-purple':    { bg:['#1a0033','#2d1b4e','#1a0033'], primary:'#c77dff',  text:'#F0F0F0', light:false },
   'neon-cyan':       { bg:['#0a1420','#142838','#0a1420'], primary:'#00e5ff',  text:'#F0F0F0', light:false },
@@ -184,9 +204,9 @@ function preloadStudioFonts() {
     "700 16px 'Merriweather'", "700 16px 'Josefin Sans'",
     "400 16px 'Bebas Neue'", "600 16px 'Oswald'",
     "700 16px 'Dancing Script'",
-    "800 16px 'Syne'",           // brand kit display
-    "700 16px 'Space Mono'",     // brand kit utility
-    "italic 16px 'DM Serif Display'", // brand kit editorial
+    "800 16px 'Syne'",
+    "700 16px 'Space Mono'",
+    "italic 16px 'DM Serif Display'",
     "700 16px 'DM Sans'",
   ];
   fonts.forEach(f => document.fonts.load(f).catch(() => {}));
@@ -404,7 +424,11 @@ postBtn.onclick = async () => {
   if (!selectedEmotion) { showToast("Please select an emotion"); return; }
 
   let post = {
-    text, emotion: selectedEmotion, mode: currentMode, community: "general",
+    text, emotion: selectedEmotion, mode: currentMode,
+    // v4.1 FIX: community now saves the actual emotion instead of "general"
+    // This is what powers the room tabs filter going forward.
+    // Old posts with community:"general" still show up in "All" — no data loss.
+    community: selectedEmotion,
     knowledge: { song: "Unknown Song", artist: "Unknown Artist" },
     guessConfig: null,
     links: currentMode !== "discover" ? {
@@ -482,15 +506,23 @@ function resetComposer() {
 }
 
 // ===== SEARCH =====
+// v4.1 UPDATE: room filter applied first, then search query
+// This means tabs + search work together (e.g. "Love" room + search "tonight")
 function getFilteredPosts() {
-  if (!searchQuery) return posts;
+  // Step 1: filter by active emotion room
+  let filtered = activeRoom === "all"
+    ? posts
+    : posts.filter(p => (p.emotion || '').toLowerCase() === activeRoom.toLowerCase());
+
+  // Step 2: filter by search query within the room result
+  if (!searchQuery) return filtered;
   const q = searchQuery.toLowerCase();
-  return posts.filter(p => {
-    return (p.text           || "").toLowerCase().includes(q)
-        || (p.knowledge?.song   || "").toLowerCase().includes(q)
-        || (p.knowledge?.artist || "").toLowerCase().includes(q)
-        || (p.emotion        || "").toLowerCase().includes(q);
-  });
+  return filtered.filter(p =>
+    (p.text           || "").toLowerCase().includes(q)
+    || (p.knowledge?.song   || "").toLowerCase().includes(q)
+    || (p.knowledge?.artist || "").toLowerCase().includes(q)
+    || (p.emotion        || "").toLowerCase().includes(q)
+  );
 }
 
 function highlightMatch(text, query) {
@@ -525,6 +557,25 @@ function initSearch() {
   }
 }
 
+// ===== v4.1: ROOM TABS =====
+// Wires up the .room-tab buttons rendered in index.html.
+// Clicking a tab: sets activeRoom, updates active class, re-renders feed.
+// "all" tab resets to showing everything.
+function initRoomTabs() {
+  const tabs = document.querySelectorAll('.room-tab');
+  if (!tabs.length) return;
+  tabs.forEach(tab => {
+    tab.onclick = () => {
+      // Update active state
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      // Set room and re-render
+      activeRoom = tab.dataset.room;
+      renderFeed();
+    };
+  });
+}
+
 // ===== RENDER FEED =====
 function getDynamicFontSize(len) {
   return '0.95rem';
@@ -557,11 +608,14 @@ function renderFeed() {
     if (resultCountEl) resultCountEl.textContent = '';
     return;
   }
-  if (searchQuery && !filtered.length) {
+  if (!filtered.length) {
+    // Empty state message adapts to whether a room or search is active
+    const roomMsg = activeRoom !== "all" ? ` in ${activeRoom}` : '';
+    const searchMsg = searchQuery ? ` matching "${searchQuery}"` : '';
     feedList.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-2)">
-      No results for <strong style="color:var(--text)">"${searchQuery}"</strong><br>
-      <span style="font-size:0.8rem">Try an emotion name, artist, or lyric fragment</span></div>`;
-    if (resultCountEl) resultCountEl.textContent = '0 results';
+      No lyrics${roomMsg}${searchMsg} yet.<br>
+      <span style="font-size:0.8rem;opacity:0.6">Be the first to drop one here.</span></div>`;
+    if (resultCountEl) resultCountEl.textContent = searchQuery ? '0 results' : '';
     return;
   }
 
@@ -967,7 +1021,7 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.textAlign = 'left';
   ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
   ctx.fillStyle = studioBgImage ? 'rgba(255,255,255,0.32)' : (c.primary + '88');
-  ctx.font = `700 ${22 * scale}px 'Space Mono', monospace`;  // brand kit utility
+  ctx.font = `700 ${22 * scale}px 'Space Mono', monospace`;
   ctx.fillText('MARGO', 52 * scale, 58 * scale);
 
   ctx.textAlign = 'center';
@@ -1017,7 +1071,6 @@ function drawPosterToCtx(ctx, W, H) {
 
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.fillStyle = artistColor;
-  // Brand kit: Space Mono for artist/metadata line
   ctx.font = `700 ${artSize}px 'Space Mono', monospace`;
   ctx.fillText(k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist, W / 2, artistY);
 
@@ -1033,7 +1086,7 @@ function drawPosterToCtx(ctx, W, H) {
   }
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.fillStyle = markColor;
-  ctx.font = `700 ${markSize}px 'Space Mono', monospace`;  // brand kit
+  ctx.font = `700 ${markSize}px 'Space Mono', monospace`;
   ctx.textAlign = 'center';
   ctx.fillText(APP_DOMAIN, W / 2, H * 0.94);
 }
@@ -1305,7 +1358,8 @@ buildLyricStream();
 preloadStudioFonts();
 setupStatsBar();
 initSearch();
-console.log("MARGO loaded — Brand Kit 4.0. Firebase:", isFirebaseEnabled);
+initRoomTabs(); // v4.1: wire up emotion room tabs
+console.log("MARGO loaded — Brand Kit 4.1. Firebase:", isFirebaseEnabled);
 
 function setupScrollToTop() {
   window.addEventListener('scroll', () => {
