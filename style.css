@@ -1186,3 +1186,66 @@ details[open] .stream-toggle { color: var(--gold); border-color: var(--gold-bord
   .font-cards { grid-template-columns: repeat(4,1fr); }
   .color-scenes { grid-template-columns: repeat(12,1fr); }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SEO H1 — visually hidden from hero but present for Google
+   Matches headline typography, sits above the visual headline
+════════════════════════════════════════════════════════════ */
+.seo-h1 {
+  font-family: var(--font-display);
+  font-size: 0;
+  line-height: 0;
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  color: transparent;
+  /* Accessible to screen readers and crawlers, invisible visually */
+  position: absolute;
+  width: 1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SITE FOOTER
+════════════════════════════════════════════════════════════ */
+.site-footer {
+  padding: 32px 24px 40px;
+  border-top: 1px solid rgba(232, 197, 71, 0.1);
+  margin-top: 0;
+}
+.footer-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 20px;
+}
+.footer-link {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(240, 240, 240, 0.4);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.footer-link:hover {
+  color: var(--gold);
+}
+.footer-copy {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+  color: rgba(240, 240, 240, 0.2);
+  text-align: center;
+  margin: 0;
+}
