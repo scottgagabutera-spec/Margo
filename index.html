@@ -155,21 +155,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-  <!-- STUDIO fonts — lazy loaded only when user opens Studio -->
-  <script>
-    function loadStudioFonts() {
-      if (document.getElementById('studio-fonts')) return;
-      var l = document.createElement('link');
-      l.id = 'studio-fonts';
-      l.rel = 'stylesheet';
-      l.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Josefin+Sans:wght@300;400;700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@400;700&display=swap';
-      document.head.appendChild(l);
-    }
-    document.addEventListener('DOMContentLoaded', function() {
-      var btn = document.getElementById('sharePosterBtn');
-      if (btn) btn.addEventListener('click', loadStudioFonts, { once: true });
-    });
-  </script>
+  <!-- STUDIO fonts — loads on demand via preload -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Josefin+Sans:wght@300;400;700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 
   <link rel="stylesheet" href="style.css"/>
 </head>
@@ -293,6 +280,19 @@
   </div>
 
   <div id="feedList"></div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="/about" class="footer-link">About</a>
+        <a href="/privacy" class="footer-link">Privacy</a>
+        <a href="/terms" class="footer-link">Terms</a>
+        <a href="mailto:hello@trymargo.com" class="footer-link">Contact</a>
+        <a href="https://linkedin.com/company/trymargo" class="footer-link" target="_blank" rel="noopener">LinkedIn</a>
+      </nav>
+      <p class="footer-copy">© 2025 Margo. A social platform for communicating through song lyrics.</p>
+    </div>
+  </footer>
 </section>
 
 <!-- COMPOSER -->
