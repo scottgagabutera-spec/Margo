@@ -62,21 +62,14 @@
   <!-- ═══════════════════════════════════════════════════════════
        FAVICONS
   ════════════════════════════════════════════════════════════ -->
-  <!-- SVG favicon — modern browsers, scales perfectly at any size -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <!-- Inline favicon — works immediately even before favicon.svg is on the server -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 88 88'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23E8C547'/%3E%3Cpath d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57' fill='none' stroke='%230B0B0D' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='35' y='60' width='10' height='3.5' rx='1.75' fill='%230B0B0D' opacity='.55'/%3E%3C/svg%3E">
-  <!-- ICO fallback — older browsers, Windows -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <!-- PNG fallbacks -->
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <!-- Apple devices — home screen icon -->
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <!-- Android / Chrome home screen -->
   <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
-  <!-- PWA manifest -->
   <link rel="manifest" href="/site.webmanifest">
 
   <!-- ═══════════════════════════════════════════════════════════
@@ -247,6 +240,28 @@
       <span class="search-result-count" id="searchResultCount"></span>
     </div>
   </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       v4.1 EMOTION ROOM TABS
+       Sits between search and feed grid.
+       "All" is active by default (data-room="all").
+       JS wires these up in initRoomTabs() — no inline handlers.
+       Adding a new emotion: just add a new .room-tab button here.
+  ════════════════════════════════════════════════════════════ -->
+  <div class="room-tabs-wrap" role="tablist" aria-label="Filter by emotion">
+    <div class="room-tabs">
+      <button class="room-tab active" data-room="all" role="tab" aria-selected="true">All</button>
+      <button class="room-tab" data-room="Love" role="tab" aria-selected="false">Love</button>
+      <button class="room-tab" data-room="Heartbreak" role="tab" aria-selected="false">Heartbreak</button>
+      <button class="room-tab" data-room="Hope" role="tab" aria-selected="false">Hope</button>
+      <button class="room-tab" data-room="Nostalgia" role="tab" aria-selected="false">Nostalgia</button>
+      <button class="room-tab" data-room="Healing" role="tab" aria-selected="false">Healing</button>
+      <button class="room-tab" data-room="Joy" role="tab" aria-selected="false">Joy</button>
+      <button class="room-tab" data-room="Rage" role="tab" aria-selected="false">Rage</button>
+      <button class="room-tab" data-room="Loneliness" role="tab" aria-selected="false">Loneliness</button>
+    </div>
+  </div>
+
   <div id="feedList"></div>
 </section>
 
