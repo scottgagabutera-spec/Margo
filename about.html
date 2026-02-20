@@ -28,7 +28,9 @@
   <meta name="application-name" content="MARGO"/>
   <meta name="apple-mobile-web-app-title" content="MARGO">
 
+  <!-- ═══ FAVICONS ═══ -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 88 88'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23E8C547'/%3E%3Cpath d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57' fill='none' stroke='%230B0B0D' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='35' y='60' width='10' height='3.5' rx='1.75' fill='%230B0B0D' opacity='.55'/%3E%3C/svg%3E">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -43,13 +45,8 @@
     "name": "About Margo",
     "description": "Margo is a social platform where people communicate through song lyrics, share what they are feeling, and discover others through music.",
     "inLanguage": "en-US",
-    "isPartOf": {
-      "@id": "https://trymargo.com/#website"
-    },
-    "about": {
-      "@type": "Organization",
-      "@id": "https://trymargo.com/#organization"
-    },
+    "isPartOf": { "@id": "https://trymargo.com/#website" },
+    "about": { "@type": "Organization", "@id": "https://trymargo.com/#organization" },
     "breadcrumb": {
       "@type": "BreadcrumbList",
       "itemListElement": [
@@ -66,301 +63,52 @@
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg:         #0B0B0D;
-      --gold:       #E8C547;
-      --gold-2:     #D4A832;
-      --text:       #F0F0F0;
-      --text-muted: rgba(240,240,240,0.45);
-      --surface:    rgba(255,255,255,0.04);
-      --border:     rgba(232,197,71,0.12);
-      --font-display: 'Syne', sans-serif;
-      --font-lyric:   'DM Serif Display', serif;
-      --font-mono:    'Space Mono', monospace;
-      --font-body:    'DM Sans', sans-serif;
+      --bg: #0B0B0D; --gold: #E8C547; --gold-2: #D4A832;
+      --text: #F0F0F0; --text-muted: rgba(240,240,240,0.45);
+      --surface: rgba(255,255,255,0.04); --border: rgba(232,197,71,0.12);
+      --font-display: 'Syne', sans-serif; --font-lyric: 'DM Serif Display', serif;
+      --font-mono: 'Space Mono', monospace; --font-body: 'DM Sans', sans-serif;
     }
-
     html { background: var(--bg); color: var(--text); scroll-behavior: smooth; }
-    body {
-      font-family: var(--font-body);
-      background: var(--bg);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* ── Ambient ── */
-    .ambient {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(90px);
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.04;
-    }
-    .ambient-1 {
-      width: 500px; height: 500px;
-      background: var(--gold);
-      top: -150px; left: -150px;
-    }
-    .ambient-2 {
-      width: 400px; height: 400px;
-      background: var(--gold);
-      bottom: -100px; right: -100px;
-    }
-
-    /* ── Nav ── */
-    .nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      height: 56px;
-      background: rgba(11,11,13,0.9);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-      color: var(--text);
-    }
-    .nav-logo-mark {
-      width: 28px; height: 28px;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    body { font-family: var(--font-body); background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+    .ambient { position: fixed; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0; opacity: 0.04; }
+    .ambient-1 { width: 500px; height: 500px; background: var(--gold); top: -150px; left: -150px; }
+    .ambient-2 { width: 400px; height: 400px; background: var(--gold); bottom: -100px; right: -100px; }
+    .nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; background: rgba(11,11,13,0.9); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+    .nav-logo-mark { width: 28px; height: 28px; position: relative; display: flex; align-items: center; justify-content: center; }
     .nav-logo-mark svg { width: 28px; height: 28px; }
-    .nav-logo-text {
-      font-family: var(--font-display);
-      font-size: 0.78rem;
-      font-weight: 800;
-      letter-spacing: 0.22em;
-      color: var(--gold);
-    }
-    .nav-home-btn {
-      font-family: var(--font-mono);
-      font-size: 0.68rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 7px 14px;
-      cursor: pointer;
-      text-decoration: none;
-      transition: color 0.2s, border-color 0.2s;
-    }
+    .nav-logo-text { font-family: var(--font-display); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.22em; color: var(--gold); }
+    .nav-home-btn { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); background: none; border: 1px solid var(--border); border-radius: 20px; padding: 7px 14px; cursor: pointer; text-decoration: none; transition: color 0.2s, border-color 0.2s; }
     .nav-home-btn:hover { color: var(--gold); border-color: rgba(232,197,71,0.4); }
-
-    /* ── Main content ── */
-    main {
-      flex: 1;
-      position: relative;
-      z-index: 1;
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 64px 24px 80px;
-      width: 100%;
-    }
-
-    /* ── Breadcrumb ── */
-    .breadcrumb {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 48px;
-    }
-    .breadcrumb a {
-      font-family: var(--font-mono);
-      font-size: 0.62rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
+    main { flex: 1; position: relative; z-index: 1; max-width: 680px; margin: 0 auto; padding: 64px 24px 80px; width: 100%; }
+    .breadcrumb { display: flex; align-items: center; gap: 8px; margin-bottom: 48px; }
+    .breadcrumb a { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
     .breadcrumb a:hover { color: var(--gold); }
-    .breadcrumb-sep {
-      font-family: var(--font-mono);
-      font-size: 0.6rem;
-      color: rgba(240,240,240,0.2);
-    }
-    .breadcrumb-current {
-      font-family: var(--font-mono);
-      font-size: 0.62rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--gold);
-    }
-
-    /* ── Article header ── */
-    .about-label {
-      font-family: var(--font-mono);
-      font-size: 0.62rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--gold);
-      display: block;
-      margin-bottom: 16px;
-    }
-    h1.about-h1 {
-      font-family: var(--font-display);
-      font-size: clamp(1.9rem, 5vw, 2.8rem);
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -0.01em;
-      color: var(--text);
-      margin-bottom: 20px;
-    }
-    h1.about-h1 em {
-      color: var(--gold);
-      font-style: normal;
-    }
-    .about-lead {
-      font-family: var(--font-lyric);
-      font-style: italic;
-      font-size: 1.15rem;
-      line-height: 1.65;
-      color: rgba(240,240,240,0.75);
-      margin-bottom: 48px;
-      padding-bottom: 32px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    /* ── Body copy ── */
-    .about-body {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-    .about-body p {
-      font-size: 1rem;
-      line-height: 1.75;
-      color: rgba(240,240,240,0.72);
-    }
-    .about-body strong {
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    /* ── Section heading ── */
-    .about-section-label {
-      font-family: var(--font-mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--gold);
-      display: block;
-      margin-top: 16px;
-      margin-bottom: 10px;
-    }
-
-    /* ── Gold pull quote ── */
-    .about-quote {
-      border-left: 2px solid var(--gold);
-      padding: 4px 0 4px 20px;
-      margin: 8px 0;
-    }
-    .about-quote p {
-      font-family: var(--font-lyric);
-      font-style: italic;
-      font-size: 1.05rem;
-      line-height: 1.6;
-      color: rgba(240,240,240,0.85) !important;
-    }
-
-    /* ── CTA block ── */
-    .about-cta {
-      margin-top: 48px;
-      padding-top: 32px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      align-items: flex-start;
-    }
-    .about-cta-label {
-      font-family: var(--font-mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-    }
-    .btn-primary-about {
-      display: inline-block;
-      background: var(--gold);
-      color: #0B0B0D;
-      font-family: var(--font-display);
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      padding: 13px 28px;
-      border-radius: 30px;
-      text-decoration: none;
-      border: none;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.15s;
-    }
-    .btn-primary-about:hover {
-      background: var(--gold-2);
-      transform: translateY(-1px);
-    }
-
-    /* ── Footer ── */
-    .site-footer {
-      position: relative;
-      z-index: 1;
-      padding: 28px 24px 36px;
-      border-top: 1px solid var(--border);
-    }
-    .footer-inner {
-      max-width: 680px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 14px;
-    }
-    .footer-links {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 6px 20px;
-    }
-    .footer-link {
-      font-family: var(--font-mono);
-      font-size: 0.65rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: rgba(240,240,240,0.35);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
+    .breadcrumb-sep { font-family: var(--font-mono); font-size: 0.6rem; color: rgba(240,240,240,0.2); }
+    .breadcrumb-current { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); }
+    .about-label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); display: block; margin-bottom: 16px; }
+    h1.about-h1 { font-family: var(--font-display); font-size: clamp(1.9rem, 5vw, 2.8rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; color: var(--text); margin-bottom: 20px; }
+    h1.about-h1 em { color: var(--gold); font-style: normal; }
+    .about-lead { font-family: var(--font-lyric); font-style: italic; font-size: 1.15rem; line-height: 1.65; color: rgba(240,240,240,0.75); margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+    .about-body { display: flex; flex-direction: column; gap: 24px; }
+    .about-body p { font-size: 1rem; line-height: 1.75; color: rgba(240,240,240,0.72); }
+    .about-body strong { color: var(--text); font-weight: 600; }
+    .about-section-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); display: block; margin-top: 16px; margin-bottom: 10px; }
+    .about-quote { border-left: 2px solid var(--gold); padding: 4px 0 4px 20px; margin: 8px 0; }
+    .about-quote p { font-family: var(--font-lyric); font-style: italic; font-size: 1.05rem; line-height: 1.6; color: rgba(240,240,240,0.85) !important; }
+    .about-cta { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+    .about-cta-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+    .btn-primary-about { display: inline-block; background: var(--gold); color: #0B0B0D; font-family: var(--font-display); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 13px 28px; border-radius: 30px; text-decoration: none; border: none; cursor: pointer; transition: background 0.2s, transform 0.15s; }
+    .btn-primary-about:hover { background: var(--gold-2); transform: translateY(-1px); }
+    .site-footer { position: relative; z-index: 1; padding: 28px 24px 36px; border-top: 1px solid var(--border); }
+    .footer-inner { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 20px; }
+    .footer-link { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(240,240,240,0.35); text-decoration: none; transition: color 0.2s; }
     .footer-link:hover { color: var(--gold); }
-    .footer-copy {
-      font-family: var(--font-mono);
-      font-size: 0.58rem;
-      letter-spacing: 0.05em;
-      color: rgba(240,240,240,0.18);
-      text-align: center;
-      margin: 0;
-    }
-
-    @media (max-width: 480px) {
-      main { padding: 40px 20px 64px; }
-      .nav { padding: 0 16px; }
-    }
+    .footer-copy { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.05em; color: rgba(240,240,240,0.18); text-align: center; margin: 0; }
+    @media (max-width: 480px) { main { padding: 40px 20px 64px; } .nav { padding: 0 16px; } }
   </style>
 </head>
 <body>
@@ -373,9 +121,7 @@
     <span class="nav-logo-mark">
       <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <circle cx="40" cy="40" r="36" fill="#E8C547"/>
-        <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
-              fill="none" stroke="#0B0B0D" stroke-width="5"
-              stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
         <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/>
       </svg>
     </span>
@@ -393,61 +139,26 @@
 
   <article>
     <span class="about-label">About Margo</span>
-
-    <h1 class="about-h1">
-      A social platform to <em>communicate through song lyrics</em>
-    </h1>
-
-    <p class="about-lead">
-      Some things are easier to say through someone else's words. A lyric that stops you mid-song. A line you've had stuck in your head for days because it says exactly what you can't. Margo is built for that moment.
-    </p>
+    <h1 class="about-h1">A social platform to <em>communicate through song lyrics</em></h1>
+    <p class="about-lead">Some things are easier to say through someone else's words. A lyric that stops you mid-song. A line you've had stuck in your head for days because it says exactly what you can't. Margo is built for that moment.</p>
 
     <div class="about-body">
-
       <span class="about-section-label">What Margo is</span>
-
-      <p>
-        <strong>Margo is a social platform where people communicate through song lyrics.</strong> Instead of writing a status or posting a thought, you drop a lyric — and let the song do the talking. It's a real-time community feed of what people are actually feeling, expressed through the music that captures it best.
-      </p>
-
-      <p>
-        Every lyric on Margo is a signal. A lyric tagged <em>Heartbreak</em> at 2am says something. A lyric tagged <em>Hope</em> on a Monday morning says something else. Together, they form a living snapshot of how people are moving through the world — communicated entirely through music.
-      </p>
-
-      <div class="about-quote">
-        <p>When words fail, a lyric says it all. Margo is where those lyrics land.</p>
-      </div>
+      <p><strong>Margo is a social platform where people communicate through song lyrics.</strong> Instead of writing a status or posting a thought, you drop a lyric — and let the song do the talking. It's a real-time community feed of what people are actually feeling, expressed through the music that captures it best.</p>
+      <p>Every lyric on Margo is a signal. A lyric tagged <em>Heartbreak</em> at 2am says something. A lyric tagged <em>Hope</em> on a Monday morning says something else. Together, they form a living snapshot of how people are moving through the world — communicated entirely through music.</p>
+      <div class="about-quote"><p>When words fail, a lyric says it all. Margo is where those lyrics land.</p></div>
 
       <span class="about-section-label">How it works</span>
-
-      <p>
-        You open Margo, type or paste a lyric, tag it with an emotion, and post it. From there, others in the community can see what you're feeling, identify the song, or share one back. There are no follower counts, no algorithms surfacing only the popular — just lyrics, feelings, and the music connecting them.
-      </p>
-
-      <p>
-        Margo also includes <strong>Studio</strong> — a poster creator that lets you turn any lyric into a shareable image. Choose a color palette, pick a font, optionally add a photo, and export. A lyric that hits deserves to look the part.
-      </p>
+      <p>You open Margo, type or paste a lyric, tag it with an emotion, and post it. From there, others in the community can see what you're feeling, identify the song, or share one back. There are no follower counts, no algorithms surfacing only the popular — just lyrics, feelings, and the music connecting them.</p>
+      <p>Margo also includes <strong>Studio</strong> — a poster creator that lets you turn any lyric into a shareable image. Choose a color palette, pick a font, optionally add a photo, and export. A lyric that hits deserves to look the part.</p>
 
       <span class="about-section-label">Who it's for</span>
-
-      <p>
-        Margo is for anyone who has ever let music speak for them. People who discover others through music rather than through profiles. People who communicate more honestly through a lyric than a caption. People who want a space where the song is the point — not the person posting it.
-      </p>
-
-      <p>
-        It's for the person who puts a song on in the car and just needs someone else to hear that exact line right now. For the person who finds a community not through shared opinions, but through shared taste. For anyone who has ever said "this song is literally my life" and meant it completely.
-      </p>
+      <p>Margo is for anyone who has ever let music speak for them. People who discover others through music rather than through profiles. People who communicate more honestly through a lyric than a caption. People who want a space where the song is the point — not the person posting it.</p>
+      <p>It's for the person who puts a song on in the car and just needs someone else to hear that exact line right now. For the person who finds a community not through shared opinions, but through shared taste. For anyone who has ever said "this song is literally my life" and meant it completely.</p>
 
       <span class="about-section-label">Why it matters</span>
-
-      <p>
-        Music has always been a social language — we share songs to say things we can't say ourselves. But most social platforms treat music as content to be consumed, not as communication. Margo flips that. Here, the lyric is the message. The song is how you introduce yourself. Discovering others through music means discovering something real — not a curated persona, but a genuine feeling expressed through art someone else made and you claimed as your own.
-      </p>
-
-      <p>
-        Margo is free to use. You don't need an account to browse the feed. Drop your first lyric in under thirty seconds. The community is live right now.
-      </p>
-
+      <p>Music has always been a social language — we share songs to say things we can't say ourselves. But most social platforms treat music as content to be consumed, not as communication. Margo flips that. Here, the lyric is the message. The song is how you introduce yourself. Discovering others through music means discovering something real — not a curated persona, but a genuine feeling expressed through art someone else made and you claimed as your own.</p>
+      <p>Margo is free to use. You don't need an account to browse the feed. Drop your first lyric in under thirty seconds. The community is live right now.</p>
     </div>
 
     <div class="about-cta">
