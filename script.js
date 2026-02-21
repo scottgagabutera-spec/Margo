@@ -557,6 +557,34 @@ function initSearch() {
   }
 }
 
+// ===== FEED RANKING =====
+function calculatePostScore(post) {
+  const now = Date.now();
+  const ageInHours = post.timestamp
+    ? (now - post.timestamp) / (1000 * 60 * 60)
+    : 999; // defensive: missing timestamp treated as very old
+
+  const recencyScore = Math.max(0, 48 - ageInHours);
+
+  const analytics = postAnalytics[post.id] || {};
+  const views   = analytics.views || 0;
+  const guesses = Object.keys(analytics.guesses || {}).length;
+  const helps   = Object.keys(analytics.helps   || {}).length;
+
+  return (
+    (recencyScore * 0.4) +
+    (views        * 0.2) +
+    (guesses      * 0.25) +
+    (helps        * 0.15)
+  );
+}
+
+function getRankedPosts() {
+  return getFilteredPosts().sort((a, b) =>
+    calculatePostScore(b) - calculatePostScore(a)
+  );
+}
+
 // ===== v4.1: ROOM TABS =====
 // Wires up the .room-tab buttons rendered in index.html.
 // Clicking a tab: sets activeRoom, updates active class, re-renders feed.
@@ -596,7 +624,7 @@ function renderFeed() {
   feedList.innerHTML = "";
   updateLandingStats();
 
-  const filtered      = getFilteredPosts();
+  const filtered      = getRankedPosts();
   const resultCountEl = document.getElementById("searchResultCount");
 
   if (!postsLoaded) {
