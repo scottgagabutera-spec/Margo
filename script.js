@@ -1447,17 +1447,32 @@ if (isFirebaseEnabled) {
   adminConfigRef = firebase.database().ref('adminConfig');
 }
 
-// ── Keyboard trigger ──
+// ── Keyboard trigger — B + G held simultaneously ──
+// Chosen to avoid all browser shortcut conflicts.
+// Guard prevents accidental trigger while typing in inputs.
+const _adminKeysHeld = new Set();
+
 function initAdmin() {
   document.addEventListener('keydown', e => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-      e.preventDefault();
+    _adminKeysHeld.add(e.key.toLowerCase());
+
+    if (_adminKeysHeld.has('b') && _adminKeysHeld.has('g')) {
+      _adminKeysHeld.clear();
+
+      // Don't fire if user is typing in a text field
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
       if (adminMode) {
         openAdminPanel();
       } else {
         showAdminLogin();
       }
     }
+  });
+
+  document.addEventListener('keyup', e => {
+    _adminKeysHeld.delete(e.key.toLowerCase());
   });
 
   // Keep adminMode in sync if user signs out elsewhere
