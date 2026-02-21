@@ -291,6 +291,21 @@ function calcFeatured() {
   };
 }
 
+// Called once on page load to show shimmer placeholders immediately
+// so the stats bar never looks blank while Firebase loads
+function initStatsShimmer() {
+  const shimmerIds = [
+    "statTotal","featuredArtistCount","featuredSongCount",
+    "topArtistName","topSongName","topEmotion"
+  ];
+  shimmerIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.textContent === '—') {
+      el.innerHTML = '<span class="stat-shimmer">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';
+    }
+  });
+}
+
 function updateLandingStats() {
   const n = posts.length || 0;
   const $ = id => document.getElementById(id);
@@ -1385,14 +1400,16 @@ function showToast(msg) {
 }
 
 // ===== INIT =====
+initStatsShimmer();   // v4.3: show shimmer immediately before Firebase loads
 setupScrollToTop();
 buildLyricStream();
 preloadStudioFonts();
 setupStatsBar();
 initSearch();
-initRoomTabs(); // v4.1: wire up emotion room tabs
-initAdmin();    // v4.2: admin moderation system
-console.log("MARGO loaded — Brand Kit 4.2. Firebase:", isFirebaseEnabled);
+initRoomTabs();    // v4.1: wire up emotion room tabs
+initAdmin();       // v4.2: admin moderation system
+initAIInspire();   // v4.3: AI lyric suggestion assistant
+console.log("MARGO loaded — Brand Kit 4.3. Firebase:", isFirebaseEnabled);
 
 function setupScrollToTop() {
   window.addEventListener('scroll', () => {
@@ -1413,6 +1430,174 @@ function setupStatsBar() {
   }
   alignStats();
   window.addEventListener('resize', alignStats);
+}
+
+/* ============================================================
+   AI INSPIRE SYSTEM — v4.3
+   ============================================================
+   When user selects an emotion in the composer, an
+   "Inspire me" button appears. Tapping it calls the
+   Anthropic API and returns 3 original poetic line
+   suggestions matching that emotion.
+
+   NO lyrics are stored or reproduced — all suggestions
+   are original AI-generated lines. Copyright safe.
+   ============================================================ */
+
+function initAIInspire() {
+  // Show inspire button when emotion is selected
+  document.querySelectorAll('.emotion-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const wrap = document.getElementById('inspireWrap');
+      if (wrap) {
+        wrap.style.display = 'block';
+        // Reset suggestions when emotion changes
+        const suggestions = document.getElementById('inspireSuggestions');
+        if (suggestions) {
+          suggestions.style.display = 'none';
+          suggestions.innerHTML = '';
+        }
+      }
+    });
+  });
+
+  // Wire up inspire button
+  const inspireBtn = document.getElementById('inspireBtn');
+  if (!inspireBtn) return;
+
+  inspireBtn.addEventListener('click', async () => {
+    if (!selectedEmotion) return;
+    await fetchAISuggestions(selectedEmotion);
+  });
+}
+
+async function fetchAISuggestions(emotion) {
+  const btn         = document.getElementById('inspireBtn');
+  const container   = document.getElementById('inspireSuggestions');
+  if (!btn || !container) return;
+
+  // Loading state
+  const originalText = btn.textContent;
+  btn.textContent    = '✦ Generating…';
+  btn.disabled       = true;
+  container.style.display = 'flex';
+  container.innerHTML = `
+    <div style="text-align:center;padding:14px;
+      font-family:'Space Mono',monospace;font-size:0.5rem;
+      color:#707078;text-transform:uppercase;letter-spacing:1px;">
+      Thinking of something for ${emotion.toLowerCase()}…
+    </div>`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        system: `You are a poetic writing assistant for a music-based social platform called Margo.
+Users share short lyric-style lines (max 140 chars) that express how they feel.
+Your job: suggest 3 original, evocative lines matching the requested emotion.
+Rules:
+- Never reproduce real song lyrics
+- Each line must be original and poetic
+- Max 100 characters per line
+- No quotation marks around the lines
+- Return ONLY a JSON array of 3 strings, nothing else
+- Example format: ["line one here","line two here","line three here"]`,
+        messages: [{
+          role: 'user',
+          content: `Suggest 3 original poetic lines for the emotion: ${emotion}`
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const raw  = data?.content?.[0]?.text || '[]';
+
+    // Parse the JSON array safely
+    const clean      = raw.replace(/```json|```/g, '').trim();
+    const suggestions = JSON.parse(clean);
+
+    if (!Array.isArray(suggestions) || suggestions.length === 0) {
+      throw new Error('No suggestions returned');
+    }
+
+    // Render suggestion pills
+    container.innerHTML = '';
+    suggestions.forEach(line => {
+      if (!line || typeof line !== 'string') return;
+      const pill = document.createElement('button');
+      pill.type  = 'button';
+      pill.style.cssText = `
+        width:100%;padding:11px 13px;border-radius:10px;
+        background:rgba(255,255,255,0.04);
+        border:1px solid rgba(255,255,255,0.08);
+        color:#E8E8F0;font-family:'DM Serif Display',serif;
+        font-style:italic;font-size:0.9rem;line-height:1.5;
+        text-align:left;cursor:pointer;transition:all 0.18s;
+      `;
+      pill.textContent = line.trim();
+
+      // Tap to use — fills textarea
+      pill.addEventListener('click', () => {
+        const textInput = document.getElementById('textInput');
+        const charCount = document.getElementById('charCount');
+        if (textInput) {
+          textInput.value = line.trim().substring(0, 140);
+          if (charCount) charCount.textContent = textInput.value.length;
+          textInput.focus();
+        }
+        // Highlight selected
+        container.querySelectorAll('button').forEach(b => {
+          b.style.background = 'rgba(255,255,255,0.04)';
+          b.style.borderColor = 'rgba(255,255,255,0.08)';
+        });
+        pill.style.background   = 'rgba(232,197,71,0.1)';
+        pill.style.borderColor  = 'rgba(232,197,71,0.3)';
+      });
+
+      // Hover effect
+      pill.addEventListener('mouseenter', () => {
+        pill.style.background  = 'rgba(255,255,255,0.07)';
+        pill.style.borderColor = 'rgba(255,255,255,0.14)';
+      });
+      pill.addEventListener('mouseleave', () => {
+        if (pill.style.borderColor !== 'rgba(232,197,71,0.3)') {
+          pill.style.background  = 'rgba(255,255,255,0.04)';
+          pill.style.borderColor = 'rgba(255,255,255,0.08)';
+        }
+      });
+
+      container.appendChild(pill);
+    });
+
+    // Add refresh button
+    const refresh = document.createElement('button');
+    refresh.type  = 'button';
+    refresh.style.cssText = `
+      width:100%;padding:8px;border-radius:8px;
+      background:transparent;border:1px dashed rgba(232,197,71,0.2);
+      color:#707078;font-family:'Space Mono',monospace;
+      font-size:0.48rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:1px;cursor:pointer;margin-top:2px;
+    `;
+    refresh.textContent = '↻ New suggestions';
+    refresh.addEventListener('click', () => fetchAISuggestions(selectedEmotion));
+    container.appendChild(refresh);
+
+  } catch (err) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:12px;
+        font-family:'Space Mono',monospace;font-size:0.5rem;
+        color:#707078;text-transform:uppercase;letter-spacing:1px;">
+        Couldn't get suggestions — try again
+      </div>`;
+    console.warn('AI inspire error:', err);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled    = false;
+  }
 }
 
 /* ============================================================
