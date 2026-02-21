@@ -1447,26 +1447,35 @@ if (isFirebaseEnabled) {
   adminConfigRef = firebase.database().ref('adminConfig');
 }
 
-// ── Keyboard trigger — B + G held simultaneously ──
+// ── Keyboard trigger — B + G pressed within 300ms of each other ──
 // Chosen to avoid all browser shortcut conflicts.
 // Guard prevents accidental trigger while typing in inputs.
 const _adminKeysHeld = new Set();
+let _adminKeyTimer = null;
 
 function initAdmin() {
   document.addEventListener('keydown', e => {
-    _adminKeysHeld.add(e.key.toLowerCase());
+    const key = e.key.toLowerCase();
 
-    if (_adminKeysHeld.has('b') && _adminKeysHeld.has('g')) {
-      _adminKeysHeld.clear();
+    // Don't fire if user is typing in a text field
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
-      // Don't fire if user is typing in a text field
-      const tag = document.activeElement?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (key === 'b' || key === 'g') {
+      _adminKeysHeld.add(key);
 
-      if (adminMode) {
-        openAdminPanel();
-      } else {
-        showAdminLogin();
+      // Clear the set after 300ms — both keys must be pressed within that window
+      clearTimeout(_adminKeyTimer);
+      _adminKeyTimer = setTimeout(() => _adminKeysHeld.clear(), 300);
+
+      if (_adminKeysHeld.has('b') && _adminKeysHeld.has('g')) {
+        _adminKeysHeld.clear();
+        clearTimeout(_adminKeyTimer);
+        if (adminMode) {
+          openAdminPanel();
+        } else {
+          showAdminLogin();
+        }
       }
     }
   });
