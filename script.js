@@ -1436,9 +1436,9 @@ function setupStatsBar() {
    AI INSPIRE SYSTEM — v4.3
    ============================================================
    When user selects an emotion in the composer, an
-   "Inspire me" button appears. Tapping it calls the
-   Anthropic API and returns 3 original poetic line
-   suggestions matching that emotion.
+   "Inspire me" button appears. Tapping it calls /api/inspire
+   (Vercel serverless proxy) which securely calls Anthropic
+   and returns 3 original poetic line suggestions.
 
    NO lyrics are stored or reproduced — all suggestions
    are original AI-generated lines. Copyright safe.
@@ -1471,6 +1471,12 @@ function initAIInspire() {
   });
 }
 
+// ─────────────────────────────────────────────────────────────
+// fetchAISuggestions — v4.3 PATCHED
+// Now calls /api/inspire (Vercel serverless proxy) instead of
+// the Anthropic API directly. The proxy holds the API key
+// securely server-side. Response shape: { suggestions: [...] }
+// ─────────────────────────────────────────────────────────────
 async function fetchAISuggestions(emotion) {
   const btn         = document.getElementById('inspireBtn');
   const container   = document.getElementById('inspireSuggestions');
@@ -1489,35 +1495,22 @@ async function fetchAISuggestions(emotion) {
     </div>`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // ── PATCHED: call our Vercel proxy, not Anthropic directly ──
+    const response = await fetch('/api/inspire', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        system: `You are a poetic writing assistant for a music-based social platform called Margo.
-Users share short lyric-style lines (max 140 chars) that express how they feel.
-Your job: suggest 3 original, evocative lines matching the requested emotion.
-Rules:
-- Never reproduce real song lyrics
-- Each line must be original and poetic
-- Max 100 characters per line
-- No quotation marks around the lines
-- Return ONLY a JSON array of 3 strings, nothing else
-- Example format: ["line one here","line two here","line three here"]`,
-        messages: [{
-          role: 'user',
-          content: `Suggest 3 original poetic lines for the emotion: ${emotion}`
-        }]
-      })
+      body: JSON.stringify({ emotion })
     });
 
-    const data = await response.json();
-    const raw  = data?.content?.[0]?.text || '[]';
+    if (!response.ok) {
+      const errText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`Server error ${response.status}: ${errText}`);
+    }
 
-    // Parse the JSON array safely
-    const clean      = raw.replace(/```json|```/g, '').trim();
-    const suggestions = JSON.parse(clean);
+    const data = await response.json();
+
+    // Proxy returns { suggestions: ["line1", "line2", "line3"] }
+    const suggestions = data.suggestions;
 
     if (!Array.isArray(suggestions) || suggestions.length === 0) {
       throw new Error('No suggestions returned');
