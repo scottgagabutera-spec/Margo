@@ -3,8 +3,109 @@
    Composer modal, post submission, guess, discover,
    listen, postcard, and analytics interactions.
    Depends on: state.js, firebase.js, feed.js (renderFeed, timeAgo)
-   v4.3
+   v4.7
    ============================================================ */
+
+/* ==============================
+   MODERATION ENGINE v4
+   Normalized profanity auto-replace
+   + phonetic variation detection
+   ============================== */
+
+const BANNED_PATTERNS = [
+  "fuck",
+  "shit",
+  "bitch",
+  "asshole",
+  "nigger",
+  "cunt",
+  "whore",
+  "slut",
+  "pussy",
+  "dick",
+  "cock",
+  "bastard",
+  "piss",
+  "damn",
+  "ass"
+];
+
+// Phonetic and common bypass variations per word
+const BANNED_VARIATIONS = {
+  fuck:    ["fuk", "fck", "fuq", "phuck", "fux"],
+  shit:    ["sh1t", "sht"],
+  bitch:   ["biatch", "b1tch"],
+  pussy:   ["pus5y", "puss1", "pussi"],
+  dick:    ["d1ck", "dik", "dic"],
+  cock:    ["c0ck", "cok"],
+  bastard: ["b4stard"],
+  ass:     ["a55", "@ss"],
+  nigger:  ["n1gger", "nigg3r", "nig"],
+};
+
+// Normalize text: lowercase → strip non-alpha → collapse repeated letters
+// Catches: f*ck, f.u.c.k, fuuuuck, FUCK, FuCk, etc.
+function normalizeText(str) {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')   // remove symbols, spaces, punctuation
+    .replace(/(.)\1+/g, '$1');   // collapse repeated letters (fuuuck → fuck)
+}
+
+// Returns true if the text contains any banned word or variation after normalization
+function containsBannedWord(text) {
+  const normalized = normalizeText(text);
+
+  return BANNED_PATTERNS.some(word => {
+    // Check the core word
+    if (normalized.includes(normalizeText(word))) return true;
+
+    // Check phonetic/bypass variations
+    const variations = BANNED_VARIATIONS[word];
+    if (variations) {
+      return variations.some(v => normalized.includes(normalizeText(v)));
+    }
+
+    return false;
+  });
+}
+
+// Auto-replace banned words and their variations with censored versions
+// e.g. fuck → f**k, shit → s**t, bitch → b***h
+function censorText(text) {
+  let result = text;
+
+  BANNED_PATTERNS.forEach(word => {
+    // Build censor mask: first + last letter, stars in between
+    const censored = word[0] + '*'.repeat(word.length - 2) + word[word.length - 1];
+
+    // 1. Plain literal match (case-insensitive)
+    const literalRegex = new RegExp(word, 'gi');
+    result = result.replace(literalRegex, censored);
+
+    // 2. Symbol-separated variants: f*ck, f.u.c.k, f_u_c_k etc.
+    const fuzzyRegex = new RegExp(
+      word.split('').join('[^a-zA-Z]*'),
+      'gi'
+    );
+    result = result.replace(fuzzyRegex, censored);
+
+    // 3. Phonetic/bypass variations: fuk, fuq, phuck, d1ck etc.
+    if (BANNED_VARIATIONS[word]) {
+      BANNED_VARIATIONS[word].forEach(variant => {
+        const variantRegex = new RegExp(variant, 'gi');
+        result = result.replace(variantRegex, censored);
+      });
+    }
+  });
+
+  return result;
+}
+
+/* ============================================================
+   END MODERATION ENGINE
+   ============================================================ */
+
 
 function initComposer() {
   // ── Char counter ──
@@ -67,9 +168,17 @@ function initComposer() {
 // ── Post submission ──
 async function submitPost() {
   if (postBtn.disabled) return;
-  const text = textInput.value.trim();
+  let text = textInput.value.trim();
   if (!text)            { showToast('Please enter a lyric'); return; }
   if (!selectedEmotion) { showToast('Please select a vibe'); return; }
+
+  // ── Moderation: auto-replace banned words, notify user transparently ──
+  if (containsBannedWord(text)) {
+    text = censorText(text);
+    textInput.value = text;              // show the user exactly what changed
+    charCount.textContent = text.length;
+    showToast('Some words were adjusted for community guidelines 🎵');
+  }
 
   let post = {
     text,
