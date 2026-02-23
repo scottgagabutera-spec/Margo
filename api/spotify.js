@@ -7,8 +7,14 @@
    ============================================================ */
 
 export default async function handler(req, res) {
-  // ── CORS headers so your frontend can call this ──
-  res.setHeader('Access-Control-Allow-Origin', 'https://trymargo.com');
+  // ── CORS — allow production + all Vercel preview URLs ──
+  const origin = req.headers.origin || '';
+  const allowed =
+    origin.includes('trymargo.com') ||
+    origin.includes('vercel.app')   ||
+    origin === '';
+
+  res.setHeader('Access-Control-Allow-Origin', allowed ? origin || '*' : 'https://trymargo.com');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -17,6 +23,11 @@ export default async function handler(req, res) {
 
   const { song, artist } = req.query;
   if (!song && !artist) return res.status(400).json({ error: 'song or artist required' });
+
+  // ── Check keys exist ──
+  if (!process.env.SPOTIFY_CLIENT_ID || !process.env.SPOTIFY_CLIENT_SECRET) {
+    return res.status(503).json({ error: 'Spotify not configured — check Vercel environment variables' });
+  }
 
   try {
     // ── Step 1: Get Spotify access token ──
@@ -31,12 +42,15 @@ export default async function handler(req, res) {
       body: 'grant_type=client_credentials'
     });
 
-    if (!tokenRes.ok) throw new Error('Failed to get Spotify token');
+    if (!tokenRes.ok) {
+      const errText = await tokenRes.text();
+      console.error('[Spotify token error]', tokenRes.status, errText);
+      throw new Error('Failed to get Spotify token');
+    }
     const { access_token } = await tokenRes.json();
 
     // ── Step 2: Search Spotify ──
-    const query   = [song, artist].filter(Boolean).join(' ');
-    const searchQ = encodeURIComponent(`track:${song || ''} artist:${artist || ''}`.trim());
+    const searchQ   = encodeURIComponent(`track:${song || ''} artist:${artist || ''}`.trim());
     const searchRes = await fetch(
       `https://api.spotify.com/v1/search?q=${searchQ}&type=track&limit=1`,
       { headers: { 'Authorization': `Bearer ${access_token}` } }
@@ -55,14 +69,14 @@ export default async function handler(req, res) {
       album:       track.album.name,
       albumArt:    track.album.images?.[0]?.url || null,
       albumArtSm:  track.album.images?.[2]?.url || null,
-      previewUrl:  track.preview_url            || null,
+      previewUrl:  track.preview_url             || null,
       spotifyUrl:  track.external_urls?.spotify  || null,
       releaseYear: track.album.release_date?.slice(0, 4) || null,
-      popularity:  track.popularity             || 0,
+      popularity:  track.popularity              || 0,
     });
 
   } catch (err) {
     console.error('[Spotify API Error]', err.message);
-    return res.status(500).json({ error: 'Spotify lookup failed' });
+    return res.status(500).json({ error: 'Spotify lookup failed', detail: err.message });
   }
 }
