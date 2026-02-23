@@ -3,7 +3,7 @@
    Composer modal, post submission, guess, discover,
    listen, postcard, and analytics interactions.
    Depends on: state.js, firebase.js, feed.js (renderFeed, timeAgo)
-   v4.8 — Spotify integration
+   v4.9 — YouTube integration
    ============================================================ */
 
 /* ==============================
@@ -67,31 +67,26 @@ function censorText(text) {
    ============================================================ */
 
 /* ============================================================
-   SPOTIFY ENGINE
-   Fetches track data via our secure Vercel API proxy
+   YOUTUBE ENGINE
+   Fetches video data via our secure Vercel API proxy
    ============================================================ */
 
-// Holds the last Spotify result so we can attach it to the post
-let spotifyData = null;
+let youtubeData      = null;
+let youtubeFetchTimer = null;
 
-// Debounce timer for auto-fetch
-let spotifyFetchTimer = null;
-
-// Fetch Spotify data when user fills in song + artist
-function initSpotifyAutofetch() {
+function initYoutubeAutofetch() {
   const songEl   = document.getElementById('songInput');
   const artistEl = document.getElementById('artistInput');
   if (!songEl || !artistEl) return;
 
   const trigger = () => {
-    clearTimeout(spotifyFetchTimer);
+    clearTimeout(youtubeFetchTimer);
     const song   = songEl.value.trim();
     const artist = artistEl.value.trim();
-    // Only fetch if both fields have something
     if (song.length > 1 && artist.length > 1) {
-      spotifyFetchTimer = setTimeout(() => fetchSpotifyData(song, artist), 800);
+      youtubeFetchTimer = setTimeout(() => fetchYoutubeData(song, artist), 800);
     } else {
-      clearSpotifyPreview();
+      clearYoutubePreview();
     }
   };
 
@@ -99,89 +94,70 @@ function initSpotifyAutofetch() {
   artistEl.addEventListener('input', trigger);
 }
 
-async function fetchSpotifyData(song, artist) {
-  showSpotifyStatus('🔍 Looking up on Spotify…');
-  spotifyData = null;
+async function fetchYoutubeData(song, artist) {
+  showYoutubeStatus('🔍 Finding on YouTube…');
+  youtubeData = null;
 
   try {
-    const res  = await fetch(`/api/spotify?song=${encodeURIComponent(song)}&artist=${encodeURIComponent(artist)}`);
+    const res  = await fetch(`/api/youtube?song=${encodeURIComponent(song)}&artist=${encodeURIComponent(artist)}`);
     const data = await res.json();
 
     if (!res.ok || data.error) {
-      showSpotifyStatus('');
+      showYoutubeStatus('');
       return;
     }
 
-    spotifyData = data;
-    renderSpotifyPreview(data);
+    youtubeData = data;
+    renderYoutubePreview(data);
 
-    // Auto-fill Spotify link if empty
-    const spotifyLinkEl = document.getElementById('spotifyLink');
-    if (spotifyLinkEl && !spotifyLinkEl.value && data.spotifyUrl) {
-      spotifyLinkEl.value = data.spotifyUrl;
+    // Auto-fill YouTube link if empty
+    const ytLinkEl = document.getElementById('youtubeLink');
+    if (ytLinkEl && !ytLinkEl.value && data.youtubeUrl) {
+      ytLinkEl.value = data.youtubeUrl;
     }
 
   } catch (err) {
-    console.warn('[Spotify fetch failed]', err.message);
-    showSpotifyStatus('');
+    console.warn('[YouTube fetch failed]', err.message);
+    showYoutubeStatus('');
   }
 }
 
-function renderSpotifyPreview(data) {
-  let preview = document.getElementById('spotifyPreview');
+function renderYoutubePreview(data) {
+  let preview = document.getElementById('youtubePreview');
   if (!preview) {
     preview = document.createElement('div');
-    preview.id = 'spotifyPreview';
-    preview.style.cssText = `
-      display:flex;align-items:center;gap:10px;
-      background:rgba(30,215,96,0.07);
-      border:1px solid rgba(30,215,96,0.2);
-      border-radius:10px;padding:10px 12px;margin-top:8px;
-    `;
-    // Insert after artistInput
+    preview.id = 'youtubePreview';
     const artistEl = document.getElementById('artistInput');
     artistEl?.parentNode?.insertBefore(preview, artistEl.nextSibling);
   }
 
-  const art = data.albumArtSm || data.albumArt || '';
+  preview.style.cssText = `
+    display:flex;align-items:center;gap:10px;
+    background:rgba(255,0,0,0.07);
+    border:1px solid rgba(255,0,0,0.2);
+    border-radius:10px;padding:10px 12px;margin-top:8px;
+  `;
+
+  const thumb = data.thumbnailSm || data.thumbnail || '';
   preview.innerHTML = `
-    ${art ? `<img src="${art}" style="width:44px;height:44px;border-radius:6px;object-fit:cover;flex-shrink:0" alt="Album art"/>` : ''}
+    ${thumb ? `<img src="${thumb}" style="width:60px;height:44px;border-radius:6px;object-fit:cover;flex-shrink:0" alt="Video thumbnail"/>` : ''}
     <div style="flex:1;min-width:0">
-      <div style="font-size:0.8rem;font-weight:700;color:#1ED760;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${data.song}</div>
-      <div style="font-size:0.72rem;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${data.artist} · ${data.album}</div>
-      ${data.releaseYear ? `<div style="font-size:0.65rem;color:var(--text-3,#666)">${data.releaseYear}</div>` : ''}
+      <div style="font-size:0.75rem;font-weight:700;color:#ff4444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${data.title}</div>
+      <div style="font-size:0.7rem;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${data.channel}</div>
     </div>
-    ${data.previewUrl ? `
-      <button onclick="toggleSpotifyPreviewAudio(this, '${data.previewUrl}')"
-        style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#1ED760;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.8rem">
-        ▶
-      </button>` : ''}
+    <a href="${data.youtubeUrl}" target="_blank" rel="noopener noreferrer"
+      style="flex-shrink:0;padding:6px 10px;border-radius:6px;background:rgba(255,0,0,0.15);border:1px solid rgba(255,0,0,0.3);color:#ff4444;font-size:0.7rem;text-decoration:none;white-space:nowrap">
+      ▶ Watch
+    </a>
   `;
 }
 
-// 30-second audio preview player
-let previewAudio = null;
-window.toggleSpotifyPreviewAudio = function(btn, url) {
-  if (previewAudio && !previewAudio.paused) {
-    previewAudio.pause();
-    btn.textContent = '▶';
-    return;
-  }
-  if (!previewAudio || previewAudio.src !== url) {
-    if (previewAudio) previewAudio.pause();
-    previewAudio = new Audio(url);
-    previewAudio.onended = () => { btn.textContent = '▶'; };
-  }
-  previewAudio.play();
-  btn.textContent = '⏸';
-};
-
-function showSpotifyStatus(msg) {
-  let preview = document.getElementById('spotifyPreview');
+function showYoutubeStatus(msg) {
+  let preview = document.getElementById('youtubePreview');
   if (!msg) { if (preview) preview.remove(); return; }
   if (!preview) {
     preview = document.createElement('div');
-    preview.id = 'spotifyPreview';
+    preview.id = 'youtubePreview';
     const artistEl = document.getElementById('artistInput');
     artistEl?.parentNode?.insertBefore(preview, artistEl.nextSibling);
   }
@@ -194,15 +170,14 @@ function showSpotifyStatus(msg) {
   preview.textContent = msg;
 }
 
-function clearSpotifyPreview() {
-  spotifyData = null;
-  const preview = document.getElementById('spotifyPreview');
+function clearYoutubePreview() {
+  youtubeData = null;
+  const preview = document.getElementById('youtubePreview');
   if (preview) preview.remove();
-  if (previewAudio) { previewAudio.pause(); previewAudio = null; }
 }
 
 /* ============================================================
-   END SPOTIFY ENGINE
+   END YOUTUBE ENGINE
    ============================================================ */
 
 
@@ -223,8 +198,7 @@ function initComposer() {
       if (currentMode === 'share')    shareInputs.classList.add('show');
       if (currentMode === 'guess')    guessInputs.classList.add('show');
       if (currentMode === 'discover') discoverInputs.classList.add('show');
-      // Clear Spotify preview when switching modes
-      clearSpotifyPreview();
+      clearYoutubePreview();
     };
   });
 
@@ -240,8 +214,8 @@ function initComposer() {
   // ── Post button ──
   postBtn.onclick = submitPost;
 
-  // ── Spotify autofetch ──
-  initSpotifyAutofetch();
+  // ── YouTube autofetch ──
+  initYoutubeAutofetch();
 
   // ── Guess submission ──
   document.getElementById('submitGuess').onclick = submitGuess;
@@ -293,21 +267,20 @@ async function submitPost() {
     flagCount:  0,
     knowledge:  { song: 'Unknown Song', artist: 'Unknown Artist' },
     guessConfig: null,
-    // Attach Spotify data if we fetched it
-    spotifyMeta: spotifyData ? {
-      albumArt:   spotifyData.albumArt   || null,
-      albumArtSm: spotifyData.albumArtSm || null,
-      previewUrl: spotifyData.previewUrl || null,
-      spotifyUrl: spotifyData.spotifyUrl || null,
-      album:      spotifyData.album      || null,
-      releaseYear:spotifyData.releaseYear|| null,
-      popularity: spotifyData.popularity || 0,
+    // Attach YouTube data if we fetched it
+    youtubeMeta: youtubeData ? {
+      videoId:    youtubeData.videoId    || null,
+      title:      youtubeData.title      || null,
+      thumbnail:  youtubeData.thumbnail  || null,
+      channel:    youtubeData.channel    || null,
+      youtubeUrl: youtubeData.youtubeUrl || null,
+      embedUrl:   youtubeData.embedUrl   || null,
     } : null,
     links: currentMode !== 'discover' ? {
-      spotify:    spotifyData?.spotifyUrl         || spotifyLink.value.trim()    || null,
-      apple:      appleLink.value.trim()          || null,
-      youtube:    youtubeLink.value.trim()        || null,
-      soundcloud: soundcloudLink.value.trim()     || null
+      spotify:    spotifyLink.value.trim()                      || null,
+      apple:      appleLink.value.trim()                        || null,
+      youtube:    youtubeData?.youtubeUrl || youtubeLink.value.trim() || null,
+      soundcloud: soundcloudLink.value.trim()                   || null
     } : null,
     authorId:  userId,
     timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now()
@@ -371,7 +344,7 @@ function resetComposer() {
   if (soundcloudLink) soundcloudLink.value = '';
   charCount.textContent = '0';
   selectedEmotion = null;
-  clearSpotifyPreview();
+  clearYoutubePreview();
   document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
   modeBtns.forEach((b, i) => b.classList.toggle('active', i === 0));
   currentMode = 'share';
@@ -397,29 +370,31 @@ window.viewPost = function(index) {
 
   const k      = currentPost.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
   const songEl = document.getElementById('postcardSong');
-  const meta   = currentPost.spotifyMeta;
+  const meta   = currentPost.youtubeMeta;
 
   if (currentPost.mode === 'guess') {
     songEl.innerHTML = `<div style="font-style:italic;color:var(--text-2)">Guess correctly to reveal</div>`;
   } else {
-    // Show album art if available from Spotify
-    const artHtml = meta?.albumArt
-      ? `<img src="${meta.albumArt}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0" alt="Album art"/>`
+    const thumbHtml = meta?.thumbnail
+      ? `<img src="${meta.thumbnail}" style="width:80px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0" alt="Video thumbnail"/>`
       : '';
     songEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px">
-        ${artHtml}
-        <div>
-          <div>${k.song}</div>
+        ${thumbHtml}
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600">${k.song}</div>
           <div style="font-size:0.8rem;color:var(--text-2)">${k.artist}</div>
-          ${meta?.album ? `<div style="font-size:0.7rem;color:var(--text-3,#666)">${meta.album}${meta.releaseYear ? ' · ' + meta.releaseYear : ''}</div>` : ''}
+          ${meta?.channel ? `<div style="font-size:0.7rem;color:var(--text-3,#666)">${meta.channel}</div>` : ''}
         </div>
       </div>
-      ${meta?.previewUrl ? `
-        <button onclick="togglePostcardPreview(this, '${meta.previewUrl}')"
-          style="margin-top:8px;width:100%;padding:8px;border-radius:8px;background:rgba(30,215,96,0.1);border:1px solid rgba(30,215,96,0.25);color:#1ED760;cursor:pointer;font-size:0.8rem;font-family:inherit">
-          ▶ Play 30s Preview
-        </button>` : ''}
+      ${meta?.youtubeUrl ? `
+        <a href="${meta.youtubeUrl}" target="_blank" rel="noopener noreferrer"
+          style="display:block;margin-top:8px;width:100%;padding:8px;border-radius:8px;
+          background:rgba(255,0,0,0.08);border:1px solid rgba(255,0,0,0.2);
+          color:#ff4444;text-align:center;font-size:0.8rem;text-decoration:none;
+          font-family:inherit">
+          ▶ Watch on YouTube
+        </a>` : ''}
     `;
   }
 
@@ -429,23 +404,6 @@ window.viewPost = function(index) {
      currentPost.links.youtube || currentPost.links.soundcloud);
   listenPostcard.style.display = (hasLinks && currentPost.mode !== 'guess') ? 'block' : 'none';
   openModal(postcardModal);
-};
-
-// Postcard 30s preview player
-let postcardAudio = null;
-window.togglePostcardPreview = function(btn, url) {
-  if (postcardAudio && !postcardAudio.paused) {
-    postcardAudio.pause();
-    btn.textContent = '▶ Play 30s Preview';
-    return;
-  }
-  if (!postcardAudio || postcardAudio.src !== url) {
-    if (postcardAudio) postcardAudio.pause();
-    postcardAudio = new Audio(url);
-    postcardAudio.onended = () => { btn.textContent = '▶ Play 30s Preview'; };
-  }
-  postcardAudio.play();
-  btn.textContent = '⏸ Pause Preview';
 };
 
 // ── Listen ──
@@ -521,10 +479,10 @@ function submitGuess() {
   if (correct) {
     resultEl.className = 'result-msg result-success';
     resultEl.innerHTML = `Correct! 🎉<br><span style="font-size:0.8rem">"${k.song}" by ${k.artist}</span>`;
-    // Show album art on correct guess if available
-    const meta = currentPost.spotifyMeta;
-    if (meta?.albumArt) {
-      resultEl.innerHTML += `<br><img src="${meta.albumArt}" style="width:60px;height:60px;border-radius:8px;margin-top:8px;object-fit:cover" alt="Album art"/>`;
+    // Show YouTube thumbnail on correct guess
+    const meta = currentPost.youtubeMeta;
+    if (meta?.thumbnail) {
+      resultEl.innerHTML += `<br><img src="${meta.thumbnail}" style="width:100%;border-radius:8px;margin-top:8px;object-fit:cover" alt="Video thumbnail"/>`;
     }
     document.getElementById('submitGuess').style.display      = 'none';
     document.getElementById('guessInputFields').style.display = 'none';
