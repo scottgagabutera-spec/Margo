@@ -50,13 +50,23 @@ export default async function handler(req, res) {
     const { access_token } = await tokenRes.json();
 
     // ── Step 2: Search Spotify ──
-    const searchQ   = encodeURIComponent(`track:${song || ''} artist:${artist || ''}`.trim());
+    // Use simple combined query — more reliable than field filters
+    const queryParts = [];
+    if (song)   queryParts.push(song);
+    if (artist) queryParts.push(artist);
+    const searchQ   = encodeURIComponent(queryParts.join(' '));
+
     const searchRes = await fetch(
       `https://api.spotify.com/v1/search?q=${searchQ}&type=track&limit=1`,
       { headers: { 'Authorization': `Bearer ${access_token}` } }
     );
 
-    if (!searchRes.ok) throw new Error('Spotify search failed');
+    if (!searchRes.ok) {
+      const errText = await searchRes.text();
+      console.error('[Spotify search error]', searchRes.status, errText);
+      throw new Error('Spotify search failed');
+    }
+
     const data  = await searchRes.json();
     const track = data.tracks?.items?.[0];
 
