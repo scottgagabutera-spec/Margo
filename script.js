@@ -47,12 +47,14 @@ const APP_DOMAIN   = "trymargo.com";
 let isFirebaseEnabled = false;
 let postsRef = null;
 let analyticsRef = null;
+let firebaseAuth = null;
 
 try {
   firebase.initializeApp(firebaseConfig);
   const database = firebase.database();
   postsRef     = database.ref('posts');
   analyticsRef = database.ref('analytics');
+  firebaseAuth = firebase.auth();
   isFirebaseEnabled = true;
   console.log('Firebase OK');
 } catch (e) {
@@ -289,6 +291,21 @@ function calcFeatured() {
   };
 }
 
+// Called once on page load to show shimmer placeholders immediately
+// so the stats bar never looks blank while Firebase loads
+function initStatsShimmer() {
+  const shimmerIds = [
+    "statTotal","featuredArtistCount","featuredSongCount",
+    "topArtistName","topSongName","topEmotion"
+  ];
+  shimmerIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.textContent === '—') {
+      el.innerHTML = '<span class="stat-shimmer">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';
+    }
+  });
+}
+
 function updateLandingStats() {
   const n = posts.length || 0;
   const $ = id => document.getElementById(id);
@@ -425,10 +442,9 @@ postBtn.onclick = async () => {
 
   let post = {
     text, emotion: selectedEmotion, mode: currentMode,
-    // v4.1 FIX: community now saves the actual emotion instead of "general"
-    // This is what powers the room tabs filter going forward.
-    // Old posts with community:"general" still show up in "All" — no data loss.
     community: selectedEmotion,
+    status: 'active', // admin moderation field — 'active' | 'hidden' | 'flagged'
+    flagCount: 0,
     knowledge: { song: "Unknown Song", artist: "Unknown Artist" },
     guessConfig: null,
     links: currentMode !== "discover" ? {
@@ -509,10 +525,13 @@ function resetComposer() {
 // v4.1 UPDATE: room filter applied first, then search query
 // This means tabs + search work together (e.g. "Love" room + search "tonight")
 function getFilteredPosts() {
+  // Step 0: never show hidden posts in public feed
+  const visible = posts.filter(p => p.status !== 'hidden');
+
   // Step 1: filter by active emotion room
   let filtered = activeRoom === "all"
-    ? posts
-    : posts.filter(p => (p.emotion || '').toLowerCase() === activeRoom.toLowerCase());
+    ? visible
+    : visible.filter(p => (p.emotion || '').toLowerCase() === activeRoom.toLowerCase());
 
   // Step 2: filter by search query within the room result
   if (!searchQuery) return filtered;
@@ -557,6 +576,34 @@ function initSearch() {
   }
 }
 
+// ===== FEED RANKING =====
+function calculatePostScore(post) {
+  const now = Date.now();
+  const ageInHours = post.timestamp
+    ? (now - post.timestamp) / (1000 * 60 * 60)
+    : 999; // defensive: missing timestamp treated as very old
+
+  const recencyScore = Math.max(0, 48 - ageInHours);
+
+  const analytics = postAnalytics[post.id] || {};
+  const views   = analytics.views || 0;
+  const guesses = Object.keys(analytics.guesses || {}).length;
+  const helps   = Object.keys(analytics.helps   || {}).length;
+
+  return (
+    (recencyScore * 0.4) +
+    (views        * 0.2) +
+    (guesses      * 0.25) +
+    (helps        * 0.15)
+  );
+}
+
+function getRankedPosts() {
+  return getFilteredPosts().sort((a, b) =>
+    calculatePostScore(b) - calculatePostScore(a)
+  );
+}
+
 // ===== v4.1: ROOM TABS =====
 // Wires up the .room-tab buttons rendered in index.html.
 // Clicking a tab: sets activeRoom, updates active class, re-renders feed.
@@ -596,7 +643,7 @@ function renderFeed() {
   feedList.innerHTML = "";
   updateLandingStats();
 
-  const filtered      = getFilteredPosts();
+  const filtered      = getRankedPosts();
   const resultCountEl = document.getElementById("searchResultCount");
 
   if (!postsLoaded) {
@@ -1353,13 +1400,16 @@ function showToast(msg) {
 }
 
 // ===== INIT =====
+initStatsShimmer();   // v4.3: show shimmer immediately before Firebase loads
 setupScrollToTop();
 buildLyricStream();
 preloadStudioFonts();
 setupStatsBar();
 initSearch();
-initRoomTabs(); // v4.1: wire up emotion room tabs
-console.log("MARGO loaded — Brand Kit 4.1. Firebase:", isFirebaseEnabled);
+initRoomTabs();    // v4.1: wire up emotion room tabs
+initAdmin();       // v4.2: admin moderation system
+initAIInspire();   // v4.3: AI lyric suggestion assistant
+console.log("MARGO loaded — Brand Kit 4.3. Firebase:", isFirebaseEnabled);
 
 function setupScrollToTop() {
   window.addEventListener('scroll', () => {
@@ -1380,4 +1430,680 @@ function setupStatsBar() {
   }
   alignStats();
   window.addEventListener('resize', alignStats);
+}
+
+/* ============================================================
+   AI INSPIRE SYSTEM — v4.3
+   ============================================================
+   When user selects an emotion in the composer, an
+   "Inspire me" button appears. Tapping it calls /api/inspire
+   (Vercel serverless proxy) which securely calls Anthropic
+   and returns 3 original poetic line suggestions.
+
+   NO lyrics are stored or reproduced — all suggestions
+   are original AI-generated lines. Copyright safe.
+   ============================================================ */
+
+function initAIInspire() {
+  // Show inspire button when emotion is selected
+  document.querySelectorAll('.emotion-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const wrap = document.getElementById('inspireWrap');
+      if (wrap) {
+        wrap.style.display = 'block';
+        // Reset suggestions when emotion changes
+        const suggestions = document.getElementById('inspireSuggestions');
+        if (suggestions) {
+          suggestions.style.display = 'none';
+          suggestions.innerHTML = '';
+        }
+      }
+    });
+  });
+
+  // Wire up inspire button
+  const inspireBtn = document.getElementById('inspireBtn');
+  if (!inspireBtn) return;
+
+  inspireBtn.addEventListener('click', async () => {
+    if (!selectedEmotion) return;
+    await fetchAISuggestions(selectedEmotion);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// fetchAISuggestions — v4.3 PATCHED
+// Now calls /api/inspire (Vercel serverless proxy) instead of
+// the Anthropic API directly. The proxy holds the API key
+// securely server-side. Response shape: { suggestions: [...] }
+// ─────────────────────────────────────────────────────────────
+async function fetchAISuggestions(emotion) {
+  const btn         = document.getElementById('inspireBtn');
+  const container   = document.getElementById('inspireSuggestions');
+  if (!btn || !container) return;
+
+  // Loading state
+  const originalText = btn.textContent;
+  btn.textContent    = '✦ Generating…';
+  btn.disabled       = true;
+  container.style.display = 'flex';
+  container.innerHTML = `
+    <div style="text-align:center;padding:14px;
+      font-family:'Space Mono',monospace;font-size:0.5rem;
+      color:#707078;text-transform:uppercase;letter-spacing:1px;">
+      Thinking of something for ${emotion.toLowerCase()}…
+    </div>`;
+
+  try {
+    // ── PATCHED: call our Vercel proxy, not Anthropic directly ──
+    const response = await fetch('/api/inspire', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emotion })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`Server error ${response.status}: ${errText}`);
+    }
+
+    const data = await response.json();
+
+    // Proxy returns { suggestions: ["line1", "line2", "line3"] }
+    const suggestions = data.suggestions;
+
+    if (!Array.isArray(suggestions) || suggestions.length === 0) {
+      throw new Error('No suggestions returned');
+    }
+
+    // Render suggestion pills
+    container.innerHTML = '';
+    suggestions.forEach(line => {
+      if (!line || typeof line !== 'string') return;
+      const pill = document.createElement('button');
+      pill.type  = 'button';
+      pill.style.cssText = `
+        width:100%;padding:11px 13px;border-radius:10px;
+        background:rgba(255,255,255,0.04);
+        border:1px solid rgba(255,255,255,0.08);
+        color:#E8E8F0;font-family:'DM Serif Display',serif;
+        font-style:italic;font-size:0.9rem;line-height:1.5;
+        text-align:left;cursor:pointer;transition:all 0.18s;
+      `;
+      pill.textContent = line.trim();
+
+      // Tap to use — fills textarea
+      pill.addEventListener('click', () => {
+        const textInput = document.getElementById('textInput');
+        const charCount = document.getElementById('charCount');
+        if (textInput) {
+          textInput.value = line.trim().substring(0, 140);
+          if (charCount) charCount.textContent = textInput.value.length;
+          textInput.focus();
+        }
+        // Highlight selected
+        container.querySelectorAll('button').forEach(b => {
+          b.style.background = 'rgba(255,255,255,0.04)';
+          b.style.borderColor = 'rgba(255,255,255,0.08)';
+        });
+        pill.style.background   = 'rgba(232,197,71,0.1)';
+        pill.style.borderColor  = 'rgba(232,197,71,0.3)';
+      });
+
+      // Hover effect
+      pill.addEventListener('mouseenter', () => {
+        pill.style.background  = 'rgba(255,255,255,0.07)';
+        pill.style.borderColor = 'rgba(255,255,255,0.14)';
+      });
+      pill.addEventListener('mouseleave', () => {
+        if (pill.style.borderColor !== 'rgba(232,197,71,0.3)') {
+          pill.style.background  = 'rgba(255,255,255,0.04)';
+          pill.style.borderColor = 'rgba(255,255,255,0.08)';
+        }
+      });
+
+      container.appendChild(pill);
+    });
+
+    // Add refresh button
+    const refresh = document.createElement('button');
+    refresh.type  = 'button';
+    refresh.style.cssText = `
+      width:100%;padding:8px;border-radius:8px;
+      background:transparent;border:1px dashed rgba(232,197,71,0.2);
+      color:#707078;font-family:'Space Mono',monospace;
+      font-size:0.48rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:1px;cursor:pointer;margin-top:2px;
+    `;
+    refresh.textContent = '↻ New suggestions';
+    refresh.addEventListener('click', () => fetchAISuggestions(selectedEmotion));
+    container.appendChild(refresh);
+
+  } catch (err) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:12px;
+        font-family:'Space Mono',monospace;font-size:0.5rem;
+        color:#707078;text-transform:uppercase;letter-spacing:1px;">
+        Couldn't get suggestions — try again
+      </div>`;
+    console.warn('AI inspire error:', err);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled    = false;
+  }
+}
+
+/* ============================================================
+   ADMIN SYSTEM — v4.2
+   ============================================================
+   ACCESS:  Ctrl + Shift + A  →  Firebase email/password login
+   SECURITY: Authenticated against Firebase Auth. Your admin UID
+             is stored in Firebase Realtime Database at:
+             /adminConfig/allowedUid
+             Nothing sensitive lives in this JS file.
+
+   SETUP (do this once in Firebase console):
+   1. Authentication → Sign-in method → Enable Email/Password
+   2. Authentication → Users → Add user (your email + password)
+   3. Copy the UID shown for your user
+   4. Realtime Database → add this node manually:
+        adminConfig: { allowedUid: "PASTE_YOUR_UID_HERE" }
+   5. Database Rules: make adminConfig readable only to that UID:
+        "adminConfig": { ".read": "auth != null && auth.uid === data.child('allowedUid').val()" }
+   That's it. No password in JS. No DevTools exploit.
+   ============================================================ */
+
+// ── Admin state ──
+let adminMode       = false;
+let adminUser       = null;
+let adminFilter     = 'all';   // 'all' | 'active' | 'hidden' | 'flagged'
+let adminSort       = 'newest'; // 'newest' | 'mostFlagged'
+let adminSearch     = '';
+let adminConfigRef  = null;
+
+if (isFirebaseEnabled) {
+  adminConfigRef = firebase.database().ref('adminConfig');
+}
+
+// ── Keyboard trigger — B + G pressed within 300ms of each other ──
+// Chosen to avoid all browser shortcut conflicts.
+// Guard prevents accidental trigger while typing in inputs.
+const _adminKeysHeld = new Set();
+let _adminKeyTimer = null;
+
+function initAdmin() {
+  document.addEventListener('keydown', e => {
+    const key = e.key.toLowerCase();
+
+    // Don't fire if user is typing in a text field
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+    if (key === 'b' || key === 'g') {
+      _adminKeysHeld.add(key);
+
+      // Clear the set after 300ms — both keys must be pressed within that window
+      clearTimeout(_adminKeyTimer);
+      _adminKeyTimer = setTimeout(() => _adminKeysHeld.clear(), 300);
+
+      if (_adminKeysHeld.has('b') && _adminKeysHeld.has('g')) {
+        _adminKeysHeld.clear();
+        clearTimeout(_adminKeyTimer);
+        if (adminMode) {
+          openAdminPanel();
+        } else {
+          showAdminLogin();
+        }
+      }
+    }
+  });
+
+  document.addEventListener('keyup', e => {
+    _adminKeysHeld.delete(e.key.toLowerCase());
+  });
+
+  // Keep adminMode in sync if user signs out elsewhere
+  if (firebaseAuth) {
+    firebaseAuth.onAuthStateChanged(user => {
+      if (!user) {
+        adminMode = false;
+        adminUser = null;
+        const panel = document.getElementById('adminModal');
+        if (panel) panel.remove();
+      }
+    });
+  }
+}
+
+// ── Login flow ──
+function showAdminLogin() {
+  // Remove any existing login UI
+  const existing = document.getElementById('adminLoginModal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'adminLoginModal';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,0.92);
+    display:flex;align-items:center;justify-content:center;
+    z-index:9000;backdrop-filter:blur(12px);
+  `;
+
+  overlay.innerHTML = `
+    <div style="
+      background:#141418;border:1px solid rgba(232,197,71,0.2);
+      border-radius:20px;padding:32px;width:100%;max-width:380px;
+      box-shadow:0 24px 60px rgba(0,0,0,0.7);
+    ">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+        <svg viewBox="-4 -4 88 88" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="40" cy="40" r="36" fill="#E8C547"/>
+          <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
+                fill="none" stroke="#0B0B0D" stroke-width="5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:0.85rem;
+          letter-spacing:3px;color:#E8C547;text-transform:uppercase;">MARGO · Admin</span>
+      </div>
+      <p style="font-family:'Space Mono',monospace;font-size:0.55rem;color:#A0A0A8;
+        text-transform:uppercase;letter-spacing:1.5px;margin-bottom:20px;">
+        Sign in to access moderation dashboard
+      </p>
+      <input id="adminEmail" type="email" placeholder="Email"
+        style="width:100%;padding:11px 13px;background:#0B0B0D;border:1px solid rgba(255,255,255,0.08);
+        border-radius:10px;color:#F0F0F0;font-family:'DM Sans',sans-serif;font-size:0.9rem;
+        margin-bottom:10px;box-sizing:border-box;outline:none;"/>
+      <input id="adminPassword" type="password" placeholder="Password"
+        style="width:100%;padding:11px 13px;background:#0B0B0D;border:1px solid rgba(255,255,255,0.08);
+        border-radius:10px;color:#F0F0F0;font-family:'DM Sans',sans-serif;font-size:0.9rem;
+        margin-bottom:18px;box-sizing:border-box;outline:none;"/>
+      <div id="adminLoginError" style="display:none;font-family:'Space Mono',monospace;
+        font-size:0.55rem;color:#ff6464;text-transform:uppercase;letter-spacing:1px;
+        margin-bottom:14px;"></div>
+      <div style="display:flex;gap:10px;">
+        <button id="adminLoginBtn" style="flex:1;padding:13px;background:#E8C547;color:#0B0B0D;
+          border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-weight:700;
+          font-size:0.88rem;cursor:pointer;">Sign In</button>
+        <button id="adminLoginCancel" style="padding:13px 18px;background:transparent;
+          color:#A0A0A8;border:1px solid rgba(255,255,255,0.08);border-radius:10px;
+          font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.88rem;cursor:pointer;">
+          Cancel</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const emailEl    = document.getElementById('adminEmail');
+  const passEl     = document.getElementById('adminPassword');
+  const errorEl    = document.getElementById('adminLoginError');
+  const loginBtn   = document.getElementById('adminLoginBtn');
+  const cancelBtn  = document.getElementById('adminLoginCancel');
+
+  cancelBtn.onclick = () => overlay.remove();
+
+  // Allow Enter key to submit
+  [emailEl, passEl].forEach(el => {
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') loginBtn.click(); });
+  });
+
+  loginBtn.onclick = async () => {
+    const email = emailEl.value.trim();
+    const pass  = passEl.value;
+    if (!email || !pass) { showAdminError(errorEl, 'Email and password required'); return; }
+
+    loginBtn.textContent = 'Signing in…';
+    loginBtn.disabled = true;
+    errorEl.style.display = 'none';
+
+    try {
+      if (!firebaseAuth) throw new Error('Firebase Auth not available');
+
+      // Sign in with Firebase
+      const cred = await firebaseAuth.signInWithEmailAndPassword(email, pass);
+      const uid  = cred.user.uid;
+
+      // Verify UID against adminConfig in Realtime Database
+      const snap = await adminConfigRef.child('allowedUid').get();
+      const allowedUid = snap.val();
+
+      if (!allowedUid) {
+        await firebaseAuth.signOut();
+        throw new Error('Admin not configured — set adminConfig/allowedUid in Firebase');
+      }
+      if (uid !== allowedUid) {
+        await firebaseAuth.signOut();
+        throw new Error('Access denied');
+      }
+
+      // Authenticated + authorised
+      adminMode = true;
+      adminUser = cred.user;
+      overlay.remove();
+      openAdminPanel();
+
+    } catch (err) {
+      loginBtn.textContent = 'Sign In';
+      loginBtn.disabled = false;
+      const msg = err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found'
+        ? 'Invalid credentials'
+        : err.message;
+      showAdminError(errorEl, msg);
+    }
+  };
+}
+
+function showAdminError(el, msg) {
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ── Admin panel ──
+function openAdminPanel() {
+  const existing = document.getElementById('adminModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'adminModal';
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,0.95);
+    z-index:8000;display:flex;flex-direction:column;
+    backdrop-filter:blur(16px);overflow:hidden;
+  `;
+
+  modal.innerHTML = `
+    <div style="
+      display:flex;align-items:center;justify-content:space-between;
+      padding:16px 20px;border-bottom:1px solid rgba(232,197,71,0.15);
+      background:#0B0B0D;flex-shrink:0;
+    ">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <svg viewBox="-4 -4 88 88" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="40" cy="40" r="36" fill="#E8C547"/>
+          <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
+                fill="none" stroke="#0B0B0D" stroke-width="5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:0.9rem;
+          letter-spacing:3px;color:#E8C547;text-transform:uppercase;">Admin</span>
+        <span id="adminPostBadge" style="font-family:'Space Mono',monospace;font-size:0.5rem;
+          color:#A0A0A8;font-weight:700;text-transform:uppercase;letter-spacing:1px;"></span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-family:'Space Mono',monospace;font-size:0.5rem;color:#707078;
+          text-transform:uppercase;letter-spacing:1px;">${adminUser?.email || ''}</span>
+        <button id="adminSignOutBtn" style="padding:6px 12px;background:transparent;
+          color:#707078;border:1px solid rgba(255,255,255,0.08);border-radius:8px;
+          font-family:'DM Sans',sans-serif;font-size:0.7rem;font-weight:600;cursor:pointer;">
+          Sign out</button>
+        <button id="adminCloseBtn" style="width:28px;height:28px;background:rgba(255,255,255,0.05);
+          border:1px solid rgba(255,255,255,0.08);border-radius:50%;color:#A0A0A8;
+          font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+    </div>
+
+    <div style="
+      display:flex;gap:8px;padding:14px 20px;
+      border-bottom:1px solid rgba(255,255,255,0.05);
+      flex-shrink:0;flex-wrap:wrap;align-items:center;
+    ">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="admin-filter-btn active" data-filter="all"
+          style="${adminFilterBtnStyle(true)}">All</button>
+        <button class="admin-filter-btn" data-filter="active"
+          style="${adminFilterBtnStyle(false)}">Active</button>
+        <button class="admin-filter-btn" data-filter="flagged"
+          style="${adminFilterBtnStyle(false)}">Flagged</button>
+        <button class="admin-filter-btn" data-filter="hidden"
+          style="${adminFilterBtnStyle(false)}">Hidden</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;">
+        <button class="admin-sort-btn active" data-sort="newest"
+          style="${adminFilterBtnStyle(true)}">Newest</button>
+        <button class="admin-sort-btn" data-sort="mostFlagged"
+          style="${adminFilterBtnStyle(false)}">Most Flagged</button>
+      </div>
+    </div>
+
+    <div style="padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
+      <input id="adminSearchInput" type="text" placeholder="Search posts…"
+        style="width:100%;padding:9px 13px;background:#141418;
+        border:1px solid rgba(255,255,255,0.08);border-radius:10px;
+        color:#F0F0F0;font-family:'DM Sans',sans-serif;font-size:0.85rem;
+        box-sizing:border-box;outline:none;"/>
+    </div>
+
+    <div id="adminPostList" style="flex:1;overflow-y:auto;padding:16px 20px;"></div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Wire controls
+  document.getElementById('adminCloseBtn').onclick   = () => modal.remove();
+  document.getElementById('adminSignOutBtn').onclick = async () => {
+    await firebaseAuth?.signOut();
+    adminMode = false;
+    adminUser = null;
+    modal.remove();
+    showToast('Signed out');
+  };
+
+  document.getElementById('adminSearchInput').oninput = e => {
+    adminSearch = e.target.value.trim().toLowerCase();
+    renderAdminPosts();
+  };
+
+  modal.querySelectorAll('.admin-filter-btn').forEach(btn => {
+    btn.onclick = () => {
+      modal.querySelectorAll('.admin-filter-btn').forEach(b => {
+        b.style.cssText = adminFilterBtnStyle(false);
+        b.classList.remove('active');
+      });
+      btn.style.cssText = adminFilterBtnStyle(true);
+      btn.classList.add('active');
+      adminFilter = btn.dataset.filter;
+      renderAdminPosts();
+    };
+  });
+
+  modal.querySelectorAll('.admin-sort-btn').forEach(btn => {
+    btn.onclick = () => {
+      modal.querySelectorAll('.admin-sort-btn').forEach(b => {
+        b.style.cssText = adminFilterBtnStyle(false);
+        b.classList.remove('active');
+      });
+      btn.style.cssText = adminFilterBtnStyle(true);
+      btn.classList.add('active');
+      adminSort = btn.dataset.sort;
+      renderAdminPosts();
+    };
+  });
+
+  renderAdminPosts();
+}
+
+function adminFilterBtnStyle(active) {
+  return `padding:6px 13px;border-radius:50px;cursor:pointer;
+    font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:0.8px;transition:all 0.18s;
+    ${active
+      ? 'background:rgba(232,197,71,0.1);border:1px solid rgba(232,197,71,0.3);color:#E8C547;'
+      : 'background:transparent;border:1px solid rgba(255,255,255,0.08);color:#707078;'}`;
+}
+
+function getAdminPosts() {
+  let list = [...posts];
+
+  // Filter by status tab
+  if (adminFilter !== 'all') {
+    list = list.filter(p => (p.status || 'active') === adminFilter);
+  }
+
+  // Filter by search
+  if (adminSearch) {
+    list = list.filter(p =>
+      (p.text || '').toLowerCase().includes(adminSearch)
+      || (p.knowledge?.song   || '').toLowerCase().includes(adminSearch)
+      || (p.knowledge?.artist || '').toLowerCase().includes(adminSearch)
+      || (p.emotion || '').toLowerCase().includes(adminSearch)
+    );
+  }
+
+  // Sort
+  if (adminSort === 'mostFlagged') {
+    list.sort((a, b) => (b.flagCount || 0) - (a.flagCount || 0));
+  } else {
+    list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  }
+
+  return list;
+}
+
+function renderAdminPosts() {
+  const container = document.getElementById('adminPostList');
+  const badge     = document.getElementById('adminPostBadge');
+  if (!container) return;
+
+  const list = getAdminPosts();
+  if (badge) badge.textContent = `${list.length} post${list.length !== 1 ? 's' : ''}`;
+
+  if (!list.length) {
+    container.innerHTML = `<div style="text-align:center;padding:60px 20px;
+      font-family:'Space Mono',monospace;font-size:0.6rem;color:#707078;
+      text-transform:uppercase;letter-spacing:1px;">No posts found</div>`;
+    return;
+  }
+
+  container.innerHTML = '';
+  list.forEach(post => {
+    const an      = postAnalytics[post.id] || {};
+    const views   = an.views || 0;
+    const guesses = Object.keys(an.guesses || {}).length;
+    const helps   = Object.keys(an.helps   || {}).length;
+    const status  = post.status || 'active';
+    const flags   = post.flagCount || 0;
+    const k       = post.knowledge || { song: 'Unknown', artist: 'Unknown' };
+
+    const statusColor = status === 'hidden'  ? '#707078'
+                      : status === 'flagged' ? '#ffc847'
+                      : '#4ade80';
+
+    const card = document.createElement('div');
+    card.style.cssText = `
+      background:#141418;border:1px solid rgba(255,255,255,0.06);
+      border-radius:14px;padding:16px;margin-bottom:10px;
+      ${status === 'hidden' ? 'opacity:0.55;' : ''}
+      ${status === 'flagged' ? 'border-color:rgba(255,200,71,0.2);' : ''}
+    `;
+
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;">
+        <div style="font-family:'DM Serif Display',serif;font-style:italic;
+          font-size:0.95rem;color:#F0F0F0;line-height:1.5;flex:1;">
+          ${post.text || ''}
+        </div>
+        <span style="font-family:'Space Mono',monospace;font-size:0.48rem;font-weight:700;
+          padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;
+          flex-shrink:0;background:${statusColor}18;color:${statusColor};
+          border:1px solid ${statusColor}40;">
+          ${status}
+        </span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center;">
+        <span style="font-family:'Space Mono',monospace;font-size:0.5rem;color:#A0A0A8;font-weight:700;">
+          ${k.song} — ${k.artist}
+        </span>
+        <span style="font-family:'Space Mono',monospace;font-size:0.48rem;color:#707078;">
+          ${post.emotion || ''}
+        </span>
+        <span style="font-family:'Space Mono',monospace;font-size:0.48rem;color:#707078;">
+          ${timeAgo(post.timestamp)}
+        </span>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px;">
+        <span style="font-family:'Space Mono',monospace;font-size:0.48rem;color:#A0A0A8;">
+          👁 ${views}
+        </span>
+        <span style="font-family:'Space Mono',monospace;font-size:0.48rem;color:#A0A0A8;">
+          🎯 ${guesses}
+        </span>
+        <span style="font-family:'Space Mono',monospace;font-size:0.48rem;color:#A0A0A8;">
+          🔍 ${helps}
+        </span>
+        <span style="font-family:'Space Mono',monospace;font-size:0.48rem;
+          color:${flags > 0 ? '#ffc847' : '#707078'};">
+          🚩 ${flags}
+        </span>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;">
+        ${status !== 'hidden'
+          ? `<button onclick="adminHidePost('${post.id}')"
+              style="${adminActionBtnStyle('#707078')}">Hide</button>`
+          : `<button onclick="adminUnhidePost('${post.id}')"
+              style="${adminActionBtnStyle('#4ade80')}">Unhide</button>`
+        }
+        ${flags > 0
+          ? `<button onclick="adminClearFlags('${post.id}')"
+              style="${adminActionBtnStyle('#ffc847')}">Clear Flags</button>`
+          : ''
+        }
+        <button onclick="adminDeletePost('${post.id}')"
+          style="${adminActionBtnStyle('#ff6464')}">Delete</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function adminActionBtnStyle(color) {
+  return `padding:7px 14px;border-radius:8px;cursor:pointer;
+    font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:0.8px;
+    background:${color}14;border:1px solid ${color}40;color:${color};
+    transition:all 0.18s;`;
+}
+
+// ── Moderation actions ──
+async function adminHidePost(postId) {
+  if (!isFirebaseEnabled) return;
+  try {
+    await postsRef.child(postId).update({ status: 'hidden' });
+    showToast('Post hidden');
+    renderAdminPosts();
+    renderFeed();
+  } catch (e) { showToast('Error: ' + e.message); }
+}
+
+async function adminUnhidePost(postId) {
+  if (!isFirebaseEnabled) return;
+  try {
+    await postsRef.child(postId).update({ status: 'active' });
+    showToast('Post restored');
+    renderAdminPosts();
+    renderFeed();
+  } catch (e) { showToast('Error: ' + e.message); }
+}
+
+async function adminDeletePost(postId) {
+  const confirmed = window.confirm(
+    'Permanently delete this post? This cannot be undone.'
+  );
+  if (!confirmed) return;
+  if (!isFirebaseEnabled) return;
+  try {
+    await postsRef.child(postId).remove();
+    await analyticsRef.child(postId).remove();
+    showToast('Post deleted');
+    renderAdminPosts();
+    renderFeed();
+  } catch (e) { showToast('Error: ' + e.message); }
+}
+
+async function adminClearFlags(postId) {
+  if (!isFirebaseEnabled) return;
+  try {
+    await postsRef.child(postId).update({ flagCount: 0, status: 'active' });
+    showToast('Flags cleared');
+    renderAdminPosts();
+  } catch (e) { showToast('Error: ' + e.message); }
 }

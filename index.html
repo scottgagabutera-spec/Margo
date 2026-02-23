@@ -271,7 +271,7 @@
       <a href="/about" class="footer-link">About</a>
       <a href="/privacy" class="footer-link">Privacy</a>
       <a href="/terms" class="footer-link">Terms</a>
-      <a href="mailto:hello@trymargo.com" class="footer-link">Contact</a>
+      <a href="/cdn-cgi/l/email-protection#1c74797070735c686e65717d6e7b73327f7371" class="footer-link">Contact</a>
       <a href="https://linkedin.com/company/trymargo" class="footer-link" target="_blank" rel="noopener">LinkedIn</a>
     </nav>
     <p class="footer-copy">© 2025 Margo. A social platform for communicating through song lyrics.</p>
@@ -286,6 +286,18 @@
       <span class="field-label">Lyric</span>
       <textarea id="textInput" maxlength="140" placeholder="The line living in your head…" inputmode="text"></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
+
+      <!-- AI INSPIRE BUTTON — appears after emotion is selected -->
+      <div id="inspireWrap" style="display:none;">
+        <button id="inspireBtn" type="button" style="
+          width:100%;padding:10px;border-radius:10px;
+          background:rgba(232,197,71,0.07);border:1px dashed rgba(232,197,71,0.3);
+          color:#E8C547;font-family:'Space Mono',monospace;font-size:0.55rem;
+          font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+          cursor:pointer;transition:all 0.2s;
+        ">✦ Inspire me — AI suggestions</button>
+        <div id="inspireSuggestions" style="display:none;margin-top:8px;flex-direction:column;gap:6px;"></div>
+      </div>
       <span class="field-label">Emotion</span>
       <div class="emotion-grid">
         <button class="emotion-btn" data-emotion="Love">Love</button>
@@ -543,6 +555,13 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-<script src="script.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="js/state.js"></script>
+<script src="js/firebase.js"></script>
+<script src="js/feed.js"></script>
+<script src="js/composer.js"></script>
+<script src="js/studio.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
