@@ -1,12 +1,9 @@
 /* ============================================================
    MARGO — js/feed.js
-   Landing lyric stream, stats bar, search, room tabs,
-   feed ranking, and renderFeed.
-   Depends on: state.js, firebase.js
-   v4.3
+   v4.4 — YouTube thumbnails on feed cards + loading skeleton
+   + mobile autocomplete fix + card fade-in animation
    ============================================================ */
 
-// ── Lyric stream sample data (shown before Firebase loads) ──
 const STREAM_SAMPLES = [
   { text: "I gave you all I had and still you left",             emotion: 'Heartbreak' },
   { text: "Some nights I still hear your voice in the quiet",    emotion: 'Nostalgia'  },
@@ -22,7 +19,6 @@ const STREAM_SAMPLES = [
   { text: "I built a home in your chest and you moved out",      emotion: 'Heartbreak' },
 ];
 
-// ── Emotion colour maps ──
 const EMOTION_COLORS = {
   Love:'rgba(255,107,157,0.12)', Heartbreak:'rgba(255,80,80,0.1)',
   Hope:'rgba(107,140,255,0.12)', Nostalgia:'rgba(232,197,71,0.1)',
@@ -34,45 +30,182 @@ const EMOTION_TEXT = {
   Healing:'#4ade80', Joy:'#ffc847', Rage:'#FF6464', Loneliness:'#a0a0ff'
 };
 
-// ── Font preload ──
+/* ── Inject all runtime styles once ── */
+function injectFeedStyles() {
+  if (document.getElementById('feedV44Styles')) return;
+  const s = document.createElement('style');
+  s.id = 'feedV44Styles';
+  s.textContent = `
+    /* ── Card fade-in ── */
+    @keyframes cardFadeIn {
+      from { opacity:0; transform:translateY(7px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .feed-card { animation: cardFadeIn 0.28s ease both; }
+
+    /* ── Skeleton shimmer ── */
+    @keyframes skShimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position:  400px 0; }
+    }
+    .skeleton-card { pointer-events:none !important; cursor:default !important; }
+    .sk-line, .sk-block {
+      border-radius: 6px;
+      background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0.03) 25%,
+        rgba(255,255,255,0.07) 50%,
+        rgba(255,255,255,0.03) 75%
+      );
+      background-size: 800px 100%;
+      animation: skShimmer 1.5s infinite linear;
+    }
+    .sk-short  { height:9px; width:28%; margin-bottom:14px; }
+    .sk-block  { height:52px; width:100%; margin-bottom:12px; border-radius:10px; }
+    .sk-medium { height:9px; width:48%; margin-bottom:10px; }
+    .sk-row    { display:flex; gap:8px; margin-top:4px; }
+    .sk-long   { height:30px; flex:1; border-radius:8px; }
+
+    /* ── Feed card song row ── */
+    .card-song {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0 4px;
+    }
+    .card-song-text { flex:1; min-width:0; }
+
+    /* ── YouTube thumbnail on card ── */
+    .card-yt-thumb-wrap {
+      position: relative;
+      flex-shrink: 0;
+      width: 64px;
+      height: 44px;
+      border-radius: 7px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.05);
+    }
+    .card-yt-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .card-yt-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.45);
+      color: #fff;
+      opacity: 0;
+      transition: opacity 0.18s;
+      text-decoration: none;
+      border-radius: 7px;
+    }
+    .card-yt-thumb-wrap:hover .card-yt-play { opacity: 1; }
+
+    /* ── Studio YouTube bg option ── */
+    .yt-bg-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255,0,0,0.07);
+      border: 1px solid rgba(255,0,0,0.2);
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background 0.18s;
+    }
+    .yt-bg-option:hover { background: rgba(255,0,0,0.13); }
+    .yt-bg-option img {
+      width: 56px; height: 38px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .yt-bg-option-text { flex:1; min-width:0; }
+    .yt-bg-option-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #ff5555;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .yt-bg-option-title {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.5);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    /* ── Mobile fixes ── */
+    @media (max-width: 768px) {
+      /* Always show play icon on touch */
+      .card-yt-play { opacity:1; background:rgba(0,0,0,0.35); }
+
+      /* Modal scroll */
+      .modal-sheet {
+        max-height: 92dvh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Autocomplete slides up from bottom on mobile */
+      .yt-autocomplete {
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        bottom: 0 !important;
+        border-radius: 18px 18px 0 0 !important;
+        max-height: 50vh;
+        overflow-y: auto;
+        box-shadow: 0 -8px 40px rgba(0,0,0,0.6) !important;
+      }
+    }
+  `;
+  document.head.appendChild(s);
+}
+
+/* ── Font preload ── */
 function preloadStudioFonts() {
   const fonts = [
-    "700 16px 'Playfair Display'", "italic 16px 'Playfair Display'",
-    "600 16px 'Cormorant Garamond'", "italic 16px 'Cormorant Garamond'",
-    "600 16px 'Lora'", "italic 16px 'Lora'",
-    "700 16px 'Merriweather'", "700 16px 'Josefin Sans'",
-    "400 16px 'Bebas Neue'", "600 16px 'Oswald'",
-    "700 16px 'Dancing Script'",
-    "800 16px 'Syne'",
-    "700 16px 'Space Mono'",
-    "italic 16px 'DM Serif Display'",
-    "700 16px 'DM Sans'",
+    "700 16px 'Playfair Display'","italic 16px 'Playfair Display'",
+    "600 16px 'Cormorant Garamond'","italic 16px 'Cormorant Garamond'",
+    "600 16px 'Lora'","italic 16px 'Lora'",
+    "700 16px 'Merriweather'","700 16px 'Josefin Sans'",
+    "400 16px 'Bebas Neue'","600 16px 'Oswald'",
+    "700 16px 'Dancing Script'","800 16px 'Syne'",
+    "700 16px 'Space Mono'","italic 16px 'DM Serif Display'","700 16px 'DM Sans'",
   ];
   fonts.forEach(f => document.fonts.load(f).catch(() => {}));
 }
 
-// ── Lyric stream ──
+/* ── Lyric stream ── */
 function buildLyricStream() {
   const track1 = document.getElementById('track1');
   const track2 = document.getElementById('track2');
   if (!track1 || !track2) return;
-  track1.innerHTML = '';
-  track2.innerHTML = '';
+  track1.innerHTML = ''; track2.innerHTML = '';
   const source = getTickerPosts();
   const fill   = [...source, ...source, ...source];
-
   const buildCard = item => {
     const emotion = item.emotion || 'Nostalgia';
     const eClass  = 'emotion-' + emotion.toLowerCase();
     const text    = item.text || '';
-    const display = text.length > 44 ? text.substring(0, 44) + '…' : text;
+    const display = text.length > 44 ? text.substring(0,44) + '…' : text;
     const card    = document.createElement('div');
     card.className = 'lyric-card' + (Math.random() > 0.65 ? ' featured' : '');
     card.innerHTML = `<div class="lyric-card-text">${display}</div>
       <div class="lyric-card-meta"><span class="lyric-card-emotion ${eClass}">${emotion}</span></div>`;
     return card;
   };
-
   const offset = Math.floor(source.length / 2);
   fill.forEach(item => track1.appendChild(buildCard(item)));
   [...source.slice(offset), ...source, ...source, ...source.slice(0, offset)]
@@ -83,21 +216,19 @@ function getTickerPosts() {
   if (posts.length < 6) return STREAM_SAMPLES;
   const recent  = posts.slice(0, 4);
   const byViews = posts.filter(p => !recent.includes(p))
-    .sort((a,b) => (postAnalytics[b.id]?.views||0) - (postAnalytics[a.id]?.views||0))
-    .slice(0, 4);
-  const rest   = posts.filter(p => !recent.includes(p) && !byViews.includes(p));
-  const random = rest.sort(() => Math.random() - 0.5).slice(0, 4);
+    .sort((a,b) => (postAnalytics[b.id]?.views||0) - (postAnalytics[a.id]?.views||0)).slice(0, 4);
+  const rest    = posts.filter(p => !recent.includes(p) && !byViews.includes(p));
+  const random  = rest.sort(() => Math.random() - 0.5).slice(0, 4);
   return [...recent, ...byViews, ...random];
 }
 
-// ── Stats bar ──
+/* ── Stats ── */
 function initStatsShimmer() {
   const ids = ['statTotal','featuredArtistCount','featuredSongCount','topArtistName','topSongName','topEmotion'];
   ids.forEach(id => {
     const el = document.getElementById(id);
-    if (el && el.textContent === '—') {
+    if (el && el.textContent === '—')
       el.innerHTML = '<span class="stat-shimmer">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';
-    }
   });
 }
 
@@ -111,9 +242,9 @@ function calcFeatured() {
     if (song   && song   !== 'Unknown Song')   { const k = song.trim();   songCounts[k]   = (songCounts[k]  ||0)+1; }
     emotionCounts[emotion] = (emotionCounts[emotion]||0)+1;
   });
-  const artistEntries = Object.entries(artistCounts).sort((a,b)=>b[1]-a[1]);
-  const songEntries   = Object.entries(songCounts).sort((a,b)=>b[1]-a[1]);
-  const topEmotion    = Object.entries(emotionCounts).sort((a,b)=>b[1]-a[1])[0];
+  const artistEntries = Object.entries(artistCounts).sort((a,b) => b[1]-a[1]);
+  const songEntries   = Object.entries(songCounts).sort((a,b)   => b[1]-a[1]);
+  const topEmotion    = Object.entries(emotionCounts).sort((a,b) => b[1]-a[1])[0];
   return {
     uniqueArtistCount: Object.keys(artistCounts).length,
     uniqueSongCount:   Object.keys(songCounts).length,
@@ -146,26 +277,20 @@ function setupStatsBar() {
   const bar = document.querySelector('.stats-bar');
   if (!bar) return;
   function alignStats() {
-    if (window.innerWidth >= 769) {
+    if (window.innerWidth >= 769)
       bar.style.justifyContent = bar.scrollWidth <= bar.clientWidth ? 'center' : 'flex-start';
-    } else {
-      bar.style.justifyContent = 'flex-start';
-      bar.scrollLeft = 0;
-    }
+    else { bar.style.justifyContent = 'flex-start'; bar.scrollLeft = 0; }
   }
   alignStats();
   window.addEventListener('resize', alignStats);
 }
 
-// ── Search ──
+/* ── Search ── */
 function getFilteredPosts() {
-  // Step 0: never show hidden posts in public feed
   const visible = posts.filter(p => p.status !== 'hidden');
-  // Step 1: filter by active emotion room
-  let filtered = activeRoom === 'all'
+  let filtered  = activeRoom === 'all'
     ? visible
     : visible.filter(p => (p.emotion || '').toLowerCase() === activeRoom.toLowerCase());
-  // Step 2: filter by search query
   if (!searchQuery) return filtered;
   const q = searchQuery.toLowerCase();
   return filtered.filter(p =>
@@ -200,13 +325,11 @@ function initSearch() {
     if (clearBtn) clearBtn.style.display = searchQuery ? 'flex' : 'none';
     renderFeed();
   };
-  input.onkeydown = e => {
-    if (e.key === 'Escape') { clearSearch(); input.blur(); }
-  };
+  input.onkeydown = e => { if (e.key === 'Escape') { clearSearch(); input.blur(); } };
   if (clearBtn) clearBtn.onclick = () => { clearSearch(); input.focus(); };
 }
 
-// ── Room tabs ──
+/* ── Room tabs ── */
 function initRoomTabs() {
   const tabs = document.querySelectorAll('.room-tab');
   if (!tabs.length) return;
@@ -220,17 +343,15 @@ function initRoomTabs() {
   });
 }
 
-// ── Feed ranking ──
+/* ── Feed ranking ── */
 function calculatePostScore(post) {
-  const now = Date.now();
-  const ageInHours = post.timestamp
-    ? (now - post.timestamp) / (1000 * 60 * 60)
-    : 999;
+  const now         = Date.now();
+  const ageInHours  = post.timestamp ? (now - post.timestamp) / (1000 * 60 * 60) : 999;
   const recencyScore = Math.max(0, 48 - ageInHours);
-  const analytics = postAnalytics[post.id] || {};
-  const views   = analytics.views || 0;
-  const guesses = Object.keys(analytics.guesses || {}).length;
-  const helps   = Object.keys(analytics.helps   || {}).length;
+  const analytics   = postAnalytics[post.id] || {};
+  const views       = analytics.views || 0;
+  const guesses     = Object.keys(analytics.guesses || {}).length;
+  const helps       = Object.keys(analytics.helps   || {}).length;
   return (recencyScore * 0.4) + (views * 0.2) + (guesses * 0.25) + (helps * 0.15);
 }
 
@@ -238,20 +359,38 @@ function getRankedPosts() {
   return getFilteredPosts().sort((a, b) => calculatePostScore(b) - calculatePostScore(a));
 }
 
-// ── Render feed ──
+/* ── Loading skeleton ── */
+function renderSkeleton() {
+  feedList.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const s = document.createElement('div');
+    s.className = 'feed-card skeleton-card';
+    s.style.animationDelay = (i * 0.07) + 's';
+    s.innerHTML = `
+      <div class="sk-line sk-short"></div>
+      <div class="sk-block"></div>
+      <div class="sk-line sk-medium"></div>
+      <div class="sk-row">
+        <div class="sk-long"></div>
+        <div class="sk-long"></div>
+      </div>`;
+    feedList.appendChild(s);
+  }
+}
+
+/* ── Render feed ── */
 function getDynamicFontSize() { return '0.95rem'; }
 
 function renderFeed() {
-  feedList.innerHTML = '';
+  injectFeedStyles();
   updateLandingStats();
 
+  if (!postsLoaded) { renderSkeleton(); return; }
+
+  feedList.innerHTML = '';
   const filtered      = getRankedPosts();
   const resultCountEl = document.getElementById('searchResultCount');
 
-  if (!postsLoaded) {
-    feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--gold)">Loading…</div>';
-    return;
-  }
   if (!posts.length) {
     feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-2)">No lyrics yet — be the first to drop one.</div>';
     if (resultCountEl) resultCountEl.textContent = '';
@@ -267,23 +406,22 @@ function renderFeed() {
     return;
   }
 
-  if (resultCountEl) {
+  if (resultCountEl)
     resultCountEl.textContent = searchQuery
-      ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}`
-      : '';
-  }
+      ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}` : '';
 
   filtered.forEach((post, i) => {
-    const card    = document.createElement('div');
+    const card = document.createElement('div');
     card.className = 'feed-card';
     card.style.animationDelay = `${i * 0.03}s`;
 
-    const k       = post.knowledge || { song:'Unknown Song', artist:'Unknown Artist' };
-    const emotion = post.emotion || 'Nostalgia';
-    const eBg     = EMOTION_COLORS[emotion] || 'rgba(232,197,71,0.1)';
-    const eColor  = EMOTION_TEXT[emotion]   || 'var(--gold)';
-    const hasLinks= post.links && (post.links.spotify||post.links.apple||post.links.youtube||post.links.soundcloud);
-    const idx     = posts.findIndex(p => p.id === post.id);
+    const k        = post.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
+    const emotion  = post.emotion || 'Nostalgia';
+    const eBg      = EMOTION_COLORS[emotion] || 'rgba(232,197,71,0.1)';
+    const eColor   = EMOTION_TEXT[emotion]   || 'var(--gold)';
+    const hasLinks = post.links && (post.links.spotify||post.links.apple||post.links.youtube||post.links.soundcloud);
+    const idx      = posts.findIndex(p => p.id === post.id);
+    const meta     = post.youtubeMeta;
 
     const modeBadge = post.mode === 'guess'
       ? '<span class="card-mode-badge mode-guess">Guess</span>'
@@ -292,12 +430,36 @@ function renderFeed() {
       : '<span class="card-mode-badge mode-share">Share</span>';
 
     const lyricHTML = highlightMatch(post.text, searchQuery);
+
+    // ── YouTube thumbnail ──
+    const thumbHTML = (meta?.thumbnailSm || meta?.thumbnail)
+      ? `<div class="card-yt-thumb-wrap">
+           <img
+             src="${meta.thumbnailSm || meta.thumbnail}"
+             class="card-yt-thumb"
+             alt=""
+             loading="lazy"
+             onerror="this.parentElement.style.display='none'"
+           />
+           <a href="${meta.youtubeUrl || '#'}"
+             target="_blank" rel="noopener noreferrer"
+             class="card-yt-play"
+             onclick="event.stopPropagation()"
+             title="Watch on YouTube">
+             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+           </a>
+         </div>`
+      : '';
+
     let songSection = '', actionsSection = '';
 
     if (post.mode === 'share') {
       songSection = `<div class="card-song">
-        <div class="card-song-title">${highlightMatch(k.song, searchQuery)}</div>
-        <div class="card-song-artist">${highlightMatch(k.artist, searchQuery)}</div>
+        ${thumbHTML}
+        <div class="card-song-text">
+          <div class="card-song-title">${highlightMatch(k.song, searchQuery)}</div>
+          <div class="card-song-artist">${highlightMatch(k.artist, searchQuery)}</div>
+        </div>
       </div>`;
       actionsSection = `<div class="card-actions">
         <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
@@ -307,8 +469,8 @@ function renderFeed() {
       const what = [];
       if (post.guessConfig?.guessSong)   what.push('song');
       if (post.guessConfig?.guessArtist) what.push('artist');
-      if (!what.length) what.push('song','artist');
-      songSection = `<div class="card-mystery">Guess the ${what.join(' & ')} →</div>`;
+      if (!what.length) what.push('song', 'artist');
+      songSection    = `<div class="card-mystery">Guess the ${what.join(' & ')} →</div>`;
       actionsSection = `<div class="card-actions">
         <button class="card-btn" onclick="window.openGuess(${idx})">Guess</button>
         <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
@@ -318,7 +480,7 @@ function renderFeed() {
       const clue    = hasClue
         ? `Maybe: ${highlightMatch(k.song, searchQuery)} — ${highlightMatch(k.artist, searchQuery)}`
         : 'Help discover this song';
-      songSection = `<div class="card-discover">${clue}</div>`;
+      songSection    = `<div class="card-discover">${clue}</div>`;
       actionsSection = `<div class="card-actions">
         <button class="card-btn" onclick="window.openDiscover(${idx})">Help</button>
         <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
@@ -339,7 +501,7 @@ function renderFeed() {
   });
 }
 
-// ── Utilities ──
+/* ── Utilities ── */
 function timeAgo(ts) {
   const m = Math.floor((Date.now() - ts) / 60000);
   if (m < 1)  return 'now';
