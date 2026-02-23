@@ -1,191 +1,439 @@
 /* ============================================================
    MARGO — js/composer.js
-   Composer modal, post submission, guess, discover,
-   listen, postcard, and analytics interactions.
-   Depends on: state.js, firebase.js, feed.js (renderFeed, timeAgo)
-   v4.9 — YouTube integration
+   v5.0 — Genius lyric ID + YouTube autocomplete + premium UX
    ============================================================ */
 
-/* ==============================
-   MODERATION ENGINE v4
-   Normalized profanity auto-replace
-   + phonetic variation detection
-   ============================== */
-
+/* ── MODERATION ENGINE ── */
 const BANNED_PATTERNS = [
-  "fuck", "shit", "bitch", "asshole", "nigger", "cunt",
-  "whore", "slut", "pussy", "dick", "cock", "bastard",
-  "piss", "damn", "ass"
+  "fuck","shit","bitch","asshole","nigger","cunt",
+  "whore","slut","pussy","dick","cock","bastard","piss","damn","ass"
 ];
-
 const BANNED_VARIATIONS = {
-  fuck:    ["fuk", "fck", "fuq", "phuck", "fux"],
-  shit:    ["sh1t", "sht"],
-  bitch:   ["biatch", "b1tch"],
-  pussy:   ["pus5y", "puss1", "pussi"],
-  dick:    ["d1ck", "dik", "dic"],
-  cock:    ["c0ck", "cok"],
-  bastard: ["b4stard"],
-  ass:     ["a55", "@ss"],
-  nigger:  ["n1gger", "nigg3r", "nig"],
+  fuck:["fuk","fck","fuq","phuck","fux"], shit:["sh1t","sht"],
+  bitch:["biatch","b1tch"], pussy:["pus5y","puss1","pussi"],
+  dick:["d1ck","dik","dic"], cock:["c0ck","cok"],
+  bastard:["b4stard"], ass:["a55","@ss"], nigger:["n1gger","nigg3r","nig"],
 };
-
-function normalizeText(str) {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '')
-    .replace(/(.)\1+/g, '$1');
-}
-
-function containsBannedWord(text) {
-  const normalized = normalizeText(text);
-  return BANNED_PATTERNS.some(word => {
-    if (normalized.includes(normalizeText(word))) return true;
-    const variations = BANNED_VARIATIONS[word];
-    if (variations) return variations.some(v => normalized.includes(normalizeText(v)));
-    return false;
+function normalizeText(s){return s.toLowerCase().replace(/[^a-z0-9]/g,'').replace(/(.)\1+/g,'$1');}
+function containsBannedWord(text){
+  const n=normalizeText(text);
+  return BANNED_PATTERNS.some(w=>{
+    if(n.includes(normalizeText(w)))return true;
+    return(BANNED_VARIATIONS[w]||[]).some(v=>n.includes(normalizeText(v)));
   });
 }
+function censorText(text){
+  let r=text;
+  BANNED_PATTERNS.forEach(w=>{
+    const c=w[0]+'*'.repeat(w.length-2)+w[w.length-1];
+    r=r.replace(new RegExp(w,'gi'),c);
+    (BANNED_VARIATIONS[w]||[]).forEach(v=>{ r=r.replace(new RegExp(v,'gi'),c); });
+  });
+  return r;
+}
 
-function censorText(text) {
-  let result = text;
-  BANNED_PATTERNS.forEach(word => {
-    const censored = word[0] + '*'.repeat(word.length - 2) + word[word.length - 1];
-    result = result.replace(new RegExp(word, 'gi'), censored);
-    result = result.replace(new RegExp(word.split('').join('[^a-zA-Z]*'), 'gi'), censored);
-    if (BANNED_VARIATIONS[word]) {
-      BANNED_VARIATIONS[word].forEach(variant => {
-        result = result.replace(new RegExp(variant, 'gi'), censored);
-      });
+/* ── SEARCH STATE ── */
+let youtubeData       = null;  // confirmed YouTube result
+let geniusResult      = null;  // confirmed Genius result
+let ytSuggestTimer    = null;
+let geniusTimer       = null;
+let ytConfirmed       = false; // true once user clicks "Use this"
+
+/* ============================================================
+   GENIUS ENGINE — identify song from lyric text
+   ============================================================ */
+function initGeniusIdentify() {
+  // Add identify button below lyric textarea
+  const textArea = document.getElementById('textInput');
+  if (!textArea) return;
+
+  let btn = document.getElementById('geniusIdentifyBtn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id   = 'geniusIdentifyBtn';
+    btn.type = 'button';
+    btn.innerHTML = `<span class="genius-btn-icon">✦</span> Identify Song`;
+    btn.style.cssText = `
+      width:100%;margin-top:6px;padding:11px 16px;
+      border-radius:12px;border:1px dashed rgba(232,197,71,0.35);
+      background:rgba(232,197,71,0.05);
+      color:#E8C547;font-family:'Space Mono',monospace;
+      font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+      cursor:pointer;transition:all 0.25s;display:flex;align-items:center;
+      justify-content:center;gap:8px;
+    `;
+    btn.onmouseenter = () => { btn.style.background='rgba(232,197,71,0.1)'; btn.style.borderColor='rgba(232,197,71,0.6)'; };
+    btn.onmouseleave = () => { btn.style.background='rgba(232,197,71,0.05)'; btn.style.borderColor='rgba(232,197,71,0.35)'; };
+    textArea.parentNode.insertBefore(btn, textArea.nextSibling);
+  }
+
+  btn.onclick = async () => {
+    const lyric = document.getElementById('textInput').value.trim();
+    if (!lyric || lyric.length < 5) { showToast('Type a lyric first'); return; }
+    await runGeniusSearch(lyric, btn);
+  };
+}
+
+async function runGeniusSearch(query, btn) {
+  // Loading state
+  const origHTML = btn.innerHTML;
+  btn.innerHTML  = `<span class="genius-spinner"></span> Searching…`;
+  btn.disabled   = true;
+  btn.style.opacity = '0.7';
+
+  // Add spinner style if not present
+  if (!document.getElementById('geniusSpinnerStyle')) {
+    const s = document.createElement('style');
+    s.id = 'geniusSpinnerStyle';
+    s.textContent = `
+      .genius-spinner {
+        width:12px;height:12px;border-radius:50%;
+        border:2px solid rgba(232,197,71,0.3);
+        border-top-color:#E8C547;
+        animation:gspin 0.7s linear infinite;display:inline-block;
+      }
+      @keyframes gspin { to { transform:rotate(360deg); } }
+      .genius-results-list { display:flex;flex-direction:column;gap:8px;margin-top:10px; }
+      .genius-result-card {
+        display:flex;align-items:center;gap:10px;padding:10px 12px;
+        border-radius:12px;background:rgba(255,255,255,0.03);
+        border:1px solid rgba(255,255,255,0.08);cursor:pointer;
+        transition:all 0.2s;
+      }
+      .genius-result-card:hover { background:rgba(232,197,71,0.08);border-color:rgba(232,197,71,0.3); }
+      .genius-result-card.selected { background:rgba(232,197,71,0.12);border-color:#E8C547; }
+      .genius-result-art { width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;background:#1a1a1a; }
+      .genius-result-info { flex:1;min-width:0; }
+      .genius-result-song { font-size:0.8rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+      .genius-result-artist { font-size:0.7rem;color:var(--text-2,#888);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+      .genius-select-badge {
+        font-size:0.6rem;font-family:'Space Mono',monospace;letter-spacing:1px;
+        text-transform:uppercase;padding:4px 8px;border-radius:6px;
+        background:rgba(232,197,71,0.1);color:#E8C547;border:1px solid rgba(232,197,71,0.3);
+        white-space:nowrap;flex-shrink:0;
+      }
+      .yt-preview-card {
+        border-radius:14px;overflow:hidden;margin-top:10px;
+        border:1px solid rgba(255,255,255,0.08);
+        background:rgba(255,255,255,0.03);
+        animation:fadeSlideUp 0.3s ease;
+      }
+      @keyframes fadeSlideUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+      .yt-preview-inner { display:flex;align-items:center;gap:12px;padding:10px 12px; }
+      .yt-preview-thumb { width:72px;height:50px;border-radius:8px;object-fit:cover;flex-shrink:0; }
+      .yt-preview-info { flex:1;min-width:0; }
+      .yt-preview-title { font-size:0.78rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+      .yt-preview-channel { font-size:0.68rem;color:var(--text-2,#888); }
+      .yt-use-btn {
+        flex-shrink:0;padding:7px 14px;border-radius:8px;
+        background:#E8C547;color:#0B0B0D;
+        font-family:'Space Mono',monospace;font-size:0.6rem;
+        font-weight:700;letter-spacing:1px;text-transform:uppercase;
+        border:none;cursor:pointer;transition:all 0.2s;white-space:nowrap;
+      }
+      .yt-use-btn:hover { background:#f5d454;transform:scale(1.03); }
+      .yt-use-btn.confirmed { background:#4ade80;color:#0B0B0D; }
+      .yt-loading { padding:12px;text-align:center;font-size:0.72rem;color:var(--text-2,#888);display:flex;align-items:center;justify-content:center;gap:8px; }
+      .song-autocomplete-dropdown {
+        position:absolute;z-index:999;left:0;right:0;
+        background:#1a1a1f;border:1px solid rgba(255,255,255,0.1);
+        border-radius:12px;overflow:hidden;margin-top:4px;
+        box-shadow:0 16px 40px rgba(0,0,0,0.5);
+        animation:fadeSlideUp 0.2s ease;
+      }
+      .autocomplete-item {
+        display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;
+        transition:background 0.15s;border-bottom:1px solid rgba(255,255,255,0.05);
+      }
+      .autocomplete-item:last-child { border-bottom:none; }
+      .autocomplete-item:hover { background:rgba(232,197,71,0.08); }
+      .autocomplete-thumb { width:36px;height:26px;border-radius:5px;object-fit:cover;flex-shrink:0;background:#222; }
+      .autocomplete-song { font-size:0.78rem;font-weight:600;color:#fff; }
+      .autocomplete-artist { font-size:0.68rem;color:var(--text-2,#888); }
+    `;
+    document.head.appendChild(s);
+  }
+
+  try {
+    const res  = await fetch(`/api/genius?lyric=${encodeURIComponent(query)}`);
+    const data = await res.json();
+
+    btn.innerHTML = origHTML;
+    btn.disabled  = false;
+    btn.style.opacity = '1';
+
+    if (!res.ok || data.error || !data.results?.length) {
+      showToast('No song found — try a different line');
+      return;
     }
+
+    renderGeniusResults(data.results);
+
+  } catch (err) {
+    btn.innerHTML = origHTML;
+    btn.disabled  = false;
+    btn.style.opacity = '1';
+    showToast('Search failed — check connection');
+  }
+}
+
+function renderGeniusResults(results) {
+  // Remove old results
+  document.getElementById('geniusResultsList')?.remove();
+
+  const list = document.createElement('div');
+  list.id    = 'geniusResultsList';
+  list.className = 'genius-results-list';
+
+  const label = document.createElement('div');
+  label.style.cssText = 'font-size:0.65rem;color:var(--text-2,#888);letter-spacing:1.5px;text-transform:uppercase;font-family:"Space Mono",monospace;margin-bottom:2px;';
+  label.textContent = 'Select the right song';
+  list.appendChild(label);
+
+  results.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'genius-result-card';
+    card.innerHTML = `
+      ${r.artwork ? `<img src="${r.artwork}" class="genius-result-art" alt=""/>` : '<div class="genius-result-art"></div>'}
+      <div class="genius-result-info">
+        <div class="genius-result-song">${r.song}</div>
+        <div class="genius-result-artist">${r.artist}</div>
+      </div>
+      <span class="genius-select-badge">Use →</span>
+    `;
+    card.onclick = () => selectGeniusResult(r, card);
+    list.appendChild(card);
   });
-  return result;
+
+  // Insert after identify button
+  const btn = document.getElementById('geniusIdentifyBtn');
+  btn.parentNode.insertBefore(list, btn.nextSibling);
+}
+
+function selectGeniusResult(result, card) {
+  // Highlight selected
+  document.querySelectorAll('.genius-result-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  card.querySelector('.genius-select-badge').textContent = '✓ Selected';
+
+  geniusResult = result;
+
+  // Auto-fill song + artist fields
+  const songEl   = document.getElementById('songInput');
+  const artistEl = document.getElementById('artistInput');
+  if (songEl)   { songEl.value   = result.song;   songEl.dispatchEvent(new Event('input')); }
+  if (artistEl) { artistEl.value = result.artist; }
+
+  // Switch to share mode if not already
+  if (currentMode !== 'share') {
+    document.querySelector('[data-mode="share"]')?.click();
+  }
+
+  // Trigger YouTube fetch
+  clearYoutubePreview();
+  ytConfirmed = false;
+  fetchYoutubeData(result.song, result.artist);
+
+  // Collapse results after short delay
+  setTimeout(() => {
+    document.getElementById('geniusResultsList')?.remove();
+  }, 1200);
 }
 
 /* ============================================================
-   END MODERATION ENGINE
+   YOUTUBE ENGINE — autocomplete + video fetch
    ============================================================ */
-
-/* ============================================================
-   YOUTUBE ENGINE
-   Fetches video data via our secure Vercel API proxy
-   ============================================================ */
-
-let youtubeData      = null;
-let youtubeFetchTimer = null;
 
 function initYoutubeAutofetch() {
   const songEl   = document.getElementById('songInput');
   const artistEl = document.getElementById('artistInput');
   if (!songEl || !artistEl) return;
 
-  const trigger = () => {
-    clearTimeout(youtubeFetchTimer);
+  // Song field — show autocomplete dropdown
+  songEl.addEventListener('input', () => {
+    clearTimeout(ytSuggestTimer);
+    const val = songEl.value.trim();
+    closeAutocomplete();
+    if (val.length < 2) { clearYoutubePreview(); return; }
+    ytSuggestTimer = setTimeout(() => fetchYoutubeSuggestions(val), 400);
+  });
+
+  songEl.addEventListener('blur', () => {
+    setTimeout(closeAutocomplete, 200);
+  });
+
+  // Artist field — trigger full YouTube fetch when both filled
+  artistEl.addEventListener('input', () => {
+    clearTimeout(ytSuggestTimer);
     const song   = songEl.value.trim();
     const artist = artistEl.value.trim();
-    if (song.length > 1 && artist.length > 1) {
-      youtubeFetchTimer = setTimeout(() => fetchYoutubeData(song, artist), 800);
-    } else {
-      clearYoutubePreview();
+    if (song.length > 1 && artist.length > 1 && !ytConfirmed) {
+      ytSuggestTimer = setTimeout(() => fetchYoutubeData(song, artist), 800);
     }
-  };
+  });
 
-  songEl.addEventListener('input', trigger);
-  artistEl.addEventListener('input', trigger);
+  // Make song input container relative for dropdown
+  songEl.style.position = 'relative';
+  const wrap = songEl.parentElement;
+  if (wrap) wrap.style.position = 'relative';
+}
+
+async function fetchYoutubeSuggestions(query) {
+  try {
+    const res  = await fetch(`/api/youtube?suggest=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    if (!res.ok || !data.suggestions?.length) return;
+    renderAutocompleteDropdown(data.suggestions);
+  } catch (err) {
+    // Silent fail for autocomplete
+  }
+}
+
+function renderAutocompleteDropdown(suggestions) {
+  closeAutocomplete();
+  const songEl = document.getElementById('songInput');
+  if (!songEl) return;
+
+  const dropdown = document.createElement('div');
+  dropdown.id    = 'ytAutocomplete';
+  dropdown.className = 'song-autocomplete-dropdown';
+
+  suggestions.slice(0, 4).forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'autocomplete-item';
+    item.innerHTML = `
+      ${s.thumbnail ? `<img src="${s.thumbnail}" class="autocomplete-thumb" alt=""/>` : '<div class="autocomplete-thumb"></div>'}
+      <div>
+        <div class="autocomplete-song">${s.song}</div>
+        <div class="autocomplete-artist">${s.artist}</div>
+      </div>
+    `;
+    item.onmousedown = (e) => {
+      e.preventDefault();
+      selectAutocompleteItem(s);
+    };
+    dropdown.appendChild(item);
+  });
+
+  // Position below song input
+  const rect = songEl.getBoundingClientRect();
+  const modal = document.getElementById('composer');
+  const modalRect = modal?.getBoundingClientRect();
+
+  dropdown.style.cssText += `
+    position:absolute;
+    top:${songEl.offsetTop + songEl.offsetHeight + 4}px;
+    left:0;right:0;
+  `;
+
+  songEl.parentElement.style.position = 'relative';
+  songEl.parentElement.appendChild(dropdown);
+}
+
+function selectAutocompleteItem(suggestion) {
+  closeAutocomplete();
+  const songEl   = document.getElementById('songInput');
+  const artistEl = document.getElementById('artistInput');
+  if (songEl)   songEl.value   = suggestion.song;
+  if (artistEl) artistEl.value = suggestion.artist;
+
+  // Directly fetch YouTube with this video
+  clearYoutubePreview();
+  ytConfirmed = false;
+  fetchYoutubeData(suggestion.song, suggestion.artist);
+}
+
+function closeAutocomplete() {
+  document.getElementById('ytAutocomplete')?.remove();
 }
 
 async function fetchYoutubeData(song, artist) {
-  showYoutubeStatus('🔍 Finding on YouTube…');
+  showYoutubeLoading();
   youtubeData = null;
+  ytConfirmed = false;
 
   try {
     const res  = await fetch(`/api/youtube?song=${encodeURIComponent(song)}&artist=${encodeURIComponent(artist)}`);
     const data = await res.json();
 
-    if (!res.ok || data.error) {
-      showYoutubeStatus('');
-      return;
-    }
+    if (!res.ok || data.error) { clearYoutubePreview(); return; }
 
     youtubeData = data;
-    renderYoutubePreview(data);
-
-    // Auto-fill YouTube link if empty
-    const ytLinkEl = document.getElementById('youtubeLink');
-    if (ytLinkEl && !ytLinkEl.value && data.youtubeUrl) {
-      ytLinkEl.value = data.youtubeUrl;
-    }
+    renderYoutubeCard(data);
 
   } catch (err) {
-    console.warn('[YouTube fetch failed]', err.message);
-    showYoutubeStatus('');
+    clearYoutubePreview();
   }
 }
 
-function renderYoutubePreview(data) {
-  let preview = document.getElementById('youtubePreview');
-  if (!preview) {
-    preview = document.createElement('div');
-    preview.id = 'youtubePreview';
-    const artistEl = document.getElementById('artistInput');
-    artistEl?.parentNode?.insertBefore(preview, artistEl.nextSibling);
-  }
+function showYoutubeLoading() {
+  clearYoutubePreview();
+  const card = document.createElement('div');
+  card.id    = 'youtubePreview';
+  card.className = 'yt-preview-card';
+  card.innerHTML = `<div class="yt-loading"><span class="genius-spinner"></span> Finding video…</div>`;
+  insertAfterArtist(card);
+}
 
-  preview.style.cssText = `
-    display:flex;align-items:center;gap:10px;
-    background:rgba(255,0,0,0.07);
-    border:1px solid rgba(255,0,0,0.2);
-    border-radius:10px;padding:10px 12px;margin-top:8px;
-  `;
-
-  const thumb = data.thumbnailSm || data.thumbnail || '';
-  preview.innerHTML = `
-    ${thumb ? `<img src="${thumb}" style="width:60px;height:44px;border-radius:6px;object-fit:cover;flex-shrink:0" alt="Video thumbnail"/>` : ''}
-    <div style="flex:1;min-width:0">
-      <div style="font-size:0.75rem;font-weight:700;color:#ff4444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${data.title}</div>
-      <div style="font-size:0.7rem;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${data.channel}</div>
+function renderYoutubeCard(data) {
+  clearYoutubePreview();
+  const card = document.createElement('div');
+  card.id    = 'youtubePreview';
+  card.className = 'yt-preview-card';
+  card.innerHTML = `
+    <div class="yt-preview-inner">
+      ${data.thumbnailSm || data.thumbnail
+        ? `<img src="${data.thumbnailSm || data.thumbnail}" class="yt-preview-thumb" alt=""/>`
+        : ''}
+      <div class="yt-preview-info">
+        <div class="yt-preview-title">${data.title}</div>
+        <div class="yt-preview-channel">${data.channel}</div>
+      </div>
+      <button class="yt-use-btn" id="ytUseBtn" type="button">Use this ✓</button>
     </div>
-    <a href="${data.youtubeUrl}" target="_blank" rel="noopener noreferrer"
-      style="flex-shrink:0;padding:6px 10px;border-radius:6px;background:rgba(255,0,0,0.15);border:1px solid rgba(255,0,0,0.3);color:#ff4444;font-size:0.7rem;text-decoration:none;white-space:nowrap">
-      ▶ Watch
-    </a>
   `;
+  insertAfterArtist(card);
+
+  document.getElementById('ytUseBtn').onclick = () => confirmYoutubeResult(data);
 }
 
-function showYoutubeStatus(msg) {
-  let preview = document.getElementById('youtubePreview');
-  if (!msg) { if (preview) preview.remove(); return; }
-  if (!preview) {
-    preview = document.createElement('div');
-    preview.id = 'youtubePreview';
-    const artistEl = document.getElementById('artistInput');
-    artistEl?.parentNode?.insertBefore(preview, artistEl.nextSibling);
+function confirmYoutubeResult(data) {
+  ytConfirmed  = true;
+  youtubeData  = data;
+
+  const btn = document.getElementById('ytUseBtn');
+  if (btn) {
+    btn.textContent = '✓ Confirmed';
+    btn.classList.add('confirmed');
+    btn.disabled = true;
   }
-  preview.style.cssText = `
-    font-size:0.75rem;color:var(--text-2);
-    padding:8px 12px;margin-top:8px;
-    background:rgba(232,197,71,0.05);
-    border-radius:8px;border:1px dashed rgba(232,197,71,0.2);
-  `;
-  preview.textContent = msg;
+
+  // Auto-fill YouTube link
+  const ytLinkEl = document.getElementById('youtubeLink');
+  if (ytLinkEl && !ytLinkEl.value && data.youtubeUrl) {
+    ytLinkEl.value = data.youtubeUrl;
+  }
+
+  showToast('Video confirmed ✓');
+}
+
+function insertAfterArtist(el) {
+  const artistEl = document.getElementById('artistInput');
+  artistEl?.parentNode?.insertBefore(el, artistEl.nextSibling);
 }
 
 function clearYoutubePreview() {
   youtubeData = null;
-  const preview = document.getElementById('youtubePreview');
-  if (preview) preview.remove();
+  ytConfirmed = false;
+  document.getElementById('youtubePreview')?.remove();
 }
 
 /* ============================================================
-   END YOUTUBE ENGINE
+   COMPOSER INIT
    ============================================================ */
-
-
 function initComposer() {
-  // ── Char counter ──
   textInput.oninput = () => { charCount.textContent = textInput.value.length; };
 
-  // ── Mode selector ──
   modeBtns.forEach(btn => {
     btn.onclick = () => {
       modeBtns.forEach(b => b.classList.remove('active'));
@@ -199,10 +447,10 @@ function initComposer() {
       if (currentMode === 'guess')    guessInputs.classList.add('show');
       if (currentMode === 'discover') discoverInputs.classList.add('show');
       clearYoutubePreview();
+      closeAutocomplete();
     };
   });
 
-  // ── Emotion/vibe pills ──
   document.querySelectorAll('.emotion-btn').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
@@ -211,46 +459,31 @@ function initComposer() {
     };
   });
 
-  // ── Post button ──
   postBtn.onclick = submitPost;
-
-  // ── YouTube autofetch ──
+  initGeniusIdentify();
   initYoutubeAutofetch();
 
-  // ── Guess submission ──
-  document.getElementById('submitGuess').onclick = submitGuess;
-
-  // ── Discover submission ──
+  document.getElementById('submitGuess').onclick   = submitGuess;
   document.getElementById('submitDiscover').onclick = submitDiscover;
-
-  // ── Analytics ──
   analyticsBtn.onclick = openAnalytics;
-  document.getElementById('closeAnalytics').onclick = () => {
-    closeModal(analyticsModal);
-    openModal(postcardModal);
-  };
-
-  // ── Listen from postcard ──
+  document.getElementById('closeAnalytics').onclick = () => { closeModal(analyticsModal); openModal(postcardModal); };
   listenPostcard.onclick = () => {
     const idx = posts.findIndex(p => p.id === currentPost?.id);
     if (idx !== -1) { closeModal(postcardModal); window.openListen(idx); }
   };
-
-  // ── Modal close buttons ──
   document.getElementById('closeGuess').onclick    = () => { closeModal(guessModal); currentGuessAttempts = 0; };
   document.getElementById('closeDiscover').onclick = () => closeModal(discoverModal);
   document.getElementById('closePostcard').onclick = () => closeModal(postcardModal);
   document.getElementById('closeListen').onclick   = () => closeModal(listenModal);
 }
 
-// ── Post submission ──
+/* ── Post submission ── */
 async function submitPost() {
   if (postBtn.disabled) return;
   let text = textInput.value.trim();
   if (!text)            { showToast('Please enter a lyric'); return; }
   if (!selectedEmotion) { showToast('Please select a vibe'); return; }
 
-  // ── Moderation: auto-replace banned words ──
   if (containsBannedWord(text)) {
     text = censorText(text);
     textInput.value = text;
@@ -259,16 +492,11 @@ async function submitPost() {
   }
 
   let post = {
-    text,
-    emotion:    selectedEmotion,
-    mode:       currentMode,
-    community:  selectedEmotion,
-    status:     'active',
-    flagCount:  0,
-    knowledge:  { song: 'Unknown Song', artist: 'Unknown Artist' },
+    text, emotion: selectedEmotion, mode: currentMode,
+    community: selectedEmotion, status: 'active', flagCount: 0,
+    knowledge: { song: 'Unknown Song', artist: 'Unknown Artist' },
     guessConfig: null,
-    // Attach YouTube data if we fetched it
-    youtubeMeta: youtubeData ? {
+    youtubeMeta: youtubeData && ytConfirmed ? {
       videoId:    youtubeData.videoId    || null,
       title:      youtubeData.title      || null,
       thumbnail:  youtubeData.thumbnail  || null,
@@ -277,10 +505,10 @@ async function submitPost() {
       embedUrl:   youtubeData.embedUrl   || null,
     } : null,
     links: currentMode !== 'discover' ? {
-      spotify:    spotifyLink.value.trim()                      || null,
-      apple:      appleLink.value.trim()                        || null,
-      youtube:    youtubeData?.youtubeUrl || youtubeLink.value.trim() || null,
-      soundcloud: soundcloudLink.value.trim()                   || null
+      spotify:    spotifyLink.value.trim()                           || null,
+      apple:      appleLink.value.trim()                             || null,
+      youtube:    (ytConfirmed && youtubeData?.youtubeUrl) || youtubeLink.value.trim() || null,
+      soundcloud: soundcloudLink.value.trim()                        || null,
     } : null,
     authorId:  userId,
     timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now()
@@ -293,8 +521,7 @@ async function submitPost() {
       post.knowledge = { song: songInput.value.trim(), artist: artistInput.value.trim() };
     }
     if (currentMode === 'guess') {
-      const doSong   = guessSongCheck.checked;
-      const doArtist = guessArtistCheck.checked;
+      const doSong = guessSongCheck.checked, doArtist = guessArtistCheck.checked;
       if (!doSong && !doArtist) throw new Error('Select at least one thing to guess');
       if (doSong   && !guessSongAnswer.value.trim())   throw new Error('Enter the correct song title');
       if (doArtist && !guessArtistAnswer.value.trim()) throw new Error('Enter the correct artist');
@@ -309,8 +536,7 @@ async function submitPost() {
     }
   } catch (err) { showToast(err.message); return; }
 
-  postBtn.disabled    = true;
-  postBtn.textContent = 'Posting…';
+  postBtn.disabled = true; postBtn.textContent = 'Posting…';
   try {
     if (isFirebaseEnabled) {
       const ref = await postsRef.push(post);
@@ -325,42 +551,37 @@ async function submitPost() {
     console.error(err);
     showToast(err.message || 'Error posting.');
   } finally {
-    postBtn.disabled    = false;
-    postBtn.textContent = 'Post';
+    postBtn.disabled = false; postBtn.textContent = 'Post';
   }
 }
 
 function resetComposer() {
-  textInput.value = '';
-  songInput.value = '';
-  artistInput.value = '';
-  guessSongAnswer.value   = '';
-  guessArtistAnswer.value = '';
-  discoverSongInput.value   = '';
-  discoverArtistInput.value = '';
+  textInput.value = ''; songInput.value = ''; artistInput.value = '';
+  guessSongAnswer.value = ''; guessArtistAnswer.value = '';
+  discoverSongInput.value = ''; discoverArtistInput.value = '';
   if (spotifyLink)    spotifyLink.value    = '';
   if (appleLink)      appleLink.value      = '';
   if (youtubeLink)    youtubeLink.value    = '';
   if (soundcloudLink) soundcloudLink.value = '';
   charCount.textContent = '0';
-  selectedEmotion = null;
-  clearYoutubePreview();
+  selectedEmotion = null; geniusResult = null;
+  clearYoutubePreview(); closeAutocomplete();
+  document.getElementById('geniusResultsList')?.remove();
   document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
-  modeBtns.forEach((b, i) => b.classList.toggle('active', i === 0));
+  modeBtns.forEach((b,i) => b.classList.toggle('active', i===0));
   currentMode = 'share';
   shareInputs.classList.add('show');
   guessInputs.classList.remove('show');
   discoverInputs.classList.remove('show');
   streamingSection.style.display = 'block';
-  guessSongCheck.checked   = true;
-  guessArtistCheck.checked = true;
-  const inspireWrap        = document.getElementById('inspireWrap');
-  const inspireSuggestions = document.getElementById('inspireSuggestions');
-  if (inspireWrap)        inspireWrap.style.display = 'none';
-  if (inspireSuggestions) { inspireSuggestions.innerHTML = ''; inspireSuggestions.style.display = 'none'; }
+  guessSongCheck.checked = true; guessArtistCheck.checked = true;
+  const iw = document.getElementById('inspireWrap');
+  const is = document.getElementById('inspireSuggestions');
+  if (iw) iw.style.display = 'none';
+  if (is) { is.innerHTML = ''; is.style.display = 'none'; }
 }
 
-// ── View post (postcard) ──
+/* ── View post (postcard) ── */
 window.viewPost = function(index) {
   currentPost = posts[index];
   if (!currentPost) return;
@@ -368,7 +589,7 @@ window.viewPost = function(index) {
   document.getElementById('postcardLyric').textContent   = currentPost.text;
   document.getElementById('postcardEmotion').textContent = currentPost.emotion || 'Nostalgia';
 
-  const k      = currentPost.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
+  const k      = currentPost.knowledge || { song:'Unknown Song', artist:'Unknown Artist' };
   const songEl = document.getElementById('postcardSong');
   const meta   = currentPost.youtubeMeta;
 
@@ -376,7 +597,7 @@ window.viewPost = function(index) {
     songEl.innerHTML = `<div style="font-style:italic;color:var(--text-2)">Guess correctly to reveal</div>`;
   } else {
     const thumbHtml = meta?.thumbnail
-      ? `<img src="${meta.thumbnail}" style="width:80px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0" alt="Video thumbnail"/>`
+      ? `<img src="${meta.thumbnail}" style="width:80px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0" alt=""/>`
       : '';
     songEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px">
@@ -384,15 +605,14 @@ window.viewPost = function(index) {
         <div style="flex:1;min-width:0">
           <div style="font-weight:600">${k.song}</div>
           <div style="font-size:0.8rem;color:var(--text-2)">${k.artist}</div>
-          ${meta?.channel ? `<div style="font-size:0.7rem;color:var(--text-3,#666)">${meta.channel}</div>` : ''}
+          ${meta?.channel ? `<div style="font-size:0.7rem;color:var(--text-3,#555)">${meta.channel}</div>` : ''}
         </div>
       </div>
       ${meta?.youtubeUrl ? `
         <a href="${meta.youtubeUrl}" target="_blank" rel="noopener noreferrer"
-          style="display:block;margin-top:8px;width:100%;padding:8px;border-radius:8px;
+          style="display:block;margin-top:8px;width:100%;padding:9px;border-radius:8px;
           background:rgba(255,0,0,0.08);border:1px solid rgba(255,0,0,0.2);
-          color:#ff4444;text-align:center;font-size:0.8rem;text-decoration:none;
-          font-family:inherit">
+          color:#ff4444;text-align:center;font-size:0.8rem;text-decoration:none;font-family:inherit">
           ▶ Watch on YouTube
         </a>` : ''}
     `;
@@ -400,13 +620,12 @@ window.viewPost = function(index) {
 
   document.getElementById('postcardCommunity').innerHTML = '';
   const hasLinks = currentPost.links &&
-    (currentPost.links.spotify || currentPost.links.apple ||
-     currentPost.links.youtube || currentPost.links.soundcloud);
+    (currentPost.links.spotify||currentPost.links.apple||currentPost.links.youtube||currentPost.links.soundcloud);
   listenPostcard.style.display = (hasLinks && currentPost.mode !== 'guess') ? 'block' : 'none';
   openModal(postcardModal);
 };
 
-// ── Listen ──
+/* ── Listen ── */
 window.openListen = function(index) {
   currentPost = posts[index];
   if (!currentPost?.links) { showToast('No streaming links'); return; }
@@ -414,15 +633,12 @@ window.openListen = function(index) {
   ll.innerHTML = '';
   let has = false;
   [['Spotify','spotify'],['Apple Music','apple'],['YouTube','youtube'],['SoundCloud','soundcloud']]
-    .forEach(([name, key]) => {
+    .forEach(([name,key]) => {
       if (currentPost.links[key]) {
         has = true;
         const a = document.createElement('a');
-        a.className = 'listen-link';
-        a.href      = currentPost.links[key];
-        a.target    = '_blank';
-        a.rel       = 'noopener noreferrer';
-        a.textContent = name;
+        a.className='listen-link'; a.href=currentPost.links[key];
+        a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=name;
         ll.appendChild(a);
       }
     });
@@ -430,7 +646,7 @@ window.openListen = function(index) {
   openModal(listenModal);
 };
 
-// ── Guess ──
+/* ── Guess ── */
 window.openGuess = function(index) {
   currentPost = posts[index];
   if (!currentPost) return;
@@ -444,13 +660,10 @@ window.openGuess = function(index) {
   document.getElementById('guessInputFields').style.display = '';
   document.getElementById('submitGuess').style.display      = '';
   document.getElementById('revealAnswer').style.display     = 'none';
-  const doSong   = currentPost.guessConfig?.guessSong   ?? true;
-  const doArtist = currentPost.guessConfig?.guessArtist ?? true;
+  const doSong=currentPost.guessConfig?.guessSong??true, doArtist=currentPost.guessConfig?.guessArtist??true;
   document.getElementById('guessSongInput').style.display   = doSong   ? 'block' : 'none';
   document.getElementById('guessArtistInput').style.display = doArtist ? 'block' : 'none';
-  const what = [];
-  if (doSong)   what.push('song');
-  if (doArtist) what.push('artist');
+  const what=[]; if(doSong)what.push('song'); if(doArtist)what.push('artist');
   document.getElementById('guessHint').textContent = `${MAX_GUESS_ATTEMPTS} attempts to guess the ${what.join(' and ')}.`;
   openModal(guessModal);
 };
@@ -458,145 +671,133 @@ window.openGuess = function(index) {
 function submitGuess() {
   if (!currentPost) return;
   currentGuessAttempts++;
-  const k        = currentPost.knowledge || {};
-  const doSong   = currentPost.guessConfig?.guessSong   ?? true;
-  const doArtist = currentPost.guessConfig?.guessArtist ?? true;
-  const gs = document.getElementById('guessSongInput').value.trim().toLowerCase();
-  const ga = document.getElementById('guessArtistInput').value.trim().toLowerCase();
-  const as = (k.song   || '').toLowerCase();
-  const aa = (k.artist || '').toLowerCase();
-  const songOk   = !doSong   || (gs && (gs === as || gs.includes(as) || as.includes(gs)));
-  const artistOk = !doArtist || (ga && (ga === aa || ga.includes(aa) || aa.includes(ga)));
-  const correct  = songOk && artistOk;
+  const k=currentPost.knowledge||{};
+  const doSong=currentPost.guessConfig?.guessSong??true, doArtist=currentPost.guessConfig?.guessArtist??true;
+  const gs=document.getElementById('guessSongInput').value.trim().toLowerCase();
+  const ga=document.getElementById('guessArtistInput').value.trim().toLowerCase();
+  const as=(k.song||'').toLowerCase(), aa=(k.artist||'').toLowerCase();
+  const songOk=!doSong||(gs&&(gs===as||gs.includes(as)||as.includes(gs)));
+  const artistOk=!doArtist||(ga&&(ga===aa||ga.includes(aa)||aa.includes(ga)));
+  const correct=songOk&&artistOk;
 
   if (isFirebaseEnabled)
-    analyticsRef.child(currentPost.id).child('guesses')
-      .push({ song: gs||null, artist: ga||null, correct, timestamp: Date.now() });
+    analyticsRef.child(currentPost.id).child('guesses').push({song:gs||null,artist:ga||null,correct,timestamp:Date.now()});
 
-  const resultEl = document.getElementById('guessResult');
+  const resultEl=document.getElementById('guessResult');
   resultEl.classList.remove('hidden','result-success','result-error','result-partial');
 
   if (correct) {
-    resultEl.className = 'result-msg result-success';
-    resultEl.innerHTML = `Correct! 🎉<br><span style="font-size:0.8rem">"${k.song}" by ${k.artist}</span>`;
-    // Show YouTube thumbnail on correct guess
-    const meta = currentPost.youtubeMeta;
-    if (meta?.thumbnail) {
-      resultEl.innerHTML += `<br><img src="${meta.thumbnail}" style="width:100%;border-radius:8px;margin-top:8px;object-fit:cover" alt="Video thumbnail"/>`;
-    }
-    document.getElementById('submitGuess').style.display      = 'none';
-    document.getElementById('guessInputFields').style.display = 'none';
+    resultEl.className='result-msg result-success';
+    resultEl.innerHTML=`Correct! 🎉<br><span style="font-size:0.8rem">"${k.song}" by ${k.artist}</span>`;
+    const meta=currentPost.youtubeMeta;
+    if (meta?.thumbnail) resultEl.innerHTML+=`<br><img src="${meta.thumbnail}" style="width:100%;border-radius:8px;margin-top:8px;object-fit:cover" alt=""/>`;
+    document.getElementById('submitGuess').style.display='none';
+    document.getElementById('guessInputFields').style.display='none';
     if (currentPost.links) {
-      const ll  = document.getElementById('guessLinksSection');
-      let html  = '<div class="guess-links-title">Listen</div>';
-      if (currentPost.links.spotify)    html += `<a href="${currentPost.links.spotify}"    target="_blank" class="guess-link">Spotify</a>`;
-      if (currentPost.links.apple)      html += `<a href="${currentPost.links.apple}"      target="_blank" class="guess-link">Apple Music</a>`;
-      if (currentPost.links.youtube)    html += `<a href="${currentPost.links.youtube}"    target="_blank" class="guess-link">YouTube</a>`;
-      if (currentPost.links.soundcloud) html += `<a href="${currentPost.links.soundcloud}" target="_blank" class="guess-link">SoundCloud</a>`;
-      ll.innerHTML = html;
-      ll.classList.remove('hidden');
+      const ll=document.getElementById('guessLinksSection');
+      let html='<div class="guess-links-title">Listen</div>';
+      if(currentPost.links.spotify)   html+=`<a href="${currentPost.links.spotify}"   target="_blank" class="guess-link">Spotify</a>`;
+      if(currentPost.links.apple)     html+=`<a href="${currentPost.links.apple}"     target="_blank" class="guess-link">Apple Music</a>`;
+      if(currentPost.links.youtube)   html+=`<a href="${currentPost.links.youtube}"   target="_blank" class="guess-link">YouTube</a>`;
+      if(currentPost.links.soundcloud)html+=`<a href="${currentPost.links.soundcloud}"target="_blank" class="guess-link">SoundCloud</a>`;
+      ll.innerHTML=html; ll.classList.remove('hidden');
     }
     return;
   }
 
-  const left = MAX_GUESS_ATTEMPTS - currentGuessAttempts;
-  if (left <= 0) {
-    resultEl.className = 'result-msg result-error';
-    resultEl.innerHTML = `Out of attempts<br><span style="font-size:0.8rem">It was: "${k.song}" by ${k.artist}</span>`;
-    document.getElementById('submitGuess').style.display      = 'none';
-    document.getElementById('guessInputFields').style.display = 'none';
+  const left=MAX_GUESS_ATTEMPTS-currentGuessAttempts;
+  if (left<=0) {
+    resultEl.className='result-msg result-error';
+    resultEl.innerHTML=`Out of attempts<br><span style="font-size:0.8rem">It was: "${k.song}" by ${k.artist}</span>`;
+    document.getElementById('submitGuess').style.display='none';
+    document.getElementById('guessInputFields').style.display='none';
     return;
   }
-
-  const ps = doSong   && gs && (gs === as || gs.includes(as) || as.includes(gs));
-  const pa = doArtist && ga && (ga === aa || ga.includes(aa) || aa.includes(ga));
-  resultEl.className = `result-msg ${(ps || pa) ? 'result-partial' : 'result-error'}`;
-  let msg = (ps || pa) ? 'Partially correct — ' : 'Incorrect — ';
-  if (doSong)   msg += `Song: ${ps ? '✓' : '✗'} `;
-  if (doArtist) msg += `Artist: ${pa ? '✓' : '✗'} `;
-  msg += `(${left} left)`;
-  resultEl.innerHTML = msg;
-  document.getElementById('guessSongInput').value   = '';
-  document.getElementById('guessArtistInput').value = '';
+  const ps=doSong&&gs&&(gs===as||gs.includes(as)||as.includes(gs));
+  const pa=doArtist&&ga&&(ga===aa||ga.includes(aa)||aa.includes(ga));
+  resultEl.className=`result-msg ${(ps||pa)?'result-partial':'result-error'}`;
+  let msg=(ps||pa)?'Partially correct — ':'Incorrect — ';
+  if(doSong)  msg+=`Song: ${ps?'✓':'✗'} `;
+  if(doArtist)msg+=`Artist: ${pa?'✓':'✗'} `;
+  msg+=`(${left} left)`;
+  resultEl.innerHTML=msg;
+  document.getElementById('guessSongInput').value='';
+  document.getElementById('guessArtistInput').value='';
 }
 
-// ── Discover ──
+/* ── Discover ── */
 window.openDiscover = function(index) {
-  currentPost = posts[index];
-  if (!currentPost) return;
+  currentPost=posts[index];
+  if(!currentPost)return;
   trackView(currentPost.id);
   ['discoverLyric','discoverSongAnswer','discoverArtistAnswer',
    'discoverSpotifyLink','discoverAppleLink','discoverYoutubeLink','discoverSoundcloudLink']
-    .forEach(id => {
-      const el = document.getElementById(id);
-      if (el) { id === 'discoverLyric' ? el.textContent = currentPost.text : el.value = ''; }
+    .forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){id==='discoverLyric'?el.textContent=currentPost.text:el.value='';}
     });
   openModal(discoverModal);
 };
 
 function submitDiscover() {
-  const song   = document.getElementById('discoverSongAnswer').value.trim();
-  const artist = document.getElementById('discoverArtistAnswer').value.trim();
-  if (!song || !artist) { showToast('Please enter both song and artist'); return; }
-  const helpData = {
-    song, artist,
-    links: {
-      spotify:    document.getElementById('discoverSpotifyLink').value.trim()    || null,
-      apple:      document.getElementById('discoverAppleLink').value.trim()      || null,
-      youtube:    document.getElementById('discoverYoutubeLink').value.trim()    || null,
-      soundcloud: document.getElementById('discoverSoundcloudLink').value.trim() || null
+  const song=document.getElementById('discoverSongAnswer').value.trim();
+  const artist=document.getElementById('discoverArtistAnswer').value.trim();
+  if(!song||!artist){showToast('Please enter both song and artist');return;}
+  const helpData={
+    song,artist,
+    links:{
+      spotify:   document.getElementById('discoverSpotifyLink').value.trim()||null,
+      apple:     document.getElementById('discoverAppleLink').value.trim()||null,
+      youtube:   document.getElementById('discoverYoutubeLink').value.trim()||null,
+      soundcloud:document.getElementById('discoverSoundcloudLink').value.trim()||null,
     },
-    timestamp: Date.now()
+    timestamp:Date.now()
   };
-  if (isFirebaseEnabled) analyticsRef.child(currentPost.id).child('helps').push(helpData);
+  if(isFirebaseEnabled)analyticsRef.child(currentPost.id).child('helps').push(helpData);
   showToast('Thanks for helping!');
   closeModal(discoverModal);
 }
 
-// ── Analytics ──
+/* ── Analytics ── */
 function openAnalytics() {
-  if (!currentPost) return;
-  const an      = postAnalytics[currentPost.id] || { views: 0 };
-  const guesses = Object.values(an.guesses || {});
-  const helps   = Object.values(an.helps   || {});
-  const body    = document.getElementById('analyticsBody');
+  if(!currentPost)return;
+  const an=postAnalytics[currentPost.id]||{views:0};
+  const guesses=Object.values(an.guesses||{});
+  const helps=Object.values(an.helps||{});
+  const body=document.getElementById('analyticsBody');
+  let html=`<div class="analytics-grid"><div class="stat-card"><div class="stat-num">${an.views||0}</div><div class="stat-label">Views</div></div>`;
+  if(currentPost.mode==='guess')   html+=`<div class="stat-card"><div class="stat-num">${guesses.length}</div><div class="stat-label">Guesses</div></div>`;
+  if(currentPost.mode==='discover')html+=`<div class="stat-card"><div class="stat-num">${helps.length}</div><div class="stat-label">Identifications</div></div>`;
+  html+='</div>';
+  body.innerHTML=html;
 
-  let html = `<div class="analytics-grid">
-    <div class="stat-card"><div class="stat-num">${an.views||0}</div><div class="stat-label">Views</div></div>`;
-  if (currentPost.mode === 'guess')
-    html += `<div class="stat-card"><div class="stat-num">${guesses.length}</div><div class="stat-label">Guesses</div></div>`;
-  if (currentPost.mode === 'discover')
-    html += `<div class="stat-card"><div class="stat-num">${helps.length}</div><div class="stat-label">Identifications</div></div>`;
-  html += '</div>';
-  body.innerHTML = html;
-
-  if (currentPost.mode === 'guess' && guesses.length) {
-    let sec = '<div class="activity-section"><h4>Guesses</h4><div class="activity-list">';
-    guesses.forEach(g => {
-      sec += `<div class="activity-item ${g.correct ? 'correct' : 'incorrect'}">
-        <div class="activity-guess">${g.song ? 'Song: ' + g.song : ''}${g.artist ? (g.song ? ' · ' : '') + 'Artist: ' + g.artist : ''}</div>
-        <div class="activity-result ${g.correct ? 'correct' : 'incorrect'}">${g.correct ? '✓ Correct' : '✗ Incorrect'}</div>
+  if(currentPost.mode==='guess'&&guesses.length){
+    let sec='<div class="activity-section"><h4>Guesses</h4><div class="activity-list">';
+    guesses.forEach(g=>{
+      sec+=`<div class="activity-item ${g.correct?'correct':'incorrect'}">
+        <div class="activity-guess">${g.song?'Song: '+g.song:''}${g.artist?(g.song?' · ':')+'Artist: '+g.artist':''}</div>
+        <div class="activity-result ${g.correct?'correct':'incorrect'}">${g.correct?'✓ Correct':'✗ Incorrect'}</div>
         <div class="activity-time">${timeAgo(g.timestamp)}</div>
       </div>`;
     });
-    body.innerHTML += sec + '</div></div>';
+    body.innerHTML+=sec+'</div></div>';
   }
 
-  if (currentPost.mode === 'discover' && helps.length) {
-    let sec = '<div class="activity-section"><h4>Community Identifications</h4><div class="activity-list">';
-    helps.forEach(h => {
-      const linkParts = [];
-      if (h.links?.spotify)    linkParts.push(`<a href="${h.links.spotify}"    target="_blank" class="help-link">Spotify</a>`);
-      if (h.links?.apple)      linkParts.push(`<a href="${h.links.apple}"      target="_blank" class="help-link">Apple</a>`);
-      if (h.links?.youtube)    linkParts.push(`<a href="${h.links.youtube}"    target="_blank" class="help-link">YouTube</a>`);
-      if (h.links?.soundcloud) linkParts.push(`<a href="${h.links.soundcloud}" target="_blank" class="help-link">SoundCloud</a>`);
-      sec += `<div class="activity-item">
-        <div class="activity-guess"><strong>${h.song || '?'}</strong> — ${h.artist || '?'}</div>
-        ${linkParts.length ? `<div class="help-links-row">${linkParts.join('')}</div>` : ''}
+  if(currentPost.mode==='discover'&&helps.length){
+    let sec='<div class="activity-section"><h4>Community Identifications</h4><div class="activity-list">';
+    helps.forEach(h=>{
+      const lp=[];
+      if(h.links?.spotify)   lp.push(`<a href="${h.links.spotify}"   target="_blank" class="help-link">Spotify</a>`);
+      if(h.links?.apple)     lp.push(`<a href="${h.links.apple}"     target="_blank" class="help-link">Apple</a>`);
+      if(h.links?.youtube)   lp.push(`<a href="${h.links.youtube}"   target="_blank" class="help-link">YouTube</a>`);
+      if(h.links?.soundcloud)lp.push(`<a href="${h.links.soundcloud}"target="_blank" class="help-link">SoundCloud</a>`);
+      sec+=`<div class="activity-item">
+        <div class="activity-guess"><strong>${h.song||'?'}</strong> — ${h.artist||'?'}</div>
+        ${lp.length?`<div class="help-links-row">${lp.join('')}</div>`:''}
         <div class="activity-time">${timeAgo(h.timestamp)}</div>
       </div>`;
     });
-    body.innerHTML += sec + '</div></div>';
+    body.innerHTML+=sec+'</div></div>';
   }
 
   closeModal(postcardModal);
