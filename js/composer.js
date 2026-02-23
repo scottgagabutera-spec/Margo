@@ -775,7 +775,7 @@ function openAnalytics() {
     let sec='<div class="activity-section"><h4>Guesses</h4><div class="activity-list">';
     guesses.forEach(g=>{
       sec+=`<div class="activity-item ${g.correct?'correct':'incorrect'}">
-        <div class="activity-guess">${g.song?'Song: '+g.song:''}${g.artist?(g.song?' · ':')+'Artist: '+g.artist':''}</div>
+        <div class="activity-guess">${g.song?'Song: '+g.song:''}${g.artist?(g.song?' · ':''  )+'Artist: '+g.artist:''}</div>
         <div class="activity-result ${g.correct?'correct':'incorrect'}">${g.correct?'✓ Correct':'✗ Incorrect'}</div>
         <div class="activity-time">${timeAgo(g.timestamp)}</div>
       </div>`;
