@@ -1,7 +1,7 @@
 /* ============================================================
    MARGO — js/feed.js
-   v4.4 — YouTube thumbnails on feed cards + loading skeleton
-   + mobile autocomplete fix + card fade-in animation
+   v4.5 — Fixed card layout, uniform YouTube thumbnails,
+          gold-tinted cards, buttons always visible
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -32,9 +32,9 @@ const EMOTION_TEXT = {
 
 /* ── Inject all runtime styles once ── */
 function injectFeedStyles() {
-  if (document.getElementById('feedV44Styles')) return;
+  if (document.getElementById('feedV45Styles')) return;
   const s = document.createElement('style');
-  s.id = 'feedV44Styles';
+  s.id = 'feedV45Styles';
   s.textContent = `
     /* ── Card fade-in ── */
     @keyframes cardFadeIn {
@@ -43,12 +43,109 @@ function injectFeedStyles() {
     }
     .feed-card { animation: cardFadeIn 0.28s ease both; }
 
+    /* ── CARD REDESIGN: gold-tinted, distinct from bg ──
+       Override the fixed height from style.css so buttons
+       are never clipped. Cards are now flex-column and
+       auto-height with a min-height floor.
+    ── */
+    #feedList .feed-card {
+      height: auto !important;
+      min-height: 230px;
+      background: #17171c !important;
+      border-color: rgba(232,197,71,0.14) !important;
+      border-width: 1px !important;
+      box-shadow:
+        0 0 0 1px rgba(232,197,71,0.04),
+        0 4px 24px rgba(0,0,0,0.35);
+      position: relative;
+      overflow: visible;
+    }
+
+    /* Gold top accent line — premium editorial feel */
+    #feedList .feed-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 16px; right: 16px;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(232,197,71,0.35) 30%,
+        rgba(232,197,71,0.55) 50%,
+        rgba(232,197,71,0.35) 70%,
+        transparent 100%
+      );
+      border-radius: 0;
+    }
+
+    #feedList .feed-card:hover {
+      border-color: rgba(232,197,71,0.35) !important;
+      background: #1a1a20 !important;
+      box-shadow:
+        0 0 0 1px rgba(232,197,71,0.08),
+        0 12px 40px rgba(0,0,0,0.5),
+        0 0 24px rgba(232,197,71,0.04);
+      transform: translateY(-2px);
+    }
+
+    /* Disable old ::after pseudo that was also used for hover glow — 
+       we handle it via box-shadow now */
+    #feedList .feed-card::after { display: none; }
+
+    /* ── Lyric: no fixed height, just clamp ── */
+    #feedList .card-lyric {
+      height: auto !important;
+      max-height: 4.8em;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    /* ── Song section: flex so thumb + text sit side by side ── */
+    #feedList .card-song {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-top: 9px;
+      border-top: 1px solid rgba(232,197,71,0.08);
+      flex-shrink: 0;
+      min-height: 52px;
+    }
+    #feedList .card-song-text { flex:1; min-width:0; }
+
+    /* ── Actions always at bottom, never hidden ── */
+    #feedList .card-actions {
+      margin-top: auto;
+      padding-top: 9px;
+      border-top: 1px solid rgba(232,197,71,0.08);
+      flex-shrink: 0;
+    }
+
+    /* Mystery / Discover sections: match border style */
+    #feedList .card-mystery,
+    #feedList .card-discover {
+      border-color: rgba(107,140,255,0.14);
+      border-color: rgba(74,222,128,0.14);
+      flex-shrink: 0;
+      min-height: 48px;
+      height: auto;
+    }
+    #feedList .card-mystery { border-color: rgba(107,140,255,0.14); }
+    #feedList .card-discover { border-color: rgba(74,222,128,0.14); }
+
     /* ── Skeleton shimmer ── */
     @keyframes skShimmer {
       0%   { background-position: -400px 0; }
       100% { background-position:  400px 0; }
     }
-    .skeleton-card { pointer-events:none !important; cursor:default !important; }
+    .skeleton-card {
+      pointer-events:none !important;
+      cursor:default !important;
+      height: auto !important;
+      min-height: 230px;
+    }
     .sk-line, .sk-block {
       border-radius: 6px;
       background: linear-gradient(
@@ -66,24 +163,16 @@ function injectFeedStyles() {
     .sk-row    { display:flex; gap:8px; margin-top:4px; }
     .sk-long   { height:30px; flex:1; border-radius:8px; }
 
-    /* ── Feed card song row ── */
-    .card-song {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 8px 0 4px;
-    }
-    .card-song-text { flex:1; min-width:0; }
-
     /* ── YouTube thumbnail on card ── */
     .card-yt-thumb-wrap {
       position: relative;
       flex-shrink: 0;
-      width: 64px;
-      height: 44px;
-      border-radius: 7px;
+      width: 58px;
+      height: 40px;
+      border-radius: 6px;
       overflow: hidden;
       background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.07);
     }
     .card-yt-thumb {
       width: 100%;
@@ -97,12 +186,12 @@ function injectFeedStyles() {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(0,0,0,0.45);
+      background: rgba(0,0,0,0.5);
       color: #fff;
       opacity: 0;
       transition: opacity 0.18s;
       text-decoration: none;
-      border-radius: 7px;
+      border-radius: 5px;
     }
     .card-yt-thumb-wrap:hover .card-yt-play { opacity: 1; }
 
@@ -147,7 +236,7 @@ function injectFeedStyles() {
     /* ── Mobile fixes ── */
     @media (max-width: 768px) {
       /* Always show play icon on touch */
-      .card-yt-play { opacity:1; background:rgba(0,0,0,0.35); }
+      .card-yt-play { opacity:1; background:rgba(0,0,0,0.4); }
 
       /* Modal scroll */
       .modal-sheet {
@@ -431,7 +520,7 @@ function renderFeed() {
 
     const lyricHTML = highlightMatch(post.text, searchQuery);
 
-    // ── YouTube thumbnail ──
+    // ── YouTube thumbnail — shown on ALL share-mode cards that have meta
     const thumbHTML = (meta?.thumbnailSm || meta?.thumbnail)
       ? `<div class="card-yt-thumb-wrap">
            <img
@@ -446,7 +535,7 @@ function renderFeed() {
              class="card-yt-play"
              onclick="event.stopPropagation()"
              title="Watch on YouTube">
-             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
            </a>
          </div>`
       : '';
