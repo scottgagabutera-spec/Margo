@@ -1,7 +1,7 @@
 /* ============================================================
    MARGO — js/feed.js
-   v4.6 — Smart Listen/thumb logic, stronger card design,
-          uniform YouTube thumbnails
+   v4.7 — Equal-height cards, gold design, smart font scaling,
+          fixed Back to Top position, uniform YouTube thumbs
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -20,129 +20,170 @@ const STREAM_SAMPLES = [
 ];
 
 const EMOTION_COLORS = {
-  Love:'rgba(255,107,157,0.15)', Heartbreak:'rgba(255,80,80,0.12)',
-  Hope:'rgba(107,140,255,0.15)', Nostalgia:'rgba(232,197,71,0.12)',
-  Healing:'rgba(74,222,128,0.15)', Joy:'rgba(255,200,71,0.12)',
-  Rage:'rgba(255,100,100,0.15)', Loneliness:'rgba(160,160,255,0.12)'
+  Love:'rgba(255,107,157,0.13)', Heartbreak:'rgba(255,80,80,0.11)',
+  Hope:'rgba(107,140,255,0.13)', Nostalgia:'rgba(232,197,71,0.11)',
+  Healing:'rgba(74,222,128,0.13)', Joy:'rgba(255,200,71,0.11)',
+  Rage:'rgba(255,100,100,0.13)', Loneliness:'rgba(160,160,255,0.11)'
 };
 const EMOTION_TEXT = {
   Love:'#FF6B9D', Heartbreak:'#ff5050', Hope:'#6B8CFF', Nostalgia:'#E8C547',
   Healing:'#4ade80', Joy:'#ffc847', Rage:'#FF6464', Loneliness:'#a0a0ff'
 };
-const EMOTION_BORDER = {
-  Love:'rgba(255,107,157,0.2)', Heartbreak:'rgba(255,80,80,0.18)',
-  Hope:'rgba(107,140,255,0.2)', Nostalgia:'rgba(232,197,71,0.22)',
-  Healing:'rgba(74,222,128,0.2)', Joy:'rgba(255,200,71,0.18)',
-  Rage:'rgba(255,100,100,0.2)', Loneliness:'rgba(160,160,255,0.2)'
+const EMOTION_GLOW = {
+  Love:'rgba(255,107,157,0.55)', Heartbreak:'rgba(255,80,80,0.5)',
+  Hope:'rgba(107,140,255,0.55)', Nostalgia:'rgba(232,197,71,0.65)',
+  Healing:'rgba(74,222,128,0.55)', Joy:'rgba(255,200,71,0.55)',
+  Rage:'rgba(255,100,100,0.55)', Loneliness:'rgba(160,160,255,0.55)'
 };
 
-/* ── Inject all runtime styles once ── */
+/* ── Inject runtime styles ── */
 function injectFeedStyles() {
-  if (document.getElementById('feedV46Styles')) return;
+  if (document.getElementById('feedV47Styles')) return;
   const s = document.createElement('style');
-  s.id = 'feedV46Styles';
+  s.id = 'feedV47Styles';
   s.textContent = `
     /* ── Card fade-in ── */
     @keyframes cardFadeIn {
       from { opacity:0; transform:translateY(10px); }
       to   { opacity:1; transform:translateY(0); }
     }
-    .feed-card { animation: cardFadeIn 0.3s ease both; }
 
-    /* ── CARD REDESIGN ── */
+    /* ── CARD BASE: fixed equal height, gold-forward ── */
     #feedList .feed-card {
-      height: auto !important;
-      min-height: 220px;
-      background: #18181f !important;
+      height: 280px !important;
+      background: #17171d !important;
       border-width: 1px !important;
       position: relative;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: cardFadeIn 0.3s ease both;
       transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
     }
 
-    /* Emotion-coloured left border strip */
+    /* Gold shimmer top line — always present */
     #feedList .feed-card::before {
       content: '';
       position: absolute;
-      top: 0; left: 0;
-      width: 3px; bottom: 0;
-      background: var(--card-emotion-color, rgba(232,197,71,0.5));
-      border-radius: 14px 0 0 14px;
-      opacity: 0.7;
-    }
-
-    /* Subtle top shimmer line */
-    #feedList .feed-card::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 3px; right: 0;
+      top: 0; left: 0; right: 0;
       height: 1px;
       background: linear-gradient(
         90deg,
-        var(--card-emotion-color, rgba(232,197,71,0.3)) 0%,
-        transparent 70%
+        transparent 0%,
+        rgba(232,197,71,0.5) 20%,
+        rgba(232,197,71,0.9) 50%,
+        rgba(232,197,71,0.5) 80%,
+        transparent 100%
       );
-      opacity: 0.5;
+    }
+
+    /* Emotion-color left accent strip */
+    #feedList .feed-card::after {
+      content: '';
+      position: absolute;
+      top: 12px; left: 0; bottom: 12px;
+      width: 3px;
+      background: var(--card-emotion-glow, rgba(232,197,71,0.6));
+      border-radius: 0 3px 3px 0;
+      opacity: 0.8;
     }
 
     #feedList .feed-card:hover {
       transform: translateY(-3px) !important;
+      border-color: rgba(232,197,71,0.4) !important;
       box-shadow:
-        0 16px 48px rgba(0,0,0,0.55),
-        0 0 0 1px var(--card-emotion-color, rgba(232,197,71,0.2));
+        0 18px 50px rgba(0,0,0,0.55),
+        0 0 30px rgba(232,197,71,0.06),
+        0 0 0 1px rgba(232,197,71,0.12);
     }
 
-    /* ── Lyric: auto height, max 3 lines ── */
+    /* ── Lyric zone: fixed height, font scales with length ── */
     #feedList .card-lyric {
-      height: auto !important;
-      max-height: 5em;
+      height: 80px !important;
+      overflow: hidden;
       display: -webkit-box;
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
-      overflow: hidden;
       flex-shrink: 0;
-      padding-left: 6px;
+      padding-left: 8px;
+      line-height: 1.45;
     }
 
-    /* ── Song row: thumb + text ── */
+    /* ── Song row ── */
     #feedList .card-song {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: 8px;
+      border-top: 1px solid rgba(232,197,71,0.1);
       flex-shrink: 0;
-      min-height: 50px;
+      height: 54px;
+      overflow: hidden;
     }
     #feedList .card-song-text { flex:1; min-width:0; }
 
-    /* ── Actions always visible at bottom ── */
-    #feedList .card-actions {
-      margin-top: auto;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      flex-shrink: 0;
-    }
+    /* ── Mystery / Discover: fixed height ── */
     #feedList .card-mystery,
     #feedList .card-discover {
       flex-shrink: 0;
-      min-height: 46px;
-      height: auto !important;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+    #feedList .card-mystery { border-color: rgba(107,140,255,0.15); }
+    #feedList .card-discover { border-color: rgba(74,222,128,0.15); }
+
+    /* ── Actions always at bottom ── */
+    #feedList .card-actions {
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid rgba(232,197,71,0.1);
+      flex-shrink: 0;
     }
 
     /* ── Card top row ── */
-    #feedList .card-top { padding-left: 6px; }
+    #feedList .card-top {
+      padding-left: 8px;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ── Emotion tag ── */
+    #feedList .card-emotion-tag {
+      flex-shrink: 0;
+      margin-bottom: 8px;
+      margin-left: 8px;
+    }
+
+    /* ── Primary card button — gold ── */
+    .card-btn-primary {
+      background: rgba(232,197,71,0.12) !important;
+      border-color: rgba(232,197,71,0.35) !important;
+      color: #E8C547 !important;
+      font-weight: 700 !important;
+    }
+    .card-btn-primary:hover {
+      background: rgba(232,197,71,0.22) !important;
+      border-color: rgba(232,197,71,0.6) !important;
+      color: #fff !important;
+    }
 
     /* ── Skeleton ── */
     @keyframes skShimmer {
       0%   { background-position: -400px 0; }
       100% { background-position:  400px 0; }
     }
-    .skeleton-card { pointer-events:none !important; height:auto !important; min-height:220px; }
+    .skeleton-card {
+      pointer-events:none !important;
+      height: 280px !important;
+    }
     .sk-line, .sk-block {
       border-radius:6px;
       background:linear-gradient(90deg,
-        rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 75%);
+        rgba(255,255,255,0.03) 25%,
+        rgba(255,255,255,0.07) 50%,
+        rgba(255,255,255,0.03) 75%);
       background-size:800px 100%;
       animation:skShimmer 1.5s infinite linear;
     }
@@ -155,8 +196,8 @@ function injectFeedStyles() {
     /* ── YouTube thumbnail ── */
     .card-yt-thumb-wrap {
       position:relative; flex-shrink:0;
-      width:60px; height:42px;
-      border-radius:7px; overflow:hidden;
+      width:58px; height:40px;
+      border-radius:6px; overflow:hidden;
       background:rgba(255,255,255,0.04);
       border:1px solid rgba(255,255,255,0.08);
     }
@@ -166,7 +207,7 @@ function injectFeedStyles() {
       display:flex; align-items:center; justify-content:center;
       background:rgba(0,0,0,0.55); color:#fff;
       opacity:0; transition:opacity 0.18s;
-      text-decoration:none; border-radius:6px;
+      text-decoration:none; border-radius:5px;
     }
     .card-yt-thumb-wrap:hover .card-yt-play { opacity:1; }
 
@@ -189,8 +230,27 @@ function injectFeedStyles() {
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;
     }
 
+    /* ── Back to Top — fixed above footer always ── */
+    .scroll-top {
+      position: fixed !important;
+      bottom: 24px !important;
+      left: 50% !important;
+      transform: translateX(-50%) translateY(80px) !important;
+      z-index: 999 !important;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1) !important;
+    }
+    .scroll-top.visible {
+      transform: translateX(-50%) translateY(0) !important;
+      opacity: 1 !important;
+      pointer-events: all !important;
+    }
+
     /* ── Mobile ── */
     @media (max-width:768px) {
+      #feedList .feed-card { height: 270px !important; }
+      .skeleton-card { height: 270px !important; }
       .card-yt-play { opacity:1; background:rgba(0,0,0,0.4); }
       .modal-sheet { max-height:92dvh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
       .yt-autocomplete {
@@ -203,6 +263,20 @@ function injectFeedStyles() {
     }
   `;
   document.head.appendChild(s);
+}
+
+/* ── Font size based on lyric length ──
+   Short lyric  (≤40 chars) → 1.05rem  — big and bold
+   Medium lyric (41–80)     → 0.9rem
+   Long lyric   (81–120)    → 0.78rem
+   Very long    (>120)      → 0.68rem  — still readable
+────────────────────────────────────── */
+function getLyricFontSize(text) {
+  const len = (text || '').length;
+  if (len <= 40)  return '1.05rem';
+  if (len <= 80)  return '0.9rem';
+  if (len <= 120) return '0.78rem';
+  return '0.68rem';
 }
 
 /* ── Font preload ── */
@@ -407,29 +481,23 @@ function renderSkeleton() {
   }
 }
 
-/* ── Smart Listen/Thumb logic ──────────────────────────────
-   RULE: If the card has a YouTube thumbnail, the thumb IS the
-   listen entry. No separate Listen button on the card.
-   If the card has streaming links but NO thumbnail, show Listen.
-   The View button is always present.
-   Full links (Spotify, Apple, etc) are in the postcard modal.
+/* ── Smart card actions ──────────────────────────────────────
+   YouTube thumb = the listen button. No duplicate.
+   Only show separate Listen if non-YouTube links exist + no thumb.
 ────────────────────────────────────────────────────────────── */
 function getCardActions(post, idx, hasMeta, hasNonYtLinks) {
   if (post.mode === 'share') {
-    // Has YouTube thumb → thumb handles playing, only need View
     if (hasMeta) {
       return `<div class="card-actions">
         <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">View Post</button>
       </div>`;
     }
-    // No thumb but has other streaming links → show Listen
     if (hasNonYtLinks) {
       return `<div class="card-actions">
         <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
         <button class="card-btn" onclick="window.openListen(${idx})">Listen</button>
       </div>`;
     }
-    // No thumb, no links → just View
     return `<div class="card-actions">
       <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">View Post</button>
     </div>`;
@@ -440,7 +508,6 @@ function getCardActions(post, idx, hasMeta, hasNonYtLinks) {
       <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
     </div>`;
   }
-  // discover
   return `<div class="card-actions">
     <button class="card-btn card-btn-primary" onclick="window.openDiscover(${idx})">Help ID →</button>
     <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
@@ -481,23 +548,20 @@ function renderFeed() {
     card.className = 'feed-card';
     card.style.animationDelay = `${i * 0.03}s`;
 
-    const k        = post.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
-    const emotion  = post.emotion || 'Nostalgia';
-    const eBg      = EMOTION_COLORS[emotion]   || 'rgba(232,197,71,0.12)';
-    const eColor   = EMOTION_TEXT[emotion]     || '#E8C547';
-    const eBorder  = EMOTION_BORDER[emotion]   || 'rgba(232,197,71,0.2)';
-    const idx      = posts.findIndex(p => p.id === post.id);
-    const meta     = post.youtubeMeta;
-    const hasMeta  = !!(meta?.thumbnailSm || meta?.thumbnail);
-
-    // Non-YouTube streaming links
-    const links = post.links || {};
+    const k          = post.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
+    const emotion    = post.emotion || 'Nostalgia';
+    const eBg        = EMOTION_COLORS[emotion]   || 'rgba(232,197,71,0.11)';
+    const eColor     = EMOTION_TEXT[emotion]     || '#E8C547';
+    const eGlow      = EMOTION_GLOW[emotion]     || 'rgba(232,197,71,0.65)';
+    const idx        = posts.findIndex(p => p.id === post.id);
+    const meta       = post.youtubeMeta;
+    const hasMeta    = !!(meta?.thumbnailSm || meta?.thumbnail);
+    const links      = post.links || {};
     const hasNonYtLinks = !!(links.spotify || links.apple || links.soundcloud);
 
-    // Set CSS variable for emotion color (used by ::before strip)
-    card.style.setProperty('--card-emotion-color', eColor);
-    card.style.borderColor = eBorder;
-    card.style.boxShadow   = `0 2px 16px rgba(0,0,0,0.3), inset 0 0 0 0 transparent`;
+    // CSS custom props for ::before / ::after pseudo elements
+    card.style.setProperty('--card-emotion-glow', eGlow);
+    card.style.borderColor = `rgba(232,197,71,0.18)`;
 
     const modeBadge = post.mode === 'guess'
       ? '<span class="card-mode-badge mode-guess">Guess</span>'
@@ -505,9 +569,10 @@ function renderFeed() {
       ? '<span class="card-mode-badge mode-discover">Discover</span>'
       : '<span class="card-mode-badge mode-share">Share</span>';
 
+    const fontSize  = getLyricFontSize(post.text);
     const lyricHTML = highlightMatch(post.text, searchQuery);
 
-    // YouTube thumbnail (shown on all cards that have meta)
+    // YouTube thumbnail
     const thumbHTML = hasMeta
       ? `<div class="card-yt-thumb-wrap">
            <img src="${meta.thumbnailSm || meta.thumbnail}" class="card-yt-thumb" alt=""
@@ -536,23 +601,22 @@ function renderFeed() {
       songSection = `<div class="card-mystery">Can you guess the ${what.join(' & ')}? →</div>`;
     } else {
       const hasClue = k.song !== 'Unknown Song' || k.artist !== 'Unknown Artist';
-      songSection = `<div class="card-discover">${hasClue
-        ? `Maybe: ${highlightMatch(k.song, searchQuery)} — ${highlightMatch(k.artist, searchQuery)}`
-        : 'Help discover this song'
+      songSection = `<div class="card-discover">${
+        hasClue
+          ? `Maybe: ${highlightMatch(k.song, searchQuery)} — ${highlightMatch(k.artist, searchQuery)}`
+          : 'Help discover this song'
       }</div>`;
     }
-
-    const actionsHTML = getCardActions(post, idx, hasMeta, hasNonYtLinks);
 
     card.innerHTML = `
       <div class="card-top">
         <span class="card-time">${timeAgo(post.timestamp)}</span>
         ${modeBadge}
       </div>
-      <div class="card-lyric" style="font-size:0.95rem">${lyricHTML}</div>
+      <div class="card-lyric" style="font-size:${fontSize}">${lyricHTML}</div>
       <span class="card-emotion-tag" style="background:${eBg};color:${eColor}">${highlightMatch(emotion, searchQuery)}</span>
       ${songSection}
-      ${actionsHTML}
+      ${getCardActions(post, idx, hasMeta, hasNonYtLinks)}
     `;
     feedList.appendChild(card);
   });
