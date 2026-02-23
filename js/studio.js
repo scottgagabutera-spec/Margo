@@ -3,7 +3,7 @@
    Margo Studio: canvas rendering, poster designs, photo
    handling, size picker, ceremony export flow.
    Depends on: state.js, firebase.js (for APP_DOMAIN)
-   v4.3
+   v4.4 — YouTube thumbnail as one-tap background option
    ============================================================ */
 
 function initStudio() {
@@ -56,10 +56,13 @@ function initStudio() {
     };
   });
 
-  // Photo upload
+  // Photo upload zone
   if (photoDropZone) {
     photoDropZone.onclick = () => studioPhotoInput?.click();
-    photoDropZone.addEventListener('dragover', e => { e.preventDefault(); photoDropZone.classList.add('has-photo'); });
+    photoDropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      photoDropZone.classList.add('has-photo');
+    });
     photoDropZone.addEventListener('dragleave', e => {
       if (!photoDropZone.contains(e.relatedTarget)) photoDropZone.classList.remove('has-photo');
     });
@@ -99,6 +102,12 @@ function initStudio() {
     if (photoDropZone)    photoDropZone.classList.remove('has-photo');
     if (photoControls)    photoControls.classList.add('hidden');
     if (studioPhotoInput) studioPhotoInput.value = '';
+    // Clear YouTube bg option highlight
+    const ytOpt = document.getElementById('ytBgOption');
+    if (ytOpt) {
+      ytOpt.style.background  = '';
+      ytOpt.style.borderColor = '';
+    }
     refreshStageCanvas();
   };
 
@@ -128,12 +137,13 @@ function initStudio() {
     };
   });
 
-  // Ceremony
+  // Ceremony actions
   ceremonyBack.onclick = () => ceremonyOverlay.classList.add('hidden');
   cerDownload.onclick  = () => { if (!generatedBlob) { showToast('No poster yet'); return; } downloadPosterBlob(); showToast('Saved!'); };
   cerShare.onclick     = shareOrDownloadPoster;
 }
 
+/* ── Open Studio ── */
 function openStudio() {
   closeModal(postcardModal);
   studioBgImage    = null;
@@ -148,32 +158,108 @@ function openStudio() {
   studioOverlay.classList.remove('hidden');
   document.body.classList.add('modal-open');
   resetStudioUI();
+
+  // Inject YouTube thumbnail option if post has one
+  const meta = currentPost?.youtubeMeta;
+  if (meta?.thumbnail) {
+    setTimeout(() => injectYoutubeBgOption(meta), 80);
+  }
+
   setTimeout(refreshStageCanvas, 60);
 }
 
+/* ── YouTube thumbnail as one-tap background ── */
+function injectYoutubeBgOption(meta) {
+  const panel = document.getElementById('panel-photo');
+  if (!panel) return;
+
+  // Remove old if exists
+  document.getElementById('ytBgOption')?.remove();
+
+  const opt = document.createElement('div');
+  opt.id        = 'ytBgOption';
+  opt.className = 'yt-bg-option';
+  opt.innerHTML = `
+    <img src="${meta.thumbnail}" alt="" onerror="this.parentElement.style.display='none'"/>
+    <div class="yt-bg-option-text">
+      <div class="yt-bg-option-label">▶ Use Video Thumbnail</div>
+      <div class="yt-bg-option-title">${meta.title || meta.channel || ''}</div>
+    </div>
+  `;
+
+  opt.onclick = () => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      studioBgImage = img;
+      if (photoDropText) photoDropText.textContent = 'YouTube thumbnail';
+      if (photoDropZone) photoDropZone.classList.add('has-photo');
+      if (photoControls) photoControls.classList.remove('hidden');
+      opt.style.background  = 'rgba(255,0,0,0.18)';
+      opt.style.borderColor = 'rgba(255,0,0,0.55)';
+      showToast('Thumbnail set as background ✓');
+      refreshStageCanvas();
+    };
+    img.onerror = () => {
+      // CORS fallback — blob it
+      fetch(meta.thumbnail)
+        .then(r => r.blob())
+        .then(blob => {
+          const url  = URL.createObjectURL(blob);
+          const img2 = new Image();
+          img2.onload = () => {
+            studioBgImage = img2;
+            if (photoDropText) photoDropText.textContent = 'YouTube thumbnail';
+            if (photoDropZone) photoDropZone.classList.add('has-photo');
+            if (photoControls) photoControls.classList.remove('hidden');
+            opt.style.background  = 'rgba(255,0,0,0.18)';
+            opt.style.borderColor = 'rgba(255,0,0,0.55)';
+            showToast('Thumbnail set ✓');
+            refreshStageCanvas();
+          };
+          img2.src = url;
+        })
+        .catch(() => showToast('Could not load thumbnail — upload manually'));
+    };
+    img.src = meta.thumbnail;
+  };
+
+  // Insert before the upload zone so it's the first thing seen
+  panel.insertBefore(opt, panel.firstChild);
+
+  // Auto-switch to photo tab so user sees it
+  document.querySelector('[data-tab="photo"]')?.click();
+}
+
+/* ── Reset Studio UI to defaults ── */
 function resetStudioUI() {
-  document.querySelectorAll('.dock-tab').forEach((t, i)  => t.classList.toggle('active', i === 0));
+  document.querySelectorAll('.dock-tab').forEach((t, i)   => t.classList.toggle('active', i === 0));
   document.querySelectorAll('.dock-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
-  document.querySelectorAll('.scene-swatch').forEach(s   => s.classList.toggle('active', s.dataset.design === studioDesign));
+  document.querySelectorAll('.scene-swatch').forEach(s    => s.classList.toggle('active', s.dataset.design === studioDesign));
   document.querySelectorAll('.font-card').forEach((fc, i) => fc.classList.toggle('active', i === 0));
+
   const bSlider = document.getElementById('studiobrightness');
   const bVal    = document.getElementById('studioBrightnessVal');
-  if (bSlider) bSlider.value = 100;
-  if (bVal)    bVal.textContent = '100%';
+  if (bSlider) bSlider.value     = 100;
+  if (bVal)    bVal.textContent  = '100%';
+
   if (photoDropText)    photoDropText.textContent = 'Tap to add a photo';
   if (photoDropZone)    photoDropZone.classList.remove('has-photo');
   if (photoControls)    photoControls.classList.add('hidden');
-  if (studioPhotoInput) studioPhotoInput.value = '';
+  if (studioPhotoInput) studioPhotoInput.value    = '';
+
   const bsl = document.getElementById('studioBlur'),  bvl = document.getElementById('studioBlurVal');
   const dsl = document.getElementById('studioDim'),   dvl = document.getElementById('studioDimVal');
   if (bsl) bsl.value = 0;  if (bvl) bvl.textContent = '0';
-  if (dsl) dsl.value = 50; if (dvl) dvl.textContent = '50%';
+  if (dsl) dsl.value = 50; if (dvl) dvl.textContent  = '50%';
+
   document.querySelectorAll('.photo-filter').forEach((f, i) => f.classList.toggle('active', i === 0));
   sizePicker.classList.add('hidden');
   ceremonyOverlay.classList.add('hidden');
+  document.getElementById('ytBgOption')?.remove();
 }
 
-// ── Canvas rendering ──
+/* ── Canvas rendering ── */
 function getPhotoFilter() {
   let f = `brightness(${studioBrightness}%)`;
   const filters = {
@@ -187,13 +273,13 @@ function getPhotoFilter() {
 }
 
 function drawPosterToCtx(ctx, W, H) {
-  const c  = POSTER_DESIGNS[studioDesign] || POSTER_DESIGNS['midnight-gold'];
-  const fd = FONT_FAMILIES[studioFont]    || FONT_FAMILIES['playfair'];
+  const c     = POSTER_DESIGNS[studioDesign] || POSTER_DESIGNS['midnight-gold'];
+  const fd    = FONT_FAMILIES[studioFont]    || FONT_FAMILIES['playfair'];
   const scale = W / 1080;
 
   ctx.filter = 'none';
 
-  // Background
+  // ── Background ──
   if (studioBgImage) {
     const tmp = document.createElement('canvas');
     tmp.width = W; tmp.height = H;
@@ -207,7 +293,7 @@ function drawPosterToCtx(ctx, W, H) {
     if (studioBlur > 0) {
       const tmp2 = document.createElement('canvas');
       tmp2.width = W; tmp2.height = H;
-      const tc2 = tmp2.getContext('2d');
+      const tc2  = tmp2.getContext('2d');
       tc2.filter = `blur(${Math.max(1, studioBlur) * 2}px)`;
       tc2.drawImage(tmp, 0, 0);
       tc2.filter = 'none';
@@ -217,19 +303,19 @@ function drawPosterToCtx(ctx, W, H) {
       ctx.filter = 'none';
       ctx.drawImage(tmp, 0, 0);
     }
-    ctx.filter = 'none';
+    ctx.filter    = 'none';
     ctx.fillStyle = `rgba(0,0,0,${studioDim / 100})`;
     ctx.fillRect(0, 0, W, H);
   } else {
-    ctx.filter = 'none';
-    const g = ctx.createLinearGradient(0, 0, 0, H);
+    ctx.filter    = 'none';
+    const g       = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, c.bg[0]);
     g.addColorStop(0.5, c.bg[1]);
     g.addColorStop(1, c.bg[2]);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
     if (studioBrightness !== 100) {
-      const bDelta = (studioBrightness - 100) / 100;
+      const bDelta  = (studioBrightness - 100) / 100;
       ctx.fillStyle = bDelta < 0
         ? `rgba(0,0,0,${Math.abs(bDelta) * 0.9})`
         : `rgba(255,255,255,${bDelta * 0.6})`;
@@ -237,9 +323,11 @@ function drawPosterToCtx(ctx, W, H) {
     }
   }
 
-  ctx.filter = 'none';
-  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  ctx.filter        = 'none';
+  ctx.shadowColor   = 'transparent';
+  ctx.shadowBlur    = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
 
   const textColor = studioBgImage ? '#ffffff' : c.text;
   if (studioBgImage) {
@@ -248,16 +336,17 @@ function drawPosterToCtx(ctx, W, H) {
     ctx.shadowOffsetY = 2 * scale;
   }
 
-  // MARGO wordmark
+  // ── MARGO wordmark ──
   ctx.textAlign  = 'left';
-  ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
   ctx.fillStyle  = studioBgImage ? 'rgba(255,255,255,0.32)' : (c.primary + '88');
   ctx.font       = `700 ${22 * scale}px 'Space Mono', monospace`;
   ctx.fillText('MARGO', 52 * scale, 58 * scale);
 
   ctx.textAlign = 'center';
 
-  // Lyric text
+  // ── Lyric text ──
   const lyricText = currentPost.text.length > 100
     ? currentPost.text.substring(0, 97) + '…'
     : currentPost.text;
@@ -275,12 +364,15 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.font = `${fd.style === 'italic' ? 'italic ' : ''}${isBold ? '700' : '600'} ${lyricSize}px ${fd.family}`;
   wrapTextCenter(ctx, lyricText, W / 2, H * 0.46, W * 0.82, lyricSize * 1.18);
 
-  // Song & Artist
-  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  ctx.filter = 'none'; ctx.textAlign = 'center';
+  // ── Song & Artist ──
+  ctx.shadowColor   = 'transparent';
+  ctx.shadowBlur    = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.filter        = 'none';
+  ctx.textAlign     = 'center';
 
-  const k       = currentPost.knowledge || { song:'Unknown Song', artist:'Unknown Artist' };
+  const k        = currentPost.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
   const songSize = Math.max(Math.round(lyricSize * 0.42), 28 * scale);
   const artSize  = Math.max(Math.round(lyricSize * 0.30), 20 * scale);
   const songY    = H * 0.76;
@@ -288,42 +380,56 @@ function drawPosterToCtx(ctx, W, H) {
 
   let songColor, artistColor;
   if (studioBgImage) {
-    songColor = '#ffffff'; artistColor = 'rgba(255,255,255,0.82)';
-    ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = 14 * scale; ctx.shadowOffsetY = 1 * scale;
+    songColor   = '#ffffff';
+    artistColor = 'rgba(255,255,255,0.82)';
+    ctx.shadowColor   = 'rgba(0,0,0,0.65)';
+    ctx.shadowBlur    = 14 * scale;
+    ctx.shadowOffsetY = 1 * scale;
   } else if (c.light) {
-    songColor = c.primary; artistColor = 'rgba(42,37,32,0.7)';
+    songColor   = c.primary;
+    artistColor = 'rgba(42,37,32,0.7)';
   } else {
-    songColor = c.primary; artistColor = 'rgba(255,255,255,0.72)';
+    songColor   = c.primary;
+    artistColor = 'rgba(255,255,255,0.72)';
   }
 
   ctx.fillStyle = songColor;
   ctx.font      = `700 ${songSize}px ${fd.family}`;
   ctx.fillText(k.song.length > 32 ? k.song.substring(0, 32) + '…' : k.song, W / 2, songY);
 
-  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-  ctx.fillStyle   = artistColor;
-  ctx.font        = `700 ${artSize}px 'Space Mono', monospace`;
+  ctx.shadowColor   = 'transparent';
+  ctx.shadowBlur    = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.fillStyle     = artistColor;
+  ctx.font          = `700 ${artSize}px 'Space Mono', monospace`;
   ctx.fillText(k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist, W / 2, artistY);
 
-  // Domain watermark
+  // ── Domain watermark ──
   const markSize  = Math.max(Math.round(18 * scale), 14);
-  const markColor = studioBgImage ? 'rgba(255,255,255,0.75)'
-    : c.light ? 'rgba(42,37,32,0.6)'
+  const markColor = studioBgImage       ? 'rgba(255,255,255,0.75)'
+    : c.light                           ? 'rgba(42,37,32,0.6)'
     : c.primary + 'cc';
-  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-  ctx.fillStyle   = markColor;
-  ctx.font        = `700 ${markSize}px 'Space Mono', monospace`;
-  ctx.textAlign   = 'center';
+  ctx.shadowColor   = 'transparent';
+  ctx.shadowBlur    = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.fillStyle     = markColor;
+  ctx.font          = `700 ${markSize}px 'Space Mono', monospace`;
+  ctx.textAlign     = 'center';
   ctx.fillText(APP_DOMAIN, W / 2, H * 0.94);
 }
 
 function wrapTextCenter(ctx, text, x, centerY, maxW, lineHeight) {
-  const words = text.split(' ');
-  let line = '', lines = [];
+  const words  = text.split(' ');
+  let line     = '';
+  const lines  = [];
   words.forEach(word => {
     const test = line + word + ' ';
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = word + ' '; }
-    else line = test;
+    if (ctx.measureText(test).width > maxW && line) {
+      lines.push(line.trim());
+      line = word + ' ';
+    } else {
+      line = test;
+    }
   });
   if (line.trim()) lines.push(line.trim());
   const startY = centerY - ((lines.length - 1) * lineHeight) / 2;
@@ -339,7 +445,7 @@ function refreshStageCanvas() {
   const size   = Math.max(80, Math.min(availW, availH, 700));
   studioCanvas.style.width  = size + 'px';
   studioCanvas.style.height = size + 'px';
-  const res = Math.round(size * dpr);
+  const res           = Math.round(size * dpr);
   studioCanvas.width  = res;
   studioCanvas.height = res;
   const ctx = studioCanvas.getContext('2d');
@@ -350,9 +456,10 @@ function refreshStageCanvas() {
 async function generateFinalPoster(sizeKey) {
   const dim = POSTER_SIZES[sizeKey];
   if (!dim || !currentPost) return null;
-  const offscreen = document.createElement('canvas');
-  offscreen.width = dim.w; offscreen.height = dim.h;
-  const ctx = offscreen.getContext('2d');
+  const offscreen    = document.createElement('canvas');
+  offscreen.width    = dim.w;
+  offscreen.height   = dim.h;
+  const ctx          = offscreen.getContext('2d');
   await document.fonts.ready;
   drawPosterToCtx(ctx, dim.w, dim.h);
   return new Promise(resolve => offscreen.toBlob(blob => resolve(blob), 'image/png'));
@@ -361,8 +468,8 @@ async function generateFinalPoster(sizeKey) {
 function drawCeremonyThumb() {
   const dpr  = window.devicePixelRatio || 1;
   const size = 600;
-  ceremonyThumb.width  = Math.round(size * dpr);
-  ceremonyThumb.height = Math.round(size * dpr);
+  ceremonyThumb.width        = Math.round(size * dpr);
+  ceremonyThumb.height       = Math.round(size * dpr);
   ceremonyThumb.style.width  = '';
   ceremonyThumb.style.height = '';
   const ctx = ceremonyThumb.getContext('2d');
@@ -371,8 +478,8 @@ function drawCeremonyThumb() {
 }
 
 function handleStudioPhoto(file) {
-  if (!file.type.startsWith('image/'))  { showToast('Please upload an image'); return; }
-  if (file.size > 15 * 1024 * 1024)    { showToast('File too large (max 15MB)'); return; }
+  if (!file.type.startsWith('image/')) { showToast('Please upload an image'); return; }
+  if (file.size > 15 * 1024 * 1024)   { showToast('File too large (max 15MB)'); return; }
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
@@ -381,6 +488,9 @@ function handleStudioPhoto(file) {
       if (photoDropText) photoDropText.textContent = file.name;
       if (photoDropZone) photoDropZone.classList.add('has-photo');
       if (photoControls) photoControls.classList.remove('hidden');
+      // Clear YouTube bg highlight since user uploaded their own
+      const ytOpt = document.getElementById('ytBgOption');
+      if (ytOpt) { ytOpt.style.background = ''; ytOpt.style.borderColor = ''; }
       showToast('Photo added');
       refreshStageCanvas();
     };
@@ -391,7 +501,7 @@ function handleStudioPhoto(file) {
 
 async function shareOrDownloadPoster() {
   if (!generatedBlob) { showToast('Generating…'); return; }
-  const file = new File([generatedBlob], `margo-poster-${Date.now()}.png`, { type: 'image/png' });
+  const file      = new File([generatedBlob], `margo-poster-${Date.now()}.png`, { type: 'image/png' });
   const shareData = {
     title: `MARGO — ${currentPost?.text?.substring(0, 50) || 'Lyric'}`,
     text:  `"${currentPost?.text || ''}"`,
@@ -414,7 +524,8 @@ function downloadPosterBlob() {
   const url = URL.createObjectURL(generatedBlob);
   a.href     = url;
   a.download = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
-  document.body.appendChild(a); a.click();
+  document.body.appendChild(a);
+  a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
