@@ -2,8 +2,8 @@
    MARGO — js/studio.js
    Margo Studio: canvas rendering, poster designs, photo
    handling, size picker, ceremony export flow.
-   Depends on: state.js, firebase.js (for APP_DOMAIN)
-   v4.4 — YouTube thumbnail as one-tap background option
+   v4.6 — Fixed download/share, improved ceremony UX,
+          YouTube thumbnail as one-tap background
    ============================================================ */
 
 function initStudio() {
@@ -57,6 +57,7 @@ function initStudio() {
   });
 
   // Photo upload zone
+  const photoDropZone = document.getElementById('photoUploadZone');
   if (photoDropZone) {
     photoDropZone.onclick = () => studioPhotoInput?.click();
     photoDropZone.addEventListener('dragover', e => {
@@ -98,16 +99,15 @@ function initStudio() {
   const removeBtn = document.getElementById('studioRemovePhoto');
   if (removeBtn) removeBtn.onclick = () => {
     studioBgImage = null;
-    if (photoDropText)    photoDropText.textContent = 'Tap to add a photo';
-    if (photoDropZone)    photoDropZone.classList.remove('has-photo');
-    if (photoControls)    photoControls.classList.add('hidden');
+    const photoDropText = document.getElementById('photoDropText');
+    const photoDropZone = document.getElementById('photoUploadZone');
+    const photoControls = document.getElementById('photoControls');
+    if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
+    if (photoDropZone) photoDropZone.classList.remove('has-photo');
+    if (photoControls) photoControls.classList.add('hidden');
     if (studioPhotoInput) studioPhotoInput.value = '';
-    // Clear YouTube bg option highlight
     const ytOpt = document.getElementById('ytBgOption');
-    if (ytOpt) {
-      ytOpt.style.background  = '';
-      ytOpt.style.borderColor = '';
-    }
+    if (ytOpt) { ytOpt.style.background = ''; ytOpt.style.borderColor = ''; }
     refreshStageCanvas();
   };
 
@@ -120,27 +120,54 @@ function initStudio() {
       selectedSize = btn.dataset.size;
       sizePicker.classList.add('hidden');
       studioCanvas.classList.add('zoom-in');
-      showToast('Generating…');
+
+      // Show generating state in ceremony
+      ceremonyOverlay.classList.remove('hidden');
+      const headlineEl = ceremonyOverlay.querySelector('.ceremony-headline');
+      if (headlineEl) headlineEl.textContent = 'Generating your poster…';
+      const actionsEl = ceremonyOverlay.querySelector('.ceremony-actions');
+      if (actionsEl) actionsEl.style.opacity = '0.4';
+
       try {
         generatedBlob = await generateFinalPoster(selectedSize);
       } catch (err) {
-        console.error(err);
-        showToast('Error generating poster');
+        console.error('Poster generation error:', err);
+        showToast('Error generating poster — try again');
         studioCanvas.classList.remove('zoom-in');
+        ceremonyOverlay.classList.add('hidden');
         return;
       }
+
       setTimeout(() => {
         studioCanvas.classList.remove('zoom-in');
         drawCeremonyThumb();
-        ceremonyOverlay.classList.remove('hidden');
+        if (headlineEl) headlineEl.textContent = 'Your poster is ready.';
+        if (actionsEl) actionsEl.style.opacity = '1';
       }, 400);
     };
   });
 
   // Ceremony actions
-  ceremonyBack.onclick = () => ceremonyOverlay.classList.add('hidden');
-  cerDownload.onclick  = () => { if (!generatedBlob) { showToast('No poster yet'); return; } downloadPosterBlob(); showToast('Saved!'); };
-  cerShare.onclick     = shareOrDownloadPoster;
+  ceremonyBack.onclick = () => {
+    ceremonyOverlay.classList.add('hidden');
+    generatedBlob = null;
+  };
+
+  cerDownload.onclick = async () => {
+    if (!generatedBlob) {
+      showToast('Generating poster…');
+      return;
+    }
+    try {
+      downloadPosterBlob();
+      showToast('Saved to device ✓');
+    } catch (err) {
+      showToast('Download failed — try again');
+      console.error('Download error:', err);
+    }
+  };
+
+  cerShare.onclick = shareOrDownloadPoster;
 }
 
 /* ── Open Studio ── */
@@ -172,8 +199,6 @@ function openStudio() {
 function injectYoutubeBgOption(meta) {
   const panel = document.getElementById('panel-photo');
   if (!panel) return;
-
-  // Remove old if exists
   document.getElementById('ytBgOption')?.remove();
 
   const opt = document.createElement('div');
@@ -188,10 +213,19 @@ function injectYoutubeBgOption(meta) {
   `;
 
   opt.onclick = () => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
+    const tryLoad = (src) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload  = () => resolve(img);
+      img.onerror = () => reject(new Error('CORS'));
+      img.src = src;
+    });
+
+    const applyImage = (img) => {
       studioBgImage = img;
+      const photoDropText = document.getElementById('photoDropText');
+      const photoDropZone = document.getElementById('photoUploadZone');
+      const photoControls = document.getElementById('photoControls');
       if (photoDropText) photoDropText.textContent = 'YouTube thumbnail';
       if (photoDropZone) photoDropZone.classList.add('has-photo');
       if (photoControls) photoControls.classList.remove('hidden');
@@ -200,38 +234,27 @@ function injectYoutubeBgOption(meta) {
       showToast('Thumbnail set as background ✓');
       refreshStageCanvas();
     };
-    img.onerror = () => {
-      // CORS fallback — blob it
-      fetch(meta.thumbnail)
-        .then(r => r.blob())
-        .then(blob => {
-          const url  = URL.createObjectURL(blob);
-          const img2 = new Image();
-          img2.onload = () => {
-            studioBgImage = img2;
-            if (photoDropText) photoDropText.textContent = 'YouTube thumbnail';
-            if (photoDropZone) photoDropZone.classList.add('has-photo');
-            if (photoControls) photoControls.classList.remove('hidden');
-            opt.style.background  = 'rgba(255,0,0,0.18)';
-            opt.style.borderColor = 'rgba(255,0,0,0.55)';
-            showToast('Thumbnail set ✓');
-            refreshStageCanvas();
-          };
-          img2.src = url;
-        })
-        .catch(() => showToast('Could not load thumbnail — upload manually'));
-    };
-    img.src = meta.thumbnail;
+
+    tryLoad(meta.thumbnail)
+      .then(applyImage)
+      .catch(() => {
+        // CORS fallback via blob
+        fetch(meta.thumbnail)
+          .then(r => r.blob())
+          .then(blob => {
+            const url  = URL.createObjectURL(blob);
+            return tryLoad(url);
+          })
+          .then(applyImage)
+          .catch(() => showToast('Could not load thumbnail — upload manually'));
+      });
   };
 
-  // Insert before the upload zone so it's the first thing seen
   panel.insertBefore(opt, panel.firstChild);
-
-  // Auto-switch to photo tab so user sees it
   document.querySelector('[data-tab="photo"]')?.click();
 }
 
-/* ── Reset Studio UI to defaults ── */
+/* ── Reset Studio UI ── */
 function resetStudioUI() {
   document.querySelectorAll('.dock-tab').forEach((t, i)   => t.classList.toggle('active', i === 0));
   document.querySelectorAll('.dock-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
@@ -240,13 +263,16 @@ function resetStudioUI() {
 
   const bSlider = document.getElementById('studiobrightness');
   const bVal    = document.getElementById('studioBrightnessVal');
-  if (bSlider) bSlider.value     = 100;
-  if (bVal)    bVal.textContent  = '100%';
+  if (bSlider) bSlider.value    = 100;
+  if (bVal)    bVal.textContent = '100%';
 
-  if (photoDropText)    photoDropText.textContent = 'Tap to add a photo';
-  if (photoDropZone)    photoDropZone.classList.remove('has-photo');
-  if (photoControls)    photoControls.classList.add('hidden');
-  if (studioPhotoInput) studioPhotoInput.value    = '';
+  const photoDropText = document.getElementById('photoDropText');
+  const photoDropZone = document.getElementById('photoUploadZone');
+  const photoControls = document.getElementById('photoControls');
+  if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
+  if (photoDropZone) photoDropZone.classList.remove('has-photo');
+  if (photoControls) photoControls.classList.add('hidden');
+  if (studioPhotoInput) studioPhotoInput.value = '';
 
   const bsl = document.getElementById('studioBlur'),  bvl = document.getElementById('studioBlurVal');
   const dsl = document.getElementById('studioDim'),   dvl = document.getElementById('studioDimVal');
@@ -297,10 +323,8 @@ function drawPosterToCtx(ctx, W, H) {
       tc2.filter = `blur(${Math.max(1, studioBlur) * 2}px)`;
       tc2.drawImage(tmp, 0, 0);
       tc2.filter = 'none';
-      ctx.filter = 'none';
       ctx.drawImage(tmp2, 0, 0);
     } else {
-      ctx.filter = 'none';
       ctx.drawImage(tmp, 0, 0);
     }
     ctx.filter    = 'none';
@@ -323,27 +347,23 @@ function drawPosterToCtx(ctx, W, H) {
     }
   }
 
-  ctx.filter        = 'none';
-  ctx.shadowColor   = 'transparent';
-  ctx.shadowBlur    = 0;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 0;
+  ctx.filter = 'none';
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
 
   const textColor = studioBgImage ? '#ffffff' : c.text;
   if (studioBgImage) {
-    ctx.shadowColor   = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur    = 14 * scale;
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur  = 14 * scale;
     ctx.shadowOffsetY = 2 * scale;
   }
 
   // ── MARGO wordmark ──
-  ctx.textAlign  = 'left';
-  ctx.shadowBlur = 0;
-  ctx.shadowColor = 'transparent';
+  ctx.textAlign = 'left';
+  ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
   ctx.fillStyle  = studioBgImage ? 'rgba(255,255,255,0.32)' : (c.primary + '88');
   ctx.font       = `700 ${22 * scale}px 'Space Mono', monospace`;
   ctx.fillText('MARGO', 52 * scale, 58 * scale);
-
   ctx.textAlign = 'center';
 
   // ── Lyric text ──
@@ -365,12 +385,9 @@ function drawPosterToCtx(ctx, W, H) {
   wrapTextCenter(ctx, lyricText, W / 2, H * 0.46, W * 0.82, lyricSize * 1.18);
 
   // ── Song & Artist ──
-  ctx.shadowColor   = 'transparent';
-  ctx.shadowBlur    = 0;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 0;
-  ctx.filter        = 'none';
-  ctx.textAlign     = 'center';
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  ctx.filter = 'none'; ctx.textAlign = 'center';
 
   const k        = currentPost.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
   const songSize = Math.max(Math.round(lyricSize * 0.42), 28 * scale);
@@ -380,41 +397,32 @@ function drawPosterToCtx(ctx, W, H) {
 
   let songColor, artistColor;
   if (studioBgImage) {
-    songColor   = '#ffffff';
-    artistColor = 'rgba(255,255,255,0.82)';
-    ctx.shadowColor   = 'rgba(0,0,0,0.65)';
-    ctx.shadowBlur    = 14 * scale;
-    ctx.shadowOffsetY = 1 * scale;
+    songColor = '#ffffff'; artistColor = 'rgba(255,255,255,0.82)';
+    ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = 14 * scale; ctx.shadowOffsetY = 1 * scale;
   } else if (c.light) {
-    songColor   = c.primary;
-    artistColor = 'rgba(42,37,32,0.7)';
+    songColor = c.primary; artistColor = 'rgba(42,37,32,0.7)';
   } else {
-    songColor   = c.primary;
-    artistColor = 'rgba(255,255,255,0.72)';
+    songColor = c.primary; artistColor = 'rgba(255,255,255,0.72)';
   }
 
   ctx.fillStyle = songColor;
   ctx.font      = `700 ${songSize}px ${fd.family}`;
   ctx.fillText(k.song.length > 32 ? k.song.substring(0, 32) + '…' : k.song, W / 2, songY);
 
-  ctx.shadowColor   = 'transparent';
-  ctx.shadowBlur    = 0;
-  ctx.shadowOffsetY = 0;
-  ctx.fillStyle     = artistColor;
-  ctx.font          = `700 ${artSize}px 'Space Mono', monospace`;
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.fillStyle = artistColor;
+  ctx.font      = `700 ${artSize}px 'Space Mono', monospace`;
   ctx.fillText(k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist, W / 2, artistY);
 
   // ── Domain watermark ──
   const markSize  = Math.max(Math.round(18 * scale), 14);
-  const markColor = studioBgImage       ? 'rgba(255,255,255,0.75)'
-    : c.light                           ? 'rgba(42,37,32,0.6)'
+  const markColor = studioBgImage ? 'rgba(255,255,255,0.75)'
+    : c.light ? 'rgba(42,37,32,0.6)'
     : c.primary + 'cc';
-  ctx.shadowColor   = 'transparent';
-  ctx.shadowBlur    = 0;
-  ctx.shadowOffsetY = 0;
-  ctx.fillStyle     = markColor;
-  ctx.font          = `700 ${markSize}px 'Space Mono', monospace`;
-  ctx.textAlign     = 'center';
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.fillStyle = markColor;
+  ctx.font      = `700 ${markSize}px 'Space Mono', monospace`;
+  ctx.textAlign = 'center';
   ctx.fillText(APP_DOMAIN, W / 2, H * 0.94);
 }
 
@@ -425,11 +433,8 @@ function wrapTextCenter(ctx, text, x, centerY, maxW, lineHeight) {
   words.forEach(word => {
     const test = line + word + ' ';
     if (ctx.measureText(test).width > maxW && line) {
-      lines.push(line.trim());
-      line = word + ' ';
-    } else {
-      line = test;
-    }
+      lines.push(line.trim()); line = word + ' ';
+    } else { line = test; }
   });
   if (line.trim()) lines.push(line.trim());
   const startY = centerY - ((lines.length - 1) * lineHeight) / 2;
@@ -455,14 +460,19 @@ function refreshStageCanvas() {
 
 async function generateFinalPoster(sizeKey) {
   const dim = POSTER_SIZES[sizeKey];
-  if (!dim || !currentPost) return null;
+  if (!dim || !currentPost) throw new Error('Invalid size or no post');
   const offscreen    = document.createElement('canvas');
   offscreen.width    = dim.w;
   offscreen.height   = dim.h;
   const ctx          = offscreen.getContext('2d');
   await document.fonts.ready;
   drawPosterToCtx(ctx, dim.w, dim.h);
-  return new Promise(resolve => offscreen.toBlob(blob => resolve(blob), 'image/png'));
+  return new Promise((resolve, reject) => {
+    offscreen.toBlob(blob => {
+      if (blob) resolve(blob);
+      else reject(new Error('Canvas toBlob returned null'));
+    }, 'image/png');
+  });
 }
 
 function drawCeremonyThumb() {
@@ -485,10 +495,12 @@ function handleStudioPhoto(file) {
     const img = new Image();
     img.onload = () => {
       studioBgImage = img;
+      const photoDropText = document.getElementById('photoDropText');
+      const photoDropZone = document.getElementById('photoUploadZone');
+      const photoControls = document.getElementById('photoControls');
       if (photoDropText) photoDropText.textContent = file.name;
       if (photoDropZone) photoDropZone.classList.add('has-photo');
       if (photoControls) photoControls.classList.remove('hidden');
-      // Clear YouTube bg highlight since user uploaded their own
       const ytOpt = document.getElementById('ytBgOption');
       if (ytOpt) { ytOpt.style.background = ''; ytOpt.style.borderColor = ''; }
       showToast('Photo added');
@@ -500,32 +512,53 @@ function handleStudioPhoto(file) {
 }
 
 async function shareOrDownloadPoster() {
-  if (!generatedBlob) { showToast('Generating…'); return; }
-  const file      = new File([generatedBlob], `margo-poster-${Date.now()}.png`, { type: 'image/png' });
+  if (!generatedBlob) {
+    showToast('Poster not ready yet');
+    return;
+  }
+
+  const fileName  = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
+  const file      = new File([generatedBlob], fileName, { type: 'image/png' });
   const shareData = {
     title: `MARGO — ${currentPost?.text?.substring(0, 50) || 'Lyric'}`,
-    text:  `"${currentPost?.text || ''}"`,
+    text:  `"${currentPost?.text || ''}" — drop your lyric at trymargo.com`,
     files: [file]
   };
-  let shared = false;
+
+  // Try native share (works on mobile, some desktop)
   try {
-    if (navigator.canShare && navigator.canShare(shareData)) {
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
       await navigator.share(shareData);
-      shared = true;
       showToast('Shared!');
+      return;
     }
-  } catch (e) { if (e.name === 'AbortError') return; }
-  if (!shared) { downloadPosterBlob(); showToast('Saved to device!'); }
+  } catch (e) {
+    if (e.name === 'AbortError') return; // user cancelled — do nothing
+    // Other errors fall through to download
+  }
+
+  // Fallback: download
+  downloadPosterBlob();
+  showToast('Saved to device!');
 }
 
 function downloadPosterBlob() {
-  if (!generatedBlob) return;
-  const a   = document.createElement('a');
-  const url = URL.createObjectURL(generatedBlob);
-  a.href     = url;
-  a.download = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  if (!generatedBlob) { showToast('Poster not ready'); return; }
+  try {
+    const url = URL.createObjectURL(generatedBlob);
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    // Cleanup after short delay
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 1000);
+  } catch (err) {
+    console.error('Download error:', err);
+    showToast('Could not download — try again');
+  }
 }
