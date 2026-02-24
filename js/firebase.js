@@ -197,13 +197,25 @@ function startFirebaseSync() {
     updateLandingStats();
     buildLyricStream();
 
-    if (postsLoaded && posts.length > prevCount && feed.classList.contains('active')) {
+    // Only show "new posts" indicator for GENUINE new posts —
+    // not on initial load (prevCount===0) and not for backfill
+    // writes (post count stays the same, only youtubeMeta changed).
+    const isInitialLoad  = !postsLoaded;
+    const isBackfillOnly = postsLoaded && posts.length === prevCount;
+
+    if (postsLoaded && !isBackfillOnly && posts.length > prevCount && feed.classList.contains('active')) {
       showNewPostsIndicator(posts.length - prevCount);
       newPostsAvailable = true;
     }
 
     postsLoaded = true;
-    if (feed.classList.contains('active') && !newPostsAvailable) renderFeed();
+
+    // Re-render feed: always on initial load, or when genuinely
+    // new posts arrive. Backfill writes re-render silently only
+    // if feed is visible and no pending new-posts bar is shown.
+    if (feed.classList.contains('active')) {
+      if (isInitialLoad || isBackfillOnly || !newPostsAvailable) renderFeed();
+    }
   });
 
   analyticsRef.on('value', snapshot => {
