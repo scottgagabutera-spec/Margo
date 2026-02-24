@@ -1,7 +1,8 @@
 /* ============================================================
    MARGO — js/composer.js
-   v5.2 — YouTube saves automatically, no confirm click needed.
-          fetchAndSaveYoutubeMeta() called as safety net after post.
+   v5.3 — Fixed: clearYoutubePreview no longer nukes youtubeData
+          Fixed: song-input-wrap always created reliably
+          Fixed: autocomplete appends to correct parent
    ============================================================ */
 
 /* ── MODERATION ENGINE ── */
@@ -35,12 +36,13 @@ function censorText(text){
 
 /* ── HTML entity decoder ── */
 function decodeHTML(str) {
+  if (!str) return '';
   const txt = document.createElement('textarea');
   txt.innerHTML = str;
   return txt.value;
 }
 
-/* ── STYLES (injected once) ── */
+/* ── STYLES ── */
 function injectComposerStyles() {
   if (document.getElementById('composerV5Styles')) return;
   const s = document.createElement('style');
@@ -131,7 +133,6 @@ function injectComposerStyles() {
       background:#E8C547;color:#0B0B0D;border-color:#E8C547;
     }
 
-    /* YouTube preview — "Found ✓" replaces old confirm button */
     .yt-card {
       margin-top:8px;border-radius:12px;overflow:hidden;
       border:1px solid rgba(255,255,255,0.08);
@@ -156,7 +157,6 @@ function injectComposerStyles() {
       font-size:0.65rem;color:rgba(255,255,255,0.4);
       margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
-    /* Green "Found ✓" status badge — no action needed from user */
     .yt-found-tag {
       flex-shrink:0;padding:5px 10px;border-radius:7px;
       background:rgba(74,222,128,0.1);color:#4ade80;
@@ -170,12 +170,15 @@ function injectComposerStyles() {
       font-family:'Space Mono',monospace;letter-spacing:0.5px;
     }
 
+    /* ── Autocomplete ── */
+    .song-input-wrap { position:relative; width:100%; }
+    .song-input-wrap input { width:100%; box-sizing:border-box; }
     .yt-autocomplete {
       position:absolute;left:0;right:0;top:calc(100% + 4px);
-      z-index:1000;background:#18181c;
+      z-index:9999;background:#18181c;
       border:1px solid rgba(255,255,255,0.1);
       border-radius:12px;overflow:hidden;
-      box-shadow:0 16px 48px rgba(0,0,0,0.6);
+      box-shadow:0 16px 48px rgba(0,0,0,0.7);
       animation:ytFadeUp 0.18s ease;
     }
     .yt-ac-item {
@@ -198,35 +201,61 @@ function injectComposerStyles() {
       font-size:0.65rem;color:rgba(255,255,255,0.4);
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
-    .song-input-wrap { position:relative; }
+
+    @media(max-width:768px){
+      .yt-autocomplete {
+        position:fixed !important;
+        left:0 !important; right:0 !important;
+        top:auto !important; bottom:0 !important;
+        border-radius:18px 18px 0 0 !important;
+        max-height:50vh; overflow-y:auto;
+        box-shadow:0 -8px 40px rgba(0,0,0,0.7) !important;
+      }
+    }
   `;
   document.head.appendChild(s);
 }
 
 /* ── STATE ── */
-let youtubeData    = null; // set as soon as video found — no confirm gate
-let geniusResult   = null;
-let geniusTimer    = null;
-let ytSuggestTimer = null;
-let ytFetchTimer   = null;
+let youtubeData     = null;
+let geniusResult    = null;
+let geniusTimer     = null;
+let ytSuggestTimer  = null;
+let ytFetchTimer    = null;
 let lastGeniusQuery = '';
 
+/* ── KEY FIX: separate preview-clear from data-clear ── */
+function clearYoutubePreview() {
+  // Only removes the UI card — does NOT null youtubeData
+  document.getElementById('youtubePreview')?.remove();
+}
+
+function resetYoutubeData() {
+  // Clears both UI and data — called on reset/mode change only
+  youtubeData = null;
+  document.getElementById('youtubePreview')?.remove();
+}
+
 /* ============================================================
-   GENIUS ENGINE — identical to v5.1
+   GENIUS ENGINE
    ============================================================ */
 function initGeniusIdentify() {
   injectComposerStyles();
   const textArea = document.getElementById('textInput');
   if (!textArea || document.getElementById('geniusIdentifyBtn')) return;
+
   const btn = document.createElement('button');
-  btn.id = 'geniusIdentifyBtn'; btn.type = 'button';
+  btn.id = 'geniusIdentifyBtn';
+  btn.type = 'button';
   btn.innerHTML = `<span>✦</span> Identify Song`;
   textArea.parentNode.insertBefore(btn, textArea.nextSibling);
+
   btn.onclick = () => {
     const lyric = textArea.value.trim();
     if (lyric.length < 5) { showToast('Type a lyric first'); return; }
     runGeniusSearch(lyric);
   };
+
   textArea.addEventListener('input', () => {
     clearTimeout(geniusTimer);
     const val = textArea.value.trim();
@@ -264,17 +293,17 @@ async function runGeniusSearch(query) {
 
 function renderGeniusResults(results) {
   document.getElementById('geniusResultsList')?.remove();
-  const wrap = document.createElement('div');
-  wrap.id = 'geniusResultsList';
+  const wrap  = document.createElement('div');
+  wrap.id     = 'geniusResultsList';
   const label = document.createElement('div');
-  label.className = 'genius-section-label';
+  label.className   = 'genius-section-label';
   label.textContent = 'Select the right song';
   wrap.appendChild(label);
   const list = document.createElement('div');
   list.className = 'genius-results-list';
   results.forEach(r => {
-    const card = document.createElement('div');
-    card.className = 'genius-result-card';
+    const card       = document.createElement('div');
+    card.className   = 'genius-result-card';
     const songName   = decodeHTML(r.song);
     const artistName = decodeHTML(r.artist);
     card.innerHTML = `
@@ -289,7 +318,8 @@ function renderGeniusResults(results) {
     list.appendChild(card);
   });
   wrap.appendChild(list);
-  document.getElementById('geniusIdentifyBtn')?.parentNode?.insertBefore(wrap, document.getElementById('geniusIdentifyBtn').nextSibling);
+  const identBtn = document.getElementById('geniusIdentifyBtn');
+  identBtn?.parentNode?.insertBefore(wrap, identBtn.nextSibling);
 }
 
 function selectGeniusResult(result, card) {
@@ -302,46 +332,53 @@ function selectGeniusResult(result, card) {
   if (songEl)   songEl.value   = result.song;
   if (artistEl) artistEl.value = result.artist;
   if (currentMode !== 'share') document.querySelector('[data-mode="share"]')?.click();
-  clearYoutubePreview();
+  resetYoutubeData(); // full reset here since this is a new search
   fetchYoutubeData(result.song, result.artist);
   setTimeout(() => { document.getElementById('geniusResultsList')?.remove(); }, 1000);
 }
 
 /* ============================================================
    YOUTUBE ENGINE
-   FIX: youtubeData set immediately when found.
-        No ytConfirmed flag. No "Use this" button.
-        "Found ✓" badge is purely visual — data always saves.
    ============================================================ */
+
+/* ── KEY FIX: wrap song input reliably ── */
+function ensureSongInputWrap() {
+  const songEl = document.getElementById('songInput');
+  if (!songEl) return null;
+  // Already wrapped
+  if (songEl.parentElement.classList.contains('song-input-wrap')) {
+    return songEl.parentElement;
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'song-input-wrap';
+  songEl.parentNode.insertBefore(wrap, songEl);
+  wrap.appendChild(songEl);
+  return wrap;
+}
+
 function initYoutubeAutofetch() {
   const songEl   = document.getElementById('songInput');
   const artistEl = document.getElementById('artistInput');
   if (!songEl || !artistEl) return;
 
-  if (!songEl.parentElement.classList.contains('song-input-wrap')) {
-    const wrap = document.createElement('div');
-    wrap.className = 'song-input-wrap';
-    songEl.parentNode.insertBefore(wrap, songEl);
-    wrap.appendChild(songEl);
-  }
+  ensureSongInputWrap();
 
   songEl.addEventListener('input', () => {
     clearTimeout(ytSuggestTimer);
     clearTimeout(ytFetchTimer);
     closeAutocomplete();
     const val = songEl.value.trim();
-    if (val.length < 2) { clearYoutubePreview(); return; }
+    if (val.length < 2) { resetYoutubeData(); return; }
     ytSuggestTimer = setTimeout(() => fetchYoutubeSuggestions(val), 350);
   });
 
-  songEl.addEventListener('blur', () => setTimeout(closeAutocomplete, 180));
+  songEl.addEventListener('blur', () => setTimeout(closeAutocomplete, 200));
 
   artistEl.addEventListener('input', () => {
     clearTimeout(ytFetchTimer);
     const song   = songEl.value.trim();
     const artist = artistEl.value.trim();
     if (song.length > 1 && artist.length > 1) {
-      // Re-fetch whenever artist changes (no confirmed guard)
       ytFetchTimer = setTimeout(() => fetchYoutubeData(song, artist), 700);
     }
   });
@@ -358,15 +395,18 @@ async function fetchYoutubeSuggestions(query) {
 
 function renderAutocomplete(suggestions) {
   closeAutocomplete();
-  const songEl = document.getElementById('songInput');
-  if (!songEl) return;
+  // KEY FIX: always re-check wrap exists before appending dropdown
+  const wrap = ensureSongInputWrap();
+  if (!wrap) return;
+
   const drop = document.createElement('div');
-  drop.id = 'ytAutocomplete';
+  drop.id        = 'ytAutocomplete';
   drop.className = 'yt-autocomplete';
+
   suggestions.slice(0, 4).forEach(s => {
-    const item = document.createElement('div');
-    item.className = 'yt-ac-item';
-    item.innerHTML = `
+    const item       = document.createElement('div');
+    item.className   = 'yt-ac-item';
+    item.innerHTML   = `
       ${s.thumbnail ? `<img src="${s.thumbnail}" class="yt-ac-thumb" alt=""/>` : `<div class="yt-ac-thumb"></div>`}
       <div style="flex:1;min-width:0">
         <div class="yt-ac-song">${decodeHTML(s.song)}</div>
@@ -376,7 +416,8 @@ function renderAutocomplete(suggestions) {
     item.onmousedown = (e) => { e.preventDefault(); selectAutocomplete(s); };
     drop.appendChild(item);
   });
-  songEl.parentElement.appendChild(drop);
+
+  wrap.appendChild(drop);
 }
 
 function selectAutocomplete(s) {
@@ -385,45 +426,55 @@ function selectAutocomplete(s) {
   const artistEl = document.getElementById('artistInput');
   if (songEl)   songEl.value   = decodeHTML(s.song);
   if (artistEl) artistEl.value = decodeHTML(s.artist);
-  clearYoutubePreview();
+  resetYoutubeData();
   fetchYoutubeData(s.song, s.artist);
 }
 
-function closeAutocomplete() { document.getElementById('ytAutocomplete')?.remove(); }
+function closeAutocomplete() {
+  document.getElementById('ytAutocomplete')?.remove();
+}
 
 async function fetchYoutubeData(song, artist) {
-  // Strip featured artists and brackets — improves YouTube match rate
   const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
   const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
 
   showYtLoading();
-  youtubeData = null; // clear until confirmed found
+  // KEY FIX: don't null youtubeData here — only null it in resetYoutubeData()
+  // This prevents a race condition where a slow previous fetch wins
 
   try {
     const res  = await fetch(`/api/youtube?song=${encodeURIComponent(cleanSong)}&artist=${encodeURIComponent(cleanArtist)}`);
     const data = await res.json();
-    if (!res.ok || data.error || !data.videoId) { clearYoutubePreview(); return; }
-    youtubeData = data; // ← set immediately, no confirm required
+    if (!res.ok || data.error || !data.videoId) {
+      clearYoutubePreview(); // only clear UI, not data (may still have previous good data)
+      return;
+    }
+    youtubeData = data; // set data as soon as found
     renderYtCard(data);
-  } catch (_) { clearYoutubePreview(); }
+  } catch (_) {
+    clearYoutubePreview();
+  }
 }
 
 function showYtLoading() {
-  clearYoutubePreview();
-  const card = document.createElement('div');
-  card.id = 'youtubePreview'; card.className = 'yt-card';
+  clearYoutubePreview(); // only clears UI card
+  const card    = document.createElement('div');
+  card.id        = 'youtubePreview';
+  card.className = 'yt-card';
   card.innerHTML = `<div class="yt-loading"><span class="m-spinner"></span>Finding video…</div>`;
   insertAfterArtist(card);
 }
 
 function renderYtCard(data) {
-  clearYoutubePreview();
-  const card = document.createElement('div');
-  card.id = 'youtubePreview'; card.className = 'yt-card';
-  // "Found ✓" badge — purely informational, no click needed
+  clearYoutubePreview(); // only clears UI card
+  const card    = document.createElement('div');
+  card.id        = 'youtubePreview';
+  card.className = 'yt-card';
   card.innerHTML = `
     <div class="yt-card-inner">
-      ${(data.thumbnailSm || data.thumbnail) ? `<img src="${data.thumbnailSm||data.thumbnail}" class="yt-thumb" alt=""/>` : ''}
+      ${(data.thumbnailSm || data.thumbnail)
+        ? `<img src="${data.thumbnailSm || data.thumbnail}" class="yt-thumb" alt=""/>`
+        : ''}
       <div class="yt-info">
         <div class="yt-title">${decodeHTML(data.title)}</div>
         <div class="yt-channel">${decodeHTML(data.channel)}</div>
@@ -432,7 +483,6 @@ function renderYtCard(data) {
     </div>
   `;
   insertAfterArtist(card);
-  // Auto-fill youtube link field if empty
   const ytLink = document.getElementById('youtubeLink');
   if (ytLink && !ytLink.value && data.youtubeUrl) ytLink.value = data.youtubeUrl;
 }
@@ -440,11 +490,6 @@ function renderYtCard(data) {
 function insertAfterArtist(el) {
   const artistEl = document.getElementById('artistInput');
   artistEl?.parentNode?.insertBefore(el, artistEl.nextSibling);
-}
-
-function clearYoutubePreview() {
-  youtubeData = null;
-  document.getElementById('youtubePreview')?.remove();
 }
 
 /* ============================================================
@@ -466,7 +511,7 @@ function initComposer() {
       if (currentMode === 'share')    shareInputs.classList.add('show');
       if (currentMode === 'guess')    guessInputs.classList.add('show');
       if (currentMode === 'discover') discoverInputs.classList.add('show');
-      clearYoutubePreview(); closeAutocomplete();
+      resetYoutubeData(); closeAutocomplete();
     };
   });
 
@@ -505,33 +550,32 @@ async function submitPost() {
 
   if (containsBannedWord(text)) {
     text = censorText(text);
-    textInput.value = text;
+    textInput.value       = text;
     charCount.textContent = text.length;
     showToast('Some words were adjusted for community guidelines 🎵');
   }
 
-  // FIX: youtubeData is used directly — no ytConfirmed gate
   const savedYtMeta = youtubeData ? {
-    videoId:     youtubeData.videoId     || null,
+    videoId:     youtubeData.videoId                          || null,
     title:       decodeHTML(youtubeData.title   || ''),
-    thumbnail:   youtubeData.thumbnail   || null,
+    thumbnail:   youtubeData.thumbnail                        || null,
     thumbnailSm: youtubeData.thumbnailSm || youtubeData.thumbnail || null,
     channel:     decodeHTML(youtubeData.channel || ''),
-    youtubeUrl:  youtubeData.youtubeUrl  || null,
-    embedUrl:    youtubeData.embedUrl    || null,
+    youtubeUrl:  youtubeData.youtubeUrl                       || null,
+    embedUrl:    youtubeData.embedUrl                         || null,
   } : null;
 
   let post = {
     text, emotion: selectedEmotion, mode: currentMode,
     community: selectedEmotion, status: 'active', flagCount: 0,
-    knowledge: { song: 'Unknown Song', artist: 'Unknown Artist' },
+    knowledge:   { song: 'Unknown Song', artist: 'Unknown Artist' },
     guessConfig: null,
     youtubeMeta: savedYtMeta,
     links: currentMode !== 'discover' ? {
-      spotify:    spotifyLink?.value.trim()          || null,
-      apple:      appleLink?.value.trim()            || null,
-      youtube:    youtubeData?.youtubeUrl            || youtubeLink?.value.trim() || null,
-      soundcloud: soundcloudLink?.value.trim()       || null,
+      spotify:    spotifyLink?.value.trim()           || null,
+      apple:      appleLink?.value.trim()             || null,
+      youtube:    youtubeData?.youtubeUrl             || youtubeLink?.value.trim() || null,
+      soundcloud: soundcloudLink?.value.trim()        || null,
     } : null,
     authorId:  userId,
     timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now()
@@ -547,7 +591,8 @@ async function submitPost() {
       };
     }
     if (currentMode === 'guess') {
-      const doSong = guessSongCheck.checked, doArtist = guessArtistCheck.checked;
+      const doSong   = guessSongCheck.checked;
+      const doArtist = guessArtistCheck.checked;
       if (!doSong && !doArtist) throw new Error('Select at least one thing to guess');
       if (doSong   && !guessSongAnswer.value.trim())   throw new Error('Enter the correct song title');
       if (doArtist && !guessArtistAnswer.value.trim()) throw new Error('Enter the correct artist');
@@ -562,56 +607,62 @@ async function submitPost() {
     }
   } catch (err) { showToast(err.message); return; }
 
-  postBtn.disabled = true; postBtn.textContent = 'Posting…';
+  postBtn.disabled    = true;
+  postBtn.textContent = 'Posting…';
 
   try {
     if (isFirebaseEnabled) {
       const ref = await postsRef.push(post);
       await analyticsRef.child(ref.key).set({ views: 0, guesses: [], helps: [] });
 
-      // SAFETY NET: if YouTube hadn't loaded yet when user hit Post,
-      // fetch it now and write to Firebase in the background.
-      // firebase.js backfill will also catch it on next load.
+      // Safety net: if YouTube hadn't loaded yet, fetch in background
       if (!post.youtubeMeta
           && post.knowledge.song   !== 'Unknown Song'
           && post.knowledge.artist !== 'Unknown Artist'
           && typeof fetchAndSaveYoutubeMeta === 'function') {
-        fetchAndSaveYoutubeMeta(ref.key, post.knowledge.song, post.knowledge.artist)
-          .catch(() => {});
+        fetchAndSaveYoutubeMeta(ref.key, post.knowledge.song, post.knowledge.artist).catch(() => {});
       }
     }
-
     showToast('Posted! 🎵');
     newPostsAvailable = false;
     renderFeed(); resetComposer(); closeModal(composer);
   } catch (err) {
     console.error(err); showToast(err.message || 'Error posting.');
   } finally {
-    postBtn.disabled = false; postBtn.textContent = 'Post';
+    postBtn.disabled    = false;
+    postBtn.textContent = 'Post';
   }
 }
 
 function resetComposer() {
-  textInput.value = ''; songInput.value = ''; artistInput.value = '';
-  guessSongAnswer.value = ''; guessArtistAnswer.value = '';
-  discoverSongInput.value = ''; discoverArtistInput.value = '';
+  textInput.value       = '';
+  songInput.value       = '';
+  artistInput.value     = '';
+  guessSongAnswer.value = '';
+  guessArtistAnswer.value = '';
+  discoverSongInput.value   = '';
+  discoverArtistInput.value = '';
   if (spotifyLink)    spotifyLink.value    = '';
   if (appleLink)      appleLink.value      = '';
   if (youtubeLink)    youtubeLink.value    = '';
   if (soundcloudLink) soundcloudLink.value = '';
   charCount.textContent = '0';
-  selectedEmotion = null; geniusResult = null; lastGeniusQuery = '';
-  clearYoutubePreview(); closeAutocomplete();
+  selectedEmotion  = null;
+  geniusResult     = null;
+  lastGeniusQuery  = '';
+  resetYoutubeData(); // full reset here
+  closeAutocomplete();
   document.getElementById('geniusResultsList')?.remove();
   document.getElementById('geniusIdentifyBtn')?.classList.remove('active');
   document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
-  modeBtns.forEach((b,i) => b.classList.toggle('active', i===0));
+  modeBtns.forEach((b, i) => b.classList.toggle('active', i === 0));
   currentMode = 'share';
   shareInputs.classList.add('show');
   guessInputs.classList.remove('show');
   discoverInputs.classList.remove('show');
   streamingSection.style.display = 'block';
-  guessSongCheck.checked = true; guessArtistCheck.checked = true;
+  guessSongCheck.checked   = true;
+  guessArtistCheck.checked = true;
   const iw = document.getElementById('inspireWrap');
   const is = document.getElementById('inspireSuggestions');
   if (iw) iw.style.display = 'none';
@@ -670,12 +721,15 @@ window.openListen = function(index) {
   ll.innerHTML = '';
   let has = false;
   [['Spotify','spotify'],['Apple Music','apple'],['YouTube','youtube'],['SoundCloud','soundcloud']]
-    .forEach(([name,key]) => {
+    .forEach(([name, key]) => {
       if (currentPost.links[key]) {
         has = true;
-        const a = document.createElement('a');
-        a.className='listen-link'; a.href=currentPost.links[key];
-        a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=name;
+        const a       = document.createElement('a');
+        a.className   = 'listen-link';
+        a.href        = currentPost.links[key];
+        a.target      = '_blank';
+        a.rel         = 'noopener noreferrer';
+        a.textContent = name;
         ll.appendChild(a);
       }
     });
@@ -689,18 +743,21 @@ window.openGuess = function(index) {
   if (!currentPost) return;
   trackView(currentPost.id);
   currentGuessAttempts = 0;
-  document.getElementById('guessLyric').textContent      = currentPost.text;
-  document.getElementById('guessSongInput').value        = '';
-  document.getElementById('guessArtistInput').value      = '';
-  document.getElementById('guessResult').className       = 'result-msg hidden';
-  document.getElementById('guessLinksSection').className = 'guess-links hidden';
-  document.getElementById('guessInputFields').style.display = '';
-  document.getElementById('submitGuess').style.display      = '';
-  document.getElementById('revealAnswer').style.display     = 'none';
-  const doSong=currentPost.guessConfig?.guessSong??true, doArtist=currentPost.guessConfig?.guessArtist??true;
-  document.getElementById('guessSongInput').style.display   = doSong   ? 'block':'none';
-  document.getElementById('guessArtistInput').style.display = doArtist ? 'block':'none';
-  const what=[]; if(doSong)what.push('song'); if(doArtist)what.push('artist');
+  document.getElementById('guessLyric').textContent          = currentPost.text;
+  document.getElementById('guessSongInput').value            = '';
+  document.getElementById('guessArtistInput').value          = '';
+  document.getElementById('guessResult').className           = 'result-msg hidden';
+  document.getElementById('guessLinksSection').className     = 'guess-links hidden';
+  document.getElementById('guessInputFields').style.display  = '';
+  document.getElementById('submitGuess').style.display       = '';
+  document.getElementById('revealAnswer').style.display      = 'none';
+  const doSong   = currentPost.guessConfig?.guessSong   ?? true;
+  const doArtist = currentPost.guessConfig?.guessArtist ?? true;
+  document.getElementById('guessSongInput').style.display   = doSong   ? 'block' : 'none';
+  document.getElementById('guessArtistInput').style.display = doArtist ? 'block' : 'none';
+  const what = [];
+  if (doSong)   what.push('song');
+  if (doArtist) what.push('artist');
   document.getElementById('guessHint').textContent = `${MAX_GUESS_ATTEMPTS} attempts to guess the ${what.join(' and ')}.`;
   openModal(guessModal);
 };
@@ -708,128 +765,140 @@ window.openGuess = function(index) {
 function submitGuess() {
   if (!currentPost) return;
   currentGuessAttempts++;
-  const k=currentPost.knowledge||{};
-  const doSong=currentPost.guessConfig?.guessSong??true, doArtist=currentPost.guessConfig?.guessArtist??true;
-  const gs=document.getElementById('guessSongInput').value.trim().toLowerCase();
-  const ga=document.getElementById('guessArtistInput').value.trim().toLowerCase();
-  const as=(k.song||'').toLowerCase(), aa=(k.artist||'').toLowerCase();
-  const songOk  =!doSong  ||(gs&&(gs===as||gs.includes(as)||as.includes(gs)));
-  const artistOk=!doArtist||(ga&&(ga===aa||ga.includes(aa)||aa.includes(ga)));
-  const correct =songOk&&artistOk;
+  const k        = currentPost.knowledge || {};
+  const doSong   = currentPost.guessConfig?.guessSong   ?? true;
+  const doArtist = currentPost.guessConfig?.guessArtist ?? true;
+  const gs = document.getElementById('guessSongInput').value.trim().toLowerCase();
+  const ga = document.getElementById('guessArtistInput').value.trim().toLowerCase();
+  const as = (k.song   || '').toLowerCase();
+  const aa = (k.artist || '').toLowerCase();
+  const songOk   = !doSong   || (gs && (gs === as || gs.includes(as) || as.includes(gs)));
+  const artistOk = !doArtist || (ga && (ga === aa || ga.includes(aa) || aa.includes(ga)));
+  const correct  = songOk && artistOk;
+
   if (isFirebaseEnabled)
-    analyticsRef.child(currentPost.id).child('guesses').push({song:gs||null,artist:ga||null,correct,timestamp:Date.now()});
-  const resultEl=document.getElementById('guessResult');
+    analyticsRef.child(currentPost.id).child('guesses').push({ song: gs||null, artist: ga||null, correct, timestamp: Date.now() });
+
+  const resultEl = document.getElementById('guessResult');
   resultEl.classList.remove('hidden','result-success','result-error','result-partial');
+
   if (correct) {
-    resultEl.className='result-msg result-success';
-    resultEl.innerHTML=`Correct! 🎉<br><span style="font-size:0.8rem">"${k.song}" by ${k.artist}</span>`;
-    const meta=currentPost.youtubeMeta;
-    if(meta?.thumbnail) resultEl.innerHTML+=`<br><img src="${meta.thumbnail}" style="width:100%;border-radius:8px;margin-top:8px;object-fit:cover" alt=""/>`;
-    document.getElementById('submitGuess').style.display='none';
-    document.getElementById('guessInputFields').style.display='none';
+    resultEl.className = 'result-msg result-success';
+    resultEl.innerHTML = `Correct! 🎉<br><span style="font-size:0.8rem">"${k.song}" by ${k.artist}</span>`;
+    const meta = currentPost.youtubeMeta;
+    if (meta?.thumbnail) resultEl.innerHTML += `<br><img src="${meta.thumbnail}" style="width:100%;border-radius:8px;margin-top:8px;object-fit:cover" alt=""/>`;
+    document.getElementById('submitGuess').style.display      = 'none';
+    document.getElementById('guessInputFields').style.display = 'none';
     if (currentPost.links) {
-      const ll=document.getElementById('guessLinksSection');
-      let html='<div class="guess-links-title">Listen</div>';
-      if(currentPost.links.spotify)   html+=`<a href="${currentPost.links.spotify}"   target="_blank" class="guess-link">Spotify</a>`;
-      if(currentPost.links.apple)     html+=`<a href="${currentPost.links.apple}"     target="_blank" class="guess-link">Apple Music</a>`;
-      if(currentPost.links.youtube)   html+=`<a href="${currentPost.links.youtube}"   target="_blank" class="guess-link">YouTube</a>`;
-      if(currentPost.links.soundcloud)html+=`<a href="${currentPost.links.soundcloud}"target="_blank" class="guess-link">SoundCloud</a>`;
-      ll.innerHTML=html; ll.classList.remove('hidden');
+      const ll = document.getElementById('guessLinksSection');
+      let html = '<div class="guess-links-title">Listen</div>';
+      if (currentPost.links.spotify)    html += `<a href="${currentPost.links.spotify}"    target="_blank" class="guess-link">Spotify</a>`;
+      if (currentPost.links.apple)      html += `<a href="${currentPost.links.apple}"      target="_blank" class="guess-link">Apple Music</a>`;
+      if (currentPost.links.youtube)    html += `<a href="${currentPost.links.youtube}"    target="_blank" class="guess-link">YouTube</a>`;
+      if (currentPost.links.soundcloud) html += `<a href="${currentPost.links.soundcloud}" target="_blank" class="guess-link">SoundCloud</a>`;
+      ll.innerHTML = html;
+      ll.classList.remove('hidden');
     }
     return;
   }
-  const left=MAX_GUESS_ATTEMPTS-currentGuessAttempts;
-  if (left<=0) {
-    resultEl.className='result-msg result-error';
-    resultEl.innerHTML=`Out of attempts<br><span style="font-size:0.8rem">It was: "${k.song}" by ${k.artist}</span>`;
-    document.getElementById('submitGuess').style.display='none';
-    document.getElementById('guessInputFields').style.display='none';
+
+  const left = MAX_GUESS_ATTEMPTS - currentGuessAttempts;
+  if (left <= 0) {
+    resultEl.className = 'result-msg result-error';
+    resultEl.innerHTML = `Out of attempts<br><span style="font-size:0.8rem">It was: "${k.song}" by ${k.artist}</span>`;
+    document.getElementById('submitGuess').style.display      = 'none';
+    document.getElementById('guessInputFields').style.display = 'none';
     return;
   }
-  const ps=doSong&&gs&&(gs===as||gs.includes(as)||as.includes(gs));
-  const pa=doArtist&&ga&&(ga===aa||ga.includes(aa)||aa.includes(ga));
-  resultEl.className=`result-msg ${(ps||pa)?'result-partial':'result-error'}`;
-  let msg=(ps||pa)?'Partially correct — ':'Incorrect — ';
-  if(doSong)  msg+=`Song: ${ps?'✓':'✗'} `;
-  if(doArtist)msg+=`Artist: ${pa?'✓':'✗'} `;
-  msg+=`(${left} left)`;
-  resultEl.innerHTML=msg;
-  document.getElementById('guessSongInput').value='';
-  document.getElementById('guessArtistInput').value='';
+  const ps = doSong   && gs && (gs === as || gs.includes(as) || as.includes(gs));
+  const pa = doArtist && ga && (ga === aa || ga.includes(aa) || aa.includes(ga));
+  resultEl.className = `result-msg ${(ps || pa) ? 'result-partial' : 'result-error'}`;
+  let msg = (ps || pa) ? 'Partially correct — ' : 'Incorrect — ';
+  if (doSong)   msg += `Song: ${ps ? '✓' : '✗'} `;
+  if (doArtist) msg += `Artist: ${pa ? '✓' : '✗'} `;
+  msg += `(${left} left)`;
+  resultEl.innerHTML = msg;
+  document.getElementById('guessSongInput').value  = '';
+  document.getElementById('guessArtistInput').value = '';
 }
 
 /* ── Discover ── */
 window.openDiscover = function(index) {
-  currentPost=posts[index]; if(!currentPost)return;
+  currentPost = posts[index];
+  if (!currentPost) return;
   trackView(currentPost.id);
   ['discoverLyric','discoverSongAnswer','discoverArtistAnswer',
    'discoverSpotifyLink','discoverAppleLink','discoverYoutubeLink','discoverSoundcloudLink']
-    .forEach(id=>{
-      const el=document.getElementById(id);
-      if(el){id==='discoverLyric'?el.textContent=currentPost.text:el.value='';}
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { id === 'discoverLyric' ? el.textContent = currentPost.text : el.value = ''; }
     });
   openModal(discoverModal);
 };
 
 function submitDiscover() {
-  const song  =document.getElementById('discoverSongAnswer').value.trim();
-  const artist=document.getElementById('discoverArtistAnswer').value.trim();
-  if(!song||!artist){showToast('Please enter both song and artist');return;}
-  const helpData={
-    song,artist,
-    links:{
-      spotify:   document.getElementById('discoverSpotifyLink').value.trim()||null,
-      apple:     document.getElementById('discoverAppleLink').value.trim()||null,
-      youtube:   document.getElementById('discoverYoutubeLink').value.trim()||null,
-      soundcloud:document.getElementById('discoverSoundcloudLink').value.trim()||null,
+  const song   = document.getElementById('discoverSongAnswer').value.trim();
+  const artist = document.getElementById('discoverArtistAnswer').value.trim();
+  if (!song || !artist) { showToast('Please enter both song and artist'); return; }
+  const helpData = {
+    song, artist,
+    links: {
+      spotify:    document.getElementById('discoverSpotifyLink').value.trim()    || null,
+      apple:      document.getElementById('discoverAppleLink').value.trim()      || null,
+      youtube:    document.getElementById('discoverYoutubeLink').value.trim()    || null,
+      soundcloud: document.getElementById('discoverSoundcloudLink').value.trim() || null,
     },
-    timestamp:Date.now()
+    timestamp: Date.now()
   };
-  if(isFirebaseEnabled)analyticsRef.child(currentPost.id).child('helps').push(helpData);
-  showToast('Thanks for helping!'); closeModal(discoverModal);
+  if (isFirebaseEnabled) analyticsRef.child(currentPost.id).child('helps').push(helpData);
+  showToast('Thanks for helping!');
+  closeModal(discoverModal);
 }
 
 /* ── Analytics ── */
 function openAnalytics() {
-  if(!currentPost)return;
-  const an=postAnalytics[currentPost.id]||{views:0};
-  const guesses=Object.values(an.guesses||{});
-  const helps  =Object.values(an.helps  ||{});
-  const body   =document.getElementById('analyticsBody');
-  let html=`<div class="analytics-grid">
+  if (!currentPost) return;
+  const an      = postAnalytics[currentPost.id] || { views: 0 };
+  const guesses = Object.values(an.guesses || {});
+  const helps   = Object.values(an.helps   || {});
+  const body    = document.getElementById('analyticsBody');
+  let html = `<div class="analytics-grid">
     <div class="stat-card"><div class="stat-num">${an.views||0}</div><div class="stat-label">Views</div></div>`;
-  if(currentPost.mode==='guess')   html+=`<div class="stat-card"><div class="stat-num">${guesses.length}</div><div class="stat-label">Guesses</div></div>`;
-  if(currentPost.mode==='discover')html+=`<div class="stat-card"><div class="stat-num">${helps.length}</div><div class="stat-label">Identifications</div></div>`;
-  html+='</div>';
-  body.innerHTML=html;
-  if(currentPost.mode==='guess'&&guesses.length){
-    let sec='<div class="activity-section"><h4>Guesses</h4><div class="activity-list">';
-    guesses.forEach(g=>{
-      const gSong   = g.song   ? 'Song: '+g.song   : '';
-      const gArtist = g.artist ? (g.song?' · ':'')+'Artist: '+g.artist : '';
-      sec+=`<div class="activity-item ${g.correct?'correct':'incorrect'}">
+  if (currentPost.mode === 'guess')   html += `<div class="stat-card"><div class="stat-num">${guesses.length}</div><div class="stat-label">Guesses</div></div>`;
+  if (currentPost.mode === 'discover')html += `<div class="stat-card"><div class="stat-num">${helps.length}</div><div class="stat-label">Identifications</div></div>`;
+  html += '</div>';
+  body.innerHTML = html;
+
+  if (currentPost.mode === 'guess' && guesses.length) {
+    let sec = '<div class="activity-section"><h4>Guesses</h4><div class="activity-list">';
+    guesses.forEach(g => {
+      const gSong   = g.song   ? 'Song: ' + g.song : '';
+      const gArtist = g.artist ? (g.song ? ' · ' : '') + 'Artist: ' + g.artist : '';
+      sec += `<div class="activity-item ${g.correct ? 'correct' : 'incorrect'}">
         <div class="activity-guess">${gSong}${gArtist}</div>
-        <div class="activity-result ${g.correct?'correct':'incorrect'}">${g.correct?'✓ Correct':'✗ Incorrect'}</div>
+        <div class="activity-result ${g.correct ? 'correct' : 'incorrect'}">${g.correct ? '✓ Correct' : '✗ Incorrect'}</div>
         <div class="activity-time">${timeAgo(g.timestamp)}</div>
       </div>`;
     });
-    body.innerHTML+=sec+'</div></div>';
+    body.innerHTML += sec + '</div></div>';
   }
-  if(currentPost.mode==='discover'&&helps.length){
-    let sec='<div class="activity-section"><h4>Community Identifications</h4><div class="activity-list">';
-    helps.forEach(h=>{
-      const lp=[];
-      if(h.links?.spotify)   lp.push(`<a href="${h.links.spotify}"   target="_blank" class="help-link">Spotify</a>`);
-      if(h.links?.apple)     lp.push(`<a href="${h.links.apple}"     target="_blank" class="help-link">Apple</a>`);
-      if(h.links?.youtube)   lp.push(`<a href="${h.links.youtube}"   target="_blank" class="help-link">YouTube</a>`);
-      if(h.links?.soundcloud)lp.push(`<a href="${h.links.soundcloud}"target="_blank" class="help-link">SoundCloud</a>`);
-      sec+=`<div class="activity-item">
-        <div class="activity-guess"><strong>${h.song||'?'}</strong> — ${h.artist||'?'}</div>
-        ${lp.length?`<div class="help-links-row">${lp.join('')}</div>`:''}
+
+  if (currentPost.mode === 'discover' && helps.length) {
+    let sec = '<div class="activity-section"><h4>Community Identifications</h4><div class="activity-list">';
+    helps.forEach(h => {
+      const lp = [];
+      if (h.links?.spotify)    lp.push(`<a href="${h.links.spotify}"    target="_blank" class="help-link">Spotify</a>`);
+      if (h.links?.apple)      lp.push(`<a href="${h.links.apple}"      target="_blank" class="help-link">Apple</a>`);
+      if (h.links?.youtube)    lp.push(`<a href="${h.links.youtube}"    target="_blank" class="help-link">YouTube</a>`);
+      if (h.links?.soundcloud) lp.push(`<a href="${h.links.soundcloud}" target="_blank" class="help-link">SoundCloud</a>`);
+      sec += `<div class="activity-item">
+        <div class="activity-guess"><strong>${h.song || '?'}</strong> — ${h.artist || '?'}</div>
+        ${lp.length ? `<div class="help-links-row">${lp.join('')}</div>` : ''}
         <div class="activity-time">${timeAgo(h.timestamp)}</div>
       </div>`;
     });
-    body.innerHTML+=sec+'</div></div>';
+    body.innerHTML += sec + '</div></div>';
   }
-  closeModal(postcardModal); openModal(analyticsModal);
+  closeModal(postcardModal);
+  openModal(analyticsModal);
 }
