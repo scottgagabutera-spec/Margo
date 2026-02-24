@@ -5,10 +5,12 @@
    Loaded last — all other modules must be loaded first.
    Depends on: state.js, firebase.js, feed.js, composer.js,
                studio.js, admin.js
-   v4.3
+   v4.4 — scroll-to-top delegated to motion.js FAB
    ============================================================ */
 
 // ── Toast ──
+// NOTE: window.showToast is intercepted and upgraded by motion.js.
+// This definition is the fallback that motion.js wraps.
 function showToast(msg) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
@@ -80,13 +82,14 @@ function initNavigation() {
 }
 
 // ── Scroll utilities ──
+// Back-to-top FAB is handled entirely by motion.js (#margoScrollTop).
+// This function only wires the "new posts" indicator.
 function setupScrollToTop() {
-  window.addEventListener('scroll', () => {
-    scrollToTopBtn?.classList.toggle('visible', window.pageYOffset > 350);
-  });
-  if (scrollToTopBtn) {
-    scrollToTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  /* Hide any legacy scroll-to-top element immediately */
+  const legacyBtn = document.getElementById('scrollToTopBtn');
+  if (legacyBtn) legacyBtn.style.display = 'none';
+
+  /* New posts indicator */
   if (newPostsIndicator) {
     newPostsIndicator.onclick = () => {
       newPostsAvailable = false;
@@ -102,7 +105,7 @@ function setupScrollToTop() {
 // ════════════════════════════════════════════════════════
 initStatsShimmer();    // show shimmer before Firebase loads
 initNavigation();      // wire nav buttons + swipe
-setupScrollToTop();    // scroll-to-top + new posts bar
+setupScrollToTop();    // new posts bar (scroll FAB = motion.js)
 setupStatsBar();       // responsive stats alignment
 preloadStudioFonts();  // kick off font loading early
 buildLyricStream();    // populate hero stream with samples
@@ -113,4 +116,4 @@ initStudio();          // Margo Studio canvas
 initAdmin();           // admin moderation (B+G trigger)
 startFirebaseSync();   // start Firebase listeners last
 
-console.log('MARGO v4.3 — modular. Firebase:', isFirebaseEnabled);
+console.log('MARGO v4.4 — modular. Firebase:', isFirebaseEnabled);
