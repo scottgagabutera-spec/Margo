@@ -1,75 +1,105 @@
 /* ============================================================
    MARGO — api/youtube.js
    Vercel serverless function — YouTube API proxy
+   v2.1 — Zero-quota suggest via suggestqueries endpoint
+           Quota guard: returns 429 when API is exhausted
+           so backfill runner can back off gracefully
    Endpoints:
      GET /api/youtube?song=X&artist=Y  → find official video
-     GET /api/youtube?suggest=X        → song title autocomplete
+     GET /api/youtube?suggest=X        → zero-quota autocomplete
    ============================================================ */
 
 export default async function handler(req, res) {
-  const origin = req.headers.origin || '';
+  const origin  = req.headers.origin || '';
   const allowed =
     origin.includes('trymargo.com') ||
     origin.includes('vercel.app')   ||
     origin === '';
 
-  res.setHeader('Access-Control-Allow-Origin', allowed ? origin || '*' : 'https://trymargo.com');
+  res.setHeader('Access-Control-Allow-Origin',  allowed ? origin || '*' : 'https://trymargo.com');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET')    return res.status(405).json({ error: 'Method not allowed' });
 
-  if (!process.env.YOUTUBE_API_KEY) {
-    return res.status(503).json({ error: 'YouTube not configured' });
-  }
-
   const { song, artist, suggest } = req.query;
 
-  // ── Suggest mode: autocomplete song titles ──
+  /* ══════════════════════════════════════════════════════════
+     SUGGEST MODE — YouTube's internal autocomplete API
+     Zero quota cost. No API key needed.
+     Returns up to 5 song title suggestions.
+  ══════════════════════════════════════════════════════════ */
   if (suggest) {
     try {
-      const q      = encodeURIComponent(`${suggest} official music video`);
-      const ytRes  = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${q}&type=video&maxResults=5&videoCategoryId=10&key=${process.env.YOUTUBE_API_KEY}`
-      );
-      if (!ytRes.ok) throw new Error('YouTube suggest failed');
-      const data = await ytRes.json();
-
-      const suggestions = (data.items || []).map(v => {
-        // Parse "Artist - Song Title" format common in YouTube music
-        const title   = v.snippet.title;
-        const channel = v.snippet.channelTitle.replace('VEVO', '').replace('- Topic', '').trim();
-        // Try to extract song title from "Artist - Song" pattern
-        const dashIdx = title.indexOf(' - ');
-        const songTitle = dashIdx > -1 ? title.slice(dashIdx + 3).replace(/\(.*?\)/g, '').trim() : title;
-        const artist    = dashIdx > -1 ? title.slice(0, dashIdx).trim() : channel;
-
-        return {
-          videoId:   v.id.videoId,
-          raw:       title,
-          song:      songTitle,
-          artist,
-          thumbnail: v.snippet.thumbnails?.default?.url || null,
-          channel:   v.snippet.channelTitle,
-        };
+      const q   = encodeURIComponent(suggest.trim());
+      // YouTube's own suggest endpoint — same one the search bar uses
+      const url = `https://suggestqueries-clients6.youtube.com/complete/search?client=youtube&ds=yt&q=${q}&callback=cb`;
+      const r   = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; Margo/1.0)',
+          'Accept':     'text/javascript',
+        }
       });
+
+      if (!r.ok) throw new Error('Suggest fetch failed');
+
+      const text = await r.text();
+
+      // Response is JSONP: cb(["query", ["suggestion1", "suggestion2", ...], ...])
+      const jsonStr  = text.replace(/^[^(]+\(/, '').replace(/\)[^)]*$/, '');
+      const parsed   = JSON.parse(jsonStr);
+      const rawTerms = parsed[1] || [];
+
+      const suggestions = rawTerms.slice(0, 6).map(item => {
+        const raw   = Array.isArray(item) ? item[0] : item;
+        const clean = String(raw).replace(/<[^>]+>/g, '').trim();
+
+        // Parse "Artist - Song" pattern common in music searches
+        const dashIdx    = clean.indexOf(' - ');
+        const songTitle  = dashIdx > -1
+          ? clean.slice(dashIdx + 3).replace(/\(.*?\)/g, '').trim()
+          : clean;
+        const artistName = dashIdx > -1 ? clean.slice(0, dashIdx).trim() : '';
+
+        return { raw: clean, song: songTitle, artist: artistName, thumbnail: null };
+      }).filter(s => s.raw.length > 2);
 
       return res.status(200).json({ suggestions });
     } catch (err) {
       console.error('[YouTube suggest error]', err.message);
-      return res.status(500).json({ error: 'Suggest failed', detail: err.message });
+      // Graceful fallback — empty list, composer still works fine
+      return res.status(200).json({ suggestions: [] });
     }
   }
 
-  // ── Main mode: fetch video for confirmed song + artist ──
+  /* ══════════════════════════════════════════════════════════
+     MAIN MODE — find official video for confirmed song+artist
+     Uses YouTube Data API v3 (costs quota units).
+     Returns 429 on quota exhaustion so backfill backs off.
+  ══════════════════════════════════════════════════════════ */
   if (!song && !artist) return res.status(400).json({ error: 'song or artist required' });
 
+  if (!process.env.YOUTUBE_API_KEY) {
+    return res.status(503).json({ error: 'YouTube not configured' });
+  }
+
   try {
-    const query  = encodeURIComponent(`${song || ''} ${artist || ''} official video`.trim());
-    const ytRes  = await fetch(
+    const query = encodeURIComponent(`${song || ''} ${artist || ''} official video`.trim());
+    const ytRes = await fetch(
       `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&maxResults=3&key=${process.env.YOUTUBE_API_KEY}`
     );
+
+    // ── Quota exhausted — tell caller to back off cleanly ──
+    if (ytRes.status === 403) {
+      const errBody = await ytRes.json().catch(() => ({}));
+      const reason  = errBody?.error?.errors?.[0]?.reason || '';
+      if (reason === 'quotaExceeded' || reason === 'dailyLimitExceeded') {
+        console.error('[YouTube] Quota exhausted for today');
+        return res.status(429).json({ error: 'quotaExceeded' });
+      }
+      throw new Error(`YouTube 403: ${reason}`);
+    }
 
     if (!ytRes.ok) {
       const errText = await ytRes.text();
