@@ -1,7 +1,6 @@
 /* ============================================================
    MARGO — js/feed.js
-   v4.8 — Deep gold cards, uniform YouTube, smart logic,
-          font scaling, fixed heights, clean design system
+   v4.9 — Uniform cards, smart YouTube logic, clean actions
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -19,7 +18,7 @@ const STREAM_SAMPLES = [
   { text: "I built a home in your chest and you moved out",      emotion: 'Heartbreak' },
 ];
 
-/* Emotion design tokens — used consistently everywhere */
+/* Emotion design tokens */
 const EMOTION_CFG = {
   Love:       { bg: 'rgba(255,107,157,0.13)', text: '#FF6B9D', border: 'rgba(255,107,157,0.22)', strip: 'rgba(255,107,157,0.7)'  },
   Heartbreak: { bg: 'rgba(255,80,80,0.11)',   text: '#ff5050', border: 'rgba(255,80,80,0.2)',    strip: 'rgba(255,80,80,0.65)'   },
@@ -32,7 +31,6 @@ const EMOTION_CFG = {
 };
 const E_DEFAULT = { bg: 'rgba(232,197,71,0.11)', text: '#E8C547', border: 'rgba(232,197,71,0.25)', strip: 'rgba(232,197,71,0.8)' };
 
-/* Lyric font size: shorter lyrics get bigger type */
 function lyricFontSize(text) {
   const n = (text || '').length;
   if (n <= 35)  return '1.08rem';
@@ -43,21 +41,16 @@ function lyricFontSize(text) {
 
 /* ── Inject all card styles once ── */
 function injectFeedStyles() {
-  if (document.getElementById('feedV48')) return;
+  if (document.getElementById('feedV49')) return;
   const s = document.createElement('style');
-  s.id = 'feedV48';
+  s.id = 'feedV49';
   s.textContent = `
-    /* ── Card animation ── */
     @keyframes cardIn {
       from { opacity:0; transform:translateY(10px); }
       to   { opacity:1; transform:translateY(0); }
     }
 
-    /* ─────────────────────────────────────────────────
-       FEED CARD — deep gold, uniform, premium feel
-       All cards same height, flex-column,
-       proportioned sections so buttons never clip
-    ───────────────────────────────────────────────── */
+    /* ─── CARD BASE ─── */
     #feedList .feed-card {
       height: 285px !important;
       background: #161619 !important;
@@ -71,137 +64,99 @@ function injectFeedStyles() {
       overflow: hidden !important;
       animation: cardIn 0.3s ease both;
       transition: transform 0.22s cubic-bezier(0.4,0,0.2,1),
-                  border-color 0.22s,
-                  box-shadow 0.22s !important;
-      box-shadow:
-        0 0 0 0 transparent,
-        0 4px 20px rgba(0,0,0,0.4),
-        inset 0 1px 0 rgba(232,197,71,0.08) !important;
+                  border-color 0.22s, box-shadow 0.22s !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4),
+                  inset 0 1px 0 rgba(232,197,71,0.08) !important;
     }
-
-    /* Gold shimmer top edge */
     #feedList .feed-card::before {
       content: '';
       position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(232,197,71,0.55) 25%,
-        rgba(232,197,71,1)    50%,
-        rgba(232,197,71,0.55) 75%,
-        transparent 100%
-      );
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%, rgba(232,197,71,0.55) 25%,
+        rgba(232,197,71,1) 50%, rgba(232,197,71,0.55) 75%, transparent 100%);
       pointer-events: none;
     }
-
-    /* Emotion-color left strip via CSS variable */
     #feedList .feed-card::after {
       content: '';
       position: absolute;
-      top: 16px; left: 0; bottom: 16px;
-      width: 3px;
+      top: 16px; left: 0; bottom: 16px; width: 3px;
       background: var(--e-strip, rgba(232,197,71,0.8));
       border-radius: 0 4px 4px 0;
-      opacity: 0.85;
-      pointer-events: none;
+      opacity: 0.85; pointer-events: none;
     }
-
     #feedList .feed-card:hover {
       transform: translateY(-3px) !important;
       border-color: rgba(232,197,71,0.5) !important;
-      box-shadow:
-        0 0 0 1px rgba(232,197,71,0.15),
-        0 20px 50px rgba(0,0,0,0.55),
-        inset 0 1px 0 rgba(232,197,71,0.12) !important;
+      box-shadow: 0 0 0 1px rgba(232,197,71,0.15),
+                  0 20px 50px rgba(0,0,0,0.55),
+                  inset 0 1px 0 rgba(232,197,71,0.12) !important;
     }
 
-    /* ── Top row ── */
+    /* ─── TOP ROW ─── */
     #feedList .card-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-      height: 20px;
-      margin-bottom: 10px;
-      padding-left: 7px;
+      display: flex; justify-content: space-between;
+      align-items: center; flex-shrink: 0;
+      height: 20px; margin-bottom: 10px; padding-left: 7px;
     }
 
-    /* ── Lyric zone: fixed 78px, font scales by JS ── */
+    /* ─── LYRIC ─── */
     #feedList .card-lyric {
-      height: 78px !important;
-      overflow: hidden !important;
+      height: 78px !important; overflow: hidden !important;
       display: -webkit-box !important;
       -webkit-line-clamp: 3 !important;
       -webkit-box-orient: vertical !important;
-      flex-shrink: 0 !important;
-      line-height: 1.45 !important;
-      margin-bottom: 8px !important;
-      padding-left: 7px !important;
+      flex-shrink: 0 !important; line-height: 1.45 !important;
+      margin-bottom: 8px !important; padding-left: 7px !important;
       font-weight: 400 !important;
     }
 
-    /* ── Emotion tag ── */
+    /* ─── EMOTION TAG ─── */
     #feedList .card-emotion-tag {
-      flex-shrink: 0 !important;
-      align-self: flex-start !important;
-      margin-bottom: 9px !important;
-      margin-left: 7px !important;
+      flex-shrink: 0 !important; align-self: flex-start !important;
+      margin-bottom: 9px !important; margin-left: 7px !important;
     }
 
-    /* ── Song row ── */
+    /* ─── SONG ROW ─── */
     #feedList .card-song {
-      display: flex !important;
-      align-items: center !important;
-      gap: 9px !important;
-      flex-shrink: 0 !important;
-      height: 50px !important;
-      overflow: hidden !important;
+      display: flex !important; align-items: center !important;
+      gap: 9px !important; flex-shrink: 0 !important;
+      height: 50px !important; overflow: hidden !important;
       padding-top: 8px !important;
       border-top: 1px solid rgba(232,197,71,0.12) !important;
       margin-bottom: 0 !important;
     }
     #feedList .card-song-text { flex:1; min-width:0; }
 
-    /* ── Guess / Discover zone ── */
+    /* ─── GUESS / DISCOVER ─── */
     #feedList .card-mystery,
     #feedList .card-discover {
-      flex-shrink: 0 !important;
-      height: 50px !important;
-      display: flex !important;
-      align-items: center !important;
+      flex-shrink: 0 !important; height: 50px !important;
+      display: flex !important; align-items: center !important;
       padding-top: 8px !important;
       border-top: 1px solid rgba(232,197,71,0.1) !important;
-      overflow: hidden !important;
-      font-size: 0.75rem !important;
+      overflow: hidden !important; font-size: 0.75rem !important;
     }
     #feedList .card-mystery  { color: #6B8CFF !important; }
     #feedList .card-discover { color: #4ade80 !important; }
 
-    /* ── Actions always at bottom ── */
+    /* ─── ACTIONS ─── */
     #feedList .card-actions {
-      margin-top: auto !important;
-      padding-top: 8px !important;
+      margin-top: auto !important; padding-top: 8px !important;
       border-top: 1px solid rgba(232,197,71,0.12) !important;
-      flex-shrink: 0 !important;
-      display: flex !important;
-      gap: 6px !important;
+      flex-shrink: 0 !important; display: flex !important; gap: 6px !important;
     }
 
-    /* ── Buttons — gold-tinted primary ── */
+    /* ─── BUTTONS ─── */
     #feedList .card-btn {
-      flex: 1 !important;
-      padding: 8px 6px !important;
+      flex: 1 !important; padding: 8px 6px !important;
       background: rgba(232,197,71,0.06) !important;
       border: 1px solid rgba(232,197,71,0.18) !important;
       border-radius: 8px !important;
       font-family: 'DM Sans', sans-serif !important;
-      font-size: 0.7rem !important;
-      font-weight: 600 !important;
+      font-size: 0.7rem !important; font-weight: 600 !important;
       color: rgba(232,197,71,0.8) !important;
-      cursor: pointer !important;
-      transition: all 0.18s !important;
+      cursor: pointer !important; transition: all 0.18s !important;
     }
     #feedList .card-btn:hover {
       background: rgba(232,197,71,0.14) !important;
@@ -211,8 +166,7 @@ function injectFeedStyles() {
     #feedList .card-btn-primary {
       background: rgba(232,197,71,0.14) !important;
       border-color: rgba(232,197,71,0.4) !important;
-      color: #E8C547 !important;
-      font-weight: 700 !important;
+      color: #E8C547 !important; font-weight: 700 !important;
     }
     #feedList .card-btn-primary:hover {
       background: rgba(232,197,71,0.25) !important;
@@ -220,16 +174,30 @@ function injectFeedStyles() {
       color: #fff !important;
     }
 
-    /* ── YouTube thumbnail ── */
+    /* ─── YOUTUBE BUTTON (no thumbnail) ─── */
+    #feedList .card-btn-yt {
+      background: rgba(255, 0, 0, 0.08) !important;
+      border-color: rgba(255, 80, 80, 0.25) !important;
+      color: #ff6464 !important;
+    }
+    #feedList .card-btn-yt:hover {
+      background: rgba(255, 0, 0, 0.16) !important;
+      border-color: rgba(255, 80, 80, 0.5) !important;
+      color: #ff4444 !important;
+    }
+
+    /* ─── YOUTUBE THUMBNAIL ─── */
     .card-yt-thumb-wrap {
-      position: relative;
-      flex-shrink: 0;
+      position: relative; flex-shrink: 0;
       width: 56px; height: 38px;
       border-radius: 6px; overflow: hidden;
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
     }
-    .card-yt-thumb { width:100%; height:100%; object-fit:cover; display:block; }
+    .card-yt-thumb {
+      width:100%; height:100%; object-fit:cover; display:block;
+    }
     .card-yt-play {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -242,20 +210,16 @@ function injectFeedStyles() {
       .card-yt-play { opacity: 1; background: rgba(0,0,0,0.4); }
     }
 
-    /* ── Skeletons ── */
+    /* ─── SKELETONS ─── */
     @keyframes skShimmer {
       0%   { background-position: -400px 0; }
       100% { background-position:  400px 0; }
     }
-    .skeleton-card {
-      pointer-events: none !important;
-      height: 285px !important;
-    }
+    .skeleton-card { pointer-events: none !important; height: 285px !important; }
     .sk-line, .sk-block {
       border-radius: 6px;
       background: linear-gradient(90deg,
-        rgba(255,255,255,0.03) 25%,
-        rgba(255,255,255,0.07) 50%,
+        rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%,
         rgba(255,255,255,0.03) 75%);
       background-size: 800px 100%;
       animation: skShimmer 1.5s infinite linear;
@@ -266,7 +230,7 @@ function injectFeedStyles() {
     .sk-row    { display:flex; gap:8px; margin-top:4px; }
     .sk-long   { height:30px; flex:1; border-radius:8px; }
 
-    /* ── Studio YouTube bg ── */
+    /* ─── STUDIO YOUTUBE BG ─── */
     .yt-bg-option {
       display:flex; align-items:center; gap:10px; padding:10px 12px;
       border-radius:10px; background:rgba(255,0,0,0.07);
@@ -285,23 +249,17 @@ function injectFeedStyles() {
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;
     }
 
-    /* ── Back to top — viewport-fixed ── */
-    .scroll-top {
-      position: fixed !important;
-      bottom: 24px !important;
-      left: 50% !important;
-      transform: translateX(-50%) !important;
+    /* ─── KILL OLD BACK-TO-TOP BAR ─── */
+    /* motion.js handles the FAB — hide everything else */
+    .scroll-top,
+    #scrollToTopBtn,
+    [id*="scrollTop"]:not(#margoScrollTop) {
+      display: none !important;
       opacity: 0 !important;
       pointer-events: none !important;
-      transition: opacity 0.3s ease !important;
-      z-index: 999 !important;
-    }
-    .scroll-top.visible {
-      opacity: 1 !important;
-      pointer-events: all !important;
     }
 
-    /* ── Mobile ── */
+    /* ─── MOBILE ─── */
     @media (max-width: 480px) {
       #feedList .feed-card { height: 275px !important; }
       .skeleton-card { height: 275px !important; }
@@ -504,7 +462,20 @@ function renderSkeleton() {
   }
 }
 
-/* ── Render feed ── */
+/* ══════════════════════════════════════════════════════════
+   RENDER FEED — v4.9 smart card logic
+   ──────────────────────────────────────────────────────
+   Card action logic (SHARE mode):
+     HAS youtube meta (thumbnail)
+       → thumbnail in song row acts as listen (click = open YouTube)
+       → "View Post" button only (no redundant Listen btn)
+     NO youtube meta BUT has stream links (spotify/apple/soundcloud)
+       → "View" + "Listen" buttons
+     NO youtube meta, NO stream links
+       → "View Post" button only
+   
+   GUESS / DISCOVER modes: unchanged
+   ══════════════════════════════════════════════════════════ */
 function renderFeed() {
   injectFeedStyles();
   updateLandingStats();
@@ -536,34 +507,39 @@ function renderFeed() {
     const emotion = post.emotion || 'Nostalgia';
     const ecfg    = EMOTION_CFG[emotion] || E_DEFAULT;
     const idx     = posts.findIndex(p => p.id === post.id);
-    const meta    = post.youtubeMeta;
-    const hasMeta = !!(meta?.thumbnailSm || meta?.thumbnail);
-    const links   = post.links || {};
-    const hasStreamLinks = !!(links.spotify || links.apple || links.soundcloud);
 
-    // Set emotion CSS variable for left strip
+    /* ── Media flags ── */
+    const meta           = post.youtubeMeta;
+    const hasThumb       = !!(meta?.thumbnailSm || meta?.thumbnail);
+    const hasYouTubeUrl  = !!(meta?.youtubeUrl);
+    const hasStreamLinks = !!(post.links?.spotify || post.links?.apple || post.links?.soundcloud);
+
     card.style.setProperty('--e-strip', ecfg.strip);
     card.style.borderColor = ecfg.border;
 
-    // Mode badge
+    /* ── Mode badge ── */
     const badge = post.mode === 'guess'
       ? '<span class="card-mode-badge mode-guess">Guess</span>'
       : post.mode === 'discover'
       ? '<span class="card-mode-badge mode-discover">Discover</span>'
       : '<span class="card-mode-badge mode-share">Share</span>';
 
-    // YouTube thumbnail — same structure for ALL posts that have meta
-    const thumb = hasMeta ? `
-      <div class="card-yt-thumb-wrap">
-        <img src="${meta.thumbnailSm || meta.thumbnail}" class="card-yt-thumb" alt=""
-          loading="lazy" onerror="this.parentElement.style.display='none'"/>
-        <a href="${meta.youtubeUrl || '#'}" target="_blank" rel="noopener noreferrer"
-          class="card-yt-play" onclick="event.stopPropagation()" title="Watch on YouTube">
+    /* ── YouTube thumbnail block ──
+       Always clickable — opens YouTube URL.
+       Only rendered if we actually have a thumbnail image. */
+    const thumb = hasThumb ? `
+      <div class="card-yt-thumb-wrap"
+           onclick="event.stopPropagation(); window.open('${meta.youtubeUrl || '#'}', '_blank', 'noopener')"
+           title="Listen on YouTube">
+        <img src="${meta.thumbnailSm || meta.thumbnail}"
+             class="card-yt-thumb" alt="" loading="lazy"
+             onerror="this.parentElement.style.display='none'"/>
+        <span class="card-yt-play">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        </a>
+        </span>
       </div>` : '';
 
-    // Song section
+    /* ── Song section ── */
     let songSection = '';
     if (post.mode === 'share') {
       songSection = `<div class="card-song">
@@ -588,20 +564,47 @@ function renderFeed() {
       }</div>`;
     }
 
-    // Actions — smart: YouTube thumb replaces listen button
+    /* ══════════════════════════════════════════════════════
+       ACTION BUTTONS — unified logic
+
+       SHARE + has thumbnail:
+         Thumbnail IS the "listen" — clicking it opens YouTube.
+         Only show "View Post". Clean. No redundancy.
+
+       SHARE + no thumbnail + has stream links:
+         Show "View" + "Listen" (opens streaming modal).
+
+       SHARE + no thumbnail + no stream links:
+         Show "View Post" only.
+
+       GUESS: "Guess →" + "View"
+       DISCOVER: "Help ID →" + "View"
+    ══════════════════════════════════════════════════════ */
     let actions = '';
+
     if (post.mode === 'share') {
-      if (hasMeta) {
-        // Thumb IS the listen button — just View needed
+      if (hasThumb) {
+        /* Thumb in card-song handles listening → just View */
         actions = `<div class="card-actions">
           <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">View Post</button>
         </div>`;
       } else if (hasStreamLinks) {
+        /* No thumbnail but streaming links available */
         actions = `<div class="card-actions">
           <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
-          <button class="card-btn" onclick="window.openListen(${idx})">Listen</button>
+          <button class="card-btn card-btn-yt" onclick="window.openListen(${idx})">Listen →</button>
+        </div>`;
+      } else if (hasYouTubeUrl && !hasThumb) {
+        /* YouTube URL exists but thumbnail failed — show YT button */
+        actions = `<div class="card-actions">
+          <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
+          <button class="card-btn card-btn-yt"
+            onclick="event.stopPropagation(); window.open('${meta.youtubeUrl}', '_blank', 'noopener')">
+            ▶ YouTube
+          </button>
         </div>`;
       } else {
+        /* No media at all */
         actions = `<div class="card-actions">
           <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">View Post</button>
         </div>`;
