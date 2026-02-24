@@ -199,6 +199,30 @@ function injectComposerStyles() {
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
     .song-input-wrap { position:relative; }
+
+    /* Listen links inside the found card */
+    .yt-links-row {
+      display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;
+    }
+    .yt-listen-link {
+      font-size:0.6rem;font-family:'Space Mono',monospace;
+      font-weight:700;letter-spacing:0.5px;text-transform:uppercase;
+      padding:3px 8px;border-radius:5px;text-decoration:none;
+      transition:opacity 0.15s;white-space:nowrap;
+    }
+    .yt-listen-link:hover { opacity:0.75; }
+    .yt-link-yt {
+      background:rgba(255,50,50,0.12);color:#ff5555;
+      border:1px solid rgba(255,50,50,0.25);
+    }
+    .yt-link-dz {
+      background:rgba(255,130,0,0.12);color:#ff8c00;
+      border:1px solid rgba(255,130,0,0.25);
+    }
+    .yt-link-it {
+      background:rgba(252,60,68,0.12);color:#fc3c44;
+      border:1px solid rgba(252,60,68,0.25);
+    }
   `;
   document.head.appendChild(s);
 }
@@ -392,18 +416,21 @@ function selectAutocomplete(s) {
 function closeAutocomplete() { document.getElementById('ytAutocomplete')?.remove(); }
 
 async function fetchYoutubeData(song, artist) {
-  // Strip featured artists and brackets — improves YouTube match rate
   const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
   const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
 
   showYtLoading();
-  youtubeData = null; // clear until confirmed found
+  youtubeData = null;
 
   try {
     const res  = await fetch(`/api/youtube?song=${encodeURIComponent(cleanSong)}&artist=${encodeURIComponent(cleanArtist)}`);
     const data = await res.json();
-    if (!res.ok || data.error || !data.videoId) { clearYoutubePreview(); return; }
-    youtubeData = data; // ← set immediately, no confirm required
+    // FIX: accept Deezer/iTunes too — they have thumbnail but no videoId
+    // Old code rejected anything without videoId, silently killing all fallbacks
+    if (!res.ok || data.error || (!data.videoId && !data.thumbnail)) {
+      clearYoutubePreview(); return;
+    }
+    youtubeData = data;
     renderYtCard(data);
   } catch (_) { clearYoutubePreview(); }
 }
@@ -412,29 +439,51 @@ function showYtLoading() {
   clearYoutubePreview();
   const card = document.createElement('div');
   card.id = 'youtubePreview'; card.className = 'yt-card';
-  card.innerHTML = `<div class="yt-loading"><span class="m-spinner"></span>Finding video…</div>`;
+  card.innerHTML = `<div class="yt-loading"><span class="m-spinner"></span>Finding on YouTube, Deezer, iTunes…</div>`;
   insertAfterArtist(card);
 }
 
 function renderYtCard(data) {
   clearYoutubePreview();
+  const source = data.source || 'youtube';
+
+  // Build listen links — clickable, open in new tab
+  const links = [];
+  if (data.videoId && data.youtubeUrl) {
+    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">▶ YouTube</a>`);
+  } else if (data.youtubeUrl) {
+    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">🔍 Find on YouTube</a>`);
+  }
+  if (data.deezerUrl) {
+    links.push(`<a href="${data.deezerUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-dz">🎵 Deezer</a>`);
+  }
+  if (data.itunesUrl) {
+    links.push(`<a href="${data.itunesUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-it">🎵 Apple Music</a>`);
+  }
+
+  const sourceBadge = source === 'youtube' ? 'YouTube ✓'
+                    : source === 'deezer'  ? 'Deezer ✓'
+                    : 'iTunes ✓';
+
   const card = document.createElement('div');
   card.id = 'youtubePreview'; card.className = 'yt-card';
-  // "Found ✓" badge — purely informational, no click needed
   card.innerHTML = `
     <div class="yt-card-inner">
-      ${(data.thumbnailSm || data.thumbnail) ? `<img src="${data.thumbnailSm||data.thumbnail}" class="yt-thumb" alt=""/>` : ''}
+      ${(data.thumbnailSm || data.thumbnail)
+        ? `<img src="${data.thumbnailSm||data.thumbnail}" class="yt-thumb" alt=""/>`
+        : ''}
       <div class="yt-info">
-        <div class="yt-title">${decodeHTML(data.title)}</div>
-        <div class="yt-channel">${decodeHTML(data.channel)}</div>
+        <div class="yt-title">${decodeHTML(data.title || '')}</div>
+        <div class="yt-channel">${decodeHTML(data.channel || '')}</div>
+        ${links.length ? `<div class="yt-links-row">${links.join('')}</div>` : ''}
       </div>
-      <span class="yt-found-tag">Found ✓</span>
+      <span class="yt-found-tag">${sourceBadge}</span>
     </div>
   `;
   insertAfterArtist(card);
-  // Auto-fill youtube link field if empty
+  // Only auto-fill youtube link if we got a direct video (not a search URL)
   const ytLink = document.getElementById('youtubeLink');
-  if (ytLink && !ytLink.value && data.youtubeUrl) ytLink.value = data.youtubeUrl;
+  if (ytLink && !ytLink.value && data.videoId && data.youtubeUrl) ytLink.value = data.youtubeUrl;
 }
 
 function insertAfterArtist(el) {
