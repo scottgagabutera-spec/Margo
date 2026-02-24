@@ -46,15 +46,17 @@ function injectComposerStyles() {
   const s = document.createElement('style');
   s.id = 'composerV5Styles';
   s.textContent = `
+    /* ── Spinner ── */
     .m-spinner {
-      width:13px;height:13px;border-radius:50%;
-      border:2px solid rgba(232,197,71,0.25);
+      width:14px;height:14px;border-radius:50%;
+      border:2px solid rgba(232,197,71,0.2);
       border-top-color:#E8C547;
-      animation:mspin 0.65s linear infinite;
+      animation:mspin 0.7s linear infinite;
       display:inline-block;flex-shrink:0;
     }
     @keyframes mspin{to{transform:rotate(360deg)}}
 
+    /* ── Identify button ── */
     #geniusIdentifyBtn {
       width:100%;margin-top:7px;padding:11px 16px;
       border-radius:12px;border:1px dashed rgba(232,197,71,0.3);
@@ -66,165 +68,179 @@ function injectComposerStyles() {
       display:flex;align-items:center;justify-content:center;gap:8px;
     }
     #geniusIdentifyBtn:hover:not(:disabled) {
-      background:rgba(232,197,71,0.09);
-      border-color:rgba(232,197,71,0.55);
-      color:#E8C547;
+      background:rgba(232,197,71,0.09);border-color:rgba(232,197,71,0.55);color:#E8C547;
     }
-    #geniusIdentifyBtn.active {
-      border-color:#E8C547;color:#E8C547;
-      background:rgba(232,197,71,0.08);
-    }
+    #geniusIdentifyBtn.active { border-color:#E8C547;color:#E8C547;background:rgba(232,197,71,0.08); }
     #geniusIdentifyBtn:disabled { opacity:0.5;cursor:default; }
 
+    /* ── Genius results ── */
     .genius-section-label {
-      font-size:0.58rem;color:rgba(255,255,255,0.35);
-      letter-spacing:2px;text-transform:uppercase;
-      font-family:'Space Mono',monospace;
-      margin:10px 0 6px;
+      font-size:0.58rem;color:rgba(255,255,255,0.35);letter-spacing:2px;
+      text-transform:uppercase;font-family:'Space Mono',monospace;margin:10px 0 6px;
     }
     .genius-results-list { display:flex;flex-direction:column;gap:6px; }
     .genius-result-card {
-      display:flex;align-items:center;gap:10px;
-      padding:10px 12px;border-radius:12px;
-      background:rgba(255,255,255,0.03);
-      border:1px solid rgba(255,255,255,0.07);
+      display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
       cursor:pointer;transition:all 0.18s;
     }
-    .genius-result-card:hover {
-      background:rgba(232,197,71,0.07);
-      border-color:rgba(232,197,71,0.25);
-      transform:translateX(2px);
-    }
-    .genius-result-card.selected {
-      background:rgba(232,197,71,0.1);
-      border-color:rgba(232,197,71,0.5);
-    }
-    .genius-art {
-      width:42px;height:42px;border-radius:8px;
-      object-fit:cover;flex-shrink:0;
-      background:rgba(255,255,255,0.05);
-    }
+    .genius-result-card:hover { background:rgba(232,197,71,0.07);border-color:rgba(232,197,71,0.25);transform:translateX(2px); }
+    .genius-result-card.selected { background:rgba(232,197,71,0.1);border-color:rgba(232,197,71,0.5); }
+    .genius-art { width:42px;height:42px;border-radius:8px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,0.05); }
     .genius-info { flex:1;min-width:0; }
-    .genius-song {
-      font-size:0.82rem;font-weight:700;color:#fff;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .genius-artist {
-      font-size:0.7rem;color:rgba(255,255,255,0.45);
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-      margin-top:1px;
-    }
+    .genius-song { font-size:0.82rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .genius-artist { font-size:0.7rem;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px; }
     .genius-use-tag {
       flex-shrink:0;font-size:0.58rem;font-family:'Space Mono',monospace;
-      letter-spacing:1px;text-transform:uppercase;
-      padding:4px 9px;border-radius:6px;
-      background:rgba(232,197,71,0.08);
-      color:rgba(232,197,71,0.7);
-      border:1px solid rgba(232,197,71,0.2);
-      transition:all 0.15s;
+      letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:6px;
+      background:rgba(232,197,71,0.08);color:rgba(232,197,71,0.7);border:1px solid rgba(232,197,71,0.2);transition:all 0.15s;
     }
-    .genius-result-card:hover .genius-use-tag {
-      background:rgba(232,197,71,0.15);
-      color:#E8C547;border-color:rgba(232,197,71,0.4);
-    }
-    .genius-result-card.selected .genius-use-tag {
-      background:#E8C547;color:#0B0B0D;border-color:#E8C547;
+    .genius-result-card:hover .genius-use-tag { background:rgba(232,197,71,0.15);color:#E8C547;border-color:rgba(232,197,71,0.4); }
+    .genius-result-card.selected .genius-use-tag { background:#E8C547;color:#0B0B0D;border-color:#E8C547; }
+
+    /* ════════════════════════════════════════
+       MUSIC METADATA CARD — premium design
+    ════════════════════════════════════════ */
+    @keyframes ytFadeUp {
+      from { opacity:0; transform:translateY(12px) scale(0.98); }
+      to   { opacity:1; transform:translateY(0)    scale(1);    }
     }
 
-    /* YouTube preview — "Found ✓" replaces old confirm button */
-    .yt-card {
-      margin-top:8px;border-radius:12px;overflow:hidden;
-      border:1px solid rgba(255,255,255,0.08);
-      background:rgba(255,255,255,0.03);
-      animation:ytFadeUp 0.25s ease;
+    /* ══ MUSIC FOUND CARD — Premium redesign ══ */
+    @keyframes ytSlideIn {
+      from { opacity:0; transform:translateY(8px) scale(0.98); }
+      to   { opacity:1; transform:translateY(0)  scale(1);    }
     }
-    @keyframes ytFadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .yt-card {
+      position:relative;
+      margin-top:12px;
+      border-radius:20px;
+      overflow:hidden;
+      border:1px solid rgba(232,197,71,0.22);
+      background:linear-gradient(160deg,#141210 0%,#0f0e0c 100%);
+      box-shadow:0 12px 40px rgba(0,0,0,0.5), 0 1px 0 rgba(232,197,71,0.18) inset;
+      animation:ytSlideIn 0.35s cubic-bezier(0.16,1,0.3,1);
+    }
+    /* Gold shimmer line across top */
+    .yt-card::before {
+      content:'';position:absolute;top:0;left:8%;right:8%;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(232,197,71,0.8),transparent);
+      pointer-events:none;
+    }
+    /* Subtle gold glow at bottom */
+    .yt-card::after {
+      content:'';position:absolute;bottom:0;left:20%;right:20%;height:40px;
+      background:radial-gradient(ellipse at center bottom,rgba(232,197,71,0.06),transparent);
+      pointer-events:none;
+    }
+
     .yt-card-inner {
-      display:flex;align-items:center;gap:10px;padding:10px 12px;
+      display:flex;align-items:flex-start;gap:14px;
+      padding:14px 14px 12px;
+    }
+
+    /* Album art — large, square, with glow */
+    .yt-thumb-wrap {
+      position:relative;flex-shrink:0;
+    }
+    .yt-thumb-wrap::after {
+      content:'';position:absolute;inset:-1px;border-radius:13px;
+      background:linear-gradient(135deg,rgba(232,197,71,0.3),transparent 60%);
+      pointer-events:none;
     }
     .yt-thumb {
-      width:68px;height:48px;border-radius:7px;
-      object-fit:cover;flex-shrink:0;background:#111;
+      width:80px;height:80px;border-radius:12px;
+      object-fit:cover;display:block;
+      box-shadow:0 6px 20px rgba(0,0,0,0.6);
     }
-    .yt-info { flex:1;min-width:0; }
+
+    /* Info section */
+    .yt-info { flex:1;min-width:0;padding-top:2px; }
+
     .yt-title {
-      font-size:0.75rem;font-weight:700;color:#fff;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-      line-height:1.3;
+      font-size:0.88rem;font-weight:700;color:#fff;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+      line-height:1.3;letter-spacing:-0.02em;
     }
     .yt-channel {
-      font-size:0.65rem;color:rgba(255,255,255,0.4);
-      margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      font-size:0.68rem;color:rgba(255,255,255,0.4);
+      margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+      letter-spacing:0.01em;
     }
-    /* Green "Found ✓" status badge — no action needed from user */
-    .yt-found-tag {
-      flex-shrink:0;padding:5px 10px;border-radius:7px;
-      background:rgba(74,222,128,0.1);color:#4ade80;
-      font-family:'Space Mono',monospace;font-size:0.56rem;
+
+    /* Listen link pills */
+    .yt-links-row {
+      display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;
+    }
+    .yt-listen-link {
+      display:inline-flex;align-items:center;gap:4px;
+      font-size:0.56rem;font-family:'Space Mono',monospace;
       font-weight:700;letter-spacing:1px;text-transform:uppercase;
-      border:1px solid rgba(74,222,128,0.22);white-space:nowrap;
+      padding:5px 11px;border-radius:20px;text-decoration:none;
+      transition:all 0.2s ease;white-space:nowrap;
+      backdrop-filter:blur(8px);
     }
+    .yt-listen-link:hover {
+      transform:translateY(-2px) scale(1.04);
+      filter:brightness(1.25);
+      box-shadow:0 4px 12px rgba(0,0,0,0.3);
+    }
+    .yt-link-yt {
+      background:rgba(255,50,50,0.14);color:#ff7070;
+      border:1px solid rgba(255,50,50,0.32);
+    }
+    .yt-link-dz {
+      background:rgba(255,100,0,0.14);color:#ff8c3a;
+      border:1px solid rgba(255,100,0,0.32);
+    }
+    .yt-link-it {
+      background:rgba(252,60,68,0.14);color:#fc7c82;
+      border:1px solid rgba(252,60,68,0.32);
+    }
+
+    /* Source badge — top right pill */
+    .yt-found-tag {
+      flex-shrink:0;align-self:flex-start;margin-top:1px;
+      padding:4px 11px;border-radius:20px;
+      font-family:'Space Mono',monospace;font-size:0.5rem;
+      font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+      white-space:nowrap;
+    }
+    .yt-found-yt { background:rgba(255,50,50,0.12);  color:#ff7070; border:1px solid rgba(255,50,50,0.28);  }
+    .yt-found-dz { background:rgba(255,100,0,0.12);  color:#ff8c3a; border:1px solid rgba(255,100,0,0.28);  }
+    .yt-found-it { background:rgba(252,60,68,0.12);  color:#fc7c82; border:1px solid rgba(252,60,68,0.28);  }
+
+    /* Loading shimmer state */
     .yt-loading {
-      display:flex;align-items:center;gap:9px;padding:13px 14px;
-      font-size:0.72rem;color:rgba(255,255,255,0.35);
+      display:flex;align-items:center;gap:10px;
+      padding:18px 16px;
+      font-size:0.65rem;color:rgba(255,255,255,0.28);
       font-family:'Space Mono',monospace;letter-spacing:0.5px;
     }
 
+        /* ── Autocomplete dropdown ── */
     .yt-autocomplete {
       position:absolute;left:0;right:0;top:calc(100% + 4px);
       z-index:1000;background:#18181c;
       border:1px solid rgba(255,255,255,0.1);
-      border-radius:12px;overflow:hidden;
-      box-shadow:0 16px 48px rgba(0,0,0,0.6);
+      border-radius:14px;overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,0.7);
       animation:ytFadeUp 0.18s ease;
     }
     .yt-ac-item {
       display:flex;align-items:center;gap:10px;
       padding:9px 13px;cursor:pointer;
-      border-bottom:1px solid rgba(255,255,255,0.04);
-      transition:background 0.12s;
+      border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.12s;
     }
-    .yt-ac-item:last-child{border-bottom:none;}
-    .yt-ac-item:hover{background:rgba(232,197,71,0.07);}
-    .yt-ac-thumb {
-      width:38px;height:27px;border-radius:5px;
-      object-fit:cover;flex-shrink:0;background:#222;
-    }
-    .yt-ac-song {
-      font-size:0.78rem;font-weight:600;color:#fff;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .yt-ac-artist {
-      font-size:0.65rem;color:rgba(255,255,255,0.4);
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .song-input-wrap { position:relative; }
+    .yt-ac-item:last-child { border-bottom:none; }
+    .yt-ac-item:hover { background:rgba(232,197,71,0.07); }
+    .yt-ac-thumb { width:38px;height:27px;border-radius:5px;object-fit:cover;flex-shrink:0;background:#222; }
+    .yt-ac-song  { font-size:0.78rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .yt-ac-artist{ font-size:0.65rem;color:rgba(255,255,255,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 
-    /* Listen links inside the found card */
-    .yt-links-row {
-      display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;
-    }
-    .yt-listen-link {
-      font-size:0.6rem;font-family:'Space Mono',monospace;
-      font-weight:700;letter-spacing:0.5px;text-transform:uppercase;
-      padding:3px 8px;border-radius:5px;text-decoration:none;
-      transition:opacity 0.15s;white-space:nowrap;
-    }
-    .yt-listen-link:hover { opacity:0.75; }
-    .yt-link-yt {
-      background:rgba(255,50,50,0.12);color:#ff5555;
-      border:1px solid rgba(255,50,50,0.25);
-    }
-    .yt-link-dz {
-      background:rgba(255,130,0,0.12);color:#ff8c00;
-      border:1px solid rgba(255,130,0,0.25);
-    }
-    .yt-link-it {
-      background:rgba(252,60,68,0.12);color:#fc3c44;
-      border:1px solid rgba(252,60,68,0.25);
-    }
+    .song-input-wrap { position:relative; }
   `;
-  document.head.appendChild(s);
+document.head.appendChild(s);
 }
 
 /* ── STATE ── */
@@ -447,41 +463,42 @@ function renderYtCard(data) {
   clearYoutubePreview();
   const source = data.source || 'youtube';
 
-  // Build listen links — clickable, open in new tab
+  // Build listen link pills — one per available platform
   const links = [];
   if (data.videoId && data.youtubeUrl) {
-    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">▶ YouTube</a>`);
+    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">▶&nbsp;YouTube</a>`);
   } else if (data.youtubeUrl) {
-    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">🔍 Find on YouTube</a>`);
+    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">⌕&nbsp;YouTube</a>`);
   }
   if (data.deezerUrl) {
-    links.push(`<a href="${data.deezerUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-dz">🎵 Deezer</a>`);
+    links.push(`<a href="${data.deezerUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-dz">♫&nbsp;Deezer</a>`);
   }
   if (data.itunesUrl) {
-    links.push(`<a href="${data.itunesUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-it">🎵 Apple Music</a>`);
+    links.push(`<a href="${data.itunesUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-it">♫&nbsp;Apple Music</a>`);
   }
 
-  const sourceBadge = source === 'youtube' ? 'YouTube ✓'
-                    : source === 'deezer'  ? 'Deezer ✓'
-                    : 'iTunes ✓';
+  const sourceBadge    = source === 'youtube' ? 'YT ✓' : source === 'deezer' ? 'Deezer ✓' : 'iTunes ✓';
+  const sourceBadgeCls = source === 'youtube' ? 'yt-found-yt' : source === 'deezer' ? 'yt-found-dz' : 'yt-found-it';
+  const thumb = data.thumbnail || data.thumbnailSm; // prefer large for 80px display
 
   const card = document.createElement('div');
   card.id = 'youtubePreview'; card.className = 'yt-card';
   card.innerHTML = `
     <div class="yt-card-inner">
-      ${(data.thumbnailSm || data.thumbnail)
-        ? `<img src="${data.thumbnailSm||data.thumbnail}" class="yt-thumb" alt=""/>`
-        : ''}
+      ${thumb ? `
+        <div class="yt-thumb-wrap">
+          <img src="${thumb}" class="yt-thumb" alt="${decodeHTML(data.title||'')}"/>
+        </div>` : ''}
       <div class="yt-info">
         <div class="yt-title">${decodeHTML(data.title || '')}</div>
-        <div class="yt-channel">${decodeHTML(data.channel || '')}</div>
+        <div class="yt-channel">${decodeHTML(data.channel || data.collectionName || '')}</div>
         ${links.length ? `<div class="yt-links-row">${links.join('')}</div>` : ''}
       </div>
-      <span class="yt-found-tag">${sourceBadge}</span>
+      <span class="yt-found-tag ${sourceBadgeCls}">${sourceBadge}</span>
     </div>
   `;
   insertAfterArtist(card);
-  // Only auto-fill youtube link if we got a direct video (not a search URL)
+  // Auto-fill youtube link field only for direct video URLs
   const ytLink = document.getElementById('youtubeLink');
   if (ytLink && !ytLink.value && data.videoId && data.youtubeUrl) ytLink.value = data.youtubeUrl;
 }
