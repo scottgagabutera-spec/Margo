@@ -1,8 +1,7 @@
 /* ============================================================
    MARGO — js/firebase.js
-   v4.9 — Quota guard: backfill runner stops immediately on
-          429 (quotaExceeded) and does not retry until next
-          session. Suggest calls are now zero-quota.
+   v4.8 — Bulletproof YouTube: new posts + backfill unified,
+          never double-fetches, handles all failure modes
    ============================================================ */
 const firebaseConfig = {
   apiKey:            'AIzaSyA1AuUethACF_9aBqbOONjra7X5NbGnfZM',
@@ -33,54 +32,61 @@ try {
 }
 
 /* ══════════════════════════════════════════════════════════
-   YOUTUBE METADATA ENGINE v4.9
+   YOUTUBE METADATA ENGINE
    ─────────────────────────────────────────────────────────
-   Key change: _ytQuotaDead flag.
-   When api/youtube returns 429 (quotaExceeded), we set
-   _ytQuotaDead = true, drain the queue without fetching,
-   and log a clear message. Runner stops until next page load
-   (quota resets at midnight Pacific).
+   SINGLE SOURCE OF TRUTH for all YouTube fetching.
 
-   Suggest calls now use zero-quota endpoint so autocomplete
-   continues working even when the main quota is exhausted.
+   Logic:
+   • _ytDoneIds   = Set of postIds that already have meta in
+                    Firebase OR that we've confirmed have none.
+                    Populated on sync. Persists for session.
+   • _ytQueue     = Array of {postId, song, artist} waiting
+                    to be fetched. Each postId appears once.
+   • _ytRunning   = Whether the runner is active.
+
+   Flow for NEW posts (called from composer.js submitPost):
+     await fetchAndSaveYoutubeMeta(postId, song, artist)
+     → fetches immediately, writes to Firebase, done.
+
+   Flow for EXISTING posts without meta (backfill):
+     On Firebase sync → enqueueYoutube(postId, song, artist)
+     → deduplicated queue, runs 1 per 1.2s, writes to Firebase.
+
+   Writing to Firebase (.child('youtubeMeta').set(...)) DOES
+   re-trigger the 'value' listener. We guard against infinite
+   loops by checking _ytDoneIds BEFORE re-queuing.
 ══════════════════════════════════════════════════════════ */
 
-const _ytDoneIds  = new Set();
-const _ytQueue    = [];
-let   _ytRunning  = false;
-let   _ytStarted  = false;
-let   _ytQuotaDead = false; // stops runner when quota exhausted
+const _ytDoneIds = new Set(); // postIds that have meta or confirmed none
+const _ytQueue   = [];        // [{postId, song, artist}]
+let   _ytRunning = false;
+let   _ytStarted = false;     // only start runner once per session
 
+/* Called on sync — enqueue posts that need YouTube meta */
 function enqueueYoutube(postId, song, artist) {
   if (!isFirebaseEnabled) return;
   if (!song || !artist)   return;
-  if (_ytQuotaDead)       return; // no point queuing if quota is gone
+  // Normalize — strip featuring info that confuses YouTube
   const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
   const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
-  if (!cleanSong   || cleanSong   === 'Unknown Song')   return;
+  if (!cleanSong || cleanSong === 'Unknown Song')     return;
   if (!cleanArtist || cleanArtist === 'Unknown Artist') return;
-  if (_ytDoneIds.has(postId)) return;
-  if (_ytQueue.some(q => q.postId === postId)) return;
+  if (_ytDoneIds.has(postId)) return; // already have meta or confirmed no match
+  if (_ytQueue.some(q => q.postId === postId)) return; // already queued
   _ytQueue.push({ postId, song: cleanSong, artist: cleanArtist });
 }
 
 function startYoutubeRunner() {
-  if (_ytStarted || _ytRunning || !_ytQueue.length || _ytQuotaDead) return;
+  if (_ytStarted || _ytRunning || !_ytQueue.length) return;
   _ytStarted = true;
   _ytRunning = true;
   processYoutubeQueue();
 }
 
 async function processYoutubeQueue() {
-  // Stop immediately if quota is dead or queue is empty
-  if (!_ytQueue.length || _ytQuotaDead) {
-    _ytRunning = false;
-    if (_ytQuotaDead) console.warn('[YT] Quota exhausted — backfill paused until midnight Pacific');
-    return;
-  }
-
+  if (!_ytQueue.length) { _ytRunning = false; return; }
   const { postId, song, artist } = _ytQueue.shift();
-  _ytDoneIds.add(postId);
+  _ytDoneIds.add(postId); // mark before fetch so re-trigger doesn't re-queue
 
   try {
     const meta = await _fetchYoutubeMeta(song, artist);
@@ -91,34 +97,18 @@ async function processYoutubeQueue() {
       console.log(`[YT] no match: ${song} — ${artist}`);
     }
   } catch (err) {
-    if (err.message === 'QUOTA_EXHAUSTED') {
-      // Stop the runner — no point burning more calls
-      _ytQuotaDead = true;
-      _ytRunning   = false;
-      // Put it back in queue so it can retry next session
-      _ytDoneIds.delete(postId);
-      _ytQueue.unshift({ postId, song, artist });
-      console.warn('[YT] Quota exhausted — backfill stopped. Will retry next session.');
-      return;
-    }
     console.log(`[YT] error ${song}: ${err.message}`);
-    _ytDoneIds.delete(postId); // allow retry next session
+    // Remove from done so it can retry next session
+    _ytDoneIds.delete(postId);
   }
 
-  // 1.5s between requests — slightly more conservative than before
-  setTimeout(processYoutubeQueue, 1500);
+  setTimeout(processYoutubeQueue, 1200); // 1.2s between requests
 }
 
+/* Shared fetch function — used by both new posts and backfill */
 async function _fetchYoutubeMeta(song, artist) {
   const url = `/api/youtube?song=${encodeURIComponent(song)}&artist=${encodeURIComponent(artist)}`;
   const res  = await fetch(url);
-
-  // Quota exhausted — throw a specific error so runner can stop cleanly
-  if (res.status === 429) {
-    _ytQuotaDead = true;
-    throw new Error('QUOTA_EXHAUSTED');
-  }
-
   if (!res.ok) return null;
   const data = await res.json();
   if (!data || !data.videoId || data.error) return null;
@@ -133,12 +123,13 @@ async function _fetchYoutubeMeta(song, artist) {
   };
 }
 
+/*
+  Called from composer.js when a new post is submitted.
+  Usage: const meta = await fetchAndSaveYoutubeMeta(postId, song, artist);
+  Returns the meta object or null.
+*/
 async function fetchAndSaveYoutubeMeta(postId, song, artist) {
   if (!isFirebaseEnabled || !postId || !song || !artist) return null;
-  if (_ytQuotaDead) {
-    console.warn('[YT] Skipping new post meta fetch — quota exhausted');
-    return null;
-  }
   const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
   const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
   if (!cleanSong || !cleanArtist) return null;
@@ -177,29 +168,30 @@ function startFirebaseSync() {
     });
     posts.sort((a, b) => b.timestamp - a.timestamp);
 
-    // Only enqueue if quota is alive
-    if (!_ytQuotaDead) {
-      posts.forEach(p => {
-        if (p.status === 'hidden') return;
-        const k = p.knowledge || {};
+    // Scan posts: mark those with meta as done, queue those without
+    posts.forEach(p => {
+      if (p.status === 'hidden') return;
+      const k = p.knowledge || {};
 
-        if (p.youtubeMeta) {
-          _ytDoneIds.add(p.id);
-          return;
-        }
-
-        if (p.mode === 'share' && k.song && k.artist) {
-          enqueueYoutube(p.id, k.song, k.artist);
-        } else if (p.mode === 'guess' && k.song && k.artist && !k.hidden) {
-          enqueueYoutube(p.id, k.song, k.artist);
-        } else if (p.mode === 'discover' && k.song && k.song !== 'Unknown Song') {
-          enqueueYoutube(p.id, k.song, k.artist || '');
-        }
-      });
-
-      if (!_ytStarted && _ytQueue.length) {
-        setTimeout(startYoutubeRunner, 3000);
+      if (p.youtubeMeta) {
+        // Already has meta — mark done so we never re-queue
+        _ytDoneIds.add(p.id);
+        return;
       }
+
+      // Determine song + artist based on mode
+      if (p.mode === 'share' && k.song && k.artist) {
+        enqueueYoutube(p.id, k.song, k.artist);
+      } else if (p.mode === 'guess' && k.song && k.artist && !k.hidden) {
+        enqueueYoutube(p.id, k.song, k.artist);
+      } else if (p.mode === 'discover' && k.song && k.song !== 'Unknown Song') {
+        enqueueYoutube(p.id, k.song, k.artist || '');
+      }
+    });
+
+    // Start the runner 3s after first load (let render settle first)
+    if (!_ytStarted && _ytQueue.length) {
+      setTimeout(startYoutubeRunner, 3000);
     }
 
     updateLandingStats();
