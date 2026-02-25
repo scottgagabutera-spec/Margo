@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Terms — Margo</title>
+  <meta name="description" content="Margo's terms of use. Clear language, no legal drama."/>
+  <link rel="canonical" href="https://trymargo.com/terms"/>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&family=DM+Serif+Display:ital@0;1&family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css"/>
+  <style>
+    .legal-wrap {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 80px 24px 120px;
+    }
+    .legal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(232,197,71,0.1);
+      position: sticky;
+      top: 0;
+      background: rgba(11,11,13,0.92);
+      backdrop-filter: blur(16px);
+      z-index: 100;
+    }
+    .legal-nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: 3px;
+      color: #E8C547;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    .legal-nav-back {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.4);
+      text-decoration: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: color 0.18s;
+    }
+    .legal-nav-back:hover { color: #E8C547; }
+    .legal-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #E8C547;
+      margin-bottom: 16px;
+    }
+    .legal-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      color: #F0F0F0;
+      line-height: 1.15;
+      margin-bottom: 12px;
+    }
+    .legal-date {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.55rem;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+    .legal-body {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      line-height: 1.75;
+      color: rgba(240,240,240,0.72);
+    }
+    .legal-body p { margin-bottom: 1.4em; }
+    .legal-body h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.2rem;
+      color: #F0F0F0;
+      margin: 2.4em 0 0.8em;
+      font-style: italic;
+    }
+    .legal-body ul {
+      padding-left: 20px;
+      margin-bottom: 1.4em;
+    }
+    .legal-body ul li { margin-bottom: 0.5em; }
+    .legal-body strong { color: rgba(240,240,240,0.9); font-weight: 600; }
+    .legal-body a { color: #E8C547; text-decoration: none; }
+    .legal-body a:hover { text-decoration: underline; }
+    .legal-divider {
+      width: 48px;
+      height: 2px;
+      background: linear-gradient(90deg, #E8C547, transparent);
+      margin: 32px 0;
+      border: none;
+    }
+    .legal-footer-links {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-top: 64px;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .legal-footer-links a {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.3);
+      text-decoration: none;
+      transition: color 0.18s;
+    }
+    .legal-footer-links a:hover { color: #E8C547; }
+  </style>
+</head>
+<body>
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<nav class="legal-nav">
+  <a href="/" class="legal-nav-logo">Margo</a>
+  <a href="/" class="legal-nav-back">← Back to Margo</a>
+</nav>
+
+<div class="legal-wrap">
+  <div class="legal-eyebrow">Terms of Use</div>
+  <h1 class="legal-title">Clear rules.<br/>No surprises.</h1>
+  <div class="legal-date" id="page-date">Effective: January 2025</div>
+  <hr class="legal-divider"/>
+
+  <div class="legal-body" id="page-content">
+    <span style="font-family:'Space Mono',monospace;font-size:0.6rem;color:rgba(255,255,255,0.2)">Loading…</span>
+  </div>
+
+  <div class="legal-footer-links">
+    <a href="/about">About</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/contact">Contact</a>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: 'AIzaSyA1AuUethACF_9aBqbOONjra7X5NbGnfZM',
+    authDomain: 'margo-f6da4.firebaseapp.com',
+    databaseURL: 'https://margo-f6da4-default-rtdb.firebaseio.com',
+    projectId: 'margo-f6da4',
+    storageBucket: 'margo-f6da4.firebasestorage.app',
+    messagingSenderId: '150183564620',
+    appId: '1:150183564620:web:a42de7fef39740b551ebe9'
+  };
+
+  const DEFAULT_CONTENT = `<p>By using Margo, you agree to these terms. They're written to be readable — not to trap you.</p>
+
+<h2>What Margo is</h2>
+<p>Margo is a social expression platform. Users post short lyric-inspired moments to share how they feel. Margo does not host full songs or store copyrighted music content.</p>
+<p>Song information on Margo comes from metadata provided by licensed third-party platforms. Streaming always happens on official services — Spotify, Apple Music, YouTube, and others.</p>
+
+<h2>What you post</h2>
+<p>You are responsible for the content you submit to Margo.</p>
+<p>By posting, you confirm that your content:</p>
+<ul>
+  <li>Does not violate copyright or anyone else's rights</li>
+  <li>Does not contain unlawful, abusive, or harmful material</li>
+  <li>Is not spam, misinformation, or impersonation</li>
+</ul>
+<p>You keep ownership of anything you post. You give Margo permission to display it within the platform.</p>
+<p><strong>Margo reserves the right to remove any content at its discretion.</strong></p>
+
+<h2>Lyrics and copyright</h2>
+<p>Margo does not claim ownership of any song lyrics, recordings, or third-party intellectual property.</p>
+<p>Short lyric excerpts shared for expressive, social purposes generally fall within fair use principles — but you are responsible for what you post.</p>
+<p>If you are a rights holder and believe content on Margo infringes your rights, contact us at <a href="mailto:contact@trymargo.com">contact@trymargo.com</a> and we will review and act promptly.</p>
+
+<h2>Third-party platforms</h2>
+<p>Margo links out to streaming services operated by third parties. We are not responsible for their content, availability, or policies. Your use of those services is governed by their own terms.</p>
+
+<h2>Platform changes</h2>
+<p>Margo is evolving. Features, integrations, and these terms may change over time. We'll let users know when something significant changes.</p>
+
+<h2>Limitation of liability</h2>
+<p>Margo is provided as-is. To the extent permitted by applicable law, Margo is not liable for user-generated content, third-party services, or any indirect damages arising from use of the platform.</p>
+
+<h2>Governing use</h2>
+<p>These terms apply to all users of Margo, wherever you are in the world. Questions? <a href="mailto:contact@trymargo.com">contact@trymargo.com</a></p>`;
+
+  try {
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    db.ref('pages/terms').once('value').then(snap => {
+      const data = snap.val();
+      if (data) {
+        document.getElementById('page-content').innerHTML = data.content || DEFAULT_CONTENT;
+        if (data.date) document.getElementById('page-date').textContent = 'Effective: ' + data.date;
+      } else {
+        document.getElementById('page-content').innerHTML = DEFAULT_CONTENT;
+      }
+    }).catch(() => {
+      document.getElementById('page-content').innerHTML = DEFAULT_CONTENT;
+    });
+  } catch(e) {
+    document.getElementById('page-content').innerHTML = DEFAULT_CONTENT;
+  }
+</script>
+</body>
+</html>
