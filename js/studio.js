@@ -1,465 +1,435 @@
 /* ============================================================
-   MARGO — js/studio.js  v5.2 — Clean rewrite
+   MARGO — js/studio.js  v5.0
+   Animated Motion Studio
+   - Ripple ring logo animation (live canvas)
+   - Word-by-word lyric entrance (7 styles)
+   - Speed control (Slow / Normal / Fast / Rapid + custom)
+   - Motion dock tab (injected, no HTML changes needed)
+   - New canvas sizes: WhatsApp, LinkedIn, Discord, FB Story
+   - WebM video export with animation baked in
+   - All existing features preserved (photo, fonts, themes, etc.)
    ============================================================ */
 
-/* ── Load mp4-muxer ── */
-(function loadMp4Muxer() {
-  if (window.Mp4Muxer) return;
-  const s = document.createElement('script');
-  s.src   = 'https://cdn.jsdelivr.net/npm/mp4-muxer@latest/build/mp4-muxer.js';
-  s.async = true;
-  document.head.appendChild(s);
-})();
+/* ─────────────────────────────────────────
+   CONSTANTS
+───────────────────────────────────────── */
+const POSTER_SIZES = {
+  'instagram-square': { w: 1080, h: 1080, label: 'Instagram',      ratio: '1:1'    },
+  'instagram-story':  { w: 1080, h: 1920, label: 'Story / TikTok', ratio: '9:16'   },
+  'facebook-story':   { w: 1080, h: 1920, label: 'Facebook Story',  ratio: '9:16'   },
+  'whatsapp':         { w: 1080, h: 1080, label: 'WhatsApp',        ratio: '1:1'    },
+  'whatsapp-status':  { w: 1080, h: 1920, label: 'WhatsApp Status', ratio: '9:16'   },
+  'linkedin':         { w: 1200, h: 627,  label: 'LinkedIn',        ratio: '1.91:1' },
+  'discord':          { w: 1280, h: 720,  label: 'Discord',         ratio: '16:9'   },
+  'reddit':           { w: 1200, h: 1200, label: 'Reddit',          ratio: '1:1'    },
+  'twitter':          { w: 1200, h: 675,  label: 'X / Twitter',     ratio: '16:9'   },
+  'pinterest':        { w: 1000, h: 1500, label: 'Pinterest',       ratio: '2:3'    },
+};
 
-/* ══════════════════════════════════════════════════════════
-   DESIGN DATA
-══════════════════════════════════════════════════════════ */
-const STUDIO_DESIGNS = {
-  'midnight-gold':   { bg:['#0B0B0D','#111116','#0B0B0D'],   accent:'#E8C547', text:'#F0F0F0', light:false },
-  'royal-purple':    { bg:['#0d0014','#1a0028','#0a0010'],   accent:'#c77dff', text:'#F0F0F0', light:false },
-  'neon-cyan':       { bg:['#050e1a','#071525','#050e1a'],   accent:'#00e5ff', text:'#F0F0F0', light:false },
-  'sunset-coral':    { bg:['#120508','#1e080c','#120508'],   accent:'#ff6b4a', text:'#F0F0F0', light:false },
-  'emerald-night':   { bg:['#051a0d','#081f10','#051a0d'],   accent:'#50fa7b', text:'#F0F0F0', light:false },
-  'rose-gold':       { bg:['#1a0d0f','#220f13','#1a0d0f'],   accent:'#f4a4c0', text:'#F0F0F0', light:false },
-  'cream-editorial': { bg:['#f5f1e8','#ede8dc','#f5f1e8'],   accent:'#B8901A', text:'#1a1a20', light:true  },
-  'monochrome':      { bg:['#000000','#111111','#000000'],   accent:'#ffffff', text:'#F0F0F0', light:false },
-  'vaporwave':       { bg:['#1a0533','#0f1a33','#001a1a'],   accent:'#ff71ce', text:'#F0F0F0', light:false },
-  'neon-dark':       { bg:['#0a0a0a','#0f0a0f','#0a0a0a'],   accent:'#ff00ff', text:'#F0F0F0', light:false },
-  'y2k-chrome':      { bg:['#000033','#000824','#000033'],   accent:'#00ffff', text:'#F0F0F0', light:false },
-  'brutalist':       { bg:['#ffffff','#f0f0f0','#ffffff'],   accent:'#000000', text:'#1a1a20', light:true  },
+const POSTER_DESIGNS = {
+  'midnight-gold':    { bg: ['#0d0d0d','#111111','#0B0B0D'], text: '#F0F0F0', primary: '#E8C547', light: false },
+  'royal-purple':     { bg: ['#0d0014','#130020','#0a000f'], text: '#F0F0F0', primary: '#c77dff', light: false },
+  'neon-cyan':        { bg: ['#050e1a','#071525','#030b14'], text: '#F0F0F0', primary: '#00e5ff', light: false },
+  'sunset-coral':     { bg: ['#120508','#1a0608','#0f0407'], text: '#F0F0F0', primary: '#ff6b6b', light: false },
+  'emerald-night':    { bg: ['#051a0d','#071a0a','#04140a'], text: '#F0F0F0', primary: '#50fa7b', light: false },
+  'rose-gold':        { bg: ['#1a0d0f','#200d12','#160b0d'], text: '#F0F0F0', primary: '#f4a4c0', light: false },
+  'cream-editorial':  { bg: ['#f5f1e8','#ede8dc','#e8e2d4'], text: '#2a2520', primary: '#B8901A', light: true  },
+  'monochrome':       { bg: ['#000000','#0a0a0a','#050505'], text: '#F0F0F0', primary: '#ffffff', light: false },
+  'vaporwave':        { bg: ['#1a0533','#0f0a20','#001a1a'], text: '#F0F0F0', primary: '#ff71ce', light: false },
+  'neon-dark':        { bg: ['#0a0a0a','#0d0d0d','#080808'], text: '#F0F0F0', primary: '#ff00ff', light: false },
+  'y2k-chrome':       { bg: ['#000033','#000824','#000020'], text: '#F0F0F0', primary: '#00ffff', light: false },
+  'brutalist':        { bg: ['#ffffff','#f5f5f5','#ebebeb'], text: '#0B0B0D', primary: '#0B0B0D', light: true  },
 };
-const STUDIO_FONT_MAP = {
-  playfair:     { family:"'Playfair Display', serif",   style:'italic',  weight:'400' },
-  cormorant:    { family:"'Cormorant Garamond', serif", style:'italic',  weight:'600' },
-  lora:         { family:"'Lora', serif",               style:'italic',  weight:'400' },
-  merriweather: { family:"'Merriweather', serif",       style:'normal',  weight:'700' },
-  josefin:      { family:"'Josefin Sans', sans-serif",  style:'normal',  weight:'400' },
-  bebas:        { family:"'Bebas Neue', sans-serif",    style:'normal',  weight:'400' },
-  oswald:       { family:"'Oswald', sans-serif",        style:'normal',  weight:'600' },
-  dancing:      { family:"'Dancing Script', cursive",   style:'normal',  weight:'700' },
+
+const FONT_FAMILIES = {
+  playfair:    { family: "'Playfair Display', serif",    style: 'italic'  },
+  cormorant:   { family: "'Cormorant Garamond', serif",  style: 'italic'  },
+  lora:        { family: "'Lora', serif",                style: 'italic'  },
+  merriweather:{ family: "'Merriweather', serif",        style: 'normal'  },
+  josefin:     { family: "'Josefin Sans', sans-serif",   style: 'normal'  },
+  bebas:       { family: "'Bebas Neue', sans-serif",     style: 'normal'  },
+  oswald:      { family: "'Oswald', sans-serif",         style: 'normal'  },
+  dancing:     { family: "'Dancing Script', cursive",    style: 'normal'  },
 };
-const STUDIO_SIZES = {
-  'instagram-square': { w:1080, h:1080 },
-  'instagram-story':  { w:1080, h:1920 },
-  'facebook-story':   { w:1080, h:1920 },
-  'tiktok':           { w:1080, h:1920 },
-  'twitter':          { w:1200, h:675  },
-  'linkedin':         { w:1200, h:627  },
-  'reddit':           { w:1200, h:1200 },
-  'whatsapp':         { w:1080, h:1080 },
-  'pinterest':        { w:1000, h:1500 },
+
+const EMOTION_DESIGN_MAP = {
+  Love:       'rose-gold',
+  Heartbreak: 'sunset-coral',
+  Hope:       'neon-cyan',
+  Nostalgia:  'midnight-gold',
+  Healing:    'emerald-night',
+  Joy:        'midnight-gold',
+  Rage:       'sunset-coral',
+  Loneliness: 'royal-purple',
 };
-const EMOTION_THEME_MAP = {
-  Love:'rose-gold', Heartbreak:'sunset-coral', Hope:'neon-cyan',
-  Nostalgia:'midnight-gold', Healing:'emerald-night', Joy:'vaporwave',
-  Rage:'sunset-coral', Loneliness:'royal-purple',
+
+const APP_DOMAIN = 'trymargo.com';
+
+const MOTION_STYLES = {
+  word:    'Word by Word',
+  cinema:  'Cinematic',
+  fade:    'Fade Up',
+  type:    'Typewriter',
+  glitch:  'Glitch',
+  rise:    'Rise',
+  blur:    'Blur Reveal',
 };
-const MOTION_DEFS = [
-  { key:'word',   icon:'◈', name:'Word by Word', desc:'Each word rises in'            },
-  { key:'cinema', icon:'◉', name:'Cinematic',    desc:'Scale + bloom from soft focus'  },
-  { key:'fade',   icon:'↑', name:'Fade Up',      desc:'Clean upward entrance'         },
-  { key:'type',   icon:'|', name:'Typewriter',   desc:'Types letter by letter'        },
-  { key:'glitch', icon:'⚡', name:'Glitch',       desc:'Digital noise entrance'        },
-  { key:'rise',   icon:'✦', name:'Rise',         desc:'Characters float up'           },
-  { key:'blur',   icon:'◌', name:'Blur Reveal',  desc:'Sharpens from fog'             },
+
+const SPEED_PRESETS = [
+  { label: 'Slow',   mult: 2.2  },
+  { label: 'Normal', mult: 1.0  },
+  { label: 'Fast',   mult: 0.6  },
+  { label: 'Rapid',  mult: 0.35 },
 ];
 
-/* ══════════════════════════════════════════════════════════
-   STUDIO STATE  (only NEW vars — rest live in state.js)
-══════════════════════════════════════════════════════════ */
-let studioMotion  = 'word';
-let studioSpeed   = 1.0;
-let _exportType   = 'png';
-let _studioMode   = 'image';   // 'image' | 'video'
-let _previewRAF   = null;      // requestAnimationFrame handle
-let _previewStart = null;      // timestamp when preview loop started
+/* ─────────────────────────────────────────
+   STATE
+───────────────────────────────────────── */
+let studioDesign     = 'midnight-gold';
+let studioFont       = 'playfair';
+let studioBrightness = 100;
+let studioBlur       = 0;
+let studioDim        = 50;
+let studioFilter     = 'none';
+let studioBgImage    = null;
+let generatedBlob    = null;
+let selectedSize     = null;
 
-/* ══════════════════════════════════════════════════════════
-   INJECT STYLES
-══════════════════════════════════════════════════════════ */
-function injectStudioV5Styles() {
-  if (document.getElementById('studioV5Styles')) return;
-  const s = document.createElement('style');
-  s.id = 'studioV5Styles';
-  s.textContent = `
-    #panel-motion { display:none; flex-direction:column; gap:10px; padding:10px 0; }
-    #panel-motion.active { display:flex; }
-    .motion-list { display:flex; flex-direction:column; gap:5px; }
-    .motion-style-btn {
-      display:flex; align-items:center; gap:10px; padding:10px 12px;
-      border-radius:10px; width:100%; text-align:left;
-      background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.07);
-      cursor:pointer; transition:all 0.18s;
-    }
-    .motion-style-btn:hover   { border-color:rgba(232,197,71,0.28); }
-    .motion-style-btn.active  { background:rgba(232,197,71,0.09); border-color:rgba(232,197,71,0.38); }
-    .msb-icon { font-size:1rem; width:20px; text-align:center; flex-shrink:0; }
-    .msb-name { display:block; font-family:'DM Sans',sans-serif; font-size:0.74rem; font-weight:600; color:rgba(240,240,240,0.88); margin-bottom:1px; }
-    .motion-style-btn.active .msb-name { color:#E8C547; }
-    .msb-desc { display:block; font-family:'Space Mono',monospace; font-size:0.37rem; color:rgba(255,255,255,0.28); text-transform:uppercase; letter-spacing:0.4px; }
-    .motion-sec-label { font-family:'Space Mono',monospace; font-size:0.4rem; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:rgba(255,255,255,0.28); padding-top:4px; }
-    .motion-spd-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
-    .motion-spd-btn {
-      padding:8px 4px; border-radius:8px; text-align:center;
-      background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);
-      color:rgba(255,255,255,0.3); font-family:'Space Mono',monospace;
-      font-size:0.4rem; font-weight:700; text-transform:uppercase; cursor:pointer; transition:all 0.18s;
-    }
-    .motion-spd-btn:hover  { border-color:rgba(232,197,71,0.3); color:rgba(255,255,255,0.7); }
-    .motion-spd-btn.active { background:rgba(232,197,71,0.1); border-color:rgba(232,197,71,0.42); color:#E8C547; }
-    .cer-progress-wrap { width:100%; height:3px; border-radius:2px; background:rgba(255,255,255,0.07); margin:6px 0 10px; overflow:hidden; display:none; }
-    .cer-progress-wrap.show { display:block; }
-    .cer-progress-bar { height:100%; background:#E8C547; border-radius:2px; width:0%; transition:width 0.1s linear; }
-    .size-options { display:grid; grid-template-columns:repeat(3,1fr); gap:8px !important; }
-    /* MODE PICKER */
-    #studioModePicker {
-      position:fixed; inset:0; z-index:99999;
-      background:#0B0B0D;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      padding:32px 24px; gap:0;
-    }
-    #studioModePicker.hidden { display:none !important; }
-    .smp-logo { display:flex; align-items:center; gap:8px; margin-bottom:22px; }
-    .smp-logo-text { font-family:'Syne',sans-serif; font-size:0.75rem; font-weight:800; letter-spacing:3px; color:#E8C547; text-transform:uppercase; }
-    .smp-title { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:800; color:#F0F0F0; text-align:center; margin-bottom:6px; }
-    .smp-sub { font-family:'Space Mono',monospace; font-size:0.38rem; color:rgba(255,255,255,0.28); text-align:center; text-transform:uppercase; letter-spacing:2px; margin-bottom:28px; }
-    .smp-cards { display:flex; gap:12px; width:100%; max-width:400px; }
-    .smp-card {
-      flex:1; border-radius:16px; padding:28px 16px 22px; cursor:pointer; text-align:center;
-      background:rgba(255,255,255,0.03); border:1.5px solid rgba(255,255,255,0.08);
-      transition:all 0.22s; user-select:none;
-    }
-    .smp-card:hover { border-color:rgba(232,197,71,0.5); background:rgba(232,197,71,0.07); transform:translateY(-3px); }
-    .smp-card:active { transform:translateY(0); }
-    .smp-card-icon { font-size:2.2rem; display:block; margin-bottom:14px; }
-    .smp-card-name { display:block; font-family:'Syne',sans-serif; font-size:0.9rem; font-weight:800; color:#F0F0F0; margin-bottom:8px; }
-    .smp-card-desc { font-family:'Space Mono',monospace; font-size:0.34rem; color:rgba(255,255,255,0.32); text-transform:uppercase; letter-spacing:0.8px; line-height:1.9; }
-    .smp-tag { display:inline-block; margin-top:12px; padding:4px 12px; border-radius:20px; font-family:'Space Mono',monospace; font-size:0.32rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
-    .smp-card-image .smp-tag { background:rgba(232,197,71,0.12); color:#E8C547; border:1px solid rgba(232,197,71,0.3); }
-    .smp-card-video .smp-tag { background:rgba(107,140,255,0.12); color:#6B8CFF; border:1px solid rgba(107,140,255,0.3); }
-    .smp-cancel { margin-top:22px; background:none; border:none; color:rgba(255,255,255,0.2); font-family:'Space Mono',monospace; font-size:0.38rem; text-transform:uppercase; letter-spacing:1.5px; cursor:pointer; padding:8px 16px; transition:color 0.18s; }
-    .smp-cancel:hover { color:rgba(255,255,255,0.5); }
-  `;
-  document.head.appendChild(s);
-}
+// Motion state
+let studioMotion     = 'word';
+let studioSpeedMult  = 1.0;
 
-/* ══════════════════════════════════════════════════════════
-   MODE PICKER
-══════════════════════════════════════════════════════════ */
-function showModePicker() {
-  // Remove any existing picker
-  document.getElementById('studioModePicker')?.remove();
+// Animation engine
+let _rafId           = null;
+let _animStart       = null;
+let _animPlaying     = false;
 
-  const picker = document.createElement('div');
-  picker.id = 'studioModePicker';
-  picker.innerHTML = `
-    <div class="smp-logo">
-      <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" width="22" height="22">
-        <circle cx="40" cy="40" r="36" fill="#E8C547"/>
-        <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
-              fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span class="smp-logo-text">MARGO · Studio</span>
-    </div>
-    <div class="smp-title">What are you creating?</div>
-    <div class="smp-sub">Choose your format to begin</div>
-    <div class="smp-cards">
-      <div class="smp-card smp-card-image" data-mode="image">
-        <span class="smp-card-icon">🖼</span>
-        <span class="smp-card-name">Image</span>
-        <div class="smp-card-desc">Animated poster<br>export as PNG</div>
-        <span class="smp-tag">PNG</span>
-      </div>
-      <div class="smp-card smp-card-video" data-mode="video">
-        <span class="smp-card-icon">🎬</span>
-        <span class="smp-card-name">Video</span>
-        <div class="smp-card-desc">Animated clip<br>all platforms</div>
-        <span class="smp-tag">MP4</span>
-      </div>
-    </div>
-    <button class="smp-cancel" id="smpCancelBtn">← Back</button>
-  `;
-  document.body.appendChild(picker);
+/* ─────────────────────────────────────────
+   DOM REFS (resolved after DOM ready)
+───────────────────────────────────────── */
+let studioOverlay, studioCanvas, studioExportBtn, closeStudio;
+let sizePicker, sizeCancelBtn, ceremonyOverlay, ceremonyThumb;
+let cerDownload, cerShare, ceremonyBack, studioPhotoInput;
 
-  picker.querySelector('.smp-cards').addEventListener('click', e => {
-    const card = e.target.closest('.smp-card');
-    if (!card) return;
-    _studioMode = card.dataset.mode;
-    _exportType = _studioMode === 'video' ? 'mp4' : 'png';
-    picker.remove();
-    enterStudio();
-  });
+/* ─────────────────────────────────────────
+   INJECT MOTION TAB INTO DOCK
+   (No changes to index.html needed)
+───────────────────────────────────────── */
+function injectMotionTab() {
+  const dockTabs   = document.querySelector('.dock-tabs');
+  const dockPanels = document.querySelector('.studio-dock');
+  if (!dockTabs || !dockPanels) return;
 
-  document.getElementById('smpCancelBtn').onclick = () => {
-    picker.remove();
-    studioOverlay.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-    openModal(postcardModal);
-  };
-}
+  // ── Tab button (between Font and Photo) ──
+  const photoTab = dockTabs.querySelector('[data-tab="photo"]');
+  const motionTab = document.createElement('button');
+  motionTab.className    = 'dock-tab';
+  motionTab.dataset.tab  = 'motion';
+  motionTab.innerHTML    = '<span class="dock-tab-icon">◈</span><span>Motion</span>';
+  dockTabs.insertBefore(motionTab, photoTab);
 
-/* ══════════════════════════════════════════════════════════
-   ENTER STUDIO — called after mode is chosen
-══════════════════════════════════════════════════════════ */
-function enterStudio() {
-  // Show/hide Motion tab
-  const motionTab   = document.querySelector('[data-tab="motion"]');
-  const motionPanel = document.getElementById('panel-motion');
-  if (motionTab)   motionTab.style.display   = _studioMode === 'video' ? '' : 'none';
-  if (motionPanel) motionPanel.style.display = _studioMode === 'video' ? '' : 'none';
-
-  // Reset tabs to first visible
-  document.querySelectorAll('.dock-tab').forEach(t   => t.classList.remove('active'));
-  document.querySelectorAll('.dock-panel').forEach(p => p.classList.remove('active'));
-  const firstTab   = [...document.querySelectorAll('.dock-tab')].find(t => t.style.display !== 'none');
-  const firstPanel = document.getElementById('panel-' + (firstTab?.dataset.tab || 'color'));
-  if (firstTab)   firstTab.classList.add('active');
-  if (firstPanel) firstPanel.classList.add('active');
-
-  // Reset controls
-  const bsl = document.getElementById('studiobrightness'), bvl = document.getElementById('studioBrightnessVal');
-  if (bsl) bsl.value = 100; if (bvl) bvl.textContent = '100%';
-  const blurSl = document.getElementById('studioBlur'), blurV = document.getElementById('studioBlurVal');
-  const dimSl  = document.getElementById('studioDim'),  dimV  = document.getElementById('studioDimVal');
-  if (blurSl) blurSl.value = 0;  if (blurV) blurV.textContent = '0';
-  if (dimSl)  dimSl.value  = 50; if (dimV)  dimV.textContent  = '50%';
-  document.querySelectorAll('.scene-swatch').forEach(s => s.classList.toggle('active', s.dataset.design === studioDesign));
-  document.querySelectorAll('.font-card').forEach((fc, i) => fc.classList.toggle('active', i === 0));
-  document.querySelectorAll('.motion-style-btn').forEach(b => b.classList.toggle('active', b.dataset.motion === 'word'));
-  document.querySelectorAll('.motion-spd-btn').forEach(b => b.classList.toggle('active', b.dataset.spd === '1'));
-  document.querySelectorAll('.photo-filter').forEach((f, i) => f.classList.toggle('active', i === 0));
-  sizePicker.classList.add('hidden');
-  ceremonyOverlay.classList.add('hidden');
-
-  // YouTube thumbnail offer
-  const meta = currentPost?.youtubeMeta;
-  if (meta?.thumbnail) setTimeout(() => injectYoutubeBgOption(meta), 80);
-
-  // Start live animation preview
-  startPreviewLoop();
-}
-
-/* ══════════════════════════════════════════════════════════
-   LIVE PREVIEW LOOP — runs on studioCanvas continuously
-   Both image and video modes show the animation live.
-   Duration matches export duration so preview = what you get.
-══════════════════════════════════════════════════════════ */
-function startPreviewLoop() {
-  stopPreviewLoop();
-  if (!studioCanvas || !currentPost) return;
-
-  const dpr  = Math.min(window.devicePixelRatio || 1, 2);
-  const stage = studioCanvas.parentElement;
-
-  function resize() {
-    const avail = Math.min(stage.clientWidth - 40, stage.clientHeight - 40, 660);
-    const size  = Math.max(80, avail);
-    studioCanvas.style.width  = size + 'px';
-    studioCanvas.style.height = size + 'px';
-    studioCanvas.width  = Math.round(size * dpr);
-    studioCanvas.height = Math.round(size * dpr);
-  }
-  resize();
-
-  const ctx   = studioCanvas.getContext('2d');
-  const W     = studioCanvas.width / dpr;
-  const H     = studioCanvas.height / dpr;
-  const words = (currentPost?.text || '').split(' ').length;
-  const durMs = Math.max(4000, Math.min(14000, (3 + words * 0.22 + 2.0 * studioSpeed) * 1000));
-
-  _previewStart = null;
-
-  function frame(now) {
-    if (!_previewStart) _previewStart = now;
-    const elapsed = now - _previewStart;
-    // Loop: t goes 0→1 then restarts
-    const t  = (elapsed % (durMs + 1500)) < durMs
-      ? (elapsed % (durMs + 1500)) / durMs
-      : 1; // hold on last frame for 1.5s before looping
-    const ms = elapsed % (durMs + 1500);
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-    drawFrame(ctx, W, H, t, ms);
-
-    _previewRAF = requestAnimationFrame(frame);
-  }
-
-  document.fonts.ready.then(() => {
-    _previewRAF = requestAnimationFrame(frame);
-  });
-}
-
-function stopPreviewLoop() {
-  if (_previewRAF) { cancelAnimationFrame(_previewRAF); _previewRAF = null; }
-  _previewStart = null;
-}
-
-/* Legacy — kept for any code that calls this */
-function refreshStageCanvas() { startPreviewLoop(); }
-
-/* ══════════════════════════════════════════════════════════
-   BUILD MOTION TAB
-══════════════════════════════════════════════════════════ */
-function buildMotionDockTab() {
-  const dockTabs = document.querySelector('.dock-tabs');
-  if (!dockTabs || document.querySelector('[data-tab="motion"]')) return;
-
-  const tab = document.createElement('button');
-  tab.className   = 'dock-tab';
-  tab.dataset.tab = 'motion';
-  tab.innerHTML   = `<span class="dock-tab-icon">◈</span><span>Motion</span>`;
-  dockTabs.appendChild(tab);
-
-  const dock  = document.querySelector('.studio-dock');
+  // ── Panel ──
   const panel = document.createElement('div');
   panel.className = 'dock-panel';
   panel.id        = 'panel-motion';
 
   panel.innerHTML = `
-    <div class="motion-list">
-      ${MOTION_DEFS.map(m => `
-        <button class="motion-style-btn${m.key==='word'?' active':''}" data-motion="${m.key}">
-          <span class="msb-icon">${m.icon}</span>
-          <div><span class="msb-name">${m.name}</span><span class="msb-desc">${m.desc}</span></div>
-        </button>`).join('')}
+    <div class="motion-section-label">Entrance Style</div>
+    <div class="motion-style-list" id="motionStyleList">
+      ${Object.entries(MOTION_STYLES).map(([key, label]) => `
+        <button class="motion-style-btn${key === 'word' ? ' active' : ''}" data-motion="${key}">
+          <span class="msb-icon">${motionIcon(key)}</span>
+          <span class="msb-label">${label}</span>
+        </button>
+      `).join('')}
     </div>
-    <div class="motion-sec-label" style="margin-top:8px">Animation Speed</div>
-    <div class="motion-spd-grid">
-      <button class="motion-spd-btn" data-spd="2.2">Slow</button>
-      <button class="motion-spd-btn active" data-spd="1">Normal</button>
-      <button class="motion-spd-btn" data-spd="0.6">Fast</button>
-      <button class="motion-spd-btn" data-spd="0.35">Rapid</button>
-    </div>`;
-  dock.appendChild(panel);
+    <div class="motion-section-label" style="margin-top:14px">Animation Speed</div>
+    <div class="motion-speed-row" id="motionSpeedRow">
+      ${SPEED_PRESETS.map((p, i) => `
+        <button class="motion-speed-btn${i === 1 ? ' active' : ''}" data-mult="${p.mult}">${p.label}</button>
+      `).join('')}
+    </div>
+    <div class="motion-replay-row">
+      <button class="motion-replay-btn" id="motionReplayBtn">↺ Preview</button>
+      <label class="motion-loop-label">
+        <input type="checkbox" id="motionLoopCheck"> Loop
+      </label>
+    </div>
+  `;
 
-  panel.querySelector('.motion-list').addEventListener('click', e => {
-    const btn = e.target.closest('.motion-style-btn'); if (!btn) return;
+  // Insert panel before size-picker (stays inside studio-dock logically)
+  const sizePicker = document.getElementById('sizePicker');
+  const dock = document.querySelector('.studio-dock');
+  dock.insertBefore(panel, dock.querySelector('.size-picker') || dock.firstChild.nextSibling);
+
+  // ── Motion style clicks ──
+  panel.querySelector('#motionStyleList').addEventListener('click', e => {
+    const btn = e.target.closest('.motion-style-btn');
+    if (!btn) return;
     panel.querySelectorAll('.motion-style-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     studioMotion = btn.dataset.motion;
-    startPreviewLoop();
+    triggerAnimation();
   });
 
-  panel.querySelector('.motion-spd-grid').addEventListener('click', e => {
-    const btn = e.target.closest('.motion-spd-btn'); if (!btn) return;
-    panel.querySelectorAll('.motion-spd-btn').forEach(b => b.classList.remove('active'));
+  // ── Speed preset clicks ──
+  panel.querySelector('#motionSpeedRow').addEventListener('click', e => {
+    const btn = e.target.closest('.motion-speed-btn');
+    if (!btn) return;
+    panel.querySelectorAll('.motion-speed-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    studioSpeed = parseFloat(btn.dataset.spd);
-    startPreviewLoop();
+    studioSpeedMult = parseFloat(btn.dataset.mult);
+    triggerAnimation();
   });
 
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.dock-tab').forEach(t   => t.classList.remove('active'));
-    document.querySelectorAll('.dock-panel').forEach(p => p.classList.remove('active'));
-    tab.classList.add('active');
-    panel.classList.add('active');
-  });
-}
+  // ── Replay ──
+  panel.querySelector('#motionReplayBtn').addEventListener('click', triggerAnimation);
 
-/* ══════════════════════════════════════════════════════════
-   BUILD CEREMONY PROGRESS BAR
-══════════════════════════════════════════════════════════ */
-function buildCeremonyExtras() {
-  const inner = document.querySelector('.ceremony-inner');
-  if (!inner || inner.querySelector('.cer-progress-wrap')) return;
-  const actions = inner.querySelector('.ceremony-actions');
-  const prog = document.createElement('div');
-  prog.className = 'cer-progress-wrap';
-  prog.id        = 'cerProgressWrap';
-  prog.innerHTML = `<div class="cer-progress-bar" id="cerProgressBar"></div>`;
-  inner.insertBefore(prog, actions);
-}
-
-/* ══════════════════════════════════════════════════════════
-   UPGRADE SIZE PICKER
-══════════════════════════════════════════════════════════ */
-function upgradeSizePicker() {
-  const opts = document.querySelector('.size-options');
-  if (!opts || opts.dataset.v5) return;
-  opts.dataset.v5 = '1';
-  [
-    { size:'facebook-story', ratio:'9:16',   name:'FB Story',  dim:'1080 × 1920' },
-    { size:'tiktok',         ratio:'9:16',   name:'TikTok',    dim:'1080 × 1920' },
-    { size:'linkedin',       ratio:'1.91:1', name:'LinkedIn',  dim:'1200 × 627'  },
-    { size:'whatsapp',       ratio:'1:1',    name:'WhatsApp',  dim:'1080 × 1080' },
-  ].forEach(({ size, ratio, name, dim }) => {
-    const btn = document.createElement('button');
-    btn.className    = 'size-opt';
-    btn.dataset.size = size;
-    btn.innerHTML    = `<span class="size-ratio">${ratio}</span><span class="size-name">${name}</span><span class="size-dim">${dim}</span>`;
-    opts.appendChild(btn);
+  // ── Loop ──
+  panel.querySelector('#motionLoopCheck').addEventListener('change', function() {
+    if (this.checked) triggerAnimation();
   });
 }
 
-/* ══════════════════════════════════════════════════════════
-   INIT STUDIO — wires all UI, called once on page load
-══════════════════════════════════════════════════════════ */
+function motionIcon(key) {
+  const icons = { word:'◈', cinema:'◉', fade:'↑', type:'|', glitch:'⚡', rise:'✦', blur:'◌' };
+  return icons[key] || '◈';
+}
+
+/* ─────────────────────────────────────────
+   INJECT MOTION STYLES INTO <head>
+───────────────────────────────────────── */
+function injectMotionStyles() {
+  if (document.getElementById('studioMotionStyles')) return;
+  const s = document.createElement('style');
+  s.id = 'studioMotionStyles';
+  s.textContent = `
+    /* Motion Tab */
+    .motion-section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.46rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 2.5px;
+      color: rgba(255,255,255,0.28); margin-bottom: 9px;
+    }
+    .motion-style-list {
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .motion-style-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 9px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.45);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; transition: all 0.18s; text-align: left;
+      width: 100%;
+    }
+    .motion-style-btn:hover {
+      border-color: rgba(232,197,71,0.3);
+      color: rgba(255,255,255,0.85);
+    }
+    .motion-style-btn.active {
+      background: rgba(232,197,71,0.09);
+      border-color: rgba(232,197,71,0.4);
+      color: #E8C547;
+    }
+    .msb-icon { font-size: 0.9rem; width: 18px; text-align: center; flex-shrink: 0; }
+    .msb-label { flex: 1; }
+
+    .motion-speed-row {
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 5px;
+      margin-bottom: 12px;
+    }
+    .motion-speed-btn {
+      padding: 8px 4px; border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.35);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.46rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      cursor: pointer; transition: all 0.18s; text-align: center;
+    }
+    .motion-speed-btn:hover {
+      border-color: rgba(232,197,71,0.3);
+      color: rgba(255,255,255,0.7);
+    }
+    .motion-speed-btn.active {
+      background: rgba(232,197,71,0.1);
+      border-color: rgba(232,197,71,0.45);
+      color: #E8C547;
+    }
+    .motion-replay-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .motion-replay-btn {
+      flex: 1; padding: 9px 12px; border-radius: 9px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.6);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.5rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      cursor: pointer; transition: all 0.18s;
+    }
+    .motion-replay-btn:hover {
+      border-color: rgba(232,197,71,0.35); color: #E8C547;
+    }
+    .motion-loop-label {
+      display: flex; align-items: center; gap: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.5rem; font-weight: 700;
+      color: rgba(255,255,255,0.3);
+      text-transform: uppercase; letter-spacing: 1px;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .motion-loop-label input { width: auto; accent-color: #E8C547; }
+
+    /* Size picker new options */
+    .size-opt-tags {
+      display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;
+    }
+    .size-opt-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.38rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.3px;
+      padding: 1px 5px; border-radius: 3px;
+      background: rgba(74,222,128,0.08);
+      color: rgba(74,222,128,0.7);
+      border: 1px solid rgba(74,222,128,0.18);
+    }
+  `;
+  document.head.appendChild(s);
+}
+
+/* ─────────────────────────────────────────
+   UPDATE SIZE PICKER OPTIONS
+───────────────────────────────────────── */
+function updateSizePicker() {
+  const sizeOptions = document.querySelector('.size-options');
+  if (!sizeOptions) return;
+
+  const sizes = [
+    { key: 'instagram-square', tags: ['Instagram', 'WhatsApp', 'Discord', 'Reddit'] },
+    { key: 'instagram-story',  tags: ['Instagram Story', 'TikTok', 'YouTube Shorts'] },
+    { key: 'facebook-story',   tags: ['Facebook Story', 'WhatsApp Status', 'Snapchat'] },
+    { key: 'whatsapp',         tags: ['WhatsApp', 'Telegram', 'Facebook'] },
+    { key: 'linkedin',         tags: ['LinkedIn', 'Facebook OG', 'Twitter/X'] },
+    { key: 'discord',          tags: ['Discord', 'Reddit', 'YouTube', 'Twitter/X'] },
+    { key: 'reddit',           tags: ['Reddit', 'Discord', 'Facebook'] },
+    { key: 'twitter',          tags: ['Twitter/X', 'Discord', 'LinkedIn'] },
+    { key: 'pinterest',        tags: ['Pinterest', 'Instagram'] },
+  ];
+
+  sizeOptions.innerHTML = sizes.map(({ key, tags }) => {
+    const d = POSTER_SIZES[key];
+    return `
+      <button class="size-opt" data-size="${key}">
+        <span class="size-ratio">${d.ratio}</span>
+        <div style="flex:1;min-width:0">
+          <span class="size-name">${d.label}</span>
+          <div class="size-opt-tags">
+            ${tags.map(t => `<span class="size-opt-tag">${t}</span>`).join('')}
+          </div>
+        </div>
+        <span class="size-dim">${d.w} × ${d.h}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+/* ─────────────────────────────────────────
+   INIT
+───────────────────────────────────────── */
 function initStudio() {
-  injectStudioV5Styles();
-  buildMotionDockTab();
-  buildCeremonyExtras();
-  upgradeSizePicker();
+  // Resolve DOM refs
+  studioOverlay  = document.getElementById('studioOverlay');
+  studioCanvas   = document.getElementById('studioCanvas');
+  studioExportBtn= document.getElementById('studioExportBtn');
+  closeStudio    = document.getElementById('closeStudio');
+  sizePicker     = document.getElementById('sizePicker');
+  sizeCancelBtn  = document.getElementById('sizeCancelBtn');
+  ceremonyOverlay= document.getElementById('ceremonyOverlay');
+  ceremonyThumb  = document.getElementById('ceremonyThumb');
+  cerDownload    = document.getElementById('cerDownload');
+  cerShare       = document.getElementById('cerShare');
+  ceremonyBack   = document.getElementById('ceremonyBack');
+  studioPhotoInput = document.getElementById('studioPhotoInput');
 
-  // Open studio from postcard
-  sharePosterBtn.onclick = openStudio;
+  const sharePosterBtn = document.getElementById('sharePosterBtn');
+  if (sharePosterBtn) sharePosterBtn.onclick = openStudio;
 
-  // Close studio → back to postcard
   closeStudio.onclick = () => {
-    stopPreviewLoop();
+    stopAnimation();
     studioOverlay.classList.add('hidden');
     document.body.classList.remove('modal-open');
-    openModal(postcardModal);
+    const postcardModal = document.getElementById('postcardModal');
+    if (postcardModal) openModal(postcardModal);
   };
 
-  // Dock tabs
-  document.querySelectorAll('.dock-tab').forEach(tab => {
-    tab.onclick = () => {
-      document.querySelectorAll('.dock-tab').forEach(t   => t.classList.remove('active'));
-      document.querySelectorAll('.dock-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      const panel = document.getElementById('panel-' + tab.dataset.tab);
-      if (panel) panel.classList.add('active');
-    };
+  // Inject Motion tab and styles
+  injectMotionStyles();
+  injectMotionTab();
+  updateSizePicker();
+
+  // Dock tabs (re-bind after motion tab injection)
+  document.querySelector('.studio-dock').addEventListener('click', e => {
+    const tab = e.target.closest('.dock-tab');
+    if (!tab) return;
+    document.querySelectorAll('.dock-tab').forEach(t  => t.classList.remove('active'));
+    document.querySelectorAll('.dock-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    const panel = document.getElementById('panel-' + tab.dataset.tab);
+    if (panel) panel.classList.add('active');
   });
 
   // Color swatches
-  document.querySelectorAll('.scene-swatch').forEach(sw => {
-    sw.onclick = () => {
+  document.querySelectorAll('.scene-swatch').forEach(swatch => {
+    swatch.onclick = () => {
       document.querySelectorAll('.scene-swatch').forEach(s => s.classList.remove('active'));
-      sw.classList.add('active');
-      studioDesign = sw.dataset.design;
+      swatch.classList.add('active');
+      studioDesign = swatch.dataset.design;
+      scheduleRedraw();
     };
   });
 
   // Brightness
-  const bSlider = document.getElementById('studiobrightness'), bValEl = document.getElementById('studioBrightnessVal');
-  if (bSlider) bSlider.oninput = () => { studioBrightness = parseInt(bSlider.value); if (bValEl) bValEl.textContent = studioBrightness + '%'; };
+  const bSlider = document.getElementById('studiobrightness');
+  const bValEl  = document.getElementById('studioBrightnessVal');
+  if (bSlider) bSlider.oninput = () => {
+    studioBrightness = parseInt(bSlider.value);
+    if (bValEl) bValEl.textContent = studioBrightness + '%';
+    scheduleRedraw();
+  };
 
-  // Fonts
+  // Font cards
   document.querySelectorAll('.font-card').forEach(card => {
     card.onclick = () => {
       document.querySelectorAll('.font-card').forEach(c => c.classList.remove('active'));
       card.classList.add('active');
       studioFont = card.dataset.font;
+      scheduleRedraw();
     };
   });
 
   // Photo upload
-  const dropZone = document.getElementById('photoUploadZone');
-  if (dropZone) {
-    dropZone.onclick = () => studioPhotoInput?.click();
-    dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    dropZone.addEventListener('dragleave', e => { if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag-over'); });
-    dropZone.addEventListener('drop',      e => { e.preventDefault(); dropZone.classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f) handleStudioPhoto(f); });
+  const photoDropZone = document.getElementById('photoUploadZone');
+  if (photoDropZone) {
+    photoDropZone.onclick = () => studioPhotoInput?.click();
+    photoDropZone.addEventListener('dragover', e => { e.preventDefault(); photoDropZone.classList.add('has-photo'); });
+    photoDropZone.addEventListener('dragleave', e => { if (!photoDropZone.contains(e.relatedTarget)) photoDropZone.classList.remove('has-photo'); });
+    photoDropZone.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleStudioPhoto(f); });
   }
   if (studioPhotoInput) studioPhotoInput.onchange = e => { const f = e.target.files[0]; if (f) handleStudioPhoto(f); };
 
   // Blur / Dim
-  const blurSl = document.getElementById('studioBlur'),  blurV = document.getElementById('studioBlurVal');
-  const dimSl  = document.getElementById('studioDim'),   dimV  = document.getElementById('studioDimVal');
-  if (blurSl) blurSl.oninput = () => { studioBlur = parseInt(blurSl.value); if (blurV) blurV.textContent = studioBlur; };
-  if (dimSl)  dimSl.oninput  = () => { studioDim  = parseInt(dimSl.value);  if (dimV)  dimV.textContent  = studioDim + '%'; };
+  const blurSlider = document.getElementById('studioBlur');
+  const blurValEl  = document.getElementById('studioBlurVal');
+  const dimSlider  = document.getElementById('studioDim');
+  const dimValEl   = document.getElementById('studioDimVal');
+  if (blurSlider) blurSlider.oninput = () => { studioBlur = parseInt(blurSlider.value); if (blurValEl) blurValEl.textContent = studioBlur; scheduleRedraw(); };
+  if (dimSlider)  dimSlider.oninput  = () => { studioDim  = parseInt(dimSlider.value);  if (dimValEl)  dimValEl.textContent = studioDim + '%'; scheduleRedraw(); };
 
   // Photo filters
   document.querySelectorAll('.photo-filter').forEach(btn => {
@@ -467,569 +437,803 @@ function initStudio() {
       document.querySelectorAll('.photo-filter').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       studioFilter = btn.dataset.filter;
+      scheduleRedraw();
     };
   });
 
   // Remove photo
-  const rmBtn = document.getElementById('studioRemovePhoto');
-  if (rmBtn) rmBtn.onclick = clearStudioPhoto;
+  const removeBtn = document.getElementById('studioRemovePhoto');
+  if (removeBtn) removeBtn.onclick = () => {
+    studioBgImage = null;
+    const photoDropText = document.getElementById('photoDropText');
+    const pdz           = document.getElementById('photoUploadZone');
+    const photoControls = document.getElementById('photoControls');
+    if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
+    if (pdz) pdz.classList.remove('has-photo');
+    if (photoControls) photoControls.classList.add('hidden');
+    if (studioPhotoInput) studioPhotoInput.value = '';
+    document.getElementById('ytBgOption')?.style && (document.getElementById('ytBgOption').style.background = '');
+    scheduleRedraw();
+  };
 
-  // Export → size picker
-  studioExportBtn.onclick = () => sizePicker.classList.remove('hidden');
-  sizeCancelBtn.onclick   = () => sizePicker.classList.add('hidden');
+  // Export
+  studioExportBtn.onclick = () => {
+    updateSizePicker(); // ensure latest sizes
+    sizePicker.classList.remove('hidden');
+  };
+  sizeCancelBtn.onclick = () => sizePicker.classList.add('hidden');
 
-  // Size selected → export
-  document.querySelector('.size-options').addEventListener('click', async e => {
-    const btn = e.target.closest('.size-opt'); if (!btn) return;
+  // Size picker — event delegation (works after updateSizePicker rebuilds DOM)
+  sizePicker.addEventListener('click', async e => {
+    const btn = e.target.closest('.size-opt');
+    if (!btn) return;
     selectedSize = btn.dataset.size;
     sizePicker.classList.add('hidden');
-    stopPreviewLoop();
-
-    const headline = ceremonyOverlay.querySelector('.ceremony-headline');
-    const actions  = ceremonyOverlay.querySelector('.ceremony-actions');
-    const progWrap = document.getElementById('cerProgressWrap');
-    const progBar  = document.getElementById('cerProgressBar');
+    studioCanvas.classList.add('zoom-in');
 
     ceremonyOverlay.classList.remove('hidden');
-    if (headline) headline.textContent = _studioMode === 'video' ? 'Recording animation…' : 'Generating poster…';
-    if (actions)  actions.style.pointerEvents = 'none';
-    if (progWrap && _studioMode === 'video') progWrap.classList.add('show');
+    const headlineEl = ceremonyOverlay.querySelector('.ceremony-headline');
+    const actionsEl  = ceremonyOverlay.querySelector('.ceremony-actions');
+    if (headlineEl) headlineEl.textContent = 'Generating your poster…';
+    if (actionsEl) actionsEl.style.opacity = '0.4';
 
     try {
-      generatedBlob = _studioMode === 'video'
-        ? await exportAnimatedMP4(selectedSize, p => { if (progBar) progBar.style.width = (p*100).toFixed(0)+'%'; })
-        : await generateStaticPNG(selectedSize);
+      generatedBlob = await generateFinalPoster(selectedSize);
     } catch (err) {
-      console.error('[Studio] export failed:', err);
-      showToast('Export failed — try again');
+      console.error('Poster generation error:', err);
+      if (typeof showToast === 'function') showToast('Error generating poster — try again');
+      studioCanvas.classList.remove('zoom-in');
       ceremonyOverlay.classList.add('hidden');
-      if (progWrap) progWrap.classList.remove('show');
-      if (actions)  actions.style.pointerEvents = '';
-      startPreviewLoop();
       return;
     }
 
-    if (progWrap) { progWrap.classList.remove('show'); if (progBar) progBar.style.width = '0%'; }
-    if (actions)  actions.style.pointerEvents = '';
-    if (headline) headline.textContent = _studioMode === 'video' ? 'Your video is ready.' : 'Your poster is ready.';
-    drawCeremonyThumb();
+    setTimeout(() => {
+      studioCanvas.classList.remove('zoom-in');
+      drawCeremonyThumb();
+      if (headlineEl) headlineEl.textContent = 'Your poster is ready.';
+      if (actionsEl) actionsEl.style.opacity = '1';
+    }, 400);
   });
 
-  // Ceremony back
-  ceremonyBack.onclick = () => {
-    ceremonyOverlay.classList.add('hidden');
-    generatedBlob = null;
-    startPreviewLoop();
+  // Ceremony
+  ceremonyBack.onclick = () => { ceremonyOverlay.classList.add('hidden'); generatedBlob = null; };
+  cerDownload.onclick  = () => {
+    if (!generatedBlob) { if (typeof showToast === 'function') showToast('Generating poster…'); return; }
+    downloadPosterBlob();
+    if (typeof showToast === 'function') showToast('Saved to device ✓');
   };
-
-  // Download
-  cerDownload.onclick = () => {
-    if (!generatedBlob) { showToast('Still generating…'); return; }
-    downloadBlob(); showToast('Saved to device ✓');
-  };
-
-  // Share
-  cerShare.onclick = shareOrDownload;
+  cerShare.onclick = shareOrDownloadPoster;
 }
 
-/* ══════════════════════════════════════════════════════════
-   OPEN STUDIO — resets state, shows mode picker
-══════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────
+   OPEN STUDIO
+───────────────────────────────────────── */
 function openStudio() {
-  closeModal(postcardModal);
-  stopPreviewLoop();
+  const postcardModal = document.getElementById('postcardModal');
+  if (postcardModal && typeof closeModal === 'function') closeModal(postcardModal);
 
-  // Reset all state
+  // Reset state
   studioBgImage    = null;
   studioFont       = 'playfair';
   studioBrightness = 100;
   studioBlur       = 0;
   studioDim        = 50;
   studioFilter     = 'none';
-  studioMotion     = 'word';
-  studioSpeed      = 1.0;
   generatedBlob    = null;
   selectedSize     = null;
-  _studioMode      = 'image';
-  _exportType      = 'png';
-  studioDesign     = EMOTION_THEME_MAP[currentPost?.emotion] || 'midnight-gold';
+  studioMotion     = 'word';
+  studioSpeedMult  = 1.0;
+  studioDesign     = (typeof currentPost !== 'undefined' && currentPost?.emotion)
+    ? (EMOTION_DESIGN_MAP[currentPost.emotion] || 'midnight-gold')
+    : 'midnight-gold';
 
   studioOverlay.classList.remove('hidden');
   document.body.classList.add('modal-open');
+  resetStudioUI();
 
-  // Show mode picker
-  showModePicker();
+  // YouTube thumbnail injection
+  const meta = (typeof currentPost !== 'undefined') ? currentPost?.youtubeMeta : null;
+  if (meta?.thumbnail) setTimeout(() => injectYoutubeBgOption(meta), 80);
+
+  // Start live animated preview
+  setTimeout(() => {
+    refreshStageCanvas();
+    triggerAnimation();
+  }, 80);
 }
 
-/* ══════════════════════════════════════════════════════════
-   RESET STUDIO UI  (kept for compatibility)
-══════════════════════════════════════════════════════════ */
-function resetStudioUI() { enterStudio(); }
+/* ─────────────────────────────────────────
+   RESET STUDIO UI
+───────────────────────────────────────── */
+function resetStudioUI() {
+  document.querySelectorAll('.dock-tab').forEach((t, i)   => t.classList.toggle('active', i === 0));
+  document.querySelectorAll('.dock-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
+  document.querySelectorAll('.scene-swatch').forEach(s    => s.classList.toggle('active', s.dataset.design === studioDesign));
+  document.querySelectorAll('.font-card').forEach((fc, i) => fc.classList.toggle('active', i === 0));
+  document.querySelectorAll('.motion-style-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+  document.querySelectorAll('.motion-speed-btn').forEach((b, i) => b.classList.toggle('active', i === 1));
 
-function clearStudioPhoto() {
-  studioBgImage = null;
-  const dt = document.getElementById('photoDropText');
-  const dz = document.getElementById('photoUploadZone');
-  const pc = document.getElementById('photoControls');
-  if (dt) dt.textContent = 'Tap to add a photo';
-  if (dz) dz.classList.remove('has-photo');
-  if (pc) pc.classList.add('hidden');
+  const bSlider = document.getElementById('studiobrightness');
+  const bVal    = document.getElementById('studioBrightnessVal');
+  if (bSlider) bSlider.value    = 100;
+  if (bVal)    bVal.textContent = '100%';
+
+  const photoDropText = document.getElementById('photoDropText');
+  const pdz           = document.getElementById('photoUploadZone');
+  const photoControls = document.getElementById('photoControls');
+  if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
+  if (pdz) pdz.classList.remove('has-photo');
+  if (photoControls) photoControls.classList.add('hidden');
   if (studioPhotoInput) studioPhotoInput.value = '';
+
+  const bsl = document.getElementById('studioBlur'),  bvl = document.getElementById('studioBlurVal');
+  const dsl = document.getElementById('studioDim'),   dvl = document.getElementById('studioDimVal');
+  if (bsl) bsl.value = 0;  if (bvl) bvl.textContent = '0';
+  if (dsl) dsl.value = 50; if (dvl) dvl.textContent  = '50%';
+
+  document.querySelectorAll('.photo-filter').forEach((f, i) => f.classList.toggle('active', i === 0));
+  if (sizePicker) sizePicker.classList.add('hidden');
+  if (ceremonyOverlay) ceremonyOverlay.classList.add('hidden');
   document.getElementById('ytBgOption')?.remove();
+
+  const loopCheck = document.getElementById('motionLoopCheck');
+  if (loopCheck) loopCheck.checked = false;
 }
 
-/* ══════════════════════════════════════════════════════════
-   DRAW FRAME
-══════════════════════════════════════════════════════════ */
-function drawFrame(ctx, W, H, t, ms) {
-  const sc    = W / 1080;
-  const d     = STUDIO_DESIGNS[studioDesign] || STUDIO_DESIGNS['midnight-gold'];
-  const fd    = STUDIO_FONT_MAP[studioFont]  || STUDIO_FONT_MAP['playfair'];
-  const spd   = studioSpeed;
-  const isDark = !d.light;
-  const GOLD   = '#E8C547';
-  const BLACK  = '#0B0B0D';
+/* ─────────────────────────────────────────
+   ANIMATION ENGINE
+───────────────────────────────────────── */
+function triggerAnimation() {
+  stopAnimation();
+  _animStart   = null;
+  _animPlaying = true;
+  _rafId = requestAnimationFrame(animationLoop);
+}
 
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.filter       = 'none';
-  ctx.shadowBlur   = 0;
-  ctx.shadowColor  = 'transparent';
-  ctx.globalAlpha  = 1;
-  ctx.clearRect(0, 0, W, H);
+function stopAnimation() {
+  if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
+  _animPlaying = false;
+}
 
-  /* ── 1. BACKGROUND ── */
-  if (studioBgImage) {
-    _drawPhotoBg(ctx, W, H);
+function scheduleRedraw() {
+  // For non-motion updates — just redraw current frame
+  if (!_animPlaying) {
+    refreshStageCanvas();
+  }
+  // If animation is running, it will pick up new state on next frame automatically
+}
+
+function animationLoop(timestamp) {
+  if (!_animStart) _animStart = timestamp;
+  const elapsed = timestamp - _animStart;
+
+  refreshStageCanvas(elapsed);
+
+  const totalDuration = getTotalDuration();
+
+  if (elapsed < totalDuration) {
+    _rafId = requestAnimationFrame(animationLoop);
   } else {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0,   d.bg[0]);
-    g.addColorStop(0.5, d.bg[1]);
-    g.addColorStop(1,   d.bg[2]);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+    // Hold final frame
+    refreshStageCanvas(totalDuration);
+    _animPlaying = false;
+    _rafId = null;
 
-    if (studioBrightness !== 100) {
-      const delta = (studioBrightness - 100) / 100;
-      ctx.fillStyle = delta < 0
-        ? `rgba(0,0,0,${Math.abs(delta) * 0.9})`
-        : `rgba(255,255,255,${delta * 0.6})`;
-      ctx.fillRect(0, 0, W, H);
+    // Loop if checked
+    const loopCheck = document.getElementById('motionLoopCheck');
+    if (loopCheck && loopCheck.checked) {
+      setTimeout(triggerAnimation, 600);
     }
-  }
-  ctx.filter = 'none';
-
-  const ag = ctx.createRadialGradient(W/2, H, 0, W/2, H, W*0.72);
-  ag.addColorStop(0, isDark ? 'rgba(232,197,71,0.07)' : 'rgba(184,144,26,0.04)');
-  ag.addColorStop(1, 'transparent');
-  ctx.fillStyle = ag; ctx.fillRect(0, 0, W, H);
-
-  if (isDark) {
-    const sg = ctx.createLinearGradient(0, 0, W, 0);
-    sg.addColorStop(0,   'transparent');
-    sg.addColorStop(0.5, 'rgba(232,197,71,0.5)');
-    sg.addColorStop(1,   'transparent');
-    ctx.fillStyle = sg;
-    ctx.fillRect(0, 0, W, 1);
-  }
-
-  /* ── 2. LOGO + RIPPLE RINGS ── */
-  const cx      = W / 2;
-  const ls      = W * 0.12;
-  const logoY   = H * 0.27;
-  const logoDly = 0.10 * spd;
-  const logoT   = ease(t, logoDly, 0.60 * spd);
-
-  if (logoT > 0) {
-    ctx.save();
-    ctx.globalAlpha = logoT;
-    const logoSc = 0.70 + logoT * 0.30;
-    ctx.translate(cx, logoY);
-    ctx.scale(logoSc, logoSc);
-    ctx.translate(-cx, -logoY);
-
-    const ringColor = isDark ? 'rgba(232,197,71,' : 'rgba(26,26,32,';
-    for (let i = 0; i < 3; i++) {
-      const pDur  = 3.4;
-      const delay = i * (pDur / 3);
-      const rt    = ((ms / 1000 - delay) % pDur) / pDur;
-      if (rt > 0 && rt < 1) {
-        const rSc = 0.5 + rt * 3.5;
-        const op  = Math.max(0, (1 - rt)) * 0.7 * logoT;
-        ctx.beginPath();
-        ctx.arc(cx, logoY, ls / 2 * rSc, 0, Math.PI * 2);
-        ctx.strokeStyle = `${ringColor}${op.toFixed(3)})`;
-        ctx.lineWidth   = Math.max(W * 0.002, 1.2);
-        ctx.stroke();
-      }
-    }
-
-    const gp = 0.5 + Math.sin(ms / 1700) * 0.5;
-    ctx.shadowColor = isDark ? GOLD : '#B8901A';
-    ctx.shadowBlur  = (12 + gp * 16) * sc;
-    ctx.beginPath();
-    ctx.arc(cx, logoY, ls / 2, 0, Math.PI * 2);
-    ctx.fillStyle = isDark ? GOLD : '#1a1a20';
-    ctx.fill();
-    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
-
-    const lx = cx - ls*0.3, ly = logoY - ls*0.34, lw = ls*0.6, lh = ls*0.65;
-    ctx.strokeStyle   = isDark ? BLACK : GOLD;
-    ctx.lineWidth     = Math.max(ls * 0.09, 2);
-    ctx.lineCap = ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(lx,          ly + lh);
-    ctx.lineTo(lx,          ly);
-    ctx.lineTo(lx+lw*0.28,  ly + lh*0.42);
-    ctx.lineTo(cx,          ly + lh*0.02);
-    ctx.lineTo(lx+lw*0.72,  ly + lh*0.42);
-    ctx.lineTo(lx+lw,       ly);
-    ctx.lineTo(lx+lw,       ly + lh);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  /* ── 3. WAVEFORM ── */
-  const waveDly = 0.90 * spd;
-  const waveT   = ease(t, waveDly, 0.50 * spd);
-  if (waveT > 0) {
-    const bars  = [0.33, 0.58, 0.83, 0.67, 1.00, 0.67, 0.83];
-    const bw    = Math.max(W * 0.005, 2), bg2 = Math.max(W * 0.007, 2.5);
-    const maxH  = H * 0.04;
-    const wy    = logoY + ls * 0.82;
-    let   bx    = cx - (bars.length * (bw + bg2)) / 2;
-    ctx.save(); ctx.globalAlpha = waveT * 0.6;
-    ctx.fillStyle = d.accent;
-    bars.forEach((hf, i) => {
-      const pulse = Math.sin(ms / 400 + i * 0.7) * 0.3 + 0.7;
-      const bh    = maxH * hf * pulse;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(bx, wy - bh/2, bw, bh, bw/2);
-      else ctx.rect(bx, wy - bh/2, bw, bh);
-      ctx.fill();
-      bx += bw + bg2;
-    });
-    ctx.restore();
-  }
-
-  /* ── 4. LYRIC TEXT ── */
-  const lyricRaw  = (currentPost?.text || '').substring(0, 120);
-  const len       = lyricRaw.length;
-  const baseFS    = W * 0.053;
-  const lyricSize = len < 40 ? baseFS * 1.55
-                  : len < 65 ? baseFS * 1.20
-                  : len < 90 ? baseFS * 0.97
-                  :             baseFS * 0.79;
-  const maxW      = W * 0.78;
-  const lyricY    = H * 0.54;
-  const lineH     = lyricSize * 1.18;
-
-  const fontStr = `${fd.style === 'italic' ? 'italic ' : ''}${fd.weight} ${lyricSize}px ${fd.family.replace(/'/g,'"')}`;
-  ctx.font         = fontStr;
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
-
-  const lines    = wrapLines(ctx, lyricRaw, maxW);
-  const totalLH  = (lines.length - 1) * lineH;
-  const startY   = lyricY - totalLH / 2;
-  const textCol  = studioBgImage ? '#ffffff' : d.text;
-  const lyricDly = 0.30 * spd;
-
-  _drawLyric(ctx, lines, startY, lineH, lyricSize, t, ms, textCol, cx, W, H, sc, spd, lyricDly, fontStr);
-
-  /* ── 5. DIVIDER + SONG + ARTIST ── */
-  const k       = currentPost?.knowledge || {};
-  const divY    = lyricY + totalLH/2 + lyricSize * 0.55;
-  const songY   = divY   + lyricSize * 0.6;
-  const artistY = songY  + lyricSize * 0.56;
-
-  const divT = ease(t, 1.30 * spd, 0.50 * spd);
-  if (divT > 0) {
-    ctx.save(); ctx.globalAlpha = divT * 0.42;
-    ctx.strokeStyle = isDark ? GOLD : 'rgba(184,144,26,0.5)';
-    ctx.lineWidth   = 1;
-    ctx.beginPath();
-    ctx.moveTo(cx - W*0.022, divY); ctx.lineTo(cx + W*0.022, divY);
-    ctx.stroke(); ctx.restore();
-  }
-
-  if (k.song && k.song !== 'Unknown Song') {
-    const sT = ease(t, 1.50 * spd, 0.50 * spd);
-    if (sT > 0) {
-      ctx.save();
-      if (studioBgImage) { ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 14 * sc; }
-      ctx.globalAlpha  = sT * 0.88;
-      ctx.font         = `600 ${lyricSize * 0.42}px ${fd.family.replace(/'/g,'"')}`;
-      ctx.textAlign    = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle    = studioBgImage ? '#ffffff' : d.accent;
-      ctx.fillText(k.song.length > 34 ? k.song.substring(0,34)+'…' : k.song, cx, songY);
-      ctx.restore();
-    }
-  }
-
-  if (k.artist && k.artist !== 'Unknown Artist') {
-    const aT = ease(t, 1.70 * spd, 0.50 * spd);
-    if (aT > 0) {
-      ctx.save(); ctx.globalAlpha = aT * 0.48;
-      ctx.font         = `700 ${lyricSize * 0.30}px 'Space Mono', monospace`;
-      ctx.textAlign    = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle    = studioBgImage ? 'rgba(255,255,255,0.85)' : d.text;
-      ctx.fillText(k.artist.length > 42 ? k.artist.substring(0,42)+'…' : k.artist.toUpperCase(), cx, artistY);
-      ctx.restore();
-    }
-  }
-
-  /* ── 6. BRAND FOOTER ── */
-  const brandT = ease(t, 2.00 * spd, 0.50 * spd);
-  if (brandT > 0) {
-    const fy   = H * 0.90;
-    const bls  = W * 0.038;
-    const bCol = isDark ? GOLD : '#B8901A';
-    ctx.save(); ctx.globalAlpha = brandT;
-
-    ctx.beginPath(); ctx.arc(W*0.09, fy, bls/2, 0, Math.PI*2);
-    ctx.fillStyle = bCol; ctx.fill();
-
-    const fx = W*0.09, mlx = fx - bls*0.3, mly = fy - bls*0.34, mlw = bls*0.6, mlh = bls*0.65;
-    ctx.strokeStyle = isDark ? BLACK : GOLD;
-    ctx.lineWidth   = Math.max(bls * 0.09, 1);
-    ctx.lineCap = ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(mlx,          mly + mlh);
-    ctx.lineTo(mlx,          mly);
-    ctx.lineTo(mlx+mlw*0.28, mly+mlh*0.42);
-    ctx.lineTo(fx,            mly+mlh*0.02);
-    ctx.lineTo(mlx+mlw*0.72, mly+mlh*0.42);
-    ctx.lineTo(mlx+mlw,      mly);
-    ctx.lineTo(mlx+mlw,      mly + mlh);
-    ctx.stroke();
-
-    ctx.font      = `800 ${W*0.017}px 'Syne', sans-serif`;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = bCol;
-    ctx.fillText('MARGO', W*0.115, fy);
-
-    const emo = currentPost?.emotion || '';
-    if (emo) {
-      ctx.font      = `700 ${W*0.015}px 'Space Mono', monospace`;
-      ctx.textAlign = 'right';
-      ctx.fillText('✦ ' + emo.toUpperCase(), W*0.91, fy);
-    }
-
-    ctx.globalAlpha  = brandT * 0.5;
-    ctx.font         = `700 ${Math.max(14, Math.round(16*sc))}px 'Space Mono', monospace`;
-    ctx.textAlign    = 'center';
-    ctx.fillText('trymargo.com', W/2, H*0.945);
-
-    ctx.restore();
   }
 }
 
-/* ── Lyric drawing per motion style ── */
-function _drawLyric(ctx, lines, startY, lineH, lyricSize, t, ms, textCol, cx, W, H, sc, spd, lyricDly, fontStr) {
-  const mo = studioMotion;
-
-  if (mo === 'cinema') {
-    const lt   = ease(t, lyricDly, 1.20 * spd);
-    if (lt <= 0) return;
-    const blur = (1 - lt) * 8 * sc;
-    if (blur > 0.2) ctx.filter = `blur(${blur}px)`;
-    ctx.globalAlpha = lt;
-    const s2 = 0.96 + lt * 0.04;
-    lines.forEach((line, i) => {
-      ctx.save(); ctx.translate(cx, startY + i*lineH); ctx.scale(s2,s2);
-      ctx.fillStyle = textCol; ctx.fillText(line, 0, 0); ctx.restore();
-    });
-    ctx.filter = 'none';
-
-  } else if (mo === 'fade') {
-    const lt = ease(t, lyricDly, 0.80 * spd);
-    if (lt <= 0) return;
-    ctx.globalAlpha = lt;
-    lines.forEach((line, i) => {
-      const y = startY + i*lineH + (1-lt) * 18 * sc;
-      ctx.fillStyle = textCol; ctx.fillText(line, cx, y);
-    });
-
-  } else if (mo === 'blur') {
-    const lt   = ease(t, lyricDly, 1.00 * spd);
-    if (lt <= 0) return;
-    const blur = (1 - lt) * 22 * sc;
-    if (blur > 0.2) ctx.filter = `blur(${blur}px)`;
-    ctx.globalAlpha = lt;
-    lines.forEach((line, i) => { ctx.fillStyle = textCol; ctx.fillText(line, cx, startY+i*lineH); });
-    ctx.filter = 'none';
-
-  } else if (mo === 'glitch') {
-    const lt = ease(t, lyricDly, 0.50 * spd);
-    if (lt <= 0) return;
-    ctx.globalAlpha = lt;
-    const gp    = Math.max(0, Math.min((t - lyricDly - 0.80*spd) / (0.15*spd), 1));
-    const cols  = ['#0ff','#f0f','#ff0', textCol];
-    const col   = gp < 1 ? cols[Math.min(Math.floor(gp * 3), 3)] : textCol;
-    const shift = gp < 1 ? (1-gp) * 3 * sc : 0;
-    ctx.save(); ctx.translate(shift, 0);
-    lines.forEach((line, i) => { ctx.fillStyle = col; ctx.fillText(line, cx, startY+i*lineH); });
-    ctx.restore();
-
-  } else if (mo === 'type') {
-    const lt    = ease(t, lyricDly, 2.60 * spd);
-    const full  = lines.join(' ');
-    const chars = Math.floor(lt * full.length);
-    const part  = full.substring(0, chars) || ' ';
-    ctx.globalAlpha = 1;
-    ctx.font = fontStr;
-    const tLines  = wrapLines(ctx, part, W * 0.78);
-    const tTotalH = (tLines.length - 1) * lineH;
-    const tStartY = (startY + (lines.length-1)*lineH/2) - tTotalH/2;
-    tLines.forEach((line, i) => { ctx.fillStyle = textCol; ctx.fillText(line, cx, tStartY+i*lineH); });
-    if (lt < 1) {
-      const on = Math.floor(ms / 530) % 2 === 0;
-      if (on) {
-        const last  = tLines[tLines.length-1] || '';
-        const lw    = ctx.measureText(last).width;
-        const curX  = cx + lw/2 + 3*sc;
-        const curY  = tStartY + (tLines.length-1)*lineH;
-        ctx.fillStyle = STUDIO_DESIGNS[studioDesign]?.accent || '#E8C547';
-        ctx.fillRect(curX, curY - lyricSize*0.4, Math.max(2, 2.5*sc), lyricSize*0.82);
-      }
-    }
-
-  } else if (mo === 'rise') {
-    let charIdx = 0;
-    lines.forEach((line, li) => {
-      const lw  = ctx.measureText(line).width;
-      let   lcx = cx - lw/2;
-      line.split('').forEach(ch => {
-        const delay = (lyricDly + charIdx * 0.05) * spd;
-        const ct    = ease(t, delay, 0.45 * spd);
-        if (ct > 0) {
-          const cy2 = startY + li*lineH + (1-ct) * 28 * sc;
-          ctx.save(); ctx.globalAlpha = ct; ctx.fillStyle = textCol;
-          ctx.fillText(ch, lcx + ctx.measureText(ch).width/2, cy2);
-          ctx.restore();
-        }
-        lcx += ctx.measureText(ch).width;
-        charIdx++;
-      });
-      charIdx++;
-    });
-
-  } else {
-    /* word — default */
-    let wordIdx = 0;
-    ctx.font = fontStr;
-    lines.forEach((line, li) => {
-      const lw  = ctx.measureText(line).width;
-      let   lcx = cx - lw/2;
-      line.split(' ').forEach(word => {
-        const delay = (lyricDly + (0.28 + wordIdx * 0.13)) * spd;
-        const wt    = ease(t, delay, 0.45 * spd);
-        if (wt > 0) {
-          const wy2 = startY + li*lineH + (1-wt)*13*sc;
-          ctx.save(); ctx.globalAlpha = wt; ctx.fillStyle = textCol;
-          const ww  = ctx.measureText(word).width;
-          ctx.fillText(word, lcx + ww/2, wy2);
-          ctx.restore();
-        }
-        lcx += ctx.measureText(word + ' ').width;
-        wordIdx++;
-      });
-    });
-  }
+function getTotalDuration() {
+  // Total animation duration in ms based on speed multiplier
+  return Math.max(3000, 4500 * studioSpeedMult);
 }
 
-/* Draw photo background with filters */
-function _drawPhotoBg(ctx, W, H) {
-  const img = studioBgImage;
-  const iw  = img.naturalWidth  || img.width;
-  const ih  = img.naturalHeight || img.height;
-  const sc  = Math.max(W/iw, H/ih);
-
-  const tmp    = document.createElement('canvas');
-  tmp.width    = W; tmp.height = H;
-  const tc     = tmp.getContext('2d');
-
-  const filters = {
-    warm:     'sepia(0.3) saturate(1.3) hue-rotate(-10deg)',
-    cool:     'saturate(0.85) hue-rotate(15deg)',
-    dramatic: 'contrast(1.5) saturate(1.2) brightness(0.9)',
-    vintage:  'sepia(0.5) contrast(1.2)',
-  };
-  tc.filter = `brightness(${studioBrightness}%)${filters[studioFilter] ? ' ' + filters[studioFilter] : ''}`;
-  tc.drawImage(img, (W - iw*sc)/2, (H - ih*sc)/2, iw*sc, ih*sc);
-  tc.filter = 'none';
-
-  if (studioBlur > 0) {
-    const tmp2 = document.createElement('canvas');
-    tmp2.width = W; tmp2.height = H;
-    const tc2  = tmp2.getContext('2d');
-    tc2.filter = `blur(${studioBlur * 2}px)`;
-    tc2.drawImage(tmp, 0, 0); tc2.filter = 'none';
-    ctx.drawImage(tmp2, 0, 0);
-  } else {
-    ctx.drawImage(tmp, 0, 0);
-  }
-
-  if (studioDim > 0) {
-    ctx.fillStyle = `rgba(0,0,0,${studioDim/100})`;
-    ctx.fillRect(0, 0, W, H);
-  }
-}
-
-function ease(t, delay, duration) {
-  if (duration <= 0) return 1;
-  const p = Math.max(0, Math.min((t - delay) / duration, 1));
-  return 1 - Math.pow(1 - p, 3);
-}
-
-/* ══════════════════════════════════════════════════════════
-   STAGE CANVAS
-══════════════════════════════════════════════════════════ */
-function refreshStageCanvas() {
-  if (!currentPost || !studioCanvas) return;
+/* ─────────────────────────────────────────
+   CANVAS RENDERING
+───────────────────────────────────────── */
+function refreshStageCanvas(elapsedMs) {
+  if (!studioCanvas) return;
   const stage  = studioCanvas.parentElement;
-  const dpr    = Math.min(window.devicePixelRatio || 1, 2);
-  const avail  = Math.min(stage.clientWidth - 40, stage.clientHeight - 40, 660);
-  const size   = Math.max(80, avail);
+  const dpr    = window.devicePixelRatio || 1;
+  const availW = stage.clientWidth  - 40;
+  const availH = stage.clientHeight - 40;
+  const size   = Math.max(80, Math.min(availW, availH, 700));
 
   studioCanvas.style.width  = size + 'px';
   studioCanvas.style.height = size + 'px';
-  studioCanvas.width        = Math.round(size * dpr);
-  studioCanvas.height       = Math.round(size * dpr);
+  const res           = Math.round(size * dpr);
+  studioCanvas.width  = res;
+  studioCanvas.height = res;
 
   const ctx = studioCanvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  document.fonts.ready.then(() => drawFrame(ctx, size, size, 1, 2400));
+
+  const ms = (elapsedMs !== undefined) ? elapsedMs : (getTotalDuration()); // static = show final frame
+  document.fonts.ready.then(() => drawPosterToCtx(ctx, size, size, ms));
 }
 
-/* ══════════════════════════════════════════════════════════
-   PHOTO HANDLER
-══════════════════════════════════════════════════════════ */
+function getPhotoFilter() {
+  let f = `brightness(${studioBrightness}%)`;
+  const filters = {
+    warm:     ' sepia(0.3) saturate(1.3) hue-rotate(-10deg)',
+    cool:     ' saturate(0.85) hue-rotate(15deg)',
+    dramatic: ' contrast(1.5) saturate(1.2) brightness(0.9)',
+    vintage:  ' sepia(0.5) contrast(1.2)',
+  };
+  if (filters[studioFilter]) f += filters[studioFilter];
+  return f;
+}
+
+/* ─────────────────────────────────────────
+   DRAW POSTER TO CANVAS CTX
+   ms = elapsed milliseconds (for animation)
+───────────────────────────────────────── */
+function drawPosterToCtx(ctx, W, H, ms) {
+  const c     = POSTER_DESIGNS[studioDesign] || POSTER_DESIGNS['midnight-gold'];
+  const fd    = FONT_FAMILIES[studioFont]    || FONT_FAMILIES['playfair'];
+  const scale = W / 1080;
+  const t     = Math.min(ms / getTotalDuration(), 1); // normalised 0→1
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.filter = 'none';
+
+  // ── Background ──
+  drawBackground(ctx, W, H, c, scale);
+
+  // ── Ripple rings ──
+  drawRippleRings(ctx, W, H, scale, ms, c);
+
+  // ── Logo ──
+  const logoOpacity = easeOut(clamp((t - 0.0) / (0.12 * studioSpeedMult), 0, 1));
+  drawLogo(ctx, W, H, scale, ms, logoOpacity, c);
+
+  // ── Waveform ──
+  const waveOpacity = easeOut(clamp((t - 0.15 * studioSpeedMult) / 0.1, 0, 1));
+  if (waveOpacity > 0) drawWaveform(ctx, W, H, scale, ms, waveOpacity, c);
+
+  // ── Lyric text ──
+  drawLyric(ctx, W, H, scale, t, fd, c);
+
+  // ── Song & Artist ──
+  const metaDelay   = 0.55 * studioSpeedMult;
+  const metaOpacity = easeOut(clamp((t - metaDelay) / 0.12, 0, 1));
+  if (metaOpacity > 0) drawMeta(ctx, W, H, scale, metaOpacity, fd, c);
+
+  // ── Brand footer ──
+  const brandDelay   = 0.68 * studioSpeedMult;
+  const brandOpacity = easeOut(clamp((t - brandDelay) / 0.1, 0, 1));
+  if (brandOpacity > 0) drawBrand(ctx, W, H, scale, brandOpacity, c);
+}
+
+/* ── Background ── */
+function drawBackground(ctx, W, H, c, scale) {
+  ctx.filter = 'none';
+
+  if (studioBgImage) {
+    const tmp = document.createElement('canvas');
+    tmp.width = W; tmp.height = H;
+    const tc  = tmp.getContext('2d');
+    const iw  = studioBgImage.naturalWidth  || studioBgImage.width;
+    const ih  = studioBgImage.naturalHeight || studioBgImage.height;
+    const imgScale = Math.max(W / iw, H / ih);
+    tc.filter = getPhotoFilter();
+    tc.drawImage(studioBgImage, (W - iw * imgScale) / 2, (H - ih * imgScale) / 2, iw * imgScale, ih * imgScale);
+    tc.filter = 'none';
+    if (studioBlur > 0) {
+      const tmp2 = document.createElement('canvas');
+      tmp2.width = W; tmp2.height = H;
+      const tc2  = tmp2.getContext('2d');
+      tc2.filter = `blur(${Math.max(1, studioBlur) * 2}px)`;
+      tc2.drawImage(tmp, 0, 0);
+      tc2.filter = 'none';
+      ctx.drawImage(tmp2, 0, 0);
+    } else {
+      ctx.drawImage(tmp, 0, 0);
+    }
+    ctx.filter    = 'none';
+    ctx.fillStyle = `rgba(0,0,0,${studioDim / 100})`;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0,   c.bg[0]);
+    g.addColorStop(0.5, c.bg[1]);
+    g.addColorStop(1,   c.bg[2]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    if (studioBrightness !== 100) {
+      const bDelta  = (studioBrightness - 100) / 100;
+      ctx.fillStyle = bDelta < 0
+        ? `rgba(0,0,0,${Math.abs(bDelta) * 0.9})`
+        : `rgba(255,255,255,${bDelta * 0.6})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  // Noise overlay
+  ctx.filter = 'none';
+  // Ambient glow from bottom
+  const glow = ctx.createRadialGradient(W/2, H, 0, W/2, H, W * 0.8);
+  glow.addColorStop(0, hexToRgba(c.primary, 0.06));
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  // Gold shimmer top line
+  if (!c.light) {
+    const sl = ctx.createLinearGradient(0, 0, W, 0);
+    sl.addColorStop(0,   'transparent');
+    sl.addColorStop(0.5, hexToRgba(c.primary, 0.55));
+    sl.addColorStop(1,   'transparent');
+    ctx.fillStyle = sl;
+    ctx.fillRect(0, 0, W, 1);
+  }
+}
+
+/* ── Ripple rings ── */
+function drawRippleRings(ctx, W, H, scale, ms, c) {
+  const cx = W / 2;
+  const cy = H * 0.28;
+  const baseR = W * 0.075;
+  const pulseDur = 3400; // ms per ring cycle
+
+  ctx.save();
+  for (let i = 0; i < 3; i++) {
+    const offset = (i / 3) * pulseDur;
+    const progress = ((ms + offset) % pulseDur) / pulseDur;
+    const radius   = baseR + progress * baseR * 2.8;
+    const opacity  = (1 - progress) * 0.65;
+    if (opacity <= 0) continue;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = hexToRgba(c.primary, opacity);
+    ctx.lineWidth   = Math.max(1.5, scale * 1.8);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ── Logo ── */
+function drawLogo(ctx, W, H, scale, ms, opacity, c) {
+  if (opacity <= 0) return;
+  const cx = W / 2;
+  const cy = H * 0.28;
+  const r  = W * 0.075;
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
+
+  // Breathing glow
+  const breathe = 0.5 + Math.sin(ms / 1700) * 0.5;
+  ctx.shadowColor = hexToRgba(c.primary, 0.6 + breathe * 0.4);
+  ctx.shadowBlur  = (10 + breathe * 20) * scale;
+
+  // Circle fill
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = c.primary;
+  ctx.fill();
+
+  ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+
+  // M waveform path inside logo
+  const lx = cx - r * 0.55, lw = r * 1.1, ly = cy - r * 0.42, lh = r * 0.85;
+  ctx.strokeStyle = c.light ? '#ffffff' : '#0B0B0D';
+  ctx.lineWidth   = Math.max(r * 0.14, 2);
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.beginPath();
+  ctx.moveTo(lx, ly + lh);
+  ctx.lineTo(lx, ly);
+  ctx.lineTo(lx + lw * 0.28, ly + lh * 0.42);
+  ctx.lineTo(cx,             ly + lh * 0.02);
+  ctx.lineTo(lx + lw * 0.72, ly + lh * 0.42);
+  ctx.lineTo(lx + lw,        ly);
+  ctx.lineTo(lx + lw,        ly + lh);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/* ── Waveform bars ── */
+function drawWaveform(ctx, W, H, scale, ms, opacity, c) {
+  const cx = W / 2;
+  const wy = H * 0.28 + W * 0.095;
+  const barW   = Math.max(W * 0.006, 2);
+  const gap    = Math.max(W * 0.009, 2.5);
+  const maxH   = H * 0.045;
+  const bars   = 7;
+  const totalW = bars * (barW + gap) - gap;
+  const delays = [0, 0.1, 0.2, 0.3, 0.2, 0.1, 0];
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.fillStyle   = hexToRgba(c.primary, 0.55);
+
+  for (let i = 0; i < bars; i++) {
+    const pulse  = Math.sin(ms / 400 + delays[i] * 10) * 0.4 + 0.6;
+    const bh     = maxH * pulse;
+    const bx     = cx - totalW / 2 + i * (barW + gap);
+    const by     = wy - bh / 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(bx, by, barW, bh, barW / 2);
+    else ctx.rect(bx, by, barW, bh);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ── Lyric text with motion styles ── */
+function drawLyric(ctx, W, H, scale, t, fd, c) {
+  if (typeof currentPost === 'undefined' || !currentPost) return;
+
+  const lyricRaw = currentPost.text || '';
+  const lyricText = lyricRaw.length > 100 ? lyricRaw.substring(0, 97) + '…' : lyricRaw;
+  if (!lyricText) return;
+
+  const textColor  = studioBgImage ? '#ffffff' : c.text;
+  const lyricLen   = lyricText.length;
+  const baseSize   = lyricLen < 40 ? 82 * scale
+                   : lyricLen < 65 ? 64 * scale
+                   : lyricLen < 90 ? 52 * scale : 42 * scale;
+  const isBold     = ['bebas','josefin','oswald'].includes(studioFont);
+  const fontStr    = `${fd.style === 'italic' ? 'italic ' : ''}${isBold ? '700' : '600'} ${baseSize}px ${fd.family}`;
+
+  ctx.font = fontStr;
+
+  // Wrap into lines
+  const maxW = W * 0.82;
+  const lines = wrapText(ctx, lyricText, maxW);
+  const lineH = baseSize * 1.18;
+  const totalH = (lines.length - 1) * lineH;
+  const centerY = H * 0.46;
+
+  const spd = studioSpeedMult;
+
+  switch (studioMotion) {
+    case 'word':  drawLyricWordByWord(ctx, W, lines, centerY, lineH, totalH, baseSize, fontStr, textColor, t, spd); break;
+    case 'cinema': drawLyricCinema(ctx, W, lines, centerY, lineH, totalH, fontStr, textColor, t, spd); break;
+    case 'fade':  drawLyricFade(ctx, W, lines, centerY, lineH, totalH, fontStr, textColor, t, spd); break;
+    case 'type':  drawLyricTypewriter(ctx, W, lyricText, centerY, baseSize, fontStr, textColor, t, spd, maxW); break;
+    case 'glitch':drawLyricGlitch(ctx, W, lines, centerY, lineH, totalH, fontStr, textColor, t, spd); break;
+    case 'rise':  drawLyricRise(ctx, W, lines, centerY, lineH, totalH, baseSize, fontStr, textColor, t, spd); break;
+    case 'blur':  drawLyricBlur(ctx, W, lines, centerY, lineH, totalH, fontStr, textColor, t, spd); break;
+    default:      drawLyricFade(ctx, W, lines, centerY, lineH, totalH, fontStr, textColor, t, spd);
+  }
+}
+
+/* Word by Word */
+function drawLyricWordByWord(ctx, W, lines, centerY, lineH, totalH, baseSize, fontStr, textColor, t, spd) {
+  ctx.font = fontStr;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const allWords = lines.join(' ').split(' ');
+  let wordIdx = 0;
+  const lyricStartT = 0.18 * spd;
+
+  lines.forEach((line, li) => {
+    const lineWords = line.split(' ');
+    const y = centerY - totalH / 2 + li * lineH;
+    let lineX = W / 2 - ctx.measureText(line).width / 2;
+
+    lineWords.forEach(word => {
+      const delay    = lyricStartT + wordIdx * 0.08 * spd;
+      const wordT    = clamp((t - delay) / (0.15 * spd), 0, 1);
+      const wordEase = easeSpring(wordT);
+      if (wordT > 0) {
+        const wordW = ctx.measureText(word).width;
+        const drawX = lineX + wordW / 2;
+        const drawY = y + (1 - wordEase) * 18 * (W / 1080);
+        ctx.save();
+        ctx.globalAlpha = wordT;
+        ctx.fillStyle   = textColor;
+        ctx.fillText(word, drawX, drawY);
+        ctx.restore();
+      }
+      lineX += ctx.measureText(word + ' ').width;
+      wordIdx++;
+    });
+  });
+}
+
+/* Cinematic */
+function drawLyricCinema(ctx, W, lines, centerY, lineH, totalH, fontStr, textColor, t, spd) {
+  const delay  = 0.12 * spd;
+  const lt     = clamp((t - delay) / (0.35 * spd), 0, 1);
+  const ease   = easeOut(lt);
+  ctx.save();
+  ctx.globalAlpha = ease;
+  ctx.filter      = `blur(${(1 - ease) * 10}px)`;
+  ctx.font        = fontStr;
+  ctx.textAlign   = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle   = textColor;
+  const sc = 0.94 + ease * 0.06;
+  ctx.translate(W / 2, centerY);
+  ctx.scale(sc, sc);
+  ctx.translate(-W / 2, -centerY);
+  lines.forEach((line, i) => ctx.fillText(line, W / 2, centerY - totalH / 2 + i * lineH));
+  ctx.restore();
+}
+
+/* Fade Up */
+function drawLyricFade(ctx, W, lines, centerY, lineH, totalH, fontStr, textColor, t, spd) {
+  const delay = 0.12 * spd;
+  const lt    = clamp((t - delay) / (0.28 * spd), 0, 1);
+  const ease  = easeOut(lt);
+  const shift = (1 - ease) * 22 * (W / 1080);
+  ctx.save();
+  ctx.globalAlpha = ease;
+  ctx.font        = fontStr;
+  ctx.textAlign   = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle   = textColor;
+  lines.forEach((line, i) => ctx.fillText(line, W / 2, centerY - totalH / 2 + i * lineH + shift));
+  ctx.restore();
+}
+
+/* Typewriter */
+function drawLyricTypewriter(ctx, W, fullText, centerY, baseSize, fontStr, textColor, t, spd, maxW) {
+  const delay   = 0.12 * spd;
+  const lt      = clamp((t - delay) / (0.7 * spd), 0, 1);
+  const shown   = Math.floor(lt * fullText.length);
+  const display = fullText.substring(0, shown);
+
+  ctx.save();
+  ctx.font      = fontStr;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = textColor;
+  ctx.globalAlpha = 1;
+
+  const lines = wrapText(ctx, display, maxW);
+  const lineH = baseSize * 1.18;
+  const totalH = (lines.length - 1) * lineH;
+  lines.forEach((line, i) => ctx.fillText(line, W / 2, centerY - totalH / 2 + i * lineH));
+
+  // Blinking cursor
+  if (lt < 1 && Math.floor(t * 8) % 2 === 0) {
+    const lastLine = lines[lines.length - 1] || '';
+    const lw = ctx.measureText(lastLine).width;
+    const cx = W / 2 + lw / 2 + 4 * (W / 1080);
+    const cy = centerY - totalH / 2 + (lines.length - 1) * lineH;
+    ctx.fillStyle   = '#E8C547';
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(cx, cy - baseSize * 0.5, Math.max(2, 3 * (W / 1080)), baseSize * 0.9);
+  }
+  ctx.restore();
+}
+
+/* Glitch */
+function drawLyricGlitch(ctx, W, lines, centerY, lineH, totalH, fontStr, textColor, t, spd) {
+  const delay = 0.10 * spd;
+  const lt    = clamp((t - delay) / (0.2 * spd), 0, 1);
+  const ease  = easeOut(lt);
+
+  ctx.save();
+  ctx.font      = fontStr;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  // Glitch color layers
+  if (lt < 0.85) {
+    const colors = ['rgba(0,255,255,0.4)', 'rgba(255,0,255,0.4)'];
+    colors.forEach((col, ci) => {
+      ctx.save();
+      ctx.globalAlpha = ease * 0.6;
+      ctx.fillStyle   = col;
+      const dx = (ci === 0 ? -1 : 1) * (1 - ease) * 5 * (W / 1080);
+      lines.forEach((line, i) => ctx.fillText(line, W / 2 + dx, centerY - totalH / 2 + i * lineH));
+      ctx.restore();
+    });
+  }
+
+  ctx.globalAlpha = ease;
+  ctx.fillStyle   = textColor;
+  lines.forEach((line, i) => ctx.fillText(line, W / 2, centerY - totalH / 2 + i * lineH));
+  ctx.restore();
+}
+
+/* Rise (chars) */
+function drawLyricRise(ctx, W, lines, centerY, lineH, totalH, baseSize, fontStr, textColor, t, spd) {
+  ctx.font      = fontStr;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const delay   = 0.12 * spd;
+  let charIdx   = 0;
+
+  lines.forEach((line, li) => {
+    const y    = centerY - totalH / 2 + li * lineH;
+    const lw   = ctx.measureText(line).width;
+    let lineX  = W / 2 - lw / 2;
+    const chars = line.split('');
+    chars.forEach(ch => {
+      const charDelay = delay + charIdx * 0.025 * spd;
+      const charT     = clamp((t - charDelay) / (0.18 * spd), 0, 1);
+      const charEase  = easeSpring(charT);
+      if (charT > 0) {
+        const shift = (1 - charEase) * 30 * (W / 1080);
+        ctx.save();
+        ctx.globalAlpha = charT;
+        ctx.fillStyle   = textColor;
+        ctx.fillText(ch, lineX, y + shift);
+        ctx.restore();
+      }
+      lineX += ctx.measureText(ch).width;
+      charIdx++;
+    });
+  });
+}
+
+/* Blur Reveal */
+function drawLyricBlur(ctx, W, lines, centerY, lineH, totalH, fontStr, textColor, t, spd) {
+  const delay = 0.12 * spd;
+  const lt    = clamp((t - delay) / (0.45 * spd), 0, 1);
+  const ease  = easeOut(lt);
+  const blurAmt = (1 - ease) * 18;
+
+  ctx.save();
+  ctx.globalAlpha = ease;
+  if (blurAmt > 0.5) ctx.filter = `blur(${blurAmt}px)`;
+  ctx.font        = fontStr;
+  ctx.textAlign   = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle   = textColor;
+  const spacing   = (1 - ease) * 0.3;
+  ctx.letterSpacing = spacing ? spacing + 'em' : '';
+  lines.forEach((line, i) => ctx.fillText(line, W / 2, centerY - totalH / 2 + i * lineH));
+  ctx.restore();
+}
+
+/* ── Song & Artist ── */
+function drawMeta(ctx, W, H, scale, opacity, fd, c) {
+  if (typeof currentPost === 'undefined' || !currentPost) return;
+  const k = currentPost.knowledge || { song: '', artist: '' };
+  if (!k.song && !k.artist) return;
+
+  const textColor  = studioBgImage ? '#ffffff' : c.text;
+  const lyricLen   = (currentPost.text || '').length;
+  const baseSize   = lyricLen < 40 ? 82 * scale : lyricLen < 65 ? 64 * scale : lyricLen < 90 ? 52 * scale : 42 * scale;
+  const songSize   = Math.max(Math.round(baseSize * 0.42), 28 * scale);
+  const artSize    = Math.max(Math.round(baseSize * 0.30), 20 * scale);
+  const songY      = H * 0.76;
+  const artistY    = songY + songSize + 16 * scale;
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.textAlign   = 'center';
+
+  // Divider line
+  ctx.strokeStyle = hexToRgba(c.primary, 0.35);
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - 18 * scale, songY - songSize * 0.85);
+  ctx.lineTo(W / 2 + 18 * scale, songY - songSize * 0.85);
+  ctx.stroke();
+
+  // Song
+  if (studioBgImage) { ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = 14 * scale; }
+  ctx.fillStyle = studioBgImage ? '#fff' : c.primary;
+  ctx.font      = `700 ${songSize}px ${fd.family}`;
+  const song    = k.song.length > 32 ? k.song.substring(0, 32) + '…' : k.song;
+  ctx.fillText(song, W / 2, songY);
+
+  // Artist
+  ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+  ctx.fillStyle  = studioBgImage ? 'rgba(255,255,255,0.8)' : (c.light ? 'rgba(42,37,32,0.65)' : 'rgba(255,255,255,0.65)');
+  ctx.font       = `700 ${artSize}px 'Space Mono', monospace`;
+  const artist   = k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist;
+  ctx.fillText(artist, W / 2, artistY);
+
+  ctx.restore();
+}
+
+/* ── Brand footer ── */
+function drawBrand(ctx, W, H, scale, opacity, c) {
+  const markColor = studioBgImage ? 'rgba(255,255,255,0.7)'
+                  : c.light ? hexToRgba(c.primary, 0.75)
+                  : hexToRgba(c.primary, 0.8);
+  const fy  = H * 0.94;
+  const lSz = Math.max(Math.round(18 * scale), 12);
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.fillStyle   = markColor;
+  ctx.font        = `700 ${lSz}px 'Space Mono', monospace`;
+  ctx.textAlign   = 'center';
+  ctx.fillText(APP_DOMAIN, W / 2, fy);
+  ctx.restore();
+}
+
+/* ── Text wrap helper ── */
+function wrapText(ctx, text, maxW) {
+  const words = text.split(' ');
+  let line    = '';
+  const lines = [];
+  words.forEach(word => {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > maxW && line) {
+      lines.push(line.trim()); line = word + ' ';
+    } else { line = test; }
+  });
+  if (line.trim()) lines.push(line.trim());
+  return lines;
+}
+
+/* ─────────────────────────────────────────
+   STAGE CANVAS (alias for compatibility)
+───────────────────────────────────────── */
+function refreshStageCanvasLegacy() { refreshStageCanvas(); }
+
+/* ─────────────────────────────────────────
+   GENERATE FINAL POSTER (static or animated)
+───────────────────────────────────────── */
+async function generateFinalPoster(sizeKey) {
+  const dim = POSTER_SIZES[sizeKey];
+  if (!dim || typeof currentPost === 'undefined' || !currentPost) throw new Error('Invalid size or no post');
+
+  // PNG export — draw final frame (t=1)
+  const offscreen    = document.createElement('canvas');
+  offscreen.width    = dim.w;
+  offscreen.height   = dim.h;
+  const ctx          = offscreen.getContext('2d');
+  await document.fonts.ready;
+  drawPosterToCtx(ctx, dim.w, dim.h, getTotalDuration()); // final frame
+
+  return new Promise((resolve, reject) => {
+    offscreen.toBlob(blob => {
+      if (blob) resolve(blob);
+      else reject(new Error('Canvas toBlob returned null'));
+    }, 'image/png');
+  });
+}
+
+/* ─────────────────────────────────────────
+   CEREMONY THUMBNAIL
+───────────────────────────────────────── */
+function drawCeremonyThumb() {
+  const dpr  = window.devicePixelRatio || 1;
+  const size = 600;
+  ceremonyThumb.width        = Math.round(size * dpr);
+  ceremonyThumb.height       = Math.round(size * dpr);
+  ceremonyThumb.style.width  = '';
+  ceremonyThumb.style.height = '';
+  const ctx = ceremonyThumb.getContext('2d');
+  ctx.scale(dpr, dpr);
+  document.fonts.ready.then(() => drawPosterToCtx(ctx, size, size, getTotalDuration()));
+}
+
+/* ─────────────────────────────────────────
+   PHOTO HANDLING
+───────────────────────────────────────── */
 function handleStudioPhoto(file) {
-  if (!file.type.startsWith('image/')) { showToast('Please upload an image file'); return; }
-  if (file.size > 15 * 1024 * 1024)   { showToast('File too large — max 15 MB');  return; }
+  if (!file.type.startsWith('image/')) {
+    if (typeof showToast === 'function') showToast('Please upload an image');
+    return;
+  }
+  if (file.size > 15 * 1024 * 1024) {
+    if (typeof showToast === 'function') showToast('File too large (max 15MB)');
+    return;
+  }
   const reader = new FileReader();
   reader.onload = ev => {
-    const img  = new Image();
+    const img = new Image();
     img.onload = () => {
       studioBgImage = img;
-      const dt = document.getElementById('photoDropText');
-      const dz = document.getElementById('photoUploadZone');
-      const pc = document.getElementById('photoControls');
-      if (dt) dt.textContent = file.name.length > 22 ? file.name.substring(0,22)+'…' : file.name;
-      if (dz) dz.classList.add('has-photo');
-      if (pc) pc.classList.remove('hidden');
-      document.getElementById('ytBgOption')?.remove();
-      showToast('Photo added');
+      const photoDropText = document.getElementById('photoDropText');
+      const pdz           = document.getElementById('photoUploadZone');
+      const photoControls = document.getElementById('photoControls');
+      if (photoDropText) photoDropText.textContent = file.name;
+      if (pdz) pdz.classList.add('has-photo');
+      if (photoControls) photoControls.classList.remove('hidden');
+      document.getElementById('ytBgOption')?.style && (document.getElementById('ytBgOption').style.background = '');
+      if (typeof showToast === 'function') showToast('Photo added');
+      scheduleRedraw();
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-/* ══════════════════════════════════════════════════════════
-   YOUTUBE THUMBNAIL AS BACKGROUND
-══════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────
+   YOUTUBE THUMBNAIL OPTION
+───────────────────────────────────────── */
 function injectYoutubeBgOption(meta) {
   const panel = document.getElementById('panel-photo');
   if (!panel) return;
@@ -1043,249 +1247,114 @@ function injectYoutubeBgOption(meta) {
     <div class="yt-bg-option-text">
       <div class="yt-bg-option-label">▶ Use Video Thumbnail</div>
       <div class="yt-bg-option-title">${meta.title || meta.channel || ''}</div>
-    </div>`;
+    </div>
+  `;
+
+  const tryLoad = src => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload  = () => resolve(img);
+    img.onerror = () => reject(new Error('CORS'));
+    img.src     = src;
+  });
+
+  const applyImage = img => {
+    studioBgImage = img;
+    const photoDropText = document.getElementById('photoDropText');
+    const pdz           = document.getElementById('photoUploadZone');
+    const photoControls = document.getElementById('photoControls');
+    if (photoDropText) photoDropText.textContent = 'YouTube thumbnail';
+    if (pdz) pdz.classList.add('has-photo');
+    if (photoControls) photoControls.classList.remove('hidden');
+    opt.style.background  = 'rgba(255,0,0,0.18)';
+    opt.style.borderColor = 'rgba(255,0,0,0.55)';
+    if (typeof showToast === 'function') showToast('Thumbnail set as background ✓');
+    scheduleRedraw();
+  };
 
   opt.onclick = () => {
-    const tryLoad = src => new Promise((res, rej) => {
-      const img = new Image(); img.crossOrigin = 'anonymous';
-      img.onload = () => res(img); img.onerror = () => rej(); img.src = src;
-    });
-    const apply = img => {
-      studioBgImage = img;
-      const dt = document.getElementById('photoDropText');
-      const dz = document.getElementById('photoUploadZone');
-      const pc = document.getElementById('photoControls');
-      if (dt) dt.textContent = 'YouTube thumbnail';
-      if (dz) dz.classList.add('has-photo');
-      if (pc) pc.classList.remove('hidden');
-      opt.style.background  = 'rgba(255,0,0,0.18)';
-      opt.style.borderColor = 'rgba(255,0,0,0.55)';
-      showToast('Thumbnail set as background ✓');
-    };
     tryLoad(meta.thumbnail)
-      .then(apply)
-      .catch(() =>
-        fetch(meta.thumbnail)
-          .then(r => r.blob())
-          .then(blob => tryLoad(URL.createObjectURL(blob)))
-          .then(apply)
-          .catch(() => showToast('Could not load thumbnail — upload a photo manually'))
-      );
+      .then(applyImage)
+      .catch(() => fetch(meta.thumbnail).then(r => r.blob()).then(blob => tryLoad(URL.createObjectURL(blob))).then(applyImage).catch(() => {
+        if (typeof showToast === 'function') showToast('Could not load thumbnail — upload manually');
+      }));
   };
+
   panel.insertBefore(opt, panel.firstChild);
+  document.querySelector('[data-tab="photo"]')?.click();
 }
 
-/* ══════════════════════════════════════════════════════════
-   ANIMATED MP4 EXPORT
-══════════════════════════════════════════════════════════ */
-async function exportAnimatedMP4(sizeKey, onProgress) {
-  const dim = STUDIO_SIZES[sizeKey];
-  if (!dim)         throw new Error('Unknown size: ' + sizeKey);
-  if (!currentPost) throw new Error('No active post');
-
-  const words      = (currentPost?.text || '').split(' ').length;
-  const durSecs    = Math.max(4, Math.min(14, 3 + words * 0.22 + 2.0 * studioSpeed));
-  const W = dim.w, H = dim.h;
-  const FPS        = 30;
-  const totalFrames = Math.round(durSecs * FPS);
-
-  await document.fonts.ready;
-
-  if (typeof VideoEncoder !== 'undefined' && typeof Mp4Muxer !== 'undefined') {
-    return new Promise((resolve, reject) => {
-      let muxer, encoder;
-      try {
-        muxer = new Mp4Muxer.Muxer({
-          target:    new Mp4Muxer.ArrayBufferTarget(),
-          video:     { codec: 'avc', width: W, height: H },
-          fastStart: 'in-memory',
-        });
-        encoder = new VideoEncoder({
-          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-          error:  err => reject(err),
-        });
-        encoder.configure({
-          codec:    'avc1.42001f',
-          width:     W,
-          height:    H,
-          bitrate:   Math.min(5_000_000, W * H * 2),
-          framerate: FPS,
-        });
-      } catch (e) {
-        console.warn('[Studio] VideoEncoder setup failed, falling back to WebM:', e);
-        exportAnimatedWebM(sizeKey, onProgress).then(resolve).catch(reject);
-        return;
-      }
-
-      const offscreen = document.createElement('canvas');
-      offscreen.width = W; offscreen.height = H;
-      const offCtx    = offscreen.getContext('2d', { willReadFrequently: true });
-
-      let frameIdx = 0;
-      const next = () => {
-        if (frameIdx >= totalFrames) {
-          encoder.flush().then(() => {
-            muxer.finalize();
-            const buf = muxer.target.buffer;
-            resolve(new Blob([buf], { type: 'video/mp4' }));
-          }).catch(reject);
-          return;
-        }
-
-        const t   = frameIdx / totalFrames;
-        const ms  = (frameIdx / FPS) * 1000;
-        const pts = Math.round((frameIdx * 1_000_000) / FPS);
-
-        drawFrame(offCtx, W, H, t, ms);
-
-        const frame = new VideoFrame(offscreen, {
-          timestamp: pts,
-          duration:  Math.round(1_000_000 / FPS),
-        });
-        encoder.encode(frame, { keyFrame: frameIdx % 30 === 0 });
-        frame.close();
-        frameIdx++;
-        if (onProgress) onProgress(frameIdx / totalFrames);
-
-        if (frameIdx % 10 === 0) setTimeout(next, 0);
-        else next();
-      };
-      next();
-    });
+/* ─────────────────────────────────────────
+   EXPORT — share / download
+───────────────────────────────────────── */
+async function shareOrDownloadPoster() {
+  if (!generatedBlob) {
+    if (typeof showToast === 'function') showToast('Poster not ready yet');
+    return;
   }
-
-  return exportAnimatedWebM(sizeKey, onProgress);
-}
-
-function exportAnimatedWebM(sizeKey, onProgress) {
-  return new Promise((resolve, reject) => {
-    const dim = STUDIO_SIZES[sizeKey];
-    if (!dim) { reject(new Error('Unknown size')); return; }
-
-    const words   = (currentPost?.text || '').split(' ').length;
-    const durSecs = Math.max(4, Math.min(14, 3 + words * 0.22 + 2.0 * studioSpeed));
-    const W = dim.w, H = dim.h;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = H;
-    const ctx    = canvas.getContext('2d');
-
-    let stream, recorder;
-    try {
-      stream   = canvas.captureStream(30);
-      const mt = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9' : 'video/webm';
-      recorder = new MediaRecorder(stream, { mimeType: mt, videoBitsPerSecond: 4_500_000 });
-    } catch (e) {
-      reject(new Error('Video recording not supported in this browser.'));
-      return;
-    }
-
-    const chunks = [];
-    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-    recorder.onstop          = () => resolve(new Blob(chunks, { type: 'video/webm' }));
-
-    const durMs = durSecs * 1000;
-    const start = performance.now();
-    recorder.start();
-
-    const frame = now => {
-      const t  = Math.min((now - start) / durMs, 1);
-      drawFrame(ctx, W, H, t, now - start);
-      if (onProgress) onProgress(t);
-      if (t < 1) requestAnimationFrame(frame);
-      else recorder.stop();
-    };
-    requestAnimationFrame(frame);
-  });
-}
-
-/* ══════════════════════════════════════════════════════════
-   STATIC PNG EXPORT
-══════════════════════════════════════════════════════════ */
-async function generateStaticPNG(sizeKey) {
-  const dim = STUDIO_SIZES[sizeKey];
-  if (!dim || !currentPost) throw new Error('Invalid size or no post');
-
-  const offscreen = document.createElement('canvas');
-  offscreen.width  = dim.w;
-  offscreen.height = dim.h;
-  const ctx        = offscreen.getContext('2d');
-  await document.fonts.ready;
-  drawFrame(ctx, dim.w, dim.h, 1, 2500);
-
-  return new Promise((resolve, reject) => {
-    offscreen.toBlob(
-      blob => blob ? resolve(blob) : reject(new Error('Canvas export failed')),
-      'image/png'
-    );
-  });
-}
-
-const generateFinalPoster = generateStaticPNG;
-
-/* ══════════════════════════════════════════════════════════
-   CEREMONY THUMBNAIL
-══════════════════════════════════════════════════════════ */
-function drawCeremonyThumb() {
-  if (!ceremonyThumb) return;
-  const dpr  = Math.min(window.devicePixelRatio || 1, 2);
-  const size = 600;
-  ceremonyThumb.width        = Math.round(size * dpr);
-  ceremonyThumb.height       = Math.round(size * dpr);
-  ceremonyThumb.style.width  = '';
-  ceremonyThumb.style.height = '';
-  const ctx = ceremonyThumb.getContext('2d');
-  ctx.scale(dpr, dpr);
-  document.fonts.ready.then(() => drawFrame(ctx, size, size, 1, 2500));
-}
-
-/* ══════════════════════════════════════════════════════════
-   DOWNLOAD + SHARE
-══════════════════════════════════════════════════════════ */
-async function shareOrDownload() {
-  if (!generatedBlob) { showToast('Not ready yet'); return; }
-
-  const isWebM   = generatedBlob.type.includes('webm');
-  const ext      = _exportType === 'mp4' ? (isWebM ? 'webm' : 'mp4') : 'png';
-  const fileName = `margo-${selectedSize || 'poster'}-${Date.now()}.${ext}`;
-  const file     = new File([generatedBlob], fileName, { type: generatedBlob.type });
-
+  const fileName  = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
+  const file      = new File([generatedBlob], fileName, { type: 'image/png' });
   const shareData = {
-    title: 'MARGO — ' + (currentPost?.text || '').substring(0, 50),
-    text:  `"${currentPost?.text || ''}" — share at trymargo.com`,
+    title: `MARGO — ${(typeof currentPost !== 'undefined' ? currentPost?.text?.substring(0, 50) : '') || 'Lyric'}`,
+    text:  `"${(typeof currentPost !== 'undefined' ? currentPost?.text : '') || ''}" — drop your lyric at trymargo.com`,
     files: [file],
   };
-
   try {
-    if (navigator.share && navigator.canShare?.(shareData)) {
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
       await navigator.share(shareData);
-      showToast('Shared!');
+      if (typeof showToast === 'function') showToast('Shared!');
       return;
     }
   } catch (e) {
     if (e.name === 'AbortError') return;
   }
-
-  downloadBlob();
-  showToast('Saved to device!');
+  downloadPosterBlob();
+  if (typeof showToast === 'function') showToast('Saved to device!');
 }
 
-function downloadBlob() {
-  if (!generatedBlob) { showToast('Not ready'); return; }
-  const isWebM = generatedBlob.type.includes('webm');
-  const ext    = _exportType === 'mp4' ? (isWebM ? 'webm' : 'mp4') : 'png';
+function downloadPosterBlob() {
+  if (!generatedBlob) {
+    if (typeof showToast === 'function') showToast('Poster not ready');
+    return;
+  }
   try {
     const url = URL.createObjectURL(generatedBlob);
     const a   = document.createElement('a');
     a.href     = url;
-    a.download = `margo-${selectedSize || 'poster'}-${Date.now()}.${ext}`;
+    a.download = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1200);
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
   } catch (err) {
-    console.error('[Studio] download error:', err);
-    showToast('Download failed — please try again');
+    console.error('Download error:', err);
+    if (typeof showToast === 'function') showToast('Could not download — try again');
   }
 }
+
+/* ─────────────────────────────────────────
+   EASING HELPERS
+───────────────────────────────────────── */
+function easeOut(t) { return 1 - Math.pow(1 - clamp(t, 0, 1), 3); }
+function easeSpring(t) {
+  t = clamp(t, 0, 1);
+  return 1 + Math.pow(t - 1, 3) * Math.cos(t * Math.PI * 4.5) * 0.28 + (t === 1 ? 0 : 0);
+}
+function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
+
+function hexToRgba(hex, alpha) {
+  if (!hex || !hex.startsWith('#')) return `rgba(232,197,71,${alpha})`;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/* ─────────────────────────────────────────
+   WINDOW RESIZE
+───────────────────────────────────────── */
+window.addEventListener('resize', () => {
+  if (!studioOverlay || studioOverlay.classList.contains('hidden')) return;
+  if (_animPlaying) return; // animation loop handles its own redraws
+  refreshStageCanvas(getTotalDuration());
+});
