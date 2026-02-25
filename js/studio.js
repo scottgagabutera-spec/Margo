@@ -290,7 +290,7 @@ function buildModePicker() {
   });
 
   document.getElementById('smpCancelBtn').onclick = () => {
-    picker.classList.add('hidden');
+    document.getElementById('studioModePicker')?.remove();
     studioOverlay.classList.add('hidden');
     document.body.classList.remove('modal-open');
     openModal(postcardModal);
@@ -303,8 +303,8 @@ function showModePicker() {
 }
 
 function hideModePickerAndEnterStudio() {
-  const picker = document.getElementById('studioModePicker');
-  if (picker) picker.classList.add('hidden');
+  // Remove picker
+  document.getElementById('studioModePicker')?.remove();
 
   // Show/hide Motion tab based on mode
   const motionTab   = document.querySelector('[data-tab="motion"]');
@@ -312,11 +312,14 @@ function hideModePickerAndEnterStudio() {
   if (motionTab)   motionTab.style.display   = _studioMode === 'video' ? '' : 'none';
   if (motionPanel) motionPanel.style.display = _studioMode === 'video' ? '' : 'none';
 
-  // Reset to first tab
-  document.querySelectorAll('.dock-tab').forEach((t, i)   => t.classList.toggle('active', i === 0));
-  document.querySelectorAll('.dock-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
+  // Full UI reset now that mode is known
+  resetStudioUI();
 
-  refreshStageCanvas();
+  // Offer YouTube thumbnail if available
+  const meta = currentPost?.youtubeMeta;
+  if (meta?.thumbnail) setTimeout(() => injectYoutubeBgOption(meta), 80);
+
+  setTimeout(refreshStageCanvas, 60);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -456,7 +459,6 @@ function upgradeSizePicker() {
 ══════════════════════════════════════════════════════════ */
 function initStudio() {
   injectStudioV5Styles();
-  buildModePicker();
   buildMotionDockTab();
   buildCeremonyExtras();
   upgradeSizePicker();
@@ -608,15 +610,12 @@ function openStudio() {
   studioOverlay.classList.remove('hidden');
   document.body.classList.add('modal-open');
 
-  resetStudioUI();
-
-  const meta = currentPost?.youtubeMeta;
-  if (meta?.thumbnail) setTimeout(() => injectYoutubeBgOption(meta), 80);
-
-  // Show mode picker first
+  // Show mode picker FIRST — resetStudioUI and canvas happen after user picks
+  document.getElementById('studioModePicker')?.remove();
   buildModePicker();
   showModePicker();
 }
+
 
 /* ══════════════════════════════════════════════════════════
    RESET STUDIO UI
@@ -629,8 +628,7 @@ function resetStudioUI() {
   document.querySelectorAll('.font-card').forEach((fc, i) => fc.classList.toggle('active', i === 0));
   document.querySelectorAll('.motion-style-btn').forEach(b => b.classList.toggle('active', b.dataset.motion === 'word'));
   document.querySelectorAll('.motion-spd-btn').forEach(b    => b.classList.toggle('active', b.dataset.spd   === '1'));
-  document.querySelectorAll('.cer-type-btn').forEach(b => b.classList.toggle('active', b.dataset.export === 'mp4'));
-  _exportType = 'mp4';
+  document.querySelectorAll('.cer-type-btn').forEach(b => b.classList.toggle('active', b.dataset.export === _exportType));
 
   const bsl = document.getElementById('studiobrightness'), bvl = document.getElementById('studioBrightnessVal');
   if (bsl) bsl.value = 100; if (bvl) bvl.textContent = '100%';
