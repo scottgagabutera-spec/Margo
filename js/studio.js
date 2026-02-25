@@ -73,6 +73,7 @@ const EMOTION_THEME_MAP = {
 let studioMotion = 'word';
 let studioSpeed  = 1.0;
 let _exportType  = 'mp4';
+let _studioMode  = 'image'; // 'image' | 'video'
 
 /* ══════════════════════════════════════════════════════════
    INJECT STYLES
@@ -172,8 +173,150 @@ function injectStudioV5Styles() {
     }
 
     .size-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px !important; }
+
+    /* ── Studio Mode Picker ── */
+    .studio-mode-picker {
+      position: absolute; inset: 0; z-index: 200;
+      background: #0B0B0D;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 32px 24px;
+    }
+    .studio-mode-picker.hidden { display: none; }
+    .smp-logo { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+    .smp-logo-text {
+      font-family: 'Syne', sans-serif; font-size: 0.75rem;
+      font-weight: 800; letter-spacing: 3px; color: #E8C547; text-transform: uppercase;
+    }
+    .smp-title {
+      font-family: 'Syne', sans-serif; font-size: 1.3rem;
+      font-weight: 800; color: #F0F0F0; text-align: center;
+      margin-bottom: 6px;
+    }
+    .smp-sub {
+      font-family: 'Space Mono', monospace; font-size: 0.38rem;
+      color: rgba(255,255,255,0.28); text-align: center;
+      text-transform: uppercase; letter-spacing: 2px; margin-bottom: 28px;
+    }
+    .smp-cards { display: flex; gap: 12px; width: 100%; max-width: 420px; }
+    .smp-card {
+      flex: 1; border-radius: 16px; padding: 22px 14px 18px;
+      cursor: pointer; text-align: center;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
+      position: relative; overflow: hidden;
+    }
+    .smp-card:hover {
+      border-color: rgba(232,197,71,0.4);
+      background: rgba(232,197,71,0.06);
+      transform: translateY(-2px);
+    }
+    .smp-card:active { transform: translateY(0); }
+    .smp-card-icon { font-size: 2rem; display: block; margin-bottom: 12px; line-height: 1; }
+    .smp-card-name {
+      display: block; font-family: 'Syne', sans-serif; font-size: 0.85rem;
+      font-weight: 800; color: #F0F0F0; margin-bottom: 8px;
+    }
+    .smp-card-desc {
+      font-family: 'Space Mono', monospace; font-size: 0.34rem;
+      color: rgba(255,255,255,0.3); text-transform: uppercase;
+      letter-spacing: 0.8px; line-height: 1.8;
+    }
+    .smp-card-tag {
+      display: inline-block; margin-top: 10px;
+      padding: 4px 10px; border-radius: 20px; font-size: 0.32rem;
+      font-family: 'Space Mono', monospace; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .smp-card-image .smp-card-tag { background: rgba(232,197,71,0.12); color: #E8C547; border: 1px solid rgba(232,197,71,0.25); }
+    .smp-card-video .smp-card-tag { background: rgba(107,140,255,0.12); color: #6B8CFF; border: 1px solid rgba(107,140,255,0.25); }
+    .smp-cancel {
+      margin-top: 20px; background: none; border: none;
+      color: rgba(255,255,255,0.22); font-family: 'Space Mono', monospace;
+      font-size: 0.38rem; text-transform: uppercase; letter-spacing: 1.5px;
+      cursor: pointer; padding: 8px 16px; transition: color 0.18s;
+    }
+    .smp-cancel:hover { color: rgba(255,255,255,0.5); }
   `;
   document.head.appendChild(s);
+}
+
+/* ══════════════════════════════════════════════════════════
+   BUILD + SHOW MODE PICKER
+══════════════════════════════════════════════════════════ */
+function buildModePicker() {
+  if (document.getElementById('studioModePicker')) return;
+  const overlay = document.getElementById('studioOverlay');
+  const picker  = document.createElement('div');
+  picker.id        = 'studioModePicker';
+  picker.className = 'studio-mode-picker hidden';
+  picker.innerHTML = `
+    <div class="smp-logo">
+      <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" width="22" height="22">
+        <circle cx="40" cy="40" r="36" fill="#E8C547"/>
+        <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
+              fill="none" stroke="#0B0B0D" stroke-width="5"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="smp-logo-text">MARGO · Studio</span>
+    </div>
+    <div class="smp-title">What are you creating?</div>
+    <div class="smp-sub">Choose your format to begin</div>
+    <div class="smp-cards">
+      <div class="smp-card smp-card-image" data-mode="image">
+        <span class="smp-card-icon">🖼</span>
+        <span class="smp-card-name">Image</span>
+        <div class="smp-card-desc">Static poster<br>PNG · Instant</div>
+        <span class="smp-card-tag">PNG</span>
+      </div>
+      <div class="smp-card smp-card-video" data-mode="video">
+        <span class="smp-card-icon">🎬</span>
+        <span class="smp-card-name">Video</span>
+        <div class="smp-card-desc">Animated clip<br>MP4 · All platforms</div>
+        <span class="smp-card-tag">MP4</span>
+      </div>
+    </div>
+    <button class="smp-cancel" id="smpCancelBtn">← Back</button>
+  `;
+  overlay.appendChild(picker);
+
+  picker.querySelector('.smp-cards').addEventListener('click', e => {
+    const card = e.target.closest('.smp-card');
+    if (!card) return;
+    _studioMode = card.dataset.mode;
+    _exportType = _studioMode === 'video' ? 'mp4' : 'png';
+    hideModePickerAndEnterStudio();
+  });
+
+  document.getElementById('smpCancelBtn').onclick = () => {
+    picker.classList.add('hidden');
+    studioOverlay.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+    openModal(postcardModal);
+  };
+}
+
+function showModePicker() {
+  const picker = document.getElementById('studioModePicker');
+  if (picker) picker.classList.remove('hidden');
+}
+
+function hideModePickerAndEnterStudio() {
+  const picker = document.getElementById('studioModePicker');
+  if (picker) picker.classList.add('hidden');
+
+  // Show/hide Motion tab based on mode
+  const motionTab   = document.querySelector('[data-tab="motion"]');
+  const motionPanel = document.getElementById('panel-motion');
+  if (motionTab)   motionTab.style.display   = _studioMode === 'video' ? '' : 'none';
+  if (motionPanel) motionPanel.style.display = _studioMode === 'video' ? '' : 'none';
+
+  // Reset to first tab
+  document.querySelectorAll('.dock-tab').forEach((t, i)   => t.classList.toggle('active', i === 0));
+  document.querySelectorAll('.dock-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
+
+  refreshStageCanvas();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -313,6 +456,7 @@ function upgradeSizePicker() {
 ══════════════════════════════════════════════════════════ */
 function initStudio() {
   injectStudioV5Styles();
+  buildModePicker();
   buildMotionDockTab();
   buildCeremonyExtras();
   upgradeSizePicker();
@@ -406,12 +550,12 @@ function initStudio() {
     const progWrap = document.getElementById('cerProgressWrap');
     const progBar  = document.getElementById('cerProgressBar');
 
-    if (headline) headline.textContent = _exportType === 'mp4' ? 'Recording animation…' : 'Generating poster…';
+    if (headline) headline.textContent = _studioMode === 'video' ? 'Recording animation…' : 'Generating poster…';
     if (actions)  actions.style.pointerEvents = 'none';
-    if (progWrap && _exportType === 'mp4') progWrap.classList.add('show');
+    if (progWrap && _studioMode === 'video') progWrap.classList.add('show');
 
     try {
-      generatedBlob = _exportType === 'mp4'
+      generatedBlob = _studioMode === 'video'
         ? await exportAnimatedMP4(selectedSize, p => { if (progBar) progBar.style.width = (p * 100).toFixed(0) + '%'; })
         : await generateStaticPNG(selectedSize);
     } catch (err) {
@@ -426,7 +570,7 @@ function initStudio() {
     if (progWrap) { progWrap.classList.remove('show'); if (progBar) progBar.style.width = '0%'; }
     if (actions)  actions.style.pointerEvents = '';
     drawCeremonyThumb();
-    if (headline) headline.textContent = _exportType === 'mp4' ? 'Your video is ready.' : 'Your poster is ready.';
+    if (headline) headline.textContent = _studioMode === 'video' ? 'Your video is ready.' : 'Your poster is ready.';
   });
 
   ceremonyBack.onclick = () => { ceremonyOverlay.classList.add('hidden'); generatedBlob = null; };
@@ -446,6 +590,7 @@ function initStudio() {
 function openStudio() {
   closeModal(postcardModal);
 
+  // Reset all state
   studioBgImage    = null;
   studioFont       = 'playfair';
   studioBrightness = 100;
@@ -456,7 +601,8 @@ function openStudio() {
   studioSpeed      = 1.0;
   generatedBlob    = null;
   selectedSize     = null;
-  _exportType      = 'mp4';
+  _studioMode      = 'image';
+  _exportType      = 'png';
   studioDesign     = EMOTION_THEME_MAP[currentPost?.emotion] || 'midnight-gold';
 
   studioOverlay.classList.remove('hidden');
@@ -467,7 +613,9 @@ function openStudio() {
   const meta = currentPost?.youtubeMeta;
   if (meta?.thumbnail) setTimeout(() => injectYoutubeBgOption(meta), 80);
 
-  setTimeout(refreshStageCanvas, 60);
+  // Show mode picker first
+  buildModePicker();
+  showModePicker();
 }
 
 /* ══════════════════════════════════════════════════════════
