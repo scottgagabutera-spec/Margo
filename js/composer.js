@@ -1,6 +1,7 @@
 /* ============================================================
    MARGO — js/composer.js
-   v5.1 — Auto Genius ID + YouTube autocomplete + premium UX
+   v5.2 — YouTube saves automatically, no confirm click needed.
+          fetchAndSaveYoutubeMeta() called as safety net after post.
    ============================================================ */
 
 /* ── MODERATION ENGINE ── */
@@ -47,10 +48,10 @@ function injectComposerStyles() {
   s.textContent = `
     /* ── Spinner ── */
     .m-spinner {
-      width:13px;height:13px;border-radius:50%;
-      border:2px solid rgba(232,197,71,0.25);
+      width:14px;height:14px;border-radius:50%;
+      border:2px solid rgba(232,197,71,0.2);
       border-top-color:#E8C547;
-      animation:mspin 0.65s linear infinite;
+      animation:mspin 0.7s linear infinite;
       display:inline-block;flex-shrink:0;
     }
     @keyframes mspin{to{transform:rotate(360deg)}}
@@ -67,153 +68,183 @@ function injectComposerStyles() {
       display:flex;align-items:center;justify-content:center;gap:8px;
     }
     #geniusIdentifyBtn:hover:not(:disabled) {
-      background:rgba(232,197,71,0.09);
-      border-color:rgba(232,197,71,0.55);
-      color:#E8C547;
+      background:rgba(232,197,71,0.09);border-color:rgba(232,197,71,0.55);color:#E8C547;
     }
-    #geniusIdentifyBtn.active {
-      border-color:#E8C547;color:#E8C547;
-      background:rgba(232,197,71,0.08);
-    }
+    #geniusIdentifyBtn.active { border-color:#E8C547;color:#E8C547;background:rgba(232,197,71,0.08); }
     #geniusIdentifyBtn:disabled { opacity:0.5;cursor:default; }
 
     /* ── Genius results ── */
     .genius-section-label {
-      font-size:0.58rem;color:rgba(255,255,255,0.35);
-      letter-spacing:2px;text-transform:uppercase;
-      font-family:'Space Mono',monospace;
-      margin:10px 0 6px;
+      font-size:0.58rem;color:rgba(255,255,255,0.35);letter-spacing:2px;
+      text-transform:uppercase;font-family:'Space Mono',monospace;margin:10px 0 6px;
     }
     .genius-results-list { display:flex;flex-direction:column;gap:6px; }
     .genius-result-card {
-      display:flex;align-items:center;gap:10px;
-      padding:10px 12px;border-radius:12px;
-      background:rgba(255,255,255,0.03);
-      border:1px solid rgba(255,255,255,0.07);
+      display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
       cursor:pointer;transition:all 0.18s;
     }
-    .genius-result-card:hover {
-      background:rgba(232,197,71,0.07);
-      border-color:rgba(232,197,71,0.25);
-      transform:translateX(2px);
-    }
-    .genius-result-card.selected {
-      background:rgba(232,197,71,0.1);
-      border-color:rgba(232,197,71,0.5);
-    }
-    .genius-art {
-      width:42px;height:42px;border-radius:8px;
-      object-fit:cover;flex-shrink:0;
-      background:rgba(255,255,255,0.05);
-    }
+    .genius-result-card:hover { background:rgba(232,197,71,0.07);border-color:rgba(232,197,71,0.25);transform:translateX(2px); }
+    .genius-result-card.selected { background:rgba(232,197,71,0.1);border-color:rgba(232,197,71,0.5); }
+    .genius-art { width:42px;height:42px;border-radius:8px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,0.05); }
     .genius-info { flex:1;min-width:0; }
-    .genius-song {
-      font-size:0.82rem;font-weight:700;color:#fff;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .genius-artist {
-      font-size:0.7rem;color:rgba(255,255,255,0.45);
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-      margin-top:1px;
-    }
+    .genius-song { font-size:0.82rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .genius-artist { font-size:0.7rem;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px; }
     .genius-use-tag {
       flex-shrink:0;font-size:0.58rem;font-family:'Space Mono',monospace;
-      letter-spacing:1px;text-transform:uppercase;
-      padding:4px 9px;border-radius:6px;
-      background:rgba(232,197,71,0.08);
-      color:rgba(232,197,71,0.7);
-      border:1px solid rgba(232,197,71,0.2);
-      transition:all 0.15s;
+      letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:6px;
+      background:rgba(232,197,71,0.08);color:rgba(232,197,71,0.7);border:1px solid rgba(232,197,71,0.2);transition:all 0.15s;
     }
-    .genius-result-card:hover .genius-use-tag {
-      background:rgba(232,197,71,0.15);
-      color:#E8C547;border-color:rgba(232,197,71,0.4);
-    }
-    .genius-result-card.selected .genius-use-tag {
-      background:#E8C547;color:#0B0B0D;border-color:#E8C547;
+    .genius-result-card:hover .genius-use-tag { background:rgba(232,197,71,0.15);color:#E8C547;border-color:rgba(232,197,71,0.4); }
+    .genius-result-card.selected .genius-use-tag { background:#E8C547;color:#0B0B0D;border-color:#E8C547; }
+
+    /* ════════════════════════════════════════
+       MUSIC METADATA CARD — premium design
+    ════════════════════════════════════════ */
+    @keyframes ytFadeUp {
+      from { opacity:0; transform:translateY(12px) scale(0.98); }
+      to   { opacity:1; transform:translateY(0)    scale(1);    }
     }
 
-    /* ── YouTube preview card ── */
-    .yt-card {
-      margin-top:8px;border-radius:12px;overflow:hidden;
-      border:1px solid rgba(255,255,255,0.08);
-      background:rgba(255,255,255,0.03);
-      animation:fadeUp 0.25s ease;
+    /* ══ MUSIC FOUND CARD — Premium redesign ══ */
+    @keyframes ytSlideIn {
+      from { opacity:0; transform:translateY(8px) scale(0.98); }
+      to   { opacity:1; transform:translateY(0)  scale(1);    }
     }
-    @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .yt-card {
+      position:relative;
+      margin-top:12px;
+      border-radius:20px;
+      overflow:hidden;
+      border:1px solid rgba(232,197,71,0.22);
+      background:linear-gradient(160deg,#141210 0%,#0f0e0c 100%);
+      box-shadow:0 12px 40px rgba(0,0,0,0.5), 0 1px 0 rgba(232,197,71,0.18) inset;
+      animation:ytSlideIn 0.35s cubic-bezier(0.16,1,0.3,1);
+    }
+    /* Gold shimmer line across top */
+    .yt-card::before {
+      content:'';position:absolute;top:0;left:8%;right:8%;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(232,197,71,0.8),transparent);
+      pointer-events:none;
+    }
+    /* Subtle gold glow at bottom */
+    .yt-card::after {
+      content:'';position:absolute;bottom:0;left:20%;right:20%;height:40px;
+      background:radial-gradient(ellipse at center bottom,rgba(232,197,71,0.06),transparent);
+      pointer-events:none;
+    }
+
     .yt-card-inner {
-      display:flex;align-items:center;gap:10px;padding:10px 12px;
+      display:flex;align-items:flex-start;gap:14px;
+      padding:14px 14px 12px;
+    }
+
+    /* Album art — large, square, with glow */
+    .yt-thumb-wrap {
+      position:relative;flex-shrink:0;
+    }
+    .yt-thumb-wrap::after {
+      content:'';position:absolute;inset:-1px;border-radius:13px;
+      background:linear-gradient(135deg,rgba(232,197,71,0.3),transparent 60%);
+      pointer-events:none;
     }
     .yt-thumb {
-      width:68px;height:48px;border-radius:7px;
-      object-fit:cover;flex-shrink:0;background:#111;
+      width:80px;height:80px;border-radius:12px;
+      object-fit:cover;display:block;
+      box-shadow:0 6px 20px rgba(0,0,0,0.6);
     }
-    .yt-info { flex:1;min-width:0; }
+
+    /* Info section */
+    .yt-info { flex:1;min-width:0;padding-top:2px; }
+
     .yt-title {
-      font-size:0.75rem;font-weight:700;color:#fff;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-      line-height:1.3;
+      font-size:0.88rem;font-weight:700;color:#fff;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+      line-height:1.3;letter-spacing:-0.02em;
     }
     .yt-channel {
-      font-size:0.65rem;color:rgba(255,255,255,0.4);
-      margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      font-size:0.68rem;color:rgba(255,255,255,0.4);
+      margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+      letter-spacing:0.01em;
     }
-    .yt-use-btn {
-      flex-shrink:0;padding:7px 13px;border-radius:8px;
-      background:#E8C547;color:#0B0B0D;
-      font-family:'Space Mono',monospace;font-size:0.58rem;
+
+    /* Listen link pills */
+    .yt-links-row {
+      display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;
+    }
+    .yt-listen-link {
+      display:inline-flex;align-items:center;gap:4px;
+      font-size:0.56rem;font-family:'Space Mono',monospace;
       font-weight:700;letter-spacing:1px;text-transform:uppercase;
-      border:none;cursor:pointer;transition:all 0.18s;white-space:nowrap;
+      padding:5px 11px;border-radius:20px;text-decoration:none;
+      transition:all 0.2s ease;white-space:nowrap;
+      backdrop-filter:blur(8px);
     }
-    .yt-use-btn:hover:not(:disabled){background:#f5d454;transform:scale(1.04);}
-    .yt-use-btn.confirmed{background:#4ade80;color:#0B0B0D;cursor:default;}
+    .yt-listen-link:hover {
+      transform:translateY(-2px) scale(1.04);
+      filter:brightness(1.25);
+      box-shadow:0 4px 12px rgba(0,0,0,0.3);
+    }
+    .yt-link-yt {
+      background:rgba(255,50,50,0.14);color:#ff7070;
+      border:1px solid rgba(255,50,50,0.32);
+    }
+    .yt-link-dz {
+      background:rgba(255,100,0,0.14);color:#ff8c3a;
+      border:1px solid rgba(255,100,0,0.32);
+    }
+    .yt-link-it {
+      background:rgba(252,60,68,0.14);color:#fc7c82;
+      border:1px solid rgba(252,60,68,0.32);
+    }
+
+    /* Source badge — top right pill */
+    .yt-found-tag {
+      flex-shrink:0;align-self:flex-start;margin-top:1px;
+      padding:4px 11px;border-radius:20px;
+      font-family:'Space Mono',monospace;font-size:0.5rem;
+      font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+      white-space:nowrap;
+    }
+    .yt-found-yt { background:rgba(255,50,50,0.12);  color:#ff7070; border:1px solid rgba(255,50,50,0.28);  }
+    .yt-found-dz { background:rgba(255,100,0,0.12);  color:#ff8c3a; border:1px solid rgba(255,100,0,0.28);  }
+    .yt-found-it { background:rgba(252,60,68,0.12);  color:#fc7c82; border:1px solid rgba(252,60,68,0.28);  }
+
+    /* Loading shimmer state */
     .yt-loading {
-      display:flex;align-items:center;gap:9px;
-      padding:13px 14px;
-      font-size:0.72rem;color:rgba(255,255,255,0.35);
+      display:flex;align-items:center;gap:10px;
+      padding:18px 16px;
+      font-size:0.65rem;color:rgba(255,255,255,0.28);
       font-family:'Space Mono',monospace;letter-spacing:0.5px;
     }
 
-    /* ── Autocomplete dropdown ── */
+        /* ── Autocomplete dropdown ── */
     .yt-autocomplete {
       position:absolute;left:0;right:0;top:calc(100% + 4px);
-      z-index:1000;
-      background:#18181c;
+      z-index:1000;background:#18181c;
       border:1px solid rgba(255,255,255,0.1);
-      border-radius:12px;overflow:hidden;
-      box-shadow:0 16px 48px rgba(0,0,0,0.6);
-      animation:fadeUp 0.18s ease;
+      border-radius:14px;overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,0.7);
+      animation:ytFadeUp 0.18s ease;
     }
     .yt-ac-item {
       display:flex;align-items:center;gap:10px;
       padding:9px 13px;cursor:pointer;
-      border-bottom:1px solid rgba(255,255,255,0.04);
-      transition:background 0.12s;
+      border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.12s;
     }
-    .yt-ac-item:last-child{border-bottom:none;}
-    .yt-ac-item:hover{background:rgba(232,197,71,0.07);}
-    .yt-ac-thumb {
-      width:38px;height:27px;border-radius:5px;
-      object-fit:cover;flex-shrink:0;background:#222;
-    }
-    .yt-ac-song {
-      font-size:0.78rem;font-weight:600;color:#fff;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .yt-ac-artist {
-      font-size:0.65rem;color:rgba(255,255,255,0.4);
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
+    .yt-ac-item:last-child { border-bottom:none; }
+    .yt-ac-item:hover { background:rgba(232,197,71,0.07); }
+    .yt-ac-thumb { width:38px;height:27px;border-radius:5px;object-fit:cover;flex-shrink:0;background:#222; }
+    .yt-ac-song  { font-size:0.78rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .yt-ac-artist{ font-size:0.65rem;color:rgba(255,255,255,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 
-    /* ── Song input wrapper ── */
     .song-input-wrap { position:relative; }
   `;
-  document.head.appendChild(s);
+document.head.appendChild(s);
 }
 
-/* ── SEARCH STATE ── */
-let youtubeData    = null;
-let ytConfirmed    = false;
+/* ── STATE ── */
+let youtubeData    = null; // set as soon as video found — no confirm gate
 let geniusResult   = null;
 let geniusTimer    = null;
 let ytSuggestTimer = null;
@@ -221,40 +252,29 @@ let ytFetchTimer   = null;
 let lastGeniusQuery = '';
 
 /* ============================================================
-   GENIUS ENGINE
+   GENIUS ENGINE — identical to v5.1
    ============================================================ */
 function initGeniusIdentify() {
   injectComposerStyles();
-
-  // Create identify button below textarea
   const textArea = document.getElementById('textInput');
   if (!textArea || document.getElementById('geniusIdentifyBtn')) return;
-
   const btn = document.createElement('button');
-  btn.id    = 'geniusIdentifyBtn';
-  btn.type  = 'button';
+  btn.id = 'geniusIdentifyBtn'; btn.type = 'button';
   btn.innerHTML = `<span>✦</span> Identify Song`;
   textArea.parentNode.insertBefore(btn, textArea.nextSibling);
-
-  // Manual button click
   btn.onclick = () => {
     const lyric = textArea.value.trim();
     if (lyric.length < 5) { showToast('Type a lyric first'); return; }
     runGeniusSearch(lyric);
   };
-
-  // Auto-trigger: 20+ chars AND stopped typing for 1.2s
   textArea.addEventListener('input', () => {
     clearTimeout(geniusTimer);
     const val = textArea.value.trim();
-
-    // Only auto-search if song fields are empty (don't override manual entry)
     const songFilled = document.getElementById('songInput')?.value.trim();
     if (val.length >= 20 && !songFilled) {
-      // Show button as active hint
       btn.classList.add('active');
       geniusTimer = setTimeout(() => {
-        if (val === lastGeniusQuery) return; // don't repeat same search
+        if (val === lastGeniusQuery) return;
         runGeniusSearch(val);
       }, 1200);
     } else {
@@ -266,28 +286,17 @@ function initGeniusIdentify() {
 async function runGeniusSearch(query) {
   const btn = document.getElementById('geniusIdentifyBtn');
   lastGeniusQuery = query;
-
-  // Loading state
-  if (btn) {
-    btn.innerHTML = `<span class="m-spinner"></span> Searching…`;
-    btn.disabled  = true;
-  }
-
-  // Remove old results
+  if (btn) { btn.innerHTML = `<span class="m-spinner"></span> Searching…`; btn.disabled = true; }
   document.getElementById('geniusResultsList')?.remove();
-
   try {
     const res  = await fetch(`/api/genius?lyric=${encodeURIComponent(query)}`);
     const data = await res.json();
-
     if (btn) { btn.innerHTML = `<span>✦</span> Identify Song`; btn.disabled = false; }
-
     if (!res.ok || !data.results?.length) {
       if (query.length > 20) showToast('No song found — try a different line');
       return;
     }
     renderGeniusResults(data.results);
-
   } catch (err) {
     if (btn) { btn.innerHTML = `<span>✦</span> Identify Song`; btn.disabled = false; }
   }
@@ -295,29 +304,21 @@ async function runGeniusSearch(query) {
 
 function renderGeniusResults(results) {
   document.getElementById('geniusResultsList')?.remove();
-
   const wrap = document.createElement('div');
-  wrap.id    = 'geniusResultsList';
-
+  wrap.id = 'geniusResultsList';
   const label = document.createElement('div');
-  label.className   = 'genius-section-label';
+  label.className = 'genius-section-label';
   label.textContent = 'Select the right song';
   wrap.appendChild(label);
-
   const list = document.createElement('div');
   list.className = 'genius-results-list';
-
   results.forEach(r => {
     const card = document.createElement('div');
     card.className = 'genius-result-card';
-
     const songName   = decodeHTML(r.song);
     const artistName = decodeHTML(r.artist);
-
     card.innerHTML = `
-      ${r.artwork
-        ? `<img src="${r.artwork}" class="genius-art" alt=""/>`
-        : `<div class="genius-art"></div>`}
+      ${r.artwork ? `<img src="${r.artwork}" class="genius-art" alt=""/>` : `<div class="genius-art"></div>`}
       <div class="genius-info">
         <div class="genius-song">${songName}</div>
         <div class="genius-artist">${artistName}</div>
@@ -327,47 +328,36 @@ function renderGeniusResults(results) {
     card.onclick = () => selectGeniusResult({ ...r, song: songName, artist: artistName }, card);
     list.appendChild(card);
   });
-
   wrap.appendChild(list);
-
-  // Insert after identify button
-  const btn = document.getElementById('geniusIdentifyBtn');
-  btn?.parentNode?.insertBefore(wrap, btn.nextSibling);
+  document.getElementById('geniusIdentifyBtn')?.parentNode?.insertBefore(wrap, document.getElementById('geniusIdentifyBtn').nextSibling);
 }
 
 function selectGeniusResult(result, card) {
   document.querySelectorAll('.genius-result-card').forEach(c => c.classList.remove('selected'));
   card.classList.add('selected');
   card.querySelector('.genius-use-tag').textContent = '✓';
-
   geniusResult = result;
-
-  // Auto-fill song + artist
   const songEl   = document.getElementById('songInput');
   const artistEl = document.getElementById('artistInput');
   if (songEl)   songEl.value   = result.song;
   if (artistEl) artistEl.value = result.artist;
-
-  // Switch to share mode
   if (currentMode !== 'share') document.querySelector('[data-mode="share"]')?.click();
-
-  // Fetch YouTube
   clearYoutubePreview();
   fetchYoutubeData(result.song, result.artist);
-
-  // Collapse after 1s
   setTimeout(() => { document.getElementById('geniusResultsList')?.remove(); }, 1000);
 }
 
 /* ============================================================
    YOUTUBE ENGINE
+   FIX: youtubeData set immediately when found.
+        No ytConfirmed flag. No "Use this" button.
+        "Found ✓" badge is purely visual — data always saves.
    ============================================================ */
 function initYoutubeAutofetch() {
   const songEl   = document.getElementById('songInput');
   const artistEl = document.getElementById('artistInput');
   if (!songEl || !artistEl) return;
 
-  // Wrap song input for dropdown positioning
   if (!songEl.parentElement.classList.contains('song-input-wrap')) {
     const wrap = document.createElement('div');
     wrap.className = 'song-input-wrap';
@@ -375,7 +365,6 @@ function initYoutubeAutofetch() {
     wrap.appendChild(songEl);
   }
 
-  // Song field: autocomplete suggestions
   songEl.addEventListener('input', () => {
     clearTimeout(ytSuggestTimer);
     clearTimeout(ytFetchTimer);
@@ -387,12 +376,12 @@ function initYoutubeAutofetch() {
 
   songEl.addEventListener('blur', () => setTimeout(closeAutocomplete, 180));
 
-  // Artist field: trigger full video fetch
   artistEl.addEventListener('input', () => {
     clearTimeout(ytFetchTimer);
     const song   = songEl.value.trim();
     const artist = artistEl.value.trim();
-    if (song.length > 1 && artist.length > 1 && !ytConfirmed) {
+    if (song.length > 1 && artist.length > 1) {
+      // Re-fetch whenever artist changes (no confirmed guard)
       ytFetchTimer = setTimeout(() => fetchYoutubeData(song, artist), 700);
     }
   });
@@ -411,18 +400,14 @@ function renderAutocomplete(suggestions) {
   closeAutocomplete();
   const songEl = document.getElementById('songInput');
   if (!songEl) return;
-
   const drop = document.createElement('div');
-  drop.id    = 'ytAutocomplete';
+  drop.id = 'ytAutocomplete';
   drop.className = 'yt-autocomplete';
-
   suggestions.slice(0, 4).forEach(s => {
     const item = document.createElement('div');
     item.className = 'yt-ac-item';
     item.innerHTML = `
-      ${s.thumbnail
-        ? `<img src="${s.thumbnail}" class="yt-ac-thumb" alt=""/>`
-        : `<div class="yt-ac-thumb"></div>`}
+      ${s.thumbnail ? `<img src="${s.thumbnail}" class="yt-ac-thumb" alt=""/>` : `<div class="yt-ac-thumb"></div>`}
       <div style="flex:1;min-width:0">
         <div class="yt-ac-song">${decodeHTML(s.song)}</div>
         <div class="yt-ac-artist">${decodeHTML(s.artist)}</div>
@@ -431,7 +416,6 @@ function renderAutocomplete(suggestions) {
     item.onmousedown = (e) => { e.preventDefault(); selectAutocomplete(s); };
     drop.appendChild(item);
   });
-
   songEl.parentElement.appendChild(drop);
 }
 
@@ -448,12 +432,20 @@ function selectAutocomplete(s) {
 function closeAutocomplete() { document.getElementById('ytAutocomplete')?.remove(); }
 
 async function fetchYoutubeData(song, artist) {
+  const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
+  const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
+
   showYtLoading();
-  youtubeData = null; ytConfirmed = false;
+  youtubeData = null;
+
   try {
-    const res  = await fetch(`/api/youtube?song=${encodeURIComponent(song)}&artist=${encodeURIComponent(artist)}`);
+    const res  = await fetch(`/api/youtube?song=${encodeURIComponent(cleanSong)}&artist=${encodeURIComponent(cleanArtist)}`);
     const data = await res.json();
-    if (!res.ok || data.error) { clearYoutubePreview(); return; }
+    // FIX: accept Deezer/iTunes too — they have thumbnail but no videoId
+    // Old code rejected anything without videoId, silently killing all fallbacks
+    if (!res.ok || data.error || (!data.videoId && !data.thumbnail)) {
+      clearYoutubePreview(); return;
+    }
     youtubeData = data;
     renderYtCard(data);
   } catch (_) { clearYoutubePreview(); }
@@ -462,40 +454,53 @@ async function fetchYoutubeData(song, artist) {
 function showYtLoading() {
   clearYoutubePreview();
   const card = document.createElement('div');
-  card.id = 'youtubePreview';
-  card.className = 'yt-card';
-  card.innerHTML = `<div class="yt-loading"><span class="m-spinner"></span>Finding video…</div>`;
+  card.id = 'youtubePreview'; card.className = 'yt-card';
+  card.innerHTML = `<div class="yt-loading"><span class="m-spinner"></span>Finding on YouTube, Deezer, iTunes…</div>`;
   insertAfterArtist(card);
 }
 
 function renderYtCard(data) {
   clearYoutubePreview();
+  const source = data.source || 'youtube';
+
+  // Build listen link pills — one per available platform
+  const links = [];
+  if (data.videoId && data.youtubeUrl) {
+    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">▶&nbsp;YouTube</a>`);
+  } else if (data.youtubeUrl) {
+    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">⌕&nbsp;YouTube</a>`);
+  }
+  if (data.deezerUrl) {
+    links.push(`<a href="${data.deezerUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-dz">♫&nbsp;Deezer</a>`);
+  }
+  if (data.itunesUrl) {
+    links.push(`<a href="${data.itunesUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-it">♫&nbsp;Apple Music</a>`);
+  }
+
+  const sourceBadge    = source === 'youtube' ? 'YT ✓' : source === 'deezer' ? 'Deezer ✓' : 'iTunes ✓';
+  const sourceBadgeCls = source === 'youtube' ? 'yt-found-yt' : source === 'deezer' ? 'yt-found-dz' : 'yt-found-it';
+  const thumb = data.thumbnail || data.thumbnailSm; // prefer large for 80px display
+
   const card = document.createElement('div');
-  card.id = 'youtubePreview';
-  card.className = 'yt-card';
+  card.id = 'youtubePreview'; card.className = 'yt-card';
   card.innerHTML = `
     <div class="yt-card-inner">
-      ${data.thumbnailSm || data.thumbnail
-        ? `<img src="${data.thumbnailSm||data.thumbnail}" class="yt-thumb" alt=""/>`
-        : ''}
+      ${thumb ? `
+        <div class="yt-thumb-wrap">
+          <img src="${thumb}" class="yt-thumb" alt="${decodeHTML(data.title||'')}"/>
+        </div>` : ''}
       <div class="yt-info">
-        <div class="yt-title">${decodeHTML(data.title)}</div>
-        <div class="yt-channel">${decodeHTML(data.channel)}</div>
+        <div class="yt-title">${decodeHTML(data.title || '')}</div>
+        <div class="yt-channel">${decodeHTML(data.channel || data.collectionName || '')}</div>
+        ${links.length ? `<div class="yt-links-row">${links.join('')}</div>` : ''}
       </div>
-      <button class="yt-use-btn" id="ytUseBtn" type="button">Use this ✓</button>
+      <span class="yt-found-tag ${sourceBadgeCls}">${sourceBadge}</span>
     </div>
   `;
   insertAfterArtist(card);
-  document.getElementById('ytUseBtn').onclick = () => confirmYt(data);
-}
-
-function confirmYt(data) {
-  ytConfirmed = true; youtubeData = data;
-  const btn = document.getElementById('ytUseBtn');
-  if (btn) { btn.textContent = '✓ Confirmed'; btn.classList.add('confirmed'); btn.disabled = true; }
+  // Auto-fill youtube link field only for direct video URLs
   const ytLink = document.getElementById('youtubeLink');
-  if (ytLink && !ytLink.value && data.youtubeUrl) ytLink.value = data.youtubeUrl;
-  showToast('Video confirmed ✓');
+  if (ytLink && !ytLink.value && data.videoId && data.youtubeUrl) ytLink.value = data.youtubeUrl;
 }
 
 function insertAfterArtist(el) {
@@ -504,7 +509,7 @@ function insertAfterArtist(el) {
 }
 
 function clearYoutubePreview() {
-  youtubeData = null; ytConfirmed = false;
+  youtubeData = null;
   document.getElementById('youtubePreview')?.remove();
 }
 
@@ -513,7 +518,6 @@ function clearYoutubePreview() {
    ============================================================ */
 function initComposer() {
   injectComposerStyles();
-
   textInput.oninput = () => { charCount.textContent = textInput.value.length; };
 
   modeBtns.forEach(btn => {
@@ -572,24 +576,28 @@ async function submitPost() {
     showToast('Some words were adjusted for community guidelines 🎵');
   }
 
+  // FIX: youtubeData is used directly — no ytConfirmed gate
+  const savedYtMeta = youtubeData ? {
+    videoId:     youtubeData.videoId     || null,
+    title:       decodeHTML(youtubeData.title   || ''),
+    thumbnail:   youtubeData.thumbnail   || null,
+    thumbnailSm: youtubeData.thumbnailSm || youtubeData.thumbnail || null,
+    channel:     decodeHTML(youtubeData.channel || ''),
+    youtubeUrl:  youtubeData.youtubeUrl  || null,
+    embedUrl:    youtubeData.embedUrl    || null,
+  } : null;
+
   let post = {
     text, emotion: selectedEmotion, mode: currentMode,
     community: selectedEmotion, status: 'active', flagCount: 0,
     knowledge: { song: 'Unknown Song', artist: 'Unknown Artist' },
     guessConfig: null,
-    youtubeMeta: (youtubeData && ytConfirmed) ? {
-      videoId:    youtubeData.videoId    || null,
-      title:      decodeHTML(youtubeData.title || ''),
-      thumbnail:  youtubeData.thumbnail  || null,
-      channel:    decodeHTML(youtubeData.channel || ''),
-      youtubeUrl: youtubeData.youtubeUrl || null,
-      embedUrl:   youtubeData.embedUrl   || null,
-    } : null,
+    youtubeMeta: savedYtMeta,
     links: currentMode !== 'discover' ? {
-      spotify:    spotifyLink?.value.trim()                               || null,
-      apple:      appleLink?.value.trim()                                 || null,
-      youtube:    (ytConfirmed && youtubeData?.youtubeUrl) || youtubeLink?.value.trim() || null,
-      soundcloud: soundcloudLink?.value.trim()                            || null,
+      spotify:    spotifyLink?.value.trim()          || null,
+      apple:      appleLink?.value.trim()            || null,
+      youtube:    youtubeData?.youtubeUrl            || youtubeLink?.value.trim() || null,
+      soundcloud: soundcloudLink?.value.trim()       || null,
     } : null,
     authorId:  userId,
     timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now()
@@ -621,12 +629,25 @@ async function submitPost() {
   } catch (err) { showToast(err.message); return; }
 
   postBtn.disabled = true; postBtn.textContent = 'Posting…';
+
   try {
     if (isFirebaseEnabled) {
       const ref = await postsRef.push(post);
       await analyticsRef.child(ref.key).set({ views: 0, guesses: [], helps: [] });
+
+      // SAFETY NET: if YouTube hadn't loaded yet when user hit Post,
+      // fetch it now and write to Firebase in the background.
+      // firebase.js backfill will also catch it on next load.
+      if (!post.youtubeMeta
+          && post.knowledge.song   !== 'Unknown Song'
+          && post.knowledge.artist !== 'Unknown Artist'
+          && typeof fetchAndSaveYoutubeMeta === 'function') {
+        fetchAndSaveYoutubeMeta(ref.key, post.knowledge.song, post.knowledge.artist)
+          .catch(() => {});
+      }
     }
-    showToast('Posted!');
+
+    showToast('Posted! 🎵');
     newPostsAvailable = false;
     renderFeed(); resetComposer(); closeModal(composer);
   } catch (err) {
@@ -670,11 +691,9 @@ window.viewPost = function(index) {
   trackView(currentPost.id);
   document.getElementById('postcardLyric').textContent   = currentPost.text;
   document.getElementById('postcardEmotion').textContent = currentPost.emotion || 'Nostalgia';
-
   const k      = currentPost.knowledge || { song:'Unknown Song', artist:'Unknown Artist' };
   const songEl = document.getElementById('postcardSong');
   const meta   = currentPost.youtubeMeta;
-
   if (currentPost.mode === 'guess') {
     songEl.innerHTML = `<div style="font-style:italic;color:var(--text-2)">Guess correctly to reveal</div>`;
   } else {
@@ -702,7 +721,6 @@ window.viewPost = function(index) {
         </a>` : ''}
     `;
   }
-
   document.getElementById('postcardCommunity').innerHTML = '';
   const hasLinks = currentPost.links &&
     (currentPost.links.spotify||currentPost.links.apple||currentPost.links.youtube||currentPost.links.soundcloud);
@@ -764,13 +782,10 @@ function submitGuess() {
   const songOk  =!doSong  ||(gs&&(gs===as||gs.includes(as)||as.includes(gs)));
   const artistOk=!doArtist||(ga&&(ga===aa||ga.includes(aa)||aa.includes(ga)));
   const correct =songOk&&artistOk;
-
   if (isFirebaseEnabled)
     analyticsRef.child(currentPost.id).child('guesses').push({song:gs||null,artist:ga||null,correct,timestamp:Date.now()});
-
   const resultEl=document.getElementById('guessResult');
   resultEl.classList.remove('hidden','result-success','result-error','result-partial');
-
   if (correct) {
     resultEl.className='result-msg result-success';
     resultEl.innerHTML=`Correct! 🎉<br><span style="font-size:0.8rem">"${k.song}" by ${k.artist}</span>`;
@@ -789,7 +804,6 @@ function submitGuess() {
     }
     return;
   }
-
   const left=MAX_GUESS_ATTEMPTS-currentGuessAttempts;
   if (left<=0) {
     resultEl.className='result-msg result-error';
@@ -854,7 +868,6 @@ function openAnalytics() {
   if(currentPost.mode==='discover')html+=`<div class="stat-card"><div class="stat-num">${helps.length}</div><div class="stat-label">Identifications</div></div>`;
   html+='</div>';
   body.innerHTML=html;
-
   if(currentPost.mode==='guess'&&guesses.length){
     let sec='<div class="activity-section"><h4>Guesses</h4><div class="activity-list">';
     guesses.forEach(g=>{
@@ -868,7 +881,6 @@ function openAnalytics() {
     });
     body.innerHTML+=sec+'</div></div>';
   }
-
   if(currentPost.mode==='discover'&&helps.length){
     let sec='<div class="activity-section"><h4>Community Identifications</h4><div class="activity-list">';
     helps.forEach(h=>{

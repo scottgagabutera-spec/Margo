@@ -4,22 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       PRIMARY META — what Google shows in search results
-       Title ≤ 60 chars | Description 120–160 chars
-  ════════════════════════════════════════════════════════════ -->
   <title>Margo — Communicate Through Song Lyrics</title>
   <meta name="description" content="Margo is a social platform where you communicate through song lyrics, share what you're feeling, and discover others through music. Free to join."/>
   <meta name="author" content="MARGO"/>
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"/>
   <link rel="canonical" href="https://trymargo.com/"/>
 
-  <!-- Google Search Console verification -->
   <meta name="google-site-verification" content="-Uao7VrDcRR4_2dcGEuPT3PmO-Vyn1SOIGptTBX6Wyw" />
 
-  <!-- ═══════════════════════════════════════════════════════════
-       OPEN GRAPH — WhatsApp, Facebook, Telegram, LinkedIn previews
-  ════════════════════════════════════════════════════════════ -->
   <meta property="og:type"         content="website"/>
   <meta property="og:site_name"    content="MARGO"/>
   <meta property="og:title"        content="Margo — Communicate Through Song Lyrics"/>
@@ -33,9 +25,6 @@
   <meta property="og:image:alt"    content="MARGO — Drop a Lyric. A community for sharing the song lines that say what you can't."/>
   <meta property="og:locale"       content="en_US"/>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       TWITTER / X CARD
-  ════════════════════════════════════════════════════════════ -->
   <meta name="twitter:card"        content="summary_large_image"/>
   <meta name="twitter:site"        content="@trymargo"/>
   <meta name="twitter:creator"     content="@trymargo"/>
@@ -44,9 +33,6 @@
   <meta name="twitter:image"       content="https://trymargo.com/og-image.png"/>
   <meta name="twitter:image:alt"   content="MARGO — Drop a Lyric"/>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       BROWSER / OS UI
-  ════════════════════════════════════════════════════════════ -->
   <meta name="theme-color" content="#E8C547" media="(prefers-color-scheme: light)"/>
   <meta name="theme-color" content="#0B0B0D" media="(prefers-color-scheme: dark)"/>
   <meta name="color-scheme" content="dark light"/>
@@ -59,9 +45,6 @@
   <meta name="msapplication-TileImage" content="/mstile-150x150.png"/>
   <meta name="msapplication-config"    content="/browserconfig.xml"/>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       FAVICONS
-  ════════════════════════════════════════════════════════════ -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 88 88'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23E8C547'/%3E%3Cpath d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57' fill='none' stroke='%230B0B0D' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='35' y='60' width='10' height='3.5' rx='1.75' fill='%230B0B0D' opacity='.55'/%3E%3C/svg%3E">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -72,9 +55,6 @@
   <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
   <link rel="manifest" href="/site.webmanifest">
 
-  <!-- ═══════════════════════════════════════════════════════════
-       JSON-LD STRUCTURED DATA
-  ════════════════════════════════════════════════════════════ -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -127,9 +107,6 @@
   }
   </script>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       FONTS
-  ════════════════════════════════════════════════════════════ -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -229,7 +206,11 @@
     <button class="header-btn primary" id="openComposer">Drop Lyric</button>
   </header>
   <div class="new-posts-bar" id="newPostsIndicator"><span id="newPostsCount">0</span> new lyrics — tap to see</div>
-  <button class="scroll-top" id="scrollToTopBtn">↑ Back to top</button>
+
+  <!-- Legacy scroll-top btn kept in HTML so state.js can reference it,
+       but motion.js hides it and replaces with the premium FAB -->
+  <button class="scroll-top" id="scrollToTopBtn" style="display:none">↑ Back to top</button>
+
   <div class="feed-search-wrap">
     <div class="feed-search-inner">
       <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -241,13 +222,6 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       v4.1 EMOTION ROOM TABS
-       Sits between search and feed grid.
-       "All" is active by default (data-room="all").
-       JS wires these up in initRoomTabs() — no inline handlers.
-       Adding a new emotion: just add a new .room-tab button here.
-  ════════════════════════════════════════════════════════════ -->
   <div class="room-tabs-wrap" role="tablist" aria-label="Filter by emotion">
     <div class="room-tabs">
       <button class="room-tab active" data-room="all" role="tab" aria-selected="true">All</button>
@@ -271,7 +245,7 @@
       <a href="/about" class="footer-link">About</a>
       <a href="/privacy" class="footer-link">Privacy</a>
       <a href="/terms" class="footer-link">Terms</a>
-      <a href="/cdn-cgi/l/email-protection#1c74797070735c686e65717d6e7b73327f7371" class="footer-link">Contact</a>
+      <a href="/contact" class="footer-link">Contact</a>
       <a href="https://linkedin.com/company/trymargo" class="footer-link" target="_blank" rel="noopener">LinkedIn</a>
     </nav>
     <p class="footer-copy">© 2025 Margo. A social platform for communicating through song lyrics.</p>
@@ -286,8 +260,6 @@
       <span class="field-label">Lyric</span>
       <textarea id="textInput" maxlength="140" placeholder="The line living in your head…" inputmode="text"></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
-
-      <!-- AI INSPIRE BUTTON — appears after emotion is selected -->
       <div id="inspireWrap" style="display:none;">
         <button id="inspireBtn" type="button" style="
           width:100%;padding:10px;border-radius:10px;
@@ -553,6 +525,11 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     SCRIPTS — load order matters
+     state.js → firebase.js → feed.js → composer.js →
+     studio.js → admin.js → app.js → motion.js (last)
+════════════════════════════════════════════════════════════ -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -563,5 +540,6 @@
 <script src="js/studio.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/app.js"></script>
+<script src="js/motion.js"></script>
 </body>
 </html>

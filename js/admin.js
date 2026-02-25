@@ -1,17 +1,16 @@
 /* ============================================================
    MARGO — js/admin.js
-   Admin moderation dashboard.
+   Admin moderation dashboard + Pages CMS.
    ACCESS: B + G keys (within 300ms) → Firebase login
    SECURITY: UID verified against /adminConfig/allowedUid
    Depends on: state.js, firebase.js, feed.js (renderFeed, timeAgo)
-   v4.3
+   v4.4 — Pages CMS added
    ============================================================ */
 
 const _adminKeysHeld = new Set();
 let _adminKeyTimer   = null;
 
 function initAdmin() {
-  // B + G keyboard trigger
   document.addEventListener('keydown', e => {
     const key = e.key.toLowerCase();
     const tag = document.activeElement?.tagName;
@@ -32,7 +31,6 @@ function initAdmin() {
 
   document.addEventListener('keyup', e => _adminKeysHeld.delete(e.key.toLowerCase()));
 
-  // Keep adminMode in sync if signed out elsewhere
   if (firebaseAuth) {
     firebaseAuth.onAuthStateChanged(user => {
       if (!user) {
@@ -133,7 +131,7 @@ function showAdminLogin() {
 
       if (!allowedUid) {
         await firebaseAuth.signOut();
-        throw new Error('Admin not configured — set adminConfig/allowedUid in Firebase');
+        throw new Error('Admin not configured');
       }
       if (uid !== allowedUid) {
         await firebaseAuth.signOut();
@@ -156,11 +154,13 @@ function showAdminLogin() {
 }
 
 function showAdminError(el, msg) {
-  el.textContent    = msg;
-  el.style.display  = 'block';
+  el.textContent   = msg;
+  el.style.display = 'block';
 }
 
 // ── Admin panel ──
+let _adminActiveTab = 'posts'; // 'posts' | 'pages'
+
 function openAdminPanel() {
   const existing = document.getElementById('adminModal');
   if (existing) existing.remove();
@@ -174,6 +174,7 @@ function openAdminPanel() {
   `;
 
   modal.innerHTML = `
+    <!-- TOP BAR -->
     <div style="
       display:flex;align-items:center;justify-content:space-between;
       padding:16px 20px;border-bottom:1px solid rgba(232,197,71,0.15);
@@ -204,47 +205,165 @@ function openAdminPanel() {
       </div>
     </div>
 
+    <!-- MAIN TABS: Posts / Pages -->
     <div style="
-      display:flex;gap:8px;padding:14px 20px;
-      border-bottom:1px solid rgba(255,255,255,0.05);
-      flex-shrink:0;flex-wrap:wrap;align-items:center;
+      display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.05);
+      background:#0B0B0D;flex-shrink:0;
     ">
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="admin-filter-btn active" data-filter="all"   style="${adminFilterBtnStyle(true)}">All</button>
-        <button class="admin-filter-btn" data-filter="active"        style="${adminFilterBtnStyle(false)}">Active</button>
-        <button class="admin-filter-btn" data-filter="flagged"       style="${adminFilterBtnStyle(false)}">Flagged</button>
-        <button class="admin-filter-btn" data-filter="hidden"        style="${adminFilterBtnStyle(false)}">Hidden</button>
-      </div>
-      <div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;">
-        <button class="admin-sort-btn active" data-sort="newest"     style="${adminFilterBtnStyle(true)}">Newest</button>
-        <button class="admin-sort-btn" data-sort="mostFlagged"       style="${adminFilterBtnStyle(false)}">Most Flagged</button>
-      </div>
+      <button id="tabPosts" style="${adminMainTabStyle(true)}" data-tab="posts">
+        Posts
+      </button>
+      <button id="tabPages" style="${adminMainTabStyle(false)}" data-tab="pages">
+        Pages
+      </button>
     </div>
 
-    <div style="padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
-      <input id="adminSearchInput" type="text" placeholder="Search posts…"
-        style="width:100%;padding:9px 13px;background:#141418;
-        border:1px solid rgba(255,255,255,0.08);border-radius:10px;
-        color:#F0F0F0;font-family:'DM Sans',sans-serif;font-size:0.85rem;
-        box-sizing:border-box;outline:none;"/>
+    <!-- POSTS PANEL -->
+    <div id="adminPanelPosts" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="
+        display:flex;gap:8px;padding:14px 20px;
+        border-bottom:1px solid rgba(255,255,255,0.05);
+        flex-shrink:0;flex-wrap:wrap;align-items:center;
+      ">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="admin-filter-btn active" data-filter="all"     style="${adminFilterBtnStyle(true)}">All</button>
+          <button class="admin-filter-btn" data-filter="active"          style="${adminFilterBtnStyle(false)}">Active</button>
+          <button class="admin-filter-btn" data-filter="flagged"         style="${adminFilterBtnStyle(false)}">Flagged</button>
+          <button class="admin-filter-btn" data-filter="hidden"          style="${adminFilterBtnStyle(false)}">Hidden</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;">
+          <button class="admin-sort-btn active" data-sort="newest"       style="${adminFilterBtnStyle(true)}">Newest</button>
+          <button class="admin-sort-btn" data-sort="mostFlagged"         style="${adminFilterBtnStyle(false)}">Most Flagged</button>
+        </div>
+      </div>
+      <div style="padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
+        <input id="adminSearchInput" type="text" placeholder="Search posts…"
+          style="width:100%;padding:9px 13px;background:#141418;
+          border:1px solid rgba(255,255,255,0.08);border-radius:10px;
+          color:#F0F0F0;font-family:'DM Sans',sans-serif;font-size:0.85rem;
+          box-sizing:border-box;outline:none;"/>
+      </div>
+      <div id="adminPostList" style="flex:1;overflow-y:auto;padding:16px 20px;"></div>
     </div>
 
-    <div id="adminPostList" style="flex:1;overflow-y:auto;padding:16px 20px;"></div>
+    <!-- PAGES PANEL (hidden by default) -->
+    <div id="adminPanelPages" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+      <div style="
+        padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.05);
+        flex-shrink:0;
+      ">
+        <p style="font-family:'Space Mono',monospace;font-size:0.55rem;color:#707078;
+          text-transform:uppercase;letter-spacing:1px;margin:0;">
+          Edit page content — changes go live instantly
+        </p>
+      </div>
+
+      <!-- Page selector tabs -->
+      <div style="display:flex;gap:6px;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;flex-wrap:wrap;">
+        <button class="page-tab-btn active" data-page="about"   style="${adminFilterBtnStyle(true)}">About</button>
+        <button class="page-tab-btn"        data-page="privacy" style="${adminFilterBtnStyle(false)}">Privacy</button>
+        <button class="page-tab-btn"        data-page="terms"   style="${adminFilterBtnStyle(false)}">Terms</button>
+        <button class="page-tab-btn"        data-page="contact" style="${adminFilterBtnStyle(false)}">Contact</button>
+      </div>
+
+      <!-- Editor area -->
+      <div style="flex:1;overflow-y:auto;padding:20px;">
+        <div id="pageEditorWrap" style="max-width:700px;margin:0 auto;">
+
+          <!-- Effective date (for privacy/terms) -->
+          <div id="pageDateRow" style="margin-bottom:14px;display:none;">
+            <label style="font-family:'Space Mono',monospace;font-size:0.55rem;color:#A0A0A8;
+              text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">
+              Effective Date
+            </label>
+            <input id="pageEffectiveDate" type="text" placeholder="e.g. January 2025"
+              style="width:100%;padding:9px 13px;background:#141418;
+              border:1px solid rgba(255,255,255,0.08);border-radius:10px;
+              color:#F0F0F0;font-family:'DM Sans',sans-serif;font-size:0.85rem;
+              box-sizing:border-box;outline:none;"/>
+          </div>
+
+          <!-- Content editor -->
+          <label style="font-family:'Space Mono',monospace;font-size:0.55rem;color:#A0A0A8;
+            text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px;">
+            Page Content (HTML supported)
+          </label>
+          <textarea id="pageContentEditor"
+            style="width:100%;min-height:340px;padding:14px;background:#141418;
+            border:1px solid rgba(255,255,255,0.08);border-radius:12px;
+            color:#F0F0F0;font-family:'DM Sans',sans-serif;font-size:0.88rem;
+            line-height:1.6;box-sizing:border-box;outline:none;resize:vertical;
+            border-color:rgba(232,197,71,0.12);"
+            placeholder="Write your page content here. Basic HTML like &lt;p&gt;, &lt;h2&gt;, &lt;ul&gt;, &lt;strong&gt;, &lt;a&gt; is supported.">
+          </textarea>
+
+          <!-- Preview toggle -->
+          <div style="margin-top:10px;margin-bottom:16px;">
+            <button id="previewToggleBtn" style="
+              padding:7px 16px;background:transparent;
+              border:1px solid rgba(255,255,255,0.1);border-radius:8px;
+              color:#707078;font-family:'Space Mono',monospace;font-size:0.5rem;
+              text-transform:uppercase;letter-spacing:0.8px;cursor:pointer;">
+              Preview ↓
+            </button>
+          </div>
+
+          <!-- Live preview -->
+          <div id="pagePreviewBox" style="
+            display:none;
+            background:#0f0f11;border:1px solid rgba(232,197,71,0.1);
+            border-radius:12px;padding:24px;margin-bottom:20px;
+            font-family:'DM Sans',sans-serif;font-size:0.95rem;
+            line-height:1.75;color:rgba(240,240,240,0.72);
+          "></div>
+
+          <!-- Save button -->
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button id="savePageBtn" style="
+              padding:13px 28px;background:#E8C547;color:#0B0B0D;
+              border:none;border-radius:10px;font-family:'DM Sans',sans-serif;
+              font-weight:700;font-size:0.88rem;cursor:pointer;transition:opacity 0.18s;">
+              Save &amp; Publish
+            </button>
+            <span id="pageSaveStatus" style="
+              font-family:'Space Mono',monospace;font-size:0.55rem;
+              text-transform:uppercase;letter-spacing:1px;color:#4ade80;
+              display:none;">
+              ✓ Saved
+            </span>
+          </div>
+
+        </div>
+      </div>
+    </div>
   `;
 
   document.body.appendChild(modal);
 
+  // ── Wire top bar ──
   document.getElementById('adminCloseBtn').onclick   = () => modal.remove();
   document.getElementById('adminSignOutBtn').onclick = async () => {
     await firebaseAuth?.signOut();
     adminMode = false; adminUser = null;
     modal.remove(); showToast('Signed out');
   };
+
+  // ── Main tab switching (Posts / Pages) ──
+  modal.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.onclick = () => {
+      _adminActiveTab = btn.dataset.tab;
+      modal.querySelectorAll('[data-tab]').forEach(b => b.style.cssText = adminMainTabStyle(false));
+      btn.style.cssText = adminMainTabStyle(true);
+      document.getElementById('adminPanelPosts').style.display = _adminActiveTab === 'posts' ? 'flex' : 'none';
+      document.getElementById('adminPanelPages').style.display = _adminActiveTab === 'pages' ? 'flex' : 'none';
+    };
+  });
+
+  // ── Posts filters ──
   document.getElementById('adminSearchInput').oninput = e => {
     adminSearch = e.target.value.trim().toLowerCase();
     renderAdminPosts();
   };
-
   modal.querySelectorAll('.admin-filter-btn').forEach(btn => {
     btn.onclick = () => {
       modal.querySelectorAll('.admin-filter-btn').forEach(b => {
@@ -255,7 +374,6 @@ function openAdminPanel() {
       renderAdminPosts();
     };
   });
-
   modal.querySelectorAll('.admin-sort-btn').forEach(btn => {
     btn.onclick = () => {
       modal.querySelectorAll('.admin-sort-btn').forEach(b => {
@@ -267,7 +385,122 @@ function openAdminPanel() {
     };
   });
 
+  // ── Pages CMS ──
+  let currentPage = 'about';
+  initPageEditor(currentPage);
+
+  modal.querySelectorAll('.page-tab-btn').forEach(btn => {
+    btn.onclick = () => {
+      modal.querySelectorAll('.page-tab-btn').forEach(b => {
+        b.style.cssText = adminFilterBtnStyle(false); b.classList.remove('active');
+      });
+      btn.style.cssText = adminFilterBtnStyle(true); btn.classList.add('active');
+      currentPage = btn.dataset.page;
+      initPageEditor(currentPage);
+    };
+  });
+
+  // Preview toggle
+  document.getElementById('previewToggleBtn').onclick = () => {
+    const box = document.getElementById('pagePreviewBox');
+    const editor = document.getElementById('pageContentEditor');
+    const btn  = document.getElementById('previewToggleBtn');
+    if (box.style.display === 'none') {
+      box.innerHTML = editor.value;
+      box.style.display = 'block';
+      btn.textContent = 'Hide Preview ↑';
+    } else {
+      box.style.display = 'none';
+      btn.textContent = 'Preview ↓';
+    }
+  };
+
+  // Save button
+  document.getElementById('savePageBtn').onclick = () => savePageContent(currentPage);
+
   renderAdminPosts();
+}
+
+// ── Page editor: load existing content from Firebase ──
+function initPageEditor(page) {
+  const editor   = document.getElementById('pageContentEditor');
+  const dateRow  = document.getElementById('pageDateRow');
+  const dateInput= document.getElementById('pageEffectiveDate');
+  const preview  = document.getElementById('pagePreviewBox');
+  const status   = document.getElementById('pageSaveStatus');
+  if (!editor) return;
+
+  // Show date field only for privacy and terms
+  dateRow.style.display = (page === 'privacy' || page === 'terms') ? 'block' : 'none';
+
+  preview.style.display = 'none';
+  document.getElementById('previewToggleBtn').textContent = 'Preview ↓';
+  status.style.display = 'none';
+  editor.value = '';
+  dateInput.value = '';
+  editor.placeholder = 'Loading…';
+
+  if (!isFirebaseEnabled) {
+    editor.placeholder = 'Firebase not connected';
+    return;
+  }
+
+  firebase.database().ref(`pages/${page}`).once('value').then(snap => {
+    const data = snap.val();
+    if (data) {
+      if (typeof data === 'string') {
+        editor.value = data;
+      } else {
+        editor.value = data.content || '';
+        if (data.date) dateInput.value = data.date;
+      }
+    }
+    editor.placeholder = 'Write page content here. HTML supported: <p>, <h2>, <ul>, <li>, <strong>, <a href="">.';
+  }).catch(() => {
+    editor.placeholder = 'Could not load content.';
+  });
+}
+
+// ── Save page content to Firebase ──
+async function savePageContent(page) {
+  const editor    = document.getElementById('pageContentEditor');
+  const dateInput = document.getElementById('pageEffectiveDate');
+  const saveBtn   = document.getElementById('savePageBtn');
+  const status    = document.getElementById('pageSaveStatus');
+  if (!editor || !isFirebaseEnabled) return;
+
+  const content = editor.value.trim();
+  if (!content) { showToast('Content is empty'); return; }
+
+  saveBtn.textContent = 'Saving…';
+  saveBtn.disabled    = true;
+  status.style.display = 'none';
+
+  const payload = (page === 'privacy' || page === 'terms')
+    ? { content, date: dateInput.value.trim() || 'January 2025' }
+    : content;
+
+  try {
+    await firebase.database().ref(`pages/${page}`).set(payload);
+    saveBtn.textContent  = 'Save & Publish';
+    saveBtn.disabled     = false;
+    status.style.display = 'inline';
+    showToast(`${page.charAt(0).toUpperCase() + page.slice(1)} page updated ✓`);
+    setTimeout(() => { status.style.display = 'none'; }, 3000);
+  } catch(err) {
+    saveBtn.textContent = 'Save & Publish';
+    saveBtn.disabled    = false;
+    showToast('Error saving: ' + err.message);
+  }
+}
+
+// ── Style helpers ──
+function adminMainTabStyle(active) {
+  return `padding:12px 24px;border:none;background:transparent;cursor:pointer;
+    font-family:'Space Mono',monospace;font-size:0.55rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:1.2px;transition:all 0.18s;
+    border-bottom:2px solid ${active ? '#E8C547' : 'transparent'};
+    color:${active ? '#E8C547' : '#707078'};`;
 }
 
 function adminFilterBtnStyle(active) {
@@ -279,6 +512,7 @@ function adminFilterBtnStyle(active) {
       : 'background:transparent;border:1px solid rgba(255,255,255,0.08);color:#707078;'}`;
 }
 
+// ── Posts list ──
 function getAdminPosts() {
   let list = [...posts];
   if (adminFilter !== 'all') list = list.filter(p => (p.status || 'active') === adminFilter);
@@ -377,19 +611,17 @@ function adminActionBtnStyle(color) {
     background:${color}14;border:1px solid ${color}40;color:${color};transition:all 0.18s;`;
 }
 
-// ── Moderation actions (global scope for onclick in innerHTML) ──
+// ── Moderation actions ──
 async function adminHidePost(postId) {
   if (!isFirebaseEnabled) return;
   try { await postsRef.child(postId).update({ status: 'hidden' }); showToast('Post hidden'); renderAdminPosts(); renderFeed(); }
   catch (e) { showToast('Error: ' + e.message); }
 }
-
 async function adminUnhidePost(postId) {
   if (!isFirebaseEnabled) return;
   try { await postsRef.child(postId).update({ status: 'active' }); showToast('Post restored'); renderAdminPosts(); renderFeed(); }
   catch (e) { showToast('Error: ' + e.message); }
 }
-
 async function adminDeletePost(postId) {
   if (!window.confirm('Permanently delete this post? This cannot be undone.')) return;
   if (!isFirebaseEnabled) return;
@@ -399,7 +631,6 @@ async function adminDeletePost(postId) {
     showToast('Post deleted'); renderAdminPosts(); renderFeed();
   } catch (e) { showToast('Error: ' + e.message); }
 }
-
 async function adminClearFlags(postId) {
   if (!isFirebaseEnabled) return;
   try { await postsRef.child(postId).update({ flagCount: 0, status: 'active' }); showToast('Flags cleared'); renderAdminPosts(); }
