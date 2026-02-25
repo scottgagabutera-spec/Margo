@@ -1,25 +1,12 @@
 /* ============================================================
    MARGO — js/studio.js
-   v5.0 — Full Motion Studio
+   v5.1 — Full Motion Studio (duplicate-safe)
    ─────────────────────────────────────────────────────────
-   What's new vs v4.6:
-   • 7 entrance animation styles (Word, Cinema, Fade, Type,
-     Glitch, Rise, Blur) driven by drawFrame() engine
-   • Real H.264 MP4 export via mp4-muxer (client-side, no
-     server). Falls back to WebM on older browsers.
-   • MP4 works on every device and platform: Android, iOS
-     (Safari), Instagram, TikTok, WhatsApp Status, LinkedIn,
-     Discord, Reddit — all of them.
-   • Content-aware duration (4s rapid short → 14s slow long)
-   • Motion tab added to dock alongside Color/Font/Photo
-   • Export choice in ceremony: Animated MP4 vs Static PNG
-   • Progress bar during recording
-   • All existing features preserved: photo bg, YouTube
-     thumbnail bg, blur/dim/filter, brightness, themes,
-     fonts, sizes, ceremony download + native share
+   Fixed: renamed internal constants to avoid collision with
+   state.js (POSTER_DESIGNS → STUDIO_DESIGNS, etc.)
    ============================================================ */
 
-/* ── Load mp4-muxer from CDN (50KB, no install needed) ── */
+/* ── Load mp4-muxer from CDN ── */
 (function loadMp4Muxer() {
   if (window.Mp4Muxer) return;
   const s   = document.createElement('script');
@@ -30,9 +17,9 @@
 })();
 
 /* ══════════════════════════════════════════════════════════
-   DESIGN DATA
+   DESIGN DATA  (studio-private, won't clash with state.js)
 ══════════════════════════════════════════════════════════ */
-const POSTER_DESIGNS = {
+const STUDIO_DESIGNS = {
   'midnight-gold':   { bg:['#0B0B0D','#111116','#0B0B0D'],   accent:'#E8C547', text:'#F0F0F0', light:false },
   'royal-purple':    { bg:['#0d0014','#1a0028','#0a0010'],   accent:'#c77dff', text:'#F0F0F0', light:false },
   'neon-cyan':       { bg:['#050e1a','#071525','#050e1a'],   accent:'#00e5ff', text:'#F0F0F0', light:false },
@@ -47,7 +34,7 @@ const POSTER_DESIGNS = {
   'brutalist':       { bg:['#ffffff','#f0f0f0','#ffffff'],   accent:'#000000', text:'#1a1a20', light:true  },
 };
 
-const FONT_MAP = {
+const STUDIO_FONT_MAP = {
   playfair:     { family:"'Playfair Display', serif",   style:'italic',  weight:'400' },
   cormorant:    { family:"'Cormorant Garamond', serif", style:'italic',  weight:'600' },
   lora:         { family:"'Lora', serif",               style:'italic',  weight:'400' },
@@ -58,7 +45,7 @@ const FONT_MAP = {
   dancing:      { family:"'Dancing Script', cursive",   style:'normal',  weight:'700' },
 };
 
-const POSTER_SIZES = {
+const STUDIO_SIZES = {
   'instagram-square': { w:1080, h:1080,  label:'Instagram 1:1'      },
   'instagram-story':  { w:1080, h:1920,  label:'IG/FB Story 9:16'   },
   'facebook-story':   { w:1080, h:1920,  label:'Facebook Story 9:16' },
@@ -87,20 +74,19 @@ let studioDim        = 50;
 let studioFilter     = 'none';
 let studioDesign     = 'midnight-gold';
 let studioMotion     = 'word';
-let studioSpeed      = 1.0;    // 0.35=rapid, 0.6=fast, 1=normal, 2.2=slow
+let studioSpeed      = 1.0;
 let generatedBlob    = null;
 let selectedSize     = null;
-let _exportType      = 'mp4'; // 'mp4' | 'png'
+let _exportType      = 'mp4';
 
 /* ══════════════════════════════════════════════════════════
-   INJECT STYLES FOR NEW FEATURES
+   INJECT STYLES
 ══════════════════════════════════════════════════════════ */
 function injectStudioV5Styles() {
   if (document.getElementById('studioV5Styles')) return;
   const s = document.createElement('style');
   s.id = 'studioV5Styles';
   s.textContent = `
-    /* ── Motion dock panel ── */
     #panel-motion {
       display: none; flex-direction: column; gap: 10px; padding: 10px 0;
     }
@@ -153,7 +139,6 @@ function injectStudioV5Styles() {
       background: rgba(232,197,71,0.1); border-color: rgba(232,197,71,0.42); color: #E8C547;
     }
 
-    /* ── Export type choice (shown in ceremony) ── */
     .ceremony-type-row {
       display: flex; gap: 8px; margin-bottom: 12px; width: 100%;
     }
@@ -180,7 +165,6 @@ function injectStudioV5Styles() {
     }
     .cer-type-btn.active .ctb-desc { color: rgba(232,197,71,0.45); }
 
-    /* ── Recording progress ── */
     .cer-progress-wrap {
       width: 100%; height: 3px; border-radius: 2px;
       background: rgba(255,255,255,0.07);
@@ -192,37 +176,34 @@ function injectStudioV5Styles() {
       width: 0%; transition: width 0.1s linear;
     }
 
-    /* ── Size options grid update ── */
     .size-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px !important; }
   `;
   document.head.appendChild(s);
 }
 
 /* ══════════════════════════════════════════════════════════
-   BUILD MOTION TAB (injected into existing dock)
+   BUILD MOTION TAB
 ══════════════════════════════════════════════════════════ */
 const MOTION_DEFS = [
-  { key:'word',   icon:'◈', name:'Word by Word', desc:'Each word rises in'          },
+  { key:'word',   icon:'◈', name:'Word by Word', desc:'Each word rises in'           },
   { key:'cinema', icon:'◉', name:'Cinematic',    desc:'Scale + bloom from soft focus' },
-  { key:'fade',   icon:'↑', name:'Fade Up',      desc:'Clean upward entrance'       },
-  { key:'type',   icon:'|', name:'Typewriter',   desc:'Types letter by letter'      },
-  { key:'glitch', icon:'⚡', name:'Glitch',       desc:'Digital noise entrance'      },
-  { key:'rise',   icon:'✦', name:'Rise',         desc:'Characters float up'         },
-  { key:'blur',   icon:'◌', name:'Blur Reveal',  desc:'Sharpens from fog'           },
+  { key:'fade',   icon:'↑', name:'Fade Up',      desc:'Clean upward entrance'        },
+  { key:'type',   icon:'|', name:'Typewriter',   desc:'Types letter by letter'       },
+  { key:'glitch', icon:'⚡', name:'Glitch',       desc:'Digital noise entrance'       },
+  { key:'rise',   icon:'✦', name:'Rise',         desc:'Characters float up'          },
+  { key:'blur',   icon:'◌', name:'Blur Reveal',  desc:'Sharpens from fog'            },
 ];
 
 function buildMotionDockTab() {
   const dockTabs = document.querySelector('.dock-tabs');
   if (!dockTabs || document.querySelector('[data-tab="motion"]')) return;
 
-  /* Tab button */
   const tab   = document.createElement('button');
-  tab.className  = 'dock-tab';
+  tab.className   = 'dock-tab';
   tab.dataset.tab = 'motion';
   tab.innerHTML   = `<span class="dock-tab-icon">◈</span><span>Motion</span>`;
   dockTabs.appendChild(tab);
 
-  /* Panel */
   const dock  = document.querySelector('.studio-dock');
   const panel = document.createElement('div');
   panel.className = 'dock-panel';
@@ -246,7 +227,6 @@ function buildMotionDockTab() {
     </div>`;
   dock.appendChild(panel);
 
-  /* Events — motion styles */
   panel.querySelector('.motion-list').addEventListener('click', e => {
     const btn = e.target.closest('.motion-style-btn');
     if (!btn) return;
@@ -256,7 +236,6 @@ function buildMotionDockTab() {
     refreshStageCanvas();
   });
 
-  /* Events — speed */
   panel.querySelector('.motion-spd-grid').addEventListener('click', e => {
     const btn = e.target.closest('.motion-spd-btn');
     if (!btn) return;
@@ -265,7 +244,6 @@ function buildMotionDockTab() {
     studioSpeed = parseFloat(btn.dataset.spd);
   });
 
-  /* Tab click wires into existing dock-tab logic */
   tab.addEventListener('click', () => {
     document.querySelectorAll('.dock-tab').forEach(t   => t.classList.remove('active'));
     document.querySelectorAll('.dock-panel').forEach(p => p.classList.remove('active'));
@@ -283,7 +261,6 @@ function buildCeremonyExtras() {
 
   const actions = inner.querySelector('.ceremony-actions');
 
-  /* Export type row */
   const typeRow = document.createElement('div');
   typeRow.className = 'ceremony-type-row';
   typeRow.innerHTML = `
@@ -307,7 +284,6 @@ function buildCeremonyExtras() {
     _exportType = btn.dataset.export;
   });
 
-  /* Progress bar */
   const prog = document.createElement('div');
   prog.className = 'cer-progress-wrap';
   prog.id        = 'cerProgressWrap';
@@ -316,7 +292,7 @@ function buildCeremonyExtras() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   UPGRADE SIZE PICKER  — add missing canvas sizes
+   UPGRADE SIZE PICKER
 ══════════════════════════════════════════════════════════ */
 function upgradeSizePicker() {
   const opts = document.querySelector('.size-options');
@@ -324,13 +300,13 @@ function upgradeSizePicker() {
   opts.dataset.v5 = '1';
 
   [
-    { size:'facebook-story', ratio:'9:16',    name:'FB Story',  dim:'1080 × 1920' },
-    { size:'tiktok',         ratio:'9:16',    name:'TikTok',    dim:'1080 × 1920' },
-    { size:'linkedin',       ratio:'1.91:1',  name:'LinkedIn',  dim:'1200 × 627'  },
-    { size:'whatsapp',       ratio:'1:1',     name:'WhatsApp',  dim:'1080 × 1080' },
+    { size:'facebook-story', ratio:'9:16',   name:'FB Story',  dim:'1080 × 1920' },
+    { size:'tiktok',         ratio:'9:16',   name:'TikTok',    dim:'1080 × 1920' },
+    { size:'linkedin',       ratio:'1.91:1', name:'LinkedIn',  dim:'1200 × 627'  },
+    { size:'whatsapp',       ratio:'1:1',    name:'WhatsApp',  dim:'1080 × 1080' },
   ].forEach(({ size, ratio, name, dim }) => {
     const btn = document.createElement('button');
-    btn.className   = 'size-opt';
+    btn.className    = 'size-opt';
     btn.dataset.size = size;
     btn.innerHTML    = `<span class="size-ratio">${ratio}</span><span class="size-name">${name}</span><span class="size-dim">${dim}</span>`;
     opts.appendChild(btn);
@@ -338,7 +314,7 @@ function upgradeSizePicker() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   INIT STUDIO — called once on page load
+   INIT STUDIO
 ══════════════════════════════════════════════════════════ */
 function initStudio() {
   injectStudioV5Styles();
@@ -346,17 +322,14 @@ function initStudio() {
   buildCeremonyExtras();
   upgradeSizePicker();
 
-  /* Entry point from postcard modal */
   sharePosterBtn.onclick = openStudio;
 
-  /* Close studio → back to postcard */
   closeStudio.onclick = () => {
     studioOverlay.classList.add('hidden');
     document.body.classList.remove('modal-open');
     openModal(postcardModal);
   };
 
-  /* Dock tabs — re-wire all (including new Motion tab) */
   document.querySelectorAll('.dock-tab').forEach(tab => {
     tab.onclick = () => {
       document.querySelectorAll('.dock-tab').forEach(t   => t.classList.remove('active'));
@@ -367,7 +340,6 @@ function initStudio() {
     };
   });
 
-  /* Color swatches */
   document.querySelectorAll('.scene-swatch').forEach(sw => {
     sw.onclick = () => {
       document.querySelectorAll('.scene-swatch').forEach(s => s.classList.remove('active'));
@@ -377,7 +349,6 @@ function initStudio() {
     };
   });
 
-  /* Brightness */
   const bSlider = document.getElementById('studiobrightness');
   const bValEl  = document.getElementById('studioBrightnessVal');
   if (bSlider) {
@@ -388,7 +359,6 @@ function initStudio() {
     };
   }
 
-  /* Fonts */
   document.querySelectorAll('.font-card').forEach(card => {
     card.onclick = () => {
       document.querySelectorAll('.font-card').forEach(c => c.classList.remove('active'));
@@ -398,7 +368,6 @@ function initStudio() {
     };
   });
 
-  /* Photo upload */
   const dropZone = document.getElementById('photoUploadZone');
   if (dropZone) {
     dropZone.onclick = () => studioPhotoInput?.click();
@@ -410,13 +379,11 @@ function initStudio() {
     studioPhotoInput.onchange = e => { const f = e.target.files[0]; if (f) handleStudioPhoto(f); };
   }
 
-  /* Blur / Dim sliders */
-  const blurSlider  = document.getElementById('studioBlur'),  blurVal  = document.getElementById('studioBlurVal');
-  const dimSlider   = document.getElementById('studioDim'),   dimVal   = document.getElementById('studioDimVal');
+  const blurSlider = document.getElementById('studioBlur'),  blurVal = document.getElementById('studioBlurVal');
+  const dimSlider  = document.getElementById('studioDim'),   dimVal  = document.getElementById('studioDimVal');
   if (blurSlider) blurSlider.oninput = () => { studioBlur = parseInt(blurSlider.value); if (blurVal) blurVal.textContent = studioBlur; refreshStageCanvas(); };
   if (dimSlider)  dimSlider.oninput  = () => { studioDim  = parseInt(dimSlider.value);  if (dimVal)  dimVal.textContent  = studioDim + '%'; refreshStageCanvas(); };
 
-  /* Photo filters */
   document.querySelectorAll('.photo-filter').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.photo-filter').forEach(b => b.classList.remove('active'));
@@ -426,22 +393,18 @@ function initStudio() {
     };
   });
 
-  /* Remove photo */
   const rmBtn = document.getElementById('studioRemovePhoto');
   if (rmBtn) rmBtn.onclick = clearStudioPhoto;
 
-  /* Export button → open size picker */
   studioExportBtn.onclick = () => sizePicker.classList.remove('hidden');
   sizeCancelBtn.onclick   = () => sizePicker.classList.add('hidden');
 
-  /* Size option selected → start export */
   document.querySelector('.size-options').addEventListener('click', async e => {
     const btn = e.target.closest('.size-opt');
     if (!btn) return;
     selectedSize = btn.dataset.size;
     sizePicker.classList.add('hidden');
 
-    /* Show ceremony, start recording */
     ceremonyOverlay.classList.remove('hidden');
     const headline = ceremonyOverlay.querySelector('.ceremony-headline');
     const actions  = ceremonyOverlay.querySelector('.ceremony-actions');
@@ -471,17 +434,14 @@ function initStudio() {
     if (headline) headline.textContent = _exportType === 'mp4' ? 'Your video is ready.' : 'Your poster is ready.';
   });
 
-  /* Ceremony: back */
   ceremonyBack.onclick = () => { ceremonyOverlay.classList.add('hidden'); generatedBlob = null; };
 
-  /* Ceremony: download */
   cerDownload.onclick = () => {
     if (!generatedBlob) { showToast('Still generating…'); return; }
     downloadBlob();
     showToast('Saved to device ✓');
   };
 
-  /* Ceremony: share */
   cerShare.onclick = shareOrDownload;
 }
 
@@ -491,7 +451,6 @@ function initStudio() {
 function openStudio() {
   closeModal(postcardModal);
 
-  /* Reset state */
   studioBgImage    = null;
   studioFont       = 'playfair';
   studioBrightness = 100;
@@ -510,7 +469,6 @@ function openStudio() {
 
   resetStudioUI();
 
-  /* Offer YouTube thumbnail as background if post has one */
   const meta = currentPost?.youtubeMeta;
   if (meta?.thumbnail) setTimeout(() => injectYoutubeBgOption(meta), 80);
 
@@ -521,29 +479,19 @@ function openStudio() {
    RESET STUDIO UI
 ══════════════════════════════════════════════════════════ */
 function resetStudioUI() {
-  /* Tabs — activate Color tab */
   document.querySelectorAll('.dock-tab').forEach((t, i)   => t.classList.toggle('active', i === 0));
   document.querySelectorAll('.dock-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
 
-  /* Theme swatches */
   document.querySelectorAll('.scene-swatch').forEach(s => s.classList.toggle('active', s.dataset.design === studioDesign));
-
-  /* Font cards */
   document.querySelectorAll('.font-card').forEach((fc, i) => fc.classList.toggle('active', i === 0));
-
-  /* Motion buttons */
   document.querySelectorAll('.motion-style-btn').forEach(b => b.classList.toggle('active', b.dataset.motion === 'word'));
   document.querySelectorAll('.motion-spd-btn').forEach(b    => b.classList.toggle('active', b.dataset.spd   === '1'));
-
-  /* Export type */
   document.querySelectorAll('.cer-type-btn').forEach(b => b.classList.toggle('active', b.dataset.export === 'mp4'));
   _exportType = 'mp4';
 
-  /* Brightness */
   const bsl = document.getElementById('studiobrightness'), bvl = document.getElementById('studioBrightnessVal');
   if (bsl) bsl.value = 100; if (bvl) bvl.textContent = '100%';
 
-  /* Photo */
   clearStudioPhoto();
   const blurSl = document.getElementById('studioBlur'), blurV = document.getElementById('studioBlurVal');
   const dimSl  = document.getElementById('studioDim'),  dimV  = document.getElementById('studioDimVal');
@@ -551,7 +499,6 @@ function resetStudioUI() {
   if (dimSl)  dimSl.value  = 50; if (dimV)  dimV.textContent  = '50%';
   document.querySelectorAll('.photo-filter').forEach((f, i) => f.classList.toggle('active', i === 0));
 
-  /* Modals */
   sizePicker.classList.add('hidden');
   ceremonyOverlay.classList.add('hidden');
   document.getElementById('ytBgOption')?.remove();
@@ -628,8 +575,8 @@ function handleStudioPhoto(file) {
   if (file.size > 15 * 1024 * 1024)   { showToast('File too large — max 15 MB');  return; }
   const reader = new FileReader();
   reader.onload = ev => {
-    const img   = new Image();
-    img.onload  = () => {
+    const img  = new Image();
+    img.onload = () => {
       studioBgImage = img;
       const dt = document.getElementById('photoDropText');
       const dz = document.getElementById('photoUploadZone');
@@ -650,7 +597,6 @@ function handleStudioPhoto(file) {
 /* ══════════════════════════════════════════════════════════
    CANVAS HELPERS
 ══════════════════════════════════════════════════════════ */
-/* Wrap text into lines that fit maxW, return array of lines */
 function wrapLines(ctx, text, maxW) {
   const words = (text || '').split(' ');
   let line = '', lines = [];
@@ -665,25 +611,17 @@ function wrapLines(ctx, text, maxW) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   DRAW FRAME  ← the heart of the motion studio
-   ─────────────────────────────────────────────────────────
-   t  = 0..1  normalized progress through the animation
-   ms = elapsed time in milliseconds  (drives ripples etc.)
-   W, H = output dimensions
-   ──────────────────────────────────────────────────────
-   All elements have staggered entrance delays × studioSpeed.
-   At t=1 everything is fully visible = the static PNG look.
+   DRAW FRAME
 ══════════════════════════════════════════════════════════ */
 function drawFrame(ctx, W, H, t, ms) {
-  const sc    = W / 1080;                    // pixel scale factor
-  const d     = POSTER_DESIGNS[studioDesign] || POSTER_DESIGNS['midnight-gold'];
-  const fd    = FONT_MAP[studioFont]         || FONT_MAP['playfair'];
+  const sc    = W / 1080;
+  const d     = STUDIO_DESIGNS[studioDesign] || STUDIO_DESIGNS['midnight-gold'];
+  const fd    = STUDIO_FONT_MAP[studioFont]  || STUDIO_FONT_MAP['playfair'];
   const spd   = studioSpeed;
   const isDark = !d.light;
   const GOLD   = '#E8C547';
   const BLACK  = '#0B0B0D';
 
-  /* Reset canvas state */
   ctx.setTransform(1,0,0,1,0,0);
   ctx.filter       = 'none';
   ctx.shadowBlur   = 0;
@@ -691,7 +629,7 @@ function drawFrame(ctx, W, H, t, ms) {
   ctx.globalAlpha  = 1;
   ctx.clearRect(0, 0, W, H);
 
-  /* ── 1. BACKGROUND ─────────────────────────────── */
+  /* ── 1. BACKGROUND ── */
   if (studioBgImage) {
     _drawPhotoBg(ctx, W, H);
   } else {
@@ -702,7 +640,6 @@ function drawFrame(ctx, W, H, t, ms) {
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
-    /* brightness overlay */
     if (studioBrightness !== 100) {
       const delta = (studioBrightness - 100) / 100;
       ctx.fillStyle = delta < 0
@@ -713,13 +650,11 @@ function drawFrame(ctx, W, H, t, ms) {
   }
   ctx.filter = 'none';
 
-  /* Ambient glow from bottom */
   const ag = ctx.createRadialGradient(W/2, H, 0, W/2, H, W*0.72);
   ag.addColorStop(0, isDark ? 'rgba(232,197,71,0.07)' : 'rgba(184,144,26,0.04)');
   ag.addColorStop(1, 'transparent');
   ctx.fillStyle = ag; ctx.fillRect(0, 0, W, H);
 
-  /* Top shimmer line */
   if (isDark) {
     const sg = ctx.createLinearGradient(0, 0, W, 0);
     sg.addColorStop(0,   'transparent');
@@ -729,9 +664,9 @@ function drawFrame(ctx, W, H, t, ms) {
     ctx.fillRect(0, 0, W, 1);
   }
 
-  /* ── 2. LOGO + RIPPLE RINGS ─────────────────────── */
+  /* ── 2. LOGO + RIPPLE RINGS ── */
   const cx      = W / 2;
-  const ls      = W * 0.12;       // logo size
+  const ls      = W * 0.12;
   const logoY   = H * 0.27;
   const logoDly = 0.10 * spd;
   const logoT   = ease(t, logoDly, 0.60 * spd);
@@ -739,18 +674,16 @@ function drawFrame(ctx, W, H, t, ms) {
   if (logoT > 0) {
     ctx.save();
     ctx.globalAlpha = logoT;
-    /* Scale-in entrance */
     const logoSc = 0.70 + logoT * 0.30;
     ctx.translate(cx, logoY);
     ctx.scale(logoSc, logoSc);
     ctx.translate(-cx, -logoY);
 
-    /* Ripple rings — continuous, driven by ms, never stop */
     const ringColor = isDark ? 'rgba(232,197,71,' : 'rgba(26,26,32,';
     for (let i = 0; i < 3; i++) {
-      const pDur   = 3.4;
-      const delay  = i * (pDur / 3);
-      const rt     = ((ms / 1000 - delay) % pDur) / pDur;
+      const pDur  = 3.4;
+      const delay = i * (pDur / 3);
+      const rt    = ((ms / 1000 - delay) % pDur) / pDur;
       if (rt > 0 && rt < 1) {
         const rSc = 0.5 + rt * 3.5;
         const op  = Math.max(0, (1 - rt)) * 0.7 * logoT;
@@ -762,7 +695,6 @@ function drawFrame(ctx, W, H, t, ms) {
       }
     }
 
-    /* Logo breathing glow */
     const gp = 0.5 + Math.sin(ms / 1700) * 0.5;
     ctx.shadowColor = isDark ? GOLD : '#B8901A';
     ctx.shadowBlur  = (12 + gp * 16) * sc;
@@ -772,7 +704,6 @@ function drawFrame(ctx, W, H, t, ms) {
     ctx.fill();
     ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
 
-    /* M crown path */
     const lx = cx - ls*0.3, ly = logoY - ls*0.34, lw = ls*0.6, lh = ls*0.65;
     ctx.strokeStyle   = isDark ? BLACK : GOLD;
     ctx.lineWidth     = Math.max(ls * 0.09, 2);
@@ -789,7 +720,7 @@ function drawFrame(ctx, W, H, t, ms) {
     ctx.restore();
   }
 
-  /* ── 3. WAVEFORM ────────────────────────────────── */
+  /* ── 3. WAVEFORM ── */
   const waveDly = 0.90 * spd;
   const waveT   = ease(t, waveDly, 0.50 * spd);
   if (waveT > 0) {
@@ -812,7 +743,7 @@ function drawFrame(ctx, W, H, t, ms) {
     ctx.restore();
   }
 
-  /* ── 4. LYRIC TEXT ──────────────────────────────── */
+  /* ── 4. LYRIC TEXT ── */
   const lyricRaw  = (currentPost?.text || '').substring(0, 120);
   const len       = lyricRaw.length;
   const baseFS    = W * 0.053;
@@ -837,13 +768,12 @@ function drawFrame(ctx, W, H, t, ms) {
 
   _drawLyric(ctx, lines, startY, lineH, lyricSize, t, ms, textCol, cx, W, H, sc, spd, lyricDly, fontStr);
 
-  /* ── 5. DIVIDER + SONG + ARTIST ─────────────────── */
+  /* ── 5. DIVIDER + SONG + ARTIST ── */
   const k       = currentPost?.knowledge || {};
   const divY    = lyricY + totalLH/2 + lyricSize * 0.55;
   const songY   = divY   + lyricSize * 0.6;
   const artistY = songY  + lyricSize * 0.56;
 
-  /* Divider */
   const divT = ease(t, 1.30 * spd, 0.50 * spd);
   if (divT > 0) {
     ctx.save(); ctx.globalAlpha = divT * 0.42;
@@ -854,7 +784,6 @@ function drawFrame(ctx, W, H, t, ms) {
     ctx.stroke(); ctx.restore();
   }
 
-  /* Song */
   if (k.song && k.song !== 'Unknown Song') {
     const sT = ease(t, 1.50 * spd, 0.50 * spd);
     if (sT > 0) {
@@ -869,7 +798,6 @@ function drawFrame(ctx, W, H, t, ms) {
     }
   }
 
-  /* Artist */
   if (k.artist && k.artist !== 'Unknown Artist') {
     const aT = ease(t, 1.70 * spd, 0.50 * spd);
     if (aT > 0) {
@@ -882,7 +810,7 @@ function drawFrame(ctx, W, H, t, ms) {
     }
   }
 
-  /* ── 6. BRAND FOOTER ────────────────────────────── */
+  /* ── 6. BRAND FOOTER ── */
   const brandT = ease(t, 2.00 * spd, 0.50 * spd);
   if (brandT > 0) {
     const fy   = H * 0.90;
@@ -890,31 +818,28 @@ function drawFrame(ctx, W, H, t, ms) {
     const bCol = isDark ? GOLD : '#B8901A';
     ctx.save(); ctx.globalAlpha = brandT;
 
-    /* Mini logo circle */
     ctx.beginPath(); ctx.arc(W*0.09, fy, bls/2, 0, Math.PI*2);
     ctx.fillStyle = bCol; ctx.fill();
-    /* Mini M path */
+
     const fx = W*0.09, mlx = fx - bls*0.3, mly = fy - bls*0.34, mlw = bls*0.6, mlh = bls*0.65;
     ctx.strokeStyle = isDark ? BLACK : GOLD;
     ctx.lineWidth   = Math.max(bls * 0.09, 1);
     ctx.lineCap = ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(mlx,         mly + mlh);
-    ctx.lineTo(mlx,         mly);
+    ctx.moveTo(mlx,          mly + mlh);
+    ctx.lineTo(mlx,          mly);
     ctx.lineTo(mlx+mlw*0.28, mly+mlh*0.42);
-    ctx.lineTo(fx,           mly+mlh*0.02);
+    ctx.lineTo(fx,            mly+mlh*0.02);
     ctx.lineTo(mlx+mlw*0.72, mly+mlh*0.42);
     ctx.lineTo(mlx+mlw,      mly);
     ctx.lineTo(mlx+mlw,      mly + mlh);
     ctx.stroke();
 
-    /* MARGO wordmark */
     ctx.font      = `800 ${W*0.017}px 'Syne', sans-serif`;
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillStyle = bCol;
     ctx.fillText('MARGO', W*0.115, fy);
 
-    /* Emotion tag right */
     const emo = currentPost?.emotion || '';
     if (emo) {
       ctx.font      = `700 ${W*0.015}px 'Space Mono', monospace`;
@@ -922,7 +847,6 @@ function drawFrame(ctx, W, H, t, ms) {
       ctx.fillText('✦ ' + emo.toUpperCase(), W*0.91, fy);
     }
 
-    /* Domain */
     ctx.globalAlpha  = brandT * 0.5;
     ctx.font         = `700 ${Math.max(14, Math.round(16*sc))}px 'Space Mono', monospace`;
     ctx.textAlign    = 'center';
@@ -986,11 +910,10 @@ function _drawLyric(ctx, lines, startY, lineH, lyricSize, t, ms, textCol, cx, W,
     const part  = full.substring(0, chars) || ' ';
     ctx.globalAlpha = 1;
     ctx.font = fontStr;
-    const tLines = wrapLines(ctx, part, W * 0.78);
+    const tLines  = wrapLines(ctx, part, W * 0.78);
     const tTotalH = (tLines.length - 1) * lineH;
     const tStartY = (startY + (lines.length-1)*lineH/2) - tTotalH/2;
     tLines.forEach((line, i) => { ctx.fillStyle = textCol; ctx.fillText(line, cx, tStartY+i*lineH); });
-    /* Blinking cursor */
     if (lt < 1) {
       const on = Math.floor(ms / 530) % 2 === 0;
       if (on) {
@@ -998,13 +921,12 @@ function _drawLyric(ctx, lines, startY, lineH, lyricSize, t, ms, textCol, cx, W,
         const lw    = ctx.measureText(last).width;
         const curX  = cx + lw/2 + 3*sc;
         const curY  = tStartY + (tLines.length-1)*lineH;
-        ctx.fillStyle = POSTER_DESIGNS[studioDesign]?.accent || '#E8C547';
+        ctx.fillStyle = STUDIO_DESIGNS[studioDesign]?.accent || '#E8C547';
         ctx.fillRect(curX, curY - lyricSize*0.4, Math.max(2, 2.5*sc), lyricSize*0.82);
       }
     }
 
   } else if (mo === 'rise') {
-    /* Individual characters float up */
     let charIdx = 0;
     lines.forEach((line, li) => {
       const lw  = ctx.measureText(line).width;
@@ -1021,11 +943,11 @@ function _drawLyric(ctx, lines, startY, lineH, lyricSize, t, ms, textCol, cx, W,
         lcx += ctx.measureText(ch).width;
         charIdx++;
       });
-      charIdx++; /* account for space between lines */
+      charIdx++;
     });
 
   } else {
-    /* word — default: words rise in staggered */
+    /* word — default */
     let wordIdx = 0;
     ctx.font = fontStr;
     lines.forEach((line, li) => {
@@ -1059,7 +981,6 @@ function _drawPhotoBg(ctx, W, H) {
   tmp.width    = W; tmp.height = H;
   const tc     = tmp.getContext('2d');
 
-  /* Photo filter */
   const filters = {
     warm:     'sepia(0.3) saturate(1.3) hue-rotate(-10deg)',
     cool:     'saturate(0.85) hue-rotate(15deg)',
@@ -1081,23 +1002,20 @@ function _drawPhotoBg(ctx, W, H) {
     ctx.drawImage(tmp, 0, 0);
   }
 
-  /* Dim overlay */
   if (studioDim > 0) {
     ctx.fillStyle = `rgba(0,0,0,${studioDim/100})`;
     ctx.fillRect(0, 0, W, H);
   }
 }
 
-/* Easing helper — returns 0→1 clamped */
 function ease(t, delay, duration) {
   if (duration <= 0) return 1;
   const p = Math.max(0, Math.min((t - delay) / duration, 1));
-  /* Ease out cubic */
   return 1 - Math.pow(1 - p, 3);
 }
 
 /* ══════════════════════════════════════════════════════════
-   STAGE CANVAS (live preview — redraws on every state change)
+   STAGE CANVAS
 ══════════════════════════════════════════════════════════ */
 function refreshStageCanvas() {
   if (!currentPost || !studioCanvas) return;
@@ -1113,49 +1031,32 @@ function refreshStageCanvas() {
 
   const ctx = studioCanvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  /* Preview: t=1 (fully visible), ms=2400 (rings at a nice position) */
   document.fonts.ready.then(() => drawFrame(ctx, size, size, 1, 2400));
 }
 
 /* ══════════════════════════════════════════════════════════
    ANIMATED MP4 EXPORT
-   ─────────────────────────────────────────────────────────
-   Priority 1 — VideoEncoder API + mp4-muxer → H.264 MP4
-     Works on: Chrome 94+, Edge 94+, Samsung Internet 16+,
-               Opera, Brave — i.e. all Chromium browsers
-               on Android, Windows, macOS, Linux.
-
-   Priority 2 — MediaRecorder fallback → WebM
-     Works on: Firefox, older Chrome, older Samsung Internet.
-     WebM plays on Android, Windows, macOS, Linux.
-     Does NOT play on iOS Safari natively — but the MP4 path
-     covers all iOS devices using Chrome/Firefox on iOS too.
-
-   Content-aware duration:
-     Short lyric + Rapid speed = ~4 s
-     Long lyric  + Slow speed  = up to 14 s
 ══════════════════════════════════════════════════════════ */
 async function exportAnimatedMP4(sizeKey, onProgress) {
-  const dim = POSTER_SIZES[sizeKey];
-  if (!dim)        throw new Error('Unknown size: ' + sizeKey);
+  const dim = STUDIO_SIZES[sizeKey];
+  if (!dim)         throw new Error('Unknown size: ' + sizeKey);
   if (!currentPost) throw new Error('No active post');
 
-  const words   = (currentPost?.text || '').split(' ').length;
-  const durSecs = Math.max(4, Math.min(14, 3 + words * 0.22 + 2.0 * studioSpeed));
+  const words      = (currentPost?.text || '').split(' ').length;
+  const durSecs    = Math.max(4, Math.min(14, 3 + words * 0.22 + 2.0 * studioSpeed));
   const W = dim.w, H = dim.h;
-  const FPS = 30;
+  const FPS        = 30;
   const totalFrames = Math.round(durSecs * FPS);
 
   await document.fonts.ready;
 
-  /* ── Path 1: VideoEncoder + mp4-muxer (H.264 MP4) ── */
   if (typeof VideoEncoder !== 'undefined' && typeof Mp4Muxer !== 'undefined') {
     return new Promise((resolve, reject) => {
       let muxer, encoder;
       try {
         muxer = new Mp4Muxer.Muxer({
-          target:     new Mp4Muxer.ArrayBufferTarget(),
-          video:      { codec: 'avc', width: W, height: H },
+          target:    new Mp4Muxer.ArrayBufferTarget(),
+          video:     { codec: 'avc', width: W, height: H },
           fastStart: 'in-memory',
         });
         encoder = new VideoEncoder({
@@ -1163,11 +1064,11 @@ async function exportAnimatedMP4(sizeKey, onProgress) {
           error:  err => reject(err),
         });
         encoder.configure({
-          codec:     'avc1.42001f',
-          width:      W,
-          height:     H,
-          bitrate:    Math.min(5_000_000, W * H * 2),
-          framerate:  FPS,
+          codec:    'avc1.42001f',
+          width:     W,
+          height:    H,
+          bitrate:   Math.min(5_000_000, W * H * 2),
+          framerate: FPS,
         });
       } catch (e) {
         console.warn('[Studio] VideoEncoder setup failed, falling back to WebM:', e);
@@ -1192,7 +1093,7 @@ async function exportAnimatedMP4(sizeKey, onProgress) {
 
         const t   = frameIdx / totalFrames;
         const ms  = (frameIdx / FPS) * 1000;
-        const pts = Math.round((frameIdx * 1_000_000) / FPS); // microseconds
+        const pts = Math.round((frameIdx * 1_000_000) / FPS);
 
         drawFrame(offCtx, W, H, t, ms);
 
@@ -1205,7 +1106,6 @@ async function exportAnimatedMP4(sizeKey, onProgress) {
         frameIdx++;
         if (onProgress) onProgress(frameIdx / totalFrames);
 
-        /* Yield every 10 frames to keep UI responsive */
         if (frameIdx % 10 === 0) setTimeout(next, 0);
         else next();
       };
@@ -1213,13 +1113,12 @@ async function exportAnimatedMP4(sizeKey, onProgress) {
     });
   }
 
-  /* ── Path 2: MediaRecorder (WebM fallback) ── */
   return exportAnimatedWebM(sizeKey, onProgress);
 }
 
 function exportAnimatedWebM(sizeKey, onProgress) {
   return new Promise((resolve, reject) => {
-    const dim = POSTER_SIZES[sizeKey];
+    const dim = STUDIO_SIZES[sizeKey];
     if (!dim) { reject(new Error('Unknown size')); return; }
 
     const words   = (currentPost?.text || '').split(' ').length;
@@ -1237,7 +1136,7 @@ function exportAnimatedWebM(sizeKey, onProgress) {
         ? 'video/webm;codecs=vp9' : 'video/webm';
       recorder = new MediaRecorder(stream, { mimeType: mt, videoBitsPerSecond: 4_500_000 });
     } catch (e) {
-      reject(new Error('Video recording not supported in this browser. Please use Chrome, Edge, or Samsung Internet.'));
+      reject(new Error('Video recording not supported in this browser.'));
       return;
     }
 
@@ -1264,7 +1163,7 @@ function exportAnimatedWebM(sizeKey, onProgress) {
    STATIC PNG EXPORT
 ══════════════════════════════════════════════════════════ */
 async function generateStaticPNG(sizeKey) {
-  const dim = POSTER_SIZES[sizeKey];
+  const dim = STUDIO_SIZES[sizeKey];
   if (!dim || !currentPost) throw new Error('Invalid size or no post');
 
   const offscreen = document.createElement('canvas');
@@ -1272,7 +1171,7 @@ async function generateStaticPNG(sizeKey) {
   offscreen.height = dim.h;
   const ctx        = offscreen.getContext('2d');
   await document.fonts.ready;
-  drawFrame(ctx, dim.w, dim.h, 1, 2500); /* t=1 = fully revealed */
+  drawFrame(ctx, dim.w, dim.h, 1, 2500);
 
   return new Promise((resolve, reject) => {
     offscreen.toBlob(
@@ -1282,7 +1181,6 @@ async function generateStaticPNG(sizeKey) {
   });
 }
 
-/* Kept for backwards compat — other files may reference this */
 const generateFinalPoster = generateStaticPNG;
 
 /* ══════════════════════════════════════════════════════════
@@ -1325,7 +1223,7 @@ async function shareOrDownload() {
       return;
     }
   } catch (e) {
-    if (e.name === 'AbortError') return; /* user cancelled */
+    if (e.name === 'AbortError') return;
   }
 
   downloadBlob();
