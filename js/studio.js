@@ -65,19 +65,14 @@ const EMOTION_THEME_MAP = {
 
 /* ══════════════════════════════════════════════════════════
    STUDIO STATE
+   Note: studioBgImage, studioFont, studioBrightness,
+   studioBlur, studioDim, studioFilter, studioDesign,
+   generatedBlob, selectedSize are declared in state.js.
+   Only motion-specific state lives here.
 ══════════════════════════════════════════════════════════ */
-let studioBgImage    = null;
-let studioFont       = 'playfair';
-let studioBrightness = 100;
-let studioBlur       = 0;
-let studioDim        = 50;
-let studioFilter     = 'none';
-let studioDesign     = 'midnight-gold';
-let studioMotion     = 'word';
-let studioSpeed      = 1.0;
-let generatedBlob    = null;
-let selectedSize     = null;
-let _exportType      = 'mp4';
+let studioMotion = 'word';
+let studioSpeed  = 1.0;
+let _exportType  = 'mp4';
 
 /* ══════════════════════════════════════════════════════════
    INJECT STYLES
