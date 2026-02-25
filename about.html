@@ -1,185 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-
-  <title>About Margo — Communicate Through Song Lyrics</title>
-  <meta name="description" content="Margo is a social platform where people communicate through song lyrics, share what they're feeling, and discover others through music. Learn how it works."/>
-  <meta name="author" content="MARGO"/>
-  <meta name="robots" content="index, follow"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>About — Margo</title>
+  <meta name="description" content="Margo is a social platform where music is the language. Drop a lyric. Say everything."/>
   <link rel="canonical" href="https://trymargo.com/about"/>
-
-  <meta property="og:type"        content="website"/>
-  <meta property="og:site_name"   content="Margo"/>
-  <meta property="og:title"       content="About Margo — Communicate Through Song Lyrics"/>
-  <meta property="og:description" content="Margo is a social platform where people communicate through song lyrics, share what they're feeling, and discover others through music."/>
-  <meta property="og:url"         content="https://trymargo.com/about"/>
-  <meta property="og:image"       content="https://trymargo.com/og-image.png"/>
-  <meta property="og:image:width"  content="1200"/>
-  <meta property="og:image:height" content="630"/>
-  <meta name="twitter:card"       content="summary_large_image"/>
-  <meta name="twitter:site"       content="@trymargo"/>
-  <meta name="twitter:title"      content="About Margo — Communicate Through Song Lyrics"/>
-  <meta name="twitter:description" content="Margo is a social platform where people communicate through song lyrics and discover others through music."/>
-  <meta name="twitter:image"      content="https://trymargo.com/og-image.png"/>
-
-  <meta name="theme-color" content="#0B0B0D"/>
-  <meta name="application-name" content="MARGO"/>
-  <meta name="apple-mobile-web-app-title" content="MARGO">
-
-  <!-- ═══ FAVICONS ═══ -->
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 88 88'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23E8C547'/%3E%3Cpath d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57' fill='none' stroke='%230B0B0D' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='35' y='60' width='10' height='3.5' rx='1.75' fill='%230B0B0D' opacity='.55'/%3E%3C/svg%3E">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="manifest" href="/site.webmanifest">
-
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "AboutPage",
-    "@id": "https://trymargo.com/about#page",
-    "url": "https://trymargo.com/about",
-    "name": "About Margo",
-    "description": "Margo is a social platform where people communicate through song lyrics, share what they are feeling, and discover others through music.",
-    "inLanguage": "en-US",
-    "isPartOf": { "@id": "https://trymargo.com/#website" },
-    "about": { "@type": "Organization", "@id": "https://trymargo.com/#organization" },
-    "breadcrumb": {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://trymargo.com/" },
-        { "@type": "ListItem", "position": 2, "name": "About", "item": "https://trymargo.com/about" }
-      ]
-    }
-  }
-  </script>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&family=DM+Serif+Display:ital@0;1&family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0B0B0D; --gold: #E8C547; --gold-2: #D4A832;
-      --text: #F0F0F0; --text-muted: rgba(240,240,240,0.45);
-      --surface: rgba(255,255,255,0.04); --border: rgba(232,197,71,0.12);
-      --font-display: 'Syne', sans-serif; --font-lyric: 'DM Serif Display', serif;
-      --font-mono: 'Space Mono', monospace; --font-body: 'DM Sans', sans-serif;
+    .legal-wrap {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 80px 24px 120px;
     }
-    html { background: var(--bg); color: var(--text); scroll-behavior: smooth; }
-    body { font-family: var(--font-body); background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
-    .ambient { position: fixed; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0; opacity: 0.04; }
-    .ambient-1 { width: 500px; height: 500px; background: var(--gold); top: -150px; left: -150px; }
-    .ambient-2 { width: 400px; height: 400px; background: var(--gold); bottom: -100px; right: -100px; }
-    .nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; background: rgba(11,11,13,0.9); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
-    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
-    .nav-logo-mark { width: 28px; height: 28px; position: relative; display: flex; align-items: center; justify-content: center; }
-    .nav-logo-mark svg { width: 28px; height: 28px; }
-    .nav-logo-text { font-family: var(--font-display); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.22em; color: var(--gold); }
-    .nav-home-btn { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); background: none; border: 1px solid var(--border); border-radius: 20px; padding: 7px 14px; cursor: pointer; text-decoration: none; transition: color 0.2s, border-color 0.2s; }
-    .nav-home-btn:hover { color: var(--gold); border-color: rgba(232,197,71,0.4); }
-    main { flex: 1; position: relative; z-index: 1; max-width: 680px; margin: 0 auto; padding: 64px 24px 80px; width: 100%; }
-    .breadcrumb { display: flex; align-items: center; gap: 8px; margin-bottom: 48px; }
-    .breadcrumb a { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
-    .breadcrumb a:hover { color: var(--gold); }
-    .breadcrumb-sep { font-family: var(--font-mono); font-size: 0.6rem; color: rgba(240,240,240,0.2); }
-    .breadcrumb-current { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); }
-    .about-label { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); display: block; margin-bottom: 16px; }
-    h1.about-h1 { font-family: var(--font-display); font-size: clamp(1.9rem, 5vw, 2.8rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; color: var(--text); margin-bottom: 20px; }
-    h1.about-h1 em { color: var(--gold); font-style: normal; }
-    .about-lead { font-family: var(--font-lyric); font-style: italic; font-size: 1.15rem; line-height: 1.65; color: rgba(240,240,240,0.75); margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
-    .about-body { display: flex; flex-direction: column; gap: 24px; }
-    .about-body p { font-size: 1rem; line-height: 1.75; color: rgba(240,240,240,0.72); }
-    .about-body strong { color: var(--text); font-weight: 600; }
-    .about-section-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); display: block; margin-top: 16px; margin-bottom: 10px; }
-    .about-quote { border-left: 2px solid var(--gold); padding: 4px 0 4px 20px; margin: 8px 0; }
-    .about-quote p { font-family: var(--font-lyric); font-style: italic; font-size: 1.05rem; line-height: 1.6; color: rgba(240,240,240,0.85) !important; }
-    .about-cta { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
-    .about-cta-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
-    .btn-primary-about { display: inline-block; background: var(--gold); color: #0B0B0D; font-family: var(--font-display); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 13px 28px; border-radius: 30px; text-decoration: none; border: none; cursor: pointer; transition: background 0.2s, transform 0.15s; }
-    .btn-primary-about:hover { background: var(--gold-2); transform: translateY(-1px); }
-    .site-footer { position: relative; z-index: 1; padding: 28px 24px 36px; border-top: 1px solid var(--border); }
-    .footer-inner { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 20px; }
-    .footer-link { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(240,240,240,0.35); text-decoration: none; transition: color 0.2s; }
-    .footer-link:hover { color: var(--gold); }
-    .footer-copy { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.05em; color: rgba(240,240,240,0.18); text-align: center; margin: 0; }
-    @media (max-width: 480px) { main { padding: 40px 20px 64px; } .nav { padding: 0 16px; } }
+    .legal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(232,197,71,0.1);
+      position: sticky;
+      top: 0;
+      background: rgba(11,11,13,0.92);
+      backdrop-filter: blur(16px);
+      z-index: 100;
+    }
+    .legal-nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: 3px;
+      color: #E8C547;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    .legal-nav-back {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.4);
+      text-decoration: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: color 0.18s;
+    }
+    .legal-nav-back:hover { color: #E8C547; }
+    .legal-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #E8C547;
+      margin-bottom: 16px;
+    }
+    .legal-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      color: #F0F0F0;
+      line-height: 1.15;
+      margin-bottom: 32px;
+    }
+    .legal-body {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      line-height: 1.75;
+      color: rgba(240,240,240,0.72);
+    }
+    .legal-body p { margin-bottom: 1.4em; }
+    .legal-body h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+      color: #F0F0F0;
+      margin: 2.4em 0 0.8em;
+      font-style: italic;
+    }
+    .legal-body strong { color: rgba(240,240,240,0.9); font-weight: 600; }
+    .legal-divider {
+      width: 48px;
+      height: 2px;
+      background: linear-gradient(90deg, #E8C547, transparent);
+      margin: 32px 0;
+      border: none;
+    }
+    .legal-tagline {
+      font-family: 'DM Serif Display', serif;
+      font-style: italic;
+      font-size: 1.5rem;
+      color: #E8C547;
+      margin-top: 48px;
+      opacity: 0.9;
+    }
+    .legal-footer-links {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-top: 64px;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .legal-footer-links a {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.3);
+      text-decoration: none;
+      transition: color 0.18s;
+    }
+    .legal-footer-links a:hover { color: #E8C547; }
+    #page-content-loading {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 1px;
+    }
   </style>
 </head>
 <body>
-
 <div class="ambient ambient-1"></div>
 <div class="ambient ambient-2"></div>
 
-<nav class="nav">
-  <a class="nav-logo" href="/" aria-label="Margo home">
-    <span class="nav-logo-mark">
-      <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <circle cx="40" cy="40" r="36" fill="#E8C547"/>
-        <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/>
-      </svg>
-    </span>
-    <span class="nav-logo-text">MARGO</span>
-  </a>
-  <a class="nav-home-btn" href="/">← Back to Margo</a>
+<nav class="legal-nav">
+  <a href="/" class="legal-nav-logo">Margo</a>
+  <a href="/" class="legal-nav-back">← Back to Margo</a>
 </nav>
 
-<main>
-  <nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="/">Home</a>
-    <span class="breadcrumb-sep">→</span>
-    <span class="breadcrumb-current">About</span>
-  </nav>
+<div class="legal-wrap">
+  <div class="legal-eyebrow">About</div>
+  <h1 class="legal-title">Music is the language.<br/>Margo is the space.</h1>
+  <hr class="legal-divider"/>
 
-  <article>
-    <span class="about-label">About Margo</span>
-    <h1 class="about-h1">A social platform to <em>communicate through song lyrics</em></h1>
-    <p class="about-lead">Some things are easier to say through someone else's words. A lyric that stops you mid-song. A line you've had stuck in your head for days because it says exactly what you can't. Margo is built for that moment.</p>
-
-    <div class="about-body">
-      <span class="about-section-label">What Margo is</span>
-      <p><strong>Margo is a social platform where people communicate through song lyrics.</strong> Instead of writing a status or posting a thought, you drop a lyric — and let the song do the talking. It's a real-time community feed of what people are actually feeling, expressed through the music that captures it best.</p>
-      <p>Every lyric on Margo is a signal. A lyric tagged <em>Heartbreak</em> at 2am says something. A lyric tagged <em>Hope</em> on a Monday morning says something else. Together, they form a living snapshot of how people are moving through the world — communicated entirely through music.</p>
-      <div class="about-quote"><p>When words fail, a lyric says it all. Margo is where those lyrics land.</p></div>
-
-      <span class="about-section-label">How it works</span>
-      <p>You open Margo, type or paste a lyric, tag it with an emotion, and post it. From there, others in the community can see what you're feeling, identify the song, or share one back. There are no follower counts, no algorithms surfacing only the popular — just lyrics, feelings, and the music connecting them.</p>
-      <p>Margo also includes <strong>Studio</strong> — a poster creator that lets you turn any lyric into a shareable image. Choose a color palette, pick a font, optionally add a photo, and export. A lyric that hits deserves to look the part.</p>
-
-      <span class="about-section-label">Who it's for</span>
-      <p>Margo is for anyone who has ever let music speak for them. People who discover others through music rather than through profiles. People who communicate more honestly through a lyric than a caption. People who want a space where the song is the point — not the person posting it.</p>
-      <p>It's for the person who puts a song on in the car and just needs someone else to hear that exact line right now. For the person who finds a community not through shared opinions, but through shared taste. For anyone who has ever said "this song is literally my life" and meant it completely.</p>
-
-      <span class="about-section-label">Why it matters</span>
-      <p>Music has always been a social language — we share songs to say things we can't say ourselves. But most social platforms treat music as content to be consumed, not as communication. Margo flips that. Here, the lyric is the message. The song is how you introduce yourself. Discovering others through music means discovering something real — not a curated persona, but a genuine feeling expressed through art someone else made and you claimed as your own.</p>
-      <p>Margo is free to use. You don't need an account to browse the feed. Drop your first lyric in under thirty seconds. The community is live right now.</p>
-    </div>
-
-    <div class="about-cta">
-      <span class="about-cta-label">Ready to drop one?</span>
-      <a class="btn-primary-about" href="/">Open Margo →</a>
-    </div>
-  </article>
-</main>
-
-<footer class="site-footer">
-  <div class="footer-inner">
-    <nav class="footer-links" aria-label="Footer navigation">
-      <a href="/about" class="footer-link">About</a>
-      <a href="/privacy" class="footer-link">Privacy</a>
-      <a href="/terms" class="footer-link">Terms</a>
-      <a href="mailto:hello@trymargo.com" class="footer-link">Contact</a>
-      <a href="https://linkedin.com/company/trymargo" class="footer-link" target="_blank" rel="noopener">LinkedIn</a>
-    </nav>
-    <p class="footer-copy">© 2025 Margo. A social platform for communicating through song lyrics.</p>
+  <div class="legal-body" id="page-content">
+    <span id="page-content-loading">Loading…</span>
   </div>
-</footer>
 
+  <div class="legal-tagline">When words fail, drop a lyric.</div>
+
+  <div class="legal-footer-links">
+    <a href="/about">About</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/contact">Contact</a>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: 'AIzaSyA1AuUethACF_9aBqbOONjra7X5NbGnfZM',
+    authDomain: 'margo-f6da4.firebaseapp.com',
+    databaseURL: 'https://margo-f6da4-default-rtdb.firebaseio.com',
+    projectId: 'margo-f6da4',
+    storageBucket: 'margo-f6da4.firebasestorage.app',
+    messagingSenderId: '150183564620',
+    appId: '1:150183564620:web:a42de7fef39740b551ebe9'
+  };
+
+  const DEFAULT_CONTENT = `<p>Margo is a social platform where music is the language.</p>
+<p>People already use song lyrics to say what they can't say themselves — breakups, late nights, joy, grief, identity. Across every platform, lyrics fill the gap when words run out. Margo makes that behavior the center of the experience instead of a caption on someone else's app.</p>
+<p>You drop a lyric. Others feel it. When a song is identified, Margo connects to licensed platforms so you can stream the full thing officially.</p>
+<p><strong>We don't host music files or store copyrighted lyrics.</strong> We use metadata from licensed providers to identify songs and point you to official streaming services.</p>
+<p>Margo is building the social layer around music — culture and habit first, infrastructure later.</p>
+<p>This is not about replacing Spotify or Apple Music. It's about the moment before you hit play — the feeling that made you search for the song in the first place.</p>`;
+
+  try {
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    db.ref('pages/about').once('value').then(snap => {
+      const content = snap.val();
+      document.getElementById('page-content').innerHTML = content || DEFAULT_CONTENT;
+    }).catch(() => {
+      document.getElementById('page-content').innerHTML = DEFAULT_CONTENT;
+    });
+  } catch(e) {
+    document.getElementById('page-content').innerHTML = DEFAULT_CONTENT;
+  }
+</script>
 </body>
 </html>
