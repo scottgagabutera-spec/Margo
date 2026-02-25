@@ -176,7 +176,7 @@ function injectStudioV5Styles() {
 
     /* ── Studio Mode Picker ── */
     .studio-mode-picker {
-      position: absolute; inset: 0; z-index: 200;
+      position: fixed; inset: 0; z-index: 99999;
       background: #0B0B0D;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
@@ -247,7 +247,6 @@ function injectStudioV5Styles() {
 ══════════════════════════════════════════════════════════ */
 function buildModePicker() {
   if (document.getElementById('studioModePicker')) return;
-  const overlay = document.getElementById('studioOverlay');
   const picker  = document.createElement('div');
   picker.id        = 'studioModePicker';
   picker.className = 'studio-mode-picker hidden';
@@ -279,7 +278,7 @@ function buildModePicker() {
     </div>
     <button class="smp-cancel" id="smpCancelBtn">← Back</button>
   `;
-  overlay.appendChild(picker);
+  document.body.appendChild(picker);
 
   picker.querySelector('.smp-cards').addEventListener('click', e => {
     const card = e.target.closest('.smp-card');
