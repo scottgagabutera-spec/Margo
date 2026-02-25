@@ -112,7 +112,6 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Josefin+Sans:wght@300;400;700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 
-  <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@latest/build/mp4-muxer.js" async></script>
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -441,7 +440,6 @@
       <button class="dock-tab active" data-tab="color"><span class="dock-tab-icon">◑</span><span>Color</span></button>
       <button class="dock-tab" data-tab="font"><span class="dock-tab-icon">Aa</span><span>Font</span></button>
       <button class="dock-tab" data-tab="photo"><span class="dock-tab-icon">⊙</span><span>Photo</span></button>
-      <button class="dock-tab" data-tab="motion"><span class="dock-tab-icon">◈</span><span>Motion</span></button>
     </div>
     <div class="dock-panel active" id="panel-color">
       <div class="color-scenes">
@@ -500,45 +498,6 @@
         <button class="photo-remove-btn" id="studioRemovePhoto">Remove photo</button>
       </div>
     </div>
-    <div class="dock-panel" id="panel-motion">
-      <div class="motion-list">
-        <button class="motion-style-btn active" data-motion="word">
-          <span class="msb-icon">◈</span>
-          <div><span class="msb-name">Word by Word</span><span class="msb-desc">Each word rises in</span></div>
-        </button>
-        <button class="motion-style-btn" data-motion="cinema">
-          <span class="msb-icon">◉</span>
-          <div><span class="msb-name">Cinematic</span><span class="msb-desc">Scale + bloom from soft focus</span></div>
-        </button>
-        <button class="motion-style-btn" data-motion="fade">
-          <span class="msb-icon">↑</span>
-          <div><span class="msb-name">Fade Up</span><span class="msb-desc">Clean upward entrance</span></div>
-        </button>
-        <button class="motion-style-btn" data-motion="type">
-          <span class="msb-icon">|</span>
-          <div><span class="msb-name">Typewriter</span><span class="msb-desc">Types letter by letter</span></div>
-        </button>
-        <button class="motion-style-btn" data-motion="glitch">
-          <span class="msb-icon">⚡</span>
-          <div><span class="msb-name">Glitch</span><span class="msb-desc">Digital noise entrance</span></div>
-        </button>
-        <button class="motion-style-btn" data-motion="rise">
-          <span class="msb-icon">✦</span>
-          <div><span class="msb-name">Rise</span><span class="msb-desc">Characters float up</span></div>
-        </button>
-        <button class="motion-style-btn" data-motion="blur">
-          <span class="msb-icon">◌</span>
-          <div><span class="msb-name">Blur Reveal</span><span class="msb-desc">Sharpens from fog</span></div>
-        </button>
-      </div>
-      <div class="motion-sec-label">Animation Speed</div>
-      <div class="motion-spd-grid">
-        <button class="motion-spd-btn"        data-spd="2.2">Slow</button>
-        <button class="motion-spd-btn active" data-spd="1">Normal</button>
-        <button class="motion-spd-btn"        data-spd="0.6">Fast</button>
-        <button class="motion-spd-btn"        data-spd="0.35">Rapid</button>
-      </div>
-    </div>
   </div>
   <div class="size-picker hidden" id="sizePicker">
     <div class="size-picker-inner">
@@ -557,21 +516,6 @@
     <div class="ceremony-inner">
       <div class="ceremony-thumb-wrap"><canvas id="ceremonyThumb"></canvas></div>
       <div class="ceremony-headline">Your lyric is ready to drop.</div>
-      <div class="ceremony-type-row">
-        <button class="cer-type-btn active" data-export="mp4">
-          <span class="ctb-icon">🎬</span>
-          <span class="ctb-name">Animated MP4</span>
-          <span class="ctb-desc">All phones · All platforms</span>
-        </button>
-        <button class="cer-type-btn" data-export="png">
-          <span class="ctb-icon">🖼</span>
-          <span class="ctb-name">Static PNG</span>
-          <span class="ctb-desc">Lightest · Instant share</span>
-        </button>
-      </div>
-      <div class="cer-progress-wrap" id="cerProgressWrap">
-        <div class="cer-progress-bar" id="cerProgressBar"></div>
-      </div>
       <div class="ceremony-actions">
         <button class="ceremony-btn" id="cerDownload"><span class="ceremony-btn-icon">↓</span>Save to Device</button>
         <button class="ceremony-btn ceremony-share" id="cerShare"><span class="ceremony-btn-icon">↗</span>Share</button>
