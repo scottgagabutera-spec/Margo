@@ -1,34 +1,33 @@
 /* ================================================================
-   MARGO · js/studio.js  v5.0  — Motion Studio
+   MARGO · js/studio.js  v6.0  — Motion Studio
    ----------------------------------------------------------------
-   Drop-in replacement. No changes to index.html, style.css,
-   motion.js required.
-
-   This file:
-   - Rebuilds #studioOverlay innerHTML with the full Motion Studio UI
-   - Injects all CSS needed (styles won't touch existing selectors)
-   - Wires all events
-   - Uses the proven CSS-class + style-injection animation system
-     from the standalone margo-motion-studio-v3.html demo
-   - Video export via canvas drawFrame() + MediaRecorder (WebM/VP9)
-   - PNG export via canvas drawFrame() at t=1 (final frame)
-   - All 9 canvas sizes covering every major social platform
-   - Reads from window.currentPost (set by existing feed.js/state.js)
+   FIXED in this version:
+   - Speed system: Slow/Normal/Fast = animation pace only.
+     Video duration always = full animation + 1.5s hold. No cutoff.
+   - Preview: auto-replays ONLY on Motion style or Speed change.
+     Theme, font, photo, color = update silently, no replay.
+   - Dark / Light mode toggle: top bar + color tab.
+   - Sidebar labels: readable white, not invisible grey.
+   - Export quality: 8Mbps VP9, correct duration, never cuts early.
+   - drawFrame(): accent color from theme, not hardcoded gold.
+   - Canvas size: moved to its own "Size" tab.
+   - Debounced replay for speed slider (300ms).
+   - All inline onclick= replaced with window.* assignments.
    ================================================================ */
 
 /* ────────────────────────────────────────────────────────────────
    DATA
 ──────────────────────────────────────────────────────────────── */
 const STU_SIZES = {
-  square:   { w:1080, h:1080, ratio:'1:1',    label:'Instagram',        plat:'Instagram,Facebook,WhatsApp,Discord,Reddit,Telegram' },
-  story:    { w:1080, h:1920, ratio:'9:16',   label:'IG / FB Story',    plat:'Instagram Story,Facebook Story,TikTok,WhatsApp Status,Snapchat,YouTube Shorts' },
-  fbstory:  { w:1080, h:1920, ratio:'9:16',   label:'Facebook Story',   plat:'Facebook Story,Instagram Story,Messenger,WhatsApp Status' },
-  twitter:  { w:1200, h:675,  ratio:'16:9',   label:'Twitter / X',      plat:'Twitter/X,Discord,Reddit,YouTube,LinkedIn' },
-  reddit:   { w:1080, h:1080, ratio:'1:1',    label:'Reddit / Discord', plat:'Reddit,Discord,Telegram,Facebook,WhatsApp' },
-  linkedin: { w:1200, h:627,  ratio:'1.91:1', label:'LinkedIn',         plat:'LinkedIn,Facebook OG,Discord,Reddit,Twitter/X' },
-  whatsapp: { w:1080, h:1080, ratio:'1:1',    label:'WhatsApp',         plat:'WhatsApp,Instagram,Discord,Telegram,Facebook' },
-  tiktok:   { w:1080, h:1920, ratio:'9:16',   label:'TikTok',           plat:'TikTok,Instagram Reels,YouTube Shorts,Snapchat' },
-  pinterest:{ w:1000, h:1500, ratio:'2:3',    label:'Pinterest',        plat:'Pinterest,Instagram,Facebook' },
+  square:    { w:1080, h:1080, ratio:'1:1',    label:'Instagram',        plat:'Instagram,Facebook,WhatsApp,Discord,Reddit,Telegram' },
+  story:     { w:1080, h:1920, ratio:'9:16',   label:'IG / FB Story',    plat:'Instagram Story,Facebook Story,TikTok,WhatsApp Status,Snapchat,YouTube Shorts' },
+  twitter:   { w:1200, h:675,  ratio:'16:9',   label:'Twitter / X',      plat:'Twitter/X,Discord,Reddit,YouTube,LinkedIn' },
+  linkedin:  { w:1200, h:627,  ratio:'1.91:1', label:'LinkedIn',         plat:'LinkedIn,Facebook OG,Discord,Reddit,Twitter/X' },
+  tiktok:    { w:1080, h:1920, ratio:'9:16',   label:'TikTok',           plat:'TikTok,Instagram Reels,YouTube Shorts,Snapchat' },
+  pinterest: { w:1000, h:1500, ratio:'2:3',    label:'Pinterest',        plat:'Pinterest,Instagram,Facebook' },
+  whatsapp:  { w:1080, h:1080, ratio:'1:1',    label:'WhatsApp',         plat:'WhatsApp,Instagram,Discord,Telegram,Facebook' },
+  reddit:    { w:1080, h:1080, ratio:'1:1',    label:'Reddit/Discord',   plat:'Reddit,Discord,Telegram,Facebook,WhatsApp' },
+  youtube:   { w:1280, h:720,  ratio:'16:9',   label:'YouTube',          plat:'YouTube,Twitter/X,Discord,LinkedIn' },
 };
 
 const STU_THEMES = {
@@ -56,20 +55,36 @@ const EMOTION_THEME_MAP = {
    STATE
 ──────────────────────────────────────────────────────────────── */
 const S = {
-  theme:'midnight', font:{ fam:"'Playfair Display',serif", sty:'italic' },
-  motion:'word', spd:1, textScale:1, pulse:3.4,
+  theme:'midnight',
+  font:{ fam:"'Playfair Display',serif", sty:'italic' },
+  motion:'word',
+  /* animSpd: how fast each element animates. 1=normal, 2=slow, 0.5=fast
+     This ONLY affects CSS animation durations, NOT video length */
+  animSpd:1,
+  textScale:1, pulse:3.4,
   photo:null, blur:0, dim:50, filter:'none',
   brightness:100, contrast:100,
   canvas:{ ...STU_SIZES.square },
   looping:false,
+  darkUI:true,   // studio UI dark/light mode (separate from poster theme)
   song:'', artist:'', lyric:'', emotion:'',
 };
-let _photoImg = null;
-let _loopTimer = null;
+
+/* Total video duration = animation settle time + hold time.
+   Never depends on animSpd — always captures the full animation. */
+function getVideoDuration() {
+  /* Longest possible delay in the animation timeline is ~2.5s (brand footer).
+     Add 1.5s hold at end = 4s base. animSpd stretches per-element durations
+     but the overall settle point scales too — we add animSpd*0.8 extra buffer */
+  return Math.max(5000, 4000 + S.animSpd * 800);
+}
+
+let _photoImg   = null;
+let _loopTimer  = null;
+let _replayDebounce = null;
 
 /* ────────────────────────────────────────────────────────────────
    CSS INJECTION
-   All studio styles live here — zero changes to style.css needed
 ──────────────────────────────────────────────────────────────── */
 function injectCSS() {
   if (document.getElementById('margo-stu-css')) return;
@@ -77,11 +92,15 @@ function injectCSS() {
   el.id = 'margo-stu-css';
   el.textContent = `
 /* ── OVERLAY ── */
-#studioOverlay{position:fixed;inset:0;z-index:500;background:#060609;display:grid;grid-template-rows:52px 1fr;overflow:hidden;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+#studioOverlay{position:fixed;inset:0;z-index:500;display:grid;grid-template-rows:52px 1fr;overflow:hidden;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;transition:background .3s}
 #studioOverlay.hidden{display:none!important}
+#studioOverlay.ms-ui-dark{background:#060609}
+#studioOverlay.ms-ui-light{background:#f0eff5}
 
 /* ── TOPBAR ── */
-.ms-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(11,11,13,.97);border-bottom:1px solid rgba(255,255,255,.06);backdrop-filter:blur(24px)}
+.ms-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid;backdrop-filter:blur(24px);transition:background .3s,border-color .3s}
+.ms-ui-dark .ms-topbar{background:rgba(11,11,13,.97);border-color:rgba(255,255,255,.06)}
+.ms-ui-light .ms-topbar{background:rgba(240,239,245,.97);border-color:rgba(0,0,0,.08)}
 .ms-tl{display:flex;align-items:center;gap:10px}
 .ms-logo-wrap{position:relative;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
 .ms-ring{position:absolute;border-radius:50%;border:1.5px solid rgba(232,197,71,.65);width:20px;height:20px;animation:msPulse 3.4s ease-out infinite}
@@ -90,28 +109,55 @@ function injectCSS() {
 .ms-logo-core{position:relative;z-index:2;animation:msBreathe 3.4s ease-in-out infinite}
 @keyframes msBreathe{0%,100%{filter:drop-shadow(0 0 5px rgba(232,197,71,.6))}50%{filter:drop-shadow(0 0 16px rgba(232,197,71,1))}}
 .ms-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:.88rem;letter-spacing:4px;color:#E8C547}
-.ms-sub{font-family:'Space Mono',monospace;font-size:.38rem;color:rgba(255,255,255,.22);text-transform:uppercase;letter-spacing:2px}
+.ms-sub{font-family:'Space Mono',monospace;font-size:.38rem;text-transform:uppercase;letter-spacing:2px;transition:color .3s}
+.ms-ui-dark .ms-sub{color:rgba(255,255,255,.22)}
+.ms-ui-light .ms-sub{color:rgba(0,0,0,.35)}
 .ms-tr{display:flex;align-items:center;gap:8px}
-.ms-back{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.55);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0}
-.ms-back:hover{background:rgba(255,255,255,.12);color:#fff}
-.ms-replay{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.45);border-radius:8px;padding:7px 13px;font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;cursor:pointer;transition:all .18s}
+.ms-back{width:32px;height:32px;border-radius:50%;border:1px solid;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0}
+.ms-ui-dark .ms-back{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.55)}
+.ms-ui-light .ms-back{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:rgba(0,0,0,.5)}
+.ms-back:hover{background:rgba(232,197,71,.15);border-color:rgba(232,197,71,.4);color:#E8C547}
+
+/* ── UI MODE TOGGLE ── */
+.ms-mode-toggle{display:flex;align-items:center;gap:0;border-radius:8px;overflow:hidden;border:1px solid;flex-shrink:0}
+.ms-ui-dark .ms-mode-toggle{border-color:rgba(255,255,255,.1)}
+.ms-ui-light .ms-mode-toggle{border-color:rgba(0,0,0,.12)}
+.ms-mt-btn{padding:6px 10px;font-size:.75rem;cursor:pointer;border:none;transition:all .18s;line-height:1}
+.ms-ui-dark  .ms-mt-btn{background:rgba(255,255,255,.04);color:rgba(255,255,255,.35)}
+.ms-ui-light .ms-mt-btn{background:rgba(0,0,0,.04);color:rgba(0,0,0,.4)}
+.ms-mt-btn.active{background:#E8C547;color:#0B0B0D}
+.ms-mt-btn:first-child{border-radius:7px 0 0 7px}
+.ms-mt-btn:last-child{border-radius:0 7px 7px 0}
+
+.ms-replay{border:1px solid;border-radius:8px;padding:7px 13px;font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;cursor:pointer;transition:all .18s}
+.ms-ui-dark  .ms-replay{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.45)}
+.ms-ui-light .ms-replay{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:rgba(0,0,0,.4)}
 .ms-replay:hover{border-color:rgba(232,197,71,.35);color:#E8C547}
 .ms-export{background:#E8C547;color:#0B0B0D;border:none;border-radius:10px;padding:9px 20px;font-family:'Syne',sans-serif;font-weight:800;font-size:.75rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
 .ms-export:hover{box-shadow:0 6px 20px rgba(232,197,71,.35);transform:translateY(-1px)}
 
-/* ── BODY ── */
+/* ── BODY LAYOUT ── */
 .ms-body{display:grid;grid-template-columns:300px 1fr;height:100%;overflow:hidden}
-@media(max-width:700px){.ms-body{grid-template-columns:1fr;grid-template-rows:1fr 270px}.ms-stage{order:1}.ms-sidebar{order:2}}
+@media(max-width:700px){.ms-body{grid-template-columns:1fr;grid-template-rows:1fr 280px}.ms-stage{order:1}.ms-sidebar{order:2}}
 
 /* ── STAGE ── */
-.ms-stage{background:#060609;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:28px}
-.ms-stage::before{content:'';position:absolute;width:700px;height:280px;background:radial-gradient(ellipse,rgba(232,197,71,.04) 0%,transparent 70%);top:-100px;left:50%;transform:translateX(-50%);pointer-events:none}
+.ms-stage{display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:28px;transition:background .3s}
+.ms-ui-dark  .ms-stage{background:#060609}
+.ms-ui-light .ms-stage{background:#e8e7ef}
 .ms-canvas-wrap{position:relative;border-radius:6px;overflow:hidden;box-shadow:0 28px 80px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.05);transition:all .4s cubic-bezier(.34,1.2,.64,1)}
-.ms-stage-ctrl{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px;background:rgba(11,11,13,.92);border:1px solid rgba(255,255,255,.11);border-radius:100px;padding:6px 12px;backdrop-filter:blur(16px);white-space:nowrap}
-.ms-sc-btn{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.28);font-family:'Space Mono',monospace;font-size:.38rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 7px;border-radius:5px;transition:all .15s}
+.ms-stage-ctrl{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px;border:1px solid;border-radius:100px;padding:6px 12px;backdrop-filter:blur(16px);white-space:nowrap;transition:background .3s,border-color .3s}
+.ms-ui-dark  .ms-stage-ctrl{background:rgba(11,11,13,.92);border-color:rgba(255,255,255,.11)}
+.ms-ui-light .ms-stage-ctrl{background:rgba(240,239,245,.92);border-color:rgba(0,0,0,.1)}
+.ms-sc-btn{background:none;border:none;cursor:pointer;font-family:'Space Mono',monospace;font-size:.38rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 7px;border-radius:5px;transition:all .15s}
+.ms-ui-dark  .ms-sc-btn{color:rgba(255,255,255,.28)}
+.ms-ui-light .ms-sc-btn{color:rgba(0,0,0,.3)}
 .ms-sc-btn:hover,.ms-sc-btn.active{color:#E8C547}
-.ms-sc-div{width:1px;height:13px;background:rgba(255,255,255,.07)}
-.ms-sz-info{font-family:'Space Mono',monospace;font-size:.38rem;color:rgba(255,255,255,.22);padding:3px 7px}
+.ms-sc-div{width:1px;height:13px;transition:background .3s}
+.ms-ui-dark  .ms-sc-div{background:rgba(255,255,255,.07)}
+.ms-ui-light .ms-sc-div{background:rgba(0,0,0,.1)}
+.ms-sz-info{font-family:'Space Mono',monospace;font-size:.38rem;padding:3px 7px;transition:color .3s}
+.ms-ui-dark  .ms-sz-info{color:rgba(255,255,255,.22)}
+.ms-ui-light .ms-sz-info{color:rgba(0,0,0,.35)}
 
 /* ── POSTER DOM ── */
 .ms-poster{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
@@ -132,7 +178,7 @@ function injectCSS() {
 .ms-p-noise{position:absolute;inset:0;pointer-events:none;z-index:1;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");background-size:180px;opacity:.03;mix-blend-mode:overlay}
 .ms-p-photo{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;transition:filter .3s}
 .ms-p-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;padding:10%;width:100%;height:100%;justify-content:center}
-/* light themes */
+/* light theme overrides on poster */
 .ms-t-bone .ms-p-lyric,.ms-t-brutal .ms-p-lyric{color:#1a1a20!important}
 .ms-t-bone .ms-p-song,.ms-t-brutal .ms-p-song{color:rgba(26,26,32,.75)!important}
 .ms-t-bone .ms-p-artist,.ms-t-brutal .ms-p-artist{color:rgba(26,26,32,.45)!important}
@@ -141,12 +187,6 @@ function injectCSS() {
 .ms-t-bone .ms-p-div,.ms-t-brutal .ms-p-div{background:rgba(26,26,32,.25)!important}
 .ms-t-bone .ms-wbar,.ms-t-brutal .ms-wbar{background:rgba(26,26,32,.4)!important}
 .ms-t-bone .ms-pr,.ms-t-brutal .ms-pr{border-color:rgba(26,26,32,.5)!important}
-.ms-t-bone .ms-p-logo svg circle,.ms-t-brutal .ms-p-logo svg circle,
-.ms-t-bone .ms-p-brand svg circle,.ms-t-brutal .ms-p-brand svg circle{fill:#1a1a20}
-.ms-t-bone .ms-p-logo svg path,.ms-t-brutal .ms-p-logo svg path,
-.ms-t-bone .ms-p-brand svg path,.ms-t-brutal .ms-p-brand svg path{stroke:#E8C547}
-.ms-t-bone .ms-p-logo svg rect,.ms-t-brutal .ms-p-logo svg rect,
-.ms-t-bone .ms-p-brand svg rect,.ms-t-brutal .ms-p-brand svg rect{fill:#E8C547}
 /* logo */
 .ms-p-logo{position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ms-p-rings{position:absolute;inset:-80%;display:flex;align-items:center;justify-content:center;pointer-events:none}
@@ -186,82 +226,158 @@ function injectCSS() {
 
 /* hidden until .ms-playing */
 .ms-p-logo,.ms-p-wave,.ms-p-lyric,.ms-p-div,.ms-p-song,.ms-p-artist,.ms-p-brand{opacity:0}
-.ms-anim-word  .ms-word{display:inline-block;opacity:0;transform:translateY(13px)}
-.ms-anim-rise  .ms-p-lyric span.ms-ch{display:inline-block;opacity:0;transform:translateY(30px)}
-.ms-anim-fade  .ms-p-lyric{opacity:0;transform:translateY(20px)}
+.ms-anim-word   .ms-word{display:inline-block;opacity:0;transform:translateY(13px)}
+.ms-anim-rise   .ms-p-lyric span.ms-ch{display:inline-block;opacity:0;transform:translateY(30px)}
+.ms-anim-fade   .ms-p-lyric{opacity:0;transform:translateY(20px)}
 .ms-anim-cinema .ms-p-lyric{opacity:0;transform:scale(.95);filter:blur(8px)}
-.ms-anim-blur  .ms-p-lyric{opacity:0;filter:blur(22px);letter-spacing:.4em}
+.ms-anim-blur   .ms-p-lyric{opacity:0;filter:blur(22px);letter-spacing:.4em}
 .ms-anim-glitch .ms-p-lyric{opacity:0}
-.ms-anim-type  .ms-p-lyric{overflow:hidden;white-space:nowrap;border-right:2px solid #E8C547;width:0;opacity:1}
-/* .ms-playing rules injected by setSpeed() */
+.ms-anim-type   .ms-p-lyric{overflow:hidden;white-space:nowrap;border-right:2px solid #E8C547;width:0;opacity:1}
 
 /* ── SIDEBAR ── */
-.ms-sidebar{background:#141418;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;overflow:hidden}
-.ms-tab-bar{display:flex;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;height:50px}
-.ms-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:none;background:none;color:rgba(255,255,255,.25);transition:all .18s;position:relative;font-family:'Space Mono',monospace;font-size:.37rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.ms-tab-icon{font-size:.9rem;line-height:1}
+.ms-sidebar{display:flex;flex-direction:column;overflow:hidden;transition:background .3s,border-color .3s}
+.ms-ui-dark  .ms-sidebar{background:#141418;border-right:1px solid rgba(255,255,255,.06)}
+.ms-ui-light .ms-sidebar{background:#e2e1ea;border-right:1px solid rgba(0,0,0,.08)}
+.ms-tab-bar{display:flex;flex-shrink:0;height:50px;transition:border-color .3s}
+.ms-ui-dark  .ms-tab-bar{border-bottom:1px solid rgba(255,255,255,.05)}
+.ms-ui-light .ms-tab-bar{border-bottom:1px solid rgba(0,0,0,.07)}
+.ms-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:none;background:none;transition:all .18s;position:relative;font-family:'Space Mono',monospace;font-size:.34rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.ms-ui-dark  .ms-tab{color:rgba(255,255,255,.25)}
+.ms-ui-light .ms-tab{color:rgba(0,0,0,.3)}
+.ms-tab-icon{font-size:.88rem;line-height:1}
 .ms-tab::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;background:#E8C547;border-radius:2px 2px 0 0;opacity:0;transition:opacity .18s}
 .ms-tab.active{color:#E8C547}.ms-tab.active::after{opacity:1}
 .ms-panels{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.06) transparent}
 .ms-panels::-webkit-scrollbar{width:3px}
-.ms-panel{display:none;padding:14px;flex-direction:column;gap:11px}
+.ms-panel{display:none;padding:16px;flex-direction:column;gap:13px}
 .ms-panel.active{display:flex}
-.ms-lbl{font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:rgba(255,255,255,.22);display:flex;align-items:center;gap:8px;flex-shrink:0}
-.ms-lbl::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.06)}
-/* inputs */
-.ms-in{width:100%;padding:8px 11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:9px;color:#F0F0F0;font-family:'DM Sans',sans-serif;font-size:.8rem;outline:none;transition:border-color .2s;-webkit-appearance:none}
-.ms-in:focus{border-color:rgba(232,197,71,.3)}.ms-in::placeholder{color:rgba(255,255,255,.2)}
-.ms-g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-/* canvas grid */
-.ms-cv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
-.ms-cv-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);cursor:pointer;transition:all .18s}
-.ms-cv-btn:hover{border-color:rgba(232,197,71,.25)}.ms-cv-btn.active{border-color:#E8C547;background:rgba(232,197,71,.08)}
-.ms-cv-ratio{font-family:'Syne',sans-serif;font-size:.55rem;font-weight:700;color:#E8C547}
-.ms-cv-name{font-family:'Space Mono',monospace;font-size:.32rem;font-weight:700;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:.3px;text-align:center;line-height:1.3}
+
+/* ── LABELS — readable, not invisible ── */
+.ms-lbl{font-family:'Space Mono',monospace;font-size:.42rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;display:flex;align-items:center;gap:8px;flex-shrink:0;margin-bottom:-4px}
+.ms-ui-dark  .ms-lbl{color:rgba(255,255,255,.55)}
+.ms-ui-light .ms-lbl{color:rgba(0,0,0,.45)}
+.ms-lbl::after{content:'';flex:1;height:1px;transition:background .3s}
+.ms-ui-dark  .ms-lbl::after{background:rgba(255,255,255,.08)}
+.ms-ui-light .ms-lbl::after{background:rgba(0,0,0,.1)}
+
+/* ── INPUTS ── */
+.ms-in{width:100%;padding:9px 12px;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;transition:border-color .2s,background .3s;-webkit-appearance:none}
+.ms-ui-dark  .ms-in{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);color:#F0F0F0}
+.ms-ui-light .ms-in{background:rgba(0,0,0,.05);border:1px solid rgba(0,0,0,.12);color:#1a1a20}
+.ms-in:focus{border-color:rgba(232,197,71,.4)}
+.ms-ui-dark  .ms-in::placeholder{color:rgba(255,255,255,.22)}
+.ms-ui-light .ms-in::placeholder{color:rgba(0,0,0,.3)}
+.ms-g2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+
+/* ── LYRIC PREVIEW ── */
+.ms-lyric-preview{font-family:'DM Serif Display',serif;font-style:italic;font-size:.88rem;line-height:1.6;padding:12px 14px;border-radius:11px;min-height:48px;border:1px solid;transition:all .3s}
+.ms-ui-dark  .ms-lyric-preview{color:rgba(255,255,255,.72);background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.07)}
+.ms-ui-light .ms-lyric-preview{color:rgba(0,0,0,.65);background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1)}
+
+/* ── CANVAS SIZE GRID ── */
+.ms-cv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ms-cv-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;border-radius:10px;border:1px solid;cursor:pointer;transition:all .18s}
+.ms-ui-dark  .ms-cv-btn{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.08)}
+.ms-ui-light .ms-cv-btn{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1)}
+.ms-cv-btn:hover{border-color:rgba(232,197,71,.3)}
+.ms-cv-btn.active{border-color:#E8C547;background:rgba(232,197,71,.09)}
+.ms-cv-ratio{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;color:#E8C547}
+.ms-cv-name{font-family:'Space Mono',monospace;font-size:.33rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;text-align:center;line-height:1.3;transition:color .3s}
+.ms-ui-dark  .ms-cv-name{color:rgba(255,255,255,.28)}
+.ms-ui-light .ms-cv-name{color:rgba(0,0,0,.4)}
 .ms-cv-btn.active .ms-cv-name{color:#E8C547}
 .ms-plat-wrap{display:flex;flex-wrap:wrap;gap:4px}
-.ms-plat-tag{font-family:'Space Mono',monospace;font-size:.33rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 6px;border-radius:4px;color:rgba(74,222,128,.75);background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.15)}
-/* theme grid */
+.ms-plat-tag{font-family:'Space Mono',monospace;font-size:.33rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:3px 7px;border-radius:4px;color:rgba(74,222,128,.85);background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.18)}
+
+/* ── THEME GRID ── */
 .ms-th-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .ms-th-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
 .ms-th-sw{width:100%;aspect-ratio:1;border-radius:9px;border:2px solid transparent;transition:all .2s;box-shadow:0 3px 8px rgba(0,0,0,.4)}
 .ms-th-item:hover .ms-th-sw{transform:scale(1.08)}.ms-th-item.active .ms-th-sw{border-color:#E8C547;box-shadow:0 0 0 3px rgba(232,197,71,.25)}
-.ms-th-nm{font-family:'Space Mono',monospace;font-size:.35rem;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,.25)}
+.ms-th-nm{font-family:'Space Mono',monospace;font-size:.36rem;font-weight:700;text-transform:uppercase;transition:color .3s}
+.ms-ui-dark  .ms-th-nm{color:rgba(255,255,255,.3)}
+.ms-ui-light .ms-th-nm{color:rgba(0,0,0,.4)}
 .ms-th-item.active .ms-th-nm{color:#E8C547}
-/* sliders */
-.ms-sl-row{display:flex;align-items:center;gap:8px}
-.ms-sl-lbl{font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:1px;min-width:58px}
-.ms-sl{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.1);outline:none;-webkit-appearance:none;cursor:pointer}
-.ms-sl::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#E8C547;cursor:pointer;box-shadow:0 0 6px rgba(232,197,71,.4)}
-.ms-sl-val{font-family:'Space Mono',monospace;font-size:.44rem;font-weight:700;color:#E8C547;min-width:32px;text-align:right}
-/* font grid */
-.ms-fn-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.ms-fn-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 7px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);cursor:pointer;transition:all .18s;text-align:center}
-.ms-fn-btn:hover{border-color:rgba(232,197,71,.25)}.ms-fn-btn.active{border-color:#E8C547;background:rgba(232,197,71,.07)}
-.ms-fn-pre{font-size:.84rem;color:rgba(255,255,255,.75);line-height:1.3;display:block}.ms-fn-btn.active .ms-fn-pre{color:#fff}
-.ms-fn-nm{font-family:'Space Mono',monospace;font-size:.35rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.22)}.ms-fn-btn.active .ms-fn-nm{color:#E8C547}
-/* motion */
+
+/* ── UI MODE in color tab ── */
+.ms-uimode-row{display:flex;gap:7px}
+.ms-uimode-btn{flex:1;padding:9px 6px;border-radius:9px;border:1px solid;font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;cursor:pointer;transition:all .18s;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}
+.ms-ui-dark  .ms-uimode-btn{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.08);color:rgba(255,255,255,.35)}
+.ms-ui-light .ms-uimode-btn{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1);color:rgba(0,0,0,.4)}
+.ms-uimode-btn:hover,.ms-uimode-btn.active{background:rgba(232,197,71,.1);border-color:rgba(232,197,71,.4);color:#E8C547}
+
+/* ── SLIDERS ── */
+.ms-sl-row{display:flex;align-items:center;gap:9px}
+.ms-sl-lbl{font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;min-width:62px;transition:color .3s}
+.ms-ui-dark  .ms-sl-lbl{color:rgba(255,255,255,.45)}
+.ms-ui-light .ms-sl-lbl{color:rgba(0,0,0,.4)}
+.ms-sl{flex:1;height:3px;border-radius:2px;outline:none;-webkit-appearance:none;cursor:pointer;transition:background .3s}
+.ms-ui-dark  .ms-sl{background:rgba(255,255,255,.1)}
+.ms-ui-light .ms-sl{background:rgba(0,0,0,.12)}
+.ms-sl::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:#E8C547;cursor:pointer;box-shadow:0 0 6px rgba(232,197,71,.4)}
+.ms-sl-val{font-family:'Space Mono',monospace;font-size:.46rem;font-weight:700;color:#E8C547;min-width:36px;text-align:right}
+
+/* ── FONT GRID ── */
+.ms-fn-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.ms-fn-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 7px;border-radius:10px;border:1px solid;cursor:pointer;transition:all .18s;text-align:center}
+.ms-ui-dark  .ms-fn-btn{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.08)}
+.ms-ui-light .ms-fn-btn{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1)}
+.ms-fn-btn:hover{border-color:rgba(232,197,71,.28)}.ms-fn-btn.active{border-color:#E8C547;background:rgba(232,197,71,.08)}
+.ms-fn-pre{font-size:.86rem;line-height:1.3;display:block;transition:color .3s}
+.ms-ui-dark  .ms-fn-pre{color:rgba(255,255,255,.75)}
+.ms-ui-light .ms-fn-pre{color:rgba(0,0,0,.6)}
+.ms-fn-btn.active .ms-fn-pre{color:#111}
+.ms-fn-nm{font-family:'Space Mono',monospace;font-size:.36rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;transition:color .3s}
+.ms-ui-dark  .ms-fn-nm{color:rgba(255,255,255,.22)}
+.ms-ui-light .ms-fn-nm{color:rgba(0,0,0,.35)}
+.ms-fn-btn.active .ms-fn-nm{color:#E8C547}
+
+/* ── MOTION LIST ── */
 .ms-mo-list{display:flex;flex-direction:column;gap:5px}
-.ms-mo-btn{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:9px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);cursor:pointer;transition:all .18s}
-.ms-mo-btn:hover{border-color:rgba(232,197,71,.25)}.ms-mo-btn.active{background:rgba(232,197,71,.08);border-color:rgba(232,197,71,.35)}
-.ms-mo-ico{font-size:.95rem;width:20px;text-align:center;flex-shrink:0}
-.ms-mo-name{font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;color:#F0F0F0;display:block;margin-bottom:1px}.ms-mo-btn.active .ms-mo-name{color:#E8C547}
-.ms-mo-desc{font-family:'Space Mono',monospace;font-size:.35rem;color:rgba(255,255,255,.26);text-transform:uppercase;letter-spacing:.4px;display:block}
-/* speed */
+.ms-mo-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid;cursor:pointer;transition:all .18s}
+.ms-ui-dark  .ms-mo-btn{background:rgba(255,255,255,.02);border-color:rgba(255,255,255,.07)}
+.ms-ui-light .ms-mo-btn{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.09)}
+.ms-mo-btn:hover{border-color:rgba(232,197,71,.28)}.ms-mo-btn.active{background:rgba(232,197,71,.08);border-color:rgba(232,197,71,.38)}
+.ms-mo-ico{font-size:.95rem;width:22px;text-align:center;flex-shrink:0}
+.ms-mo-name{font-family:'DM Sans',sans-serif;font-size:.72rem;font-weight:600;display:block;margin-bottom:1px;transition:color .3s}
+.ms-ui-dark  .ms-mo-name{color:#F0F0F0}
+.ms-ui-light .ms-mo-name{color:#1a1a20}
+.ms-mo-btn.active .ms-mo-name{color:#E8C547}
+.ms-mo-desc{font-family:'Space Mono',monospace;font-size:.36rem;text-transform:uppercase;letter-spacing:.4px;display:block;transition:color .3s}
+.ms-ui-dark  .ms-mo-desc{color:rgba(255,255,255,.28)}
+.ms-ui-light .ms-mo-desc{color:rgba(0,0,0,.35)}
+
+/* ── SPEED BUTTONS ── */
 .ms-spd-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.ms-sp-btn{padding:9px 4px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.28);font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;cursor:pointer;transition:all .18s;text-align:center}
-.ms-sp-btn:hover{border-color:rgba(232,197,71,.25);color:rgba(255,255,255,.6)}.ms-sp-btn.active{background:rgba(232,197,71,.1);border-color:rgba(232,197,71,.4);color:#E8C547}
-/* photo */
-.ms-ph-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:18px;border:1.5px dashed rgba(232,197,71,.25);border-radius:11px;cursor:pointer;transition:all .2s;background:rgba(232,197,71,.03);min-height:80px}
-.ms-ph-drop:hover,.ms-ph-drop.has-photo{border-color:rgba(232,197,71,.5);background:rgba(232,197,71,.06)}
-.ms-ph-ico{color:#E8C547;opacity:.6;font-size:1.3rem}
-.ms-ph-txt{font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;color:rgba(255,255,255,.4)}
-.ms-ph-sub{font-family:'Space Mono',monospace;font-size:.36rem;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:1px}
-.ms-ph-ctrl{display:flex;flex-direction:column;gap:9px}.ms-ph-ctrl.hidden{display:none}
-.ms-fi-row{display:flex;gap:4px}
-.ms-fi-btn{flex:1;padding:7px 3px;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.3);font-family:'Space Mono',monospace;font-size:.38rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;transition:all .15s;text-align:center}
-.ms-fi-btn:hover{border-color:rgba(232,197,71,.25);color:rgba(255,255,255,.7)}.ms-fi-btn.active{background:rgba(232,197,71,.1);border-color:rgba(232,197,71,.4);color:#E8C547}
-.ms-rm-ph{width:100%;padding:8px;background:transparent;border:1px solid rgba(255,100,100,.2);border-radius:8px;color:rgba(255,100,100,.5);font-family:'DM Sans',sans-serif;font-size:.68rem;font-weight:600;cursor:pointer;transition:all .18s}
+.ms-sp-btn{padding:10px 4px;border-radius:9px;border:1px solid;font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;cursor:pointer;transition:all .18s;text-align:center}
+.ms-ui-dark  .ms-sp-btn{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.08);color:rgba(255,255,255,.35)}
+.ms-ui-light .ms-sp-btn{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1);color:rgba(0,0,0,.4)}
+.ms-sp-btn:hover{border-color:rgba(232,197,71,.28);color:rgba(232,197,71,.8)}
+.ms-sp-btn.active{background:rgba(232,197,71,.1);border-color:rgba(232,197,71,.42);color:#E8C547}
+
+/* ── SPEED INFO BOX ── */
+.ms-spd-info{padding:9px 12px;border-radius:9px;border:1px solid;font-family:'Space Mono',monospace;font-size:.38rem;line-height:1.6;transition:all .3s}
+.ms-ui-dark  .ms-spd-info{background:rgba(232,197,71,.04);border-color:rgba(232,197,71,.15);color:rgba(255,255,255,.4)}
+.ms-ui-light .ms-spd-info{background:rgba(232,197,71,.06);border-color:rgba(232,197,71,.2);color:rgba(0,0,0,.45)}
+.ms-spd-info strong{color:#E8C547}
+
+/* ── PHOTO ── */
+.ms-ph-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;border:1.5px dashed rgba(232,197,71,.28);border-radius:12px;cursor:pointer;transition:all .2s;background:rgba(232,197,71,.03);min-height:80px}
+.ms-ph-drop:hover,.ms-ph-drop.has-photo{border-color:rgba(232,197,71,.55);background:rgba(232,197,71,.07)}
+.ms-ph-ico{color:#E8C547;opacity:.6;font-size:1.4rem}
+.ms-ph-txt{font-family:'DM Sans',sans-serif;font-size:.72rem;font-weight:600;transition:color .3s}
+.ms-ui-dark  .ms-ph-txt{color:rgba(255,255,255,.42)}
+.ms-ui-light .ms-ph-txt{color:rgba(0,0,0,.4)}
+.ms-ph-sub{font-family:'Space Mono',monospace;font-size:.37rem;text-transform:uppercase;letter-spacing:1px;transition:color .3s}
+.ms-ui-dark  .ms-ph-sub{color:rgba(255,255,255,.2)}
+.ms-ui-light .ms-ph-sub{color:rgba(0,0,0,.3)}
+.ms-ph-ctrl{display:flex;flex-direction:column;gap:10px}.ms-ph-ctrl.hidden{display:none}
+.ms-fi-row{display:flex;gap:5px;flex-wrap:wrap}
+.ms-fi-btn{flex:1;min-width:50px;padding:8px 4px;border-radius:8px;border:1px solid;font-family:'Space Mono',monospace;font-size:.38rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;transition:all .15s;text-align:center}
+.ms-ui-dark  .ms-fi-btn{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08);color:rgba(255,255,255,.35)}
+.ms-ui-light .ms-fi-btn{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1);color:rgba(0,0,0,.4)}
+.ms-fi-btn:hover{border-color:rgba(232,197,71,.28)}.ms-fi-btn.active{background:rgba(232,197,71,.1);border-color:rgba(232,197,71,.42);color:#E8C547}
+.ms-rm-ph{width:100%;padding:9px;background:transparent;border:1px solid rgba(255,100,100,.22);border-radius:9px;color:rgba(255,100,100,.55);font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;cursor:pointer;transition:all .18s}
 .ms-rm-ph:hover{border-color:#ff6464;color:#ff6464}
 
 /* ── EXPORT MODAL ── */
@@ -270,31 +386,38 @@ function injectCSS() {
 .ms-em-box{background:#111013;border:1px solid rgba(255,255,255,.08);border-bottom:none;border-radius:24px 24px 0 0;width:100%;max-width:560px;padding:26px 22px 42px;transform:translateY(50px);transition:transform .35s cubic-bezier(.34,1.2,.64,1)}
 .ms-export-modal.open .ms-em-box{transform:translateY(0)}
 .ms-em-h{font-family:'Syne',sans-serif;font-weight:800;font-size:.95rem;letter-spacing:2px;text-transform:uppercase;color:#E8C547;margin-bottom:3px}
-.ms-em-sub{font-family:'Space Mono',monospace;font-size:.4rem;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:2px;margin-bottom:18px}
-.ms-ef-list{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
-.ms-ef{display:flex;align-items:center;gap:12px;padding:13px 15px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);cursor:pointer;transition:all .18s}
-.ms-ef:hover,.ms-ef.rec{border-color:rgba(232,197,71,.35);background:rgba(232,197,71,.05)}
-.ms-ef-ico{font-size:1.3rem;flex-shrink:0}
-.ms-ef-name{font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:700;color:#F0F0F0;margin-bottom:2px}
-.ms-ef-desc{font-family:'Space Mono',monospace;font-size:.36rem;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:.4px;line-height:1.6}
-.ms-ef-badge{font-family:'Space Mono',monospace;font-size:.35rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 8px;border-radius:100px;flex-shrink:0;white-space:nowrap}
+.ms-em-sub{font-family:'Space Mono',monospace;font-size:.42rem;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:2px;margin-bottom:18px}
+.ms-ef-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.ms-ef{display:flex;align-items:center;gap:12px;padding:14px 15px;border-radius:13px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);cursor:pointer;transition:all .18s}
+.ms-ef:hover,.ms-ef.rec{border-color:rgba(232,197,71,.38);background:rgba(232,197,71,.05)}
+.ms-ef-ico{font-size:1.35rem;flex-shrink:0}
+.ms-ef-name{font-family:'DM Sans',sans-serif;font-size:.84rem;font-weight:700;color:#F0F0F0;margin-bottom:3px}
+.ms-ef-desc{font-family:'Space Mono',monospace;font-size:.37rem;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.4px;line-height:1.7}
+.ms-ef-badge{font-family:'Space Mono',monospace;font-size:.36rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:4px 9px;border-radius:100px;flex-shrink:0;white-space:nowrap}
 .ms-b-rec{background:rgba(232,197,71,.15);color:#E8C547;border:1px solid rgba(232,197,71,.3)}
 .ms-b-sm{background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.2)}
-.ms-pl-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px}
-.ms-pl-tag{display:flex;align-items:center;gap:3px;font-family:'Space Mono',monospace;font-size:.34rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:rgba(74,222,128,.75);background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.15);border-radius:4px;padding:3px 6px}
+.ms-pl-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:16px}
+.ms-pl-tag{display:flex;align-items:center;gap:3px;font-family:'Space Mono',monospace;font-size:.35rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:rgba(74,222,128,.8);background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.18);border-radius:4px;padding:3px 7px}
 .ms-pl-dot{width:4px;height:4px;border-radius:50%;background:#4ade80}
-.ms-em-cancel{width:100%;padding:11px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:11px;color:rgba(255,255,255,.28);font-family:'Space Mono',monospace;font-size:.46rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;cursor:pointer;transition:all .18s}
-.ms-em-cancel:hover{border-color:rgba(255,255,255,.2);color:rgba(255,255,255,.55)}
+.ms-em-cancel{width:100%;padding:12px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(255,255,255,.3);font-family:'Space Mono',monospace;font-size:.47rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;cursor:pointer;transition:all .18s}
+.ms-em-cancel:hover{border-color:rgba(255,255,255,.22);color:rgba(255,255,255,.6)}
+
+/* ── RECORDING BADGE ── */
+.ms-rec-badge{display:none;align-items:center;gap:6px;padding:5px 12px;background:rgba(255,50,50,.15);border:1px solid rgba(255,50,50,.3);border-radius:100px;font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;color:#ff5050;text-transform:uppercase;letter-spacing:1px}
+.ms-rec-badge.visible{display:flex}
+.ms-rec-dot{width:6px;height:6px;border-radius:50%;background:#ff5050;animation:msRecPulse 1s ease-in-out infinite}
+@keyframes msRecPulse{0%,100%{opacity:1}50%{opacity:.3}}
 `;
   document.head.appendChild(el);
 }
 
 /* ────────────────────────────────────────────────────────────────
-   BUILD HTML — replaces #studioOverlay contents
+   BUILD HTML
 ──────────────────────────────────────────────────────────────── */
 function buildStudioHTML() {
   const ov = document.getElementById('studioOverlay');
   if (!ov) return;
+  ov.className = 'ms-ui-dark';
   ov.innerHTML = `
 <header class="ms-topbar">
   <div class="ms-tl">
@@ -309,7 +432,12 @@ function buildStudioHTML() {
     <div><div class="ms-brand">MARGO</div><div class="ms-sub">Motion Studio</div></div>
   </div>
   <div class="ms-tr">
-    <button class="ms-back" id="msBack">
+    <div class="ms-rec-badge" id="msRecBadge"><span class="ms-rec-dot"></span>Recording</div>
+    <div class="ms-mode-toggle" id="msTopModeToggle" title="Switch studio UI theme">
+      <button class="ms-mt-btn active" data-ui="dark">🌙</button>
+      <button class="ms-mt-btn" data-ui="light">☀️</button>
+    </div>
+    <button class="ms-back" id="msBack" title="Back">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
     </button>
     <button class="ms-replay" id="msReplay">↺ Preview</button>
@@ -377,6 +505,7 @@ function buildStudioHTML() {
       <button class="ms-tab" data-tab="color"><span class="ms-tab-icon">◑</span>Color</button>
       <button class="ms-tab" data-tab="font"><span class="ms-tab-icon">Aa</span>Font</button>
       <button class="ms-tab" data-tab="motion"><span class="ms-tab-icon">◈</span>Motion</button>
+      <button class="ms-tab" data-tab="size"><span class="ms-tab-icon">⊞</span>Size</button>
       <button class="ms-tab" data-tab="photo"><span class="ms-tab-icon">⊙</span>Photo</button>
     </div>
     <div class="ms-panels">
@@ -384,30 +513,22 @@ function buildStudioHTML() {
       <!-- CONTENT -->
       <div class="ms-panel active" id="ms-panel-content">
         <div class="ms-lbl">Lyric</div>
-        <div id="msLyricPreview" style="font-family:'DM Serif Display',serif;font-style:italic;font-size:.88rem;line-height:1.6;color:rgba(255,255,255,.72);padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;min-height:44px"></div>
+        <div class="ms-lyric-preview" id="msLyricPreview"></div>
         <div class="ms-g2">
           <input class="ms-in" id="msSongIn" placeholder="Song title"/>
           <input class="ms-in" id="msArtistIn" placeholder="Artist"/>
         </div>
-        <input class="ms-in" id="msEmotionIn" placeholder="Emotion tag"/>
-        <div class="ms-lbl">Canvas Size</div>
-        <div class="ms-cv-grid" id="msCvGrid">
-          <div class="ms-cv-btn active" data-key="square"><span class="ms-cv-ratio">1:1</span><span class="ms-cv-name">Instagram</span></div>
-          <div class="ms-cv-btn" data-key="story"><span class="ms-cv-ratio">9:16</span><span class="ms-cv-name">IG/FB Story</span></div>
-          <div class="ms-cv-btn" data-key="fbstory"><span class="ms-cv-ratio">9:16</span><span class="ms-cv-name">FB Story</span></div>
-          <div class="ms-cv-btn" data-key="twitter"><span class="ms-cv-ratio">16:9</span><span class="ms-cv-name">Twitter/X</span></div>
-          <div class="ms-cv-btn" data-key="reddit"><span class="ms-cv-ratio">1:1</span><span class="ms-cv-name">Reddit/Discord</span></div>
-          <div class="ms-cv-btn" data-key="linkedin"><span class="ms-cv-ratio">1.91:1</span><span class="ms-cv-name">LinkedIn</span></div>
-          <div class="ms-cv-btn" data-key="whatsapp"><span class="ms-cv-ratio">1:1</span><span class="ms-cv-name">WhatsApp</span></div>
-          <div class="ms-cv-btn" data-key="tiktok"><span class="ms-cv-ratio">9:16</span><span class="ms-cv-name">TikTok</span></div>
-          <div class="ms-cv-btn" data-key="pinterest"><span class="ms-cv-ratio">2:3</span><span class="ms-cv-name">Pinterest</span></div>
-        </div>
-        <div class="ms-plat-wrap" id="msPlatTags"></div>
+        <input class="ms-in" id="msEmotionIn" placeholder="Emotion tag (e.g. Nostalgia)"/>
       </div>
 
       <!-- COLOR -->
       <div class="ms-panel" id="ms-panel-color">
-        <div class="ms-lbl">Theme</div>
+        <div class="ms-lbl">Studio Mode</div>
+        <div class="ms-uimode-row" id="msSidebarModeToggle">
+          <button class="ms-uimode-btn active" data-ui="dark">🌙 Dark Studio</button>
+          <button class="ms-uimode-btn" data-ui="light">☀️ Light Studio</button>
+        </div>
+        <div class="ms-lbl">Poster Theme</div>
         <div class="ms-th-grid" id="msThemeGrid">
           <div class="ms-th-item active" data-theme="midnight"><div class="ms-th-sw" style="background:linear-gradient(135deg,#0B0B0D,#1a1a20)"></div><div class="ms-th-nm">Gold</div></div>
           <div class="ms-th-item" data-theme="violet"><div class="ms-th-sw" style="background:linear-gradient(135deg,#0d0014,#c77dff)"></div><div class="ms-th-nm">Violet</div></div>
@@ -461,12 +582,34 @@ function buildStudioHTML() {
           <button class="ms-sp-btn" data-spd="2.2">Slow</button>
           <button class="ms-sp-btn active" data-spd="1">Normal</button>
           <button class="ms-sp-btn" data-spd="0.6">Fast</button>
-          <button class="ms-sp-btn" data-spd="0.35">Rapid</button>
+          <button class="ms-sp-btn" data-spd="0.3">Rapid</button>
         </div>
-        <div class="ms-lbl">Custom Speed</div>
-        <div class="ms-sl-row"><span class="ms-sl-lbl">Duration</span><input type="range" class="ms-sl" id="msCustomSpd" min="0.2" max="3.5" step="0.1" value="1"/><span class="ms-sl-val" id="msCustomSpdVal">1.0×</span></div>
+        <div class="ms-sl-row" style="margin-top:-4px"><span class="ms-sl-lbl">Custom</span><input type="range" class="ms-sl" id="msCustomSpd" min="0.2" max="3.0" step="0.05" value="1"/><span class="ms-sl-val" id="msCustomSpdVal">1.0×</span></div>
+        <div class="ms-spd-info" id="msSpdInfo">
+          <strong>Speed controls animation pace only.</strong><br>
+          The video always captures the full animation — nothing is cut off.
+          Video duration auto-adjusts so every element is visible.
+        </div>
         <div class="ms-lbl">Logo Pulse</div>
-        <div class="ms-sl-row"><span class="ms-sl-lbl">Speed</span><input type="range" class="ms-sl" id="msPulseSpd" min="1" max="7" step="0.1" value="3.4"/><span class="ms-sl-val" id="msPulseSpdVal">3.4s</span></div>
+        <div class="ms-sl-row"><span class="ms-sl-lbl">Rhythm</span><input type="range" class="ms-sl" id="msPulseSpd" min="1" max="7" step="0.1" value="3.4"/><span class="ms-sl-val" id="msPulseSpdVal">3.4s</span></div>
+      </div>
+
+      <!-- SIZE — dedicated tab -->
+      <div class="ms-panel" id="ms-panel-size">
+        <div class="ms-lbl">Canvas Size</div>
+        <div class="ms-cv-grid" id="msCvGrid">
+          <div class="ms-cv-btn active" data-key="square"><span class="ms-cv-ratio">1:1</span><span class="ms-cv-name">Instagram</span></div>
+          <div class="ms-cv-btn" data-key="story"><span class="ms-cv-ratio">9:16</span><span class="ms-cv-name">IG Story</span></div>
+          <div class="ms-cv-btn" data-key="twitter"><span class="ms-cv-ratio">16:9</span><span class="ms-cv-name">Twitter/X</span></div>
+          <div class="ms-cv-btn" data-key="linkedin"><span class="ms-cv-ratio">1.91:1</span><span class="ms-cv-name">LinkedIn</span></div>
+          <div class="ms-cv-btn" data-key="tiktok"><span class="ms-cv-ratio">9:16</span><span class="ms-cv-name">TikTok</span></div>
+          <div class="ms-cv-btn" data-key="pinterest"><span class="ms-cv-ratio">2:3</span><span class="ms-cv-name">Pinterest</span></div>
+          <div class="ms-cv-btn" data-key="whatsapp"><span class="ms-cv-ratio">1:1</span><span class="ms-cv-name">WhatsApp</span></div>
+          <div class="ms-cv-btn" data-key="reddit"><span class="ms-cv-ratio">1:1</span><span class="ms-cv-name">Reddit</span></div>
+          <div class="ms-cv-btn" data-key="youtube"><span class="ms-cv-ratio">16:9</span><span class="ms-cv-name">YouTube</span></div>
+        </div>
+        <div class="ms-lbl">Works On</div>
+        <div class="ms-plat-wrap" id="msPlatTags"></div>
       </div>
 
       <!-- PHOTO -->
@@ -489,7 +632,7 @@ function buildStudioHTML() {
             <button class="ms-fi-btn" data-fi="drama">Drama</button>
             <button class="ms-fi-btn" data-fi="vintage">Vintage</button>
           </div>
-          <button class="ms-rm-ph" id="msRmPh">Remove photo</button>
+          <button class="ms-rm-ph" id="msRmPh">✕ Remove photo</button>
         </div>
       </div>
 
@@ -501,51 +644,37 @@ function buildStudioHTML() {
 <div class="ms-export-modal" id="msExportModal">
   <div class="ms-em-box">
     <div class="ms-em-h">Export Your Poster</div>
-    <div class="ms-em-sub">Choose format · <span id="msEmSize">1080 × 1080</span></div>
+    <div class="ms-em-sub">Format · <span id="msEmSize">1080 × 1080</span></div>
     <div class="ms-ef-list">
-      <div class="ms-ef rec" onclick="msDoExport('video')">
+      <div class="ms-ef rec" id="msExportVideo">
         <span class="ms-ef-ico">🎬</span>
-        <div class="ms-ef-body">
+        <div>
           <div class="ms-ef-name">Animated Video (WebM)</div>
-          <div class="ms-ef-desc">Ripple rings + motion text baked in · ~500KB–2MB · plays everywhere</div>
+          <div class="ms-ef-desc">Full animation baked in · 8Mbps VP9 · captures complete sequence · plays everywhere</div>
         </div>
         <span class="ms-ef-badge ms-b-rec">Best</span>
       </div>
-      <div class="ms-ef" onclick="msDoExport('png')">
+      <div class="ms-ef" id="msExportPng">
         <span class="ms-ef-ico">🖼</span>
-        <div class="ms-ef-body">
+        <div>
           <div class="ms-ef-name">Static PNG</div>
-          <div class="ms-ef-desc">Full-res still · all platforms · print · press kit · lightest file</div>
+          <div class="ms-ef-desc">Full-res still frame · all platforms · print · press kit · instant download</div>
         </div>
-        <span class="ms-ef-badge ms-b-sm">Tiny</span>
+        <span class="ms-ef-badge ms-b-sm">Fast</span>
       </div>
     </div>
-    <div class="ms-lbl" style="margin-bottom:8px">Works on</div>
+    <div class="ms-lbl" style="margin-bottom:9px">Works on</div>
     <div class="ms-pl-list">
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>Instagram</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>Instagram Story</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>Facebook</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>Facebook Story</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>TikTok</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>LinkedIn</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>Twitter / X</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>YouTube Shorts</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>WhatsApp</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>WhatsApp Status</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>Discord</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>Reddit</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>Pinterest</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>Snapchat</div>
-      <div class="ms-pl-tag"><div class="ms-pl-dot"></div>Telegram</div>
+      ${['Instagram','Instagram Story','Facebook','TikTok','LinkedIn','Twitter/X','YouTube Shorts','WhatsApp','WhatsApp Status','Discord','Reddit','Pinterest','Snapchat','Telegram'].map(p=>`<div class="ms-pl-tag"><div class="ms-pl-dot"></div>${p}</div>`).join('')}
     </div>
-    <button class="ms-em-cancel" onclick="msCloseExport()">Cancel</button>
+    <button class="ms-em-cancel" id="msExportCancel">Cancel</button>
   </div>
 </div>
 `;
 }
 
 /* ────────────────────────────────────────────────────────────────
-   INIT  — called once on DOMContentLoaded
+   INIT
 ──────────────────────────────────────────────────────────────── */
 function initStudio() {
   injectCSS();
@@ -557,50 +686,57 @@ function initStudio() {
    OPEN STUDIO
 ──────────────────────────────────────────────────────────────── */
 function openStudio() {
-  // Close postcard if open
   const pm = document.getElementById('postcardModal');
   if (pm && typeof closeModal === 'function') closeModal(pm);
 
-  // Pull data from currentPost
   const cp = (typeof currentPost !== 'undefined') ? currentPost : null;
-  S.lyric   = cp?.text    || '';
+  S.lyric   = cp?.text              || '';
   S.song    = cp?.knowledge?.song   || '';
   S.artist  = cp?.knowledge?.artist || '';
-  S.emotion = cp?.emotion || '';
+  S.emotion = cp?.emotion           || '';
   S.theme   = EMOTION_THEME_MAP[S.emotion] || 'midnight';
 
-  // Reset style state
-  S.font={ fam:"'Playfair Display',serif", sty:'italic' };
-  S.motion='word'; S.spd=1; S.textScale=1; S.pulse=3.4;
-  S.photo=null; S.blur=0; S.dim=50; S.filter='none';
-  S.brightness=100; S.contrast=100;
-  S.canvas={ ...STU_SIZES.square };
-  S.looping=false;
-  _photoImg=null;
+  // Reset to defaults
+  S.font       = { fam:"'Playfair Display',serif", sty:'italic' };
+  S.motion     = 'word';
+  S.animSpd    = 1;
+  S.textScale  = 1;
+  S.pulse      = 3.4;
+  S.photo      = null;
+  S.blur       = 0;
+  S.dim        = 50;
+  S.filter     = 'none';
+  S.brightness = 100;
+  S.contrast   = 100;
+  S.canvas     = { ...STU_SIZES.square };
+  S.looping    = false;
+  S.darkUI     = true;
+  _photoImg    = null;
+  clearTimeout(_loopTimer);
+  clearTimeout(_replayDebounce);
 
-  // Build fresh HTML
   buildStudioHTML();
+  applyUIMode('dark');
 
-  // Populate content
+  // Populate fields
   const lp = document.getElementById('msLyricPreview');
   if (lp) lp.textContent = S.lyric;
-  $v('msSongIn',   S.song);
-  $v('msArtistIn', S.artist);
-  $v('msEmotionIn',S.emotion);
+  $v('msSongIn',    S.song);
+  $v('msArtistIn',  S.artist);
+  $v('msEmotionIn', S.emotion);
 
   // Set poster text
-  $t('msPSong',   S.song);
-  $t('msPArtist', S.artist.toUpperCase());
-  $t('msPEmotion',S.emotion ? '✦ '+S.emotion.toUpperCase() : '');
+  $t('msPSong',    S.song);
+  $t('msPArtist',  S.artist.toUpperCase());
+  $t('msPEmotion', S.emotion ? '✦ '+S.emotion.toUpperCase() : '');
 
   // Apply theme
-  const poster = document.getElementById('msPoster');
-  poster.classList.remove(...[...poster.classList].filter(c=>c.startsWith('ms-t-')));
-  poster.classList.add('ms-t-'+S.theme);
-  // activate correct theme swatch
-  document.querySelectorAll('.ms-th-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.theme === S.theme);
-  });
+  applyPosterTheme(S.theme);
+
+  // Mark correct theme swatch
+  document.querySelectorAll('.ms-th-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.theme === S.theme)
+  );
 
   bindEvents();
   updatePlatTags();
@@ -610,21 +746,60 @@ function openStudio() {
 
   setTimeout(() => {
     sizeCanvas();
-    setSpeed(1);
+    setAnimSpeed(1, false); // set speed, don't replay yet
     buildLyricHTML();
-    setTimeout(play, 400);
+    setTimeout(play, 350);
   }, 60);
 
-  // YouTube thumbnail
-  if (cp?.youtubeMeta?.thumbnail) setTimeout(() => injectYtOption(cp.youtubeMeta), 120);
+  if (cp?.youtubeMeta?.thumbnail) setTimeout(() => injectYtOption(cp.youtubeMeta), 130);
 }
 
 /* ────────────────────────────────────────────────────────────────
    HELPERS
 ──────────────────────────────────────────────────────────────── */
-function $(id){ return document.getElementById(id); }
-function $v(id, val){ const el=$(id); if(el) el.value=val; }
-function $t(id, txt){ const el=$(id); if(el) el.textContent=txt; }
+function $(id)          { return document.getElementById(id); }
+function $v(id, val)    { const el=$(id); if(el) el.value=val; }
+function $t(id, txt)    { const el=$(id); if(el) el.textContent=txt; }
+function $qs(sel, root) { return (root||document).querySelector(sel); }
+
+/* ────────────────────────────────────────────────────────────────
+   UI MODE (dark / light studio)
+──────────────────────────────────────────────────────────────── */
+function applyUIMode(mode) {
+  S.darkUI = (mode === 'dark');
+  const ov = $('studioOverlay');
+  if (!ov) return;
+  ov.classList.toggle('ms-ui-dark',  S.darkUI);
+  ov.classList.toggle('ms-ui-light', !S.darkUI);
+
+  // Sync both toggles
+  document.querySelectorAll('#msTopModeToggle .ms-mt-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.ui === mode)
+  );
+  document.querySelectorAll('#msSidebarModeToggle .ms-uimode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.ui === mode)
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────
+   POSTER THEME
+──────────────────────────────────────────────────────────────── */
+function applyPosterTheme(themeName) {
+  S.theme = themeName;
+  const p = $('msPoster');
+  if (!p) return;
+  p.classList.remove(...[...p.classList].filter(c => c.startsWith('ms-t-')));
+  p.classList.add('ms-t-' + themeName);
+
+  // Update waveform bar color to match accent
+  const td = STU_THEMES[themeName] || STU_THEMES.midnight;
+  document.querySelectorAll('.ms-wbar').forEach(b => {
+    b.style.background = td.accent + '99'; // 60% opacity
+  });
+  document.querySelectorAll('.ms-pr').forEach(r => {
+    r.style.borderColor = td.accent + 'aa';
+  });
+}
 
 /* ────────────────────────────────────────────────────────────────
    SIZE CANVAS
@@ -632,45 +807,49 @@ function $t(id, txt){ const el=$(id); if(el) el.textContent=txt; }
 function sizeCanvas() {
   const stage = $('msStage');
   if (!stage) return;
-  const r  = stage.getBoundingClientRect();
-  const sw = r.width-56, sh = r.height-56;
-  const {w,h} = S.canvas;
-  const ratio = w/h;
-  let pw,ph;
-  if (sw/sh > ratio) { ph=Math.min(sh,570); pw=ph*ratio; }
-  else               { pw=Math.min(sw,520); ph=pw/ratio; }
+  const r = stage.getBoundingClientRect();
+  const sw = r.width - 56, sh = r.height - 56;
+  const {w, h} = S.canvas;
+  const ratio = w / h;
+  let pw, ph;
+  if (sw / sh > ratio) { ph = Math.min(sh, 570); pw = ph * ratio; }
+  else                  { pw = Math.min(sw, 520); ph = pw / ratio; }
 
   const cw = $('msCanvasWrap');
   if (!cw) return;
-  cw.style.width=pw+'px'; cw.style.height=ph+'px';
+  cw.style.width  = pw + 'px';
+  cw.style.height = ph + 'px';
 
-  const ls  = Math.max(pw*.11, 34);
-  const bls = Math.max(pw*.038, 11);
+  const ls     = Math.max(pw * .11, 34);
+  const bls    = Math.max(pw * .038, 11);
   const logoSvg  = $('msPLogoSvg');
   const brandSvg = $('msPBrandSvg');
-  if (logoSvg)  { logoSvg.style.width=ls+'px';  logoSvg.style.height=ls+'px'; }
-  if (brandSvg) { brandSvg.style.width=bls+'px';brandSvg.style.height=bls+'px'; }
+  if (logoSvg)  { logoSvg.style.width  = ls + 'px'; logoSvg.style.height  = ls + 'px'; }
+  if (brandSvg) { brandSvg.style.width = bls + 'px'; brandSvg.style.height = bls + 'px'; }
   ['msPr1','msPr2','msPr3'].forEach(id => {
-    const el=$(id); if(el){el.style.width=ls+'px';el.style.height=ls+'px';}
+    const el = $(id); if (el) { el.style.width = ls + 'px'; el.style.height = ls + 'px'; }
   });
 
-  const fs = Math.max(pw*.053*(S.textScale||1), 12);
-  const sl = $('msPLyric'), ss=$('msPSong'), sa=$('msPArtist'), sb=$('msPBrand');
-  const sbw = sb?.querySelector('.ms-p-brand-word'), sem=$('msPEmotion');
-  if(sl)  sl.style.fontSize  = fs+'px';
-  if(ss)  ss.style.fontSize  = Math.max(pw*.028,8)+'px';
-  if(sa)  sa.style.fontSize  = Math.max(pw*.020,7)+'px';
-  if(sbw) sbw.style.fontSize = Math.max(pw*.017,6)+'px';
-  if(sem) sem.style.fontSize = Math.max(pw*.015,5)+'px';
+  const fs  = Math.max(pw * .053 * (S.textScale || 1), 12);
+  const sl  = $('msPLyric'), ss = $('msPSong'), sa = $('msPArtist');
+  const sb  = $('msPBrand');
+  const sbw = sb?.querySelector('.ms-p-brand-word');
+  const sem = $('msPEmotion');
+  if (sl)  sl.style.fontSize  = fs + 'px';
+  if (ss)  ss.style.fontSize  = Math.max(pw * .028, 8) + 'px';
+  if (sa)  sa.style.fontSize  = Math.max(pw * .020, 7) + 'px';
+  if (sbw) sbw.style.fontSize = Math.max(pw * .017, 6) + 'px';
+  if (sem) sem.style.fontSize = Math.max(pw * .015, 5) + 'px';
 
-  const gap = Math.max(pw*.034, 9);
-  const pLogo=$('msPLogo'), pWave=$('msPWave'), pDiv=document.querySelector('.ms-p-div');
-  if(pLogo) pLogo.style.marginBottom=gap+'px';
-  if(pWave) pWave.style.marginBottom=gap*.7+'px';
-  if(sl)    sl.style.marginBottom=gap+'px';
-  if(pDiv)  pDiv.style.marginBottom=gap*.65+'px';
-  if(ss)    ss.style.marginBottom=gap*.18+'px';
-  if(sb)    sb.style.padding=`${pw*.04}px ${pw*.07}px`;
+  const gap  = Math.max(pw * .034, 9);
+  const pLogo = $('msPLogo'), pWave = $('msPWave');
+  const pDiv  = document.querySelector('.ms-p-div');
+  if (pLogo) pLogo.style.marginBottom = gap + 'px';
+  if (pWave) pWave.style.marginBottom = gap * .7 + 'px';
+  if (sl)    sl.style.marginBottom    = gap + 'px';
+  if (pDiv)  pDiv.style.marginBottom  = gap * .65 + 'px';
+  if (ss)    ss.style.marginBottom    = gap * .18 + 'px';
+  if (sb)    sb.style.padding = `${pw * .04}px ${pw * .07}px`;
 
   $t('msSzInfo', `${S.canvas.w} × ${S.canvas.h}`);
 }
@@ -681,74 +860,102 @@ function sizeCanvas() {
 function updatePlatTags() {
   const el = $('msPlatTags');
   if (!el || !S.canvas.plat) return;
-  el.innerHTML = S.canvas.plat.split(',').map(p=>`<span class="ms-plat-tag">✓ ${p.trim()}</span>`).join('');
+  el.innerHTML = S.canvas.plat.split(',').map(p =>
+    `<span class="ms-plat-tag">✓ ${p.trim()}</span>`
+  ).join('');
 }
 
 /* ────────────────────────────────────────────────────────────────
-   PLAY
+   PLAY  (triggers CSS animation sequence)
 ──────────────────────────────────────────────────────────────── */
 function play() {
-  const p=$('msPoster'); if(!p) return;
+  const p = $('msPoster');
+  if (!p) return;
   p.classList.remove('ms-playing');
-  void p.offsetWidth; // force reflow — critical
+  void p.offsetWidth; // force reflow
   p.classList.add('ms-playing');
+
   if (S.looping) {
     clearTimeout(_loopTimer);
-    _loopTimer = setTimeout(play, (2.2*S.spd+1)*1000);
+    const loopDelay = getVideoDuration() + 800;
+    _loopTimer = setTimeout(play, loopDelay);
   }
 }
 
 /* ────────────────────────────────────────────────────────────────
-   SET SPEED — inject real ms values (CSS calc is unreliable here)
+   SET ANIMATION SPEED
+   spd = multiplier: 1=normal, 2=slow, 0.5=fast
+   autoReplay = whether to trigger play() after setting
 ──────────────────────────────────────────────────────────────── */
-function setSpeed(spd) {
-  S.spd = spd;
-  const old=$('ms-spd-style'); if(old) old.remove();
-  const s=spd;
-  const logo  =+(0.60*s).toFixed(3), word=+(0.45*s).toFixed(3), meta=+(0.50*s).toFixed(3);
-  const d0=+(0.10*s).toFixed(3), d1=+(0.90*s).toFixed(3), d2=+(1.30*s).toFixed(3);
-  const d3=+(1.50*s).toFixed(3), d4=+(1.70*s).toFixed(3), d5=+(2.00*s).toFixed(3);
-  const d03=+(0.30*s).toFixed(3), typeW=+(2.60*s).toFixed(3), cinW=+(1.20*s).toFixed(3);
-  const fadeW=+(0.80*s).toFixed(3), blurW=+(1.00*s).toFixed(3);
-  const glW=+(0.50*s).toFixed(3), glSh=+(0.15*s).toFixed(3), glShD=+(0.80*s).toFixed(3);
+function setAnimSpeed(spd, autoReplay) {
+  S.animSpd = spd;
+  const old = $('ms-spd-style');
+  if (old) old.remove();
 
-  const st=document.createElement('style'); st.id='ms-spd-style';
-  st.textContent=`
-    .ms-playing .ms-p-logo  {animation:msLogoIn  ${logo}s  cubic-bezier(.34,1.2,.64,1) ${d0}s  both!important}
-    .ms-playing .ms-p-wave  {animation:msSlideUp ${meta}s  ease                        ${d1}s  both!important}
-    .ms-playing .ms-p-div   {animation:msSlideUp ${meta}s  ease                        ${d2}s  both!important}
-    .ms-playing .ms-p-song  {animation:msSlideUp ${meta}s  ease                        ${d3}s  both!important}
-    .ms-playing .ms-p-artist{animation:msSlideUp ${meta}s  ease                        ${d4}s  both!important}
-    .ms-playing .ms-p-brand {animation:msSlideUp ${meta}s  ease                        ${d5}s  both!important}
+  const s  = spd;
+  // All durations scale with s. Slow (s=2.2) = slower animation, same full capture.
+  const logo  = +(0.60 * s).toFixed(3);
+  const word  = +(0.45 * s).toFixed(3);
+  const meta  = +(0.50 * s).toFixed(3);
+  const d0    = +(0.10 * s).toFixed(3);
+  const d1    = +(0.90 * s).toFixed(3);
+  const d2    = +(1.30 * s).toFixed(3);
+  const d3    = +(1.50 * s).toFixed(3);
+  const d4    = +(1.70 * s).toFixed(3);
+  const d5    = +(2.00 * s).toFixed(3);
+  const d03   = +(0.30 * s).toFixed(3);
+  const typeW = +(2.60 * s).toFixed(3);
+  const cinW  = +(1.20 * s).toFixed(3);
+  const fadeW = +(0.80 * s).toFixed(3);
+  const blurW = +(1.00 * s).toFixed(3);
+  const glW   = +(0.50 * s).toFixed(3);
+  const glSh  = +(0.15 * s).toFixed(3);
+  const glShD = +(0.80 * s).toFixed(3);
+
+  const st = document.createElement('style');
+  st.id = 'ms-spd-style';
+  st.textContent = `
+    .ms-playing .ms-p-logo  {animation:msLogoIn  ${logo}s cubic-bezier(.34,1.2,.64,1) ${d0}s  both!important}
+    .ms-playing .ms-p-wave  {animation:msSlideUp ${meta}s ease                        ${d1}s  both!important}
+    .ms-playing .ms-p-div   {animation:msSlideUp ${meta}s ease                        ${d2}s  both!important}
+    .ms-playing .ms-p-song  {animation:msSlideUp ${meta}s ease                        ${d3}s  both!important}
+    .ms-playing .ms-p-artist{animation:msSlideUp ${meta}s ease                        ${d4}s  both!important}
+    .ms-playing .ms-p-brand {animation:msSlideUp ${meta}s ease                        ${d5}s  both!important}
     .ms-playing.ms-anim-fade   .ms-p-lyric{animation:msLyricUp ${fadeW}s cubic-bezier(.34,1.2,.64,1) ${d03}s both!important}
-    .ms-playing.ms-anim-cinema .ms-p-lyric{animation:msCinIn   ${cinW}s  cubic-bezier(.16,1,.3,1)    ${d03}s both!important}
+    .ms-playing.ms-anim-cinema .ms-p-lyric{animation:msCinIn   ${cinW}s cubic-bezier(.16,1,.3,1)     ${d03}s both!important}
     .ms-playing.ms-anim-blur   .ms-p-lyric{animation:msBlurIn  ${blurW}s cubic-bezier(.16,1,.3,1)    ${d03}s both!important}
-    .ms-playing.ms-anim-glitch .ms-p-lyric{animation:msGlIn    ${glW}s   ease ${d03}s both,msGlShk ${glSh}s ease ${glShD}s!important}
+    .ms-playing.ms-anim-glitch .ms-p-lyric{animation:msGlIn    ${glW}s ease ${d03}s both,msGlShk ${glSh}s ease ${glShD}s!important}
     .ms-playing.ms-anim-type   .ms-p-lyric{animation:msTypeW   ${typeW}s steps(40,end) ${d03}s forwards,msBlinkC .75s step-end infinite!important}
-    .ms-playing.ms-anim-word   .ms-word   {animation:msWordUp  ${word}s  cubic-bezier(.34,1.2,.64,1) both!important}
+    .ms-playing.ms-anim-word   .ms-word   {animation:msWordUp  ${word}s cubic-bezier(.34,1.2,.64,1) both!important}
     .ms-playing.ms-anim-rise   .ms-p-lyric span.ms-ch{animation:msRiseUp ${word}s cubic-bezier(.34,1.5,.64,1) both!important}
   `;
   document.head.appendChild(st);
   buildLyricHTML();
+  if (autoReplay) play();
 }
 
 /* ────────────────────────────────────────────────────────────────
    BUILD LYRIC SPANS
 ──────────────────────────────────────────────────────────────── */
 function buildLyricHTML() {
-  const el=$('msPLyric'); if(!el) return;
-  const mo=S.motion, spd=S.spd, lyric=S.lyric||'';
-  if (mo==='word') {
-    el.innerHTML = lyric.split(' ').map((w,i)=>
-      `<span class="ms-word" style="animation-delay:${(0.28+i*0.13)*spd}s;animation-duration:${0.45*spd}s">${w}</span>`
+  const el = $('msPLyric');
+  if (!el) return;
+  const mo    = S.motion;
+  const spd   = S.animSpd;
+  const lyric = S.lyric || '';
+
+  if (mo === 'word') {
+    el.innerHTML = lyric.split(' ').map((w, i) =>
+      `<span class="ms-word" style="animation-delay:${(0.28 + i * 0.13) * spd}s;animation-duration:${0.45 * spd}s">${w}</span>`
     ).join(' ');
-  } else if (mo==='rise') {
-    el.innerHTML = lyric.split('').map((c,i)=>
-      c===' ' ? ' ' : `<span class="ms-ch" style="animation-delay:${(0.28+i*0.05)*spd}s;animation-duration:${0.45*spd}s">${c}</span>`
+  } else if (mo === 'rise') {
+    el.innerHTML = lyric.split('').map((c, i) =>
+      c === ' ' ? ' ' : `<span class="ms-ch" style="animation-delay:${(0.28 + i * 0.05) * spd}s;animation-duration:${0.45 * spd}s">${c}</span>`
     ).join('');
   } else {
     el.textContent = lyric;
   }
+
   el.style.fontFamily = S.font.fam;
   el.style.fontStyle  = S.font.sty;
 }
@@ -757,169 +964,242 @@ function buildLyricHTML() {
    BIND EVENTS
 ──────────────────────────────────────────────────────────────── */
 function bindEvents() {
-  // Back
+  // ── Back
   $('msBack').onclick = () => {
     clearTimeout(_loopTimer);
+    clearTimeout(_replayDebounce);
     $('studioOverlay').classList.add('hidden');
     document.body.classList.remove('modal-open');
-    const pm=$('postcardModal');
-    if (pm && typeof openModal==='function') openModal(pm);
+    const pm = $('postcardModal');
+    if (pm && typeof openModal === 'function') openModal(pm);
   };
 
-  // Replay
-  $('msReplay').onclick      = ()=>{ play(); toast('▶ Preview'); };
-  $('msReplayStage').onclick = ()=>{ play(); toast('▶ Replay'); };
+  // ── Manual replay buttons (always replay)
+  $('msReplay').onclick      = () => { play(); toast('▶ Preview'); };
+  $('msReplayStage').onclick = () => { play(); toast('▶ Replay'); };
 
-  // Loop
-  $('msLoopBtn').onclick = function(){
-    S.looping=!S.looping; this.classList.toggle('active',S.looping);
-    if(S.looping){play();toast('⟳ Loop on');}
-    else{clearTimeout(_loopTimer);toast('⟳ Loop off');}
+  // ── Loop
+  $('msLoopBtn').onclick = function() {
+    S.looping = !S.looping;
+    this.classList.toggle('active', S.looping);
+    if (S.looping) { play(); toast('⟳ Loop on'); }
+    else           { clearTimeout(_loopTimer); toast('⟳ Loop off'); }
   };
 
-  // Export open
-  $('msExportBtn').onclick = ()=>{
-    $t('msEmSize',`${S.canvas.w} × ${S.canvas.h}`);
+  // ── Export open
+  $('msExportBtn').onclick = () => {
+    $t('msEmSize', `${S.canvas.w} × ${S.canvas.h}`);
     $('msExportModal').classList.add('open');
   };
+  $('msExportVideo').onclick  = () => { msCloseExport(); exportVideo(); };
+  $('msExportPng').onclick    = () => { msCloseExport(); exportPNG(); };
+  $('msExportCancel').onclick = msCloseExport;
 
-  // Tabs
-  document.querySelector('.ms-tab-bar').addEventListener('click', e=>{
-    const tab=e.target.closest('.ms-tab'); if(!tab) return;
-    document.querySelectorAll('.ms-tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('active'));
+  // ── Tabs
+  document.querySelector('.ms-tab-bar').addEventListener('click', e => {
+    const tab = e.target.closest('.ms-tab');
+    if (!tab) return;
+    document.querySelectorAll('.ms-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.ms-panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
-    const panel=$('ms-panel-'+tab.dataset.tab);
-    if(panel) panel.classList.add('active');
+    const panel = $('ms-panel-' + tab.dataset.tab);
+    if (panel) panel.classList.add('active');
+    // NO auto-replay on tab change
   });
 
-  // Canvas sizes
-  $('msCvGrid').addEventListener('click', e=>{
-    const btn=e.target.closest('.ms-cv-btn'); if(!btn) return;
-    document.querySelectorAll('.ms-cv-btn').forEach(b=>b.classList.remove('active'));
+  // ── UI Mode toggles (topbar)
+  $('msTopModeToggle').addEventListener('click', e => {
+    const btn = e.target.closest('.ms-mt-btn');
+    if (!btn) return;
+    applyUIMode(btn.dataset.ui);
+    toast(btn.dataset.ui === 'dark' ? '🌙 Dark Studio' : '☀️ Light Studio');
+  });
+
+  // ── UI Mode toggles (sidebar color tab)
+  $('msSidebarModeToggle').addEventListener('click', e => {
+    const btn = e.target.closest('.ms-uimode-btn');
+    if (!btn) return;
+    applyUIMode(btn.dataset.ui);
+    toast(btn.dataset.ui === 'dark' ? '🌙 Dark Studio' : '☀️ Light Studio');
+  });
+
+  // ── Canvas sizes (in Size tab)
+  $('msCvGrid').addEventListener('click', e => {
+    const btn = e.target.closest('.ms-cv-btn');
+    if (!btn) return;
+    document.querySelectorAll('.ms-cv-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    S.canvas={...STU_SIZES[btn.dataset.key]};
-    updatePlatTags(); sizeCanvas(); setTimeout(play,200);
+    S.canvas = { ...STU_SIZES[btn.dataset.key] };
+    updatePlatTags();
+    sizeCanvas();
     toast(btn.querySelector('.ms-cv-name').textContent);
+    // NO auto-replay on size change
   });
 
-  // Theme
-  $('msThemeGrid').addEventListener('click', e=>{
-    const item=e.target.closest('.ms-th-item'); if(!item) return;
-    document.querySelectorAll('.ms-th-item').forEach(x=>x.classList.remove('active'));
+  // ── Poster Theme (NO auto-replay — just update visually)
+  $('msThemeGrid').addEventListener('click', e => {
+    const item = e.target.closest('.ms-th-item');
+    if (!item) return;
+    document.querySelectorAll('.ms-th-item').forEach(x => x.classList.remove('active'));
     item.classList.add('active');
-    S.theme=item.dataset.theme;
-    const p=$('msPoster');
-    p.classList.remove(...[...p.classList].filter(c=>c.startsWith('ms-t-')));
-    p.classList.add('ms-t-'+S.theme);
-    setTimeout(play,80); toast('Theme: '+item.querySelector('.ms-th-nm').textContent);
+    applyPosterTheme(item.dataset.theme);
+    toast('Theme: ' + item.querySelector('.ms-th-nm').textContent);
+    // No replay — theme change is visible immediately
   });
 
-  // Brightness
-  $('msBrightness').addEventListener('input',function(){
-    S.brightness=+this.value; $t('msBrightnessVal',this.value+'%'); applyAdjust();
+  // ── Brightness / Contrast (NO replay)
+  $('msBrightness').addEventListener('input', function() {
+    S.brightness = +this.value;
+    $t('msBrightnessVal', this.value + '%');
+    applyAdjust();
   });
-  $('msContrast').addEventListener('input',function(){
-    S.contrast=+this.value; $t('msContrastVal',this.value+'%'); applyAdjust();
+  $('msContrast').addEventListener('input', function() {
+    S.contrast = +this.value;
+    $t('msContrastVal', this.value + '%');
+    applyAdjust();
   });
 
-  // Font
-  $('msFontGrid').addEventListener('click', e=>{
-    const btn=e.target.closest('.ms-fn-btn'); if(!btn) return;
-    document.querySelectorAll('.ms-fn-btn').forEach(x=>x.classList.remove('active'));
+  // ── Font (NO replay — update live)
+  $('msFontGrid').addEventListener('click', e => {
+    const btn = e.target.closest('.ms-fn-btn');
+    if (!btn) return;
+    document.querySelectorAll('.ms-fn-btn').forEach(x => x.classList.remove('active'));
     btn.classList.add('active');
-    S.font={fam:btn.dataset.fam, sty:btn.dataset.sty};
-    buildLyricHTML(); setTimeout(play,80);
-    toast('Font: '+btn.querySelector('.ms-fn-nm').textContent);
-  });
-  $('msTextSize').addEventListener('input',function(){
-    S.textScale=+this.value/100; $t('msTextSizeVal',this.value+'%'); sizeCanvas();
+    S.font = { fam: btn.dataset.fam, sty: btn.dataset.sty };
+    buildLyricHTML();
+    toast('Font: ' + btn.querySelector('.ms-fn-nm').textContent);
+    // No replay needed — font updates live in DOM
   });
 
-  // Motion style
-  $('msMoList').addEventListener('click', e=>{
-    const btn=e.target.closest('.ms-mo-btn'); if(!btn) return;
-    document.querySelectorAll('.ms-mo-btn').forEach(x=>x.classList.remove('active'));
+  $('msTextSize').addEventListener('input', function() {
+    S.textScale = +this.value / 100;
+    $t('msTextSizeVal', this.value + '%');
+    sizeCanvas();
+    // No replay
+  });
+
+  // ── Motion style (AUTO-REPLAY — changes visible animation)
+  $('msMoList').addEventListener('click', e => {
+    const btn = e.target.closest('.ms-mo-btn');
+    if (!btn) return;
+    document.querySelectorAll('.ms-mo-btn').forEach(x => x.classList.remove('active'));
     btn.classList.add('active');
-    S.motion=btn.dataset.mo;
-    const p=$('msPoster');
-    p.classList.remove(...[...p.classList].filter(c=>c.startsWith('ms-anim-')));
-    p.classList.add('ms-anim-'+S.motion);
-    buildLyricHTML(); setTimeout(play,80);
-    toast('Motion: '+btn.querySelector('.ms-mo-name').textContent);
+    S.motion = btn.dataset.mo;
+    const p = $('msPoster');
+    p.classList.remove(...[...p.classList].filter(c => c.startsWith('ms-anim-')));
+    p.classList.add('ms-anim-' + S.motion);
+    buildLyricHTML();
+    toast('Motion: ' + btn.querySelector('.ms-mo-name').textContent);
+    play(); // AUTO-REPLAY for motion change
   });
 
-  // Speed presets
-  $('msSpdBtns').addEventListener('click', e=>{
-    const btn=e.target.closest('.ms-sp-btn'); if(!btn) return;
-    document.querySelectorAll('.ms-sp-btn').forEach(x=>x.classList.remove('active'));
+  // ── Speed presets (AUTO-REPLAY)
+  $('msSpdBtns').addEventListener('click', e => {
+    const btn = e.target.closest('.ms-sp-btn');
+    if (!btn) return;
+    document.querySelectorAll('.ms-sp-btn').forEach(x => x.classList.remove('active'));
     btn.classList.add('active');
-    const spd=parseFloat(btn.dataset.spd);
-    $('msCustomSpd').value=spd; $t('msCustomSpdVal',spd.toFixed(1)+'×');
-    setSpeed(spd); setTimeout(play,80); toast('Speed: '+btn.textContent);
+    const spd = parseFloat(btn.dataset.spd);
+    $('msCustomSpd').value = spd;
+    $t('msCustomSpdVal', spd.toFixed(1) + '×');
+    setAnimSpeed(spd, true); // true = auto-replay
+    toast('Speed: ' + btn.textContent);
   });
 
-  // Custom speed
-  $('msCustomSpd').addEventListener('input',function(){
-    const spd=parseFloat(this.value);
-    $t('msCustomSpdVal',spd.toFixed(1)+'×');
-    document.querySelectorAll('.ms-sp-btn').forEach(x=>x.classList.remove('active'));
-    setSpeed(spd); clearTimeout(window._msSpd);
-    window._msSpd=setTimeout(play,300);
+  // ── Custom speed slider (AUTO-REPLAY with debounce)
+  $('msCustomSpd').addEventListener('input', function() {
+    const spd = parseFloat(this.value);
+    $t('msCustomSpdVal', spd.toFixed(2) + '×');
+    // Deactivate preset buttons
+    document.querySelectorAll('.ms-sp-btn').forEach(x => x.classList.remove('active'));
+    setAnimSpeed(spd, false); // update CSS but don't replay immediately
+    clearTimeout(_replayDebounce);
+    _replayDebounce = setTimeout(() => play(), 600); // replay after user stops dragging
   });
 
-  // Pulse speed
-  $('msPulseSpd').addEventListener('input',function(){
-    S.pulse=parseFloat(this.value); $t('msPulseSpdVal',this.value+'s');
-    document.documentElement.style.setProperty('--ms-pulse',this.value+'s');
+  // ── Pulse speed (NO replay — just CSS variable, live)
+  $('msPulseSpd').addEventListener('input', function() {
+    S.pulse = parseFloat(this.value);
+    $t('msPulseSpdVal', this.value + 's');
+    document.documentElement.style.setProperty('--ms-pulse', this.value + 's');
   });
 
-  // Content inputs
-  $('msSongIn').addEventListener('input',function(){ S.song=this.value; $t('msPSong',this.value); });
-  $('msArtistIn').addEventListener('input',function(){ S.artist=this.value; $t('msPArtist',this.value.toUpperCase()); });
-  $('msEmotionIn').addEventListener('input',function(){ S.emotion=this.value; $t('msPEmotion',this.value?'✦ '+this.value.toUpperCase():''); });
+  // ── Content inputs (NO replay)
+  $('msSongIn').addEventListener('input', function() {
+    S.song = this.value;
+    $t('msPSong', this.value);
+  });
+  $('msArtistIn').addEventListener('input', function() {
+    S.artist = this.value;
+    $t('msPArtist', this.value.toUpperCase());
+  });
+  $('msEmotionIn').addEventListener('input', function() {
+    S.emotion = this.value;
+    $t('msPEmotion', this.value ? '✦ ' + this.value.toUpperCase() : '');
+  });
 
-  // Photo upload
-  $('msPhDrop').addEventListener('click',()=>$('msPhFile').click());
-  $('msPhFile').addEventListener('change',function(e){
-    const file=e.target.files[0]; if(!file) return;
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      S.photo=ev.target.result;
-      const ph=$('msPPhoto'); ph.style.backgroundImage=`url(${S.photo})`; ph.style.display='block';
-      $t('msPhTxt','✓ Photo added'); $('msPhDrop').classList.add('has-photo');
+  // ── Photo upload
+  $('msPhDrop').addEventListener('click', () => $('msPhFile').click());
+  $('msPhFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      S.photo = ev.target.result;
+      const ph = $('msPPhoto');
+      ph.style.backgroundImage = `url(${S.photo})`;
+      ph.style.display = 'block';
+      $t('msPhTxt', '✓ Photo added');
+      $('msPhDrop').classList.add('has-photo');
       $('msPhCtrl').classList.remove('hidden');
-      const img=new Image(); img.src=S.photo; _photoImg=img;
-      applyPhotoStyles(); toast('✓ Photo added');
+      const img = new Image(); img.src = S.photo; _photoImg = img;
+      applyPhotoStyles();
+      toast('✓ Photo added');
     };
     reader.readAsDataURL(file);
   });
-  $('msPhBlur').addEventListener('input',function(){ S.blur=+this.value; $t('msBlurVal',this.value+'px'); applyPhotoStyles(); });
-  $('msPhDim').addEventListener('input',function(){ S.dim=+this.value; $t('msDimVal',this.value+'%'); applyPhotoStyles(); });
-  $('msFiRow').addEventListener('click',e=>{
-    const btn=e.target.closest('.ms-fi-btn'); if(!btn) return;
-    document.querySelectorAll('.ms-fi-btn').forEach(x=>x.classList.remove('active'));
-    btn.classList.add('active'); S.filter=btn.dataset.fi;
-    applyPhotoStyles(); toast('Filter: '+btn.textContent);
+  $('msPhBlur').addEventListener('input', function() {
+    S.blur = +this.value;
+    $t('msBlurVal', this.value + 'px');
+    applyPhotoStyles();
   });
-  $('msRmPh').addEventListener('click',()=>{
-    S.photo=null; _photoImg=null;
-    $('msPPhoto').style.backgroundImage=''; $('msPPhoto').style.display='none';
-    $t('msPhTxt','Tap to add a photo'); $('msPhDrop').classList.remove('has-photo');
-    $('msPhCtrl').classList.add('hidden'); toast('Photo removed');
+  $('msPhDim').addEventListener('input', function() {
+    S.dim = +this.value;
+    $t('msDimVal', this.value + '%');
+    applyPhotoStyles();
+  });
+  $('msFiRow').addEventListener('click', e => {
+    const btn = e.target.closest('.ms-fi-btn');
+    if (!btn) return;
+    document.querySelectorAll('.ms-fi-btn').forEach(x => x.classList.remove('active'));
+    btn.classList.add('active');
+    S.filter = btn.dataset.fi;
+    applyPhotoStyles();
+    toast('Filter: ' + btn.textContent);
+  });
+  $('msRmPh').addEventListener('click', () => {
+    S.photo = null; _photoImg = null;
+    $('msPPhoto').style.backgroundImage = '';
+    $('msPPhoto').style.display = 'none';
+    $t('msPhTxt', 'Tap to add a photo');
+    $('msPhDrop').classList.remove('has-photo');
+    $('msPhCtrl').classList.add('hidden');
+    toast('Photo removed');
   });
 
-  // Drag and drop on photo panel
-  const drop=$('msPhDrop');
-  drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('has-photo');});
-  drop.addEventListener('dragleave',e=>{ if(!drop.contains(e.relatedTarget)) drop.classList.remove('has-photo'); });
-  drop.addEventListener('drop',e=>{
+  // ── Drag and drop
+  const drop = $('msPhDrop');
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('has-photo'); });
+  drop.addEventListener('dragleave', e => { if (!drop.contains(e.relatedTarget)) drop.classList.remove('has-photo'); });
+  drop.addEventListener('drop', e => {
     e.preventDefault();
-    if(e.dataTransfer.files[0]){
-      try{
-        const dt=new DataTransfer(); dt.items.add(e.dataTransfer.files[0]);
-        $('msPhFile').files=dt.files; $('msPhFile').dispatchEvent(new Event('change'));
-      } catch(ex){ /* Safari fallback */ }
+    if (e.dataTransfer.files[0]) {
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(e.dataTransfer.files[0]);
+        $('msPhFile').files = dt.files;
+        $('msPhFile').dispatchEvent(new Event('change'));
+      } catch(ex) { /* Safari fallback */ }
     }
   });
 
@@ -930,319 +1210,540 @@ function bindEvents() {
    PHOTO + ADJUST
 ──────────────────────────────────────────────────────────────── */
 function applyPhotoStyles() {
-  const ph=$('msPPhoto'); if(!ph||!S.photo) return;
-  const filters={none:'',warm:'sepia(.3) saturate(1.3) hue-rotate(-10deg)',cool:'saturate(.8) hue-rotate(20deg) brightness(1.05)',drama:'contrast(1.3) saturate(.8) brightness(.85)',vintage:'sepia(.5) contrast(.9) brightness(.9) saturate(.8)'};
-  ph.style.filter=`blur(${S.blur}px) ${filters[S.filter]||''}`;
-  ph.style.opacity=1-S.dim/100;
+  const ph = $('msPPhoto');
+  if (!ph || !S.photo) return;
+  const filters = {
+    none:    '',
+    warm:    'sepia(.3) saturate(1.3) hue-rotate(-10deg)',
+    cool:    'saturate(.8) hue-rotate(20deg) brightness(1.05)',
+    drama:   'contrast(1.3) saturate(.8) brightness(.85)',
+    vintage: 'sepia(.5) contrast(.9) brightness(.9) saturate(.8)',
+  };
+  ph.style.filter  = `blur(${S.blur}px) ${filters[S.filter] || ''}`;
+  ph.style.opacity = 1 - S.dim / 100;
 }
+
 function applyAdjust() {
-  const p=$('msPoster');
-  if(p) p.style.filter=`brightness(${S.brightness/100}) contrast(${S.contrast/100})`;
+  const p = $('msPoster');
+  if (p) p.style.filter = `brightness(${S.brightness / 100}) contrast(${S.contrast / 100})`;
 }
 
 /* ────────────────────────────────────────────────────────────────
    YOUTUBE THUMBNAIL
 ──────────────────────────────────────────────────────────────── */
 function injectYtOption(meta) {
-  const panel=$('ms-panel-photo'); if(!panel) return;
+  const panel = $('ms-panel-photo');
+  if (!panel) return;
   $('msYtOpt')?.remove();
-  const opt=document.createElement('div');
-  opt.id='msYtOpt';
-  opt.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,80,80,.3);background:rgba(255,0,0,.05);cursor:pointer;margin-bottom:8px;';
-  opt.innerHTML=`<img src="${meta.thumbnail}" style="width:48px;height:36px;object-fit:cover;border-radius:5px;" onerror="this.parentElement.style.display='none'"/>
-    <div><div style="font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;color:rgba(255,80,80,.8);text-transform:uppercase;letter-spacing:1px;">▶ Use Video Thumbnail</div>
-    <div style="font-family:'DM Sans',sans-serif;font-size:.72rem;color:rgba(255,255,255,.45);margin-top:2px;">${meta.title||meta.channel||''}</div></div>`;
-  const tryLoad=src=>new Promise((res,rej)=>{const img=new Image();img.crossOrigin='anonymous';img.onload=()=>res(img);img.onerror=()=>rej();img.src=src;});
-  const apply=img=>{
-    _photoImg=img; S.photo=img.src;
-    $('msPPhoto').style.backgroundImage=`url(${img.src})`; $('msPPhoto').style.display='block';
-    $t('msPhTxt','YouTube thumbnail'); $('msPhDrop').classList.add('has-photo');
+  const opt = document.createElement('div');
+  opt.id = 'msYtOpt';
+  opt.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,80,80,.3);background:rgba(255,0,0,.05);cursor:pointer;margin-bottom:8px;';
+  opt.innerHTML = `
+    <img src="${meta.thumbnail}" style="width:48px;height:36px;object-fit:cover;border-radius:5px;" onerror="this.parentElement.style.display='none'"/>
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:.4rem;font-weight:700;color:rgba(255,80,80,.85);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">▶ Use Video Thumbnail</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:.72rem;color:rgba(255,255,255,.45);">${meta.title || meta.channel || ''}</div>
+    </div>`;
+
+  const tryLoad = src => new Promise((res, rej) => {
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    img.onload = () => res(img); img.onerror = () => rej();
+    img.src = src;
+  });
+
+  const apply = img => {
+    _photoImg = img; S.photo = img.src;
+    $('msPPhoto').style.backgroundImage = `url(${img.src})`;
+    $('msPPhoto').style.display = 'block';
+    $t('msPhTxt', 'YouTube thumbnail');
+    $('msPhDrop').classList.add('has-photo');
     $('msPhCtrl').classList.remove('hidden');
-    opt.style.borderColor='rgba(255,0,0,.55)'; opt.style.background='rgba(255,0,0,.15)';
-    applyPhotoStyles(); toast('Thumbnail set ✓');
+    opt.style.borderColor = 'rgba(255,0,0,.55)';
+    opt.style.background  = 'rgba(255,0,0,.15)';
+    applyPhotoStyles();
+    toast('Thumbnail set ✓');
   };
-  opt.onclick=()=>tryLoad(meta.thumbnail).then(apply).catch(()=>fetch(meta.thumbnail).then(r=>r.blob()).then(b=>tryLoad(URL.createObjectURL(b))).then(apply).catch(()=>toast('Could not load thumbnail')));
+
+  opt.onclick = () =>
+    tryLoad(meta.thumbnail)
+      .then(apply)
+      .catch(() =>
+        fetch(meta.thumbnail)
+          .then(r => r.blob())
+          .then(b => tryLoad(URL.createObjectURL(b)))
+          .then(apply)
+          .catch(() => toast('Could not load thumbnail'))
+      );
+
   panel.insertBefore(opt, panel.firstChild);
 }
 
 /* ────────────────────────────────────────────────────────────────
    EXPORT
 ──────────────────────────────────────────────────────────────── */
-function msCloseExport(){ $('msExportModal').classList.remove('open'); }
-function msDoExport(type){ msCloseExport(); type==='png' ? exportPNG() : exportVideo(); }
+function msCloseExport() {
+  const m = $('msExportModal');
+  if (m) m.classList.remove('open');
+}
 
 function exportPNG() {
   toast('⏳ Preparing PNG…');
-  const {w,h}=S.canvas;
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
-  document.fonts.ready.then(()=>{
-    drawFrame(ctx,w,h,1,4000);
-    c.toBlob(blob=>{
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob); a.download=`margo-${S.theme}-${w}x${h}.png`; a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  const {w, h} = S.canvas;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  document.fonts.ready.then(() => {
+    // Draw final frame (t=1, past all animations)
+    drawFrame(ctx, w, h, 1.0, getVideoDuration());
+    c.toBlob(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `margo-${S.theme}-${w}x${h}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
       toast(`✓ PNG saved · ${w}×${h}`);
-    },'image/png');
+    }, 'image/png');
   });
 }
 
 function exportVideo() {
-  const {w,h}=S.canvas;
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
-  let stream,recorder;
-  try {
-    stream=c.captureStream(30);
-    const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':'video/webm';
-    recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:4_500_000});
-  } catch(e){ toast('⚠ Use Chrome/Edge for video export'); return; }
+  const {w, h} = S.canvas;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
 
-  toast('🎬 Recording animation…');
-  const chunks=[];
-  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
-  recorder.onstop=()=>{
-    const blob=new Blob(chunks,{type:'video/webm'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob); a.download=`margo-motion-${w}x${h}-${Date.now()}.webm`; a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-    toast(`✓ Video saved · ${w}×${h}`);
+  let stream, recorder;
+  try {
+    stream = c.captureStream(30);
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9' : 'video/webm';
+    recorder = new MediaRecorder(stream, {
+      mimeType: mime,
+      videoBitsPerSecond: 8_000_000, // 8Mbps — high quality
+    });
+  } catch(e) {
+    toast('⚠ Use Chrome or Edge for video export');
+    return;
+  }
+
+  // Total duration = animation settle + 1.5s hold. Never cuts early.
+  const totalDur   = getVideoDuration();
+  const animSettle = totalDur - 1500; // animation portion
+  const holdMs     = 1500;            // static hold at end
+
+  toast('🎬 Recording — do not close this tab…');
+  const recBadge = $('msRecBadge');
+  if (recBadge) recBadge.classList.add('visible');
+
+  const chunks = [];
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    if (recBadge) recBadge.classList.remove('visible');
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `margo-motion-${w}x${h}-${Date.now()}.webm`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    const kb = Math.round(blob.size / 1024);
+    toast(`✓ Video saved · ${w}×${h} · ${kb < 1024 ? kb+'KB' : (kb/1024).toFixed(1)+'MB'}`);
   };
 
-  const dur=Math.max(4000,4000*S.spd);
-  const start=performance.now();
-  recorder.start();
-  document.fonts.ready.then(()=>{
-    function frame(now){
-      const t=Math.min((now-start)/dur,1);
-      drawFrame(ctx,w,h,t,now-start);
-      if(t<1) requestAnimationFrame(frame); else recorder.stop();
+  recorder.start(100); // collect every 100ms
+  const startMs = performance.now();
+
+  document.fonts.ready.then(() => {
+    function frame(now) {
+      const elapsed = now - startMs;
+
+      if (elapsed <= animSettle) {
+        // Animation phase: t goes 0→1
+        const t = elapsed / animSettle;
+        drawFrame(ctx, w, h, Math.min(t, 1), elapsed);
+        requestAnimationFrame(frame);
+      } else if (elapsed <= totalDur) {
+        // Hold phase: draw final frame
+        drawFrame(ctx, w, h, 1.0, elapsed);
+        requestAnimationFrame(frame);
+      } else {
+        // Done
+        recorder.stop();
+      }
     }
     requestAnimationFrame(frame);
   });
 }
 
 /* ────────────────────────────────────────────────────────────────
-   DRAW FRAME  — canvas renderer for PNG + video export
-   t  = 0→1 normalised time
-   ms = elapsed milliseconds (for ripple phase)
+   DRAW FRAME
+   t   = 0→1 normalised animation progress
+   ms  = elapsed milliseconds (for ripple phase, waveform)
 ──────────────────────────────────────────────────────────────── */
 function drawFrame(ctx, w, h, t, ms) {
-  const td=STU_THEMES[S.theme]||STU_THEMES.midnight;
-  const isDark=!td.light, gold='#E8C547', black='#0B0B0D';
-  const textCol=td.textCol;
+  const td      = STU_THEMES[S.theme] || STU_THEMES.midnight;
+  const isDark  = !td.light;
+  const accent  = td.accent;     // theme accent color — NOT hardcoded gold
+  const textCol = td.textCol;
+  const black   = '#0B0B0D';
 
-  // Background
-  const g=ctx.createLinearGradient(0,0,0,h);
-  g.addColorStop(0,td.bg0); g.addColorStop(.5,td.bg1); g.addColorStop(1,td.bg2);
-  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  // ── Background gradient
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0,   td.bg0);
+  bg.addColorStop(0.5, td.bg1);
+  bg.addColorStop(1,   td.bg2);
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
 
-  // Photo layer
-  if (S.photo && _photoImg && _photoImg.complete) {
+  // ── Photo layer
+  if (S.photo && _photoImg && _photoImg.complete && _photoImg.naturalWidth > 0) {
     ctx.save();
-    ctx.globalAlpha=1-S.dim/100;
-    if(S.blur>0) ctx.filter=`blur(${S.blur*(w/1080)}px)`;
-    const img=_photoImg, ir=img.naturalWidth/img.naturalHeight, cr=w/h;
-    let sx=0,sy=0,sw2=img.naturalWidth,sh2=img.naturalHeight;
-    if(ir>cr){sw2=img.naturalHeight*cr;sx=(img.naturalWidth-sw2)/2;}
-    else{sh2=img.naturalWidth/cr;sy=(img.naturalHeight-sh2)/2;}
-    ctx.drawImage(img,sx,sy,sw2,sh2,0,0,w,h);
-    ctx.filter='none'; ctx.restore();
-    ctx.save(); ctx.fillStyle=`rgba(0,0,0,${S.dim/100})`; ctx.fillRect(0,0,w,h); ctx.restore();
+    ctx.globalAlpha = 1 - S.dim / 100;
+    if (S.blur > 0) ctx.filter = `blur(${S.blur * (w / 1080)}px)`;
+    const img = _photoImg;
+    const ir  = img.naturalWidth / img.naturalHeight;
+    const cr  = w / h;
+    let sx = 0, sy = 0, sw2 = img.naturalWidth, sh2 = img.naturalHeight;
+    if (ir > cr) { sw2 = img.naturalHeight * cr;    sx = (img.naturalWidth  - sw2) / 2; }
+    else          { sh2 = img.naturalWidth  / cr;   sy = (img.naturalHeight - sh2) / 2; }
+    ctx.drawImage(img, sx, sy, sw2, sh2, 0, 0, w, h);
+    ctx.filter = 'none';
+    ctx.restore();
+    // Dim overlay
+    ctx.save();
+    ctx.fillStyle = `rgba(0,0,0,${S.dim / 100})`;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
   }
 
-  // Ambient glow
-  const ag=ctx.createRadialGradient(w/2,h,0,w/2,h,w*.7);
-  ag.addColorStop(0,isDark?'rgba(232,197,71,.06)':'rgba(184,144,26,.04)');
-  ag.addColorStop(1,'transparent');
-  ctx.fillStyle=ag; ctx.fillRect(0,0,w,h);
+  // ── Ambient glow
+  const ag = ctx.createRadialGradient(w / 2, h, 0, w / 2, h, w * 0.7);
+  ag.addColorStop(0, isDark ? 'rgba(232,197,71,.05)' : 'rgba(184,144,26,.03)');
+  ag.addColorStop(1, 'transparent');
+  ctx.fillStyle = ag;
+  ctx.fillRect(0, 0, w, h);
 
-  // Shimmer top line
-  if(isDark){
-    const sg=ctx.createLinearGradient(0,0,w,0);
-    sg.addColorStop(0,'transparent'); sg.addColorStop(.5,'rgba(232,197,71,.5)'); sg.addColorStop(1,'transparent');
-    ctx.fillStyle=sg; ctx.fillRect(0,0,w,1);
+  // ── Shimmer top line (dark themes only)
+  if (isDark) {
+    const sg = ctx.createLinearGradient(0, 0, w, 0);
+    sg.addColorStop(0,   'transparent');
+    sg.addColorStop(0.5, hexToRgba(accent, 0.55));
+    sg.addColorStop(1,   'transparent');
+    ctx.fillStyle = sg;
+    ctx.fillRect(0, 0, w, 1);
   }
 
-  // ── LOGO ──
-  const logoY=h*.27, ls=w*.12, cx=w/2;
+  // ── LOGO
+  const logoY = h * 0.27;
+  const ls    = w * 0.12;
+  const cx    = w / 2;
 
   // Ripple rings
-  const pDur=S.pulse;
-  for(let i=0;i<3;i++){
-    const delay=i*(pDur/3);
-    const rt=((ms/1000-delay)%pDur)/pDur;
-    if(rt>0){
-      const sc=.5+rt*3.5, op=Math.max(0,1-rt)*.7;
-      ctx.save(); ctx.beginPath(); ctx.arc(cx,logoY,ls/2*sc,0,Math.PI*2);
-      ctx.strokeStyle=`rgba(232,197,71,${op})`; ctx.lineWidth=Math.max(w*.002,1); ctx.stroke(); ctx.restore();
+  const pDur = S.pulse;
+  for (let i = 0; i < 3; i++) {
+    const delay = i * (pDur / 3);
+    const rt    = ((ms / 1000 - delay) % pDur) / pDur;
+    if (rt > 0) {
+      const sc = 0.5 + rt * 3.5;
+      const op = Math.max(0, 1 - rt) * 0.65;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, logoY, (ls / 2) * sc, 0, Math.PI * 2);
+      ctx.strokeStyle = hexToRgba(accent, op);
+      ctx.lineWidth   = Math.max(w * 0.002, 1);
+      ctx.stroke();
+      ctx.restore();
     }
   }
 
-  // Logo circle (breathing glow)
-  const gp=.5+Math.sin(ms/1700)*.5;
-  ctx.save(); ctx.shadowColor=gold; ctx.shadowBlur=12+gp*16;
-  ctx.beginPath(); ctx.arc(cx,logoY,ls/2,0,Math.PI*2);
-  ctx.fillStyle=isDark?gold:td.accent; ctx.fill(); ctx.restore();
+  // Logo circle with glow
+  const glow = 0.5 + Math.sin(ms / 1700) * 0.5;
+  ctx.save();
+  ctx.shadowColor = accent;
+  ctx.shadowBlur  = 12 + glow * 16;
+  ctx.beginPath();
+  ctx.arc(cx, logoY, ls / 2, 0, Math.PI * 2);
+  ctx.fillStyle = isDark ? accent : accent;
+  ctx.fill();
+  ctx.restore();
 
-  // M path
-  const lx=cx-ls*.3, ly=logoY-ls*.34, lw=ls*.6, lh=ls*.65;
-  ctx.save(); ctx.strokeStyle=isDark?black:'#ffffff';
-  ctx.lineWidth=Math.max(ls*.09,2); ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.beginPath(); ctx.moveTo(lx,ly+lh); ctx.lineTo(lx,ly);
-  ctx.lineTo(lx+lw*.28,ly+lh*.42); ctx.lineTo(cx,ly+lh*.02);
-  ctx.lineTo(lx+lw*.72,ly+lh*.42); ctx.lineTo(lx+lw,ly); ctx.lineTo(lx+lw,ly+lh);
-  ctx.stroke(); ctx.restore();
+  // M lettermark on logo
+  const lx = cx - ls * 0.3;
+  const ly = logoY - ls * 0.34;
+  const lw = ls * 0.6;
+  const lh = ls * 0.65;
+  ctx.save();
+  ctx.strokeStyle = isDark ? black : '#ffffff';
+  ctx.lineWidth   = Math.max(ls * 0.09, 2);
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.beginPath();
+  ctx.moveTo(lx, ly + lh);   ctx.lineTo(lx, ly);
+  ctx.lineTo(lx + lw * 0.28, ly + lh * 0.42);
+  ctx.lineTo(cx, ly + lh * 0.02);
+  ctx.lineTo(lx + lw * 0.72, ly + lh * 0.42);
+  ctx.lineTo(lx + lw, ly);   ctx.lineTo(lx + lw, ly + lh);
+  ctx.stroke();
+  ctx.restore();
 
-  // ── WAVEFORM ──
-  if(t>0.22){
-    const wo=Math.min((t-.22)/.15,1);
-    const bars=[.33,.58,.83,.67,1,.67,.83];
-    const bw=Math.max(w*.005,2), bg2=Math.max(w*.007,2), maxH=h*.04;
-    const totalBW=bars.length*(bw+bg2);
-    let bx=cx-totalBW/2;
-    const wy=logoY+ls*.82;
-    ctx.save(); ctx.globalAlpha=wo*.6; ctx.fillStyle=td.accent;
-    bars.forEach((hf,i)=>{
-      const pulse=Math.sin(ms/400+i*.7)*.3+.7;
-      const bh=maxH*hf*pulse;
+  // ── WAVEFORM
+  if (t > 0.22) {
+    const wo   = Math.min((t - 0.22) / 0.15, 1);
+    const bars = [0.33, 0.58, 0.83, 0.67, 1, 0.67, 0.83];
+    const bw   = Math.max(w * 0.005, 2);
+    const bg2  = Math.max(w * 0.007, 2);
+    const maxH = h * 0.04;
+    const totW = bars.length * (bw + bg2);
+    let bx     = cx - totW / 2;
+    const wy   = logoY + ls * 0.82;
+
+    ctx.save();
+    ctx.globalAlpha = wo * 0.65;
+    ctx.fillStyle   = accent;
+    bars.forEach((hf, i) => {
+      const pulse = Math.sin(ms / 400 + i * 0.7) * 0.3 + 0.7;
+      const bh    = maxH * hf * pulse;
       ctx.beginPath();
-      if(ctx.roundRect) ctx.roundRect(bx,wy-bh/2,bw,bh,bw/2);
-      else ctx.rect(bx,wy-bh/2,bw,bh);
-      ctx.fill(); bx+=bw+bg2;
+      if (ctx.roundRect) ctx.roundRect(bx, wy - bh / 2, bw, bh, bw / 2);
+      else ctx.rect(bx, wy - bh / 2, bw, bh);
+      ctx.fill();
+      bx += bw + bg2;
     });
     ctx.restore();
   }
 
-  // ── LYRIC ──
-  const baseFS=w*.053*(S.textScale||1);
-  const lyricY=h*.54, maxW=w*.78, lineH=baseFS*1.5;
-  const fam=(S.font&&S.font.fam)||"'Playfair Display',serif";
-  const italic=(S.font&&S.font.sty)==='italic';
+  // ── LYRIC TEXT
+  const baseFS = w * 0.053 * (S.textScale || 1);
+  const lyricY = h * 0.54;
+  const maxW   = w * 0.78;
+  const lineH  = baseFS * 1.5;
+  const fam    = (S.font && S.font.fam) || "'Playfair Display',serif";
+  const italic = (S.font && S.font.sty) === 'italic';
+
   ctx.save();
-  ctx.font=`${italic?'italic ':''}${baseFS}px ${fam.replace(/'/g,'')}`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font         = `${italic ? 'italic ' : ''}${baseFS}px ${fam.replace(/'/g, '')}`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
 
   // Word wrap
-  const words=S.lyric.split(' ');
-  let lines=[],cur='';
-  words.forEach(word=>{
-    const test=cur?cur+' '+word:word;
-    if(ctx.measureText(test).width>maxW){lines.push(cur);cur=word;}
-    else cur=test;
+  const words  = S.lyric.split(' ');
+  const lines  = [];
+  let cur      = '';
+  words.forEach(word => {
+    const test = cur ? cur + ' ' + word : word;
+    if (ctx.measureText(test).width > maxW) { lines.push(cur); cur = word; }
+    else cur = test;
   });
-  if(cur) lines.push(cur);
-  const totalLH=(lines.length-1)*lineH, startY=lyricY-totalLH/2;
-  const lyricT=t/S.spd;
+  if (cur) lines.push(cur);
 
-  if(['cinema','fade','blur'].includes(S.motion)){
-    const lt=Math.max(0,Math.min((lyricT-.3)/.25,1));
-    const blur=S.motion==='blur'?(1-lt)*20:S.motion==='cinema'?(1-lt)*8:0;
-    if(blur>0) ctx.filter=`blur(${blur}px)`;
-    ctx.globalAlpha=lt;
-    const sc=S.motion==='cinema'?.96+lt*.04:1;
-    lines.forEach((line,i)=>{ctx.save();ctx.translate(cx,startY+i*lineH);ctx.scale(sc,sc);ctx.fillStyle=textCol;ctx.fillText(line,0,0);ctx.restore();});
-    ctx.filter='none';
-  } else if(S.motion==='glitch'){
-    const lt=Math.max(0,Math.min((lyricT-.3)/.2,1));
-    if(lt<.85){
-      [['rgba(0,255,255,.4)',-1],['rgba(255,0,255,.4)',1]].forEach(([col,dx])=>{
-        ctx.save();ctx.globalAlpha=lt*.55;ctx.fillStyle=col;
-        lines.forEach((line,i)=>ctx.fillText(line,cx+dx*(1-lt)*5,startY+i*lineH));
+  const totalLH = (lines.length - 1) * lineH;
+  const startY  = lyricY - totalLH / 2;
+
+  // Animation progress for lyric (t normalised to animation settle)
+  // animSpd scales how fast it plays; t is already the full 0→1
+  // We map t through animSpd: at t=animSpd*0.3, lyric begins
+  const lyricT = t;
+
+  if (['cinema', 'fade', 'blur'].includes(S.motion)) {
+    const startT = 0.30 * S.animSpd * (1 / Math.max(S.animSpd, 0.3));
+    const lt = Math.max(0, Math.min((lyricT - 0.25) / 0.22, 1));
+    const blur = S.motion === 'blur'   ? (1 - lt) * 20
+               : S.motion === 'cinema' ? (1 - lt) * 8
+               : 0;
+    if (blur > 0) ctx.filter = `blur(${blur}px)`;
+    ctx.globalAlpha = lt;
+    const sc = S.motion === 'cinema' ? 0.96 + lt * 0.04 : 1;
+    lines.forEach((line, i) => {
+      ctx.save();
+      ctx.translate(cx, startY + i * lineH);
+      ctx.scale(sc, sc);
+      ctx.fillStyle = textCol;
+      ctx.fillText(line, 0, 0);
+      ctx.restore();
+    });
+    ctx.filter = 'none';
+
+  } else if (S.motion === 'glitch') {
+    const lt = Math.max(0, Math.min((lyricT - 0.25) / 0.20, 1));
+    if (lt < 0.85) {
+      [['rgba(0,255,255,.4)', -1], ['rgba(255,0,255,.4)', 1]].forEach(([col, dx]) => {
+        ctx.save();
+        ctx.globalAlpha = lt * 0.5;
+        ctx.fillStyle   = col;
+        lines.forEach((line, i) => ctx.fillText(line, cx + dx * (1 - lt) * 5, startY + i * lineH));
         ctx.restore();
       });
     }
-    ctx.globalAlpha=lt; ctx.fillStyle=textCol;
-    lines.forEach((line,i)=>ctx.fillText(line,cx,startY+i*lineH));
-  } else if(S.motion==='type'){
-    const lt=Math.max(0,Math.min((lyricT-.3)/(.7*S.spd),1));
-    const shown=Math.floor(lt*S.lyric.length);
-    const disp=S.lyric.substring(0,shown);
-    const tl=[]; let tc='';
-    disp.split(' ').forEach(w2=>{ const test=tc?tc+' '+w2:w2; if(ctx.measureText(test).width>maxW){tl.push(tc);tc=w2;}else tc=test; });
+    ctx.globalAlpha = lt;
+    ctx.fillStyle   = textCol;
+    lines.forEach((line, i) => ctx.fillText(line, cx, startY + i * lineH));
+
+  } else if (S.motion === 'type') {
+    const typeDur = 0.7 * S.animSpd;
+    const lt      = Math.max(0, Math.min((lyricT - 0.25) / typeDur, 1));
+    const shown   = Math.floor(lt * S.lyric.length);
+    const disp    = S.lyric.substring(0, shown);
+    const tl      = [];
+    let tc        = '';
+    disp.split(' ').forEach(w2 => {
+      const test = tc ? tc + ' ' + w2 : w2;
+      if (ctx.measureText(test).width > maxW) { tl.push(tc); tc = w2; }
+      else tc = test;
+    });
     tl.push(tc);
-    const ttlH=(tl.length-1)*lineH;
-    ctx.globalAlpha=1; ctx.fillStyle=textCol;
-    tl.forEach((line,i)=>ctx.fillText(line,cx,lyricY-ttlH/2+i*lineH));
-    if(lt<1 && Math.floor(t*8)%2===0){
-      const ll=tl[tl.length-1]||'';
-      const lw2=ctx.measureText(ll).width;
-      ctx.save(); ctx.fillStyle=gold; ctx.globalAlpha=.9;
-      ctx.fillRect(cx+lw2/2+4,lyricY-ttlH/2+(tl.length-1)*lineH-baseFS*.5,Math.max(2,3*(w/1080)),baseFS*.9);
+    const ttlH = (tl.length - 1) * lineH;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle   = textCol;
+    tl.forEach((line, i) => ctx.fillText(line, cx, lyricY - ttlH / 2 + i * lineH));
+    // Cursor blink
+    if (lt < 1 && Math.floor(ms / 500) % 2 === 0) {
+      const ll  = tl[tl.length - 1] || '';
+      const lw2 = ctx.measureText(ll).width;
+      ctx.save();
+      ctx.fillStyle   = accent;
+      ctx.globalAlpha = 0.9;
+      ctx.fillRect(cx + lw2 / 2 + 4, lyricY - ttlH / 2 + (tl.length - 1) * lineH - baseFS * 0.5, Math.max(2, 3 * (w / 1080)), baseFS * 0.9);
       ctx.restore();
     }
+
   } else {
-    // word-by-word (default) and rise both use word-level timing
-    let wi=0;
-    lines.forEach((line,li)=>{
-      const lineW=ctx.measureText(line).width;
-      let lxw=cx-lineW/2;
-      line.split(' ').forEach((word,wi2)=>{
-        const wDelay=(0.28+wi*0.13)*S.spd;
-        const wt=Math.max(0,Math.min((t-wDelay)/(0.45*S.spd*.8),1));
-        if(wt>0){
-          const wy2=startY+li*lineH+(1-wt)*14;
-          ctx.globalAlpha=wt; ctx.fillStyle=textCol;
-          const ww=ctx.measureText(word).width;
-          ctx.fillText(word,lxw+ww/2,wy2);
+    // Word-by-word (default) and rise: each word animates on its own schedule
+    let wi = 0;
+    lines.forEach((line, li) => {
+      const lineW = ctx.measureText(line).width;
+      let lxw     = cx - lineW / 2;
+      line.split(' ').forEach((word, wi2) => {
+        const wDelay = (0.28 + wi * 0.13) * S.animSpd;
+        const wDur   = 0.45 * S.animSpd;
+        const wt     = Math.max(0, Math.min((lyricT - wDelay / (S.animSpd * 2.5)) / (wDur / 2.5), 1));
+        if (wt > 0) {
+          const wy2 = startY + li * lineH + (1 - wt) * 14;
+          ctx.globalAlpha = wt;
+          ctx.fillStyle   = textCol;
+          const ww = ctx.measureText(word).width;
+          ctx.fillText(word, lxw + ww / 2, wy2);
         }
-        lxw+=ctx.measureText(word+(wi2<line.split(' ').length-1?' ':'')).width;
+        lxw += ctx.measureText(word + (wi2 < line.split(' ').length - 1 ? ' ' : '')).width;
         wi++;
       });
     });
   }
   ctx.restore();
 
-  // ── SONG & ARTIST ──
-  const mDelay=1.5*S.spd;
-  if(t>mDelay/4.5){
-    const mt=Math.min((t-mDelay/4.5)/.15,1);
-    const metaY=lyricY+totalLH/2+baseFS*.85;
-    ctx.save(); ctx.globalAlpha=mt*.42; ctx.strokeStyle=isDark?gold:'rgba(184,144,26,.5)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(cx-w*.02,metaY-baseFS*.28); ctx.lineTo(cx+w*.02,metaY-baseFS*.28); ctx.stroke(); ctx.restore();
-    if(S.song){
-      ctx.save(); ctx.globalAlpha=mt*.88;
-      ctx.font=`600 ${baseFS*.5}px DM Sans,Arial,sans-serif`;
-      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle=textCol;
-      ctx.fillText(S.song.substring(0,36),cx,metaY); ctx.restore();
+  // ── SONG & ARTIST META
+  const mDelay = 0.55; // fraction of t
+  if (t > mDelay) {
+    const mt    = Math.min((t - mDelay) / 0.12, 1);
+    const metaY = lyricY + totalLH / 2 + baseFS * 0.9;
+    // Divider line
+    ctx.save();
+    ctx.globalAlpha = mt * 0.42;
+    ctx.strokeStyle = isDark ? hexToRgba(accent, 0.55) : 'rgba(184,144,26,.5)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - w * 0.022, metaY - baseFS * 0.3);
+    ctx.lineTo(cx + w * 0.022, metaY - baseFS * 0.3);
+    ctx.stroke();
+    ctx.restore();
+
+    if (S.song) {
+      ctx.save();
+      ctx.globalAlpha  = mt * 0.9;
+      ctx.font         = `600 ${baseFS * 0.5}px DM Sans,Arial,sans-serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle    = textCol;
+      ctx.fillText(S.song.substring(0, 38), cx, metaY);
+      ctx.restore();
     }
-    if(S.artist){
-      ctx.save(); ctx.globalAlpha=mt*.48;
-      ctx.font=`700 ${baseFS*.36}px Space Mono,monospace`;
-      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle=textCol;
-      ctx.fillText(S.artist.toUpperCase().substring(0,40),cx,metaY+baseFS*.52); ctx.restore();
+    if (S.artist) {
+      ctx.save();
+      ctx.globalAlpha  = mt * 0.48;
+      ctx.font         = `700 ${baseFS * 0.36}px Space Mono,monospace`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle    = textCol;
+      ctx.fillText(S.artist.toUpperCase().substring(0, 40), cx, metaY + baseFS * 0.55);
+      ctx.restore();
     }
   }
 
-  // ── BRAND FOOTER ──
-  const bDelay=2.0*S.spd;
-  if(t>bDelay/4.5){
-    const bt=Math.min((t-bDelay/4.5)/.15,1);
-    const fy=h*.9, bls2=w*.038;
-    ctx.save(); ctx.globalAlpha=bt;
-    ctx.beginPath(); ctx.arc(w*.09,fy,bls2/2,0,Math.PI*2);
-    ctx.fillStyle=isDark?gold:td.accent; ctx.fill(); ctx.restore();
-    ctx.save(); ctx.globalAlpha=bt;
-    ctx.font=`800 ${w*.017}px Syne,Arial,sans-serif`;
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillStyle=isDark?gold:td.accent; ctx.fillText('MARGO',w*.115,fy); ctx.restore();
-    if(S.emotion){
-      ctx.save(); ctx.globalAlpha=bt*.85;
-      ctx.font=`700 ${w*.015}px Space Mono,monospace`;
-      ctx.textAlign='right'; ctx.textBaseline='middle';
-      ctx.fillStyle=isDark?gold:td.accent;
-      ctx.fillText('✦ '+S.emotion.toUpperCase(),w*.91,fy); ctx.restore();
+  // ── BRAND FOOTER
+  const bDelay = 0.72; // fraction of t
+  if (t > bDelay) {
+    const bt  = Math.min((t - bDelay) / 0.12, 1);
+    const fy  = h * 0.9;
+    const bls = w * 0.038;
+
+    // Logo circle
+    ctx.save();
+    ctx.globalAlpha = bt;
+    ctx.beginPath();
+    ctx.arc(w * 0.09, fy, bls / 2, 0, Math.PI * 2);
+    ctx.fillStyle = accent;
+    ctx.fill();
+    ctx.restore();
+
+    // MARGO wordmark
+    ctx.save();
+    ctx.globalAlpha  = bt;
+    ctx.font         = `800 ${w * 0.017}px Syne,Arial,sans-serif`;
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle    = accent;
+    ctx.fillText('MARGO', w * 0.115, fy);
+    ctx.restore();
+
+    // Emotion tag
+    if (S.emotion) {
+      ctx.save();
+      ctx.globalAlpha  = bt * 0.88;
+      ctx.font         = `700 ${w * 0.015}px Space Mono,monospace`;
+      ctx.textAlign    = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle    = accent;
+      ctx.fillText('✦ ' + S.emotion.toUpperCase(), w * 0.91, fy);
+      ctx.restore();
     }
   }
 }
 
 /* ────────────────────────────────────────────────────────────────
-   TOAST
+   UTILITY: hex color → rgba string
 ──────────────────────────────────────────────────────────────── */
-function toast(msg){ if(typeof showToast==='function') showToast(msg); }
+function hexToRgba(hex, alpha) {
+  // Handles #RRGGBB and shorthand #RGB
+  const h = hex.replace('#', '');
+  let r, g, b;
+  if (h.length === 3) {
+    r = parseInt(h[0]+h[0], 16);
+    g = parseInt(h[1]+h[1], 16);
+    b = parseInt(h[2]+h[2], 16);
+  } else {
+    r = parseInt(h.substring(0, 2), 16);
+    g = parseInt(h.substring(2, 4), 16);
+    b = parseInt(h.substring(4, 6), 16);
+  }
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return `rgba(232,197,71,${alpha})`; // fallback
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 /* ────────────────────────────────────────────────────────────────
-   GLOBAL EXPORTS  (onclick="..." in injected HTML uses these)
+   TOAST
 ──────────────────────────────────────────────────────────────── */
-window.msDoExport    = msDoExport;
+function toast(msg) {
+  if (typeof showToast === 'function') showToast(msg);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   GLOBAL ASSIGNMENTS (for safety — no inline onclick= in HTML)
+──────────────────────────────────────────────────────────────── */
+window.msDoExport    = function(type) { msCloseExport(); if (type === 'png') exportPNG(); else exportVideo(); };
 window.msCloseExport = msCloseExport;
+window.openStudio    = openStudio;
+
+/* ── Auto-init ── */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initStudio);
+} else {
+  initStudio();
+}
