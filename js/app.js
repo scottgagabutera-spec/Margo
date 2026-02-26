@@ -1,16 +1,15 @@
 /* ============================================================
    MARGO — js/app.js
-   Navigation, modal helpers, toast, scroll, and the
-   main INIT block that starts everything.
+   v4.5 — Fixed scroll-to-feed: smooth scroll accounts for
+           sticky header height so the sort bar and date
+           section are never hidden behind it.
    Loaded last — all other modules must be loaded first.
    Depends on: state.js, firebase.js, feed.js, composer.js,
                studio.js, admin.js, motion.js
-   v4.4 — scroll FAB delegated to motion.js
    ============================================================ */
 
 // ── Toast ──
 // motion.js will intercept and upgrade this automatically.
-// This is just the base definition so the function exists.
 function showToast(msg) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
@@ -51,6 +50,35 @@ function goToLanding() {
   landing.classList.add('active');
 }
 
+/* ──────────────────────────────────────────────────────────────
+   scrollToFeed — smooth scroll to feed content area, accounting
+   for the sticky feed header so no content is ever hidden under it.
+
+   BEFORE: feedList.scrollIntoView({ behavior:'smooth' }) — this
+   scrolled the LIST itself into view but ignored the sticky
+   header, so the top 52px of content (date, sort bar, count)
+   was always hidden behind it.
+
+   NOW: We measure the header, add a comfortable margin (16px),
+   and use window.scrollTo with smooth behavior so the transition
+   is elegant rather than abrupt.
+──────────────────────────────────────────────────────────────── */
+function scrollToFeed() {
+  const sortBar    = document.getElementById('feedSortBar');
+  const header     = document.querySelector('.feed-header');
+  const headerH    = header ? header.offsetHeight : 52;
+  const margin     = 14; // comfortable breathing room below header
+
+  // Prefer to scroll to the sort bar (sits above feedList), else feedList
+  const target     = sortBar || feedList;
+  if (!target) return;
+
+  const targetTop  = target.getBoundingClientRect().top + window.pageYOffset;
+  const scrollTo   = Math.max(0, targetTop - headerH - margin);
+
+  window.scrollTo({ top: scrollTo, behavior: 'smooth' });
+}
+
 function initNavigation() {
   enterBtn.onclick = () => {
     goToFeed();
@@ -59,8 +87,10 @@ function initNavigation() {
 
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
-  if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(() => feedList?.scrollIntoView({ behavior: 'smooth' }), 150); };
-  if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(() => feedList?.scrollIntoView({ behavior: 'smooth' }), 150); };
+
+  // Fixed: use scrollToFeed() which accounts for header height
+  if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 180); };
+  if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 180); };
 
   backBtn.onclick         = goToLanding;
   openComposerBtn.onclick = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
@@ -82,8 +112,6 @@ function initNavigation() {
 }
 
 // ── Scroll utilities ──
-// The back-to-top FAB is fully handled by motion.js.
-// This only hides the legacy button and wires the new-posts indicator.
 function setupScrollToTop() {
   // Hide legacy button — motion.js FAB replaces it
   if (scrollToTopBtn) scrollToTopBtn.style.display = 'none';
@@ -100,7 +128,7 @@ function setupScrollToTop() {
 }
 
 // ════════════════════════════════════════════════════════
-//   INIT — runs once on page load, in dependency order
+//   INIT
 // ════════════════════════════════════════════════════════
 initStatsShimmer();    // show shimmer before Firebase loads
 initNavigation();      // wire nav buttons + swipe
@@ -115,4 +143,4 @@ initStudio();          // Margo Studio canvas
 initAdmin();           // admin moderation (B+G trigger)
 startFirebaseSync();   // start Firebase listeners last
 
-console.log('MARGO v4.4 — modular. Firebase:', isFirebaseEnabled);
+console.log('MARGO v4.5 — scroll fixed, moderation fixed, smart ranking.');
