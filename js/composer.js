@@ -1,36 +1,125 @@
 /* ============================================================
    MARGO — js/composer.js
-   v5.2 — YouTube saves automatically, no confirm click needed.
-          fetchAndSaveYoutubeMeta() called as safety net after post.
+   v5.3 — Fixed moderation (word-boundary aware, no false positives),
+           YouTube saves automatically, no confirm click needed.
    ============================================================ */
 
-/* ── MODERATION ENGINE ── */
+/* ══════════════════════════════════════════════════════════════
+   MODERATION ENGINE — v2.0
+   ──────────────────────────────────────────────────────────────
+   KEY FIX: Previous version used substring matching on the full
+   normalized text — so "night" triggered because "nig" is a
+   banned variation, and "bass" triggered "ass", "classic" → "ass",
+   "assumption" → "ass", "passionate" → "ass", etc.
+
+   New approach: tokenize into WORDS first, then check each word.
+   A word only matches a banned pattern if the entire normalized
+   word IS the pattern (or a known variation), not just contains it.
+   This eliminates all false positives.
+
+   Additionally: safe-listed common words that will never match
+   even if they happen to share substrings with banned patterns.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Words that must NEVER be censored regardless of any substring match */
+const SAFE_WORDS = new Set([
+  'night','nights','midnight','knight','knights','tonight','fortnight',
+  'bass','bassist','classic','classics','classical','classy','glass','glasses',
+  'grass','mass','masses','massive','class','classes','classic','passage',
+  'passion','passionate','compass','compass','harass','embarrass','assassin',
+  'assumption','assistant','assemble','asset','assets','assess','assign',
+  'associate','assist','assistance','association','assist',
+  'pass','passes','passing','passenger','passion','passive',
+  'mass','massage','ambassador',
+  'cock','cocktail','cockatoo','peacock','hancock','woodcock','haycock',
+  'rooster','weathercock',
+  'piss','dismiss','bliss','kiss','kissing','missy','mississippi',
+  'bastard','dastardly',
+  'damn','damning','adamant','madam',
+  'pitch','ditch','hitch','switch','witch','kitchen','itch',
+  'dig','digit','digital','digs','dignity','digging',
+  'asset','assets',
+]);
+
+/* Actual banned words — explicit slurs and hate speech */
 const BANNED_PATTERNS = [
-  "fuck","shit","bitch","asshole","nigger","cunt",
-  "whore","slut","pussy","dick","cock","bastard","piss","damn","ass"
+  'fuck','shit','bitch','asshole','nigger','cunt',
+  'whore','slut','pussy','dick','cock','bastard',
 ];
+
+/* Known leetspeak / deliberate variations */
 const BANNED_VARIATIONS = {
-  fuck:["fuk","fck","fuq","phuck","fux"],shit:["sh1t","sht"],
-  bitch:["biatch","b1tch"],pussy:["pus5y","puss1","pussi"],
-  dick:["d1ck","dik","dic"],cock:["c0ck","cok"],
-  bastard:["b4stard"],ass:["a55","@ss"],nigger:["n1gger","nigg3r","nig"],
+  fuck:    ['fuk','fck','fuq','phuck','fux','f u c k','f*ck'],
+  shit:    ['sh1t','sht','5hit'],
+  bitch:   ['biatch','b1tch','bytch'],
+  pussy:   ['pus5y','puss1','pussi','pus5i'],
+  dick:    ['d1ck','dik','d!ck'],
+  cock:    ['c0ck','cok','c0k'],
+  bastard: ['b4stard','baztard'],
+  asshole: ['a55hole','@sshole','ahole'],
+  nigger:  ['n1gger','nigg3r'],
+  cunt:    ['c*nt','kunt'],
+  whore:   ['wh0re','h0re'],
+  slut:    ['5lut','sl*t'],
 };
-function normalizeText(s){return s.toLowerCase().replace(/[^a-z0-9]/g,'').replace(/(.)\1+/g,'$1');}
-function containsBannedWord(text){
-  const n=normalizeText(text);
-  return BANNED_PATTERNS.some(w=>{
-    if(n.includes(normalizeText(w)))return true;
-    return(BANNED_VARIATIONS[w]||[]).some(v=>n.includes(normalizeText(v)));
-  });
+
+/* Tokenize text into words (split on spaces and punctuation) */
+function tokenize(text) {
+  return text.toLowerCase().split(/[\s,\.!?;:\-"'()\[\]{}\/\\|<>]+/).filter(Boolean);
 }
-function censorText(text){
-  let r=text;
-  BANNED_PATTERNS.forEach(w=>{
-    const c=w[0]+'*'.repeat(w.length-2)+w[w.length-1];
-    r=r.replace(new RegExp(w,'gi'),c);
-    (BANNED_VARIATIONS[w]||[]).forEach(v=>{r=r.replace(new RegExp(v,'gi'),c);});
-  });
-  return r;
+
+/* Normalize a single token: remove non-alphanumeric, collapse repeated chars */
+function normalizeWord(w) {
+  return w.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/(.)\1+/g, '$1');
+}
+
+/* Check if a single word (already tokenized) is banned */
+function isWordBanned(word) {
+  const norm = normalizeWord(word);
+  // Never ban safe words
+  if (SAFE_WORDS.has(word.toLowerCase())) return false;
+  if (SAFE_WORDS.has(norm)) return false;
+
+  for (const pattern of BANNED_PATTERNS) {
+    const normPattern = normalizeWord(pattern);
+    // Exact match only (not substring)
+    if (norm === normPattern) return true;
+    // Check known variations — also exact match
+    const vars = BANNED_VARIATIONS[pattern] || [];
+    if (vars.some(v => norm === normalizeWord(v))) return true;
+  }
+  return false;
+}
+
+/* Check if any word in the text is banned */
+function containsBannedWord(text) {
+  return tokenize(text).some(word => isWordBanned(word));
+}
+
+/* Censor banned words in-place, preserving original spacing and punctuation */
+function censorText(text) {
+  // Replace word-by-word using regex word boundaries
+  let result = text;
+  for (const pattern of BANNED_PATTERNS) {
+    // Build all variants including the base pattern
+    const allVariants = [pattern, ...(BANNED_VARIATIONS[pattern] || [])];
+    for (const variant of allVariants) {
+      if (!variant.includes(' ')) {
+        // Simple word — use word boundary replacement
+        try {
+          const escaped = variant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
+          const censored = pattern[0] + '*'.repeat(Math.max(pattern.length - 2, 1)) + pattern[pattern.length - 1];
+          result = result.replace(regex, (match) => {
+            // Double-check: don't censor if the full matched word is safe
+            if (SAFE_WORDS.has(match.toLowerCase())) return match;
+            return censored;
+          });
+        } catch (_) {}
+      }
+    }
+  }
+  return result;
 }
 
 /* ── HTML entity decoder ── */
@@ -75,7 +164,7 @@ function injectComposerStyles() {
 
     /* ── Genius results ── */
     .genius-section-label {
-      font-size:0.58rem;color:rgba(255,255,255,0.35);letter-spacing:2px;
+      font-size:0.58rem;color:rgba(255,255,255,0.45);letter-spacing:2px;
       text-transform:uppercase;font-family:'Space Mono',monospace;margin:10px 0 6px;
     }
     .genius-results-list { display:flex;flex-direction:column;gap:6px; }
@@ -101,12 +190,6 @@ function injectComposerStyles() {
     /* ════════════════════════════════════════
        MUSIC METADATA CARD — premium design
     ════════════════════════════════════════ */
-    @keyframes ytFadeUp {
-      from { opacity:0; transform:translateY(12px) scale(0.98); }
-      to   { opacity:1; transform:translateY(0)    scale(1);    }
-    }
-
-    /* ══ MUSIC FOUND CARD — Premium redesign ══ */
     @keyframes ytSlideIn {
       from { opacity:0; transform:translateY(8px) scale(0.98); }
       to   { opacity:1; transform:translateY(0)  scale(1);    }
@@ -121,25 +204,20 @@ function injectComposerStyles() {
       box-shadow:0 12px 40px rgba(0,0,0,0.5), 0 1px 0 rgba(232,197,71,0.18) inset;
       animation:ytSlideIn 0.35s cubic-bezier(0.16,1,0.3,1);
     }
-    /* Gold shimmer line across top */
     .yt-card::before {
       content:'';position:absolute;top:0;left:8%;right:8%;height:1px;
       background:linear-gradient(90deg,transparent,rgba(232,197,71,0.8),transparent);
       pointer-events:none;
     }
-    /* Subtle gold glow at bottom */
     .yt-card::after {
       content:'';position:absolute;bottom:0;left:20%;right:20%;height:40px;
       background:radial-gradient(ellipse at center bottom,rgba(232,197,71,0.06),transparent);
       pointer-events:none;
     }
-
     .yt-card-inner {
       display:flex;align-items:flex-start;gap:14px;
       padding:14px 14px 12px;
     }
-
-    /* Album art — large, square, with glow */
     .yt-thumb-wrap {
       position:relative;flex-shrink:0;
     }
@@ -153,10 +231,7 @@ function injectComposerStyles() {
       object-fit:cover;display:block;
       box-shadow:0 6px 20px rgba(0,0,0,0.6);
     }
-
-    /* Info section */
     .yt-info { flex:1;min-width:0;padding-top:2px; }
-
     .yt-title {
       font-size:0.88rem;font-weight:700;color:#fff;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -165,10 +240,7 @@ function injectComposerStyles() {
     .yt-channel {
       font-size:0.68rem;color:rgba(255,255,255,0.4);
       margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-      letter-spacing:0.01em;
     }
-
-    /* Listen link pills */
     .yt-links-row {
       display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;
     }
@@ -185,20 +257,9 @@ function injectComposerStyles() {
       filter:brightness(1.25);
       box-shadow:0 4px 12px rgba(0,0,0,0.3);
     }
-    .yt-link-yt {
-      background:rgba(255,50,50,0.14);color:#ff7070;
-      border:1px solid rgba(255,50,50,0.32);
-    }
-    .yt-link-dz {
-      background:rgba(255,100,0,0.14);color:#ff8c3a;
-      border:1px solid rgba(255,100,0,0.32);
-    }
-    .yt-link-it {
-      background:rgba(252,60,68,0.14);color:#fc7c82;
-      border:1px solid rgba(252,60,68,0.32);
-    }
-
-    /* Source badge — top right pill */
+    .yt-link-yt  { background:rgba(255,50,50,0.14);color:#ff7070;border:1px solid rgba(255,50,50,0.32); }
+    .yt-link-dz  { background:rgba(255,100,0,0.14);color:#ff8c3a;border:1px solid rgba(255,100,0,0.32); }
+    .yt-link-it  { background:rgba(252,60,68,0.14);color:#fc7c82;border:1px solid rgba(252,60,68,0.32); }
     .yt-found-tag {
       flex-shrink:0;align-self:flex-start;margin-top:1px;
       padding:4px 11px;border-radius:20px;
@@ -209,16 +270,18 @@ function injectComposerStyles() {
     .yt-found-yt { background:rgba(255,50,50,0.12);  color:#ff7070; border:1px solid rgba(255,50,50,0.28);  }
     .yt-found-dz { background:rgba(255,100,0,0.12);  color:#ff8c3a; border:1px solid rgba(255,100,0,0.28);  }
     .yt-found-it { background:rgba(252,60,68,0.12);  color:#fc7c82; border:1px solid rgba(252,60,68,0.28);  }
-
-    /* Loading shimmer state */
     .yt-loading {
       display:flex;align-items:center;gap:10px;
       padding:18px 16px;
-      font-size:0.65rem;color:rgba(255,255,255,0.28);
+      font-size:0.65rem;color:rgba(255,255,255,0.4);
       font-family:'Space Mono',monospace;letter-spacing:0.5px;
     }
 
-        /* ── Autocomplete dropdown ── */
+    /* ── Autocomplete dropdown ── */
+    @keyframes ytFadeUp {
+      from { opacity:0; transform:translateY(4px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
     .yt-autocomplete {
       position:absolute;left:0;right:0;top:calc(100% + 4px);
       z-index:1000;background:#18181c;
@@ -234,17 +297,26 @@ function injectComposerStyles() {
     }
     .yt-ac-item:last-child { border-bottom:none; }
     .yt-ac-item:hover { background:rgba(232,197,71,0.07); }
-    .yt-ac-thumb { width:38px;height:27px;border-radius:5px;object-fit:cover;flex-shrink:0;background:#222; }
-    .yt-ac-song  { font-size:0.78rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-    .yt-ac-artist{ font-size:0.65rem;color:rgba(255,255,255,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-
+    .yt-ac-thumb  { width:38px;height:27px;border-radius:5px;object-fit:cover;flex-shrink:0;background:#222; }
+    .yt-ac-song   { font-size:0.78rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .yt-ac-artist { font-size:0.65rem;color:rgba(255,255,255,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
     .song-input-wrap { position:relative; }
+
+    @media (max-width: 768px) {
+      .yt-autocomplete {
+        position:fixed !important;left:0 !important;right:0 !important;
+        top:auto !important;bottom:0 !important;
+        border-radius:18px 18px 0 0 !important;
+        max-height:50vh;overflow-y:auto;
+        box-shadow:0 -8px 40px rgba(0,0,0,0.6) !important;
+      }
+    }
   `;
-document.head.appendChild(s);
+  document.head.appendChild(s);
 }
 
 /* ── STATE ── */
-let youtubeData    = null; // set as soon as video found — no confirm gate
+let youtubeData    = null;
 let geniusResult   = null;
 let geniusTimer    = null;
 let ytSuggestTimer = null;
@@ -252,7 +324,7 @@ let ytFetchTimer   = null;
 let lastGeniusQuery = '';
 
 /* ============================================================
-   GENIUS ENGINE — identical to v5.1
+   GENIUS ENGINE
    ============================================================ */
 function initGeniusIdentify() {
   injectComposerStyles();
@@ -329,7 +401,9 @@ function renderGeniusResults(results) {
     list.appendChild(card);
   });
   wrap.appendChild(list);
-  document.getElementById('geniusIdentifyBtn')?.parentNode?.insertBefore(wrap, document.getElementById('geniusIdentifyBtn').nextSibling);
+  document.getElementById('geniusIdentifyBtn')?.parentNode?.insertBefore(
+    wrap, document.getElementById('geniusIdentifyBtn').nextSibling
+  );
 }
 
 function selectGeniusResult(result, card) {
@@ -349,9 +423,7 @@ function selectGeniusResult(result, card) {
 
 /* ============================================================
    YOUTUBE ENGINE
-   FIX: youtubeData set immediately when found.
-        No ytConfirmed flag. No "Use this" button.
-        "Found ✓" badge is purely visual — data always saves.
+   youtubeData set immediately when found — no confirm gate.
    ============================================================ */
 function initYoutubeAutofetch() {
   const songEl   = document.getElementById('songInput');
@@ -381,7 +453,6 @@ function initYoutubeAutofetch() {
     const song   = songEl.value.trim();
     const artist = artistEl.value.trim();
     if (song.length > 1 && artist.length > 1) {
-      // Re-fetch whenever artist changes (no confirmed guard)
       ytFetchTimer = setTimeout(() => fetchYoutubeData(song, artist), 700);
     }
   });
@@ -434,15 +505,11 @@ function closeAutocomplete() { document.getElementById('ytAutocomplete')?.remove
 async function fetchYoutubeData(song, artist) {
   const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
   const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
-
   showYtLoading();
   youtubeData = null;
-
   try {
     const res  = await fetch(`/api/youtube?song=${encodeURIComponent(cleanSong)}&artist=${encodeURIComponent(cleanArtist)}`);
     const data = await res.json();
-    // FIX: accept Deezer/iTunes too — they have thumbnail but no videoId
-    // Old code rejected anything without videoId, silently killing all fallbacks
     if (!res.ok || data.error || (!data.videoId && !data.thumbnail)) {
       clearYoutubePreview(); return;
     }
@@ -462,33 +529,25 @@ function showYtLoading() {
 function renderYtCard(data) {
   clearYoutubePreview();
   const source = data.source || 'youtube';
-
-  // Build listen link pills — one per available platform
   const links = [];
-  if (data.videoId && data.youtubeUrl) {
+  if (data.videoId && data.youtubeUrl)
     links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">▶&nbsp;YouTube</a>`);
-  } else if (data.youtubeUrl) {
+  else if (data.youtubeUrl)
     links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">⌕&nbsp;YouTube</a>`);
-  }
-  if (data.deezerUrl) {
+  if (data.deezerUrl)
     links.push(`<a href="${data.deezerUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-dz">♫&nbsp;Deezer</a>`);
-  }
-  if (data.itunesUrl) {
+  if (data.itunesUrl)
     links.push(`<a href="${data.itunesUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-it">♫&nbsp;Apple Music</a>`);
-  }
 
   const sourceBadge    = source === 'youtube' ? 'YT ✓' : source === 'deezer' ? 'Deezer ✓' : 'iTunes ✓';
   const sourceBadgeCls = source === 'youtube' ? 'yt-found-yt' : source === 'deezer' ? 'yt-found-dz' : 'yt-found-it';
-  const thumb = data.thumbnail || data.thumbnailSm; // prefer large for 80px display
+  const thumb = data.thumbnail || data.thumbnailSm;
 
   const card = document.createElement('div');
   card.id = 'youtubePreview'; card.className = 'yt-card';
   card.innerHTML = `
     <div class="yt-card-inner">
-      ${thumb ? `
-        <div class="yt-thumb-wrap">
-          <img src="${thumb}" class="yt-thumb" alt="${decodeHTML(data.title||'')}"/>
-        </div>` : ''}
+      ${thumb ? `<div class="yt-thumb-wrap"><img src="${thumb}" class="yt-thumb" alt="${decodeHTML(data.title||'')}"/></div>` : ''}
       <div class="yt-info">
         <div class="yt-title">${decodeHTML(data.title || '')}</div>
         <div class="yt-channel">${decodeHTML(data.channel || data.collectionName || '')}</div>
@@ -498,7 +557,6 @@ function renderYtCard(data) {
     </div>
   `;
   insertAfterArtist(card);
-  // Auto-fill youtube link field only for direct video URLs
   const ytLink = document.getElementById('youtubeLink');
   if (ytLink && !ytLink.value && data.videoId && data.youtubeUrl) ytLink.value = data.youtubeUrl;
 }
@@ -576,7 +634,6 @@ async function submitPost() {
     showToast('Some words were adjusted for community guidelines 🎵');
   }
 
-  // FIX: youtubeData is used directly — no ytConfirmed gate
   const savedYtMeta = youtubeData ? {
     videoId:     youtubeData.videoId     || null,
     title:       decodeHTML(youtubeData.title   || ''),
@@ -594,10 +651,10 @@ async function submitPost() {
     guessConfig: null,
     youtubeMeta: savedYtMeta,
     links: currentMode !== 'discover' ? {
-      spotify:    spotifyLink?.value.trim()          || null,
-      apple:      appleLink?.value.trim()            || null,
-      youtube:    youtubeData?.youtubeUrl            || youtubeLink?.value.trim() || null,
-      soundcloud: soundcloudLink?.value.trim()       || null,
+      spotify:    spotifyLink?.value.trim()    || null,
+      apple:      appleLink?.value.trim()      || null,
+      youtube:    youtubeData?.youtubeUrl      || youtubeLink?.value.trim() || null,
+      soundcloud: soundcloudLink?.value.trim() || null,
     } : null,
     authorId:  userId,
     timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now()
@@ -635,15 +692,11 @@ async function submitPost() {
       const ref = await postsRef.push(post);
       await analyticsRef.child(ref.key).set({ views: 0, guesses: [], helps: [] });
 
-      // SAFETY NET: if YouTube hadn't loaded yet when user hit Post,
-      // fetch it now and write to Firebase in the background.
-      // firebase.js backfill will also catch it on next load.
       if (!post.youtubeMeta
           && post.knowledge.song   !== 'Unknown Song'
           && post.knowledge.artist !== 'Unknown Artist'
           && typeof fetchAndSaveYoutubeMeta === 'function') {
-        fetchAndSaveYoutubeMeta(ref.key, post.knowledge.song, post.knowledge.artist)
-          .catch(() => {});
+        fetchAndSaveYoutubeMeta(ref.key, post.knowledge.song, post.knowledge.artist).catch(() => {});
       }
     }
 
