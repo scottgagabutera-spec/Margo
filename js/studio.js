@@ -138,7 +138,15 @@ function injectCSS() {
 
 /* ── BODY LAYOUT ── */
 .ms-body{display:grid;grid-template-columns:300px 1fr;height:100%;overflow:hidden}
-@media(max-width:700px){.ms-body{grid-template-columns:1fr;grid-template-rows:1fr 280px}.ms-stage{order:1}.ms-sidebar{order:2}}
+@media(max-width:700px){
+  .ms-body{grid-template-columns:1fr;grid-template-rows:1fr auto;overflow:hidden}
+  .ms-stage{order:1;min-height:0}
+  .ms-sidebar{order:2;height:310px;flex-shrink:0}
+  .ms-panels{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  .ms-tab-bar{overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:none}
+  .ms-tab-bar::-webkit-scrollbar{display:none}
+  .ms-tab{flex-shrink:0}
+}
 
 /* ── STAGE ── */
 .ms-stage{display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:28px;transition:background .3s}
@@ -274,6 +282,38 @@ function injectCSS() {
 .ms-ui-dark  .ms-lyric-preview{color:rgba(255,255,255,.72);background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.07)}
 .ms-ui-light .ms-lyric-preview{color:rgba(0,0,0,.65);background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1)}
 
+/* ── Song meta card ── */
+.ms-meta-card{border-radius:11px;padding:10px 12px;border:1px solid;transition:all .3s}
+.ms-ui-dark  .ms-meta-card{background:rgba(232,197,71,.05);border-color:rgba(232,197,71,.18)}
+.ms-ui-light .ms-meta-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.1)}
+.ms-meta-row{display:flex;align-items:center;gap:10px}
+.ms-meta-icon{font-size:1rem;color:#E8C547;flex-shrink:0;opacity:.7}
+.ms-meta-text{flex:1;min-width:0}
+.ms-meta-song{font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .3s}
+.ms-ui-dark  .ms-meta-song{color:rgba(255,255,255,.85)}
+.ms-ui-light .ms-meta-song{color:rgba(0,0,0,.8)}
+.ms-meta-artist{font-size:.68rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;transition:color .3s}
+.ms-ui-dark  .ms-meta-artist{color:rgba(255,255,255,.4)}
+.ms-ui-light .ms-meta-artist{color:rgba(0,0,0,.45)}
+.ms-meta-edit{background:none;border:1px solid;border-radius:7px;padding:4px 8px;font-size:.75rem;cursor:pointer;flex-shrink:0;transition:all .18s;line-height:1}
+.ms-ui-dark  .ms-meta-edit{border-color:rgba(255,255,255,.12);color:rgba(255,255,255,.35)}
+.ms-ui-light .ms-meta-edit{border-color:rgba(0,0,0,.12);color:rgba(0,0,0,.35)}
+.ms-meta-edit:hover{border-color:rgba(232,197,71,.5)!important;color:#E8C547!important}
+.ms-meta-edit-fields{display:flex;flex-direction:column;gap:8px}
+.ms-apply-btn{padding:9px;border-radius:10px;background:rgba(232,197,71,.12);border:1px solid rgba(232,197,71,.35);color:#E8C547;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .18s}
+.ms-apply-btn:hover{background:rgba(232,197,71,.22);border-color:rgba(232,197,71,.6)}
+
+/* ── Export type selector (in content tab) ── */
+.ms-export-type-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ms-export-type-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 8px;border-radius:11px;border:1px solid;cursor:pointer;transition:all .2s;text-align:center}
+.ms-ui-dark  .ms-export-type-btn{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.45)}
+.ms-ui-light .ms-export-type-btn{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.1);color:rgba(0,0,0,.45)}
+.ms-export-type-btn:hover{border-color:rgba(232,197,71,.4)!important;color:#E8C547!important}
+.ms-export-type-btn.active{background:rgba(232,197,71,.1)!important;border-color:rgba(232,197,71,.45)!important;color:#E8C547!important}
+.ms-et-icon{font-size:1.1rem;line-height:1}
+.ms-et-label{font-size:.75rem;font-weight:700;font-family:'DM Sans',sans-serif}
+.ms-et-sub{font-size:.54rem;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.5px;opacity:.6}
+
 /* ── CANVAS SIZE GRID ── */
 .ms-cv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .ms-cv-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;border-radius:10px;border:1px solid;cursor:pointer;transition:all .18s}
@@ -290,10 +330,10 @@ function injectCSS() {
 .ms-plat-tag{font-family:'Space Mono',monospace;font-size:.33rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:3px 7px;border-radius:4px;color:rgba(74,222,128,.85);background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.18)}
 
 /* ── THEME GRID ── */
-.ms-th-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-.ms-th-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
-.ms-th-sw{width:100%;aspect-ratio:1;border-radius:9px;border:2px solid transparent;transition:all .2s;box-shadow:0 3px 8px rgba(0,0,0,.4)}
-.ms-th-item:hover .ms-th-sw{transform:scale(1.08)}.ms-th-item.active .ms-th-sw{border-color:#E8C547;box-shadow:0 0 0 3px rgba(232,197,71,.25)}
+.ms-th-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ms-th-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.ms-th-sw{width:100%;height:44px;border-radius:8px;border:2px solid transparent;transition:all .18s;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.ms-th-item:hover .ms-th-sw{transform:scale(1.06);box-shadow:0 4px 12px rgba(0,0,0,.5)}.ms-th-item.active .ms-th-sw{border-color:#E8C547;box-shadow:0 0 0 3px rgba(232,197,71,.25)}
 .ms-th-nm{font-family:'Space Mono',monospace;font-size:.36rem;font-weight:700;text-transform:uppercase;transition:color .3s}
 .ms-ui-dark  .ms-th-nm{color:rgba(255,255,255,.3)}
 .ms-ui-light .ms-th-nm{color:rgba(0,0,0,.4)}
@@ -512,13 +552,39 @@ function buildStudioHTML() {
 
       <!-- CONTENT -->
       <div class="ms-panel active" id="ms-panel-content">
-        <div class="ms-lbl">Lyric</div>
+        <div class="ms-lbl">Lyric Preview</div>
         <div class="ms-lyric-preview" id="msLyricPreview"></div>
-        <div class="ms-g2">
-          <input class="ms-in" id="msSongIn" placeholder="Song title"/>
-          <input class="ms-in" id="msArtistIn" placeholder="Artist"/>
+        <div class="ms-meta-card" id="msSongMeta">
+          <div class="ms-meta-row">
+            <span class="ms-meta-icon">♪</span>
+            <div class="ms-meta-text">
+              <div class="ms-meta-song" id="msSongDisplay">—</div>
+              <div class="ms-meta-artist" id="msArtistDisplay">—</div>
+            </div>
+            <button class="ms-meta-edit" id="msSongEditBtn" title="Edit song info">✎</button>
+          </div>
         </div>
-        <input class="ms-in" id="msEmotionIn" placeholder="Emotion tag (e.g. Nostalgia)"/>
+        <div class="ms-meta-edit-fields" id="msSongEditFields" style="display:none">
+          <div class="ms-g2">
+            <input class="ms-in" id="msSongIn" placeholder="Song title"/>
+            <input class="ms-in" id="msArtistIn" placeholder="Artist"/>
+          </div>
+          <input class="ms-in" id="msEmotionIn" placeholder="Emotion tag (e.g. Nostalgia)"/>
+          <button class="ms-apply-btn" id="msSongApplyBtn">Apply</button>
+        </div>
+        <div class="ms-lbl" style="margin-top:4px">Export Type</div>
+        <div class="ms-export-type-row" id="msExportTypeRow">
+          <button class="ms-export-type-btn active" data-etype="video">
+            <span class="ms-et-icon">▶</span>
+            <span class="ms-et-label">Video</span>
+            <span class="ms-et-sub">Animated MP4</span>
+          </button>
+          <button class="ms-export-type-btn" data-etype="png">
+            <span class="ms-et-icon">⊡</span>
+            <span class="ms-et-label">Image</span>
+            <span class="ms-et-sub">Static PNG</span>
+          </button>
+        </div>
       </div>
 
       <!-- COLOR -->
@@ -718,12 +784,58 @@ function openStudio() {
   buildStudioHTML();
   applyUIMode('dark');
 
-  // Populate fields
+  // Populate lyric preview
   const lp = document.getElementById('msLyricPreview');
   if (lp) lp.textContent = S.lyric;
+
+  // Populate meta card (read-only summary)
+  const sd = document.getElementById('msSongDisplay');
+  const ad = document.getElementById('msArtistDisplay');
+  if (sd) sd.textContent = S.song    || '—';
+  if (ad) ad.textContent = S.artist  || '—';
+
+  // Pre-fill hidden edit fields too
   $v('msSongIn',    S.song);
   $v('msArtistIn',  S.artist);
   $v('msEmotionIn', S.emotion);
+
+  // Wire edit toggle
+  const editBtn    = document.getElementById('msSongEditBtn');
+  const editFields = document.getElementById('msSongEditFields');
+  const applyBtn   = document.getElementById('msSongApplyBtn');
+  if (editBtn && editFields) {
+    editBtn.onclick = () => {
+      const open = editFields.style.display !== 'none';
+      editFields.style.display = open ? 'none' : 'flex';
+      editBtn.textContent = open ? '✎' : '✕';
+    };
+  }
+  if (applyBtn) {
+    applyBtn.onclick = () => {
+      S.song   = document.getElementById('msSongIn').value.trim()   || S.song;
+      S.artist = document.getElementById('msArtistIn').value.trim() || S.artist;
+      S.emotion= document.getElementById('msEmotionIn').value.trim()|| S.emotion;
+      const sd2 = document.getElementById('msSongDisplay');
+      const ad2 = document.getElementById('msArtistDisplay');
+      if (sd2) sd2.textContent = S.song   || '—';
+      if (ad2) ad2.textContent = S.artist || '—';
+      $t('msPSong',    S.song);
+      $t('msPArtist',  S.artist.toUpperCase());
+      $t('msPEmotion', S.emotion ? '✦ '+S.emotion.toUpperCase() : '');
+      if (editFields) editFields.style.display = 'none';
+      if (editBtn)    editBtn.textContent = '✎';
+    };
+  }
+
+  // Wire export type toggle
+  document.querySelectorAll('.ms-export-type-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.ms-export-type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      S._exportType = btn.dataset.etype; // 'video' or 'png'
+    };
+  });
+  S._exportType = 'video'; // default
 
   // Set poster text
   $t('msPSong',    S.song);
@@ -791,14 +903,36 @@ function applyPosterTheme(themeName) {
   p.classList.remove(...[...p.classList].filter(c => c.startsWith('ms-t-')));
   p.classList.add('ms-t-' + themeName);
 
-  // Update waveform bar color to match accent
   const td = STU_THEMES[themeName] || STU_THEMES.midnight;
-  document.querySelectorAll('.ms-wbar').forEach(b => {
-    b.style.background = td.accent + '99'; // 60% opacity
-  });
-  document.querySelectorAll('.ms-pr').forEach(r => {
-    r.style.borderColor = td.accent + 'aa';
-  });
+
+  // Accent colors on waveform + rings
+  document.querySelectorAll('.ms-wbar').forEach(b => { b.style.background = td.accent + '99'; });
+  document.querySelectorAll('.ms-pr').forEach(r  => { r.style.borderColor  = td.accent + 'aa'; });
+
+  // Force text colors for light themes — CSS class rules alone aren't
+  // reliable enough when animation is transitioning opacity simultaneously
+  const isLight = td.light === true;
+  const lyricEl    = $('msPLyric');
+  const songEl     = $('msPSong');
+  const artistEl   = $('msPArtist');
+  const emotionEl  = $('msPEmotion');
+  const brandWord  = p.querySelector('.ms-p-brand-word');
+  const divEl      = p.querySelector('.ms-p-div');
+
+  if (isLight) {
+    if (lyricEl)  lyricEl.style.color    = td.textCol;
+    if (songEl)   songEl.style.color     = hexAlpha(td.textCol, 0.75);
+    if (artistEl) artistEl.style.color   = hexAlpha(td.textCol, 0.45);
+    if (emotionEl)emotionEl.style.color  = td.accent;
+    if (brandWord)brandWord.style.color  = td.accent;
+    if (divEl)    divEl.style.background = hexAlpha(td.textCol, 0.2);
+  } else {
+    // Reset inline styles for dark themes — let CSS take over
+    [lyricEl, songEl, artistEl, emotionEl, brandWord].forEach(el => {
+      if (el) el.style.color = '';
+    });
+    if (divEl) divEl.style.background = '';
+  }
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -975,19 +1109,23 @@ function bindEvents() {
   };
 
   // ── Manual replay buttons (always replay)
-  $('msReplay').onclick      = () => { play(); toast('▶ Preview'); };
-  $('msReplayStage').onclick = () => { play(); toast('▶ Replay'); };
+  $('msReplay').onclick      = () => { play();; };
+  $('msReplayStage').onclick = () => { play();; };
 
   // ── Loop
   $('msLoopBtn').onclick = function() {
     S.looping = !S.looping;
     this.classList.toggle('active', S.looping);
-    if (S.looping) { play(); toast('⟳ Loop on'); }
-    else           { clearTimeout(_loopTimer); toast('⟳ Loop off'); }
+    if (S.looping) { play();; }
+    else           { clearTimeout(_loopTimer);; }
   };
 
-  // ── Export open
+  // ── Export — uses type selected in content tab (or falls back to modal)
   $('msExportBtn').onclick = () => {
+    const type = S._exportType || 'video';
+    if (type === 'png')   { exportPNG();   return; }
+    if (type === 'video') { exportVideo(); return; }
+    // Fallback: show modal
     $t('msEmSize', `${S.canvas.w} × ${S.canvas.h}`);
     $('msExportModal').classList.add('open');
   };
@@ -1012,7 +1150,6 @@ function bindEvents() {
     const btn = e.target.closest('.ms-mt-btn');
     if (!btn) return;
     applyUIMode(btn.dataset.ui);
-    toast(btn.dataset.ui === 'dark' ? '🌙 Dark Studio' : '☀️ Light Studio');
   });
 
   // ── UI Mode toggles (sidebar color tab)
@@ -1020,7 +1157,6 @@ function bindEvents() {
     const btn = e.target.closest('.ms-uimode-btn');
     if (!btn) return;
     applyUIMode(btn.dataset.ui);
-    toast(btn.dataset.ui === 'dark' ? '🌙 Dark Studio' : '☀️ Light Studio');
   });
 
   // ── Canvas sizes (in Size tab)
@@ -1032,7 +1168,6 @@ function bindEvents() {
     S.canvas = { ...STU_SIZES[btn.dataset.key] };
     updatePlatTags();
     sizeCanvas();
-    toast(btn.querySelector('.ms-cv-name').textContent);
     // NO auto-replay on size change
   });
 
@@ -1043,7 +1178,6 @@ function bindEvents() {
     document.querySelectorAll('.ms-th-item').forEach(x => x.classList.remove('active'));
     item.classList.add('active');
     applyPosterTheme(item.dataset.theme);
-    toast('Theme: ' + item.querySelector('.ms-th-nm').textContent);
     // No replay — theme change is visible immediately
   });
 
@@ -1067,7 +1201,6 @@ function bindEvents() {
     btn.classList.add('active');
     S.font = { fam: btn.dataset.fam, sty: btn.dataset.sty };
     buildLyricHTML();
-    toast('Font: ' + btn.querySelector('.ms-fn-nm').textContent);
     // No replay needed — font updates live in DOM
   });
 
@@ -1089,7 +1222,6 @@ function bindEvents() {
     p.classList.remove(...[...p.classList].filter(c => c.startsWith('ms-anim-')));
     p.classList.add('ms-anim-' + S.motion);
     buildLyricHTML();
-    toast('Motion: ' + btn.querySelector('.ms-mo-name').textContent);
     play(); // AUTO-REPLAY for motion change
   });
 
@@ -1103,7 +1235,6 @@ function bindEvents() {
     $('msCustomSpd').value = spd;
     $t('msCustomSpdVal', spd.toFixed(1) + '×');
     setAnimSpeed(spd, true); // true = auto-replay
-    toast('Speed: ' + btn.textContent);
   });
 
   // ── Custom speed slider (AUTO-REPLAY with debounce)
@@ -1154,7 +1285,6 @@ function bindEvents() {
       $('msPhCtrl').classList.remove('hidden');
       const img = new Image(); img.src = S.photo; _photoImg = img;
       applyPhotoStyles();
-      toast('✓ Photo added');
     };
     reader.readAsDataURL(file);
   });
@@ -1175,7 +1305,6 @@ function bindEvents() {
     btn.classList.add('active');
     S.filter = btn.dataset.fi;
     applyPhotoStyles();
-    toast('Filter: ' + btn.textContent);
   });
   $('msRmPh').addEventListener('click', () => {
     S.photo = null; _photoImg = null;
@@ -1184,7 +1313,6 @@ function bindEvents() {
     $t('msPhTxt', 'Tap to add a photo');
     $('msPhDrop').classList.remove('has-photo');
     $('msPhCtrl').classList.add('hidden');
-    toast('Photo removed');
   });
 
   // ── Drag and drop
@@ -1261,7 +1389,6 @@ function injectYtOption(meta) {
     opt.style.borderColor = 'rgba(255,0,0,.55)';
     opt.style.background  = 'rgba(255,0,0,.15)';
     applyPhotoStyles();
-    toast('Thumbnail set ✓');
   };
 
   opt.onclick = () =>
@@ -1272,7 +1399,7 @@ function injectYtOption(meta) {
           .then(r => r.blob())
           .then(b => tryLoad(URL.createObjectURL(b)))
           .then(apply)
-          .catch(() => toast('Could not load thumbnail'))
+          .catch(() => {})
       );
 
   panel.insertBefore(opt, panel.firstChild);
@@ -1287,7 +1414,6 @@ function msCloseExport() {
 }
 
 function exportPNG() {
-  toast('⏳ Preparing PNG…');
   const {w, h} = S.canvas;
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
@@ -1301,7 +1427,6 @@ function exportPNG() {
       a.download = `margo-${S.theme}-${w}x${h}.png`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-      toast(`✓ PNG saved · ${w}×${h}`);
     }, 'image/png');
   });
 }
@@ -1322,7 +1447,6 @@ function exportVideo() {
       videoBitsPerSecond: 8_000_000, // 8Mbps — high quality
     });
   } catch(e) {
-    toast('⚠ Use Chrome or Edge for video export');
     return;
   }
 
@@ -1331,7 +1455,6 @@ function exportVideo() {
   const animSettle = totalDur - 1500; // animation portion
   const holdMs     = 1500;            // static hold at end
 
-  toast('🎬 Recording — do not close this tab…');
   const recBadge = $('msRecBadge');
   if (recBadge) recBadge.classList.add('visible');
 
@@ -1346,7 +1469,7 @@ function exportVideo() {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     const kb = Math.round(blob.size / 1024);
-    toast(`✓ Video saved · ${w}×${h} · ${kb < 1024 ? kb+'KB' : (kb/1024).toFixed(1)+'MB'}`);
+    console.log(`Video saved · ${w}×${h} · ${kb < 1024 ? kb+'KB' : (kb/1024).toFixed(1)+'MB'}`);
   };
 
   recorder.start(100); // collect every 100ms
@@ -1727,12 +1850,6 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-/* ────────────────────────────────────────────────────────────────
-   TOAST
-──────────────────────────────────────────────────────────────── */
-function toast(msg) {
-  if (typeof showToast === 'function') showToast(msg);
-}
 
 /* ────────────────────────────────────────────────────────────────
    GLOBAL ASSIGNMENTS (for safety — no inline onclick= in HTML)
