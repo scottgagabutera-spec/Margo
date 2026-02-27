@@ -1,37 +1,11 @@
 /* ============================================================
    MARGO — js/studio.js
    Image Studio (canvas → PNG) + Studio Chooser wiring
-   v5.4 — Dev branch fix.
-          Adds DOM variable resolution that was missing in dev.
-          (In main these lived in state.js; dev dropped them.)
-          HTML is already in index.html — no buildStudioHTML().
+   v5.3 — Dev branch.
+          Image studio = exact working code from main.
+          Chooser wiring added for Motion→Image, GIF→gif-studio.
+          No buildStudioHTML() — HTML already in index.html.
    ============================================================ */
-
-/* ════════════════════════════════════════
-   DOM VARIABLES — resolved at init time
-   (In main branch these are in state.js.
-    Dev dropped them. We resolve them here
-    after DOMContentLoaded so the HTML exists.)
-   ════════════════════════════════════════ */
-let studioOverlay, studioCanvas, studioExportBtn;
-let sizePicker, sizeCancelBtn;
-let ceremonyOverlay, ceremonyThumb, cerDownload, cerShare, ceremonyBack;
-let studioPhotoInput, sharePosterBtn;
-
-function resolveStudioDOMVars() {
-  studioOverlay    = document.getElementById('studioOverlay');
-  studioCanvas     = document.getElementById('studioCanvas');
-  studioExportBtn  = document.getElementById('studioExportBtn');
-  sizePicker       = document.getElementById('sizePicker');
-  sizeCancelBtn    = document.getElementById('sizeCancelBtn');
-  ceremonyOverlay  = document.getElementById('ceremonyOverlay');
-  ceremonyThumb    = document.getElementById('ceremonyThumb');
-  cerDownload      = document.getElementById('cerDownload');
-  cerShare         = document.getElementById('cerShare');
-  ceremonyBack     = document.getElementById('ceremonyBack');
-  studioPhotoInput = document.getElementById('studioPhotoInput');
-  sharePosterBtn   = document.getElementById('sharePosterBtn');
-}
 
 /* ════════════════════════════════════════
    STUDIO CHOOSER WIRING
@@ -46,7 +20,7 @@ function initStudioChooser() {
 
   if (motionBtn) motionBtn.addEventListener('click', () => {
     chooser.classList.add('hidden');
-    openStudio();
+    openStudio();   // opens the working image studio
   });
 
   if (gifBtn) gifBtn.addEventListener('click', () => {
@@ -64,7 +38,7 @@ function initStudioChooser() {
 function openStudioChooser() {
   closeModal(postcardModal);
   const chooser = document.getElementById('studioChooser');
-  if (!chooser) { openStudio(); return; }
+  if (!chooser) { openStudio(); return; }   // fallback if chooser missing
   chooser.classList.remove('hidden');
   document.body.classList.add('modal-open');
 }
@@ -85,28 +59,17 @@ function initGifStudioTabs() {
 }
 
 /* ════════════════════════════════════════
-   IMAGE STUDIO
+   IMAGE STUDIO — working code from main
    ════════════════════════════════════════ */
 function initStudio() {
-  // Resolve DOM vars first — critical fix for dev branch
-  resolveStudioDOMVars();
+  // Route "Create Poster" → chooser (dev) instead of direct to studio (main)
+  sharePosterBtn.onclick = openStudioChooser;
 
-  if (!studioOverlay || !studioCanvas) {
-    console.warn('[studio] studioOverlay or studioCanvas not found in DOM');
-    return;
-  }
-
-  // Route "Create Poster" → chooser
-  if (sharePosterBtn) sharePosterBtn.onclick = openStudioChooser;
-
-  const closeStudio = document.getElementById('closeStudio');
-  if (closeStudio) {
-    closeStudio.onclick = () => {
-      studioOverlay.classList.add('hidden');
-      document.body.classList.remove('modal-open');
-      openModal(postcardModal);
-    };
-  }
+  closeStudio.onclick = () => {
+    studioOverlay.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+    openModal(postcardModal);
+  };
 
   // Dock tabs
   document.querySelectorAll('.dock-tab').forEach(tab => {
@@ -206,20 +169,20 @@ function initStudio() {
   };
 
   // Export / size picker
-  if (studioExportBtn) studioExportBtn.onclick = () => sizePicker?.classList.remove('hidden');
-  if (sizeCancelBtn)   sizeCancelBtn.onclick   = () => sizePicker?.classList.add('hidden');
+  studioExportBtn.onclick = () => sizePicker.classList.remove('hidden');
+  sizeCancelBtn.onclick   = () => sizePicker.classList.add('hidden');
 
   document.querySelectorAll('.size-opt').forEach(btn => {
     btn.onclick = async () => {
       selectedSize = btn.dataset.size;
-      sizePicker?.classList.add('hidden');
+      sizePicker.classList.add('hidden');
       studioCanvas.classList.add('zoom-in');
 
-      ceremonyOverlay?.classList.remove('hidden');
-      const headlineEl = ceremonyOverlay?.querySelector('.ceremony-headline');
-      const actionsEl  = ceremonyOverlay?.querySelector('.ceremony-actions');
+      ceremonyOverlay.classList.remove('hidden');
+      const headlineEl = ceremonyOverlay.querySelector('.ceremony-headline');
       if (headlineEl) headlineEl.textContent = 'Generating your poster…';
-      if (actionsEl)  actionsEl.style.opacity = '0.4';
+      const actionsEl = ceremonyOverlay.querySelector('.ceremony-actions');
+      if (actionsEl) actionsEl.style.opacity = '0.4';
 
       try {
         generatedBlob = await generateFinalPoster(selectedSize);
@@ -227,7 +190,7 @@ function initStudio() {
         console.error('Poster generation error:', err);
         showToast('Error generating poster — try again');
         studioCanvas.classList.remove('zoom-in');
-        ceremonyOverlay?.classList.add('hidden');
+        ceremonyOverlay.classList.add('hidden');
         return;
       }
 
@@ -235,19 +198,29 @@ function initStudio() {
         studioCanvas.classList.remove('zoom-in');
         drawCeremonyThumb();
         if (headlineEl) headlineEl.textContent = 'Your poster is ready.';
-        if (actionsEl)  actionsEl.style.opacity = '1';
+        if (actionsEl) actionsEl.style.opacity = '1';
       }, 400);
     };
   });
 
   // Ceremony actions
-  if (ceremonyBack)   ceremonyBack.onclick   = () => { ceremonyOverlay?.classList.add('hidden'); generatedBlob = null; };
-  if (cerDownload)    cerDownload.onclick     = async () => {
-    if (!generatedBlob) { showToast('Generating poster…'); return; }
-    try { downloadPosterBlob(); showToast('Saved to device ✓'); }
-    catch (err) { showToast('Download failed — try again'); console.error('Download error:', err); }
+  ceremonyBack.onclick = () => {
+    ceremonyOverlay.classList.add('hidden');
+    generatedBlob = null;
   };
-  if (cerShare) cerShare.onclick = shareOrDownloadPoster;
+
+  cerDownload.onclick = async () => {
+    if (!generatedBlob) { showToast('Generating poster…'); return; }
+    try {
+      downloadPosterBlob();
+      showToast('Saved to device ✓');
+    } catch (err) {
+      showToast('Download failed — try again');
+      console.error('Download error:', err);
+    }
+  };
+
+  cerShare.onclick = shareOrDownloadPoster;
 
   // GIF studio tabs + chooser
   initGifStudioTabs();
@@ -256,16 +229,8 @@ function initStudio() {
   if (typeof initGifStudio === 'function') initGifStudio();
 }
 
-/* ── Open Image Studio ── */
+/* ── Open Image Studio (from main, unchanged) ── */
 function openStudio() {
-  // Re-resolve in case initStudio() hasn't run yet
-  resolveStudioDOMVars();
-
-  if (!studioOverlay) {
-    console.error('[studio] #studioOverlay not found — cannot open studio');
-    return;
-  }
-
   closeModal(postcardModal);
   studioBgImage    = null;
   studioFont       = 'playfair';
@@ -285,9 +250,10 @@ function openStudio() {
   setTimeout(refreshStageCanvas, 60);
 }
 
+// Alias so chooser and any other callers all work
 const openImageStudio = openStudio;
 
-/* ── YouTube thumbnail as background ── */
+/* ── YouTube thumbnail as one-tap background ── */
 function injectYoutubeBgOption(meta) {
   const panel = document.getElementById('panel-photo');
   if (!panel) return;
@@ -368,8 +334,8 @@ function resetStudioUI() {
   if (dsl) dsl.value = 50; if (dvl) dvl.textContent  = '50%';
 
   document.querySelectorAll('.photo-filter').forEach((f, i) => f.classList.toggle('active', i === 0));
-  sizePicker?.classList.add('hidden');
-  ceremonyOverlay?.classList.add('hidden');
+  sizePicker.classList.add('hidden');
+  ceremonyOverlay.classList.add('hidden');
   document.getElementById('ytBgOption')?.remove();
 }
 
@@ -531,11 +497,7 @@ function wrapTextCenter(ctx, text, x, centerY, maxW, lineHeight) {
 }
 
 function refreshStageCanvas() {
-  if (!currentPost) return;
-  // Re-resolve in case we're called before init
-  if (!studioCanvas) resolveStudioDOMVars();
-  if (!studioCanvas) return;
-
+  if (!currentPost || !studioCanvas) return;
   const stage  = studioCanvas.parentElement;
   const dpr    = window.devicePixelRatio || 1;
   const availW = stage.clientWidth  - 40;
@@ -569,8 +531,6 @@ async function generateFinalPoster(sizeKey) {
 }
 
 function drawCeremonyThumb() {
-  if (!ceremonyThumb) resolveStudioDOMVars();
-  if (!ceremonyThumb) return;
   const dpr  = window.devicePixelRatio || 1;
   const size = 600;
   ceremonyThumb.width        = Math.round(size * dpr);
@@ -647,22 +607,3 @@ function downloadPosterBlob() {
     showToast('Could not download — try again');
   }
 }
-
-/* ════════════════════════════════════════
-   FAILSAFE: wire sharePosterBtn as early
-   as possible, independent of initStudio()
-   ════════════════════════════════════════ */
-(function wirePosterBtnEarly() {
-  const wire = () => {
-    const btn = document.getElementById('sharePosterBtn');
-    if (btn && !btn._chooserWired) {
-      btn._chooserWired = true;
-      btn.onclick = openStudioChooser;
-    }
-  };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', wire);
-  } else {
-    wire();
-  }
-})();
