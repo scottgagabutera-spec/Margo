@@ -76,7 +76,7 @@
         "applicationCategory": "SocialNetworkingApplication",
         "applicationSubCategory": "Music-Based Communication Platform",
         "operatingSystem": "Web, iOS, Android",
-        "description": "Margo is a social platform where people communicate through song lyrics and discover others through music. Drop a lyric that says what you feel, explore what others are sharing, and connect through the songs that matter.",
+        "description": "Margo is a social platform where people communicate through song lyrics and discover others through music.",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
         "screenshot": "https://trymargo.com/og-image.png",
         "featureList": [
@@ -207,9 +207,6 @@
     <button class="header-btn primary" id="openComposer">Drop Lyric</button>
   </header>
   <div class="new-posts-bar" id="newPostsIndicator"><span id="newPostsCount">0</span> new lyrics — tap to see</div>
-
-  <!-- Legacy scroll-top btn kept in HTML so state.js can reference it,
-       but motion.js hides it and replaces with the premium FAB -->
   <button class="scroll-top" id="scrollToTopBtn" style="display:none">↑ Back to top</button>
 
   <div class="feed-search-wrap">
@@ -262,13 +259,7 @@
       <textarea id="textInput" maxlength="140" placeholder="The line living in your head…" inputmode="text"></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
       <div id="inspireWrap" style="display:none;">
-        <button id="inspireBtn" type="button" style="
-          width:100%;padding:10px;border-radius:10px;
-          background:rgba(232,197,71,0.07);border:1px dashed rgba(232,197,71,0.3);
-          color:#E8C547;font-family:'Space Mono',monospace;font-size:0.55rem;
-          font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
-          cursor:pointer;transition:all 0.2s;
-        ">✦ Inspire me — AI suggestions</button>
+        <button id="inspireBtn" type="button" style="width:100%;padding:10px;border-radius:10px;background:rgba(232,197,71,0.07);border:1px dashed rgba(232,197,71,0.3);color:#E8C547;font-family:'Space Mono',monospace;font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;cursor:pointer;transition:all 0.2s;">✦ Inspire me — AI suggestions</button>
         <div id="inspireSuggestions" style="display:none;margin-top:8px;flex-direction:column;gap:6px;"></div>
       </div>
       <span class="field-label">Emotion</span>
@@ -384,11 +375,8 @@
           <span class="postcard-header-mark">
             <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
               <circle cx="40" cy="40" r="36" fill="#0B0B0D"/>
-              <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
-                    fill="none" stroke="#E8C547" stroke-width="5"
-                    stroke-linecap="round" stroke-linejoin="round"/>
-              <rect x="35" y="60" width="10" height="3.5" rx="1.75"
-                    fill="#E8C547" opacity=".7"/>
+              <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#E8C547" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#E8C547" opacity=".7"/>
             </svg>
           </span>
           MARGO
@@ -415,19 +403,127 @@
   </div>
 </div>
 
-<!-- MARGO STUDIO (Motion/Video) — inner HTML built by studio.js -->
-<div id="studioOverlay" class="studio-overlay hidden"></div>
+<!-- ═══════════════════════════════════════════════════════
+     MARGO IMAGE STUDIO — full HTML from main (working)
+════════════════════════════════════════════════════════ -->
+<div id="studioOverlay" class="studio-overlay hidden">
+  <div class="studio-stage">
+    <canvas id="studioCanvas"></canvas>
+    <div class="studio-topbar">
+      <button class="studio-back-btn" id="closeStudio">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <span class="studio-title">
+        <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="14" height="14" style="vertical-align:middle;margin-right:5px">
+          <circle cx="40" cy="40" r="36" fill="#E8C547"/>
+          <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/>
+        </svg>
+        MARGO · Studio
+      </span>
+      <button class="studio-export-btn" id="studioExportBtn">Export →</button>
+    </div>
+  </div>
+  <div class="studio-dock">
+    <div class="dock-tabs">
+      <button class="dock-tab active" data-tab="color"><span class="dock-tab-icon">◑</span><span>Color</span></button>
+      <button class="dock-tab" data-tab="font"><span class="dock-tab-icon">Aa</span><span>Font</span></button>
+      <button class="dock-tab" data-tab="photo"><span class="dock-tab-icon">⊙</span><span>Photo</span></button>
+    </div>
+    <div class="dock-panel active" id="panel-color">
+      <div class="color-scenes">
+        <button class="scene-swatch active" data-design="midnight-gold"><span class="swatch-preview" style="background:linear-gradient(135deg,#0d0d0d 0%,#E8C547 100%)"></span><span class="swatch-label">Gold</span></button>
+        <button class="scene-swatch" data-design="royal-purple"><span class="swatch-preview" style="background:linear-gradient(135deg,#1a0033 0%,#c77dff 100%)"></span><span class="swatch-label">Violet</span></button>
+        <button class="scene-swatch" data-design="neon-cyan"><span class="swatch-preview" style="background:linear-gradient(135deg,#0a1420 0%,#00e5ff 100%)"></span><span class="swatch-label">Ocean</span></button>
+        <button class="scene-swatch" data-design="sunset-coral"><span class="swatch-preview" style="background:linear-gradient(135deg,#1a0a0a 0%,#ff6b6b 100%)"></span><span class="swatch-label">Ember</span></button>
+        <button class="scene-swatch" data-design="emerald-night"><span class="swatch-preview" style="background:linear-gradient(135deg,#051a0d 0%,#50fa7b 100%)"></span><span class="swatch-label">Forest</span></button>
+        <button class="scene-swatch" data-design="rose-gold"><span class="swatch-preview" style="background:linear-gradient(135deg,#1a0d0f 0%,#f4a4c0 100%)"></span><span class="swatch-label">Rose</span></button>
+        <button class="scene-swatch" data-design="cream-editorial"><span class="swatch-preview" style="background:linear-gradient(135deg,#f5f1e8 0%,#2a2520 100%)"></span><span class="swatch-label">Bone</span></button>
+        <button class="scene-swatch" data-design="monochrome"><span class="swatch-preview" style="background:linear-gradient(135deg,#000 0%,#fff 100%)"></span><span class="swatch-label">Mono</span></button>
+        <button class="scene-swatch" data-design="vaporwave"><span class="swatch-preview" style="background:linear-gradient(135deg,#ff71ce 0%,#05ffa1 100%)"></span><span class="swatch-label">Wave</span></button>
+        <button class="scene-swatch" data-design="neon-dark"><span class="swatch-preview" style="background:linear-gradient(135deg,#0a0a0a 0%,#ff00ff 100%)"></span><span class="swatch-label">Neon</span></button>
+        <button class="scene-swatch" data-design="y2k-chrome"><span class="swatch-preview" style="background:linear-gradient(135deg,#000033 0%,#0ff 100%)"></span><span class="swatch-label">Chrome</span></button>
+        <button class="scene-swatch" data-design="brutalist"><span class="swatch-preview" style="background:linear-gradient(135deg,#fff 0%,#000 100%)"></span><span class="swatch-label">Brutal</span></button>
+      </div>
+      <div class="brightness-row">
+        <span class="dock-label">Brightness</span>
+        <input type="range" id="studiobrightness" class="studio-slider" min="50" max="150" value="100">
+        <span class="studio-slider-val" id="studioBrightnessVal">100%</span>
+      </div>
+    </div>
+    <div class="dock-panel" id="panel-font">
+      <div class="font-cards">
+        <button class="font-card active" data-font="playfair"><span class="font-card-preview" style="font-family:'Playfair Display',serif;font-style:italic">Say everything</span><span class="font-card-name">Playfair</span></button>
+        <button class="font-card" data-font="cormorant"><span class="font-card-preview" style="font-family:'Cormorant Garamond',serif;font-style:italic">Say everything</span><span class="font-card-name">Cormorant</span></button>
+        <button class="font-card" data-font="lora"><span class="font-card-preview" style="font-family:'Lora',serif;font-style:italic">Say everything</span><span class="font-card-name">Lora</span></button>
+        <button class="font-card" data-font="merriweather"><span class="font-card-preview" style="font-family:'Merriweather',serif">Say everything</span><span class="font-card-name">Merriweather</span></button>
+        <button class="font-card" data-font="josefin"><span class="font-card-preview" style="font-family:'Josefin Sans',sans-serif;letter-spacing:2px">Say everything</span><span class="font-card-name">Josefin</span></button>
+        <button class="font-card" data-font="bebas"><span class="font-card-preview" style="font-family:'Bebas Neue',sans-serif;letter-spacing:3px;font-size:1.1rem">SAY EVERYTHING</span><span class="font-card-name">Bebas</span></button>
+        <button class="font-card" data-font="oswald"><span class="font-card-preview" style="font-family:'Oswald',sans-serif;font-weight:600">Say everything</span><span class="font-card-name">Oswald</span></button>
+        <button class="font-card" data-font="dancing"><span class="font-card-preview" style="font-family:'Dancing Script',cursive">Say everything</span><span class="font-card-name">Dancing</span></button>
+      </div>
+    </div>
+    <div class="dock-panel" id="panel-photo">
+      <div id="photoUploadZone" class="photo-drop-zone">
+        <div class="photo-drop-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <span class="photo-drop-text" id="photoDropText">Tap to add a photo</span>
+      </div>
+      <input type="file" id="studioPhotoInput" accept="image/*" style="display:none">
+      <div class="photo-controls hidden" id="photoControls">
+        <div class="photo-effect-row"><span class="dock-label">Blur</span><input type="range" id="studioBlur" class="studio-slider" min="0" max="15" value="0"><span class="studio-slider-val" id="studioBlurVal">0</span></div>
+        <div class="photo-effect-row"><span class="dock-label">Dim</span><input type="range" id="studioDim" class="studio-slider" min="0" max="90" value="50"><span class="studio-slider-val" id="studioDimVal">50%</span></div>
+        <div class="photo-filter-row">
+          <button class="photo-filter active" data-filter="none">None</button>
+          <button class="photo-filter" data-filter="warm">Warm</button>
+          <button class="photo-filter" data-filter="cool">Cool</button>
+          <button class="photo-filter" data-filter="dramatic">Drama</button>
+          <button class="photo-filter" data-filter="vintage">Vintage</button>
+        </div>
+        <button class="photo-remove-btn" id="studioRemovePhoto">Remove photo</button>
+      </div>
+    </div>
+  </div>
+  <div class="size-picker hidden" id="sizePicker">
+    <div class="size-picker-inner">
+      <div class="size-picker-title">Choose your canvas</div>
+      <div class="size-options">
+        <button class="size-opt" data-size="instagram-square"><span class="size-ratio">1:1</span><span class="size-name">Instagram</span><span class="size-dim">1080 × 1080</span></button>
+        <button class="size-opt" data-size="instagram-story"><span class="size-ratio">9:16</span><span class="size-name">Story / TikTok</span><span class="size-dim">1080 × 1920</span></button>
+        <button class="size-opt" data-size="reddit"><span class="size-ratio">1:1</span><span class="size-name">Reddit</span><span class="size-dim">1200 × 1200</span></button>
+        <button class="size-opt" data-size="twitter"><span class="size-ratio">16:9</span><span class="size-name">X / Twitter</span><span class="size-dim">1200 × 675</span></button>
+        <button class="size-opt" data-size="pinterest"><span class="size-ratio">2:3</span><span class="size-name">Pinterest</span><span class="size-dim">1000 × 1500</span></button>
+      </div>
+      <button class="size-cancel" id="sizeCancelBtn">Cancel</button>
+    </div>
+  </div>
+  <div class="ceremony-overlay hidden" id="ceremonyOverlay">
+    <div class="ceremony-inner">
+      <div class="ceremony-thumb-wrap"><canvas id="ceremonyThumb"></canvas></div>
+      <div class="ceremony-headline">Your lyric is ready to drop.</div>
+      <div class="ceremony-actions">
+        <button class="ceremony-btn" id="cerDownload"><span class="ceremony-btn-icon">↓</span>Save to Device</button>
+        <button class="ceremony-btn ceremony-share" id="cerShare"><span class="ceremony-btn-icon">↗</span>Share</button>
+      </div>
+      <button class="ceremony-back" id="ceremonyBack">← Back to studio</button>
+    </div>
+  </div>
+</div>
 
-<!-- STUDIO CHOOSER — shown when user taps "Create Poster" -->
+<!-- ═══════════════════════════════════════════════════════
+     STUDIO CHOOSER — new in dev
+════════════════════════════════════════════════════════ -->
 <div id="studioChooser" class="hidden">
   <div class="sc-inner">
     <div class="sc-header">
       <div class="sc-logo">
         <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="20" height="20">
           <circle cx="40" cy="40" r="36" fill="#E8C547"/>
-          <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
-                fill="none" stroke="#0B0B0D" stroke-width="5"
-                stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
           <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/>
         </svg>
         <span class="sc-logo-text">MARGO · STUDIO</span>
@@ -453,177 +549,74 @@
   </div>
 </div>
 
-<!-- GIF STUDIO OVERLAY -->
+<!-- ═══════════════════════════════════════════════════════
+     GIF STUDIO OVERLAY — new in dev
+════════════════════════════════════════════════════════ -->
 <div id="gifStudioOverlay" class="hidden">
-
-  <!-- Top bar -->
   <div class="gs-topbar">
     <button class="gs-back-btn" id="closeGifStudio" aria-label="Back">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
       </svg>
     </button>
     <span class="gs-topbar-title">✦ Animated GIF Studio</span>
     <button id="gsExportBtn">Create GIF →</button>
   </div>
-
-  <!-- Body -->
   <div class="gs-body">
-
-    <!-- Live preview canvas -->
     <div class="gs-stage">
       <canvas id="gsCanvas"></canvas>
     </div>
-
-    <!-- Dock -->
     <div class="gs-dock">
-
-      <!-- Tab bar -->
       <div class="gs-tab-bar">
-        <button class="gs-tab active" data-gstab="anim">
-          <span class="gs-tab-icon">✦</span><span>Motion</span>
-        </button>
-        <button class="gs-tab" data-gstab="color">
-          <span class="gs-tab-icon">◑</span><span>Color</span>
-        </button>
-        <button class="gs-tab" data-gstab="font">
-          <span class="gs-tab-icon">Aa</span><span>Font</span>
-        </button>
-        <button class="gs-tab" data-gstab="speed">
-          <span class="gs-tab-icon">⏱</span><span>Speed</span>
-        </button>
+        <button class="gs-tab active" data-gstab="anim"><span class="gs-tab-icon">✦</span><span>Motion</span></button>
+        <button class="gs-tab" data-gstab="color"><span class="gs-tab-icon">◑</span><span>Color</span></button>
+        <button class="gs-tab" data-gstab="font"><span class="gs-tab-icon">Aa</span><span>Font</span></button>
+        <button class="gs-tab" data-gstab="speed"><span class="gs-tab-icon">⏱</span><span>Speed</span></button>
       </div>
-
-      <!-- Panels -->
       <div class="gs-panels">
-
-        <!-- Motion panel -->
         <div class="gs-panel active" id="gs-panel-anim">
           <p class="gs-panel-label">Animation style</p>
           <div class="gs-anim-grid">
-            <button class="gs-anim-btn active" data-anim="fade-up">
-              <span class="gs-anim-icon">↑</span><span class="gs-anim-label">Fade Up</span>
-            </button>
-            <button class="gs-anim-btn" data-anim="typewriter">
-              <span class="gs-anim-icon">▌</span><span class="gs-anim-label">Typewriter</span>
-            </button>
-            <button class="gs-anim-btn" data-anim="slide-in">
-              <span class="gs-anim-icon">→</span><span class="gs-anim-label">Slide In</span>
-            </button>
-            <button class="gs-anim-btn" data-anim="pulse">
-              <span class="gs-anim-icon">◎</span><span class="gs-anim-label">Pulse</span>
-            </button>
-            <button class="gs-anim-btn" data-anim="glitch">
-              <span class="gs-anim-icon">▒</span><span class="gs-anim-label">Glitch</span>
-            </button>
-            <button class="gs-anim-btn" data-anim="wave">
-              <span class="gs-anim-icon">∿</span><span class="gs-anim-label">Wave</span>
-            </button>
-            <button class="gs-anim-btn" data-anim="shimmer">
-              <span class="gs-anim-icon">✦</span><span class="gs-anim-label">Shimmer</span>
-            </button>
-            <button class="gs-anim-btn" data-anim="bounce">
-              <span class="gs-anim-icon">◡</span><span class="gs-anim-label">Bounce</span>
-            </button>
+            <button class="gs-anim-btn active" data-anim="fade-up"><span class="gs-anim-icon">↑</span><span class="gs-anim-label">Fade Up</span></button>
+            <button class="gs-anim-btn" data-anim="typewriter"><span class="gs-anim-icon">▌</span><span class="gs-anim-label">Typewriter</span></button>
+            <button class="gs-anim-btn" data-anim="slide-in"><span class="gs-anim-icon">→</span><span class="gs-anim-label">Slide In</span></button>
+            <button class="gs-anim-btn" data-anim="pulse"><span class="gs-anim-icon">◎</span><span class="gs-anim-label">Pulse</span></button>
+            <button class="gs-anim-btn" data-anim="glitch"><span class="gs-anim-icon">▒</span><span class="gs-anim-label">Glitch</span></button>
+            <button class="gs-anim-btn" data-anim="wave"><span class="gs-anim-icon">∿</span><span class="gs-anim-label">Wave</span></button>
+            <button class="gs-anim-btn" data-anim="shimmer"><span class="gs-anim-icon">✦</span><span class="gs-anim-label">Shimmer</span></button>
+            <button class="gs-anim-btn" data-anim="bounce"><span class="gs-anim-icon">◡</span><span class="gs-anim-label">Bounce</span></button>
           </div>
         </div>
-
-        <!-- Color panel -->
         <div class="gs-panel" id="gs-panel-color">
           <p class="gs-panel-label">Theme</p>
           <div class="gs-swatches">
-            <button class="gs-swatch active" data-theme="midnight-gold">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#0d0d0d,#E8C547)"></span>
-              <span class="gs-swatch-label">Gold</span>
-            </button>
-            <button class="gs-swatch" data-theme="royal-purple">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#1a0033,#c77dff)"></span>
-              <span class="gs-swatch-label">Violet</span>
-            </button>
-            <button class="gs-swatch" data-theme="neon-cyan">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#0a1420,#00e5ff)"></span>
-              <span class="gs-swatch-label">Ocean</span>
-            </button>
-            <button class="gs-swatch" data-theme="sunset-coral">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#1a0a0a,#ff6b6b)"></span>
-              <span class="gs-swatch-label">Ember</span>
-            </button>
-            <button class="gs-swatch" data-theme="emerald-night">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#051a0d,#50fa7b)"></span>
-              <span class="gs-swatch-label">Forest</span>
-            </button>
-            <button class="gs-swatch" data-theme="rose-gold">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#1a0d0f,#f4a4c0)"></span>
-              <span class="gs-swatch-label">Rose</span>
-            </button>
-            <button class="gs-swatch" data-theme="monochrome">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#000,#fff)"></span>
-              <span class="gs-swatch-label">Mono</span>
-            </button>
-            <button class="gs-swatch" data-theme="vaporwave">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#ff71ce,#05ffa1)"></span>
-              <span class="gs-swatch-label">Wave</span>
-            </button>
-            <button class="gs-swatch" data-theme="neon-dark">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#0a0a0a,#ff00ff)"></span>
-              <span class="gs-swatch-label">Neon</span>
-            </button>
-            <button class="gs-swatch" data-theme="y2k-chrome">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#000033,#0ff)"></span>
-              <span class="gs-swatch-label">Chrome</span>
-            </button>
-            <button class="gs-swatch" data-theme="brutalist">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#fff,#000)"></span>
-              <span class="gs-swatch-label">Brutal</span>
-            </button>
-            <button class="gs-swatch" data-theme="cream-editorial">
-              <span class="gs-swatch-preview" style="background:linear-gradient(135deg,#f5f1e8,#2a2520)"></span>
-              <span class="gs-swatch-label">Bone</span>
-            </button>
+            <button class="gs-swatch active" data-theme="midnight-gold"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#0d0d0d,#E8C547)"></span><span class="gs-swatch-label">Gold</span></button>
+            <button class="gs-swatch" data-theme="royal-purple"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#1a0033,#c77dff)"></span><span class="gs-swatch-label">Violet</span></button>
+            <button class="gs-swatch" data-theme="neon-cyan"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#0a1420,#00e5ff)"></span><span class="gs-swatch-label">Ocean</span></button>
+            <button class="gs-swatch" data-theme="sunset-coral"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#1a0a0a,#ff6b6b)"></span><span class="gs-swatch-label">Ember</span></button>
+            <button class="gs-swatch" data-theme="emerald-night"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#051a0d,#50fa7b)"></span><span class="gs-swatch-label">Forest</span></button>
+            <button class="gs-swatch" data-theme="rose-gold"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#1a0d0f,#f4a4c0)"></span><span class="gs-swatch-label">Rose</span></button>
+            <button class="gs-swatch" data-theme="monochrome"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#000,#fff)"></span><span class="gs-swatch-label">Mono</span></button>
+            <button class="gs-swatch" data-theme="vaporwave"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#ff71ce,#05ffa1)"></span><span class="gs-swatch-label">Wave</span></button>
+            <button class="gs-swatch" data-theme="neon-dark"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#0a0a0a,#ff00ff)"></span><span class="gs-swatch-label">Neon</span></button>
+            <button class="gs-swatch" data-theme="y2k-chrome"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#000033,#0ff)"></span><span class="gs-swatch-label">Chrome</span></button>
+            <button class="gs-swatch" data-theme="brutalist"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#fff,#000)"></span><span class="gs-swatch-label">Brutal</span></button>
+            <button class="gs-swatch" data-theme="cream-editorial"><span class="gs-swatch-preview" style="background:linear-gradient(135deg,#f5f1e8,#2a2520)"></span><span class="gs-swatch-label">Bone</span></button>
           </div>
         </div>
-
-        <!-- Font panel -->
         <div class="gs-panel" id="gs-panel-font">
           <p class="gs-panel-label">Font</p>
           <div class="gs-font-cards">
-            <button class="gs-font-card active" data-font="playfair">
-              <span class="gs-font-preview" style="font-family:'Playfair Display',serif;font-style:italic">Say everything</span>
-              <span class="gs-font-name">Playfair</span>
-            </button>
-            <button class="gs-font-card" data-font="cormorant">
-              <span class="gs-font-preview" style="font-family:'Cormorant Garamond',serif;font-style:italic">Say everything</span>
-              <span class="gs-font-name">Cormorant</span>
-            </button>
-            <button class="gs-font-card" data-font="lora">
-              <span class="gs-font-preview" style="font-family:'Lora',serif;font-style:italic">Say everything</span>
-              <span class="gs-font-name">Lora</span>
-            </button>
-            <button class="gs-font-card" data-font="merriweather">
-              <span class="gs-font-preview" style="font-family:'Merriweather',serif">Say everything</span>
-              <span class="gs-font-name">Merriweather</span>
-            </button>
-            <button class="gs-font-card" data-font="josefin">
-              <span class="gs-font-preview" style="font-family:'Josefin Sans',sans-serif;letter-spacing:2px">Say everything</span>
-              <span class="gs-font-name">Josefin</span>
-            </button>
-            <button class="gs-font-card" data-font="bebas">
-              <span class="gs-font-preview" style="font-family:'Bebas Neue',sans-serif;letter-spacing:3px">SAY EVERYTHING</span>
-              <span class="gs-font-name">Bebas</span>
-            </button>
-            <button class="gs-font-card" data-font="oswald">
-              <span class="gs-font-preview" style="font-family:'Oswald',sans-serif;font-weight:600">Say everything</span>
-              <span class="gs-font-name">Oswald</span>
-            </button>
-            <button class="gs-font-card" data-font="dancing">
-              <span class="gs-font-preview" style="font-family:'Dancing Script',cursive">Say everything</span>
-              <span class="gs-font-name">Dancing</span>
-            </button>
+            <button class="gs-font-card active" data-font="playfair"><span class="gs-font-preview" style="font-family:'Playfair Display',serif;font-style:italic">Say everything</span><span class="gs-font-name">Playfair</span></button>
+            <button class="gs-font-card" data-font="cormorant"><span class="gs-font-preview" style="font-family:'Cormorant Garamond',serif;font-style:italic">Say everything</span><span class="gs-font-name">Cormorant</span></button>
+            <button class="gs-font-card" data-font="lora"><span class="gs-font-preview" style="font-family:'Lora',serif;font-style:italic">Say everything</span><span class="gs-font-name">Lora</span></button>
+            <button class="gs-font-card" data-font="merriweather"><span class="gs-font-preview" style="font-family:'Merriweather',serif">Say everything</span><span class="gs-font-name">Merriweather</span></button>
+            <button class="gs-font-card" data-font="josefin"><span class="gs-font-preview" style="font-family:'Josefin Sans',sans-serif;letter-spacing:2px">Say everything</span><span class="gs-font-name">Josefin</span></button>
+            <button class="gs-font-card" data-font="bebas"><span class="gs-font-preview" style="font-family:'Bebas Neue',sans-serif;letter-spacing:3px">SAY EVERYTHING</span><span class="gs-font-name">Bebas</span></button>
+            <button class="gs-font-card" data-font="oswald"><span class="gs-font-preview" style="font-family:'Oswald',sans-serif;font-weight:600">Say everything</span><span class="gs-font-name">Oswald</span></button>
+            <button class="gs-font-card" data-font="dancing"><span class="gs-font-preview" style="font-family:'Dancing Script',cursive">Say everything</span><span class="gs-font-name">Dancing</span></button>
           </div>
         </div>
-
-        <!-- Speed panel -->
         <div class="gs-panel" id="gs-panel-speed">
           <p class="gs-panel-label">Animation speed</p>
           <div class="gs-speed-row">
@@ -636,16 +629,15 @@
             GIFs loop automatically with no play button — they work on every platform including WhatsApp, iMessage, Instagram DMs, Twitter, and Discord. Export takes ~5–10 seconds.
           </div>
         </div>
-
-      </div><!-- end .gs-panels -->
-    </div><!-- end .gs-dock -->
-  </div><!-- end .gs-body -->
-</div><!-- end #gifStudioOverlay -->
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════════════════════════
-     SCRIPTS — load order matters
+     SCRIPTS
      state.js → firebase.js → feed.js → composer.js →
-     studio.js → gif-studio.js → admin.js → app.js → motion.js (last)
+     studio.js → gif-studio.js → admin.js → app.js → motion.js
 ════════════════════════════════════════════════════════════ -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
