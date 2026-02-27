@@ -647,3 +647,22 @@ function downloadPosterBlob() {
     showToast('Could not download — try again');
   }
 }
+
+/* ════════════════════════════════════════
+   FAILSAFE: wire sharePosterBtn as early
+   as possible, independent of initStudio()
+   ════════════════════════════════════════ */
+(function wirePosterBtnEarly() {
+  const wire = () => {
+    const btn = document.getElementById('sharePosterBtn');
+    if (btn && !btn._chooserWired) {
+      btn._chooserWired = true;
+      btn.onclick = openStudioChooser;
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wire);
+  } else {
+    wire();
+  }
+})();
