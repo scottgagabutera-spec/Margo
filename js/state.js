@@ -2,9 +2,8 @@
    MARGO — js/state.js
    Shared state, constants, and DOM element references.
    Loaded first. All other modules read/write these globals.
-   v4.4 — Studio DOM refs are now late-bound via bindStudioElements()
-          called by studio.js AFTER it injects the studio HTML.
-          This prevents null crashes at parse time.
+   v4.5 — Dev branch: studio HTML is in index.html (from main),
+          GIF studio + chooser also in index.html (new in dev).
    ============================================================ */
 
 // ── App constants ──
@@ -20,17 +19,17 @@ if (!userId) {
 }
 
 // ── Feed state ──
-let currentMode         = 'share';
-let selectedEmotion     = null;
-let currentPost         = null;
-let currentGuessAttempts= 0;
-let posts               = [];
-let postAnalytics       = {};
-let postsLoaded         = false;
-let savedScrollPosition = 0;
-let newPostsAvailable   = false;
-let searchQuery         = '';
-let activeRoom          = 'all';
+let currentMode          = 'share';
+let selectedEmotion      = null;
+let currentPost          = null;
+let currentGuessAttempts = 0;
+let posts                = [];
+let postAnalytics        = {};
+let postsLoaded          = false;
+let savedScrollPosition  = 0;
+let newPostsAvailable    = false;
+let searchQuery          = '';
+let activeRoom           = 'all';
 
 // ── Studio state ──
 const FONT_FAMILIES = {
@@ -73,15 +72,15 @@ const POSTER_SIZES = {
   'pinterest':        { w:1000, h:1500 },
 };
 
-let studioFont      = 'playfair';
-let studioDesign    = 'midnight-gold';
-let studioBgImage   = null;
-let studioBrightness= 100;
-let studioBlur      = 0;
-let studioDim       = 50;
-let studioFilter    = 'none';
-let generatedBlob   = null;
-let selectedSize    = null;
+let studioFont       = 'playfair';
+let studioDesign     = 'midnight-gold';
+let studioBgImage    = null;
+let studioBrightness = 100;
+let studioBlur       = 0;
+let studioDim        = 50;
+let studioFilter     = 'none';
+let generatedBlob    = null;
+let selectedSize     = null;
 
 // ── Admin state ──
 let adminMode   = false;
@@ -90,7 +89,7 @@ let adminFilter = 'all';
 let adminSort   = 'newest';
 let adminSearch = '';
 
-// ── DOM Elements — always present in HTML ──
+// ── DOM Elements — always present ──
 const landing           = document.getElementById('landing');
 const feed              = document.getElementById('feed');
 const composer          = document.getElementById('composer');
@@ -135,38 +134,20 @@ const sharePosterBtn = document.getElementById('sharePosterBtn');
 const listenPostcard = document.getElementById('listenPostcard');
 const analyticsBtn   = document.getElementById('analyticsBtn');
 
-// ── Studio overlay (exists in HTML as empty shell) ──
-const studioOverlay = document.getElementById('studioOverlay');
+// ── Studio elements — all present in index.html (copied from main) ──
+const studioOverlay  = document.getElementById('studioOverlay');
+const studioCanvas   = document.getElementById('studioCanvas');
+const closeStudio    = document.getElementById('closeStudio');
+const studioExportBtn= document.getElementById('studioExportBtn');
+const sizePicker     = document.getElementById('sizePicker');
+const sizeCancelBtn  = document.getElementById('sizeCancelBtn');
+const ceremonyOverlay= document.getElementById('ceremonyOverlay');
+const ceremonyThumb  = document.getElementById('ceremonyThumb');
+const cerDownload    = document.getElementById('cerDownload');
+const cerShare       = document.getElementById('cerShare');
+const ceremonyBack   = document.getElementById('ceremonyBack');
+const studioPhotoInput = document.getElementById('studioPhotoInput');
+const photoControls  = document.getElementById('photoControls');
 
-// ── Studio inner elements — injected by studio.js at runtime.
-//    Declared as `let` here so studio.js can assign them after
-//    buildStudioHTML() runs. DO NOT use getElementById here —
-//    these elements don't exist yet when state.js loads. ──
-let studioCanvas     = null;
-let closeStudio      = null;
-let studioExportBtn  = null;
-let sizePicker       = null;
-let sizeCancelBtn    = null;
-let ceremonyOverlay  = null;
-let ceremonyThumb    = null;
-let cerDownload      = null;
-let cerShare         = null;
-let ceremonyBack     = null;
-let studioPhotoInput = null;
-let photoControls    = null;
-
-// Called by studio.js immediately after buildStudioHTML()
-function bindStudioElements() {
-  studioCanvas     = document.getElementById('studioCanvas');
-  closeStudio      = document.getElementById('closeStudio');
-  studioExportBtn  = document.getElementById('studioExportBtn');
-  sizePicker       = document.getElementById('sizePicker');
-  sizeCancelBtn    = document.getElementById('sizeCancelBtn');
-  ceremonyOverlay  = document.getElementById('ceremonyOverlay');
-  ceremonyThumb    = document.getElementById('ceremonyThumb');
-  cerDownload      = document.getElementById('cerDownload');
-  cerShare         = document.getElementById('cerShare');
-  ceremonyBack     = document.getElementById('ceremonyBack');
-  studioPhotoInput = document.getElementById('studioPhotoInput');
-  photoControls    = document.getElementById('photoControls');
-}
+// Safety: called by studio.js — no-op here since elements already exist
+function bindStudioElements() {}
