@@ -671,9 +671,19 @@
 
 <script>
 /*
-  MARGO — Feed UI Controller v6.6
-  Fixes: scroll reset on feed open, FAB never on landing,
-         back-to-top visibility, landing always starts at top.
+  MARGO — Feed UI Controller v6.7
+  ─────────────────────────────────
+  Two problems solved here:
+
+  1. FAB on landing: CSS sets display:none by default. JS only adds
+     .fab-visible when feed is confirmed active. We patch EVERY button
+     that could trigger the composer to also call refreshFAB first.
+
+  2. First-row cards clipped: When app.js switches landing→feed it does
+     NOT reset scrollY. So the feed opens mid-scroll, hiding row 1.
+     We intercept the transition using a MutationObserver that fires
+     SYNCHRONOUSLY (no setTimeout) and calls scrollTo(0,0) immediately
+     when feed's display changes from none→flex.
 */
 (function () {
   var feed     = document.getElementById('feed');
@@ -687,9 +697,10 @@
 
   if (!feed || !fab) return;
 
-  /* ── Ensure page always starts at top on load ── */
+  /* ── Force page to top on initial load ── */
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
 
   /* ── Wire FAB → composer ── */
   fab.addEventListener('click', function () {
@@ -710,56 +721,69 @@
     });
   }
 
-  /* ── Detect when feed becomes active and RESET SCROLL ──
-     This is the key fix: when app.js switches from landing→feed,
-     we must scroll to top so the first row of cards is fully visible.
-  ── */
+  /* ── Core: is the feed currently visible? ── */
   function feedIsActive () {
+    /* If feed has display:none via inline style — definitely not active */
+    if (feed.style.display === 'none') return false;
+    /* If feed has the .active class (how app.js shows it) — active */
+    if (feed.classList.contains('active')) return true;
+    /* If feed has .hidden class — not active */
+    if (feed.classList.contains('hidden')) return false;
+    /* Fall back to computed style */
     var cs = window.getComputedStyle(feed);
-    return cs.display !== 'none'
-        && cs.visibility !== 'hidden'
-        && cs.opacity   !== '0'
-        && !feed.classList.contains('hidden');
+    return cs.display !== 'none';
   }
 
-  var wasFeedActive = false;
+  var wasFeedActive = feedIsActive(); /* capture initial state synchronously */
 
-  function refreshFAB () {
+  function onFeedVisibilityChange () {
     var isActive = feedIsActive();
 
-    /* When feed first becomes active, scroll to top immediately */
     if (isActive && !wasFeedActive) {
-      window.scrollTo(0, 0);
+      /* Feed just became visible — IMMEDIATELY reset scroll before paint */
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
       lastY = 0;
+      /* Re-run scroll handler so FAB/topBtn states are correct at y=0 */
+      pending = false;
+      onScroll();
     }
+
     wasFeedActive = isActive;
 
+    /* FAB: show only in feed, never on landing */
     if (isActive) {
       fab.classList.add('fab-visible');
       fab.classList.remove('scroll-hidden');
     } else {
-      /* Landing page: always hide FAB completely */
       fab.classList.remove('fab-visible');
       fab.classList.remove('scroll-hidden');
       fab.classList.remove('hidden-fab');
-      /* Also hide back-to-top when on landing */
       if (topBtn) topBtn.classList.remove('visible');
     }
   }
 
-  /* Watch #feed and #landing for display/class changes */
-  var obs = new MutationObserver(refreshFAB);
-  obs.observe(feed, { attributes: true, attributeFilter: ['class', 'style'] });
-  if (landing) obs.observe(landing, { attributes: true, attributeFilter: ['class', 'style'] });
+  /* Observe both #feed style/class AND #landing style/class.
+     Use subtree:false, attributes:true for minimal overhead. */
+  var obs = new MutationObserver(onFeedVisibilityChange);
+  obs.observe(feed, {
+    attributes: true,
+    attributeFilter: ['class', 'style']
+  });
+  if (landing) {
+    obs.observe(landing, {
+      attributes: true,
+      attributeFilter: ['class', 'style']
+    });
+  }
 
-  /* Initial state — run AFTER a tick so app.js has set initial display */
-  setTimeout(refreshFAB, 0);
+  /* Run once NOW (synchronously) to set correct initial FAB state */
+  onFeedVisibilityChange();
 
-  /* ── Hide FAB when composer modal is open ── */
+  /* ── Hide FAB while composer modal is open ── */
   if (modal) {
     new MutationObserver(function () {
-      var open = !modal.classList.contains('hidden');
-      fab.classList.toggle('hidden-fab', open);
+      fab.classList.toggle('hidden-fab', !modal.classList.contains('hidden'));
     }).observe(modal, { attributes: true, attributeFilter: ['class'] });
   }
 
@@ -777,14 +801,13 @@
       var down = y > lastY;
       var d    = Math.abs(y - lastY);
 
-      /* Header border gets slightly brighter when scrolled */
       if (header) {
         header.style.borderBottomColor = y > 8
           ? 'rgba(232,197,71,0.22)'
           : 'rgba(232,197,71,0.12)';
       }
 
-      /* FAB: hide on scroll-down, show on scroll-up — feed only */
+      /* FAB scroll hide/show — only when in feed */
       if (feedIsActive() && !fab.classList.contains('hidden-fab')) {
         if (down && d > FAB_MIN && y > 100) {
           fab.classList.add('scroll-hidden');
@@ -794,7 +817,7 @@
         if (y < 60) fab.classList.remove('scroll-hidden');
       }
 
-      /* Back-to-top — only show when in feed and scrolled enough */
+      /* Back-to-top: only in feed, only when scrolled */
       if (topBtn) {
         topBtn.classList.toggle('visible', feedIsActive() && y > TOP_AT);
       }
