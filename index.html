@@ -115,12 +115,6 @@
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="gif-studio.css"/>
 
-  <!-- NOTE: The large inline <style> block that was here previously has been
-       removed. All feed sticky-stack CSS (header, search, tabs, sort bar,
-       FAB, back-to-top) now lives in style.css under the
-       "FEED — STICKY HEADER STACK" section. This eliminates the cascade
-       conflict that was hiding the sort bar and clipping card tops. -->
-
 </head>
 <body>
 <div class="ambient ambient-1"></div>
@@ -259,11 +253,8 @@
   Drop a Lyric
 </button>
 
-<!-- Back to top — ring + "TOP" label -->
-<button id="margoScrollTop" aria-label="Back to top">
-  <div class="scroll-top-ring">↑</div>
-  <span class="scroll-top-label">top</span>
-</button>
+<!-- Back to top — motion.js injects pill design into this button -->
+<button id="margoScrollTop" aria-label="Back to top"></button>
 
 <footer class="site-footer">
   <div class="footer-inner">
@@ -671,27 +662,17 @@
 
 <script>
 /*
-  MARGO — Feed UI Controller v6.7
+  MARGO — Feed UI Controller v6.8
   ─────────────────────────────────
-  Two problems solved here:
-
-  1. FAB on landing: CSS sets display:none by default. JS only adds
-     .fab-visible when feed is confirmed active. We patch EVERY button
-     that could trigger the composer to also call refreshFAB first.
-
-  2. First-row cards clipped: When app.js switches landing→feed it does
-     NOT reset scrollY. So the feed opens mid-scroll, hiding row 1.
-     We intercept the transition using a MutationObserver that fires
-     SYNCHRONOUSLY (no setTimeout) and calls scrollTo(0,0) immediately
-     when feed's display changes from none→flex.
+  Manages FAB visibility and feed scroll state.
+  NOTE: scroll position reset on feed activation removed —
+  app.js / scrollToFeed() owns the scroll position.
 */
 (function () {
   var feed     = document.getElementById('feed');
   var landing  = document.getElementById('landing');
   var header   = document.getElementById('feedHeader');
   var fab      = document.getElementById('dropLyricFAB');
-  var topBtn   = document.getElementById('margoScrollTop');
-  var composer = document.getElementById('openComposer');
   var logoHome = document.getElementById('feedLogoHome');
   var modal    = document.getElementById('composer');
 
@@ -703,6 +684,7 @@
   document.body.scrollTop = 0;
 
   /* ── Wire FAB → composer ── */
+  var composer = document.getElementById('openComposer');
   fab.addEventListener('click', function () {
     if (composer) composer.click();
   });
@@ -714,37 +696,25 @@
     });
   }
 
-  /* ── Back-to-top button ── */
-  if (topBtn) {
-    topBtn.addEventListener('click', function () {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-  }
-
   /* ── Core: is the feed currently visible? ── */
   function feedIsActive () {
-    /* If feed has display:none via inline style — definitely not active */
     if (feed.style.display === 'none') return false;
-    /* If feed has the .active class (how app.js shows it) — active */
     if (feed.classList.contains('active')) return true;
-    /* If feed has .hidden class — not active */
     if (feed.classList.contains('hidden')) return false;
-    /* Fall back to computed style */
     var cs = window.getComputedStyle(feed);
     return cs.display !== 'none';
   }
 
-  var wasFeedActive = feedIsActive(); /* capture initial state synchronously */
+  var wasFeedActive = feedIsActive();
 
   function onFeedVisibilityChange () {
     var isActive = feedIsActive();
 
     if (isActive && !wasFeedActive) {
-      /* Feed just became visible — IMMEDIATELY reset scroll before paint */
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
+      /* Feed just became visible.
+         Do NOT reset scroll here — app.js scrollToFeed() handles scroll.
+         Just reset tracking vars and re-run scroll handler. */
       lastY = 0;
-      /* Re-run scroll handler so FAB/topBtn states are correct at y=0 */
       pending = false;
       onScroll();
     }
@@ -759,25 +729,15 @@
       fab.classList.remove('fab-visible');
       fab.classList.remove('scroll-hidden');
       fab.classList.remove('hidden-fab');
-      if (topBtn) topBtn.classList.remove('visible');
     }
   }
 
-  /* Observe both #feed style/class AND #landing style/class.
-     Use subtree:false, attributes:true for minimal overhead. */
   var obs = new MutationObserver(onFeedVisibilityChange);
-  obs.observe(feed, {
-    attributes: true,
-    attributeFilter: ['class', 'style']
-  });
+  obs.observe(feed, { attributes: true, attributeFilter: ['class', 'style'] });
   if (landing) {
-    obs.observe(landing, {
-      attributes: true,
-      attributeFilter: ['class', 'style']
-    });
+    obs.observe(landing, { attributes: true, attributeFilter: ['class', 'style'] });
   }
 
-  /* Run once NOW (synchronously) to set correct initial FAB state */
   onFeedVisibilityChange();
 
   /* ── Hide FAB while composer modal is open ── */
@@ -791,7 +751,6 @@
   var lastY   = 0;
   var pending = false;
   var FAB_MIN = 6;
-  var TOP_AT  = 300;
 
   function onScroll () {
     if (pending) return;
@@ -815,11 +774,6 @@
           fab.classList.remove('scroll-hidden');
         }
         if (y < 60) fab.classList.remove('scroll-hidden');
-      }
-
-      /* Back-to-top: only in feed, only when scrolled */
-      if (topBtn) {
-        topBtn.classList.toggle('visible', feedIsActive() && y > TOP_AT);
       }
 
       lastY   = y;
