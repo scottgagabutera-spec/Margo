@@ -1,12 +1,13 @@
 /* ============================================================
    MARGO — js/motion.js
-   Premium Interaction Layer v1.3
+   Premium Interaction Layer v1.4
 
-   FAB: ultra-minimal frosted "TOP ↑" pill
-   - body.on-landing  → ALL fixed floating buttons hidden
-   - body.on-feed     → FAB visible after scroll threshold
-   - Thin gold progress line inside pill
-   - No circle, no ring, no overlap
+   FIXES:
+   - No longer creates a new #margoScrollTop — replaces the
+     existing HTML button in-place (was causing duplicate)
+   - TOP pill is injected into the existing button cleanly
+   - body.on-landing hides ALL fixed floaters via CSS
+   - Scroll detection on window (not #feed)
    ============================================================ */
 
 (function () {
@@ -34,10 +35,10 @@
 
       /* ═══════════════════════════════════════
          LANDING PAGE: hide ALL floating buttons
-         The landing already has its own CTAs.
          body.on-landing kills everything fixed.
       ═══════════════════════════════════════ */
       body.on-landing #margoScrollTop,
+      body.on-landing #dropLyricFAB,
       body.on-landing [style*="position: fixed"][style*="DROP"],
       body.on-landing [style*="position:fixed"][style*="DROP"] {
         opacity: 0 !important;
@@ -92,8 +93,8 @@
         overflow: hidden;
         transition:
           border-color 200ms var(--ease-smooth),
-          box-shadow 200ms var(--ease-smooth),
-          background 200ms var(--ease-smooth);
+          box-shadow   200ms var(--ease-smooth),
+          background   200ms var(--ease-smooth);
       }
       #margoScrollTop:hover #mst-pill {
         border-color: rgba(232, 197, 71, 0.6);
@@ -272,15 +273,26 @@
   }
 
   /* ══════════════════════════════════════════════════════════
-     BACK TO TOP — minimal "↑ TOP" pill
+     BACK TO TOP — reuses existing #margoScrollTop from HTML,
+     replaces its inner content with the modern pill design.
+     This prevents the duplicate-button bug.
   ══════════════════════════════════════════════════════════ */
   function initScrollTop() {
+    // Hide any legacy button that isn't ours
     const oldBtn = document.getElementById('scrollToTopBtn');
     if (oldBtn) oldBtn.style.display = 'none';
 
-    const btn = document.createElement('button');
-    btn.id = 'margoScrollTop';
-    btn.setAttribute('aria-label', 'Back to top');
+    // Reuse the existing button from index.html — do NOT create a new one
+    let btn = document.getElementById('margoScrollTop');
+    if (!btn) {
+      // Fallback: create if somehow missing
+      btn = document.createElement('button');
+      btn.id = 'margoScrollTop';
+      btn.setAttribute('aria-label', 'Back to top');
+      document.body.appendChild(btn);
+    }
+
+    // Replace inner content with the new pill (removes old ring+label markup)
     btn.innerHTML = `
       <div id="mst-pill">
         <span id="mst-arrow">
@@ -294,10 +306,12 @@
         <div id="mst-progress-bar"></div>
       </div>
     `;
-    document.body.appendChild(btn);
 
-    const progressBar   = document.getElementById('mst-progress-bar');
-    let   ticking       = false;
+    // Remove any inline styles from the HTML that would conflict
+    btn.removeAttribute('style');
+
+    const progressBar = document.getElementById('mst-progress-bar');
+    let ticking = false;
 
     function isOnLanding() {
       return document.body.classList.contains('on-landing');
@@ -329,7 +343,7 @@
 
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // Also re-evaluate when body class changes (landing ↔ feed)
+    // Re-evaluate when body class changes (landing ↔ feed)
     new MutationObserver(onScroll).observe(document.body, {
       attributes: true, attributeFilter: ['class']
     });
