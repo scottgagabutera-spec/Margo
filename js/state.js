@@ -2,7 +2,9 @@
    MARGO — js/state.js
    Shared state, constants, and DOM element references.
    Loaded first. All other modules read/write these globals.
-   v4.3
+   v4.4 — Studio DOM refs are now late-bound via bindStudioElements()
+          called by studio.js AFTER it injects the studio HTML.
+          This prevents null crashes at parse time.
    ============================================================ */
 
 // ── App constants ──
@@ -28,7 +30,7 @@ let postsLoaded         = false;
 let savedScrollPosition = 0;
 let newPostsAvailable   = false;
 let searchQuery         = '';
-let activeRoom          = 'all';   // v4.1: emotion room filter
+let activeRoom          = 'all';
 
 // ── Studio state ──
 const FONT_FAMILIES = {
@@ -88,7 +90,7 @@ let adminFilter = 'all';
 let adminSort   = 'newest';
 let adminSearch = '';
 
-// ── DOM Elements ──
+// ── DOM Elements — always present in HTML ──
 const landing           = document.getElementById('landing');
 const feed              = document.getElementById('feed');
 const composer          = document.getElementById('composer');
@@ -133,18 +135,38 @@ const sharePosterBtn = document.getElementById('sharePosterBtn');
 const listenPostcard = document.getElementById('listenPostcard');
 const analyticsBtn   = document.getElementById('analyticsBtn');
 
-const studioOverlay  = document.getElementById('studioOverlay');
-const studioCanvas   = document.getElementById('studioCanvas');
-const closeStudio    = document.getElementById('closeStudio');
-const studioExportBtn= document.getElementById('studioExportBtn');
-const sizePicker     = document.getElementById('sizePicker');
-const sizeCancelBtn  = document.getElementById('sizeCancelBtn');
-const ceremonyOverlay= document.getElementById('ceremonyOverlay');
-const ceremonyThumb  = document.getElementById('ceremonyThumb');
-const cerDownload    = document.getElementById('cerDownload');
-const cerShare       = document.getElementById('cerShare');
-const ceremonyBack   = document.getElementById('ceremonyBack');
-const photoDropText  = document.getElementById('photoDropText');
-const photoDropZone  = document.getElementById('photoUploadZone');
-const studioPhotoInput = document.getElementById('studioPhotoInput');
-const photoControls  = document.getElementById('photoControls');
+// ── Studio overlay (exists in HTML as empty shell) ──
+const studioOverlay = document.getElementById('studioOverlay');
+
+// ── Studio inner elements — injected by studio.js at runtime.
+//    Declared as `let` here so studio.js can assign them after
+//    buildStudioHTML() runs. DO NOT use getElementById here —
+//    these elements don't exist yet when state.js loads. ──
+let studioCanvas     = null;
+let closeStudio      = null;
+let studioExportBtn  = null;
+let sizePicker       = null;
+let sizeCancelBtn    = null;
+let ceremonyOverlay  = null;
+let ceremonyThumb    = null;
+let cerDownload      = null;
+let cerShare         = null;
+let ceremonyBack     = null;
+let studioPhotoInput = null;
+let photoControls    = null;
+
+// Called by studio.js immediately after buildStudioHTML()
+function bindStudioElements() {
+  studioCanvas     = document.getElementById('studioCanvas');
+  closeStudio      = document.getElementById('closeStudio');
+  studioExportBtn  = document.getElementById('studioExportBtn');
+  sizePicker       = document.getElementById('sizePicker');
+  sizeCancelBtn    = document.getElementById('sizeCancelBtn');
+  ceremonyOverlay  = document.getElementById('ceremonyOverlay');
+  ceremonyThumb    = document.getElementById('ceremonyThumb');
+  cerDownload      = document.getElementById('cerDownload');
+  cerShare         = document.getElementById('cerShare');
+  ceremonyBack     = document.getElementById('ceremonyBack');
+  studioPhotoInput = document.getElementById('studioPhotoInput');
+  photoControls    = document.getElementById('photoControls');
+}
