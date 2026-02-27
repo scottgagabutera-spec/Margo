@@ -64,8 +64,7 @@ function injectFeedStyles() {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 14px;
-      /* position/top/z-index set by index.html */
+      padding: 0 14px;  /* NO vertical padding — height 38px set by index.html */
     }
     .feed-sort-label {
       font-family: 'Space Mono', monospace;
@@ -325,7 +324,7 @@ function injectFeedStyles() {
     @media (max-width: 480px) {
       #feedList .feed-card { height: 275px !important; }
       .skeleton-card { height: 275px !important; }
-      .feed-sort-bar { padding: 8px 10px 6px; }
+      /* feed-sort-bar height/padding controlled by index.html */
     }
     @media (max-width: 768px) {
       .modal-sheet { max-height: 92dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
