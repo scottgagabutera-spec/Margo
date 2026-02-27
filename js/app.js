@@ -1,8 +1,8 @@
 /* ============================================================
    MARGO — js/app.js
-   v4.9 — Body gets class 'on-landing' or 'on-feed' so CSS
-          can cleanly hide the floating FAB on landing.
-          scrollToFeed waits for sort bar injection.
+   v5.0 — scrollToFeed fires AFTER the inline script's
+          MutationObserver scroll-reset, so it always wins.
+          Body gets 'on-landing'/'on-feed' for CSS FAB control.
    ============================================================ */
 
 // ── Toast ──
@@ -33,10 +33,8 @@ function closeModal(modal) {
 
 // ── Page state helpers ──
 function setPageState(page) {
-  // 'landing' or 'feed'
   document.body.classList.remove('on-landing', 'on-feed');
   document.body.classList.add('on-' + page);
-  // Always hide FAB immediately when switching pages
   const fab = document.getElementById('margoScrollTop');
   if (fab) fab.classList.remove('visible');
 }
@@ -58,29 +56,46 @@ function goToLanding() {
   setPageState('landing');
 }
 
-// Measure sticky stack height — waits for sort bar (injected by feed.js)
+// scrollToFeed — waits for sort bar, then scrolls PAST the sticky stack.
+// Uses two rAF passes after the sort bar appears so it always fires AFTER
+// the inline MutationObserver in index.html resets scroll to 0.
 function scrollToFeed() {
   let attempts = 0;
-  const tryScroll = () => {
-    attempts++;
+
+  const measure = () => {
     const sortBar    = document.getElementById('feedSortBar');
     const header     = document.querySelector('.feed-header');
     const searchWrap = document.querySelector('.feed-search-wrap');
     const tabsWrap   = document.querySelector('.room-tabs-wrap');
 
-    if (sortBar || attempts >= 10) {
-      let h = 0;
-      if (header)     h += header.getBoundingClientRect().height;
-      if (searchWrap) h += searchWrap.getBoundingClientRect().height;
-      if (tabsWrap)   h += tabsWrap.getBoundingClientRect().height;
-      if (sortBar)    h += sortBar.getBoundingClientRect().height;
-      window.scrollTo({ top: h + 8, behavior: 'smooth' });
+    let h = 0;
+    if (header)     h += header.getBoundingClientRect().height;
+    if (searchWrap) h += searchWrap.getBoundingClientRect().height;
+    if (tabsWrap)   h += tabsWrap.getBoundingClientRect().height;
+    if (sortBar)    h += sortBar.getBoundingClientRect().height;
+    return h;
+  };
+
+  const tryScroll = () => {
+    attempts++;
+    const sortBar = document.getElementById('feedSortBar');
+
+    if (sortBar || attempts >= 12) {
+      const h = measure();
+      // Two rAF passes: first ensures DOM is painted, second fires after
+      // the inline script's MutationObserver scroll-reset, so we win.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: h + 8, behavior: 'smooth' });
+        });
+      });
     } else {
-      setTimeout(tryScroll, 50);
+      setTimeout(tryScroll, 60);
     }
   };
-  // Give renderFeed() a head start before we try to measure
-  setTimeout(tryScroll, 80);
+
+  // Give renderFeed() time to inject the sort bar before we start polling
+  setTimeout(tryScroll, 100);
 }
 
 function initNavigation() {
@@ -91,8 +106,8 @@ function initNavigation() {
 
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
-  if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 200); };
-  if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 200); };
+  if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 150); };
+  if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 150); };
 
   backBtn.onclick          = goToLanding;
   openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
@@ -127,7 +142,6 @@ function setupScrollToTop() {
 // ════════════════════════════════════════════════════════
 //   INIT
 // ════════════════════════════════════════════════════════
-// Set initial page state — landing is active on load
 setPageState('landing');
 
 initStatsShimmer();
@@ -149,4 +163,4 @@ try {
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v4.9 dev — body state class + scroll fix + minimal TOP.');
+console.log('MARGO v5.0 dev — scroll fix + duplicate FAB fix + clean TOP pill.');
