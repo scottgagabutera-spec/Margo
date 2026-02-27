@@ -1,6 +1,8 @@
 /* ============================================================
    MARGO — js/motion.js
-   Premium Interaction Layer v1.0
+   Premium Interaction Layer v1.1
+   Fix: FAB hidden on landing page. Scroll detection uses
+        window only (feed does not have its own scrollbar).
    ============================================================ */
 
 (function () {
@@ -280,11 +282,9 @@
      BACK TO TOP FAB
   ══════════════════════════════════════════════════════════ */
   function initScrollTop() {
-    // Hide legacy button immediately
     const oldBtn = document.getElementById('scrollToTopBtn');
     if (oldBtn) oldBtn.style.display = 'none';
 
-    // Build FAB
     const btn = document.createElement('button');
     btn.id = 'margoScrollTop';
     btn.setAttribute('aria-label', 'Back to top');
@@ -312,58 +312,50 @@
 
     let ticking = false;
 
-    function getScrollValues() {
-      const feedEl = document.getElementById('feed');
-      const useFeed = feedEl && feedEl.classList.contains('active')
-        && feedEl.scrollHeight > feedEl.clientHeight;
-      if (useFeed) {
-        return { top: feedEl.scrollTop, max: feedEl.scrollHeight - feedEl.clientHeight };
-      }
-      return {
-        top: window.scrollY || document.documentElement.scrollTop,
-        max: document.documentElement.scrollHeight - window.innerHeight,
-      };
+    function isLandingActive() {
+      const landingEl = document.getElementById('landing');
+      return landingEl && landingEl.classList.contains('active');
     }
 
     function onScroll() {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
-        const { top, max } = getScrollValues();
-        if (top > 300) {
+        // Never show FAB on landing page
+        if (isLandingActive()) {
+          btn.classList.remove('visible');
+          ticking = false;
+          return;
+        }
+
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+
+        if (scrollTop > 300) {
           btn.classList.add('visible');
         } else {
           btn.classList.remove('visible');
         }
-        const pct = max > 0 ? Math.min(top / max, 1) : 0;
+
+        const pct = scrollMax > 0 ? Math.min(scrollTop / scrollMax, 1) : 0;
         progressEl.style.strokeDashoffset = CIRCUMFERENCE * (1 - pct);
         ticking = false;
       });
     }
 
-    // Listen on window
+    // Only listen on window — the feed page scrolls the whole window, not #feed element
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // Also listen on feed section (it may scroll independently)
-    const feedEl = document.getElementById('feed');
-    if (feedEl) {
-      feedEl.addEventListener('scroll', onScroll, { passive: true });
-      // Re-check when feed becomes active
-      new MutationObserver(() => onScroll())
-        .observe(feedEl, { attributes: true, attributeFilter: ['class'] });
-    }
+    // Re-check whenever landing/feed switch (class changes on #landing or #feed)
+    const landingEl = document.getElementById('landing');
+    const feedEl    = document.getElementById('feed');
+    const observer  = new MutationObserver(() => onScroll());
+    if (landingEl) observer.observe(landingEl, { attributes: true, attributeFilter: ['class'] });
+    if (feedEl)    observer.observe(feedEl,    { attributes: true, attributeFilter: ['class'] });
 
     // Click — scroll to top
     btn.addEventListener('click', () => {
-      const feedEl2 = document.getElementById('feed');
-      const useFeed = feedEl2 && feedEl2.classList.contains('active')
-        && feedEl2.scrollHeight > feedEl2.clientHeight;
-      if (useFeed) {
-        feedEl2.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-      // Tap ripple
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       btn.style.transition = 'transform 120ms cubic-bezier(0.4,0,0.2,1)';
       btn.style.transform  = 'scale(0.85)';
       setTimeout(() => { btn.style.transition = ''; btn.style.transform = ''; }, 120);
@@ -434,15 +426,12 @@
     `;
     container.appendChild(toast);
 
-    // Animate in
     requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('entering')));
 
-    // Progress bar
     const bar = toast.querySelector('.margo-toast-progress');
     bar.style.transitionDuration = TOAST_DURATION + 'ms';
     requestAnimationFrame(() => requestAnimationFrame(() => bar.style.transform = 'scaleX(0)'));
 
-    // Auto dismiss
     const timer = setTimeout(() => dismissToast(toast), TOAST_DURATION);
 
     toast.querySelector('.margo-toast-close').addEventListener('click', e => {
