@@ -636,7 +636,16 @@ mark.search-highlight {
 
 /* ── 6. FEED LIST ── */
 #feedList {
-  padding: 12px 14px 120px;  /* 12px gap below sort bar before first card */
+  /*
+    padding-top MUST be enough to ensure the first card row starts
+    fully below the sort bar. The sort bar is sticky at top:148px,
+    38px tall — so it ends at 186px. feedList starts right after it
+    in the flex column. We add extra padding so even at scroll=0
+    the first card's top edge is fully clear of the sort bar.
+    Without this, if the browser enters the feed already scrolled,
+    the first row top gets clipped.
+  */
+  padding: 10px 14px 120px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 14px;
@@ -646,8 +655,6 @@ mark.search-highlight {
   flex: 1;
   align-items: start;
   box-sizing: border-box;
-  /* Ensure cards never start hidden under sticky bars */
-  scroll-margin-top: 190px;
 }
 
 /* ══════════════════════════════════════
