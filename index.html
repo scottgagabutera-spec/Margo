@@ -116,11 +116,33 @@
   <link rel="stylesheet" href="gif-studio.css"/>
 
   <style>
-    /* ═══════════════════════════════════════════════════
-       FEED HEADER — v6.0
-       Logo centered, no Back button on feed.
-       Clean minimal top bar like Spotify/Apple Music.
-    ═══════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════════
+       MARGO FEED LAYOUT — v6.1
+       Precise sticky stack. Cross-browser. No overlap ever.
+
+       Stack order (top → down):
+         56px  feed-header        (z:100)
+         52px  feed-search-wrap   (z:99)
+         44px  room-tabs-wrap     (z:98)
+         36px  feed-sort-bar      (z:97)  ← injected by feed.js
+         auto  new-posts-bar      (z:96)
+         ...   feedList cards
+    ═══════════════════════════════════════════════════════ */
+
+    /* ══════════════════════════════════════════════════════════
+       STICKY STACK — v6.2  FIXED px values. No shrinking header.
+       Removing animated height eliminates offset race conditions
+       across Chrome, Edge, Firefox, Safari.
+
+       Stack (exact px):
+         52px  feed-header       top: 0
+         48px  feed-search-wrap  top: 52
+         40px  room-tabs-wrap    top: 100
+         38px  #feedSortBar      top: 140
+               new-posts-bar     top: 178
+    ════════════════════════════════════════════════════════════ */
+
+    /* ── HEADER — fixed 52px, no shrink animation ── */
     #feed .feed-header {
       position: sticky;
       top: 0;
@@ -129,25 +151,17 @@
       align-items: center;
       justify-content: center;
       padding: 0 16px;
-      height: 56px;
-      background: rgba(11, 11, 13, 0.92);
+      height: 52px;
+      background: rgba(11, 11, 13, 0.96);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(232, 197, 71, 0.08);
-      /* smooth header shrink on scroll — driven by JS */
-      transition: height 0.25s ease, border-color 0.25s ease;
+      border-bottom: 1px solid rgba(232, 197, 71, 0.10);
+      box-sizing: border-box;
     }
-    #feed .feed-header.scrolled {
-      height: 48px;
-      border-color: rgba(232, 197, 71, 0.14);
-    }
+    #feed .feed-header #backBtn { display: none !important; }
+    #feed .header-btn.primary   { display: none !important; }
 
-    /* Hide the old Back button entirely on feed — no "back" from home */
-    #feed .feed-header #backBtn {
-      display: none !important;
-    }
-
-    /* Logo centered — this IS the home, it IS Margo */
+    /* Logo centered */
     #feed .feed-center {
       display: flex;
       flex-direction: column;
@@ -160,49 +174,103 @@
       align-items: center;
       gap: 8px;
     }
-    /* Shrink logo rings slightly on scroll */
-    #feed .feed-header.scrolled .feed-logo-mark {
-      transform: scale(0.85);
-    }
-    #feed .feed-logo-mark {
-      transition: transform 0.25s ease;
-    }
     #feed .post-count {
-      font-size: 0.5rem;
+      font-size: 0.46rem;
       letter-spacing: 2px;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.28);
       font-family: 'Space Mono', monospace;
-      transition: opacity 0.25s;
-    }
-    /* Hide post count when scrolled to save space */
-    #feed .feed-header.scrolled .post-count {
-      opacity: 0;
-      pointer-events: none;
     }
 
-    /* ── FAB: Drop a Lyric ──────────────────────────────
-       Fixed bottom-center. TikTok/Instagram pattern.
-       Most reachable spot on any phone screen.
-    ────────────────────────────────────────────────── */
+    /* ── SEARCH — top: 52px ── */
+    #feed .feed-search-wrap {
+      position: sticky;
+      top: 52px;
+      z-index: 99;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      background: rgba(11, 11, 13, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      box-sizing: border-box;
+    }
+
+    /* ── FILTER TABS — top: 100px ── */
+    #feed .room-tabs-wrap {
+      position: sticky;
+      top: 100px;
+      z-index: 98;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      background: rgba(11, 11, 13, 0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      box-sizing: border-box;
+    }
+
+    /* ── SORT BAR — top: 140px (injected by feed.js) ── */
+    #feedSortBar {
+      position: sticky !important;
+      top: 140px !important;
+      z-index: 97 !important;
+      background: rgba(11, 11, 13, 0.96) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+      border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+      box-sizing: border-box !important;
+    }
+
+    /* ── NEW POSTS BAR — top: 178px ── */
+    .new-posts-bar {
+      position: sticky;
+      top: 178px;
+      z-index: 96;
+    }
+
+    /* Mobile: slightly tighter */
+    @media (max-width: 480px) {
+      #feed .feed-header      { height: 48px; }
+      #feed .feed-search-wrap { top: 48px;  height: 44px; padding: 0 10px; }
+      #feed .room-tabs-wrap   { top: 92px;  height: 38px; padding: 0 10px; }
+      #feedSortBar            { top: 130px !important; }
+      .new-posts-bar          { top: 164px; }
+    }
+
+    /* ── FEED LIST — extra bottom space for FAB ── */
+    #feedList {
+      padding-bottom: 110px !important;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       FAB — Drop a Lyric
+       Smaller, less intrusive. Refined chip style.
+       ONLY visible when feed section is active.
+       Starts hidden — JS shows it when feed opens.
+    ═══════════════════════════════════════════════════ */
     #dropLyricFAB {
       position: fixed;
       bottom: 28px;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translateX(-50%) translateY(0);
       z-index: 200;
 
-      display: flex;
+      display: none;          /* hidden by default — shown by JS when feed is active */
       align-items: center;
-      gap: 8px;
-      padding: 14px 28px;
+      gap: 7px;
+      padding: 11px 22px;    /* smaller than before — refined, not dominant */
       border-radius: 50px;
 
       background: #E8C547;
       color: #0B0B0D;
       font-family: 'Syne', sans-serif;
       font-weight: 800;
-      font-size: 0.78rem;
+      font-size: 0.7rem;     /* smaller text */
       letter-spacing: 1.5px;
       text-transform: uppercase;
       border: none;
@@ -210,107 +278,130 @@
       white-space: nowrap;
 
       box-shadow:
-        0 8px 32px rgba(232, 197, 71, 0.40),
-        0 2px 8px rgba(0,0,0,0.4);
-      transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1),
-                  box-shadow 0.22s ease,
-                  opacity 0.22s ease;
+        0 6px 24px rgba(232, 197, 71, 0.35),
+        0 2px 6px rgba(0,0,0,0.35);
 
-      /* Ensure it's never clipped or hidden */
+      transition:
+        transform 0.25s cubic-bezier(0.34,1.56,0.64,1),
+        box-shadow 0.22s ease,
+        opacity 0.22s ease;
+
       -webkit-tap-highlight-color: transparent;
+      opacity: 1;
+    }
+    /* JS sets display:flex when feed is active */
+    #dropLyricFAB.fab-visible {
+      display: flex;
     }
     #dropLyricFAB:hover {
-      transform: translateX(-50%) translateY(-3px) scale(1.04);
+      transform: translateX(-50%) translateY(-2px) scale(1.03);
       box-shadow:
-        0 14px 40px rgba(232, 197, 71, 0.55),
-        0 4px 12px rgba(0,0,0,0.4);
+        0 10px 32px rgba(232, 197, 71, 0.50),
+        0 3px 10px rgba(0,0,0,0.35);
     }
     #dropLyricFAB:active {
       transform: translateX(-50%) scale(0.96);
     }
-    /* Hide FAB when composer modal is open */
+    /* When composer is open */
     #dropLyricFAB.hidden-fab {
-      opacity: 0;
-      pointer-events: none;
-      transform: translateX(-50%) translateY(20px) scale(0.9);
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateX(-50%) translateY(16px) !important;
     }
-    /* FAB hides gracefully when scrolling down, reappears scrolling up */
+    /* Scroll-aware: hide scrolling down, show scrolling up */
     #dropLyricFAB.scroll-hidden {
       opacity: 0;
       pointer-events: none;
-      transform: translateX(-50%) translateY(16px);
+      transform: translateX(-50%) translateY(12px);
     }
 
-    /* ── Search bar — always fully visible ────────────── */
-    #feed .feed-search-wrap {
-      position: sticky;
-      /* sits right below the header — never overlaps */
-      top: 56px;
-      z-index: 99;
-      background: rgba(11, 11, 13, 0.90);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      padding: 10px 14px 6px;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-      transition: top 0.25s ease;
+    /* ═══════════════════════════════════════════════════
+       BACK TO TOP BUTTON — refined ring with label
+       The fancy ring stays. "top" label added below icon.
+    ═══════════════════════════════════════════════════ */
+    #margoScrollTop {
+      position: fixed !important;
+      bottom: 28px !important;
+      right: 20px !important;
+      z-index: 199 !important;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      background: none !important;
+      border: none !important;
+      cursor: pointer;
+      padding: 0 !important;
     }
-    /* When header shrinks, search stays flush */
-    #feed.header-scrolled .feed-search-wrap {
-      top: 48px;
+    #margoScrollTop.visible {
+      display: flex !important;
+    }
+    .scroll-top-ring {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(232,197,71,0.5);
+      background: rgba(11,11,13,0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #E8C547;
+      font-size: 0.8rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    #margoScrollTop:hover .scroll-top-ring {
+      border-color: rgba(232,197,71,0.9);
+      background: rgba(232,197,71,0.1);
+      box-shadow: 0 6px 20px rgba(232,197,71,0.2);
+      transform: translateY(-2px);
+    }
+    .scroll-top-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.4rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(232,197,71,0.5);
+      transition: color 0.2s;
+    }
+    #margoScrollTop:hover .scroll-top-label {
+      color: rgba(232,197,71,0.9);
     }
 
-    /* ── Filter tabs — always visible below search ────── */
-    #feed .room-tabs-wrap {
-      position: sticky;
-      top: calc(56px + 52px); /* header + search */
-      z-index: 98;
-      background: rgba(11, 11, 13, 0.88);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      padding: 6px 14px 4px;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-      transition: top 0.25s ease;
-    }
-    #feed.header-scrolled .room-tabs-wrap {
-      top: calc(48px + 52px);
-    }
-
-    /* Ensure feedList has enough bottom padding so FAB never covers last card */
-    #feedList {
-      padding-bottom: 100px !important;
-    }
-
-    /* ── New posts indicator ── */
-    .new-posts-bar {
-      position: sticky;
-      top: calc(56px + 52px + 44px); /* header + search + tabs */
-      z-index: 97;
-    }
-
-    /* ── Remove old header-btn styling that competed ── */
-    #feed .header-btn.primary {
+    /* Suppress old scroll-top buttons */
+    .scroll-top:not(#margoScrollTop),
+    #scrollToTopBtn {
       display: none !important;
     }
 
-    /* ── Mobile: FAB slightly higher to clear browser chrome ── */
+    /* ── Mobile ── */
     @media (max-width: 480px) {
+      #feed {
+        --hdr-h:  50px;
+        --hdr-s:  44px;
+        --srch-h: 48px;
+        --tabs-h: 40px;
+        --sort-h: 34px;
+      }
       #dropLyricFAB {
-        bottom: 24px;
-        padding: 13px 24px;
-        font-size: 0.72rem;
+        bottom: 20px;
+        padding: 10px 20px;
+        font-size: 0.65rem;
       }
-      #feed .feed-search-wrap {
-        padding: 8px 10px 4px;
-      }
-      #feed .room-tabs-wrap {
-        padding: 4px 10px 2px;
-      }
+      #feed .feed-search-wrap { padding: 6px 10px; }
+      #feed .room-tabs-wrap   { padding: 0 10px; }
     }
 
-    /* ── Safe area insets for modern phones (notch/home bar) ── */
+    /* Safe area (iPhone notch / home bar) */
     @supports (padding-bottom: env(safe-area-inset-bottom)) {
       #dropLyricFAB {
-        bottom: calc(24px + env(safe-area-inset-bottom));
+        bottom: calc(20px + env(safe-area-inset-bottom));
+      }
+      #margoScrollTop {
+        bottom: calc(20px + env(safe-area-inset-bottom)) !important;
       }
     }
   </style>
@@ -445,16 +536,18 @@
   <div id="feedList"></div>
 </section>
 
-<!-- ══════════════════════════════════════════════════
-     FLOATING ACTION BUTTON — "Drop a Lyric"
-     Fixed bottom-center. Always reachable. Never hidden.
-     Triggered by tapping anywhere on the feed.
-══════════════════════════════════════════════════ -->
+<!-- FAB — hidden on landing, shown by JS when feed is active -->
 <button id="dropLyricFAB" aria-label="Drop a Lyric">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
   Drop a Lyric
+</button>
+
+<!-- Back to top — ring + "top" label so users know what it does -->
+<button id="margoScrollTop" aria-label="Back to top">
+  <div class="scroll-top-ring">↑</div>
+  <span class="scroll-top-label">top</span>
 </button>
 
 <footer class="site-footer">
@@ -863,105 +956,135 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════
-   FAB + HEADER SCROLL BEHAVIOUR — v6.0
-   Works on ALL browsers: Chrome, Edge, Firefox, Safari.
-   No IntersectionObserver quirks. Pure scroll events.
+   MARGO — Feed Layout Controller v6.1
+   FAB + back-to-top + header scroll.
+   Works: Chrome, Edge, Firefox, Safari, mobile browsers.
 ═══════════════════════════════════════════════════════ */
 (function() {
-  const feedSection   = document.getElementById('feed');
-  const feedHeader    = document.getElementById('feedHeader');
-  const fab           = document.getElementById('dropLyricFAB');
-  const openComposer  = document.getElementById('openComposer');
-  const feedLogoHome  = document.getElementById('feedLogoHome');
+  const feedSection  = document.getElementById('feed');
+  const feedHeader   = document.getElementById('feedHeader');
+  const fab          = document.getElementById('dropLyricFAB');
+  const scrollTopBtn = document.getElementById('margoScrollTop');
+  const openComposer = document.getElementById('openComposer');
+  const feedLogoHome = document.getElementById('feedLogoHome');
 
   if (!feedSection || !fab) return;
 
-  /* ── Wire FAB to open composer ── */
+  /* ── FAB: wire to composer ── */
   fab.addEventListener('click', function() {
     if (openComposer) openComposer.click();
   });
 
-  /* ── Logo tap = scroll back to top of feed ── */
-  if (feedLogoHome) {
-    feedLogoHome.addEventListener('click', function() {
-      feedSection.scrollTo({ top: 0, behavior: 'smooth' });
+  /* ── Back to top button ── */
+  if (scrollTopBtn) {
+    scrollTopBtn.addEventListener('click', function() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
 
-  /* ── Smart scroll: header shrinks, FAB hides/shows ──
-     Uses the document scroll since #feed is a section,
-     not a scrolling container itself.
-  ── */
-  let lastScrollY   = 0;
-  let scrollTicking = false;
-  let fabHideTimer  = null;
-
-  function onScroll() {
-    if (scrollTicking) return;
-    scrollTicking = true;
-    requestAnimationFrame(function() {
-      const scrollY   = window.scrollY || document.documentElement.scrollTop;
-      const scrolling  = scrollY > 80; // only react once past top chrome
-      const scrollingDown = scrollY > lastScrollY;
-      const delta     = Math.abs(scrollY - lastScrollY);
-
-      /* Header: compact when scrolled */
-      if (feedHeader) {
-        feedHeader.classList.toggle('scrolled', scrollY > 20);
-      }
-      /* feed section class for search/tab top offset */
-      feedSection.classList.toggle('header-scrolled', scrollY > 20);
-
-      /* FAB: hide on scroll down (content focus), show on scroll up */
-      if (scrolling && scrollingDown && delta > 4) {
-        fab.classList.add('scroll-hidden');
-        clearTimeout(fabHideTimer);
-      } else if (!scrollingDown && delta > 4) {
-        fab.classList.remove('scroll-hidden');
-      }
-
-      /* Always show FAB when near top */
-      if (scrollY < 80) {
-        fab.classList.remove('scroll-hidden');
-      }
-
-      lastScrollY   = scrollY;
-      scrollTicking = false;
+  /* ── Logo tap = scroll to top ── */
+  if (feedLogoHome) {
+    feedLogoHome.addEventListener('click', function() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
 
-  window.addEventListener('scroll', onScroll, { passive: true });
+  /* ══════════════════════════════════════════════════
+     FAB VISIBILITY — only show when feed is active.
+     Landing page should never show the FAB.
+     Uses MutationObserver on the feed section class/style.
+  ══════════════════════════════════════════════════ */
+  function isFeedVisible() {
+    if (!feedSection) return false;
+    const style = window.getComputedStyle(feedSection);
+    return style.display !== 'none'
+      && style.visibility !== 'hidden'
+      && !feedSection.classList.contains('hidden');
+  }
 
-  /* ── Show/hide FAB when composer opens/closes ── */
-  /* Watch for composer modal visibility changes */
+  function syncFABDisplay() {
+    if (isFeedVisible()) {
+      fab.classList.add('fab-visible');
+    } else {
+      fab.classList.remove('fab-visible');
+      fab.classList.remove('scroll-hidden');
+    }
+  }
+
+  /* Watch for feed section show/hide */
+  const feedVisObserver = new MutationObserver(syncFABDisplay);
+  feedVisObserver.observe(feedSection, {
+    attributes: true,
+    attributeFilter: ['class', 'style']
+  });
+  /* Also watch parent/body in case display is toggled there */
+  feedVisObserver.observe(document.body, {
+    childList: false,
+    subtree: false,
+    attributes: true,
+    attributeFilter: ['class']
+  });
+  syncFABDisplay(); // initial state
+
+  /* ══════════════════════════════════════════════════
+     COMPOSER OPEN/CLOSE — hide FAB while composing
+  ══════════════════════════════════════════════════ */
   const composerModal = document.getElementById('composer');
   if (composerModal) {
-    const observer = new MutationObserver(function(mutations) {
-      mutations.forEach(function(m) {
-        if (m.attributeName === 'class') {
-          const isOpen = !composerModal.classList.contains('hidden');
-          fab.classList.toggle('hidden-fab', isOpen);
+    new MutationObserver(function() {
+      const isOpen = !composerModal.classList.contains('hidden');
+      fab.classList.toggle('hidden-fab', isOpen);
+    }).observe(composerModal, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  /* ══════════════════════════════════════════════════
+     SCROLL HANDLER
+     - Header shrinks after 20px scroll
+     - FAB hides on scroll-down, shows on scroll-up
+     - Back-to-top shows after 400px scroll
+     requestAnimationFrame batches all DOM writes.
+  ══════════════════════════════════════════════════ */
+  let lastScrollY   = 0;
+  let ticking       = false;
+  const SHOW_TOP_AT = 400; // px before back-to-top appears
+  const FAB_REACT   = 6;   // px delta before FAB reacts
+
+  function handleScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function() {
+      const y    = window.scrollY || document.documentElement.scrollTop;
+      const down = y > lastScrollY;
+      const delta = Math.abs(y - lastScrollY);
+
+      /* 1. Header: no shrink, just border emphasis on scroll */
+      if (feedHeader) {
+        feedHeader.style.borderBottomColor = y > 10
+          ? 'rgba(232,197,71,0.18)' : 'rgba(232,197,71,0.10)';
+      }
+
+      /* 2. FAB: hide scrolling down, show scrolling up */
+      if (isFeedVisible()) {
+        if (down && delta > FAB_REACT && y > 100) {
+          fab.classList.add('scroll-hidden');
+        } else if (!down && delta > FAB_REACT) {
+          fab.classList.remove('scroll-hidden');
         }
-      });
+        if (y < 80) fab.classList.remove('scroll-hidden');
+      }
+
+      /* 3. Back-to-top visibility */
+      if (scrollTopBtn) {
+        scrollTopBtn.classList.toggle('visible', y > SHOW_TOP_AT);
+      }
+
+      lastScrollY = y;
+      ticking     = false;
     });
-    observer.observe(composerModal, { attributes: true });
   }
 
-  /* ── Also handle the section visibility for FAB ──
-     FAB should only show when #feed is visible, not on landing.
-  ── */
-  function updateFABVisibility() {
-    const feedVisible = !feedSection.classList.contains('hidden')
-      && feedSection.style.display !== 'none'
-      && window.getComputedStyle(feedSection).display !== 'none';
-    fab.style.display = feedVisible ? '' : 'none';
-  }
-
-  /* Watch for feed section visibility */
-  const feedObserver = new MutationObserver(updateFABVisibility);
-  feedObserver.observe(feedSection, { attributes: true, attributeFilter: ['class', 'style'] });
-  updateFABVisibility();
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  handleScroll(); // run once on load
 })();
 </script>
 </body>
