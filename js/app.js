@@ -1,14 +1,12 @@
 /* ============================================================
    MARGO — js/app.js
-   v4.6 — Fixed: initStudio wrapped in try/catch so a missing
-          DOM element in studio can never block Firebase sync.
-   Loaded last — all other modules must be loaded first.
-   Depends on: state.js, firebase.js, feed.js, composer.js,
-               studio.js, admin.js, motion.js
+   v4.6 — initStudio wrapped in try/catch so any studio error
+          never blocks startFirebaseSync() from running.
+   Loaded last. Depends on: state.js, firebase.js, feed.js,
+   composer.js, studio.js, admin.js, motion.js
    ============================================================ */
 
 // ── Toast ──
-// motion.js will intercept and upgrade this automatically.
 function showToast(msg) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
@@ -49,23 +47,15 @@ function goToLanding() {
   landing.classList.add('active');
 }
 
-/* ──────────────────────────────────────────────────────────────
-   scrollToFeed — smooth scroll to feed content area, accounting
-   for the sticky feed header so no content is ever hidden under it.
-──────────────────────────────────────────────────────────────── */
 function scrollToFeed() {
-  const sortBar    = document.getElementById('feedSortBar');
-  const header     = document.querySelector('.feed-header');
-  const headerH    = header ? header.offsetHeight : 52;
-  const margin     = 14;
-
-  const target     = sortBar || feedList;
+  const sortBar  = document.getElementById('feedSortBar');
+  const header   = document.querySelector('.feed-header');
+  const headerH  = header ? header.offsetHeight : 52;
+  const margin   = 14;
+  const target   = sortBar || feedList;
   if (!target) return;
-
-  const targetTop  = target.getBoundingClientRect().top + window.pageYOffset;
-  const scrollTo   = Math.max(0, targetTop - headerH - margin);
-
-  window.scrollTo({ top: scrollTo, behavior: 'smooth' });
+  const targetTop = target.getBoundingClientRect().top + window.pageYOffset;
+  window.scrollTo({ top: Math.max(0, targetTop - headerH - margin), behavior: 'smooth' });
 }
 
 function initNavigation() {
@@ -76,15 +66,13 @@ function initNavigation() {
 
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
-
   if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 180); };
   if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 180); };
 
-  backBtn.onclick         = goToLanding;
-  openComposerBtn.onclick = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
-  closeComposerBtn.onclick= () => { closeModal(composer); resetComposer(); };
+  backBtn.onclick          = goToLanding;
+  openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
+  closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
 
-  // Swipe left/right between landing and feed
   let tSX = 0, tSY = 0;
   [landing, feed].forEach(s => {
     s.addEventListener('touchstart', e => { tSX = e.touches[0].clientX; tSY = e.touches[0].clientY; });
@@ -99,12 +87,8 @@ function initNavigation() {
   });
 }
 
-// ── Scroll utilities ──
 function setupScrollToTop() {
-  // Hide legacy button — motion.js FAB replaces it
   if (scrollToTopBtn) scrollToTopBtn.style.display = 'none';
-
-  // New posts indicator
   if (newPostsIndicator) {
     newPostsIndicator.onclick = () => {
       newPostsAvailable = false;
@@ -118,26 +102,25 @@ function setupScrollToTop() {
 // ════════════════════════════════════════════════════════
 //   INIT
 // ════════════════════════════════════════════════════════
-initStatsShimmer();    // show shimmer before Firebase loads
-initNavigation();      // wire nav buttons + swipe
-setupScrollToTop();    // hide legacy btn, wire new-posts bar
-setupStatsBar();       // responsive stats alignment
-preloadStudioFonts();  // kick off font loading early
-buildLyricStream();    // populate hero stream with samples
-initSearch();          // search bar
-initRoomTabs();        // emotion room tab filter
-initComposer();        // composer modal + post/guess/discover
+initStatsShimmer();
+initNavigation();
+setupScrollToTop();
+setupStatsBar();
+preloadStudioFonts();
+buildLyricStream();
+initSearch();
+initRoomTabs();
+initComposer();
 
-// ── FIXED: wrap initStudio in try/catch so a missing DOM element
-//    (e.g. studio overlay not yet in HTML) can never crash this file
-//    and block Firebase from starting below. ──
+// ── CRITICAL FIX: studio init is isolated so it can NEVER
+//    crash this file and block Firebase from starting ──
 try {
-  initStudio();        // Margo Studio canvas
+  initStudio();
 } catch (err) {
   console.warn('[Margo] initStudio error (non-fatal):', err.message);
 }
 
-initAdmin();           // admin moderation (B+G trigger)
-startFirebaseSync();   // start Firebase listeners last — ALWAYS runs
+initAdmin();
+startFirebaseSync(); // always runs — this is what loads the lyrics
 
-console.log('MARGO v4.6 — studio crash-safe, Firebase always starts.');
+console.log('MARGO v4.6 — studio crash-isolated, Firebase always starts.');
