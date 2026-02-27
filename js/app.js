@@ -1,8 +1,7 @@
 /* ============================================================
    MARGO — js/app.js
-   v4.5 — Fixed scroll-to-feed: smooth scroll accounts for
-           sticky header height so the sort bar and date
-           section are never hidden behind it.
+   v4.6 — Fixed: initStudio wrapped in try/catch so a missing
+          DOM element in studio can never block Firebase sync.
    Loaded last — all other modules must be loaded first.
    Depends on: state.js, firebase.js, feed.js, composer.js,
                studio.js, admin.js, motion.js
@@ -53,23 +52,13 @@ function goToLanding() {
 /* ──────────────────────────────────────────────────────────────
    scrollToFeed — smooth scroll to feed content area, accounting
    for the sticky feed header so no content is ever hidden under it.
-
-   BEFORE: feedList.scrollIntoView({ behavior:'smooth' }) — this
-   scrolled the LIST itself into view but ignored the sticky
-   header, so the top 52px of content (date, sort bar, count)
-   was always hidden behind it.
-
-   NOW: We measure the header, add a comfortable margin (16px),
-   and use window.scrollTo with smooth behavior so the transition
-   is elegant rather than abrupt.
 ──────────────────────────────────────────────────────────────── */
 function scrollToFeed() {
   const sortBar    = document.getElementById('feedSortBar');
   const header     = document.querySelector('.feed-header');
   const headerH    = header ? header.offsetHeight : 52;
-  const margin     = 14; // comfortable breathing room below header
+  const margin     = 14;
 
-  // Prefer to scroll to the sort bar (sits above feedList), else feedList
   const target     = sortBar || feedList;
   if (!target) return;
 
@@ -88,7 +77,6 @@ function initNavigation() {
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
 
-  // Fixed: use scrollToFeed() which accounts for header height
   if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 180); };
   if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 180); };
 
@@ -139,8 +127,17 @@ buildLyricStream();    // populate hero stream with samples
 initSearch();          // search bar
 initRoomTabs();        // emotion room tab filter
 initComposer();        // composer modal + post/guess/discover
-initStudio();          // Margo Studio canvas
-initAdmin();           // admin moderation (B+G trigger)
-startFirebaseSync();   // start Firebase listeners last
 
-console.log('MARGO v4.5 — scroll fixed, moderation fixed, smart ranking.');
+// ── FIXED: wrap initStudio in try/catch so a missing DOM element
+//    (e.g. studio overlay not yet in HTML) can never crash this file
+//    and block Firebase from starting below. ──
+try {
+  initStudio();        // Margo Studio canvas
+} catch (err) {
+  console.warn('[Margo] initStudio error (non-fatal):', err.message);
+}
+
+initAdmin();           // admin moderation (B+G trigger)
+startFirebaseSync();   // start Firebase listeners last — ALWAYS runs
+
+console.log('MARGO v4.6 — studio crash-safe, Firebase always starts.');
