@@ -1,42 +1,51 @@
 /* ============================================================
    MARGO — js/studio.js
    Image Studio (canvas → PNG) + Studio Chooser wiring
-   v5.0 — 2-studio architecture: Image + Animated GIF
+   v5.1 — Fixed: removed duplicate function declarations,
+          removed premature IIFE, added null guards everywhere
    ============================================================ */
 
 /* ════════════════════════════════════════
    STUDIO CHOOSER
    ════════════════════════════════════════ */
 function initStudioChooser() {
-  const chooser   = document.getElementById('studioChooser');
-  const imgBtn    = document.getElementById('chooserImageBtn');
-  const gifBtn    = document.getElementById('chooserGifBtn');
-  const backBtn   = document.getElementById('chooserBackBtn');
+  const chooser  = document.getElementById('studioChooser');
+  const imgBtn   = document.getElementById('chooserMotionBtn');
+  const gifBtn   = document.getElementById('chooserGifBtn');
+  const backBtn  = document.getElementById('chooserBackBtn');
 
   if (!chooser) return;
 
-  imgBtn?.addEventListener('click', () => {
-    chooser.classList.add('hidden');
-    openImageStudio();
-  });
+  if (imgBtn) {
+    imgBtn.addEventListener('click', () => {
+      chooser.classList.add('hidden');
+      openImageStudio();
+    });
+  }
 
-  gifBtn?.addEventListener('click', () => {
-    chooser.classList.add('hidden');
-    openGifStudio();        // defined in gif-studio.js
-  });
+  if (gifBtn) {
+    gifBtn.addEventListener('click', () => {
+      chooser.classList.add('hidden');
+      if (typeof openGifStudio === 'function') openGifStudio();
+    });
+  }
 
-  backBtn?.addEventListener('click', () => {
-    chooser.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-    openModal(postcardModal);
-  });
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      chooser.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      const pm = document.getElementById('postcardModal');
+      if (pm && typeof openModal === 'function') openModal(pm);
+    });
+  }
 }
 
 /* Called by sharePosterBtn — shows chooser instead of going direct to studio */
 function openStudioChooser() {
-  closeModal(postcardModal);
+  const pm = document.getElementById('postcardModal');
+  if (pm && typeof closeModal === 'function') closeModal(pm);
   const chooser = document.getElementById('studioChooser');
-  if (!chooser) { openImageStudio(); return; }  // fallback
+  if (!chooser) { openImageStudio(); return; } // fallback
   chooser.classList.remove('hidden');
   document.body.classList.add('modal-open');
 }
@@ -46,13 +55,18 @@ function openStudioChooser() {
    ════════════════════════════════════════ */
 function initStudio() {
   /* Route Create Poster → chooser */
-  sharePosterBtn.onclick = openStudioChooser;
+  const spb = document.getElementById('sharePosterBtn');
+  if (spb) spb.onclick = openStudioChooser;
 
-  closeStudio.onclick = () => {
-    studioOverlay.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-    openModal(postcardModal);
-  };
+  const cs = document.getElementById('closeStudio') || closeStudio;
+  if (cs) {
+    cs.onclick = () => {
+      if (studioOverlay) studioOverlay.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      const pm = document.getElementById('postcardModal');
+      if (pm && typeof openModal === 'function') openModal(pm);
+    };
+  }
 
   /* Dock tabs */
   document.querySelectorAll('.dock-tab').forEach(tab => {
@@ -152,32 +166,32 @@ function initStudio() {
   };
 
   /* Export → size picker */
-  studioExportBtn.onclick = () => sizePicker.classList.remove('hidden');
-  sizeCancelBtn.onclick   = () => sizePicker.classList.add('hidden');
+  if (studioExportBtn) studioExportBtn.onclick = () => { if (sizePicker) sizePicker.classList.remove('hidden'); };
+  if (sizeCancelBtn)   sizeCancelBtn.onclick   = () => { if (sizePicker) sizePicker.classList.add('hidden'); };
 
   document.querySelectorAll('.size-opt').forEach(btn => {
     btn.onclick = async () => {
       selectedSize = btn.dataset.size;
-      sizePicker.classList.add('hidden');
-      studioCanvas.classList.add('zoom-in');
+      if (sizePicker) sizePicker.classList.add('hidden');
+      if (studioCanvas) studioCanvas.classList.add('zoom-in');
 
-      ceremonyOverlay.classList.remove('hidden');
-      const headlineEl = ceremonyOverlay.querySelector('.ceremony-headline');
+      if (ceremonyOverlay) ceremonyOverlay.classList.remove('hidden');
+      const headlineEl = ceremonyOverlay?.querySelector('.ceremony-headline');
       if (headlineEl) headlineEl.textContent = 'Generating your poster…';
-      const actionsEl = ceremonyOverlay.querySelector('.ceremony-actions');
+      const actionsEl = ceremonyOverlay?.querySelector('.ceremony-actions');
       if (actionsEl) actionsEl.style.opacity = '0.4';
 
       try {
         generatedBlob = await generateFinalPoster(selectedSize);
       } catch (err) {
         console.error('Poster generation error:', err);
-        studioCanvas.classList.remove('zoom-in');
-        ceremonyOverlay.classList.add('hidden');
+        if (studioCanvas) studioCanvas.classList.remove('zoom-in');
+        if (ceremonyOverlay) ceremonyOverlay.classList.add('hidden');
         return;
       }
 
       setTimeout(() => {
-        studioCanvas.classList.remove('zoom-in');
+        if (studioCanvas) studioCanvas.classList.remove('zoom-in');
         drawCeremonyThumb();
         if (headlineEl) headlineEl.textContent = 'Your poster is ready.';
         if (actionsEl) actionsEl.style.opacity = '1';
@@ -186,17 +200,21 @@ function initStudio() {
   });
 
   /* Ceremony actions */
-  ceremonyBack.onclick = () => {
-    ceremonyOverlay.classList.add('hidden');
-    generatedBlob = null;
-  };
+  if (ceremonyBack) {
+    ceremonyBack.onclick = () => {
+      if (ceremonyOverlay) ceremonyOverlay.classList.add('hidden');
+      generatedBlob = null;
+    };
+  }
 
-  cerDownload.onclick = async () => {
-    if (!generatedBlob) return;
-    try { downloadPosterBlob(); } catch (err) { console.error('Download error:', err); }
-  };
+  if (cerDownload) {
+    cerDownload.onclick = async () => {
+      if (!generatedBlob) return;
+      try { downloadPosterBlob(); } catch (err) { console.error('Download error:', err); }
+    };
+  }
 
-  cerShare.onclick = shareOrDownloadPoster;
+  if (cerShare) cerShare.onclick = shareOrDownloadPoster;
 
   /* GIF studio tab system */
   initGifStudioTabs();
@@ -236,7 +254,7 @@ function openImageStudio() {
   generatedBlob    = null;
   selectedSize     = null;
   studioDesign     = EMOTION_DESIGN_MAP[currentPost?.emotion] || 'midnight-gold';
-  studioOverlay.classList.remove('hidden');
+  if (studioOverlay) studioOverlay.classList.remove('hidden');
   document.body.classList.add('modal-open');
   resetStudioUI();
 
@@ -332,8 +350,8 @@ function resetStudioUI() {
   if (dsl) dsl.value = 50; if (dvl) dvl.textContent  = '50%';
 
   document.querySelectorAll('.photo-filter').forEach((f, i) => f.classList.toggle('active', i === 0));
-  sizePicker.classList.add('hidden');
-  ceremonyOverlay.classList.add('hidden');
+  if (sizePicker)      sizePicker.classList.add('hidden');
+  if (ceremonyOverlay) ceremonyOverlay.classList.add('hidden');
   document.getElementById('ytBgOption')?.remove();
 }
 
@@ -530,6 +548,7 @@ async function generateFinalPoster(sizeKey) {
 }
 
 function drawCeremonyThumb() {
+  if (!ceremonyThumb) return;
   const dpr  = window.devicePixelRatio || 1;
   const size = 600;
   ceremonyThumb.width        = Math.round(size * dpr);
@@ -602,82 +621,3 @@ function downloadPosterBlob() {
     console.error('Download error:', err);
   }
 }
-
-/* ================================================================
-   STUDIO CHOOSER WIRING  (appended to studio.js v6.0)
-   ================================================================
-   Intercepts "Create Poster" → shows chooser modal.
-   chooserMotionBtn → opens Motion Studio (existing openStudio)
-   chooserGifBtn    → opens GIF Studio
-   chooserBackBtn   → back to postcard
-   ================================================================ */
-
-function initStudioChooser() {
-  // Re-route "Create Poster" button → chooser, not directly to studio
-  const sharePosterBtn = document.getElementById('sharePosterBtn');
-  if (sharePosterBtn) {
-    sharePosterBtn.onclick = openStudioChooser;
-  }
-
-  // Motion option → existing studio
-  const chooserMotionBtn = document.getElementById('chooserMotionBtn');
-  if (chooserMotionBtn) {
-    chooserMotionBtn.onclick = () => {
-      document.getElementById('studioChooser').classList.add('hidden');
-      openStudio();
-    };
-  }
-
-  // GIF option → gif studio
-  const chooserGifBtn = document.getElementById('chooserGifBtn');
-  if (chooserGifBtn) {
-    chooserGifBtn.onclick = () => {
-      document.getElementById('studioChooser').classList.add('hidden');
-      if (typeof openGifStudio === 'function') openGifStudio();
-    };
-  }
-
-  // Back → return to postcard
-  const chooserBackBtn = document.getElementById('chooserBackBtn');
-  if (chooserBackBtn) {
-    chooserBackBtn.onclick = () => {
-      document.getElementById('studioChooser').classList.add('hidden');
-      const pm = document.getElementById('postcardModal');
-      if (pm && typeof openModal === 'function') openModal(pm);
-    };
-  }
-
-  // Wire GIF studio tab switching
-  initGifStudioTabs();
-}
-
-function openStudioChooser() {
-  // Close postcard first
-  const pm = document.getElementById('postcardModal');
-  if (pm && typeof closeModal === 'function') closeModal(pm);
-  document.getElementById('studioChooser').classList.remove('hidden');
-}
-
-function initGifStudioTabs() {
-  const ov = document.getElementById('gifStudioOverlay');
-  if (!ov) return;
-  ov.querySelectorAll('.gs-tab').forEach(tab => {
-    tab.onclick = () => {
-      ov.querySelectorAll('.gs-tab').forEach(t => t.classList.remove('active'));
-      ov.querySelectorAll('.gs-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      const panel = document.getElementById('gs-panel-' + tab.dataset.gstab);
-      if (panel) panel.classList.add('active');
-    };
-  });
-}
-
-// Run chooser init after DOM ready (alongside existing initStudio)
-(function() {
-  const run = () => initStudioChooser();
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', run);
-  } else {
-    run();
-  }
-})();
