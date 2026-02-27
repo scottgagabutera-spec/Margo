@@ -2,6 +2,7 @@
    MARGO — js/gif-studio.js
    Animated GIF Studio: canvas-rendered lyric animations → GIF
    8 animation styles, all themes, all fonts from image studio
+   v1.1 — gif.worker.js now hosted locally (fixes CORS/download)
    ============================================================ */
 
 /* ── State ── */
@@ -11,7 +12,7 @@ const GS = {
   _animFrame: null, _frame: 0, _last: 0,
 };
 
-/* ── Themes (shared with image studio) ── */
+/* ── Themes ── */
 const GS_THEMES = {
   'midnight-gold':  { bg: ['#0B0B0D','#1a1400','#0B0B0D'], accent: '#E8C547',  text: '#ffffff' },
   'royal-purple':   { bg: ['#0d0014','#1a003a','#0d0014'], accent: '#c77dff',  text: '#ffffff' },
@@ -90,7 +91,7 @@ function initGifStudio() {
     };
   });
 
-  document.getElementById('gsExportBtn').onclick   = gsExport;
+  document.getElementById('gsExportBtn').onclick    = gsExport;
   document.getElementById('closeGifStudio').onclick = closeGifStudio;
 }
 
@@ -136,13 +137,15 @@ function gsStartPreview() {
       GS._last = ts;
       const canvas = document.getElementById('gsCanvas');
       if (canvas) {
-        const anim = GS_ANIMS[GS.animation];
+        const anim   = GS_ANIMS[GS.animation];
         const frames = anim?.frames || 24;
-        const stage = canvas.parentElement;
-        const dpr = window.devicePixelRatio || 1;
-        const size = Math.min(stage.clientWidth - 24, 340);
-        canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
-        canvas.width = Math.round(size*dpr); canvas.height = Math.round(size*dpr);
+        const stage  = canvas.parentElement;
+        const dpr    = window.devicePixelRatio || 1;
+        const size   = Math.min(stage.clientWidth - 24, 340);
+        canvas.style.width  = size + 'px';
+        canvas.style.height = size + 'px';
+        canvas.width  = Math.round(size * dpr);
+        canvas.height = Math.round(size * dpr);
         const ctx = canvas.getContext('2d');
         ctx.scale(dpr, dpr);
         gsDrawFrame(ctx, size, size, GS._frame / frames);
@@ -167,21 +170,23 @@ function gsDrawFrame(ctx, W, H, t) {
   const post  = currentPost || {};
   const k     = post.knowledge || {};
   const data  = {
-    lyric:  (post.text || 'Your lyric here').substring(0,120),
-    song:   (k.song   || 'Unknown Song').substring(0,36),
-    artist: (k.artist || 'Unknown Artist').substring(0,36),
+    lyric:  (post.text || 'Your lyric here').substring(0, 120),
+    song:   (k.song   || 'Unknown Song').substring(0, 36),
+    artist: (k.artist || 'Unknown Artist').substring(0, 36),
     theme, font,
   };
-  const anim = GS.animation;
 
   // Background
-  const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0, theme.bg[0]); g.addColorStop(0.5, theme.bg[1]); g.addColorStop(1, theme.bg[2]);
-  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, theme.bg[0]);
+  g.addColorStop(0.5, theme.bg[1]);
+  g.addColorStop(1, theme.bg[2]);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
 
-  // Dispatch to animation
   const scale = W / 500;
   ctx.save();
+  const anim = GS.animation;
   if      (anim==='fade-up')    gsFadeUp(ctx,W,H,t,data,scale);
   else if (anim==='typewriter') gsTypewriter(ctx,W,H,t,data,scale);
   else if (anim==='slide-in')   gsSlideIn(ctx,W,H,t,data,scale);
@@ -195,161 +200,161 @@ function gsDrawFrame(ctx, W, H, t) {
   // Logo
   ctx.save();
   ctx.globalAlpha = 0.38; ctx.textAlign = 'left';
-  ctx.fillStyle = theme.text; ctx.font = `700 ${11*scale}px 'Space Mono',monospace`;
+  ctx.fillStyle = theme.text;
+  ctx.font = `700 ${11*scale}px 'Space Mono',monospace`;
   ctx.fillText('MARGO', 22*scale, 30*scale);
   ctx.restore();
 
-  // Meta
-  gsMeta(ctx,W,H,data,scale);
+  gsMeta(ctx, W, H, data, scale);
 }
 
 /* ── Helpers ── */
 function gsWrap(ctx, text, cx, cy, maxW, lineH) {
-  const words = text.split(' '); let line='', lines=[];
+  const words = text.split(' ');
+  let line = '', lines = [];
   words.forEach(w => {
-    const t = line+w+' ';
-    if (ctx.measureText(t).width>maxW && line) { lines.push(line.trim()); line=w+' '; }
-    else line=t;
+    const t = line + w + ' ';
+    if (ctx.measureText(t).width > maxW && line) { lines.push(line.trim()); line = w + ' '; }
+    else line = t;
   });
   if (line.trim()) lines.push(line.trim());
-  const startY = cy - ((lines.length-1)*lineH)/2;
-  lines.forEach((l,i) => ctx.fillText(l, cx, startY+i*lineH));
+  const startY = cy - ((lines.length - 1) * lineH) / 2;
+  lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineH));
 }
 
 function gsMeta(ctx, W, H, data, scale) {
   ctx.save();
-  ctx.textAlign='center'; ctx.shadowBlur=0;
+  ctx.textAlign = 'center'; ctx.shadowBlur = 0;
   ctx.fillStyle = data.theme.accent;
-  ctx.font = `700 ${Math.max(12,16*scale)}px ${data.font.family}`;
+  ctx.font = `700 ${Math.max(12, 16*scale)}px ${data.font.family}`;
   ctx.fillText(data.song, W/2, H*0.79);
-  ctx.fillStyle = data.theme.text==='#000000' ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)';
-  ctx.font = `400 ${Math.max(9,11*scale)}px 'Space Mono',monospace`;
-  ctx.fillText(data.artist, W/2, H*0.79+18*scale);
-  ctx.fillStyle = data.theme.text==='#000000' ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.22)';
-  ctx.font = `700 ${Math.max(7,9*scale)}px 'Space Mono',monospace`;
+  ctx.fillStyle = data.theme.text === '#000000' ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)';
+  ctx.font = `400 ${Math.max(9, 11*scale)}px 'Space Mono',monospace`;
+  ctx.fillText(data.artist, W/2, H*0.79 + 18*scale);
+  ctx.fillStyle = data.theme.text === '#000000' ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.22)';
+  ctx.font = `700 ${Math.max(7, 9*scale)}px 'Space Mono',monospace`;
   ctx.fillText('MARGO · trymargo.com', W/2, H*0.935);
   ctx.restore();
 }
 
 function gsLyricFont(ctx, data, scale, W) {
   const len = data.lyric.length;
-  const sz  = len<40 ? 52*scale : len<70 ? 40*scale : 30*scale;
+  const sz  = len < 40 ? 52*scale : len < 70 ? 40*scale : 30*scale;
   const bold = ['bebas','josefin','oswald'].includes(GS.font);
-  ctx.font = `${data.font.style==='italic'?'italic ':''} ${bold?'700':'600'} ${sz}px ${data.font.family}`;
+  ctx.font = `${data.font.style==='italic' ? 'italic ' : ''}${bold ? '700' : '600'} ${sz}px ${data.font.family}`;
   return sz;
 }
 
-/* ── Animation functions ── */
+/* ── Animations ── */
 function gsFadeUp(ctx,W,H,t,data,scale) {
   const e = t<0.5 ? 2*t*t : -1+(4-2*t)*t;
-  const oy= (1-e)*38*scale, a=Math.min(1,e*2.2);
-  ctx.globalAlpha=a; ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=14*scale;
-  ctx.fillStyle=data.theme.text; ctx.textAlign='center';
-  const sz=gsLyricFont(ctx,data,scale,W);
-  gsWrap(ctx,data.lyric,W/2,H*0.44+oy,W*0.82,sz*1.2);
-  ctx.globalAlpha=1; ctx.shadowBlur=0;
+  const oy = (1-e)*38*scale, a = Math.min(1, e*2.2);
+  ctx.globalAlpha = a; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14*scale;
+  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
+  const sz = gsLyricFont(ctx, data, scale, W);
+  gsWrap(ctx, data.lyric, W/2, H*0.44+oy, W*0.82, sz*1.2);
+  ctx.globalAlpha = 1; ctx.shadowBlur = 0;
 }
 
 function gsTypewriter(ctx,W,H,t,data,scale) {
-  const chars=Math.floor(t*(data.lyric.length+6));
-  const vis=data.lyric.substring(0,Math.min(chars,data.lyric.length));
-  const cur=chars<=data.lyric.length&&(Math.floor(t*10)%2===0)?'|':'';
-  ctx.fillStyle=data.theme.text; ctx.textAlign='center';
-  ctx.shadowColor='rgba(0,0,0,0.35)'; ctx.shadowBlur=10*scale;
-  const sz=gsLyricFont(ctx,data,scale,W);
-  gsWrap(ctx,vis+cur,W/2,H*0.44,W*0.82,sz*1.2);
-  ctx.shadowBlur=0;
+  const chars = Math.floor(t * (data.lyric.length + 6));
+  const vis   = data.lyric.substring(0, Math.min(chars, data.lyric.length));
+  const cur   = chars <= data.lyric.length && (Math.floor(t*10) % 2 === 0) ? '|' : '';
+  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10*scale;
+  const sz = gsLyricFont(ctx, data, scale, W);
+  gsWrap(ctx, vis+cur, W/2, H*0.44, W*0.82, sz*1.2);
+  ctx.shadowBlur = 0;
 }
 
 function gsSlideIn(ctx,W,H,t,data,scale) {
-  const e=t<0.4?t/0.4:1; const eo=1-Math.pow(1-e,3);
-  const ox=(1-eo)*W*0.55;
+  const e = t<0.4 ? t/0.4 : 1; const eo = 1 - Math.pow(1-e, 3);
+  const ox = (1-eo) * W * 0.55;
   ctx.save(); ctx.rect(0,0,W,H); ctx.clip();
-  ctx.globalAlpha=Math.min(1,eo*1.6);
-  ctx.fillStyle=data.theme.text; ctx.textAlign='center';
-  ctx.shadowColor='rgba(0,0,0,0.45)'; ctx.shadowBlur=12*scale;
-  const sz=gsLyricFont(ctx,data,scale,W);
-  ctx.translate(ox,0);
-  gsWrap(ctx,data.lyric,W/2,H*0.44,W*0.82,sz*1.2);
-  ctx.restore(); ctx.shadowBlur=0;
+  ctx.globalAlpha = Math.min(1, eo*1.6);
+  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 12*scale;
+  const sz = gsLyricFont(ctx, data, scale, W);
+  ctx.translate(ox, 0);
+  gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2);
+  ctx.restore(); ctx.shadowBlur = 0;
 }
 
 function gsPulse(ctx,W,H,t,data,scale) {
-  const p=0.93+0.07*Math.sin(t*Math.PI*2);
-  const glow=0.5+0.5*Math.sin(t*Math.PI*2);
-  ctx.save(); ctx.translate(W/2,H*0.44); ctx.scale(p,p);
-  const sz=gsLyricFont(ctx,data,scale,W);
-  ctx.shadowColor=data.theme.accent; ctx.shadowBlur=(8+glow*22)*scale;
-  ctx.fillStyle=data.theme.text; ctx.textAlign='center';
-  gsWrap(ctx,data.lyric,0,0,W*0.82,sz*1.2);
-  ctx.restore(); ctx.shadowBlur=0;
+  const p    = 0.93 + 0.07 * Math.sin(t * Math.PI * 2);
+  const glow = 0.5  + 0.5  * Math.sin(t * Math.PI * 2);
+  ctx.save(); ctx.translate(W/2, H*0.44); ctx.scale(p, p);
+  const sz = gsLyricFont(ctx, data, scale, W);
+  ctx.shadowColor = data.theme.accent; ctx.shadowBlur = (8 + glow*22) * scale;
+  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
+  gsWrap(ctx, data.lyric, 0, 0, W*0.82, sz*1.2);
+  ctx.restore(); ctx.shadowBlur = 0;
 }
 
 function gsGlitch(ctx,W,H,t,data,scale) {
-  const phase=Math.floor(t*9); const isG=phase%3===0&&t<0.85;
-  const sz=gsLyricFont(ctx,data,scale,W);
-  const ox=isG?(Math.random()-0.5)*10*scale:0;
-  if(isG){
-    ctx.save(); ctx.globalAlpha=0.55; ctx.fillStyle='#ff0040'; ctx.textAlign='center';
-    ctx.translate(3*scale,0); gsWrap(ctx,data.lyric,W/2+ox,H*0.44,W*0.82,sz*1.2); ctx.restore();
+  const phase = Math.floor(t*9); const isG = phase%3===0 && t<0.85;
+  const sz = gsLyricFont(ctx, data, scale, W);
+  const ox = isG ? (Math.random()-0.5)*10*scale : 0;
+  if (isG) {
+    ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = '#ff0040'; ctx.textAlign = 'center';
+    ctx.translate(3*scale, 0); gsWrap(ctx, data.lyric, W/2+ox, H*0.44, W*0.82, sz*1.2); ctx.restore();
   }
-  ctx.fillStyle=data.theme.text; ctx.textAlign='center';
-  ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-  ctx.save(); ctx.translate(isG?ox:0,0);
-  gsWrap(ctx,data.lyric,W/2,H*0.44,W*0.82,sz*1.2); ctx.restore();
+  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
+  ctx.shadowBlur = 0;
+  ctx.save(); ctx.translate(isG ? ox : 0, 0);
+  gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2); ctx.restore();
 }
 
 function gsWave(ctx,W,H,t,data,scale) {
-  // Animated underwave
-  ctx.beginPath(); ctx.strokeStyle=data.theme.accent+'55'; ctx.lineWidth=1.5*scale;
-  for(let x=0;x<=W;x+=2){
-    const y=H*0.87+Math.sin((x/W)*4*Math.PI+t*Math.PI*2)*7*scale;
-    x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  ctx.beginPath(); ctx.strokeStyle = data.theme.accent+'55'; ctx.lineWidth = 1.5*scale;
+  for (let x=0; x<=W; x+=2) {
+    const y = H*0.87 + Math.sin((x/W)*4*Math.PI + t*Math.PI*2)*7*scale;
+    x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
   }
   ctx.stroke();
-  ctx.fillStyle=data.theme.text; ctx.textAlign='center';
-  ctx.shadowColor='rgba(0,0,0,0.35)'; ctx.shadowBlur=10*scale;
-  const sz=gsLyricFont(ctx,data,scale,W);
-  // word wave
-  ctx.font; // already set by gsLyricFont
-  const words=data.lyric.split(' ');
-  const totalW=words.reduce((a,w)=>a+ctx.measureText(w+' ').width,0);
-  if(totalW>W*0.88){ gsWrap(ctx,data.lyric,W/2,H*0.43,W*0.82,sz*1.2); }
-  else{
-    let cx2=W/2-totalW/2;
-    words.forEach((w,i)=>{
-      const wy=H*0.44+Math.sin((i/words.length)*Math.PI*2+t*Math.PI*2)*7*scale;
-      ctx.textAlign='left'; ctx.fillText(w+' ',cx2,wy); cx2+=ctx.measureText(w+' ').width;
+  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10*scale;
+  const sz = gsLyricFont(ctx, data, scale, W);
+  const words = data.lyric.split(' ');
+  const totalW = words.reduce((a,w) => a + ctx.measureText(w+' ').width, 0);
+  if (totalW > W*0.88) {
+    gsWrap(ctx, data.lyric, W/2, H*0.43, W*0.82, sz*1.2);
+  } else {
+    let cx2 = W/2 - totalW/2;
+    words.forEach((w,i) => {
+      const wy = H*0.44 + Math.sin((i/words.length)*Math.PI*2 + t*Math.PI*2)*7*scale;
+      ctx.textAlign = 'left'; ctx.fillText(w+' ', cx2, wy);
+      cx2 += ctx.measureText(w+' ').width;
     });
   }
-  ctx.shadowBlur=0;
+  ctx.shadowBlur = 0;
 }
 
 function gsShimmer(ctx,W,H,t,data,scale) {
-  const sz=gsLyricFont(ctx,data,scale,W);
-  ctx.fillStyle=data.theme.text+'99'; ctx.textAlign='center';
-  gsWrap(ctx,data.lyric,W/2,H*0.44,W*0.82,sz*1.2);
-  const sx=t*(W+160*scale)-80*scale;
-  const sh=ctx.createLinearGradient(sx-70*scale,0,sx+70*scale,0);
-  sh.addColorStop(0,'transparent'); sh.addColorStop(0.4,data.theme.accent);
-  sh.addColorStop(0.6,'#ffffff'); sh.addColorStop(1,'transparent');
-  ctx.save(); ctx.globalCompositeOperation='source-atop';
-  ctx.fillStyle=sh; gsWrap(ctx,data.lyric,W/2,H*0.44,W*0.82,sz*1.2); ctx.restore();
+  const sz = gsLyricFont(ctx, data, scale, W);
+  ctx.fillStyle = data.theme.text+'99'; ctx.textAlign = 'center';
+  gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2);
+  const sx = t*(W + 160*scale) - 80*scale;
+  const sh = ctx.createLinearGradient(sx-70*scale, 0, sx+70*scale, 0);
+  sh.addColorStop(0, 'transparent'); sh.addColorStop(0.4, data.theme.accent);
+  sh.addColorStop(0.6, '#ffffff'); sh.addColorStop(1, 'transparent');
+  ctx.save(); ctx.globalCompositeOperation = 'source-atop';
+  ctx.fillStyle = sh; gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2); ctx.restore();
 }
 
 function gsBounce(ctx,W,H,t,data,scale) {
-  const b=t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
-  const oy=(1-b)*H*0.28; const sy=0.86+b*0.14;
-  ctx.save(); ctx.translate(W/2,H*0.44+oy); ctx.scale(1,sy);
-  const sz=gsLyricFont(ctx,data,scale,W);
-  ctx.fillStyle=data.theme.text; ctx.textAlign='center';
-  ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=12*scale;
-  gsWrap(ctx,data.lyric,0,0,W*0.82,sz*1.2);
-  ctx.restore(); ctx.shadowBlur=0;
+  const b  = t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
+  const oy = (1-b) * H * 0.28; const sy = 0.86 + b*0.14;
+  ctx.save(); ctx.translate(W/2, H*0.44+oy); ctx.scale(1, sy);
+  const sz = gsLyricFont(ctx, data, scale, W);
+  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 12*scale;
+  gsWrap(ctx, data.lyric, 0, 0, W*0.82, sz*1.2);
+  ctx.restore(); ctx.shadowBlur = 0;
 }
 
 /* ================================================================
-   GIF EXPORT via gif.js
+   GIF EXPORT
    ================================================================ */
 async function gsExport() {
   if (GS.isExporting) return;
@@ -371,9 +376,9 @@ async function gsExport() {
   try {
     await document.fonts.ready;
 
-    // Load gif.js dynamically
+    // Load gif.js from CDN (main library, not the worker)
     if (typeof GIF === 'undefined') {
-      await new Promise((res,rej) => {
+      await new Promise((res, rej) => {
         const s = document.createElement('script');
         s.src = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
         s.onload = res; s.onerror = rej;
@@ -381,31 +386,38 @@ async function gsExport() {
       });
     }
 
+    // ── KEY FIX: use local worker to avoid CORS error ──
     const gif = new GIF({
-      workers: 2, quality: 8,
-      width: SIZE, height: SIZE,
-      workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',
+      workers: 2,
+      quality: 8,
+      width: SIZE,
+      height: SIZE,
+      workerScript: '/js/gif.worker.js',  // local — no CORS
     });
 
     for (let i = 0; i < frames; i++) {
       oc.clearRect(0, 0, SIZE, SIZE);
-      const savedAnim = GS.animation;
-      gsDrawFrame(oc, SIZE, SIZE, i/frames);
-      GS.animation = savedAnim;
+      gsDrawFrame(oc, SIZE, SIZE, i / frames);
       gif.addFrame(off, { copy: true, delay });
-      btn.textContent = `Building… ${Math.round((i/frames)*75)}%`;
+      btn.textContent = `Building… ${Math.round((i / frames) * 75)}%`;
       await new Promise(r => setTimeout(r, 0));
     }
 
-    gif.on('progress', p => { btn.textContent = `Encoding… ${Math.round(75+p*25)}%`; });
+    gif.on('progress', p => {
+      btn.textContent = `Encoding… ${Math.round(75 + p * 25)}%`;
+    });
 
     gif.on('finished', blob => {
       const url = URL.createObjectURL(blob);
       const a   = document.createElement('a');
-      a.href = url; a.download = `margo-${Date.now()}.gif`;
-      a.style.display='none'; document.body.appendChild(a); a.click();
+      a.href = url;
+      a.download = `margo-${Date.now()}.gif`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
-      btn.textContent = '✓ Saved!'; btn.disabled = false;
+      btn.textContent = '✓ Saved!';
+      btn.disabled = false;
       GS.isExporting = false;
       setTimeout(gsStartPreview, 400);
     });
@@ -414,7 +426,8 @@ async function gsExport() {
 
   } catch(err) {
     console.error('GIF error:', err);
-    btn.textContent = 'Try Again'; btn.disabled = false;
+    btn.textContent = 'Try Again';
+    btn.disabled = false;
     GS.isExporting = false;
     gsStartPreview();
   }
