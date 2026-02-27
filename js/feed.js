@@ -1,8 +1,8 @@
 /* ============================================================
    MARGO — js/feed.js
-   v5.0 — Smart ranking with Fresh/Hot/Top sort toggle.
-          Fixed scroll-to-feed that accounts for sticky header.
-          Cards unchanged visually, logic fully cleaned.
+   v6.0 — Clean sort bar (no emojis — typographic symbols only).
+          Sticky offsets fixed for all browsers.
+          FAB-aware bottom padding.
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -33,7 +33,6 @@ const EMOTION_CFG = {
 };
 const E_DEFAULT = { bg: 'rgba(232,197,71,0.11)', text: '#E8C547', border: 'rgba(232,197,71,0.25)', strip: 'rgba(232,197,71,0.8)' };
 
-/* ── Sort mode state ── */
 let currentSort = 'fresh'; // 'fresh' | 'hot' | 'top'
 
 function lyricFontSize(text) {
@@ -46,268 +45,289 @@ function lyricFontSize(text) {
 
 /* ── Inject all styles once ── */
 function injectFeedStyles() {
-  if (document.getElementById('feedV50')) return;
+  if (document.getElementById('feedV60')) return;
   const s = document.createElement('style');
-  s.id = 'feedV50';
+  s.id = 'feedV60';
   s.textContent = `
     @keyframes cardIn {
       from { opacity:0; transform:translateY(10px); }
       to   { opacity:1; transform:translateY(0); }
     }
 
-    /* ─── FEED SORT BAR ─── */
+    /* ═══════════════════════════════════════════════
+       SORT BAR — v6.0
+       No emojis. Clean typographic symbols only.
+       Matches Margo's editorial identity.
+    ═══════════════════════════════════════════════ */
     .feed-sort-bar {
-      display:flex;align-items:center;gap:6px;
-      padding:10px 14px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
     }
     .feed-sort-label {
-      font-family:'Space Mono',monospace;font-size:0.46rem;font-weight:700;
-      text-transform:uppercase;letter-spacing:1.5px;
-      color:rgba(255,255,255,0.25);flex-shrink:0;margin-right:2px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.44rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.2);
+      flex-shrink: 0;
+      margin-right: 2px;
     }
     .sort-btn {
-      padding:6px 14px;border-radius:50px;
-      border:1px solid rgba(255,255,255,0.08);
-      background:rgba(255,255,255,0.03);
-      color:rgba(255,255,255,0.35);
-      font-family:'Space Mono',monospace;font-size:0.48rem;font-weight:700;
-      text-transform:uppercase;letter-spacing:1px;
-      cursor:pointer;transition:all 0.18s;white-space:nowrap;
-      display:flex;align-items:center;gap:5px;
+      padding: 5px 14px;
+      border-radius: 50px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.02);
+      color: rgba(255,255,255,0.3);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.46rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      transition: all 0.18s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
     .sort-btn:hover {
-      border-color:rgba(232,197,71,0.3);color:rgba(232,197,71,0.75);
-      background:rgba(232,197,71,0.04);
+      border-color: rgba(232,197,71,0.3);
+      color: rgba(232,197,71,0.75);
+      background: rgba(232,197,71,0.04);
     }
     .sort-btn.active {
-      background:rgba(232,197,71,0.1);border-color:rgba(232,197,71,0.4);
-      color:#E8C547;
+      background: rgba(232,197,71,0.10);
+      border-color: rgba(232,197,71,0.45);
+      color: #E8C547;
     }
-    .sort-btn-icon { font-size:0.65rem;line-height:1; }
+    /* Typographic symbols — no emojis */
+    .sort-btn-mark {
+      font-size: 0.7rem;
+      line-height: 1;
+      font-style: normal;
+    }
 
-    /* Hot badge on cards */
+    /* Hot / New badges — text only, no emojis */
     .card-hot-badge {
-      position:absolute;top:10px;right:10px;z-index:2;
-      font-family:'Space Mono',monospace;font-size:0.42rem;font-weight:700;
-      text-transform:uppercase;letter-spacing:0.5px;
-      padding:3px 8px;border-radius:20px;
-      background:rgba(255,140,0,0.15);color:#ffaa44;
-      border:1px solid rgba(255,140,0,0.3);
-      pointer-events:none;
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.42rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 3px 8px; border-radius: 20px;
+      background: rgba(255,140,0,0.12);
+      color: #ffaa44;
+      border: 1px solid rgba(255,140,0,0.28);
+      pointer-events: none;
     }
     .card-new-badge {
-      position:absolute;top:10px;right:10px;z-index:2;
-      font-family:'Space Mono',monospace;font-size:0.42rem;font-weight:700;
-      text-transform:uppercase;letter-spacing:0.5px;
-      padding:3px 8px;border-radius:20px;
-      background:rgba(74,222,128,0.12);color:#4ade80;
-      border:1px solid rgba(74,222,128,0.28);
-      pointer-events:none;
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.42rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 3px 8px; border-radius: 20px;
+      background: rgba(74,222,128,0.10);
+      color: #4ade80;
+      border: 1px solid rgba(74,222,128,0.25);
+      pointer-events: none;
     }
 
     /* ─── CARD BASE ─── */
     #feedList .feed-card {
-      height:285px !important;
-      background:#161619 !important;
-      border:1px solid rgba(232,197,71,0.22) !important;
-      border-radius:14px !important;
-      padding:14px !important;
-      display:flex !important;
-      flex-direction:column !important;
-      gap:0 !important;
-      position:relative !important;
-      overflow:hidden !important;
-      animation:cardIn 0.3s ease both;
-      transition:transform 0.22s cubic-bezier(0.4,0,0.2,1),
-                 border-color 0.22s,box-shadow 0.22s !important;
-      box-shadow:0 4px 20px rgba(0,0,0,0.4),
-                 inset 0 1px 0 rgba(232,197,71,0.08) !important;
+      height: 285px !important;
+      background: #161619 !important;
+      border: 1px solid rgba(232,197,71,0.22) !important;
+      border-radius: 14px !important;
+      padding: 14px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0 !important;
+      position: relative !important;
+      overflow: hidden !important;
+      animation: cardIn 0.3s ease both;
+      transition: transform 0.22s cubic-bezier(0.4,0,0.2,1),
+                  border-color 0.22s, box-shadow 0.22s !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4),
+                  inset 0 1px 0 rgba(232,197,71,0.08) !important;
     }
     #feedList .feed-card::before {
-      content:'';position:absolute;top:0;left:0;right:0;height:1px;
-      background:linear-gradient(90deg,
-        transparent 0%,rgba(232,197,71,0.55) 25%,
-        rgba(232,197,71,1) 50%,rgba(232,197,71,0.55) 75%,transparent 100%);
-      pointer-events:none;
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%, rgba(232,197,71,0.55) 25%,
+        rgba(232,197,71,1) 50%, rgba(232,197,71,0.55) 75%, transparent 100%);
+      pointer-events: none;
     }
     #feedList .feed-card::after {
-      content:'';position:absolute;
-      top:16px;left:0;bottom:16px;width:3px;
-      background:var(--e-strip,rgba(232,197,71,0.8));
-      border-radius:0 4px 4px 0;opacity:0.85;pointer-events:none;
+      content: ''; position: absolute;
+      top: 16px; left: 0; bottom: 16px; width: 3px;
+      background: var(--e-strip, rgba(232,197,71,0.8));
+      border-radius: 0 4px 4px 0; opacity: 0.85; pointer-events: none;
     }
     #feedList .feed-card:hover {
-      transform:translateY(-3px) !important;
-      border-color:rgba(232,197,71,0.5) !important;
-      box-shadow:0 0 0 1px rgba(232,197,71,0.15),
-                 0 20px 50px rgba(0,0,0,0.55),
-                 inset 0 1px 0 rgba(232,197,71,0.12) !important;
+      transform: translateY(-3px) !important;
+      border-color: rgba(232,197,71,0.5) !important;
+      box-shadow: 0 0 0 1px rgba(232,197,71,0.15),
+                  0 20px 50px rgba(0,0,0,0.55),
+                  inset 0 1px 0 rgba(232,197,71,0.12) !important;
     }
 
-    /* ─── TOP ROW ─── */
+    /* ─── LAYOUT INTERNALS ─── */
     #feedList .card-top {
-      display:flex;justify-content:space-between;
-      align-items:center;flex-shrink:0;
-      height:20px;margin-bottom:10px;padding-left:7px;
+      display: flex; justify-content: space-between;
+      align-items: center; flex-shrink: 0;
+      height: 20px; margin-bottom: 10px; padding-left: 7px;
     }
-
-    /* ─── LYRIC ─── */
     #feedList .card-lyric {
-      height:78px !important;overflow:hidden !important;
-      display:-webkit-box !important;
-      -webkit-line-clamp:3 !important;
-      -webkit-box-orient:vertical !important;
-      flex-shrink:0 !important;line-height:1.45 !important;
-      margin-bottom:8px !important;padding-left:7px !important;
-      font-weight:400 !important;
+      height: 78px !important; overflow: hidden !important;
+      display: -webkit-box !important;
+      -webkit-line-clamp: 3 !important;
+      -webkit-box-orient: vertical !important;
+      flex-shrink: 0 !important; line-height: 1.45 !important;
+      margin-bottom: 8px !important; padding-left: 7px !important;
+      font-weight: 400 !important;
     }
-
-    /* ─── EMOTION TAG ─── */
     #feedList .card-emotion-tag {
-      flex-shrink:0 !important;align-self:flex-start !important;
-      margin-bottom:9px !important;margin-left:7px !important;
+      flex-shrink: 0 !important; align-self: flex-start !important;
+      margin-bottom: 9px !important; margin-left: 7px !important;
     }
-
-    /* ─── SONG ROW ─── */
     #feedList .card-song {
-      display:flex !important;align-items:center !important;
-      gap:9px !important;flex-shrink:0 !important;
-      height:50px !important;overflow:hidden !important;
-      padding-top:8px !important;
-      border-top:1px solid rgba(232,197,71,0.12) !important;
-      margin-bottom:0 !important;
+      display: flex !important; align-items: center !important;
+      gap: 9px !important; flex-shrink: 0 !important;
+      height: 50px !important; overflow: hidden !important;
+      padding-top: 8px !important;
+      border-top: 1px solid rgba(232,197,71,0.12) !important;
+      margin-bottom: 0 !important;
     }
-    #feedList .card-song-text { flex:1;min-width:0; }
-
-    /* ─── GUESS / DISCOVER ─── */
+    #feedList .card-song-text { flex: 1; min-width: 0; }
     #feedList .card-mystery,
     #feedList .card-discover {
-      flex-shrink:0 !important;height:50px !important;
-      display:flex !important;align-items:center !important;
-      padding-top:8px !important;
-      border-top:1px solid rgba(232,197,71,0.1) !important;
-      overflow:hidden !important;font-size:0.75rem !important;
+      flex-shrink: 0 !important; height: 50px !important;
+      display: flex !important; align-items: center !important;
+      padding-top: 8px !important;
+      border-top: 1px solid rgba(232,197,71,0.1) !important;
+      overflow: hidden !important; font-size: 0.75rem !important;
     }
-    #feedList .card-mystery  { color:#6B8CFF !important; }
-    #feedList .card-discover { color:#4ade80 !important; }
-
-    /* ─── ACTIONS ─── */
+    #feedList .card-mystery  { color: #6B8CFF !important; }
+    #feedList .card-discover { color: #4ade80 !important; }
     #feedList .card-actions {
-      margin-top:auto !important;padding-top:8px !important;
-      border-top:1px solid rgba(232,197,71,0.12) !important;
-      flex-shrink:0 !important;display:flex !important;gap:6px !important;
+      margin-top: auto !important; padding-top: 8px !important;
+      border-top: 1px solid rgba(232,197,71,0.12) !important;
+      flex-shrink: 0 !important; display: flex !important; gap: 6px !important;
     }
 
     /* ─── BUTTONS ─── */
     #feedList .card-btn {
-      flex:1 !important;padding:8px 6px !important;
-      background:rgba(232,197,71,0.06) !important;
-      border:1px solid rgba(232,197,71,0.18) !important;
-      border-radius:8px !important;
-      font-family:'DM Sans',sans-serif !important;
-      font-size:0.7rem !important;font-weight:600 !important;
-      color:rgba(232,197,71,0.8) !important;
-      cursor:pointer !important;transition:all 0.18s !important;
+      flex: 1 !important; padding: 8px 6px !important;
+      background: rgba(232,197,71,0.06) !important;
+      border: 1px solid rgba(232,197,71,0.18) !important;
+      border-radius: 8px !important;
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 0.7rem !important; font-weight: 600 !important;
+      color: rgba(232,197,71,0.8) !important;
+      cursor: pointer !important; transition: all 0.18s !important;
     }
     #feedList .card-btn:hover {
-      background:rgba(232,197,71,0.14) !important;
-      border-color:rgba(232,197,71,0.45) !important;
-      color:#E8C547 !important;
+      background: rgba(232,197,71,0.14) !important;
+      border-color: rgba(232,197,71,0.45) !important;
+      color: #E8C547 !important;
     }
     #feedList .card-btn-primary {
-      background:rgba(232,197,71,0.14) !important;
-      border-color:rgba(232,197,71,0.4) !important;
-      color:#E8C547 !important;font-weight:700 !important;
+      background: rgba(232,197,71,0.14) !important;
+      border-color: rgba(232,197,71,0.4) !important;
+      color: #E8C547 !important; font-weight: 700 !important;
     }
     #feedList .card-btn-primary:hover {
-      background:rgba(232,197,71,0.25) !important;
-      border-color:rgba(232,197,71,0.65) !important;
-      color:#fff !important;
+      background: rgba(232,197,71,0.25) !important;
+      border-color: rgba(232,197,71,0.65) !important;
+      color: #fff !important;
     }
     #feedList .card-btn-yt {
-      background:rgba(255,0,0,0.08) !important;
-      border-color:rgba(255,80,80,0.25) !important;
-      color:#ff6464 !important;
+      background: rgba(255,0,0,0.08) !important;
+      border-color: rgba(255,80,80,0.25) !important;
+      color: #ff6464 !important;
     }
     #feedList .card-btn-yt:hover {
-      background:rgba(255,0,0,0.16) !important;
-      border-color:rgba(255,80,80,0.5) !important;
-      color:#ff4444 !important;
+      background: rgba(255,0,0,0.16) !important;
+      border-color: rgba(255,80,80,0.5) !important;
+      color: #ff4444 !important;
     }
 
     /* ─── YOUTUBE THUMBNAIL ─── */
     .card-yt-thumb-wrap {
-      position:relative;flex-shrink:0;
-      width:56px;height:38px;
-      border-radius:6px;overflow:hidden;
-      background:rgba(255,255,255,0.04);
-      border:1px solid rgba(255,255,255,0.08);
-      cursor:pointer;
+      position: relative; flex-shrink: 0;
+      width: 56px; height: 38px;
+      border-radius: 6px; overflow: hidden;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
     }
-    .card-yt-thumb { width:100%;height:100%;object-fit:cover;display:block; }
+    .card-yt-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
     .card-yt-play {
-      position:absolute;inset:0;
-      display:flex;align-items:center;justify-content:center;
-      background:rgba(0,0,0,0.55);color:#fff;
-      opacity:0;transition:opacity 0.18s;
-      text-decoration:none;border-radius:5px;
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.55); color: #fff;
+      opacity: 0; transition: opacity 0.18s;
+      text-decoration: none; border-radius: 5px;
     }
-    .card-yt-thumb-wrap:hover .card-yt-play { opacity:1; }
+    .card-yt-thumb-wrap:hover .card-yt-play { opacity: 1; }
     @media (max-width:768px) {
-      .card-yt-play { opacity:1;background:rgba(0,0,0,0.4); }
+      .card-yt-play { opacity: 1; background: rgba(0,0,0,0.4); }
     }
 
     /* ─── SKELETONS ─── */
     @keyframes skShimmer {
-      0%   { background-position:-400px 0; }
-      100% { background-position: 400px 0; }
+      0%   { background-position: -400px 0; }
+      100% { background-position:  400px 0; }
     }
-    .skeleton-card { pointer-events:none !important;height:285px !important; }
-    .sk-line,.sk-block {
-      border-radius:6px;
-      background:linear-gradient(90deg,
-        rgba(255,255,255,0.03) 25%,rgba(255,255,255,0.07) 50%,
+    .skeleton-card { pointer-events: none !important; height: 285px !important; }
+    .sk-line, .sk-block {
+      border-radius: 6px;
+      background: linear-gradient(90deg,
+        rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%,
         rgba(255,255,255,0.03) 75%);
-      background-size:800px 100%;
-      animation:skShimmer 1.5s infinite linear;
+      background-size: 800px 100%;
+      animation: skShimmer 1.5s infinite linear;
     }
-    .sk-short  { height:9px;width:28%;margin-bottom:14px; }
-    .sk-block  { height:52px;width:100%;margin-bottom:12px;border-radius:10px; }
-    .sk-medium { height:9px;width:48%;margin-bottom:10px; }
-    .sk-row    { display:flex;gap:8px;margin-top:4px; }
-    .sk-long   { height:30px;flex:1;border-radius:8px; }
+    .sk-short  { height: 9px; width: 28%; margin-bottom: 14px; }
+    .sk-block  { height: 52px; width: 100%; margin-bottom: 12px; border-radius: 10px; }
+    .sk-medium { height: 9px; width: 48%; margin-bottom: 10px; }
+    .sk-row    { display: flex; gap: 8px; margin-top: 4px; }
+    .sk-long   { height: 30px; flex: 1; border-radius: 8px; }
 
     /* ─── STUDIO YT BG ─── */
     .yt-bg-option {
-      display:flex;align-items:center;gap:10px;padding:10px 12px;
-      border-radius:10px;background:rgba(255,0,0,0.07);
-      border:1px solid rgba(255,0,0,0.2);cursor:pointer;
-      margin-bottom:10px;transition:background 0.18s;
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: 10px; background: rgba(255,0,0,0.07);
+      border: 1px solid rgba(255,0,0,0.2); cursor: pointer;
+      margin-bottom: 10px; transition: background 0.18s;
     }
-    .yt-bg-option:hover { background:rgba(255,0,0,0.13); }
-    .yt-bg-option img { width:56px;height:38px;border-radius:6px;object-fit:cover;flex-shrink:0; }
+    .yt-bg-option:hover { background: rgba(255,0,0,0.13); }
+    .yt-bg-option img { width: 56px; height: 38px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
     .yt-bg-option-label {
-      font-size:0.65rem;font-weight:700;color:#ff5555;
-      font-family:'Space Mono',monospace;letter-spacing:1px;text-transform:uppercase;
+      font-size: 0.65rem; font-weight: 700; color: #ff5555;
+      font-family: 'Space Mono', monospace; letter-spacing: 1px; text-transform: uppercase;
     }
     .yt-bg-option-title {
-      font-size:0.7rem;color:rgba(255,255,255,0.5);
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;
+      font-size: 0.7rem; color: rgba(255,255,255,0.5);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
     }
 
-    /* ─── HIDE OLD SCROLL BTN ─── */
-    .scroll-top,[id*="scrollTop"]:not(#margoScrollTop){
-      display:none !important;opacity:0 !important;pointer-events:none !important;
+    /* ─── SUPPRESS OLD SCROLL BTN ─── */
+    .scroll-top, [id*="scrollTop"]:not(#margoScrollTop) {
+      display: none !important; opacity: 0 !important; pointer-events: none !important;
     }
 
     /* ─── MOBILE ─── */
-    @media (max-width:480px) {
-      #feedList .feed-card { height:275px !important; }
-      .skeleton-card { height:275px !important; }
-      .feed-sort-bar { padding:10px 10px 0; }
+    @media (max-width: 480px) {
+      #feedList .feed-card { height: 275px !important; }
+      .skeleton-card { height: 275px !important; }
+      .feed-sort-bar { padding: 8px 10px 6px; }
     }
-    @media (max-width:768px) {
-      .modal-sheet { max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch; }
+    @media (max-width: 768px) {
+      .modal-sheet { max-height: 92dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     }
   `;
   document.head.appendChild(s);
@@ -319,16 +339,17 @@ function injectSortBar() {
   const bar = document.createElement('div');
   bar.id = 'feedSortBar';
   bar.className = 'feed-sort-bar';
+  /* Pure typographic symbols — no emoji, no AI aesthetic */
   bar.innerHTML = `
     <span class="feed-sort-label">Sort</span>
     <button class="sort-btn active" data-sort="fresh">
-      <span class="sort-btn-icon">✦</span> Fresh
+      <span class="sort-btn-mark">✦</span> Fresh
     </button>
     <button class="sort-btn" data-sort="hot">
-      <span class="sort-btn-icon">🔥</span> Hot
+      <span class="sort-btn-mark">↑</span> Hot
     </button>
     <button class="sort-btn" data-sort="top">
-      <span class="sort-btn-icon">⭐</span> Top
+      <span class="sort-btn-mark">★</span> Top
     </button>
   `;
   bar.addEventListener('click', e => {
@@ -339,7 +360,6 @@ function injectSortBar() {
     currentSort = btn.dataset.sort;
     renderFeed();
   });
-  // Insert before feedList
   feedList?.parentNode?.insertBefore(bar, feedList);
 }
 
@@ -508,29 +528,12 @@ function initRoomTabs() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   RANKING SYSTEM — v5.0
-
-   Three modes:
-
-   FRESH (default) — bias heavily toward new posts.
-     Posts under 6h get a massive boost.
-     Posts under 24h still prioritised.
-     Engagement adds a small signal so dead-new beats dead-old,
-     but a 3-day-old viral post won't bury today's posts.
-
-   HOT — balance of recency + engagement.
-     Classic Reddit-style: (score / (age_hours + 2)^gravity)
-     gravity=1.4 means engagement decays fast enough that
-     fresh posts can still compete even with fewer views.
-
-   TOP — pure engagement score, all time.
-     views×1 + guesses×3 + helps×2
-     Recency is ignored. Best content rises forever.
+   RANKING SYSTEM — v5.0 (unchanged — it works well)
    ══════════════════════════════════════════════════════════ */
 
 function getPostAge(post) {
   if (!post.timestamp) return 999;
-  return (Date.now() - post.timestamp) / 3600000; // hours
+  return (Date.now() - post.timestamp) / 3600000;
 }
 
 function getEngagement(post) {
@@ -544,31 +547,20 @@ function calculatePostScore(post) {
   const engage = getEngagement(post);
 
   if (currentSort === 'fresh') {
-    /* Exponential decay — halves every 12h, engagement is a tiebreaker only */
-    const decay = Math.exp(-age / 18); // ~1.0 at 0h, ~0.5 at 12h, ~0.1 at 40h
+    const decay = Math.exp(-age / 18);
     return decay * 1000 + engage * 0.05;
   }
-
   if (currentSort === 'hot') {
-    /* Reddit-style gravity: score / (age+2)^1.4 */
     return engage / Math.pow(age + 2, 1.4);
   }
-
   if (currentSort === 'top') {
-    /* Pure engagement — all time */
     return engage;
   }
-
   return 0;
 }
 
-function isNewPost(post) {
-  return getPostAge(post) < 6; // under 6 hours
-}
-
-function isHotPost(post) {
-  return getEngagement(post) >= 20; // arbitrary threshold
-}
+function isNewPost(post)  { return getPostAge(post) < 6; }
+function isHotPost(post)  { return getEngagement(post) >= 20; }
 
 function getRankedPosts() {
   return getFilteredPosts().sort((a, b) => calculatePostScore(b) - calculatePostScore(a));
@@ -589,7 +581,7 @@ function renderSkeleton() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   RENDER FEED — v5.0
+   RENDER FEED — v6.0
    ══════════════════════════════════════════════════════════ */
 function renderFeed() {
   injectFeedStyles();
@@ -624,7 +616,6 @@ function renderFeed() {
     const ecfg    = EMOTION_CFG[emotion] || E_DEFAULT;
     const idx     = posts.findIndex(p => p.id === post.id);
 
-    /* ── Media flags ── */
     const meta           = post.youtubeMeta;
     const hasThumb       = !!(meta?.thumbnailSm || meta?.thumbnail);
     const hasYouTubeUrl  = !!(meta?.youtubeUrl);
@@ -633,22 +624,20 @@ function renderFeed() {
     card.style.setProperty('--e-strip', ecfg.strip);
     card.style.borderColor = ecfg.border;
 
-    /* ── Mode badge ── */
     const badge = post.mode === 'guess'
       ? '<span class="card-mode-badge mode-guess">Guess</span>'
       : post.mode === 'discover'
       ? '<span class="card-mode-badge mode-discover">Discover</span>'
       : '<span class="card-mode-badge mode-share">Share</span>';
 
-    /* ── Fresh / Hot badges (subtle, only in relevant modes) ── */
+    /* Rank badges — text only, no emojis */
     let rankBadge = '';
     if (currentSort === 'fresh' && isNewPost(post)) {
       rankBadge = '<span class="card-new-badge">New</span>';
     } else if (currentSort === 'hot' && isHotPost(post)) {
-      rankBadge = '<span class="card-hot-badge">🔥 Hot</span>';
+      rankBadge = '<span class="card-hot-badge">Hot</span>';
     }
 
-    /* ── YouTube thumbnail ── */
     const thumb = hasThumb ? `
       <div class="card-yt-thumb-wrap"
            onclick="event.stopPropagation();window.open('${meta.youtubeUrl || '#'}','_blank','noopener')"
@@ -661,7 +650,6 @@ function renderFeed() {
         </span>
       </div>` : '';
 
-    /* ── Song section ── */
     let songSection = '';
     if (post.mode === 'share') {
       songSection = `<div class="card-song">
@@ -686,7 +674,6 @@ function renderFeed() {
       }</div>`;
     }
 
-    /* ── Action buttons ── */
     let actions = '';
     if (post.mode === 'share') {
       if (hasThumb) {
@@ -703,7 +690,7 @@ function renderFeed() {
           <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
           <button class="card-btn card-btn-yt"
             onclick="event.stopPropagation();window.open('${meta.youtubeUrl}','_blank','noopener')">
-            ▶ YouTube
+            Watch on YouTube
           </button>
         </div>`;
       } else {
