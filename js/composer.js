@@ -1,8 +1,8 @@
 /* ============================================================
    MARGO — js/composer.js
-   v5.4 — "Post & Create →" one-tap flow:
+   v5.5 — Single "Post & Create →" CTA:
            posts to feed AND opens studio chooser immediately.
-           Zero extra steps. No feed hunting.
+           No separate "Post" button — one decisive action.
    ============================================================ */
 
 /* ══════════════════════════════════════════════════════════════
@@ -116,53 +116,79 @@ function injectComposerStyles() {
     @keyframes mspin{to{transform:rotate(360deg)}}
 
     /* ══════════════════════════════
-       POST BUTTONS ROW — v5.4
+       SINGLE PRIMARY CTA — v5.5
+       "Post & Create →" is the only button.
+       Full-width, bold, unmissable.
     ══════════════════════════════ */
-    .post-btn-row {
-      display: flex;
-      gap: 8px;
-    }
-    /* "Post" shrinks to give more room to "Post & Create" */
-    .post-btn-row #postBtn {
-      flex: 1;
-      border-radius: var(--radius) !important;
-    }
-    /* "Post & Create →" — dark gold outline style, feels premium */
     #postAndCreateBtn {
-      flex: 2;
-      position: relative; overflow: hidden;
-      padding: 16px 20px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 18px 24px;
       border-radius: var(--radius);
-      background: linear-gradient(135deg, #141108 0%, #1e1a08 100%);
-      color: #E8C547;
-      font-family: var(--font-display); font-weight: 800; font-size: 0.82rem;
-      letter-spacing: 1px; text-transform: uppercase;
-      border: 1px solid rgba(232,197,71,0.40);
+      background: linear-gradient(135deg, #E8C547 0%, #D4A820 100%);
+      color: #0B0B0D;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 0.92rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border: none;
       cursor: pointer;
       transition: all 0.22s var(--ease-out);
-      box-shadow: 0 4px 20px rgba(232,197,71,0.08), inset 0 1px 0 rgba(232,197,71,0.08);
+      box-shadow: 0 6px 28px rgba(232,197,71,0.30), inset 0 1px 0 rgba(255,255,255,0.25);
+      position: relative;
+      overflow: hidden;
       white-space: nowrap;
     }
-    #postAndCreateBtn::after {
+    #postAndCreateBtn::before {
       content: '';
-      position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(232,197,71,0.07) 0%, transparent 60%);
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
       pointer-events: none;
     }
     #postAndCreateBtn:hover {
-      background: linear-gradient(135deg, #1e1a08 0%, #2a2408 100%);
-      border-color: rgba(232,197,71,0.75);
-      box-shadow: 0 8px 28px rgba(232,197,71,0.18), inset 0 1px 0 rgba(232,197,71,0.15);
+      background: linear-gradient(135deg, #F5D46A 0%, #E8C547 100%);
+      box-shadow: 0 10px 36px rgba(232,197,71,0.45), inset 0 1px 0 rgba(255,255,255,0.3);
       transform: translateY(-2px);
-      color: #F5D46A;
     }
-    #postAndCreateBtn:active { transform: scale(0.97); }
-    #postAndCreateBtn:disabled { opacity: 0.5; cursor: default; transform: none; }
+    #postAndCreateBtn:active {
+      transform: scale(0.97);
+      box-shadow: 0 4px 16px rgba(232,197,71,0.25);
+    }
+    #postAndCreateBtn:disabled {
+      opacity: 0.55;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
 
-    @media (max-width: 480px) {
-      .post-btn-row { flex-direction: column; gap: 7px; }
-      .post-btn-row #postBtn,
-      #postAndCreateBtn { flex: none; width: 100%; }
+    /* Subtle "just post" escape hatch — text link only, no visual weight */
+    #justPostLink {
+      display: block;
+      text-align: center;
+      margin-top: 10px;
+      font-size: 0.68rem;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      cursor: pointer;
+      background: none;
+      border: none;
+      width: 100%;
+      padding: 4px 0;
+      transition: color 0.18s;
+    }
+    #justPostLink:hover:not(:disabled) {
+      color: rgba(255,255,255,0.5);
+    }
+    #justPostLink:disabled {
+      opacity: 0.4;
+      cursor: default;
     }
 
     /* ── Identify button ── */
@@ -566,8 +592,9 @@ function clearYoutubePreview() {
 
 /* ============================================================
    COMPOSER INIT
-   ── CHANGE 1: inject "Post & Create →" button into the footer,
-      wire both buttons, wrap them in .post-btn-row
+   ── v5.5: Single CTA — "Post & Create →" is the only button.
+      A lightweight "Just post" text link sits below it for
+      users who truly don't want to open the studio.
    ============================================================ */
 function initComposer() {
   injectComposerStyles();
@@ -597,10 +624,8 @@ function initComposer() {
     };
   });
 
-  // Wire original Post button (post only, stay in feed)
-  postBtn.onclick = () => submitPost(false);
-
-  // Inject "Post & Create →" button next to Post
+  // ── Replace the old postBtn entirely with "Post & Create →" as the primary CTA
+  // We keep a reference to postBtn's parent so we can inject our new layout there.
   if (!document.getElementById('postAndCreateBtn')) {
     const pacBtn = document.createElement('button');
     pacBtn.id        = 'postAndCreateBtn';
@@ -608,12 +633,19 @@ function initComposer() {
     pacBtn.innerHTML = '✦ Post &amp; Create →';
     pacBtn.onclick   = () => submitPost(true);
 
-    // Wrap both buttons in a flex row
-    const row = document.createElement('div');
-    row.className = 'post-btn-row';
-    postBtn.parentNode.insertBefore(row, postBtn);
-    row.appendChild(postBtn);
-    row.appendChild(pacBtn);
+    // "Just post" escape hatch — tiny text link, zero visual competition
+    const justPostBtn = document.createElement('button');
+    justPostBtn.id        = 'justPostLink';
+    justPostBtn.type      = 'button';
+    justPostBtn.textContent = 'or just post without creating';
+    justPostBtn.onclick   = () => submitPost(false);
+
+    // Replace the original postBtn with our new CTA + link
+    const parent = postBtn.parentNode;
+    parent.insertBefore(pacBtn, postBtn);
+    parent.insertBefore(justPostBtn, postBtn);
+    // Hide the original postBtn — it's no longer needed visually
+    postBtn.style.display = 'none';
   }
 
   initGeniusIdentify();
@@ -635,13 +667,15 @@ function initComposer() {
 
 /* ============================================================
    POST SUBMISSION
-   ── CHANGE 2: openChooser param drives the new flow
-      openChooser = false → normal "Post" (existing behaviour)
-      openChooser = true  → "Post & Create": posts silently,
-                            then opens studioChooser immediately
+   ── openChooser = true  → "Post & Create": posts, then opens
+                            studioChooser immediately (default flow)
+   ── openChooser = false → "Just post": posts silently, done
    ============================================================ */
-async function submitPost(openChooser = false) {
-  if (postBtn.disabled) return;
+async function submitPost(openChooser = true) {
+  const pacBtn     = document.getElementById('postAndCreateBtn');
+  const justPostBtn = document.getElementById('justPostLink');
+  if (pacBtn?.disabled) return;
+
   let text = textInput.value.trim();
   if (!text)            { showToast('Please enter a lyric'); return; }
   if (!selectedEmotion) { showToast('Please select a vibe'); return; }
@@ -704,11 +738,9 @@ async function submitPost(openChooser = false) {
     }
   } catch (err) { showToast(err.message); return; }
 
-  // Disable both buttons during submission
-  postBtn.disabled = true;
-  postBtn.textContent = 'Posting…';
-  const pacBtn = document.getElementById('postAndCreateBtn');
-  if (pacBtn) pacBtn.disabled = true;
+  // Disable both CTAs during submission
+  if (pacBtn)      { pacBtn.disabled = true;      pacBtn.innerHTML = '<span class="m-spinner"></span> Posting…'; }
+  if (justPostBtn) { justPostBtn.disabled = true; }
 
   try {
     if (isFirebaseEnabled) {
@@ -722,7 +754,6 @@ async function submitPost(openChooser = false) {
         fetchAndSaveYoutubeMeta(ref.key, post.knowledge.song, post.knowledge.artist).catch(() => {});
       }
 
-      // Make the new post available as currentPost so studio has song/lyric data
       if (openChooser) {
         currentPost = { ...post, id: ref.key };
       }
@@ -734,7 +765,6 @@ async function submitPost(openChooser = false) {
     closeModal(composer);
 
     if (openChooser) {
-      // Brief pause so composer modal closes cleanly, then launch studio chooser
       setTimeout(() => {
         showToast('Posted! Now create your visual 🎨');
         openStudioChooser();
@@ -747,9 +777,10 @@ async function submitPost(openChooser = false) {
     console.error(err);
     showToast(err.message || 'Error posting.');
   } finally {
+    if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = '✦ Post &amp; Create →'; }
+    if (justPostBtn) { justPostBtn.disabled = false; }
+    // Keep the old postBtn hidden
     postBtn.disabled = false;
-    postBtn.textContent = 'Post';
-    if (pacBtn) pacBtn.disabled = false;
   }
 }
 
