@@ -106,8 +106,8 @@ function initNavigation() {
 
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
-  if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 150); };
-  if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 150); };
+  if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 250); };
+  if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 250); };
 
   backBtn.onclick          = goToLanding;
   openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
