@@ -46,7 +46,7 @@
   <meta name="msapplication-config"    content="/browserconfig.xml"/>
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 88 88'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23E8C547'/%3E%3Cpath d='M57 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57' fill='none' stroke='%230B0B0D' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='35' y='60' width='10' height='3.5' rx='1.75' fill='%230B0B0D' opacity='.55'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 88 88'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23E8C547'/%3E%3Cpath d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57' fill='none' stroke='%230B0B0D' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='35' y='60' width='10' height='3.5' rx='1.75' fill='%230B0B0D' opacity='.55'/%3E%3C/svg%3E">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -671,11 +671,13 @@
 
 <script>
 /*
-  MARGO — Feed UI Controller v6.5
-  FAB visibility + scroll behaviour + back-to-top
+  MARGO — Feed UI Controller v6.6
+  Fixes: scroll reset on feed open, FAB never on landing,
+         back-to-top visibility, landing always starts at top.
 */
 (function () {
   var feed     = document.getElementById('feed');
+  var landing  = document.getElementById('landing');
   var header   = document.getElementById('feedHeader');
   var fab      = document.getElementById('dropLyricFAB');
   var topBtn   = document.getElementById('margoScrollTop');
@@ -684,6 +686,10 @@
   var modal    = document.getElementById('composer');
 
   if (!feed || !fab) return;
+
+  /* ── Ensure page always starts at top on load ── */
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
 
   /* ── Wire FAB → composer ── */
   fab.addEventListener('click', function () {
@@ -704,9 +710,9 @@
     });
   }
 
-  /* ── FAB visibility: ONLY when feed section is active ──
-     Checks computed style AND class list so it works regardless
-     of how app.js shows/hides the feed section.
+  /* ── Detect when feed becomes active and RESET SCROLL ──
+     This is the key fix: when app.js switches from landing→feed,
+     we must scroll to top so the first row of cards is fully visible.
   ── */
   function feedIsActive () {
     var cs = window.getComputedStyle(feed);
@@ -716,21 +722,38 @@
         && !feed.classList.contains('hidden');
   }
 
+  var wasFeedActive = false;
+
   function refreshFAB () {
-    if (feedIsActive()) {
+    var isActive = feedIsActive();
+
+    /* When feed first becomes active, scroll to top immediately */
+    if (isActive && !wasFeedActive) {
+      window.scrollTo(0, 0);
+      lastY = 0;
+    }
+    wasFeedActive = isActive;
+
+    if (isActive) {
       fab.classList.add('fab-visible');
+      fab.classList.remove('scroll-hidden');
     } else {
+      /* Landing page: always hide FAB completely */
       fab.classList.remove('fab-visible');
       fab.classList.remove('scroll-hidden');
+      fab.classList.remove('hidden-fab');
+      /* Also hide back-to-top when on landing */
+      if (topBtn) topBtn.classList.remove('visible');
     }
   }
 
-  /* Watch #feed and #landing for attribute/style changes */
+  /* Watch #feed and #landing for display/class changes */
   var obs = new MutationObserver(refreshFAB);
   obs.observe(feed, { attributes: true, attributeFilter: ['class', 'style'] });
-  var landing = document.getElementById('landing');
   if (landing) obs.observe(landing, { attributes: true, attributeFilter: ['class', 'style'] });
-  refreshFAB();
+
+  /* Initial state — run AFTER a tick so app.js has set initial display */
+  setTimeout(refreshFAB, 0);
 
   /* ── Hide FAB when composer modal is open ── */
   if (modal) {
@@ -743,8 +766,8 @@
   /* ── Scroll handler ── */
   var lastY   = 0;
   var pending = false;
-  var FAB_MIN = 6;    /* min delta px before reacting */
-  var TOP_AT  = 400;  /* px scrolled before back-to-top appears */
+  var FAB_MIN = 6;
+  var TOP_AT  = 300;
 
   function onScroll () {
     if (pending) return;
@@ -754,26 +777,26 @@
       var down = y > lastY;
       var d    = Math.abs(y - lastY);
 
-      /* Subtle border emphasis on header when scrolled */
+      /* Header border gets slightly brighter when scrolled */
       if (header) {
         header.style.borderBottomColor = y > 8
           ? 'rgba(232,197,71,0.22)'
           : 'rgba(232,197,71,0.12)';
       }
 
-      /* FAB: hide on scroll-down, show on scroll-up */
+      /* FAB: hide on scroll-down, show on scroll-up — feed only */
       if (feedIsActive() && !fab.classList.contains('hidden-fab')) {
-        if (down && d > FAB_MIN && y > 120) {
+        if (down && d > FAB_MIN && y > 100) {
           fab.classList.add('scroll-hidden');
         } else if (!down && d > FAB_MIN) {
           fab.classList.remove('scroll-hidden');
         }
-        if (y < 80) fab.classList.remove('scroll-hidden');
+        if (y < 60) fab.classList.remove('scroll-hidden');
       }
 
-      /* Back-to-top */
+      /* Back-to-top — only show when in feed and scrolled enough */
       if (topBtn) {
-        topBtn.classList.toggle('visible', y > TOP_AT);
+        topBtn.classList.toggle('visible', feedIsActive() && y > TOP_AT);
       }
 
       lastY   = y;
