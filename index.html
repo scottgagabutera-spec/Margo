@@ -246,7 +246,7 @@
 </section>
 
 <!-- FAB — hidden on landing page, shown by JS when feed is active -->
-<button id="dropLyricFAB" aria-label="Drop a Lyric">
+<button id="dropLyricFAB" aria-label="Drop a Lyric" style="display:none">
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
@@ -721,12 +721,12 @@
 
     wasFeedActive = isActive;
 
-    /* FAB: show only in feed, never on landing */
+    /* FAB: display:none on landing — no CSS class can override inline style */
     if (isActive) {
-      fab.classList.add('fab-visible');
+      fab.style.display = '';   /* restore to CSS-controlled value (flex/block) */
       fab.classList.remove('scroll-hidden');
     } else {
-      fab.classList.remove('fab-visible');
+      fab.style.display = 'none'; /* hard hide — beats any stylesheet rule */
       fab.classList.remove('scroll-hidden');
       fab.classList.remove('hidden-fab');
     }
