@@ -1,7 +1,8 @@
 /* ============================================================
    MARGO — js/app.js
-   v4.7 — Fix: scrollToFeed accounts for full header stack.
-          FAB hidden on landing page.
+   v4.9 — Body gets class 'on-landing' or 'on-feed' so CSS
+          can cleanly hide the floating FAB on landing.
+          scrollToFeed waits for sort bar injection.
    ============================================================ */
 
 // ── Toast ──
@@ -30,6 +31,16 @@ function closeModal(modal) {
   window.scrollTo(0, savedScrollPosition);
 }
 
+// ── Page state helpers ──
+function setPageState(page) {
+  // 'landing' or 'feed'
+  document.body.classList.remove('on-landing', 'on-feed');
+  document.body.classList.add('on-' + page);
+  // Always hide FAB immediately when switching pages
+  const fab = document.getElementById('margoScrollTop');
+  if (fab) fab.classList.remove('visible');
+}
+
 // ── Navigation ──
 function goToFeed() {
   landing.classList.remove('active');
@@ -37,38 +48,39 @@ function goToFeed() {
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
   window.scrollTo(0, 0);
-
-  // Hide FAB — motion.js shows it only after user scrolls down
-  const fab = document.getElementById('margoScrollTop');
-  if (fab) fab.classList.remove('visible');
-
+  setPageState('feed');
   renderFeed();
 }
 
 function goToLanding() {
   feed.classList.remove('active');
   landing.classList.add('active');
-
-  // Always hide FAB on landing — landing already has its own CTA button
-  const fab = document.getElementById('margoScrollTop');
-  if (fab) fab.classList.remove('visible');
+  setPageState('landing');
 }
 
+// Measure sticky stack height — waits for sort bar (injected by feed.js)
 function scrollToFeed() {
-  // Measure the full sticky header stack so content isn't hidden behind it
-  const header     = document.querySelector('.feed-header');
-  const searchWrap = document.querySelector('.feed-search-wrap');
-  const tabsWrap   = document.querySelector('.room-tabs-wrap');
-  const sortBar    = document.getElementById('feedSortBar');
+  let attempts = 0;
+  const tryScroll = () => {
+    attempts++;
+    const sortBar    = document.getElementById('feedSortBar');
+    const header     = document.querySelector('.feed-header');
+    const searchWrap = document.querySelector('.feed-search-wrap');
+    const tabsWrap   = document.querySelector('.room-tabs-wrap');
 
-  let stickyHeight = 0;
-  if (header)     stickyHeight += header.offsetHeight;
-  if (searchWrap) stickyHeight += searchWrap.offsetHeight;
-  if (tabsWrap)   stickyHeight += tabsWrap.offsetHeight;
-  if (sortBar)    stickyHeight += sortBar.offsetHeight;
-
-  const margin = 12;
-  window.scrollTo({ top: stickyHeight + margin, behavior: 'smooth' });
+    if (sortBar || attempts >= 10) {
+      let h = 0;
+      if (header)     h += header.getBoundingClientRect().height;
+      if (searchWrap) h += searchWrap.getBoundingClientRect().height;
+      if (tabsWrap)   h += tabsWrap.getBoundingClientRect().height;
+      if (sortBar)    h += sortBar.getBoundingClientRect().height;
+      window.scrollTo({ top: h + 8, behavior: 'smooth' });
+    } else {
+      setTimeout(tryScroll, 50);
+    }
+  };
+  // Give renderFeed() a head start before we try to measure
+  setTimeout(tryScroll, 80);
 }
 
 function initNavigation() {
@@ -115,6 +127,9 @@ function setupScrollToTop() {
 // ════════════════════════════════════════════════════════
 //   INIT
 // ════════════════════════════════════════════════════════
+// Set initial page state — landing is active on load
+setPageState('landing');
+
 initStatsShimmer();
 initNavigation();
 setupScrollToTop();
@@ -134,4 +149,4 @@ try {
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v4.7 dev — scroll fix + FAB landing hide.');
+console.log('MARGO v4.9 dev — body state class + scroll fix + minimal TOP.');
