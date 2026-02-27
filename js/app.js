@@ -1,9 +1,7 @@
 /* ============================================================
    MARGO — js/app.js
-   v4.6 — Dev branch. initStudio wrapped in try/catch so any
-          studio crash never blocks startFirebaseSync().
-   Loaded last. Depends on: state.js, firebase.js, feed.js,
-   composer.js, studio.js, gif-studio.js, admin.js, motion.js
+   v4.7 — Fix: scrollToFeed accounts for full header stack.
+          FAB hidden on landing page.
    ============================================================ */
 
 // ── Toast ──
@@ -39,23 +37,38 @@ function goToFeed() {
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
   window.scrollTo(0, 0);
+
+  // Hide FAB — motion.js shows it only after user scrolls down
+  const fab = document.getElementById('margoScrollTop');
+  if (fab) fab.classList.remove('visible');
+
   renderFeed();
 }
 
 function goToLanding() {
   feed.classList.remove('active');
   landing.classList.add('active');
+
+  // Always hide FAB on landing — landing already has its own CTA button
+  const fab = document.getElementById('margoScrollTop');
+  if (fab) fab.classList.remove('visible');
 }
 
 function scrollToFeed() {
-  const sortBar  = document.getElementById('feedSortBar');
-  const header   = document.querySelector('.feed-header');
-  const headerH  = header ? header.offsetHeight : 52;
-  const margin   = 14;
-  const target   = sortBar || feedList;
-  if (!target) return;
-  const targetTop = target.getBoundingClientRect().top + window.pageYOffset;
-  window.scrollTo({ top: Math.max(0, targetTop - headerH - margin), behavior: 'smooth' });
+  // Measure the full sticky header stack so content isn't hidden behind it
+  const header     = document.querySelector('.feed-header');
+  const searchWrap = document.querySelector('.feed-search-wrap');
+  const tabsWrap   = document.querySelector('.room-tabs-wrap');
+  const sortBar    = document.getElementById('feedSortBar');
+
+  let stickyHeight = 0;
+  if (header)     stickyHeight += header.offsetHeight;
+  if (searchWrap) stickyHeight += searchWrap.offsetHeight;
+  if (tabsWrap)   stickyHeight += tabsWrap.offsetHeight;
+  if (sortBar)    stickyHeight += sortBar.offsetHeight;
+
+  const margin = 12;
+  window.scrollTo({ top: stickyHeight + margin, behavior: 'smooth' });
 }
 
 function initNavigation() {
@@ -66,8 +79,8 @@ function initNavigation() {
 
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
-  if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 180); };
-  if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 180); };
+  if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 200); };
+  if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 200); };
 
   backBtn.onclick          = goToLanding;
   openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
@@ -119,6 +132,6 @@ try {
 }
 
 initAdmin();
-startFirebaseSync(); // always runs — loads all lyrics
+startFirebaseSync();
 
-console.log('MARGO v4.6 dev — image studio + GIF studio + chooser.');
+console.log('MARGO v4.7 dev — scroll fix + FAB landing hide.');
