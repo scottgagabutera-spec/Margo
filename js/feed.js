@@ -55,16 +55,17 @@ function injectFeedStyles() {
     }
 
     /* ═══════════════════════════════════════════════
-       SORT BAR — v6.0
-       No emojis. Clean typographic symbols only.
-       Matches Margo's editorial identity.
+       SORT BAR — v6.1
+       NOTE: position:sticky and top offset are set in
+       index.html CSS via #feedSortBar selector.
+       Only visual styling lives here.
     ═══════════════════════════════════════════════ */
     .feed-sort-bar {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 10px 14px 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
+      padding: 8px 14px;
+      /* position/top/z-index set by index.html */
     }
     .feed-sort-label {
       font-family: 'Space Mono', monospace;
@@ -339,7 +340,8 @@ function injectSortBar() {
   const bar = document.createElement('div');
   bar.id = 'feedSortBar';
   bar.className = 'feed-sort-bar';
-  /* Pure typographic symbols — no emoji, no AI aesthetic */
+  /* Pure typographic symbols — no emoji, no AI aesthetic.
+     Do NOT set position/top here — CSS handles sticky via #feedSortBar selector. */
   bar.innerHTML = `
     <span class="feed-sort-label">Sort</span>
     <button class="sort-btn active" data-sort="fresh">
