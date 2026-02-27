@@ -1,9 +1,9 @@
 /* ============================================================
    MARGO — js/app.js
-   v4.6 — initStudio wrapped in try/catch so any studio error
-          never blocks startFirebaseSync() from running.
+   v4.6 — Dev branch. initStudio wrapped in try/catch so any
+          studio crash never blocks startFirebaseSync().
    Loaded last. Depends on: state.js, firebase.js, feed.js,
-   composer.js, studio.js, admin.js, motion.js
+   composer.js, studio.js, gif-studio.js, admin.js, motion.js
    ============================================================ */
 
 // ── Toast ──
@@ -112,8 +112,6 @@ initSearch();
 initRoomTabs();
 initComposer();
 
-// ── CRITICAL FIX: studio init is isolated so it can NEVER
-//    crash this file and block Firebase from starting ──
 try {
   initStudio();
 } catch (err) {
@@ -121,6 +119,6 @@ try {
 }
 
 initAdmin();
-startFirebaseSync(); // always runs — this is what loads the lyrics
+startFirebaseSync(); // always runs — loads all lyrics
 
-console.log('MARGO v4.6 — studio crash-isolated, Firebase always starts.');
+console.log('MARGO v4.6 dev — image studio + GIF studio + chooser.');
