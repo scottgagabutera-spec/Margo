@@ -1,39 +1,99 @@
 /* ============================================================
    MARGO — js/composer.js
-   v5.2 — YouTube saves automatically, no confirm click needed.
-          fetchAndSaveYoutubeMeta() called as safety net after post.
+   v5.5 — Single "Post & Create →" CTA:
+           posts to feed AND opens studio chooser immediately.
+           No separate "Post" button — one decisive action.
    ============================================================ */
 
-/* ── MODERATION ENGINE ── */
+/* ══════════════════════════════════════════════════════════════
+   MODERATION ENGINE — v2.0
+   ══════════════════════════════════════════════════════════════ */
+
+const SAFE_WORDS = new Set([
+  'night','nights','midnight','knight','knights','tonight','fortnight',
+  'bass','bassist','classic','classics','classical','classy','glass','glasses',
+  'grass','mass','masses','massive','class','classes','classic','passage',
+  'passion','passionate','compass','compass','harass','embarrass','assassin',
+  'assumption','assistant','assemble','asset','assets','assess','assign',
+  'associate','assist','assistance','association','assist',
+  'pass','passes','passing','passenger','passion','passive',
+  'mass','massage','ambassador',
+  'cock','cocktail','cockatoo','peacock','hancock','woodcock','haycock',
+  'rooster','weathercock',
+  'piss','dismiss','bliss','kiss','kissing','missy','mississippi',
+  'bastard','dastardly',
+  'damn','damning','adamant','madam',
+  'pitch','ditch','hitch','switch','witch','kitchen','itch',
+  'dig','digit','digital','digs','dignity','digging',
+  'asset','assets',
+]);
+
 const BANNED_PATTERNS = [
-  "fuck","shit","bitch","asshole","nigger","cunt",
-  "whore","slut","pussy","dick","cock","bastard","piss","damn","ass"
+  'fuck','shit','bitch','asshole','nigger','cunt',
+  'whore','slut','pussy','dick','cock','bastard',
 ];
+
 const BANNED_VARIATIONS = {
-  fuck:["fuk","fck","fuq","phuck","fux"],shit:["sh1t","sht"],
-  bitch:["biatch","b1tch"],pussy:["pus5y","puss1","pussi"],
-  dick:["d1ck","dik","dic"],cock:["c0ck","cok"],
-  bastard:["b4stard"],ass:["a55","@ss"],nigger:["n1gger","nigg3r","nig"],
+  fuck:    ['fuk','fck','fuq','phuck','fux','f u c k','f*ck'],
+  shit:    ['sh1t','sht','5hit'],
+  bitch:   ['biatch','b1tch','bytch'],
+  pussy:   ['pus5y','puss1','pussi','pus5i'],
+  dick:    ['d1ck','dik','d!ck'],
+  cock:    ['c0ck','cok','c0k'],
+  bastard: ['b4stard','baztard'],
+  asshole: ['a55hole','@sshole','ahole'],
+  nigger:  ['n1gger','nigg3r'],
+  cunt:    ['c*nt','kunt'],
+  whore:   ['wh0re','h0re'],
+  slut:    ['5lut','sl*t'],
 };
-function normalizeText(s){return s.toLowerCase().replace(/[^a-z0-9]/g,'').replace(/(.)\1+/g,'$1');}
-function containsBannedWord(text){
-  const n=normalizeText(text);
-  return BANNED_PATTERNS.some(w=>{
-    if(n.includes(normalizeText(w)))return true;
-    return(BANNED_VARIATIONS[w]||[]).some(v=>n.includes(normalizeText(v)));
-  });
-}
-function censorText(text){
-  let r=text;
-  BANNED_PATTERNS.forEach(w=>{
-    const c=w[0]+'*'.repeat(w.length-2)+w[w.length-1];
-    r=r.replace(new RegExp(w,'gi'),c);
-    (BANNED_VARIATIONS[w]||[]).forEach(v=>{r=r.replace(new RegExp(v,'gi'),c);});
-  });
-  return r;
+
+function tokenize(text) {
+  return text.toLowerCase().split(/[\s,\.!?;:\-"'()\[\]{}\/\\|<>]+/).filter(Boolean);
 }
 
-/* ── HTML entity decoder ── */
+function normalizeWord(w) {
+  return w.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/(.)\1+/g, '$1');
+}
+
+function isWordBanned(word) {
+  const norm = normalizeWord(word);
+  if (SAFE_WORDS.has(word.toLowerCase())) return false;
+  if (SAFE_WORDS.has(norm)) return false;
+  for (const pattern of BANNED_PATTERNS) {
+    const normPattern = normalizeWord(pattern);
+    if (norm === normPattern) return true;
+    const vars = BANNED_VARIATIONS[pattern] || [];
+    if (vars.some(v => norm === normalizeWord(v))) return true;
+  }
+  return false;
+}
+
+function containsBannedWord(text) {
+  return tokenize(text).some(word => isWordBanned(word));
+}
+
+function censorText(text) {
+  let result = text;
+  for (const pattern of BANNED_PATTERNS) {
+    const allVariants = [pattern, ...(BANNED_VARIATIONS[pattern] || [])];
+    for (const variant of allVariants) {
+      if (!variant.includes(' ')) {
+        try {
+          const escaped = variant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
+          const censored = pattern[0] + '*'.repeat(Math.max(pattern.length - 2, 1)) + pattern[pattern.length - 1];
+          result = result.replace(regex, (match) => {
+            if (SAFE_WORDS.has(match.toLowerCase())) return match;
+            return censored;
+          });
+        } catch (_) {}
+      }
+    }
+  }
+  return result;
+}
+
 function decodeHTML(str) {
   const txt = document.createElement('textarea');
   txt.innerHTML = str;
@@ -46,7 +106,6 @@ function injectComposerStyles() {
   const s = document.createElement('style');
   s.id = 'composerV5Styles';
   s.textContent = `
-    /* ── Spinner ── */
     .m-spinner {
       width:14px;height:14px;border-radius:50%;
       border:2px solid rgba(232,197,71,0.2);
@@ -55,6 +114,82 @@ function injectComposerStyles() {
       display:inline-block;flex-shrink:0;
     }
     @keyframes mspin{to{transform:rotate(360deg)}}
+
+    /* ══════════════════════════════
+       SINGLE PRIMARY CTA — v5.5
+       "Post & Create →" is the only button.
+       Full-width, bold, unmissable.
+    ══════════════════════════════ */
+    #postAndCreateBtn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 18px 24px;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, #E8C547 0%, #D4A820 100%);
+      color: #0B0B0D;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 0.92rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+      transition: all 0.22s var(--ease-out);
+      box-shadow: 0 6px 28px rgba(232,197,71,0.30), inset 0 1px 0 rgba(255,255,255,0.25);
+      position: relative;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    #postAndCreateBtn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    #postAndCreateBtn:hover {
+      background: linear-gradient(135deg, #F5D46A 0%, #E8C547 100%);
+      box-shadow: 0 10px 36px rgba(232,197,71,0.45), inset 0 1px 0 rgba(255,255,255,0.3);
+      transform: translateY(-2px);
+    }
+    #postAndCreateBtn:active {
+      transform: scale(0.97);
+      box-shadow: 0 4px 16px rgba(232,197,71,0.25);
+    }
+    #postAndCreateBtn:disabled {
+      opacity: 0.55;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Subtle "just post" escape hatch — text link only, no visual weight */
+    #justPostLink {
+      display: block;
+      text-align: center;
+      margin-top: 10px;
+      font-size: 0.68rem;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      cursor: pointer;
+      background: none;
+      border: none;
+      width: 100%;
+      padding: 4px 0;
+      transition: color 0.18s;
+    }
+    #justPostLink:hover:not(:disabled) {
+      color: rgba(255,255,255,0.5);
+    }
+    #justPostLink:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
 
     /* ── Identify button ── */
     #geniusIdentifyBtn {
@@ -73,9 +208,8 @@ function injectComposerStyles() {
     #geniusIdentifyBtn.active { border-color:#E8C547;color:#E8C547;background:rgba(232,197,71,0.08); }
     #geniusIdentifyBtn:disabled { opacity:0.5;cursor:default; }
 
-    /* ── Genius results ── */
     .genius-section-label {
-      font-size:0.58rem;color:rgba(255,255,255,0.35);letter-spacing:2px;
+      font-size:0.58rem;color:rgba(255,255,255,0.45);letter-spacing:2px;
       text-transform:uppercase;font-family:'Space Mono',monospace;margin:10px 0 6px;
     }
     .genius-results-list { display:flex;flex-direction:column;gap:6px; }
@@ -98,51 +232,29 @@ function injectComposerStyles() {
     .genius-result-card:hover .genius-use-tag { background:rgba(232,197,71,0.15);color:#E8C547;border-color:rgba(232,197,71,0.4); }
     .genius-result-card.selected .genius-use-tag { background:#E8C547;color:#0B0B0D;border-color:#E8C547; }
 
-    /* ════════════════════════════════════════
-       MUSIC METADATA CARD — premium design
-    ════════════════════════════════════════ */
-    @keyframes ytFadeUp {
-      from { opacity:0; transform:translateY(12px) scale(0.98); }
-      to   { opacity:1; transform:translateY(0)    scale(1);    }
-    }
-
-    /* ══ MUSIC FOUND CARD — Premium redesign ══ */
     @keyframes ytSlideIn {
       from { opacity:0; transform:translateY(8px) scale(0.98); }
       to   { opacity:1; transform:translateY(0)  scale(1);    }
     }
     .yt-card {
-      position:relative;
-      margin-top:12px;
-      border-radius:20px;
-      overflow:hidden;
+      position:relative;margin-top:12px;border-radius:20px;overflow:hidden;
       border:1px solid rgba(232,197,71,0.22);
       background:linear-gradient(160deg,#141210 0%,#0f0e0c 100%);
       box-shadow:0 12px 40px rgba(0,0,0,0.5), 0 1px 0 rgba(232,197,71,0.18) inset;
       animation:ytSlideIn 0.35s cubic-bezier(0.16,1,0.3,1);
     }
-    /* Gold shimmer line across top */
     .yt-card::before {
       content:'';position:absolute;top:0;left:8%;right:8%;height:1px;
       background:linear-gradient(90deg,transparent,rgba(232,197,71,0.8),transparent);
       pointer-events:none;
     }
-    /* Subtle gold glow at bottom */
     .yt-card::after {
       content:'';position:absolute;bottom:0;left:20%;right:20%;height:40px;
       background:radial-gradient(ellipse at center bottom,rgba(232,197,71,0.06),transparent);
       pointer-events:none;
     }
-
-    .yt-card-inner {
-      display:flex;align-items:flex-start;gap:14px;
-      padding:14px 14px 12px;
-    }
-
-    /* Album art — large, square, with glow */
-    .yt-thumb-wrap {
-      position:relative;flex-shrink:0;
-    }
+    .yt-card-inner { display:flex;align-items:flex-start;gap:14px;padding:14px 14px 12px; }
+    .yt-thumb-wrap { position:relative;flex-shrink:0; }
     .yt-thumb-wrap::after {
       content:'';position:absolute;inset:-1px;border-radius:13px;
       background:linear-gradient(135deg,rgba(232,197,71,0.3),transparent 60%);
@@ -150,13 +262,9 @@ function injectComposerStyles() {
     }
     .yt-thumb {
       width:80px;height:80px;border-radius:12px;
-      object-fit:cover;display:block;
-      box-shadow:0 6px 20px rgba(0,0,0,0.6);
+      object-fit:cover;display:block;box-shadow:0 6px 20px rgba(0,0,0,0.6);
     }
-
-    /* Info section */
     .yt-info { flex:1;min-width:0;padding-top:2px; }
-
     .yt-title {
       font-size:0.88rem;font-weight:700;color:#fff;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -165,86 +273,70 @@ function injectComposerStyles() {
     .yt-channel {
       font-size:0.68rem;color:rgba(255,255,255,0.4);
       margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-      letter-spacing:0.01em;
     }
-
-    /* Listen link pills */
-    .yt-links-row {
-      display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;
-    }
+    .yt-links-row { display:flex;gap:5px;flex-wrap:wrap;margin-top:9px; }
     .yt-listen-link {
       display:inline-flex;align-items:center;gap:4px;
       font-size:0.56rem;font-family:'Space Mono',monospace;
       font-weight:700;letter-spacing:1px;text-transform:uppercase;
       padding:5px 11px;border-radius:20px;text-decoration:none;
-      transition:all 0.2s ease;white-space:nowrap;
-      backdrop-filter:blur(8px);
+      transition:all 0.2s ease;white-space:nowrap;backdrop-filter:blur(8px);
     }
-    .yt-listen-link:hover {
-      transform:translateY(-2px) scale(1.04);
-      filter:brightness(1.25);
-      box-shadow:0 4px 12px rgba(0,0,0,0.3);
-    }
-    .yt-link-yt {
-      background:rgba(255,50,50,0.14);color:#ff7070;
-      border:1px solid rgba(255,50,50,0.32);
-    }
-    .yt-link-dz {
-      background:rgba(255,100,0,0.14);color:#ff8c3a;
-      border:1px solid rgba(255,100,0,0.32);
-    }
-    .yt-link-it {
-      background:rgba(252,60,68,0.14);color:#fc7c82;
-      border:1px solid rgba(252,60,68,0.32);
-    }
-
-    /* Source badge — top right pill */
+    .yt-listen-link:hover { transform:translateY(-2px) scale(1.04);filter:brightness(1.25);box-shadow:0 4px 12px rgba(0,0,0,0.3); }
+    .yt-link-yt  { background:rgba(255,50,50,0.14);color:#ff7070;border:1px solid rgba(255,50,50,0.32); }
+    .yt-link-dz  { background:rgba(255,100,0,0.14);color:#ff8c3a;border:1px solid rgba(255,100,0,0.32); }
+    .yt-link-it  { background:rgba(252,60,68,0.14);color:#fc7c82;border:1px solid rgba(252,60,68,0.32); }
     .yt-found-tag {
       flex-shrink:0;align-self:flex-start;margin-top:1px;
       padding:4px 11px;border-radius:20px;
       font-family:'Space Mono',monospace;font-size:0.5rem;
-      font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
-      white-space:nowrap;
+      font-weight:700;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;
     }
     .yt-found-yt { background:rgba(255,50,50,0.12);  color:#ff7070; border:1px solid rgba(255,50,50,0.28);  }
     .yt-found-dz { background:rgba(255,100,0,0.12);  color:#ff8c3a; border:1px solid rgba(255,100,0,0.28);  }
     .yt-found-it { background:rgba(252,60,68,0.12);  color:#fc7c82; border:1px solid rgba(252,60,68,0.28);  }
-
-    /* Loading shimmer state */
     .yt-loading {
-      display:flex;align-items:center;gap:10px;
-      padding:18px 16px;
-      font-size:0.65rem;color:rgba(255,255,255,0.28);
+      display:flex;align-items:center;gap:10px;padding:18px 16px;
+      font-size:0.65rem;color:rgba(255,255,255,0.4);
       font-family:'Space Mono',monospace;letter-spacing:0.5px;
     }
 
-        /* ── Autocomplete dropdown ── */
+    @keyframes ytFadeUp {
+      from { opacity:0; transform:translateY(4px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
     .yt-autocomplete {
       position:absolute;left:0;right:0;top:calc(100% + 4px);
       z-index:1000;background:#18181c;
-      border:1px solid rgba(255,255,255,0.1);
-      border-radius:14px;overflow:hidden;
-      box-shadow:0 20px 60px rgba(0,0,0,0.7);
-      animation:ytFadeUp 0.18s ease;
+      border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,0.7);animation:ytFadeUp 0.18s ease;
     }
     .yt-ac-item {
-      display:flex;align-items:center;gap:10px;
-      padding:9px 13px;cursor:pointer;
+      display:flex;align-items:center;gap:10px;padding:9px 13px;cursor:pointer;
       border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.12s;
     }
     .yt-ac-item:last-child { border-bottom:none; }
     .yt-ac-item:hover { background:rgba(232,197,71,0.07); }
-    .yt-ac-thumb { width:38px;height:27px;border-radius:5px;object-fit:cover;flex-shrink:0;background:#222; }
-    .yt-ac-song  { font-size:0.78rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-    .yt-ac-artist{ font-size:0.65rem;color:rgba(255,255,255,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-
+    .yt-ac-thumb  { width:38px;height:27px;border-radius:5px;object-fit:cover;flex-shrink:0;background:#222; }
+    .yt-ac-song   { font-size:0.78rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .yt-ac-artist { font-size:0.65rem;color:rgba(255,255,255,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
     .song-input-wrap { position:relative; }
+
+    @media (max-width: 768px) {
+      .yt-autocomplete {
+        position:fixed !important;left:0 !important;right:0 !important;
+        top:auto !important;bottom:0 !important;
+        border-radius:18px 18px 0 0 !important;
+        max-height:50vh;overflow-y:auto;
+        box-shadow:0 -8px 40px rgba(0,0,0,0.6) !important;
+      }
+    }
   `;
-document.head.appendChild(s);
+  document.head.appendChild(s);
 }
 
 /* ── STATE ── */
-let youtubeData    = null; // set as soon as video found — no confirm gate
+let youtubeData    = null;
 let geniusResult   = null;
 let geniusTimer    = null;
 let ytSuggestTimer = null;
@@ -252,7 +344,7 @@ let ytFetchTimer   = null;
 let lastGeniusQuery = '';
 
 /* ============================================================
-   GENIUS ENGINE — identical to v5.1
+   GENIUS ENGINE
    ============================================================ */
 function initGeniusIdentify() {
   injectComposerStyles();
@@ -329,7 +421,9 @@ function renderGeniusResults(results) {
     list.appendChild(card);
   });
   wrap.appendChild(list);
-  document.getElementById('geniusIdentifyBtn')?.parentNode?.insertBefore(wrap, document.getElementById('geniusIdentifyBtn').nextSibling);
+  document.getElementById('geniusIdentifyBtn')?.parentNode?.insertBefore(
+    wrap, document.getElementById('geniusIdentifyBtn').nextSibling
+  );
 }
 
 function selectGeniusResult(result, card) {
@@ -349,9 +443,6 @@ function selectGeniusResult(result, card) {
 
 /* ============================================================
    YOUTUBE ENGINE
-   FIX: youtubeData set immediately when found.
-        No ytConfirmed flag. No "Use this" button.
-        "Found ✓" badge is purely visual — data always saves.
    ============================================================ */
 function initYoutubeAutofetch() {
   const songEl   = document.getElementById('songInput');
@@ -381,7 +472,6 @@ function initYoutubeAutofetch() {
     const song   = songEl.value.trim();
     const artist = artistEl.value.trim();
     if (song.length > 1 && artist.length > 1) {
-      // Re-fetch whenever artist changes (no confirmed guard)
       ytFetchTimer = setTimeout(() => fetchYoutubeData(song, artist), 700);
     }
   });
@@ -434,15 +524,11 @@ function closeAutocomplete() { document.getElementById('ytAutocomplete')?.remove
 async function fetchYoutubeData(song, artist) {
   const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
   const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
-
   showYtLoading();
   youtubeData = null;
-
   try {
     const res  = await fetch(`/api/youtube?song=${encodeURIComponent(cleanSong)}&artist=${encodeURIComponent(cleanArtist)}`);
     const data = await res.json();
-    // FIX: accept Deezer/iTunes too — they have thumbnail but no videoId
-    // Old code rejected anything without videoId, silently killing all fallbacks
     if (!res.ok || data.error || (!data.videoId && !data.thumbnail)) {
       clearYoutubePreview(); return;
     }
@@ -462,33 +548,25 @@ function showYtLoading() {
 function renderYtCard(data) {
   clearYoutubePreview();
   const source = data.source || 'youtube';
-
-  // Build listen link pills — one per available platform
   const links = [];
-  if (data.videoId && data.youtubeUrl) {
+  if (data.videoId && data.youtubeUrl)
     links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">▶&nbsp;YouTube</a>`);
-  } else if (data.youtubeUrl) {
+  else if (data.youtubeUrl)
     links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">⌕&nbsp;YouTube</a>`);
-  }
-  if (data.deezerUrl) {
+  if (data.deezerUrl)
     links.push(`<a href="${data.deezerUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-dz">♫&nbsp;Deezer</a>`);
-  }
-  if (data.itunesUrl) {
+  if (data.itunesUrl)
     links.push(`<a href="${data.itunesUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-it">♫&nbsp;Apple Music</a>`);
-  }
 
   const sourceBadge    = source === 'youtube' ? 'YT ✓' : source === 'deezer' ? 'Deezer ✓' : 'iTunes ✓';
   const sourceBadgeCls = source === 'youtube' ? 'yt-found-yt' : source === 'deezer' ? 'yt-found-dz' : 'yt-found-it';
-  const thumb = data.thumbnail || data.thumbnailSm; // prefer large for 80px display
+  const thumb = data.thumbnail || data.thumbnailSm;
 
   const card = document.createElement('div');
   card.id = 'youtubePreview'; card.className = 'yt-card';
   card.innerHTML = `
     <div class="yt-card-inner">
-      ${thumb ? `
-        <div class="yt-thumb-wrap">
-          <img src="${thumb}" class="yt-thumb" alt="${decodeHTML(data.title||'')}"/>
-        </div>` : ''}
+      ${thumb ? `<div class="yt-thumb-wrap"><img src="${thumb}" class="yt-thumb" alt="${decodeHTML(data.title||'')}"/></div>` : ''}
       <div class="yt-info">
         <div class="yt-title">${decodeHTML(data.title || '')}</div>
         <div class="yt-channel">${decodeHTML(data.channel || data.collectionName || '')}</div>
@@ -498,7 +576,6 @@ function renderYtCard(data) {
     </div>
   `;
   insertAfterArtist(card);
-  // Auto-fill youtube link field only for direct video URLs
   const ytLink = document.getElementById('youtubeLink');
   if (ytLink && !ytLink.value && data.videoId && data.youtubeUrl) ytLink.value = data.youtubeUrl;
 }
@@ -515,6 +592,9 @@ function clearYoutubePreview() {
 
 /* ============================================================
    COMPOSER INIT
+   ── v5.5: Single CTA — "Post & Create →" is the only button.
+      A lightweight "Just post" text link sits below it for
+      users who truly don't want to open the studio.
    ============================================================ */
 function initComposer() {
   injectComposerStyles();
@@ -544,7 +624,30 @@ function initComposer() {
     };
   });
 
-  postBtn.onclick = submitPost;
+  // ── Replace the old postBtn entirely with "Post & Create →" as the primary CTA
+  // We keep a reference to postBtn's parent so we can inject our new layout there.
+  if (!document.getElementById('postAndCreateBtn')) {
+    const pacBtn = document.createElement('button');
+    pacBtn.id        = 'postAndCreateBtn';
+    pacBtn.type      = 'button';
+    pacBtn.innerHTML = '✦ Post &amp; Create →';
+    pacBtn.onclick   = () => submitPost(true);
+
+    // "Just post" escape hatch — tiny text link, zero visual competition
+    const justPostBtn = document.createElement('button');
+    justPostBtn.id        = 'justPostLink';
+    justPostBtn.type      = 'button';
+    justPostBtn.textContent = 'or just post without creating';
+    justPostBtn.onclick   = () => submitPost(false);
+
+    // Replace the original postBtn with our new CTA + link
+    const parent = postBtn.parentNode;
+    parent.insertBefore(pacBtn, postBtn);
+    parent.insertBefore(justPostBtn, postBtn);
+    // Hide the original postBtn — it's no longer needed visually
+    postBtn.style.display = 'none';
+  }
+
   initGeniusIdentify();
   initYoutubeAutofetch();
 
@@ -562,9 +665,17 @@ function initComposer() {
   document.getElementById('closeListen').onclick   = () => closeModal(listenModal);
 }
 
-/* ── Post submission ── */
-async function submitPost() {
-  if (postBtn.disabled) return;
+/* ============================================================
+   POST SUBMISSION
+   ── openChooser = true  → "Post & Create": posts, then opens
+                            studioChooser immediately (default flow)
+   ── openChooser = false → "Just post": posts silently, done
+   ============================================================ */
+async function submitPost(openChooser = true) {
+  const pacBtn     = document.getElementById('postAndCreateBtn');
+  const justPostBtn = document.getElementById('justPostLink');
+  if (pacBtn?.disabled) return;
+
   let text = textInput.value.trim();
   if (!text)            { showToast('Please enter a lyric'); return; }
   if (!selectedEmotion) { showToast('Please select a vibe'); return; }
@@ -576,7 +687,6 @@ async function submitPost() {
     showToast('Some words were adjusted for community guidelines 🎵');
   }
 
-  // FIX: youtubeData is used directly — no ytConfirmed gate
   const savedYtMeta = youtubeData ? {
     videoId:     youtubeData.videoId     || null,
     title:       decodeHTML(youtubeData.title   || ''),
@@ -594,10 +704,10 @@ async function submitPost() {
     guessConfig: null,
     youtubeMeta: savedYtMeta,
     links: currentMode !== 'discover' ? {
-      spotify:    spotifyLink?.value.trim()          || null,
-      apple:      appleLink?.value.trim()            || null,
-      youtube:    youtubeData?.youtubeUrl            || youtubeLink?.value.trim() || null,
-      soundcloud: soundcloudLink?.value.trim()       || null,
+      spotify:    spotifyLink?.value.trim()    || null,
+      apple:      appleLink?.value.trim()      || null,
+      youtube:    youtubeData?.youtubeUrl      || youtubeLink?.value.trim() || null,
+      soundcloud: soundcloudLink?.value.trim() || null,
     } : null,
     authorId:  userId,
     timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now()
@@ -628,32 +738,49 @@ async function submitPost() {
     }
   } catch (err) { showToast(err.message); return; }
 
-  postBtn.disabled = true; postBtn.textContent = 'Posting…';
+  // Disable both CTAs during submission
+  if (pacBtn)      { pacBtn.disabled = true;      pacBtn.innerHTML = '<span class="m-spinner"></span> Posting…'; }
+  if (justPostBtn) { justPostBtn.disabled = true; }
 
   try {
     if (isFirebaseEnabled) {
       const ref = await postsRef.push(post);
       await analyticsRef.child(ref.key).set({ views: 0, guesses: [], helps: [] });
 
-      // SAFETY NET: if YouTube hadn't loaded yet when user hit Post,
-      // fetch it now and write to Firebase in the background.
-      // firebase.js backfill will also catch it on next load.
       if (!post.youtubeMeta
           && post.knowledge.song   !== 'Unknown Song'
           && post.knowledge.artist !== 'Unknown Artist'
           && typeof fetchAndSaveYoutubeMeta === 'function') {
-        fetchAndSaveYoutubeMeta(ref.key, post.knowledge.song, post.knowledge.artist)
-          .catch(() => {});
+        fetchAndSaveYoutubeMeta(ref.key, post.knowledge.song, post.knowledge.artist).catch(() => {});
+      }
+
+      if (openChooser) {
+        currentPost = { ...post, id: ref.key };
       }
     }
 
-    showToast('Posted! 🎵');
     newPostsAvailable = false;
-    renderFeed(); resetComposer(); closeModal(composer);
+    renderFeed();
+    resetComposer();
+    closeModal(composer);
+
+    if (openChooser) {
+      setTimeout(() => {
+        showToast('Posted! Now create your visual 🎨');
+        openStudioChooser();
+      }, 120);
+    } else {
+      showToast('Posted! 🎵');
+    }
+
   } catch (err) {
-    console.error(err); showToast(err.message || 'Error posting.');
+    console.error(err);
+    showToast(err.message || 'Error posting.');
   } finally {
-    postBtn.disabled = false; postBtn.textContent = 'Post';
+    if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = '✦ Post &amp; Create →'; }
+    if (justPostBtn) { justPostBtn.disabled = false; }
+    // Keep the old postBtn hidden
+    postBtn.disabled = false;
   }
 }
 

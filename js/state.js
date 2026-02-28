@@ -2,7 +2,8 @@
    MARGO — js/state.js
    Shared state, constants, and DOM element references.
    Loaded first. All other modules read/write these globals.
-   v4.3
+   v4.5 — Dev branch: studio HTML is in index.html (from main),
+          GIF studio + chooser also in index.html (new in dev).
    ============================================================ */
 
 // ── App constants ──
@@ -18,17 +19,17 @@ if (!userId) {
 }
 
 // ── Feed state ──
-let currentMode         = 'share';
-let selectedEmotion     = null;
-let currentPost         = null;
-let currentGuessAttempts= 0;
-let posts               = [];
-let postAnalytics       = {};
-let postsLoaded         = false;
-let savedScrollPosition = 0;
-let newPostsAvailable   = false;
-let searchQuery         = '';
-let activeRoom          = 'all';   // v4.1: emotion room filter
+let currentMode          = 'share';
+let selectedEmotion      = null;
+let currentPost          = null;
+let currentGuessAttempts = 0;
+let posts                = [];
+let postAnalytics        = {};
+let postsLoaded          = false;
+let savedScrollPosition  = 0;
+let newPostsAvailable    = false;
+let searchQuery          = '';
+let activeRoom           = 'all';
 
 // ── Studio state ──
 const FONT_FAMILIES = {
@@ -71,15 +72,15 @@ const POSTER_SIZES = {
   'pinterest':        { w:1000, h:1500 },
 };
 
-let studioFont      = 'playfair';
-let studioDesign    = 'midnight-gold';
-let studioBgImage   = null;
-let studioBrightness= 100;
-let studioBlur      = 0;
-let studioDim       = 50;
-let studioFilter    = 'none';
-let generatedBlob   = null;
-let selectedSize    = null;
+let studioFont       = 'playfair';
+let studioDesign     = 'midnight-gold';
+let studioBgImage    = null;
+let studioBrightness = 100;
+let studioBlur       = 0;
+let studioDim        = 50;
+let studioFilter     = 'none';
+let generatedBlob    = null;
+let selectedSize     = null;
 
 // ── Admin state ──
 let adminMode   = false;
@@ -88,7 +89,7 @@ let adminFilter = 'all';
 let adminSort   = 'newest';
 let adminSearch = '';
 
-// ── DOM Elements ──
+// ── DOM Elements — always present ──
 const landing           = document.getElementById('landing');
 const feed              = document.getElementById('feed');
 const composer          = document.getElementById('composer');
@@ -133,6 +134,7 @@ const sharePosterBtn = document.getElementById('sharePosterBtn');
 const listenPostcard = document.getElementById('listenPostcard');
 const analyticsBtn   = document.getElementById('analyticsBtn');
 
+// ── Studio elements — all present in index.html (copied from main) ──
 const studioOverlay  = document.getElementById('studioOverlay');
 const studioCanvas   = document.getElementById('studioCanvas');
 const closeStudio    = document.getElementById('closeStudio');
@@ -144,7 +146,8 @@ const ceremonyThumb  = document.getElementById('ceremonyThumb');
 const cerDownload    = document.getElementById('cerDownload');
 const cerShare       = document.getElementById('cerShare');
 const ceremonyBack   = document.getElementById('ceremonyBack');
-const photoDropText  = document.getElementById('photoDropText');
-const photoDropZone  = document.getElementById('photoUploadZone');
 const studioPhotoInput = document.getElementById('studioPhotoInput');
 const photoControls  = document.getElementById('photoControls');
+
+// Safety: called by studio.js — no-op here since elements already exist
+function bindStudioElements() {}

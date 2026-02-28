@@ -1,6 +1,8 @@
 /* ============================================================
    MARGO — js/feed.js
-   v4.9 — Uniform cards, smart YouTube logic, clean actions
+   v6.0 — Clean sort bar (no emojis — typographic symbols only).
+          Sticky offsets fixed for all browsers.
+          FAB-aware bottom padding.
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -31,6 +33,8 @@ const EMOTION_CFG = {
 };
 const E_DEFAULT = { bg: 'rgba(232,197,71,0.11)', text: '#E8C547', border: 'rgba(232,197,71,0.25)', strip: 'rgba(232,197,71,0.8)' };
 
+let currentSort = 'fresh'; // 'fresh' | 'hot' | 'top'
+
 function lyricFontSize(text) {
   const n = (text || '').length;
   if (n <= 35)  return '1.08rem';
@@ -39,15 +43,96 @@ function lyricFontSize(text) {
   return '0.68rem';
 }
 
-/* ── Inject all card styles once ── */
+/* ── Inject all styles once ── */
 function injectFeedStyles() {
-  if (document.getElementById('feedV49')) return;
+  if (document.getElementById('feedV60')) return;
   const s = document.createElement('style');
-  s.id = 'feedV49';
+  s.id = 'feedV60';
   s.textContent = `
     @keyframes cardIn {
       from { opacity:0; transform:translateY(10px); }
       to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ═══════════════════════════════════════════════
+       SORT BAR — v6.1
+       NOTE: position:sticky and top offset are set in
+       index.html CSS via #feedSortBar selector.
+       Only visual styling lives here.
+    ═══════════════════════════════════════════════ */
+    .feed-sort-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px;  /* NO vertical padding — height 38px set by index.html */
+    }
+    .feed-sort-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.44rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.2);
+      flex-shrink: 0;
+      margin-right: 2px;
+    }
+    .sort-btn {
+      padding: 5px 14px;
+      border-radius: 50px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.02);
+      color: rgba(255,255,255,0.3);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.46rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      transition: all 0.18s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .sort-btn:hover {
+      border-color: rgba(232,197,71,0.3);
+      color: rgba(232,197,71,0.75);
+      background: rgba(232,197,71,0.04);
+    }
+    .sort-btn.active {
+      background: rgba(232,197,71,0.10);
+      border-color: rgba(232,197,71,0.45);
+      color: #E8C547;
+    }
+    /* Typographic symbols — no emojis */
+    .sort-btn-mark {
+      font-size: 0.7rem;
+      line-height: 1;
+      font-style: normal;
+    }
+
+    /* Hot / New badges — text only, no emojis */
+    .card-hot-badge {
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.42rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 3px 8px; border-radius: 20px;
+      background: rgba(255,140,0,0.12);
+      color: #ffaa44;
+      border: 1px solid rgba(255,140,0,0.28);
+      pointer-events: none;
+    }
+    .card-new-badge {
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.42rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 3px 8px; border-radius: 20px;
+      background: rgba(74,222,128,0.10);
+      color: #4ade80;
+      border: 1px solid rgba(74,222,128,0.25);
+      pointer-events: none;
     }
 
     /* ─── CARD BASE ─── */
@@ -69,21 +154,17 @@ function injectFeedStyles() {
                   inset 0 1px 0 rgba(232,197,71,0.08) !important;
     }
     #feedList .feed-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 1px;
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
       background: linear-gradient(90deg,
         transparent 0%, rgba(232,197,71,0.55) 25%,
         rgba(232,197,71,1) 50%, rgba(232,197,71,0.55) 75%, transparent 100%);
       pointer-events: none;
     }
     #feedList .feed-card::after {
-      content: '';
-      position: absolute;
+      content: ''; position: absolute;
       top: 16px; left: 0; bottom: 16px; width: 3px;
       background: var(--e-strip, rgba(232,197,71,0.8));
-      border-radius: 0 4px 4px 0;
-      opacity: 0.85; pointer-events: none;
+      border-radius: 0 4px 4px 0; opacity: 0.85; pointer-events: none;
     }
     #feedList .feed-card:hover {
       transform: translateY(-3px) !important;
@@ -93,14 +174,12 @@ function injectFeedStyles() {
                   inset 0 1px 0 rgba(232,197,71,0.12) !important;
     }
 
-    /* ─── TOP ROW ─── */
+    /* ─── LAYOUT INTERNALS ─── */
     #feedList .card-top {
       display: flex; justify-content: space-between;
       align-items: center; flex-shrink: 0;
       height: 20px; margin-bottom: 10px; padding-left: 7px;
     }
-
-    /* ─── LYRIC ─── */
     #feedList .card-lyric {
       height: 78px !important; overflow: hidden !important;
       display: -webkit-box !important;
@@ -110,14 +189,10 @@ function injectFeedStyles() {
       margin-bottom: 8px !important; padding-left: 7px !important;
       font-weight: 400 !important;
     }
-
-    /* ─── EMOTION TAG ─── */
     #feedList .card-emotion-tag {
       flex-shrink: 0 !important; align-self: flex-start !important;
       margin-bottom: 9px !important; margin-left: 7px !important;
     }
-
-    /* ─── SONG ROW ─── */
     #feedList .card-song {
       display: flex !important; align-items: center !important;
       gap: 9px !important; flex-shrink: 0 !important;
@@ -126,9 +201,7 @@ function injectFeedStyles() {
       border-top: 1px solid rgba(232,197,71,0.12) !important;
       margin-bottom: 0 !important;
     }
-    #feedList .card-song-text { flex:1; min-width:0; }
-
-    /* ─── GUESS / DISCOVER ─── */
+    #feedList .card-song-text { flex: 1; min-width: 0; }
     #feedList .card-mystery,
     #feedList .card-discover {
       flex-shrink: 0 !important; height: 50px !important;
@@ -139,8 +212,6 @@ function injectFeedStyles() {
     }
     #feedList .card-mystery  { color: #6B8CFF !important; }
     #feedList .card-discover { color: #4ade80 !important; }
-
-    /* ─── ACTIONS ─── */
     #feedList .card-actions {
       margin-top: auto !important; padding-top: 8px !important;
       border-top: 1px solid rgba(232,197,71,0.12) !important;
@@ -173,16 +244,14 @@ function injectFeedStyles() {
       border-color: rgba(232,197,71,0.65) !important;
       color: #fff !important;
     }
-
-    /* ─── YOUTUBE BUTTON (no thumbnail) ─── */
     #feedList .card-btn-yt {
-      background: rgba(255, 0, 0, 0.08) !important;
-      border-color: rgba(255, 80, 80, 0.25) !important;
+      background: rgba(255,0,0,0.08) !important;
+      border-color: rgba(255,80,80,0.25) !important;
       color: #ff6464 !important;
     }
     #feedList .card-btn-yt:hover {
-      background: rgba(255, 0, 0, 0.16) !important;
-      border-color: rgba(255, 80, 80, 0.5) !important;
+      background: rgba(255,0,0,0.16) !important;
+      border-color: rgba(255,80,80,0.5) !important;
       color: #ff4444 !important;
     }
 
@@ -195,9 +264,7 @@ function injectFeedStyles() {
       border: 1px solid rgba(255,255,255,0.08);
       cursor: pointer;
     }
-    .card-yt-thumb {
-      width:100%; height:100%; object-fit:cover; display:block;
-    }
+    .card-yt-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
     .card-yt-play {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -206,7 +273,7 @@ function injectFeedStyles() {
       text-decoration: none; border-radius: 5px;
     }
     .card-yt-thumb-wrap:hover .card-yt-play { opacity: 1; }
-    @media (max-width: 768px) {
+    @media (max-width:768px) {
       .card-yt-play { opacity: 1; background: rgba(0,0,0,0.4); }
     }
 
@@ -224,58 +291,77 @@ function injectFeedStyles() {
       background-size: 800px 100%;
       animation: skShimmer 1.5s infinite linear;
     }
-    .sk-short  { height:9px; width:28%; margin-bottom:14px; }
-    .sk-block  { height:52px; width:100%; margin-bottom:12px; border-radius:10px; }
-    .sk-medium { height:9px; width:48%; margin-bottom:10px; }
-    .sk-row    { display:flex; gap:8px; margin-top:4px; }
-    .sk-long   { height:30px; flex:1; border-radius:8px; }
+    .sk-short  { height: 9px; width: 28%; margin-bottom: 14px; }
+    .sk-block  { height: 52px; width: 100%; margin-bottom: 12px; border-radius: 10px; }
+    .sk-medium { height: 9px; width: 48%; margin-bottom: 10px; }
+    .sk-row    { display: flex; gap: 8px; margin-top: 4px; }
+    .sk-long   { height: 30px; flex: 1; border-radius: 8px; }
 
-    /* ─── STUDIO YOUTUBE BG ─── */
+    /* ─── STUDIO YT BG ─── */
     .yt-bg-option {
-      display:flex; align-items:center; gap:10px; padding:10px 12px;
-      border-radius:10px; background:rgba(255,0,0,0.07);
-      border:1px solid rgba(255,0,0,0.2); cursor:pointer;
-      margin-bottom:10px; transition:background 0.18s;
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: 10px; background: rgba(255,0,0,0.07);
+      border: 1px solid rgba(255,0,0,0.2); cursor: pointer;
+      margin-bottom: 10px; transition: background 0.18s;
     }
-    .yt-bg-option:hover { background:rgba(255,0,0,0.13); }
-    .yt-bg-option img { width:56px;height:38px;border-radius:6px;object-fit:cover;flex-shrink:0; }
-    .yt-bg-option-text { flex:1; min-width:0; }
+    .yt-bg-option:hover { background: rgba(255,0,0,0.13); }
+    .yt-bg-option img { width: 56px; height: 38px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
     .yt-bg-option-label {
-      font-size:0.65rem; font-weight:700; color:#ff5555;
-      font-family:'Space Mono',monospace; letter-spacing:1px; text-transform:uppercase;
+      font-size: 0.65rem; font-weight: 700; color: #ff5555;
+      font-family: 'Space Mono', monospace; letter-spacing: 1px; text-transform: uppercase;
     }
     .yt-bg-option-title {
-      font-size:0.7rem; color:rgba(255,255,255,0.5);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;
+      font-size: 0.7rem; color: rgba(255,255,255,0.5);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
     }
 
-    /* ─── KILL OLD BACK-TO-TOP BAR ─── */
-    /* motion.js handles the FAB — hide everything else */
-    .scroll-top,
-    #scrollToTopBtn,
-    [id*="scrollTop"]:not(#margoScrollTop) {
-      display: none !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
+    /* ─── SUPPRESS OLD SCROLL BTN ─── */
+    .scroll-top, [id*="scrollTop"]:not(#margoScrollTop) {
+      display: none !important; opacity: 0 !important; pointer-events: none !important;
     }
 
     /* ─── MOBILE ─── */
     @media (max-width: 480px) {
       #feedList .feed-card { height: 275px !important; }
       .skeleton-card { height: 275px !important; }
+      /* feed-sort-bar height/padding controlled by index.html */
     }
     @media (max-width: 768px) {
       .modal-sheet { max-height: 92dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-      .yt-autocomplete {
-        position: fixed !important; left:0 !important; right:0 !important;
-        top:auto !important; bottom:0 !important;
-        border-radius:18px 18px 0 0 !important;
-        max-height:50vh; overflow-y:auto;
-        box-shadow:0 -8px 40px rgba(0,0,0,0.6) !important;
-      }
     }
   `;
   document.head.appendChild(s);
+}
+
+/* ── Sort bar (injected above feedList, once) ── */
+function injectSortBar() {
+  if (document.getElementById('feedSortBar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'feedSortBar';
+  bar.className = 'feed-sort-bar';
+  /* Pure typographic symbols — no emoji, no AI aesthetic.
+     Do NOT set position/top here — CSS handles sticky via #feedSortBar selector. */
+  bar.innerHTML = `
+    <span class="feed-sort-label">Sort</span>
+    <button class="sort-btn active" data-sort="fresh">
+      <span class="sort-btn-mark">✦</span> Fresh
+    </button>
+    <button class="sort-btn" data-sort="hot">
+      <span class="sort-btn-mark">↑</span> Hot
+    </button>
+    <button class="sort-btn" data-sort="top">
+      <span class="sort-btn-mark">★</span> Top
+    </button>
+  `;
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('.sort-btn');
+    if (!btn) return;
+    bar.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentSort = btn.dataset.sort;
+    renderFeed();
+  });
+  feedList?.parentNode?.insertBefore(bar, feedList);
 }
 
 /* ── Font preload ── */
@@ -360,7 +446,11 @@ function updateLandingStats() {
   if ($('liveCount'))  $('liveCount').textContent  = n;
   if ($('statTotal'))  $('statTotal').textContent  = n || '—';
   if ($('postCount'))  $('postCount').textContent  = n;
-  if (!n) { ['featuredArtistCount','featuredSongCount','topArtistName','topSongName','topEmotion'].forEach(id => { if ($(id)) $(id).textContent = '—'; }); return; }
+  if (!n) {
+    ['featuredArtistCount','featuredSongCount','topArtistName','topSongName','topEmotion']
+      .forEach(id => { if ($(id)) $(id).textContent = '—'; });
+    return;
+  }
   const { uniqueArtistCount, uniqueSongCount, topArtist, topSong, topEmotion } = calcFeatured();
   if ($('featuredArtistCount')) $('featuredArtistCount').textContent = uniqueArtistCount || '—';
   if ($('featuredSongCount'))   $('featuredSongCount').textContent   = uniqueSongCount   || '—';
@@ -416,7 +506,11 @@ function initSearch() {
   const input = document.getElementById('feedSearchInput');
   const btn   = document.getElementById('searchClearBtn');
   if (!input) return;
-  input.oninput   = () => { searchQuery = input.value.trim(); if (btn) btn.style.display = searchQuery ? 'flex' : 'none'; renderFeed(); };
+  input.oninput   = () => {
+    searchQuery = input.value.trim();
+    if (btn) btn.style.display = searchQuery ? 'flex' : 'none';
+    renderFeed();
+  };
   input.onkeydown = e => { if (e.key === 'Escape') { clearSearch(); input.blur(); } };
   if (btn) btn.onclick = () => { clearSearch(); input.focus(); };
 }
@@ -434,16 +528,41 @@ function initRoomTabs() {
   });
 }
 
-/* ── Feed ranking ── */
-function calculatePostScore(post) {
-  const now  = Date.now();
-  const age  = post.timestamp ? (now - post.timestamp) / 3600000 : 999;
-  const rec  = Math.max(0, 48 - age);
-  const a    = postAnalytics[post.id] || {};
-  return (rec * 0.4) + ((a.views||0) * 0.2)
-    + (Object.keys(a.guesses||{}).length * 0.25)
-    + (Object.keys(a.helps||{}).length   * 0.15);
+/* ══════════════════════════════════════════════════════════
+   RANKING SYSTEM — v5.0 (unchanged — it works well)
+   ══════════════════════════════════════════════════════════ */
+
+function getPostAge(post) {
+  if (!post.timestamp) return 999;
+  return (Date.now() - post.timestamp) / 3600000;
 }
+
+function getEngagement(post) {
+  const a = postAnalytics[post.id] || {};
+  return (a.views || 0) + (Object.keys(a.guesses || {}).length * 3)
+    + (Object.keys(a.helps || {}).length * 2);
+}
+
+function calculatePostScore(post) {
+  const age    = getPostAge(post);
+  const engage = getEngagement(post);
+
+  if (currentSort === 'fresh') {
+    const decay = Math.exp(-age / 18);
+    return decay * 1000 + engage * 0.05;
+  }
+  if (currentSort === 'hot') {
+    return engage / Math.pow(age + 2, 1.4);
+  }
+  if (currentSort === 'top') {
+    return engage;
+  }
+  return 0;
+}
+
+function isNewPost(post)  { return getPostAge(post) < 6; }
+function isHotPost(post)  { return getEngagement(post) >= 20; }
+
 function getRankedPosts() {
   return getFilteredPosts().sort((a, b) => calculatePostScore(b) - calculatePostScore(a));
 }
@@ -463,21 +582,11 @@ function renderSkeleton() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   RENDER FEED — v4.9 smart card logic
-   ──────────────────────────────────────────────────────
-   Card action logic (SHARE mode):
-     HAS youtube meta (thumbnail)
-       → thumbnail in song row acts as listen (click = open YouTube)
-       → "View Post" button only (no redundant Listen btn)
-     NO youtube meta BUT has stream links (spotify/apple/soundcloud)
-       → "View" + "Listen" buttons
-     NO youtube meta, NO stream links
-       → "View Post" button only
-   
-   GUESS / DISCOVER modes: unchanged
+   RENDER FEED — v6.0
    ══════════════════════════════════════════════════════════ */
 function renderFeed() {
   injectFeedStyles();
+  injectSortBar();
   updateLandingStats();
   if (!postsLoaded) { renderSkeleton(); return; }
 
@@ -486,13 +595,13 @@ function renderFeed() {
   const rc = document.getElementById('searchResultCount');
 
   if (!posts.length) {
-    feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-2)">No lyrics yet — be the first to drop one.</div>';
+    feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:rgba(255,255,255,0.4)">No lyrics yet — be the first to drop one.</div>';
     if (rc) rc.textContent = ''; return;
   }
   if (!filtered.length) {
     const roomMsg   = activeRoom !== 'all' ? ` in ${activeRoom}` : '';
     const searchMsg = searchQuery ? ` matching "${searchQuery}"` : '';
-    feedList.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-2)">
+    feedList.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:rgba(255,255,255,0.4)">
       No lyrics${roomMsg}${searchMsg} yet.<br><span style="font-size:0.8rem;opacity:0.6">Be the first to drop one here.</span></div>`;
     if (rc) rc.textContent = searchQuery ? '0 results' : ''; return;
   }
@@ -508,7 +617,6 @@ function renderFeed() {
     const ecfg    = EMOTION_CFG[emotion] || E_DEFAULT;
     const idx     = posts.findIndex(p => p.id === post.id);
 
-    /* ── Media flags ── */
     const meta           = post.youtubeMeta;
     const hasThumb       = !!(meta?.thumbnailSm || meta?.thumbnail);
     const hasYouTubeUrl  = !!(meta?.youtubeUrl);
@@ -517,19 +625,23 @@ function renderFeed() {
     card.style.setProperty('--e-strip', ecfg.strip);
     card.style.borderColor = ecfg.border;
 
-    /* ── Mode badge ── */
     const badge = post.mode === 'guess'
       ? '<span class="card-mode-badge mode-guess">Guess</span>'
       : post.mode === 'discover'
       ? '<span class="card-mode-badge mode-discover">Discover</span>'
       : '<span class="card-mode-badge mode-share">Share</span>';
 
-    /* ── YouTube thumbnail block ──
-       Always clickable — opens YouTube URL.
-       Only rendered if we actually have a thumbnail image. */
+    /* Rank badges — text only, no emojis */
+    let rankBadge = '';
+    if (currentSort === 'fresh' && isNewPost(post)) {
+      rankBadge = '<span class="card-new-badge">New</span>';
+    } else if (currentSort === 'hot' && isHotPost(post)) {
+      rankBadge = '<span class="card-hot-badge">Hot</span>';
+    }
+
     const thumb = hasThumb ? `
       <div class="card-yt-thumb-wrap"
-           onclick="event.stopPropagation(); window.open('${meta.youtubeUrl || '#'}', '_blank', 'noopener')"
+           onclick="event.stopPropagation();window.open('${meta.youtubeUrl || '#'}','_blank','noopener')"
            title="Listen on YouTube">
         <img src="${meta.thumbnailSm || meta.thumbnail}"
              class="card-yt-thumb" alt="" loading="lazy"
@@ -539,7 +651,6 @@ function renderFeed() {
         </span>
       </div>` : '';
 
-    /* ── Song section ── */
     let songSection = '';
     if (post.mode === 'share') {
       songSection = `<div class="card-song">
@@ -564,47 +675,26 @@ function renderFeed() {
       }</div>`;
     }
 
-    /* ══════════════════════════════════════════════════════
-       ACTION BUTTONS — unified logic
-
-       SHARE + has thumbnail:
-         Thumbnail IS the "listen" — clicking it opens YouTube.
-         Only show "View Post". Clean. No redundancy.
-
-       SHARE + no thumbnail + has stream links:
-         Show "View" + "Listen" (opens streaming modal).
-
-       SHARE + no thumbnail + no stream links:
-         Show "View Post" only.
-
-       GUESS: "Guess →" + "View"
-       DISCOVER: "Help ID →" + "View"
-    ══════════════════════════════════════════════════════ */
     let actions = '';
-
     if (post.mode === 'share') {
       if (hasThumb) {
-        /* Thumb in card-song handles listening → just View */
         actions = `<div class="card-actions">
           <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">View Post</button>
         </div>`;
       } else if (hasStreamLinks) {
-        /* No thumbnail but streaming links available */
         actions = `<div class="card-actions">
           <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
           <button class="card-btn card-btn-yt" onclick="window.openListen(${idx})">Listen →</button>
         </div>`;
       } else if (hasYouTubeUrl && !hasThumb) {
-        /* YouTube URL exists but thumbnail failed — show YT button */
         actions = `<div class="card-actions">
           <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
           <button class="card-btn card-btn-yt"
-            onclick="event.stopPropagation(); window.open('${meta.youtubeUrl}', '_blank', 'noopener')">
-            ▶ YouTube
+            onclick="event.stopPropagation();window.open('${meta.youtubeUrl}','_blank','noopener')">
+            Watch on YouTube
           </button>
         </div>`;
       } else {
-        /* No media at all */
         actions = `<div class="card-actions">
           <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">View Post</button>
         </div>`;
@@ -622,6 +712,7 @@ function renderFeed() {
     }
 
     card.innerHTML = `
+      ${rankBadge}
       <div class="card-top">
         <span class="card-time">${timeAgo(post.timestamp)}</span>
         ${badge}
@@ -644,10 +735,12 @@ function timeAgo(ts) {
   if (h < 24) return h + 'h';
   return Math.floor(h / 24) + 'd';
 }
+
 function trackView(postId) {
   if (isFirebaseEnabled && postId)
     analyticsRef.child(postId).child('views').transaction(v => (v||0)+1);
 }
+
 function showNewPostsIndicator(count) {
   const c = document.getElementById('newPostsCount');
   if (c) c.textContent = count;

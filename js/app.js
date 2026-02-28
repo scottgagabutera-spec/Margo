@@ -1,16 +1,12 @@
 /* ============================================================
    MARGO — js/app.js
-   Navigation, modal helpers, toast, scroll, and the
-   main INIT block that starts everything.
-   Loaded last — all other modules must be loaded first.
-   Depends on: state.js, firebase.js, feed.js, composer.js,
-               studio.js, admin.js, motion.js
-   v4.4 — scroll FAB delegated to motion.js
+   v5.4 — scrollToFeed dynamically measures the actual sticky
+          stack height at runtime (header + search + tabs + sort bar)
+          so scroll always lands precisely at the first card on
+          any screen size. No hardcoded offsets, no guessing.
    ============================================================ */
 
 // ── Toast ──
-// motion.js will intercept and upgrade this automatically.
-// This is just the base definition so the function exists.
 function showToast(msg) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
@@ -36,6 +32,14 @@ function closeModal(modal) {
   window.scrollTo(0, savedScrollPosition);
 }
 
+// ── Page state helpers ──
+function setPageState(page) {
+  document.body.classList.remove('on-landing', 'on-feed');
+  document.body.classList.add('on-' + page);
+  const fab = document.getElementById('margoScrollTop');
+  if (fab) fab.classList.remove('visible');
+}
+
 // ── Navigation ──
 function goToFeed() {
   landing.classList.remove('active');
@@ -43,12 +47,60 @@ function goToFeed() {
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
   window.scrollTo(0, 0);
+  setPageState('feed');
   renderFeed();
 }
 
 function goToLanding() {
   feed.classList.remove('active');
   landing.classList.add('active');
+  setPageState('landing');
+}
+
+// ── scrollToFeed ──
+// Dynamically measures the actual rendered height of every sticky layer
+// (header + search wrap + tabs + sort bar) so the scroll target is always
+// pixel-perfect on both desktop and mobile, regardless of breakpoint.
+function scrollToFeed() {
+  let attempts = 0;
+
+  // Measure the full sticky stack at the moment of scrolling,
+  // not at load time — this handles font-load reflows, etc.
+  function getStickyOffset() {
+    const header  = document.querySelector('.feed-header');
+    const search  = document.querySelector('.feed-search-wrap');
+    const tabs    = document.querySelector('.room-tabs-wrap');
+    const sortBar = document.getElementById('feedSortBar');
+    return (
+      (header  ? header.offsetHeight  : 54) +
+      (search  ? search.offsetHeight  : 52) +
+      (tabs    ? tabs.offsetHeight    : 42) +
+      (sortBar ? sortBar.offsetHeight : 38)
+    );
+  }
+
+  const tryScroll = () => {
+    attempts++;
+
+    // Wait for a real card (not skeleton) to appear in the feed
+    const firstCard = document.querySelector('#feedList .feed-card:not(.skeleton-card)');
+
+    if (firstCard || attempts >= 20) {
+      const stickyOffset = getStickyOffset();
+      const cardTop = firstCard
+        ? firstCard.getBoundingClientRect().top + window.scrollY
+        : 300; // fallback if no cards yet
+
+      // 12px breathing room below the last sticky bar
+      const target = cardTop - stickyOffset - 12;
+      window.scrollTo({ top: Math.max(0, target), behavior: 'instant' });
+    } else {
+      setTimeout(tryScroll, 80);
+    }
+  };
+
+  // Wait 500ms so renderFeed() completes and cards are in the DOM
+  setTimeout(tryScroll, 500);
 }
 
 function initNavigation() {
@@ -59,14 +111,13 @@ function initNavigation() {
 
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
-  if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(() => feedList?.scrollIntoView({ behavior: 'smooth' }), 150); };
-  if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(() => feedList?.scrollIntoView({ behavior: 'smooth' }), 150); };
+  if (efb1) efb1.onclick = () => { goToFeed(); scrollToFeed(); };
+  if (efb2) efb2.onclick = () => { goToFeed(); scrollToFeed(); };
 
-  backBtn.onclick         = goToLanding;
-  openComposerBtn.onclick = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
-  closeComposerBtn.onclick= () => { closeModal(composer); resetComposer(); };
+  backBtn.onclick          = goToLanding;
+  openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
+  closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
 
-  // Swipe left/right between landing and feed
   let tSX = 0, tSY = 0;
   [landing, feed].forEach(s => {
     s.addEventListener('touchstart', e => { tSX = e.touches[0].clientX; tSY = e.touches[0].clientY; });
@@ -81,14 +132,8 @@ function initNavigation() {
   });
 }
 
-// ── Scroll utilities ──
-// The back-to-top FAB is fully handled by motion.js.
-// This only hides the legacy button and wires the new-posts indicator.
 function setupScrollToTop() {
-  // Hide legacy button — motion.js FAB replaces it
   if (scrollToTopBtn) scrollToTopBtn.style.display = 'none';
-
-  // New posts indicator
   if (newPostsIndicator) {
     newPostsIndicator.onclick = () => {
       newPostsAvailable = false;
@@ -100,19 +145,27 @@ function setupScrollToTop() {
 }
 
 // ════════════════════════════════════════════════════════
-//   INIT — runs once on page load, in dependency order
+//   INIT
 // ════════════════════════════════════════════════════════
-initStatsShimmer();    // show shimmer before Firebase loads
-initNavigation();      // wire nav buttons + swipe
-setupScrollToTop();    // hide legacy btn, wire new-posts bar
-setupStatsBar();       // responsive stats alignment
-preloadStudioFonts();  // kick off font loading early
-buildLyricStream();    // populate hero stream with samples
-initSearch();          // search bar
-initRoomTabs();        // emotion room tab filter
-initComposer();        // composer modal + post/guess/discover
-initStudio();          // Margo Studio canvas
-initAdmin();           // admin moderation (B+G trigger)
-startFirebaseSync();   // start Firebase listeners last
+setPageState('landing');
 
-console.log('MARGO v4.4 — modular. Firebase:', isFirebaseEnabled);
+initStatsShimmer();
+initNavigation();
+setupScrollToTop();
+setupStatsBar();
+preloadStudioFonts();
+buildLyricStream();
+initSearch();
+initRoomTabs();
+initComposer();
+
+try {
+  initStudio();
+} catch (err) {
+  console.warn('[Margo] initStudio error (non-fatal):', err.message);
+}
+
+initAdmin();
+startFirebaseSync();
+
+console.log('MARGO v5.4 dev — scrollToFeed dynamically measures sticky stack.');

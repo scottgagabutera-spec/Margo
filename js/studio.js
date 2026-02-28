@@ -1,14 +1,71 @@
 /* ============================================================
    MARGO — js/studio.js
-   Margo Studio: canvas rendering, poster designs, photo
-   handling, size picker, ceremony export flow.
-   v4.6 — Fixed download/share, improved ceremony UX,
-          YouTube thumbnail as one-tap background
+   Image Studio (canvas → PNG) + Studio Chooser wiring
+   v5.3 — Dev branch.
+          Image studio = exact working code from main.
+          Chooser wiring added for Motion→Image, GIF→gif-studio.
+          No buildStudioHTML() — HTML already in index.html.
    ============================================================ */
 
+/* ════════════════════════════════════════
+   STUDIO CHOOSER WIRING
+   ════════════════════════════════════════ */
+function initStudioChooser() {
+  const chooser   = document.getElementById('studioChooser');
+  if (!chooser) return;
+
+  const motionBtn = document.getElementById('chooserMotionBtn');
+  const gifBtn    = document.getElementById('chooserGifBtn');
+  const backBtn   = document.getElementById('chooserBackBtn');
+
+  if (motionBtn) motionBtn.addEventListener('click', () => {
+    chooser.classList.add('hidden');
+    openStudio();   // opens the working image studio
+  });
+
+  if (gifBtn) gifBtn.addEventListener('click', () => {
+    chooser.classList.add('hidden');
+    if (typeof openGifStudio === 'function') openGifStudio();
+  });
+
+  if (backBtn) backBtn.addEventListener('click', () => {
+    chooser.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+    openModal(postcardModal);
+  });
+}
+
+function openStudioChooser() {
+  closeModal(postcardModal);
+  const chooser = document.getElementById('studioChooser');
+  if (!chooser) { openStudio(); return; }   // fallback if chooser missing
+  chooser.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+}
+
+/* ── Wire GIF studio dock tabs ── */
+function initGifStudioTabs() {
+  const ov = document.getElementById('gifStudioOverlay');
+  if (!ov) return;
+  ov.querySelectorAll('.gs-tab').forEach(tab => {
+    tab.onclick = () => {
+      ov.querySelectorAll('.gs-tab').forEach(t  => t.classList.remove('active'));
+      ov.querySelectorAll('.gs-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const panel = ov.querySelector(`#gs-panel-${tab.dataset.gstab}`);
+      if (panel) panel.classList.add('active');
+    };
+  });
+}
+
+/* ════════════════════════════════════════
+   IMAGE STUDIO — working code from main
+   ════════════════════════════════════════ */
 function initStudio() {
-  sharePosterBtn.onclick = openStudio;
-  closeStudio.onclick    = () => {
+  // Route "Create Poster" → chooser (dev) instead of direct to studio (main)
+  sharePosterBtn.onclick = openStudioChooser;
+
+  closeStudio.onclick = () => {
     studioOverlay.classList.add('hidden');
     document.body.classList.remove('modal-open');
     openModal(postcardModal);
@@ -121,7 +178,6 @@ function initStudio() {
       sizePicker.classList.add('hidden');
       studioCanvas.classList.add('zoom-in');
 
-      // Show generating state in ceremony
       ceremonyOverlay.classList.remove('hidden');
       const headlineEl = ceremonyOverlay.querySelector('.ceremony-headline');
       if (headlineEl) headlineEl.textContent = 'Generating your poster…';
@@ -154,10 +210,7 @@ function initStudio() {
   };
 
   cerDownload.onclick = async () => {
-    if (!generatedBlob) {
-      showToast('Generating poster…');
-      return;
-    }
+    if (!generatedBlob) { showToast('Generating poster…'); return; }
     try {
       downloadPosterBlob();
       showToast('Saved to device ✓');
@@ -168,9 +221,15 @@ function initStudio() {
   };
 
   cerShare.onclick = shareOrDownloadPoster;
+
+  // GIF studio tabs + chooser
+  initGifStudioTabs();
+  initStudioChooser();
+
+  if (typeof initGifStudio === 'function') initGifStudio();
 }
 
-/* ── Open Studio ── */
+/* ── Open Image Studio (from main, unchanged) ── */
 function openStudio() {
   closeModal(postcardModal);
   studioBgImage    = null;
@@ -186,14 +245,13 @@ function openStudio() {
   document.body.classList.add('modal-open');
   resetStudioUI();
 
-  // Inject YouTube thumbnail option if post has one
   const meta = currentPost?.youtubeMeta;
-  if (meta?.thumbnail) {
-    setTimeout(() => injectYoutubeBgOption(meta), 80);
-  }
-
+  if (meta?.thumbnail) setTimeout(() => injectYoutubeBgOption(meta), 80);
   setTimeout(refreshStageCanvas, 60);
 }
+
+// Alias so chooser and any other callers all work
+const openImageStudio = openStudio;
 
 /* ── YouTube thumbnail as one-tap background ── */
 function injectYoutubeBgOption(meta) {
@@ -238,13 +296,9 @@ function injectYoutubeBgOption(meta) {
     tryLoad(meta.thumbnail)
       .then(applyImage)
       .catch(() => {
-        // CORS fallback via blob
         fetch(meta.thumbnail)
           .then(r => r.blob())
-          .then(blob => {
-            const url  = URL.createObjectURL(blob);
-            return tryLoad(url);
-          })
+          .then(blob => { const url = URL.createObjectURL(blob); return tryLoad(url); })
           .then(applyImage)
           .catch(() => showToast('Could not load thumbnail — upload manually'));
       });
@@ -285,7 +339,9 @@ function resetStudioUI() {
   document.getElementById('ytBgOption')?.remove();
 }
 
-/* ── Canvas rendering ── */
+/* ════════════════════════════════════════
+   CANVAS RENDERING
+   ════════════════════════════════════════ */
 function getPhotoFilter() {
   let f = `brightness(${studioBrightness}%)`;
   const filters = {
@@ -305,7 +361,6 @@ function drawPosterToCtx(ctx, W, H) {
 
   ctx.filter = 'none';
 
-  // ── Background ──
   if (studioBgImage) {
     const tmp = document.createElement('canvas');
     tmp.width = W; tmp.height = H;
@@ -353,20 +408,20 @@ function drawPosterToCtx(ctx, W, H) {
 
   const textColor = studioBgImage ? '#ffffff' : c.text;
   if (studioBgImage) {
-    ctx.shadowColor = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur  = 14 * scale;
+    ctx.shadowColor   = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur    = 14 * scale;
     ctx.shadowOffsetY = 2 * scale;
   }
 
-  // ── MARGO wordmark ──
-  ctx.textAlign = 'left';
+  // MARGO wordmark
+  ctx.textAlign  = 'left';
   ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
   ctx.fillStyle  = studioBgImage ? 'rgba(255,255,255,0.32)' : (c.primary + '88');
   ctx.font       = `700 ${22 * scale}px 'Space Mono', monospace`;
   ctx.fillText('MARGO', 52 * scale, 58 * scale);
-  ctx.textAlign = 'center';
+  ctx.textAlign  = 'center';
 
-  // ── Lyric text ──
+  // Lyric text
   const lyricText = currentPost.text.length > 100
     ? currentPost.text.substring(0, 97) + '…'
     : currentPost.text;
@@ -384,7 +439,7 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.font = `${fd.style === 'italic' ? 'italic ' : ''}${isBold ? '700' : '600'} ${lyricSize}px ${fd.family}`;
   wrapTextCenter(ctx, lyricText, W / 2, H * 0.46, W * 0.82, lyricSize * 1.18);
 
-  // ── Song & Artist ──
+  // Song & Artist
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
   ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   ctx.filter = 'none'; ctx.textAlign = 'center';
@@ -414,7 +469,7 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.font      = `700 ${artSize}px 'Space Mono', monospace`;
   ctx.fillText(k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist, W / 2, artistY);
 
-  // ── Domain watermark ──
+  // Domain watermark
   const markSize  = Math.max(Math.round(18 * scale), 14);
   const markColor = studioBgImage ? 'rgba(255,255,255,0.75)'
     : c.light ? 'rgba(42,37,32,0.6)'
@@ -427,9 +482,9 @@ function drawPosterToCtx(ctx, W, H) {
 }
 
 function wrapTextCenter(ctx, text, x, centerY, maxW, lineHeight) {
-  const words  = text.split(' ');
-  let line     = '';
-  const lines  = [];
+  const words = text.split(' ');
+  let line    = '';
+  const lines = [];
   words.forEach(word => {
     const test = line + word + ' ';
     if (ctx.measureText(test).width > maxW && line) {
@@ -450,7 +505,7 @@ function refreshStageCanvas() {
   const size   = Math.max(80, Math.min(availW, availH, 700));
   studioCanvas.style.width  = size + 'px';
   studioCanvas.style.height = size + 'px';
-  const res           = Math.round(size * dpr);
+  const res = Math.round(size * dpr);
   studioCanvas.width  = res;
   studioCanvas.height = res;
   const ctx = studioCanvas.getContext('2d');
@@ -461,10 +516,10 @@ function refreshStageCanvas() {
 async function generateFinalPoster(sizeKey) {
   const dim = POSTER_SIZES[sizeKey];
   if (!dim || !currentPost) throw new Error('Invalid size or no post');
-  const offscreen    = document.createElement('canvas');
-  offscreen.width    = dim.w;
-  offscreen.height   = dim.h;
-  const ctx          = offscreen.getContext('2d');
+  const offscreen = document.createElement('canvas');
+  offscreen.width  = dim.w;
+  offscreen.height = dim.h;
+  const ctx = offscreen.getContext('2d');
   await document.fonts.ready;
   drawPosterToCtx(ctx, dim.w, dim.h);
   return new Promise((resolve, reject) => {
@@ -512,10 +567,7 @@ function handleStudioPhoto(file) {
 }
 
 async function shareOrDownloadPoster() {
-  if (!generatedBlob) {
-    showToast('Poster not ready yet');
-    return;
-  }
+  if (!generatedBlob) { showToast('Poster not ready yet'); return; }
 
   const fileName  = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
   const file      = new File([generatedBlob], fileName, { type: 'image/png' });
@@ -525,7 +577,6 @@ async function shareOrDownloadPoster() {
     files: [file]
   };
 
-  // Try native share (works on mobile, some desktop)
   try {
     if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
       await navigator.share(shareData);
@@ -533,11 +584,9 @@ async function shareOrDownloadPoster() {
       return;
     }
   } catch (e) {
-    if (e.name === 'AbortError') return; // user cancelled — do nothing
-    // Other errors fall through to download
+    if (e.name === 'AbortError') return;
   }
 
-  // Fallback: download
   downloadPosterBlob();
   showToast('Saved to device!');
 }
@@ -552,11 +601,7 @@ function downloadPosterBlob() {
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    // Cleanup after short delay
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 1000);
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
   } catch (err) {
     console.error('Download error:', err);
     showToast('Could not download — try again');
