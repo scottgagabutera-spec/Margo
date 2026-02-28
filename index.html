@@ -141,7 +141,7 @@
       <span class="nav-logo-text">MARGO</span>
     </a>
     <div class="nav-right">
-      <button class="nav-pill" id="enterFeedBtn">Read the room →</button>
+      <button class="nav-pill" id="enterFeedBtn">Read the room</button>
     </div>
   </nav>
   <div class="hero">
@@ -157,7 +157,7 @@
     <p class="tagline">When words fail, drop a lyric.</p>
     <div class="cta-group">
       <button class="btn-primary" id="enterBtn">Drop a Lyric</button>
-      <button class="btn-secondary" id="enterFeedBtn2">See what people are feeling →</button>
+      <button class="btn-secondary" id="enterFeedBtn2">See what people are feeling</button>
     </div>
     <div class="lyric-stream">
       <div class="lyric-track" id="track1"></div>
@@ -182,9 +182,9 @@
 </section>
 
 <section id="feed">
-  <!-- ── Sticky header: logo centered ── -->
+  <!-- ── Sticky header ── -->
   <header class="feed-header" id="feedHeader">
-    <button class="header-btn" id="backBtn" style="display:none">← Back</button>
+    <button class="header-btn" id="backBtn" style="display:none">Back</button>
     <div class="feed-center" id="feedLogoHome" title="Back to top">
       <div class="feed-logo-wrap">
         <span class="feed-logo-mark">
@@ -245,7 +245,7 @@
   <div id="feedList"></div>
 </section>
 
-<!-- FAB — hidden on landing page, shown by JS when feed is active -->
+<!-- FAB -->
 <button id="dropLyricFAB" aria-label="Drop a Lyric" style="display:none">
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -278,7 +278,7 @@
       <textarea id="textInput" maxlength="140" placeholder="The line living in your head…" inputmode="text"></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
       <div id="inspireWrap" style="display:none;">
-        <button id="inspireBtn" type="button" style="width:100%;padding:10px;border-radius:10px;background:rgba(232,197,71,0.07);border:1px dashed rgba(232,197,71,0.3);color:#E8C547;font-family:'Space Mono',monospace;font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;cursor:pointer;transition:all 0.2s;">✦ Inspire me — AI suggestions</button>
+        <button id="inspireBtn" type="button" style="width:100%;padding:10px;border-radius:10px;background:rgba(232,197,71,0.07);border:1px dashed rgba(232,197,71,0.3);color:#E8C547;font-family:'Space Mono',monospace;font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;cursor:pointer;transition:all 0.2s;">Need inspiration?</button>
         <div id="inspireSuggestions" style="display:none;margin-top:8px;flex-direction:column;gap:6px;"></div>
       </div>
       <span class="field-label">Emotion</span>
@@ -407,7 +407,7 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-primary full-btn" id="sharePosterBtn">Create Poster</button>
+      <button class="btn-primary full-btn" id="sharePosterBtn">Make it a poster</button>
       <button class="btn-secondary full-btn" id="listenPostcard">Listen</button>
       <button class="btn-secondary full-btn" id="analyticsBtn">Analytics</button>
     </div>
@@ -438,14 +438,14 @@
         </svg>
         MARGO · Studio
       </span>
-      <button class="studio-export-btn" id="studioExportBtn">Export →</button>
+      <button class="studio-export-btn" id="studioExportBtn">Export</button>
     </div>
   </div>
   <div class="studio-dock">
     <div class="dock-tabs">
-      <button class="dock-tab active" data-tab="color"><span class="dock-tab-icon">◑</span><span>Color</span></button>
-      <button class="dock-tab" data-tab="font"><span class="dock-tab-icon">Aa</span><span>Font</span></button>
-      <button class="dock-tab" data-tab="photo"><span class="dock-tab-icon">⊙</span><span>Photo</span></button>
+      <button class="dock-tab active" data-tab="color"><span>Color</span></button>
+      <button class="dock-tab" data-tab="font"><span>Font</span></button>
+      <button class="dock-tab" data-tab="photo"><span>Photo</span></button>
     </div>
     <div class="dock-panel active" id="panel-color">
       <div class="color-scenes">
@@ -521,12 +521,12 @@
   <div class="ceremony-overlay hidden" id="ceremonyOverlay">
     <div class="ceremony-inner">
       <div class="ceremony-thumb-wrap"><canvas id="ceremonyThumb"></canvas></div>
-      <div class="ceremony-headline">Your lyric is ready to drop.</div>
+      <div class="ceremony-headline">Your lyric is ready.</div>
       <div class="ceremony-actions">
         <button class="ceremony-btn" id="cerDownload"><span class="ceremony-btn-icon">↓</span>Save to Device</button>
         <button class="ceremony-btn ceremony-share" id="cerShare"><span class="ceremony-btn-icon">↗</span>Share</button>
       </div>
-      <button class="ceremony-back" id="ceremonyBack">← Back to studio</button>
+      <button class="ceremony-back" id="ceremonyBack">Back to studio</button>
     </div>
   </div>
 </div>
@@ -544,11 +544,11 @@
         <span class="sc-logo-text">MARGO · STUDIO</span>
       </div>
       <h2 class="sc-title">Choose your format</h2>
-      <p class="sc-sub">What kind of post do you want to create?</p>
+      <p class="sc-sub">What kind of visual do you want to make?</p>
     </div>
     <div class="sc-cards">
       <button class="sc-card" id="chooserMotionBtn">
-        <div class="sc-card-icon img-icon">Image</div>
+        <div class="sc-card-icon img-icon">Img</div>
         <div class="sc-card-title">Image</div>
         <div class="sc-card-desc">Design a lyric poster — pick colors, fonts &amp; export in any size</div>
         <span class="sc-card-tag img-tag">PNG · Poster</span>
@@ -560,7 +560,7 @@
         <span class="sc-card-tag gif-tag">GIF · Auto-loop</span>
       </button>
     </div>
-    <button class="sc-back" id="chooserBackBtn">← back to post</button>
+    <button class="sc-back" id="chooserBackBtn">Back to post</button>
   </div>
 </div>
 
@@ -572,8 +572,8 @@
         <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
       </svg>
     </button>
-    <span class="gs-topbar-title">✦ Animated GIF Studio</span>
-    <button id="gsExportBtn">Create GIF →</button>
+    <span class="gs-topbar-title">Margo · GIF Studio</span>
+    <button id="gsExportBtn">Export GIF</button>
   </div>
   <div class="gs-body">
     <div class="gs-stage">
@@ -581,23 +581,23 @@
     </div>
     <div class="gs-dock">
       <div class="gs-tab-bar">
-        <button class="gs-tab active" data-gstab="anim"><span class="gs-tab-icon">✦</span><span>Motion</span></button>
-        <button class="gs-tab" data-gstab="color"><span class="gs-tab-icon">◑</span><span>Color</span></button>
-        <button class="gs-tab" data-gstab="font"><span class="gs-tab-icon">Aa</span><span>Font</span></button>
-        <button class="gs-tab" data-gstab="speed"><span class="gs-tab-icon">⏱</span><span>Speed</span></button>
+        <button class="gs-tab active" data-gstab="anim"><span>Motion</span></button>
+        <button class="gs-tab" data-gstab="color"><span>Color</span></button>
+        <button class="gs-tab" data-gstab="font"><span>Font</span></button>
+        <button class="gs-tab" data-gstab="speed"><span>Speed</span></button>
       </div>
       <div class="gs-panels">
         <div class="gs-panel active" id="gs-panel-anim">
           <p class="gs-panel-label">Animation style</p>
           <div class="gs-anim-grid">
-            <button class="gs-anim-btn active" data-anim="fade-up"><span class="gs-anim-icon">↑</span><span class="gs-anim-label">Fade Up</span></button>
-            <button class="gs-anim-btn" data-anim="typewriter"><span class="gs-anim-icon">▌</span><span class="gs-anim-label">Typewriter</span></button>
-            <button class="gs-anim-btn" data-anim="slide-in"><span class="gs-anim-icon">→</span><span class="gs-anim-label">Slide In</span></button>
-            <button class="gs-anim-btn" data-anim="pulse"><span class="gs-anim-icon">◎</span><span class="gs-anim-label">Pulse</span></button>
-            <button class="gs-anim-btn" data-anim="glitch"><span class="gs-anim-icon">▒</span><span class="gs-anim-label">Glitch</span></button>
-            <button class="gs-anim-btn" data-anim="wave"><span class="gs-anim-icon">∿</span><span class="gs-anim-label">Wave</span></button>
-            <button class="gs-anim-btn" data-anim="shimmer"><span class="gs-anim-icon">✦</span><span class="gs-anim-label">Shimmer</span></button>
-            <button class="gs-anim-btn" data-anim="bounce"><span class="gs-anim-icon">◡</span><span class="gs-anim-label">Bounce</span></button>
+            <button class="gs-anim-btn active" data-anim="fade-up"><span class="gs-anim-label">Fade Up</span></button>
+            <button class="gs-anim-btn" data-anim="typewriter"><span class="gs-anim-label">Typewriter</span></button>
+            <button class="gs-anim-btn" data-anim="slide-in"><span class="gs-anim-label">Slide In</span></button>
+            <button class="gs-anim-btn" data-anim="pulse"><span class="gs-anim-label">Pulse</span></button>
+            <button class="gs-anim-btn" data-anim="glitch"><span class="gs-anim-label">Glitch</span></button>
+            <button class="gs-anim-btn" data-anim="wave"><span class="gs-anim-label">Wave</span></button>
+            <button class="gs-anim-btn" data-anim="shimmer"><span class="gs-anim-label">Shimmer</span></button>
+            <button class="gs-anim-btn" data-anim="bounce"><span class="gs-anim-label">Bounce</span></button>
           </div>
         </div>
         <div class="gs-panel" id="gs-panel-color">
@@ -639,7 +639,7 @@
           </div>
           <div class="gs-gif-note">
             <strong>About GIF</strong><br>
-            GIFs loop automatically with no play button — they work on every platform including WhatsApp, iMessage, Instagram DMs, Twitter, and Discord. Export takes ~5–10 seconds.
+            GIFs loop automatically — no play button needed. They work on every platform: WhatsApp, iMessage, Instagram, Twitter, Discord. Export takes around 5–10 seconds.
           </div>
         </div>
       </div>
@@ -663,10 +663,7 @@
 <script>
 /*
   MARGO — Feed UI Controller v6.8
-  ─────────────────────────────────
   Manages FAB visibility and feed scroll state.
-  NOTE: scroll position reset on feed activation removed —
-  app.js / scrollToFeed() owns the scroll position.
 */
 (function () {
   var feed     = document.getElementById('feed');
@@ -711,9 +708,6 @@
     var isActive = feedIsActive();
 
     if (isActive && !wasFeedActive) {
-      /* Feed just became visible.
-         Do NOT reset scroll here — app.js scrollToFeed() handles scroll.
-         Just reset tracking vars and re-run scroll handler. */
       lastY = 0;
       pending = false;
       onScroll();
@@ -721,12 +715,11 @@
 
     wasFeedActive = isActive;
 
-    /* FAB: display:none on landing — no CSS class can override inline style */
     if (isActive) {
-      fab.style.display = '';   /* restore to CSS-controlled value (flex/block) */
+      fab.style.display = '';
       fab.classList.remove('scroll-hidden');
     } else {
-      fab.style.display = 'none'; /* hard hide — beats any stylesheet rule */
+      fab.style.display = 'none';
       fab.classList.remove('scroll-hidden');
       fab.classList.remove('hidden-fab');
     }
@@ -766,7 +759,6 @@
           : 'rgba(232,197,71,0.12)';
       }
 
-      /* FAB scroll hide/show — only when in feed */
       if (feedIsActive() && !fab.classList.contains('hidden-fab')) {
         if (down && d > FAB_MIN && y > 100) {
           fab.classList.add('scroll-hidden');
