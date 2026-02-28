@@ -1,10 +1,10 @@
 /* ============================================================
    MARGO — js/gif-studio.js
-   Animated GIF Studio: canvas-rendered lyric animations → GIF
-   8 animation styles, all themes, all fonts from image studio
-   v1.3 — Proper brand logo (icon + ripple rings) top-left
-          Always-legible trymargo.com pill watermark bottom
-          Max quality export: 1080px, quality:1, 4 workers
+   Animated GIF Studio: canvas-rendered lyric animations → GIF / MP4
+   v1.4 — Dual export: GIF + MP4 (WhatsApp/IG/TikTok)
+          Fixed brand mark ripple rings (visible on all themes)
+          Always-legible trymargo.com pill watermark
+          Max quality: 1080px, quality:1, 4 workers
    ============================================================ */
 
 /* ── State ── */
@@ -54,48 +54,52 @@ const GS_ANIMS = {
   'bounce':    { label:'Bounce',     frames:22, icon:'◡' },
 };
 
-/* ── Export resolution ── */
 const GS_EXPORT_SIZE = 1080;
 
 /* ================================================================
-   BRAND MARK RENDERER
-   Draws the full Margo logo: ripple rings + gold circle + M-mark
-   Sourced directly from brand kit SVG paths.
-
-   cx, cy  = centre of the logo circle
-   r       = radius of the gold circle (outermost ring reaches ~2.65r)
+   BRAND MARK — gold circle + M icon + ripple rings
+   The rings use the theme accent colour so they always show up,
+   with a dark-on-light fallback for bright themes.
    ================================================================ */
-function gsDrawBrandMark(ctx, cx, cy, r) {
+function gsDrawBrandMark(ctx, cx, cy, r, theme) {
   ctx.save();
 
-  /* ── 3 concentric ripple rings ── */
-  const ripples = [
-    { rMult: 1.55, alpha: 0.18, width: 0.06 },
-    { rMult: 2.05, alpha: 0.10, width: 0.05 },
-    { rMult: 2.65, alpha: 0.05, width: 0.04 },
+  /* Accent colour for rings — use gold on all dark themes,
+     dark on light themes (brutalist / cream) */
+  const isLight  = theme.text === '#000000';
+  const ringColor = isLight ? '#0B0B0D' : '#E8C547';
+
+  /* 3 ripple rings — progressively larger and more transparent */
+  const rings = [
+    { mult: 1.6,  alpha: 0.35, lw: 0.055 },
+    { mult: 2.15, alpha: 0.20, lw: 0.045 },
+    { mult: 2.75, alpha: 0.10, lw: 0.035 },
   ];
-  ripples.forEach(({ rMult, alpha, width }) => {
+
+  rings.forEach(({ mult, alpha, lw }) => {
     ctx.beginPath();
-    ctx.arc(cx, cy, r * rMult, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(232,197,71,${alpha})`;
-    ctx.lineWidth   = r * width;
+    ctx.arc(cx, cy, r * mult, 0, Math.PI * 2);
+    /* Convert hex to rgba */
+    const hex = ringColor.replace('#','');
+    const rc  = parseInt(hex.slice(0,2),16);
+    const gc  = parseInt(hex.slice(2,4),16);
+    const bc  = parseInt(hex.slice(4,6),16);
+    ctx.strokeStyle = `rgba(${rc},${gc},${bc},${alpha})`;
+    ctx.lineWidth   = r * lw;
     ctx.stroke();
   });
 
-  /* ── Gold filled circle ── */
+  /* Gold filled circle */
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fillStyle = '#E8C547';
   ctx.fill();
 
-  /* ── M / lightning icon mark
-        Original from brand kit SVG (circle r=102, centred at 150,150):
-        M114 122 L114 70 L124 86 L140 68 L156 86 L166 70 L166 122
-        We scale and translate to fit our (cx,cy,r).
-  ── */
-  const s  = r / 102;           // scale factor
-  const ox = cx - 150 * s;     // X origin shift
-  const oy = cy - 150 * s;     // Y origin shift
+  /* M / lightning mark
+     Brand kit SVG path, original viewBox centred at (150,150) r=102 */
+  const s  = r / 102;
+  const ox = cx - 150 * s;
+  const oy = cy - 150 * s;
 
   ctx.beginPath();
   ctx.moveTo(ox + 114*s, oy + 122*s);
@@ -111,9 +115,8 @@ function gsDrawBrandMark(ctx, cx, cy, r) {
   ctx.lineJoin    = 'round';
   ctx.stroke();
 
-  /* ── Small base rectangle ── */
-  const bx = ox + 133*s, by = oy + 125*s;
-  const bw = 14*s,       bh = 5*s, br = 2.5*s;
+  /* Small base bar */
+  const bx = ox + 133*s, by = oy + 125*s, bw = 14*s, bh = 5*s, br = 2.5*s;
   ctx.beginPath();
   ctx.moveTo(bx + br, by);
   ctx.arcTo(bx+bw, by,    bx+bw, by+bh, br);
@@ -128,14 +131,12 @@ function gsDrawBrandMark(ctx, cx, cy, r) {
 }
 
 /* ================================================================
-   WATERMARK — always-legible frosted pill at bottom centre
-   Font: Space Mono (Margo brand mono font)
-   Pill background guarantees contrast on every theme
+   WATERMARK PILL — always legible on every theme
    ================================================================ */
 function gsDrawWatermark(ctx, W, H, theme) {
   ctx.save();
 
-  const isLight = (theme.text === '#000000');
+  const isLight = theme.text === '#000000';
   const text    = 'trymargo.com';
   const fSize   = Math.max(10, W * 0.022);
 
@@ -151,7 +152,6 @@ function gsDrawWatermark(ctx, W, H, theme) {
   const pillX = W / 2 - pillW / 2;
   const pillY = H * 0.938 - pillH / 2;
 
-  /* Pill shape */
   ctx.beginPath();
   ctx.moveTo(pillX + pillR, pillY);
   ctx.arcTo(pillX + pillW, pillY,         pillX + pillW, pillY + pillH, pillR);
@@ -160,19 +160,15 @@ function gsDrawWatermark(ctx, W, H, theme) {
   ctx.arcTo(pillX,         pillY,         pillX + pillW, pillY,         pillR);
   ctx.closePath();
 
-  /* Background fill — dark pill on light themes, frosted on dark */
-  ctx.fillStyle = isLight ? 'rgba(11,11,13,0.75)' : 'rgba(255,255,255,0.10)';
+  ctx.fillStyle   = isLight ? 'rgba(11,11,13,0.80)' : 'rgba(255,255,255,0.12)';
   ctx.fill();
-
-  /* Subtle border for crisp edge definition */
-  ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.18)';
+  ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.22)';
   ctx.lineWidth   = Math.max(1, W * 0.001);
   ctx.stroke();
 
-  /* Text — always white inside pill (contrast guaranteed on both themes) */
-  ctx.fillStyle   = '#FFFFFF';
-  ctx.textAlign   = 'center';
-  ctx.shadowBlur  = 0;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textAlign = 'center';
+  ctx.shadowBlur = 0;
   ctx.fillText(text, W / 2, pillY + pillH / 2);
 
   ctx.restore();
@@ -217,7 +213,8 @@ function initGifStudio() {
     };
   });
 
-  document.getElementById('gsExportBtn').onclick    = gsExport;
+  document.getElementById('gsExportBtn')?.addEventListener('click', gsExport);
+  document.getElementById('gsExportMp4')?.addEventListener('click', gsExportMp4);
   document.getElementById('closeGifStudio').onclick = closeGifStudio;
 }
 
@@ -236,8 +233,10 @@ function openGifStudio() {
   ov.querySelectorAll('.gs-anim-btn').forEach((b,i)  => b.classList.toggle('active', i===0));
   ov.querySelectorAll('.gs-speed-btn').forEach(b     => b.classList.toggle('active', b.dataset.speed==='normal'));
 
-  const btn = document.getElementById('gsExportBtn');
-  if (btn) { btn.textContent = 'Create GIF →'; btn.disabled = false; }
+  const gifBtn = document.getElementById('gsExportBtn');
+  const mp4Btn = document.getElementById('gsExportMp4');
+  if (gifBtn) { gifBtn.textContent = 'GIF'; gifBtn.disabled = false; }
+  if (mp4Btn) { mp4Btn.textContent = '▶ Video'; mp4Btn.disabled = false; }
 
   ov.classList.remove('hidden');
   document.body.classList.add('modal-open');
@@ -302,7 +301,7 @@ function gsDrawFrame(ctx, W, H, t) {
     theme, font,
   };
 
-  /* ── Background gradient ── */
+  /* Background */
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0,   theme.bg[0]);
   g.addColorStop(0.5, theme.bg[1]);
@@ -310,15 +309,13 @@ function gsDrawFrame(ctx, W, H, t) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  /* ── Brand mark top-left
-        logoR  = gold circle radius (~7% of canvas)
-        logoX/Y = centre position, padded so outermost ripple (2.65r) doesn't clip
-  ── */
-  const logoR = W * 0.07;
-  const logoPad = logoR * 2.65 + W * 0.012;  // outermost ring radius + small margin
-  gsDrawBrandMark(ctx, logoPad, logoPad, logoR);
+  /* Brand mark — logo circle r = 7% of W
+     Centre positioned so outermost ring (2.75r) + small margin doesn't clip */
+  const logoR   = W * 0.07;
+  const logoPad = logoR * 2.75 + W * 0.015;
+  gsDrawBrandMark(ctx, logoPad, logoPad, logoR, theme);
 
-  /* ── Animation layer ── */
+  /* Animation layer */
   const scale = W / 500;
   ctx.save();
   const anim = GS.animation;
@@ -332,10 +329,10 @@ function gsDrawFrame(ctx, W, H, t) {
   else if (anim==='bounce')     gsBounce(ctx,W,H,t,data,scale);
   ctx.restore();
 
-  /* ── Song + artist meta ── */
+  /* Song + artist meta */
   gsMeta(ctx, W, H, data, scale);
 
-  /* ── Watermark pill — drawn last so it's always on top ── */
+  /* Watermark pill — always rendered last */
   gsDrawWatermark(ctx, W, H, theme);
 }
 
@@ -367,7 +364,7 @@ function gsMeta(ctx, W, H, data, scale) {
   ctx.restore();
 }
 
-function gsLyricFont(ctx, data, scale, W) {
+function gsLyricFont(ctx, data, scale) {
   const len  = data.lyric.length;
   const sz   = len < 40 ? 52*scale : len < 70 ? 40*scale : 30*scale;
   const bold = ['bebas','josefin','oswald'].includes(GS.font);
@@ -375,13 +372,13 @@ function gsLyricFont(ctx, data, scale, W) {
   return sz;
 }
 
-/* ── Animations (unchanged) ── */
+/* ── Animations ── */
 function gsFadeUp(ctx,W,H,t,data,scale) {
   const e = t<0.5 ? 2*t*t : -1+(4-2*t)*t;
   const oy = (1-e)*38*scale, a = Math.min(1, e*2.2);
   ctx.globalAlpha = a; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14*scale;
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   gsWrap(ctx, data.lyric, W/2, H*0.44+oy, W*0.82, sz*1.2);
   ctx.globalAlpha = 1; ctx.shadowBlur = 0;
 }
@@ -392,7 +389,7 @@ function gsTypewriter(ctx,W,H,t,data,scale) {
   const cur   = chars <= data.lyric.length && (Math.floor(t*10) % 2 === 0) ? '|' : '';
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10*scale;
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   gsWrap(ctx, vis+cur, W/2, H*0.44, W*0.82, sz*1.2);
   ctx.shadowBlur = 0;
 }
@@ -404,7 +401,7 @@ function gsSlideIn(ctx,W,H,t,data,scale) {
   ctx.globalAlpha = Math.min(1, eo*1.6);
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 12*scale;
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   ctx.translate(ox, 0);
   gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2);
   ctx.restore(); ctx.shadowBlur = 0;
@@ -414,7 +411,7 @@ function gsPulse(ctx,W,H,t,data,scale) {
   const p    = 0.93 + 0.07 * Math.sin(t * Math.PI * 2);
   const glow = 0.5  + 0.5  * Math.sin(t * Math.PI * 2);
   ctx.save(); ctx.translate(W/2, H*0.44); ctx.scale(p, p);
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   ctx.shadowColor = data.theme.accent; ctx.shadowBlur = (8 + glow*22) * scale;
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
   gsWrap(ctx, data.lyric, 0, 0, W*0.82, sz*1.2);
@@ -423,14 +420,13 @@ function gsPulse(ctx,W,H,t,data,scale) {
 
 function gsGlitch(ctx,W,H,t,data,scale) {
   const phase = Math.floor(t*9); const isG = phase%3===0 && t<0.85;
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   const ox = isG ? (Math.random()-0.5)*10*scale : 0;
   if (isG) {
     ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = '#ff0040'; ctx.textAlign = 'center';
     ctx.translate(3*scale, 0); gsWrap(ctx, data.lyric, W/2+ox, H*0.44, W*0.82, sz*1.2); ctx.restore();
   }
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  ctx.shadowBlur = 0;
+  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center'; ctx.shadowBlur = 0;
   ctx.save(); ctx.translate(isG ? ox : 0, 0);
   gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2); ctx.restore();
 }
@@ -444,7 +440,7 @@ function gsWave(ctx,W,H,t,data,scale) {
   ctx.stroke();
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10*scale;
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   const words = data.lyric.split(' ');
   const totalW = words.reduce((a,w) => a + ctx.measureText(w+' ').width, 0);
   if (totalW > W*0.88) {
@@ -461,13 +457,13 @@ function gsWave(ctx,W,H,t,data,scale) {
 }
 
 function gsShimmer(ctx,W,H,t,data,scale) {
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   ctx.fillStyle = data.theme.text+'99'; ctx.textAlign = 'center';
   gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2);
   const sx = t*(W + 160*scale) - 80*scale;
   const sh = ctx.createLinearGradient(sx-70*scale, 0, sx+70*scale, 0);
   sh.addColorStop(0, 'transparent'); sh.addColorStop(0.4, data.theme.accent);
-  sh.addColorStop(0.6, '#ffffff'); sh.addColorStop(1, 'transparent');
+  sh.addColorStop(0.6, '#ffffff');   sh.addColorStop(1, 'transparent');
   ctx.save(); ctx.globalCompositeOperation = 'source-atop';
   ctx.fillStyle = sh; gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2); ctx.restore();
 }
@@ -476,7 +472,7 @@ function gsBounce(ctx,W,H,t,data,scale) {
   const b  = t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
   const oy = (1-b) * H * 0.28; const sy = 0.86 + b*0.14;
   ctx.save(); ctx.translate(W/2, H*0.44+oy); ctx.scale(1, sy);
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 12*scale;
   gsWrap(ctx, data.lyric, 0, 0, W*0.82, sz*1.2);
@@ -484,25 +480,26 @@ function gsBounce(ctx,W,H,t,data,scale) {
 }
 
 /* ================================================================
-   GIF EXPORT  —  MAX QUALITY
+   GIF EXPORT — MAX QUALITY
    ================================================================ */
 async function gsExport() {
   if (GS.isExporting) return;
   GS.isExporting = true;
   gsStopPreview();
 
-  const btn = document.getElementById('gsExportBtn');
-  btn.disabled = true;
+  const gifBtn = document.getElementById('gsExportBtn');
+  const mp4Btn = document.getElementById('gsExportMp4');
+  gifBtn.disabled = true;
+  if (mp4Btn) mp4Btn.disabled = true;
 
-  const SIZE   = GS_EXPORT_SIZE;   // 1080
+  const SIZE   = GS_EXPORT_SIZE;
   const anim   = GS_ANIMS[GS.animation];
   const frames = anim?.frames || 24;
   const delay  = GS_SPEED_MS[GS.speed] || 70;
 
   const off = document.createElement('canvas');
-  off.width  = SIZE;
-  off.height = SIZE;
-  const oc   = off.getContext('2d');
+  off.width = SIZE; off.height = SIZE;
+  const oc  = off.getContext('2d');
 
   try {
     await document.fonts.ready;
@@ -517,38 +514,35 @@ async function gsExport() {
     }
 
     const gif = new GIF({
-      workers:      4,
-      quality:      1,         // 1 = maximum quality
-      width:        SIZE,
-      height:       SIZE,
+      workers: 4, quality: 1,
+      width: SIZE, height: SIZE,
       workerScript: '/js/gif.worker.js',
-      dither:       false,     // sharper text/edges
+      dither: false,
     });
 
     for (let i = 0; i < frames; i++) {
       oc.clearRect(0, 0, SIZE, SIZE);
       gsDrawFrame(oc, SIZE, SIZE, i / frames);
       gif.addFrame(off, { copy: true, delay });
-      btn.textContent = `Building… ${Math.round((i / frames) * 75)}%`;
+      gifBtn.textContent = `GIF ${Math.round((i / frames) * 75)}%`;
       await new Promise(r => setTimeout(r, 0));
     }
 
     gif.on('progress', p => {
-      btn.textContent = `Encoding… ${Math.round(75 + p * 25)}%`;
+      gifBtn.textContent = `Encoding… ${Math.round(75 + p * 25)}%`;
     });
 
     gif.on('finished', blob => {
       const url = URL.createObjectURL(blob);
-      const a   = document.createElement('a');
-      a.href     = url;
-      a.download = `margo-${Date.now()}.gif`;
+      const a = document.createElement('a');
+      a.href = url; a.download = `margo-${Date.now()}.gif`;
       a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
+      document.body.appendChild(a); a.click();
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
-      btn.textContent = '✓ Saved!';
-      btn.disabled    = false;
-      GS.isExporting  = false;
+      gifBtn.textContent = '✓ GIF Saved!';
+      gifBtn.disabled = false;
+      if (mp4Btn) mp4Btn.disabled = false;
+      GS.isExporting = false;
       setTimeout(gsStartPreview, 400);
     });
 
@@ -556,9 +550,93 @@ async function gsExport() {
 
   } catch(err) {
     console.error('GIF error:', err);
-    btn.textContent = 'Try Again';
-    btn.disabled    = false;
-    GS.isExporting  = false;
+    gifBtn.textContent = 'GIF';
+    gifBtn.disabled = false;
+    if (mp4Btn) mp4Btn.disabled = false;
+    GS.isExporting = false;
+    gsStartPreview();
+  }
+}
+
+/* ================================================================
+   MP4 EXPORT — MediaRecorder API (no library, auto-loops on share)
+   Loops 3× so platforms detect it as looping content.
+   Auto-plays silently on WhatsApp, IG, TikTok, iMessage.
+   ================================================================ */
+async function gsExportMp4() {
+  if (GS.isExporting) return;
+  GS.isExporting = true;
+  gsStopPreview();
+
+  const gifBtn = document.getElementById('gsExportBtn');
+  const mp4Btn = document.getElementById('gsExportMp4');
+  if (gifBtn) gifBtn.disabled = true;
+  mp4Btn.disabled = true;
+  mp4Btn.textContent = 'Preparing…';
+
+  const SIZE        = GS_EXPORT_SIZE;
+  const anim        = GS_ANIMS[GS.animation];
+  const frames      = anim?.frames || 24;
+  const delay       = GS_SPEED_MS[GS.speed] || 70;
+  const LOOPS       = 3;
+  const totalFrames = frames * LOOPS;
+  const fps         = Math.round(1000 / delay);
+
+  const off = document.createElement('canvas');
+  off.width = SIZE; off.height = SIZE;
+  const oc  = off.getContext('2d');
+
+  try {
+    await document.fonts.ready;
+
+    const mimeType = [
+      'video/mp4;codecs=avc1',
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+    ].find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+
+    const stream   = off.captureStream(fps);
+    const chunks   = [];
+    const recorder = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: 8_000_000,  // 8 Mbps — broadcast quality
+    });
+
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: mimeType });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `margo-${Date.now()}.mp4`;
+      a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+      mp4Btn.textContent = '✓ Video Saved!';
+      mp4Btn.disabled    = false;
+      if (gifBtn) gifBtn.disabled = false;
+      GS.isExporting     = false;
+      setTimeout(gsStartPreview, 400);
+    };
+
+    recorder.start();
+
+    for (let i = 0; i < totalFrames; i++) {
+      oc.clearRect(0, 0, SIZE, SIZE);
+      gsDrawFrame(oc, SIZE, SIZE, (i % frames) / frames);
+      mp4Btn.textContent = `Video ${Math.round((i / totalFrames) * 100)}%`;
+      await new Promise(r => setTimeout(r, delay));
+    }
+
+    recorder.stop();
+
+  } catch(err) {
+    console.error('MP4 error:', err);
+    mp4Btn.textContent = '▶ Video';
+    mp4Btn.disabled    = false;
+    if (gifBtn) gifBtn.disabled = false;
+    GS.isExporting     = false;
     gsStartPreview();
   }
 }
