@@ -1,163 +1,748 @@
 /* ============================================================
-   MARGO — js/app.js
-   v5.1 — scrollToFeed fires 400ms after feed switch, then
-          uses a plain setTimeout(0) to queue AFTER all
-          MutationObserver callbacks, guaranteeing scroll wins.
+   MARGO — js/feed.js
+   v6.0 — Clean sort bar (no emojis — typographic symbols only).
+          Sticky offsets fixed for all browsers.
+          FAB-aware bottom padding.
    ============================================================ */
 
-// ── Toast ──
-function showToast(msg) {
-  document.querySelectorAll('.toast').forEach(t => t.remove());
-  const t = document.createElement('div');
-  t.className   = 'toast';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.classList.add('show'), 10);
-  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 2600);
+const STREAM_SAMPLES = [
+  { text: "I gave you all I had and still you left",             emotion: 'Heartbreak' },
+  { text: "Some nights I still hear your voice in the quiet",    emotion: 'Nostalgia'  },
+  { text: "Dancing alone was better than lying beside you",      emotion: 'Healing'    },
+  { text: "The city never sleeps but I always dream of you",     emotion: 'Love'       },
+  { text: "Rage is just grief that forgot how to cry",           emotion: 'Rage'       },
+  { text: "Every sunrise is a permission to start over",         emotion: 'Hope'       },
+  { text: "I carry your memory like a song I can't name",        emotion: 'Loneliness' },
+  { text: "Nothing gold can stay but gold can glow forever",     emotion: 'Nostalgia'  },
+  { text: "You were thunder and I was the calm after",           emotion: 'Love'       },
+  { text: "Joy is not the absence of pain, it's dancing anyway", emotion: 'Joy'        },
+  { text: "Missing someone is just love with nowhere to go",     emotion: 'Loneliness' },
+  { text: "I built a home in your chest and you moved out",      emotion: 'Heartbreak' },
+];
+
+/* Emotion design tokens */
+const EMOTION_CFG = {
+  Love:       { bg: 'rgba(255,107,157,0.13)', text: '#FF6B9D', border: 'rgba(255,107,157,0.22)', strip: 'rgba(255,107,157,0.7)'  },
+  Heartbreak: { bg: 'rgba(255,80,80,0.11)',   text: '#ff5050', border: 'rgba(255,80,80,0.2)',    strip: 'rgba(255,80,80,0.65)'   },
+  Hope:       { bg: 'rgba(107,140,255,0.13)', text: '#6B8CFF', border: 'rgba(107,140,255,0.22)', strip: 'rgba(107,140,255,0.7)'  },
+  Nostalgia:  { bg: 'rgba(232,197,71,0.11)',  text: '#E8C547', border: 'rgba(232,197,71,0.25)',  strip: 'rgba(232,197,71,0.8)'   },
+  Healing:    { bg: 'rgba(74,222,128,0.13)',  text: '#4ade80', border: 'rgba(74,222,128,0.22)',  strip: 'rgba(74,222,128,0.7)'   },
+  Joy:        { bg: 'rgba(255,200,71,0.11)',  text: '#ffc847', border: 'rgba(255,200,71,0.22)',  strip: 'rgba(255,200,71,0.7)'   },
+  Rage:       { bg: 'rgba(255,100,100,0.13)', text: '#FF6464', border: 'rgba(255,100,100,0.22)', strip: 'rgba(255,100,100,0.65)' },
+  Loneliness: { bg: 'rgba(160,160,255,0.11)', text: '#a0a0ff', border: 'rgba(160,160,255,0.22)', strip: 'rgba(160,160,255,0.7)'  },
+};
+const E_DEFAULT = { bg: 'rgba(232,197,71,0.11)', text: '#E8C547', border: 'rgba(232,197,71,0.25)', strip: 'rgba(232,197,71,0.8)' };
+
+let currentSort = 'fresh'; // 'fresh' | 'hot' | 'top'
+
+function lyricFontSize(text) {
+  const n = (text || '').length;
+  if (n <= 35)  return '1.08rem';
+  if (n <= 65)  return '0.93rem';
+  if (n <= 110) return '0.8rem';
+  return '0.68rem';
 }
 
-// ── Modal helpers ──
-function openModal(modal) {
-  savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
-  modal.classList.remove('hidden');
-  document.body.classList.add('modal-open');
-  document.body.style.top = `-${savedScrollPosition}px`;
+/* ── Inject all styles once ── */
+function injectFeedStyles() {
+  if (document.getElementById('feedV60')) return;
+  const s = document.createElement('style');
+  s.id = 'feedV60';
+  s.textContent = `
+    @keyframes cardIn {
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ═══════════════════════════════════════════════
+       SORT BAR — v6.1
+       NOTE: position:sticky and top offset are set in
+       index.html CSS via #feedSortBar selector.
+       Only visual styling lives here.
+    ═══════════════════════════════════════════════ */
+    .feed-sort-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px;  /* NO vertical padding — height 38px set by index.html */
+    }
+    .feed-sort-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.44rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.2);
+      flex-shrink: 0;
+      margin-right: 2px;
+    }
+    .sort-btn {
+      padding: 5px 14px;
+      border-radius: 50px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.02);
+      color: rgba(255,255,255,0.3);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.46rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      transition: all 0.18s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .sort-btn:hover {
+      border-color: rgba(232,197,71,0.3);
+      color: rgba(232,197,71,0.75);
+      background: rgba(232,197,71,0.04);
+    }
+    .sort-btn.active {
+      background: rgba(232,197,71,0.10);
+      border-color: rgba(232,197,71,0.45);
+      color: #E8C547;
+    }
+    /* Typographic symbols — no emojis */
+    .sort-btn-mark {
+      font-size: 0.7rem;
+      line-height: 1;
+      font-style: normal;
+    }
+
+    /* Hot / New badges — text only, no emojis */
+    .card-hot-badge {
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.42rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 3px 8px; border-radius: 20px;
+      background: rgba(255,140,0,0.12);
+      color: #ffaa44;
+      border: 1px solid rgba(255,140,0,0.28);
+      pointer-events: none;
+    }
+    .card-new-badge {
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.42rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 3px 8px; border-radius: 20px;
+      background: rgba(74,222,128,0.10);
+      color: #4ade80;
+      border: 1px solid rgba(74,222,128,0.25);
+      pointer-events: none;
+    }
+
+    /* ─── CARD BASE ─── */
+    #feedList .feed-card {
+      height: 285px !important;
+      background: #161619 !important;
+      border: 1px solid rgba(232,197,71,0.22) !important;
+      border-radius: 14px !important;
+      padding: 14px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0 !important;
+      position: relative !important;
+      overflow: hidden !important;
+      animation: cardIn 0.3s ease both;
+      transition: transform 0.22s cubic-bezier(0.4,0,0.2,1),
+                  border-color 0.22s, box-shadow 0.22s !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4),
+                  inset 0 1px 0 rgba(232,197,71,0.08) !important;
+    }
+    #feedList .feed-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%, rgba(232,197,71,0.55) 25%,
+        rgba(232,197,71,1) 50%, rgba(232,197,71,0.55) 75%, transparent 100%);
+      pointer-events: none;
+    }
+    #feedList .feed-card::after {
+      content: ''; position: absolute;
+      top: 16px; left: 0; bottom: 16px; width: 3px;
+      background: var(--e-strip, rgba(232,197,71,0.8));
+      border-radius: 0 4px 4px 0; opacity: 0.85; pointer-events: none;
+    }
+    #feedList .feed-card:hover {
+      transform: translateY(-3px) !important;
+      border-color: rgba(232,197,71,0.5) !important;
+      box-shadow: 0 0 0 1px rgba(232,197,71,0.15),
+                  0 20px 50px rgba(0,0,0,0.55),
+                  inset 0 1px 0 rgba(232,197,71,0.12) !important;
+    }
+
+    /* ─── LAYOUT INTERNALS ─── */
+    #feedList .card-top {
+      display: flex; justify-content: space-between;
+      align-items: center; flex-shrink: 0;
+      height: 20px; margin-bottom: 10px; padding-left: 7px;
+    }
+    #feedList .card-lyric {
+      height: 78px !important; overflow: hidden !important;
+      display: -webkit-box !important;
+      -webkit-line-clamp: 3 !important;
+      -webkit-box-orient: vertical !important;
+      flex-shrink: 0 !important; line-height: 1.45 !important;
+      margin-bottom: 8px !important; padding-left: 7px !important;
+      font-weight: 400 !important;
+    }
+    #feedList .card-emotion-tag {
+      flex-shrink: 0 !important; align-self: flex-start !important;
+      margin-bottom: 9px !important; margin-left: 7px !important;
+    }
+    #feedList .card-song {
+      display: flex !important; align-items: center !important;
+      gap: 9px !important; flex-shrink: 0 !important;
+      height: 50px !important; overflow: hidden !important;
+      padding-top: 8px !important;
+      border-top: 1px solid rgba(232,197,71,0.12) !important;
+      margin-bottom: 0 !important;
+    }
+    #feedList .card-song-text { flex: 1; min-width: 0; }
+    #feedList .card-mystery,
+    #feedList .card-discover {
+      flex-shrink: 0 !important; height: 50px !important;
+      display: flex !important; align-items: center !important;
+      padding-top: 8px !important;
+      border-top: 1px solid rgba(232,197,71,0.1) !important;
+      overflow: hidden !important; font-size: 0.75rem !important;
+    }
+    #feedList .card-mystery  { color: #6B8CFF !important; }
+    #feedList .card-discover { color: #4ade80 !important; }
+    #feedList .card-actions {
+      margin-top: auto !important; padding-top: 8px !important;
+      border-top: 1px solid rgba(232,197,71,0.12) !important;
+      flex-shrink: 0 !important; display: flex !important; gap: 6px !important;
+    }
+
+    /* ─── BUTTONS ─── */
+    #feedList .card-btn {
+      flex: 1 !important; padding: 8px 6px !important;
+      background: rgba(232,197,71,0.06) !important;
+      border: 1px solid rgba(232,197,71,0.18) !important;
+      border-radius: 8px !important;
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 0.7rem !important; font-weight: 600 !important;
+      color: rgba(232,197,71,0.8) !important;
+      cursor: pointer !important; transition: all 0.18s !important;
+    }
+    #feedList .card-btn:hover {
+      background: rgba(232,197,71,0.14) !important;
+      border-color: rgba(232,197,71,0.45) !important;
+      color: #E8C547 !important;
+    }
+    #feedList .card-btn-primary {
+      background: rgba(232,197,71,0.14) !important;
+      border-color: rgba(232,197,71,0.4) !important;
+      color: #E8C547 !important; font-weight: 700 !important;
+    }
+    #feedList .card-btn-primary:hover {
+      background: rgba(232,197,71,0.25) !important;
+      border-color: rgba(232,197,71,0.65) !important;
+      color: #fff !important;
+    }
+    #feedList .card-btn-yt {
+      background: rgba(255,0,0,0.08) !important;
+      border-color: rgba(255,80,80,0.25) !important;
+      color: #ff6464 !important;
+    }
+    #feedList .card-btn-yt:hover {
+      background: rgba(255,0,0,0.16) !important;
+      border-color: rgba(255,80,80,0.5) !important;
+      color: #ff4444 !important;
+    }
+
+    /* ─── YOUTUBE THUMBNAIL ─── */
+    .card-yt-thumb-wrap {
+      position: relative; flex-shrink: 0;
+      width: 56px; height: 38px;
+      border-radius: 6px; overflow: hidden;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+    }
+    .card-yt-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card-yt-play {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.55); color: #fff;
+      opacity: 0; transition: opacity 0.18s;
+      text-decoration: none; border-radius: 5px;
+    }
+    .card-yt-thumb-wrap:hover .card-yt-play { opacity: 1; }
+    @media (max-width:768px) {
+      .card-yt-play { opacity: 1; background: rgba(0,0,0,0.4); }
+    }
+
+    /* ─── SKELETONS ─── */
+    @keyframes skShimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position:  400px 0; }
+    }
+    .skeleton-card { pointer-events: none !important; height: 285px !important; }
+    .sk-line, .sk-block {
+      border-radius: 6px;
+      background: linear-gradient(90deg,
+        rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%,
+        rgba(255,255,255,0.03) 75%);
+      background-size: 800px 100%;
+      animation: skShimmer 1.5s infinite linear;
+    }
+    .sk-short  { height: 9px; width: 28%; margin-bottom: 14px; }
+    .sk-block  { height: 52px; width: 100%; margin-bottom: 12px; border-radius: 10px; }
+    .sk-medium { height: 9px; width: 48%; margin-bottom: 10px; }
+    .sk-row    { display: flex; gap: 8px; margin-top: 4px; }
+    .sk-long   { height: 30px; flex: 1; border-radius: 8px; }
+
+    /* ─── STUDIO YT BG ─── */
+    .yt-bg-option {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: 10px; background: rgba(255,0,0,0.07);
+      border: 1px solid rgba(255,0,0,0.2); cursor: pointer;
+      margin-bottom: 10px; transition: background 0.18s;
+    }
+    .yt-bg-option:hover { background: rgba(255,0,0,0.13); }
+    .yt-bg-option img { width: 56px; height: 38px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+    .yt-bg-option-label {
+      font-size: 0.65rem; font-weight: 700; color: #ff5555;
+      font-family: 'Space Mono', monospace; letter-spacing: 1px; text-transform: uppercase;
+    }
+    .yt-bg-option-title {
+      font-size: 0.7rem; color: rgba(255,255,255,0.5);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
+    }
+
+    /* ─── SUPPRESS OLD SCROLL BTN ─── */
+    .scroll-top, [id*="scrollTop"]:not(#margoScrollTop) {
+      display: none !important; opacity: 0 !important; pointer-events: none !important;
+    }
+
+    /* ─── MOBILE ─── */
+    @media (max-width: 480px) {
+      #feedList .feed-card { height: 275px !important; }
+      .skeleton-card { height: 275px !important; }
+      /* feed-sort-bar height/padding controlled by index.html */
+    }
+    @media (max-width: 768px) {
+      .modal-sheet { max-height: 92dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    }
+  `;
+  document.head.appendChild(s);
 }
 
-function closeModal(modal) {
-  modal.classList.add('hidden');
-  document.body.classList.remove('modal-open');
-  document.body.style.top = '';
-  window.scrollTo(0, savedScrollPosition);
+/* ── Sort bar (injected above feedList, once) ── */
+function injectSortBar() {
+  if (document.getElementById('feedSortBar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'feedSortBar';
+  bar.className = 'feed-sort-bar';
+  /* Pure typographic symbols — no emoji, no AI aesthetic.
+     Do NOT set position/top here — CSS handles sticky via #feedSortBar selector. */
+  bar.innerHTML = `
+    <span class="feed-sort-label">Sort</span>
+    <button class="sort-btn active" data-sort="fresh">
+      <span class="sort-btn-mark">✦</span> Fresh
+    </button>
+    <button class="sort-btn" data-sort="hot">
+      <span class="sort-btn-mark">↑</span> Hot
+    </button>
+    <button class="sort-btn" data-sort="top">
+      <span class="sort-btn-mark">★</span> Top
+    </button>
+  `;
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('.sort-btn');
+    if (!btn) return;
+    bar.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentSort = btn.dataset.sort;
+    renderFeed();
+  });
+  feedList?.parentNode?.insertBefore(bar, feedList);
 }
 
-// ── Page state helpers ──
-function setPageState(page) {
-  document.body.classList.remove('on-landing', 'on-feed');
-  document.body.classList.add('on-' + page);
-  const fab = document.getElementById('margoScrollTop');
-  if (fab) fab.classList.remove('visible');
+/* ── Font preload ── */
+function preloadStudioFonts() {
+  ["700 16px 'Playfair Display'","italic 16px 'Playfair Display'",
+   "600 16px 'Cormorant Garamond'","italic 16px 'Cormorant Garamond'",
+   "600 16px 'Lora'","italic 16px 'Lora'",
+   "700 16px 'Merriweather'","700 16px 'Josefin Sans'",
+   "400 16px 'Bebas Neue'","600 16px 'Oswald'",
+   "700 16px 'Dancing Script'","800 16px 'Syne'",
+   "700 16px 'Space Mono'","italic 16px 'DM Serif Display'","700 16px 'DM Sans'",
+  ].forEach(f => document.fonts.load(f).catch(() => {}));
 }
 
-// ── Navigation ──
-function goToFeed() {
-  landing.classList.remove('active');
-  feed.classList.add('active');
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
-  window.scrollTo(0, 0);
-  setPageState('feed');
+/* ── Lyric stream ── */
+function buildLyricStream() {
+  const track1 = document.getElementById('track1');
+  const track2 = document.getElementById('track2');
+  if (!track1 || !track2) return;
+  track1.innerHTML = ''; track2.innerHTML = '';
+  const source = getTickerPosts();
+  const fill   = [...source, ...source, ...source];
+  const buildCard = item => {
+    const emotion = item.emotion || 'Nostalgia';
+    const text    = item.text || '';
+    const display = text.length > 44 ? text.substring(0,44) + '…' : text;
+    const card    = document.createElement('div');
+    card.className = 'lyric-card' + (Math.random() > 0.65 ? ' featured' : '');
+    card.innerHTML = `<div class="lyric-card-text">${display}</div>
+      <div class="lyric-card-meta"><span class="lyric-card-emotion emotion-${emotion.toLowerCase()}">${emotion}</span></div>`;
+    return card;
+  };
+  const offset = Math.floor(source.length / 2);
+  fill.forEach(item => track1.appendChild(buildCard(item)));
+  [...source.slice(offset), ...source, ...source, ...source.slice(0, offset)]
+    .forEach(item => track2.appendChild(buildCard(item)));
+}
+
+function getTickerPosts() {
+  if (posts.length < 6) return STREAM_SAMPLES;
+  const recent  = posts.slice(0, 4);
+  const byViews = posts.filter(p => !recent.includes(p))
+    .sort((a,b) => (postAnalytics[b.id]?.views||0) - (postAnalytics[a.id]?.views||0)).slice(0, 4);
+  const rest    = posts.filter(p => !recent.includes(p) && !byViews.includes(p));
+  const random  = rest.sort(() => Math.random() - 0.5).slice(0, 4);
+  return [...recent, ...byViews, ...random];
+}
+
+/* ── Stats ── */
+function initStatsShimmer() {
+  ['statTotal','featuredArtistCount','featuredSongCount','topArtistName','topSongName','topEmotion']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.textContent === '—')
+        el.innerHTML = '<span class="stat-shimmer">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';
+    });
+}
+
+function calcFeatured() {
+  const ac = {}, sc = {}, ec = {};
+  posts.forEach(p => {
+    const a = p.knowledge?.artist, s = p.knowledge?.song, e = p.emotion || 'Nostalgia';
+    if (a && a !== 'Unknown Artist') { const k = a.trim(); ac[k] = (ac[k]||0)+1; }
+    if (s && s !== 'Unknown Song')   { const k = s.trim(); sc[k] = (sc[k]||0)+1; }
+    ec[e] = (ec[e]||0)+1;
+  });
+  const ae = Object.entries(ac).sort((a,b) => b[1]-a[1]);
+  const se = Object.entries(sc).sort((a,b) => b[1]-a[1]);
+  const te = Object.entries(ec).sort((a,b) => b[1]-a[1])[0];
+  return {
+    uniqueArtistCount: Object.keys(ac).length,
+    uniqueSongCount:   Object.keys(sc).length,
+    topArtist: (ae[0]?.[1] >= 2) ? ae[0][0] : null,
+    topSong:   (se[0]?.[1] >= 2) ? se[0][0] : null,
+    topEmotion: te
+  };
+}
+
+function updateLandingStats() {
+  const n = posts.length || 0;
+  const $ = id => document.getElementById(id);
+  if ($('liveCount'))  $('liveCount').textContent  = n;
+  if ($('statTotal'))  $('statTotal').textContent  = n || '—';
+  if ($('postCount'))  $('postCount').textContent  = n;
+  if (!n) {
+    ['featuredArtistCount','featuredSongCount','topArtistName','topSongName','topEmotion']
+      .forEach(id => { if ($(id)) $(id).textContent = '—'; });
+    return;
+  }
+  const { uniqueArtistCount, uniqueSongCount, topArtist, topSong, topEmotion } = calcFeatured();
+  if ($('featuredArtistCount')) $('featuredArtistCount').textContent = uniqueArtistCount || '—';
+  if ($('featuredSongCount'))   $('featuredSongCount').textContent   = uniqueSongCount   || '—';
+  if ($('topArtistName'))       $('topArtistName').textContent       = topArtist         || '—';
+  if ($('topSongName'))         $('topSongName').textContent         = topSong           || '—';
+  if ($('topEmotion'))          $('topEmotion').textContent          = topEmotion ? topEmotion[0] : '—';
+}
+
+function setupStatsBar() {
+  const bar = document.querySelector('.stats-bar');
+  if (!bar) return;
+  const align = () => {
+    if (window.innerWidth >= 769)
+      bar.style.justifyContent = bar.scrollWidth <= bar.clientWidth ? 'center' : 'flex-start';
+    else { bar.style.justifyContent = 'flex-start'; bar.scrollLeft = 0; }
+  };
+  align();
+  window.addEventListener('resize', align);
+}
+
+/* ── Search ── */
+function getFilteredPosts() {
+  const visible = posts.filter(p => p.status !== 'hidden');
+  let filtered  = activeRoom === 'all'
+    ? visible
+    : visible.filter(p => (p.emotion||'').toLowerCase() === activeRoom.toLowerCase());
+  if (!searchQuery) return filtered;
+  const q = searchQuery.toLowerCase();
+  return filtered.filter(p =>
+    (p.text||'').toLowerCase().includes(q)
+    || (p.knowledge?.song||'').toLowerCase().includes(q)
+    || (p.knowledge?.artist||'').toLowerCase().includes(q)
+    || (p.emotion||'').toLowerCase().includes(q)
+  );
+}
+
+function highlightMatch(text, query) {
+  if (!query || !text) return text || '';
+  const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return String(text).replace(new RegExp(`(${esc})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+}
+
+function clearSearch() {
+  const input = document.getElementById('feedSearchInput');
+  const btn   = document.getElementById('searchClearBtn');
+  searchQuery = '';
+  if (input) input.value = '';
+  if (btn) btn.style.display = 'none';
   renderFeed();
 }
 
-function goToLanding() {
-  feed.classList.remove('active');
-  landing.classList.add('active');
-  setPageState('landing');
+function initSearch() {
+  const input = document.getElementById('feedSearchInput');
+  const btn   = document.getElementById('searchClearBtn');
+  if (!input) return;
+  input.oninput   = () => {
+    searchQuery = input.value.trim();
+    if (btn) btn.style.display = searchQuery ? 'flex' : 'none';
+    renderFeed();
+  };
+  input.onkeydown = e => { if (e.key === 'Escape') { clearSearch(); input.blur(); } };
+  if (btn) btn.onclick = () => { clearSearch(); input.focus(); };
 }
 
-// scrollToFeed — waits for sort bar then scrolls below the entire sticky stack.
-// Fires 400ms after goToFeed() so renderFeed() has time to inject the sort bar,
-// then uses setTimeout(0) to queue after any pending MutationObserver callbacks.
-function scrollToFeed() {
-  let attempts = 0;
-
-  const getHeight = () => {
-    let h = 0;
-    const header     = document.querySelector('.feed-header');
-    const searchWrap = document.querySelector('.feed-search-wrap');
-    const tabsWrap   = document.querySelector('.room-tabs-wrap');
-    const sortBar    = document.getElementById('feedSortBar');
-    if (header)     h += header.getBoundingClientRect().height;
-    if (searchWrap) h += searchWrap.getBoundingClientRect().height;
-    if (tabsWrap)   h += tabsWrap.getBoundingClientRect().height;
-    if (sortBar)    h += sortBar.getBoundingClientRect().height;
-    return h;
-  };
-
-  const tryScroll = () => {
-    attempts++;
-    const sortBar = document.getElementById('feedSortBar');
-
-    if (sortBar || attempts >= 15) {
-      const h = getHeight();
-      // setTimeout(0) queues this AFTER all sync observers have fired
-      setTimeout(() => {
-        window.scrollTo({ top: h + 8, behavior: 'instant' });
-      }, 0);
-    } else {
-      setTimeout(tryScroll, 60);
-    }
-  };
-
-  // 400ms head start — lets renderFeed() inject DOM and lets the
-  // inline MutationObserver scroll-reset fire and settle first.
-  setTimeout(tryScroll, 500);
-}
-
-function initNavigation() {
-  enterBtn.onclick = () => {
-    goToFeed();
-    setTimeout(() => { openModal(composer); setTimeout(() => textInput.focus(), 200); }, 100);
-  };
-
-  const efb1 = document.getElementById('enterFeedBtn');
-  const efb2 = document.getElementById('enterFeedBtn2');
-  if (efb1) efb1.onclick = () => { goToFeed(); scrollToFeed(); };
-  if (efb2) efb2.onclick = () => { goToFeed(); scrollToFeed(); };
-
-  backBtn.onclick          = goToLanding;
-  openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
-  closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
-
-  let tSX = 0, tSY = 0;
-  [landing, feed].forEach(s => {
-    s.addEventListener('touchstart', e => { tSX = e.touches[0].clientX; tSY = e.touches[0].clientY; });
-    s.addEventListener('touchend', e => {
-      const dx = tSX - e.changedTouches[0].clientX;
-      const dy = Math.abs(tSY - e.changedTouches[0].clientY);
-      if (Math.abs(dx) > dy && Math.abs(dx) > 100) {
-        if (dx > 0 && landing.classList.contains('active')) goToFeed();
-        if (dx < 0 && feed.classList.contains('active'))   goToLanding();
-      }
-    });
+function initRoomTabs() {
+  const tabs = document.querySelectorAll('.room-tab');
+  if (!tabs.length) return;
+  tabs.forEach(tab => {
+    tab.onclick = () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeRoom = tab.dataset.room;
+      renderFeed();
+    };
   });
 }
 
-function setupScrollToTop() {
-  if (scrollToTopBtn) scrollToTopBtn.style.display = 'none';
-  if (newPostsIndicator) {
-    newPostsIndicator.onclick = () => {
-      newPostsAvailable = false;
-      renderFeed();
-      newPostsIndicator.classList.remove('visible');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+/* ══════════════════════════════════════════════════════════
+   RANKING SYSTEM — v5.0 (unchanged — it works well)
+   ══════════════════════════════════════════════════════════ */
+
+function getPostAge(post) {
+  if (!post.timestamp) return 999;
+  return (Date.now() - post.timestamp) / 3600000;
+}
+
+function getEngagement(post) {
+  const a = postAnalytics[post.id] || {};
+  return (a.views || 0) + (Object.keys(a.guesses || {}).length * 3)
+    + (Object.keys(a.helps || {}).length * 2);
+}
+
+function calculatePostScore(post) {
+  const age    = getPostAge(post);
+  const engage = getEngagement(post);
+
+  if (currentSort === 'fresh') {
+    const decay = Math.exp(-age / 18);
+    return decay * 1000 + engage * 0.05;
+  }
+  if (currentSort === 'hot') {
+    return engage / Math.pow(age + 2, 1.4);
+  }
+  if (currentSort === 'top') {
+    return engage;
+  }
+  return 0;
+}
+
+function isNewPost(post)  { return getPostAge(post) < 6; }
+function isHotPost(post)  { return getEngagement(post) >= 20; }
+
+function getRankedPosts() {
+  return getFilteredPosts().sort((a, b) => calculatePostScore(b) - calculatePostScore(a));
+}
+
+/* ── Skeleton ── */
+function renderSkeleton() {
+  feedList.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const s = document.createElement('div');
+    s.className = 'feed-card skeleton-card';
+    s.style.animationDelay = (i * 0.07) + 's';
+    s.innerHTML = `<div class="sk-line sk-short"></div><div class="sk-block"></div>
+      <div class="sk-line sk-medium"></div>
+      <div class="sk-row"><div class="sk-long"></div><div class="sk-long"></div></div>`;
+    feedList.appendChild(s);
   }
 }
 
-// ════════════════════════════════════════════════════════
-//   INIT
-// ════════════════════════════════════════════════════════
-setPageState('landing');
+/* ══════════════════════════════════════════════════════════
+   RENDER FEED — v6.0
+   ══════════════════════════════════════════════════════════ */
+function renderFeed() {
+  injectFeedStyles();
+  injectSortBar();
+  updateLandingStats();
+  if (!postsLoaded) { renderSkeleton(); return; }
 
-initStatsShimmer();
-initNavigation();
-setupScrollToTop();
-setupStatsBar();
-preloadStudioFonts();
-buildLyricStream();
-initSearch();
-initRoomTabs();
-initComposer();
+  feedList.innerHTML = '';
+  const filtered = getRankedPosts();
+  const rc = document.getElementById('searchResultCount');
 
-try {
-  initStudio();
-} catch (err) {
-  console.warn('[Margo] initStudio error (non-fatal):', err.message);
+  if (!posts.length) {
+    feedList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:rgba(255,255,255,0.4)">No lyrics yet — be the first to drop one.</div>';
+    if (rc) rc.textContent = ''; return;
+  }
+  if (!filtered.length) {
+    const roomMsg   = activeRoom !== 'all' ? ` in ${activeRoom}` : '';
+    const searchMsg = searchQuery ? ` matching "${searchQuery}"` : '';
+    feedList.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:rgba(255,255,255,0.4)">
+      No lyrics${roomMsg}${searchMsg} yet.<br><span style="font-size:0.8rem;opacity:0.6">Be the first to drop one here.</span></div>`;
+    if (rc) rc.textContent = searchQuery ? '0 results' : ''; return;
+  }
+  if (rc) rc.textContent = searchQuery ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}` : '';
+
+  filtered.forEach((post, i) => {
+    const card    = document.createElement('div');
+    card.className = 'feed-card';
+    card.style.animationDelay = `${i * 0.03}s`;
+
+    const k       = post.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
+    const emotion = post.emotion || 'Nostalgia';
+    const ecfg    = EMOTION_CFG[emotion] || E_DEFAULT;
+    const idx     = posts.findIndex(p => p.id === post.id);
+
+    const meta           = post.youtubeMeta;
+    const hasThumb       = !!(meta?.thumbnailSm || meta?.thumbnail);
+    const hasYouTubeUrl  = !!(meta?.youtubeUrl);
+    const hasStreamLinks = !!(post.links?.spotify || post.links?.apple || post.links?.soundcloud);
+
+    card.style.setProperty('--e-strip', ecfg.strip);
+    card.style.borderColor = ecfg.border;
+
+    const badge = post.mode === 'guess'
+      ? '<span class="card-mode-badge mode-guess">Guess</span>'
+      : post.mode === 'discover'
+      ? '<span class="card-mode-badge mode-discover">Discover</span>'
+      : '<span class="card-mode-badge mode-share">Share</span>';
+
+    /* Rank badges — text only, no emojis */
+    let rankBadge = '';
+    if (currentSort === 'fresh' && isNewPost(post)) {
+      rankBadge = '<span class="card-new-badge">New</span>';
+    } else if (currentSort === 'hot' && isHotPost(post)) {
+      rankBadge = '<span class="card-hot-badge">Hot</span>';
+    }
+
+    const thumb = hasThumb ? `
+      <div class="card-yt-thumb-wrap"
+           onclick="event.stopPropagation();window.open('${meta.youtubeUrl || '#'}','_blank','noopener')"
+           title="Listen on YouTube">
+        <img src="${meta.thumbnailSm || meta.thumbnail}"
+             class="card-yt-thumb" alt="" loading="lazy"
+             onerror="this.parentElement.style.display='none'"/>
+        <span class="card-yt-play">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </span>
+      </div>` : '';
+
+    let songSection = '';
+    if (post.mode === 'share') {
+      songSection = `<div class="card-song">
+        ${thumb}
+        <div class="card-song-text">
+          <div class="card-song-title">${highlightMatch(k.song, searchQuery)}</div>
+          <div class="card-song-artist">${highlightMatch(k.artist, searchQuery)}</div>
+        </div>
+      </div>`;
+    } else if (post.mode === 'guess') {
+      const what = [];
+      if (post.guessConfig?.guessSong)   what.push('song');
+      if (post.guessConfig?.guessArtist) what.push('artist');
+      if (!what.length) what.push('song', 'artist');
+      songSection = `<div class="card-mystery">Can you guess the ${what.join(' & ')}? →</div>`;
+    } else {
+      const hasClue = k.song !== 'Unknown Song' || k.artist !== 'Unknown Artist';
+      songSection = `<div class="card-discover">${
+        hasClue
+          ? `Maybe: ${highlightMatch(k.song, searchQuery)} — ${highlightMatch(k.artist, searchQuery)}`
+          : 'Help discover this song'
+      }</div>`;
+    }
+
+    let actions = '';
+    if (post.mode === 'share') {
+      if (hasThumb) {
+        actions = `<div class="card-actions">
+          <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">View Post</button>
+        </div>`;
+      } else if (hasStreamLinks) {
+        actions = `<div class="card-actions">
+          <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
+          <button class="card-btn card-btn-yt" onclick="window.openListen(${idx})">Listen →</button>
+        </div>`;
+      } else if (hasYouTubeUrl && !hasThumb) {
+        actions = `<div class="card-actions">
+          <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
+          <button class="card-btn card-btn-yt"
+            onclick="event.stopPropagation();window.open('${meta.youtubeUrl}','_blank','noopener')">
+            Watch on YouTube
+          </button>
+        </div>`;
+      } else {
+        actions = `<div class="card-actions">
+          <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">View Post</button>
+        </div>`;
+      }
+    } else if (post.mode === 'guess') {
+      actions = `<div class="card-actions">
+        <button class="card-btn card-btn-primary" onclick="window.openGuess(${idx})">Guess →</button>
+        <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
+      </div>`;
+    } else {
+      actions = `<div class="card-actions">
+        <button class="card-btn card-btn-primary" onclick="window.openDiscover(${idx})">Help ID →</button>
+        <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
+      </div>`;
+    }
+
+    card.innerHTML = `
+      ${rankBadge}
+      <div class="card-top">
+        <span class="card-time">${timeAgo(post.timestamp)}</span>
+        ${badge}
+      </div>
+      <div class="card-lyric" style="font-size:${lyricFontSize(post.text)}">${highlightMatch(post.text, searchQuery)}</div>
+      <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text}">${highlightMatch(emotion, searchQuery)}</span>
+      ${songSection}
+      ${actions}
+    `;
+    feedList.appendChild(card);
+  });
 }
 
-initAdmin();
-startFirebaseSync();
+/* ── Utilities ── */
+function timeAgo(ts) {
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1)  return 'now';
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h';
+  return Math.floor(h / 24) + 'd';
+}
 
-console.log('MARGO v5.2 dev — scrollToFeed 400ms + setTimeout(0) guarantee.');
+function trackView(postId) {
+  if (isFirebaseEnabled && postId)
+    analyticsRef.child(postId).child('views').transaction(v => (v||0)+1);
+}
+
+function showNewPostsIndicator(count) {
+  const c = document.getElementById('newPostsCount');
+  if (c) c.textContent = count;
+  newPostsIndicator?.classList.add('visible');
+}
