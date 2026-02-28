@@ -1,11 +1,11 @@
 /* ============================================================
    MARGO — js/motion.js
-   Premium Interaction Layer v1.4
+   Premium Interaction Layer v1.5
 
    FIXES:
-   - No longer creates a new #margoScrollTop — replaces the
-     existing HTML button in-place (was causing duplicate)
-   - TOP pill is injected into the existing button cleanly
+   - No emoji in toast icons — clean typographic marks only
+   - Toast wording is direct, human, not system-like
+   - No longer creates a new #margoScrollTop — reuses HTML button
    - body.on-landing hides ALL fixed floaters via CSS
    - Scroll detection on window (not #feed)
    ============================================================ */
@@ -35,7 +35,6 @@
 
       /* ═══════════════════════════════════════
          LANDING PAGE: hide ALL floating buttons
-         body.on-landing kills everything fixed.
       ═══════════════════════════════════════ */
       body.on-landing #margoScrollTop,
       body.on-landing #dropLyricFAB,
@@ -241,10 +240,15 @@
         background: linear-gradient(90deg, transparent, var(--toast-accent, rgba(232,197,71,0.6)), transparent);
         opacity: 0.6;
       }
-      .margo-toast-icon  { font-size: 1rem; flex-shrink: 0; margin-top: 1px; line-height: 1; width: 18px; text-align: center; }
+      .margo-toast-icon  {
+        font-size: 0.85rem; flex-shrink: 0; margin-top: 1px;
+        line-height: 1; width: 18px; text-align: center;
+        color: var(--toast-accent, #E8C547);
+        font-family: 'Space Mono', monospace; font-weight: 700;
+      }
       .margo-toast-body  { flex: 1; min-width: 0; }
       .margo-toast-title {
-        font-family: 'Space Mono', monospace; font-size: 0.58rem; font-weight: 700;
+        font-family: 'Space Mono', monospace; font-size: 0.56rem; font-weight: 700;
         text-transform: uppercase; letter-spacing: 1.2px;
         color: var(--toast-accent, #E8C547); margin-bottom: 3px; line-height: 1.2;
       }
@@ -273,26 +277,20 @@
   }
 
   /* ══════════════════════════════════════════════════════════
-     BACK TO TOP — reuses existing #margoScrollTop from HTML,
-     replaces its inner content with the modern pill design.
-     This prevents the duplicate-button bug.
+     BACK TO TOP — reuses existing #margoScrollTop from HTML
   ══════════════════════════════════════════════════════════ */
   function initScrollTop() {
-    // Hide any legacy button that isn't ours
     const oldBtn = document.getElementById('scrollToTopBtn');
     if (oldBtn) oldBtn.style.display = 'none';
 
-    // Reuse the existing button from index.html — do NOT create a new one
     let btn = document.getElementById('margoScrollTop');
     if (!btn) {
-      // Fallback: create if somehow missing
       btn = document.createElement('button');
       btn.id = 'margoScrollTop';
       btn.setAttribute('aria-label', 'Back to top');
       document.body.appendChild(btn);
     }
 
-    // Replace inner content with the new pill (removes old ring+label markup)
     btn.innerHTML = `
       <div id="mst-pill">
         <span id="mst-arrow">
@@ -307,7 +305,6 @@
       </div>
     `;
 
-    // Remove any inline styles from the HTML that would conflict
     btn.removeAttribute('style');
 
     const progressBar = document.getElementById('mst-progress-bar');
@@ -343,7 +340,6 @@
 
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // Re-evaluate when body class changes (landing ↔ feed)
     new MutationObserver(onScroll).observe(document.body, {
       attributes: true, attributeFilter: ['class']
     });
@@ -361,11 +357,12 @@
   const TOAST_DURATION = 4000;
   const MAX_TOASTS     = 4;
 
+  /* Clean typographic marks — no emoji, no AI aesthetics */
   const TOAST_TYPES = {
-    success: { icon: '✦', accent: '#4ade80', title: 'Done'  },
-    error:   { icon: '✕', accent: '#ff6464', title: 'Error' },
-    info:    { icon: '♪', accent: '#6B8CFF', title: 'Hey'   },
-    default: { icon: '✦', accent: '#E8C547', title: 'Margo' },
+    success: { icon: '—', accent: '#4ade80', title: 'Done'    },
+    error:   { icon: '—', accent: '#ff6464', title: 'Heads up' },
+    info:    { icon: '—', accent: '#6B8CFF', title: 'Note'    },
+    default: { icon: '—', accent: '#E8C547', title: 'Margo'   },
   };
 
   let toastContainer = null;
@@ -379,9 +376,9 @@
 
   function detectToastType(msg) {
     const m = (msg || '').toLowerCase();
-    if (m.includes('error')||m.includes('fail')||m.includes('wrong')||m.includes('invalid')) return 'error';
-    if (m.includes('posted')||m.includes('done')||m.includes('saved')||m.includes('correct')||m.includes('thanks')) return 'success';
-    if (m.includes('tip')||m.includes('searching')||m.includes('try')||m.includes('type')) return 'info';
+    if (m.includes('error')||m.includes('fail')||m.includes('wrong')||m.includes('invalid')||m.includes('heads up')) return 'error';
+    if (m.includes('posted')||m.includes('done')||m.includes('saved')||m.includes('correct')||m.includes('thanks')||m.includes('dropped')||m.includes('got it')) return 'success';
+    if (m.includes('tip')||m.includes('searching')||m.includes('try')||m.includes('type')||m.includes('add')) return 'info';
     return 'default';
   }
 
@@ -411,7 +408,7 @@
         <div class="margo-toast-title">${cfg.title}</div>
         <div class="margo-toast-msg">${message}</div>
       </div>
-      <button class="margo-toast-close" aria-label="Dismiss">✕</button>
+      <button class="margo-toast-close" aria-label="Dismiss">×</button>
       <div class="margo-toast-progress"></div>
     `;
     container.appendChild(toast);
