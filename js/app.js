@@ -1,8 +1,8 @@
 /* ============================================================
    MARGO — js/app.js
-   v5.0 — scrollToFeed fires AFTER the inline script's
-          MutationObserver scroll-reset, so it always wins.
-          Body gets 'on-landing'/'on-feed' for CSS FAB control.
+   v5.1 — scrollToFeed fires 400ms after feed switch, then
+          uses a plain setTimeout(0) to queue AFTER all
+          MutationObserver callbacks, guaranteeing scroll wins.
    ============================================================ */
 
 // ── Toast ──
@@ -56,19 +56,18 @@ function goToLanding() {
   setPageState('landing');
 }
 
-// scrollToFeed — waits for sort bar, then scrolls PAST the sticky stack.
-// Uses two rAF passes after the sort bar appears so it always fires AFTER
-// the inline MutationObserver in index.html resets scroll to 0.
+// scrollToFeed — waits for sort bar then scrolls below the entire sticky stack.
+// Fires 400ms after goToFeed() so renderFeed() has time to inject the sort bar,
+// then uses setTimeout(0) to queue after any pending MutationObserver callbacks.
 function scrollToFeed() {
   let attempts = 0;
 
-  const measure = () => {
-    const sortBar    = document.getElementById('feedSortBar');
+  const getHeight = () => {
+    let h = 0;
     const header     = document.querySelector('.feed-header');
     const searchWrap = document.querySelector('.feed-search-wrap');
     const tabsWrap   = document.querySelector('.room-tabs-wrap');
-
-    let h = 0;
+    const sortBar    = document.getElementById('feedSortBar');
     if (header)     h += header.getBoundingClientRect().height;
     if (searchWrap) h += searchWrap.getBoundingClientRect().height;
     if (tabsWrap)   h += tabsWrap.getBoundingClientRect().height;
@@ -80,22 +79,20 @@ function scrollToFeed() {
     attempts++;
     const sortBar = document.getElementById('feedSortBar');
 
-    if (sortBar || attempts >= 12) {
-      const h = measure();
-      // Two rAF passes: first ensures DOM is painted, second fires after
-      // the inline script's MutationObserver scroll-reset, so we win.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: h + 8, behavior: 'smooth' });
-        });
-      });
+    if (sortBar || attempts >= 15) {
+      const h = getHeight();
+      // setTimeout(0) queues this AFTER all sync observers have fired
+      setTimeout(() => {
+        window.scrollTo({ top: h + 8, behavior: 'smooth' });
+      }, 0);
     } else {
       setTimeout(tryScroll, 60);
     }
   };
 
-  // Give renderFeed() time to inject the sort bar before we start polling
-  setTimeout(tryScroll, 100);
+  // 400ms head start — lets renderFeed() inject DOM and lets the
+  // inline MutationObserver scroll-reset fire and settle first.
+  setTimeout(tryScroll, 400);
 }
 
 function initNavigation() {
@@ -106,8 +103,8 @@ function initNavigation() {
 
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
-  if (efb1) efb1.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 250); };
-  if (efb2) efb2.onclick = () => { goToFeed(); setTimeout(scrollToFeed, 250); };
+  if (efb1) efb1.onclick = () => { goToFeed(); scrollToFeed(); };
+  if (efb2) efb2.onclick = () => { goToFeed(); scrollToFeed(); };
 
   backBtn.onclick          = goToLanding;
   openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
@@ -163,4 +160,4 @@ try {
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v5.0 dev — scroll fix + duplicate FAB fix + clean TOP pill.');
+console.log('MARGO v5.1 dev — scrollToFeed 400ms + setTimeout(0) guarantee.');
