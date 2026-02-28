@@ -1,6 +1,7 @@
 /* ============================================================
    MARGO — js/feed.js
-   v6.0 — Clean sort bar (no emojis — typographic symbols only).
+   v6.1 — Refined wording, no unnecessary symbols,
+          clean sort bar, human button language.
           Sticky offsets fixed for all browsers.
           FAB-aware bottom padding.
    ============================================================ */
@@ -45,9 +46,9 @@ function lyricFontSize(text) {
 
 /* ── Inject all styles once ── */
 function injectFeedStyles() {
-  if (document.getElementById('feedV60')) return;
+  if (document.getElementById('feedV61')) return;
   const s = document.createElement('style');
-  s.id = 'feedV60';
+  s.id = 'feedV61';
   s.textContent = `
     @keyframes cardIn {
       from { opacity:0; transform:translateY(10px); }
@@ -56,15 +57,14 @@ function injectFeedStyles() {
 
     /* ═══════════════════════════════════════════════
        SORT BAR — v6.1
-       NOTE: position:sticky and top offset are set in
-       index.html CSS via #feedSortBar selector.
+       position:sticky and top offset set in style.css.
        Only visual styling lives here.
     ═══════════════════════════════════════════════ */
     .feed-sort-bar {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 0 14px;  /* NO vertical padding — height 38px set by index.html */
+      padding: 0 14px;
     }
     .feed-sort-label {
       font-family: 'Space Mono', monospace;
@@ -90,9 +90,6 @@ function injectFeedStyles() {
       cursor: pointer;
       transition: all 0.18s;
       white-space: nowrap;
-      display: flex;
-      align-items: center;
-      gap: 5px;
     }
     .sort-btn:hover {
       border-color: rgba(232,197,71,0.3);
@@ -104,14 +101,8 @@ function injectFeedStyles() {
       border-color: rgba(232,197,71,0.45);
       color: #E8C547;
     }
-    /* Typographic symbols — no emojis */
-    .sort-btn-mark {
-      font-size: 0.7rem;
-      line-height: 1;
-      font-style: normal;
-    }
 
-    /* Hot / New badges — text only, no emojis */
+    /* Rank badges */
     .card-hot-badge {
       position: absolute; top: 10px; right: 10px; z-index: 2;
       font-family: 'Space Mono', monospace;
@@ -324,7 +315,6 @@ function injectFeedStyles() {
     @media (max-width: 480px) {
       #feedList .feed-card { height: 275px !important; }
       .skeleton-card { height: 275px !important; }
-      /* feed-sort-bar height/padding controlled by index.html */
     }
     @media (max-width: 768px) {
       .modal-sheet { max-height: 92dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -339,19 +329,11 @@ function injectSortBar() {
   const bar = document.createElement('div');
   bar.id = 'feedSortBar';
   bar.className = 'feed-sort-bar';
-  /* Pure typographic symbols — no emoji, no AI aesthetic.
-     Do NOT set position/top here — CSS handles sticky via #feedSortBar selector. */
   bar.innerHTML = `
     <span class="feed-sort-label">Sort</span>
-    <button class="sort-btn active" data-sort="fresh">
-      <span class="sort-btn-mark">✦</span> Fresh
-    </button>
-    <button class="sort-btn" data-sort="hot">
-      <span class="sort-btn-mark">↑</span> Hot
-    </button>
-    <button class="sort-btn" data-sort="top">
-      <span class="sort-btn-mark">★</span> Top
-    </button>
+    <button class="sort-btn active" data-sort="fresh">Recent</button>
+    <button class="sort-btn" data-sort="hot">Rising</button>
+    <button class="sort-btn" data-sort="top">All time</button>
   `;
   bar.addEventListener('click', e => {
     const btn = e.target.closest('.sort-btn');
@@ -529,7 +511,7 @@ function initRoomTabs() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   RANKING SYSTEM — v5.0 (unchanged — it works well)
+   RANKING SYSTEM
    ══════════════════════════════════════════════════════════ */
 
 function getPostAge(post) {
@@ -582,7 +564,7 @@ function renderSkeleton() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   RENDER FEED — v6.0
+   RENDER FEED
    ══════════════════════════════════════════════════════════ */
 function renderFeed() {
   injectFeedStyles();
@@ -631,12 +613,11 @@ function renderFeed() {
       ? '<span class="card-mode-badge mode-discover">Discover</span>'
       : '<span class="card-mode-badge mode-share">Share</span>';
 
-    /* Rank badges — text only, no emojis */
     let rankBadge = '';
     if (currentSort === 'fresh' && isNewPost(post)) {
       rankBadge = '<span class="card-new-badge">New</span>';
     } else if (currentSort === 'hot' && isHotPost(post)) {
-      rankBadge = '<span class="card-hot-badge">Hot</span>';
+      rankBadge = '<span class="card-hot-badge">Trending</span>';
     }
 
     const thumb = hasThumb ? `
@@ -665,13 +646,13 @@ function renderFeed() {
       if (post.guessConfig?.guessSong)   what.push('song');
       if (post.guessConfig?.guessArtist) what.push('artist');
       if (!what.length) what.push('song', 'artist');
-      songSection = `<div class="card-mystery">Can you guess the ${what.join(' & ')}? →</div>`;
+      songSection = `<div class="card-mystery">Can you name the ${what.join(' and ')}?</div>`;
     } else {
       const hasClue = k.song !== 'Unknown Song' || k.artist !== 'Unknown Artist';
       songSection = `<div class="card-discover">${
         hasClue
           ? `Maybe: ${highlightMatch(k.song, searchQuery)} — ${highlightMatch(k.artist, searchQuery)}`
-          : 'Help discover this song'
+          : 'Help identify this song'
       }</div>`;
     }
 
@@ -679,16 +660,16 @@ function renderFeed() {
     if (post.mode === 'share') {
       if (hasThumb) {
         actions = `<div class="card-actions">
-          <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">View Post</button>
+          <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">Open</button>
         </div>`;
       } else if (hasStreamLinks) {
         actions = `<div class="card-actions">
-          <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
-          <button class="card-btn card-btn-yt" onclick="window.openListen(${idx})">Listen →</button>
+          <button class="card-btn" onclick="window.viewPost(${idx})">Open</button>
+          <button class="card-btn card-btn-yt" onclick="window.openListen(${idx})">Listen</button>
         </div>`;
       } else if (hasYouTubeUrl && !hasThumb) {
         actions = `<div class="card-actions">
-          <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
+          <button class="card-btn" onclick="window.viewPost(${idx})">Open</button>
           <button class="card-btn card-btn-yt"
             onclick="event.stopPropagation();window.open('${meta.youtubeUrl}','_blank','noopener')">
             Watch on YouTube
@@ -696,18 +677,18 @@ function renderFeed() {
         </div>`;
       } else {
         actions = `<div class="card-actions">
-          <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">View Post</button>
+          <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">Open</button>
         </div>`;
       }
     } else if (post.mode === 'guess') {
       actions = `<div class="card-actions">
-        <button class="card-btn card-btn-primary" onclick="window.openGuess(${idx})">Guess →</button>
-        <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
+        <button class="card-btn card-btn-primary" onclick="window.openGuess(${idx})">Take a guess</button>
+        <button class="card-btn" onclick="window.viewPost(${idx})">Open</button>
       </div>`;
     } else {
       actions = `<div class="card-actions">
-        <button class="card-btn card-btn-primary" onclick="window.openDiscover(${idx})">Help ID →</button>
-        <button class="card-btn" onclick="window.viewPost(${idx})">View</button>
+        <button class="card-btn card-btn-primary" onclick="window.openDiscover(${idx})">Help identify</button>
+        <button class="card-btn" onclick="window.viewPost(${idx})">Open</button>
       </div>`;
     }
 

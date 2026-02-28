@@ -1,8 +1,8 @@
 /* ============================================================
    MARGO — js/composer.js
-   v5.5 — Single "Post & Create →" CTA:
+   v5.6 — Single "Post & Create" CTA:
            posts to feed AND opens studio chooser immediately.
-           No separate "Post" button — one decisive action.
+           No unnecessary symbols. Human wording throughout.
    ============================================================ */
 
 /* ══════════════════════════════════════════════════════════════
@@ -102,9 +102,9 @@ function decodeHTML(str) {
 
 /* ── STYLES (injected once) ── */
 function injectComposerStyles() {
-  if (document.getElementById('composerV5Styles')) return;
+  if (document.getElementById('composerV56Styles')) return;
   const s = document.createElement('style');
-  s.id = 'composerV5Styles';
+  s.id = 'composerV56Styles';
   s.textContent = `
     .m-spinner {
       width:14px;height:14px;border-radius:50%;
@@ -116,8 +116,7 @@ function injectComposerStyles() {
     @keyframes mspin{to{transform:rotate(360deg)}}
 
     /* ══════════════════════════════
-       SINGLE PRIMARY CTA — v5.5
-       "Post & Create →" is the only button.
+       PRIMARY CTA — "Post & Create"
        Full-width, bold, unmissable.
     ══════════════════════════════ */
     #postAndCreateBtn {
@@ -166,7 +165,7 @@ function injectComposerStyles() {
       box-shadow: none;
     }
 
-    /* Subtle "just post" escape hatch — text link only, no visual weight */
+    /* Subtle "just post" escape hatch */
     #justPostLink {
       display: block;
       text-align: center;
@@ -352,7 +351,7 @@ function initGeniusIdentify() {
   if (!textArea || document.getElementById('geniusIdentifyBtn')) return;
   const btn = document.createElement('button');
   btn.id = 'geniusIdentifyBtn'; btn.type = 'button';
-  btn.innerHTML = `<span>✦</span> Identify Song`;
+  btn.innerHTML = `Identify Song`;
   textArea.parentNode.insertBefore(btn, textArea.nextSibling);
   btn.onclick = () => {
     const lyric = textArea.value.trim();
@@ -383,14 +382,14 @@ async function runGeniusSearch(query) {
   try {
     const res  = await fetch(`/api/genius?lyric=${encodeURIComponent(query)}`);
     const data = await res.json();
-    if (btn) { btn.innerHTML = `<span>✦</span> Identify Song`; btn.disabled = false; }
+    if (btn) { btn.innerHTML = `Identify Song`; btn.disabled = false; }
     if (!res.ok || !data.results?.length) {
       if (query.length > 20) showToast('No song found — try a different line');
       return;
     }
     renderGeniusResults(data.results);
   } catch (err) {
-    if (btn) { btn.innerHTML = `<span>✦</span> Identify Song`; btn.disabled = false; }
+    if (btn) { btn.innerHTML = `Identify Song`; btn.disabled = false; }
   }
 }
 
@@ -415,7 +414,7 @@ function renderGeniusResults(results) {
         <div class="genius-song">${songName}</div>
         <div class="genius-artist">${artistName}</div>
       </div>
-      <span class="genius-use-tag">Use →</span>
+      <span class="genius-use-tag">Use</span>
     `;
     card.onclick = () => selectGeniusResult({ ...r, song: songName, artist: artistName }, card);
     list.appendChild(card);
@@ -429,7 +428,7 @@ function renderGeniusResults(results) {
 function selectGeniusResult(result, card) {
   document.querySelectorAll('.genius-result-card').forEach(c => c.classList.remove('selected'));
   card.classList.add('selected');
-  card.querySelector('.genius-use-tag').textContent = '✓';
+  card.querySelector('.genius-use-tag').textContent = 'Selected';
   geniusResult = result;
   const songEl   = document.getElementById('songInput');
   const artistEl = document.getElementById('artistInput');
@@ -541,7 +540,7 @@ function showYtLoading() {
   clearYoutubePreview();
   const card = document.createElement('div');
   card.id = 'youtubePreview'; card.className = 'yt-card';
-  card.innerHTML = `<div class="yt-loading"><span class="m-spinner"></span>Finding on YouTube, Deezer, iTunes…</div>`;
+  card.innerHTML = `<div class="yt-loading"><span class="m-spinner"></span>Looking up on YouTube, Deezer, Apple Music…</div>`;
   insertAfterArtist(card);
 }
 
@@ -550,15 +549,15 @@ function renderYtCard(data) {
   const source = data.source || 'youtube';
   const links = [];
   if (data.videoId && data.youtubeUrl)
-    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">▶&nbsp;YouTube</a>`);
+    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">YouTube</a>`);
   else if (data.youtubeUrl)
-    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">⌕&nbsp;YouTube</a>`);
+    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">YouTube</a>`);
   if (data.deezerUrl)
-    links.push(`<a href="${data.deezerUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-dz">♫&nbsp;Deezer</a>`);
+    links.push(`<a href="${data.deezerUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-dz">Deezer</a>`);
   if (data.itunesUrl)
-    links.push(`<a href="${data.itunesUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-it">♫&nbsp;Apple Music</a>`);
+    links.push(`<a href="${data.itunesUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-it">Apple Music</a>`);
 
-  const sourceBadge    = source === 'youtube' ? 'YT ✓' : source === 'deezer' ? 'Deezer ✓' : 'iTunes ✓';
+  const sourceBadge    = source === 'youtube' ? 'Found' : source === 'deezer' ? 'Found' : 'Found';
   const sourceBadgeCls = source === 'youtube' ? 'yt-found-yt' : source === 'deezer' ? 'yt-found-dz' : 'yt-found-it';
   const thumb = data.thumbnail || data.thumbnailSm;
 
@@ -592,9 +591,8 @@ function clearYoutubePreview() {
 
 /* ============================================================
    COMPOSER INIT
-   ── v5.5: Single CTA — "Post & Create →" is the only button.
-      A lightweight "Just post" text link sits below it for
-      users who truly don't want to open the studio.
+   v5.6: Single CTA — "Post & Create" is the only button.
+         A lightweight "or just post" text link sits below it.
    ============================================================ */
 function initComposer() {
   injectComposerStyles();
@@ -624,27 +622,22 @@ function initComposer() {
     };
   });
 
-  // ── Replace the old postBtn entirely with "Post & Create →" as the primary CTA
-  // We keep a reference to postBtn's parent so we can inject our new layout there.
   if (!document.getElementById('postAndCreateBtn')) {
     const pacBtn = document.createElement('button');
     pacBtn.id        = 'postAndCreateBtn';
     pacBtn.type      = 'button';
-    pacBtn.innerHTML = '✦ Post &amp; Create →';
+    pacBtn.innerHTML = 'Post &amp; Create Visual';
     pacBtn.onclick   = () => submitPost(true);
 
-    // "Just post" escape hatch — tiny text link, zero visual competition
     const justPostBtn = document.createElement('button');
     justPostBtn.id        = 'justPostLink';
     justPostBtn.type      = 'button';
     justPostBtn.textContent = 'or just post without creating';
     justPostBtn.onclick   = () => submitPost(false);
 
-    // Replace the original postBtn with our new CTA + link
     const parent = postBtn.parentNode;
     parent.insertBefore(pacBtn, postBtn);
     parent.insertBefore(justPostBtn, postBtn);
-    // Hide the original postBtn — it's no longer needed visually
     postBtn.style.display = 'none';
   }
 
@@ -667,9 +660,8 @@ function initComposer() {
 
 /* ============================================================
    POST SUBMISSION
-   ── openChooser = true  → "Post & Create": posts, then opens
-                            studioChooser immediately (default flow)
-   ── openChooser = false → "Just post": posts silently, done
+   openChooser = true  → posts then opens studio chooser
+   openChooser = false → posts silently
    ============================================================ */
 async function submitPost(openChooser = true) {
   const pacBtn     = document.getElementById('postAndCreateBtn');
@@ -677,14 +669,14 @@ async function submitPost(openChooser = true) {
   if (pacBtn?.disabled) return;
 
   let text = textInput.value.trim();
-  if (!text)            { showToast('Please enter a lyric'); return; }
-  if (!selectedEmotion) { showToast('Please select a vibe'); return; }
+  if (!text)            { showToast('Add a lyric first'); return; }
+  if (!selectedEmotion) { showToast('Pick an emotion'); return; }
 
   if (containsBannedWord(text)) {
     text = censorText(text);
     textInput.value = text;
     charCount.textContent = text.length;
-    showToast('Some words were adjusted for community guidelines 🎵');
+    showToast('Some words were adjusted for community guidelines');
   }
 
   const savedYtMeta = youtubeData ? {
@@ -716,7 +708,7 @@ async function submitPost(openChooser = true) {
   try {
     if (currentMode === 'share') {
       if (!songInput.value.trim() || !artistInput.value.trim())
-        throw new Error('Please enter song and artist');
+        throw new Error('Add the song title and artist');
       post.knowledge = {
         song:   decodeHTML(songInput.value.trim()),
         artist: decodeHTML(artistInput.value.trim())
@@ -724,7 +716,7 @@ async function submitPost(openChooser = true) {
     }
     if (currentMode === 'guess') {
       const doSong = guessSongCheck.checked, doArtist = guessArtistCheck.checked;
-      if (!doSong && !doArtist) throw new Error('Select at least one thing to guess');
+      if (!doSong && !doArtist) throw new Error('Choose at least one thing to guess');
       if (doSong   && !guessSongAnswer.value.trim())   throw new Error('Enter the correct song title');
       if (doArtist && !guessArtistAnswer.value.trim()) throw new Error('Enter the correct artist');
       post.knowledge   = { song: guessSongAnswer.value.trim(), artist: guessArtistAnswer.value.trim(), hidden: true };
@@ -738,7 +730,6 @@ async function submitPost(openChooser = true) {
     }
   } catch (err) { showToast(err.message); return; }
 
-  // Disable both CTAs during submission
   if (pacBtn)      { pacBtn.disabled = true;      pacBtn.innerHTML = '<span class="m-spinner"></span> Posting…'; }
   if (justPostBtn) { justPostBtn.disabled = true; }
 
@@ -766,20 +757,19 @@ async function submitPost(openChooser = true) {
 
     if (openChooser) {
       setTimeout(() => {
-        showToast('Posted! Now create your visual 🎨');
+        showToast('Posted — now make it visual');
         openStudioChooser();
       }, 120);
     } else {
-      showToast('Posted! 🎵');
+      showToast('Dropped.');
     }
 
   } catch (err) {
     console.error(err);
-    showToast(err.message || 'Error posting.');
+    showToast(err.message || 'Something went wrong. Try again.');
   } finally {
-    if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = '✦ Post &amp; Create →'; }
+    if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = 'Post &amp; Create Visual'; }
     if (justPostBtn) { justPostBtn.disabled = false; }
-    // Keep the old postBtn hidden
     postBtn.disabled = false;
   }
 }
@@ -844,7 +834,7 @@ window.viewPost = function(index) {
           text-decoration:none;font-family:inherit;transition:background 0.2s;"
           onmouseover="this.style.background='rgba(255,0,0,0.12)'"
           onmouseout="this.style.background='rgba(255,0,0,0.07)'">
-          ▶ Watch on YouTube
+          Watch on YouTube
         </a>` : ''}
     `;
   }
@@ -894,7 +884,7 @@ window.openGuess = function(index) {
   document.getElementById('guessSongInput').style.display   = doSong   ? 'block':'none';
   document.getElementById('guessArtistInput').style.display = doArtist ? 'block':'none';
   const what=[]; if(doSong)what.push('song'); if(doArtist)what.push('artist');
-  document.getElementById('guessHint').textContent = `${MAX_GUESS_ATTEMPTS} attempts to guess the ${what.join(' and ')}.`;
+  document.getElementById('guessHint').textContent = `${MAX_GUESS_ATTEMPTS} attempts to name the ${what.join(' and ')}.`;
   openModal(guessModal);
 };
 
@@ -915,7 +905,7 @@ function submitGuess() {
   resultEl.classList.remove('hidden','result-success','result-error','result-partial');
   if (correct) {
     resultEl.className='result-msg result-success';
-    resultEl.innerHTML=`Correct! 🎉<br><span style="font-size:0.8rem">"${k.song}" by ${k.artist}</span>`;
+    resultEl.innerHTML=`You got it — "${k.song}" by ${k.artist}`;
     const meta=currentPost.youtubeMeta;
     if(meta?.thumbnail) resultEl.innerHTML+=`<br><img src="${meta.thumbnail}" style="width:100%;border-radius:8px;margin-top:8px;object-fit:cover" alt=""/>`;
     document.getElementById('submitGuess').style.display='none';
@@ -934,7 +924,7 @@ function submitGuess() {
   const left=MAX_GUESS_ATTEMPTS-currentGuessAttempts;
   if (left<=0) {
     resultEl.className='result-msg result-error';
-    resultEl.innerHTML=`Out of attempts<br><span style="font-size:0.8rem">It was: "${k.song}" by ${k.artist}</span>`;
+    resultEl.innerHTML=`It was: "${k.song}" by ${k.artist}`;
     document.getElementById('submitGuess').style.display='none';
     document.getElementById('guessInputFields').style.display='none';
     return;
@@ -942,9 +932,9 @@ function submitGuess() {
   const ps=doSong&&gs&&(gs===as||gs.includes(as)||as.includes(gs));
   const pa=doArtist&&ga&&(ga===aa||ga.includes(aa)||aa.includes(ga));
   resultEl.className=`result-msg ${(ps||pa)?'result-partial':'result-error'}`;
-  let msg=(ps||pa)?'Partially correct — ':'Incorrect — ';
-  if(doSong)  msg+=`Song: ${ps?'✓':'✗'} `;
-  if(doArtist)msg+=`Artist: ${pa?'✓':'✗'} `;
+  let msg=(ps||pa)?'Partially right — ':'Not quite — ';
+  if(doSong)  msg+=`Song: ${ps?'correct':'wrong'} `;
+  if(doArtist)msg+=`Artist: ${pa?'correct':'wrong'} `;
   msg+=`(${left} left)`;
   resultEl.innerHTML=msg;
   document.getElementById('guessSongInput').value='';
@@ -967,7 +957,7 @@ window.openDiscover = function(index) {
 function submitDiscover() {
   const song  =document.getElementById('discoverSongAnswer').value.trim();
   const artist=document.getElementById('discoverArtistAnswer').value.trim();
-  if(!song||!artist){showToast('Please enter both song and artist');return;}
+  if(!song||!artist){showToast('Enter both song and artist');return;}
   const helpData={
     song,artist,
     links:{
@@ -979,7 +969,7 @@ function submitDiscover() {
     timestamp:Date.now()
   };
   if(isFirebaseEnabled)analyticsRef.child(currentPost.id).child('helps').push(helpData);
-  showToast('Thanks for helping!'); closeModal(discoverModal);
+  showToast('Thanks for helping identify it'); closeModal(discoverModal);
 }
 
 /* ── Analytics ── */
@@ -1002,7 +992,7 @@ function openAnalytics() {
       const gArtist = g.artist ? (g.song?' · ':'')+'Artist: '+g.artist : '';
       sec+=`<div class="activity-item ${g.correct?'correct':'incorrect'}">
         <div class="activity-guess">${gSong}${gArtist}</div>
-        <div class="activity-result ${g.correct?'correct':'incorrect'}">${g.correct?'✓ Correct':'✗ Incorrect'}</div>
+        <div class="activity-result ${g.correct?'correct':'incorrect'}">${g.correct?'Correct':'Incorrect'}</div>
         <div class="activity-time">${timeAgo(g.timestamp)}</div>
       </div>`;
     });
