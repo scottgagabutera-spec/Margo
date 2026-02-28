@@ -1,9 +1,9 @@
 /* ============================================================
    MARGO — js/gif-studio.js
    Animated GIF Studio: canvas-rendered lyric animations → GIF / MP4
-   v1.4 — Dual export: GIF + MP4 (WhatsApp/IG/TikTok)
-          Fixed brand mark ripple rings (visible on all themes)
-          Always-legible trymargo.com pill watermark
+   v1.5 — Logo: clean MARGO wordmark (Syne 800) top-left
+          Always-legible trymargo.com pill watermark bottom
+          Dual export: GIF + MP4 (WhatsApp/IG/TikTok)
           Max quality: 1080px, quality:1, 4 workers
    ============================================================ */
 
@@ -57,81 +57,33 @@ const GS_ANIMS = {
 const GS_EXPORT_SIZE = 1080;
 
 /* ================================================================
-   BRAND MARK — gold circle + M icon + ripple rings
-   The rings use the theme accent colour so they always show up,
-   with a dark-on-light fallback for bright themes.
+   MARGO WORDMARK — top-left, exactly like the website nav
+   Uses Syne 800 (brand display font) in gold, with letter-spacing
    ================================================================ */
-function gsDrawBrandMark(ctx, cx, cy, r, theme) {
+function gsDrawWordmark(ctx, W, theme) {
   ctx.save();
 
-  /* Accent colour for rings — use gold on all dark themes,
-     dark on light themes (brutalist / cream) */
-  const isLight  = theme.text === '#000000';
-  const ringColor = isLight ? '#0B0B0D' : '#E8C547';
+  const isLight = theme.text === '#000000';
+  const fSize   = Math.max(14, W * 0.038);   // ~41px at 1080, ~13px at 340 preview
+  const padX    = W * 0.048;
+  const padY    = W * 0.052;
 
-  /* 3 ripple rings — progressively larger and more transparent */
-  const rings = [
-    { mult: 1.6,  alpha: 0.35, lw: 0.055 },
-    { mult: 2.15, alpha: 0.20, lw: 0.045 },
-    { mult: 2.75, alpha: 0.10, lw: 0.035 },
-  ];
+  ctx.font         = `800 ${fSize}px 'Syne', 'Arial Black', sans-serif`;
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'top';
+  ctx.letterSpacing = '0.08em';
+  ctx.shadowBlur   = 0;
 
-  rings.forEach(({ mult, alpha, lw }) => {
-    ctx.beginPath();
-    ctx.arc(cx, cy, r * mult, 0, Math.PI * 2);
-    /* Convert hex to rgba */
-    const hex = ringColor.replace('#','');
-    const rc  = parseInt(hex.slice(0,2),16);
-    const gc  = parseInt(hex.slice(2,4),16);
-    const bc  = parseInt(hex.slice(4,6),16);
-    ctx.strokeStyle = `rgba(${rc},${gc},${bc},${alpha})`;
-    ctx.lineWidth   = r * lw;
-    ctx.stroke();
-  });
-
-  /* Gold filled circle */
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = '#E8C547';
-  ctx.fill();
-
-  /* M / lightning mark
-     Brand kit SVG path, original viewBox centred at (150,150) r=102 */
-  const s  = r / 102;
-  const ox = cx - 150 * s;
-  const oy = cy - 150 * s;
-
-  ctx.beginPath();
-  ctx.moveTo(ox + 114*s, oy + 122*s);
-  ctx.lineTo(ox + 114*s, oy +  70*s);
-  ctx.lineTo(ox + 124*s, oy +  86*s);
-  ctx.lineTo(ox + 140*s, oy +  68*s);
-  ctx.lineTo(ox + 156*s, oy +  86*s);
-  ctx.lineTo(ox + 166*s, oy +  70*s);
-  ctx.lineTo(ox + 166*s, oy + 122*s);
-  ctx.strokeStyle = '#0B0B0D';
-  ctx.lineWidth   = 9 * s;
-  ctx.lineCap     = 'round';
-  ctx.lineJoin    = 'round';
-  ctx.stroke();
-
-  /* Small base bar */
-  const bx = ox + 133*s, by = oy + 125*s, bw = 14*s, bh = 5*s, br = 2.5*s;
-  ctx.beginPath();
-  ctx.moveTo(bx + br, by);
-  ctx.arcTo(bx+bw, by,    bx+bw, by+bh, br);
-  ctx.arcTo(bx+bw, by+bh, bx,    by+bh, br);
-  ctx.arcTo(bx,    by+bh, bx,    by,    br);
-  ctx.arcTo(bx,    by,    bx+bw, by,    br);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(11,11,13,0.45)';
-  ctx.fill();
+  /* On light themes use dark text, on dark themes use gold — matches the site */
+  ctx.fillStyle = isLight ? '#0B0B0D' : '#E8C547';
+  ctx.fillText('MARGO', padX, padY);
 
   ctx.restore();
 }
 
 /* ================================================================
-   WATERMARK PILL — always legible on every theme
+   WATERMARK PILL — always-legible at bottom centre
+   Space Mono 700 — Margo brand mono font
    ================================================================ */
 function gsDrawWatermark(ctx, W, H, theme) {
   ctx.save();
@@ -309,11 +261,8 @@ function gsDrawFrame(ctx, W, H, t) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  /* Brand mark — logo circle r = 7% of W
-     Centre positioned so outermost ring (2.75r) + small margin doesn't clip */
-  const logoR   = W * 0.07;
-  const logoPad = logoR * 2.75 + W * 0.015;
-  gsDrawBrandMark(ctx, logoPad, logoPad, logoR, theme);
+  /* MARGO wordmark top-left */
+  gsDrawWordmark(ctx, W, theme);
 
   /* Animation layer */
   const scale = W / 500;
@@ -332,7 +281,7 @@ function gsDrawFrame(ctx, W, H, t) {
   /* Song + artist meta */
   gsMeta(ctx, W, H, data, scale);
 
-  /* Watermark pill — always rendered last */
+  /* Watermark pill — always last */
   gsDrawWatermark(ctx, W, H, theme);
 }
 
@@ -559,9 +508,8 @@ async function gsExport() {
 }
 
 /* ================================================================
-   MP4 EXPORT — MediaRecorder API (no library, auto-loops on share)
-   Loops 3× so platforms detect it as looping content.
-   Auto-plays silently on WhatsApp, IG, TikTok, iMessage.
+   MP4 EXPORT — MediaRecorder API
+   Loops 3× — auto-plays silently on WhatsApp, IG, TikTok, iMessage
    ================================================================ */
 async function gsExportMp4() {
   if (GS.isExporting) return;
@@ -600,7 +548,7 @@ async function gsExportMp4() {
     const chunks   = [];
     const recorder = new MediaRecorder(stream, {
       mimeType,
-      videoBitsPerSecond: 8_000_000,  // 8 Mbps — broadcast quality
+      videoBitsPerSecond: 8_000_000,
     });
 
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
