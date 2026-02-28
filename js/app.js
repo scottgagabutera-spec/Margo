@@ -1,8 +1,9 @@
 /* ============================================================
    MARGO — js/app.js
-   v5.3 — scrollToFeed scrolls to the first feed card directly
-          using its actual DOM position. No height measurement,
-          no guessing — just finds the first card and goes there.
+   v5.4 — scrollToFeed dynamically measures the actual sticky
+          stack height at runtime (header + search + tabs + sort bar)
+          so scroll always lands precisely at the first card on
+          any screen size. No hardcoded offsets, no guessing.
    ============================================================ */
 
 // ── Toast ──
@@ -56,10 +57,27 @@ function goToLanding() {
   setPageState('landing');
 }
 
-// scrollToFeed — finds the first real feed card and scrolls to it.
-// This is bulletproof: no sticky height guessing, just the card position.
+// ── scrollToFeed ──
+// Dynamically measures the actual rendered height of every sticky layer
+// (header + search wrap + tabs + sort bar) so the scroll target is always
+// pixel-perfect on both desktop and mobile, regardless of breakpoint.
 function scrollToFeed() {
   let attempts = 0;
+
+  // Measure the full sticky stack at the moment of scrolling,
+  // not at load time — this handles font-load reflows, etc.
+  function getStickyOffset() {
+    const header  = document.querySelector('.feed-header');
+    const search  = document.querySelector('.feed-search-wrap');
+    const tabs    = document.querySelector('.room-tabs-wrap');
+    const sortBar = document.getElementById('feedSortBar');
+    return (
+      (header  ? header.offsetHeight  : 54) +
+      (search  ? search.offsetHeight  : 52) +
+      (tabs    ? tabs.offsetHeight    : 42) +
+      (sortBar ? sortBar.offsetHeight : 38)
+    );
+  }
 
   const tryScroll = () => {
     attempts++;
@@ -68,13 +86,14 @@ function scrollToFeed() {
     const firstCard = document.querySelector('#feedList .feed-card:not(.skeleton-card)');
 
     if (firstCard || attempts >= 20) {
-      const target = firstCard
-        ? firstCard.getBoundingClientRect().top + window.scrollY - 8
-        : 200; // fallback
+      const stickyOffset = getStickyOffset();
+      const cardTop = firstCard
+        ? firstCard.getBoundingClientRect().top + window.scrollY
+        : 300; // fallback if no cards yet
 
-      setTimeout(() => {
-        window.scrollTo({ top: target, behavior: 'instant' });
-      }, 0);
+      // 12px breathing room below the last sticky bar
+      const target = cardTop - stickyOffset - 12;
+      window.scrollTo({ top: Math.max(0, target), behavior: 'instant' });
     } else {
       setTimeout(tryScroll, 80);
     }
@@ -149,4 +168,4 @@ try {
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v5.3 dev — scrollToFeed targets first card directly.');
+console.log('MARGO v5.4 dev — scrollToFeed dynamically measures sticky stack.');
