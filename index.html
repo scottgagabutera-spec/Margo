@@ -115,6 +115,30 @@
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="gif-studio.css"/>
 
+  <!-- MP4 export button style -->
+  <style>
+    #gsExportMp4 {
+      background: #00e5ff;
+      color: #0B0B0D;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      font-size: 0.62rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      transition: all 0.2s;
+      min-width: 100px;
+      text-align: center;
+    }
+    #gsExportMp4:hover:not(:disabled) { background: #33eeff; transform: scale(1.03); }
+    #gsExportMp4:disabled { opacity: 0.6; cursor: wait; }
+    /* Make topbar accommodate two buttons */
+    .gs-topbar { gap: 8px; }
+  </style>
+
 </head>
 <body>
 <div class="ambient ambient-1"></div>
@@ -214,7 +238,7 @@
     <span id="newPostsCount">0</span> new lyrics — tap to see
   </div>
 
-  <!-- ── Search — sticky ── -->
+  <!-- ── Search ── -->
   <div class="feed-search-wrap">
     <div class="feed-search-inner">
       <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -226,7 +250,7 @@
     </div>
   </div>
 
-  <!-- ── Emotion filter tabs — sticky ── -->
+  <!-- ── Emotion filter tabs ── -->
   <div class="room-tabs-wrap" role="tablist" aria-label="Filter by emotion">
     <div class="room-tabs">
       <button class="room-tab active" data-room="all" role="tab" aria-selected="true">All</button>
@@ -241,7 +265,6 @@
     </div>
   </div>
 
-  <!-- Sort bar injected here by feed.js as #feedSortBar -->
   <div id="feedList"></div>
 </section>
 
@@ -253,7 +276,6 @@
   Drop a Lyric
 </button>
 
-<!-- Back to top — motion.js injects pill design into this button -->
 <button id="margoScrollTop" aria-label="Back to top"></button>
 
 <footer class="site-footer">
@@ -555,9 +577,9 @@
       </button>
       <button class="sc-card" id="chooserGifBtn">
         <div class="sc-card-icon gif-icon">GIF</div>
-        <div class="sc-card-title">GIF</div>
-        <div class="sc-card-desc">Looping animated GIF — works everywhere, no play button needed</div>
-        <span class="sc-card-tag gif-tag">GIF · Auto-loop</span>
+        <div class="sc-card-title">Animated</div>
+        <div class="sc-card-desc">Looping animation — export as GIF or Video for WhatsApp &amp; IG</div>
+        <span class="sc-card-tag gif-tag">GIF · Video</span>
       </button>
     </div>
     <button class="sc-back" id="chooserBackBtn">Back to post</button>
@@ -573,7 +595,11 @@
       </svg>
     </button>
     <span class="gs-topbar-title">Margo · GIF Studio</span>
-    <button id="gsExportBtn">Export GIF</button>
+    <!-- ↓ TWO export buttons: GIF (gold) + Video/MP4 (cyan) -->
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="gsExportBtn">GIF</button>
+      <button id="gsExportMp4">▶ Video</button>
+    </div>
   </div>
   <div class="gs-body">
     <div class="gs-stage">
@@ -638,8 +664,9 @@
             <button class="gs-speed-btn" data-speed="fast">Fast</button>
           </div>
           <div class="gs-gif-note">
-            <strong>About GIF</strong><br>
-            GIFs loop automatically — no play button needed. They work on every platform: WhatsApp, iMessage, Instagram, Twitter, Discord. Export takes around 5–10 seconds.
+            <strong>Export formats</strong><br>
+            <strong>GIF</strong> — works on every platform, loops automatically.<br>
+            <strong>▶ Video</strong> — best for WhatsApp, Instagram &amp; TikTok. Auto-plays silently, no play button.
           </div>
         </div>
       </div>
@@ -675,25 +702,21 @@
 
   if (!feed || !fab) return;
 
-  /* ── Force page to top on initial load ── */
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
 
-  /* ── Wire FAB → composer ── */
   var composer = document.getElementById('openComposer');
   fab.addEventListener('click', function () {
     if (composer) composer.click();
   });
 
-  /* ── Logo → scroll to top ── */
   if (logoHome) {
     logoHome.addEventListener('click', function () {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
 
-  /* ── Core: is the feed currently visible? ── */
   function feedIsActive () {
     if (feed.style.display === 'none') return false;
     if (feed.classList.contains('active')) return true;
@@ -706,15 +729,8 @@
 
   function onFeedVisibilityChange () {
     var isActive = feedIsActive();
-
-    if (isActive && !wasFeedActive) {
-      lastY = 0;
-      pending = false;
-      onScroll();
-    }
-
+    if (isActive && !wasFeedActive) { lastY = 0; pending = false; onScroll(); }
     wasFeedActive = isActive;
-
     if (isActive) {
       fab.style.display = '';
       fab.classList.remove('scroll-hidden');
@@ -727,20 +743,15 @@
 
   var obs = new MutationObserver(onFeedVisibilityChange);
   obs.observe(feed, { attributes: true, attributeFilter: ['class', 'style'] });
-  if (landing) {
-    obs.observe(landing, { attributes: true, attributeFilter: ['class', 'style'] });
-  }
-
+  if (landing) obs.observe(landing, { attributes: true, attributeFilter: ['class', 'style'] });
   onFeedVisibilityChange();
 
-  /* ── Hide FAB while composer modal is open ── */
   if (modal) {
     new MutationObserver(function () {
       fab.classList.toggle('hidden-fab', !modal.classList.contains('hidden'));
     }).observe(modal, { attributes: true, attributeFilter: ['class'] });
   }
 
-  /* ── Scroll handler ── */
   var lastY   = 0;
   var pending = false;
   var FAB_MIN = 6;
@@ -752,24 +763,17 @@
       var y    = window.scrollY || document.documentElement.scrollTop || 0;
       var down = y > lastY;
       var d    = Math.abs(y - lastY);
-
       if (header) {
         header.style.borderBottomColor = y > 8
           ? 'rgba(232,197,71,0.22)'
           : 'rgba(232,197,71,0.12)';
       }
-
       if (feedIsActive() && !fab.classList.contains('hidden-fab')) {
-        if (down && d > FAB_MIN && y > 100) {
-          fab.classList.add('scroll-hidden');
-        } else if (!down && d > FAB_MIN) {
-          fab.classList.remove('scroll-hidden');
-        }
+        if (down && d > FAB_MIN && y > 100) fab.classList.add('scroll-hidden');
+        else if (!down && d > FAB_MIN) fab.classList.remove('scroll-hidden');
         if (y < 60) fab.classList.remove('scroll-hidden');
       }
-
-      lastY   = y;
-      pending = false;
+      lastY = y; pending = false;
     });
   }
 

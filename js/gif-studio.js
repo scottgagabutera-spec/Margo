@@ -1,8 +1,10 @@
 /* ============================================================
    MARGO — js/gif-studio.js
-   Animated GIF Studio: canvas-rendered lyric animations → GIF
-   8 animation styles, all themes, all fonts from image studio
-   v1.1 — gif.worker.js now hosted locally (fixes CORS/download)
+   Animated GIF Studio: canvas-rendered lyric animations → GIF / MP4
+   v1.5 — Logo: clean MARGO wordmark (Syne 800) top-left
+          Always-legible trymargo.com pill watermark bottom
+          Dual export: GIF + MP4 (WhatsApp/IG/TikTok)
+          Max quality: 1080px, quality:1, 4 workers
    ============================================================ */
 
 /* ── State ── */
@@ -52,6 +54,78 @@ const GS_ANIMS = {
   'bounce':    { label:'Bounce',     frames:22, icon:'◡' },
 };
 
+const GS_EXPORT_SIZE = 1080;
+
+/* ================================================================
+   MARGO WORDMARK — top-left, exactly like the website nav
+   Uses Syne 800 (brand display font) in gold, with letter-spacing
+   ================================================================ */
+function gsDrawWordmark(ctx, W, theme) {
+  ctx.save();
+
+  const isLight = theme.text === '#000000';
+  const fSize   = Math.max(14, W * 0.038);   // ~41px at 1080, ~13px at 340 preview
+  const padX    = W * 0.048;
+  const padY    = W * 0.052;
+
+  ctx.font         = `800 ${fSize}px 'Syne', 'Arial Black', sans-serif`;
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'top';
+  ctx.letterSpacing = '0.08em';
+  ctx.shadowBlur   = 0;
+
+  /* On light themes use dark text, on dark themes use gold — matches the site */
+  ctx.fillStyle = isLight ? '#0B0B0D' : '#E8C547';
+  ctx.fillText('MARGO', padX, padY);
+
+  ctx.restore();
+}
+
+/* ================================================================
+   WATERMARK PILL — always-legible at bottom centre
+   Space Mono 700 — Margo brand mono font
+   ================================================================ */
+function gsDrawWatermark(ctx, W, H, theme) {
+  ctx.save();
+
+  const isLight = theme.text === '#000000';
+  const text    = 'trymargo.com';
+  const fSize   = Math.max(10, W * 0.022);
+
+  ctx.font         = `700 ${fSize}px 'Space Mono', monospace`;
+  ctx.textBaseline = 'middle';
+
+  const textW = ctx.measureText(text).width;
+  const padX  = fSize * 1.0;
+  const padY  = fSize * 0.55;
+  const pillW = textW + padX * 2;
+  const pillH = fSize + padY * 2;
+  const pillR = pillH / 2;
+  const pillX = W / 2 - pillW / 2;
+  const pillY = H * 0.938 - pillH / 2;
+
+  ctx.beginPath();
+  ctx.moveTo(pillX + pillR, pillY);
+  ctx.arcTo(pillX + pillW, pillY,         pillX + pillW, pillY + pillH, pillR);
+  ctx.arcTo(pillX + pillW, pillY + pillH, pillX,         pillY + pillH, pillR);
+  ctx.arcTo(pillX,         pillY + pillH, pillX,         pillY,         pillR);
+  ctx.arcTo(pillX,         pillY,         pillX + pillW, pillY,         pillR);
+  ctx.closePath();
+
+  ctx.fillStyle   = isLight ? 'rgba(11,11,13,0.80)' : 'rgba(255,255,255,0.12)';
+  ctx.fill();
+  ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.22)';
+  ctx.lineWidth   = Math.max(1, W * 0.001);
+  ctx.stroke();
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textAlign = 'center';
+  ctx.shadowBlur = 0;
+  ctx.fillText(text, W / 2, pillY + pillH / 2);
+
+  ctx.restore();
+}
+
 /* ================================================================
    INIT
    ================================================================ */
@@ -91,7 +165,8 @@ function initGifStudio() {
     };
   });
 
-  document.getElementById('gsExportBtn').onclick    = gsExport;
+  document.getElementById('gsExportBtn')?.addEventListener('click', gsExport);
+  document.getElementById('gsExportMp4')?.addEventListener('click', gsExportMp4);
   document.getElementById('closeGifStudio').onclick = closeGifStudio;
 }
 
@@ -110,8 +185,10 @@ function openGifStudio() {
   ov.querySelectorAll('.gs-anim-btn').forEach((b,i)  => b.classList.toggle('active', i===0));
   ov.querySelectorAll('.gs-speed-btn').forEach(b     => b.classList.toggle('active', b.dataset.speed==='normal'));
 
-  const btn = document.getElementById('gsExportBtn');
-  if (btn) { btn.textContent = 'Create GIF →'; btn.disabled = false; }
+  const gifBtn = document.getElementById('gsExportBtn');
+  const mp4Btn = document.getElementById('gsExportMp4');
+  if (gifBtn) { gifBtn.textContent = 'GIF'; gifBtn.disabled = false; }
+  if (mp4Btn) { mp4Btn.textContent = '▶ Video'; mp4Btn.disabled = false; }
 
   ov.classList.remove('hidden');
   document.body.classList.add('modal-open');
@@ -176,14 +253,18 @@ function gsDrawFrame(ctx, W, H, t) {
     theme, font,
   };
 
-  // Background
+  /* Background */
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, theme.bg[0]);
+  g.addColorStop(0,   theme.bg[0]);
   g.addColorStop(0.5, theme.bg[1]);
-  g.addColorStop(1, theme.bg[2]);
+  g.addColorStop(1,   theme.bg[2]);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
+  /* MARGO wordmark top-left */
+  gsDrawWordmark(ctx, W, theme);
+
+  /* Animation layer */
   const scale = W / 500;
   ctx.save();
   const anim = GS.animation;
@@ -197,15 +278,11 @@ function gsDrawFrame(ctx, W, H, t) {
   else if (anim==='bounce')     gsBounce(ctx,W,H,t,data,scale);
   ctx.restore();
 
-  // Logo
-  ctx.save();
-  ctx.globalAlpha = 0.38; ctx.textAlign = 'left';
-  ctx.fillStyle = theme.text;
-  ctx.font = `700 ${11*scale}px 'Space Mono',monospace`;
-  ctx.fillText('MARGO', 22*scale, 30*scale);
-  ctx.restore();
-
+  /* Song + artist meta */
   gsMeta(ctx, W, H, data, scale);
+
+  /* Watermark pill — always last */
+  gsDrawWatermark(ctx, W, H, theme);
 }
 
 /* ── Helpers ── */
@@ -224,24 +301,23 @@ function gsWrap(ctx, text, cx, cy, maxW, lineH) {
 
 function gsMeta(ctx, W, H, data, scale) {
   ctx.save();
-  ctx.textAlign = 'center'; ctx.shadowBlur = 0;
-  ctx.fillStyle = data.theme.accent;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.shadowBlur   = 0;
+  ctx.fillStyle    = data.theme.accent;
   ctx.font = `700 ${Math.max(12, 16*scale)}px ${data.font.family}`;
   ctx.fillText(data.song, W/2, H*0.79);
   ctx.fillStyle = data.theme.text === '#000000' ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)';
   ctx.font = `400 ${Math.max(9, 11*scale)}px 'Space Mono',monospace`;
   ctx.fillText(data.artist, W/2, H*0.79 + 18*scale);
-  ctx.fillStyle = data.theme.text === '#000000' ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.22)';
-  ctx.font = `700 ${Math.max(7, 9*scale)}px 'Space Mono',monospace`;
-  ctx.fillText('MARGO · trymargo.com', W/2, H*0.935);
   ctx.restore();
 }
 
-function gsLyricFont(ctx, data, scale, W) {
-  const len = data.lyric.length;
-  const sz  = len < 40 ? 52*scale : len < 70 ? 40*scale : 30*scale;
+function gsLyricFont(ctx, data, scale) {
+  const len  = data.lyric.length;
+  const sz   = len < 40 ? 52*scale : len < 70 ? 40*scale : 30*scale;
   const bold = ['bebas','josefin','oswald'].includes(GS.font);
-  ctx.font = `${data.font.style==='italic' ? 'italic ' : ''}${bold ? '700' : '600'} ${sz}px ${data.font.family}`;
+  ctx.font   = `${data.font.style==='italic' ? 'italic ' : ''}${bold ? '700' : '600'} ${sz}px ${data.font.family}`;
   return sz;
 }
 
@@ -251,7 +327,7 @@ function gsFadeUp(ctx,W,H,t,data,scale) {
   const oy = (1-e)*38*scale, a = Math.min(1, e*2.2);
   ctx.globalAlpha = a; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14*scale;
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   gsWrap(ctx, data.lyric, W/2, H*0.44+oy, W*0.82, sz*1.2);
   ctx.globalAlpha = 1; ctx.shadowBlur = 0;
 }
@@ -262,7 +338,7 @@ function gsTypewriter(ctx,W,H,t,data,scale) {
   const cur   = chars <= data.lyric.length && (Math.floor(t*10) % 2 === 0) ? '|' : '';
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10*scale;
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   gsWrap(ctx, vis+cur, W/2, H*0.44, W*0.82, sz*1.2);
   ctx.shadowBlur = 0;
 }
@@ -274,7 +350,7 @@ function gsSlideIn(ctx,W,H,t,data,scale) {
   ctx.globalAlpha = Math.min(1, eo*1.6);
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 12*scale;
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   ctx.translate(ox, 0);
   gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2);
   ctx.restore(); ctx.shadowBlur = 0;
@@ -284,7 +360,7 @@ function gsPulse(ctx,W,H,t,data,scale) {
   const p    = 0.93 + 0.07 * Math.sin(t * Math.PI * 2);
   const glow = 0.5  + 0.5  * Math.sin(t * Math.PI * 2);
   ctx.save(); ctx.translate(W/2, H*0.44); ctx.scale(p, p);
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   ctx.shadowColor = data.theme.accent; ctx.shadowBlur = (8 + glow*22) * scale;
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
   gsWrap(ctx, data.lyric, 0, 0, W*0.82, sz*1.2);
@@ -293,14 +369,13 @@ function gsPulse(ctx,W,H,t,data,scale) {
 
 function gsGlitch(ctx,W,H,t,data,scale) {
   const phase = Math.floor(t*9); const isG = phase%3===0 && t<0.85;
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   const ox = isG ? (Math.random()-0.5)*10*scale : 0;
   if (isG) {
     ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = '#ff0040'; ctx.textAlign = 'center';
     ctx.translate(3*scale, 0); gsWrap(ctx, data.lyric, W/2+ox, H*0.44, W*0.82, sz*1.2); ctx.restore();
   }
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  ctx.shadowBlur = 0;
+  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center'; ctx.shadowBlur = 0;
   ctx.save(); ctx.translate(isG ? ox : 0, 0);
   gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2); ctx.restore();
 }
@@ -314,7 +389,7 @@ function gsWave(ctx,W,H,t,data,scale) {
   ctx.stroke();
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10*scale;
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   const words = data.lyric.split(' ');
   const totalW = words.reduce((a,w) => a + ctx.measureText(w+' ').width, 0);
   if (totalW > W*0.88) {
@@ -331,13 +406,13 @@ function gsWave(ctx,W,H,t,data,scale) {
 }
 
 function gsShimmer(ctx,W,H,t,data,scale) {
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   ctx.fillStyle = data.theme.text+'99'; ctx.textAlign = 'center';
   gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2);
   const sx = t*(W + 160*scale) - 80*scale;
   const sh = ctx.createLinearGradient(sx-70*scale, 0, sx+70*scale, 0);
   sh.addColorStop(0, 'transparent'); sh.addColorStop(0.4, data.theme.accent);
-  sh.addColorStop(0.6, '#ffffff'); sh.addColorStop(1, 'transparent');
+  sh.addColorStop(0.6, '#ffffff');   sh.addColorStop(1, 'transparent');
   ctx.save(); ctx.globalCompositeOperation = 'source-atop';
   ctx.fillStyle = sh; gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2); ctx.restore();
 }
@@ -346,7 +421,7 @@ function gsBounce(ctx,W,H,t,data,scale) {
   const b  = t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
   const oy = (1-b) * H * 0.28; const sy = 0.86 + b*0.14;
   ctx.save(); ctx.translate(W/2, H*0.44+oy); ctx.scale(1, sy);
-  const sz = gsLyricFont(ctx, data, scale, W);
+  const sz = gsLyricFont(ctx, data, scale);
   ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 12*scale;
   gsWrap(ctx, data.lyric, 0, 0, W*0.82, sz*1.2);
@@ -354,17 +429,19 @@ function gsBounce(ctx,W,H,t,data,scale) {
 }
 
 /* ================================================================
-   GIF EXPORT
+   GIF EXPORT — MAX QUALITY
    ================================================================ */
 async function gsExport() {
   if (GS.isExporting) return;
   GS.isExporting = true;
   gsStopPreview();
 
-  const btn = document.getElementById('gsExportBtn');
-  btn.disabled = true;
+  const gifBtn = document.getElementById('gsExportBtn');
+  const mp4Btn = document.getElementById('gsExportMp4');
+  gifBtn.disabled = true;
+  if (mp4Btn) mp4Btn.disabled = true;
 
-  const SIZE   = 600;
+  const SIZE   = GS_EXPORT_SIZE;
   const anim   = GS_ANIMS[GS.animation];
   const frames = anim?.frames || 24;
   const delay  = GS_SPEED_MS[GS.speed] || 70;
@@ -376,7 +453,6 @@ async function gsExport() {
   try {
     await document.fonts.ready;
 
-    // Load gif.js from CDN (main library, not the worker)
     if (typeof GIF === 'undefined') {
       await new Promise((res, rej) => {
         const s = document.createElement('script');
@@ -386,38 +462,35 @@ async function gsExport() {
       });
     }
 
-    // ── KEY FIX: use local worker to avoid CORS error ──
     const gif = new GIF({
-      workers: 2,
-      quality: 8,
-      width: SIZE,
-      height: SIZE,
-      workerScript: '/js/gif.worker.js',  // local — no CORS
+      workers: 4, quality: 1,
+      width: SIZE, height: SIZE,
+      workerScript: '/js/gif.worker.js',
+      dither: false,
     });
 
     for (let i = 0; i < frames; i++) {
       oc.clearRect(0, 0, SIZE, SIZE);
       gsDrawFrame(oc, SIZE, SIZE, i / frames);
       gif.addFrame(off, { copy: true, delay });
-      btn.textContent = `Building… ${Math.round((i / frames) * 75)}%`;
+      gifBtn.textContent = `GIF ${Math.round((i / frames) * 75)}%`;
       await new Promise(r => setTimeout(r, 0));
     }
 
     gif.on('progress', p => {
-      btn.textContent = `Encoding… ${Math.round(75 + p * 25)}%`;
+      gifBtn.textContent = `Encoding… ${Math.round(75 + p * 25)}%`;
     });
 
     gif.on('finished', blob => {
       const url = URL.createObjectURL(blob);
-      const a   = document.createElement('a');
-      a.href = url;
-      a.download = `margo-${Date.now()}.gif`;
+      const a = document.createElement('a');
+      a.href = url; a.download = `margo-${Date.now()}.gif`;
       a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
+      document.body.appendChild(a); a.click();
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
-      btn.textContent = '✓ Saved!';
-      btn.disabled = false;
+      gifBtn.textContent = '✓ GIF Saved!';
+      gifBtn.disabled = false;
+      if (mp4Btn) mp4Btn.disabled = false;
       GS.isExporting = false;
       setTimeout(gsStartPreview, 400);
     });
@@ -426,9 +499,92 @@ async function gsExport() {
 
   } catch(err) {
     console.error('GIF error:', err);
-    btn.textContent = 'Try Again';
-    btn.disabled = false;
+    gifBtn.textContent = 'GIF';
+    gifBtn.disabled = false;
+    if (mp4Btn) mp4Btn.disabled = false;
     GS.isExporting = false;
+    gsStartPreview();
+  }
+}
+
+/* ================================================================
+   MP4 EXPORT — MediaRecorder API
+   Loops 3× — auto-plays silently on WhatsApp, IG, TikTok, iMessage
+   ================================================================ */
+async function gsExportMp4() {
+  if (GS.isExporting) return;
+  GS.isExporting = true;
+  gsStopPreview();
+
+  const gifBtn = document.getElementById('gsExportBtn');
+  const mp4Btn = document.getElementById('gsExportMp4');
+  if (gifBtn) gifBtn.disabled = true;
+  mp4Btn.disabled = true;
+  mp4Btn.textContent = 'Preparing…';
+
+  const SIZE        = GS_EXPORT_SIZE;
+  const anim        = GS_ANIMS[GS.animation];
+  const frames      = anim?.frames || 24;
+  const delay       = GS_SPEED_MS[GS.speed] || 70;
+  const LOOPS       = 3;
+  const totalFrames = frames * LOOPS;
+  const fps         = Math.round(1000 / delay);
+
+  const off = document.createElement('canvas');
+  off.width = SIZE; off.height = SIZE;
+  const oc  = off.getContext('2d');
+
+  try {
+    await document.fonts.ready;
+
+    const mimeType = [
+      'video/mp4;codecs=avc1',
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+    ].find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+
+    const stream   = off.captureStream(fps);
+    const chunks   = [];
+    const recorder = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: 8_000_000,
+    });
+
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: mimeType });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `margo-${Date.now()}.mp4`;
+      a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+      mp4Btn.textContent = '✓ Video Saved!';
+      mp4Btn.disabled    = false;
+      if (gifBtn) gifBtn.disabled = false;
+      GS.isExporting     = false;
+      setTimeout(gsStartPreview, 400);
+    };
+
+    recorder.start();
+
+    for (let i = 0; i < totalFrames; i++) {
+      oc.clearRect(0, 0, SIZE, SIZE);
+      gsDrawFrame(oc, SIZE, SIZE, (i % frames) / frames);
+      mp4Btn.textContent = `Video ${Math.round((i / totalFrames) * 100)}%`;
+      await new Promise(r => setTimeout(r, delay));
+    }
+
+    recorder.stop();
+
+  } catch(err) {
+    console.error('MP4 error:', err);
+    mp4Btn.textContent = '▶ Video';
+    mp4Btn.disabled    = false;
+    if (gifBtn) gifBtn.disabled = false;
+    GS.isExporting     = false;
     gsStartPreview();
   }
 }
