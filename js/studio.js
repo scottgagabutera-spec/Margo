@@ -1,642 +1,609 @@
 /* ============================================================
-   MARGO — js/gif-studio.js
-   Animated GIF Studio: canvas-rendered lyric animations → GIF / MP4
-   v1.4 — Dual export: GIF + MP4 (WhatsApp/IG/TikTok)
-          Fixed brand mark ripple rings (visible on all themes)
-          Always-legible trymargo.com pill watermark
-          Max quality: 1080px, quality:1, 4 workers
+   MARGO — js/studio.js
+   Image Studio (canvas → PNG) + Studio Chooser wiring
+   v5.3 — Dev branch.
+          Image studio = exact working code from main.
+          Chooser wiring added for Motion→Image, GIF→gif-studio.
+          No buildStudioHTML() — HTML already in index.html.
    ============================================================ */
 
-/* ── State ── */
-const GS = {
-  theme: 'midnight-gold', font: 'playfair', animation: 'fade-up',
-  speed: 'normal', isExporting: false,
-  _animFrame: null, _frame: 0, _last: 0,
-};
+/* ════════════════════════════════════════
+   STUDIO CHOOSER WIRING
+   ════════════════════════════════════════ */
+function initStudioChooser() {
+  const chooser   = document.getElementById('studioChooser');
+  if (!chooser) return;
 
-/* ── Themes ── */
-const GS_THEMES = {
-  'midnight-gold':  { bg: ['#0B0B0D','#1a1400','#0B0B0D'], accent: '#E8C547',  text: '#ffffff' },
-  'royal-purple':   { bg: ['#0d0014','#1a003a','#0d0014'], accent: '#c77dff',  text: '#ffffff' },
-  'neon-cyan':      { bg: ['#050e1a','#0a1e2e','#050e1a'], accent: '#00e5ff',  text: '#ffffff' },
-  'sunset-coral':   { bg: ['#1a0505','#2d0808','#1a0505'], accent: '#ff6b6b',  text: '#ffffff' },
-  'emerald-night':  { bg: ['#051a0d','#0a2e18','#051a0d'], accent: '#50fa7b',  text: '#ffffff' },
-  'rose-gold':      { bg: ['#1a0d0f','#2d1219','#1a0d0f'], accent: '#f4a4c0',  text: '#ffffff' },
-  'monochrome':     { bg: ['#000000','#111111','#000000'], accent: '#ffffff',   text: '#ffffff' },
-  'vaporwave':      { bg: ['#1a0533','#2d0a4d','#001a1a'], accent: '#ff71ce',  text: '#ffffff' },
-  'neon-dark':      { bg: ['#0a0a0a','#141414','#0a0a0a'], accent: '#ff00ff',  text: '#ffffff' },
-  'y2k-chrome':     { bg: ['#000033','#000824','#000033'], accent: '#00ffff',  text: '#ffffff' },
-  'brutalist':      { bg: ['#ffffff','#f0f0f0','#ffffff'], accent: '#000000',   text: '#000000' },
-  'cream-editorial':{ bg: ['#f5f1e8','#ede8dc','#f5f1e8'], accent: '#B8901A', text: '#1a1a20' },
-};
+  const motionBtn = document.getElementById('chooserMotionBtn');
+  const gifBtn    = document.getElementById('chooserGifBtn');
+  const backBtn   = document.getElementById('chooserBackBtn');
 
-const GS_FONTS = {
-  playfair:    { family:"'Playfair Display',serif",    style:'italic'  },
-  cormorant:   { family:"'Cormorant Garamond',serif",  style:'italic'  },
-  lora:        { family:"'Lora',serif",                style:'italic'  },
-  merriweather:{ family:"'Merriweather',serif",        style:'normal'  },
-  josefin:     { family:"'Josefin Sans',sans-serif",   style:'normal'  },
-  bebas:       { family:"'Bebas Neue',sans-serif",     style:'normal'  },
-  oswald:      { family:"'Oswald',sans-serif",         style:'normal'  },
-  dancing:     { family:"'Dancing Script',cursive",    style:'normal'  },
-};
-
-const GS_SPEED_MS = { slow: 130, normal: 70, fast: 35 };
-
-const GS_ANIMS = {
-  'fade-up':   { label:'Fade Up',    frames:24, icon:'↑' },
-  'typewriter':{ label:'Typewriter', frames:32, icon:'▌' },
-  'slide-in':  { label:'Slide In',   frames:22, icon:'→' },
-  'pulse':     { label:'Pulse',      frames:20, icon:'◎' },
-  'glitch':    { label:'Glitch',     frames:18, icon:'▒' },
-  'wave':      { label:'Wave',       frames:28, icon:'∿' },
-  'shimmer':   { label:'Shimmer',    frames:24, icon:'✦' },
-  'bounce':    { label:'Bounce',     frames:22, icon:'◡' },
-};
-
-const GS_EXPORT_SIZE = 1080;
-
-/* ================================================================
-   BRAND MARK — gold circle + M icon + ripple rings
-   The rings use the theme accent colour so they always show up,
-   with a dark-on-light fallback for bright themes.
-   ================================================================ */
-function gsDrawBrandMark(ctx, cx, cy, r, theme) {
-  ctx.save();
-
-  /* Accent colour for rings — use gold on all dark themes,
-     dark on light themes (brutalist / cream) */
-  const isLight  = theme.text === '#000000';
-  const ringColor = isLight ? '#0B0B0D' : '#E8C547';
-
-  /* 3 ripple rings — progressively larger and more transparent */
-  const rings = [
-    { mult: 1.6,  alpha: 0.35, lw: 0.055 },
-    { mult: 2.15, alpha: 0.20, lw: 0.045 },
-    { mult: 2.75, alpha: 0.10, lw: 0.035 },
-  ];
-
-  rings.forEach(({ mult, alpha, lw }) => {
-    ctx.beginPath();
-    ctx.arc(cx, cy, r * mult, 0, Math.PI * 2);
-    /* Convert hex to rgba */
-    const hex = ringColor.replace('#','');
-    const rc  = parseInt(hex.slice(0,2),16);
-    const gc  = parseInt(hex.slice(2,4),16);
-    const bc  = parseInt(hex.slice(4,6),16);
-    ctx.strokeStyle = `rgba(${rc},${gc},${bc},${alpha})`;
-    ctx.lineWidth   = r * lw;
-    ctx.stroke();
+  if (motionBtn) motionBtn.addEventListener('click', () => {
+    chooser.classList.add('hidden');
+    openStudio();   // opens the working image studio
   });
 
-  /* Gold filled circle */
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = '#E8C547';
-  ctx.fill();
+  if (gifBtn) gifBtn.addEventListener('click', () => {
+    chooser.classList.add('hidden');
+    if (typeof openGifStudio === 'function') openGifStudio();
+  });
 
-  /* M / lightning mark
-     Brand kit SVG path, original viewBox centred at (150,150) r=102 */
-  const s  = r / 102;
-  const ox = cx - 150 * s;
-  const oy = cy - 150 * s;
-
-  ctx.beginPath();
-  ctx.moveTo(ox + 114*s, oy + 122*s);
-  ctx.lineTo(ox + 114*s, oy +  70*s);
-  ctx.lineTo(ox + 124*s, oy +  86*s);
-  ctx.lineTo(ox + 140*s, oy +  68*s);
-  ctx.lineTo(ox + 156*s, oy +  86*s);
-  ctx.lineTo(ox + 166*s, oy +  70*s);
-  ctx.lineTo(ox + 166*s, oy + 122*s);
-  ctx.strokeStyle = '#0B0B0D';
-  ctx.lineWidth   = 9 * s;
-  ctx.lineCap     = 'round';
-  ctx.lineJoin    = 'round';
-  ctx.stroke();
-
-  /* Small base bar */
-  const bx = ox + 133*s, by = oy + 125*s, bw = 14*s, bh = 5*s, br = 2.5*s;
-  ctx.beginPath();
-  ctx.moveTo(bx + br, by);
-  ctx.arcTo(bx+bw, by,    bx+bw, by+bh, br);
-  ctx.arcTo(bx+bw, by+bh, bx,    by+bh, br);
-  ctx.arcTo(bx,    by+bh, bx,    by,    br);
-  ctx.arcTo(bx,    by,    bx+bw, by,    br);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(11,11,13,0.45)';
-  ctx.fill();
-
-  ctx.restore();
+  if (backBtn) backBtn.addEventListener('click', () => {
+    chooser.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+    openModal(postcardModal);
+  });
 }
 
-/* ================================================================
-   WATERMARK PILL — always legible on every theme
-   ================================================================ */
-function gsDrawWatermark(ctx, W, H, theme) {
-  ctx.save();
-
-  const isLight = theme.text === '#000000';
-  const text    = 'trymargo.com';
-  const fSize   = Math.max(10, W * 0.022);
-
-  ctx.font         = `700 ${fSize}px 'Space Mono', monospace`;
-  ctx.textBaseline = 'middle';
-
-  const textW = ctx.measureText(text).width;
-  const padX  = fSize * 1.0;
-  const padY  = fSize * 0.55;
-  const pillW = textW + padX * 2;
-  const pillH = fSize + padY * 2;
-  const pillR = pillH / 2;
-  const pillX = W / 2 - pillW / 2;
-  const pillY = H * 0.938 - pillH / 2;
-
-  ctx.beginPath();
-  ctx.moveTo(pillX + pillR, pillY);
-  ctx.arcTo(pillX + pillW, pillY,         pillX + pillW, pillY + pillH, pillR);
-  ctx.arcTo(pillX + pillW, pillY + pillH, pillX,         pillY + pillH, pillR);
-  ctx.arcTo(pillX,         pillY + pillH, pillX,         pillY,         pillR);
-  ctx.arcTo(pillX,         pillY,         pillX + pillW, pillY,         pillR);
-  ctx.closePath();
-
-  ctx.fillStyle   = isLight ? 'rgba(11,11,13,0.80)' : 'rgba(255,255,255,0.12)';
-  ctx.fill();
-  ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.22)';
-  ctx.lineWidth   = Math.max(1, W * 0.001);
-  ctx.stroke();
-
-  ctx.fillStyle = '#FFFFFF';
-  ctx.textAlign = 'center';
-  ctx.shadowBlur = 0;
-  ctx.fillText(text, W / 2, pillY + pillH / 2);
-
-  ctx.restore();
-}
-
-/* ================================================================
-   INIT
-   ================================================================ */
-function initGifStudio() {
-  const ov = document.getElementById('gifStudioOverlay');
-  if (!ov) return;
-
-  ov.querySelectorAll('.gs-swatch').forEach(sw => {
-    sw.onclick = () => {
-      ov.querySelectorAll('.gs-swatch').forEach(s => s.classList.remove('active'));
-      sw.classList.add('active');
-      GS.theme = sw.dataset.theme;
-    };
-  });
-
-  ov.querySelectorAll('.gs-font-card').forEach(fc => {
-    fc.onclick = () => {
-      ov.querySelectorAll('.gs-font-card').forEach(f => f.classList.remove('active'));
-      fc.classList.add('active');
-      GS.font = fc.dataset.font;
-    };
-  });
-
-  ov.querySelectorAll('.gs-anim-btn').forEach(btn => {
-    btn.onclick = () => {
-      ov.querySelectorAll('.gs-anim-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      GS.animation = btn.dataset.anim;
-    };
-  });
-
-  ov.querySelectorAll('.gs-speed-btn').forEach(btn => {
-    btn.onclick = () => {
-      ov.querySelectorAll('.gs-speed-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      GS.speed = btn.dataset.speed;
-    };
-  });
-
-  document.getElementById('gsExportBtn')?.addEventListener('click', gsExport);
-  document.getElementById('gsExportMp4')?.addEventListener('click', gsExportMp4);
-  document.getElementById('closeGifStudio').onclick = closeGifStudio;
-}
-
-/* ================================================================
-   OPEN / CLOSE
-   ================================================================ */
-function openGifStudio() {
-  const ov = document.getElementById('gifStudioOverlay');
-  if (!ov) return;
-  GS.theme = 'midnight-gold'; GS.font = 'playfair';
-  GS.animation = 'fade-up';   GS.speed = 'normal';
-  GS.isExporting = false;
-
-  ov.querySelectorAll('.gs-swatch').forEach((s,i)    => s.classList.toggle('active', i===0));
-  ov.querySelectorAll('.gs-font-card').forEach((f,i) => f.classList.toggle('active', i===0));
-  ov.querySelectorAll('.gs-anim-btn').forEach((b,i)  => b.classList.toggle('active', i===0));
-  ov.querySelectorAll('.gs-speed-btn').forEach(b     => b.classList.toggle('active', b.dataset.speed==='normal'));
-
-  const gifBtn = document.getElementById('gsExportBtn');
-  const mp4Btn = document.getElementById('gsExportMp4');
-  if (gifBtn) { gifBtn.textContent = 'GIF'; gifBtn.disabled = false; }
-  if (mp4Btn) { mp4Btn.textContent = '▶ Video'; mp4Btn.disabled = false; }
-
-  ov.classList.remove('hidden');
+function openStudioChooser() {
+  closeModal(postcardModal);
+  const chooser = document.getElementById('studioChooser');
+  if (!chooser) { openStudio(); return; }   // fallback if chooser missing
+  chooser.classList.remove('hidden');
   document.body.classList.add('modal-open');
-  gsStartPreview();
 }
 
-function closeGifStudio() {
-  gsStopPreview();
-  document.getElementById('gifStudioOverlay')?.classList.add('hidden');
-  document.body.classList.remove('modal-open');
-  document.getElementById('studioChooser')?.classList.remove('hidden');
+/* ── Wire GIF studio dock tabs ── */
+function initGifStudioTabs() {
+  const ov = document.getElementById('gifStudioOverlay');
+  if (!ov) return;
+  ov.querySelectorAll('.gs-tab').forEach(tab => {
+    tab.onclick = () => {
+      ov.querySelectorAll('.gs-tab').forEach(t  => t.classList.remove('active'));
+      ov.querySelectorAll('.gs-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const panel = ov.querySelector(`#gs-panel-${tab.dataset.gstab}`);
+      if (panel) panel.classList.add('active');
+    };
+  });
 }
 
-/* ================================================================
-   PREVIEW LOOP
-   ================================================================ */
-function gsStartPreview() {
-  gsStopPreview();
-  GS._frame = 0; GS._last = 0;
-  const loop = (ts) => {
-    const delay = GS_SPEED_MS[GS.speed] || 70;
-    if (ts - GS._last >= delay) {
-      GS._last = ts;
-      const canvas = document.getElementById('gsCanvas');
-      if (canvas) {
-        const anim   = GS_ANIMS[GS.animation];
-        const frames = anim?.frames || 24;
-        const stage  = canvas.parentElement;
-        const dpr    = window.devicePixelRatio || 1;
-        const size   = Math.min(stage.clientWidth - 24, 340);
-        canvas.style.width  = size + 'px';
-        canvas.style.height = size + 'px';
-        canvas.width  = Math.round(size * dpr);
-        canvas.height = Math.round(size * dpr);
-        const ctx = canvas.getContext('2d');
-        ctx.scale(dpr, dpr);
-        gsDrawFrame(ctx, size, size, GS._frame / frames);
-        GS._frame = (GS._frame + 1) % frames;
+/* ════════════════════════════════════════
+   IMAGE STUDIO — working code from main
+   ════════════════════════════════════════ */
+function initStudio() {
+  // Route "Create Poster" → chooser (dev) instead of direct to studio (main)
+  sharePosterBtn.onclick = openStudioChooser;
+
+  closeStudio.onclick = () => {
+    studioOverlay.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+    openModal(postcardModal);
+  };
+
+  // Dock tabs
+  document.querySelectorAll('.dock-tab').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.dock-tab').forEach(t  => t.classList.remove('active'));
+      document.querySelectorAll('.dock-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const panel = document.getElementById('panel-' + tab.dataset.tab);
+      if (panel) panel.classList.add('active');
+    };
+  });
+
+  // Color swatches
+  document.querySelectorAll('.scene-swatch').forEach(swatch => {
+    swatch.onclick = () => {
+      document.querySelectorAll('.scene-swatch').forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
+      studioDesign = swatch.dataset.design;
+      refreshStageCanvas();
+    };
+  });
+
+  // Brightness slider
+  const bSlider = document.getElementById('studiobrightness');
+  const bValEl  = document.getElementById('studioBrightnessVal');
+  if (bSlider) {
+    bSlider.oninput = () => {
+      studioBrightness = parseInt(bSlider.value);
+      if (bValEl) bValEl.textContent = studioBrightness + '%';
+      refreshStageCanvas();
+    };
+  }
+
+  // Font cards
+  document.querySelectorAll('.font-card').forEach(card => {
+    card.onclick = () => {
+      document.querySelectorAll('.font-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      studioFont = card.dataset.font;
+      refreshStageCanvas();
+    };
+  });
+
+  // Photo upload zone
+  const photoDropZone = document.getElementById('photoUploadZone');
+  if (photoDropZone) {
+    photoDropZone.onclick = () => studioPhotoInput?.click();
+    photoDropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      photoDropZone.classList.add('has-photo');
+    });
+    photoDropZone.addEventListener('dragleave', e => {
+      if (!photoDropZone.contains(e.relatedTarget)) photoDropZone.classList.remove('has-photo');
+    });
+    photoDropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      const f = e.dataTransfer.files[0];
+      if (f) handleStudioPhoto(f);
+    });
+  }
+  if (studioPhotoInput) {
+    studioPhotoInput.onchange = e => { const f = e.target.files[0]; if (f) handleStudioPhoto(f); };
+  }
+
+  // Blur / Dim sliders
+  const blurSlider = document.getElementById('studioBlur');
+  const blurValEl  = document.getElementById('studioBlurVal');
+  const dimSlider  = document.getElementById('studioDim');
+  const dimValEl   = document.getElementById('studioDimVal');
+  if (blurSlider) blurSlider.oninput = () => { studioBlur = parseInt(blurSlider.value); if (blurValEl) blurValEl.textContent = studioBlur; refreshStageCanvas(); };
+  if (dimSlider)  dimSlider.oninput  = () => { studioDim  = parseInt(dimSlider.value);  if (dimValEl)  dimValEl.textContent  = studioDim + '%'; refreshStageCanvas(); };
+
+  // Photo filters
+  document.querySelectorAll('.photo-filter').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.photo-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      studioFilter = btn.dataset.filter;
+      refreshStageCanvas();
+    };
+  });
+
+  // Remove photo
+  const removeBtn = document.getElementById('studioRemovePhoto');
+  if (removeBtn) removeBtn.onclick = () => {
+    studioBgImage = null;
+    const photoDropText = document.getElementById('photoDropText');
+    const photoDropZone = document.getElementById('photoUploadZone');
+    const photoControls = document.getElementById('photoControls');
+    if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
+    if (photoDropZone) photoDropZone.classList.remove('has-photo');
+    if (photoControls) photoControls.classList.add('hidden');
+    if (studioPhotoInput) studioPhotoInput.value = '';
+    const ytOpt = document.getElementById('ytBgOption');
+    if (ytOpt) { ytOpt.style.background = ''; ytOpt.style.borderColor = ''; }
+    refreshStageCanvas();
+  };
+
+  // Export / size picker
+  studioExportBtn.onclick = () => sizePicker.classList.remove('hidden');
+  sizeCancelBtn.onclick   = () => sizePicker.classList.add('hidden');
+
+  document.querySelectorAll('.size-opt').forEach(btn => {
+    btn.onclick = async () => {
+      selectedSize = btn.dataset.size;
+      sizePicker.classList.add('hidden');
+      studioCanvas.classList.add('zoom-in');
+
+      ceremonyOverlay.classList.remove('hidden');
+      const headlineEl = ceremonyOverlay.querySelector('.ceremony-headline');
+      if (headlineEl) headlineEl.textContent = 'Generating your poster…';
+      const actionsEl = ceremonyOverlay.querySelector('.ceremony-actions');
+      if (actionsEl) actionsEl.style.opacity = '0.4';
+
+      try {
+        generatedBlob = await generateFinalPoster(selectedSize);
+      } catch (err) {
+        console.error('Poster generation error:', err);
+        showToast('Error generating poster — try again');
+        studioCanvas.classList.remove('zoom-in');
+        ceremonyOverlay.classList.add('hidden');
+        return;
       }
+
+      setTimeout(() => {
+        studioCanvas.classList.remove('zoom-in');
+        drawCeremonyThumb();
+        if (headlineEl) headlineEl.textContent = 'Your poster is ready.';
+        if (actionsEl) actionsEl.style.opacity = '1';
+      }, 400);
+    };
+  });
+
+  // Ceremony actions
+  ceremonyBack.onclick = () => {
+    ceremonyOverlay.classList.add('hidden');
+    generatedBlob = null;
+  };
+
+  cerDownload.onclick = async () => {
+    if (!generatedBlob) { showToast('Generating poster…'); return; }
+    try {
+      downloadPosterBlob();
+      showToast('Saved to device ✓');
+    } catch (err) {
+      showToast('Download failed — try again');
+      console.error('Download error:', err);
     }
-    GS._animFrame = requestAnimationFrame(loop);
-  };
-  GS._animFrame = requestAnimationFrame(loop);
-}
-
-function gsStopPreview() {
-  if (GS._animFrame) { cancelAnimationFrame(GS._animFrame); GS._animFrame = null; }
-}
-
-/* ================================================================
-   FRAME RENDERER
-   ================================================================ */
-function gsDrawFrame(ctx, W, H, t) {
-  const theme = GS_THEMES[GS.theme] || GS_THEMES['midnight-gold'];
-  const font  = GS_FONTS[GS.font]   || GS_FONTS.playfair;
-  const post  = currentPost || {};
-  const k     = post.knowledge || {};
-  const data  = {
-    lyric:  (post.text || 'Your lyric here').substring(0, 120),
-    song:   (k.song   || 'Unknown Song').substring(0, 36),
-    artist: (k.artist || 'Unknown Artist').substring(0, 36),
-    theme, font,
   };
 
-  /* Background */
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0,   theme.bg[0]);
-  g.addColorStop(0.5, theme.bg[1]);
-  g.addColorStop(1,   theme.bg[2]);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  cerShare.onclick = shareOrDownloadPoster;
 
-  /* Brand mark — logo circle r = 7% of W
-     Centre positioned so outermost ring (2.75r) + small margin doesn't clip */
-  const logoR   = W * 0.07;
-  const logoPad = logoR * 2.75 + W * 0.015;
-  gsDrawBrandMark(ctx, logoPad, logoPad, logoR, theme);
+  // GIF studio tabs + chooser
+  initGifStudioTabs();
+  initStudioChooser();
 
-  /* Animation layer */
-  const scale = W / 500;
-  ctx.save();
-  const anim = GS.animation;
-  if      (anim==='fade-up')    gsFadeUp(ctx,W,H,t,data,scale);
-  else if (anim==='typewriter') gsTypewriter(ctx,W,H,t,data,scale);
-  else if (anim==='slide-in')   gsSlideIn(ctx,W,H,t,data,scale);
-  else if (anim==='pulse')      gsPulse(ctx,W,H,t,data,scale);
-  else if (anim==='glitch')     gsGlitch(ctx,W,H,t,data,scale);
-  else if (anim==='wave')       gsWave(ctx,W,H,t,data,scale);
-  else if (anim==='shimmer')    gsShimmer(ctx,W,H,t,data,scale);
-  else if (anim==='bounce')     gsBounce(ctx,W,H,t,data,scale);
-  ctx.restore();
-
-  /* Song + artist meta */
-  gsMeta(ctx, W, H, data, scale);
-
-  /* Watermark pill — always rendered last */
-  gsDrawWatermark(ctx, W, H, theme);
+  if (typeof initGifStudio === 'function') initGifStudio();
 }
 
-/* ── Helpers ── */
-function gsWrap(ctx, text, cx, cy, maxW, lineH) {
+/* ── Open Image Studio (from main, unchanged) ── */
+function openStudio() {
+  closeModal(postcardModal);
+  studioBgImage    = null;
+  studioFont       = 'playfair';
+  studioBrightness = 100;
+  studioBlur       = 0;
+  studioDim        = 50;
+  studioFilter     = 'none';
+  generatedBlob    = null;
+  selectedSize     = null;
+  studioDesign     = EMOTION_DESIGN_MAP[currentPost?.emotion] || 'midnight-gold';
+  studioOverlay.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  resetStudioUI();
+
+  const meta = currentPost?.youtubeMeta;
+  if (meta?.thumbnail) setTimeout(() => injectYoutubeBgOption(meta), 80);
+  setTimeout(refreshStageCanvas, 60);
+}
+
+// Alias so chooser and any other callers all work
+const openImageStudio = openStudio;
+
+/* ── YouTube thumbnail as one-tap background ── */
+function injectYoutubeBgOption(meta) {
+  const panel = document.getElementById('panel-photo');
+  if (!panel) return;
+  document.getElementById('ytBgOption')?.remove();
+
+  const opt = document.createElement('div');
+  opt.id        = 'ytBgOption';
+  opt.className = 'yt-bg-option';
+  opt.innerHTML = `
+    <img src="${meta.thumbnail}" alt="" onerror="this.parentElement.style.display='none'"/>
+    <div class="yt-bg-option-text">
+      <div class="yt-bg-option-label">▶ Use Video Thumbnail</div>
+      <div class="yt-bg-option-title">${meta.title || meta.channel || ''}</div>
+    </div>
+  `;
+
+  opt.onclick = () => {
+    const tryLoad = (src) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload  = () => resolve(img);
+      img.onerror = () => reject(new Error('CORS'));
+      img.src = src;
+    });
+
+    const applyImage = (img) => {
+      studioBgImage = img;
+      const photoDropText = document.getElementById('photoDropText');
+      const photoDropZone = document.getElementById('photoUploadZone');
+      const photoControls = document.getElementById('photoControls');
+      if (photoDropText) photoDropText.textContent = 'YouTube thumbnail';
+      if (photoDropZone) photoDropZone.classList.add('has-photo');
+      if (photoControls) photoControls.classList.remove('hidden');
+      opt.style.background  = 'rgba(255,0,0,0.18)';
+      opt.style.borderColor = 'rgba(255,0,0,0.55)';
+      showToast('Thumbnail set as background ✓');
+      refreshStageCanvas();
+    };
+
+    tryLoad(meta.thumbnail)
+      .then(applyImage)
+      .catch(() => {
+        fetch(meta.thumbnail)
+          .then(r => r.blob())
+          .then(blob => { const url = URL.createObjectURL(blob); return tryLoad(url); })
+          .then(applyImage)
+          .catch(() => showToast('Could not load thumbnail — upload manually'));
+      });
+  };
+
+  panel.insertBefore(opt, panel.firstChild);
+  document.querySelector('[data-tab="photo"]')?.click();
+}
+
+/* ── Reset Studio UI ── */
+function resetStudioUI() {
+  document.querySelectorAll('.dock-tab').forEach((t, i)   => t.classList.toggle('active', i === 0));
+  document.querySelectorAll('.dock-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
+  document.querySelectorAll('.scene-swatch').forEach(s    => s.classList.toggle('active', s.dataset.design === studioDesign));
+  document.querySelectorAll('.font-card').forEach((fc, i) => fc.classList.toggle('active', i === 0));
+
+  const bSlider = document.getElementById('studiobrightness');
+  const bVal    = document.getElementById('studioBrightnessVal');
+  if (bSlider) bSlider.value    = 100;
+  if (bVal)    bVal.textContent = '100%';
+
+  const photoDropText = document.getElementById('photoDropText');
+  const photoDropZone = document.getElementById('photoUploadZone');
+  const photoControls = document.getElementById('photoControls');
+  if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
+  if (photoDropZone) photoDropZone.classList.remove('has-photo');
+  if (photoControls) photoControls.classList.add('hidden');
+  if (studioPhotoInput) studioPhotoInput.value = '';
+
+  const bsl = document.getElementById('studioBlur'),  bvl = document.getElementById('studioBlurVal');
+  const dsl = document.getElementById('studioDim'),   dvl = document.getElementById('studioDimVal');
+  if (bsl) bsl.value = 0;  if (bvl) bvl.textContent = '0';
+  if (dsl) dsl.value = 50; if (dvl) dvl.textContent  = '50%';
+
+  document.querySelectorAll('.photo-filter').forEach((f, i) => f.classList.toggle('active', i === 0));
+  sizePicker.classList.add('hidden');
+  ceremonyOverlay.classList.add('hidden');
+  document.getElementById('ytBgOption')?.remove();
+}
+
+/* ════════════════════════════════════════
+   CANVAS RENDERING
+   ════════════════════════════════════════ */
+function getPhotoFilter() {
+  let f = `brightness(${studioBrightness}%)`;
+  const filters = {
+    warm:     ' sepia(0.3) saturate(1.3) hue-rotate(-10deg)',
+    cool:     ' saturate(0.85) hue-rotate(15deg)',
+    dramatic: ' contrast(1.5) saturate(1.2) brightness(0.9)',
+    vintage:  ' sepia(0.5) contrast(1.2)',
+  };
+  if (filters[studioFilter]) f += filters[studioFilter];
+  return f;
+}
+
+function drawPosterToCtx(ctx, W, H) {
+  const c     = POSTER_DESIGNS[studioDesign] || POSTER_DESIGNS['midnight-gold'];
+  const fd    = FONT_FAMILIES[studioFont]    || FONT_FAMILIES['playfair'];
+  const scale = W / 1080;
+
+  ctx.filter = 'none';
+
+  if (studioBgImage) {
+    const tmp = document.createElement('canvas');
+    tmp.width = W; tmp.height = H;
+    const tc  = tmp.getContext('2d');
+    const iw  = studioBgImage.naturalWidth  || studioBgImage.width;
+    const ih  = studioBgImage.naturalHeight || studioBgImage.height;
+    const imgScale = Math.max(W / iw, H / ih);
+    tc.filter = getPhotoFilter();
+    tc.drawImage(studioBgImage, (W - iw * imgScale) / 2, (H - ih * imgScale) / 2, iw * imgScale, ih * imgScale);
+    tc.filter = 'none';
+    if (studioBlur > 0) {
+      const tmp2 = document.createElement('canvas');
+      tmp2.width = W; tmp2.height = H;
+      const tc2  = tmp2.getContext('2d');
+      tc2.filter = `blur(${Math.max(1, studioBlur) * 2}px)`;
+      tc2.drawImage(tmp, 0, 0);
+      tc2.filter = 'none';
+      ctx.drawImage(tmp2, 0, 0);
+    } else {
+      ctx.drawImage(tmp, 0, 0);
+    }
+    ctx.filter    = 'none';
+    ctx.fillStyle = `rgba(0,0,0,${studioDim / 100})`;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    ctx.filter    = 'none';
+    const g       = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, c.bg[0]);
+    g.addColorStop(0.5, c.bg[1]);
+    g.addColorStop(1, c.bg[2]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    if (studioBrightness !== 100) {
+      const bDelta  = (studioBrightness - 100) / 100;
+      ctx.fillStyle = bDelta < 0
+        ? `rgba(0,0,0,${Math.abs(bDelta) * 0.9})`
+        : `rgba(255,255,255,${bDelta * 0.6})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  ctx.filter = 'none';
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+
+  const textColor = studioBgImage ? '#ffffff' : c.text;
+  if (studioBgImage) {
+    ctx.shadowColor   = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur    = 14 * scale;
+    ctx.shadowOffsetY = 2 * scale;
+  }
+
+  // MARGO wordmark
+  ctx.textAlign  = 'left';
+  ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+  ctx.fillStyle  = studioBgImage ? 'rgba(255,255,255,0.32)' : (c.primary + '88');
+  ctx.font       = `700 ${22 * scale}px 'Space Mono', monospace`;
+  ctx.fillText('MARGO', 52 * scale, 58 * scale);
+  ctx.textAlign  = 'center';
+
+  // Lyric text
+  const lyricText = currentPost.text.length > 100
+    ? currentPost.text.substring(0, 97) + '…'
+    : currentPost.text;
+
+  if (studioBgImage) { ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 18 * scale; }
+  ctx.fillStyle = textColor;
+
+  const lyricLen  = lyricText.length;
+  const lyricSize = lyricLen < 40 ? 82 * scale
+    : lyricLen < 65 ? 64 * scale
+    : lyricLen < 90 ? 52 * scale
+    : 42 * scale;
+
+  const isBold = ['bebas','josefin','oswald'].includes(studioFont);
+  ctx.font = `${fd.style === 'italic' ? 'italic ' : ''}${isBold ? '700' : '600'} ${lyricSize}px ${fd.family}`;
+  wrapTextCenter(ctx, lyricText, W / 2, H * 0.46, W * 0.82, lyricSize * 1.18);
+
+  // Song & Artist
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  ctx.filter = 'none'; ctx.textAlign = 'center';
+
+  const k        = currentPost.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
+  const songSize = Math.max(Math.round(lyricSize * 0.42), 28 * scale);
+  const artSize  = Math.max(Math.round(lyricSize * 0.30), 20 * scale);
+  const songY    = H * 0.76;
+  const artistY  = songY + songSize + 16 * scale;
+
+  let songColor, artistColor;
+  if (studioBgImage) {
+    songColor = '#ffffff'; artistColor = 'rgba(255,255,255,0.82)';
+    ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = 14 * scale; ctx.shadowOffsetY = 1 * scale;
+  } else if (c.light) {
+    songColor = c.primary; artistColor = 'rgba(42,37,32,0.7)';
+  } else {
+    songColor = c.primary; artistColor = 'rgba(255,255,255,0.72)';
+  }
+
+  ctx.fillStyle = songColor;
+  ctx.font      = `700 ${songSize}px ${fd.family}`;
+  ctx.fillText(k.song.length > 32 ? k.song.substring(0, 32) + '…' : k.song, W / 2, songY);
+
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.fillStyle = artistColor;
+  ctx.font      = `700 ${artSize}px 'Space Mono', monospace`;
+  ctx.fillText(k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist, W / 2, artistY);
+
+  // Domain watermark
+  const markSize  = Math.max(Math.round(18 * scale), 14);
+  const markColor = studioBgImage ? 'rgba(255,255,255,0.75)'
+    : c.light ? 'rgba(42,37,32,0.6)'
+    : c.primary + 'cc';
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.fillStyle = markColor;
+  ctx.font      = `700 ${markSize}px 'Space Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(APP_DOMAIN, W / 2, H * 0.94);
+}
+
+function wrapTextCenter(ctx, text, x, centerY, maxW, lineHeight) {
   const words = text.split(' ');
-  let line = '', lines = [];
-  words.forEach(w => {
-    const t = line + w + ' ';
-    if (ctx.measureText(t).width > maxW && line) { lines.push(line.trim()); line = w + ' '; }
-    else line = t;
+  let line    = '';
+  const lines = [];
+  words.forEach(word => {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > maxW && line) {
+      lines.push(line.trim()); line = word + ' ';
+    } else { line = test; }
   });
   if (line.trim()) lines.push(line.trim());
-  const startY = cy - ((lines.length - 1) * lineH) / 2;
-  lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineH));
+  const startY = centerY - ((lines.length - 1) * lineHeight) / 2;
+  lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
 }
 
-function gsMeta(ctx, W, H, data, scale) {
-  ctx.save();
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.shadowBlur   = 0;
-  ctx.fillStyle    = data.theme.accent;
-  ctx.font = `700 ${Math.max(12, 16*scale)}px ${data.font.family}`;
-  ctx.fillText(data.song, W/2, H*0.79);
-  ctx.fillStyle = data.theme.text === '#000000' ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)';
-  ctx.font = `400 ${Math.max(9, 11*scale)}px 'Space Mono',monospace`;
-  ctx.fillText(data.artist, W/2, H*0.79 + 18*scale);
-  ctx.restore();
+function refreshStageCanvas() {
+  if (!currentPost || !studioCanvas) return;
+  const stage  = studioCanvas.parentElement;
+  const dpr    = window.devicePixelRatio || 1;
+  const availW = stage.clientWidth  - 40;
+  const availH = stage.clientHeight - 40;
+  const size   = Math.max(80, Math.min(availW, availH, 700));
+  studioCanvas.style.width  = size + 'px';
+  studioCanvas.style.height = size + 'px';
+  const res = Math.round(size * dpr);
+  studioCanvas.width  = res;
+  studioCanvas.height = res;
+  const ctx = studioCanvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  document.fonts.ready.then(() => drawPosterToCtx(ctx, size, size));
 }
 
-function gsLyricFont(ctx, data, scale) {
-  const len  = data.lyric.length;
-  const sz   = len < 40 ? 52*scale : len < 70 ? 40*scale : 30*scale;
-  const bold = ['bebas','josefin','oswald'].includes(GS.font);
-  ctx.font   = `${data.font.style==='italic' ? 'italic ' : ''}${bold ? '700' : '600'} ${sz}px ${data.font.family}`;
-  return sz;
+async function generateFinalPoster(sizeKey) {
+  const dim = POSTER_SIZES[sizeKey];
+  if (!dim || !currentPost) throw new Error('Invalid size or no post');
+  const offscreen = document.createElement('canvas');
+  offscreen.width  = dim.w;
+  offscreen.height = dim.h;
+  const ctx = offscreen.getContext('2d');
+  await document.fonts.ready;
+  drawPosterToCtx(ctx, dim.w, dim.h);
+  return new Promise((resolve, reject) => {
+    offscreen.toBlob(blob => {
+      if (blob) resolve(blob);
+      else reject(new Error('Canvas toBlob returned null'));
+    }, 'image/png');
+  });
 }
 
-/* ── Animations ── */
-function gsFadeUp(ctx,W,H,t,data,scale) {
-  const e = t<0.5 ? 2*t*t : -1+(4-2*t)*t;
-  const oy = (1-e)*38*scale, a = Math.min(1, e*2.2);
-  ctx.globalAlpha = a; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14*scale;
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  const sz = gsLyricFont(ctx, data, scale);
-  gsWrap(ctx, data.lyric, W/2, H*0.44+oy, W*0.82, sz*1.2);
-  ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+function drawCeremonyThumb() {
+  const dpr  = window.devicePixelRatio || 1;
+  const size = 600;
+  ceremonyThumb.width        = Math.round(size * dpr);
+  ceremonyThumb.height       = Math.round(size * dpr);
+  ceremonyThumb.style.width  = '';
+  ceremonyThumb.style.height = '';
+  const ctx = ceremonyThumb.getContext('2d');
+  ctx.scale(dpr, dpr);
+  document.fonts.ready.then(() => drawPosterToCtx(ctx, size, size));
 }
 
-function gsTypewriter(ctx,W,H,t,data,scale) {
-  const chars = Math.floor(t * (data.lyric.length + 6));
-  const vis   = data.lyric.substring(0, Math.min(chars, data.lyric.length));
-  const cur   = chars <= data.lyric.length && (Math.floor(t*10) % 2 === 0) ? '|' : '';
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10*scale;
-  const sz = gsLyricFont(ctx, data, scale);
-  gsWrap(ctx, vis+cur, W/2, H*0.44, W*0.82, sz*1.2);
-  ctx.shadowBlur = 0;
-}
-
-function gsSlideIn(ctx,W,H,t,data,scale) {
-  const e = t<0.4 ? t/0.4 : 1; const eo = 1 - Math.pow(1-e, 3);
-  const ox = (1-eo) * W * 0.55;
-  ctx.save(); ctx.rect(0,0,W,H); ctx.clip();
-  ctx.globalAlpha = Math.min(1, eo*1.6);
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 12*scale;
-  const sz = gsLyricFont(ctx, data, scale);
-  ctx.translate(ox, 0);
-  gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2);
-  ctx.restore(); ctx.shadowBlur = 0;
-}
-
-function gsPulse(ctx,W,H,t,data,scale) {
-  const p    = 0.93 + 0.07 * Math.sin(t * Math.PI * 2);
-  const glow = 0.5  + 0.5  * Math.sin(t * Math.PI * 2);
-  ctx.save(); ctx.translate(W/2, H*0.44); ctx.scale(p, p);
-  const sz = gsLyricFont(ctx, data, scale);
-  ctx.shadowColor = data.theme.accent; ctx.shadowBlur = (8 + glow*22) * scale;
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  gsWrap(ctx, data.lyric, 0, 0, W*0.82, sz*1.2);
-  ctx.restore(); ctx.shadowBlur = 0;
-}
-
-function gsGlitch(ctx,W,H,t,data,scale) {
-  const phase = Math.floor(t*9); const isG = phase%3===0 && t<0.85;
-  const sz = gsLyricFont(ctx, data, scale);
-  const ox = isG ? (Math.random()-0.5)*10*scale : 0;
-  if (isG) {
-    ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = '#ff0040'; ctx.textAlign = 'center';
-    ctx.translate(3*scale, 0); gsWrap(ctx, data.lyric, W/2+ox, H*0.44, W*0.82, sz*1.2); ctx.restore();
-  }
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center'; ctx.shadowBlur = 0;
-  ctx.save(); ctx.translate(isG ? ox : 0, 0);
-  gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2); ctx.restore();
-}
-
-function gsWave(ctx,W,H,t,data,scale) {
-  ctx.beginPath(); ctx.strokeStyle = data.theme.accent+'55'; ctx.lineWidth = 1.5*scale;
-  for (let x=0; x<=W; x+=2) {
-    const y = H*0.87 + Math.sin((x/W)*4*Math.PI + t*Math.PI*2)*7*scale;
-    x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-  }
-  ctx.stroke();
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10*scale;
-  const sz = gsLyricFont(ctx, data, scale);
-  const words = data.lyric.split(' ');
-  const totalW = words.reduce((a,w) => a + ctx.measureText(w+' ').width, 0);
-  if (totalW > W*0.88) {
-    gsWrap(ctx, data.lyric, W/2, H*0.43, W*0.82, sz*1.2);
-  } else {
-    let cx2 = W/2 - totalW/2;
-    words.forEach((w,i) => {
-      const wy = H*0.44 + Math.sin((i/words.length)*Math.PI*2 + t*Math.PI*2)*7*scale;
-      ctx.textAlign = 'left'; ctx.fillText(w+' ', cx2, wy);
-      cx2 += ctx.measureText(w+' ').width;
-    });
-  }
-  ctx.shadowBlur = 0;
-}
-
-function gsShimmer(ctx,W,H,t,data,scale) {
-  const sz = gsLyricFont(ctx, data, scale);
-  ctx.fillStyle = data.theme.text+'99'; ctx.textAlign = 'center';
-  gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2);
-  const sx = t*(W + 160*scale) - 80*scale;
-  const sh = ctx.createLinearGradient(sx-70*scale, 0, sx+70*scale, 0);
-  sh.addColorStop(0, 'transparent'); sh.addColorStop(0.4, data.theme.accent);
-  sh.addColorStop(0.6, '#ffffff');   sh.addColorStop(1, 'transparent');
-  ctx.save(); ctx.globalCompositeOperation = 'source-atop';
-  ctx.fillStyle = sh; gsWrap(ctx, data.lyric, W/2, H*0.44, W*0.82, sz*1.2); ctx.restore();
-}
-
-function gsBounce(ctx,W,H,t,data,scale) {
-  const b  = t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
-  const oy = (1-b) * H * 0.28; const sy = 0.86 + b*0.14;
-  ctx.save(); ctx.translate(W/2, H*0.44+oy); ctx.scale(1, sy);
-  const sz = gsLyricFont(ctx, data, scale);
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 12*scale;
-  gsWrap(ctx, data.lyric, 0, 0, W*0.82, sz*1.2);
-  ctx.restore(); ctx.shadowBlur = 0;
-}
-
-/* ================================================================
-   GIF EXPORT — MAX QUALITY
-   ================================================================ */
-async function gsExport() {
-  if (GS.isExporting) return;
-  GS.isExporting = true;
-  gsStopPreview();
-
-  const gifBtn = document.getElementById('gsExportBtn');
-  const mp4Btn = document.getElementById('gsExportMp4');
-  gifBtn.disabled = true;
-  if (mp4Btn) mp4Btn.disabled = true;
-
-  const SIZE   = GS_EXPORT_SIZE;
-  const anim   = GS_ANIMS[GS.animation];
-  const frames = anim?.frames || 24;
-  const delay  = GS_SPEED_MS[GS.speed] || 70;
-
-  const off = document.createElement('canvas');
-  off.width = SIZE; off.height = SIZE;
-  const oc  = off.getContext('2d');
-
-  try {
-    await document.fonts.ready;
-
-    if (typeof GIF === 'undefined') {
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      });
-    }
-
-    const gif = new GIF({
-      workers: 4, quality: 1,
-      width: SIZE, height: SIZE,
-      workerScript: '/js/gif.worker.js',
-      dither: false,
-    });
-
-    for (let i = 0; i < frames; i++) {
-      oc.clearRect(0, 0, SIZE, SIZE);
-      gsDrawFrame(oc, SIZE, SIZE, i / frames);
-      gif.addFrame(off, { copy: true, delay });
-      gifBtn.textContent = `GIF ${Math.round((i / frames) * 75)}%`;
-      await new Promise(r => setTimeout(r, 0));
-    }
-
-    gif.on('progress', p => {
-      gifBtn.textContent = `Encoding… ${Math.round(75 + p * 25)}%`;
-    });
-
-    gif.on('finished', blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `margo-${Date.now()}.gif`;
-      a.style.display = 'none';
-      document.body.appendChild(a); a.click();
-      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
-      gifBtn.textContent = '✓ GIF Saved!';
-      gifBtn.disabled = false;
-      if (mp4Btn) mp4Btn.disabled = false;
-      GS.isExporting = false;
-      setTimeout(gsStartPreview, 400);
-    });
-
-    gif.render();
-
-  } catch(err) {
-    console.error('GIF error:', err);
-    gifBtn.textContent = 'GIF';
-    gifBtn.disabled = false;
-    if (mp4Btn) mp4Btn.disabled = false;
-    GS.isExporting = false;
-    gsStartPreview();
-  }
-}
-
-/* ================================================================
-   MP4 EXPORT — MediaRecorder API (no library, auto-loops on share)
-   Loops 3× so platforms detect it as looping content.
-   Auto-plays silently on WhatsApp, IG, TikTok, iMessage.
-   ================================================================ */
-async function gsExportMp4() {
-  if (GS.isExporting) return;
-  GS.isExporting = true;
-  gsStopPreview();
-
-  const gifBtn = document.getElementById('gsExportBtn');
-  const mp4Btn = document.getElementById('gsExportMp4');
-  if (gifBtn) gifBtn.disabled = true;
-  mp4Btn.disabled = true;
-  mp4Btn.textContent = 'Preparing…';
-
-  const SIZE        = GS_EXPORT_SIZE;
-  const anim        = GS_ANIMS[GS.animation];
-  const frames      = anim?.frames || 24;
-  const delay       = GS_SPEED_MS[GS.speed] || 70;
-  const LOOPS       = 3;
-  const totalFrames = frames * LOOPS;
-  const fps         = Math.round(1000 / delay);
-
-  const off = document.createElement('canvas');
-  off.width = SIZE; off.height = SIZE;
-  const oc  = off.getContext('2d');
-
-  try {
-    await document.fonts.ready;
-
-    const mimeType = [
-      'video/mp4;codecs=avc1',
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm',
-    ].find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
-
-    const stream   = off.captureStream(fps);
-    const chunks   = [];
-    const recorder = new MediaRecorder(stream, {
-      mimeType,
-      videoBitsPerSecond: 8_000_000,  // 8 Mbps — broadcast quality
-    });
-
-    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url; a.download = `margo-${Date.now()}.mp4`;
-      a.style.display = 'none';
-      document.body.appendChild(a); a.click();
-      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
-      mp4Btn.textContent = '✓ Video Saved!';
-      mp4Btn.disabled    = false;
-      if (gifBtn) gifBtn.disabled = false;
-      GS.isExporting     = false;
-      setTimeout(gsStartPreview, 400);
+function handleStudioPhoto(file) {
+  if (!file.type.startsWith('image/')) { showToast('Please upload an image'); return; }
+  if (file.size > 15 * 1024 * 1024)   { showToast('File too large (max 15MB)'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      studioBgImage = img;
+      const photoDropText = document.getElementById('photoDropText');
+      const photoDropZone = document.getElementById('photoUploadZone');
+      const photoControls = document.getElementById('photoControls');
+      if (photoDropText) photoDropText.textContent = file.name;
+      if (photoDropZone) photoDropZone.classList.add('has-photo');
+      if (photoControls) photoControls.classList.remove('hidden');
+      const ytOpt = document.getElementById('ytBgOption');
+      if (ytOpt) { ytOpt.style.background = ''; ytOpt.style.borderColor = ''; }
+      showToast('Photo added');
+      refreshStageCanvas();
     };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 
-    recorder.start();
+async function shareOrDownloadPoster() {
+  if (!generatedBlob) { showToast('Poster not ready yet'); return; }
 
-    for (let i = 0; i < totalFrames; i++) {
-      oc.clearRect(0, 0, SIZE, SIZE);
-      gsDrawFrame(oc, SIZE, SIZE, (i % frames) / frames);
-      mp4Btn.textContent = `Video ${Math.round((i / totalFrames) * 100)}%`;
-      await new Promise(r => setTimeout(r, delay));
+  const fileName  = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
+  const file      = new File([generatedBlob], fileName, { type: 'image/png' });
+  const shareData = {
+    title: `MARGO — ${currentPost?.text?.substring(0, 50) || 'Lyric'}`,
+    text:  `"${currentPost?.text || ''}" — drop your lyric at trymargo.com`,
+    files: [file]
+  };
+
+  try {
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      await navigator.share(shareData);
+      showToast('Shared!');
+      return;
     }
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+  }
 
-    recorder.stop();
+  downloadPosterBlob();
+  showToast('Saved to device!');
+}
 
-  } catch(err) {
-    console.error('MP4 error:', err);
-    mp4Btn.textContent = '▶ Video';
-    mp4Btn.disabled    = false;
-    if (gifBtn) gifBtn.disabled = false;
-    GS.isExporting     = false;
-    gsStartPreview();
+function downloadPosterBlob() {
+  if (!generatedBlob) { showToast('Poster not ready'); return; }
+  try {
+    const url = URL.createObjectURL(generatedBlob);
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+  } catch (err) {
+    console.error('Download error:', err);
+    showToast('Could not download — try again');
   }
 }
