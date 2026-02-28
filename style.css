@@ -1,8 +1,9 @@
 /*
-  MARGO — style.css v5.2
-  v5.2 — Fixed sticky feed header stack. All four layers (header, search,
-          tabs, sort bar) now use hard-coded pixel tops so they never fight
-          each other. FAB hidden on landing. Back-to-top label is readable.
+  MARGO — style.css v5.3
+  v5.3 — scroll-margin-top on .feed-card updated to match the real sticky
+          stack height (186px desktop / 174px mobile) so browser-native
+          scrollIntoView() also lands correctly. All four sticky layers
+          retain their hard-coded pixel tops for zero-jank stacking.
 */
 
 *, *::before, *::after {
@@ -53,6 +54,13 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Sticky stack total heights ──
+     Used by scroll-margin-top on .feed-card so browser-native
+     scrollIntoView also lands correctly.
+     Desktop: 54 + 52 + 42 + 38 = 186px
+     Mobile overridden in @media (max-width:600px) below.        */
+  --sticky-total: 186px;
 }
 
 html { height: 100%; }
@@ -434,7 +442,6 @@ body::before {
   -webkit-backdrop-filter: blur(24px);
   flex-shrink: 0;
   box-sizing: border-box;
-  /* NO height transition — fixed 54px always */
 }
 
 .feed-logo-wrap { display: flex; align-items: center; gap: 8px; }
@@ -488,7 +495,7 @@ body::before {
   z-index: 99;
   height: 52px;
   width: 100%;
-  max-width: none;   /* override any inherited max-width */
+  max-width: none;
   left: 0;
   right: 0;
   display: flex;
@@ -577,7 +584,6 @@ mark.search-highlight {
   flex-shrink: 0;
 }
 .room-tabs-wrap::-webkit-scrollbar { display: none; }
-/* Remove the fade overlays — they cause layout issues with sticky */
 .room-tabs-wrap::before,
 .room-tabs-wrap::after { display: none; }
 
@@ -605,7 +611,6 @@ mark.search-highlight {
 }
 
 /* ── 4. SORT BAR — injected by feed.js as #feedSortBar, sticky at 148px ── */
-/* feed.js adds class="feed-sort-bar" but position is controlled here via ID */
 #feedSortBar {
   position: sticky !important;
   top: 148px !important;
@@ -631,20 +636,10 @@ mark.search-highlight {
   position: sticky !important;
   top: 186px !important;
   z-index: 96 !important;
-  /* Keep original visual styles from below */
 }
 
 /* ── 6. FEED LIST ── */
 #feedList {
-  /*
-    padding-top MUST be enough to ensure the first card row starts
-    fully below the sort bar. The sort bar is sticky at top:148px,
-    38px tall — so it ends at 186px. feedList starts right after it
-    in the flex column. We add extra padding so even at scroll=0
-    the first card's top edge is fully clear of the sort bar.
-    Without this, if the browser enters the feed already scrolled,
-    the first row top gets clipped.
-  */
   padding: 10px 14px 120px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -671,7 +666,13 @@ mark.search-highlight {
   transition: all 0.24s var(--ease-out);
   animation: cardIn 0.32s ease both;
   box-shadow: 0 4px 20px rgba(0,0,0,0.35);
-  scroll-margin-top: 196px; /* clears full sticky stack */
+  /* ─── KEY FIX ───────────────────────────────────────────────
+     scroll-margin-top must equal the full sticky stack height so
+     that browser-native scrollIntoView (and our JS scrollTo) both
+     clear every sticky layer.
+     Desktop: 186px  — overridden to 174px in the mobile breakpoint.
+  ──────────────────────────────────────────────────────────── */
+  scroll-margin-top: var(--sticky-total);
 }
 .feed-card::before {
   content: '';
@@ -802,8 +803,6 @@ mark.search-highlight {
 
 /* ══════════════════════════════════════
    FAB — "Drop a Lyric"
-   Default: hidden. JS adds .fab-visible only when feed section is active.
-   This means it NEVER shows on the landing page.
 ══════════════════════════════════════ */
 #dropLyricFAB {
   position: fixed;
@@ -811,7 +810,7 @@ mark.search-highlight {
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
-  display: none;  /* JS sets display:flex via .fab-visible */
+  display: none;
   align-items: center;
   gap: 7px;
   padding: 11px 24px;
@@ -839,13 +838,13 @@ mark.search-highlight {
 #dropLyricFAB:active { transform: translateX(-50%) scale(0.96); }
 
 /* ══════════════════════════════════════
-   BACK TO TOP — ring + clearly visible label
+   BACK TO TOP
 ══════════════════════════════════════ */
 #margoScrollTop {
   position: fixed;
-  bottom: 80px;   /* raised so it clears card SHARE badges at bottom of viewport */
+  bottom: 80px;
   right: 16px;
-  z-index: 201;   /* above FAB (200) and everything else */
+  z-index: 201;
   display: none;
   flex-direction: column;
   align-items: center;
@@ -880,7 +879,6 @@ mark.search-highlight {
   background: rgba(232,197,71,0.12);
   transform: translateY(-2px);
 }
-/* Label — gold, large enough to read */
 .scroll-top-label {
   font-family: 'Space Mono', monospace;
   font-size: 0.55rem;
@@ -893,12 +891,11 @@ mark.search-highlight {
 }
 #margoScrollTop:hover .scroll-top-label { color: #E8C547; }
 
-/* Kill any old scroll-top variants */
 .scroll-top:not(#margoScrollTop),
 #scrollToTopBtn { display: none !important; }
 
 /* ══════════════════════════════════════
-   FLOATING NEW-POSTS BAR (visual only — position handled above)
+   FLOATING NEW-POSTS BAR
 ══════════════════════════════════════ */
 .new-posts-bar {
   left: 50%;
@@ -1697,10 +1694,13 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
    RESPONSIVE
 ══════════════════════════════════════ */
 @media (max-width: 600px) {
-  /* Mobile sticky stack recalculation */
+  /* ── Mobile sticky stack heights ──
+     50 + 48 + 40 + 36 = 174px total   */
+  :root { --sticky-total: 174px; }
+
   .feed-header      { height: 50px; }
-  .feed-search-wrap { top: 50px !important; height: 48px !important; padding: 0 12px !important; }
-  .room-tabs-wrap   { top: 98px !important; height: 40px !important; padding: 0 10px !important; }
+  .feed-search-wrap { top: 50px !important;  height: 48px !important; padding: 0 12px !important; }
+  .room-tabs-wrap   { top: 98px !important;  height: 40px !important; padding: 0 10px !important; }
   #feedSortBar      { top: 138px !important; height: 36px !important; }
   #newPostsIndicator,
   .new-posts-bar    { top: 174px !important; }
