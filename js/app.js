@@ -83,7 +83,7 @@ function scrollToFeed() {
       const h = getHeight();
       // setTimeout(0) queues this AFTER all sync observers have fired
       setTimeout(() => {
-        window.scrollTo({ top: h + 8, behavior: 'smooth' });
+        window.scrollTo({ top: h + 8, behavior: 'instant' });
       }, 0);
     } else {
       setTimeout(tryScroll, 60);
@@ -92,7 +92,7 @@ function scrollToFeed() {
 
   // 400ms head start — lets renderFeed() inject DOM and lets the
   // inline MutationObserver scroll-reset fire and settle first.
-  setTimeout(tryScroll, 400);
+  setTimeout(tryScroll, 500);
 }
 
 function initNavigation() {
@@ -160,4 +160,4 @@ try {
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v5.1 dev — scrollToFeed 400ms + setTimeout(0) guarantee.');
+console.log('MARGO v5.2 dev — scrollToFeed 400ms + setTimeout(0) guarantee.');
