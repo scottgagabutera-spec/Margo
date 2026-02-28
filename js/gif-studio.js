@@ -2,7 +2,9 @@
    MARGO — js/gif-studio.js
    Animated GIF Studio: canvas-rendered lyric animations → GIF
    8 animation styles, all themes, all fonts from image studio
-   v1.2 — Max quality export: 1080px, quality:1, 4 workers
+   v1.3 — Proper brand logo (icon + ripple rings) top-left
+          Always-legible trymargo.com pill watermark bottom
+          Max quality export: 1080px, quality:1, 4 workers
    ============================================================ */
 
 /* ── State ── */
@@ -52,8 +54,129 @@ const GS_ANIMS = {
   'bounce':    { label:'Bounce',     frames:22, icon:'◡' },
 };
 
-/* ── Export resolution — set to 1080 for max quality ── */
+/* ── Export resolution ── */
 const GS_EXPORT_SIZE = 1080;
+
+/* ================================================================
+   BRAND MARK RENDERER
+   Draws the full Margo logo: ripple rings + gold circle + M-mark
+   Sourced directly from brand kit SVG paths.
+
+   cx, cy  = centre of the logo circle
+   r       = radius of the gold circle (outermost ring reaches ~2.65r)
+   ================================================================ */
+function gsDrawBrandMark(ctx, cx, cy, r) {
+  ctx.save();
+
+  /* ── 3 concentric ripple rings ── */
+  const ripples = [
+    { rMult: 1.55, alpha: 0.18, width: 0.06 },
+    { rMult: 2.05, alpha: 0.10, width: 0.05 },
+    { rMult: 2.65, alpha: 0.05, width: 0.04 },
+  ];
+  ripples.forEach(({ rMult, alpha, width }) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * rMult, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(232,197,71,${alpha})`;
+    ctx.lineWidth   = r * width;
+    ctx.stroke();
+  });
+
+  /* ── Gold filled circle ── */
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#E8C547';
+  ctx.fill();
+
+  /* ── M / lightning icon mark
+        Original from brand kit SVG (circle r=102, centred at 150,150):
+        M114 122 L114 70 L124 86 L140 68 L156 86 L166 70 L166 122
+        We scale and translate to fit our (cx,cy,r).
+  ── */
+  const s  = r / 102;           // scale factor
+  const ox = cx - 150 * s;     // X origin shift
+  const oy = cy - 150 * s;     // Y origin shift
+
+  ctx.beginPath();
+  ctx.moveTo(ox + 114*s, oy + 122*s);
+  ctx.lineTo(ox + 114*s, oy +  70*s);
+  ctx.lineTo(ox + 124*s, oy +  86*s);
+  ctx.lineTo(ox + 140*s, oy +  68*s);
+  ctx.lineTo(ox + 156*s, oy +  86*s);
+  ctx.lineTo(ox + 166*s, oy +  70*s);
+  ctx.lineTo(ox + 166*s, oy + 122*s);
+  ctx.strokeStyle = '#0B0B0D';
+  ctx.lineWidth   = 9 * s;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.stroke();
+
+  /* ── Small base rectangle ── */
+  const bx = ox + 133*s, by = oy + 125*s;
+  const bw = 14*s,       bh = 5*s, br = 2.5*s;
+  ctx.beginPath();
+  ctx.moveTo(bx + br, by);
+  ctx.arcTo(bx+bw, by,    bx+bw, by+bh, br);
+  ctx.arcTo(bx+bw, by+bh, bx,    by+bh, br);
+  ctx.arcTo(bx,    by+bh, bx,    by,    br);
+  ctx.arcTo(bx,    by,    bx+bw, by,    br);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(11,11,13,0.45)';
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/* ================================================================
+   WATERMARK — always-legible frosted pill at bottom centre
+   Font: Space Mono (Margo brand mono font)
+   Pill background guarantees contrast on every theme
+   ================================================================ */
+function gsDrawWatermark(ctx, W, H, theme) {
+  ctx.save();
+
+  const isLight = (theme.text === '#000000');
+  const text    = 'trymargo.com';
+  const fSize   = Math.max(10, W * 0.022);
+
+  ctx.font         = `700 ${fSize}px 'Space Mono', monospace`;
+  ctx.textBaseline = 'middle';
+
+  const textW = ctx.measureText(text).width;
+  const padX  = fSize * 1.0;
+  const padY  = fSize * 0.55;
+  const pillW = textW + padX * 2;
+  const pillH = fSize + padY * 2;
+  const pillR = pillH / 2;
+  const pillX = W / 2 - pillW / 2;
+  const pillY = H * 0.938 - pillH / 2;
+
+  /* Pill shape */
+  ctx.beginPath();
+  ctx.moveTo(pillX + pillR, pillY);
+  ctx.arcTo(pillX + pillW, pillY,         pillX + pillW, pillY + pillH, pillR);
+  ctx.arcTo(pillX + pillW, pillY + pillH, pillX,         pillY + pillH, pillR);
+  ctx.arcTo(pillX,         pillY + pillH, pillX,         pillY,         pillR);
+  ctx.arcTo(pillX,         pillY,         pillX + pillW, pillY,         pillR);
+  ctx.closePath();
+
+  /* Background fill — dark pill on light themes, frosted on dark */
+  ctx.fillStyle = isLight ? 'rgba(11,11,13,0.75)' : 'rgba(255,255,255,0.10)';
+  ctx.fill();
+
+  /* Subtle border for crisp edge definition */
+  ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.18)';
+  ctx.lineWidth   = Math.max(1, W * 0.001);
+  ctx.stroke();
+
+  /* Text — always white inside pill (contrast guaranteed on both themes) */
+  ctx.fillStyle   = '#FFFFFF';
+  ctx.textAlign   = 'center';
+  ctx.shadowBlur  = 0;
+  ctx.fillText(text, W / 2, pillY + pillH / 2);
+
+  ctx.restore();
+}
 
 /* ================================================================
    INIT
@@ -179,14 +302,23 @@ function gsDrawFrame(ctx, W, H, t) {
     theme, font,
   };
 
-  // Background
+  /* ── Background gradient ── */
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, theme.bg[0]);
+  g.addColorStop(0,   theme.bg[0]);
   g.addColorStop(0.5, theme.bg[1]);
-  g.addColorStop(1, theme.bg[2]);
+  g.addColorStop(1,   theme.bg[2]);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
+  /* ── Brand mark top-left
+        logoR  = gold circle radius (~7% of canvas)
+        logoX/Y = centre position, padded so outermost ripple (2.65r) doesn't clip
+  ── */
+  const logoR = W * 0.07;
+  const logoPad = logoR * 2.65 + W * 0.012;  // outermost ring radius + small margin
+  gsDrawBrandMark(ctx, logoPad, logoPad, logoR);
+
+  /* ── Animation layer ── */
   const scale = W / 500;
   ctx.save();
   const anim = GS.animation;
@@ -200,15 +332,11 @@ function gsDrawFrame(ctx, W, H, t) {
   else if (anim==='bounce')     gsBounce(ctx,W,H,t,data,scale);
   ctx.restore();
 
-  // Logo
-  ctx.save();
-  ctx.globalAlpha = 0.38; ctx.textAlign = 'left';
-  ctx.fillStyle = theme.text;
-  ctx.font = `700 ${11*scale}px 'Space Mono',monospace`;
-  ctx.fillText('MARGO', 22*scale, 30*scale);
-  ctx.restore();
-
+  /* ── Song + artist meta ── */
   gsMeta(ctx, W, H, data, scale);
+
+  /* ── Watermark pill — drawn last so it's always on top ── */
+  gsDrawWatermark(ctx, W, H, theme);
 }
 
 /* ── Helpers ── */
@@ -227,28 +355,27 @@ function gsWrap(ctx, text, cx, cy, maxW, lineH) {
 
 function gsMeta(ctx, W, H, data, scale) {
   ctx.save();
-  ctx.textAlign = 'center'; ctx.shadowBlur = 0;
-  ctx.fillStyle = data.theme.accent;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.shadowBlur   = 0;
+  ctx.fillStyle    = data.theme.accent;
   ctx.font = `700 ${Math.max(12, 16*scale)}px ${data.font.family}`;
   ctx.fillText(data.song, W/2, H*0.79);
   ctx.fillStyle = data.theme.text === '#000000' ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)';
   ctx.font = `400 ${Math.max(9, 11*scale)}px 'Space Mono',monospace`;
   ctx.fillText(data.artist, W/2, H*0.79 + 18*scale);
-  ctx.fillStyle = data.theme.text === '#000000' ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.22)';
-  ctx.font = `700 ${Math.max(7, 9*scale)}px 'Space Mono',monospace`;
-  ctx.fillText('MARGO · trymargo.com', W/2, H*0.935);
   ctx.restore();
 }
 
 function gsLyricFont(ctx, data, scale, W) {
-  const len = data.lyric.length;
-  const sz  = len < 40 ? 52*scale : len < 70 ? 40*scale : 30*scale;
+  const len  = data.lyric.length;
+  const sz   = len < 40 ? 52*scale : len < 70 ? 40*scale : 30*scale;
   const bold = ['bebas','josefin','oswald'].includes(GS.font);
-  ctx.font = `${data.font.style==='italic' ? 'italic ' : ''}${bold ? '700' : '600'} ${sz}px ${data.font.family}`;
+  ctx.font   = `${data.font.style==='italic' ? 'italic ' : ''}${bold ? '700' : '600'} ${sz}px ${data.font.family}`;
   return sz;
 }
 
-/* ── Animations ── */
+/* ── Animations (unchanged) ── */
 function gsFadeUp(ctx,W,H,t,data,scale) {
   const e = t<0.5 ? 2*t*t : -1+(4-2*t)*t;
   const oy = (1-e)*38*scale, a = Math.min(1, e*2.2);
@@ -367,17 +494,11 @@ async function gsExport() {
   const btn = document.getElementById('gsExportBtn');
   btn.disabled = true;
 
-  /* ─────────────────────────────────────────────────────────────
-     SIZE:    1080 × 1080  (Instagram / TikTok ready)
-     QUALITY: 1  (gif.js scale: 1 = best, 10 = worst)
-     WORKERS: 4  (faster encoding)
-  ───────────────────────────────────────────────────────────── */
   const SIZE   = GS_EXPORT_SIZE;   // 1080
   const anim   = GS_ANIMS[GS.animation];
   const frames = anim?.frames || 24;
   const delay  = GS_SPEED_MS[GS.speed] || 70;
 
-  /* Offscreen canvas at full export resolution */
   const off = document.createElement('canvas');
   off.width  = SIZE;
   off.height = SIZE;
@@ -386,7 +507,6 @@ async function gsExport() {
   try {
     await document.fonts.ready;
 
-    /* Load gif.js library if not already present */
     if (typeof GIF === 'undefined') {
       await new Promise((res, rej) => {
         const s = document.createElement('script');
@@ -397,15 +517,14 @@ async function gsExport() {
     }
 
     const gif = new GIF({
-      workers:      4,         // more workers = faster encode
-      quality:      1,         // 1 = maximum quality (lowest dithering loss)
-      width:        SIZE,      // 1080
-      height:       SIZE,      // 1080
-      workerScript: '/js/gif.worker.js',  // local — no CORS
-      dither:       false,     // disable dithering for sharper text/lines
+      workers:      4,
+      quality:      1,         // 1 = maximum quality
+      width:        SIZE,
+      height:       SIZE,
+      workerScript: '/js/gif.worker.js',
+      dither:       false,     // sharper text/edges
     });
 
-    /* Render every frame at full 1080 resolution */
     for (let i = 0; i < frames; i++) {
       oc.clearRect(0, 0, SIZE, SIZE);
       gsDrawFrame(oc, SIZE, SIZE, i / frames);
