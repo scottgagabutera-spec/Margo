@@ -2,7 +2,7 @@
    MARGO — js/gif-studio.js
    Animated GIF Studio: canvas-rendered lyric animations → GIF
    8 animation styles, all themes, all fonts from image studio
-   v1.1 — gif.worker.js now hosted locally (fixes CORS/download)
+   v1.2 — Max quality export: 1080px, quality:1, 4 workers
    ============================================================ */
 
 /* ── State ── */
@@ -51,6 +51,9 @@ const GS_ANIMS = {
   'shimmer':   { label:'Shimmer',    frames:24, icon:'✦' },
   'bounce':    { label:'Bounce',     frames:22, icon:'◡' },
 };
+
+/* ── Export resolution — set to 1080 for max quality ── */
+const GS_EXPORT_SIZE = 1080;
 
 /* ================================================================
    INIT
@@ -354,7 +357,7 @@ function gsBounce(ctx,W,H,t,data,scale) {
 }
 
 /* ================================================================
-   GIF EXPORT
+   GIF EXPORT  —  MAX QUALITY
    ================================================================ */
 async function gsExport() {
   if (GS.isExporting) return;
@@ -364,19 +367,26 @@ async function gsExport() {
   const btn = document.getElementById('gsExportBtn');
   btn.disabled = true;
 
-  const SIZE   = 600;
+  /* ─────────────────────────────────────────────────────────────
+     SIZE:    1080 × 1080  (Instagram / TikTok ready)
+     QUALITY: 1  (gif.js scale: 1 = best, 10 = worst)
+     WORKERS: 4  (faster encoding)
+  ───────────────────────────────────────────────────────────── */
+  const SIZE   = GS_EXPORT_SIZE;   // 1080
   const anim   = GS_ANIMS[GS.animation];
   const frames = anim?.frames || 24;
   const delay  = GS_SPEED_MS[GS.speed] || 70;
 
+  /* Offscreen canvas at full export resolution */
   const off = document.createElement('canvas');
-  off.width = SIZE; off.height = SIZE;
-  const oc  = off.getContext('2d');
+  off.width  = SIZE;
+  off.height = SIZE;
+  const oc   = off.getContext('2d');
 
   try {
     await document.fonts.ready;
 
-    // Load gif.js from CDN (main library, not the worker)
+    /* Load gif.js library if not already present */
     if (typeof GIF === 'undefined') {
       await new Promise((res, rej) => {
         const s = document.createElement('script');
@@ -386,15 +396,16 @@ async function gsExport() {
       });
     }
 
-    // ── KEY FIX: use local worker to avoid CORS error ──
     const gif = new GIF({
-      workers: 2,
-      quality: 8,
-      width: SIZE,
-      height: SIZE,
+      workers:      4,         // more workers = faster encode
+      quality:      1,         // 1 = maximum quality (lowest dithering loss)
+      width:        SIZE,      // 1080
+      height:       SIZE,      // 1080
       workerScript: '/js/gif.worker.js',  // local — no CORS
+      dither:       false,     // disable dithering for sharper text/lines
     });
 
+    /* Render every frame at full 1080 resolution */
     for (let i = 0; i < frames; i++) {
       oc.clearRect(0, 0, SIZE, SIZE);
       gsDrawFrame(oc, SIZE, SIZE, i / frames);
@@ -410,15 +421,15 @@ async function gsExport() {
     gif.on('finished', blob => {
       const url = URL.createObjectURL(blob);
       const a   = document.createElement('a');
-      a.href = url;
+      a.href     = url;
       a.download = `margo-${Date.now()}.gif`;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
       btn.textContent = '✓ Saved!';
-      btn.disabled = false;
-      GS.isExporting = false;
+      btn.disabled    = false;
+      GS.isExporting  = false;
       setTimeout(gsStartPreview, 400);
     });
 
@@ -427,8 +438,8 @@ async function gsExport() {
   } catch(err) {
     console.error('GIF error:', err);
     btn.textContent = 'Try Again';
-    btn.disabled = false;
-    GS.isExporting = false;
+    btn.disabled    = false;
+    GS.isExporting  = false;
     gsStartPreview();
   }
 }
