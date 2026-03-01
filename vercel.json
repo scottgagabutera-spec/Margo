@@ -4,5 +4,15 @@
     { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/terms",   "destination": "/terms.html"   },
     { "source": "/contact", "destination": "/contact.html" }
+  ],
+  "headers": [
+    {
+      "source": "/favicon.ico",
+      "headers": [{ "key": "Content-Type", "value": "image/x-icon" }]
+    },
+    {
+      "source": "/favicon-:size.png",
+      "headers": [{ "key": "Content-Type", "value": "image/png" }]
+    }
   ]
 }
