@@ -648,13 +648,8 @@ mark.search-highlight {
   pointer-events: none;
 }
 
-.feed-card:hover {
-  transform: translateY(-6px) scale(1.015);
-  box-shadow: 0 24px 60px rgba(0,0,0,.7),
-              0 0 40px var(--e-glow, rgba(232,197,71,.07)),
-              0 0 0 1px rgba(255,255,255,.04);
-}
-.feed-card:active { transform: translateY(-2px) scale(1.004); }
+.feed-card:hover { border-color: var(--e-border, rgba(232,197,71,0.28)); }
+.feed-card:active { opacity: 0.92; }
 
 .card-top {
   display: flex; justify-content: space-between; align-items: center;
