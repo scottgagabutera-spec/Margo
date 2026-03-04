@@ -1,9 +1,7 @@
 /* ============================================================
    MARGO — js/feed.js
-   v6.1 — Refined wording, no unnecessary symbols,
-          clean sort bar, human button language.
-          Sticky offsets fixed for all browsers.
-          FAB-aware bottom padding.
+   v6.2 — Stats fix: updateLandingStats guarded behind
+          postsLoaded so it never writes 0 on cold start.
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -569,7 +567,9 @@ function renderSkeleton() {
 function renderFeed() {
   injectFeedStyles();
   injectSortBar();
-  updateLandingStats();
+  // Guard: only update stats once posts have loaded — prevents
+  // writing 0 on cold start before Firebase returns data.
+  if (postsLoaded) updateLandingStats();
   if (!postsLoaded) { renderSkeleton(); return; }
 
   feedList.innerHTML = '';
