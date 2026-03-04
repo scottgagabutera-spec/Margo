@@ -1,7 +1,11 @@
 /* ============================================================
    MARGO — js/feed.js
-   v6.2 — Stats fix: updateLandingStats guarded behind
-          postsLoaded so it never writes 0 on cold start.
+   v6.3 — concept-v2
+   • Two new emotions: SendIt + LetOut
+   • Emotion color bleeds into card background
+   • Smart text contrast — light bg = dark text, dark bg = light text
+   • Mode badge removed entirely from cards
+   • Lyric Back echo count passed via data-attr for resonate.js to use
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -17,22 +21,93 @@ const STREAM_SAMPLES = [
   { text: "Joy is not the absence of pain, it's dancing anyway", emotion: 'Joy'        },
   { text: "Missing someone is just love with nowhere to go",     emotion: 'Loneliness' },
   { text: "I built a home in your chest and you moved out",      emotion: 'Heartbreak' },
+  { text: "This one's for you — you know who you are",           emotion: 'SendIt'     },
+  { text: "Had to say it through a song because words failed",   emotion: 'LetOut'     },
 ];
 
-/* Emotion design tokens */
+/* ══════════════════════════════════════════════════════════
+   EMOTION DESIGN TOKENS
+   Each emotion has:
+   - bg:        card background tint (more opaque than before)
+   - cardBg:    full card background CSS (gradient)
+   - text:      emotion label / accent color
+   - border:    card border color
+   - strip:     left side strip color
+   - lyricText: color for the lyric text on this card
+   - metaText:  color for song/artist/time metadata
+   - isDark:    true = dark background → use light text
+══════════════════════════════════════════════════════════ */
 const EMOTION_CFG = {
-  Love:       { bg: 'rgba(255,107,157,0.13)', text: '#FF6B9D', border: 'rgba(255,107,157,0.22)', strip: 'rgba(255,107,157,0.7)'  },
-  Heartbreak: { bg: 'rgba(255,80,80,0.11)',   text: '#ff5050', border: 'rgba(255,80,80,0.2)',    strip: 'rgba(255,80,80,0.65)'   },
-  Hope:       { bg: 'rgba(107,140,255,0.13)', text: '#6B8CFF', border: 'rgba(107,140,255,0.22)', strip: 'rgba(107,140,255,0.7)'  },
-  Nostalgia:  { bg: 'rgba(232,197,71,0.11)',  text: '#E8C547', border: 'rgba(232,197,71,0.25)',  strip: 'rgba(232,197,71,0.8)'   },
-  Healing:    { bg: 'rgba(74,222,128,0.13)',  text: '#4ade80', border: 'rgba(74,222,128,0.22)',  strip: 'rgba(74,222,128,0.7)'   },
-  Joy:        { bg: 'rgba(255,200,71,0.11)',  text: '#ffc847', border: 'rgba(255,200,71,0.22)',  strip: 'rgba(255,200,71,0.7)'   },
-  Rage:       { bg: 'rgba(255,100,100,0.13)', text: '#FF6464', border: 'rgba(255,100,100,0.22)', strip: 'rgba(255,100,100,0.65)' },
-  Loneliness: { bg: 'rgba(160,160,255,0.11)', text: '#a0a0ff', border: 'rgba(160,160,255,0.22)', strip: 'rgba(160,160,255,0.7)'  },
+  Love: {
+    bg: 'rgba(255,107,157,0.13)', text: '#FF6B9D',
+    border: 'rgba(255,107,157,0.3)', strip: 'rgba(255,107,157,0.8)',
+    cardBg: 'linear-gradient(160deg, rgba(255,107,157,0.12) 0%, rgba(20,14,18,1) 55%)',
+    lyricText: '#fff', metaText: 'rgba(255,200,220,0.75)', isDark: true
+  },
+  Heartbreak: {
+    bg: 'rgba(255,80,80,0.11)', text: '#ff5050',
+    border: 'rgba(255,80,80,0.28)', strip: 'rgba(255,80,80,0.75)',
+    cardBg: 'linear-gradient(160deg, rgba(255,60,60,0.14) 0%, rgba(18,12,12,1) 55%)',
+    lyricText: '#fff', metaText: 'rgba(255,180,180,0.7)', isDark: true
+  },
+  Hope: {
+    bg: 'rgba(107,140,255,0.13)', text: '#6B8CFF',
+    border: 'rgba(107,140,255,0.3)', strip: 'rgba(107,140,255,0.8)',
+    cardBg: 'linear-gradient(160deg, rgba(107,140,255,0.13) 0%, rgba(12,14,22,1) 55%)',
+    lyricText: '#fff', metaText: 'rgba(180,200,255,0.7)', isDark: true
+  },
+  Nostalgia: {
+    bg: 'rgba(232,197,71,0.11)', text: '#E8C547',
+    border: 'rgba(232,197,71,0.32)', strip: 'rgba(232,197,71,0.9)',
+    cardBg: 'linear-gradient(160deg, rgba(232,197,71,0.11) 0%, rgba(16,15,10,1) 55%)',
+    lyricText: '#fff', metaText: 'rgba(232,210,140,0.7)', isDark: true
+  },
+  Healing: {
+    bg: 'rgba(74,222,128,0.13)', text: '#4ade80',
+    border: 'rgba(74,222,128,0.28)', strip: 'rgba(74,222,128,0.8)',
+    cardBg: 'linear-gradient(160deg, rgba(74,222,128,0.11) 0%, rgba(10,18,14,1) 55%)',
+    lyricText: '#fff', metaText: 'rgba(160,240,190,0.7)', isDark: true
+  },
+  Joy: {
+    bg: 'rgba(255,200,71,0.11)', text: '#ffc847',
+    border: 'rgba(255,200,71,0.3)', strip: 'rgba(255,200,71,0.8)',
+    cardBg: 'linear-gradient(160deg, rgba(255,200,71,0.11) 0%, rgba(18,16,8,1) 55%)',
+    lyricText: '#fff', metaText: 'rgba(255,220,140,0.7)', isDark: true
+  },
+  Rage: {
+    bg: 'rgba(255,100,60,0.13)', text: '#FF6440',
+    border: 'rgba(255,100,60,0.3)', strip: 'rgba(255,100,60,0.8)',
+    cardBg: 'linear-gradient(160deg, rgba(255,80,40,0.15) 0%, rgba(20,10,8,1) 55%)',
+    lyricText: '#fff', metaText: 'rgba(255,180,160,0.7)', isDark: true
+  },
+  Loneliness: {
+    bg: 'rgba(160,160,255,0.11)', text: '#a0a0ff',
+    border: 'rgba(160,160,255,0.28)', strip: 'rgba(160,160,255,0.75)',
+    cardBg: 'linear-gradient(160deg, rgba(140,140,255,0.12) 0%, rgba(12,12,20,1) 55%)',
+    lyricText: '#fff', metaText: 'rgba(190,190,255,0.65)', isDark: true
+  },
+  // ── NEW EMOTIONS ──
+  SendIt: {
+    bg: 'rgba(0,229,200,0.11)', text: '#00e5c8',
+    border: 'rgba(0,229,200,0.28)', strip: 'rgba(0,229,200,0.8)',
+    cardBg: 'linear-gradient(160deg, rgba(0,229,200,0.12) 0%, rgba(8,18,18,1) 55%)',
+    lyricText: '#fff', metaText: 'rgba(140,240,225,0.7)', isDark: true
+  },
+  LetOut: {
+    bg: 'rgba(200,100,255,0.11)', text: '#c864ff',
+    border: 'rgba(200,100,255,0.28)', strip: 'rgba(200,100,255,0.8)',
+    cardBg: 'linear-gradient(160deg, rgba(180,80,255,0.13) 0%, rgba(16,8,20,1) 55%)',
+    lyricText: '#fff', metaText: 'rgba(220,170,255,0.7)', isDark: true
+  },
 };
-const E_DEFAULT = { bg: 'rgba(232,197,71,0.11)', text: '#E8C547', border: 'rgba(232,197,71,0.25)', strip: 'rgba(232,197,71,0.8)' };
+const E_DEFAULT = {
+  bg: 'rgba(232,197,71,0.11)', text: '#E8C547',
+  border: 'rgba(232,197,71,0.25)', strip: 'rgba(232,197,71,0.8)',
+  cardBg: 'linear-gradient(160deg, rgba(232,197,71,0.09) 0%, rgba(16,15,10,1) 55%)',
+  lyricText: '#fff', metaText: 'rgba(232,210,140,0.65)', isDark: true
+};
 
-let currentSort = 'fresh'; // 'fresh' | 'hot' | 'top'
+let currentSort = 'fresh';
 
 function lyricFontSize(text) {
   const n = (text || '').length;
@@ -42,93 +117,62 @@ function lyricFontSize(text) {
   return '0.68rem';
 }
 
-/* ── Inject all styles once ── */
+/* ── Inject styles ── */
 function injectFeedStyles() {
-  if (document.getElementById('feedV61')) return;
+  if (document.getElementById('feedV63')) return;
   const s = document.createElement('style');
-  s.id = 'feedV61';
+  s.id = 'feedV63';
   s.textContent = `
     @keyframes cardIn {
       from { opacity:0; transform:translateY(10px); }
       to   { opacity:1; transform:translateY(0); }
     }
 
-    /* ═══════════════════════════════════════════════
-       SORT BAR — v6.1
-       position:sticky and top offset set in style.css.
-       Only visual styling lives here.
-    ═══════════════════════════════════════════════ */
     .feed-sort-bar {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0 14px;
+      display: flex; align-items: center; gap: 6px; padding: 0 14px;
     }
     .feed-sort-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 0.44rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: rgba(255,255,255,0.2);
-      flex-shrink: 0;
-      margin-right: 2px;
+      font-family: 'Space Mono', monospace; font-size: 0.44rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.2);
+      flex-shrink: 0; margin-right: 2px;
     }
     .sort-btn {
-      padding: 5px 14px;
-      border-radius: 50px;
+      padding: 5px 14px; border-radius: 50px;
       border: 1px solid rgba(255,255,255,0.07);
-      background: rgba(255,255,255,0.02);
-      color: rgba(255,255,255,0.3);
-      font-family: 'Space Mono', monospace;
-      font-size: 0.46rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      cursor: pointer;
-      transition: all 0.18s;
-      white-space: nowrap;
+      background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.3);
+      font-family: 'Space Mono', monospace; font-size: 0.46rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      cursor: pointer; transition: all 0.18s; white-space: nowrap;
     }
     .sort-btn:hover {
-      border-color: rgba(232,197,71,0.3);
-      color: rgba(232,197,71,0.75);
+      border-color: rgba(232,197,71,0.3); color: rgba(232,197,71,0.75);
       background: rgba(232,197,71,0.04);
     }
     .sort-btn.active {
-      background: rgba(232,197,71,0.10);
-      border-color: rgba(232,197,71,0.45);
-      color: #E8C547;
+      background: rgba(232,197,71,0.10); border-color: rgba(232,197,71,0.45); color: #E8C547;
     }
 
     /* Rank badges */
     .card-hot-badge {
       position: absolute; top: 10px; right: 10px; z-index: 2;
-      font-family: 'Space Mono', monospace;
-      font-size: 0.42rem; font-weight: 700;
+      font-family: 'Space Mono', monospace; font-size: 0.42rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.5px;
       padding: 3px 8px; border-radius: 20px;
-      background: rgba(255,140,0,0.12);
-      color: #ffaa44;
-      border: 1px solid rgba(255,140,0,0.28);
-      pointer-events: none;
+      background: rgba(255,140,0,0.12); color: #ffaa44;
+      border: 1px solid rgba(255,140,0,0.28); pointer-events: none;
     }
     .card-new-badge {
       position: absolute; top: 10px; right: 10px; z-index: 2;
-      font-family: 'Space Mono', monospace;
-      font-size: 0.42rem; font-weight: 700;
+      font-family: 'Space Mono', monospace; font-size: 0.42rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.5px;
       padding: 3px 8px; border-radius: 20px;
-      background: rgba(74,222,128,0.10);
-      color: #4ade80;
-      border: 1px solid rgba(74,222,128,0.25);
-      pointer-events: none;
+      background: rgba(74,222,128,0.10); color: #4ade80;
+      border: 1px solid rgba(74,222,128,0.25); pointer-events: none;
     }
 
     /* ─── CARD BASE ─── */
     #feedList .feed-card {
       height: 285px !important;
-      background: #161619 !important;
-      border: 1px solid rgba(232,197,71,0.22) !important;
       border-radius: 14px !important;
       padding: 14px !important;
       display: flex !important;
@@ -139,28 +183,26 @@ function injectFeedStyles() {
       animation: cardIn 0.3s ease both;
       transition: transform 0.22s cubic-bezier(0.4,0,0.2,1),
                   border-color 0.22s, box-shadow 0.22s !important;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4),
-                  inset 0 1px 0 rgba(232,197,71,0.08) !important;
     }
     #feedList .feed-card::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
       background: linear-gradient(90deg,
-        transparent 0%, rgba(232,197,71,0.55) 25%,
-        rgba(232,197,71,1) 50%, rgba(232,197,71,0.55) 75%, transparent 100%);
+        transparent 0%, var(--e-strip-color, rgba(232,197,71,0.55)) 25%,
+        var(--e-strip-color, rgba(232,197,71,1)) 50%,
+        var(--e-strip-color, rgba(232,197,71,0.55)) 75%, transparent 100%);
       pointer-events: none;
     }
     #feedList .feed-card::after {
       content: ''; position: absolute;
       top: 16px; left: 0; bottom: 16px; width: 3px;
       background: var(--e-strip, rgba(232,197,71,0.8));
-      border-radius: 0 4px 4px 0; opacity: 0.85; pointer-events: none;
+      border-radius: 0 4px 4px 0; opacity: 0.9; pointer-events: none;
     }
     #feedList .feed-card:hover {
       transform: translateY(-3px) !important;
-      border-color: rgba(232,197,71,0.5) !important;
-      box-shadow: 0 0 0 1px rgba(232,197,71,0.15),
-                  0 20px 50px rgba(0,0,0,0.55),
-                  inset 0 1px 0 rgba(232,197,71,0.12) !important;
+      box-shadow: 0 0 0 1px var(--e-border, rgba(232,197,71,0.2)),
+                  0 20px 50px rgba(0,0,0,0.6),
+                  inset 0 1px 0 rgba(255,255,255,0.05) !important;
     }
 
     /* ─── LAYOUT INTERNALS ─── */
@@ -187,7 +229,7 @@ function injectFeedStyles() {
       gap: 9px !important; flex-shrink: 0 !important;
       height: 50px !important; overflow: hidden !important;
       padding-top: 8px !important;
-      border-top: 1px solid rgba(232,197,71,0.12) !important;
+      border-top: 1px solid rgba(255,255,255,0.08) !important;
       margin-bottom: 0 !important;
     }
     #feedList .card-song-text { flex: 1; min-width: 0; }
@@ -196,61 +238,39 @@ function injectFeedStyles() {
       flex-shrink: 0 !important; height: 50px !important;
       display: flex !important; align-items: center !important;
       padding-top: 8px !important;
-      border-top: 1px solid rgba(232,197,71,0.1) !important;
+      border-top: 1px solid rgba(255,255,255,0.08) !important;
       overflow: hidden !important; font-size: 0.75rem !important;
     }
-    #feedList .card-mystery  { color: #6B8CFF !important; }
-    #feedList .card-discover { color: #4ade80 !important; }
+    #feedList .card-mystery  { color: rgba(180,200,255,0.7) !important; }
+    #feedList .card-discover { color: rgba(140,230,180,0.7) !important; }
     #feedList .card-actions {
       margin-top: auto !important; padding-top: 8px !important;
-      border-top: 1px solid rgba(232,197,71,0.12) !important;
+      border-top: 1px solid rgba(255,255,255,0.08) !important;
       flex-shrink: 0 !important; display: flex !important; gap: 6px !important;
     }
 
-    /* ─── BUTTONS ─── */
+    /* ─── BUTTONS — inherit from resonate.js for v2 row ─── */
     #feedList .card-btn {
       flex: 1 !important; padding: 8px 6px !important;
-      background: rgba(232,197,71,0.06) !important;
-      border: 1px solid rgba(232,197,71,0.18) !important;
+      background: rgba(255,255,255,0.06) !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
       border-radius: 8px !important;
       font-family: 'DM Sans', sans-serif !important;
       font-size: 0.7rem !important; font-weight: 600 !important;
-      color: rgba(232,197,71,0.8) !important;
+      color: rgba(255,255,255,0.7) !important;
       cursor: pointer !important; transition: all 0.18s !important;
     }
     #feedList .card-btn:hover {
-      background: rgba(232,197,71,0.14) !important;
-      border-color: rgba(232,197,71,0.45) !important;
-      color: #E8C547 !important;
-    }
-    #feedList .card-btn-primary {
-      background: rgba(232,197,71,0.14) !important;
-      border-color: rgba(232,197,71,0.4) !important;
-      color: #E8C547 !important; font-weight: 700 !important;
-    }
-    #feedList .card-btn-primary:hover {
-      background: rgba(232,197,71,0.25) !important;
-      border-color: rgba(232,197,71,0.65) !important;
+      background: rgba(255,255,255,0.12) !important;
+      border-color: rgba(255,255,255,0.25) !important;
       color: #fff !important;
-    }
-    #feedList .card-btn-yt {
-      background: rgba(255,0,0,0.08) !important;
-      border-color: rgba(255,80,80,0.25) !important;
-      color: #ff6464 !important;
-    }
-    #feedList .card-btn-yt:hover {
-      background: rgba(255,0,0,0.16) !important;
-      border-color: rgba(255,80,80,0.5) !important;
-      color: #ff4444 !important;
     }
 
     /* ─── YOUTUBE THUMBNAIL ─── */
     .card-yt-thumb-wrap {
       position: relative; flex-shrink: 0;
-      width: 56px; height: 38px;
-      border-radius: 6px; overflow: hidden;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
+      width: 56px; height: 38px; border-radius: 6px; overflow: hidden;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
       cursor: pointer;
     }
     .card-yt-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -286,6 +306,10 @@ function injectFeedStyles() {
     .sk-row    { display: flex; gap: 8px; margin-top: 4px; }
     .sk-long   { height: 30px; flex: 1; border-radius: 8px; }
 
+    /* ─── NEW EMOTION STREAM CLASSES ─── */
+    .emotion-sendit { background:rgba(0,229,200,0.12); color:#00e5c8; }
+    .emotion-letout { background:rgba(200,100,255,0.12); color:#c864ff; }
+
     /* ─── STUDIO YT BG ─── */
     .yt-bg-option {
       display: flex; align-items: center; gap: 10px; padding: 10px 12px;
@@ -304,12 +328,10 @@ function injectFeedStyles() {
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
     }
 
-    /* ─── SUPPRESS OLD SCROLL BTN ─── */
     .scroll-top, [id*="scrollTop"]:not(#margoScrollTop) {
       display: none !important; opacity: 0 !important; pointer-events: none !important;
     }
 
-    /* ─── MOBILE ─── */
     @media (max-width: 480px) {
       #feedList .feed-card { height: 275px !important; }
       .skeleton-card { height: 275px !important; }
@@ -321,7 +343,7 @@ function injectFeedStyles() {
   document.head.appendChild(s);
 }
 
-/* ── Sort bar (injected above feedList, once) ── */
+/* ── Sort bar ── */
 function injectSortBar() {
   if (document.getElementById('feedSortBar')) return;
   const bar = document.createElement('div');
@@ -508,10 +530,7 @@ function initRoomTabs() {
   });
 }
 
-/* ══════════════════════════════════════════════════════════
-   RANKING SYSTEM
-   ══════════════════════════════════════════════════════════ */
-
+/* ── Ranking ── */
 function getPostAge(post) {
   if (!post.timestamp) return 999;
   return (Date.now() - post.timestamp) / 3600000;
@@ -519,32 +538,33 @@ function getPostAge(post) {
 
 function getEngagement(post) {
   const a = postAnalytics[post.id] || {};
-  return (a.views || 0) + (Object.keys(a.guesses || {}).length * 3)
-    + (Object.keys(a.helps || {}).length * 2);
+  return (a.views || 0)
+    + (Object.keys(a.guesses  || {}).length * 3)
+    + (Object.keys(a.helps    || {}).length * 2)
+    + (Object.keys(a.resonates|| {}).length * 4)
+    + (Object.keys(a.echoes   || {}).length * 5);
 }
 
 function calculatePostScore(post) {
   const age    = getPostAge(post);
   const engage = getEngagement(post);
-
-  if (currentSort === 'fresh') {
-    const decay = Math.exp(-age / 18);
-    return decay * 1000 + engage * 0.05;
-  }
-  if (currentSort === 'hot') {
-    return engage / Math.pow(age + 2, 1.4);
-  }
-  if (currentSort === 'top') {
-    return engage;
-  }
+  if (currentSort === 'fresh') return Math.exp(-age / 18) * 1000 + engage * 0.05;
+  if (currentSort === 'hot')   return engage / Math.pow(age + 2, 1.4);
+  if (currentSort === 'top')   return engage;
   return 0;
 }
 
-function isNewPost(post)  { return getPostAge(post) < 6; }
-function isHotPost(post)  { return getEngagement(post) >= 20; }
+function isNewPost(post) { return getPostAge(post) < 6; }
+function isHotPost(post) { return getEngagement(post) >= 20; }
 
 function getRankedPosts() {
   return getFilteredPosts().sort((a, b) => calculatePostScore(b) - calculatePostScore(a));
+}
+
+/* ── Get echo count for a post ── */
+function getEchoCount(postId) {
+  if (typeof postAnalytics === 'undefined') return 0;
+  return Object.keys(postAnalytics[postId]?.echoes || {}).length;
 }
 
 /* ── Skeleton ── */
@@ -563,12 +583,10 @@ function renderSkeleton() {
 
 /* ══════════════════════════════════════════════════════════
    RENDER FEED
-   ══════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════════════════ */
 function renderFeed() {
   injectFeedStyles();
   injectSortBar();
-  // Guard: only update stats once posts have loaded — prevents
-  // writing 0 on cold start before Firebase returns data.
   if (postsLoaded) updateLandingStats();
   if (!postsLoaded) { renderSkeleton(); return; }
 
@@ -590,7 +608,7 @@ function renderFeed() {
   if (rc) rc.textContent = searchQuery ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}` : '';
 
   filtered.forEach((post, i) => {
-    const card    = document.createElement('div');
+    const card     = document.createElement('div');
     card.className = 'feed-card';
     card.style.animationDelay = `${i * 0.03}s`;
 
@@ -598,27 +616,28 @@ function renderFeed() {
     const emotion = post.emotion || 'Nostalgia';
     const ecfg    = EMOTION_CFG[emotion] || E_DEFAULT;
     const idx     = posts.findIndex(p => p.id === post.id);
+    const echoCnt = getEchoCount(post.id);
 
     const meta           = post.youtubeMeta;
     const hasThumb       = !!(meta?.thumbnailSm || meta?.thumbnail);
     const hasYouTubeUrl  = !!(meta?.youtubeUrl);
     const hasStreamLinks = !!(post.links?.spotify || post.links?.apple || post.links?.soundcloud);
 
-    card.style.setProperty('--e-strip', ecfg.strip);
-    card.style.borderColor = ecfg.border;
+    /* ── Emotion-driven card styling ── */
+    card.style.background   = ecfg.cardBg;
+    card.style.borderColor  = ecfg.border;
+    card.style.boxShadow    = `0 4px 24px rgba(0,0,0,0.45), inset 0 1px 0 ${ecfg.border}`;
+    card.style.setProperty('--e-strip',       ecfg.strip);
+    card.style.setProperty('--e-strip-color', ecfg.strip);
+    card.style.setProperty('--e-border',      ecfg.border);
 
-    const badge = post.mode === 'guess'
-      ? '<span class="card-mode-badge mode-guess">Guess</span>'
-      : post.mode === 'discover'
-      ? '<span class="card-mode-badge mode-discover">Discover</span>'
-      : '<span class="card-mode-badge mode-share">Share</span>';
+    /* Smart text contrast */
+    const lyricColor = ecfg.lyricText || '#fff';
+    const metaColor  = ecfg.metaText  || 'rgba(255,255,255,0.6)';
 
     let rankBadge = '';
-    if (currentSort === 'fresh' && isNewPost(post)) {
-      rankBadge = '<span class="card-new-badge">New</span>';
-    } else if (currentSort === 'hot' && isHotPost(post)) {
-      rankBadge = '<span class="card-hot-badge">Trending</span>';
-    }
+    if (currentSort === 'fresh' && isNewPost(post))  rankBadge = '<span class="card-new-badge">New</span>';
+    else if (currentSort === 'hot' && isHotPost(post)) rankBadge = '<span class="card-hot-badge">Trending</span>';
 
     const thumb = hasThumb ? `
       <div class="card-yt-thumb-wrap"
@@ -632,13 +651,16 @@ function renderFeed() {
         </span>
       </div>` : '';
 
+    /* Song section — show song/artist for all modes if we have the data */
     let songSection = '';
-    if (post.mode === 'share') {
+    const hasSongData = k.song !== 'Unknown Song' || k.artist !== 'Unknown Artist';
+
+    if (hasSongData) {
       songSection = `<div class="card-song">
         ${thumb}
         <div class="card-song-text">
-          <div class="card-song-title">${highlightMatch(k.song, searchQuery)}</div>
-          <div class="card-song-artist">${highlightMatch(k.artist, searchQuery)}</div>
+          <div class="card-song-title" style="color:${lyricColor}">${highlightMatch(k.song, searchQuery)}</div>
+          <div class="card-song-artist" style="color:${metaColor}">${highlightMatch(k.artist, searchQuery)}</div>
         </div>
       </div>`;
     } else if (post.mode === 'guess') {
@@ -648,61 +670,29 @@ function renderFeed() {
       if (!what.length) what.push('song', 'artist');
       songSection = `<div class="card-mystery">Can you name the ${what.join(' and ')}?</div>`;
     } else {
-      const hasClue = k.song !== 'Unknown Song' || k.artist !== 'Unknown Artist';
-      songSection = `<div class="card-discover">${
-        hasClue
-          ? `Maybe: ${highlightMatch(k.song, searchQuery)} — ${highlightMatch(k.artist, searchQuery)}`
-          : 'Help identify this song'
-      }</div>`;
+      songSection = `<div class="card-discover">Help identify this song</div>`;
     }
 
-    let actions = '';
-    if (post.mode === 'share') {
-      if (hasThumb) {
-        actions = `<div class="card-actions">
-          <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">Open</button>
-        </div>`;
-      } else if (hasStreamLinks) {
-        actions = `<div class="card-actions">
-          <button class="card-btn" onclick="window.viewPost(${idx})">Open</button>
-          <button class="card-btn card-btn-yt" onclick="window.openListen(${idx})">Listen</button>
-        </div>`;
-      } else if (hasYouTubeUrl && !hasThumb) {
-        actions = `<div class="card-actions">
-          <button class="card-btn" onclick="window.viewPost(${idx})">Open</button>
-          <button class="card-btn card-btn-yt"
-            onclick="event.stopPropagation();window.open('${meta.youtubeUrl}','_blank','noopener')">
-            Watch on YouTube
-          </button>
-        </div>`;
-      } else {
-        actions = `<div class="card-actions">
-          <button class="card-btn card-btn-primary" onclick="window.viewPost(${idx})">Open</button>
-        </div>`;
-      }
-    } else if (post.mode === 'guess') {
-      actions = `<div class="card-actions">
-        <button class="card-btn card-btn-primary" onclick="window.openGuess(${idx})">Take a guess</button>
-        <button class="card-btn" onclick="window.viewPost(${idx})">Open</button>
-      </div>`;
-    } else {
-      actions = `<div class="card-actions">
-        <button class="card-btn card-btn-primary" onclick="window.openDiscover(${idx})">Help identify</button>
-        <button class="card-btn" onclick="window.viewPost(${idx})">Open</button>
-      </div>`;
-    }
+    /* Actions — always the same structure, resonate.js will upgrade to v2 row */
+    const actions = `<div class="card-actions">
+      <button class="card-btn" onclick="window.viewPost(${idx})">Open</button>
+    </div>`;
 
     card.innerHTML = `
       ${rankBadge}
       <div class="card-top">
-        <span class="card-time">${timeAgo(post.timestamp)}</span>
-        ${badge}
+        <span class="card-time" style="color:${metaColor}">${timeAgo(post.timestamp)}</span>
       </div>
-      <div class="card-lyric" style="font-size:${lyricFontSize(post.text)}">${highlightMatch(post.text, searchQuery)}</div>
-      <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text}">${highlightMatch(emotion, searchQuery)}</span>
+      <div class="card-lyric" style="font-size:${lyricFontSize(post.text)};color:${lyricColor}">${highlightMatch(post.text, searchQuery)}</div>
+      <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">${highlightMatch(emotion, searchQuery)}</span>
       ${songSection}
       ${actions}
     `;
+
+    /* Store echo count on card for resonate.js to read */
+    card.dataset.echoCount = echoCnt;
+    card.dataset.postId    = post.id;
+
     feedList.appendChild(card);
   });
 }
