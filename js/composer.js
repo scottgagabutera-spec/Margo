@@ -1,8 +1,9 @@
 /* ============================================================
    MARGO — js/composer.js
-   v5.6 — Single "Post & Create" CTA:
-           posts to feed AND opens studio chooser immediately.
-           No unnecessary symbols. Human wording throughout.
+   v5.7 — concept-v2: postcardModal removed.
+          All postcard/closePostcard/listenPostcard references
+          are null-guarded so initComposer() no longer crashes
+          and app.js reaches startFirebaseSync().
    ============================================================ */
 
 /* ══════════════════════════════════════════════════════════════
@@ -115,10 +116,6 @@ function injectComposerStyles() {
     }
     @keyframes mspin{to{transform:rotate(360deg)}}
 
-    /* ══════════════════════════════
-       PRIMARY CTA — "Post & Create"
-       Full-width, bold, unmissable.
-    ══════════════════════════════ */
     #postAndCreateBtn {
       width: 100%;
       display: flex;
@@ -165,7 +162,6 @@ function injectComposerStyles() {
       box-shadow: none;
     }
 
-    /* Subtle "just post" escape hatch */
     #justPostLink {
       display: block;
       text-align: center;
@@ -190,7 +186,6 @@ function injectComposerStyles() {
       cursor: default;
     }
 
-    /* ── Identify button ── */
     #geniusIdentifyBtn {
       width:100%;margin-top:7px;padding:11px 16px;
       border-radius:12px;border:1px dashed rgba(232,197,71,0.3);
@@ -557,7 +552,6 @@ function renderYtCard(data) {
   if (data.itunesUrl)
     links.push(`<a href="${data.itunesUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-it">Apple Music</a>`);
 
-  const sourceBadge    = source === 'youtube' ? 'Found' : source === 'deezer' ? 'Found' : 'Found';
   const sourceBadgeCls = source === 'youtube' ? 'yt-found-yt' : source === 'deezer' ? 'yt-found-dz' : 'yt-found-it';
   const thumb = data.thumbnail || data.thumbnailSm;
 
@@ -571,7 +565,7 @@ function renderYtCard(data) {
         <div class="yt-channel">${decodeHTML(data.channel || data.collectionName || '')}</div>
         ${links.length ? `<div class="yt-links-row">${links.join('')}</div>` : ''}
       </div>
-      <span class="yt-found-tag ${sourceBadgeCls}">${sourceBadge}</span>
+      <span class="yt-found-tag ${sourceBadgeCls}">Found</span>
     </div>
   `;
   insertAfterArtist(card);
@@ -591,8 +585,8 @@ function clearYoutubePreview() {
 
 /* ============================================================
    COMPOSER INIT
-   v5.6: Single CTA — "Post & Create" is the only button.
-         A lightweight "or just post" text link sits below it.
+   v5.7: All postcard/listenPostcard/closePostcard refs are
+         null-guarded — postcard modal removed in concept-v2.
    ============================================================ */
 function initComposer() {
   injectComposerStyles();
@@ -644,27 +638,40 @@ function initComposer() {
   initGeniusIdentify();
   initYoutubeAutofetch();
 
-  document.getElementById('submitGuess').onclick    = submitGuess;
-  document.getElementById('submitDiscover').onclick = submitDiscover;
-  analyticsBtn.onclick = openAnalytics;
-  document.getElementById('closeAnalytics').onclick = () => { closeModal(analyticsModal); openModal(postcardModal); };
-  listenPostcard.onclick = () => {
-    const idx = posts.findIndex(p => p.id === currentPost?.id);
-    if (idx !== -1) { closeModal(postcardModal); window.openListen(idx); }
-  };
-  document.getElementById('closeGuess').onclick    = () => { closeModal(guessModal); currentGuessAttempts = 0; };
-  document.getElementById('closeDiscover').onclick = () => closeModal(discoverModal);
-  document.getElementById('closePostcard').onclick = () => closeModal(postcardModal);
-  document.getElementById('closeListen').onclick   = () => closeModal(listenModal);
+  // Guess / Discover / Listen / Analytics — these modals still exist
+  const submitGuessEl    = document.getElementById('submitGuess');
+  const submitDiscoverEl = document.getElementById('submitDiscover');
+  const closeGuessEl     = document.getElementById('closeGuess');
+  const closeDiscoverEl  = document.getElementById('closeDiscover');
+  const closeListenEl    = document.getElementById('closeListen');
+  const closeAnalyticsEl = document.getElementById('closeAnalytics');
+
+  if (submitGuessEl)    submitGuessEl.onclick    = submitGuess;
+  if (submitDiscoverEl) submitDiscoverEl.onclick = submitDiscover;
+  if (closeGuessEl)     closeGuessEl.onclick     = () => { closeModal(guessModal); currentGuessAttempts = 0; };
+  if (closeDiscoverEl)  closeDiscoverEl.onclick  = () => closeModal(discoverModal);
+  if (closeListenEl)    closeListenEl.onclick    = () => closeModal(listenModal);
+
+  // analyticsBtn and closeAnalytics — postcard is gone so just close analytics
+  if (analyticsBtn)     analyticsBtn.onclick     = openAnalytics;
+  if (closeAnalyticsEl) closeAnalyticsEl.onclick = () => closeModal(analyticsModal);
+
+  // These are null in concept-v2 (postcard removed) — guarded safely
+  if (listenPostcard) {
+    listenPostcard.onclick = () => {
+      const idx = posts.findIndex(p => p.id === currentPost?.id);
+      if (idx !== -1) window.openListen(idx);
+    };
+  }
+  const closePostcardEl = document.getElementById('closePostcard');
+  if (closePostcardEl) closePostcardEl.onclick = () => closeModal(postcardModal);
 }
 
 /* ============================================================
    POST SUBMISSION
-   openChooser = true  → posts then opens studio chooser
-   openChooser = false → posts silently
    ============================================================ */
 async function submitPost(openChooser = true) {
-  const pacBtn     = document.getElementById('postAndCreateBtn');
+  const pacBtn      = document.getElementById('postAndCreateBtn');
   const justPostBtn = document.getElementById('justPostLink');
   if (pacBtn?.disabled) return;
 
@@ -770,7 +777,7 @@ async function submitPost(openChooser = true) {
   } finally {
     if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = 'Post &amp; Create Visual'; }
     if (justPostBtn) { justPostBtn.disabled = false; }
-    postBtn.disabled = false;
+    if (postBtn)     { postBtn.disabled = false; }
   }
 }
 
@@ -800,50 +807,6 @@ function resetComposer() {
   if (iw) iw.style.display = 'none';
   if (is) { is.innerHTML = ''; is.style.display = 'none'; }
 }
-
-/* ── View post (postcard) ── */
-window.viewPost = function(index) {
-  currentPost = posts[index];
-  if (!currentPost) return;
-  trackView(currentPost.id);
-  document.getElementById('postcardLyric').textContent   = currentPost.text;
-  document.getElementById('postcardEmotion').textContent = currentPost.emotion || 'Nostalgia';
-  const k      = currentPost.knowledge || { song:'Unknown Song', artist:'Unknown Artist' };
-  const songEl = document.getElementById('postcardSong');
-  const meta   = currentPost.youtubeMeta;
-  if (currentPost.mode === 'guess') {
-    songEl.innerHTML = `<div style="font-style:italic;color:var(--text-2)">Guess correctly to reveal</div>`;
-  } else {
-    const thumbHtml = meta?.thumbnail
-      ? `<img src="${meta.thumbnail}" style="width:80px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0" alt=""/>`
-      : '';
-    songEl.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px">
-        ${thumbHtml}
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600">${k.song}</div>
-          <div style="font-size:0.8rem;color:var(--text-2)">${k.artist}</div>
-          ${meta?.channel ? `<div style="font-size:0.7rem;color:rgba(255,255,255,0.35)">${meta.channel}</div>` : ''}
-        </div>
-      </div>
-      ${meta?.youtubeUrl ? `
-        <a href="${meta.youtubeUrl}" target="_blank" rel="noopener noreferrer"
-          style="display:block;margin-top:8px;width:100%;padding:9px;border-radius:8px;
-          background:rgba(255,0,0,0.07);border:1px solid rgba(255,0,0,0.18);
-          color:#ff5555;text-align:center;font-size:0.78rem;
-          text-decoration:none;font-family:inherit;transition:background 0.2s;"
-          onmouseover="this.style.background='rgba(255,0,0,0.12)'"
-          onmouseout="this.style.background='rgba(255,0,0,0.07)'">
-          Watch on YouTube
-        </a>` : ''}
-    `;
-  }
-  document.getElementById('postcardCommunity').innerHTML = '';
-  const hasLinks = currentPost.links &&
-    (currentPost.links.spotify||currentPost.links.apple||currentPost.links.youtube||currentPost.links.soundcloud);
-  listenPostcard.style.display = (hasLinks && currentPost.mode !== 'guess') ? 'block' : 'none';
-  openModal(postcardModal);
-};
 
 /* ── Listen ── */
 window.openListen = function(index) {
@@ -1014,5 +977,5 @@ function openAnalytics() {
     });
     body.innerHTML+=sec+'</div></div>';
   }
-  closeModal(postcardModal); openModal(analyticsModal);
+  openModal(analyticsModal);
 }
