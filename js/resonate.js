@@ -1,6 +1,6 @@
 /* ============================================================
    MARGO — js/resonate.js
-   v1.1 — concept-v2
+   v1.2 — concept-v2
    • Resonate button shows "Resonate" text so users know what it means
    • Share button shows "GIF · Poster" so users know what they're getting
    • upgradeCardActions() replaces .card-actions on ALL card modes
@@ -70,12 +70,17 @@ function injectResonateStyles() {
       font-size: 0.7rem; font-weight: 600;
       cursor: pointer; transition: all 0.18s;
       white-space: nowrap; text-align: center;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
     }
     .card-lyric-back-btn:hover {
       background: rgba(107,140,255,0.12);
       border-color: rgba(107,140,255,0.4); color: #6B8CFF;
     }
     .card-lyric-back-btn:active { transform: scale(0.96); }
+    .lyric-back-count {
+      font-size: 0.58rem; font-family: 'Space Mono', monospace;
+      font-weight: 700; opacity: 0.7;
+    }
 
     /* GIF · Poster */
     .card-share-btn {
@@ -149,10 +154,11 @@ function buildCardActionsV2(post, postIdx) {
   };
   row.appendChild(resonateBtn);
 
-  // Lyric Back
+  // Lyric Back — show echo count if any
+  const echoCount = Object.keys((postAnalytics?.[postId]?.echoes) || {}).length;
   const lyrBackBtn = document.createElement('button');
   lyrBackBtn.className = 'card-lyric-back-btn';
-  lyrBackBtn.textContent = 'Lyric Back';
+  lyrBackBtn.innerHTML = `Lyric Back${echoCount > 0 ? ` <span class="lyric-back-count">${echoCount}</span>` : ''}`;
   lyrBackBtn.onclick = (e) => {
     e.stopPropagation();
     if (typeof openEchoSheet === 'function') openEchoSheet(postIdx);
