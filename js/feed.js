@@ -633,12 +633,12 @@ function renderFeed() {
 
   filtered.forEach((post, i) => {
     const card     = document.createElement('div');
+    const k        = post.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
+    const emotion  = post.emotion || 'Nostalgia';
     const eClass   = emotion.toLowerCase().replace(/\s+/g, '');
     card.className = `feed-card e-${eClass}`;
     card.style.animationDelay = `${i * 0.03}s`;
 
-    const k       = post.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
-    const emotion = post.emotion || 'Nostalgia';
     const ecfg    = EMOTION_CFG[emotion] || E_DEFAULT;
     const idx     = posts.findIndex(p => p.id === post.id);
     const echoCnt = getEchoCount(post.id);
