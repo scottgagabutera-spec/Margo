@@ -225,6 +225,7 @@ preloadStudioFonts();
 buildLyricStream();
 initSearch();
 initRoomTabs();
+if (typeof initCardTilt === 'function') initCardTilt();
 initComposer();
 
 try {
