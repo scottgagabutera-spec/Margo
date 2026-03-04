@@ -110,11 +110,8 @@ const E_DEFAULT = {
 let currentSort = 'fresh';
 
 function lyricFontSize(text) {
-  const n = (text || '').length;
-  if (n <= 35)  return '1.08rem';
-  if (n <= 65)  return '0.93rem';
-  if (n <= 110) return '0.8rem';
-  return '0.68rem';
+  // Uniform — one size fits all, consistent card height
+  return '0.92rem';
 }
 
 /* ── Inject styles ── */
@@ -172,21 +169,17 @@ function injectFeedStyles() {
 
     /* ─── CARD BASE ─── */
     #feedList .feed-card {
+      height: 268px !important;
       border-radius: 14px !important;
-      padding: 0 !important;
+      padding: 14px 14px 0 18px !important;
       display: flex !important;
       flex-direction: column !important;
       gap: 0 !important;
       position: relative !important;
       overflow: hidden !important;
       animation: cardIn 0.3s ease both;
-      transition: transform 0.36s cubic-bezier(.34,1.36,.64,1),
-                  border-color 0.28s, box-shadow 0.28s !important;
-    }
-    #feedList .c-inner {
-      padding: 14px 14px 10px 19px;
-      display: flex; flex-direction: column; flex: 1;
-      position: relative; z-index: 2;
+      transition: transform 0.22s cubic-bezier(0.4,0,0.2,1),
+                  border-color 0.22s, box-shadow 0.22s !important;
     }
     #feedList .feed-card::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
@@ -208,15 +201,6 @@ function injectFeedStyles() {
                   0 20px 50px rgba(0,0,0,0.6),
                   inset 0 1px 0 rgba(255,255,255,0.05) !important;
     }
-
-    /* ─── GLOW ORB ─── */
-    #feedList .c-glow {
-      position: absolute; top: -50px; right: -50px;
-      width: 200px; height: 200px; border-radius: 50%;
-      filter: blur(60px); z-index: 0; pointer-events: none;
-      opacity: .08; transition: opacity .4s ease;
-    }
-    #feedList .feed-card:hover .c-glow { opacity: .18 !important; }
 
     /* ─── LAYOUT INTERNALS ─── */
     #feedList .card-top {
@@ -673,26 +657,17 @@ function renderFeed() {
         </span>
       </div>` : '';
 
-    /* Song section — show song/artist for all modes if we have the data */
+    /* Song section — always show what we have, clean */
     let songSection = '';
     const hasSongData = k.song !== 'Unknown Song' || k.artist !== 'Unknown Artist';
-
     if (hasSongData) {
       songSection = `<div class="card-song">
         ${thumb}
         <div class="card-song-text">
-          <div class="card-song-title" style="color:${lyricColor}">${highlightMatch(k.song, searchQuery)}</div>
-          <div class="card-song-artist" style="color:${metaColor}">${highlightMatch(k.artist, searchQuery)}</div>
+          <div class="card-song-title">${highlightMatch(k.song, searchQuery)}</div>
+          <div class="card-song-artist">${highlightMatch(k.artist, searchQuery)}</div>
         </div>
       </div>`;
-    } else if (post.mode === 'guess') {
-      const what = [];
-      if (post.guessConfig?.guessSong)   what.push('song');
-      if (post.guessConfig?.guessArtist) what.push('artist');
-      if (!what.length) what.push('song', 'artist');
-      songSection = `<div class="card-mystery">Can you name the ${what.join(' and ')}?</div>`;
-    } else {
-      songSection = `<div class="card-discover">Help identify this song</div>`;
     }
 
     /* Actions — always the same structure, resonate.js will upgrade to v2 row */
@@ -702,16 +677,13 @@ function renderFeed() {
 
     card.innerHTML = `
       ${rankBadge}
-      <div class="c-glow" style="background:${ecfg.text}4D"></div>
-      <div class="c-inner">
-        <div class="card-top">
-          <span class="card-time" style="color:${metaColor}">${timeAgo(post.timestamp)}</span>
-        </div>
-        <div class="card-lyric" style="font-size:${lyricFontSize(post.text)};color:${lyricColor}">${highlightMatch(post.text, searchQuery)}</div>
-        <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">${highlightMatch(emotion, searchQuery)}</span>
-        ${songSection}
+      <div class="card-top">
+        <span class="card-time">${timeAgo(post.timestamp)}</span>
       </div>
-      ${actions}
+      <div class="card-lyric">${highlightMatch(post.text, searchQuery)}</div>
+      <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">${highlightMatch(emotion, searchQuery)}</span>
+      ${songSection}
+      <div class="card-actions"></div>
     `;
 
     /* Store echo count on card for resonate.js to read */
