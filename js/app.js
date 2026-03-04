@@ -1,9 +1,12 @@
 /* ============================================================
    MARGO — js/app.js
-   v5.4 — scrollToFeed dynamically measures the actual sticky
-          stack height at runtime (header + search + tabs + sort bar)
-          so scroll always lands precisely at the first card on
-          any screen size. No hardcoded offsets, no guessing.
+   v6.0 — concept-v2 branch:
+          • postcardModal / studioChooser removed
+          • studios return via reopenShareSheet()
+          • sharePosterBtn → openShareSheet()
+          • FAB wiring unchanged
+          • scrollToFeed unchanged
+          • initStudio() back-button patched to call reopenShareSheet
    ============================================================ */
 
 // ── Toast ──
@@ -17,8 +20,9 @@ function showToast(msg) {
   setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 2600);
 }
 
-// ── Modal helpers ──
+// ── Modal helpers (kept for guess/discover/listen/analytics) ──
 function openModal(modal) {
+  if (!modal) return;
   savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
   modal.classList.remove('hidden');
   document.body.classList.add('modal-open');
@@ -26,6 +30,7 @@ function openModal(modal) {
 }
 
 function closeModal(modal) {
+  if (!modal) return;
   modal.classList.add('hidden');
   document.body.classList.remove('modal-open');
   document.body.style.top = '';
@@ -57,15 +62,10 @@ function goToLanding() {
   setPageState('landing');
 }
 
-// ── scrollToFeed ──
-// Dynamically measures the actual rendered height of every sticky layer
-// (header + search wrap + tabs + sort bar) so the scroll target is always
-// pixel-perfect on both desktop and mobile, regardless of breakpoint.
+// ── scrollToFeed ── (unchanged from v5.4)
 function scrollToFeed() {
   let attempts = 0;
 
-  // Measure the full sticky stack at the moment of scrolling,
-  // not at load time — this handles font-load reflows, etc.
   function getStickyOffset() {
     const header  = document.querySelector('.feed-header');
     const search  = document.querySelector('.feed-search-wrap');
@@ -81,45 +81,42 @@ function scrollToFeed() {
 
   const tryScroll = () => {
     attempts++;
-
-    // Wait for a real card (not skeleton) to appear in the feed
     const firstCard = document.querySelector('#feedList .feed-card:not(.skeleton-card)');
-
     if (firstCard || attempts >= 20) {
       const stickyOffset = getStickyOffset();
       const cardTop = firstCard
         ? firstCard.getBoundingClientRect().top + window.scrollY
-        : 300; // fallback if no cards yet
-
-      // 12px breathing room below the last sticky bar
+        : 300;
       const target = cardTop - stickyOffset - 12;
       window.scrollTo({ top: Math.max(0, target), behavior: 'instant' });
     } else {
       setTimeout(tryScroll, 80);
     }
   };
-
-  // Wait 500ms so renderFeed() completes and cards are in the DOM
   setTimeout(tryScroll, 500);
 }
 
 function initNavigation() {
-  enterBtn.onclick = () => {
-    goToFeed();
-    setTimeout(() => { openModal(composer); setTimeout(() => textInput.focus(), 200); }, 100);
-  };
+  // Enter → open feed + composer
+  if (enterBtn) {
+    enterBtn.onclick = () => {
+      goToFeed();
+      setTimeout(() => { openModal(composer); setTimeout(() => textInput?.focus(), 200); }, 100);
+    };
+  }
 
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
   if (efb1) efb1.onclick = () => { goToFeed(); scrollToFeed(); };
   if (efb2) efb2.onclick = () => { goToFeed(); scrollToFeed(); };
 
-  backBtn.onclick          = goToLanding;
-  openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
-  closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
+  if (backBtn)          backBtn.onclick          = goToLanding;
+  if (openComposerBtn)  openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput?.focus(), 200); };
+  if (closeComposerBtn) closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
 
+  // Touch swipe nav
   let tSX = 0, tSY = 0;
-  [landing, feed].forEach(s => {
+  [landing, feed].filter(Boolean).forEach(s => {
     s.addEventListener('touchstart', e => { tSX = e.touches[0].clientX; tSY = e.touches[0].clientY; });
     s.addEventListener('touchend', e => {
       const dx = tSX - e.changedTouches[0].clientX;
@@ -144,6 +141,77 @@ function setupScrollToTop() {
   }
 }
 
+/* ────────────────────────────────────────────────────────────
+   STUDIO BACK BUTTON PATCH
+   In concept-v2, studios return to the share sheet, not
+   the (removed) postcard modal. We patch closeStudio and
+   closeGifStudio to call reopenShareSheet() instead.
+──────────────────────────────────────────────────────────── */
+function patchStudioBackButtons() {
+  // Image studio close button
+  const closeStudioBtn = document.getElementById('closeStudio');
+  if (closeStudioBtn) {
+    closeStudioBtn.onclick = () => {
+      const overlay = document.getElementById('studioOverlay');
+      if (overlay) overlay.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      if (typeof reopenShareSheet === 'function') reopenShareSheet();
+    };
+  }
+
+  // GIF studio close button
+  const closeGifBtn = document.getElementById('closeGifStudio');
+  if (closeGifBtn) {
+    closeGifBtn.onclick = () => {
+      if (typeof gsStopPreview === 'function') gsStopPreview();
+      const overlay = document.getElementById('gifStudioOverlay');
+      if (overlay) overlay.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      if (typeof reopenShareSheet === 'function') reopenShareSheet();
+    };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   SHARE SHEET — wire sharePosterBtn from postcard (now gone)
+   sharePosterBtn in index.html was inside postcardModal.
+   In concept-v2 the postcard is removed, but if the element
+   still exists for backward compat, wire it to openShareSheet.
+──────────────────────────────────────────────────────────── */
+function wireSharPosterBtn() {
+  if (sharePosterBtn) {
+    sharePosterBtn.onclick = () => {
+      if (typeof openShareSheet === 'function' && currentPost) {
+        openShareSheet(currentPost);
+      }
+    };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   COMPOSER SUBMIT — open share sheet after posting
+   Patches the submitPost behaviour: after a successful post,
+   instead of opening the studio chooser, open the share sheet.
+──────────────────────────────────────────────────────────── */
+function patchComposerForShareSheet() {
+  // openStudioChooser is called by composer.js submitPost(true).
+  // We override it to open the share sheet instead.
+  window.openStudioChooser = function() {
+    if (typeof openShareSheet === 'function' && currentPost) {
+      setTimeout(() => {
+        showToast('Posted — now make it visual');
+        openShareSheet(currentPost);
+      }, 120);
+    }
+  };
+}
+
+/* ────────────────────────────────────────────────────────────
+   GUESS / DISCOVER / LISTEN / ANALYTICS
+   These modals still exist and work the same way.
+──────────────────────────────────────────────────────────── */
+// (All wired by composer.js — no changes needed here)
+
 // ════════════════════════════════════════════════════════
 //   INIT
 // ════════════════════════════════════════════════════════
@@ -165,7 +233,12 @@ try {
   console.warn('[Margo] initStudio error (non-fatal):', err.message);
 }
 
+// concept-v2 patches
+patchStudioBackButtons();
+patchComposerForShareSheet();
+wireSharPosterBtn();
+
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v5.4 dev — scrollToFeed dynamically measures sticky stack.');
+console.log('MARGO v6.0 concept-v2 — share sheet, echoes, resonate, username system active.');
