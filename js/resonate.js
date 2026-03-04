@@ -12,161 +12,101 @@ function injectResonateStyles() {
   const s = document.createElement('style');
   s.id = 'resonateStyles';
   s.textContent = `
-    /* ── REACTION BAR — prototype-matched ── */
-    #feedList .reaction-bar {
-      position: relative; z-index: 2;
-      display: flex; flex-direction: column; gap: 0;
-      background: rgba(0,0,0,.38);
-      border-top: 1px solid rgba(255,255,255,.07);
-      flex-shrink: 0;
-      backdrop-filter: blur(10px);
-    }
-    #feedList .rb-row1,
-    #feedList .rb-row2 {
-      display: flex; align-items: center;
-      padding: 8px 13px 8px 14px; gap: 7px;
-    }
-    #feedList .rb-row1 {
-      border-bottom: 1px solid rgba(255,255,255,.05);
-      padding-bottom: 7px;
-    }
-    #feedList .rb-row2 {
-      padding-top: 7px; padding-bottom: 10px;
+    /* ── SINGLE ACTION ROW ── */
+    #feedList .card-actions-v2 {
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      padding: 8px 12px 10px !important;
+      border-top: 1px solid rgba(255,255,255,0.07) !important;
+      flex-shrink: 0 !important;
     }
 
     /* Resonate */
-    #feedList .resonate-btn {
-      display: flex; align-items: center; gap: 7px;
-      padding: 7px 16px; border-radius: 50px;
-      border: 1px solid rgba(192,132,252,.28);
-      background: rgba(192,132,252,.08);
-      cursor: pointer;
-      transition: all .25s cubic-bezier(.34,1.56,.64,1);
-      font-family: 'DM Serif Display', serif;
-      font-size: .75rem; font-weight: 600; font-style: italic;
-      color: rgba(192,132,252,.95);
-      position: relative; overflow: hidden; flex-shrink: 0;
-      white-space: nowrap; letter-spacing: .2px;
+    .card-resonate-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 7px 12px; border-radius: 50px;
+      background: rgba(192,132,252,0.08);
+      border: 1px solid rgba(192,132,252,0.25);
+      color: rgba(192,132,252,0.9);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.68rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      white-space: nowrap; flex-shrink: 0;
+      position: relative; overflow: hidden;
     }
-    #feedList .resonate-btn:hover {
-      border-color: rgba(192,132,252,.55); color: #C084FC;
-      background: rgba(192,132,252,.16);
-      transform: scale(1.06);
-      box-shadow: 0 0 22px rgba(192,132,252,.24);
+    .card-resonate-btn:hover {
+      background: rgba(192,132,252,0.16);
+      border-color: rgba(192,132,252,0.5);
+      transform: scale(1.04);
     }
-    #feedList .resonate-btn.resonated {
-      border-color: rgba(192,132,252,.6);
-      color: #C084FC; background: rgba(192,132,252,.18);
+    .card-resonate-btn.resonated {
+      background: rgba(192,132,252,0.18);
+      border-color: rgba(192,132,252,0.55);
+      color: #C084FC;
     }
-    #feedList .resonate-btn:active { transform: scale(0.94); }
-
+    .card-resonate-btn:active { transform: scale(0.94); }
+    .r-icon { font-size: 0.82rem; display: inline-block; line-height: 1; }
+    .card-resonate-btn.resonated .r-icon { transform: scale(1.3) rotate(20deg); }
+    .r-count {
+      color: #00E5FF; font-size: 0.62rem;
+      font-family: 'Space Mono', monospace; font-weight: 700;
+    }
     @keyframes rBurst {
-      0%   { opacity:1; transform:scale(0); }
-      65%  { opacity:.4; transform:scale(2.6); }
-      100% { opacity:0; transform:scale(4); }
+      0%{opacity:1;transform:scale(0)} 65%{opacity:.4;transform:scale(2.4)} 100%{opacity:0;transform:scale(3.8)}
     }
     .r-ripple {
-      position: absolute; inset: 0; border-radius: 50px;
-      background: radial-gradient(circle, rgba(192,132,252,.55) 0%, transparent 70%);
-      opacity: 0; pointer-events: none;
+      position:absolute;inset:0;border-radius:50px;
+      background:radial-gradient(circle,rgba(192,132,252,.5) 0%,transparent 70%);
+      opacity:0;pointer-events:none;
     }
-    .r-ripple.go { animation: rBurst .55s ease-out forwards; }
-
-    @keyframes rIconPop {
-      0%   { transform: scale(1) rotate(0deg); }
-      40%  { transform: scale(1.6) rotate(22deg); }
-      100% { transform: scale(1) rotate(0deg); }
-    }
-    .r-icon {
-      font-size: 1rem; display: inline-block;
-      line-height: 1; font-style: normal;
-      transition: transform .36s cubic-bezier(.34,1.56,.64,1);
-    }
-    #feedList .resonate-btn.resonated .r-icon {
-      transform: scale(1.4) rotate(22deg);
-    }
-    .r-count {
-      color: #00E5FF;
-      font-family: 'DM Serif Display', serif;
-      font-size: .72rem; font-weight: 700;
-      font-style: normal; letter-spacing: .3px;
-    }
-
-    /* Spacer */
-    #feedList .rb-spacer { flex: 1; }
-
-    /* Views chip */
-    #feedList .views-chip {
-      display: flex; align-items: center; gap: 5px;
-      padding: 5px 11px; border-radius: 20px;
-      font-family: 'DM Serif Display', serif;
-      font-size: .7rem; font-weight: 600;
-      color: rgba(255,255,255,.82);
-      background: rgba(0,0,0,.5);
-      border: 1px solid rgba(255,255,255,.1);
-      backdrop-filter: blur(8px);
-      text-shadow: 0 1px 6px rgba(0,0,0,.8);
-      box-shadow: 0 1px 8px rgba(0,0,0,.35);
-      flex-shrink: 0; letter-spacing: .2px;
-    }
+    .r-ripple.go { animation: rBurst .5s ease-out forwards; }
 
     /* Lyric Back */
-    #feedList .reply-btn {
-      display: flex; align-items: center; gap: 6px;
-      padding: 7px 14px; border-radius: 50px;
-      border: 1px solid rgba(232,197,71,.22);
-      background: rgba(232,197,71,.06);
-      cursor: pointer;
-      transition: all .22s cubic-bezier(.34,1.56,.64,1);
-      font-family: 'DM Serif Display', serif;
-      font-size: .72rem; font-weight: 600; font-style: italic;
-      color: rgba(232,197,71,.9);
-      white-space: nowrap; flex-shrink: 0;
+    .card-lyric-back-btn {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 7px 8px; border-radius: 50px;
+      background: rgba(232,197,71,0.06);
+      border: 1px solid rgba(232,197,71,0.2);
+      color: rgba(232,197,71,0.85);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.68rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      white-space: nowrap; text-align: center;
     }
-    #feedList .reply-btn:hover {
-      background: rgba(232,197,71,.14);
-      border-color: rgba(232,197,71,.48);
-      color: #E8C547; transform: scale(1.05);
-      box-shadow: 0 0 16px rgba(232,197,71,.15);
-    }
-    #feedList .reply-btn:active { transform: scale(0.96); }
-    .reply-badge {
+    .card-lyric-back-btn:hover {
+      background: rgba(232,197,71,0.13);
+      border-color: rgba(232,197,71,0.45);
       color: #E8C547;
-      font-family: 'DM Serif Display', serif;
-      font-size: .66rem; font-style: normal; font-weight: 700;
+    }
+    .card-lyric-back-btn:active { transform: scale(0.96); }
+    .lyric-back-count {
+      font-size: 0.58rem; font-family: 'Space Mono', monospace;
+      font-weight: 700; color: #E8C547; opacity: 0.8;
     }
 
-    /* Share button */
-    #feedList .share-btn {
-      display: flex; align-items: center; gap: 7px;
-      padding: 8px 15px 8px 12px; border-radius: 50px;
-      border: 1px solid rgba(232,197,71,.35);
-      background: rgba(232,197,71,.09);
-      cursor: pointer;
-      transition: all .22s cubic-bezier(.34,1.56,.64,1);
-      white-space: nowrap; flex-shrink: 0;
-      margin-left: auto;
-    }
-    #feedList .share-btn:hover {
-      background: rgba(232,197,71,.18);
-      border-color: rgba(232,197,71,.6);
-      transform: scale(1.06);
-      box-shadow: 0 0 20px rgba(232,197,71,.22);
-    }
-    #feedList .share-btn:active { transform: scale(0.96); }
-    .share-top {
-      font-family: 'DM Serif Display', serif;
-      font-size: .68rem; font-weight: 700;
-      color: rgba(232,197,71,.98); font-style: italic; line-height: 1.1;
-    }
-    .share-sub {
+    /* GIF · Poster */
+    .card-share-btn {
+      display: flex; align-items: center; gap: 4px;
+      padding: 7px 12px; border-radius: 50px;
+      background: rgba(232,197,71,0.08);
+      border: 1px solid rgba(232,197,71,0.28);
+      color: rgba(232,197,71,0.9);
       font-family: 'Space Mono', monospace;
-      font-size: .42rem; font-weight: 700;
-      color: rgba(232,197,71,.6); letter-spacing: .6px;
-      line-height: 1; text-transform: uppercase;
+      font-size: 0.48rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      cursor: pointer; transition: all 0.2s;
+      white-space: nowrap; flex-shrink: 0;
     }
-    .share-labels { display: flex; flex-direction: column; gap: 2px; }
-    .share-icon { font-size: 1rem; line-height: 1; }
+    .card-share-btn:hover {
+      background: rgba(232,197,71,0.16);
+      border-color: rgba(232,197,71,0.5);
+      color: #E8C547;
+      box-shadow: 0 0 16px rgba(232,197,71,0.15);
+    }
+    .card-share-btn:active { transform: scale(0.96); }
+    .card-share-dot { opacity: 0.4; margin: 0 1px; }
   `;
   document.head.appendChild(s);
 }
@@ -190,28 +130,20 @@ function toggleResonate(postId) {
   ref.once('value').then(snap => { snap.exists() ? ref.remove() : ref.set(true); });
 }
 
-/* ── Build action row — prototype-matched ── */
+/* ── Build single action row ── */
 function buildCardActionsV2(post, postIdx) {
   injectResonateStyles();
   const postId    = post.id;
   const rCount    = getResonateCount(postId);
   const resonated = hasResonated(postId);
   const echoCount = Object.keys((postAnalytics?.[postId]?.echoes) || {}).length;
-  const views     = postAnalytics?.[postId]?.views || 0;
 
-  const viewsLabel = views >= 1000
-    ? (views / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
-    : views || '';
+  const row = document.createElement('div');
+  row.className = 'card-actions-v2';
 
-  const bar = document.createElement('div');
-  bar.className = 'reaction-bar';
-
-  // ROW 1: Resonate + views
-  const row1 = document.createElement('div');
-  row1.className = 'rb-row1';
-
+  // ♥ Resonate
   const resonateBtn = document.createElement('button');
-  resonateBtn.className = `resonate-btn${resonated ? ' resonated' : ''}`;
+  resonateBtn.className = `card-resonate-btn${resonated ? ' resonated' : ''}`;
   resonateBtn.setAttribute('data-post-id', postId);
   resonateBtn.innerHTML = `
     <div class="r-ripple"></div>
@@ -227,51 +159,30 @@ function buildCardActionsV2(post, postIdx) {
     void rip.offsetWidth;
     rip.classList.add('go');
   };
+  row.appendChild(resonateBtn);
 
-  const spacer = document.createElement('div');
-  spacer.className = 'rb-spacer';
-
-  const viewsChip = document.createElement('div');
-  viewsChip.className = 'views-chip';
-  viewsChip.innerHTML = `👁 ${viewsLabel || '—'}`;
-
-  row1.appendChild(resonateBtn);
-  row1.appendChild(spacer);
-  row1.appendChild(viewsChip);
-
-  // ROW 2: Lyric Back + Share
-  const row2 = document.createElement('div');
-  row2.className = 'rb-row2';
-
-  const replyBtn = document.createElement('button');
-  replyBtn.className = 'reply-btn';
-  replyBtn.innerHTML = `↩ Lyric Back${echoCount > 0 ? ` <span class="reply-badge">·${echoCount}</span>` : ''}`;
-  replyBtn.onclick = (e) => {
+  // ↩ Lyric Back (with echo count)
+  const lyrBackBtn = document.createElement('button');
+  lyrBackBtn.className = 'card-lyric-back-btn';
+  lyrBackBtn.innerHTML = `↩ Lyric Back${echoCount > 0 ? ` <span class="lyric-back-count">·${echoCount}</span>` : ''}`;
+  lyrBackBtn.onclick = (e) => {
     e.stopPropagation();
     if (typeof openEchoSheet === 'function') openEchoSheet(postIdx);
   };
+  row.appendChild(lyrBackBtn);
 
+  // GIF · Poster
   const shareBtn = document.createElement('button');
-  shareBtn.className = 'share-btn';
-  shareBtn.innerHTML = `
-    <span class="share-icon">⬡</span>
-    <span class="share-labels">
-      <span class="share-top">Share</span>
-      <span class="share-sub">GIF · Poster</span>
-    </span>
-  `;
+  shareBtn.className = 'card-share-btn';
+  shareBtn.innerHTML = `GIF <span class="card-share-dot">·</span> Poster`;
   shareBtn.onclick = (e) => {
     e.stopPropagation();
     window.currentPost = post;
     if (typeof openShareSheet === 'function') openShareSheet(post);
   };
+  row.appendChild(shareBtn);
 
-  row2.appendChild(replyBtn);
-  row2.appendChild(shareBtn);
-
-  bar.appendChild(row1);
-  bar.appendChild(row2);
-  return bar;
+  return row;
 }
 
 /* ── Patch renderFeed ── */
@@ -327,7 +238,7 @@ function upgradeCardActions() {
 
 /* ── Live resonate refresh ── */
 function refreshVisibleResonateCounts() {
-  document.querySelectorAll('.resonate-btn[data-post-id]').forEach(btn => {
+  document.querySelectorAll('.card-resonate-btn[data-post-id]').forEach(btn => {
     const postId    = btn.dataset.postId;
     const count     = getResonateCount(postId);
     const resonated = hasResonated(postId);
