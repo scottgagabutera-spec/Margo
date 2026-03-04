@@ -581,46 +581,80 @@ mark.search-highlight {
 }
 
 /* ══════════════════════════════════════
-   FEED CARD
+   FEED CARD — v5.4 prototype-matched
+   Emotion backgrounds + CSS variables
+   Natural height, no fixed px forcing
 ══════════════════════════════════════ */
 .feed-card {
-  height: 280px; overflow: hidden;
-  background: #16161c;
-  border: 1px solid rgba(232,197,71,0.16);
+  overflow: hidden;
   border-radius: var(--radius);
-  padding: 16px;
-  display: flex; flex-direction: column;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
   position: relative;
-  transition: all 0.24s var(--ease-out);
-  animation: cardIn 0.32s ease both;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  cursor: pointer;
+  transition: transform .36s cubic-bezier(.34,1.36,.64,1),
+              border-color .28s, box-shadow .28s;
+  animation: cardIn 0.38s cubic-bezier(.22,1,.36,1) both;
+  transform-style: preserve-3d;
+  will-change: transform;
   scroll-margin-top: var(--sticky-total);
 }
+
+/* Emotion backgrounds */
+.feed-card.e-nostalgia  { background: linear-gradient(150deg,#14110A 0%,#211900 100%); border-color: rgba(232,197,71,.2); }
+.feed-card.e-love       { background: linear-gradient(150deg,#160710 0%,#250B1A 100%); border-color: rgba(255,107,157,.2); }
+.feed-card.e-hope       { background: linear-gradient(150deg,#070E1C 0%,#0B1530 100%); border-color: rgba(107,140,255,.2); }
+.feed-card.e-rage       { background: linear-gradient(150deg,#160505 0%,#280909 100%); border-color: rgba(255,100,60,.2); }
+.feed-card.e-healing    { background: linear-gradient(150deg,#07130E 0%,#0B2016 100%); border-color: rgba(74,222,128,.2); }
+.feed-card.e-heartbreak { background: linear-gradient(150deg,#15050E 0%,#260818 100%); border-color: rgba(255,80,80,.2); }
+.feed-card.e-loneliness { background: linear-gradient(150deg,#090918 0%,#101028 100%); border-color: rgba(160,160,255,.2); }
+.feed-card.e-joy        { background: linear-gradient(150deg,#141100 0%,#231C00 100%); border-color: rgba(255,200,71,.2); }
+.feed-card.e-sendit     { background: linear-gradient(150deg,#041414 0%,#062020 100%); border-color: rgba(0,229,200,.2); }
+.feed-card.e-letout     { background: linear-gradient(150deg,#120820 0%,#1E0D34 100%); border-color: rgba(200,100,255,.2); }
+
+/* CSS variable sets per emotion */
+.feed-card.e-nostalgia  { --e-strip:rgba(232,197,71,.85); --e-shimmer:rgba(232,197,71,.9); --e-glow:rgba(232,197,71,.1); --e-tag-bg:rgba(232,197,71,.1); --e-tag:#E8C547; }
+.feed-card.e-love       { --e-strip:rgba(255,107,157,.85); --e-shimmer:rgba(255,107,157,.9); --e-glow:rgba(255,107,157,.12); --e-tag-bg:rgba(255,107,157,.1); --e-tag:#FF6B9D; }
+.feed-card.e-hope       { --e-strip:rgba(107,140,255,.85); --e-shimmer:rgba(107,140,255,.9); --e-glow:rgba(107,140,255,.12); --e-tag-bg:rgba(107,140,255,.1); --e-tag:#7B9FFF; }
+.feed-card.e-rage       { --e-strip:rgba(255,100,60,.85); --e-shimmer:rgba(255,100,60,.9); --e-glow:rgba(255,100,60,.12); --e-tag-bg:rgba(255,100,60,.1); --e-tag:#FF6440; }
+.feed-card.e-healing    { --e-strip:rgba(74,222,128,.85); --e-shimmer:rgba(74,222,128,.9); --e-glow:rgba(74,222,128,.12); --e-tag-bg:rgba(74,222,128,.1); --e-tag:#4ade80; }
+.feed-card.e-heartbreak { --e-strip:rgba(255,80,80,.85); --e-shimmer:rgba(255,80,80,.9); --e-glow:rgba(255,80,80,.12); --e-tag-bg:rgba(255,80,80,.1); --e-tag:#ff5050; }
+.feed-card.e-loneliness { --e-strip:rgba(160,160,255,.85); --e-shimmer:rgba(160,160,255,.9); --e-glow:rgba(160,160,255,.12); --e-tag-bg:rgba(160,160,255,.1); --e-tag:#a0a0ff; }
+.feed-card.e-joy        { --e-strip:rgba(255,200,71,.85); --e-shimmer:rgba(255,200,71,.9); --e-glow:rgba(255,200,71,.12); --e-tag-bg:rgba(255,200,71,.1); --e-tag:#ffc847; }
+.feed-card.e-sendit     { --e-strip:rgba(0,229,200,.85); --e-shimmer:rgba(0,229,200,.9); --e-glow:rgba(0,229,200,.12); --e-tag-bg:rgba(0,229,200,.1); --e-tag:#00e5c8; }
+.feed-card.e-letout     { --e-strip:rgba(200,100,255,.85); --e-shimmer:rgba(200,100,255,.9); --e-glow:rgba(200,100,255,.12); --e-tag-bg:rgba(200,100,255,.1); --e-tag:#c864ff; }
+
+/* Top shimmer line — uses emotion color */
 .feed-card::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(
-    90deg, transparent 0%, rgba(232,197,71,0.35) 15%,
-    rgba(232,197,71,0.8) 50%, rgba(232,197,71,0.35) 85%, transparent 100%
-  );
+  background: linear-gradient(90deg,
+    transparent,
+    var(--e-shimmer, rgba(232,197,71,.7)) 30%,
+    var(--e-shimmer, rgba(232,197,71,1)) 50%,
+    var(--e-shimmer, rgba(232,197,71,.7)) 70%,
+    transparent);
+  z-index: 3;
   pointer-events: none;
 }
+/* Left strip — uses emotion color */
 .feed-card::after {
   content: '';
   position: absolute; top: 16px; left: 0; bottom: 16px; width: 3px;
-  background: var(--card-emotion-glow, rgba(232,197,71,0.55));
-  border-radius: 0 3px 3px 0; opacity: 0.8; pointer-events: none;
+  background: var(--e-strip, rgba(232,197,71,.8));
+  border-radius: 0 3px 3px 0;
+  z-index: 3;
+  pointer-events: none;
 }
+
 .feed-card:hover {
-  border-color: rgba(232,197,71,0.38);
-  background: #1a1a22;
-  transform: translateY(-3px);
-  box-shadow:
-    0 20px 50px rgba(0,0,0,0.55),
-    0 0 0 1px rgba(232,197,71,0.08),
-    0 0 32px rgba(232,197,71,0.05);
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 24px 60px rgba(0,0,0,.7),
+              0 0 40px var(--e-glow, rgba(232,197,71,.07)),
+              0 0 0 1px rgba(255,255,255,.04);
 }
-@keyframes cardIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.feed-card:active { transform: translateY(-2px) scale(1.004); }
 
 .card-top {
   display: flex; justify-content: space-between; align-items: center;
@@ -1495,7 +1529,6 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
   .new-posts-bar    { top: 174px !important; }
 
   #feedList { grid-template-columns: 1fr; padding: 10px 10px 120px; }
-  .feed-card { height: 270px; }
   .hero { padding: 12px 16px 0; }
   .tagline { max-width: 100%; }
   .cta-group { max-width: 100%; }
