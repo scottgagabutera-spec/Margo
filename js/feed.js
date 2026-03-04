@@ -172,17 +172,21 @@ function injectFeedStyles() {
 
     /* ─── CARD BASE ─── */
     #feedList .feed-card {
-      height: 285px !important;
       border-radius: 14px !important;
-      padding: 14px !important;
+      padding: 0 !important;
       display: flex !important;
       flex-direction: column !important;
       gap: 0 !important;
       position: relative !important;
       overflow: hidden !important;
       animation: cardIn 0.3s ease both;
-      transition: transform 0.22s cubic-bezier(0.4,0,0.2,1),
-                  border-color 0.22s, box-shadow 0.22s !important;
+      transition: transform 0.36s cubic-bezier(.34,1.36,.64,1),
+                  border-color 0.28s, box-shadow 0.28s !important;
+    }
+    #feedList .c-inner {
+      padding: 14px 14px 10px 19px;
+      display: flex; flex-direction: column; flex: 1;
+      position: relative; z-index: 2;
     }
     #feedList .feed-card::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
@@ -205,49 +209,53 @@ function injectFeedStyles() {
                   inset 0 1px 0 rgba(255,255,255,0.05) !important;
     }
 
+    /* ─── GLOW ORB ─── */
+    #feedList .c-glow {
+      position: absolute; top: -50px; right: -50px;
+      width: 200px; height: 200px; border-radius: 50%;
+      filter: blur(60px); z-index: 0; pointer-events: none;
+      opacity: .08; transition: opacity .4s ease;
+    }
+    #feedList .feed-card:hover .c-glow { opacity: .18 !important; }
+
     /* ─── LAYOUT INTERNALS ─── */
     #feedList .card-top {
       display: flex; justify-content: space-between;
       align-items: center; flex-shrink: 0;
-      height: 20px; margin-bottom: 10px; padding-left: 7px;
+      height: 20px; margin-bottom: 10px;
     }
     #feedList .card-lyric {
-      height: 78px !important; overflow: hidden !important;
+      overflow: hidden !important;
       display: -webkit-box !important;
       -webkit-line-clamp: 3 !important;
       -webkit-box-orient: vertical !important;
-      flex-shrink: 0 !important; line-height: 1.45 !important;
-      margin-bottom: 8px !important; padding-left: 7px !important;
+      flex-shrink: 0 !important; line-height: 1.5 !important;
+      margin-bottom: 9px !important;
       font-weight: 400 !important;
     }
     #feedList .card-emotion-tag {
       flex-shrink: 0 !important; align-self: flex-start !important;
-      margin-bottom: 9px !important; margin-left: 7px !important;
+      margin-bottom: 8px !important;
     }
     #feedList .card-song {
       display: flex !important; align-items: center !important;
       gap: 9px !important; flex-shrink: 0 !important;
-      height: 50px !important; overflow: hidden !important;
+      min-height: 44px !important; overflow: hidden !important;
       padding-top: 8px !important;
-      border-top: 1px solid rgba(255,255,255,0.08) !important;
-      margin-bottom: 0 !important;
+      border-top: 1px solid rgba(255,255,255,.07) !important;
     }
     #feedList .card-song-text { flex: 1; min-width: 0; }
     #feedList .card-mystery,
     #feedList .card-discover {
-      flex-shrink: 0 !important; height: 50px !important;
+      flex-shrink: 0 !important; min-height: 44px !important;
       display: flex !important; align-items: center !important;
       padding-top: 8px !important;
-      border-top: 1px solid rgba(255,255,255,0.08) !important;
+      border-top: 1px solid rgba(255,255,255,.08) !important;
       overflow: hidden !important; font-size: 0.75rem !important;
     }
-    #feedList .card-mystery  { color: rgba(180,200,255,0.7) !important; }
-    #feedList .card-discover { color: rgba(140,230,180,0.7) !important; }
-    #feedList .card-actions {
-      margin-top: auto !important; padding-top: 8px !important;
-      border-top: 1px solid rgba(255,255,255,0.08) !important;
-      flex-shrink: 0 !important; display: flex !important; gap: 6px !important;
-    }
+    #feedList .card-mystery  { color: rgba(180,200,255,.7) !important; }
+    #feedList .card-discover { color: rgba(140,230,180,.7) !important; }
+    #feedList .card-actions  { display: none !important; }
 
     /* ─── BUTTONS — inherit from resonate.js for v2 row ─── */
     #feedList .card-btn {
@@ -291,7 +299,7 @@ function injectFeedStyles() {
       0%   { background-position: -400px 0; }
       100% { background-position:  400px 0; }
     }
-    .skeleton-card { pointer-events: none !important; height: 285px !important; }
+    .skeleton-card { pointer-events: none !important; min-height: 200px !important; }
     .sk-line, .sk-block {
       border-radius: 6px;
       background: linear-gradient(90deg,
@@ -333,8 +341,7 @@ function injectFeedStyles() {
     }
 
     @media (max-width: 480px) {
-      #feedList .feed-card { height: 275px !important; }
-      .skeleton-card { height: 275px !important; }
+      .skeleton-card { min-height: 180px !important; }
     }
     @media (max-width: 768px) {
       .modal-sheet { max-height: 92dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -530,7 +537,24 @@ function initRoomTabs() {
   });
 }
 
-/* ── Ranking ── */
+/* ── Magnetic tilt ── */
+function initCardTilt() {
+  if (window.matchMedia('(hover: none)').matches) return; // skip on touch
+  document.getElementById('feedList')?.addEventListener('mousemove', e => {
+    const card = e.target.closest('.feed-card');
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width  - 0.5;
+    const y = (e.clientY - r.top)  / r.height - 0.5;
+    card.style.transform = `translateY(-8px) scale(1.018) rotateY(${x*5}deg) rotateX(${-y*4}deg)`;
+  }, { passive: true });
+  document.getElementById('feedList')?.addEventListener('mouseleave', e => {
+    const card = e.target.closest?.('.feed-card');
+    if (card) card.style.transform = '';
+  }, { passive: true });
+}
+
+
 function getPostAge(post) {
   if (!post.timestamp) return 999;
   return (Date.now() - post.timestamp) / 3600000;
@@ -609,7 +633,8 @@ function renderFeed() {
 
   filtered.forEach((post, i) => {
     const card     = document.createElement('div');
-    card.className = 'feed-card';
+    const eClass   = emotion.toLowerCase().replace(/\s+/g, '');
+    card.className = `feed-card e-${eClass}`;
     card.style.animationDelay = `${i * 0.03}s`;
 
     const k       = post.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
@@ -623,13 +648,10 @@ function renderFeed() {
     const hasYouTubeUrl  = !!(meta?.youtubeUrl);
     const hasStreamLinks = !!(post.links?.spotify || post.links?.apple || post.links?.soundcloud);
 
-    /* ── Emotion-driven card styling ── */
-    card.style.background   = ecfg.cardBg;
-    card.style.borderColor  = ecfg.border;
-    card.style.boxShadow    = `0 4px 24px rgba(0,0,0,0.45), inset 0 1px 0 ${ecfg.border}`;
-    card.style.setProperty('--e-strip',       ecfg.strip);
-    card.style.setProperty('--e-strip-color', ecfg.strip);
-    card.style.setProperty('--e-border',      ecfg.border);
+    /* ── CSS class handles background, border, strip, glow ── */
+    card.style.setProperty('--e-strip', ecfg.strip);
+    card.style.setProperty('--e-shimmer', ecfg.strip.replace('0.85', '0.9'));
+    card.style.setProperty('--e-glow', ecfg.border.replace('0.3', '0.1'));
 
     /* Smart text contrast */
     const lyricColor = ecfg.lyricText || '#fff';
@@ -680,12 +702,15 @@ function renderFeed() {
 
     card.innerHTML = `
       ${rankBadge}
-      <div class="card-top">
-        <span class="card-time" style="color:${metaColor}">${timeAgo(post.timestamp)}</span>
+      <div class="c-glow" style="background:${ecfg.text}4D"></div>
+      <div class="c-inner">
+        <div class="card-top">
+          <span class="card-time" style="color:${metaColor}">${timeAgo(post.timestamp)}</span>
+        </div>
+        <div class="card-lyric" style="font-size:${lyricFontSize(post.text)};color:${lyricColor}">${highlightMatch(post.text, searchQuery)}</div>
+        <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">${highlightMatch(emotion, searchQuery)}</span>
+        ${songSection}
       </div>
-      <div class="card-lyric" style="font-size:${lyricFontSize(post.text)};color:${lyricColor}">${highlightMatch(post.text, searchQuery)}</div>
-      <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">${highlightMatch(emotion, searchQuery)}</span>
-      ${songSection}
       ${actions}
     `;
 
