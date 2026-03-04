@@ -406,36 +406,6 @@
   </div>
 </div>
 
-<!-- POSTCARD -->
-<div id="postcardModal" class="modal hidden">
-  <div class="modal-sheet">
-    <div class="modal-top"><span class="modal-title">Post</span><button class="modal-close" id="closePostcard">×</button></div>
-    <div class="modal-body">
-      <div class="postcard">
-        <div class="postcard-header">
-          <span class="postcard-header-mark">
-            <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
-              <circle cx="40" cy="40" r="36" fill="#0B0B0D"/>
-              <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#E8C547" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-              <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#E8C547" opacity=".7"/>
-            </svg>
-          </span>
-          MARGO
-        </div>
-        <div class="postcard-lyric" id="postcardLyric"></div>
-        <div class="postcard-emotion" id="postcardEmotion"></div>
-        <div class="postcard-song" id="postcardSong"></div>
-        <div class="postcard-community" id="postcardCommunity"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-primary full-btn" id="sharePosterBtn">Make it a poster</button>
-      <button class="btn-secondary full-btn" id="listenPostcard">Listen</button>
-      <button class="btn-secondary full-btn" id="analyticsBtn">Analytics</button>
-    </div>
-  </div>
-</div>
-
 <!-- ANALYTICS -->
 <div id="analyticsModal" class="modal hidden">
   <div class="modal-sheet">
@@ -553,39 +523,6 @@
   </div>
 </div>
 
-<!-- STUDIO CHOOSER -->
-<div id="studioChooser" class="hidden">
-  <div class="sc-inner">
-    <div class="sc-header">
-      <div class="sc-logo">
-        <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="20" height="20">
-          <circle cx="40" cy="40" r="36" fill="#E8C547"/>
-          <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-          <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/>
-        </svg>
-        <span class="sc-logo-text">MARGO · STUDIO</span>
-      </div>
-      <h2 class="sc-title">Choose your format</h2>
-      <p class="sc-sub">What kind of visual do you want to make?</p>
-    </div>
-    <div class="sc-cards">
-      <button class="sc-card" id="chooserMotionBtn">
-        <div class="sc-card-icon img-icon">Img</div>
-        <div class="sc-card-title">Image</div>
-        <div class="sc-card-desc">Design a lyric poster — pick colors, fonts &amp; export in any size</div>
-        <span class="sc-card-tag img-tag">PNG · Poster</span>
-      </button>
-      <button class="sc-card" id="chooserGifBtn">
-        <div class="sc-card-icon gif-icon">GIF</div>
-        <div class="sc-card-title">Animated</div>
-        <div class="sc-card-desc">Looping animation — export as GIF or Video for WhatsApp &amp; IG</div>
-        <span class="sc-card-tag gif-tag">GIF · Video</span>
-      </button>
-    </div>
-    <button class="sc-back" id="chooserBackBtn">Back to post</button>
-  </div>
-</div>
-
 <!-- GIF STUDIO -->
 <div id="gifStudioOverlay" class="hidden">
   <div class="gs-topbar">
@@ -595,7 +532,6 @@
       </svg>
     </button>
     <span class="gs-topbar-title">Margo · GIF Studio</span>
-    <!-- ↓ TWO export buttons: GIF (gold) + Video/MP4 (cyan) -->
     <div style="display:flex;gap:8px;align-items:center;">
       <button id="gsExportBtn">GIF</button>
       <button id="gsExportMp4">▶ Video</button>
@@ -683,6 +619,11 @@
 <script src="js/composer.js"></script>
 <script src="js/studio.js"></script>
 <script src="js/gif-studio.js"></script>
+<script src="js/username.js"></script>
+<script src="js/share-sheet.js"></script>
+<script src="js/echoes.js"></script>
+<script src="js/duet-mode.js"></script>
+<script src="js/resonate.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/app.js"></script>
 <script src="js/motion.js"></script>
