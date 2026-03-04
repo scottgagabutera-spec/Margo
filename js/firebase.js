@@ -197,6 +197,12 @@ function startFirebaseSync() {
     updateLandingStats();
     buildLyricStream();
 
+    // Update postCount in feed header
+    const postCountEl = document.getElementById('postCount');
+    if (postCountEl) {
+      postCountEl.textContent = posts.filter(p => p.status !== 'hidden').length;
+    }
+
     // Only show "new posts" indicator for GENUINE new posts —
     // not on initial load (prevCount===0) and not for backfill
     // writes (post count stays the same, only youtubeMeta changed).
@@ -220,6 +226,24 @@ function startFirebaseSync() {
 
   analyticsRef.on('value', snapshot => {
     postAnalytics = snapshot.val() || {};
+
+    // Update stats everywhere analytics change (resonates, views, etc.)
+    if (typeof updateLandingStats === 'function') updateLandingStats();
+
+    // Update postCount in feed header
+    const postCountEl = document.getElementById('postCount');
+    if (postCountEl && typeof posts !== 'undefined') {
+      postCountEl.textContent = posts.filter(p => p.status !== 'hidden').length;
+    }
+
+    // Re-render feed cards if feed is active and posts are loaded
+    const feedEl = document.getElementById('feed');
+    if (feedEl && feedEl.classList.contains('active') &&
+        typeof postsLoaded !== 'undefined' && postsLoaded &&
+        typeof renderFeed === 'function') {
+      renderFeed();
+    }
+
     buildLyricStream();
   });
 }
