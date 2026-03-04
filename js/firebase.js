@@ -1,7 +1,8 @@
 /* ============================================================
    MARGO — js/firebase.js
-   v4.8 — Bulletproof YouTube: new posts + backfill unified,
-          never double-fetches, handles all failure modes
+   v4.9 — Stats fix: updateLandingStats only fires after posts
+          are loaded. analyticsRef listener also updates stats
+          and re-renders feed correctly.
    ============================================================ */
 const firebaseConfig = {
   apiKey:            'AIzaSyA1AuUethACF_9aBqbOONjra7X5NbGnfZM',
@@ -33,46 +34,22 @@ try {
 
 /* ══════════════════════════════════════════════════════════
    YOUTUBE METADATA ENGINE
-   ─────────────────────────────────────────────────────────
-   SINGLE SOURCE OF TRUTH for all YouTube fetching.
-
-   Logic:
-   • _ytDoneIds   = Set of postIds that already have meta in
-                    Firebase OR that we've confirmed have none.
-                    Populated on sync. Persists for session.
-   • _ytQueue     = Array of {postId, song, artist} waiting
-                    to be fetched. Each postId appears once.
-   • _ytRunning   = Whether the runner is active.
-
-   Flow for NEW posts (called from composer.js submitPost):
-     await fetchAndSaveYoutubeMeta(postId, song, artist)
-     → fetches immediately, writes to Firebase, done.
-
-   Flow for EXISTING posts without meta (backfill):
-     On Firebase sync → enqueueYoutube(postId, song, artist)
-     → deduplicated queue, runs 1 per 1.2s, writes to Firebase.
-
-   Writing to Firebase (.child('youtubeMeta').set(...)) DOES
-   re-trigger the 'value' listener. We guard against infinite
-   loops by checking _ytDoneIds BEFORE re-queuing.
 ══════════════════════════════════════════════════════════ */
 
-const _ytDoneIds = new Set(); // postIds that have meta or confirmed none
-const _ytQueue   = [];        // [{postId, song, artist}]
+const _ytDoneIds = new Set();
+const _ytQueue   = [];
 let   _ytRunning = false;
-let   _ytStarted = false;     // only start runner once per session
+let   _ytStarted = false;
 
-/* Called on sync — enqueue posts that need YouTube meta */
 function enqueueYoutube(postId, song, artist) {
   if (!isFirebaseEnabled) return;
   if (!song || !artist)   return;
-  // Normalize — strip featuring info that confuses YouTube
   const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
   const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
-  if (!cleanSong || cleanSong === 'Unknown Song')     return;
+  if (!cleanSong || cleanSong === 'Unknown Song')       return;
   if (!cleanArtist || cleanArtist === 'Unknown Artist') return;
-  if (_ytDoneIds.has(postId)) return; // already have meta or confirmed no match
-  if (_ytQueue.some(q => q.postId === postId)) return; // already queued
+  if (_ytDoneIds.has(postId)) return;
+  if (_ytQueue.some(q => q.postId === postId)) return;
   _ytQueue.push({ postId, song: cleanSong, artist: cleanArtist });
 }
 
@@ -86,8 +63,7 @@ function startYoutubeRunner() {
 async function processYoutubeQueue() {
   if (!_ytQueue.length) { _ytRunning = false; return; }
   const { postId, song, artist } = _ytQueue.shift();
-  _ytDoneIds.add(postId); // mark before fetch so re-trigger doesn't re-queue
-
+  _ytDoneIds.add(postId);
   try {
     const meta = await _fetchYoutubeMeta(song, artist);
     if (meta) {
@@ -98,14 +74,11 @@ async function processYoutubeQueue() {
     }
   } catch (err) {
     console.log(`[YT] error ${song}: ${err.message}`);
-    // Remove from done so it can retry next session
     _ytDoneIds.delete(postId);
   }
-
-  setTimeout(processYoutubeQueue, 1200); // 1.2s between requests
+  setTimeout(processYoutubeQueue, 1200);
 }
 
-/* Shared fetch function — used by both new posts and backfill */
 async function _fetchYoutubeMeta(song, artist) {
   const url = `/api/youtube?song=${encodeURIComponent(song)}&artist=${encodeURIComponent(artist)}`;
   const res  = await fetch(url);
@@ -123,11 +96,6 @@ async function _fetchYoutubeMeta(song, artist) {
   };
 }
 
-/*
-  Called from composer.js when a new post is submitted.
-  Usage: const meta = await fetchAndSaveYoutubeMeta(postId, song, artist);
-  Returns the meta object or null.
-*/
 async function fetchAndSaveYoutubeMeta(postId, song, artist) {
   if (!isFirebaseEnabled || !postId || !song || !artist) return null;
   const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
@@ -148,12 +116,27 @@ async function fetchAndSaveYoutubeMeta(postId, song, artist) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   STATS HELPER
+   Single place that updates all stat elements.
+   Only runs if posts have loaded — prevents dashes persisting
+   because calcFeatured() read an empty posts array.
+══════════════════════════════════════════════════════════ */
+function _refreshStats() {
+  if (!postsLoaded) return;
+  if (typeof updateLandingStats === 'function') updateLandingStats();
+  const postCountEl = document.getElementById('postCount');
+  if (postCountEl) {
+    postCountEl.textContent = posts.filter(p => p.status !== 'hidden').length;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
    FIREBASE REALTIME SYNC
 ══════════════════════════════════════════════════════════ */
 function startFirebaseSync() {
   if (!isFirebaseEnabled) {
     postsLoaded = true;
-    updateLandingStats();
+    _refreshStats();
     buildLyricStream();
     return;
   }
@@ -168,18 +151,10 @@ function startFirebaseSync() {
     });
     posts.sort((a, b) => b.timestamp - a.timestamp);
 
-    // Scan posts: mark those with meta as done, queue those without
     posts.forEach(p => {
       if (p.status === 'hidden') return;
       const k = p.knowledge || {};
-
-      if (p.youtubeMeta) {
-        // Already has meta — mark done so we never re-queue
-        _ytDoneIds.add(p.id);
-        return;
-      }
-
-      // Determine song + artist based on mode
+      if (p.youtubeMeta) { _ytDoneIds.add(p.id); return; }
       if (p.mode === 'share' && k.song && k.artist) {
         enqueueYoutube(p.id, k.song, k.artist);
       } else if (p.mode === 'guess' && k.song && k.artist && !k.hidden) {
@@ -189,36 +164,22 @@ function startFirebaseSync() {
       }
     });
 
-    // Start the runner 3s after first load (let render settle first)
-    if (!_ytStarted && _ytQueue.length) {
-      setTimeout(startYoutubeRunner, 3000);
-    }
+    if (!_ytStarted && _ytQueue.length) setTimeout(startYoutubeRunner, 3000);
 
-    updateLandingStats();
-    buildLyricStream();
-
-    // Update postCount in feed header
-    const postCountEl = document.getElementById('postCount');
-    if (postCountEl) {
-      postCountEl.textContent = posts.filter(p => p.status !== 'hidden').length;
-    }
-
-    // Only show "new posts" indicator for GENUINE new posts —
-    // not on initial load (prevCount===0) and not for backfill
-    // writes (post count stays the same, only youtubeMeta changed).
     const isInitialLoad  = !postsLoaded;
     const isBackfillOnly = postsLoaded && posts.length === prevCount;
 
-    if (postsLoaded && !isBackfillOnly && posts.length > prevCount && feed.classList.contains('active')) {
+    // Set postsLoaded BEFORE _refreshStats so the guard inside passes
+    postsLoaded = true;
+
+    _refreshStats();
+    buildLyricStream();
+
+    if (!isInitialLoad && !isBackfillOnly && posts.length > prevCount && feed.classList.contains('active')) {
       showNewPostsIndicator(posts.length - prevCount);
       newPostsAvailable = true;
     }
 
-    postsLoaded = true;
-
-    // Re-render feed: always on initial load, or when genuinely
-    // new posts arrive. Backfill writes re-render silently only
-    // if feed is visible and no pending new-posts bar is shown.
     if (feed.classList.contains('active')) {
       if (isInitialLoad || isBackfillOnly || !newPostsAvailable) renderFeed();
     }
@@ -227,21 +188,16 @@ function startFirebaseSync() {
   analyticsRef.on('value', snapshot => {
     postAnalytics = snapshot.val() || {};
 
-    // Update stats everywhere analytics change (resonates, views, etc.)
-    if (typeof updateLandingStats === 'function') updateLandingStats();
+    // Guard: only refresh stats once posts are loaded
+    // (analyticsRef often fires before postsRef on cold start)
+    _refreshStats();
 
-    // Update postCount in feed header
-    const postCountEl = document.getElementById('postCount');
-    if (postCountEl && typeof posts !== 'undefined') {
-      postCountEl.textContent = posts.filter(p => p.status !== 'hidden').length;
-    }
-
-    // Re-render feed cards if feed is active and posts are loaded
-    const feedEl = document.getElementById('feed');
-    if (feedEl && feedEl.classList.contains('active') &&
-        typeof postsLoaded !== 'undefined' && postsLoaded &&
-        typeof renderFeed === 'function') {
-      renderFeed();
+    // Re-render feed if active — refreshes resonate counts on cards
+    if (postsLoaded) {
+      const feedEl = document.getElementById('feed');
+      if (feedEl && feedEl.classList.contains('active') && typeof renderFeed === 'function') {
+        renderFeed();
+      }
     }
 
     buildLyricStream();
