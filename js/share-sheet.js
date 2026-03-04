@@ -388,8 +388,9 @@ function ssStartPreview(canvas) {
 
 /** Fallback renderer if studios haven't loaded yet */
 function ssDrawFallback(ctx, W, H) {
-  if (!SS.post) return;
-  const emotion = SS.post.emotion || 'Nostalgia';
+  const post = SS.post || window.currentPost;
+  if (!post) return;
+  const emotion = post.emotion || 'Nostalgia';
   const cfg     = SS_EMOTION_CFG[emotion] || SS_EMOTION_DEFAULT;
 
   // Background
