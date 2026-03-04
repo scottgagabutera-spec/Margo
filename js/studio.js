@@ -1,49 +1,14 @@
 /* ============================================================
    MARGO — js/studio.js
-   Image Studio (canvas → PNG) + Studio Chooser wiring
-   v5.3 — Dev branch.
-          Image studio = exact working code from main.
-          Chooser wiring added for Motion→Image, GIF→gif-studio.
-          No buildStudioHTML() — HTML already in index.html.
+   Image Studio (canvas → PNG)
+   v5.4 — concept-v2 clean:
+          • postcardModal references removed entirely
+          • openStudio() no longer calls closeModal(postcardModal)
+          • closeStudio routes back to reopenShareSheet()
+          • All exports and controls fully functional
    ============================================================ */
 
-/* ════════════════════════════════════════
-   STUDIO CHOOSER WIRING
-   ════════════════════════════════════════ */
-function initStudioChooser() {
-  const chooser   = document.getElementById('studioChooser');
-  if (!chooser) return;
-
-  const motionBtn = document.getElementById('chooserMotionBtn');
-  const gifBtn    = document.getElementById('chooserGifBtn');
-  const backBtn   = document.getElementById('chooserBackBtn');
-
-  if (motionBtn) motionBtn.addEventListener('click', () => {
-    chooser.classList.add('hidden');
-    openStudio();   // opens the working image studio
-  });
-
-  if (gifBtn) gifBtn.addEventListener('click', () => {
-    chooser.classList.add('hidden');
-    if (typeof openGifStudio === 'function') openGifStudio();
-  });
-
-  if (backBtn) backBtn.addEventListener('click', () => {
-    chooser.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-    openModal(postcardModal);
-  });
-}
-
-function openStudioChooser() {
-  closeModal(postcardModal);
-  const chooser = document.getElementById('studioChooser');
-  if (!chooser) { openStudio(); return; }   // fallback if chooser missing
-  chooser.classList.remove('hidden');
-  document.body.classList.add('modal-open');
-}
-
-/* ── Wire GIF studio dock tabs ── */
+/* ── GIF studio dock tabs ── */
 function initGifStudioTabs() {
   const ov = document.getElementById('gifStudioOverlay');
   if (!ov) return;
@@ -59,17 +24,18 @@ function initGifStudioTabs() {
 }
 
 /* ════════════════════════════════════════
-   IMAGE STUDIO — working code from main
+   IMAGE STUDIO
    ════════════════════════════════════════ */
 function initStudio() {
-  // Route "Create Poster" → chooser (dev) instead of direct to studio (main)
-  sharePosterBtn.onclick = openStudioChooser;
-
-  closeStudio.onclick = () => {
-    studioOverlay.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-    openModal(postcardModal);
-  };
+  // closeStudio → back to share sheet (no postcardModal)
+  const closeStudioEl = document.getElementById('closeStudio');
+  if (closeStudioEl) {
+    closeStudioEl.onclick = () => {
+      studioOverlay.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      if (typeof reopenShareSheet === 'function') reopenShareSheet();
+    };
+  }
 
   // Dock tabs
   document.querySelectorAll('.dock-tab').forEach(tab => {
@@ -157,10 +123,10 @@ function initStudio() {
   if (removeBtn) removeBtn.onclick = () => {
     studioBgImage = null;
     const photoDropText = document.getElementById('photoDropText');
-    const photoDropZone = document.getElementById('photoUploadZone');
+    const pDZ = document.getElementById('photoUploadZone');
     const photoControls = document.getElementById('photoControls');
     if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
-    if (photoDropZone) photoDropZone.classList.remove('has-photo');
+    if (pDZ) pDZ.classList.remove('has-photo');
     if (photoControls) photoControls.classList.add('hidden');
     if (studioPhotoInput) studioPhotoInput.value = '';
     const ytOpt = document.getElementById('ytBgOption');
@@ -169,8 +135,8 @@ function initStudio() {
   };
 
   // Export / size picker
-  studioExportBtn.onclick = () => sizePicker.classList.remove('hidden');
-  sizeCancelBtn.onclick   = () => sizePicker.classList.add('hidden');
+  if (studioExportBtn) studioExportBtn.onclick = () => sizePicker.classList.remove('hidden');
+  if (sizeCancelBtn)   sizeCancelBtn.onclick   = () => sizePicker.classList.add('hidden');
 
   document.querySelectorAll('.size-opt').forEach(btn => {
     btn.onclick = async () => {
@@ -204,34 +170,35 @@ function initStudio() {
   });
 
   // Ceremony actions
-  ceremonyBack.onclick = () => {
-    ceremonyOverlay.classList.add('hidden');
-    generatedBlob = null;
-  };
+  if (ceremonyBack) {
+    ceremonyBack.onclick = () => {
+      ceremonyOverlay.classList.add('hidden');
+      generatedBlob = null;
+    };
+  }
 
-  cerDownload.onclick = async () => {
-    if (!generatedBlob) { showToast('Generating poster…'); return; }
-    try {
-      downloadPosterBlob();
-      showToast('Saved to device ✓');
-    } catch (err) {
-      showToast('Download failed — try again');
-      console.error('Download error:', err);
-    }
-  };
+  if (cerDownload) {
+    cerDownload.onclick = async () => {
+      if (!generatedBlob) { showToast('Generating poster…'); return; }
+      try {
+        downloadPosterBlob();
+        showToast('Saved to device ✓');
+      } catch (err) {
+        showToast('Download failed — try again');
+        console.error('Download error:', err);
+      }
+    };
+  }
 
-  cerShare.onclick = shareOrDownloadPoster;
+  if (cerShare) cerShare.onclick = shareOrDownloadPoster;
 
-  // GIF studio tabs + chooser
   initGifStudioTabs();
-  initStudioChooser();
-
   if (typeof initGifStudio === 'function') initGifStudio();
 }
 
-/* ── Open Image Studio (from main, unchanged) ── */
+/* ── Open Image Studio (no postcardModal reference) ── */
 function openStudio() {
-  closeModal(postcardModal);
+  // Don't call closeModal(postcardModal) — postcard is gone in concept-v2
   studioBgImage    = null;
   studioFont       = 'playfair';
   studioBrightness = 100;
@@ -240,9 +207,14 @@ function openStudio() {
   studioFilter     = 'none';
   generatedBlob    = null;
   selectedSize     = null;
-  studioDesign     = EMOTION_DESIGN_MAP[currentPost?.emotion] || 'midnight-gold';
-  studioOverlay.classList.remove('hidden');
-  document.body.classList.add('modal-open');
+  studioDesign     = (typeof EMOTION_DESIGN_MAP !== 'undefined' && currentPost?.emotion)
+    ? (EMOTION_DESIGN_MAP[currentPost.emotion] || 'midnight-gold')
+    : 'midnight-gold';
+
+  if (studioOverlay) {
+    studioOverlay.classList.remove('hidden');
+    document.body.classList.add('modal-open');
+  }
   resetStudioUI();
 
   const meta = currentPost?.youtubeMeta;
@@ -250,10 +222,9 @@ function openStudio() {
   setTimeout(refreshStageCanvas, 60);
 }
 
-// Alias so chooser and any other callers all work
 const openImageStudio = openStudio;
 
-/* ── YouTube thumbnail as one-tap background ── */
+/* ── YouTube thumbnail as background ── */
 function injectYoutubeBgOption(meta) {
   const panel = document.getElementById('panel-photo');
   if (!panel) return;
@@ -282,10 +253,10 @@ function injectYoutubeBgOption(meta) {
     const applyImage = (img) => {
       studioBgImage = img;
       const photoDropText = document.getElementById('photoDropText');
-      const photoDropZone = document.getElementById('photoUploadZone');
+      const pDZ = document.getElementById('photoUploadZone');
       const photoControls = document.getElementById('photoControls');
       if (photoDropText) photoDropText.textContent = 'YouTube thumbnail';
-      if (photoDropZone) photoDropZone.classList.add('has-photo');
+      if (pDZ) pDZ.classList.add('has-photo');
       if (photoControls) photoControls.classList.remove('hidden');
       opt.style.background  = 'rgba(255,0,0,0.18)';
       opt.style.borderColor = 'rgba(255,0,0,0.55)';
@@ -321,10 +292,10 @@ function resetStudioUI() {
   if (bVal)    bVal.textContent = '100%';
 
   const photoDropText = document.getElementById('photoDropText');
-  const photoDropZone = document.getElementById('photoUploadZone');
+  const pDZ = document.getElementById('photoUploadZone');
   const photoControls = document.getElementById('photoControls');
   if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
-  if (photoDropZone) photoDropZone.classList.remove('has-photo');
+  if (pDZ) pDZ.classList.remove('has-photo');
   if (photoControls) photoControls.classList.add('hidden');
   if (studioPhotoInput) studioPhotoInput.value = '';
 
@@ -334,8 +305,8 @@ function resetStudioUI() {
   if (dsl) dsl.value = 50; if (dvl) dvl.textContent  = '50%';
 
   document.querySelectorAll('.photo-filter').forEach((f, i) => f.classList.toggle('active', i === 0));
-  sizePicker.classList.add('hidden');
-  ceremonyOverlay.classList.add('hidden');
+  if (sizePicker) sizePicker.classList.add('hidden');
+  if (ceremonyOverlay) ceremonyOverlay.classList.add('hidden');
   document.getElementById('ytBgOption')?.remove();
 }
 
@@ -354,9 +325,15 @@ function getPhotoFilter() {
   return f;
 }
 
+/* ── Single source of truth for poster canvas ── */
 function drawPosterToCtx(ctx, W, H) {
-  const c     = POSTER_DESIGNS[studioDesign] || POSTER_DESIGNS['midnight-gold'];
-  const fd    = FONT_FAMILIES[studioFont]    || FONT_FAMILIES['playfair'];
+  const post = window.currentPost;
+  if (!post) return;
+
+  const c     = (typeof POSTER_DESIGNS !== 'undefined' ? POSTER_DESIGNS[studioDesign] : null)
+    || { bg:['#0B0B0D','#1a1400','#0B0B0D'], text:'#ffffff', primary:'#E8C547', light:false };
+  const fd    = (typeof FONT_FAMILIES !== 'undefined' ? FONT_FAMILIES[studioFont] : null)
+    || { family:"'Playfair Display',serif", style:'italic' };
   const scale = W / 1080;
 
   ctx.filter = 'none';
@@ -422,9 +399,9 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.textAlign  = 'center';
 
   // Lyric text
-  const lyricText = currentPost.text.length > 100
-    ? currentPost.text.substring(0, 97) + '…'
-    : currentPost.text;
+  const lyricText = post.text.length > 100
+    ? post.text.substring(0, 97) + '…'
+    : post.text;
 
   if (studioBgImage) { ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 18 * scale; }
   ctx.fillStyle = textColor;
@@ -444,7 +421,7 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   ctx.filter = 'none'; ctx.textAlign = 'center';
 
-  const k        = currentPost.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
+  const k        = post.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
   const songSize = Math.max(Math.round(lyricSize * 0.42), 28 * scale);
   const artSize  = Math.max(Math.round(lyricSize * 0.30), 20 * scale);
   const songY    = H * 0.76;
@@ -470,6 +447,7 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.fillText(k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist, W / 2, artistY);
 
   // Domain watermark
+  const APP_DOMAIN_VAL = typeof APP_DOMAIN !== 'undefined' ? APP_DOMAIN : 'trymargo.com';
   const markSize  = Math.max(Math.round(18 * scale), 14);
   const markColor = studioBgImage ? 'rgba(255,255,255,0.75)'
     : c.light ? 'rgba(42,37,32,0.6)'
@@ -478,7 +456,7 @@ function drawPosterToCtx(ctx, W, H) {
   ctx.fillStyle = markColor;
   ctx.font      = `700 ${markSize}px 'Space Mono', monospace`;
   ctx.textAlign = 'center';
-  ctx.fillText(APP_DOMAIN, W / 2, H * 0.94);
+  ctx.fillText(APP_DOMAIN_VAL, W / 2, H * 0.94);
 }
 
 function wrapTextCenter(ctx, text, x, centerY, maxW, lineHeight) {
@@ -497,7 +475,7 @@ function wrapTextCenter(ctx, text, x, centerY, maxW, lineHeight) {
 }
 
 function refreshStageCanvas() {
-  if (!currentPost || !studioCanvas) return;
+  if (!window.currentPost || !studioCanvas) return;
   const stage  = studioCanvas.parentElement;
   const dpr    = window.devicePixelRatio || 1;
   const availW = stage.clientWidth  - 40;
@@ -514,8 +492,8 @@ function refreshStageCanvas() {
 }
 
 async function generateFinalPoster(sizeKey) {
-  const dim = POSTER_SIZES[sizeKey];
-  if (!dim || !currentPost) throw new Error('Invalid size or no post');
+  const dim = typeof POSTER_SIZES !== 'undefined' ? POSTER_SIZES[sizeKey] : null;
+  if (!dim || !window.currentPost) throw new Error('Invalid size or no post');
   const offscreen = document.createElement('canvas');
   offscreen.width  = dim.w;
   offscreen.height = dim.h;
@@ -533,6 +511,7 @@ async function generateFinalPoster(sizeKey) {
 function drawCeremonyThumb() {
   const dpr  = window.devicePixelRatio || 1;
   const size = 600;
+  if (!ceremonyThumb) return;
   ceremonyThumb.width        = Math.round(size * dpr);
   ceremonyThumb.height       = Math.round(size * dpr);
   ceremonyThumb.style.width  = '';
@@ -551,10 +530,10 @@ function handleStudioPhoto(file) {
     img.onload = () => {
       studioBgImage = img;
       const photoDropText = document.getElementById('photoDropText');
-      const photoDropZone = document.getElementById('photoUploadZone');
+      const pDZ = document.getElementById('photoUploadZone');
       const photoControls = document.getElementById('photoControls');
       if (photoDropText) photoDropText.textContent = file.name;
-      if (photoDropZone) photoDropZone.classList.add('has-photo');
+      if (pDZ) pDZ.classList.add('has-photo');
       if (photoControls) photoControls.classList.remove('hidden');
       const ytOpt = document.getElementById('ytBgOption');
       if (ytOpt) { ytOpt.style.background = ''; ytOpt.style.borderColor = ''; }
@@ -568,12 +547,12 @@ function handleStudioPhoto(file) {
 
 async function shareOrDownloadPoster() {
   if (!generatedBlob) { showToast('Poster not ready yet'); return; }
-
+  const post = window.currentPost;
   const fileName  = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
   const file      = new File([generatedBlob], fileName, { type: 'image/png' });
   const shareData = {
-    title: `MARGO — ${currentPost?.text?.substring(0, 50) || 'Lyric'}`,
-    text:  `"${currentPost?.text || ''}" — drop your lyric at trymargo.com`,
+    title: `MARGO — ${post?.text?.substring(0, 50) || 'Lyric'}`,
+    text:  `"${post?.text || ''}" — drop your lyric at trymargo.com`,
     files: [file]
   };
 
