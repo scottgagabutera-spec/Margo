@@ -196,10 +196,7 @@ function injectFeedStyles() {
       border-radius: 0 4px 4px 0; opacity: 0.9; pointer-events: none;
     }
     #feedList .feed-card:hover {
-      transform: translateY(-3px) !important;
-      box-shadow: 0 0 0 1px var(--e-border, rgba(232,197,71,0.2)),
-                  0 20px 50px rgba(0,0,0,0.6),
-                  inset 0 1px 0 rgba(255,255,255,0.05) !important;
+      border-color: var(--e-border, rgba(232,197,71,0.28)) !important;
     }
 
     /* ─── LAYOUT INTERNALS ─── */
@@ -521,22 +518,8 @@ function initRoomTabs() {
   });
 }
 
-/* ── Magnetic tilt ── */
-function initCardTilt() {
-  if (window.matchMedia('(hover: none)').matches) return; // skip on touch
-  document.getElementById('feedList')?.addEventListener('mousemove', e => {
-    const card = e.target.closest('.feed-card');
-    if (!card) return;
-    const r = card.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width  - 0.5;
-    const y = (e.clientY - r.top)  / r.height - 0.5;
-    card.style.transform = `translateY(-8px) scale(1.018) rotateY(${x*5}deg) rotateX(${-y*4}deg)`;
-  }, { passive: true });
-  document.getElementById('feedList')?.addEventListener('mouseleave', e => {
-    const card = e.target.closest?.('.feed-card');
-    if (card) card.style.transform = '';
-  }, { passive: true });
-}
+/* ── Card tilt disabled — flat cards, no hover lift ── */
+function initCardTilt() {}
 
 
 function getPostAge(post) {
