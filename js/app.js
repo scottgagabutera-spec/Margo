@@ -53,7 +53,21 @@ function goToFeed() {
   document.body.scrollTop = 0;
   window.scrollTo(0, 0);
   setPageState('feed');
+  mountUsernamePill();
   renderFeed();
+}
+
+/* ── Mount username pill into header ── */
+function mountUsernamePill() {
+  const slot = document.getElementById('headerUsernamePill');
+  if (!slot || typeof window.MargoUsername === 'undefined') return;
+  slot.style.display = 'flex';
+  slot.innerHTML = '';
+  const pill = window.MargoUsername.buildPill(window.MargoUsername.get());
+  pill.style.cursor = 'pointer';
+  pill.title = 'Your Margo name — tap to view';
+  pill.onclick = () => window.MargoUsername.showReveal();
+  slot.appendChild(pill);
 }
 
 function goToLanding() {
