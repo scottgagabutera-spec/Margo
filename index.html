@@ -109,7 +109,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Josefin+Sans:wght@300;400;700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 
   <link rel="stylesheet" href="style.css"/>
@@ -135,7 +135,6 @@
     }
     #gsExportMp4:hover:not(:disabled) { background: #33eeff; transform: scale(1.03); }
     #gsExportMp4:disabled { opacity: 0.6; cursor: wait; }
-    /* Make topbar accommodate two buttons */
     .gs-topbar { gap: 8px; }
   </style>
 
@@ -165,7 +164,8 @@
       <span class="nav-logo-text">MARGO</span>
     </a>
     <div class="nav-right">
-      <button class="nav-pill" id="enterFeedBtn">Read the room</button>
+      <!-- CHANGE 1: nav pill text changed from "Read the room" to "See what's live" -->
+      <button class="nav-pill" id="enterFeedBtn">See what's live</button>
     </div>
   </nav>
   <div class="hero">
@@ -178,10 +178,12 @@
       <span class="headline-word">Drop a lyric.</span>
       <span class="headline-word accent">Say everything.</span>
     </div>
-    <p class="tagline">When words fail, drop a lyric.</p>
+    <!-- CHANGE 2: tagline updated -->
+    <p class="tagline">The place where a song line says what you can't.</p>
     <div class="cta-group">
       <button class="btn-primary" id="enterBtn">Drop a Lyric</button>
-      <button class="btn-secondary" id="enterFeedBtn2">See what people are feeling</button>
+      <!-- CHANGE 3: secondary CTA is now a ghost/text style, not a full button -->
+      <button class="btn-ghost" id="enterFeedBtn2">Read the room</button>
     </div>
     <div class="lyric-stream">
       <div class="lyric-track" id="track1"></div>
@@ -230,6 +232,7 @@
       </div>
       <span class="post-count"><span id="postCount">0</span> posts</span>
     </div>
+    <div id="headerUsernamePill" style="display:none"></div>
     <button class="header-btn primary" id="openComposer" style="display:none">Drop a Lyric</button>
   </header>
 
@@ -262,6 +265,8 @@
       <button class="room-tab" data-room="Joy" role="tab" aria-selected="false">Joy</button>
       <button class="room-tab" data-room="Rage" role="tab" aria-selected="false">Rage</button>
       <button class="room-tab" data-room="Loneliness" role="tab" aria-selected="false">Loneliness</button>
+      <button class="room-tab" data-room="SendIt" role="tab" aria-selected="false">Send It</button>
+      <button class="room-tab" data-room="LetOut" role="tab" aria-selected="false">Let Out</button>
     </div>
   </div>
 
@@ -313,6 +318,8 @@
         <button class="emotion-btn" data-emotion="Joy">Joy</button>
         <button class="emotion-btn" data-emotion="Rage">Rage</button>
         <button class="emotion-btn" data-emotion="Loneliness">Loneliness</button>
+        <button class="emotion-btn" data-emotion="SendIt">Send It</button>
+        <button class="emotion-btn" data-emotion="LetOut">Let Out</button>
       </div>
       <span class="field-label">Mode</span>
       <div class="mode-row-form">
@@ -402,36 +409,6 @@
     <div class="modal-body">
       <p class="hint">Streaming links:</p>
       <div id="listenLinks" style="display:flex;flex-direction:column;gap:8px;"></div>
-    </div>
-  </div>
-</div>
-
-<!-- POSTCARD -->
-<div id="postcardModal" class="modal hidden">
-  <div class="modal-sheet">
-    <div class="modal-top"><span class="modal-title">Post</span><button class="modal-close" id="closePostcard">×</button></div>
-    <div class="modal-body">
-      <div class="postcard">
-        <div class="postcard-header">
-          <span class="postcard-header-mark">
-            <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="18" height="18">
-              <circle cx="40" cy="40" r="36" fill="#0B0B0D"/>
-              <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#E8C547" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-              <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#E8C547" opacity=".7"/>
-            </svg>
-          </span>
-          MARGO
-        </div>
-        <div class="postcard-lyric" id="postcardLyric"></div>
-        <div class="postcard-emotion" id="postcardEmotion"></div>
-        <div class="postcard-song" id="postcardSong"></div>
-        <div class="postcard-community" id="postcardCommunity"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-primary full-btn" id="sharePosterBtn">Make it a poster</button>
-      <button class="btn-secondary full-btn" id="listenPostcard">Listen</button>
-      <button class="btn-secondary full-btn" id="analyticsBtn">Analytics</button>
     </div>
   </div>
 </div>
@@ -553,39 +530,6 @@
   </div>
 </div>
 
-<!-- STUDIO CHOOSER -->
-<div id="studioChooser" class="hidden">
-  <div class="sc-inner">
-    <div class="sc-header">
-      <div class="sc-logo">
-        <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="20" height="20">
-          <circle cx="40" cy="40" r="36" fill="#E8C547"/>
-          <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-          <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/>
-        </svg>
-        <span class="sc-logo-text">MARGO · STUDIO</span>
-      </div>
-      <h2 class="sc-title">Choose your format</h2>
-      <p class="sc-sub">What kind of visual do you want to make?</p>
-    </div>
-    <div class="sc-cards">
-      <button class="sc-card" id="chooserMotionBtn">
-        <div class="sc-card-icon img-icon">Img</div>
-        <div class="sc-card-title">Image</div>
-        <div class="sc-card-desc">Design a lyric poster — pick colors, fonts &amp; export in any size</div>
-        <span class="sc-card-tag img-tag">PNG · Poster</span>
-      </button>
-      <button class="sc-card" id="chooserGifBtn">
-        <div class="sc-card-icon gif-icon">GIF</div>
-        <div class="sc-card-title">Animated</div>
-        <div class="sc-card-desc">Looping animation — export as GIF or Video for WhatsApp &amp; IG</div>
-        <span class="sc-card-tag gif-tag">GIF · Video</span>
-      </button>
-    </div>
-    <button class="sc-back" id="chooserBackBtn">Back to post</button>
-  </div>
-</div>
-
 <!-- GIF STUDIO -->
 <div id="gifStudioOverlay" class="hidden">
   <div class="gs-topbar">
@@ -595,7 +539,6 @@
       </svg>
     </button>
     <span class="gs-topbar-title">Margo · GIF Studio</span>
-    <!-- ↓ TWO export buttons: GIF (gold) + Video/MP4 (cyan) -->
     <div style="display:flex;gap:8px;align-items:center;">
       <button id="gsExportBtn">GIF</button>
       <button id="gsExportMp4">▶ Video</button>
@@ -682,7 +625,14 @@
 <script src="js/feed.js"></script>
 <script src="js/composer.js"></script>
 <script src="js/studio.js"></script>
+<script src="js/poster.js"></script>
+<script src="js/duet-sheet.js"></script>
 <script src="js/gif-studio.js"></script>
+<script src="js/username.js"></script>
+<script src="js/share-sheet.js"></script>
+<script src="js/echoes.js"></script>
+<script src="js/duet-mode.js"></script>
+<script src="js/resonate.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/app.js"></script>
 <script src="js/motion.js"></script>

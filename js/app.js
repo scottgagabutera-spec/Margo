@@ -1,9 +1,9 @@
 /* ============================================================
    MARGO — js/app.js
-   v5.4 — scrollToFeed dynamically measures the actual sticky
-          stack height at runtime (header + search + tabs + sort bar)
-          so scroll always lands precisely at the first card on
-          any screen size. No hardcoded offsets, no guessing.
+   v6.1 — concept-v2 branch:
+          • patchStudioBackButtons uses onclick (overrides studio.js addEventListener)
+          • closeStudio() called via window.closeStudio() for full state cleanup
+          • studios return via reopenShareSheet()
    ============================================================ */
 
 // ── Toast ──
@@ -17,8 +17,9 @@ function showToast(msg) {
   setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 2600);
 }
 
-// ── Modal helpers ──
+// ── Modal helpers (kept for guess/discover/listen/analytics) ──
 function openModal(modal) {
+  if (!modal) return;
   savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
   modal.classList.remove('hidden');
   document.body.classList.add('modal-open');
@@ -26,6 +27,7 @@ function openModal(modal) {
 }
 
 function closeModal(modal) {
+  if (!modal) return;
   modal.classList.add('hidden');
   document.body.classList.remove('modal-open');
   document.body.style.top = '';
@@ -48,7 +50,21 @@ function goToFeed() {
   document.body.scrollTop = 0;
   window.scrollTo(0, 0);
   setPageState('feed');
+  mountUsernamePill();
   renderFeed();
+}
+
+/* ── Mount username pill into header ── */
+function mountUsernamePill() {
+  const slot = document.getElementById('headerUsernamePill');
+  if (!slot || typeof window.MargoUsername === 'undefined') return;
+  slot.style.display = 'flex';
+  slot.innerHTML = '';
+  const pill = window.MargoUsername.buildPill(window.MargoUsername.get());
+  pill.style.cursor = 'pointer';
+  pill.title = 'Your Margo name — tap to view';
+  pill.onclick = () => window.MargoUsername.showReveal();
+  slot.appendChild(pill);
 }
 
 function goToLanding() {
@@ -58,14 +74,9 @@ function goToLanding() {
 }
 
 // ── scrollToFeed ──
-// Dynamically measures the actual rendered height of every sticky layer
-// (header + search wrap + tabs + sort bar) so the scroll target is always
-// pixel-perfect on both desktop and mobile, regardless of breakpoint.
 function scrollToFeed() {
   let attempts = 0;
 
-  // Measure the full sticky stack at the moment of scrolling,
-  // not at load time — this handles font-load reflows, etc.
   function getStickyOffset() {
     const header  = document.querySelector('.feed-header');
     const search  = document.querySelector('.feed-search-wrap');
@@ -81,45 +92,40 @@ function scrollToFeed() {
 
   const tryScroll = () => {
     attempts++;
-
-    // Wait for a real card (not skeleton) to appear in the feed
     const firstCard = document.querySelector('#feedList .feed-card:not(.skeleton-card)');
-
     if (firstCard || attempts >= 20) {
       const stickyOffset = getStickyOffset();
       const cardTop = firstCard
         ? firstCard.getBoundingClientRect().top + window.scrollY
-        : 300; // fallback if no cards yet
-
-      // 12px breathing room below the last sticky bar
+        : 300;
       const target = cardTop - stickyOffset - 12;
       window.scrollTo({ top: Math.max(0, target), behavior: 'instant' });
     } else {
       setTimeout(tryScroll, 80);
     }
   };
-
-  // Wait 500ms so renderFeed() completes and cards are in the DOM
   setTimeout(tryScroll, 500);
 }
 
 function initNavigation() {
-  enterBtn.onclick = () => {
-    goToFeed();
-    setTimeout(() => { openModal(composer); setTimeout(() => textInput.focus(), 200); }, 100);
-  };
+  if (enterBtn) {
+    enterBtn.onclick = () => {
+      goToFeed();
+      setTimeout(() => { openModal(composer); setTimeout(() => textInput?.focus(), 200); }, 100);
+    };
+  }
 
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
   if (efb1) efb1.onclick = () => { goToFeed(); scrollToFeed(); };
   if (efb2) efb2.onclick = () => { goToFeed(); scrollToFeed(); };
 
-  backBtn.onclick          = goToLanding;
-  openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput.focus(), 200); };
-  closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
+  if (backBtn)          backBtn.onclick          = goToLanding;
+  if (openComposerBtn)  openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput?.focus(), 200); };
+  if (closeComposerBtn) closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
 
   let tSX = 0, tSY = 0;
-  [landing, feed].forEach(s => {
+  [landing, feed].filter(Boolean).forEach(s => {
     s.addEventListener('touchstart', e => { tSX = e.touches[0].clientX; tSY = e.touches[0].clientY; });
     s.addEventListener('touchend', e => {
       const dx = tSX - e.changedTouches[0].clientX;
@@ -144,6 +150,70 @@ function setupScrollToTop() {
   }
 }
 
+/* ────────────────────────────────────────────────────────────
+   STUDIO BACK BUTTON PATCH
+   Uses .onclick to fully override any addEventListener bound
+   earlier by studio.js initStudio(). Single handler, no double-fire.
+   Calls window.closeStudio() / window.closeGifStudio() for full
+   state cleanup, then reopens the share sheet.
+──────────────────────────────────────────────────────────── */
+function patchStudioBackButtons() {
+  // Image studio — .onclick overrides any prior addEventListener
+  const closeStudioBtn = document.getElementById('closeStudio');
+  if (closeStudioBtn) {
+    closeStudioBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (typeof window.closeStudio === 'function') {
+        window.closeStudio();
+      } else {
+        document.getElementById('studioOverlay')?.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+      }
+      if (typeof reopenShareSheet === 'function') reopenShareSheet();
+    };
+  }
+
+  // GIF studio — same pattern
+  const closeGifBtn = document.getElementById('closeGifStudio');
+  if (closeGifBtn) {
+    closeGifBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (typeof gsStopPreview === 'function') gsStopPreview();
+      const overlay = document.getElementById('gifStudioOverlay');
+      if (overlay) overlay.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      if (typeof reopenShareSheet === 'function') reopenShareSheet();
+    };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   SHARE SHEET — wire sharePosterBtn
+──────────────────────────────────────────────────────────── */
+function wireSharPosterBtn() {
+  if (typeof sharePosterBtn !== 'undefined' && sharePosterBtn) {
+    sharePosterBtn.onclick = () => {
+      if (typeof openShareSheet === 'function' && currentPost) {
+        openShareSheet(currentPost);
+      }
+    };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   COMPOSER SUBMIT — open share sheet after posting
+──────────────────────────────────────────────────────────── */
+function patchComposerForShareSheet() {
+  window.openStudioChooser = function() {
+    if (typeof openShareSheet === 'function' && currentPost) {
+      setTimeout(() => {
+        showToast('Posted — now make it visual');
+        openShareSheet(currentPost);
+      }, 120);
+    }
+  };
+}
+
 // ════════════════════════════════════════════════════════
 //   INIT
 // ════════════════════════════════════════════════════════
@@ -157,6 +227,7 @@ preloadStudioFonts();
 buildLyricStream();
 initSearch();
 initRoomTabs();
+if (typeof initCardTilt === 'function') initCardTilt();
 initComposer();
 
 try {
@@ -165,7 +236,12 @@ try {
   console.warn('[Margo] initStudio error (non-fatal):', err.message);
 }
 
+// concept-v2 patches — run AFTER initStudio() so .onclick overrides addEventListener
+patchStudioBackButtons();
+patchComposerForShareSheet();
+wireSharPosterBtn();
+
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v5.4 dev — scrollToFeed dynamically measures sticky stack.');
+console.log('MARGO v6.1 concept-v2 — studio back buttons patched, share sheet active.');
