@@ -1,8 +1,11 @@
 /* ============================================================
    MARGO — js/echoes.js
-   The Echo System — "Lyric Back" feature.
-   v1.1 — Fixed submitEcho: timestamp safe, Firebase guard,
-          postsRef scope confirmed global from firebase.js
+   v1.2 — fixes:
+          • EMOTION → VIBE everywhere in UI
+          • "Send It" / "Let Out" display names fixed (no camel case)
+          • Bottom action buttons fully readable (white/bright text)
+          • Live Genius search from ≥3 chars
+          • Submit Firebase guard + timestamp safe
    ============================================================ */
 
 window._echoState = window._echoState || {
@@ -18,9 +21,9 @@ const ES = window._echoState;
    STYLES
 ──────────────────────────────────────────────────────────── */
 function injectEchoStyles() {
-  if (document.getElementById('echoStyles')) return;
+  if (document.getElementById('echoStylesV12')) return;
   const s = document.createElement('style');
-  s.id = 'echoStyles';
+  s.id = 'echoStylesV12';
   s.textContent = `
     #echoSheetBackdrop {
       position:fixed;inset:0;z-index:650;
@@ -130,21 +133,45 @@ function injectEchoStyles() {
     .echo-song-info{min-width:0}
     .echo-song-name{font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:600;color:rgba(255,255,255,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .echo-artist-name{font-family:'Space Mono',monospace;font-size:0.58rem;color:rgba(255,255,255,0.35);letter-spacing:0.3px}
-    .echo-emotion-tag{font-family:'Space Mono',monospace;font-size:0.48rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:3px 9px;border-radius:20px;flex-shrink:0}
+    .echo-vibe-tag{font-family:'Space Mono',monospace;font-size:0.48rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:3px 9px;border-radius:20px;flex-shrink:0}
 
-    .echo-card-actions{display:flex;gap:6px}
+    /* ── Action buttons — FULLY READABLE, high contrast ── */
+    .echo-card-actions{display:flex;gap:6px;margin-top:2px}
     .echo-action-btn{
-      flex:1;padding:8px 6px;border-radius:9px;
-      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
-      color:rgba(255,255,255,0.38);
-      font-family:'Space Mono',monospace;font-size:0.52rem;font-weight:700;
-      text-transform:uppercase;letter-spacing:1px;
+      flex:1;padding:9px 6px;border-radius:10px;
+      font-family:'Space Mono',monospace;font-size:0.54rem;font-weight:700;
+      text-transform:uppercase;letter-spacing:0.8px;
       cursor:pointer;transition:all 0.18s;
-      display:flex;align-items:center;justify-content:center;gap:4px;
+      display:flex;align-items:center;justify-content:center;gap:5px;
+      white-space:nowrap;
     }
-    .echo-action-btn:hover{border-color:rgba(255,255,255,0.18);color:rgba(255,255,255,0.7)}
-    .echo-resonate-btn.resonated{background:rgba(255,107,157,0.1);border-color:rgba(255,107,157,0.35);color:#FF6B9D}
-    .echo-share-btn:hover{border-color:rgba(232,197,71,0.3);color:rgba(232,197,71,0.8);background:rgba(232,197,71,0.05)}
+    /* Resonate — purple tint, white text */
+    .echo-resonate-btn{
+      background:rgba(192,132,252,0.10);
+      border:1px solid rgba(192,132,252,0.35);
+      color:rgba(255,255,255,0.9);
+    }
+    .echo-resonate-btn:hover{
+      background:rgba(192,132,252,0.22);
+      border-color:rgba(192,132,252,0.6);
+      color:#fff;transform:translateY(-1px);
+    }
+    .echo-resonate-btn.resonated{
+      background:rgba(192,132,252,0.22);
+      border-color:rgba(192,132,252,0.65);
+      color:#C084FC;
+    }
+    /* Share — gold tint, white text */
+    .echo-share-btn{
+      background:rgba(232,197,71,0.08);
+      border:1px solid rgba(232,197,71,0.28);
+      color:rgba(255,255,255,0.88);
+    }
+    .echo-share-btn:hover{
+      background:rgba(232,197,71,0.18);
+      border-color:rgba(232,197,71,0.55);
+      color:#fff;transform:translateY(-1px);
+    }
 
     .echo-empty{text-align:center;padding:32px 20px;display:flex;flex-direction:column;align-items:center;gap:12px}
     .echo-empty-icon{font-size:2rem;opacity:0.35}
@@ -175,6 +202,13 @@ function injectEchoStyles() {
     .echo-form-user-row{display:flex;align-items:center;gap:8px;margin-bottom:2px}
     .echo-form-username{font-family:'Space Mono',monospace;font-size:0.65rem;font-weight:700}
 
+    /* Vibe section label */
+    .echo-vibe-label{
+      font-family:'Space Mono',monospace;font-size:0.46rem;font-weight:700;
+      color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:2px;
+      margin-bottom:4px;
+    }
+
     .echo-lyric-input{
       width:100%;min-height:70px;resize:none;
       padding:13px 15px;border-radius:14px;
@@ -198,24 +232,30 @@ function injectEchoStyles() {
     .echo-form-input::placeholder{color:rgba(255,255,255,0.2)}
     .echo-form-input:focus{border-color:rgba(232,197,71,0.3);box-shadow:0 0 0 3px rgba(232,197,71,0.06)}
 
-    .echo-emotion-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-    .echo-emotion-opt{
-      padding:7px 4px;border-radius:9px;
-      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
-      color:rgba(255,255,255,0.38);font-family:'DM Sans',sans-serif;
-      font-size:0.65rem;font-weight:600;cursor:pointer;transition:all 0.18s;text-align:center;
+    /* ── Vibe grid — 5 cols, matches composer ── */
+    .echo-vibe-row{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:5px;
     }
-    .echo-emotion-opt.active{background:rgba(232,197,71,0.1);border-color:rgba(232,197,71,0.4);color:#E8C547}
+    .echo-vibe-opt{
+      padding:8px 4px;border-radius:9px;
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+      color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;
+      font-size:0.62rem;font-weight:600;cursor:pointer;transition:all 0.18s;text-align:center;
+    }
+    .echo-vibe-opt:hover{background:rgba(255,255,255,0.08);color:#fff;border-color:rgba(255,255,255,0.2)}
+    .echo-vibe-opt.active{background:rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.45);color:#E8C547}
 
     .echo-form-submit-row{display:flex;gap:8px;align-items:center}
     .echo-cancel-btn{
       padding:12px 14px;border-radius:12px;
-      background:none;border:1px solid rgba(255,255,255,0.08);
-      color:rgba(255,255,255,0.28);font-family:'Space Mono',monospace;
+      background:none;border:1px solid rgba(255,255,255,0.1);
+      color:rgba(255,255,255,0.5);font-family:'Space Mono',monospace;
       font-size:0.52rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;
       cursor:pointer;transition:all 0.18s;
     }
-    .echo-cancel-btn:hover{border-color:rgba(255,255,255,0.18);color:rgba(255,255,255,0.55)}
+    .echo-cancel-btn:hover{border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.85)}
     .echo-submit-btn{
       flex:1;padding:13px;border-radius:12px;
       background:rgba(232,197,71,0.12);border:1px solid rgba(232,197,71,0.4);
@@ -224,7 +264,7 @@ function injectEchoStyles() {
       cursor:pointer;transition:all 0.22s cubic-bezier(0.16,1,0.3,1);
       display:flex;align-items:center;justify-content:center;gap:8px;
     }
-    .echo-submit-btn:hover{background:rgba(232,197,71,0.2);border-color:rgba(232,197,71,0.65);color:#fff;transform:translateY(-1px);box-shadow:0 8px 24px rgba(232,197,71,0.2)}
+    .echo-submit-btn:hover{background:rgba(232,197,71,0.22);border-color:rgba(232,197,71,0.7);color:#fff;transform:translateY(-1px);box-shadow:0 8px 24px rgba(232,197,71,0.2)}
     .echo-submit-btn:active{transform:scale(0.97)}
     .echo-submit-btn:disabled{opacity:0.45;cursor:default;transform:none;box-shadow:none}
 
@@ -233,13 +273,25 @@ function injectEchoStyles() {
     .echo-identify-btn{
       width:100%;padding:9px 12px;border-radius:10px;
       background:rgba(232,197,71,0.04);border:1px dashed rgba(232,197,71,0.25);
-      color:rgba(232,197,71,0.6);font-family:'Space Mono',monospace;
+      color:rgba(232,197,71,0.7);font-family:'Space Mono',monospace;
       font-size:0.52rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
       cursor:pointer;transition:all 0.18s;
       display:flex;align-items:center;justify-content:center;gap:6px;
     }
     .echo-identify-btn:hover:not(:disabled){background:rgba(232,197,71,0.09);border-color:rgba(232,197,71,0.5);color:#E8C547}
     .echo-identify-btn:disabled{opacity:0.4;cursor:default}
+
+    /* Live search hint */
+    .echo-live-hint{
+      display:inline-flex;align-items:center;gap:5px;
+      font-family:'Space Mono',monospace;font-size:0.46rem;font-weight:700;
+      color:rgba(232,197,71,0.5);letter-spacing:1px;text-transform:uppercase;padding:2px 0;
+    }
+    .echo-live-dot{
+      width:5px;height:5px;border-radius:50%;background:#E8C547;opacity:0.6;
+      animation:echoLD 1.2s ease-in-out infinite;
+    }
+    @keyframes echoLD{0%,100%{opacity:0.2;transform:scale(0.8)}50%{opacity:1;transform:scale(1)}}
 
     .echo-spinner{
       width:12px;height:12px;border-radius:50%;
@@ -252,10 +304,22 @@ function injectEchoStyles() {
 }
 
 /* ────────────────────────────────────────────────────────────
-   FEELING CONFIG
+   VIBE CONFIG — display names fixed
 ──────────────────────────────────────────────────────────── */
-const ECHO_FEELINGS = ['Love','Heartbreak','Hope','Nostalgia','Healing','Joy','Rage','Loneliness','SendIt','LetOut'];
-const ECHO_FEELING_CFG = {
+const ECHO_VIBES = [
+  { value: 'Love',       label: 'Love'       },
+  { value: 'Heartbreak', label: 'Heartbreak' },
+  { value: 'Hope',       label: 'Hope'       },
+  { value: 'Nostalgia',  label: 'Nostalgia'  },
+  { value: 'Healing',    label: 'Healing'    },
+  { value: 'Joy',        label: 'Joy'        },
+  { value: 'Rage',       label: 'Rage'       },
+  { value: 'Loneliness', label: 'Loneliness' },
+  { value: 'SendIt',     label: 'Send It'    },
+  { value: 'LetOut',     label: 'Let Out'    },
+];
+
+const ECHO_VIBE_CFG = {
   Love:       { bg:'rgba(255,107,157,0.13)', text:'#FF6B9D', border:'rgba(255,107,157,0.22)' },
   Heartbreak: { bg:'rgba(255,80,80,0.11)',   text:'#ff5050', border:'rgba(255,80,80,0.2)'    },
   Hope:       { bg:'rgba(107,140,255,0.13)', text:'#6B8CFF', border:'rgba(107,140,255,0.22)' },
@@ -274,6 +338,10 @@ const ECHO_FEELING_CFG = {
 function mountEchoSheet() {
   if (document.getElementById('echoSheetBackdrop')) return;
   injectEchoStyles();
+
+  const vibeButtons = ECHO_VIBES.map(v =>
+    `<button class="echo-vibe-opt" data-emotion="${v.value}">${v.label}</button>`
+  ).join('');
 
   const backdrop = document.createElement('div');
   backdrop.id = 'echoSheetBackdrop';
@@ -318,13 +386,17 @@ function mountEchoSheet() {
           <button class="echo-identify-btn" id="echoIdentifyBtn">
             Identify Song
           </button>
+          <div id="echoLiveHint" class="echo-live-hint" style="display:none">
+            <span class="echo-live-dot"></span> Searching for song…
+          </div>
           <div id="echoGeniusResults"></div>
           <div class="echo-form-row">
             <input class="echo-form-input" id="echoSongInput" placeholder="Song title" type="text" maxlength="80"/>
             <input class="echo-form-input" id="echoArtistInput" placeholder="Artist" type="text" maxlength="80"/>
           </div>
-          <div class="echo-emotion-row" id="echoEmotionRow">
-            ${ECHO_FEELINGS.map(e => `<button class="echo-emotion-opt" data-emotion="${e}">${e}</button>`).join('')}
+          <div class="echo-vibe-label">Vibe</div>
+          <div class="echo-vibe-row" id="echoVibeRow">
+            ${vibeButtons}
           </div>
           <div class="echo-form-submit-row">
             <button class="echo-cancel-btn" id="echoCancelBtn">Cancel</button>
@@ -339,10 +411,10 @@ function mountEchoSheet() {
 
   document.body.appendChild(backdrop);
 
-  backdrop.querySelector('#echoClose').onclick       = closeEchoSheet;
+  backdrop.querySelector('#echoClose').onclick          = closeEchoSheet;
   backdrop.querySelector('#echoComposeTrigger').onclick = expandEchoCompose;
-  backdrop.querySelector('#echoCancelBtn').onclick   = collapseEchoCompose;
-  backdrop.querySelector('#echoSubmitBtn').onclick   = submitEcho;
+  backdrop.querySelector('#echoCancelBtn').onclick      = collapseEchoCompose;
+  backdrop.querySelector('#echoSubmitBtn').onclick      = submitEcho;
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeEchoSheet(); });
 
   backdrop.querySelector('#echoLyricInput').oninput = (e) => {
@@ -351,26 +423,34 @@ function mountEchoSheet() {
     backdrop.querySelector('#echoSubmitBtn').disabled = n < 2;
   };
 
-  backdrop.querySelectorAll('.echo-emotion-opt').forEach(btn => {
+  backdrop.querySelectorAll('.echo-vibe-opt').forEach(btn => {
     btn.onclick = () => {
-      backdrop.querySelectorAll('.echo-emotion-opt').forEach(b => b.classList.remove('active'));
+      backdrop.querySelectorAll('.echo-vibe-opt').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     };
   });
 
+  // Identify song button
   backdrop.querySelector('#echoIdentifyBtn').onclick = () => {
     const lyric = backdrop.querySelector('#echoLyricInput').value.trim();
-    if (lyric.length < 5) { if (typeof showToast === 'function') showToast('Type a lyric first'); return; }
+    if (lyric.length < 3) { if (typeof showToast === 'function') showToast('Type a lyric first'); return; }
     runEchoGeniusSearch(lyric);
   };
 
+  // Live search from ≥3 chars
   let geniusDebounce;
   backdrop.querySelector('#echoLyricInput').addEventListener('input', (e) => {
     clearTimeout(geniusDebounce);
     const val = e.target.value.trim();
     const songFilled = backdrop.querySelector('#echoSongInput').value.trim();
-    if (val.length >= 20 && !songFilled) {
-      geniusDebounce = setTimeout(() => runEchoGeniusSearch(val), 1400);
+    const liveHint = document.getElementById('echoLiveHint');
+
+    if (val.length >= 3 && !songFilled) {
+      if (liveHint) liveHint.style.display = 'inline-flex';
+      const ms = val.length < 8 ? 900 : val.length < 15 ? 700 : 500;
+      geniusDebounce = setTimeout(() => runEchoGeniusSearch(val), ms);
+    } else {
+      if (liveHint) liveHint.style.display = 'none';
     }
   });
 
@@ -433,15 +513,17 @@ function closeEchoSheet() {
 function populateEchoOgCard(post) {
   const card = document.getElementById('echoOgCard');
   if (!card) return;
-  const k       = post.knowledge || {};
-  const feeling = post.emotion || post.feeling || 'Nostalgia';
-  const ecfg    = ECHO_FEELING_CFG[feeling] || ECHO_FEELING_CFG['Nostalgia'];
+  const k    = post.knowledge || {};
+  const vibe = post.emotion || post.feeling || 'Nostalgia';
+  const vcfg = ECHO_VIBE_CFG[vibe] || ECHO_VIBE_CFG['Nostalgia'];
+  // Find display label for vibe
+  const vibeLabel = ECHO_VIBES.find(v => v.value === vibe)?.label || vibe;
   card.innerHTML = `
     <div class="echo-og-lyric">"${post.text || ''}"</div>
     <div class="echo-og-meta">
       <span class="echo-og-song">${k.song || 'Unknown Song'} — ${k.artist || ''}</span>
-      <span class="echo-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">
-        ${feeling}
+      <span class="echo-vibe-tag" style="background:${vcfg.bg};color:${vcfg.text};border:1px solid ${vcfg.border}">
+        ${vibeLabel}
       </span>
     </div>
   `;
@@ -496,9 +578,11 @@ function clearEchoForm() {
   if (cc) cc.textContent = '0';
   const submitBtn = document.getElementById('echoSubmitBtn');
   if (submitBtn) submitBtn.disabled = true;
-  document.querySelectorAll('.echo-emotion-opt').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.echo-vibe-opt').forEach(b => b.classList.remove('active'));
   const gr = document.getElementById('echoGeniusResults');
   if (gr) gr.innerHTML = '';
+  const lh = document.getElementById('echoLiveHint');
+  if (lh) lh.style.display = 'none';
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -558,17 +642,18 @@ function renderEchoList(echoes) {
 }
 
 function buildEchoCard(echo, idx) {
-  const username = echo.username || 'Anonymous';
-  const feeling  = echo.emotion || echo.feeling || 'Nostalgia';
-  const ecfg     = ECHO_FEELING_CFG[feeling] || ECHO_FEELING_CFG['Nostalgia'];
+  const username   = echo.username || 'Anonymous';
+  const vibe       = echo.emotion || echo.feeling || 'Nostalgia';
+  const vcfg       = ECHO_VIBE_CFG[vibe] || ECHO_VIBE_CFG['Nostalgia'];
+  const vibeLabel  = ECHO_VIBES.find(v => v.value === vibe)?.label || vibe;
   const resonateCount = Object.keys(echo.resonates || {}).length;
-  const myUserId = typeof userId !== 'undefined' ? userId : '';
+  const myUserId   = typeof userId !== 'undefined' ? userId : '';
   const hasResonated = !!(echo.resonates && echo.resonates[myUserId]);
 
   let avatarColor = '#E8C547';
   let avatarIcon  = '♪';
   if (typeof MargoUsername !== 'undefined') {
-    const c    = MargoUsername.getColor(username);
+    const c = MargoUsername.getColor(username);
     avatarColor = c.color;
     const instr = MargoUsername.getInstrument ? MargoUsername.getInstrument(username) : '';
     const icons = {
@@ -580,8 +665,7 @@ function buildEchoCard(echo, idx) {
     avatarIcon = icons[instr] || '♪';
   }
 
-  const timeStr = typeof timeAgo === 'function' && echo.timestamp
-    ? timeAgo(echo.timestamp) : '';
+  const timeStr = typeof timeAgo === 'function' && echo.timestamp ? timeAgo(echo.timestamp) : '';
 
   const card = document.createElement('div');
   card.className = 'echo-card';
@@ -606,8 +690,8 @@ function buildEchoCard(echo, idx) {
         <div class="echo-song-name">${echo.song || 'Unknown Song'}</div>
         <div class="echo-artist-name">${echo.artist || ''}</div>
       </div>
-      <span class="echo-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">
-        ${feeling}
+      <span class="echo-vibe-tag" style="background:${vcfg.bg};color:${vcfg.text};border:1px solid ${vcfg.border}">
+        ${vibeLabel}
       </span>
     </div>
     <div class="echo-card-actions">
@@ -616,7 +700,7 @@ function buildEchoCard(echo, idx) {
         ♥ ${resonateCount > 0 ? resonateCount : 'Resonate'}
       </button>
       <button class="echo-action-btn echo-share-btn" data-echo-idx="${idx}">
-        ↗ Share · GIF · Poster
+        ↗ GIF · Poster
       </button>
     </div>
   `;
@@ -656,10 +740,10 @@ function openDuetShareSheet(echo) {
 async function submitEcho() {
   if (ES.isSubmitting) return;
 
-  const lyric   = document.getElementById('echoLyricInput')?.value.trim();
-  const song    = document.getElementById('echoSongInput')?.value.trim()   || 'Unknown Song';
-  const artist  = document.getElementById('echoArtistInput')?.value.trim() || 'Unknown Artist';
-  const feeling = document.querySelector('.echo-emotion-opt.active')?.dataset.emotion || 'Nostalgia';
+  const lyric  = document.getElementById('echoLyricInput')?.value.trim();
+  const song   = document.getElementById('echoSongInput')?.value.trim()   || 'Unknown Song';
+  const artist = document.getElementById('echoArtistInput')?.value.trim() || 'Unknown Artist';
+  const vibe   = document.querySelector('.echo-vibe-opt.active')?.dataset.emotion || 'Nostalgia';
 
   if (!lyric || lyric.length < 2) {
     if (typeof showToast === 'function') showToast('Add a lyric first');
@@ -673,7 +757,6 @@ async function submitEcho() {
 
   const username = (typeof MargoUsername !== 'undefined') ? MargoUsername.get() : 'Anon';
 
-  // Safe ServerValue.TIMESTAMP — works after initializeApp()
   let ts;
   try {
     ts = firebase.database.ServerValue.TIMESTAMP;
@@ -685,7 +768,7 @@ async function submitEcho() {
     lyric,
     song,
     artist,
-    emotion: feeling,
+    emotion: vibe,
     username,
     timestamp: ts,
     resonates: {},
@@ -724,8 +807,11 @@ let _echoLastQuery = '';
 async function runEchoGeniusSearch(query) {
   if (query === _echoLastQuery) return;
   _echoLastQuery = query;
-  const btn = document.getElementById('echoIdentifyBtn');
+
+  const btn     = document.getElementById('echoIdentifyBtn');
+  const liveHint = document.getElementById('echoLiveHint');
   if (btn) { btn.innerHTML = '<span class="echo-spinner"></span> Searching…'; btn.disabled = true; }
+  if (liveHint) liveHint.style.display = 'none';
   const resultsEl = document.getElementById('echoGeniusResults');
   if (resultsEl) resultsEl.innerHTML = '';
 
@@ -775,6 +861,9 @@ function renderEchoGeniusResults(results) {
       if (artistInput) artistInput.value = r.artist;
       el.innerHTML = '';
       _echoLastQuery = '';
+      // Hide live hint after selection
+      const lh = document.getElementById('echoLiveHint');
+      if (lh) lh.style.display = 'none';
     };
     el.appendChild(card);
   });
