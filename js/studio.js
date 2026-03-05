@@ -812,14 +812,7 @@ window.addEventListener('resize', () => {
   document.getElementById('studioExportBtn')
     ?.addEventListener('click', exportPoster);
 
-  /* Bind close button */
-  const closeBtn = document.getElementById('closeStudio');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-      window.closeStudio();
-      if (typeof openStudioChooser === 'function') openStudioChooser();
-    });
-  }
+  /* Close button is handled by app.js patchStudioBackButtons — do not bind here */
 
   /* Bind dock tabs */
   document.querySelectorAll('.dock-tab').forEach(tab => {
