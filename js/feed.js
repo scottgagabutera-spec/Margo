@@ -1,6 +1,6 @@
 /* ============================================================
    MARGO — js/feed.js
-   v6.9 — Card lyric font switched to Instrument Serif italic
+   v7.0 — Card height 280px, lyric font-size 1.28rem, line-height 1.45, padding-left 10px
    (was DM Sans 500 — reverted to match prototype editorial feel)
    Size 1.15rem, card height 300px, letter-spacing -0.015em retained.
    All other logic identical to v6.8.
@@ -83,7 +83,7 @@ function injectFeedStyles() {
 
     /* ─── CARD BASE ─── */
     #feedList .feed-card {
-      height: 300px !important;
+      height: 280px !important;
       border-radius: 14px !important;
       padding: 14px 14px 46px 18px !important;
       display: flex !important;
@@ -130,10 +130,11 @@ function injectFeedStyles() {
       display:-webkit-box !important;
       -webkit-line-clamp:3 !important;
       -webkit-box-orient:vertical !important;
-      flex-shrink:0 !important; line-height:1.5 !important;
+      flex-shrink:0 !important; line-height:1.45 !important;
       margin-bottom:8px !important;
-      font-size:1.15rem !important;
+      font-size:1.28rem !important;
       letter-spacing:-0.015em !important;
+      padding-left:10px !important;
     }
     #feedList .card-emotion-tag {
       flex-shrink:0 !important;
