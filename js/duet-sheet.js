@@ -58,8 +58,9 @@ function injectDuetStyles() {
       border:1px solid rgba(255,255,255,0.07);
       border-bottom:none; border-radius:28px 28px 0 0;
       overflow-y:auto; overflow-x:hidden;
+      -webkit-overflow-scrolling:touch;
       display:flex; flex-direction:column;
-      max-height:96dvh;
+      max-height:92dvh;
       box-shadow:0 -12px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(232,197,71,0.06) inset;
       animation:dsSlideUp 0.42s cubic-bezier(0.16,1,0.3,1);
       scrollbar-width:none;
@@ -68,7 +69,7 @@ function injectDuetStyles() {
     @media(min-width:560px) {
       #duetSheet {
         border-radius:24px; border-bottom:1px solid rgba(255,255,255,0.07);
-        max-height:92dvh; animation:dsFadeUp 0.32s cubic-bezier(0.16,1,0.3,1);
+        max-height:90dvh; animation:dsFadeUp 0.32s cubic-bezier(0.16,1,0.3,1);
       }
     }
     @keyframes dsSlideUp { from{transform:translateY(70px);opacity:0} to{transform:translateY(0);opacity:1} }
