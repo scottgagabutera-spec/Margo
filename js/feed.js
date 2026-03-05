@@ -1,10 +1,9 @@
 /* ============================================================
    MARGO — js/feed.js
-   v6.7 — Badge fix pass
-   • .card-hot-badge and .card-new-badge CSS removed from
-     injectFeedStyles — style.css v6.2 now owns those rules
-     (badges sit bottom-left, no collision with vibe tag)
-   • All other logic identical to v6.6
+   v6.8 — Card lyric font corrected in injectFeedStyles:
+   • DM Sans 500 1.15rem (was Instrument Serif 400 1rem — was overriding style.css)
+   • Card height 300px (was 268px) to give text breathing room
+   • letter-spacing -0.015em for crispness
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -84,7 +83,7 @@ function injectFeedStyles() {
 
     /* ─── CARD BASE ─── */
     #feedList .feed-card {
-      height: 268px !important;
+      height: 300px !important;
       border-radius: 14px !important;
       padding: 14px 14px 46px 18px !important;
       display: flex !important;
@@ -124,16 +123,17 @@ function injectFeedStyles() {
       height:22px; margin-bottom:10px;
     }
     #feedList .card-lyric {
-      font-family:'Instrument Serif',serif !important;
+      font-family:'DM Sans',sans-serif !important;
       font-style:normal !important;
       overflow:hidden !important;
       display:-webkit-box !important;
       -webkit-line-clamp:3 !important;
       -webkit-box-orient:vertical !important;
-      flex-shrink:0 !important; line-height:1.55 !important;
+      flex-shrink:0 !important; line-height:1.5 !important;
       margin-bottom:8px !important;
-      font-weight:400 !important;
-      font-size:1rem !important;
+      font-weight:500 !important;
+      font-size:1.15rem !important;
+      letter-spacing:-0.015em !important;
     }
     #feedList .card-emotion-tag {
       flex-shrink:0 !important;
