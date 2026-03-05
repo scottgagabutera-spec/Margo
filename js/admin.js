@@ -4,7 +4,10 @@
    ACCESS: B + G keys (within 300ms) → Firebase login
    SECURITY: UID verified against /adminConfig/allowedUid
    Depends on: state.js, firebase.js, feed.js (renderFeed, timeAgo)
-   v4.4 — Pages CMS added
+   v4.5 — Echo (reply) moderation added:
+          • Each post card now shows its echoes inline
+          • Hide / Unhide / Delete per echo
+          • adminHideEcho(), adminUnhideEcho(), adminDeleteEcho()
    ============================================================ */
 
 const _adminKeysHeld = new Set();
@@ -430,7 +433,6 @@ function initPageEditor(page) {
   const status   = document.getElementById('pageSaveStatus');
   if (!editor) return;
 
-  // Show date field only for privacy and terms
   dateRow.style.display = (page === 'privacy' || page === 'terms') ? 'block' : 'none';
 
   preview.style.display = 'none';
@@ -590,7 +592,7 @@ function renderAdminPosts() {
         <span style="font-family:'Space Mono',monospace;font-size:0.48rem;
           color:${flags > 0 ? '#ffc847' : '#707078'};">🚩 ${flags}</span>
       </div>
-      <div style="display:flex;gap:7px;flex-wrap:wrap;">
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:${post.echoes ? '14px' : '0'};">
         ${status !== 'hidden'
           ? `<button onclick="adminHidePost('${post.id}')"   style="${adminActionBtnStyle('#707078')}">Hide</button>`
           : `<button onclick="adminUnhidePost('${post.id}')" style="${adminActionBtnStyle('#4ade80')}">Unhide</button>`}
@@ -599,8 +601,94 @@ function renderAdminPosts() {
           : ''}
         <button onclick="adminDeletePost('${post.id}')" style="${adminActionBtnStyle('#ff6464')}">Delete</button>
       </div>
+      <div id="echoes-${post.id}" style="margin-top:4px;"></div>
     `;
     container.appendChild(card);
+
+    // Load and render echoes for this post
+    renderAdminEchoes(post.id, post.echoes || null);
+  });
+}
+
+// ── Render echoes (replies) under a post card ──
+function renderAdminEchoes(postId, echoesData) {
+  const wrap = document.getElementById(`echoes-${postId}`);
+  if (!wrap) return;
+
+  // If echoes already in memory (from posts array), use them
+  if (echoesData) {
+    _displayAdminEchoes(postId, wrap, echoesData);
+    return;
+  }
+
+  // Otherwise fetch from Firebase
+  if (!isFirebaseEnabled) return;
+  postsRef.child(postId).child('echoes').once('value').then(snap => {
+    const data = snap.val();
+    if (data) _displayAdminEchoes(postId, wrap, data);
+  }).catch(() => {});
+}
+
+function _displayAdminEchoes(postId, wrap, echoesData) {
+  const echoList = Object.entries(echoesData).map(([id, val]) => ({ id, ...val }));
+  if (!echoList.length) return;
+
+  echoList.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+  const header = document.createElement('div');
+  header.style.cssText = `
+    font-family:'Space Mono',monospace;font-size:0.48rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:1px;color:#707078;
+    margin-bottom:8px;padding-top:12px;
+    border-top:1px solid rgba(255,255,255,0.05);
+  `;
+  header.textContent = `${echoList.length} Echo${echoList.length !== 1 ? 's' : ''}`;
+  wrap.appendChild(header);
+
+  echoList.forEach(echo => {
+    const echoStatus = echo.status || 'active';
+    const echoCard   = document.createElement('div');
+    echoCard.id      = `echo-card-${postId}-${echo.id}`;
+    echoCard.style.cssText = `
+      background:#0f0f11;border:1px solid rgba(255,255,255,0.04);
+      border-radius:10px;padding:11px 13px;margin-bottom:7px;
+      ${echoStatus === 'hidden' ? 'opacity:0.45;' : ''}
+    `;
+
+    const k = echo.knowledge || {};
+    const songLine = (k.song && k.song !== 'Unknown Song')
+      ? `<span style="font-family:'Space Mono',monospace;font-size:0.45rem;color:#707078;display:block;margin-top:4px;">
+           ${k.song}${k.artist ? ' — ' + k.artist : ''}
+         </span>`
+      : '';
+
+    echoCard.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;">
+        <div style="flex:1;">
+          <div style="font-family:'DM Sans',sans-serif;font-size:0.85rem;
+            color:${echoStatus === 'hidden' ? '#707078' : '#D0D0D0'};line-height:1.45;">
+            "${echo.text || ''}"
+          </div>
+          ${songLine}
+          <span style="font-family:'Space Mono',monospace;font-size:0.44rem;color:#505058;
+            display:block;margin-top:4px;">${timeAgo(echo.timestamp)}</span>
+        </div>
+        <span style="font-family:'Space Mono',monospace;font-size:0.44rem;font-weight:700;
+          padding:2px 7px;border-radius:20px;text-transform:uppercase;flex-shrink:0;
+          ${echoStatus === 'hidden'
+            ? 'background:rgba(112,112,120,0.1);color:#707078;border:1px solid rgba(112,112,120,0.3);'
+            : 'background:rgba(74,222,128,0.08);color:#4ade80;border:1px solid rgba(74,222,128,0.25);'}">
+          ${echoStatus}
+        </span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${echoStatus !== 'hidden'
+          ? `<button onclick="adminHideEcho('${postId}','${echo.id}')"   style="${adminActionBtnStyle('#707078')}">Hide</button>`
+          : `<button onclick="adminUnhideEcho('${postId}','${echo.id}')" style="${adminActionBtnStyle('#4ade80')}">Unhide</button>`}
+        <button onclick="adminDeleteEcho('${postId}','${echo.id}')" style="${adminActionBtnStyle('#ff6464')}">Delete</button>
+      </div>
+    `;
+    wrap.appendChild(echoCard);
   });
 }
 
@@ -611,7 +699,7 @@ function adminActionBtnStyle(color) {
     background:${color}14;border:1px solid ${color}40;color:${color};transition:all 0.18s;`;
 }
 
-// ── Moderation actions ──
+// ── Post moderation actions ──
 async function adminHidePost(postId) {
   if (!isFirebaseEnabled) return;
   try { await postsRef.child(postId).update({ status: 'hidden' }); showToast('Post hidden'); renderAdminPosts(); renderFeed(); }
@@ -635,4 +723,31 @@ async function adminClearFlags(postId) {
   if (!isFirebaseEnabled) return;
   try { await postsRef.child(postId).update({ flagCount: 0, status: 'active' }); showToast('Flags cleared'); renderAdminPosts(); }
   catch (e) { showToast('Error: ' + e.message); }
+}
+
+// ── Echo (reply) moderation actions ──
+async function adminHideEcho(postId, echoId) {
+  if (!isFirebaseEnabled) return;
+  try {
+    await postsRef.child(postId).child('echoes').child(echoId).update({ status: 'hidden' });
+    showToast('Echo hidden');
+    renderAdminPosts();
+  } catch (e) { showToast('Error: ' + e.message); }
+}
+async function adminUnhideEcho(postId, echoId) {
+  if (!isFirebaseEnabled) return;
+  try {
+    await postsRef.child(postId).child('echoes').child(echoId).update({ status: 'active' });
+    showToast('Echo restored');
+    renderAdminPosts();
+  } catch (e) { showToast('Error: ' + e.message); }
+}
+async function adminDeleteEcho(postId, echoId) {
+  if (!window.confirm('Permanently delete this echo? This cannot be undone.')) return;
+  if (!isFirebaseEnabled) return;
+  try {
+    await postsRef.child(postId).child('echoes').child(echoId).remove();
+    showToast('Echo deleted');
+    renderAdminPosts();
+  } catch (e) { showToast('Error: ' + e.message); }
 }
