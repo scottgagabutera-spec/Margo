@@ -62,7 +62,9 @@ function injectDuetStyles() {
       max-height:96dvh;
       box-shadow:0 -12px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(232,197,71,0.06) inset;
       animation:dsSlideUp 0.42s cubic-bezier(0.16,1,0.3,1);
+      scrollbar-width:none;
     }
+    #duetSheet::-webkit-scrollbar { display:none; }
     @media(min-width:560px) {
       #duetSheet {
         border-radius:24px; border-bottom:1px solid rgba(255,255,255,0.07);
