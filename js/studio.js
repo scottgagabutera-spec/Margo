@@ -1,3 +1,4 @@
+(function() {
 /* ============================================================
    MARGO — js/studio.js
    v5.6 — FINAL
@@ -818,4 +819,5 @@ window.addEventListener('resize', () => {
   document.querySelectorAll('.dock-tab').forEach(tab => {
     tab.onclick = () => _switchDockTab(tab.dataset.tab);
   });
+})();
 })();
