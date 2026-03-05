@@ -496,6 +496,288 @@ window.drawPosterPreview = function(ctx, W, H, post) {
 };
 
 /* ============================================================
+   DUET CARD RENDERER
+   Called by share-sheet when isDuet:true.
+   parentPost = original lyric post
+   echoPost   = the reply (has .lyric, .song, .artist, .emotion, .username)
+============================================================ */
+window.drawDuetPreview = function(ctx, W, H, parentPost, echoPost) {
+  if (!parentPost || !echoPost) return;
+  _renderDuetToCtx(ctx, W, H, parentPost, echoPost);
+};
+
+function _renderDuetToCtx(ctx, W, H, parent, echo) {
+  const pad    = W * 0.07;
+  const innerW = W - pad * 2;
+
+  const parentEmotion = parent.emotion || 'Nostalgia';
+  const echoEmotion   = echo.emotion   || 'Nostalgia';
+  const parentVibe = POSTER_VIBE_COLORS[parentEmotion] || '#E8C547';
+  const echoVibe   = POSTER_VIBE_COLORS[echoEmotion]   || '#E8C547';
+
+  const dividerY = H * 0.48;
+
+  /* ── Background — deep cinematic dark ── */
+  ctx.save();
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0,   '#0a0a0d');
+  bg.addColorStop(0.45,'#0d0b10');
+  bg.addColorStop(0.55,'#0b0d10');
+  bg.addColorStop(1,   '#080a0d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  /* ── Parent vibe glow — top left ── */
+  ctx.save();
+  const pg = ctx.createRadialGradient(W * 0.2, H * 0.18, 0, W * 0.2, H * 0.18, W * 0.65);
+  pg.addColorStop(0, parentVibe + '18');
+  pg.addColorStop(1, 'transparent');
+  ctx.fillStyle = pg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  /* ── Echo vibe glow — bottom right ── */
+  ctx.save();
+  const eg = ctx.createRadialGradient(W * 0.8, H * 0.82, 0, W * 0.8, H * 0.82, W * 0.65);
+  eg.addColorStop(0, echoVibe + '1a');
+  eg.addColorStop(1, 'transparent');
+  ctx.fillStyle = eg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  /* ── Subtle noise texture ── */
+  ctx.save();
+  ctx.globalAlpha = 0.018;
+  for (let y = 0; y < H; y += 4) {
+    for (let x = 0; x < W; x += 4) {
+      const v = Math.random() * 255 | 0;
+      ctx.fillStyle = `rgb(${v},${v},${v})`;
+      ctx.fillRect(x, y, 4, 4);
+    }
+  }
+  ctx.restore();
+
+  /* ── Top accent line in parent vibe color ── */
+  ctx.save();
+  const topLine = ctx.createLinearGradient(pad, 0, W - pad, 0);
+  topLine.addColorStop(0, 'transparent');
+  topLine.addColorStop(0.5, parentVibe);
+  topLine.addColorStop(1, 'transparent');
+  ctx.globalAlpha = 0.6;
+  ctx.fillStyle   = topLine;
+  ctx.fillRect(pad, 0, innerW, 2);
+  ctx.restore();
+
+  /* ── Bottom accent line in echo vibe color ── */
+  ctx.save();
+  const botLine = ctx.createLinearGradient(pad, 0, W - pad, 0);
+  botLine.addColorStop(0, 'transparent');
+  botLine.addColorStop(0.5, echoVibe);
+  botLine.addColorStop(1, 'transparent');
+  ctx.globalAlpha = 0.6;
+  ctx.fillStyle   = botLine;
+  ctx.fillRect(pad, H - 2, innerW, 2);
+  ctx.restore();
+
+  /* ── MARGO wordmark ── */
+  const margoSz = Math.max(20, W * 0.048);
+  ctx.save();
+  ctx.font         = `800 ${margoSz}px 'Syne',sans-serif`;
+  ctx.fillStyle    = '#E8C547';
+  ctx.globalAlpha  = 0.9;
+  ctx.textBaseline = 'top';
+  ctx.textAlign    = 'left';
+  ctx.fillText('MARGO', pad, pad * 0.72);
+  ctx.restore();
+
+  /* ══ PARENT LYRIC — top half ══ */
+  const parentLyric = parent.text || '';
+  const parentK     = parent.knowledge || {};
+  const topZoneH    = dividerY - pad * 2.5;
+  const topZoneY    = pad * 2.2;
+
+  let parentFS = Math.min(W * 0.058, topZoneH * 0.28);
+  ctx.font = `italic 600 ${parentFS}px 'DM Serif Display',serif`;
+  let parentLines = _posterWrap(ctx, parentLyric, innerW * 0.88);
+  if (parentLines.length > 4) {
+    parentFS = Math.max(W * 0.032, parentFS * (4 / parentLines.length));
+    ctx.font = `italic 600 ${parentFS}px 'DM Serif Display',serif`;
+    parentLines = _posterWrap(ctx, parentLyric, innerW * 0.88);
+  }
+  const parentLH  = parentFS * 1.5;
+  const parentBlockH = parentLines.length * parentLH;
+  const parentStartY = topZoneY + (topZoneH - parentBlockH) / 2;
+
+  ctx.save();
+  ctx.textBaseline = 'top';
+  ctx.textAlign    = 'center';
+  ctx.shadowColor  = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur   = 20;
+  parentLines.forEach((line, i) => {
+    ctx.globalAlpha = 0.62 - i * 0.03;
+    ctx.fillStyle   = '#ffffff';
+    ctx.fillText(line, W / 2, parentStartY + i * parentLH);
+  });
+  ctx.restore();
+
+  /* Parent song attribution */
+  if (parentK.song || parentK.artist) {
+    const attrFS = Math.max(11, W * 0.022);
+    ctx.save();
+    ctx.font         = `700 ${attrFS}px 'Space Mono',monospace`;
+    ctx.fillStyle    = parentVibe;
+    ctx.globalAlpha  = 0.5;
+    ctx.textBaseline = 'bottom';
+    ctx.textAlign    = 'center';
+    let attrStr = [parentK.song, parentK.artist].filter(Boolean).join(' — ');
+    while (ctx.measureText(attrStr).width > innerW * 0.8 && attrStr.length > 4)
+      attrStr = attrStr.slice(0, -4) + '…';
+    ctx.fillText(attrStr, W / 2, dividerY - W * 0.04);
+    ctx.restore();
+  }
+
+  /* ══ DIVIDER — the hero moment ══ */
+  const divText   = `ECHOED BY  @${(echo.username || 'anonymous').toUpperCase()}`;
+  const divFS     = Math.max(13, W * 0.024);
+  ctx.font = `700 ${divFS}px 'Space Mono',monospace`;
+  const divTW  = ctx.measureText(divText).width;
+  const pillPH = W * 0.032;
+  const pillW  = divTW + pillPH * 2;
+  const pillH  = divFS * 1.9;
+  const pillX  = W / 2 - pillW / 2;
+  const pillY  = dividerY - pillH / 2;
+  const pillR  = pillH / 2;
+
+  /* Divider lines */
+  ctx.save();
+  const lineGap = pillW / 2 + W * 0.02;
+  const lineY   = dividerY;
+
+  const leftLine = ctx.createLinearGradient(pad, lineY, W / 2 - lineGap, lineY);
+  leftLine.addColorStop(0, 'transparent');
+  leftLine.addColorStop(1, 'rgba(255,255,255,0.15)');
+  ctx.globalAlpha = 1;
+  ctx.fillStyle   = leftLine;
+  ctx.fillRect(pad, lineY - 0.75, W / 2 - lineGap - pad, 1.5);
+
+  const rightLine = ctx.createLinearGradient(W / 2 + lineGap, lineY, W - pad, lineY);
+  rightLine.addColorStop(0, 'rgba(255,255,255,0.15)');
+  rightLine.addColorStop(1, 'transparent');
+  ctx.fillStyle = rightLine;
+  ctx.fillRect(W / 2 + lineGap, lineY - 0.75, W - pad - (W / 2 + lineGap), 1.5);
+  ctx.restore();
+
+  /* Pill background */
+  ctx.save();
+  ctx.globalAlpha = 1;
+  /* Gold border glow */
+  ctx.shadowColor = '#E8C547';
+  ctx.shadowBlur  = 18;
+  ctx.strokeStyle = 'rgba(232,197,71,0.55)';
+  ctx.lineWidth   = 1.5;
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(pillX, pillY, pillW, pillH, pillR) : ctx.rect(pillX, pillY, pillW, pillH);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  /* Pill fill */
+  const pillFill = ctx.createLinearGradient(pillX, pillY, pillX, pillY + pillH);
+  pillFill.addColorStop(0, 'rgba(232,197,71,0.12)');
+  pillFill.addColorStop(1, 'rgba(232,197,71,0.06)');
+  ctx.fillStyle = pillFill;
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(pillX, pillY, pillW, pillH, pillR) : ctx.rect(pillX, pillY, pillW, pillH);
+  ctx.fill();
+
+  /* Pill text */
+  ctx.font         = `700 ${divFS}px 'Space Mono',monospace`;
+  ctx.fillStyle    = '#E8C547';
+  ctx.globalAlpha  = 0.92;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign    = 'center';
+  ctx.fillText(divText, W / 2, dividerY);
+  ctx.restore();
+
+  /* ══ ECHO LYRIC — bottom half ══ */
+  const echoLyric  = echo.lyric || '';
+  const botZoneY   = dividerY + pillH / 2 + W * 0.03;
+  const botZoneH   = H * 0.85 - botZoneY;
+
+  let echoFS = Math.min(W * 0.068, botZoneH * 0.28);
+  ctx.font = `italic 700 ${echoFS}px 'DM Serif Display',serif`;
+  let echoLines = _posterWrap(ctx, echoLyric, innerW * 0.88);
+  if (echoLines.length > 4) {
+    echoFS = Math.max(W * 0.036, echoFS * (4 / echoLines.length));
+    ctx.font = `italic 700 ${echoFS}px 'DM Serif Display',serif`;
+    echoLines = _posterWrap(ctx, echoLyric, innerW * 0.88);
+  }
+  const echoLH     = echoFS * 1.5;
+  const echoBlockH = echoLines.length * echoLH;
+  const echoStartY = botZoneY + (botZoneH - echoBlockH) / 2;
+
+  ctx.save();
+  ctx.textBaseline = 'top';
+  ctx.textAlign    = 'center';
+  ctx.shadowColor  = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur   = 24;
+  echoLines.forEach((line, i) => {
+    ctx.globalAlpha = 1 - i * 0.02;
+    ctx.fillStyle   = '#ffffff';
+    ctx.fillText(line, W / 2, echoStartY + i * echoLH);
+  });
+  ctx.restore();
+
+  /* Echo song attribution */
+  if (echo.song || echo.artist) {
+    const eAttrFS = Math.max(11, W * 0.022);
+    ctx.save();
+    ctx.font         = `700 ${eAttrFS}px 'Space Mono',monospace`;
+    ctx.fillStyle    = '#E8C547';
+    ctx.globalAlpha  = 0.85;
+    ctx.textBaseline = 'bottom';
+    ctx.textAlign    = 'center';
+    let eStr = [echo.song, echo.artist].filter(Boolean).join(' — ');
+    while (ctx.measureText(eStr).width > innerW * 0.8 && eStr.length > 4)
+      eStr = eStr.slice(0, -4) + '…';
+    ctx.fillText(eStr, W / 2, H * 0.9);
+    ctx.restore();
+
+    const eArtistFS = Math.max(10, W * 0.018);
+    ctx.save();
+    ctx.font         = `400 ${eArtistFS}px 'Space Mono',monospace`;
+    ctx.fillStyle    = 'rgba(255,255,255,0.38)';
+    ctx.globalAlpha  = 1;
+    ctx.textBaseline = 'bottom';
+    ctx.textAlign    = 'center';
+    ctx.fillText(echo.artist || '', W / 2, H * 0.9 + eAttrFS * 1.3);
+    ctx.restore();
+  }
+
+  /* ── trymargo.com watermark pill ── */
+  const waterFS = Math.max(11, W * 0.022);
+  ctx.save();
+  ctx.font = `700 ${waterFS}px 'Space Mono',monospace`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign    = 'center';
+  const wText = 'trymargo.com';
+  const wW    = ctx.measureText(wText).width + W * 0.05;
+  const wH    = waterFS * 1.7;
+  const wX    = W / 2 - wW / 2;
+  const wY    = H - pad * 0.9 - wH / 2;
+  const wR    = wH / 2;
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle   = '#ffffff';
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(wX, wY, wW, wH, wR) : ctx.rect(wX, wY, wW, wH);
+  ctx.fill();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle   = '#ffffff';
+  ctx.fillText(wText, W / 2, wY + wH / 2);
+  ctx.restore();
+}
+
+/* ============================================================
    EXPORT
 ============================================================ */
 async function _posterExport() {
