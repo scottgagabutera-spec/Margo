@@ -210,14 +210,12 @@ function ssStartPreview(canvas) {
   canvas.height = Math.round(size * dpr);
 
   if (SS.activeTab === 'poster') {
-    /* ── Poster preview — single or duet ── */
+    /* ── Poster preview — uses window.drawPosterPreview exposed by poster.js ── */
     const ctx = canvas.getContext('2d');
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
     document.fonts.ready.then(() => {
-      if (SS.isDuet && SS.echoPost && typeof window.drawDuetPreview === 'function') {
-        window.drawDuetPreview(ctx, size, size, SS.post, SS.echoPost);
-      } else if (typeof window.drawPosterPreview === 'function') {
+      if (typeof window.drawPosterPreview === 'function') {
         window.drawPosterPreview(ctx, size, size, post);
       } else {
         ssDrawFallback(ctx, size, size, post);
@@ -561,10 +559,8 @@ async function ssGeneratePoster() {
     const ctx = offscreen.getContext('2d');
     await document.fonts.ready;
 
-    /* Use duet renderer if isDuet, otherwise single poster */
-    if (SS.isDuet && SS.echoPost && typeof window.drawDuetPreview === 'function') {
-      window.drawDuetPreview(ctx, 1080, 1080, SS.post, SS.echoPost);
-    } else if (typeof window.drawPosterPreview === 'function') {
+    /* Use window.drawPosterPreview — poster.js public function */
+    if (typeof window.drawPosterPreview === 'function') {
       window.drawPosterPreview(ctx, 1080, 1080, SS.post);
     } else {
       ssDrawFallback(ctx, 1080, 1080, SS.post);
