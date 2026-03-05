@@ -1,9 +1,9 @@
 /* ============================================================
    MARGO — js/feed.js
-   v6.8 — Card lyric font corrected in injectFeedStyles:
-   • DM Sans 500 1.15rem (was Instrument Serif 400 1rem — was overriding style.css)
-   • Card height 300px (was 268px) to give text breathing room
-   • letter-spacing -0.015em for crispness
+   v6.9 — Card lyric font switched to Instrument Serif italic
+   (was DM Sans 500 — reverted to match prototype editorial feel)
+   Size 1.15rem, card height 300px, letter-spacing -0.015em retained.
+   All other logic identical to v6.8.
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -123,15 +123,15 @@ function injectFeedStyles() {
       height:22px; margin-bottom:10px;
     }
     #feedList .card-lyric {
-      font-family:'DM Sans',sans-serif !important;
-      font-style:normal !important;
+      font-family:'Instrument Serif', serif !important;
+      font-style:italic !important;
+      font-weight:400 !important;
       overflow:hidden !important;
       display:-webkit-box !important;
       -webkit-line-clamp:3 !important;
       -webkit-box-orient:vertical !important;
       flex-shrink:0 !important; line-height:1.5 !important;
       margin-bottom:8px !important;
-      font-weight:500 !important;
       font-size:1.15rem !important;
       letter-spacing:-0.015em !important;
     }
@@ -625,7 +625,6 @@ function renderFeed() {
     card.style.setProperty('--e-border',      ecfg.border);
     card.style.background = ecfg.cardBg;
 
-    /* v6.7 — rank badge only when sort is active, no class collision with vibe tag */
     let rankBadge = '';
     if      (currentSort==='fresh' && isNewPost(post))  rankBadge='<span class="card-new-badge">New</span>';
     else if (currentSort==='hot'   && isHotPost(post))  rankBadge='<span class="card-hot-badge">Trending</span>';
@@ -654,7 +653,6 @@ function renderFeed() {
       </div>`;
     }
 
-    /* vibe tag top-right, rank badge bottom-left — no collision */
     card.innerHTML = `
       ${rankBadge}
       <div class="card-top">
