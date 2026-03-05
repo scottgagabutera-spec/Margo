@@ -776,64 +776,17 @@ async function exportPoster() {
 
 /* ══════════════════════════════════════════════════════════
    STUDIO CHOOSER
+   Redirects to share sheet — the chooser UI is in share-sheet.js
 ══════════════════════════════════════════════════════════ */
 window.openStudioChooser = function(post) {
   if (post) { studioPost = post; window.currentPost = post; }
-  const chooser = document.getElementById('studioChooser');
-  if (!chooser) { _buildStudioChooser(); return; }
-  chooser.classList.remove('hidden');
+  // Delegate to share sheet — never build our own chooser UI
+  if (typeof window.openShareSheet === 'function') {
+    window.openShareSheet(studioPost || window.currentPost);
+  }
 };
 window.closeStudioChooser = function() {
-  document.getElementById('studioChooser')?.classList.add('hidden');
-};
-
-function _buildStudioChooser() {
-  if (document.getElementById('studioChooser')) {
-    document.getElementById('studioChooser').classList.remove('hidden');
-    return;
-  }
-  const el = document.createElement('div');
-  el.id = 'studioChooser';
-  el.innerHTML = `
-    <div class="sc-inner">
-      <div class="sc-header">
-        <div class="sc-title">Make It Visual</div>
-        <div class="sc-sub">Choose how you want to share this lyric</div>
-      </div>
-      <div class="sc-cards">
-        <div class="sc-card" id="scChooseImage">
-          <div class="sc-card-icon">🖼</div>
-          <div class="sc-card-title">Poster</div>
-          <div class="sc-card-desc">Still image for Instagram, WhatsApp, X</div>
-          <span class="sc-card-tag">PNG</span>
-        </div>
-        <div class="sc-card" id="scChooseGif">
-          <div class="sc-card-icon">✨</div>
-          <div class="sc-card-title">Animated GIF</div>
-          <div class="sc-card-desc">Cinematic motion poster that moves</div>
-          <span class="sc-card-tag">GIF</span>
-        </div>
-      </div>
-      <button class="sc-back" id="scBackBtn">Skip for now</button>
-    </div>
-  `;
-  document.body.appendChild(el);
-  document.getElementById('scChooseImage').onclick = () => { window.closeStudioChooser(); window.openStudio(studioPost || window.currentPost); };
-  document.getElementById('scChooseGif').onclick   = () => { window.closeStudioChooser(); if (typeof openGifStudio === 'function') openGifStudio(studioPost || window.currentPost); };
-  document.getElementById('scBackBtn').onclick     = () => window.closeStudioChooser();
-}
-
-/* ══════════════════════════════════════════════════════════
-   SHARE SHEET INTEGRATION
-══════════════════════════════════════════════════════════ */
-window.openShareSheet = window.openShareSheet || function(post, opts) {
-  opts = opts || {};
-  studioPost = post; window.currentPost = post;
-  if (opts.isDuet && typeof openDuetStudio === 'function') {
-    openDuetStudio(post, opts.echoPost);
-    return;
-  }
-  window.openStudioChooser(post);
+  // No-op — share sheet handles its own close
 };
 
 /* ══════════════════════════════════════════════════════════
