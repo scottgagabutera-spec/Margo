@@ -714,7 +714,7 @@ mark.search-highlight {
 /* ── v6.8 CHANGE: font-size 1.28rem, line-height 1.45, padding-left 10px ── */
 .card-lyric {
   font-family: 'Instrument Serif', serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   line-height: 1.45;
   color: var(--text);
