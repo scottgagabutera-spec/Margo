@@ -1,12 +1,8 @@
 /*
-  MARGO — style.css v6.3
-  v6.3 — Visual parity with prototype:
-          • Headline massively larger (clamp 4.2→8.5rem / accent 3.6→7.8rem)
-          • Hero max-width widened to 820px so headline fills viewport
-          • Lyric stream cards wider (220–300px) with bigger text (0.92rem)
-          • Stats bar numbers larger (2.4rem / 1.5rem for named stats)
-          • Feed card lyric text bumped to 1.08rem
-          Badge collision fix and .btn-ghost from v6.2 retained.
+  MARGO — style.css v6.4
+  v6.4 — Logo wordmark font corrected to Syne 800 (brand spec).
+          .nav-logo-text and .feed-logo now use Syne 800 at 4px letter-spacing.
+          All v6.3 visual changes retained.
 */
 
 *, *::before, *::after {
@@ -185,10 +181,10 @@ body::before {
 }
 
 .nav-logo-text {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 1.2rem;
-  letter-spacing: 6px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 4px;
   color: var(--gold);
   text-transform: uppercase;
   line-height: 1;
@@ -470,10 +466,10 @@ body::before {
 .feed-logo-wrap { display: flex; align-items: center; gap: 9px; }
 
 .feed-logo {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 1.1rem;
-  letter-spacing: 5px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 4px;
   color: var(--gold);
   text-transform: uppercase;
   line-height: 1;
