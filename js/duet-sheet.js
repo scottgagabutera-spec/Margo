@@ -1,10 +1,10 @@
 /* ============================================================
    MARGO — js/duet-sheet.js
-   v2.0 — Duet Conversation Card
-   Triggered by openDuetSheet(parentPost, echoPost) from echoes.js
-   Shows conversation view (WhatsApp-style) + card view with
-   live motion/color/font editing panel.
-   Completely self-contained — touches no other file at runtime.
+   v2.1 — Conversation motion animations added:
+          • Motion styles (Fade Up, Glitch, Shimmer etc.) now
+            animate .ds-bubble-lyric elements in Conversation
+            view as well as .ds-anim elements in Card view.
+          • _dsClearAnims, _dsPlayMotion, _dsShowView updated.
    ============================================================ */
 
 (function () {
@@ -531,7 +531,7 @@ function mountDuetSheet() {
     document.querySelectorAll('.ds-motion-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     DS.motion = btn.dataset.motion;
-    _dsShowView('card');
+    _dsPlayMotion();
   });
 
   /* Speed buttons */
@@ -541,7 +541,7 @@ function mountDuetSheet() {
     document.querySelectorAll('.ds-speed-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     DS.dur = parseFloat(btn.dataset.dur);
-    _dsShowView('card');
+    _dsPlayMotion();
   });
 
   /* Color swatches */
@@ -596,7 +596,6 @@ function openDuetSheet(parentPost, echoPost) {
   const backdrop = document.getElementById('duetBackdrop');
   backdrop.classList.remove('ds-hidden');
   document.body.classList.add('ds-modal-open');
-  // Save scroll position so we can restore it on close
   DS._savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
 }
 
@@ -605,7 +604,6 @@ function closeDuetSheet() {
   if (backdrop) backdrop.classList.add('ds-hidden');
   document.body.classList.remove('ds-modal-open');
   _dsClearAnims();
-  // Restore scroll position so user lands back where they were
   const savedY = DS._savedScrollY || 0;
   requestAnimationFrame(() => {
     window.scrollTo({ top: savedY, behavior: 'instant' });
@@ -630,12 +628,10 @@ function _dsPopulateConvo() {
   const eSong  = e.song    || '—';
   const eArtist= e.artist  || '';
 
-  /* Set CSS custom properties for vibe colours */
   const sheet = document.getElementById('duetSheet');
   sheet.style.setProperty('--ds-vibe-left',  pVibe);
   sheet.style.setProperty('--ds-vibe-right', eVibe);
 
-  /* Conversation bubbles */
   document.getElementById('dsConvoBubbles').innerHTML = `
     <div class="ds-bubble original">
       <div class="ds-bubble-user"><span class="ds-udot"></span>${pUser}</div>
@@ -672,7 +668,6 @@ function _dsPopulateConvo() {
     </div>
   `;
 
-  /* Song strip */
   document.getElementById('dsSongStrip').innerHTML = `
     <span class="ds-strip-label">Songs</span>
     <div class="ds-strip-songs">
@@ -715,7 +710,6 @@ function _dsPopulateCard() {
   if (divPill)  divPill.textContent  = 'LYRIC BACK ↩ ' + eUser;
 }
 
-/* ── Update card fonts live ── */
 function _dsUpdateCardFonts() {
   ['dsCLyricTop','dsCLyricBot'].forEach(id => {
     const el = document.getElementById(id);
@@ -723,10 +717,16 @@ function _dsUpdateCardFonts() {
     el.style.fontFamily = `'${DS.fontFamily}', serif`;
     el.style.fontStyle  = DS.fontItalic ? 'italic' : 'normal';
   });
+  /* Also update conversation bubble lyrics */
+  document.querySelectorAll('.ds-bubble-lyric').forEach(el => {
+    el.style.fontFamily = `'${DS.fontFamily}', serif`;
+    el.style.fontStyle  = DS.fontItalic ? 'italic' : 'normal';
+  });
 }
 
 /* ══════════════════════════════════════════════════════════
    VIEW TOGGLE
+   v2.1 — motion now plays on both convo and card views
 ══════════════════════════════════════════════════════════ */
 function _dsShowView(v) {
   const convo = document.getElementById('dsViewConvo');
@@ -739,8 +739,9 @@ function _dsShowView(v) {
   tc.classList.toggle('active', v === 'convo');
   tk.classList.toggle('active', v === 'card');
 
-  if (v === 'card') _dsPlayMotion();
-  else              _dsClearAnims();
+  /* Play motion on both views — poster mode skips animation */
+  if (v === 'card' || v === 'convo') _dsPlayMotion();
+  else                               _dsClearAnims();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -756,7 +757,6 @@ function _dsSwitchFormat(fmt) {
   const motionTab = document.querySelector('[data-opt="motion"]');
   if (fmt === 'poster') {
     if (motionTab) motionTab.style.display = 'none';
-    /* If motion tab was active, switch to color */
     const activeOpt = document.querySelector('.ds-option-tab.active');
     if (activeOpt && activeOpt.dataset.opt === 'motion') {
       document.querySelectorAll('.ds-option-tab').forEach(b => b.classList.remove('active'));
@@ -768,15 +768,16 @@ function _dsSwitchFormat(fmt) {
     _dsClearAnims();
   } else {
     if (motionTab) motionTab.style.display = '';
-    if (document.getElementById('dsViewCard').style.display !== 'none') _dsPlayMotion();
+    _dsPlayMotion();
   }
 }
 
 /* ══════════════════════════════════════════════════════════
    MOTION ANIMATIONS
+   v2.1 — targets both .ds-anim (card) and .ds-bubble-lyric (convo)
 ══════════════════════════════════════════════════════════ */
 function _dsClearAnims() {
-  document.querySelectorAll('.ds-anim').forEach(el => {
+  document.querySelectorAll('.ds-anim, .ds-bubble-lyric').forEach(el => {
     el.style.animation              = '';
     el.style.opacity                = '';
     el.style.transform              = '';
@@ -800,12 +801,14 @@ function _dsPlayMotion() {
   /* Force reflow so cleared styles register before re-applying */
   void document.getElementById('dsCanvasContent').offsetHeight;
 
-  const els  = document.querySelectorAll('.ds-anim');
+  /* Target both card elements and conversation bubble lyrics */
+  const els  = document.querySelectorAll('.ds-anim, .ds-bubble-lyric');
   const dur  = DS.dur;
   const name = DS.motion;
 
-  els.forEach(el => {
-    const i     = parseInt(el.getAttribute('data-i') || '0');
+  els.forEach((el, idx) => {
+    /* Card elements use data-i for staggered delay; bubble lyrics use their index */
+    const i     = parseInt(el.getAttribute('data-i') ?? idx);
     const delay = i * 0.14;
 
     switch (name) {
@@ -854,11 +857,9 @@ function _dsPlayMotion() {
    ACTIONS
 ══════════════════════════════════════════════════════════ */
 function _dsRoute(tab) {
-  // Download directly from duet sheet — no routing to share-sheet
   if (tab === 'poster') {
     _dsDownload();
   } else {
-    // GIF: try gif export if available, else fallback to PNG download
     if (typeof gsExportForShareSheet === 'function') {
       if (typeof showToast === 'function') showToast('Preparing GIF…');
       window.currentPost = DS.parentPost;
@@ -910,7 +911,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   const eVibe    = DS_VIBE[eEmotion] || '#E8C547';
   const divY     = H * 0.495;
 
-  /* Background */
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0,    '#090810');
   bg.addColorStop(0.48, '#0d0b12');
@@ -919,7 +919,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  /* Vibe glows */
   ctx.save();
   const pg = ctx.createRadialGradient(W * 0.15, H * 0.15, 0, W * 0.15, H * 0.15, W * 0.7);
   pg.addColorStop(0, pVibe + '22'); pg.addColorStop(1, 'transparent');
@@ -932,7 +931,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   ctx.fillStyle = eg; ctx.fillRect(0, 0, W, H);
   ctx.restore();
 
-  /* Noise */
   ctx.save();
   ctx.globalAlpha = 0.016;
   for (let y = 0; y < H; y += 4) {
@@ -944,7 +942,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   }
   ctx.restore();
 
-  /* Top/bottom accent lines */
   ctx.save();
   const tl = ctx.createLinearGradient(0, 0, W, 0);
   tl.addColorStop(0, 'transparent'); tl.addColorStop(0.5, pVibe); tl.addColorStop(1, 'transparent');
@@ -954,7 +951,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   ctx.fillStyle = bl; ctx.fillRect(0, H - 2, W, 2);
   ctx.restore();
 
-  /* MARGO wordmark */
   const mSz = Math.max(14, W * 0.046);
   ctx.save();
   ctx.font = `800 ${mSz}px 'Syne',sans-serif`;
@@ -963,7 +959,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   ctx.fillText('MARGO', pad, pad * 0.65);
   ctx.restore();
 
-  /* Parent lyric — top zone */
   const topZoneTop = pad * 2;
   const topZoneBot = divY - W * 0.05;
   const topH = topZoneBot - topZoneTop;
@@ -990,7 +985,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   });
   ctx.restore();
 
-  /* Parent attribution */
   const pk = parent.knowledge || {};
   const pSongStr = pk.song || parent.song || '';
   if (pSongStr) {
@@ -1006,7 +1000,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
     ctx.restore();
   }
 
-  /* Divider pill — "LYRIC BACK ↩ @USER" */
   const dText = `LYRIC BACK ↩  @${(echo.username || 'anonymous').toUpperCase()}`;
   const dFS   = Math.max(10, W * 0.021);
   ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
@@ -1048,7 +1041,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   ctx.fillText(dText, W / 2, divY);
   ctx.restore();
 
-  /* Echo lyric — bottom zone */
   const botZoneTop = divY + pH / 2 + W * 0.025;
   const botZoneBot = H * 0.88;
   const botH  = botZoneBot - botZoneTop;
@@ -1075,7 +1067,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   });
   ctx.restore();
 
-  /* Echo attribution */
   if (echo.song) {
     const eaFS = Math.max(9, W * 0.019);
     ctx.save();
@@ -1089,7 +1080,6 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
     ctx.restore();
   }
 
-  /* Watermark */
   const wFS = Math.max(9, W * 0.02);
   ctx.save();
   ctx.font = `700 ${wFS}px 'Space Mono',monospace`;
