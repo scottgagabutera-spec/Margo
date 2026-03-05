@@ -1,9 +1,9 @@
 /*
-  MARGO — style.css v6.6
-  v6.6 — Lyric font size bumped to 1.15rem (was 1rem), line-height 1.5,
-          letter-spacing -0.015em. DM Sans weight 500 retained.
-          Card height adjusted to 94px to accommodate larger text.
-          All v6.5 changes retained.
+  MARGO — style.css v6.7
+  v6.7 — card-lyric font switched to Instrument Serif italic
+          (was DM Sans 500 — reverted to match prototype editorial feel)
+          Size 1.15rem, height 94px, letter-spacing -0.015em retained.
+          All other rules identical to v6.6.
 */
 
 *, *::before, *::after {
@@ -712,15 +712,16 @@ mark.search-highlight {
 }
 .card-mode-badge { display: none; }
 
+/* ── v6.7 CHANGE: Instrument Serif italic (was DM Sans 500 normal) ── */
 .card-lyric {
-  font-family: var(--font-ui);
-  font-style: normal;
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-weight: 400;
   line-height: 1.5;
   color: var(--text);
   height: 94px; overflow: hidden;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
   flex-shrink: 0; margin-bottom: 10px;
-  font-weight: 500;
   padding-left: 8px;
   font-size: 1.15rem;
   letter-spacing: -0.015em;
@@ -1105,9 +1106,9 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
 }
 .guess-field:focus { outline: none; border-color: var(--gold-border); box-shadow: 0 0 0 3px rgba(232,197,71,0.07); }
 .lyric-display {
-  font-family: var(--font-ui);
-  font-style: normal;
-  font-weight: 500;
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-weight: 400;
   font-size: 0.97rem; line-height: 1.6; text-align: center;
   padding: 14px; background: var(--bg); border: 1px solid var(--border);
   border-radius: 11px; color: var(--text); max-height: 110px; overflow-y: auto;
