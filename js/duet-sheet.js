@@ -29,6 +29,18 @@ const DS_VIBE = {
   SendIt:'#00e5c8', LetOut:'#c864ff',
 };
 
+/* ── Color theme map: bg → { gradient, textColor, isLight } ── */
+const DS_THEMES = {
+  '#07060E': { grad:'linear-gradient(135deg,#0d0d0d,#1a1410)',  text:'#ffffff', isLight:false },
+  '#0e0018': { grad:'linear-gradient(135deg,#1a0033,#2d1b4e)',  text:'#ffffff', isLight:false },
+  '#04090f': { grad:'linear-gradient(135deg,#0a1420,#142838)',  text:'#ffffff', isLight:false },
+  '#0f0404': { grad:'linear-gradient(135deg,#1a0a0a,#2d1416)',  text:'#ffffff', isLight:false },
+  '#020f06': { grad:'linear-gradient(135deg,#051a0d,#0d2e1a)',  text:'#ffffff', isLight:false },
+  '#0f0508': { grad:'linear-gradient(135deg,#1a0d0f,#2d1a1f)',  text:'#ffffff', isLight:false },
+  '#080808': { grad:'linear-gradient(135deg,#000000,#111111)',   text:'#ffffff', isLight:false },
+  '#150520': { grad:'linear-gradient(135deg,#2d0a3d,#6b1fa8)',   text:'#ffffff', isLight:false },
+};
+
 /* ══════════════════════════════════════════════════════════
    STYLES
 ══════════════════════════════════════════════════════════ */
@@ -550,7 +562,7 @@ function mountDuetSheet() {
       document.querySelectorAll('.ds-color-swatch').forEach(s => s.classList.remove('active'));
       sw.classList.add('active');
       DS.bgColor = sw.dataset.bg;
-      document.getElementById('dsCanvasBg').style.background = DS.bgColor;
+      _dsApplyTheme(DS.bgColor);
     };
   });
 
@@ -588,6 +600,7 @@ function openDuetSheet(parentPost, echoPost) {
   _dsPopulateCard();
 
   /* Start on conversation view */
+  _dsApplyTheme(DS.bgColor);
   _dsShowView('convo');
 
   /* Reset format tab */
@@ -708,6 +721,71 @@ function _dsPopulateCard() {
   if (attrTop)  attrTop.textContent  = [pSong, pArtist].filter(Boolean).join(' — ') + ' · ' + pUser;
   if (attrBot)  attrBot.textContent  = [eSong, eArtist].filter(Boolean).join(' — ') + ' · ' + eUser;
   if (divPill)  divPill.textContent  = 'LYRIC BACK ↩ ' + eUser;
+}
+
+/* ── Apply color theme to both card and conversation views ── */
+function _dsApplyTheme(bg) {
+  const theme = DS_THEMES[bg] || { grad: bg, text: '#ffffff', isLight: false };
+  const textColor = theme.text;
+  const isDark = !theme.isLight;
+
+  /* Card background */
+  const canvasBg = document.getElementById('dsCanvasBg');
+  if (canvasBg) canvasBg.style.background = theme.grad;
+
+  /* Card lyric text color */
+  document.querySelectorAll('.ds-c-lyric').forEach(el => {
+    el.style.color = textColor;
+  });
+  document.querySelectorAll('.ds-c-attr').forEach(el => {
+    el.style.color = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.5)';
+  });
+  const margo = document.querySelector('.ds-c-margo');
+  if (margo) margo.style.color = isDark ? '#E8C547' : '#0B0B0D';
+
+  /* Conversation bubble backgrounds and text */
+  document.querySelectorAll('.ds-bubble.original .ds-bubble-card').forEach(el => {
+    el.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+    el.style.border = isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)';
+  });
+  document.querySelectorAll('.ds-bubble.reply .ds-bubble-card').forEach(el => {
+    el.style.background = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)';
+    el.style.border = isDark ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.15)';
+  });
+  document.querySelectorAll('.ds-bubble-lyric').forEach(el => {
+    el.style.color = textColor;
+  });
+  document.querySelectorAll('.ds-bubble-song').forEach(el => {
+    el.style.color = textColor;
+  });
+  document.querySelectorAll('.ds-bubble-artist').forEach(el => {
+    el.style.color = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)';
+  });
+  document.querySelectorAll('.ds-bubble-meta').forEach(el => {
+    el.style.borderTopColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  });
+
+  /* Backdrop background */
+  const convo = document.getElementById('dsViewConvo');
+  if (convo) convo.style.background = theme.grad;
+  const card = document.getElementById('dsViewCard');
+  if (card) card.style.background = theme.grad;
+
+  /* Song strip */
+  const strip = document.getElementById('dsSongStrip');
+  if (strip) {
+    strip.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+    strip.style.border = isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.08)';
+  }
+  document.querySelectorAll('.ds-strip-song-name').forEach(el => {
+    el.style.color = isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)';
+  });
+  document.querySelectorAll('.ds-strip-song-artist').forEach(el => {
+    el.style.color = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+  });
+  document.querySelectorAll('.ds-strip-label').forEach(el => {
+    el.style.color = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.35)';
+  });
 }
 
 function _dsUpdateCardFonts() {
