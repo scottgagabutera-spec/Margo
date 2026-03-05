@@ -1,7 +1,8 @@
 /*
-  MARGO — style.css v6.1
-  v6.1 — Lyric stream full-width (matches prototype), stats bar bolder Bebas,
-          card tag moved to top-right. All other selectors/IDs identical to v6.0.
+  MARGO — style.css v6.2
+  v6.2 — Added .btn-ghost for secondary CTA (clearly subordinate to primary).
+          Fixed rank badge collision: badges now bottom-left, not top-right.
+          All other selectors/IDs identical to v6.1.
 */
 
 *, *::before, *::after {
@@ -20,7 +21,6 @@
   --gold-border:  rgba(232,197,71,0.28);
   --gold-glow:    rgba(232,197,71,0.12);
 
-  /* v6 — richer blacks */
   --bg:           #07060A;
   --surface:      #0F0E13;
   --surface-2:    #161420;
@@ -32,7 +32,6 @@
   --text-2:       #9A98A4;
   --text-3:       #555360;
 
-  /* v6 — unified type system */
   --font-display: 'Bebas Neue', sans-serif;
   --font-lyric:   'Instrument Serif', serif;
   --font-mono:    'Space Mono', monospace;
@@ -89,7 +88,6 @@ body::before {
   pointer-events: none; z-index: 0;
 }
 
-/* Ambient blobs — v6 slightly warmer */
 .ambient { position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0; }
 .ambient-1 {
   width: 600px; height: 280px;
@@ -114,7 +112,7 @@ body::before {
 #feed.active { display: flex; }
 
 /* ══════════════════════════════════════
-   NAV — v6: Bebas Neue logo
+   NAV
 ══════════════════════════════════════ */
 .nav {
   display: flex; justify-content: space-between; align-items: center;
@@ -182,7 +180,6 @@ body::before {
   100% { transform: scale(2.8);  opacity: 0; border-color: rgba(232,197,71,0);   }
 }
 
-/* v6 — Bebas Neue logo text */
 .nav-logo-text {
   font-family: var(--font-display);
   font-weight: 400;
@@ -212,7 +209,7 @@ body::before {
 .nav-pill:active { transform: scale(0.97); }
 
 /* ══════════════════════════════════════
-   HERO — v6: Bebas Neue + Instrument Serif
+   HERO
 ══════════════════════════════════════ */
 .hero {
   flex: 1; display: flex; flex-direction: column;
@@ -238,7 +235,6 @@ body::before {
 .status-text  { font-size: 0.72rem; color: var(--text-2); font-weight: 500; }
 .status-count { color: var(--text); font-weight: 700; }
 
-/* v6 headline: line-1 Bebas, line-2 Instrument Serif italic */
 .headline { margin-bottom: 10px; animation: fadeUp 0.6s ease 0.08s both; }
 .headline-word {
   display: block;
@@ -266,7 +262,7 @@ body::before {
   font-size: clamp(0.88rem, 2.4vw, 1.02rem);
   color: var(--text-2);
   font-weight: 400;
-  max-width: 290px;
+  max-width: 320px;
   line-height: 1.7;
   margin-bottom: 32px;
   animation: fadeUp 0.6s ease 0.22s both;
@@ -277,9 +273,9 @@ body::before {
   width: 100%; max-width: 290px;
   animation: fadeUp 0.6s ease 0.3s both;
   margin-bottom: 40px;
+  align-items: center;
 }
 
-/* v6 — primary CTA: Bebas Neue */
 .btn-primary {
   position: relative; overflow: hidden;
   padding: 17px 28px; border-radius: 50px;
@@ -290,6 +286,7 @@ body::before {
   letter-spacing: 3px;
   text-transform: uppercase;
   border: none; cursor: pointer;
+  width: 100%;
   transition: all 0.22s var(--ease-out);
   box-shadow: 0 6px 28px rgba(232,197,71,0.28), inset 0 1px 0 rgba(255,255,255,0.22);
 }
@@ -305,6 +302,23 @@ body::before {
   background: var(--gold-warm);
 }
 .btn-primary:active { transform: scale(0.97); }
+
+/* v6.2 — ghost secondary CTA: clearly subordinate, text-link feel */
+.btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 12px;
+  letter-spacing: 0.02em;
+  transition: color 0.2s ease;
+  text-decoration: none;
+}
+.btn-ghost:hover { color: var(--text-2); }
+.btn-ghost:active { opacity: 0.7; }
 
 .btn-secondary {
   padding: 15px 28px; border-radius: 50px;
@@ -325,7 +339,7 @@ body::before {
 .full-btn { width: 100%; border-radius: var(--radius); }
 
 /* ══════════════════════════════════════
-   LYRIC STREAM — v6.1: full-width like prototype
+   LYRIC STREAM
 ══════════════════════════════════════ */
 .lyric-stream {
   width: 100%; overflow: hidden;
@@ -348,7 +362,6 @@ body::before {
 @keyframes scrollL { from{transform:translateX(0)}    to{transform:translateX(-50%)} }
 @keyframes scrollR { from{transform:translateX(-50%)} to{transform:translateX(0)}    }
 
-/* v6.1 — cards match prototype: wider, edge-to-edge feel */
 .lyric-card {
   flex-shrink: 0;
   background: rgba(255,255,255,0.04);
@@ -385,7 +398,9 @@ body::before {
 .emotion-sendit     { background:rgba(0,229,200,0.12);   color:#00e5c8; }
 .emotion-letout     { background:rgba(200,100,255,0.12); color:#c864ff; }
 
-/* ── STATS BAR — v6.1: bolder, matches prototype ── */
+/* ══════════════════════════════════════
+   STATS BAR
+══════════════════════════════════════ */
 .stats-bar-wrap {
   position: relative; width: 100%; isolation: isolate;
 }
@@ -410,7 +425,6 @@ body::before {
 .stat-item:first-child { padding-left: 28px; }
 .stat-item:last-child  { padding-right: 28px; }
 
-/* v6.1 — bigger, bolder Bebas stats matching prototype */
 .stat-num {
   font-family: var(--font-display);
   font-size: 1.6rem; font-weight: 400;
@@ -439,8 +453,6 @@ body::before {
 /* ══════════════════════════════════════
    FEED — STICKY HEADER STACK
 ══════════════════════════════════════ */
-
-/* ── 1. HEADER ── */
 .feed-header {
   position: sticky; top: 0; z-index: 100; height: 56px;
   display: flex; justify-content: space-between; align-items: center;
@@ -453,7 +465,6 @@ body::before {
 
 .feed-logo-wrap { display: flex; align-items: center; gap: 9px; }
 
-/* v6 — Bebas Neue feed logo */
 .feed-logo {
   font-family: var(--font-display);
   font-weight: 400;
@@ -485,7 +496,6 @@ body::before {
 }
 .header-btn:active { transform: scale(0.96); }
 
-/* v6 — primary header btn: Bebas */
 .header-btn.primary {
   background: var(--gold); color: #07060A;
   border-color: transparent;
@@ -507,7 +517,7 @@ body::before {
   border-color: transparent;
 }
 
-/* ── 2. SEARCH ── */
+/* ── SEARCH ── */
 .feed-search-wrap {
   position: sticky; top: 56px; z-index: 99; height: 52px;
   width: 100%; max-width: none; left: 0; right: 0;
@@ -558,7 +568,7 @@ mark.search-highlight {
   border-radius: 2px; padding: 0 1px; font-style: inherit;
 }
 
-/* ── 3. VIBE TABS ── */
+/* ── VIBE TABS ── */
 .room-tabs-wrap {
   position: sticky; top: 108px; z-index: 98; height: 42px;
   width: 100%; max-width: none;
@@ -593,7 +603,7 @@ mark.search-highlight {
   color: var(--gold); box-shadow: 0 0 12px rgba(232,197,71,0.08);
 }
 
-/* ── 4. SORT BAR ── */
+/* ── SORT BAR ── */
 #feedSortBar {
   position: sticky !important; top: 150px !important; z-index: 97 !important;
   height: 38px !important; width: 100% !important; max-width: none !important;
@@ -605,13 +615,13 @@ mark.search-highlight {
   box-sizing: border-box !important; margin: 0 !important;
 }
 
-/* ── 5. NEW POSTS BAR ── */
+/* ── NEW POSTS BAR ── */
 #newPostsIndicator,
 .new-posts-bar {
   position: sticky !important; top: 188px !important; z-index: 96 !important;
 }
 
-/* ── 6. FEED LIST ── */
+/* ── FEED LIST ── */
 #feedList {
   padding: 12px 14px 120px;
   display: grid;
@@ -623,7 +633,7 @@ mark.search-highlight {
 }
 
 /* ══════════════════════════════════════
-   FEED CARD — v6 glassmorphism
+   FEED CARD
 ══════════════════════════════════════ */
 .feed-card {
   overflow: hidden;
@@ -641,7 +651,6 @@ mark.search-highlight {
   scroll-margin-top: var(--sticky-total);
 }
 
-/* v6 — shimmer top line */
 .feed-card::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0; height: 1px;
@@ -654,7 +663,6 @@ mark.search-highlight {
   z-index: 3;
   pointer-events: none;
 }
-/* v6 — left accent strip */
 .feed-card::after {
   content: '';
   position: absolute; top: 16px; left: 0; bottom: 46px; width: 3px;
@@ -664,7 +672,6 @@ mark.search-highlight {
   pointer-events: none;
 }
 
-/* Emotion backgrounds */
 .feed-card.e-nostalgia  { background: linear-gradient(160deg,rgba(232,197,71,0.11) 0%,#0e0c07 55%); border-color: rgba(232,197,71,.18); }
 .feed-card.e-love       { background: linear-gradient(160deg,rgba(255,107,157,0.12) 0%,#120710 55%); border-color: rgba(255,107,157,.18); }
 .feed-card.e-hope       { background: linear-gradient(160deg,rgba(107,140,255,0.12) 0%,#070b16 55%); border-color: rgba(107,140,255,.18); }
@@ -676,7 +683,6 @@ mark.search-highlight {
 .feed-card.e-sendit     { background: linear-gradient(160deg,rgba(0,229,200,0.10) 0%,#041210 55%); border-color: rgba(0,229,200,.18); }
 .feed-card.e-letout     { background: linear-gradient(160deg,rgba(200,100,255,0.11) 0%,#100618 55%); border-color: rgba(200,100,255,.18); }
 
-/* CSS variable sets */
 .feed-card.e-nostalgia  { --e-strip:rgba(232,197,71,.85); --e-shimmer:rgba(232,197,71,.9); --e-glow:rgba(232,197,71,.1); --e-tag-bg:rgba(232,197,71,.1); --e-tag:#E8C547; }
 .feed-card.e-love       { --e-strip:rgba(255,107,157,.85); --e-shimmer:rgba(255,107,157,.9); --e-glow:rgba(255,107,157,.12); --e-tag-bg:rgba(255,107,157,.1); --e-tag:#FF6B9D; }
 .feed-card.e-hope       { --e-strip:rgba(107,140,255,.85); --e-shimmer:rgba(107,140,255,.9); --e-glow:rgba(107,140,255,.12); --e-tag-bg:rgba(107,140,255,.1); --e-tag:#7B9FFF; }
@@ -691,7 +697,7 @@ mark.search-highlight {
 .feed-card:hover { border-color: var(--e-border, rgba(232,197,71,0.28)); }
 .feed-card:active { opacity: 0.92; }
 
-/* v6.1 — card-top: time LEFT, vibe tag RIGHT (matches prototype) */
+/* card-top: time LEFT, vibe tag RIGHT — no collision with badges */
 .card-top {
   display: flex; justify-content: space-between; align-items: center;
   flex-shrink: 0; height: 22px; margin-bottom: 10px; padding-left: 8px;
@@ -702,7 +708,6 @@ mark.search-highlight {
 }
 .card-mode-badge { display: none; }
 
-/* v6 — Instrument Serif lyrics, NOT italic */
 .card-lyric {
   font-family: var(--font-lyric);
   font-style: normal;
@@ -714,14 +719,36 @@ mark.search-highlight {
   font-size: 1rem;
 }
 
-/* v6.1 — emotion tag: now rendered inside card-top (top-right) via feed.js */
 .card-emotion-tag {
   font-family: var(--font-mono);
   font-size: 0.52rem; font-weight: 700;
   padding: 3px 10px; border-radius: 20px;
   text-transform: uppercase; letter-spacing: 0.5px;
   flex-shrink: 0;
-  /* no bottom margin — sits in card-top row */
+}
+
+/* v6.2 — rank badges move to bottom-left, no longer collide with vibe tag */
+.card-hot-badge,
+.card-new-badge {
+  position: absolute !important;
+  bottom: 52px !important;
+  left: 18px !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: 4;
+  font-family: var(--font-mono);
+  font-size: 0.42rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 3px 8px; border-radius: 20px;
+  pointer-events: none;
+}
+.card-hot-badge {
+  background: rgba(255,140,0,0.12); color: #ffaa44;
+  border: 1px solid rgba(255,140,0,0.28);
+}
+.card-new-badge {
+  background: rgba(74,222,128,0.10); color: #4ade80;
+  border: 1px solid rgba(74,222,128,0.25);
 }
 
 .card-song {
@@ -885,7 +912,6 @@ input:focus, textarea:focus {
 input::placeholder { color: rgba(255,255,255,0.22); }
 @media(max-width:768px){ input,textarea{ font-size:16px!important; } }
 
-/* v6 — textarea uses Instrument Serif */
 textarea#textInput {
   min-height: 90px; resize: none;
   background: rgba(255,255,255,0.03);
@@ -959,7 +985,6 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
   flex-shrink: 0;
   background: linear-gradient(180deg, rgba(232,197,71,0.03) 0%, transparent 100%);
 }
-/* v6 — modal title: Bebas Neue */
 .modal-title {
   font-family: var(--font-display);
   font-size: 1rem; font-weight: 400;
@@ -1160,7 +1185,6 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
   color: var(--gold); border-bottom-color: var(--gold);
   background: rgba(232,197,71,0.04);
 }
-.dock-tab-icon { font-size: 0.75rem; }
 .dock-panel {
   display: none; overflow-y: auto; padding: 14px;
   scrollbar-width: none; flex: 1;
@@ -1442,7 +1466,6 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
   .hero { padding: 12px 16px 0; }
   .tagline { max-width: 100%; }
   .cta-group { max-width: 100%; }
-  .btn-secondary { font-size: 0.9rem; font-weight: 500; color: var(--text); border-color: rgba(255,255,255,0.18); }
   .feed-logo { font-size: 0.85rem; letter-spacing: 4px; }
   .header-btn { padding: 7px 12px; font-size: 0.78rem; }
   .sc-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
