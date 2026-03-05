@@ -143,13 +143,16 @@ function injectFeedStyles() {
       height:20px; margin-bottom:10px;
     }
     #feedList .card-lyric {
+      font-family:'Instrument Serif',serif !important;
+      font-style:normal !important;
       overflow:hidden !important;
       display:-webkit-box !important;
       -webkit-line-clamp:3 !important;
       -webkit-box-orient:vertical !important;
-      flex-shrink:0 !important; line-height:1.5 !important;
+      flex-shrink:0 !important; line-height:1.55 !important;
       margin-bottom:8px !important;
       font-weight:400 !important;
+      font-size:1rem !important;
     }
     #feedList .card-emotion-tag {
       flex-shrink:0 !important; align-self:flex-start !important;
@@ -657,7 +660,6 @@ function renderFeed() {
 
     const hasSongData = k.song!=='Unknown Song' || k.artist!=='Unknown Artist';
 
-    // Old guess/discover cards: songSection is simply empty — hidden by CSS
     let songSection = '';
     if (hasSongData) {
       songSection = `<div class="card-song">
@@ -668,8 +670,6 @@ function renderFeed() {
         </div>
       </div>`;
     }
-    // Intentionally no else — old guess/discover cards render nothing here
-    // card-mystery and card-discover are display:none in CSS anyway
 
     card.innerHTML = `
       ${rankBadge}
