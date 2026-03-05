@@ -1,11 +1,11 @@
 /* ============================================================
    MARGO — js/feed.js
-   v6.4 — concept-v2
+   v6.5 — concept-v2
+   • Old guess/discover mode sections hidden entirely (display:none)
+   • VIBE replaces EMOTION in all UI labels
    • Action row pinned to absolute bottom of every card
    • Premium button design — sharp, crisp, high-contrast
-   • Old guess/discover mode cards get same clean layout
    • Emotion color background on all cards
-   • Card click opens share sheet for that specific card
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -43,15 +43,22 @@ const E_DEFAULT = {
   lyricText:'#fff', metaText:'rgba(232,210,140,0.65)', isDark:true
 };
 
+/* Vibe display labels */
+const VIBE_LABELS = {
+  Love:'Love', Heartbreak:'Heartbreak', Hope:'Hope', Nostalgia:'Nostalgia',
+  Healing:'Healing', Joy:'Joy', Rage:'Rage', Loneliness:'Loneliness',
+  SendIt:'Send It', LetOut:'Let Out',
+};
+
 let currentSort = 'fresh';
 
 /* ══════════════════════════════════════════════════════════
    STYLES
 ══════════════════════════════════════════════════════════ */
 function injectFeedStyles() {
-  if (document.getElementById('feedV64')) return;
+  if (document.getElementById('feedV65')) return;
   const s = document.createElement('style');
-  s.id = 'feedV64';
+  s.id = 'feedV65';
   s.textContent = `
     @keyframes cardIn {
       from { opacity:0; transform:translateY(10px); }
@@ -94,9 +101,7 @@ function injectFeedStyles() {
       border:1px solid rgba(74,222,128,0.25); pointer-events:none;
     }
 
-    /* ─── CARD BASE ───
-       Fixed height. Flex column. Action row sits at absolute bottom.
-       Padding-bottom = action row height (46px) so content never overlaps. ─── */
+    /* ─── CARD BASE ─── */
     #feedList .feed-card {
       height: 268px !important;
       border-radius: 14px !important;
@@ -151,7 +156,6 @@ function injectFeedStyles() {
       margin-bottom:8px !important;
     }
 
-    /* Song section — pushes to fill remaining vertical space */
     #feedList .card-song {
       display:flex !important; align-items:center !important;
       gap:9px !important; flex-shrink:0 !important;
@@ -162,25 +166,16 @@ function injectFeedStyles() {
     }
     #feedList .card-song-text { flex:1; min-width:0; }
 
-    /* Old guess/discover mode sections — same height as song section */
+    /* ── OLD MODE SECTIONS — HIDDEN ENTIRELY ── */
     #feedList .card-mystery,
     #feedList .card-discover {
-      flex-shrink:0 !important; min-height:44px !important;
-      display:flex !important; align-items:center !important;
-      padding-top:8px !important;
-      border-top:1px solid rgba(255,255,255,.08) !important;
-      overflow:hidden !important; font-size:0.75rem !important;
-      margin-top:auto !important;
+      display: none !important;
     }
-    #feedList .card-mystery  { color:rgba(180,200,255,.7) !important; }
-    #feedList .card-discover { color:rgba(140,230,180,.7) !important; }
 
-    /* Hide old card-actions entirely — resonate.js builds card-actions-v2 */
+    /* Hide old card-actions — resonate.js builds card-actions-v2 */
     #feedList .card-actions { display:none !important; }
 
-    /* ─── ACTION ROW — pinned absolutely to bottom ───
-       Position:absolute so it never affects layout flow.
-       Gradient fade ensures readability over card content. ─── */
+    /* ─── ACTION ROW — pinned absolutely to bottom ─── */
     #feedList .card-actions-v2 {
       position: absolute !important;
       bottom: 0 !important;
@@ -209,7 +204,7 @@ function injectFeedStyles() {
       border-radius: 8px !important;
       background: rgba(192,132,252,0.10) !important;
       border: 1px solid rgba(192,132,252,0.28) !important;
-      color: rgba(192,132,252,0.9) !important;
+      color: rgba(255,255,255,0.9) !important;
       font-family: 'Space Mono', monospace !important;
       font-size: 0.56rem !important;
       font-weight: 700 !important;
@@ -226,6 +221,7 @@ function injectFeedStyles() {
     #feedList .card-resonate-btn:hover {
       background: rgba(192,132,252,0.2) !important;
       border-color: rgba(192,132,252,0.55) !important;
+      color: #fff !important;
       transform: translateY(-1px) !important;
     }
     #feedList .card-resonate-btn:active { transform: scale(0.94) !important; }
@@ -260,8 +256,8 @@ function injectFeedStyles() {
       padding: 0 8px !important;
       border-radius: 8px !important;
       background: rgba(232,197,71,0.07) !important;
-      border: 1px solid rgba(232,197,71,0.2) !important;
-      color: rgba(232,197,71,0.8) !important;
+      border: 1px solid rgba(232,197,71,0.22) !important;
+      color: rgba(255,255,255,0.88) !important;
       font-family: 'Space Mono', monospace !important;
       font-size: 0.53rem !important;
       font-weight: 700 !important;
@@ -274,8 +270,8 @@ function injectFeedStyles() {
     }
     #feedList .card-lyric-back-btn:hover {
       background: rgba(232,197,71,0.15) !important;
-      border-color: rgba(232,197,71,0.45) !important;
-      color: #E8C547 !important;
+      border-color: rgba(232,197,71,0.5) !important;
+      color: #fff !important;
       transform: translateY(-1px) !important;
     }
     #feedList .card-lyric-back-btn:active { transform: scale(0.94) !important; }
@@ -296,8 +292,8 @@ function injectFeedStyles() {
       padding: 0 11px !important;
       border-radius: 8px !important;
       background: rgba(255,255,255,0.05) !important;
-      border: 1px solid rgba(255,255,255,0.13) !important;
-      color: rgba(255,255,255,0.6) !important;
+      border: 1px solid rgba(255,255,255,0.15) !important;
+      color: rgba(255,255,255,0.75) !important;
       font-family: 'Space Mono', monospace !important;
       font-size: 0.5rem !important;
       font-weight: 700 !important;
@@ -311,13 +307,13 @@ function injectFeedStyles() {
     }
     #feedList .card-share-btn:hover {
       background: rgba(232,197,71,0.12) !important;
-      border-color: rgba(232,197,71,0.35) !important;
-      color: #E8C547 !important;
+      border-color: rgba(232,197,71,0.4) !important;
+      color: #fff !important;
       transform: translateY(-1px) !important;
     }
     #feedList .card-share-btn:active { transform: scale(0.94) !important; }
     #feedList .card-share-dot {
-      opacity: 0.3 !important;
+      opacity: 0.35 !important;
       margin: 0 1px !important;
       font-size: 0.6rem !important;
     }
@@ -370,9 +366,6 @@ function injectFeedStyles() {
     .sk-medium { height:9px; width:48%; margin-bottom:10px; }
     .sk-row    { display:flex; gap:8px; margin-top:4px; }
     .sk-long   { height:30px; flex:1; border-radius:8px; }
-
-    .emotion-sendit { background:rgba(0,229,200,0.12); color:#00e5c8; }
-    .emotion-letout { background:rgba(200,100,255,0.12); color:#c864ff; }
 
     .yt-bg-option {
       display:flex; align-items:center; gap:10px; padding:10px 12px;
@@ -442,7 +435,7 @@ function buildLyricStream() {
     const card    = document.createElement('div');
     card.className = 'lyric-card' + (Math.random() > 0.65 ? ' featured' : '');
     card.innerHTML = `<div class="lyric-card-text">${display}</div>
-      <div class="lyric-card-meta"><span class="lyric-card-emotion emotion-${emotion.toLowerCase()}">${emotion}</span></div>`;
+      <div class="lyric-card-meta"><span class="lyric-card-emotion emotion-${emotion.toLowerCase()}">${VIBE_LABELS[emotion]||emotion}</span></div>`;
     return card;
   };
   const offset = Math.floor(source.length / 2);
@@ -499,7 +492,7 @@ function updateLandingStats() {
   if ($('featuredSongCount'))   $('featuredSongCount').textContent   = uniqueSongCount||'—';
   if ($('topArtistName'))       $('topArtistName').textContent       = topArtist||'—';
   if ($('topSongName'))         $('topSongName').textContent         = topSong||'—';
-  if ($('topEmotion'))          $('topEmotion').textContent          = topEmotion ? topEmotion[0] : '—';
+  if ($('topEmotion'))          $('topEmotion').textContent          = topEmotion ? (VIBE_LABELS[topEmotion[0]]||topEmotion[0]) : '—';
 }
 
 function setupStatsBar() {
@@ -635,8 +628,9 @@ function renderFeed() {
     card.className = `feed-card e-${eClass}`;
     card.style.animationDelay = `${i*0.03}s`;
 
-    const ecfg    = EMOTION_CFG[emotion]||E_DEFAULT;
-    const echoCnt = getEchoCount(post.id);
+    const ecfg     = EMOTION_CFG[emotion]||E_DEFAULT;
+    const echoCnt  = getEchoCount(post.id);
+    const vibeLabel = VIBE_LABELS[emotion] || emotion;
 
     const meta     = post.youtubeMeta;
     const hasThumb = !!(meta?.thumbnailSm||meta?.thumbnail);
@@ -662,6 +656,8 @@ function renderFeed() {
       </div>` : '';
 
     const hasSongData = k.song!=='Unknown Song' || k.artist!=='Unknown Artist';
+
+    // Old guess/discover cards: songSection is simply empty — hidden by CSS
     let songSection = '';
     if (hasSongData) {
       songSection = `<div class="card-song">
@@ -671,12 +667,9 @@ function renderFeed() {
           <div class="card-song-artist">${highlightMatch(k.artist,searchQuery)}</div>
         </div>
       </div>`;
-    } else if (post.mode==='guess') {
-      /* Old guess posts — show neutral placeholder, same layout */
-      songSection = `<div class="card-mystery">🎵 Guess this song</div>`;
-    } else if (post.mode==='discover') {
-      songSection = `<div class="card-discover">🔍 Help identify this lyric</div>`;
     }
+    // Intentionally no else — old guess/discover cards render nothing here
+    // card-mystery and card-discover are display:none in CSS anyway
 
     card.innerHTML = `
       ${rankBadge}
@@ -684,19 +677,17 @@ function renderFeed() {
         <span class="card-time">${timeAgo(post.timestamp)}</span>
       </div>
       <div class="card-lyric" style="color:${ecfg.lyricText}">${highlightMatch(post.text,searchQuery)}</div>
-      <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">${highlightMatch(emotion,searchQuery)}</span>
+      <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">${highlightMatch(vibeLabel,searchQuery)}</span>
       ${songSection}
       <div class="card-actions"></div>
     `;
 
-    /* Data attributes for resonate.js */
     card.dataset.echoCount = echoCnt;
     card.dataset.postId    = post.id;
 
     feedList.appendChild(card);
   });
 
-  /* resonate.js upgrades card-actions → card-actions-v2 after DOM ready */
   if (typeof upgradeCardActions === 'function') {
     requestAnimationFrame(upgradeCardActions);
   }
