@@ -124,7 +124,7 @@ function injectFeedStyles() {
     }
     #feedList .card-lyric {
       font-family:'Instrument Serif', serif !important;
-      font-style:italic !important;
+      font-style:normal !important;
       font-weight:400 !important;
       overflow:hidden !important;
       display:-webkit-box !important;
