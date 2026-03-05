@@ -655,11 +655,14 @@ function _displayAdminEchoes(postId, wrap, echoesData) {
       ${echoStatus === 'hidden' ? 'opacity:0.45;' : ''}
     `;
 
-    const k = echo.knowledge || {};
-    const songLine = (k.song && k.song !== 'Unknown Song')
+    const songLine = (echo.song)
       ? `<span style="font-family:'Space Mono',monospace;font-size:0.45rem;color:#707078;display:block;margin-top:4px;">
-           ${k.song}${k.artist ? ' — ' + k.artist : ''}
+           ${echo.song}${echo.artist ? ' — ' + echo.artist : ''}
          </span>`
+      : '';
+
+    const usernameLabel = echo.username
+      ? `<span style="font-family:'Space Mono',monospace;font-size:0.44rem;color:#505058;display:block;margin-top:2px;">@${echo.username}</span>`
       : '';
 
     echoCard.innerHTML = `
@@ -667,9 +670,10 @@ function _displayAdminEchoes(postId, wrap, echoesData) {
         <div style="flex:1;">
           <div style="font-family:'DM Sans',sans-serif;font-size:0.85rem;
             color:${echoStatus === 'hidden' ? '#707078' : '#D0D0D0'};line-height:1.45;">
-            "${echo.text || ''}"
+            "${echo.lyric || ''}"
           </div>
           ${songLine}
+          ${usernameLabel}
           <span style="font-family:'Space Mono',monospace;font-size:0.44rem;color:#505058;
             display:block;margin-top:4px;">${timeAgo(echo.timestamp)}</span>
         </div>
