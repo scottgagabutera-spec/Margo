@@ -48,6 +48,7 @@ function injectDuetStyles() {
       animation:dsBackdropIn 0.25s ease;
     }
     #duetBackdrop.ds-hidden { display:none!important; }
+    body.ds-modal-open { overflow:hidden; }
     @keyframes dsBackdropIn { from{opacity:0} to{opacity:1} }
 
     @media(min-width:560px) {
@@ -599,13 +600,13 @@ function openDuetSheet(parentPost, echoPost) {
 
   const backdrop = document.getElementById('duetBackdrop');
   backdrop.classList.remove('ds-hidden');
-  document.body.classList.add('modal-open');
+  document.body.classList.add('ds-modal-open');
 }
 
 function closeDuetSheet() {
   const backdrop = document.getElementById('duetBackdrop');
   if (backdrop) backdrop.classList.add('ds-hidden');
-  document.body.classList.remove('modal-open');
+  document.body.classList.remove('ds-modal-open');
   _dsClearAnims();
 }
 
