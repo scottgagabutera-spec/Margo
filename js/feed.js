@@ -1,9 +1,10 @@
 /* ============================================================
    MARGO — js/feed.js
-   v6.6 — Visual polish pass
-   • cardBg gradients: cleaner, less muddy base colors
-   • Vibe tag moved to top-right (inside card-top row)
-   • All other logic identical to v6.5
+   v6.7 — Badge fix pass
+   • .card-hot-badge and .card-new-badge CSS removed from
+     injectFeedStyles — style.css v6.2 now owns those rules
+     (badges sit bottom-left, no collision with vibe tag)
+   • All other logic identical to v6.6
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -23,7 +24,6 @@ const STREAM_SAMPLES = [
   { text: "Had to say it through a song because words failed",   emotion: 'LetOut'     },
 ];
 
-/* v6.6 — cleaner cardBg: less muddy, crisper dark base matching prototype */
 const EMOTION_CFG = {
   Love:       { bg:'rgba(255,107,157,0.13)', text:'#FF6B9D', border:'rgba(255,107,157,0.3)',  strip:'rgba(255,107,157,0.8)',  cardBg:'linear-gradient(160deg,rgba(255,107,157,0.13) 0%,#0E0C13 55%)',  lyricText:'#fff', metaText:'rgba(255,200,220,0.75)', isDark:true },
   Heartbreak: { bg:'rgba(255,80,80,0.11)',   text:'#ff5050', border:'rgba(255,80,80,0.28)',   strip:'rgba(255,80,80,0.75)',   cardBg:'linear-gradient(160deg,rgba(255,60,60,0.14) 0%,#0E0C13 55%)',   lyricText:'#fff', metaText:'rgba(255,180,180,0.7)',   isDark:true },
@@ -42,7 +42,6 @@ const E_DEFAULT = {
   lyricText:'#fff', metaText:'rgba(232,210,140,0.65)', isDark:true
 };
 
-/* Vibe display labels */
 const VIBE_LABELS = {
   Love:'Love', Heartbreak:'Heartbreak', Hope:'Hope', Nostalgia:'Nostalgia',
   Healing:'Healing', Joy:'Joy', Rage:'Rage', Loneliness:'Loneliness',
@@ -83,23 +82,6 @@ function injectFeedStyles() {
     .sort-btn:hover { border-color:rgba(232,197,71,0.3); color:rgba(232,197,71,0.75); background:rgba(232,197,71,0.04); }
     .sort-btn.active { background:rgba(232,197,71,0.10); border-color:rgba(232,197,71,0.45); color:#E8C547; }
 
-    .card-hot-badge {
-      position:absolute; top:10px; right:10px; z-index:2;
-      font-family:'Space Mono',monospace; font-size:0.42rem; font-weight:700;
-      text-transform:uppercase; letter-spacing:0.5px;
-      padding:3px 8px; border-radius:20px;
-      background:rgba(255,140,0,0.12); color:#ffaa44;
-      border:1px solid rgba(255,140,0,0.28); pointer-events:none;
-    }
-    .card-new-badge {
-      position:absolute; top:10px; right:10px; z-index:2;
-      font-family:'Space Mono',monospace; font-size:0.42rem; font-weight:700;
-      text-transform:uppercase; letter-spacing:0.5px;
-      padding:3px 8px; border-radius:20px;
-      background:rgba(74,222,128,0.10); color:#4ade80;
-      border:1px solid rgba(74,222,128,0.25); pointer-events:none;
-    }
-
     /* ─── CARD BASE ─── */
     #feedList .feed-card {
       height: 268px !important;
@@ -136,7 +118,6 @@ function injectFeedStyles() {
     }
 
     /* ─── CARD LAYOUT ─── */
-    /* v6.6 — card-top: time LEFT, vibe tag RIGHT */
     #feedList .card-top {
       display:flex; justify-content:space-between;
       align-items:center; flex-shrink:0;
@@ -154,7 +135,6 @@ function injectFeedStyles() {
       font-weight:400 !important;
       font-size:1rem !important;
     }
-    /* v6.6 — emotion tag now sits inside card-top, hide old standalone position */
     #feedList .card-emotion-tag {
       flex-shrink:0 !important;
       margin-bottom:0 !important;
@@ -633,8 +613,8 @@ function renderFeed() {
     card.className = `feed-card e-${eClass}`;
     card.style.animationDelay = `${i*0.03}s`;
 
-    const ecfg     = EMOTION_CFG[emotion]||E_DEFAULT;
-    const echoCnt  = getEchoCount(post.id);
+    const ecfg      = EMOTION_CFG[emotion]||E_DEFAULT;
+    const echoCnt   = getEchoCount(post.id);
     const vibeLabel = VIBE_LABELS[emotion] || emotion;
 
     const meta     = post.youtubeMeta;
@@ -645,7 +625,7 @@ function renderFeed() {
     card.style.setProperty('--e-border',      ecfg.border);
     card.style.background = ecfg.cardBg;
 
-    /* v6.6 — rank badge only shows if no vibe tag conflict (tag is top-right now) */
+    /* v6.7 — rank badge only when sort is active, no class collision with vibe tag */
     let rankBadge = '';
     if      (currentSort==='fresh' && isNewPost(post))  rankBadge='<span class="card-new-badge">New</span>';
     else if (currentSort==='hot'   && isHotPost(post))  rankBadge='<span class="card-hot-badge">Trending</span>';
@@ -674,7 +654,7 @@ function renderFeed() {
       </div>`;
     }
 
-    /* v6.6 — vibe tag now in card-top (top-right), not below lyric */
+    /* vibe tag top-right, rank badge bottom-left — no collision */
     card.innerHTML = `
       ${rankBadge}
       <div class="card-top">
