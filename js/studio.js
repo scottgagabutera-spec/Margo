@@ -266,10 +266,10 @@ function _studioWrapText(ctx, text, maxWidth) {
 
 /* ══════════════════════════════════════════════════════════
    CANVAS DRAW — window.drawPosterToCtx
-   This is the POSTER renderer. gif-studio.js has its own
-   independent gsDrawFrame / gifDrawPosterToCtx — no conflict.
+   FIX v5.7: Guard with || so poster.js (loads after) wins if
+   it has already claimed this function.
 ══════════════════════════════════════════════════════════ */
-window.drawPosterToCtx = function(ctx, W, H, post, options) {
+window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, options) {
   options = options || {};
   if (!post) return;
 
@@ -662,14 +662,11 @@ function _loadPhotoFile(file, dropZone, controls, dropText) {
 
 /* ══════════════════════════════════════════════════════════
    DOCK TAB SWITCHING
-   Works with both HTML tab IDs (dock-tab[data-tab]) and
-   the panel IDs (panel-color, panel-font, panel-photo)
 ══════════════════════════════════════════════════════════ */
 function _switchDockTab(tabId) {
   document.querySelectorAll('.dock-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === tabId);
   });
-  /* Show/hide panels — support both naming conventions */
   const panelIds = {
     color: ['panel-color', 'dockColorPanel'],
     font:  ['panel-font',  'dockFontPanel'],
@@ -687,8 +684,17 @@ function _switchDockTab(tabId) {
 
 /* ══════════════════════════════════════════════════════════
    OPEN / CLOSE
+   FIX v5.7: openStudio now delegates to openPosterStudio
+   if poster.js is loaded, so the share sheet "Studio" button
+   never navigates to the landing page.
 ══════════════════════════════════════════════════════════ */
 window.openStudio = function(post) {
+  /* Delegate to poster.js if available — it owns the overlay */
+  if (typeof window.openPosterStudio === 'function') {
+    return window.openPosterStudio(post || window.currentPost);
+  }
+
+  /* Fallback: studio.js direct open (poster.js not loaded) */
   studioPost = post || window.currentPost;
   if (!studioPost) return;
 
@@ -714,12 +720,10 @@ window.openStudio = function(post) {
   overlay.classList.remove('hidden');
   document.body.classList.add('modal-open');
 
-  /* Wire all panels */
   wireColorPanel();
   wireFontPanel();
   wirePhotoPanel();
 
-  /* Show color tab by default */
   _switchDockTab('color');
 
   requestAnimationFrame(() => refreshStageCanvas());
@@ -776,11 +780,9 @@ async function exportPoster() {
 
 /* ══════════════════════════════════════════════════════════
    STUDIO CHOOSER
-   Redirects to share sheet — the chooser UI is in share-sheet.js
 ══════════════════════════════════════════════════════════ */
 window.openStudioChooser = function(post) {
   if (post) { studioPost = post; window.currentPost = post; }
-  // Delegate to share sheet — never build our own chooser UI
   if (typeof window.openShareSheet === 'function') {
     window.openShareSheet(studioPost || window.currentPost);
   }
@@ -804,13 +806,11 @@ window.addEventListener('resize', () => {
 
 /* ══════════════════════════════════════════════════════════
    INIT — bind events already in HTML
+   NOTE: studioExportBtn is NOT bound here — poster.js owns
+   it when openPosterStudio() is called, preventing double-fire.
 ══════════════════════════════════════════════════════════ */
 (function initStudio() {
   injectStudioStyles();
-
-  /* Bind export button */
-  document.getElementById('studioExportBtn')
-    ?.addEventListener('click', exportPoster);
 
   /* Close button is handled by app.js patchStudioBackButtons — do not bind here */
 
