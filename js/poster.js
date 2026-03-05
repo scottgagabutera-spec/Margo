@@ -1,8 +1,11 @@
 /* ============================================================
-   MARGO — js/poster.js  v1.0
+   MARGO — js/poster.js  v1.1
    Self-contained poster studio, separate from gif-studio.js.
    Works with the existing #studioOverlay HTML in index.html.
    Called by share-sheet.js via window.openPosterStudio(post).
+   FIX v1.1: exportBtn wired via addEventListener (not onclick)
+             so studio.js IIFE binding does not double-fire.
+             closeBtn uses window.closePosterStudio directly.
    ============================================================ */
 
 /* ── VIBE colours ── */
@@ -66,6 +69,9 @@ let _pPhotoDim   = 50;
 let _pPhotoFilter= 'none';
 let _pThumbImg   = null;
 
+/* ── Track whether export button listener is attached ── */
+let _pExportBound = false;
+
 /* ============================================================
    OPEN
 ============================================================ */
@@ -94,17 +100,22 @@ window.openPosterStudio = function(post) {
   document.getElementById('sizePicker')?.classList.add('hidden');
   document.getElementById('ceremonyOverlay')?.classList.add('hidden');
 
-  // Wire close button (index.html uses id="closeStudio")
+  // Wire close button — use onclick so app.js patchStudioBackButtons
+  // can override it cleanly with its own reopenShareSheet logic
   const closeBtn = document.getElementById('closeStudio');
   if (closeBtn) {
     closeBtn.onclick = () => window.closePosterStudio();
   }
 
-  // Wire export button
+  // Wire export button — bind once only to avoid double-fire with
+  // studio.js IIFE which may have already added an addEventListener
   const exportBtn = document.getElementById('studioExportBtn');
-  if (exportBtn) {
-    exportBtn.onclick = () => _posterExport();
+  if (exportBtn && !_pExportBound) {
+    exportBtn.addEventListener('click', _posterExport);
+    _pExportBound = true;
   }
+  // Always make sure onclick from studio.js IIFE is cleared
+  if (exportBtn) exportBtn.onclick = null;
 
   // Wire dock tabs
   document.querySelectorAll('.dock-tab').forEach(tab => {
@@ -309,7 +320,6 @@ function _posterRenderToCtx(ctx, W, H) {
   /* ── Photo layer ── */
   if (_pPhotoImg) {
     ctx.save();
-    // Blur via shadow trick (canvas has no native blur, use offscreen)
     if (_pPhotoBlur > 0) {
       ctx.filter = `blur(${_pPhotoBlur}px)`;
     }
@@ -463,7 +473,6 @@ function _posterRenderToCtx(ctx, W, H) {
     ctx.fillText(str, pad, bottomY);
     ctx.restore();
 
-    /* artist line below */
     if (k.artist) {
       ctx.save();
       ctx.font         = `400 ${Math.max(12, W * 0.018)}px 'Space Mono',monospace`;
@@ -564,7 +573,6 @@ async function _posterExport() {
     _posterRenderToCtx(tCtx, size.w, size.h);
   }
 
-  // Store blob for download/share
   window._posterExportBlob = blob;
   document.getElementById('ceremonyOverlay')?.classList.remove('hidden');
 
@@ -581,8 +589,6 @@ function _renderCeremonyThumb() {
 }
 
 function _posterDownloadFinal() {
-  const blob = window._posterExportBlob;
-  if (!blob) return;
   const size = POSTER_SIZES[_pSize] || POSTER_SIZES['instagram-square'];
   const offscreen = document.createElement('canvas');
   offscreen.width  = size.w;
@@ -614,7 +620,6 @@ async function _posterShareFinal() {
         });
       } catch (_) {}
     } else {
-      // Fallback: download
       _posterDownloadFinal();
     }
   }, 'image/png', 0.92);
