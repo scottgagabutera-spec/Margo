@@ -43,13 +43,15 @@ function injectDuetStyles() {
       backdrop-filter:blur(20px) saturate(0.6);
       -webkit-backdrop-filter:blur(20px) saturate(0.6);
       display:flex;align-items:flex-end;justify-content:center;
+      overflow-y:auto;overflow-x:hidden;
+      -webkit-overflow-scrolling:touch;
       animation:dsBackdropIn 0.25s ease;
     }
     #duetBackdrop.ds-hidden { display:none!important; }
     @keyframes dsBackdropIn { from{opacity:0} to{opacity:1} }
 
     @media(min-width:560px) {
-      #duetBackdrop { align-items:center; padding:24px; }
+      #duetBackdrop { align-items:flex-start; padding:24px; justify-content:center; }
     }
 
     #duetSheet {
