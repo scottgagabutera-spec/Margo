@@ -1,3 +1,4 @@
+(function() {
 /* ============================================================
    MARGO — js/poster.js  v1.1
    Self-contained poster studio, separate from gif-studio.js.
@@ -635,3 +636,4 @@ window.addEventListener('resize', () => {
     }
   }, 120);
 });
+})();
