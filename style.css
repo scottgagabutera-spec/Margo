@@ -1,8 +1,7 @@
 /*
-  MARGO — style.css v6.0
-  v6.0 — Visual redesign: Instrument Serif lyrics, Bebas Neue headers,
-          glassmorphism cards, richer darks, unified gold system.
-          All selectors/IDs/logic identical to v5.5 — purely visual.
+  MARGO — style.css v6.1
+  v6.1 — Lyric stream full-width (matches prototype), stats bar bolder Bebas,
+          card tag moved to top-right. All other selectors/IDs identical to v6.0.
 */
 
 *, *::before, *::after {
@@ -326,7 +325,7 @@ body::before {
 .full-btn { width: 100%; border-radius: var(--radius); }
 
 /* ══════════════════════════════════════
-   LYRIC STREAM — v6 Instrument Serif
+   LYRIC STREAM — v6.1: full-width like prototype
 ══════════════════════════════════════ */
 .lyric-stream {
   width: 100%; overflow: hidden;
@@ -336,12 +335,12 @@ body::before {
 .lyric-stream::before,
 .lyric-stream::after {
   content: ''; position: absolute;
-  top: 0; bottom: 0; width: 70px; z-index: 2; pointer-events: none;
+  top: 0; bottom: 0; width: 80px; z-index: 2; pointer-events: none;
 }
-.lyric-stream::before { left:  0; background: linear-gradient(to right, var(--bg) 20%, transparent); }
-.lyric-stream::after  { right: 0; background: linear-gradient(to left,  var(--bg) 20%, transparent); }
+.lyric-stream::before { left:  0; background: linear-gradient(to right, var(--bg) 30%, transparent); }
+.lyric-stream::after  { right: 0; background: linear-gradient(to left,  var(--bg) 30%, transparent); }
 .lyric-track {
-  display: flex; gap: 9px; padding: 7px 8px;
+  display: flex; gap: 8px; padding: 5px 0;
   width: max-content;
 }
 .lyric-track:first-child  { animation: scrollL 30s linear infinite; }
@@ -349,28 +348,29 @@ body::before {
 @keyframes scrollL { from{transform:translateX(0)}    to{transform:translateX(-50%)} }
 @keyframes scrollR { from{transform:translateX(-50%)} to{transform:translateX(0)}    }
 
+/* v6.1 — cards match prototype: wider, edge-to-edge feel */
 .lyric-card {
   flex-shrink: 0;
   background: rgba(255,255,255,0.04);
   backdrop-filter: blur(12px);
   border: 1px solid var(--border);
-  border-radius: 12px; padding: 10px 14px;
+  border-radius: 10px;
+  padding: 10px 14px;
   display: flex; flex-direction: column; gap: 5px;
-  min-width: 190px; max-width: 230px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  min-width: 175px; max-width: 220px;
 }
 .lyric-card.featured { border-color: var(--gold-border); }
 .lyric-card-text {
   font-family: var(--font-lyric);
   font-style: italic;
-  font-size: 0.82rem;
-  color: var(--text); line-height: 1.45;
+  font-size: 0.8rem;
+  color: var(--text); line-height: 1.4;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .lyric-card-meta { display: flex; align-items: center; gap: 6px; }
 .lyric-card-emotion {
   font-family: var(--font-mono);
-  font-size: 0.5rem; font-weight: 700;
+  font-size: 0.48rem; font-weight: 700;
   padding: 2px 7px; border-radius: 20px;
   letter-spacing: 0.3px; text-transform: uppercase;
 }
@@ -385,7 +385,7 @@ body::before {
 .emotion-sendit     { background:rgba(0,229,200,0.12);   color:#00e5c8; }
 .emotion-letout     { background:rgba(200,100,255,0.12); color:#c864ff; }
 
-/* ── STATS BAR ── */
+/* ── STATS BAR — v6.1: bolder, matches prototype ── */
 .stats-bar-wrap {
   position: relative; width: 100%; isolation: isolate;
 }
@@ -396,7 +396,7 @@ body::before {
 .stats-bar-wrap::after  { right: 0; background: linear-gradient(to left,  var(--bg) 40%, transparent); }
 .stats-bar {
   position: relative; z-index: 2;
-  padding: 14px 0 28px;
+  padding: 16px 0 32px;
   display: flex; justify-content: flex-start; gap: 0;
   animation: fadeUp 0.6s ease 0.44s both; flex-shrink: 0;
   overflow-x: scroll; overflow-y: visible;
@@ -405,28 +405,33 @@ body::before {
 .stats-bar::-webkit-scrollbar { display: none; }
 .stat-item {
   display: flex; flex-direction: column; align-items: center;
-  gap: 3px; padding: 0 16px; flex-shrink: 0;
+  gap: 4px; padding: 0 20px; flex-shrink: 0;
 }
-.stat-item:first-child { padding-left: 24px; }
-.stat-item:last-child  { padding-right: 24px; }
+.stat-item:first-child { padding-left: 28px; }
+.stat-item:last-child  { padding-right: 28px; }
 
-/* v6 — Bebas Neue stats */
+/* v6.1 — bigger, bolder Bebas stats matching prototype */
 .stat-num {
   font-family: var(--font-display);
-  font-size: 1.3rem; font-weight: 400;
+  font-size: 1.6rem; font-weight: 400;
   color: var(--text); white-space: nowrap; letter-spacing: 1px;
+  line-height: 1;
 }
 .stat-num.stat-sm {
   font-family: var(--font-display);
-  font-size: 1rem; font-weight: 400;
-  color: var(--gold); max-width: 120px;
+  font-size: 1.1rem; font-weight: 400;
+  color: var(--gold); max-width: 130px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  letter-spacing: 0.5px; line-height: 1;
+}
+#topEmotion {
+  font-family: var(--font-display);
+  font-size: 1.1rem; font-weight: 400;
   letter-spacing: 0.5px;
 }
-#topEmotion { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 700; }
 .stat-label {
   font-family: var(--font-mono);
-  font-size: 0.46rem; color: var(--text-3);
+  font-size: 0.44rem; color: var(--text-3);
   text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; white-space: nowrap;
 }
 .stat-divider { width: 1px; background: var(--border); align-self: stretch; flex-shrink: 0; }
@@ -636,7 +641,7 @@ mark.search-highlight {
   scroll-margin-top: var(--sticky-total);
 }
 
-/* v6 — glass overlay inside each card */
+/* v6 — shimmer top line */
 .feed-card::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0; height: 1px;
@@ -649,6 +654,7 @@ mark.search-highlight {
   z-index: 3;
   pointer-events: none;
 }
+/* v6 — left accent strip */
 .feed-card::after {
   content: '';
   position: absolute; top: 16px; left: 0; bottom: 46px; width: 3px;
@@ -658,7 +664,7 @@ mark.search-highlight {
   pointer-events: none;
 }
 
-/* Emotion backgrounds — v6: richer, slightly deeper */
+/* Emotion backgrounds */
 .feed-card.e-nostalgia  { background: linear-gradient(160deg,rgba(232,197,71,0.11) 0%,#0e0c07 55%); border-color: rgba(232,197,71,.18); }
 .feed-card.e-love       { background: linear-gradient(160deg,rgba(255,107,157,0.12) 0%,#120710 55%); border-color: rgba(255,107,157,.18); }
 .feed-card.e-hope       { background: linear-gradient(160deg,rgba(107,140,255,0.12) 0%,#070b16 55%); border-color: rgba(107,140,255,.18); }
@@ -670,7 +676,7 @@ mark.search-highlight {
 .feed-card.e-sendit     { background: linear-gradient(160deg,rgba(0,229,200,0.10) 0%,#041210 55%); border-color: rgba(0,229,200,.18); }
 .feed-card.e-letout     { background: linear-gradient(160deg,rgba(200,100,255,0.11) 0%,#100618 55%); border-color: rgba(200,100,255,.18); }
 
-/* CSS variable sets — identical names as v5.5 */
+/* CSS variable sets */
 .feed-card.e-nostalgia  { --e-strip:rgba(232,197,71,.85); --e-shimmer:rgba(232,197,71,.9); --e-glow:rgba(232,197,71,.1); --e-tag-bg:rgba(232,197,71,.1); --e-tag:#E8C547; }
 .feed-card.e-love       { --e-strip:rgba(255,107,157,.85); --e-shimmer:rgba(255,107,157,.9); --e-glow:rgba(255,107,157,.12); --e-tag-bg:rgba(255,107,157,.1); --e-tag:#FF6B9D; }
 .feed-card.e-hope       { --e-strip:rgba(107,140,255,.85); --e-shimmer:rgba(107,140,255,.9); --e-glow:rgba(107,140,255,.12); --e-tag-bg:rgba(107,140,255,.1); --e-tag:#7B9FFF; }
@@ -685,6 +691,7 @@ mark.search-highlight {
 .feed-card:hover { border-color: var(--e-border, rgba(232,197,71,0.28)); }
 .feed-card:active { opacity: 0.92; }
 
+/* v6.1 — card-top: time LEFT, vibe tag RIGHT (matches prototype) */
 .card-top {
   display: flex; justify-content: space-between; align-items: center;
   flex-shrink: 0; height: 22px; margin-bottom: 10px; padding-left: 8px;
@@ -695,7 +702,7 @@ mark.search-highlight {
 }
 .card-mode-badge { display: none; }
 
-/* v6 — Instrument Serif lyrics, NOT italic for readability */
+/* v6 — Instrument Serif lyrics, NOT italic */
 .card-lyric {
   font-family: var(--font-lyric);
   font-style: normal;
@@ -707,12 +714,16 @@ mark.search-highlight {
   font-size: 1rem;
 }
 
+/* v6.1 — emotion tag: now rendered inside card-top (top-right) via feed.js */
 .card-emotion-tag {
   font-family: var(--font-mono);
-  align-self: flex-start; font-size: 0.52rem; font-weight: 700;
-  padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
-  flex-shrink: 0; margin-bottom: 10px; margin-left: 8px;
+  font-size: 0.52rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  flex-shrink: 0;
+  /* no bottom margin — sits in card-top row */
 }
+
 .card-song {
   display: flex; align-items: center; gap: 10px;
   padding-top: 9px; border-top: 1px solid rgba(255,255,255,0.07);
