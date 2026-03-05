@@ -109,7 +109,6 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- v6.0: Bebas Neue + Instrument Serif replace Syne + DM Serif Display -->
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Josefin+Sans:wght@300;400;700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 
@@ -136,7 +135,6 @@
     }
     #gsExportMp4:hover:not(:disabled) { background: #33eeff; transform: scale(1.03); }
     #gsExportMp4:disabled { opacity: 0.6; cursor: wait; }
-    /* Make topbar accommodate two buttons */
     .gs-topbar { gap: 8px; }
   </style>
 
@@ -166,7 +164,8 @@
       <span class="nav-logo-text">MARGO</span>
     </a>
     <div class="nav-right">
-      <button class="nav-pill" id="enterFeedBtn">Read the room</button>
+      <!-- CHANGE 1: nav pill text changed from "Read the room" to "See what's live" -->
+      <button class="nav-pill" id="enterFeedBtn">See what's live</button>
     </div>
   </nav>
   <div class="hero">
@@ -179,10 +178,12 @@
       <span class="headline-word">Drop a lyric.</span>
       <span class="headline-word accent">Say everything.</span>
     </div>
-    <p class="tagline">When words fail, drop a lyric.</p>
+    <!-- CHANGE 2: tagline updated -->
+    <p class="tagline">The place where a song line says what you can't.</p>
     <div class="cta-group">
       <button class="btn-primary" id="enterBtn">Drop a Lyric</button>
-      <button class="btn-secondary" id="enterFeedBtn2">Read the room</button>
+      <!-- CHANGE 3: secondary CTA is now a ghost/text style, not a full button -->
+      <button class="btn-ghost" id="enterFeedBtn2">Read the room</button>
     </div>
     <div class="lyric-stream">
       <div class="lyric-track" id="track1"></div>
