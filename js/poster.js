@@ -390,17 +390,18 @@ function _posterRenderToCtx(ctx, W, H) {
   ctx.fillRect(barX, barY, barW, barH);
   ctx.restore();
 
-  /* ── MARGO wordmark ── */
+  /* ── MARGO wordmark — always gold like GIF ── */
   const margoSz = Math.max(22, W * 0.055);
   ctx.save();
   ctx.font         = `800 ${margoSz}px 'Syne',sans-serif`;
-  ctx.fillStyle    = vibeColor;
+  ctx.fillStyle    = '#E8C547';
   ctx.globalAlpha  = 0.9;
   ctx.textBaseline = 'top';
+  ctx.textAlign    = 'left';
   ctx.fillText('MARGO', pad, pad * 0.75);
   ctx.restore();
 
-  /* ── Lyric text ── */
+  /* ── Lyric text — centered like GIF ── */
   const lyric  = _pPost?.text || '';
   const maxFS  = Math.min(W * 0.072, H * 0.055);
   let fontSize = maxFS;
@@ -420,12 +421,13 @@ function _posterRenderToCtx(ctx, W, H) {
 
   ctx.save();
   ctx.textBaseline = 'top';
+  ctx.textAlign    = 'center';
   ctx.shadowColor   = 'rgba(0,0,0,0.65)';
   ctx.shadowBlur    = 18;
   lines.forEach((line, i) => {
     ctx.globalAlpha = 1 - i / lines.length * 0.06;
     ctx.fillStyle   = theme.text;
-    ctx.fillText(line, pad, startY + i * lh);
+    ctx.fillText(line, W / 2, startY + i * lh);
   });
   ctx.restore();
 
