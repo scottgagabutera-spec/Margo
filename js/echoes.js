@@ -547,10 +547,11 @@ function clearEchoForm() {
 ──────────────────────────────────────────────────────────── */
 function subscribeEchoes(postId) {
   unsubscribeEchoes();
-  if (typeof firebase === 'undefined' || !firebase.apps?.length) return;
+  let _subDb; try { _subDb = firebase.database(); } catch(_) { return; }
+  if (!_subDb) return;
 
   try {
-    const ref = firebase.database().ref('posts').child(postId).child('echoes');
+    const ref = _subDb.ref('posts').child(postId).child('echoes');
     const handler = snap => {
       ES.echoes = [];
       snap.forEach(child => {
@@ -676,10 +677,11 @@ function buildEchoCard(echo, idx) {
 ──────────────────────────────────────────────────────────── */
 function resonateEcho(echoId) {
   if (!ES.post?.id || !echoId) return;
-  if (typeof firebase === 'undefined' || !firebase.apps?.length) return;
+  let _rDb; try { _rDb = firebase.database(); } catch(_) { return; }
+  if (!_rDb) return;
   const myId = typeof userId !== 'undefined' ? userId : 'anon';
   try {
-    const ref = firebase.database().ref('posts')
+    const ref = _rDb.ref('posts')
       .child(ES.post.id).child('echoes').child(echoId).child('resonates').child(myId);
     ref.once('value').then(snap => {
       if (snap.exists()) ref.remove();
@@ -716,7 +718,9 @@ async function submitEcho() {
     return;
   }
 
-  if (typeof firebase === 'undefined' || !firebase.apps?.length) {
+  let _db;
+  try { _db = firebase.database(); } catch(_) { _db = null; }
+  if (!_db) {
     if (typeof showToast === 'function') showToast('Not connected — try again');
     return;
   }
@@ -749,7 +753,7 @@ async function submitEcho() {
 
   try {
     /* ── DIRECT db reference — bypasses any stale postsRef ── */
-    await firebase.database().ref('posts').child(ES.post.id).child('echoes').push(echoData);
+    await _db.ref('posts').child(ES.post.id).child('echoes').push(echoData);
 
     collapseEchoCompose();
     clearEchoForm();
