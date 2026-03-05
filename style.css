@@ -1,8 +1,10 @@
 /*
-  MARGO — style.css v5.4
-  v5.4 — Added SendIt + LetOut emotions (ticker pills, button active/hover states).
-          Emotion grid updated to repeat(5,1fr) for 10 emotions in 2 rows.
-          Card emotion backgrounds driven by feed.js v6.3 inline styles.
+  MARGO — style.css v5.5
+  v5.5 — • MODE section CSS purged entirely
+          • EMOTION/FEELING → VIBE in all UI labels
+          • SendIt + LetOut emotions retained
+          • Emotion grid repeat(5,1fr) for 10 emotions
+          • Card emotion backgrounds driven by feed.js inline styles
 */
 
 *, *::before, *::after {
@@ -360,7 +362,6 @@ body::before {
 .emotion-loneliness { background:rgba(160,160,255,0.10); color:#a0a0ff; }
 .emotion-joy        { background:rgba(255,200,71,0.10);  color:#ffc847; }
 .emotion-heartbreak { background:rgba(255,80,80,0.10);   color:#ff5050; }
-/* v5.4 — new emotions */
 .emotion-sendit     { background:rgba(0,229,200,0.12);   color:#00e5c8; }
 .emotion-letout     { background:rgba(200,100,255,0.12); color:#c864ff; }
 
@@ -515,7 +516,7 @@ mark.search-highlight {
   border-radius: 2px; padding: 0 1px; font-style: inherit;
 }
 
-/* ── 3. EMOTION TABS ── */
+/* ── 3. VIBE TABS (was emotion/room tabs) ── */
 .room-tabs-wrap {
   position: sticky; top: 106px; z-index: 98; height: 42px;
   width: 100%; max-width: none;
@@ -581,9 +582,7 @@ mark.search-highlight {
 }
 
 /* ══════════════════════════════════════
-   FEED CARD — v5.4 prototype-matched
-   Emotion backgrounds + CSS variables
-   Natural height, no fixed px forcing
+   FEED CARD
 ══════════════════════════════════════ */
 .feed-card {
   overflow: hidden;
@@ -625,7 +624,7 @@ mark.search-highlight {
 .feed-card.e-sendit     { --e-strip:rgba(0,229,200,.85); --e-shimmer:rgba(0,229,200,.9); --e-glow:rgba(0,229,200,.12); --e-tag-bg:rgba(0,229,200,.1); --e-tag:#00e5c8; }
 .feed-card.e-letout     { --e-strip:rgba(200,100,255,.85); --e-shimmer:rgba(200,100,255,.9); --e-glow:rgba(200,100,255,.12); --e-tag-bg:rgba(200,100,255,.1); --e-tag:#c864ff; }
 
-/* Top shimmer line — uses emotion color */
+/* Top shimmer line */
 .feed-card::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0; height: 1px;
@@ -638,7 +637,7 @@ mark.search-highlight {
   z-index: 3;
   pointer-events: none;
 }
-/* Left strip — uses emotion color */
+/* Left strip */
 .feed-card::after {
   content: '';
   position: absolute; top: 16px; left: 0; bottom: 16px; width: 3px;
@@ -659,7 +658,6 @@ mark.search-highlight {
   font-family: var(--font-mono);
   font-size: 0.58rem; color: var(--text-3); font-weight: 400; letter-spacing: 0.3px;
 }
-/* Mode badge — kept for backwards compat but hidden by default in v2 */
 .card-mode-badge { display: none; }
 
 .card-lyric {
@@ -689,21 +687,23 @@ mark.search-highlight {
   font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.3px;
 }
-.card-mystery {
-  padding: 9px 12px; height: 54px;
-  background: rgba(107,140,255,0.05); border: 1px dashed rgba(107,140,255,0.18);
-  border-radius: 9px; font-family: var(--font-lyric); font-style: italic;
-  font-size: 0.73rem; color: #6B8CFF; font-weight: 400;
-  display: flex; align-items: center; overflow: hidden; flex-shrink: 0;
+
+/* ── MODE REMNANTS — FULLY HIDDEN ── */
+/* Purge all mode/guess/discover UI from old posts */
+.card-mystery,
+.card-discover,
+.mode-section,
+.composer-mode-row,
+#modeSection,
+.mode-row-form,
+.mode-btn,
+[class*="mode-section"],
+[class*="mode-row"],
+#guessInputs,
+#discoverInputs {
+  display: none !important;
 }
-.card-discover {
-  padding: 9px 12px; height: 54px;
-  background: rgba(74,222,128,0.05); border: 1px dashed rgba(74,222,128,0.18);
-  border-radius: 9px; font-family: var(--font-lyric); font-style: italic;
-  font-size: 0.73rem; color: #4ade80; font-weight: 400;
-  display: flex; align-items: center;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;
-}
+
 .card-actions {
   display: flex; gap: 6px;
   padding-top: 9px; border-top: 1px solid rgba(232,197,71,0.08);
@@ -937,20 +937,21 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
 }
 @media(min-width:520px) { .modal-footer { padding-bottom: 14px; } }
 
+/* ── Field labels — VIBE replaces EMOTION ── */
 .field-label {
   font-family: var(--font-mono); font-size: 0.48rem; font-weight: 700;
   color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 2px;
 }
 
 /* ══════════════════════════════════════
-   EMOTION BUTTONS
-   v5.4 — grid is now repeat(5,1fr) for 10 emotions
+   VIBE BUTTONS (was emotion buttons)
+   v5.5 — grid repeat(5,1fr) for 10 vibes in 2 rows
 ══════════════════════════════════════ */
 .emotion-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 7px; }
 .emotion-btn {
   padding: 10px 4px 9px; border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.55);
   font-family: var(--font-ui); font-size: 0.7rem; font-weight: 600;
   cursor: pointer; transition: all 0.2s var(--ease-out); text-align: center;
 }
@@ -958,7 +959,6 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
   background: rgba(255,255,255,0.08); color: #fff;
   transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
-/* existing emotions */
 .emotion-btn[data-emotion="Love"].active       { background:rgba(255,107,157,0.15); border-color:rgba(255,107,157,0.5); color:#FF6B9D; box-shadow:0 0 16px rgba(255,107,157,0.15); }
 .emotion-btn[data-emotion="Heartbreak"].active { background:rgba(255,80,80,0.15);   border-color:rgba(255,80,80,0.5);   color:#ff6060; box-shadow:0 0 16px rgba(255,80,80,0.15);   }
 .emotion-btn[data-emotion="Hope"].active       { background:rgba(107,140,255,0.15); border-color:rgba(107,140,255,0.5); color:#7B9FFF; box-shadow:0 0 16px rgba(107,140,255,0.15); }
@@ -967,7 +967,6 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
 .emotion-btn[data-emotion="Joy"].active        { background:rgba(255,200,71,0.14);  border-color:rgba(255,200,71,0.5);  color:#ffc847; box-shadow:0 0 16px rgba(255,200,71,0.12);  }
 .emotion-btn[data-emotion="Rage"].active       { background:rgba(255,100,60,0.15);  border-color:rgba(255,100,60,0.5);  color:#FF6440; box-shadow:0 0 16px rgba(255,100,60,0.15);  }
 .emotion-btn[data-emotion="Loneliness"].active { background:rgba(160,160,255,0.14); border-color:rgba(160,160,255,0.45);color:#a0a0ff; box-shadow:0 0 16px rgba(160,160,255,0.12); }
-/* v5.4 new */
 .emotion-btn[data-emotion="SendIt"].active     { background:rgba(0,229,200,0.13);   border-color:rgba(0,229,200,0.5);   color:#00e5c8; box-shadow:0 0 16px rgba(0,229,200,0.14);   }
 .emotion-btn[data-emotion="LetOut"].active     { background:rgba(200,100,255,0.13); border-color:rgba(200,100,255,0.5); color:#c864ff; box-shadow:0 0 16px rgba(200,100,255,0.14); }
 
@@ -979,51 +978,12 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
 .emotion-btn[data-emotion="Joy"]:hover        { border-color:rgba(255,200,71,0.32);  color:#ffc847; }
 .emotion-btn[data-emotion="Rage"]:hover       { border-color:rgba(255,100,60,0.28);  color:#FF6440; }
 .emotion-btn[data-emotion="Loneliness"]:hover { border-color:rgba(160,160,255,0.28); color:#a0a0ff; }
-/* v5.4 new */
 .emotion-btn[data-emotion="SendIt"]:hover     { border-color:rgba(0,229,200,0.28);   color:#00e5c8; }
 .emotion-btn[data-emotion="LetOut"]:hover     { border-color:rgba(200,100,255,0.28); color:#c864ff; }
 
 /* ══════════════════════════════════════
-   MODE BUTTONS
+   RESULT / GUESS / LISTEN
 ══════════════════════════════════════ */
-.mode-row-form { display: flex; gap: 6px; }
-.mode-btn {
-  flex: 1; padding: 12px 6px; border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.38);
-  font-family: var(--font-ui); font-size: 0.76rem; font-weight: 600;
-  cursor: pointer; transition: all 0.2s var(--ease-out);
-}
-.mode-btn:hover {
-  background: rgba(255,255,255,0.08); color: #fff;
-  border-color: rgba(255,255,255,0.15); transform: translateY(-1px);
-}
-.mode-btn.active {
-  background: rgba(232,197,71,0.12); border-color: rgba(232,197,71,0.45);
-  color: #E8C547; box-shadow: 0 0 20px rgba(232,197,71,0.1); font-weight: 700;
-}
-.conditional { display: none; }
-.conditional.show { display: flex; flex-direction: column; gap: 9px; animation: fadeIn 0.2s ease; }
-.stream-toggle {
-  padding: 10px 14px; background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08); border-radius: 11px; cursor: pointer;
-  font-family: var(--font-mono); font-size: 0.48rem; font-weight: 700;
-  color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 2px;
-  list-style: none; transition: all 0.18s;
-}
-.stream-toggle:hover { color: rgba(232,197,71,0.7); border-color: rgba(232,197,71,0.2); }
-details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71,0.3); }
-.stream-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 0 2px; }
-.stream-field { display: flex; flex-direction: column; gap: 4px; }
-.stream-field input { font-size: 0.78rem!important; padding: 9px 11px; border-radius: 10px; }
-.check-row {
-  display: flex; align-items: center; gap: 10px; padding: 11px 13px;
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 11px; cursor: pointer; transition: border-color 0.18s;
-}
-.check-row:hover { border-color: rgba(232,197,71,0.25); }
-.check-row input[type="checkbox"] { width: auto; accent-color: var(--gold); }
-.check-row span { font-size: 0.82rem; font-weight: 500; color: rgba(255,255,255,0.7); }
 .result-msg {
   padding: 13px; border-radius: 12px; font-weight: 600; font-size: 0.82rem;
   line-height: 1.4; text-align: center;
@@ -1033,37 +993,6 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
 .result-error   { background: rgba(255,100,100,0.08); border: 1px solid rgba(255,100,100,0.28); color: #ff6464; }
 .result-partial { background: rgba(255,200,71,0.08);  border: 1px solid rgba(255,200,71,0.28);  color: #ffc847; }
 
-/* ══════════════════════════════════════
-   POSTCARD
-══════════════════════════════════════ */
-.postcard {
-  background: var(--bg); border-radius: 13px;
-  overflow: hidden; border: 1px solid var(--border-hi);
-}
-.postcard-header {
-  padding: 11px 16px;
-  background: var(--gold); color: #0B0B0D;
-  font-family: var(--font-display); font-weight: 800;
-  font-size: 0.62rem; letter-spacing: 4px; text-transform: uppercase;
-  display: flex; align-items: center; gap: 8px;
-}
-.postcard-header-mark { display: flex; align-items: center; flex-shrink: 0; }
-.postcard-lyric {
-  font-family: var(--font-lyric); font-style: italic;
-  font-size: 1.08rem; line-height: 1.6; padding: 22px 18px;
-  color: var(--text); text-align: center; min-height: 100px;
-  display: flex; align-items: center; justify-content: center; font-weight: 400;
-}
-.postcard-emotion {
-  text-align: center; padding: 8px 16px;
-  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-  font-family: var(--font-mono); font-size: 0.5rem; font-weight: 700;
-  color: var(--gold); text-transform: uppercase; letter-spacing: 2px;
-}
-.postcard-song { padding: 14px 18px; text-align: center; }
-.postcard-song div:first-child { font-weight: 700; font-size: 0.85rem; color: var(--text); margin-bottom: 3px; }
-.postcard-song div:last-child  { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-2); letter-spacing: 0.5px; }
-.postcard-community { padding: 0 18px 12px; text-align: center; }
 .listen-link {
   display: block; padding: 12px 14px; background: var(--surface-2);
   border: 1px solid var(--border-hi); border-radius: 10px;
@@ -1132,14 +1061,6 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
 .activity-result.correct   { color: #4ade80; }
 .activity-result.incorrect { color: #ff6464; }
 .activity-time   { font-family: var(--font-mono); font-size: 0.52rem; color: var(--text-2); font-weight: 700; }
-.help-links-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-.help-link {
-  font-family: var(--font-mono); font-size: 0.5rem; font-weight: 700; padding: 3px 8px;
-  background: var(--gold-faint); border: 1px solid var(--gold-border);
-  border-radius: 20px; color: var(--gold); text-decoration: none; transition: all 0.15s;
-  text-transform: uppercase; letter-spacing: 0.5px;
-}
-.help-link:hover { background: rgba(232,197,71,0.15); }
 
 /* ══════════════════════════════════════
    MARGO IMAGE STUDIO
@@ -1240,9 +1161,12 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
   letter-spacing: 1.5px; display: block; margin-bottom: 8px;
 }
 
+/* ── COLOR SWATCHES — compact pill row, not giant blocks ── */
 .color-scenes {
-  display: grid; grid-template-columns: repeat(6, 1fr);
-  gap: 8px; margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
 }
 .scene-swatch {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -1252,7 +1176,9 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
   width: 100%; aspect-ratio: 1; border-radius: 9px;
   border: 2px solid rgba(255,255,255,0.1); transition: all 0.18s; display: block;
 }
-.scene-swatch:hover .swatch-preview { border-color: rgba(255,255,255,0.35); transform: scale(1.06); }
+.scene-swatch:hover .swatch-preview {
+  border-color: rgba(255,255,255,0.35); transform: scale(1.06);
+}
 .scene-swatch.active .swatch-preview {
   border-color: var(--gold); box-shadow: 0 0 0 2px rgba(232,197,71,0.35);
 }
@@ -1302,18 +1228,21 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
 }
 .font-card.active .font-card-name { color: var(--gold); }
 
+/* ── PHOTO UPLOAD ── */
 .photo-drop-zone {
-  border: 1.5px dashed rgba(255,255,255,0.14); border-radius: 12px; padding: 20px;
+  border: 1.5px dashed rgba(255,255,255,0.2); border-radius: 12px; padding: 20px;
   display: flex; flex-direction: column; align-items: center; gap: 8px;
-  cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.02);
+  cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.03);
   margin-bottom: 12px;
 }
 .photo-drop-zone:hover,
-.photo-drop-zone.has-photo { border-color: var(--gold-border); background: var(--gold-faint); }
-.photo-drop-icon { color: rgba(255,255,255,0.3); }
+.photo-drop-zone.has-photo {
+  border-color: var(--gold-border); background: var(--gold-faint);
+}
+.photo-drop-icon { color: rgba(255,255,255,0.4); font-size: 1.5rem; }
 .photo-drop-text {
   font-family: var(--font-mono); font-size: 0.55rem; font-weight: 700;
-  color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 1px;
+  color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;
 }
 .photo-controls { display: flex; flex-direction: column; gap: 10px; }
 .photo-controls.hidden { display: none; }
@@ -1322,7 +1251,7 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
 .photo-filter {
   padding: 6px 12px; border-radius: 20px;
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.45); font-family: var(--font-mono);
+  color: rgba(255,255,255,0.55); font-family: var(--font-mono);
   font-size: 0.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
   cursor: pointer; transition: all 0.18s;
 }
@@ -1331,7 +1260,7 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
 .photo-remove-btn {
   width: 100%; padding: 9px; border-radius: 9px;
   background: rgba(255,80,80,0.07); border: 1px solid rgba(255,80,80,0.2);
-  color: rgba(255,100,100,0.7); font-family: var(--font-mono);
+  color: rgba(255,130,130,0.9); font-family: var(--font-mono);
   font-size: 0.52rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
   cursor: pointer; transition: all 0.18s;
 }
@@ -1366,11 +1295,11 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
 .size-cancel {
   width: 100%; padding: 12px; border-radius: 10px;
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.4); font-family: var(--font-mono);
+  color: rgba(255,255,255,0.5); font-family: var(--font-mono);
   font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
   cursor: pointer; transition: all 0.18s;
 }
-.size-cancel:hover { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.18); }
+.size-cancel:hover { color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.18); }
 
 .ceremony-overlay {
   position: absolute; inset: 0; z-index: 30;
@@ -1408,10 +1337,10 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
 .ceremony-back {
   background: none; border: none; cursor: pointer;
   font-family: var(--font-mono); font-size: 0.52rem; font-weight: 700;
-  color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px;
+  color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 1px;
   padding: 8px; transition: color 0.18s;
 }
-.ceremony-back:hover { color: rgba(255,255,255,0.65); }
+.ceremony-back:hover { color: rgba(255,255,255,0.7); }
 
 /* ══════════════════════════════════════
    STUDIO CHOOSER
@@ -1468,6 +1397,7 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
 @keyframes fadeUp   { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 @keyframes fadeDown { from{opacity:0;transform:translateY(-8px)}  to{opacity:1;transform:translateY(0)} }
 @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+@keyframes cardIn   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
 /* ══════════════════════════════════════
    STATS SHIMMER
@@ -1537,7 +1467,6 @@ details[open] .stream-toggle { color: var(--gold); border-color: rgba(232,197,71
   #dropLyricFAB   { bottom: 22px; padding: 10px 20px; font-size: 0.67rem; }
   #margoScrollTop { bottom: 72px; right: 12px; }
   .scroll-top-label { font-size: 0.5rem; }
-  /* Emotion grid — keep 5 cols but tighter */
   .emotion-grid { grid-template-columns: repeat(5,1fr); gap: 5px; }
   .emotion-btn  { padding: 9px 2px 8px; font-size: 0.62rem; }
 }
