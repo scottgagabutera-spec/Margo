@@ -1,11 +1,12 @@
 /* ============================================================
    MARGO — js/echoes.js
-   v1.2 — fixes:
-          • EMOTION → VIBE everywhere in UI
-          • "Send It" / "Let Out" display names fixed (no camel case)
-          • Bottom action buttons fully readable (white/bright text)
-          • Live Genius search from ≥3 chars
-          • Submit Firebase guard + timestamp safe
+   v1.3 — FINAL
+   • EMOTION → VIBE everywhere
+   • Send It / Let Out display names correct
+   • Bottom action buttons fully readable
+   • Live Genius search from ≥3 chars
+   • Submit uses firebase.database().ref('posts') DIRECTLY
+     — never relies on stale postsRef global
    ============================================================ */
 
 window._echoState = window._echoState || {
@@ -21,9 +22,9 @@ const ES = window._echoState;
    STYLES
 ──────────────────────────────────────────────────────────── */
 function injectEchoStyles() {
-  if (document.getElementById('echoStylesV12')) return;
+  if (document.getElementById('echoStylesV13')) return;
   const s = document.createElement('style');
-  s.id = 'echoStylesV12';
+  s.id = 'echoStylesV13';
   s.textContent = `
     #echoSheetBackdrop {
       position:fixed;inset:0;z-index:650;
@@ -135,7 +136,7 @@ function injectEchoStyles() {
     .echo-artist-name{font-family:'Space Mono',monospace;font-size:0.58rem;color:rgba(255,255,255,0.35);letter-spacing:0.3px}
     .echo-vibe-tag{font-family:'Space Mono',monospace;font-size:0.48rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:3px 9px;border-radius:20px;flex-shrink:0}
 
-    /* ── Action buttons — FULLY READABLE, high contrast ── */
+    /* ── Action buttons — FULLY READABLE ── */
     .echo-card-actions{display:flex;gap:6px;margin-top:2px}
     .echo-action-btn{
       flex:1;padding:9px 6px;border-radius:10px;
@@ -145,31 +146,25 @@ function injectEchoStyles() {
       display:flex;align-items:center;justify-content:center;gap:5px;
       white-space:nowrap;
     }
-    /* Resonate — purple tint, white text */
     .echo-resonate-btn{
       background:rgba(192,132,252,0.10);
       border:1px solid rgba(192,132,252,0.35);
       color:rgba(255,255,255,0.9);
     }
     .echo-resonate-btn:hover{
-      background:rgba(192,132,252,0.22);
-      border-color:rgba(192,132,252,0.6);
+      background:rgba(192,132,252,0.22);border-color:rgba(192,132,252,0.6);
       color:#fff;transform:translateY(-1px);
     }
     .echo-resonate-btn.resonated{
-      background:rgba(192,132,252,0.22);
-      border-color:rgba(192,132,252,0.65);
-      color:#C084FC;
+      background:rgba(192,132,252,0.22);border-color:rgba(192,132,252,0.65);color:#C084FC;
     }
-    /* Share — gold tint, white text */
     .echo-share-btn{
       background:rgba(232,197,71,0.08);
       border:1px solid rgba(232,197,71,0.28);
       color:rgba(255,255,255,0.88);
     }
     .echo-share-btn:hover{
-      background:rgba(232,197,71,0.18);
-      border-color:rgba(232,197,71,0.55);
+      background:rgba(232,197,71,0.18);border-color:rgba(232,197,71,0.55);
       color:#fff;transform:translateY(-1px);
     }
 
@@ -184,7 +179,6 @@ function injectEchoStyles() {
       display:flex;flex-direction:column;gap:8px;
       background:rgba(0,0,0,0.2);
     }
-
     .echo-compose-collapsed{display:flex;align-items:center;gap:10px}
     .echo-compose-trigger{
       flex:1;padding:12px 16px;border-radius:50px;
@@ -202,11 +196,9 @@ function injectEchoStyles() {
     .echo-form-user-row{display:flex;align-items:center;gap:8px;margin-bottom:2px}
     .echo-form-username{font-family:'Space Mono',monospace;font-size:0.65rem;font-weight:700}
 
-    /* Vibe section label */
     .echo-vibe-label{
       font-family:'Space Mono',monospace;font-size:0.46rem;font-weight:700;
-      color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:2px;
-      margin-bottom:4px;
+      color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;
     }
 
     .echo-lyric-input{
@@ -215,8 +207,7 @@ function injectEchoStyles() {
       background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
       color:#fff;font-family:'DM Serif Display',serif;
       font-style:italic;font-size:1rem;line-height:1.6;
-      outline:none;transition:border-color 0.2s,box-shadow 0.2s;
-      box-sizing:border-box;
+      outline:none;transition:border-color 0.2s,box-shadow 0.2s;box-sizing:border-box;
     }
     .echo-lyric-input::placeholder{color:rgba(255,255,255,0.2)}
     .echo-lyric-input:focus{border-color:rgba(232,197,71,0.38);box-shadow:0 0 0 3px rgba(232,197,71,0.07)}
@@ -226,18 +217,12 @@ function injectEchoStyles() {
       flex:1;padding:10px 12px;border-radius:11px;
       background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
       color:#fff;font-family:'DM Sans',sans-serif;font-size:0.85rem;
-      outline:none;transition:border-color 0.2s;
-      box-sizing:border-box;
+      outline:none;transition:border-color 0.2s;box-sizing:border-box;
     }
     .echo-form-input::placeholder{color:rgba(255,255,255,0.2)}
     .echo-form-input:focus{border-color:rgba(232,197,71,0.3);box-shadow:0 0 0 3px rgba(232,197,71,0.06)}
 
-    /* ── Vibe grid — 5 cols, matches composer ── */
-    .echo-vibe-row{
-      display:grid;
-      grid-template-columns:repeat(5,1fr);
-      gap:5px;
-    }
+    .echo-vibe-row{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
     .echo-vibe-opt{
       padding:8px 4px;border-radius:9px;
       background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
@@ -281,7 +266,6 @@ function injectEchoStyles() {
     .echo-identify-btn:hover:not(:disabled){background:rgba(232,197,71,0.09);border-color:rgba(232,197,71,0.5);color:#E8C547}
     .echo-identify-btn:disabled{opacity:0.4;cursor:default}
 
-    /* Live search hint */
     .echo-live-hint{
       display:inline-flex;align-items:center;gap:5px;
       font-family:'Space Mono',monospace;font-size:0.46rem;font-weight:700;
@@ -304,7 +288,7 @@ function injectEchoStyles() {
 }
 
 /* ────────────────────────────────────────────────────────────
-   VIBE CONFIG — display names fixed
+   VIBE CONFIG
 ──────────────────────────────────────────────────────────── */
 const ECHO_VIBES = [
   { value: 'Love',       label: 'Love'       },
@@ -349,7 +333,6 @@ function mountEchoSheet() {
   backdrop.innerHTML = `
     <div id="echoSheet">
       <div class="echo-handle"></div>
-
       <div class="echo-header">
         <div class="echo-header-left">
           <span class="echo-title">Lyric Back</span>
@@ -357,23 +340,17 @@ function mountEchoSheet() {
         </div>
         <button class="echo-close" id="echoClose" aria-label="Close">×</button>
       </div>
-
       <div class="echo-og-card" id="echoOgCard"></div>
-
       <div class="echo-divider">
         <div class="echo-divider-line"></div>
         <span class="echo-divider-label" id="echoCountLabel">0 echoes</span>
         <div class="echo-divider-line"></div>
       </div>
-
       <div class="echo-list-wrap" id="echoList"></div>
-
       <div class="echo-compose" id="echoCompose">
         <div class="echo-compose-collapsed" id="echoCollapsed">
           <div class="echo-compose-avatar" id="echoComposeAvatar"></div>
-          <button class="echo-compose-trigger" id="echoComposeTrigger">
-            Drop a lyric back…
-          </button>
+          <button class="echo-compose-trigger" id="echoComposeTrigger">Drop a lyric back…</button>
         </div>
         <div class="echo-compose-form" id="echoComposeForm">
           <div class="echo-form-user-row">
@@ -383,9 +360,7 @@ function mountEchoSheet() {
           <textarea class="echo-lyric-input" id="echoLyricInput"
             maxlength="140" placeholder="The lyric that answers this one…" rows="3"></textarea>
           <div class="echo-char-count"><span id="echoCharCount">0</span>/140</div>
-          <button class="echo-identify-btn" id="echoIdentifyBtn">
-            Identify Song
-          </button>
+          <button class="echo-identify-btn" id="echoIdentifyBtn">Identify Song</button>
           <div id="echoLiveHint" class="echo-live-hint" style="display:none">
             <span class="echo-live-dot"></span> Searching for song…
           </div>
@@ -395,14 +370,10 @@ function mountEchoSheet() {
             <input class="echo-form-input" id="echoArtistInput" placeholder="Artist" type="text" maxlength="80"/>
           </div>
           <div class="echo-vibe-label">Vibe</div>
-          <div class="echo-vibe-row" id="echoVibeRow">
-            ${vibeButtons}
-          </div>
+          <div class="echo-vibe-row" id="echoVibeRow">${vibeButtons}</div>
           <div class="echo-form-submit-row">
             <button class="echo-cancel-btn" id="echoCancelBtn">Cancel</button>
-            <button class="echo-submit-btn" id="echoSubmitBtn" disabled>
-              Drop Your Lyric Back
-            </button>
+            <button class="echo-submit-btn" id="echoSubmitBtn" disabled>Drop Your Lyric Back</button>
           </div>
         </div>
       </div>
@@ -415,9 +386,9 @@ function mountEchoSheet() {
   backdrop.querySelector('#echoComposeTrigger').onclick = expandEchoCompose;
   backdrop.querySelector('#echoCancelBtn').onclick      = collapseEchoCompose;
   backdrop.querySelector('#echoSubmitBtn').onclick      = submitEcho;
-  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeEchoSheet(); });
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) closeEchoSheet(); });
 
-  backdrop.querySelector('#echoLyricInput').oninput = (e) => {
+  backdrop.querySelector('#echoLyricInput').oninput = e => {
     const n = e.target.value.length;
     backdrop.querySelector('#echoCharCount').textContent = n;
     backdrop.querySelector('#echoSubmitBtn').disabled = n < 2;
@@ -430,21 +401,18 @@ function mountEchoSheet() {
     };
   });
 
-  // Identify song button
   backdrop.querySelector('#echoIdentifyBtn').onclick = () => {
     const lyric = backdrop.querySelector('#echoLyricInput').value.trim();
     if (lyric.length < 3) { if (typeof showToast === 'function') showToast('Type a lyric first'); return; }
     runEchoGeniusSearch(lyric);
   };
 
-  // Live search from ≥3 chars
   let geniusDebounce;
-  backdrop.querySelector('#echoLyricInput').addEventListener('input', (e) => {
+  backdrop.querySelector('#echoLyricInput').addEventListener('input', e => {
     clearTimeout(geniusDebounce);
     const val = e.target.value.trim();
     const songFilled = backdrop.querySelector('#echoSongInput').value.trim();
     const liveHint = document.getElementById('echoLiveHint');
-
     if (val.length >= 3 && !songFilled) {
       if (liveHint) liveHint.style.display = 'inline-flex';
       const ms = val.length < 8 ? 900 : val.length < 15 ? 700 : 500;
@@ -513,10 +481,9 @@ function closeEchoSheet() {
 function populateEchoOgCard(post) {
   const card = document.getElementById('echoOgCard');
   if (!card) return;
-  const k    = post.knowledge || {};
-  const vibe = post.emotion || post.feeling || 'Nostalgia';
-  const vcfg = ECHO_VIBE_CFG[vibe] || ECHO_VIBE_CFG['Nostalgia'];
-  // Find display label for vibe
+  const k         = post.knowledge || {};
+  const vibe      = post.emotion || post.feeling || 'Nostalgia';
+  const vcfg      = ECHO_VIBE_CFG[vibe] || ECHO_VIBE_CFG['Nostalgia'];
   const vibeLabel = ECHO_VIBES.find(v => v.value === vibe)?.label || vibe;
   card.innerHTML = `
     <div class="echo-og-lyric">"${post.text || ''}"</div>
@@ -534,24 +501,14 @@ function populateEchoOgCard(post) {
 ──────────────────────────────────────────────────────────── */
 function populateEchoComposeUser() {
   if (typeof MargoUsername === 'undefined') return;
-  const name    = MargoUsername.get();
-  const avatar  = document.getElementById('echoComposeAvatar');
-  const fAvatar = document.getElementById('echoFormAvatar');
-  const fName   = document.getElementById('echoFormUsername');
+  const name   = MargoUsername.get();
+  const avatar = document.getElementById('echoComposeAvatar');
+  const fAvatar= document.getElementById('echoFormAvatar');
+  const fName  = document.getElementById('echoFormUsername');
   const { color } = MargoUsername.getColor(name);
-
-  if (avatar) {
-    avatar.innerHTML = '';
-    avatar.appendChild(MargoUsername.buildAvatar(name, 28));
-  }
-  if (fAvatar) {
-    fAvatar.innerHTML = '';
-    fAvatar.appendChild(MargoUsername.buildAvatar(name, 22));
-  }
-  if (fName) {
-    fName.textContent = name;
-    fName.style.color = color;
-  }
+  if (avatar)  { avatar.innerHTML  = ''; avatar.appendChild(MargoUsername.buildAvatar(name, 28)); }
+  if (fAvatar) { fAvatar.innerHTML = ''; fAvatar.appendChild(MargoUsername.buildAvatar(name, 22)); }
+  if (fName)   { fName.textContent = name; fName.style.color = color; }
 }
 
 function expandEchoCompose() {
@@ -590,21 +547,25 @@ function clearEchoForm() {
 ──────────────────────────────────────────────────────────── */
 function subscribeEchoes(postId) {
   unsubscribeEchoes();
-  if (!isFirebaseEnabled || !postsRef) return;
+  if (typeof firebase === 'undefined' || !firebase.apps?.length) return;
 
-  const ref = postsRef.child(postId).child('echoes');
-  const handler = (snap) => {
-    ES.echoes = [];
-    snap.forEach(child => {
-      const echo = child.val();
-      echo.id = child.key;
-      ES.echoes.push(echo);
-    });
-    ES.echoes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    renderEchoList(ES.echoes);
-  };
-  ref.on('value', handler);
-  ES.echoListener = () => ref.off('value', handler);
+  try {
+    const ref = firebase.database().ref('posts').child(postId).child('echoes');
+    const handler = snap => {
+      ES.echoes = [];
+      snap.forEach(child => {
+        const echo = child.val();
+        echo.id = child.key;
+        ES.echoes.push(echo);
+      });
+      ES.echoes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      renderEchoList(ES.echoes);
+    };
+    ref.on('value', handler);
+    ES.echoListener = () => ref.off('value', handler);
+  } catch (err) {
+    console.error('[Echo] subscribe error:', err);
+  }
 }
 
 function unsubscribeEchoes() {
@@ -642,13 +603,13 @@ function renderEchoList(echoes) {
 }
 
 function buildEchoCard(echo, idx) {
-  const username   = echo.username || 'Anonymous';
-  const vibe       = echo.emotion || echo.feeling || 'Nostalgia';
-  const vcfg       = ECHO_VIBE_CFG[vibe] || ECHO_VIBE_CFG['Nostalgia'];
-  const vibeLabel  = ECHO_VIBES.find(v => v.value === vibe)?.label || vibe;
+  const username      = echo.username || 'Anonymous';
+  const vibe          = echo.emotion || echo.feeling || 'Nostalgia';
+  const vcfg          = ECHO_VIBE_CFG[vibe] || ECHO_VIBE_CFG['Nostalgia'];
+  const vibeLabel     = ECHO_VIBES.find(v => v.value === vibe)?.label || vibe;
   const resonateCount = Object.keys(echo.resonates || {}).length;
-  const myUserId   = typeof userId !== 'undefined' ? userId : '';
-  const hasResonated = !!(echo.resonates && echo.resonates[myUserId]);
+  const myUserId      = typeof userId !== 'undefined' ? userId : '';
+  const hasResonated  = !!(echo.resonates && echo.resonates[myUserId]);
 
   let avatarColor = '#E8C547';
   let avatarIcon  = '♪';
@@ -666,6 +627,7 @@ function buildEchoCard(echo, idx) {
   }
 
   const timeStr = typeof timeAgo === 'function' && echo.timestamp ? timeAgo(echo.timestamp) : '';
+  const colorBg = typeof MargoUsername !== 'undefined' ? MargoUsername.getColor(username).colorBg : 'rgba(232,197,71,0.1)';
 
   const card = document.createElement('div');
   card.className = 'echo-card';
@@ -674,8 +636,7 @@ function buildEchoCard(echo, idx) {
     <div class="echo-card-header">
       <div class="echo-user-row">
         <div style="width:22px;height:22px;border-radius:50%;
-          background:${typeof MargoUsername !== 'undefined' ? MargoUsername.getColor(username).colorBg : 'rgba(232,197,71,0.1)'};
-          border:1.5px solid ${avatarColor};
+          background:${colorBg};border:1.5px solid ${avatarColor};
           display:flex;align-items:center;justify-content:center;
           font-size:0.7rem;flex-shrink:0;color:${avatarColor}">
           ${avatarIcon}
@@ -695,8 +656,7 @@ function buildEchoCard(echo, idx) {
       </span>
     </div>
     <div class="echo-card-actions">
-      <button class="echo-action-btn echo-resonate-btn ${hasResonated ? 'resonated' : ''}"
-        data-echo-id="${echo.id}">
+      <button class="echo-action-btn echo-resonate-btn ${hasResonated ? 'resonated' : ''}" data-echo-id="${echo.id}">
         ♥ ${resonateCount > 0 ? resonateCount : 'Resonate'}
       </button>
       <button class="echo-action-btn echo-share-btn" data-echo-idx="${idx}">
@@ -716,13 +676,18 @@ function buildEchoCard(echo, idx) {
 ──────────────────────────────────────────────────────────── */
 function resonateEcho(echoId) {
   if (!ES.post?.id || !echoId) return;
-  if (!isFirebaseEnabled || !postsRef) return;
+  if (typeof firebase === 'undefined' || !firebase.apps?.length) return;
   const myId = typeof userId !== 'undefined' ? userId : 'anon';
-  const ref  = postsRef.child(ES.post.id).child('echoes').child(echoId).child('resonates').child(myId);
-  ref.once('value').then(snap => {
-    if (snap.exists()) ref.remove();
-    else ref.set(true);
-  });
+  try {
+    const ref = firebase.database().ref('posts')
+      .child(ES.post.id).child('echoes').child(echoId).child('resonates').child(myId);
+    ref.once('value').then(snap => {
+      if (snap.exists()) ref.remove();
+      else ref.set(true);
+    });
+  } catch (err) {
+    console.error('[Echo] resonate error:', err);
+  }
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -735,7 +700,8 @@ function openDuetShareSheet(echo) {
 }
 
 /* ────────────────────────────────────────────────────────────
-   SUBMIT ECHO
+   SUBMIT ECHO — uses firebase.database().ref('posts') DIRECTLY
+   Never relies on postsRef global which can be stale
 ──────────────────────────────────────────────────────────── */
 async function submitEcho() {
   if (ES.isSubmitting) return;
@@ -750,25 +716,25 @@ async function submitEcho() {
     return;
   }
 
-  if (!isFirebaseEnabled || !postsRef || !ES.post?.id) {
+  if (typeof firebase === 'undefined' || !firebase.apps?.length) {
     if (typeof showToast === 'function') showToast('Not connected — try again');
     return;
   }
 
-  const username = (typeof MargoUsername !== 'undefined') ? MargoUsername.get() : 'Anon';
-
-  let ts;
-  try {
-    ts = firebase.database.ServerValue.TIMESTAMP;
-  } catch (_) {
-    ts = Date.now();
+  if (!ES.post?.id) {
+    if (typeof showToast === 'function') showToast('Something went wrong — try again');
+    return;
   }
 
+  const username = typeof MargoUsername !== 'undefined' ? MargoUsername.get() : 'Anon';
+
+  let ts;
+  try { ts = firebase.database.ServerValue.TIMESTAMP; }
+  catch (_) { ts = Date.now(); }
+
   const echoData = {
-    lyric,
-    song,
-    artist,
-    emotion: vibe,
+    lyric, song, artist,
+    emotion:   vibe,
     username,
     timestamp: ts,
     resonates: {},
@@ -782,10 +748,13 @@ async function submitEcho() {
   }
 
   try {
-    await postsRef.child(ES.post.id).child('echoes').push(echoData);
+    /* ── DIRECT db reference — bypasses any stale postsRef ── */
+    await firebase.database().ref('posts').child(ES.post.id).child('echoes').push(echoData);
+
     collapseEchoCompose();
     clearEchoForm();
     if (typeof showToast === 'function') showToast('Lyric dropped ♪');
+
   } catch (err) {
     console.error('[Echo] submit error:', err);
     if (typeof showToast === 'function') showToast('Something went wrong — try again');
@@ -799,16 +768,15 @@ async function submitEcho() {
 }
 
 /* ────────────────────────────────────────────────────────────
-   GENIUS SEARCH IN ECHO FORM
+   GENIUS SEARCH
 ──────────────────────────────────────────────────────────── */
-let _echoGeniusTimer;
 let _echoLastQuery = '';
 
 async function runEchoGeniusSearch(query) {
   if (query === _echoLastQuery) return;
   _echoLastQuery = query;
 
-  const btn     = document.getElementById('echoIdentifyBtn');
+  const btn      = document.getElementById('echoIdentifyBtn');
   const liveHint = document.getElementById('echoLiveHint');
   if (btn) { btn.innerHTML = '<span class="echo-spinner"></span> Searching…'; btn.disabled = true; }
   if (liveHint) liveHint.style.display = 'none';
@@ -861,7 +829,6 @@ function renderEchoGeniusResults(results) {
       if (artistInput) artistInput.value = r.artist;
       el.innerHTML = '';
       _echoLastQuery = '';
-      // Hide live hint after selection
       const lh = document.getElementById('echoLiveHint');
       if (lh) lh.style.display = 'none';
     };
@@ -870,7 +837,7 @@ function renderEchoGeniusResults(results) {
 }
 
 async function fillEchoSongMeta(song, artist) {
-  // No-op — song/artist already set from Genius or manual input
+  // No-op — song/artist set from Genius or manual input
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -878,6 +845,7 @@ async function fillEchoSongMeta(song, artist) {
 ──────────────────────────────────────────────────────────── */
 window.openEchoSheet  = openEchoSheet;
 window.closeEchoSheet = closeEchoSheet;
+window.submitEcho     = submitEcho;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', mountEchoSheet);
