@@ -1,12 +1,13 @@
 (function() {
 /* ============================================================
-   MARGO — js/poster.js  v1.1
+   MARGO — js/poster.js  v1.2
    Self-contained poster studio, separate from gif-studio.js.
    Works with the existing #studioOverlay HTML in index.html.
    Called by share-sheet.js via window.openPosterStudio(post).
    FIX v1.1: exportBtn wired via addEventListener (not onclick)
              so studio.js IIFE binding does not double-fire.
-             closeBtn uses window.closePosterStudio directly.
+   FIX v1.2: window.drawPosterPreview exposed for share-sheet preview.
+             Song/artist/watermark layout matches GIF style.
    ============================================================ */
 
 /* ── VIBE colours ── */
@@ -458,67 +459,59 @@ function _posterRenderToCtx(ctx, W, H) {
   ctx.fillText(vibeLabel.toUpperCase(), pad + tagPH, tagY + tagH / 2);
   ctx.restore();
 
-  /* ── Song / artist ── */
-  const k       = _pPost?.knowledge || {};
-  const metaFS  = Math.max(14, W * 0.022);
-  const bottomY = H - pad;
+  /* ── Song / artist — GIF style (centered, vibe color song name) ── */
+  const k      = _pPost?.knowledge || {};
+  const metaFS = Math.max(14, W * 0.038);
 
-  if (k.song || k.artist) {
+  if (k.song) {
     ctx.save();
-    ctx.font         = `700 ${metaFS}px 'DM Sans',sans-serif`;
-    ctx.fillStyle    = theme.text;
-    ctx.globalAlpha  = 0.8;
+    ctx.font         = `700 ${metaFS}px 'Space Mono',monospace`;
+    ctx.fillStyle    = vibeColor;
+    ctx.globalAlpha  = 1;
     ctx.textBaseline = 'bottom';
-    let str = [k.song ? `♪ ${k.song}` : '', k.artist ? ` — ${k.artist}` : ''].join('');
-    while (ctx.measureText(str).width > innerW * 0.72 && str.length > 4) str = str.slice(0, -4) + '…';
-    ctx.fillText(str, pad, bottomY);
+    ctx.textAlign    = 'center';
+    let songStr = k.song;
+    while (ctx.measureText(songStr).width > innerW * 0.88 && songStr.length > 4)
+      songStr = songStr.slice(0, -4) + '…';
+    ctx.fillText(songStr, W / 2, H * 0.78);
     ctx.restore();
-
-    if (k.artist) {
-      ctx.save();
-      ctx.font         = `400 ${Math.max(12, W * 0.018)}px 'Space Mono',monospace`;
-      ctx.fillStyle    = vibeColor;
-      ctx.globalAlpha  = 0.55;
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(k.artist, pad, bottomY - metaFS * 1.4);
-      ctx.restore();
-    }
   }
 
-  /* ── trymargo.com watermark ── */
-  const waterFS = Math.max(11, W * 0.016);
+  if (k.artist) {
+    ctx.save();
+    ctx.font         = `400 ${Math.max(12, W * 0.028)}px 'Space Mono',monospace`;
+    ctx.fillStyle    = 'rgba(255,255,255,0.45)';
+    ctx.globalAlpha  = 1;
+    ctx.textBaseline = 'bottom';
+    ctx.textAlign    = 'center';
+    let artStr = k.artist;
+    while (ctx.measureText(artStr).width > innerW * 0.88 && artStr.length > 4)
+      artStr = artStr.slice(0, -4) + '…';
+    ctx.fillText(artStr, W / 2, H * 0.78 + metaFS * 1.1);
+    ctx.restore();
+  }
+
+  /* ── trymargo.com watermark pill — GIF style ── */
+  const waterFS = Math.max(11, W * 0.026);
   ctx.save();
-  ctx.font         = `400 ${waterFS}px 'Space Mono',monospace`;
-  ctx.fillStyle    = theme.text;
-  ctx.globalAlpha  = 0.22;
-  ctx.textBaseline = 'bottom';
+  ctx.font = `700 ${waterFS}px 'Space Mono',monospace`;
+  ctx.textBaseline = 'middle';
   ctx.textAlign    = 'center';
-  ctx.fillText('trymargo.com', W / 2, H - pad * 0.5);
+  const wText  = 'trymargo.com';
+  const wW     = ctx.measureText(wText).width + W * 0.05;
+  const wH     = waterFS * 1.7;
+  const wX     = W / 2 - wW / 2;
+  const wY     = H * 0.92 - wH / 2;
+  const wR     = wH / 2;
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle   = '#ffffff';
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(wX, wY, wW, wH, wR) : ctx.rect(wX, wY, wW, wH);
+  ctx.fill();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle   = '#ffffff';
+  ctx.fillText(wText, W / 2, wY + wH / 2);
   ctx.restore();
-
-  /* ── YouTube thumbnail ── */
-  if (_pThumbImg?.complete && _pThumbImg.naturalWidth) {
-    try {
-      const tS = Math.round(W * 0.09);
-      const tX = W - pad - tS;
-      const tY = bottomY - tS - metaFS * 1.6;
-      ctx.save();
-      ctx.beginPath();
-      const tR = tS * 0.14;
-      ctx.roundRect ? ctx.roundRect(tX, tY, tS, tS, tR) : ctx.rect(tX, tY, tS, tS);
-      ctx.clip();
-      ctx.drawImage(_pThumbImg, tX, tY, tS, tS);
-      ctx.restore();
-      ctx.save();
-      ctx.strokeStyle = vibeColor;
-      ctx.lineWidth   = 2;
-      ctx.globalAlpha = 0.5;
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(tX, tY, tS, tS, tR) : ctx.rect(tX, tY, tS, tS);
-      ctx.stroke();
-      ctx.restore();
-    } catch (_) {}
-  }
 }
 
 function _posterWrap(ctx, text, maxW) {
@@ -533,6 +526,14 @@ function _posterWrap(ctx, text, maxW) {
   if (cur) lines.push(cur);
   return lines;
 }
+
+/* ── Public preview — called by share-sheet.js ssStartPreview ──
+   Sets _pPost then renders to the passed ctx/W/H. ── */
+window.drawPosterPreview = function(ctx, W, H, post) {
+  if (!post) return;
+  _pPost = post;
+  _posterRenderToCtx(ctx, W, H);
+};
 
 /* ============================================================
    EXPORT
