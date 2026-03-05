@@ -374,21 +374,7 @@ function _posterRenderToCtx(ctx, W, H) {
   ctx.fillRect(pad, 0, W - pad * 2, 2);
   ctx.restore();
 
-  /* ── Left accent bar ── */
-  ctx.save();
-  const barH  = H * 0.42;
-  const barY  = (H - barH) / 2;
-  const barX  = pad - W * 0.026;
-  const barW  = W * 0.007;
-  const barGr = ctx.createLinearGradient(0, barY, 0, barY + barH);
-  barGr.addColorStop(0, 'transparent');
-  barGr.addColorStop(0.3, vibeColor);
-  barGr.addColorStop(0.7, vibeColor);
-  barGr.addColorStop(1, 'transparent');
-  ctx.fillStyle   = barGr;
-  ctx.globalAlpha = 0.88;
-  ctx.fillRect(barX, barY, barW, barH);
-  ctx.restore();
+
 
   /* ── MARGO wordmark — always gold like GIF ── */
   const margoSz = Math.max(22, W * 0.055);
@@ -431,35 +417,7 @@ function _posterRenderToCtx(ctx, W, H) {
   });
   ctx.restore();
 
-  /* ── Vibe pill ── */
-  const tagFS  = Math.max(14, W * 0.022);
-  const tagY   = startY + blockH + lh * 0.65;
-  ctx.save();
-  ctx.font = `700 ${tagFS}px 'Space Mono',monospace`;
-  ctx.textBaseline = 'middle';
-  const tagPH = W * 0.022;
-  const tagPV = W * 0.01;
-  const tagW  = ctx.measureText(vibeLabel.toUpperCase()).width + tagPH * 2;
-  const tagH  = tagFS + tagPV * 2;
-  const tagR  = tagH / 2;
 
-  ctx.globalAlpha = 0.16;
-  ctx.fillStyle   = vibeColor;
-  ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(pad, tagY, tagW, tagH, tagR) : ctx.rect(pad, tagY, tagW, tagH);
-  ctx.fill();
-
-  ctx.globalAlpha = 0.55;
-  ctx.strokeStyle = vibeColor;
-  ctx.lineWidth   = 1.5;
-  ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(pad, tagY, tagW, tagH, tagR) : ctx.rect(pad, tagY, tagW, tagH);
-  ctx.stroke();
-
-  ctx.globalAlpha = 0.92;
-  ctx.fillStyle   = vibeColor;
-  ctx.fillText(vibeLabel.toUpperCase(), pad + tagPH, tagY + tagH / 2);
-  ctx.restore();
 
   /* ── Song / artist — GIF style (centered, vibe color song name) ── */
   const k      = _pPost?.knowledge || {};
@@ -468,7 +426,7 @@ function _posterRenderToCtx(ctx, W, H) {
   if (k.song) {
     ctx.save();
     ctx.font         = `700 ${metaFS}px 'Space Mono',monospace`;
-    ctx.fillStyle    = vibeColor;
+    ctx.fillStyle    = '#E8C547';
     ctx.globalAlpha  = 1;
     ctx.textBaseline = 'bottom';
     ctx.textAlign    = 'center';
