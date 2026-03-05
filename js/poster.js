@@ -469,7 +469,7 @@ function _posterRenderToCtx(ctx, W, H) {
   ctx.roundRect ? ctx.roundRect(wX, wY, wW, wH, wR) : ctx.rect(wX, wY, wW, wH);
   ctx.fill();
   ctx.globalAlpha = 0.55;
-  ctx.fillStyle   = 'rgba(232,197,71,0.8)';
+  ctx.fillStyle   = '#ffffff';
   ctx.fillText(wText, W / 2, wY + wH / 2);
   ctx.restore();
 }
