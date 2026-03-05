@@ -1,12 +1,8 @@
 /* ============================================================
    MARGO — js/share-sheet.js
    The Share Sheet — single-tap access from any feed card.
-   v1.1 — Canvas fix: post passed directly into draw calls,
-          never relies on window.currentPost timing.
-          GIF preview delegates to gif-studio gsDrawFrame
-          with post injected explicitly.
-          Poster preview delegates to studio drawPosterToCtx
-          with window.currentPost set synchronously before call.
+   v1.2 — ssOpenStudio() now calls openPosterStudio() for poster tab
+          so Studio button no longer navigates to landing page.
    ============================================================ */
 
 window._shareSheet = window._shareSheet || {
@@ -190,7 +186,6 @@ const SS_FEELING_DEFAULT = { bg:'rgba(232,197,71,0.11)', text:'#E8C547', border:
 
 /* ══════════════════════════════════════════════════════════
    CANVAS PREVIEW
-   Always uses SS.post directly — never waits on window.currentPost
 ══════════════════════════════════════════════════════════ */
 
 function ssStopPreview() {
@@ -214,21 +209,30 @@ function ssStartPreview(canvas) {
   canvas.height = Math.round(size * dpr);
 
   if (SS.activeTab === 'poster') {
-    // Static poster — set currentPost synchronously then draw
     window.currentPost = post;
     const ctx = canvas.getContext('2d');
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
     document.fonts.ready.then(() => {
-      window.currentPost = post; // ensure still set after async
-      if (typeof drawPosterToCtx === 'function') {
+      window.currentPost = post;
+      if (typeof window.openPosterStudio === 'function') {
+        /* poster.js is loaded — render via its internal draw function */
+        /* We call the draw directly on the preview canvas */
+        if (typeof _posterRenderToCtx === 'function') {
+          _pPost = post;
+          _posterRenderToCtx(ctx, size, size);
+        } else if (typeof drawPosterToCtx === 'function') {
+          drawPosterToCtx(ctx, size, size);
+        } else {
+          ssDrawFallback(ctx, size, size, post);
+        }
+      } else if (typeof drawPosterToCtx === 'function') {
         drawPosterToCtx(ctx, size, size);
       } else {
         ssDrawFallback(ctx, size, size, post);
       }
     });
   } else {
-    // Animated GIF preview
     let frame = 0;
     let last  = 0;
     const delay  = 70;
@@ -240,10 +244,7 @@ function ssStartPreview(canvas) {
         const ctx = canvas.getContext('2d');
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
-
-        // Set currentPost before each frame draw
         window.currentPost = post;
-
         if (typeof gsDrawFrame === 'function') {
           gsDrawFrame(ctx, size, size, frame / frames);
         } else {
@@ -257,14 +258,13 @@ function ssStartPreview(canvas) {
   }
 }
 
-/* ── Fallback renderer — always receives post explicitly ── */
+/* ── Fallback renderer ── */
 function ssDrawFallback(ctx, W, H, post) {
   if (!post) return;
   const feeling = post.emotion || post.feeling || 'Nostalgia';
   const cfg     = SS_FEELING_CFG[feeling] || SS_FEELING_DEFAULT;
   const k       = post.knowledge || {};
 
-  // Background
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#0B0B0D');
   g.addColorStop(0.5, '#1a1410');
@@ -272,17 +272,14 @@ function ssDrawFallback(ctx, W, H, post) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  // Top accent line
   ctx.fillStyle = cfg.text;
   ctx.fillRect(0, 0, W, 2);
 
-  // MARGO wordmark
   ctx.fillStyle = 'rgba(232,197,71,0.5)';
   ctx.font = `700 ${Math.round(W * 0.04)}px 'Space Mono', monospace`;
   ctx.textAlign = 'left';
   ctx.fillText('MARGO', W * 0.05, W * 0.09);
 
-  // Lyric
   const lyric = (post.text || '').substring(0, 120);
   ctx.fillStyle = '#F0F0F0';
   ctx.textAlign = 'center';
@@ -290,17 +287,14 @@ function ssDrawFallback(ctx, W, H, post) {
   ctx.font = `italic 600 ${sz}px 'DM Serif Display', serif`;
   ssWrapText(ctx, lyric, W / 2, H * 0.44, W * 0.84, sz * 1.25);
 
-  // Song
   ctx.fillStyle = cfg.text;
   ctx.font = `700 ${W * 0.038}px 'Space Mono', monospace`;
   ctx.fillText((k.song || '').substring(0, 28), W / 2, H * 0.76);
 
-  // Artist
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
   ctx.font = `400 ${W * 0.028}px 'Space Mono', monospace`;
   ctx.fillText((k.artist || '').substring(0, 32), W / 2, H * 0.76 + W * 0.048);
 
-  // Domain
   ctx.fillStyle = 'rgba(232,197,71,0.5)';
   ctx.font = `700 ${W * 0.026}px 'Space Mono', monospace`;
   ctx.fillText('trymargo.com', W / 2, H * 0.92);
@@ -405,7 +399,6 @@ function openShareSheet(post, opts = {}) {
 
   mountShareSheet();
 
-  // Set SS.post and window.currentPost together, synchronously
   SS.post       = post;
   window.currentPost = post;
 
@@ -415,25 +408,20 @@ function openShareSheet(post, opts = {}) {
   SS.posterBlob = null;
   SS.activeTab  = 'gif';
 
-  // Populate info strip
   populateSSInfoStrip(post);
 
-  // Lyric preview in header
   const prev = document.getElementById('ssLyricPreview');
   if (prev) prev.textContent = (post.text || '').substring(0, 48) + (post.text?.length > 48 ? '…' : '');
 
-  // Reset tab UI
   document.getElementById('ssTabGif')?.classList.add('active');
   document.getElementById('ssTabPoster')?.classList.remove('active');
   const lbl = document.getElementById('ssBtnDownloadLabel');
   if (lbl) lbl.textContent = 'Download GIF';
 
-  // Show
   const backdrop = document.getElementById('shareSheetBackdrop');
   backdrop.classList.remove('ss-hidden');
   document.body.classList.add('modal-open');
 
-  // Wait for DOM paint then start canvas
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       ssStartPreview(document.getElementById('ssCanvas'));
@@ -464,7 +452,6 @@ function reopenShareSheet() {
   if (!backdrop) return;
   backdrop.classList.remove('ss-hidden');
   document.body.classList.add('modal-open');
-  // Re-sync both
   window.currentPost = SS.post;
   requestAnimationFrame(() => ssStartPreview(document.getElementById('ssCanvas')));
 }
@@ -562,7 +549,6 @@ async function ssShare() {
     if (e.name === 'AbortError') return;
   }
 
-  // Fallback download
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
   a.href = url; a.download = fileName; a.style.display = 'none';
@@ -578,12 +564,12 @@ async function ssGeneratePoster() {
   setSSEncoding(true, 'Generating poster…');
 
   try {
-    window.currentPost = SS.post;
     const offscreen = document.createElement('canvas');
     offscreen.width = 1080; offscreen.height = 1080;
     const ctx = offscreen.getContext('2d');
     await document.fonts.ready;
-    window.currentPost = SS.post; // re-confirm after async
+    window.currentPost = SS.post;
+
     if (typeof drawPosterToCtx === 'function') {
       drawPosterToCtx(ctx, 1080, 1080);
     } else {
@@ -644,7 +630,9 @@ function setSSEncoding(on, label = '') {
   });
 }
 
-/* ── Open Studio (hides sheet, opens correct studio) ── */
+/* ── Open Studio ── */
+/* ── FIX v1.2: poster tab now calls openPosterStudio (poster.js)
+      instead of openStudio (old studio.js) which navigated to landing page ── */
 function ssOpenStudio() {
   ssStopPreview();
   const backdrop = document.getElementById('shareSheetBackdrop');
@@ -653,9 +641,17 @@ function ssOpenStudio() {
   window.currentPost = SS.post;
 
   if (SS.activeTab === 'poster') {
-    if (typeof openStudio === 'function') openStudio();
+    /* poster.js — self-contained, never navigates away */
+    if (typeof openPosterStudio === 'function') {
+      openPosterStudio(SS.post);
+    } else if (typeof openStudio === 'function') {
+      openStudio();
+    }
   } else {
-    if (typeof openGifStudio === 'function') openGifStudio();
+    /* GIF studio */
+    if (typeof openGifStudio === 'function') {
+      openGifStudio();
+    }
   }
 }
 
