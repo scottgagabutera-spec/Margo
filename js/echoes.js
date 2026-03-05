@@ -696,8 +696,8 @@ function resonateEcho(echoId) {
    DUET SHARE
 ──────────────────────────────────────────────────────────── */
 function openDuetShareSheet(echo) {
-  if (typeof openShareSheet === 'function') {
-    openShareSheet(ES.post, { isDuet: true, echoPost: echo });
+  if (typeof openDuetSheet === 'function') {
+    openDuetSheet(ES.post, echo);
   }
 }
 
