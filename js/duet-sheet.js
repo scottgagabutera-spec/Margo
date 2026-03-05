@@ -596,6 +596,8 @@ function openDuetSheet(parentPost, echoPost) {
   const backdrop = document.getElementById('duetBackdrop');
   backdrop.classList.remove('ds-hidden');
   document.body.classList.add('ds-modal-open');
+  // Save scroll position so we can restore it on close
+  DS._savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
 }
 
 function closeDuetSheet() {
@@ -603,6 +605,11 @@ function closeDuetSheet() {
   if (backdrop) backdrop.classList.add('ds-hidden');
   document.body.classList.remove('ds-modal-open');
   _dsClearAnims();
+  // Restore scroll position so user lands back where they were
+  const savedY = DS._savedScrollY || 0;
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: savedY, behavior: 'instant' });
+  });
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -847,16 +854,28 @@ function _dsPlayMotion() {
    ACTIONS
 ══════════════════════════════════════════════════════════ */
 function _dsRoute(tab) {
-  closeDuetSheet();
-  setTimeout(() => {
-    if (typeof window.openShareSheet === 'function') {
-      window.openShareSheet(DS.parentPost, {
-        isDuet:    true,
-        echoPost:  DS.echoPost,
-        preferTab: tab,
-      });
+  // Download directly from duet sheet — no routing to share-sheet
+  if (tab === 'poster') {
+    _dsDownload();
+  } else {
+    // GIF: try gif export if available, else fallback to PNG download
+    if (typeof gsExportForShareSheet === 'function') {
+      if (typeof showToast === 'function') showToast('Preparing GIF…');
+      window.currentPost = DS.parentPost;
+      gsExportForShareSheet(() => {}).then(blob => {
+        if (!blob) { _dsDownload(); return; }
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `margo-duet-${Date.now()}.gif`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        if (typeof showToast === 'function') showToast('GIF saved ✓');
+      }).catch(() => _dsDownload());
+    } else {
+      _dsDownload();
     }
-  }, 160);
+  }
 }
 
 function _dsDownload() {
