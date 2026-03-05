@@ -1,11 +1,9 @@
 /* ============================================================
    MARGO — js/feed.js
-   v6.5 — concept-v2
-   • Old guess/discover mode sections hidden entirely (display:none)
-   • VIBE replaces EMOTION in all UI labels
-   • Action row pinned to absolute bottom of every card
-   • Premium button design — sharp, crisp, high-contrast
-   • Emotion color background on all cards
+   v6.6 — Visual polish pass
+   • cardBg gradients: cleaner, less muddy base colors
+   • Vibe tag moved to top-right (inside card-top row)
+   • All other logic identical to v6.5
    ============================================================ */
 
 const STREAM_SAMPLES = [
@@ -25,21 +23,22 @@ const STREAM_SAMPLES = [
   { text: "Had to say it through a song because words failed",   emotion: 'LetOut'     },
 ];
 
+/* v6.6 — cleaner cardBg: less muddy, crisper dark base matching prototype */
 const EMOTION_CFG = {
-  Love:       { bg:'rgba(255,107,157,0.13)', text:'#FF6B9D', border:'rgba(255,107,157,0.3)',  strip:'rgba(255,107,157,0.8)',  cardBg:'linear-gradient(160deg,rgba(255,107,157,0.12) 0%,rgba(20,14,18,1) 55%)',   lyricText:'#fff', metaText:'rgba(255,200,220,0.75)', isDark:true },
-  Heartbreak: { bg:'rgba(255,80,80,0.11)',   text:'#ff5050', border:'rgba(255,80,80,0.28)',   strip:'rgba(255,80,80,0.75)',   cardBg:'linear-gradient(160deg,rgba(255,60,60,0.14) 0%,rgba(18,12,12,1) 55%)',    lyricText:'#fff', metaText:'rgba(255,180,180,0.7)',   isDark:true },
-  Hope:       { bg:'rgba(107,140,255,0.13)', text:'#6B8CFF', border:'rgba(107,140,255,0.3)',  strip:'rgba(107,140,255,0.8)',  cardBg:'linear-gradient(160deg,rgba(107,140,255,0.13) 0%,rgba(12,14,22,1) 55%)',   lyricText:'#fff', metaText:'rgba(180,200,255,0.7)',   isDark:true },
-  Nostalgia:  { bg:'rgba(232,197,71,0.11)',  text:'#E8C547', border:'rgba(232,197,71,0.32)',  strip:'rgba(232,197,71,0.9)',   cardBg:'linear-gradient(160deg,rgba(232,197,71,0.11) 0%,rgba(16,15,10,1) 55%)',   lyricText:'#fff', metaText:'rgba(232,210,140,0.7)',   isDark:true },
-  Healing:    { bg:'rgba(74,222,128,0.13)',  text:'#4ade80', border:'rgba(74,222,128,0.28)',  strip:'rgba(74,222,128,0.8)',   cardBg:'linear-gradient(160deg,rgba(74,222,128,0.11) 0%,rgba(10,18,14,1) 55%)',   lyricText:'#fff', metaText:'rgba(160,240,190,0.7)',   isDark:true },
-  Joy:        { bg:'rgba(255,200,71,0.11)',  text:'#ffc847', border:'rgba(255,200,71,0.3)',   strip:'rgba(255,200,71,0.8)',   cardBg:'linear-gradient(160deg,rgba(255,200,71,0.11) 0%,rgba(18,16,8,1) 55%)',    lyricText:'#fff', metaText:'rgba(255,220,140,0.7)',   isDark:true },
-  Rage:       { bg:'rgba(255,100,60,0.13)',  text:'#FF6440', border:'rgba(255,100,60,0.3)',   strip:'rgba(255,100,60,0.8)',   cardBg:'linear-gradient(160deg,rgba(255,80,40,0.15) 0%,rgba(20,10,8,1) 55%)',    lyricText:'#fff', metaText:'rgba(255,180,160,0.7)',   isDark:true },
-  Loneliness: { bg:'rgba(160,160,255,0.11)', text:'#a0a0ff', border:'rgba(160,160,255,0.28)', strip:'rgba(160,160,255,0.75)', cardBg:'linear-gradient(160deg,rgba(140,140,255,0.12) 0%,rgba(12,12,20,1) 55%)',  lyricText:'#fff', metaText:'rgba(190,190,255,0.65)',  isDark:true },
-  SendIt:     { bg:'rgba(0,229,200,0.11)',   text:'#00e5c8', border:'rgba(0,229,200,0.28)',   strip:'rgba(0,229,200,0.8)',    cardBg:'linear-gradient(160deg,rgba(0,229,200,0.12) 0%,rgba(8,18,18,1) 55%)',    lyricText:'#fff', metaText:'rgba(140,240,225,0.7)',   isDark:true },
-  LetOut:     { bg:'rgba(200,100,255,0.11)', text:'#c864ff', border:'rgba(200,100,255,0.28)', strip:'rgba(200,100,255,0.8)',  cardBg:'linear-gradient(160deg,rgba(180,80,255,0.13) 0%,rgba(16,8,20,1) 55%)',   lyricText:'#fff', metaText:'rgba(220,170,255,0.7)',   isDark:true },
+  Love:       { bg:'rgba(255,107,157,0.13)', text:'#FF6B9D', border:'rgba(255,107,157,0.3)',  strip:'rgba(255,107,157,0.8)',  cardBg:'linear-gradient(160deg,rgba(255,107,157,0.13) 0%,#0E0C13 55%)',  lyricText:'#fff', metaText:'rgba(255,200,220,0.75)', isDark:true },
+  Heartbreak: { bg:'rgba(255,80,80,0.11)',   text:'#ff5050', border:'rgba(255,80,80,0.28)',   strip:'rgba(255,80,80,0.75)',   cardBg:'linear-gradient(160deg,rgba(255,60,60,0.14) 0%,#0E0C13 55%)',   lyricText:'#fff', metaText:'rgba(255,180,180,0.7)',   isDark:true },
+  Hope:       { bg:'rgba(107,140,255,0.13)', text:'#6B8CFF', border:'rgba(107,140,255,0.3)',  strip:'rgba(107,140,255,0.8)',  cardBg:'linear-gradient(160deg,rgba(107,140,255,0.13) 0%,#0E0C13 55%)',  lyricText:'#fff', metaText:'rgba(180,200,255,0.7)',   isDark:true },
+  Nostalgia:  { bg:'rgba(232,197,71,0.11)',  text:'#E8C547', border:'rgba(232,197,71,0.32)',  strip:'rgba(232,197,71,0.9)',   cardBg:'linear-gradient(160deg,rgba(232,197,71,0.12) 0%,#0E0C13 55%)',  lyricText:'#fff', metaText:'rgba(232,210,140,0.7)',   isDark:true },
+  Healing:    { bg:'rgba(74,222,128,0.13)',  text:'#4ade80', border:'rgba(74,222,128,0.28)',  strip:'rgba(74,222,128,0.8)',   cardBg:'linear-gradient(160deg,rgba(74,222,128,0.12) 0%,#0E0C13 55%)',  lyricText:'#fff', metaText:'rgba(160,240,190,0.7)',   isDark:true },
+  Joy:        { bg:'rgba(255,200,71,0.11)',  text:'#ffc847', border:'rgba(255,200,71,0.3)',   strip:'rgba(255,200,71,0.8)',   cardBg:'linear-gradient(160deg,rgba(255,200,71,0.12) 0%,#0E0C13 55%)',  lyricText:'#fff', metaText:'rgba(255,220,140,0.7)',   isDark:true },
+  Rage:       { bg:'rgba(255,100,60,0.13)',  text:'#FF6440', border:'rgba(255,100,60,0.3)',   strip:'rgba(255,100,60,0.8)',   cardBg:'linear-gradient(160deg,rgba(255,80,40,0.15) 0%,#0E0C13 55%)',  lyricText:'#fff', metaText:'rgba(255,180,160,0.7)',   isDark:true },
+  Loneliness: { bg:'rgba(160,160,255,0.11)', text:'#a0a0ff', border:'rgba(160,160,255,0.28)', strip:'rgba(160,160,255,0.75)', cardBg:'linear-gradient(160deg,rgba(140,140,255,0.13) 0%,#0E0C13 55%)', lyricText:'#fff', metaText:'rgba(190,190,255,0.65)',  isDark:true },
+  SendIt:     { bg:'rgba(0,229,200,0.11)',   text:'#00e5c8', border:'rgba(0,229,200,0.28)',   strip:'rgba(0,229,200,0.8)',    cardBg:'linear-gradient(160deg,rgba(0,229,200,0.12) 0%,#0E0C13 55%)',   lyricText:'#fff', metaText:'rgba(140,240,225,0.7)',   isDark:true },
+  LetOut:     { bg:'rgba(200,100,255,0.11)', text:'#c864ff', border:'rgba(200,100,255,0.28)', strip:'rgba(200,100,255,0.8)',  cardBg:'linear-gradient(160deg,rgba(180,80,255,0.13) 0%,#0E0C13 55%)',  lyricText:'#fff', metaText:'rgba(220,170,255,0.7)',   isDark:true },
 };
 const E_DEFAULT = {
   bg:'rgba(232,197,71,0.11)', text:'#E8C547', border:'rgba(232,197,71,0.25)',
-  strip:'rgba(232,197,71,0.8)', cardBg:'linear-gradient(160deg,rgba(232,197,71,0.09) 0%,rgba(16,15,10,1) 55%)',
+  strip:'rgba(232,197,71,0.8)', cardBg:'linear-gradient(160deg,rgba(232,197,71,0.10) 0%,#0E0C13 55%)',
   lyricText:'#fff', metaText:'rgba(232,210,140,0.65)', isDark:true
 };
 
@@ -137,10 +136,11 @@ function injectFeedStyles() {
     }
 
     /* ─── CARD LAYOUT ─── */
+    /* v6.6 — card-top: time LEFT, vibe tag RIGHT */
     #feedList .card-top {
       display:flex; justify-content:space-between;
       align-items:center; flex-shrink:0;
-      height:20px; margin-bottom:10px;
+      height:22px; margin-bottom:10px;
     }
     #feedList .card-lyric {
       font-family:'Instrument Serif',serif !important;
@@ -154,9 +154,11 @@ function injectFeedStyles() {
       font-weight:400 !important;
       font-size:1rem !important;
     }
+    /* v6.6 — emotion tag now sits inside card-top, hide old standalone position */
     #feedList .card-emotion-tag {
-      flex-shrink:0 !important; align-self:flex-start !important;
-      margin-bottom:8px !important;
+      flex-shrink:0 !important;
+      margin-bottom:0 !important;
+      align-self:center !important;
     }
 
     #feedList .card-song {
@@ -643,6 +645,7 @@ function renderFeed() {
     card.style.setProperty('--e-border',      ecfg.border);
     card.style.background = ecfg.cardBg;
 
+    /* v6.6 — rank badge only shows if no vibe tag conflict (tag is top-right now) */
     let rankBadge = '';
     if      (currentSort==='fresh' && isNewPost(post))  rankBadge='<span class="card-new-badge">New</span>';
     else if (currentSort==='hot'   && isHotPost(post))  rankBadge='<span class="card-hot-badge">Trending</span>';
@@ -671,13 +674,14 @@ function renderFeed() {
       </div>`;
     }
 
+    /* v6.6 — vibe tag now in card-top (top-right), not below lyric */
     card.innerHTML = `
       ${rankBadge}
       <div class="card-top">
         <span class="card-time">${timeAgo(post.timestamp)}</span>
+        <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">${highlightMatch(vibeLabel,searchQuery)}</span>
       </div>
       <div class="card-lyric" style="color:${ecfg.lyricText}">${highlightMatch(post.text,searchQuery)}</div>
-      <span class="card-emotion-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">${highlightMatch(vibeLabel,searchQuery)}</span>
       ${songSection}
       <div class="card-actions"></div>
     `;
