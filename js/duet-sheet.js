@@ -42,7 +42,7 @@ function injectDuetStyles() {
       background:rgba(0,0,0,0.88);
       backdrop-filter:blur(20px) saturate(0.6);
       -webkit-backdrop-filter:blur(20px) saturate(0.6);
-      display:flex;align-items:flex-end;justify-content:center;
+      display:block;
       overflow-y:auto;overflow-x:hidden;
       -webkit-overflow-scrolling:touch;
       animation:dsBackdropIn 0.25s ease;
@@ -51,28 +51,23 @@ function injectDuetStyles() {
     body.ds-modal-open { overflow:hidden; }
     @keyframes dsBackdropIn { from{opacity:0} to{opacity:1} }
 
-    @media(min-width:560px) {
-      #duetBackdrop { align-items:flex-start; padding:24px; justify-content:center; }
-    }
-
     #duetSheet {
       width:100%; max-width:520px;
       background:#0c0b10;
       border:1px solid rgba(255,255,255,0.07);
-      border-bottom:none; border-radius:28px 28px 0 0;
-      overflow-y:auto; overflow-x:hidden;
-      -webkit-overflow-scrolling:touch;
+      border-radius:28px 28px 0 0;
+      overflow:visible;
       display:flex; flex-direction:column;
-      max-height:92dvh;
+      margin:0 auto;
       box-shadow:0 -12px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(232,197,71,0.06) inset;
       animation:dsSlideUp 0.42s cubic-bezier(0.16,1,0.3,1);
-      scrollbar-width:none;
     }
-    #duetSheet::-webkit-scrollbar { display:none; }
     @media(min-width:560px) {
       #duetSheet {
-        border-radius:24px; border-bottom:1px solid rgba(255,255,255,0.07);
-        max-height:90dvh; animation:dsFadeUp 0.32s cubic-bezier(0.16,1,0.3,1);
+        border-radius:24px;
+        border:1px solid rgba(255,255,255,0.07);
+        margin:24px auto;
+        animation:dsFadeUp 0.32s cubic-bezier(0.16,1,0.3,1);
       }
     }
     @keyframes dsSlideUp { from{transform:translateY(70px);opacity:0} to{transform:translateY(0);opacity:1} }
