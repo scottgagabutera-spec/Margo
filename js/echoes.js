@@ -760,8 +760,9 @@ async function submitEcho() {
     if (typeof showToast === 'function') showToast('Lyric dropped ♪');
 
   } catch (err) {
-    console.error('[Echo] submit error:', err);
-    if (typeof showToast === 'function') showToast('Something went wrong — try again');
+    console.error('[Echo] submit error:', err.code, err.message);
+    const msg = err.code === 'PERMISSION_DENIED' ? 'Permission denied — check Firebase rules' : 'Something went wrong — try again';
+    if (typeof showToast === 'function') showToast(msg);
   } finally {
     ES.isSubmitting = false;
     if (submitBtn) {
