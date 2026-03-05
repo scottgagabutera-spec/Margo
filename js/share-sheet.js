@@ -1,8 +1,9 @@
 /* ============================================================
    MARGO — js/share-sheet.js
    The Share Sheet — single-tap access from any feed card.
-   v1.2 — ssOpenStudio() now calls openPosterStudio() for poster tab
-          so Studio button no longer navigates to landing page.
+   v1.3 — poster preview uses window.drawPosterPreview (poster.js)
+          ssGeneratePoster uses window.drawPosterPreview
+          so blank canvas on poster tab is fixed.
    ============================================================ */
 
 window._shareSheet = window._shareSheet || {
@@ -209,30 +210,19 @@ function ssStartPreview(canvas) {
   canvas.height = Math.round(size * dpr);
 
   if (SS.activeTab === 'poster') {
-    window.currentPost = post;
+    /* ── Poster preview — uses window.drawPosterPreview exposed by poster.js ── */
     const ctx = canvas.getContext('2d');
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
     document.fonts.ready.then(() => {
-      window.currentPost = post;
-      if (typeof window.openPosterStudio === 'function') {
-        /* poster.js is loaded — render via its internal draw function */
-        /* We call the draw directly on the preview canvas */
-        if (typeof _posterRenderToCtx === 'function') {
-          _pPost = post;
-          _posterRenderToCtx(ctx, size, size);
-        } else if (typeof drawPosterToCtx === 'function') {
-          drawPosterToCtx(ctx, size, size);
-        } else {
-          ssDrawFallback(ctx, size, size, post);
-        }
-      } else if (typeof drawPosterToCtx === 'function') {
-        drawPosterToCtx(ctx, size, size);
+      if (typeof window.drawPosterPreview === 'function') {
+        window.drawPosterPreview(ctx, size, size, post);
       } else {
         ssDrawFallback(ctx, size, size, post);
       }
     });
   } else {
+    /* ── GIF animated preview ── */
     let frame = 0;
     let last  = 0;
     const delay  = 70;
@@ -568,13 +558,14 @@ async function ssGeneratePoster() {
     offscreen.width = 1080; offscreen.height = 1080;
     const ctx = offscreen.getContext('2d');
     await document.fonts.ready;
-    window.currentPost = SS.post;
 
-    if (typeof drawPosterToCtx === 'function') {
-      drawPosterToCtx(ctx, 1080, 1080);
+    /* Use window.drawPosterPreview — poster.js public function */
+    if (typeof window.drawPosterPreview === 'function') {
+      window.drawPosterPreview(ctx, 1080, 1080, SS.post);
     } else {
       ssDrawFallback(ctx, 1080, 1080, SS.post);
     }
+
     SS.posterBlob = await new Promise((res, rej) => {
       offscreen.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png');
     });
@@ -631,8 +622,6 @@ function setSSEncoding(on, label = '') {
 }
 
 /* ── Open Studio ── */
-/* ── FIX v1.2: poster tab now calls openPosterStudio (poster.js)
-      instead of openStudio (old studio.js) which navigated to landing page ── */
 function ssOpenStudio() {
   ssStopPreview();
   const backdrop = document.getElementById('shareSheetBackdrop');
@@ -641,14 +630,12 @@ function ssOpenStudio() {
   window.currentPost = SS.post;
 
   if (SS.activeTab === 'poster') {
-    /* poster.js — self-contained, never navigates away */
     if (typeof openPosterStudio === 'function') {
       openPosterStudio(SS.post);
     } else if (typeof openStudio === 'function') {
-      openStudio();
+      openStudio(SS.post);
     }
   } else {
-    /* GIF studio */
     if (typeof openGifStudio === 'function') {
       openGifStudio();
     }
