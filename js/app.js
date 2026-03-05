@@ -1,12 +1,9 @@
 /* ============================================================
    MARGO — js/app.js
-   v6.0 — concept-v2 branch:
-          • postcardModal / studioChooser removed
+   v6.1 — concept-v2 branch:
+          • patchStudioBackButtons uses onclick (overrides studio.js addEventListener)
+          • closeStudio() called via window.closeStudio() for full state cleanup
           • studios return via reopenShareSheet()
-          • sharePosterBtn → openShareSheet()
-          • FAB wiring unchanged
-          • scrollToFeed unchanged
-          • initStudio() back-button patched to call reopenShareSheet
    ============================================================ */
 
 // ── Toast ──
@@ -76,7 +73,7 @@ function goToLanding() {
   setPageState('landing');
 }
 
-// ── scrollToFeed ── (unchanged from v5.4)
+// ── scrollToFeed ──
 function scrollToFeed() {
   let attempts = 0;
 
@@ -111,7 +108,6 @@ function scrollToFeed() {
 }
 
 function initNavigation() {
-  // Enter → open feed + composer
   if (enterBtn) {
     enterBtn.onclick = () => {
       goToFeed();
@@ -128,7 +124,6 @@ function initNavigation() {
   if (openComposerBtn)  openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => textInput?.focus(), 200); };
   if (closeComposerBtn) closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
 
-  // Touch swipe nav
   let tSX = 0, tSY = 0;
   [landing, feed].filter(Boolean).forEach(s => {
     s.addEventListener('touchstart', e => { tSX = e.touches[0].clientX; tSY = e.touches[0].clientY; });
@@ -157,26 +152,32 @@ function setupScrollToTop() {
 
 /* ────────────────────────────────────────────────────────────
    STUDIO BACK BUTTON PATCH
-   In concept-v2, studios return to the share sheet, not
-   the (removed) postcard modal. We patch closeStudio and
-   closeGifStudio to call reopenShareSheet() instead.
+   Uses .onclick to fully override any addEventListener bound
+   earlier by studio.js initStudio(). Single handler, no double-fire.
+   Calls window.closeStudio() / window.closeGifStudio() for full
+   state cleanup, then reopens the share sheet.
 ──────────────────────────────────────────────────────────── */
 function patchStudioBackButtons() {
-  // Image studio close button
+  // Image studio — .onclick overrides any prior addEventListener
   const closeStudioBtn = document.getElementById('closeStudio');
   if (closeStudioBtn) {
-    closeStudioBtn.onclick = () => {
-      const overlay = document.getElementById('studioOverlay');
-      if (overlay) overlay.classList.add('hidden');
-      document.body.classList.remove('modal-open');
+    closeStudioBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (typeof window.closeStudio === 'function') {
+        window.closeStudio();
+      } else {
+        document.getElementById('studioOverlay')?.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+      }
       if (typeof reopenShareSheet === 'function') reopenShareSheet();
     };
   }
 
-  // GIF studio close button
+  // GIF studio — same pattern
   const closeGifBtn = document.getElementById('closeGifStudio');
   if (closeGifBtn) {
-    closeGifBtn.onclick = () => {
+    closeGifBtn.onclick = (e) => {
+      e.stopPropagation();
       if (typeof gsStopPreview === 'function') gsStopPreview();
       const overlay = document.getElementById('gifStudioOverlay');
       if (overlay) overlay.classList.add('hidden');
@@ -187,13 +188,10 @@ function patchStudioBackButtons() {
 }
 
 /* ────────────────────────────────────────────────────────────
-   SHARE SHEET — wire sharePosterBtn from postcard (now gone)
-   sharePosterBtn in index.html was inside postcardModal.
-   In concept-v2 the postcard is removed, but if the element
-   still exists for backward compat, wire it to openShareSheet.
+   SHARE SHEET — wire sharePosterBtn
 ──────────────────────────────────────────────────────────── */
 function wireSharPosterBtn() {
-  if (sharePosterBtn) {
+  if (typeof sharePosterBtn !== 'undefined' && sharePosterBtn) {
     sharePosterBtn.onclick = () => {
       if (typeof openShareSheet === 'function' && currentPost) {
         openShareSheet(currentPost);
@@ -204,12 +202,8 @@ function wireSharPosterBtn() {
 
 /* ────────────────────────────────────────────────────────────
    COMPOSER SUBMIT — open share sheet after posting
-   Patches the submitPost behaviour: after a successful post,
-   instead of opening the studio chooser, open the share sheet.
 ──────────────────────────────────────────────────────────── */
 function patchComposerForShareSheet() {
-  // openStudioChooser is called by composer.js submitPost(true).
-  // We override it to open the share sheet instead.
   window.openStudioChooser = function() {
     if (typeof openShareSheet === 'function' && currentPost) {
       setTimeout(() => {
@@ -219,12 +213,6 @@ function patchComposerForShareSheet() {
     }
   };
 }
-
-/* ────────────────────────────────────────────────────────────
-   GUESS / DISCOVER / LISTEN / ANALYTICS
-   These modals still exist and work the same way.
-──────────────────────────────────────────────────────────── */
-// (All wired by composer.js — no changes needed here)
 
 // ════════════════════════════════════════════════════════
 //   INIT
@@ -248,7 +236,7 @@ try {
   console.warn('[Margo] initStudio error (non-fatal):', err.message);
 }
 
-// concept-v2 patches
+// concept-v2 patches — run AFTER initStudio() so .onclick overrides addEventListener
 patchStudioBackButtons();
 patchComposerForShareSheet();
 wireSharPosterBtn();
@@ -256,4 +244,4 @@ wireSharPosterBtn();
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v6.0 concept-v2 — share sheet, echoes, resonate, username system active.');
+console.log('MARGO v6.1 concept-v2 — studio back buttons patched, share sheet active.');
