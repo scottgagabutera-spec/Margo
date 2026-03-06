@@ -970,19 +970,24 @@ async function _dsExportGif() {
       });
     }
 
+    /* Use CDN worker if local one unavailable */
+    const workerScript = document.querySelector('script[src*="gif.worker"]')
+      ? '/js/gif.worker.js'
+      : 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js';
+
     const gif = new GIF({
-      workers: 4,
-      quality: 1,
+      workers: 2,
+      quality: 10,
       width:   SIZE,
       height:  SIZE,
-      workerScript: '/js/gif.worker.js',
+      workerScript,
       dither: false,
     });
 
-    /* Draw each frame — duet card at different fade-up t values */
+    /* Draw each frame with varying t for animation */
     for (let i = 0; i < FRAMES; i++) {
       oc.clearRect(0, 0, SIZE, SIZE);
-      _dsDrawCard(oc, SIZE, SIZE, DS.parentPost, DS.echoPost);
+      _dsDrawCard(oc, SIZE, SIZE, DS.parentPost, DS.echoPost, i / FRAMES);
       gif.addFrame(off, { copy: true, delay: DELAY });
       setBtnText(`GIF ${Math.round((i / FRAMES) * 75)}%`);
       await new Promise(r => setTimeout(r, 0));
@@ -1060,12 +1065,17 @@ function _dsExportPoster() {
 
 /* ══════════════════════════════════════════════════════════
    CANVAS DRAW (for download/export)
+   v2.4 — respects DS.bgColor theme and DS.fontFamily/fontItalic
 ══════════════════════════════════════════════════════════ */
-function _dsDrawCard(ctx, W, H, parent, echo) {
+function _dsDrawCard(ctx, W, H, parent, echo, t) {
   if (!parent || !echo) return;
 
   const pad    = W * 0.07;
   const innerW = W - pad * 2;
+
+  /* ── Use selected theme from DS.bgColor ── */
+  const theme  = DS_THEMES[DS.bgColor] || DS_THEMES['#07060E'];
+  const isDark = !theme.isLight;
 
   const pEmotion = parent.emotion || 'Nostalgia';
   const eEmotion = echo.emotion   || 'Nostalgia';
@@ -1073,14 +1083,16 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   const eVibe    = DS_VIBE[eEmotion] || '#E8C547';
   const divY     = H * 0.495;
 
+  /* ── Background from theme gradient ── */
+  const themeParts = theme.grad.match(/#[0-9a-fA-F]{6}/g) || ['#090810','#0d0b12','#060809'];
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0,    '#090810');
-  bg.addColorStop(0.48, '#0d0b12');
-  bg.addColorStop(0.52, '#080c10');
-  bg.addColorStop(1,    '#060809');
+  bg.addColorStop(0,    themeParts[0] || '#090810');
+  bg.addColorStop(0.5,  themeParts[1] || '#0d0b12');
+  bg.addColorStop(1,    themeParts[2] || themeParts[1] || '#060809');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
+  /* ── Vibe glows ── */
   ctx.save();
   const pg = ctx.createRadialGradient(W * 0.15, H * 0.15, 0, W * 0.15, H * 0.15, W * 0.7);
   pg.addColorStop(0, pVibe + '22'); pg.addColorStop(1, 'transparent');
@@ -1093,6 +1105,7 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   ctx.fillStyle = eg; ctx.fillRect(0, 0, W, H);
   ctx.restore();
 
+  /* ── Noise ── */
   ctx.save();
   ctx.globalAlpha = 0.016;
   for (let y = 0; y < H; y += 4) {
@@ -1104,6 +1117,7 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   }
   ctx.restore();
 
+  /* ── Top/bottom accent lines ── */
   ctx.save();
   const tl = ctx.createLinearGradient(0, 0, W, 0);
   tl.addColorStop(0, 'transparent'); tl.addColorStop(0.5, pVibe); tl.addColorStop(1, 'transparent');
@@ -1113,40 +1127,52 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   ctx.fillStyle = bl; ctx.fillRect(0, H - 2, W, 2);
   ctx.restore();
 
+  /* ── MARGO wordmark ── */
   const mSz = Math.max(14, W * 0.046);
   ctx.save();
   ctx.font = `800 ${mSz}px 'Syne',sans-serif`;
-  ctx.fillStyle = '#E8C547'; ctx.globalAlpha = 0.88;
+  ctx.fillStyle = isDark ? '#E8C547' : '#0B0B0D';
+  ctx.globalAlpha = 0.88;
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
   ctx.fillText('MARGO', pad, pad * 0.65);
   ctx.restore();
 
+  /* ── Use selected font from DS ── */
+  const lyricFont   = DS.fontFamily || 'DM Serif Display';
+  const lyricItalic = DS.fontItalic !== false;
+  const lyricStyle  = lyricItalic ? 'italic ' : '';
+  const textColor   = theme.text || '#ffffff';
+
+  /* ── Top lyric (parent) with fade animation if t provided ── */
   const topZoneTop = pad * 2;
   const topZoneBot = divY - W * 0.05;
   const topH = topZoneBot - topZoneTop;
   const pText = parent.text || parent.lyric || '';
   let pFS = Math.min(W * 0.054, topH * 0.3);
-  ctx.font = `italic 600 ${pFS}px 'DM Serif Display',serif`;
+  ctx.font = `${lyricStyle}600 ${pFS}px '${lyricFont}',serif`;
   let pLines = _dsWrap(ctx, pText, innerW * 0.9);
   if (pLines.length > 3) {
     pFS = Math.max(W * 0.028, pFS * (3 / pLines.length));
-    ctx.font = `italic 600 ${pFS}px 'DM Serif Display',serif`;
+    ctx.font = `${lyricStyle}600 ${pFS}px '${lyricFont}',serif`;
     pLines = _dsWrap(ctx, pText, innerW * 0.9);
   }
   const pLH     = pFS * 1.52;
   const pBlockH = pLines.length * pLH;
-  const pStartY = topZoneTop + (topH - pBlockH) / 2 - pFS * 0.3;
+  const fadeT   = t !== undefined ? t : 1;
+  const fadeOY  = (1 - fadeT) * 24;
+  const pStartY = topZoneTop + (topH - pBlockH) / 2 - pFS * 0.3 + fadeOY;
 
   ctx.save();
   ctx.textBaseline = 'top'; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 16;
   pLines.forEach((line, i) => {
-    ctx.globalAlpha = 0.58 - i * 0.04;
-    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = (0.58 - i * 0.04) * Math.min(1, fadeT * 2);
+    ctx.fillStyle = textColor;
     ctx.fillText(line, W / 2, pStartY + i * pLH);
   });
   ctx.restore();
 
+  /* ── Parent song attribution ── */
   const pk = parent.knowledge || {};
   const pSongStr = pk.song || parent.song || '';
   if (pSongStr) {
@@ -1162,6 +1188,7 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
     ctx.restore();
   }
 
+  /* ── Divider pill ── */
   const dText = `LYRIC BACK ↩  @${(echo.username || 'anonymous').toUpperCase()}`;
   const dFS   = Math.max(10, W * 0.021);
   ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
@@ -1203,32 +1230,35 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
   ctx.fillText(dText, W / 2, divY);
   ctx.restore();
 
+  /* ── Bottom lyric (echo) ── */
   const botZoneTop = divY + pH / 2 + W * 0.025;
   const botZoneBot = H * 0.88;
   const botH  = botZoneBot - botZoneTop;
   const eText = echo.lyric || echo.text || '';
   let eFS = Math.min(W * 0.062, botH * 0.3);
-  ctx.font = `italic 700 ${eFS}px 'DM Serif Display',serif`;
+  ctx.font = `${lyricStyle}700 ${eFS}px '${lyricFont}',serif`;
   let eLines = _dsWrap(ctx, eText, innerW * 0.9);
   if (eLines.length > 3) {
     eFS = Math.max(W * 0.032, eFS * (3 / eLines.length));
-    ctx.font = `italic 700 ${eFS}px 'DM Serif Display',serif`;
+    ctx.font = `${lyricStyle}700 ${eFS}px '${lyricFont}',serif`;
     eLines = _dsWrap(ctx, eText, innerW * 0.9);
   }
   const eLH     = eFS * 1.52;
   const eBlockH = eLines.length * eLH;
-  const eStartY = botZoneTop + (botH - eBlockH) / 2;
+  const eOY     = t !== undefined ? (1 - Math.min(1, t * 1.5)) * 24 : 0;
+  const eStartY = botZoneTop + (botH - eBlockH) / 2 + eOY;
 
   ctx.save();
   ctx.textBaseline = 'top'; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 20;
   eLines.forEach((line, i) => {
-    ctx.globalAlpha = 1 - i * 0.02;
-    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = (1 - i * 0.02) * (t !== undefined ? Math.min(1, t * 1.8) : 1);
+    ctx.fillStyle = textColor;
     ctx.fillText(line, W / 2, eStartY + i * eLH);
   });
   ctx.restore();
 
+  /* ── Echo song attribution ── */
   if (echo.song) {
     const eaFS = Math.max(9, W * 0.019);
     ctx.save();
@@ -1242,6 +1272,7 @@ function _dsDrawCard(ctx, W, H, parent, echo) {
     ctx.restore();
   }
 
+  /* ── Watermark pill ── */
   const wFS = Math.max(9, W * 0.02);
   ctx.save();
   ctx.font = `700 ${wFS}px 'Space Mono',monospace`;
