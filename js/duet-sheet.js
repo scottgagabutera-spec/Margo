@@ -1,10 +1,10 @@
 /* ============================================================
    MARGO — js/duet-sheet.js
-   v2.1 — Conversation motion animations added:
-          • Motion styles (Fade Up, Glitch, Shimmer etc.) now
-            animate .ds-bubble-lyric elements in Conversation
-            view as well as .ds-anim elements in Card view.
-          • _dsClearAnims, _dsPlayMotion, _dsShowView updated.
+   v2.2 — _dsRoute fix: both GIF + Poster now use _dsDrawCard
+          (was incorrectly calling gsExportForShareSheet which
+          exported a single-lyric GIF from the wrong post).
+          _dsDownload: inline button progress bar replaces
+          floating "Preparing GIF…" toast entirely.
    ============================================================ */
 
 (function () {
@@ -279,6 +279,7 @@ function injectDuetStyles() {
     .ds-share-btn { flex:1; padding:16px 10px; border-radius:17px; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.22s cubic-bezier(0.16,1,0.3,1); font-family:'Space Mono',monospace; font-weight:700; font-size:0.54rem; letter-spacing:1.2px; text-transform:uppercase; }
     .ds-share-btn:hover  { transform:translateY(-2px); }
     .ds-share-btn:active { transform:scale(0.97); }
+    .ds-share-btn:disabled { cursor:wait; transform:none; }
     .ds-share-btn-icon { font-size:1.1rem; }
     .ds-btn-gif { background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.25); color:#00E5FF; }
     .ds-btn-gif:hover { background:rgba(0,229,255,0.14); border-color:rgba(0,229,255,0.45); box-shadow:0 8px 24px rgba(0,229,255,0.12); }
@@ -517,7 +518,7 @@ function mountDuetSheet() {
   document.getElementById('dsClose').onclick        = closeDuetSheet;
   document.getElementById('dsToggleConvo').onclick  = () => _dsShowView('convo');
   document.getElementById('dsToggleCard').onclick   = () => _dsShowView('card');
-  document.getElementById('dsBtnDownload').onclick  = _dsDownload;
+  document.getElementById('dsBtnDownload').onclick  = () => _dsDownload('poster');
   document.getElementById('dsBtnGif').onclick       = () => _dsRoute('gif');
   document.getElementById('dsBtnPoster').onclick    = () => _dsRoute('poster');
 
@@ -591,7 +592,6 @@ function openDuetSheet(parentPost, echoPost) {
   DS.parentPost = parentPost;
   DS.echoPost   = echoPost;
 
-  /* Reset to defaults on each open */
   DS.motion = 'fade-up';
   DS.dur    = 2.4;
   DS.format = 'gif';
@@ -599,11 +599,8 @@ function openDuetSheet(parentPost, echoPost) {
   _dsPopulateConvo();
   _dsPopulateCard();
 
-  /* Start on conversation view */
   _dsApplyTheme(DS.bgColor);
   _dsShowView('convo');
-
-  /* Reset format tab */
   _dsSwitchFormat('gif');
 
   const backdrop = document.getElementById('duetBackdrop');
@@ -723,27 +720,21 @@ function _dsPopulateCard() {
   if (divPill)  divPill.textContent  = 'LYRIC BACK ↩ ' + eUser;
 }
 
-/* ── Apply color theme to both card and conversation views ── */
 function _dsApplyTheme(bg) {
   const theme = DS_THEMES[bg] || { grad: bg, text: '#ffffff', isLight: false };
   const textColor = theme.text;
   const isDark = !theme.isLight;
 
-  /* Card background */
   const canvasBg = document.getElementById('dsCanvasBg');
   if (canvasBg) canvasBg.style.background = theme.grad;
 
-  /* Card lyric text color */
-  document.querySelectorAll('.ds-c-lyric').forEach(el => {
-    el.style.color = textColor;
-  });
+  document.querySelectorAll('.ds-c-lyric').forEach(el => { el.style.color = textColor; });
   document.querySelectorAll('.ds-c-attr').forEach(el => {
     el.style.color = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.5)';
   });
   const margo = document.querySelector('.ds-c-margo');
   if (margo) margo.style.color = isDark ? '#E8C547' : '#0B0B0D';
 
-  /* Conversation bubble backgrounds and text */
   document.querySelectorAll('.ds-bubble.original .ds-bubble-card').forEach(el => {
     el.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
     el.style.border = isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)';
@@ -752,12 +743,8 @@ function _dsApplyTheme(bg) {
     el.style.background = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)';
     el.style.border = isDark ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.15)';
   });
-  document.querySelectorAll('.ds-bubble-lyric').forEach(el => {
-    el.style.color = textColor;
-  });
-  document.querySelectorAll('.ds-bubble-song').forEach(el => {
-    el.style.color = textColor;
-  });
+  document.querySelectorAll('.ds-bubble-lyric').forEach(el => { el.style.color = textColor; });
+  document.querySelectorAll('.ds-bubble-song').forEach(el => { el.style.color = textColor; });
   document.querySelectorAll('.ds-bubble-artist').forEach(el => {
     el.style.color = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)';
   });
@@ -765,13 +752,11 @@ function _dsApplyTheme(bg) {
     el.style.borderTopColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
   });
 
-  /* Backdrop background */
   const convo = document.getElementById('dsViewConvo');
   if (convo) convo.style.background = theme.grad;
   const card = document.getElementById('dsViewCard');
   if (card) card.style.background = theme.grad;
 
-  /* Song strip */
   const strip = document.getElementById('dsSongStrip');
   if (strip) {
     strip.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
@@ -795,7 +780,6 @@ function _dsUpdateCardFonts() {
     el.style.fontFamily = `'${DS.fontFamily}', serif`;
     el.style.fontStyle  = DS.fontItalic ? 'italic' : 'normal';
   });
-  /* Also update conversation bubble lyrics */
   document.querySelectorAll('.ds-bubble-lyric').forEach(el => {
     el.style.fontFamily = `'${DS.fontFamily}', serif`;
     el.style.fontStyle  = DS.fontItalic ? 'italic' : 'normal';
@@ -804,7 +788,6 @@ function _dsUpdateCardFonts() {
 
 /* ══════════════════════════════════════════════════════════
    VIEW TOGGLE
-   v2.1 — motion now plays on both convo and card views
 ══════════════════════════════════════════════════════════ */
 function _dsShowView(v) {
   const convo = document.getElementById('dsViewConvo');
@@ -817,7 +800,6 @@ function _dsShowView(v) {
   tc.classList.toggle('active', v === 'convo');
   tk.classList.toggle('active', v === 'card');
 
-  /* Play motion on both views — poster mode skips animation */
   if (v === 'card' || v === 'convo') _dsPlayMotion();
   else                               _dsClearAnims();
 }
@@ -852,7 +834,6 @@ function _dsSwitchFormat(fmt) {
 
 /* ══════════════════════════════════════════════════════════
    MOTION ANIMATIONS
-   v2.1 — targets both .ds-anim (card) and .ds-bubble-lyric (convo)
 ══════════════════════════════════════════════════════════ */
 function _dsClearAnims() {
   document.querySelectorAll('.ds-anim, .ds-bubble-lyric').forEach(el => {
@@ -876,16 +857,13 @@ function _dsPlayMotion() {
   if (DS.format === 'poster') return;
   _dsClearAnims();
 
-  /* Force reflow so cleared styles register before re-applying */
   void document.getElementById('dsCanvasContent').offsetHeight;
 
-  /* Target both card elements and conversation bubble lyrics */
   const els  = document.querySelectorAll('.ds-anim, .ds-bubble-lyric');
   const dur  = DS.dur;
   const name = DS.motion;
 
   els.forEach((el, idx) => {
-    /* Card elements use data-i for staggered delay; bubble lyrics use their index */
     const i     = parseInt(el.getAttribute('data-i') ?? idx);
     const delay = i * 0.14;
 
@@ -933,44 +911,60 @@ function _dsPlayMotion() {
 
 /* ══════════════════════════════════════════════════════════
    ACTIONS
+   v2.2 — _dsRoute: both GIF and Poster use _dsDownload()
+          which correctly draws the full duet via _dsDrawCard.
+          Removed gsExportForShareSheet call entirely.
 ══════════════════════════════════════════════════════════ */
 function _dsRoute(tab) {
-  if (tab === 'poster') {
-    _dsDownload();
-  } else {
-    if (typeof gsExportForShareSheet === 'function') {
-      if (typeof showToast === 'function') showToast('Preparing GIF…');
-      window.currentPost = DS.parentPost;
-      gsExportForShareSheet(() => {}).then(blob => {
-        if (!blob) { _dsDownload(); return; }
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = `margo-duet-${Date.now()}.gif`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        if (typeof showToast === 'function') showToast('GIF saved ✓');
-      }).catch(() => _dsDownload());
-    } else {
-      _dsDownload();
-    }
-  }
+  DS.format = tab;
+  _dsDownload(tab);
 }
 
-function _dsDownload() {
-  const offscreen = document.createElement('canvas');
+/* ── v2.2 _dsDownload: inline button progress, no floating toast ── */
+function _dsDownload(tab) {
+  const isGif    = (tab || DS.format) === 'gif';
+  const btnId    = isGif ? 'dsBtnGif' : 'dsBtnPoster';
+  const btn      = document.getElementById(btnId);
+  const origHTML = btn ? btn.innerHTML : '';
+
+  function setProgress(pct) {
+    if (!btn) return;
+    if (pct < 100) {
+      btn.innerHTML = `<span class="ds-share-btn-icon">↓</span>${pct}%`;
+      btn.disabled  = true;
+      btn.style.opacity = '0.75';
+    } else {
+      btn.innerHTML = `<span class="ds-share-btn-icon">✓</span>Done`;
+      btn.style.opacity = '1';
+      setTimeout(() => {
+        btn.innerHTML = origHTML;
+        btn.disabled  = false;
+        btn.style.opacity = '';
+      }, 1800);
+    }
+  }
+
+  setProgress(10);
+
+  const offscreen  = document.createElement('canvas');
   offscreen.width  = 1080;
   offscreen.height = 1080;
   const ctx = offscreen.getContext('2d');
 
+  setProgress(35);
+
   document.fonts.ready.then(() => {
+    setProgress(65);
     _dsDrawCard(ctx, 1080, 1080, DS.parentPost, DS.echoPost);
-    const link     = document.createElement('a');
-    const pSong    = (DS.parentPost?.knowledge?.song || DS.parentPost?.song || 'lyric').replace(/\s+/g, '-').toLowerCase();
-    link.download  = `margo-conversation-${pSong}.png`;
-    link.href      = offscreen.toDataURL('image/png', 0.93);
+    setProgress(88);
+
+    const pSong   = (DS.parentPost?.knowledge?.song || DS.parentPost?.song || 'lyric')
+                      .replace(/\s+/g, '-').toLowerCase();
+    const link    = document.createElement('a');
+    link.download = `margo-conversation-${pSong}.png`;
+    link.href     = offscreen.toDataURL('image/png', 0.93);
     link.click();
-    if (typeof showToast === 'function') showToast('Conversation saved ✓');
+    setProgress(100);
   });
 }
 
