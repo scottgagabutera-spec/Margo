@@ -909,11 +909,13 @@ function _dsPlayMotion() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   ACTIONS
-   v2.3 — _dsRoute: detects active view (Conversation/Card),
-          GIF uses real gif.js encoding matching gif-studio
-          pattern. Poster uses canvas PNG. Progress lives in
-          the share button itself — no floating toasts.
+   ACTIONS  v2.5
+   — GIF: always use /js/gif.worker.js (confirmed present),
+     quality:1, workers:4 matching gif-studio.js exactly.
+     Conversation view draws _dsDrawConvo to canvas.
+   — Poster: toBlob pattern matching poster.js exactly,
+     quality 0.92, conversation or card per active view.
+   — Active view (Conversation/Card) determines content.
 ══════════════════════════════════════════════════════════ */
 function _dsRoute(tab) {
   DS.format = tab;
@@ -924,18 +926,258 @@ function _dsRoute(tab) {
   }
 }
 
-/* ── Detect which view is active ── */
+/* ── Which view is showing ── */
 function _dsActiveView() {
   const card = document.getElementById('dsViewCard');
   return card && card.style.display !== 'none' ? 'card' : 'convo';
 }
 
-/* ── Draw active view to an offscreen canvas ── */
-function _dsDrawActiveToCanvas(ctx, W, H) {
-  _dsDrawCard(ctx, W, H, DS.parentPost, DS.echoPost);
+/* ── Draw whichever view is active onto ctx ── */
+function _dsDrawActive(ctx, W, H, t) {
+  if (_dsActiveView() === 'convo') {
+    _dsDrawConvo(ctx, W, H);
+  } else {
+    _dsDrawCard(ctx, W, H, DS.parentPost, DS.echoPost, t);
+  }
 }
 
-/* ── GIF export — mirrors gif-studio.js gsExport pattern ── */
+/* ── Draw conversation view to canvas ── */
+function _dsDrawConvo(ctx, W, H) {
+  const p = DS.parentPost;
+  const e = DS.echoPost;
+  if (!p || !e) return;
+
+  const theme   = DS_THEMES[DS.bgColor] || DS_THEMES['#07060E'];
+  const isDark  = !theme.isLight;
+  const textCol = theme.text || '#ffffff';
+  const lyricFont   = DS.fontFamily || 'DM Serif Display';
+  const lyricItalic = DS.fontItalic !== false;
+  const lyricStyle  = lyricItalic ? 'italic ' : '';
+
+  const pk      = p.knowledge || {};
+  const pVibe   = DS_VIBE[p.emotion || 'Nostalgia'] || '#E8C547';
+  const eVibe   = DS_VIBE[e.emotion || 'Nostalgia'] || '#6B8CFF';
+  const pUser   = ('@' + (p.username || 'anonymous')).toUpperCase();
+  const eUser   = ('@' + (e.username || 'anonymous')).toUpperCase();
+  const pSong   = pk.song   || p.song   || '';
+  const pArtist = pk.artist || p.artist || '';
+  const eSong   = e.song    || '';
+  const eArtist = e.artist  || '';
+
+  const pad = W * 0.07;
+
+  /* Background */
+  const themeParts = theme.grad.match(/#[0-9a-fA-F]{6}/g) || ['#090810','#0d0b12'];
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, themeParts[0]);
+  bg.addColorStop(1, themeParts[1] || themeParts[0]);
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  /* Vibe glows */
+  ctx.save();
+  const pg = ctx.createRadialGradient(W * 0.15, H * 0.2, 0, W * 0.15, H * 0.2, W * 0.65);
+  pg.addColorStop(0, pVibe + '28'); pg.addColorStop(1, 'transparent');
+  ctx.fillStyle = pg; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+  ctx.save();
+  const eg = ctx.createRadialGradient(W * 0.85, H * 0.8, 0, W * 0.85, H * 0.8, W * 0.65);
+  eg.addColorStop(0, eVibe + '28'); eg.addColorStop(1, 'transparent');
+  ctx.fillStyle = eg; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  /* MARGO wordmark */
+  const mSz = Math.max(14, W * 0.046);
+  ctx.save();
+  ctx.font = `800 ${mSz}px 'Syne',sans-serif`;
+  ctx.fillStyle = '#E8C547'; ctx.globalAlpha = 0.9;
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.fillText('MARGO', pad, pad * 0.65);
+  ctx.restore();
+
+  /* Helper: draw a bubble card */
+  function drawBubble(lyric, song, artist, emotion, user, isLeft, yTop) {
+    const vibe     = DS_VIBE[emotion || 'Nostalgia'] || '#E8C547';
+    const bubbleW  = W * 0.72;
+    const bX       = isLeft ? pad : W - pad - bubbleW;
+    const bubbleR  = W * 0.04;
+    const lyrFS    = Math.min(W * 0.052, 48);
+    ctx.font = `${lyricStyle}600 ${lyrFS}px '${lyricFont}',serif`;
+    const lyrLines = _dsWrap(ctx, lyric, bubbleW - W * 0.08);
+    const lyrLH    = lyrFS * 1.52;
+    const metaH    = W * 0.055;
+    const innerPad = W * 0.04;
+    const contentH = lyrLines.length * lyrLH + innerPad + metaH + innerPad * 1.5;
+    const cardH    = contentH;
+
+    /* User label */
+    ctx.save();
+    const uFS = Math.max(10, W * 0.022);
+    ctx.font = `700 ${uFS}px 'Space Mono',monospace`;
+    ctx.fillStyle = vibe; ctx.globalAlpha = 0.9;
+    ctx.textBaseline = 'bottom'; ctx.textAlign = isLeft ? 'left' : 'right';
+    ctx.fillText(user, isLeft ? bX + innerPad : bX + bubbleW - innerPad, yTop - W * 0.012);
+
+    /* Dot */
+    ctx.beginPath();
+    ctx.arc(isLeft ? bX + innerPad - uFS * 1.2 : bX + bubbleW - innerPad + uFS * 1.2,
+            yTop - W * 0.012 - uFS * 0.4, uFS * 0.28, 0, Math.PI * 2);
+    ctx.fillStyle = vibe; ctx.globalAlpha = 0.8; ctx.fill();
+    ctx.restore();
+
+    /* Bubble background */
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = vibe;
+    _dsRoundRect(ctx, bX, yTop, bubbleW, cardH, bubbleR);
+    ctx.fill();
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = vibe;
+    ctx.lineWidth = 1.5;
+    _dsRoundRect(ctx, bX, yTop, bubbleW, cardH, bubbleR);
+    ctx.stroke();
+    ctx.restore();
+
+    /* Lyric text */
+    ctx.save();
+    ctx.font = `${lyricStyle}600 ${lyrFS}px '${lyricFont}',serif`;
+    ctx.fillStyle = textCol; ctx.globalAlpha = 0.95;
+    ctx.textBaseline = 'top'; ctx.textAlign = isLeft ? 'left' : 'right';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 10;
+    lyrLines.forEach((line, i) => {
+      ctx.fillText(line,
+        isLeft ? bX + innerPad : bX + bubbleW - innerPad,
+        yTop + innerPad + i * lyrLH);
+    });
+    ctx.restore();
+
+    /* Meta separator */
+    const metaY = yTop + innerPad + lyrLines.length * lyrLH + innerPad * 0.5;
+    ctx.save();
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(bX + innerPad, metaY);
+    ctx.lineTo(bX + bubbleW - innerPad, metaY);
+    ctx.stroke();
+    ctx.restore();
+
+    /* Song + artist */
+    if (song) {
+      const sFS = Math.max(10, W * 0.026);
+      ctx.save();
+      ctx.font = `700 ${sFS}px 'DM Sans',sans-serif`;
+      ctx.fillStyle = textCol; ctx.globalAlpha = 0.85;
+      ctx.textBaseline = 'middle'; ctx.textAlign = isLeft ? 'left' : 'right';
+      const sX = isLeft ? bX + innerPad : bX + bubbleW - innerPad;
+      ctx.fillText(song, sX, metaY + metaH * 0.35);
+      ctx.font = `400 ${Math.max(9, W * 0.02)}px 'Space Mono',monospace`;
+      ctx.fillStyle = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
+      if (artist) ctx.fillText(artist, sX, metaY + metaH * 0.78);
+      ctx.restore();
+    }
+
+    /* Vibe tag */
+    if (emotion) {
+      const vFS = Math.max(8, W * 0.018);
+      ctx.save();
+      ctx.font = `700 ${vFS}px 'Space Mono',monospace`;
+      const vLabel = emotion.toUpperCase();
+      const vTW = ctx.measureText(vLabel).width;
+      const vPad = W * 0.016;
+      const vTH = vFS * 1.6;
+      const vX = isLeft ? bX + bubbleW - innerPad - vTW - vPad * 2 : bX + innerPad;
+      const vY = metaY + (metaH - vTH) / 2;
+      ctx.globalAlpha = 0.15; ctx.fillStyle = vibe;
+      _dsRoundRect(ctx, vX, vY, vTW + vPad * 2, vTH, vTH / 2); ctx.fill();
+      ctx.globalAlpha = 0.35; ctx.strokeStyle = vibe; ctx.lineWidth = 1;
+      _dsRoundRect(ctx, vX, vY, vTW + vPad * 2, vTH, vTH / 2); ctx.stroke();
+      ctx.globalAlpha = 0.8; ctx.fillStyle = vibe;
+      ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      ctx.fillText(vLabel, vX + vPad, vY + vTH / 2);
+      ctx.restore();
+    }
+
+    return yTop + cardH;
+  }
+
+  /* Helper: rounded rect path */
+  function _dsRoundRect(c, x, y, w, h, r) {
+    if (c.roundRect) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+    else { c.beginPath(); c.rect(x, y, w, h); }
+  }
+
+  /* Layout bubbles */
+  const startY = pad * 2.2;
+  const pBotY  = drawBubble(
+    p.text || p.lyric || '',
+    pSong, pArtist, p.emotion, pUser, true, startY
+  );
+
+  /* Divider pill */
+  const divY   = pBotY + H * 0.04;
+  const dText  = `LYRIC BACK ↩  ${eUser}`;
+  const dFS    = Math.max(10, W * 0.021);
+  ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
+  const dTW = ctx.measureText(dText).width;
+  const pH  = dFS * 1.95;
+  const pW  = dTW + W * 0.056;
+  const pX  = W / 2 - pW / 2;
+  const pR  = pH / 2;
+
+  ctx.save();
+  [[pad, W / 2 - pW / 2 - W * 0.018], [W / 2 + pW / 2 + W * 0.018, W - pad]].forEach(([x1, x2]) => {
+    const lg = ctx.createLinearGradient(x1, 0, x2, 0);
+    if (x1 === pad) { lg.addColorStop(0,'transparent'); lg.addColorStop(1,'rgba(232,197,71,0.22)'); }
+    else            { lg.addColorStop(0,'rgba(232,197,71,0.22)'); lg.addColorStop(1,'transparent'); }
+    ctx.fillStyle = lg; ctx.fillRect(x1, divY - 0.75, x2 - x1, 1.5);
+  });
+  ctx.restore();
+
+  ctx.save();
+  ctx.shadowColor = '#E8C547'; ctx.shadowBlur = 10;
+  ctx.strokeStyle = 'rgba(232,197,71,0.55)'; ctx.lineWidth = 1.5;
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(pX, divY - pH / 2, pW, pH, pR); }
+  else { ctx.beginPath(); ctx.rect(pX, divY - pH / 2, pW, pH); }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  const pFill = ctx.createLinearGradient(pX, divY - pH / 2, pX, divY + pH / 2);
+  pFill.addColorStop(0,'rgba(232,197,71,0.14)'); pFill.addColorStop(1,'rgba(232,197,71,0.06)');
+  ctx.fillStyle = pFill;
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(pX, divY - pH / 2, pW, pH, pR); }
+  else { ctx.beginPath(); ctx.rect(pX, divY - pH / 2, pW, pH); }
+  ctx.fill();
+  ctx.fillStyle = '#E8C547'; ctx.globalAlpha = 0.95;
+  ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.fillText(dText, W / 2, divY);
+  ctx.restore();
+
+  /* Echo bubble */
+  drawBubble(
+    e.lyric || e.text || '',
+    eSong, eArtist, e.emotion, eUser, false, divY + pH / 2 + H * 0.04
+  );
+
+  /* Watermark */
+  const wFS = Math.max(9, W * 0.02);
+  ctx.save();
+  ctx.font = `700 ${wFS}px 'Space Mono',monospace`;
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  const wTxt = 'trymargo.com';
+  const wW2  = ctx.measureText(wTxt).width + W * 0.044;
+  const wH2  = wFS * 1.7;
+  const wX   = W / 2 - wW2 / 2;
+  const wY   = H - pad * 0.85 - wH2 / 2;
+  ctx.globalAlpha = 0.16; ctx.fillStyle = '#ffffff';
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(wX, wY, wW2, wH2, wH2 / 2); ctx.fill(); }
+  else { ctx.fillRect(wX, wY, wW2, wH2); }
+  ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffffff';
+  ctx.fillText(wTxt, W / 2, wY + wH2 / 2);
+  ctx.restore();
+}
+
+/* ── GIF export — exact gif-studio.js gsExport pattern ── */
 async function _dsExportGif() {
   const btn      = document.getElementById('dsBtnGif');
   const origHTML = btn ? btn.innerHTML : '';
@@ -944,7 +1186,7 @@ async function _dsExportGif() {
     if (btn) btn.innerHTML = `<span class="ds-share-btn-icon">◎</span>${txt}`;
   }
 
-  if (btn) { btn.disabled = true; }
+  if (btn) btn.disabled = true;
   setBtnText('GIF 0%');
 
   const SIZE   = 1080;
@@ -952,42 +1194,33 @@ async function _dsExportGif() {
   const DELAY  = 70;
 
   const off = document.createElement('canvas');
-  off.width  = SIZE;
-  off.height = SIZE;
-  const oc   = off.getContext('2d');
+  off.width = SIZE; off.height = SIZE;
+  const oc  = off.getContext('2d');
 
   try {
     await document.fonts.ready;
 
-    /* Load gif.js if not already present */
     if (typeof GIF === 'undefined') {
       await new Promise((res, rej) => {
-        const sc  = document.createElement('script');
-        sc.src    = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
-        sc.onload = res;
-        sc.onerror = rej;
+        const sc = document.createElement('script');
+        sc.src   = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
+        sc.onload = res; sc.onerror = rej;
         document.head.appendChild(sc);
       });
     }
 
-    /* Use CDN worker if local one unavailable */
-    const workerScript = document.querySelector('script[src*="gif.worker"]')
-      ? '/js/gif.worker.js'
-      : 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js';
-
     const gif = new GIF({
-      workers: 2,
-      quality: 10,
-      width:   SIZE,
-      height:  SIZE,
-      workerScript,
-      dither: false,
+      workers:      4,
+      quality:      1,
+      width:        SIZE,
+      height:       SIZE,
+      workerScript: '/js/gif.worker.js',
+      dither:       false,
     });
 
-    /* Draw each frame with varying t for animation */
     for (let i = 0; i < FRAMES; i++) {
       oc.clearRect(0, 0, SIZE, SIZE);
-      _dsDrawCard(oc, SIZE, SIZE, DS.parentPost, DS.echoPost, i / FRAMES);
+      _dsDrawActive(oc, SIZE, SIZE, i / FRAMES);
       gif.addFrame(off, { copy: true, delay: DELAY });
       setBtnText(`GIF ${Math.round((i / FRAMES) * 75)}%`);
       await new Promise(r => setTimeout(r, 0));
@@ -1002,7 +1235,7 @@ async function _dsExportGif() {
       const a    = document.createElement('a');
       const name = (DS.parentPost?.knowledge?.song || DS.parentPost?.song || 'duet')
                      .replace(/\s+/g, '-').toLowerCase();
-      a.href     = url;
+      a.href = url;
       a.download = `margo-duet-${name}.gif`;
       a.style.display = 'none';
       document.body.appendChild(a);
@@ -1023,7 +1256,7 @@ async function _dsExportGif() {
   }
 }
 
-/* ── Poster export — PNG via canvas ── */
+/* ── Poster export — exact poster.js _posterDownloadFinal pattern ── */
 function _dsExportPoster() {
   const btn      = document.getElementById('dsBtnPoster');
   const origHTML = btn ? btn.innerHTML : '';
@@ -1037,29 +1270,36 @@ function _dsExportPoster() {
 
   const SIZE = 1080;
   const off  = document.createElement('canvas');
-  off.width  = SIZE;
-  off.height = SIZE;
+  off.width  = SIZE; off.height = SIZE;
   const ctx  = off.getContext('2d');
 
-  setBtnText('35%');
+  setBtnText('40%');
 
   document.fonts.ready.then(() => {
-    setBtnText('70%');
-    _dsDrawCard(ctx, SIZE, SIZE, DS.parentPost, DS.echoPost);
-    setBtnText('90%');
+    setBtnText('75%');
+    _dsDrawActive(ctx, SIZE, SIZE);
+    setBtnText('92%');
 
     const name = (DS.parentPost?.knowledge?.song || DS.parentPost?.song || 'duet')
                    .replace(/\s+/g, '-').toLowerCase();
-    const link    = document.createElement('a');
-    link.download = `margo-poster-${name}.png`;
-    link.href     = off.toDataURL('image/png', 0.93);
-    link.click();
 
-    if (btn) {
-      btn.innerHTML = `<span class="ds-share-btn-icon">✓</span>Saved!`;
-      btn.disabled  = false;
-      setTimeout(() => { btn.innerHTML = origHTML; }, 2200);
-    }
+    off.toBlob(blob => {
+      if (!blob) return;
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `margo-poster-${name}.png`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+
+      if (btn) {
+        btn.innerHTML = `<span class="ds-share-btn-icon">✓</span>Saved!`;
+        btn.disabled  = false;
+        setTimeout(() => { btn.innerHTML = origHTML; }, 2200);
+      }
+    }, 'image/png', 0.92);
   });
 }
 
