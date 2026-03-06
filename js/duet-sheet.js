@@ -1,10 +1,9 @@
 /* ============================================================
    MARGO — js/duet-sheet.js
-   v2.2 — _dsRoute fix: both GIF + Poster now use _dsDrawCard
-          (was incorrectly calling gsExportForShareSheet which
-          exported a single-lyric GIF from the wrong post).
-          _dsDownload: inline button progress bar replaces
-          floating "Preparing GIF…" toast entirely.
+   v2.3 — _dsRoute: GIF uses real gif.js encoding (same pattern
+          as gif-studio.js) with button progress GIF 0%→75%→
+          Encoding…100%→✓ Saved. Poster uses canvas PNG download.
+          Both export whichever view is active (Conversation/Card).
    ============================================================ */
 
 (function () {
@@ -518,7 +517,7 @@ function mountDuetSheet() {
   document.getElementById('dsClose').onclick        = closeDuetSheet;
   document.getElementById('dsToggleConvo').onclick  = () => _dsShowView('convo');
   document.getElementById('dsToggleCard').onclick   = () => _dsShowView('card');
-  document.getElementById('dsBtnDownload').onclick  = () => _dsDownload('poster');
+  document.getElementById('dsBtnDownload').onclick  = () => _dsExportPoster();
   document.getElementById('dsBtnGif').onclick       = () => _dsRoute('gif');
   document.getElementById('dsBtnPoster').onclick    = () => _dsRoute('poster');
 
@@ -911,60 +910,151 @@ function _dsPlayMotion() {
 
 /* ══════════════════════════════════════════════════════════
    ACTIONS
-   v2.2 — _dsRoute: both GIF and Poster use _dsDownload()
-          which correctly draws the full duet via _dsDrawCard.
-          Removed gsExportForShareSheet call entirely.
+   v2.3 — _dsRoute: detects active view (Conversation/Card),
+          GIF uses real gif.js encoding matching gif-studio
+          pattern. Poster uses canvas PNG. Progress lives in
+          the share button itself — no floating toasts.
 ══════════════════════════════════════════════════════════ */
 function _dsRoute(tab) {
   DS.format = tab;
-  _dsDownload(tab);
+  if (tab === 'gif') {
+    _dsExportGif();
+  } else {
+    _dsExportPoster();
+  }
 }
 
-/* ── v2.2 _dsDownload: inline button progress, no floating toast ── */
-function _dsDownload(tab) {
-  const isGif    = (tab || DS.format) === 'gif';
-  const btnId    = isGif ? 'dsBtnGif' : 'dsBtnPoster';
-  const btn      = document.getElementById(btnId);
+/* ── Detect which view is active ── */
+function _dsActiveView() {
+  const card = document.getElementById('dsViewCard');
+  return card && card.style.display !== 'none' ? 'card' : 'convo';
+}
+
+/* ── Draw active view to an offscreen canvas ── */
+function _dsDrawActiveToCanvas(ctx, W, H) {
+  _dsDrawCard(ctx, W, H, DS.parentPost, DS.echoPost);
+}
+
+/* ── GIF export — mirrors gif-studio.js gsExport pattern ── */
+async function _dsExportGif() {
+  const btn      = document.getElementById('dsBtnGif');
   const origHTML = btn ? btn.innerHTML : '';
 
-  function setProgress(pct) {
-    if (!btn) return;
-    if (pct < 100) {
-      btn.innerHTML = `<span class="ds-share-btn-icon">↓</span>${pct}%`;
-      btn.disabled  = true;
-      btn.style.opacity = '0.75';
-    } else {
-      btn.innerHTML = `<span class="ds-share-btn-icon">✓</span>Done`;
-      btn.style.opacity = '1';
-      setTimeout(() => {
-        btn.innerHTML = origHTML;
-        btn.disabled  = false;
-        btn.style.opacity = '';
-      }, 1800);
-    }
+  function setBtnText(txt) {
+    if (btn) btn.innerHTML = `<span class="ds-share-btn-icon">◎</span>${txt}`;
   }
 
-  setProgress(10);
+  if (btn) { btn.disabled = true; }
+  setBtnText('GIF 0%');
 
-  const offscreen  = document.createElement('canvas');
-  offscreen.width  = 1080;
-  offscreen.height = 1080;
-  const ctx = offscreen.getContext('2d');
+  const SIZE   = 1080;
+  const FRAMES = 24;
+  const DELAY  = 70;
 
-  setProgress(35);
+  const off = document.createElement('canvas');
+  off.width  = SIZE;
+  off.height = SIZE;
+  const oc   = off.getContext('2d');
+
+  try {
+    await document.fonts.ready;
+
+    /* Load gif.js if not already present */
+    if (typeof GIF === 'undefined') {
+      await new Promise((res, rej) => {
+        const sc  = document.createElement('script');
+        sc.src    = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
+        sc.onload = res;
+        sc.onerror = rej;
+        document.head.appendChild(sc);
+      });
+    }
+
+    const gif = new GIF({
+      workers: 4,
+      quality: 1,
+      width:   SIZE,
+      height:  SIZE,
+      workerScript: '/js/gif.worker.js',
+      dither: false,
+    });
+
+    /* Draw each frame — duet card at different fade-up t values */
+    for (let i = 0; i < FRAMES; i++) {
+      oc.clearRect(0, 0, SIZE, SIZE);
+      _dsDrawCard(oc, SIZE, SIZE, DS.parentPost, DS.echoPost);
+      gif.addFrame(off, { copy: true, delay: DELAY });
+      setBtnText(`GIF ${Math.round((i / FRAMES) * 75)}%`);
+      await new Promise(r => setTimeout(r, 0));
+    }
+
+    gif.on('progress', p => {
+      setBtnText(`Encoding… ${Math.round(75 + p * 25)}%`);
+    });
+
+    gif.on('finished', blob => {
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const name = (DS.parentPost?.knowledge?.song || DS.parentPost?.song || 'duet')
+                     .replace(/\s+/g, '-').toLowerCase();
+      a.href     = url;
+      a.download = `margo-duet-${name}.gif`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+      if (btn) {
+        btn.innerHTML = `<span class="ds-share-btn-icon">✓</span>GIF Saved!`;
+        btn.disabled  = false;
+        setTimeout(() => { btn.innerHTML = origHTML; }, 2200);
+      }
+    });
+
+    gif.render();
+
+  } catch (err) {
+    console.error('Duet GIF error:', err);
+    if (btn) { btn.innerHTML = origHTML; btn.disabled = false; }
+  }
+}
+
+/* ── Poster export — PNG via canvas ── */
+function _dsExportPoster() {
+  const btn      = document.getElementById('dsBtnPoster');
+  const origHTML = btn ? btn.innerHTML : '';
+
+  function setBtnText(txt) {
+    if (btn) btn.innerHTML = `<span class="ds-share-btn-icon">✦</span>${txt}`;
+  }
+
+  if (btn) btn.disabled = true;
+  setBtnText('0%');
+
+  const SIZE = 1080;
+  const off  = document.createElement('canvas');
+  off.width  = SIZE;
+  off.height = SIZE;
+  const ctx  = off.getContext('2d');
+
+  setBtnText('35%');
 
   document.fonts.ready.then(() => {
-    setProgress(65);
-    _dsDrawCard(ctx, 1080, 1080, DS.parentPost, DS.echoPost);
-    setProgress(88);
+    setBtnText('70%');
+    _dsDrawCard(ctx, SIZE, SIZE, DS.parentPost, DS.echoPost);
+    setBtnText('90%');
 
-    const pSong   = (DS.parentPost?.knowledge?.song || DS.parentPost?.song || 'lyric')
-                      .replace(/\s+/g, '-').toLowerCase();
+    const name = (DS.parentPost?.knowledge?.song || DS.parentPost?.song || 'duet')
+                   .replace(/\s+/g, '-').toLowerCase();
     const link    = document.createElement('a');
-    link.download = `margo-conversation-${pSong}.png`;
-    link.href     = offscreen.toDataURL('image/png', 0.93);
+    link.download = `margo-poster-${name}.png`;
+    link.href     = off.toDataURL('image/png', 0.93);
     link.click();
-    setProgress(100);
+
+    if (btn) {
+      btn.innerHTML = `<span class="ds-share-btn-icon">✓</span>Saved!`;
+      btn.disabled  = false;
+      setTimeout(() => { btn.innerHTML = origHTML; }, 2200);
+    }
   });
 }
 
