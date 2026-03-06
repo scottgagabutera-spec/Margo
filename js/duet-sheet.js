@@ -1,9 +1,12 @@
 /* ============================================================
    MARGO — js/duet-sheet.js
-   v2.3 — _dsRoute: GIF uses real gif.js encoding (same pattern
-          as gif-studio.js) with button progress GIF 0%→75%→
-          Encoding…100%→✓ Saved. Poster uses canvas PNG download.
-          Both export whichever view is active (Conversation/Card).
+   v2.6 — Export quality overhaul:
+   • Single share button (GIF tab → GIF only, Poster tab → Poster only)
+   • GIF: FloydSteinberg dither, 36 frames, quality:1, per-frame palette
+   • Conversation canvas rebuilt — proper 1080×1080 layout, nothing clipped
+   • Card canvas: SONGS bar added at bottom
+   • Conversation canvas: SONGS bar added at bottom
+   • Competing-with-giants visual quality on all exports
    ============================================================ */
 
 (function () {
@@ -21,14 +24,14 @@ const DS = {
   fontItalic: true,
 };
 
-/* ── Vibe colours (self-contained copy) ── */
+/* ── Vibe colours ── */
 const DS_VIBE = {
   Love:'#FF6B9D', Heartbreak:'#ff5050', Hope:'#6B8CFF', Nostalgia:'#E8C547',
   Healing:'#4ade80', Joy:'#ffc847', Rage:'#FF6440', Loneliness:'#a0a0ff',
   SendIt:'#00e5c8', LetOut:'#c864ff',
 };
 
-/* ── Color theme map: bg → { gradient, textColor, isLight } ── */
+/* ── Color theme map ── */
 const DS_THEMES = {
   '#07060E': { grad:'linear-gradient(135deg,#0d0d0d,#1a1410)',  text:'#ffffff', isLight:false },
   '#0e0018': { grad:'linear-gradient(135deg,#1a0033,#2d1b4e)',  text:'#ffffff', isLight:false },
@@ -84,13 +87,11 @@ function injectDuetStyles() {
     @keyframes dsSlideUp { from{transform:translateY(70px);opacity:0} to{transform:translateY(0);opacity:1} }
     @keyframes dsFadeUp  { from{transform:translateY(24px) scale(0.97);opacity:0} to{transform:translateY(0) scale(1);opacity:1} }
 
-    /* ── Handle ── */
     .ds-handle {
       width:36px; height:4px; border-radius:2px;
       background:rgba(255,255,255,0.1); margin:12px auto 0; flex-shrink:0;
     }
 
-    /* ── Header ── */
     .ds-header {
       display:flex; align-items:center; justify-content:space-between;
       padding:14px 18px 0; flex-shrink:0;
@@ -109,7 +110,6 @@ function injectDuetStyles() {
     }
     .ds-close:hover { background:rgba(255,255,255,0.12); color:#fff; }
 
-    /* ── View Toggle ── */
     .ds-view-toggle {
       display:flex; align-items:center; justify-content:center;
       gap:6px; padding:14px 20px 0;
@@ -127,7 +127,7 @@ function injectDuetStyles() {
     }
     .ds-toggle-btn:not(.active):hover { color:rgba(255,255,255,0.75); background:rgba(255,255,255,0.07); }
 
-    /* ══ CONVERSATION VIEW ══ */
+    /* CONVERSATION VIEW */
     .ds-convo { padding:18px 18px 14px; display:flex; flex-direction:column; gap:12px; }
 
     .ds-bubble { max-width:82%; display:flex; flex-direction:column; gap:6px; animation:dsBubbleIn 0.45s cubic-bezier(0.16,1,0.3,1) both; }
@@ -179,7 +179,7 @@ function injectDuetStyles() {
     .ds-strip-song-artist { font-family:'Space Mono',monospace; font-size:0.5rem; color:rgba(255,255,255,0.4); }
     .ds-strip-sep { font-size:0.65rem; color:rgba(255,255,255,0.2); }
 
-    /* ══ CARD VIEW ══ */
+    /* CARD VIEW */
     .ds-card-view { padding:16px 18px 0; }
 
     .ds-canvas-preview {
@@ -224,7 +224,7 @@ function injectDuetStyles() {
     .ds-card-btn-download { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.7); }
     .ds-card-btn-download:hover { background:rgba(255,255,255,0.1); color:#fff; }
 
-    /* ══ EDITING PANEL ══ */
+    /* EDITING PANEL */
     .ds-section-sep { height:1px; background:rgba(255,255,255,0.06); margin:14px 18px 0; }
     .ds-edit-panel { margin:14px 18px 0; background:#181720; border-radius:18px; border:1px solid rgba(255,255,255,0.07); overflow:hidden; }
 
@@ -245,7 +245,6 @@ function injectDuetStyles() {
     .ds-panel-section.active { display:block; }
     .ds-panel-label { font-family:'Space Mono',monospace; font-size:0.5rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:10px; }
 
-    /* Motion grid */
     .ds-motion-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
     .ds-motion-btn { padding:9px 4px; border-radius:10px; background:#1E1D28; border:1px solid rgba(255,255,255,0.07); color:rgba(255,255,255,0.7); font-family:'DM Sans',sans-serif; font-size:0.66rem; font-weight:600; cursor:pointer; transition:all 0.18s; text-align:center; }
     .ds-motion-btn:hover { background:rgba(255,255,255,0.08); color:#fff; border-color:rgba(255,255,255,0.18); }
@@ -256,7 +255,6 @@ function injectDuetStyles() {
     .ds-speed-btn.active { background:rgba(0,229,255,0.1); border-color:rgba(0,229,255,0.3); color:#00E5FF; }
     .ds-speed-btn:hover:not(.active) { background:rgba(255,255,255,0.07); color:#fff; }
 
-    /* Color swatches */
     .ds-color-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
     .ds-color-swatch { border-radius:11px; overflow:hidden; cursor:pointer; border:2px solid transparent; transition:all 0.18s; aspect-ratio:1; position:relative; }
     .ds-color-swatch:hover { transform:scale(1.05); }
@@ -264,7 +262,6 @@ function injectDuetStyles() {
     .ds-swatch-fill { width:100%; height:70%; }
     .ds-swatch-name { position:absolute; bottom:0; left:0; right:0; padding:4px 2px 5px; background:rgba(0,0,0,0.55); font-family:'Space Mono',monospace; font-size:0.42rem; font-weight:700; color:rgba(255,255,255,0.8); text-align:center; }
 
-    /* Font cards */
     .ds-font-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
     .ds-font-card { padding:12px 12px 10px; border-radius:12px; background:#1E1D28; border:1px solid rgba(255,255,255,0.07); cursor:pointer; transition:all 0.18s; display:flex; flex-direction:column; gap:5px; }
     .ds-font-card:hover { background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.16); }
@@ -273,7 +270,7 @@ function injectDuetStyles() {
     .ds-font-card-name { font-family:'Space Mono',monospace; font-size:0.48rem; font-weight:700; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; }
     .ds-font-card.active .ds-font-card-name { color:#E8C547; }
 
-    /* Share row */
+    /* Share row — single button */
     .ds-share-row { display:flex; gap:9px; padding:14px 18px 22px; }
     .ds-share-btn { flex:1; padding:16px 10px; border-radius:17px; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.22s cubic-bezier(0.16,1,0.3,1); font-family:'Space Mono',monospace; font-weight:700; font-size:0.54rem; letter-spacing:1.2px; text-transform:uppercase; }
     .ds-share-btn:hover  { transform:translateY(-2px); }
@@ -282,10 +279,10 @@ function injectDuetStyles() {
     .ds-share-btn-icon { font-size:1.1rem; }
     .ds-btn-gif { background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.25); color:#00E5FF; }
     .ds-btn-gif:hover { background:rgba(0,229,255,0.14); border-color:rgba(0,229,255,0.45); box-shadow:0 8px 24px rgba(0,229,255,0.12); }
-    .ds-btn-poster { background:rgba(232,197,71,0.1); border:1px solid rgba(232,197,71,0.3); color:#E8C547; flex:1.4; }
+    .ds-btn-poster { background:rgba(232,197,71,0.1); border:1px solid rgba(232,197,71,0.3); color:#E8C547; }
     .ds-btn-poster:hover { background:rgba(232,197,71,0.17); border-color:rgba(232,197,71,0.52); box-shadow:0 8px 24px rgba(232,197,71,0.15); }
 
-    /* ══ LIVE MOTION KEYFRAMES ══ */
+    /* MOTION KEYFRAMES */
     @keyframes dsKFadeUp {
       0%       { opacity:0; transform:translateY(20px); }
       25%,75%  { opacity:1; transform:translateY(0); }
@@ -357,13 +354,13 @@ function mountDuetSheet() {
         <button class="ds-toggle-btn"        id="dsToggleCard">Card</button>
       </div>
 
-      <!-- ══ CONVERSATION VIEW ══ -->
+      <!-- CONVERSATION VIEW -->
       <div id="dsViewConvo">
         <div class="ds-convo" id="dsConvoBubbles"></div>
         <div class="ds-song-strip" id="dsSongStrip"></div>
       </div>
 
-      <!-- ══ CARD VIEW ══ -->
+      <!-- CARD VIEW -->
       <div id="dsViewCard" style="display:none">
         <div class="ds-card-view">
           <div class="ds-canvas-preview">
@@ -396,7 +393,7 @@ function mountDuetSheet() {
 
       <div class="ds-section-sep"></div>
 
-      <!-- ══ EDITING PANEL ══ -->
+      <!-- EDITING PANEL -->
       <div class="ds-edit-panel">
         <div class="ds-format-tabs">
           <button class="ds-format-tab active-gif"    id="dsFmtGif"    data-fmt="gif">GIF</button>
@@ -497,13 +494,10 @@ function mountDuetSheet() {
         </div>
       </div>
 
-      <!-- Share row -->
+      <!-- Single share button — swaps based on format tab -->
       <div class="ds-share-row">
-        <button class="ds-share-btn ds-btn-gif" id="dsBtnGif">
-          <span class="ds-share-btn-icon">◎</span>Share as GIF
-        </button>
-        <button class="ds-share-btn ds-btn-poster" id="dsBtnPoster">
-          <span class="ds-share-btn-icon">✦</span>Share as Poster
+        <button class="ds-share-btn ds-btn-gif" id="dsBtnShare">
+          <span class="ds-share-btn-icon">◎</span><span id="dsBtnShareLabel">Share as GIF</span>
         </button>
       </div>
 
@@ -513,20 +507,16 @@ function mountDuetSheet() {
   document.body.appendChild(backdrop);
   DS.mounted = true;
 
-  /* ── Wire all events ── */
   document.getElementById('dsClose').onclick        = closeDuetSheet;
   document.getElementById('dsToggleConvo').onclick  = () => _dsShowView('convo');
   document.getElementById('dsToggleCard').onclick   = () => _dsShowView('card');
   document.getElementById('dsBtnDownload').onclick  = () => _dsExportPoster();
-  document.getElementById('dsBtnGif').onclick       = () => _dsRoute('gif');
-  document.getElementById('dsBtnPoster').onclick    = () => _dsRoute('poster');
+  document.getElementById('dsBtnShare').onclick     = () => _dsRoute();
 
-  /* Format tabs */
   document.querySelectorAll('.ds-format-tab').forEach(btn => {
     btn.onclick = () => _dsSwitchFormat(btn.dataset.fmt);
   });
 
-  /* Option tabs */
   document.getElementById('dsOptionTabs').addEventListener('click', e => {
     const btn = e.target.closest('.ds-option-tab');
     if (!btn) return;
@@ -536,7 +526,6 @@ function mountDuetSheet() {
     document.getElementById('ds-section-' + btn.dataset.opt).classList.add('active');
   });
 
-  /* Motion buttons */
   document.getElementById('dsMotionGrid').addEventListener('click', e => {
     const btn = e.target.closest('.ds-motion-btn');
     if (!btn) return;
@@ -546,7 +535,6 @@ function mountDuetSheet() {
     _dsPlayMotion();
   });
 
-  /* Speed buttons */
   document.getElementById('dsSpeedRow').addEventListener('click', e => {
     const btn = e.target.closest('.ds-speed-btn');
     if (!btn) return;
@@ -556,7 +544,6 @@ function mountDuetSheet() {
     _dsPlayMotion();
   });
 
-  /* Color swatches */
   document.querySelectorAll('.ds-color-swatch').forEach(sw => {
     sw.onclick = () => {
       document.querySelectorAll('.ds-color-swatch').forEach(s => s.classList.remove('active'));
@@ -566,7 +553,6 @@ function mountDuetSheet() {
     };
   });
 
-  /* Font cards */
   document.querySelectorAll('.ds-font-card').forEach(card => {
     card.onclick = () => {
       document.querySelectorAll('.ds-font-card').forEach(c => c.classList.remove('active'));
@@ -590,14 +576,12 @@ function openDuetSheet(parentPost, echoPost) {
 
   DS.parentPost = parentPost;
   DS.echoPost   = echoPost;
-
   DS.motion = 'fade-up';
   DS.dur    = 2.4;
   DS.format = 'gif';
 
   _dsPopulateConvo();
   _dsPopulateCard();
-
   _dsApplyTheme(DS.bgColor);
   _dsShowView('convo');
   _dsSwitchFormat('gif');
@@ -614,21 +598,19 @@ function closeDuetSheet() {
   document.body.classList.remove('ds-modal-open');
   _dsClearAnims();
   const savedY = DS._savedScrollY || 0;
-  requestAnimationFrame(() => {
-    window.scrollTo({ top: savedY, behavior: 'instant' });
-  });
+  requestAnimationFrame(() => { window.scrollTo({ top: savedY, behavior: 'instant' }); });
 }
 
 /* ══════════════════════════════════════════════════════════
    POPULATE
 ══════════════════════════════════════════════════════════ */
 function _dsPopulateConvo() {
-  const p  = DS.parentPost;
-  const e  = DS.echoPost;
+  const p = DS.parentPost;
+  const e = DS.echoPost;
   if (!p || !e) return;
 
-  const pVibe  = DS_VIBE[p.emotion  || 'Nostalgia'] || '#E8C547';
-  const eVibe  = DS_VIBE[e.emotion  || 'Nostalgia'] || '#E8C547';
+  const pVibe  = DS_VIBE[p.emotion || 'Nostalgia'] || '#E8C547';
+  const eVibe  = DS_VIBE[e.emotion || 'Nostalgia'] || '#E8C547';
   const pk     = p.knowledge || {};
   const pUser  = ('@' + (p.username  || 'anonymous')).toUpperCase();
   const eUser  = ('@' + (e.username  || 'anonymous')).toUpperCase();
@@ -643,7 +625,7 @@ function _dsPopulateConvo() {
 
   document.getElementById('dsConvoBubbles').innerHTML = `
     <div class="ds-bubble original">
-      <div class="ds-bubble-user"><span class="ds-udot"></span>${pUser}</div>
+      <div class="ds-bubble-user"><span class="ds-udot"></span>${_dsEsc(pUser)}</div>
       <div class="ds-bubble-card">
         <div class="ds-bubble-lyric">${_dsEsc(p.text || p.lyric || '')}</div>
         <div class="ds-bubble-meta">
@@ -655,15 +637,13 @@ function _dsPopulateConvo() {
         </div>
       </div>
     </div>
-
     <div class="ds-lb-divider">
       <div class="ds-lb-line"></div>
-      <div class="ds-lb-pill">Lyric Back ↩ ${eUser}</div>
+      <div class="ds-lb-pill">Lyric Back ↩ ${_dsEsc(eUser)}</div>
       <div class="ds-lb-line"></div>
     </div>
-
     <div class="ds-bubble reply">
-      <div class="ds-bubble-user">${eUser}<span class="ds-udot"></span></div>
+      <div class="ds-bubble-user">${_dsEsc(eUser)}<span class="ds-udot"></span></div>
       <div class="ds-bubble-card">
         <div class="ds-bubble-lyric">${_dsEsc(e.lyric || e.text || '')}</div>
         <div class="ds-bubble-meta">
@@ -694,8 +674,8 @@ function _dsPopulateConvo() {
 }
 
 function _dsPopulateCard() {
-  const p  = DS.parentPost;
-  const e  = DS.echoPost;
+  const p = DS.parentPost;
+  const e = DS.echoPost;
   if (!p || !e) return;
 
   const pk      = p.knowledge || {};
@@ -800,11 +780,11 @@ function _dsShowView(v) {
   tk.classList.toggle('active', v === 'card');
 
   if (v === 'card' || v === 'convo') _dsPlayMotion();
-  else                               _dsClearAnims();
+  else _dsClearAnims();
 }
 
 /* ══════════════════════════════════════════════════════════
-   FORMAT SWITCH
+   FORMAT SWITCH — updates single share button label
 ══════════════════════════════════════════════════════════ */
 function _dsSwitchFormat(fmt) {
   DS.format = fmt;
@@ -812,6 +792,21 @@ function _dsSwitchFormat(fmt) {
   const fmtPoster = document.getElementById('dsFmtPoster');
   if (fmtGif)    fmtGif.className    = 'ds-format-tab' + (fmt === 'gif'    ? ' active-gif'    : '');
   if (fmtPoster) fmtPoster.className = 'ds-format-tab' + (fmt === 'poster' ? ' active-poster' : '');
+
+  /* Swap button style + label */
+  const btn   = document.getElementById('dsBtnShare');
+  const label = document.getElementById('dsBtnShareLabel');
+  if (btn && label) {
+    if (fmt === 'gif') {
+      btn.className = 'ds-share-btn ds-btn-gif';
+      btn.querySelector('.ds-share-btn-icon').textContent = '◎';
+      label.textContent = 'Share as GIF';
+    } else {
+      btn.className = 'ds-share-btn ds-btn-poster';
+      btn.querySelector('.ds-share-btn-icon').textContent = '✦';
+      label.textContent = 'Share as Poster';
+    }
+  }
 
   const motionTab = document.querySelector('[data-opt="motion"]');
   if (fmt === 'poster') {
@@ -855,7 +850,6 @@ function _dsClearAnims() {
 function _dsPlayMotion() {
   if (DS.format === 'poster') return;
   _dsClearAnims();
-
   void document.getElementById('dsCanvasContent').offsetHeight;
 
   const els  = document.querySelectorAll('.ds-anim, .ds-bubble-lyric');
@@ -865,36 +859,28 @@ function _dsPlayMotion() {
   els.forEach((el, idx) => {
     const i     = parseInt(el.getAttribute('data-i') ?? idx);
     const delay = i * 0.14;
-
     switch (name) {
       case 'fade-up':
-        el.style.animation = `dsKFadeUp ${dur}s ${delay}s ease-in-out infinite both`;
-        break;
+        el.style.animation = `dsKFadeUp ${dur}s ${delay}s ease-in-out infinite both`; break;
       case 'slide-in':
-        el.style.animation = `dsKSlideIn ${dur}s ${delay}s ease-in-out infinite both`;
-        break;
+        el.style.animation = `dsKSlideIn ${dur}s ${delay}s ease-in-out infinite both`; break;
       case 'pulse':
-        el.style.animation = `dsKPulse ${dur}s ${delay}s ease-in-out infinite both`;
-        break;
+        el.style.animation = `dsKPulse ${dur}s ${delay}s ease-in-out infinite both`; break;
       case 'glitch':
-        el.style.animation = `dsKGlitch ${dur}s ${delay * 0.5}s steps(1) infinite`;
-        break;
+        el.style.animation = `dsKGlitch ${dur}s ${delay * 0.5}s steps(1) infinite`; break;
       case 'wave':
         el.style.display   = 'inline-block';
-        el.style.animation = `dsKWave ${dur}s ${delay}s ease-in-out infinite`;
-        break;
+        el.style.animation = `dsKWave ${dur}s ${delay}s ease-in-out infinite`; break;
       case 'shimmer':
         el.style.background           = 'linear-gradient(90deg, rgba(255,255,255,0.6) 0%, #fff 35%, #E8C547 50%, #fff 65%, rgba(255,255,255,0.6) 100%)';
         el.style.backgroundSize       = '300% auto';
         el.style.webkitBackgroundClip = 'text';
         el.style.webkitTextFillColor  = 'transparent';
         el.style.backgroundClip       = 'text';
-        el.style.animation            = `dsKShimmer ${dur}s ${delay}s linear infinite`;
-        break;
+        el.style.animation            = `dsKShimmer ${dur}s ${delay}s linear infinite`; break;
       case 'bounce':
         el.style.display   = 'inline-block';
-        el.style.animation = `dsKBounce ${dur}s ${delay}s ease infinite`;
-        break;
+        el.style.animation = `dsKBounce ${dur}s ${delay}s ease infinite`; break;
       case 'typewriter':
         el.style.overflow   = 'hidden';
         el.style.whiteSpace = 'nowrap';
@@ -902,284 +888,31 @@ function _dsPlayMotion() {
         el.style.width      = '0';
         el.style.animation  =
           `dsKType ${dur}s ${delay}s steps(30,end) infinite,` +
-          `dsKBlink 0.7s ${delay}s step-end infinite`;
-        break;
+          `dsKBlink 0.7s ${delay}s step-end infinite`; break;
     }
   });
 }
 
 /* ══════════════════════════════════════════════════════════
-   ACTIONS  v2.5
-   — GIF: always use /js/gif.worker.js (confirmed present),
-     quality:1, workers:4 matching gif-studio.js exactly.
-     Conversation view draws _dsDrawConvo to canvas.
-   — Poster: toBlob pattern matching poster.js exactly,
-     quality 0.92, conversation or card per active view.
-   — Active view (Conversation/Card) determines content.
+   ROUTE — single button dispatches based on DS.format
 ══════════════════════════════════════════════════════════ */
-function _dsRoute(tab) {
-  DS.format = tab;
-  if (tab === 'gif') {
-    _dsExportGif();
-  } else {
-    _dsExportPoster();
-  }
+function _dsRoute() {
+  if (DS.format === 'gif') _dsExportGif();
+  else _dsExportPoster();
 }
 
-/* ── Which view is showing ── */
 function _dsActiveView() {
   const card = document.getElementById('dsViewCard');
   return card && card.style.display !== 'none' ? 'card' : 'convo';
 }
 
-/* ── Draw whichever view is active onto ctx ── */
-function _dsDrawActive(ctx, W, H, t) {
-  if (_dsActiveView() === 'convo') {
-    _dsDrawConvo(ctx, W, H);
-  } else {
-    _dsDrawCard(ctx, W, H, DS.parentPost, DS.echoPost, t);
-  }
-}
-
-/* ── Draw conversation view to canvas ── */
-function _dsDrawConvo(ctx, W, H) {
-  const p = DS.parentPost;
-  const e = DS.echoPost;
-  if (!p || !e) return;
-
-  const theme   = DS_THEMES[DS.bgColor] || DS_THEMES['#07060E'];
-  const isDark  = !theme.isLight;
-  const textCol = theme.text || '#ffffff';
-  const lyricFont   = DS.fontFamily || 'DM Serif Display';
-  const lyricItalic = DS.fontItalic !== false;
-  const lyricStyle  = lyricItalic ? 'italic ' : '';
-
-  const pk      = p.knowledge || {};
-  const pVibe   = DS_VIBE[p.emotion || 'Nostalgia'] || '#E8C547';
-  const eVibe   = DS_VIBE[e.emotion || 'Nostalgia'] || '#6B8CFF';
-  const pUser   = ('@' + (p.username || 'anonymous')).toUpperCase();
-  const eUser   = ('@' + (e.username || 'anonymous')).toUpperCase();
-  const pSong   = pk.song   || p.song   || '';
-  const pArtist = pk.artist || p.artist || '';
-  const eSong   = e.song    || '';
-  const eArtist = e.artist  || '';
-
-  const pad = W * 0.07;
-
-  /* Background */
-  const themeParts = theme.grad.match(/#[0-9a-fA-F]{6}/g) || ['#090810','#0d0b12'];
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, themeParts[0]);
-  bg.addColorStop(1, themeParts[1] || themeParts[0]);
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-
-  /* Vibe glows */
-  ctx.save();
-  const pg = ctx.createRadialGradient(W * 0.15, H * 0.2, 0, W * 0.15, H * 0.2, W * 0.65);
-  pg.addColorStop(0, pVibe + '28'); pg.addColorStop(1, 'transparent');
-  ctx.fillStyle = pg; ctx.fillRect(0, 0, W, H);
-  ctx.restore();
-  ctx.save();
-  const eg = ctx.createRadialGradient(W * 0.85, H * 0.8, 0, W * 0.85, H * 0.8, W * 0.65);
-  eg.addColorStop(0, eVibe + '28'); eg.addColorStop(1, 'transparent');
-  ctx.fillStyle = eg; ctx.fillRect(0, 0, W, H);
-  ctx.restore();
-
-  /* MARGO wordmark */
-  const mSz = Math.max(14, W * 0.046);
-  ctx.save();
-  ctx.font = `800 ${mSz}px 'Syne',sans-serif`;
-  ctx.fillStyle = '#E8C547'; ctx.globalAlpha = 0.9;
-  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-  ctx.fillText('MARGO', pad, pad * 0.65);
-  ctx.restore();
-
-  /* Helper: draw a bubble card */
-  function drawBubble(lyric, song, artist, emotion, user, isLeft, yTop) {
-    const vibe     = DS_VIBE[emotion || 'Nostalgia'] || '#E8C547';
-    const bubbleW  = W * 0.72;
-    const bX       = isLeft ? pad : W - pad - bubbleW;
-    const bubbleR  = W * 0.04;
-    const lyrFS    = Math.min(W * 0.052, 48);
-    ctx.font = `${lyricStyle}600 ${lyrFS}px '${lyricFont}',serif`;
-    const lyrLines = _dsWrap(ctx, lyric, bubbleW - W * 0.08);
-    const lyrLH    = lyrFS * 1.52;
-    const metaH    = W * 0.055;
-    const innerPad = W * 0.04;
-    const contentH = lyrLines.length * lyrLH + innerPad + metaH + innerPad * 1.5;
-    const cardH    = contentH;
-
-    /* User label */
-    ctx.save();
-    const uFS = Math.max(10, W * 0.022);
-    ctx.font = `700 ${uFS}px 'Space Mono',monospace`;
-    ctx.fillStyle = vibe; ctx.globalAlpha = 0.9;
-    ctx.textBaseline = 'bottom'; ctx.textAlign = isLeft ? 'left' : 'right';
-    ctx.fillText(user, isLeft ? bX + innerPad : bX + bubbleW - innerPad, yTop - W * 0.012);
-
-    /* Dot */
-    ctx.beginPath();
-    ctx.arc(isLeft ? bX + innerPad - uFS * 1.2 : bX + bubbleW - innerPad + uFS * 1.2,
-            yTop - W * 0.012 - uFS * 0.4, uFS * 0.28, 0, Math.PI * 2);
-    ctx.fillStyle = vibe; ctx.globalAlpha = 0.8; ctx.fill();
-    ctx.restore();
-
-    /* Bubble background */
-    ctx.save();
-    ctx.globalAlpha = 0.12;
-    ctx.fillStyle = vibe;
-    _dsRoundRect(ctx, bX, yTop, bubbleW, cardH, bubbleR);
-    ctx.fill();
-    ctx.globalAlpha = 0.3;
-    ctx.strokeStyle = vibe;
-    ctx.lineWidth = 1.5;
-    _dsRoundRect(ctx, bX, yTop, bubbleW, cardH, bubbleR);
-    ctx.stroke();
-    ctx.restore();
-
-    /* Lyric text */
-    ctx.save();
-    ctx.font = `${lyricStyle}600 ${lyrFS}px '${lyricFont}',serif`;
-    ctx.fillStyle = textCol; ctx.globalAlpha = 0.95;
-    ctx.textBaseline = 'top'; ctx.textAlign = isLeft ? 'left' : 'right';
-    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 10;
-    lyrLines.forEach((line, i) => {
-      ctx.fillText(line,
-        isLeft ? bX + innerPad : bX + bubbleW - innerPad,
-        yTop + innerPad + i * lyrLH);
-    });
-    ctx.restore();
-
-    /* Meta separator */
-    const metaY = yTop + innerPad + lyrLines.length * lyrLH + innerPad * 0.5;
-    ctx.save();
-    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(bX + innerPad, metaY);
-    ctx.lineTo(bX + bubbleW - innerPad, metaY);
-    ctx.stroke();
-    ctx.restore();
-
-    /* Song + artist */
-    if (song) {
-      const sFS = Math.max(10, W * 0.026);
-      ctx.save();
-      ctx.font = `700 ${sFS}px 'DM Sans',sans-serif`;
-      ctx.fillStyle = textCol; ctx.globalAlpha = 0.85;
-      ctx.textBaseline = 'middle'; ctx.textAlign = isLeft ? 'left' : 'right';
-      const sX = isLeft ? bX + innerPad : bX + bubbleW - innerPad;
-      ctx.fillText(song, sX, metaY + metaH * 0.35);
-      ctx.font = `400 ${Math.max(9, W * 0.02)}px 'Space Mono',monospace`;
-      ctx.fillStyle = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
-      if (artist) ctx.fillText(artist, sX, metaY + metaH * 0.78);
-      ctx.restore();
-    }
-
-    /* Vibe tag */
-    if (emotion) {
-      const vFS = Math.max(8, W * 0.018);
-      ctx.save();
-      ctx.font = `700 ${vFS}px 'Space Mono',monospace`;
-      const vLabel = emotion.toUpperCase();
-      const vTW = ctx.measureText(vLabel).width;
-      const vPad = W * 0.016;
-      const vTH = vFS * 1.6;
-      const vX = isLeft ? bX + bubbleW - innerPad - vTW - vPad * 2 : bX + innerPad;
-      const vY = metaY + (metaH - vTH) / 2;
-      ctx.globalAlpha = 0.15; ctx.fillStyle = vibe;
-      _dsRoundRect(ctx, vX, vY, vTW + vPad * 2, vTH, vTH / 2); ctx.fill();
-      ctx.globalAlpha = 0.35; ctx.strokeStyle = vibe; ctx.lineWidth = 1;
-      _dsRoundRect(ctx, vX, vY, vTW + vPad * 2, vTH, vTH / 2); ctx.stroke();
-      ctx.globalAlpha = 0.8; ctx.fillStyle = vibe;
-      ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-      ctx.fillText(vLabel, vX + vPad, vY + vTH / 2);
-      ctx.restore();
-    }
-
-    return yTop + cardH;
-  }
-
-  /* Helper: rounded rect path */
-  function _dsRoundRect(c, x, y, w, h, r) {
-    if (c.roundRect) { c.beginPath(); c.roundRect(x, y, w, h, r); }
-    else { c.beginPath(); c.rect(x, y, w, h); }
-  }
-
-  /* Layout bubbles */
-  const startY = pad * 2.2;
-  const pBotY  = drawBubble(
-    p.text || p.lyric || '',
-    pSong, pArtist, p.emotion, pUser, true, startY
-  );
-
-  /* Divider pill */
-  const divY   = pBotY + H * 0.04;
-  const dText  = `LYRIC BACK ↩  ${eUser}`;
-  const dFS    = Math.max(10, W * 0.021);
-  ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
-  const dTW = ctx.measureText(dText).width;
-  const pH  = dFS * 1.95;
-  const pW  = dTW + W * 0.056;
-  const pX  = W / 2 - pW / 2;
-  const pR  = pH / 2;
-
-  ctx.save();
-  [[pad, W / 2 - pW / 2 - W * 0.018], [W / 2 + pW / 2 + W * 0.018, W - pad]].forEach(([x1, x2]) => {
-    const lg = ctx.createLinearGradient(x1, 0, x2, 0);
-    if (x1 === pad) { lg.addColorStop(0,'transparent'); lg.addColorStop(1,'rgba(232,197,71,0.22)'); }
-    else            { lg.addColorStop(0,'rgba(232,197,71,0.22)'); lg.addColorStop(1,'transparent'); }
-    ctx.fillStyle = lg; ctx.fillRect(x1, divY - 0.75, x2 - x1, 1.5);
-  });
-  ctx.restore();
-
-  ctx.save();
-  ctx.shadowColor = '#E8C547'; ctx.shadowBlur = 10;
-  ctx.strokeStyle = 'rgba(232,197,71,0.55)'; ctx.lineWidth = 1.5;
-  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(pX, divY - pH / 2, pW, pH, pR); }
-  else { ctx.beginPath(); ctx.rect(pX, divY - pH / 2, pW, pH); }
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-  const pFill = ctx.createLinearGradient(pX, divY - pH / 2, pX, divY + pH / 2);
-  pFill.addColorStop(0,'rgba(232,197,71,0.14)'); pFill.addColorStop(1,'rgba(232,197,71,0.06)');
-  ctx.fillStyle = pFill;
-  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(pX, divY - pH / 2, pW, pH, pR); }
-  else { ctx.beginPath(); ctx.rect(pX, divY - pH / 2, pW, pH); }
-  ctx.fill();
-  ctx.fillStyle = '#E8C547'; ctx.globalAlpha = 0.95;
-  ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
-  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-  ctx.fillText(dText, W / 2, divY);
-  ctx.restore();
-
-  /* Echo bubble */
-  drawBubble(
-    e.lyric || e.text || '',
-    eSong, eArtist, e.emotion, eUser, false, divY + pH / 2 + H * 0.04
-  );
-
-  /* Watermark */
-  const wFS = Math.max(9, W * 0.02);
-  ctx.save();
-  ctx.font = `700 ${wFS}px 'Space Mono',monospace`;
-  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-  const wTxt = 'trymargo.com';
-  const wW2  = ctx.measureText(wTxt).width + W * 0.044;
-  const wH2  = wFS * 1.7;
-  const wX   = W / 2 - wW2 / 2;
-  const wY   = H - pad * 0.85 - wH2 / 2;
-  ctx.globalAlpha = 0.16; ctx.fillStyle = '#ffffff';
-  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(wX, wY, wW2, wH2, wH2 / 2); ctx.fill(); }
-  else { ctx.fillRect(wX, wY, wW2, wH2); }
-  ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffffff';
-  ctx.fillText(wTxt, W / 2, wY + wH2 / 2);
-  ctx.restore();
-}
-
-/* ── GIF export — exact gif-studio.js gsExport pattern ── */
+/* ══════════════════════════════════════════════════════════
+   GIF EXPORT
+   — 36 frames, quality:1, FloydSteinberg dither
+   — Routes to correct canvas draw per active view
+══════════════════════════════════════════════════════════ */
 async function _dsExportGif() {
-  const btn      = document.getElementById('dsBtnGif');
+  const btn      = document.getElementById('dsBtnShare');
   const origHTML = btn ? btn.innerHTML : '';
 
   function setBtnText(txt) {
@@ -1190,8 +923,8 @@ async function _dsExportGif() {
   setBtnText('GIF 0%');
 
   const SIZE   = 1080;
-  const FRAMES = 24;
-  const DELAY  = 70;
+  const FRAMES = 36;
+  const DELAY  = 55;
 
   const off = document.createElement('canvas');
   off.width = SIZE; off.height = SIZE;
@@ -1209,18 +942,26 @@ async function _dsExportGif() {
       });
     }
 
+    const isConvo = _dsActiveView() === 'convo';
+
     const gif = new GIF({
       workers:      4,
       quality:      1,
       width:        SIZE,
       height:       SIZE,
       workerScript: '/js/gif.worker.js',
-      dither:       false,
+      dither:       'FloydSteinberg',
+      globalPalette: false,
     });
 
     for (let i = 0; i < FRAMES; i++) {
+      const t = i / FRAMES;
       oc.clearRect(0, 0, SIZE, SIZE);
-      _dsDrawActive(oc, SIZE, SIZE, i / FRAMES);
+      if (isConvo) {
+        _dsDrawConvo(oc, SIZE, SIZE);
+      } else {
+        _dsDrawCard(oc, SIZE, SIZE, DS.parentPost, DS.echoPost, t);
+      }
       gif.addFrame(off, { copy: true, delay: DELAY });
       setBtnText(`GIF ${Math.round((i / FRAMES) * 75)}%`);
       await new Promise(r => setTimeout(r, 0));
@@ -1256,9 +997,12 @@ async function _dsExportGif() {
   }
 }
 
-/* ── Poster export — exact poster.js _posterDownloadFinal pattern ── */
+/* ══════════════════════════════════════════════════════════
+   POSTER EXPORT
+   — PNG, toBlob 0.92, exact poster.js pattern
+══════════════════════════════════════════════════════════ */
 function _dsExportPoster() {
-  const btn      = document.getElementById('dsBtnPoster');
+  const btn      = document.getElementById('dsBtnShare');
   const origHTML = btn ? btn.innerHTML : '';
 
   function setBtnText(txt) {
@@ -1273,27 +1017,33 @@ function _dsExportPoster() {
   off.width  = SIZE; off.height = SIZE;
   const ctx  = off.getContext('2d');
 
-  setBtnText('40%');
+  setBtnText('35%');
 
   document.fonts.ready.then(() => {
-    setBtnText('75%');
-    _dsDrawActive(ctx, SIZE, SIZE);
-    setBtnText('92%');
+    setBtnText('70%');
+
+    const isConvo = _dsActiveView() === 'convo';
+    if (isConvo) {
+      _dsDrawConvo(ctx, SIZE, SIZE);
+    } else {
+      _dsDrawCard(ctx, SIZE, SIZE, DS.parentPost, DS.echoPost, 1);
+    }
+
+    setBtnText('90%');
 
     const name = (DS.parentPost?.knowledge?.song || DS.parentPost?.song || 'duet')
                    .replace(/\s+/g, '-').toLowerCase();
 
     off.toBlob(blob => {
       if (!blob) return;
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href    = url;
       a.download = `margo-poster-${name}.png`;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
-
       if (btn) {
         btn.innerHTML = `<span class="ds-share-btn-icon">✓</span>Saved!`;
         btn.disabled  = false;
@@ -1304,16 +1054,349 @@ function _dsExportPoster() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   CANVAS DRAW (for download/export)
-   v2.4 — respects DS.bgColor theme and DS.fontFamily/fontItalic
+   CANVAS: CONVERSATION VIEW
+   Rebuilt for 1080×1080 — proper proportions, nothing clipped
+   Layout: MARGO → bubble1 → divider pill → bubble2 → songs bar → watermark
+══════════════════════════════════════════════════════════ */
+function _dsDrawConvo(ctx, W, H) {
+  const p = DS.parentPost;
+  const e = DS.echoPost;
+  if (!p || !e) return;
+
+  const theme      = DS_THEMES[DS.bgColor] || DS_THEMES['#07060E'];
+  const isDark     = !theme.isLight;
+  const textCol    = theme.text || '#ffffff';
+  const lyricFont  = DS.fontFamily || 'DM Serif Display';
+  const lyricStyle = DS.fontItalic !== false ? 'italic ' : '';
+
+  const pk      = p.knowledge || {};
+  const pVibe   = DS_VIBE[p.emotion || 'Nostalgia'] || '#E8C547';
+  const eVibe   = DS_VIBE[e.emotion || 'Nostalgia'] || '#6B8CFF';
+  const pUser   = ('@' + (p.username || 'anonymous')).toUpperCase();
+  const eUser   = ('@' + (e.username || 'anonymous')).toUpperCase();
+  const pSong   = pk.song   || p.song   || '';
+  const pArtist = pk.artist || p.artist || '';
+  const eSong   = e.song    || '';
+  const eArtist = e.artist  || '';
+  const pLyric  = p.text || p.lyric || '';
+  const eLyric  = e.lyric || e.text || '';
+  const pEmo    = p.emotion || '';
+  const eEmo    = e.emotion || '';
+
+  const pad     = W * 0.065;
+  const bubbleW = W * 0.74;
+
+  /* ── Background ── */
+  const colors = theme.grad.match(/#[0-9a-fA-F]{6}/g) || ['#090810','#0d0b12'];
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, colors[0]);
+  bg.addColorStop(1, colors[1] || colors[0]);
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  /* ── Vibe atmosphere glows ── */
+  _dsGlow(ctx, W * 0.12, H * 0.22, W * 0.55, pVibe + '30');
+  _dsGlow(ctx, W * 0.88, H * 0.78, W * 0.55, eVibe + '30');
+
+  /* ── Top accent line ── */
+  const tl = ctx.createLinearGradient(0, 0, W, 0);
+  tl.addColorStop(0,'transparent'); tl.addColorStop(0.5, pVibe); tl.addColorStop(1,'transparent');
+  ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = tl; ctx.fillRect(0, 0, W, 2); ctx.restore();
+
+  /* ── MARGO wordmark ── */
+  const mSz = W * 0.048;
+  ctx.save();
+  ctx.font = `800 ${mSz}px 'Syne',sans-serif`;
+  ctx.fillStyle = '#E8C547'; ctx.globalAlpha = 0.92;
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.letterSpacing = '4px';
+  ctx.fillText('MARGO', pad, pad * 0.7);
+  ctx.restore();
+
+  /* ── Measure bubble heights before drawing ── */
+  const innerPad = W * 0.042;
+  const lyrFS    = W * 0.052;
+  const metaH    = W * 0.062;
+
+  ctx.font = `${lyricStyle}600 ${lyrFS}px '${lyricFont}',serif`;
+  const pLines = _dsWrap(ctx, pLyric, bubbleW - innerPad * 2);
+  const eLines = _dsWrap(ctx, eLyric, bubbleW - innerPad * 2);
+  const lyrLH  = lyrFS * 1.55;
+
+  const pCardH = innerPad + pLines.length * lyrLH + innerPad * 0.6 + metaH + innerPad;
+  const eCardH = innerPad + eLines.length * lyrLH + innerPad * 0.6 + metaH + innerPad;
+
+  const userLabelH = W * 0.032;
+  const userGap    = W * 0.014;
+  const dividerH   = W * 0.052;
+  const divGapV    = H * 0.028;
+
+  /* Songs bar at bottom */
+  const songsBarH  = W * 0.088;
+  const songsBarY  = H - pad * 0.7 - songsBarH - W * 0.042; /* above watermark */
+  const watermarkH = W * 0.035;
+  const watermarkY = H - pad * 0.55;
+
+  /* Layout top-down */
+  const margoBottom = pad * 0.7 + mSz + pad * 0.5;
+  const p1Y = margoBottom;                                          /* p user label top */
+  const p2Y = p1Y + userLabelH + userGap;                          /* p bubble top */
+  const divTop = p2Y + pCardH + divGapV;                           /* divider centre */
+  const e1Y = divTop + dividerH / 2 + divGapV;                     /* e user label top */
+  const e2Y = e1Y + userLabelH + userGap;                          /* e bubble top */
+
+  /* ── Draw parent bubble ── */
+  _dsDrawBubble(ctx, W, pad, bubbleW, p1Y, p2Y, pCardH, pLines, lyrFS, lyrLH, lyricStyle, lyricFont, innerPad, metaH, pSong, pArtist, pEmo, pUser, pVibe, textCol, isDark, true);
+
+  /* ── Divider pill ── */
+  const dText = `LYRIC BACK ↩  ${eUser}`;
+  const dFS   = W * 0.022;
+  ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
+  const dTW = ctx.measureText(dText).width;
+  const pH  = dFS * 2.1;
+  const pW  = dTW + W * 0.06;
+  const pX  = W / 2 - pW / 2;
+  const pR  = pH / 2;
+
+  /* Lines either side */
+  ctx.save();
+  [[pad, pX - W * 0.02], [pX + pW + W * 0.02, W - pad]].forEach(([x1, x2]) => {
+    const lg = ctx.createLinearGradient(x1, 0, x2, 0);
+    if (x1 === pad) { lg.addColorStop(0,'transparent'); lg.addColorStop(1,'rgba(232,197,71,0.28)'); }
+    else            { lg.addColorStop(0,'rgba(232,197,71,0.28)'); lg.addColorStop(1,'transparent'); }
+    ctx.fillStyle = lg; ctx.fillRect(x1, divTop - 0.8, x2 - x1, 1.6);
+  });
+  ctx.restore();
+
+  ctx.save();
+  ctx.shadowColor = '#E8C547'; ctx.shadowBlur = 12;
+  ctx.strokeStyle = 'rgba(232,197,71,0.6)'; ctx.lineWidth = 1.5;
+  _dsRR(ctx, pX, divTop - pH / 2, pW, pH, pR); ctx.stroke();
+  ctx.shadowBlur = 0;
+  const pFill = ctx.createLinearGradient(pX, divTop - pH / 2, pX, divTop + pH / 2);
+  pFill.addColorStop(0,'rgba(232,197,71,0.16)'); pFill.addColorStop(1,'rgba(232,197,71,0.06)');
+  ctx.fillStyle = pFill; _dsRR(ctx, pX, divTop - pH / 2, pW, pH, pR); ctx.fill();
+  ctx.fillStyle = '#E8C547'; ctx.globalAlpha = 0.95;
+  ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.fillText(dText, W / 2, divTop);
+  ctx.restore();
+
+  /* ── Draw echo bubble ── */
+  _dsDrawBubble(ctx, W, pad, bubbleW, e1Y, e2Y, eCardH, eLines, lyrFS, lyrLH, lyricStyle, lyricFont, innerPad, metaH, eSong, eArtist, eEmo, eUser, eVibe, textCol, isDark, false);
+
+  /* ── Songs bar ── */
+  _dsDrawSongsBar(ctx, W, pad, songsBarY, songsBarH, pSong, pArtist, eSong, eArtist, isDark, textCol);
+
+  /* ── Bottom accent line ── */
+  const bl = ctx.createLinearGradient(0, 0, W, 0);
+  bl.addColorStop(0,'transparent'); bl.addColorStop(0.5, eVibe); bl.addColorStop(1,'transparent');
+  ctx.save(); ctx.globalAlpha = 0.4; ctx.fillStyle = bl; ctx.fillRect(0, H - 2, W, 2); ctx.restore();
+
+  /* ── Watermark ── */
+  _dsDrawWatermark(ctx, W, watermarkY);
+}
+
+/* ── Draw a single bubble ── */
+function _dsDrawBubble(ctx, W, pad, bubbleW, userY, cardY, cardH, lines, lyrFS, lyrLH, lyricStyle, lyricFont, innerPad, metaH, song, artist, emotion, user, vibe, textCol, isDark, isLeft) {
+  const bX = isLeft ? pad : W - pad - bubbleW;
+  const uFS = W * 0.023;
+  const dotR = uFS * 0.3;
+
+  /* User label */
+  ctx.save();
+  ctx.font = `700 ${uFS}px 'Space Mono',monospace`;
+  ctx.fillStyle = vibe; ctx.globalAlpha = 0.9;
+  ctx.textBaseline = 'top';
+  const dotX = isLeft ? bX + innerPad : bX + bubbleW - innerPad;
+  const labelX = isLeft ? dotX + dotR * 2.5 + uFS * 0.3 : dotX - dotR * 2.5 - uFS * 0.3;
+  ctx.textAlign = isLeft ? 'left' : 'right';
+  ctx.fillText(user, labelX, userY);
+  ctx.beginPath();
+  ctx.arc(isLeft ? dotX - dotR * 1.5 : dotX + dotR * 1.5, userY + uFS * 0.55, dotR, 0, Math.PI * 2);
+  ctx.fillStyle = vibe; ctx.globalAlpha = 0.85; ctx.fill();
+  ctx.restore();
+
+  /* Bubble BG */
+  const bubbleR = W * 0.032;
+  ctx.save();
+  ctx.globalAlpha = 0.13; ctx.fillStyle = vibe;
+  _dsRR(ctx, bX, cardY, bubbleW, cardH, bubbleR); ctx.fill();
+  ctx.globalAlpha = 0.32; ctx.strokeStyle = vibe; ctx.lineWidth = 1.5;
+  _dsRR(ctx, bX, cardY, bubbleW, cardH, bubbleR); ctx.stroke();
+  ctx.restore();
+
+  /* Vibe glow inside bubble */
+  ctx.save();
+  const glowGrad = ctx.createRadialGradient(
+    isLeft ? bX + bubbleW * 0.15 : bX + bubbleW * 0.85, cardY + cardH * 0.2, 0,
+    isLeft ? bX + bubbleW * 0.15 : bX + bubbleW * 0.85, cardY + cardH * 0.2, bubbleW * 0.6
+  );
+  glowGrad.addColorStop(0, vibe + '1A'); glowGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = glowGrad; ctx.fillRect(bX, cardY, bubbleW, cardH);
+  ctx.restore();
+
+  /* Lyric text */
+  ctx.save();
+  ctx.font = `${lyricStyle}600 ${lyrFS}px '${lyricFont}',serif`;
+  ctx.fillStyle = textCol; ctx.globalAlpha = 0.96;
+  ctx.textBaseline = 'top';
+  ctx.textAlign = isLeft ? 'left' : 'right';
+  ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 10;
+  const lyrX = isLeft ? bX + innerPad : bX + bubbleW - innerPad;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, lyrX, cardY + innerPad + i * lyrLH);
+  });
+  ctx.restore();
+
+  /* Meta separator */
+  const metaSepY = cardY + innerPad + lines.length * lyrLH + innerPad * 0.55;
+  ctx.save();
+  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(bX + innerPad * 0.6, metaSepY);
+  ctx.lineTo(bX + bubbleW - innerPad * 0.6, metaSepY);
+  ctx.stroke();
+  ctx.restore();
+
+  /* Song + artist */
+  if (song) {
+    const sFS = W * 0.026;
+    ctx.save();
+    ctx.font = `700 ${sFS}px 'DM Sans',sans-serif`;
+    ctx.fillStyle = textCol; ctx.globalAlpha = 0.88;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = isLeft ? 'left' : 'right';
+    const sX = isLeft ? bX + innerPad : bX + bubbleW - innerPad;
+    ctx.fillText(song, sX, metaSepY + metaH * 0.32);
+    if (artist) {
+      ctx.font = `400 ${W * 0.02}px 'Space Mono',monospace`;
+      ctx.fillStyle = isDark ? 'rgba(255,255,255,0.52)' : 'rgba(0,0,0,0.52)';
+      ctx.fillText(artist, sX, metaSepY + metaH * 0.72);
+    }
+    ctx.restore();
+  }
+
+  /* Vibe tag */
+  if (emotion) {
+    const vFS  = W * 0.019;
+    ctx.save();
+    ctx.font = `700 ${vFS}px 'Space Mono',monospace`;
+    const vTW   = ctx.measureText(emotion.toUpperCase()).width;
+    const vPadX = W * 0.018;
+    const vH    = vFS * 1.7;
+    const vW    = vTW + vPadX * 2;
+    const vY    = metaSepY + (metaH - vH) / 2;
+    const vX    = isLeft ? bX + bubbleW - innerPad - vW : bX + innerPad;
+    ctx.globalAlpha = 0.15; ctx.fillStyle = vibe;
+    _dsRR(ctx, vX, vY, vW, vH, vH / 2); ctx.fill();
+    ctx.globalAlpha = 0.38; ctx.strokeStyle = vibe; ctx.lineWidth = 1;
+    _dsRR(ctx, vX, vY, vW, vH, vH / 2); ctx.stroke();
+    ctx.globalAlpha = 0.85; ctx.fillStyle = vibe;
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.fillText(emotion.toUpperCase(), vX + vPadX, vY + vH / 2);
+    ctx.restore();
+  }
+}
+
+/* ── Draw songs bar ── */
+function _dsDrawSongsBar(ctx, W, pad, barY, barH, pSong, pArtist, eSong, eArtist, isDark, textCol) {
+  const barX = pad;
+  const barW = W - pad * 2;
+  const barR = W * 0.022;
+
+  ctx.save();
+  ctx.globalAlpha = isDark ? 0.55 : 0.45;
+  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+  _dsRR(ctx, barX, barY, barW, barH, barR); ctx.fill();
+  ctx.globalAlpha = isDark ? 0.35 : 0.25;
+  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  ctx.lineWidth = 1; _dsRR(ctx, barX, barW, barY, barH, barR); ctx.stroke();
+  ctx.restore();
+
+  const labelFS = W * 0.019;
+  const songFS  = W * 0.024;
+  const artistFS= W * 0.018;
+  const midY    = barY + barH / 2;
+
+  /* SONGS label */
+  ctx.save();
+  ctx.font = `700 ${labelFS}px 'Space Mono',monospace`;
+  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.35)';
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText('SONGS', barX + W * 0.038, midY);
+  ctx.restore();
+
+  /* Parent song (left-ish) */
+  const s1X = barX + W * 0.2;
+  ctx.save();
+  ctx.font = `700 ${songFS}px 'DM Sans',sans-serif`;
+  ctx.fillStyle = textCol; ctx.globalAlpha = 0.85;
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText(_dsTruncate(ctx, pSong, W * 0.22), s1X, midY - artistFS * 0.55);
+  ctx.font = `400 ${artistFS}px 'Space Mono',monospace`;
+  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
+  ctx.fillText(_dsTruncate(ctx, pArtist, W * 0.22), s1X, midY + songFS * 0.55);
+  ctx.restore();
+
+  /* Separator arrow */
+  ctx.save();
+  ctx.font = `400 ${W * 0.03}px 'Space Mono',monospace`;
+  ctx.fillStyle = 'rgba(232,197,71,0.5)';
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.fillText('↔', W / 2, midY);
+  ctx.restore();
+
+  /* Echo song (right-ish) */
+  const s2X = W - pad - W * 0.038;
+  ctx.save();
+  ctx.font = `700 ${songFS}px 'DM Sans',sans-serif`;
+  ctx.fillStyle = textCol; ctx.globalAlpha = 0.85;
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+  ctx.fillText(_dsTruncate(ctx, eSong, W * 0.22), s2X, midY - artistFS * 0.55);
+  ctx.font = `400 ${artistFS}px 'Space Mono',monospace`;
+  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
+  ctx.fillText(_dsTruncate(ctx, eArtist, W * 0.22), s2X, midY + songFS * 0.55);
+  ctx.restore();
+}
+
+/* ── Watermark ── */
+function _dsDrawWatermark(ctx, W, centreY) {
+  const wFS  = W * 0.021;
+  const wTxt = 'trymargo.com';
+  ctx.save();
+  ctx.font = `700 ${wFS}px 'Space Mono',monospace`;
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  const wW = ctx.measureText(wTxt).width + W * 0.048;
+  const wH = wFS * 1.75;
+  const wX = W / 2 - wW / 2;
+  const wY = centreY - wH / 2;
+  ctx.globalAlpha = 0.14; ctx.fillStyle = '#ffffff';
+  _dsRR(ctx, wX, wY, wW, wH, wH / 2); ctx.fill();
+  ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffffff';
+  ctx.fillText(wTxt, W / 2, centreY);
+  ctx.restore();
+}
+
+/* ── Radial glow helper ── */
+function _dsGlow(ctx, cx, cy, r, color) {
+  ctx.save();
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  g.addColorStop(0, color); g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.restore();
+}
+
+/* ══════════════════════════════════════════════════════════
+   CANVAS: CARD VIEW
+   v2.6 — adds SONGS bar, respects DS theme + font
 ══════════════════════════════════════════════════════════ */
 function _dsDrawCard(ctx, W, H, parent, echo, t) {
   if (!parent || !echo) return;
 
   const pad    = W * 0.07;
   const innerW = W - pad * 2;
-
-  /* ── Use selected theme from DS.bgColor ── */
   const theme  = DS_THEMES[DS.bgColor] || DS_THEMES['#07060E'];
   const isDark = !theme.isLight;
 
@@ -1321,172 +1404,139 @@ function _dsDrawCard(ctx, W, H, parent, echo, t) {
   const eEmotion = echo.emotion   || 'Nostalgia';
   const pVibe    = DS_VIBE[pEmotion] || '#E8C547';
   const eVibe    = DS_VIBE[eEmotion] || '#E8C547';
-  const divY     = H * 0.495;
 
-  /* ── Background from theme gradient ── */
-  const themeParts = theme.grad.match(/#[0-9a-fA-F]{6}/g) || ['#090810','#0d0b12','#060809'];
+  const lyricFont  = DS.fontFamily || 'DM Serif Display';
+  const lyricItalic= DS.fontItalic !== false;
+  const lyricStyle = lyricItalic ? 'italic ' : '';
+  const textColor  = theme.text || '#ffffff';
+
+  /* Background */
+  const colors = theme.grad.match(/#[0-9a-fA-F]{6}/g) || ['#090810','#0d0b12'];
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0,    themeParts[0] || '#090810');
-  bg.addColorStop(0.5,  themeParts[1] || '#0d0b12');
-  bg.addColorStop(1,    themeParts[2] || themeParts[1] || '#060809');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  bg.addColorStop(0, colors[0]); bg.addColorStop(1, colors[1] || colors[0]);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  /* ── Vibe glows ── */
-  ctx.save();
-  const pg = ctx.createRadialGradient(W * 0.15, H * 0.15, 0, W * 0.15, H * 0.15, W * 0.7);
-  pg.addColorStop(0, pVibe + '22'); pg.addColorStop(1, 'transparent');
-  ctx.fillStyle = pg; ctx.fillRect(0, 0, W, H);
-  ctx.restore();
+  /* Vibe glows */
+  _dsGlow(ctx, W * 0.15, H * 0.15, W * 0.65, pVibe + '22');
+  _dsGlow(ctx, W * 0.85, H * 0.85, W * 0.65, eVibe + '22');
 
-  ctx.save();
-  const eg = ctx.createRadialGradient(W * 0.85, H * 0.85, 0, W * 0.85, H * 0.85, W * 0.7);
-  eg.addColorStop(0, eVibe + '22'); eg.addColorStop(1, 'transparent');
-  ctx.fillStyle = eg; ctx.fillRect(0, 0, W, H);
-  ctx.restore();
+  /* Accent lines */
+  const tl = ctx.createLinearGradient(0,0,W,0);
+  tl.addColorStop(0,'transparent'); tl.addColorStop(0.5, pVibe); tl.addColorStop(1,'transparent');
+  ctx.save(); ctx.globalAlpha = 0.6; ctx.fillStyle = tl; ctx.fillRect(0,0,W,2); ctx.restore();
+  const bl2 = ctx.createLinearGradient(0,0,W,0);
+  bl2.addColorStop(0,'transparent'); bl2.addColorStop(0.5, eVibe); bl2.addColorStop(1,'transparent');
+  ctx.save(); ctx.globalAlpha = 0.4; ctx.fillStyle = bl2; ctx.fillRect(0,H-2,W,2); ctx.restore();
 
-  /* ── Noise ── */
-  ctx.save();
-  ctx.globalAlpha = 0.016;
-  for (let y = 0; y < H; y += 4) {
-    for (let x = 0; x < W; x += 4) {
-      const v = Math.random() * 255 | 0;
-      ctx.fillStyle = `rgb(${v},${v},${v})`;
-      ctx.fillRect(x, y, 4, 4);
-    }
-  }
-  ctx.restore();
-
-  /* ── Top/bottom accent lines ── */
-  ctx.save();
-  const tl = ctx.createLinearGradient(0, 0, W, 0);
-  tl.addColorStop(0, 'transparent'); tl.addColorStop(0.5, pVibe); tl.addColorStop(1, 'transparent');
-  ctx.globalAlpha = 0.65; ctx.fillStyle = tl; ctx.fillRect(0, 0, W, 2);
-  const bl = ctx.createLinearGradient(0, 0, W, 0);
-  bl.addColorStop(0, 'transparent'); bl.addColorStop(0.5, eVibe); bl.addColorStop(1, 'transparent');
-  ctx.fillStyle = bl; ctx.fillRect(0, H - 2, W, 2);
-  ctx.restore();
-
-  /* ── MARGO wordmark ── */
-  const mSz = Math.max(14, W * 0.046);
+  /* MARGO wordmark */
+  const mSz = W * 0.046;
   ctx.save();
   ctx.font = `800 ${mSz}px 'Syne',sans-serif`;
-  ctx.fillStyle = isDark ? '#E8C547' : '#0B0B0D';
-  ctx.globalAlpha = 0.88;
+  ctx.fillStyle = isDark ? '#E8C547' : '#0B0B0D'; ctx.globalAlpha = 0.88;
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
   ctx.fillText('MARGO', pad, pad * 0.65);
   ctx.restore();
 
-  /* ── Use selected font from DS ── */
-  const lyricFont   = DS.fontFamily || 'DM Serif Display';
-  const lyricItalic = DS.fontItalic !== false;
-  const lyricStyle  = lyricItalic ? 'italic ' : '';
-  const textColor   = theme.text || '#ffffff';
+  /* Songs bar at bottom (above watermark) */
+  const songsBarH = W * 0.082;
+  const watermarkH= W * 0.035;
+  const watermarkY= H - pad * 0.5;
+  const songsBarY = watermarkY - watermarkH / 2 - W * 0.022 - songsBarH;
 
-  /* ── Top lyric (parent) with fade animation if t provided ── */
-  const topZoneTop = pad * 2;
-  const topZoneBot = divY - W * 0.05;
-  const topH = topZoneBot - topZoneTop;
-  const pText = parent.text || parent.lyric || '';
-  let pFS = Math.min(W * 0.054, topH * 0.3);
+  const pk = parent.knowledge || {};
+  const pSong   = pk.song   || parent.song   || '';
+  const pArtist = pk.artist || parent.artist || '';
+  const eSong   = echo.song    || '';
+  const eArtist = echo.artist  || '';
+
+  _dsDrawSongsBar(ctx, W, pad, songsBarY, songsBarH, pSong, pArtist, eSong, eArtist, isDark, textColor);
+
+  /* Working area for lyrics */
+  const topStart  = pad * 2 + mSz * 0.3;
+  const bottomEnd = songsBarY - W * 0.025;
+  const divY      = topStart + (bottomEnd - topStart) * 0.46;
+
+  /* Top lyric (parent) */
+  const topH   = divY - W * 0.05 - topStart;
+  const pText  = parent.text || parent.lyric || '';
+  let pFS = Math.min(W * 0.056, topH * 0.28);
   ctx.font = `${lyricStyle}600 ${pFS}px '${lyricFont}',serif`;
-  let pLines = _dsWrap(ctx, pText, innerW * 0.9);
-  if (pLines.length > 3) {
-    pFS = Math.max(W * 0.028, pFS * (3 / pLines.length));
-    ctx.font = `${lyricStyle}600 ${pFS}px '${lyricFont}',serif`;
-    pLines = _dsWrap(ctx, pText, innerW * 0.9);
-  }
-  const pLH     = pFS * 1.52;
+  let pLines = _dsWrap(ctx, pText, innerW * 0.88);
+  if (pLines.length > 3) { pFS = Math.max(W * 0.03, pFS * (3 / pLines.length)); ctx.font = `${lyricStyle}600 ${pFS}px '${lyricFont}',serif`; pLines = _dsWrap(ctx, pText, innerW * 0.88); }
+  const pLH = pFS * 1.52;
   const pBlockH = pLines.length * pLH;
-  const fadeT   = t !== undefined ? t : 1;
-  const fadeOY  = (1 - fadeT) * 24;
-  const pStartY = topZoneTop + (topH - pBlockH) / 2 - pFS * 0.3 + fadeOY;
+  const fadeT = t !== undefined ? t : 1;
+  const pStartY = topStart + (topH - pBlockH) / 2 + (1 - fadeT) * 20;
 
   ctx.save();
   ctx.textBaseline = 'top'; ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 16;
   pLines.forEach((line, i) => {
-    ctx.globalAlpha = (0.58 - i * 0.04) * Math.min(1, fadeT * 2);
+    ctx.globalAlpha = (0.62 - i * 0.04) * Math.min(1, fadeT * 2);
     ctx.fillStyle = textColor;
     ctx.fillText(line, W / 2, pStartY + i * pLH);
   });
   ctx.restore();
 
-  /* ── Parent song attribution ── */
-  const pk = parent.knowledge || {};
-  const pSongStr = pk.song || parent.song || '';
-  if (pSongStr) {
-    const paFS = Math.max(9, W * 0.019);
+  /* Parent attribution */
+  if (pSong) {
+    const paFS = W * 0.019;
     ctx.save();
     ctx.font = `700 ${paFS}px 'Space Mono',monospace`;
-    ctx.fillStyle = pVibe; ctx.globalAlpha = 0.42;
+    ctx.fillStyle = pVibe; ctx.globalAlpha = 0.45;
     ctx.textBaseline = 'bottom'; ctx.textAlign = 'center';
-    let paStr = pSongStr + (pk.artist || parent.artist ? ' — ' + (pk.artist || parent.artist) : '');
-    while (ctx.measureText(paStr).width > innerW * 0.8 && paStr.length > 4)
-      paStr = paStr.slice(0, -4) + '…';
-    ctx.fillText(paStr, W / 2, divY - W * 0.045);
+    const paStr = _dsTruncate(ctx, pSong + (pArtist ? ' — ' + pArtist : ''), innerW * 0.78);
+    ctx.fillText(paStr, W / 2, divY - W * 0.042);
     ctx.restore();
   }
 
-  /* ── Divider pill ── */
+  /* Divider pill */
   const dText = `LYRIC BACK ↩  @${(echo.username || 'anonymous').toUpperCase()}`;
-  const dFS   = Math.max(10, W * 0.021);
+  const dFS   = W * 0.021;
   ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
-  const dTW  = ctx.measureText(dText).width;
-  const pH   = dFS * 1.95;
-  const pPH  = W * 0.028;
-  const pW   = dTW + pPH * 2;
-  const pX   = W / 2 - pW / 2;
-  const pY   = divY - pH / 2;
-  const pR   = pH / 2;
+  const dTW = ctx.measureText(dText).width;
+  const dpH = dFS * 1.95;
+  const dpW = dTW + W * 0.028 * 2;
+  const dpX = W / 2 - dpW / 2;
+  const dpY = divY - dpH / 2;
+  const dpR = dpH / 2;
 
   ctx.save();
-  const gap = pW / 2 + W * 0.018;
-  [[pad, W / 2 - gap], [W / 2 + gap, W - pad]].forEach(([x1, x2]) => {
+  const gap2 = dpW / 2 + W * 0.018;
+  [[pad, W / 2 - gap2], [W / 2 + gap2, W - pad]].forEach(([x1, x2]) => {
     const lg = ctx.createLinearGradient(x1, 0, x2, 0);
     if (x1 === pad) { lg.addColorStop(0,'transparent'); lg.addColorStop(1,'rgba(232,197,71,0.22)'); }
     else            { lg.addColorStop(0,'rgba(232,197,71,0.22)'); lg.addColorStop(1,'transparent'); }
-    ctx.fillStyle = lg;
-    ctx.fillRect(x1, divY - 0.75, x2 - x1, 1.5);
+    ctx.fillStyle = lg; ctx.fillRect(x1, divY - 0.75, x2 - x1, 1.5);
   });
   ctx.restore();
 
   ctx.save();
   ctx.shadowColor = '#E8C547'; ctx.shadowBlur = 14;
   ctx.strokeStyle = 'rgba(232,197,71,0.6)'; ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(pX, pY, pW, pH, pR) : ctx.rect(pX, pY, pW, pH);
-  ctx.stroke();
+  _dsRR(ctx, dpX, dpY, dpW, dpH, dpR); ctx.stroke();
   ctx.shadowBlur = 0;
-  const pFill = ctx.createLinearGradient(pX, pY, pX, pY + pH);
-  pFill.addColorStop(0, 'rgba(232,197,71,0.14)'); pFill.addColorStop(1, 'rgba(232,197,71,0.06)');
-  ctx.fillStyle = pFill;
-  ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(pX, pY, pW, pH, pR) : ctx.rect(pX, pY, pW, pH);
-  ctx.fill();
+  const dpFill = ctx.createLinearGradient(dpX, dpY, dpX, dpY + dpH);
+  dpFill.addColorStop(0,'rgba(232,197,71,0.14)'); dpFill.addColorStop(1,'rgba(232,197,71,0.06)');
+  ctx.fillStyle = dpFill; _dsRR(ctx, dpX, dpY, dpW, dpH, dpR); ctx.fill();
   ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
   ctx.fillStyle = '#E8C547'; ctx.globalAlpha = 0.95;
   ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
   ctx.fillText(dText, W / 2, divY);
   ctx.restore();
 
-  /* ── Bottom lyric (echo) ── */
-  const botZoneTop = divY + pH / 2 + W * 0.025;
-  const botZoneBot = H * 0.88;
-  const botH  = botZoneBot - botZoneTop;
-  const eText = echo.lyric || echo.text || '';
-  let eFS = Math.min(W * 0.062, botH * 0.3);
+  /* Bottom lyric (echo) */
+  const botStart = divY + dpH / 2 + W * 0.028;
+  const botH     = songsBarY - W * 0.025 - botStart;
+  const eText    = echo.lyric || echo.text || '';
+  let eFS = Math.min(W * 0.064, botH * 0.28);
   ctx.font = `${lyricStyle}700 ${eFS}px '${lyricFont}',serif`;
-  let eLines = _dsWrap(ctx, eText, innerW * 0.9);
-  if (eLines.length > 3) {
-    eFS = Math.max(W * 0.032, eFS * (3 / eLines.length));
-    ctx.font = `${lyricStyle}700 ${eFS}px '${lyricFont}',serif`;
-    eLines = _dsWrap(ctx, eText, innerW * 0.9);
-  }
-  const eLH     = eFS * 1.52;
+  let eLines = _dsWrap(ctx, eText, innerW * 0.88);
+  if (eLines.length > 3) { eFS = Math.max(W * 0.034, eFS * (3 / eLines.length)); ctx.font = `${lyricStyle}700 ${eFS}px '${lyricFont}',serif`; eLines = _dsWrap(ctx, eText, innerW * 0.88); }
+  const eLH = eFS * 1.52;
   const eBlockH = eLines.length * eLH;
-  const eOY     = t !== undefined ? (1 - Math.min(1, t * 1.5)) * 24 : 0;
-  const eStartY = botZoneTop + (botH - eBlockH) / 2 + eOY;
+  const eOY = t !== undefined ? (1 - Math.min(1, t * 1.5)) * 20 : 0;
+  const eStartY = botStart + (botH - eBlockH) / 2 + eOY;
 
   ctx.save();
   ctx.textBaseline = 'top'; ctx.textAlign = 'center';
@@ -1498,42 +1548,27 @@ function _dsDrawCard(ctx, W, H, parent, echo, t) {
   });
   ctx.restore();
 
-  /* ── Echo song attribution ── */
-  if (echo.song) {
-    const eaFS = Math.max(9, W * 0.019);
+  /* Echo attribution */
+  if (eSong) {
+    const eaFS = W * 0.019;
     ctx.save();
     ctx.font = `700 ${eaFS}px 'Space Mono',monospace`;
-    ctx.fillStyle = '#E8C547'; ctx.globalAlpha = 0.8;
-    ctx.textBaseline = 'bottom'; ctx.textAlign = 'center';
-    let eaStr = echo.song + (echo.artist ? ' — ' + echo.artist : '');
-    while (ctx.measureText(eaStr).width > innerW * 0.8 && eaStr.length > 4)
-      eaStr = eaStr.slice(0, -4) + '…';
-    ctx.fillText(eaStr, W / 2, H * 0.89);
+    ctx.fillStyle = '#E8C547'; ctx.globalAlpha = 0.75;
+    ctx.textBaseline = 'top'; ctx.textAlign = 'center';
+    const eaStr = _dsTruncate(ctx, eSong + (eArtist ? ' — ' + eArtist : ''), innerW * 0.78);
+    ctx.fillText(eaStr, W / 2, eStartY + eBlockH + W * 0.012);
     ctx.restore();
   }
 
-  /* ── Watermark pill ── */
-  const wFS = Math.max(9, W * 0.02);
-  ctx.save();
-  ctx.font = `700 ${wFS}px 'Space Mono',monospace`;
-  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-  const wTxt = 'trymargo.com';
-  const wW2  = ctx.measureText(wTxt).width + W * 0.044;
-  const wH2  = wFS * 1.7;
-  const wX   = W / 2 - wW2 / 2;
-  const wY   = H - pad * 0.85 - wH2 / 2;
-  ctx.globalAlpha = 0.16; ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(wX, wY, wW2, wH2, wH2 / 2) : ctx.rect(wX, wY, wW2, wH2);
-  ctx.fill();
-  ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffffff';
-  ctx.fillText(wTxt, W / 2, wY + wH2 / 2);
-  ctx.restore();
+  /* Watermark */
+  _dsDrawWatermark(ctx, W, watermarkY);
 }
 
-/* ── Word wrap helper ── */
+/* ══════════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════════ */
 function _dsWrap(ctx, text, maxW) {
-  const words = text.split(' ');
+  const words = (text || '').split(' ');
   const lines = [];
   let cur = '';
   for (const w of words) {
@@ -1542,15 +1577,29 @@ function _dsWrap(ctx, text, maxW) {
     else cur = test;
   }
   if (cur) lines.push(cur);
-  return lines;
+  return lines.length ? lines : [''];
 }
 
-/* ── HTML escape helper ── */
+function _dsTruncate(ctx, text, maxW) {
+  if (!text) return '';
+  let t = text;
+  while (ctx.measureText(t).width > maxW && t.length > 3) t = t.slice(0, -4) + '…';
+  return t;
+}
+
+function _dsRR(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+  else ctx.rect(x, y, w, h);
+}
+
 function _dsEsc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ── Swipe to close ── */
+/* ══════════════════════════════════════════════════════════
+   SWIPE TO CLOSE
+══════════════════════════════════════════════════════════ */
 function _initDsSwipe() {
   const sheet  = document.getElementById('duetSheet');
   const handle = document.getElementById('dsDragHandle');
@@ -1570,7 +1619,7 @@ function _initDsSwipe() {
     if (!dragging) return;
     dragging = false;
     sheet.style.transition = '';
-    if (curY - startY > 80) { closeDuetSheet(); }
+    if (curY - startY > 80) closeDuetSheet();
     else { sheet.style.transform = ''; sheet.style.opacity = ''; }
   };
 
