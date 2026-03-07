@@ -1,15 +1,24 @@
 /* ============================================================
-   MARGO — js/duet-sheet.js  v3.0
+   MARGO — js/duet-sheet.js  v3.1
    • GIF animated — BOTH card AND conversation view
      Conversation GIF: html2canvas DOM capture per frame
      Card GIF: canvas geometry draw per frame
    • Poster PNG — BOTH views, correct platform dimensions
    • Platform picker bottom sheet before every export
    • Download + Share buttons always present (both formats)
-   • MARGO wordmark top-left, M-mark bottom-right on every export
+   • MARGO wordmark stamp (opacity 0.28) top-left every export
+   • M-mark bottom-right on every export
    • Zero Google dependency — fonts from browser cache
    • html2canvas one-time CDN load, cached
    • gif.worker from /js/gif.worker.js
+   Changes v3.1:
+   - DS_THEMES expanded: 9 themes, each with g1/g2/acc/l/r/glow1/glow2/light
+   - White/light theme added (white bg, black text, black logo)
+   - MARGO wordmark = stamp treatment (globalAlpha 0.28, muted colour)
+   - Username labels: Syne 800 (not Space Mono)
+   - LYRIC BACK divider pill: Syne 800
+   - SONGS label: Syne 800, legible opacity
+   - trymargo.com watermark: clearly visible
    ============================================================ */
 (function () {
 
@@ -32,15 +41,23 @@ const DS_VIBE = {
   SendIt:'#00e5c8',LetOut:'#c864ff',
 };
 
+/* ─── THEMES ───
+   g1/g2   = gradient stops for background
+   acc     = accent colour (MARGO wordmark, divider, M-mark)
+   l / r   = left/right bubble accent colours
+   glow1/2 = radial glow overlay colours (rgba strings)
+   light   = true → invert text/icon colours
+─────────────────────────────────────────────────────────── */
 const DS_THEMES = {
-  '#07060E':{grad:'linear-gradient(135deg,#0d0d0d,#1a1410)',text:'#ffffff',isLight:false},
-  '#0e0018':{grad:'linear-gradient(135deg,#1a0033,#2d1b4e)',text:'#ffffff',isLight:false},
-  '#04090f':{grad:'linear-gradient(135deg,#0a1420,#142838)',text:'#ffffff',isLight:false},
-  '#0f0404':{grad:'linear-gradient(135deg,#1a0a0a,#2d1416)',text:'#ffffff',isLight:false},
-  '#020f06':{grad:'linear-gradient(135deg,#051a0d,#0d2e1a)',text:'#ffffff',isLight:false},
-  '#0f0508':{grad:'linear-gradient(135deg,#1a0d0f,#2d1a1f)',text:'#ffffff',isLight:false},
-  '#080808':{grad:'linear-gradient(135deg,#000000,#111111)',text:'#ffffff',isLight:false},
-  '#150520':{grad:'linear-gradient(135deg,#2d0a3d,#6b1fa8)',text:'#ffffff',isLight:false},
+  '#07060E':{g1:'#0c0a04',g2:'#1a1306',acc:'#E8C547',l:'#FF6B9D',r:'#6B8CFF',glow1:'rgba(232,197,71,0.18)',glow2:'rgba(107,140,255,0.14)',grad:'linear-gradient(135deg,#0d0d0d,#1a1410)',text:'#ffffff',light:false},
+  '#0e0018':{g1:'#100020',g2:'#1c0730',acc:'#c77dff',l:'#ff71ce',r:'#05ffa1',glow1:'rgba(199,125,255,0.2)',glow2:'rgba(5,255,161,0.12)',grad:'linear-gradient(135deg,#1a0033,#2d1b4e)',text:'#ffffff',light:false},
+  '#04090f':{g1:'#040f18',g2:'#071622',acc:'#00e5ff',l:'#00e5ff',r:'#0070ff',glow1:'rgba(0,229,255,0.18)',glow2:'rgba(0,112,255,0.12)',grad:'linear-gradient(135deg,#0a1420,#142838)',text:'#ffffff',light:false},
+  '#0f0404':{g1:'#140505',g2:'#1e0a0a',acc:'#ff6b6b',l:'#ff6b6b',r:'#ffb347',glow1:'rgba(255,107,107,0.2)',glow2:'rgba(255,179,71,0.12)',grad:'linear-gradient(135deg,#1a0a0a,#2d1416)',text:'#ffffff',light:false},
+  '#020f06':{g1:'#020d06',g2:'#05160a',acc:'#50fa7b',l:'#50fa7b',r:'#00e5c0',glow1:'rgba(80,250,123,0.18)',glow2:'rgba(0,229,192,0.12)',grad:'linear-gradient(135deg,#051a0d,#0d2e1a)',text:'#ffffff',light:false},
+  '#0f0508':{g1:'#120708',g2:'#1c0c0f',acc:'#f4a4c0',l:'#f4a4c0',r:'#c084fc',glow1:'rgba(244,164,192,0.18)',glow2:'rgba(192,132,252,0.12)',grad:'linear-gradient(135deg,#1a0d0f,#2d1a1f)',text:'#ffffff',light:false},
+  '#080808':{g1:'#000000',g2:'#0a0a0a',acc:'#E8C547',l:'#ffffff',r:'#aaaaaa',glow1:'rgba(255,255,255,0.07)',glow2:'rgba(200,200,200,0.04)',grad:'linear-gradient(135deg,#000000,#111111)',text:'#ffffff',light:false},
+  '#150520':{g1:'#110317',g2:'#09140f',acc:'#05ffa1',l:'#ff71ce',r:'#05ffa1',glow1:'rgba(255,113,206,0.2)',glow2:'rgba(5,255,161,0.14)',grad:'linear-gradient(135deg,#2d0a3d,#6b1fa8)',text:'#ffffff',light:false},
+  '#f5f0e8':{g1:'#ffffff',g2:'#ece8e0',acc:'#0B0B0D',l:'#c0392b',r:'#1a6fbd',glow1:'rgba(0,0,0,0.05)',glow2:'rgba(0,0,0,0.03)',grad:'linear-gradient(135deg,#ffffff,#ece8e0)',text:'#0B0B0D',light:true},
 };
 
 /* ════════════════════════ STYLES ════════════════════════ */
@@ -72,7 +89,8 @@ body.ds-modal-open{overflow:hidden}
 @keyframes dsBubbleIn{from{opacity:0;transform:translateY(10px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 .ds-bubble.original{align-self:flex-start;animation-delay:0.1s}
 .ds-bubble.reply{align-self:flex-end;align-items:flex-end;animation-delay:0.35s}
-.ds-bubble-user{font-family:'Space Mono',monospace;font-size:0.6rem;font-weight:700;display:flex;align-items:center;gap:6px;padding:0 5px}
+/* FIX A: username labels — Syne 800, not Space Mono */
+.ds-bubble-user{font-family:'Syne',sans-serif;font-weight:800;font-size:0.65rem;letter-spacing:0.04em;display:flex;align-items:center;gap:6px;padding:0 5px}
 .ds-bubble.original .ds-bubble-user{color:var(--ds-vibe-left,#FF6B9D)}
 .ds-bubble.reply .ds-bubble-user{color:var(--ds-vibe-right,#6B8CFF);flex-direction:row-reverse}
 .ds-udot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
@@ -88,14 +106,16 @@ body.ds-modal-open{overflow:hidden}
 .ds-bubble-meta{margin-top:11px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .ds-bubble-song{font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:700;color:#fff}
 .ds-bubble-artist{font-family:'Space Mono',monospace;font-size:0.58rem;color:rgba(255,255,255,0.6);margin-top:2px}
-.ds-bubble-vibe{font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;text-transform:uppercase;padding:4px 10px;border-radius:20px;flex-shrink:0}
+.ds-bubble-vibe{font-family:'Syne',sans-serif;font-weight:800;font-size:0.5rem;letter-spacing:0.05em;text-transform:uppercase;padding:4px 10px;border-radius:20px;flex-shrink:0}
 .ds-bubble.original .ds-bubble-vibe{background:rgba(255,107,157,0.15);color:#FF9DC0;border:1px solid rgba(255,107,157,0.3)}
 .ds-bubble.reply .ds-bubble-vibe{background:rgba(107,140,255,0.15);color:#9DB5FF;border:1px solid rgba(107,140,255,0.3)}
+/* FIX B: LYRIC BACK divider — Syne 800 */
 .ds-lb-divider{display:flex;align-items:center;gap:9px;padding:2px 0;animation:dsBubbleIn 0.4s cubic-bezier(0.16,1,0.3,1) 0.22s both}
 .ds-lb-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(232,197,71,0.22),transparent)}
-.ds-lb-pill{font-family:'Space Mono',monospace;font-size:0.52rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#E8C547;background:rgba(232,197,71,0.1);border:1px solid rgba(232,197,71,0.28);padding:6px 13px;border-radius:20px;white-space:nowrap}
+.ds-lb-pill{font-family:'Syne',sans-serif;font-weight:800;font-size:0.55rem;letter-spacing:0.06em;text-transform:uppercase;color:#E8C547;background:rgba(232,197,71,0.1);border:1px solid rgba(232,197,71,0.28);padding:6px 13px;border-radius:20px;white-space:nowrap}
 .ds-song-strip{margin:6px 18px 0;padding:11px 15px;background:#181720;border-radius:13px;border:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between}
-.ds-strip-label{font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.3)}
+/* FIX C: SONGS label — Syne 800, legible */
+.ds-strip-label{font-family:'Syne',sans-serif;font-weight:800;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.7)}
 .ds-strip-songs{display:flex;align-items:center;gap:12px}
 .ds-strip-song{display:flex;flex-direction:column;gap:2px}
 .ds-strip-song:last-child{align-items:flex-end}
@@ -107,7 +127,8 @@ body.ds-modal-open{overflow:hidden}
 .ds-canvas-bg{position:absolute;inset:0;transition:background 0.4s;z-index:0}
 .ds-canvas-bg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 55% 48% at 12% 12%,var(--ds-glow-left,rgba(255,107,157,0.22)) 0%,transparent 65%),radial-gradient(ellipse 55% 48% at 88% 88%,var(--ds-glow-right,rgba(107,140,255,0.22)) 0%,transparent 65%);pointer-events:none}
 .ds-canvas-content{position:relative;z-index:1;width:100%;height:100%;padding:24px 26px 20px;display:flex;flex-direction:column}
-.ds-c-margo{font-family:'Syne',sans-serif;font-weight:800;font-size:0.9rem;letter-spacing:5px;color:#E8C547}
+/* FIX D: MARGO wordmark in card preview — stamp treatment */
+.ds-c-margo{font-family:'Syne',sans-serif;font-weight:800;font-size:0.9rem;letter-spacing:5px;opacity:0.28;filter:blur(0.3px) contrast(0.7)}
 .ds-c-top{flex:1;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:14px}
 .ds-c-lyric{font-family:'DM Serif Display',serif;font-style:italic;line-height:1.5}
 .ds-c-lyric.dim{font-size:1rem;color:rgba(255,255,255,0.6)}
@@ -115,10 +136,12 @@ body.ds-modal-open{overflow:hidden}
 .ds-c-attr{font-family:'Space Mono',monospace;font-size:0.48rem;color:rgba(255,255,255,0.45);margin-top:7px}
 .ds-c-divider{display:flex;align-items:center;gap:8px;margin:6px 0}
 .ds-c-div-line{flex:1;height:1px;background:rgba(232,197,71,0.25)}
-.ds-c-div-pill{font-family:'Space Mono',monospace;font-size:0.42rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#E8C547;background:rgba(232,197,71,0.12);border:1px solid rgba(232,197,71,0.32);padding:5px 11px;border-radius:20px;white-space:nowrap}
+/* FIX E: card view divider pill — Syne 800 */
+.ds-c-div-pill{font-family:'Syne',sans-serif;font-weight:800;font-size:0.44rem;letter-spacing:0.06em;text-transform:uppercase;color:#E8C547;background:rgba(232,197,71,0.12);border:1px solid rgba(232,197,71,0.32);padding:5px 11px;border-radius:20px;white-space:nowrap}
 .ds-c-bottom{flex:1.3;display:flex;flex-direction:column;justify-content:flex-start;padding-top:14px}
 .ds-c-watermark{text-align:center;margin-top:auto;padding-top:10px}
-.ds-c-watermark-pill{display:inline-block;font-family:'Space Mono',monospace;font-size:0.44rem;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:5px 14px;border-radius:20px}
+/* FIX F: trymargo.com watermark — clearly visible */
+.ds-c-watermark-pill{display:inline-block;font-family:'Space Mono',monospace;font-size:0.44rem;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.85);background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.18);padding:5px 14px;border-radius:20px}
 .ds-section-sep{height:1px;background:rgba(255,255,255,0.06);margin:14px 18px 0}
 .ds-edit-panel{margin:14px 18px 0;background:#181720;border-radius:18px;border:1px solid rgba(255,255,255,0.07);overflow:hidden}
 .ds-format-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,0.07)}
@@ -292,6 +315,7 @@ function mountDuetSheet(){
           <div class="ds-color-swatch" data-bg="#0f0508"><div class="ds-swatch-fill" style="background:linear-gradient(135deg,#1a0d0f,#f4a4c0)"></div><div class="ds-swatch-name">Rose</div></div>
           <div class="ds-color-swatch" data-bg="#080808"><div class="ds-swatch-fill" style="background:linear-gradient(135deg,#000,#fff)"></div><div class="ds-swatch-name">Mono</div></div>
           <div class="ds-color-swatch" data-bg="#150520"><div class="ds-swatch-fill" style="background:linear-gradient(135deg,#ff71ce,#05ffa1)"></div><div class="ds-swatch-name">Wave</div></div>
+          <div class="ds-color-swatch" data-bg="#f5f0e8"><div class="ds-swatch-fill" style="background:#fff;border:1px solid #ddd"></div><div class="ds-swatch-name" style="background:rgba(0,0,0,0.08);color:#333">White</div></div>
         </div>
       </div>
       <div class="ds-panel-section" id="ds-section-font">
@@ -416,7 +440,7 @@ function _dsPopulateConvo(){
 <div class="ds-bubble original"><div class="ds-bubble-user"><span class="ds-udot"></span>${_esc(pU)}</div><div class="ds-bubble-card"><div class="ds-bubble-lyric">${_esc(p.text||p.lyric||'')}</div><div class="ds-bubble-meta"><div><div class="ds-bubble-song">${_esc(pS)}</div><div class="ds-bubble-artist">${_esc(pA)}</div></div><span class="ds-bubble-vibe">${_esc(p.emotion||'Vibe')}</span></div></div></div>
 <div class="ds-lb-divider"><div class="ds-lb-line"></div><div class="ds-lb-pill">Lyric Back ↩ ${_esc(eU)}</div><div class="ds-lb-line"></div></div>
 <div class="ds-bubble reply"><div class="ds-bubble-user">${_esc(eU)}<span class="ds-udot"></span></div><div class="ds-bubble-card"><div class="ds-bubble-lyric">${_esc(e.lyric||e.text||'')}</div><div class="ds-bubble-meta"><div><div class="ds-bubble-song">${_esc(eS)}</div><div class="ds-bubble-artist">${_esc(eA)}</div></div><span class="ds-bubble-vibe">${_esc(e.emotion||'Vibe')}</span></div></div></div>`;
-  document.getElementById('dsSongStrip').innerHTML=`<span class="ds-strip-label">Songs</span><div class="ds-strip-songs"><div class="ds-strip-song"><span class="ds-strip-song-name">${_esc(pS)}</span><span class="ds-strip-song-artist">${_esc(pA)}</span></div><span class="ds-strip-sep">↔</span><div class="ds-strip-song"><span class="ds-strip-song-name">${_esc(eS)}</span><span class="ds-strip-song-artist">${_esc(eA)}</span></div></div>`;
+  document.getElementById('dsSongStrip').innerHTML=`<span class="ds-strip-label">SONGS</span><div class="ds-strip-songs"><div class="ds-strip-song"><span class="ds-strip-song-name">${_esc(pS)}</span><span class="ds-strip-song-artist">${_esc(pA)}</span></div><span class="ds-strip-sep">↔</span><div class="ds-strip-song"><span class="ds-strip-song-name">${_esc(eS)}</span><span class="ds-strip-song-artist">${_esc(eA)}</span></div></div>`;
 }
 function _dsPopulateCard(){
   const p=DS.parentPost,e=DS.echoPost;if(!p||!e)return;
@@ -430,16 +454,31 @@ function _dsPopulateCard(){
   if(el('dsCAttrBot'))el('dsCAttrBot').textContent=[eS,eA].filter(Boolean).join(' — ')+' · '+eU;
   if(el('dsCDivPill'))el('dsCDivPill').textContent='LYRIC BACK ↩ '+eU;
 }
+
 function _dsApplyTheme(bg){
-  const t=DS_THEMES[bg]||{grad:bg,text:'#ffffff',isLight:false},dk=!t.isLight;
-  const cb=document.getElementById('dsCanvasBg');if(cb)cb.style.background=t.grad;
+  const t=DS_THEMES[bg]||DS_THEMES['#07060E'];
+  const dk=!t.light;
+  const cb=document.getElementById('dsCanvasBg');
+  if(cb){
+    cb.style.background=t.grad;
+    /* Per-theme radial glows via CSS variables */
+    cb.style.setProperty('--ds-glow-left', t.glow1||'rgba(255,107,157,0.22)');
+    cb.style.setProperty('--ds-glow-right',t.glow2||'rgba(107,140,255,0.22)');
+  }
+  /* Lyric / attr text colour adapts to light theme */
   document.querySelectorAll('.ds-c-lyric').forEach(el=>el.style.color=t.text);
   document.querySelectorAll('.ds-c-attr').forEach(el=>el.style.color=dk?'rgba(255,255,255,0.45)':'rgba(0,0,0,0.5)');
-  const m=document.querySelector('.ds-c-margo');if(m)m.style.color=dk?'#E8C547':'#0B0B0D';
+  /* MARGO stamp colour follows accent */
+  const m=document.querySelector('.ds-c-margo');
+  if(m)m.style.color=t.acc;
+  /* Bubble lyric/song text */
   document.querySelectorAll('.ds-bubble-lyric,.ds-bubble-song').forEach(el=>el.style.color=t.text);
+  /* View backgrounds */
   const cv=document.getElementById('dsViewConvo'),cd=document.getElementById('dsViewCard');
-  if(cv)cv.style.background=t.grad;if(cd)cd.style.background=t.grad;
+  if(cv)cv.style.background=t.grad;
+  if(cd)cd.style.background=t.grad;
 }
+
 function _dsUpdateCardFonts(){
   ['dsCLyricTop','dsCLyricBot'].forEach(id=>{const el=document.getElementById(id);if(!el)return;el.style.fontFamily=`'${DS.fontFamily}',serif`;el.style.fontStyle=DS.fontItalic?'italic':'normal';});
   document.querySelectorAll('.ds-bubble-lyric').forEach(el=>{el.style.fontFamily=`'${DS.fontFamily}',serif`;el.style.fontStyle=DS.fontItalic?'italic':'normal';});
@@ -587,7 +626,6 @@ async function _dsExportGif(plat,action){
         const t=i/FRAMES;
         _dsSetProgress(btn,Math.round((i/FRAMES)*65),`Frame ${i+1}/${FRAMES}`,color);
 
-        /* Animate bubble lyrics with sine wave for motion */
         const alpha=(0.35+0.65*Math.abs(Math.sin(t*Math.PI*1.5))).toFixed(3);
         convoEl.querySelectorAll('.ds-bubble-lyric,.ds-lb-pill').forEach(el=>el.style.opacity=alpha);
 
@@ -599,16 +637,13 @@ async function _dsExportGif(plat,action){
         convoEl.querySelectorAll('.ds-bubble-lyric,.ds-lb-pill').forEach(el=>el.style.opacity='');
 
         oc.clearRect(0,0,W,H);
-        /* BG gradient */
         const th=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'];
         const cols=th.grad.match(/#[0-9a-fA-F]{6}/g)||['#090810','#0d0b12'];
         const gbg=oc.createLinearGradient(0,0,0,H);gbg.addColorStop(0,cols[0]);gbg.addColorStop(1,cols[1]||cols[0]);
         oc.fillStyle=gbg;oc.fillRect(0,0,W,H);
-        /* Draw snapshot centred */
         const dW=W,dH=Math.round(snap.height*(W/snap.width));
         const dY=Math.max(0,(H-dH)/2);
         oc.drawImage(snap,0,dY,dW,Math.min(dH,H));
-        /* Branding */
         _dsDrawBranding(oc,W,H);
         gif.addFrame(off,{copy:true,delay:DELAY});
         await new Promise(r=>setTimeout(r,0));
@@ -720,57 +755,94 @@ function _dsDl(blob,fname){
   setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1500);
 }
 
-/* ════════════ BRANDING OVERLAY ════════════ */
+/* ════════════ BRANDING OVERLAY ════════════
+   MARGO = stamp treatment: globalAlpha 0.28, muted colour
+   M-mark = full opacity solid circle
+   trymargo.com = clearly legible
+═══════════════════════════════════════════ */
 function _dsDrawBranding(ctx,W,H){
+  const t=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'];
   const pad=W*0.055;
-  /* MARGO wordmark top-left */
+
+  /* MARGO wordmark — stamp: low opacity, slightly desaturated */
   const mSz=W*0.044;
-  ctx.save();ctx.font=`800 ${mSz}px Syne,sans-serif`;ctx.fillStyle='#E8C547';ctx.globalAlpha=0.92;
-  ctx.textBaseline='top';ctx.textAlign='left';ctx.fillText('MARGO',pad,pad*0.62);ctx.restore();
-  /* M-mark circle bottom-right */
+  const stampColor = t.light ? 'rgba(0,0,0,0.35)' : _hexMix(t.acc,'#888888',0.45);
+  ctx.save();
+  ctx.font=`800 ${mSz}px Syne,sans-serif`;
+  ctx.fillStyle=stampColor;
+  ctx.globalAlpha=0.28;
+  ctx.textBaseline='top';
+  ctx.textAlign='left';
+  ctx.fillText('MARGO',pad,pad*0.62);
+  ctx.restore();
+
+  /* M-mark circle bottom-right — full accent colour */
   const r=W*0.038,cx=W-pad-r,cy=H-pad-r;
-  ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle='#E8C547';ctx.globalAlpha=0.92;ctx.fill();
+  ctx.save();
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fillStyle=t.acc;ctx.globalAlpha=0.92;ctx.fill();
   const sc=r/40;
-  ctx.strokeStyle='#0B0B0D';ctx.lineWidth=5.5*sc;ctx.lineCap='round';ctx.lineJoin='round';ctx.globalAlpha=1;
+  const strokeClr=t.light?'#ffffff':'#0B0B0D';
+  ctx.strokeStyle=strokeClr;ctx.lineWidth=5.5*sc;ctx.lineCap='round';ctx.lineJoin='round';ctx.globalAlpha=1;
   ctx.beginPath();
   ctx.moveTo(cx+(17-40)*sc,cy+(57-40)*sc);ctx.lineTo(cx+(17-40)*sc,cy+(27-40)*sc);
   ctx.lineTo(cx+(29-40)*sc,cy+(45-40)*sc);ctx.lineTo(cx+(40-40)*sc,cy+(26-40)*sc);
   ctx.lineTo(cx+(51-40)*sc,cy+(45-40)*sc);ctx.lineTo(cx+(63-40)*sc,cy+(27-40)*sc);
   ctx.lineTo(cx+(63-40)*sc,cy+(57-40)*sc);
   ctx.stroke();ctx.restore();
-  /* trymargo.com watermark */
+
+  /* trymargo.com watermark — legible */
   const wFS=W*0.018,wTxt='trymargo.com';
-  ctx.save();ctx.font=`700 ${wFS}px "Space Mono",monospace`;ctx.textBaseline='middle';ctx.textAlign='center';
+  ctx.save();
+  ctx.font=`700 ${wFS}px "Space Mono",monospace`;
+  ctx.textBaseline='middle';ctx.textAlign='center';
   const wW=ctx.measureText(wTxt).width+W*0.042,wH=wFS*1.8;
   const wX=W/2-wW/2,wY=H-pad*0.55-wH/2;
-  ctx.globalAlpha=0.13;ctx.fillStyle='#ffffff';
-  if(ctx.roundRect){ctx.beginPath();ctx.roundRect(wX,wY,wW,wH,wH/2);ctx.fill();}else ctx.fillRect(wX,wY,wW,wH);
-  ctx.globalAlpha=0.48;ctx.fillStyle='#ffffff';ctx.fillText(wTxt,W/2,wY+wH/2);ctx.restore();
+  ctx.globalAlpha=0.14;
+  ctx.fillStyle=t.light?'#000000':'#ffffff';
+  if(ctx.roundRect){ctx.beginPath();ctx.roundRect(wX,wY,wW,wH,wH/2);ctx.fill();}
+  else ctx.fillRect(wX,wY,wW,wH);
+  ctx.globalAlpha=0.82;  /* clearly visible */
+  ctx.fillStyle=t.light?'rgba(0,0,0,0.75)':'#ffffff';
+  ctx.fillText(wTxt,W/2,wY+wH/2);
+  ctx.restore();
+}
+
+/* Hex colour mix helper for stamp colour desaturation */
+function _hexMix(hex1,hex2,t){
+  const p=c=>{const h=c.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];};
+  const [r1,g1,b1]=p(hex1),[r2,g2,b2]=p(hex2);
+  const r=Math.round(r1+(r2-r1)*t),g=Math.round(g1+(g2-g1)*t),b=Math.round(b1+(b2-b1)*t);
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
 }
 
 /* ════════════ CARD CANVAS DRAW ════════════ */
 function _dsDrawCard(ctx,W,H,parent,echo,t){
   if(!parent||!echo)return;
   const pad=W*0.07,innerW=W-pad*2;
-  const th=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'],dk=!th.isLight;
+  const th=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'],dk=!th.light;
   const pV=DS_VIBE[parent.emotion||'Nostalgia']||'#E8C547',eV=DS_VIBE[echo.emotion||'Nostalgia']||'#E8C547';
   const lf=DS.fontFamily||'DM Serif Display',li=DS.fontItalic!==false,ls=li?'italic ':'';
   const tc=th.text||'#ffffff';
   const cols=th.grad.match(/#[0-9a-fA-F]{6}/g)||['#090810','#0d0b12'];
   const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,cols[0]);bg.addColorStop(1,cols[1]||cols[0]);
   ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-  _dsGlow(ctx,W*0.15,H*0.15,W*0.65,pV+'22');_dsGlow(ctx,W*0.85,H*0.85,W*0.65,eV+'22');
-  const tl=ctx.createLinearGradient(0,0,W,0);tl.addColorStop(0,'transparent');tl.addColorStop(0.5,pV);tl.addColorStop(1,'transparent');
-  ctx.save();ctx.globalAlpha=0.6;ctx.fillStyle=tl;ctx.fillRect(0,0,W,2);ctx.restore();
-  const bl=ctx.createLinearGradient(0,0,W,0);bl.addColorStop(0,'transparent');bl.addColorStop(0.5,eV);bl.addColorStop(1,'transparent');
-  ctx.save();ctx.globalAlpha=0.4;ctx.fillStyle=bl;ctx.fillRect(0,H-2,W,2);ctx.restore();
+  /* Per-theme radial glows */
+  _dsGlow(ctx,W*0.15,H*0.15,W*0.65,th.glow1||pV+'22');
+  _dsGlow(ctx,W*0.85,H*0.85,W*0.65,th.glow2||eV+'22');
+  /* Edge accent lines */
+  const tl=ctx.createLinearGradient(0,0,W,0);tl.addColorStop(0,'transparent');tl.addColorStop(0.5,th.l||pV);tl.addColorStop(1,'transparent');
+  ctx.save();ctx.globalAlpha=0.5;ctx.fillStyle=tl;ctx.fillRect(0,0,W,2);ctx.restore();
+  const bl=ctx.createLinearGradient(0,0,W,0);bl.addColorStop(0,'transparent');bl.addColorStop(0.5,th.r||eV);bl.addColorStop(1,'transparent');
+  ctx.save();ctx.globalAlpha=0.38;ctx.fillStyle=bl;ctx.fillRect(0,H-2,W,2);ctx.restore();
+  /* Branding (stamp MARGO + M-mark + watermark) */
   _dsDrawBranding(ctx,W,H);
   const pk=parent.knowledge||{};
   const pS=pk.song||parent.song||'',pA=pk.artist||parent.artist||'',eS=echo.song||'',eA=echo.artist||'';
   const sbH=W*0.082,wFS2=W*0.018;
   ctx.font=`700 ${wFS2}px "Space Mono",monospace`;
   const sbY=H-W*0.055*0.55-wFS2*1.8/2-W*0.02-sbH;
-  _dsSongsBar(ctx,W,pad,sbY,sbH,pS,pA,eS,eA,dk,tc);
+  _dsSongsBar(ctx,W,pad,sbY,sbH,pS,pA,eS,eA,dk,tc,th);
   const mSz2=W*0.044,ts=W*0.055*0.62+mSz2+W*0.022,be=sbY-W*0.018,dY=ts+(be-ts)*0.46;
   /* Top lyric */
   const topH=dY-W*0.046-ts;const pTxt=parent.text||parent.lyric||'';
@@ -781,15 +853,15 @@ function _dsDrawCard(ctx,W,H,parent,echo,t){
   const pSY=ts+(topH-pBH)/2+(1-ft)*20;
   ctx.save();ctx.textBaseline='top';ctx.textAlign='center';ctx.shadowColor='rgba(0,0,0,0.9)';ctx.shadowBlur=16;
   pLn.forEach((l,i)=>{ctx.globalAlpha=(0.62-i*0.04)*Math.min(1,ft*2);ctx.fillStyle=tc;ctx.fillText(l,W/2,pSY+i*pLH);});ctx.restore();
-  if(pS){const paFS=W*0.019;ctx.save();ctx.font=`700 ${paFS}px "Space Mono",monospace`;ctx.fillStyle=pV;ctx.globalAlpha=0.45;ctx.textBaseline='bottom';ctx.textAlign='center';ctx.fillText(_trunc(ctx,pS+(pA?' — '+pA:''),innerW*0.78),W/2,dY-W*0.04);ctx.restore();}
-  /* Divider */
+  if(pS){const paFS=W*0.019;ctx.save();ctx.font=`700 ${paFS}px "Space Mono",monospace`;ctx.fillStyle=th.l||pV;ctx.globalAlpha=0.55;ctx.textBaseline='bottom';ctx.textAlign='center';ctx.fillText(_trunc(ctx,pS+(pA?' — '+pA:''),innerW*0.78),W/2,dY-W*0.04);ctx.restore();}
+  /* Divider — Syne 800 */
   const dTxt=`LYRIC BACK ↩  @${(echo.username||'anonymous').toUpperCase()}`,dFS=W*0.021;
-  ctx.font=`700 ${dFS}px "Space Mono",monospace`;
+  ctx.font=`800 ${dFS}px Syne,sans-serif`;
   const dTW=ctx.measureText(dTxt).width,dpH=dFS*1.95,dpW=dTW+W*0.028*2,dpX=W/2-dpW/2,dpY2=dY-dpH/2,dpR=dpH/2;
   ctx.save();[[pad,W/2-dpW/2-W*0.018],[W/2+dpW/2+W*0.018,W-pad]].forEach(([x1,x2])=>{const lg=ctx.createLinearGradient(x1,0,x2,0);if(x1===pad){lg.addColorStop(0,'transparent');lg.addColorStop(1,'rgba(232,197,71,0.22)');}else{lg.addColorStop(0,'rgba(232,197,71,0.22)');lg.addColorStop(1,'transparent');}ctx.fillStyle=lg;ctx.fillRect(x1,dY-0.75,x2-x1,1.5);});ctx.restore();
   ctx.save();ctx.shadowColor='#E8C547';ctx.shadowBlur=14;ctx.strokeStyle='rgba(232,197,71,0.6)';ctx.lineWidth=1.5;_rr(ctx,dpX,dpY2,dpW,dpH,dpR);ctx.stroke();ctx.shadowBlur=0;
   const dpF=ctx.createLinearGradient(dpX,dpY2,dpX,dpY2+dpH);dpF.addColorStop(0,'rgba(232,197,71,0.14)');dpF.addColorStop(1,'rgba(232,197,71,0.06)');ctx.fillStyle=dpF;_rr(ctx,dpX,dpY2,dpW,dpH,dpR);ctx.fill();
-  ctx.font=`700 ${dFS}px "Space Mono",monospace`;ctx.fillStyle='#E8C547';ctx.globalAlpha=0.95;ctx.textBaseline='middle';ctx.textAlign='center';ctx.fillText(dTxt,W/2,dY);ctx.restore();
+  ctx.font=`800 ${dFS}px Syne,sans-serif`;ctx.fillStyle=th.acc||'#E8C547';ctx.globalAlpha=0.95;ctx.textBaseline='middle';ctx.textAlign='center';ctx.fillText(dTxt,W/2,dY);ctx.restore();
   /* Bottom lyric */
   const bS2=dY+dpH/2+W*0.026,bH2=sbY-W*0.018-bS2;const eTxt=echo.lyric||echo.text||'';
   let eFS=Math.min(W*0.064,bH2*0.28);ctx.font=`${ls}700 ${eFS}px "${lf}",serif`;
@@ -799,17 +871,24 @@ function _dsDrawCard(ctx,W,H,parent,echo,t){
   const eSY=bS2+(bH2-eBH)/2+eOY;
   ctx.save();ctx.textBaseline='top';ctx.textAlign='center';ctx.shadowColor='rgba(0,0,0,0.9)';ctx.shadowBlur=20;
   eLn.forEach((l,i)=>{ctx.globalAlpha=(1-i*0.02)*(t!==undefined?Math.min(1,t*1.8):1);ctx.fillStyle=tc;ctx.fillText(l,W/2,eSY+i*eLH);});ctx.restore();
-  if(eS){const eaFS=W*0.019;ctx.save();ctx.font=`700 ${eaFS}px "Space Mono",monospace`;ctx.fillStyle='#E8C547';ctx.globalAlpha=0.75;ctx.textBaseline='top';ctx.textAlign='center';ctx.fillText(_trunc(ctx,eS+(eA?' — '+eA:''),innerW*0.78),W/2,eSY+eBH+W*0.012);ctx.restore();}
+  if(eS){const eaFS=W*0.019;ctx.save();ctx.font=`700 ${eaFS}px "Space Mono",monospace`;ctx.fillStyle=th.r||eV;ctx.globalAlpha=0.75;ctx.textBaseline='top';ctx.textAlign='center';ctx.fillText(_trunc(ctx,eS+(eA?' — '+eA:''),innerW*0.78),W/2,eSY+eBH+W*0.012);ctx.restore();}
 }
 
-function _dsSongsBar(ctx,W,pad,bY,bH,pS,pA,eS,eA,dk,tc){
+/* ════════════ SONGS BAR — Syne 800 SONGS label, legible ════════════ */
+function _dsSongsBar(ctx,W,pad,bY,bH,pS,pA,eS,eA,dk,tc,th){
   const bX=pad,bW=W-pad*2,bR=W*0.022;
   ctx.save();ctx.globalAlpha=0.55;ctx.fillStyle=dk?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.06)';_rr(ctx,bX,bY,bW,bH,bR);ctx.fill();
   ctx.globalAlpha=0.3;ctx.strokeStyle=dk?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)';ctx.lineWidth=1;_rr(ctx,bX,bY,bW,bH,bR);ctx.stroke();ctx.restore();
-  const lFS=W*0.019,sFS=W*0.024,aFS=W*0.018,mY=bY+bH/2;
-  ctx.save();ctx.font=`700 ${lFS}px "Space Mono",monospace`;ctx.fillStyle=dk?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.35)';ctx.textBaseline='middle';ctx.textAlign='left';ctx.fillText('SONGS',bX+W*0.038,mY);ctx.restore();
+  const lFS=W*0.022,sFS=W*0.024,aFS=W*0.018,mY=bY+bH/2;
+  /* SONGS label — Syne 800, clearly readable */
+  ctx.save();
+  ctx.font=`800 ${lFS}px Syne,sans-serif`;
+  ctx.fillStyle=dk?'rgba(255,255,255,0.72)':'rgba(0,0,0,0.6)';
+  ctx.textBaseline='middle';ctx.textAlign='left';
+  ctx.fillText('SONGS',bX+W*0.038,mY);
+  ctx.restore();
   const s1X=bX+W*0.2;ctx.save();ctx.font=`700 ${sFS}px "DM Sans",sans-serif`;ctx.fillStyle=tc;ctx.globalAlpha=0.85;ctx.textBaseline='middle';ctx.textAlign='left';ctx.fillText(_trunc(ctx,pS,W*0.22),s1X,mY-aFS*0.55);ctx.font=`400 ${aFS}px "Space Mono",monospace`;ctx.fillStyle=dk?'rgba(255,255,255,0.45)':'rgba(0,0,0,0.45)';ctx.fillText(_trunc(ctx,pA,W*0.22),s1X,mY+sFS*0.55);ctx.restore();
-  ctx.save();ctx.font=`400 ${W*0.03}px "Space Mono",monospace`;ctx.fillStyle='rgba(232,197,71,0.5)';ctx.textBaseline='middle';ctx.textAlign='center';ctx.fillText('↔',W/2,mY);ctx.restore();
+  ctx.save();ctx.font=`400 ${W*0.03}px "Space Mono",monospace`;ctx.fillStyle=(th&&th.acc)?th.acc+'99':'rgba(232,197,71,0.55)';ctx.textBaseline='middle';ctx.textAlign='center';ctx.fillText('↔',W/2,mY);ctx.restore();
   const s2X=W-pad-W*0.038;ctx.save();ctx.font=`700 ${sFS}px "DM Sans",sans-serif`;ctx.fillStyle=tc;ctx.globalAlpha=0.85;ctx.textBaseline='middle';ctx.textAlign='right';ctx.fillText(_trunc(ctx,eS,W*0.22),s2X,mY-aFS*0.55);ctx.font=`400 ${aFS}px "Space Mono",monospace`;ctx.fillStyle=dk?'rgba(255,255,255,0.45)':'rgba(0,0,0,0.45)';ctx.fillText(_trunc(ctx,eA,W*0.22),s2X,mY+sFS*0.55);ctx.restore();
 }
 
