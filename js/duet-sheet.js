@@ -128,8 +128,8 @@ function _bubbleCard(side,data,B,t,bubbleAnimStr,lyricAnimStr){
   const mutedTxt=light?'rgba(0,0,0,0.5)':'rgba(255,255,255,0.48)';
   const divLine=light?'rgba(0,0,0,0.1)':'rgba(255,255,255,0.1)';
   const col=side==='left'?t.l:t.r;
-  const bgl=side==='left'?('rgba(192,57,43,'+(light?0.08:0.14)+')'):'rgba(26,111,189,'+(light?0.08:0.14)+')';
-  const bbc=side==='left'?('rgba(192,57,43,'+(light?0.25:0.28)+')'):'rgba(26,111,189,'+(light?0.25:0.28)+')';
+  const bgl=col+'22';
+  const bbc=col+'44';
   const lFs=q(B*0.043)+'px';
   const sFs=q(B*0.026)+'px';
   const aFs=q(B*0.018)+'px';
