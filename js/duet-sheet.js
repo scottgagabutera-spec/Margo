@@ -644,7 +644,7 @@ function _dsRefreshPreview(){
   wrap.style.position='relative';
   const inner=document.createElement('div');
   inner.style.cssText='position:absolute;top:0;left:0;width:'+PW+'px;height:'+PH+'px;transform:scale('+scale+');transform-origin:top left;pointer-events:none';
-  inner.innerHTML=_buildCardHTML(PW,PH,t,still?'still':'animated');
+  inner.innerHTML=_buildCardHTML(PW,PH,t,still);
   wrap.innerHTML='';
   wrap.appendChild(inner);
 }
@@ -735,13 +735,17 @@ async function _dsExportGif(plat,action){
     const t=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'];
     const gif=new GIF({workers:4,quality:2,width:W,height:H,workerScript:'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',dither:'FloydSteinberg',globalPalette:false});
     const buildFn=isConvo?_buildConvoHTML:_buildCardHTML;
+    const _offGif=_getOff();
+    _offGif.style.width=W+'px';_offGif.style.height=H+'px';
+    _offGif.innerHTML=buildFn(W,H,t,false);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
     for(let i=0;i<FRAMES;i++){
       _dsSetProgress(btn,Math.round((i/FRAMES)*72),'Frame '+(i+1)+'/'+FRAMES,color);
-      const html=buildFn(W,H,t,'animated');
-      const snap=await _captureFrame(html,W,H);
+      const snap=await window.html2canvas(_offGif,{width:W,height:H,scale:1,backgroundColor:null,logging:false,useCORS:true,allowTaint:true,foreignObjectRendering:false});
       gif.addFrame(snap,{copy:true,delay:DELAY});
-      await new Promise(r=>setTimeout(r,4));
+      await new Promise(r=>setTimeout(r,DELAY));
     }
+    _offGif.innerHTML='';
     gif.on('progress',p=>_dsSetProgress(btn,Math.round(72+p*26),'Encoding '+Math.round(72+p*26)+'%',color));
     gif.on('finished',async blob=>{
       _dsSetProgress(btn,100,'\u2713 Done!',color);
@@ -776,7 +780,7 @@ async function _dsExportPoster(plat,action){
     _dsSetProgress(btn,30,'Rendering\u2026',color);
     const t=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'];
     const buildFn=isConvo?_buildConvoHTML:_buildCardHTML;
-    const html=buildFn(W,H,t,'still');
+    const html=buildFn(W,H,t,true);
     const snap=await _captureFrame(html,W,H);
     _dsSetProgress(btn,85,'Saving\u2026',color);
     const name=((DS.parentPost&&(DS.parentPost.knowledge&&DS.parentPost.knowledge.song||DS.parentPost.song))||'duet').replace(/\s+/g,'-').toLowerCase();
