@@ -582,7 +582,19 @@ function mountDuetSheet(){
 let _dsPickerAction='download';
 function _dsOpenPicker(a){_dsPickerAction=a;document.getElementById('dsPlatformPicker').classList.remove('ds-hidden');}
 function _dsClosePicker(){document.getElementById('dsPlatformPicker').classList.add('ds-hidden');}
-function _dsStartExport(plat){_dsClosePicker();DS.format==='gif'?_dsExportGif(plat,_dsPickerAction):_dsExportPoster(plat,_dsPickerAction);}
+
+/* ── CHANGE 2: _dsStartExport delegates to duet-export.js ── */
+function _dsStartExport(plat){
+  _dsClosePicker();
+  if(window._duetExport){
+    DS.format==='gif'
+      ? window._duetExport.gif(plat,_dsPickerAction)
+      : window._duetExport.poster(plat,_dsPickerAction);
+  }else{
+    /* fallback: original export functions still present below */
+    DS.format==='gif'?_dsExportGif(plat,_dsPickerAction):_dsExportPoster(plat,_dsPickerAction);
+  }
+}
 
 function openDuetSheet(parentPost,echoPost){
   if(!parentPost||!echoPost)return;
@@ -601,7 +613,6 @@ function closeDuetSheet(){
   requestAnimationFrame(()=>window.scrollTo({top:DS._savedScrollY||0,behavior:'instant'}));
 }
 
-/* Sheet preview — convo view uses the same styled preview as before */
 function _dsPopulateConvo(){
   const p=DS.parentPost,e=DS.echoPost;if(!p||!e)return;
   const pV=DS_VIBE[p.emotion||'Nostalgia']||'#E8C547',eV=DS_VIBE[e.emotion||'Nostalgia']||'#E8C547';
@@ -619,16 +630,13 @@ function _dsPopulateConvo(){
     '<span class="ds-strip-label">SONGS</span><div class="ds-strip-songs"><div class="ds-strip-song"><span class="ds-strip-song-name">'+_esc(pS)+'</span><span class="ds-strip-song-artist">'+_esc(pA)+'</span></div><span class="ds-strip-sep">\u2194</span><div class="ds-strip-song"><span class="ds-strip-song-name">'+_esc(eS)+'</span><span class="ds-strip-song-artist">'+_esc(eA)+'</span></div></div>';
 }
 
-/* Card view: render at true 1080×1080 resolution, scale down via CSS transform */
 function _dsRefreshPreview(){
   const isCard=document.getElementById('dsViewCard').style.display!=='none';
   if(!isCard)return;
   const wrap=document.getElementById('dsCardPreviewWrap');if(!wrap)return;
   const t=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'];
   const still=DS.format==='poster';
-  // Always render at true export resolution (square default for preview)
   const PW=1080,PH=1080;
-  // Scale to fit the wrap container
   const wrapW=wrap.clientWidth||340;
   const scale=wrapW/PW;
   wrap.style.height=(PH*scale)+'px';
@@ -708,7 +716,7 @@ async function _dsLoadH2C(){
   });
 }
 
-/* ════ GIF EXPORT ════ */
+/* ════ GIF EXPORT (fallback — kept intact) ════ */
 async function _dsExportGif(plat,action){
   const dlBtn=document.getElementById('dsBtnDownload'),shBtn=document.getElementById('dsBtnShare');
   const btn=action==='download'?dlBtn:shBtn;
@@ -754,7 +762,7 @@ async function _dsExportGif(plat,action){
   }
 }
 
-/* ════ POSTER EXPORT ════ */
+/* ════ POSTER EXPORT (fallback — kept intact) ════ */
 async function _dsExportPoster(plat,action){
   const dlBtn=document.getElementById('dsBtnDownload'),shBtn=document.getElementById('dsBtnShare');
   const btn=action==='download'?dlBtn:shBtn;
@@ -808,6 +816,13 @@ function _initDsSwipe(){
 
 window.openDuetSheet=openDuetSheet;
 window.closeDuetSheet=closeDuetSheet;
+
+/* ── CHANGE 1: expose internals for duet-export.js ── */
+window._DS             = DS;
+window._DSThemes       = DS_THEMES;
+window._buildConvoHTML = _buildConvoHTML;
+window._buildCardHTML  = _buildCardHTML;
+window._dsSwitchFormat = _dsSwitchFormat;
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountDuetSheet);
 else mountDuetSheet();
