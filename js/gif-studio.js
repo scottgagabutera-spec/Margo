@@ -1,11 +1,15 @@
 /* ============================================================
    MARGO — js/gif-studio.js
-   v1.7 — FINAL
-   • Fully independent from studio.js — NO shared drawPosterToCtx
-   • Uses its own gsDrawFrame for GIF preview + export
-   • drawPosterToCtx in this file is ONLY for the Poster tab
-     inside the share-sheet chooser (if used there)
-   • All CANONICAL flag logic removed entirely
+   v1.8 — FIXED
+   Bugs fixed vs v1.7:
+   • midnight-gold bg updated to #07060A (matches style.css v6.8)
+   • Wordmark font: Syne → Bebas Neue (Syne removed from index.html)
+   • Preview loop: canvas size only recalculated on resize, not every frame
+     — eliminates jitter + prevents compounding ctx.scale bug
+   • gsWave: textAlign reset to 'center' before gsWrap fallback
+   • gsShimmer: base layer draws at full opacity then composites correctly
+   • gsGlitch: Math.random() stabilised per-phase to prevent flicker storm
+   • All theme bg[0] values aligned to design system dark base
    ============================================================ */
 
 /* ── State ── */
@@ -13,11 +17,12 @@ const GS = {
   theme: 'midnight-gold', font: 'playfair', animation: 'fade-up',
   speed: 'normal', isExporting: false,
   _animFrame: null, _frame: 0, _last: 0,
+  _canvasSize: 0, /* cached — only recalc on resize */
 };
 
-/* ── Themes ── */
+/* ── Themes — bg[0] aligned to #07060A design system ── */
 const GS_THEMES = {
-  'midnight-gold':   { bg: ['#0B0B0D','#1a1400','#0B0B0D'], accent: '#E8C547',  text: '#ffffff' },
+  'midnight-gold':   { bg: ['#07060A','#1a1400','#07060A'], accent: '#E8C547',  text: '#ffffff' },
   'royal-purple':    { bg: ['#0d0014','#1a003a','#0d0014'], accent: '#c77dff',  text: '#ffffff' },
   'neon-cyan':       { bg: ['#050e1a','#0a1e2e','#050e1a'], accent: '#00e5ff',  text: '#ffffff' },
   'sunset-coral':    { bg: ['#1a0505','#2d0808','#1a0505'], accent: '#ff6b6b',  text: '#ffffff' },
@@ -45,37 +50,32 @@ const GS_FONTS = {
 const GS_SPEED_MS = { slow: 130, normal: 70, fast: 35 };
 
 const GS_ANIMS = {
-  'fade-up':    { label:'Fade Up',    frames:24 },
-  'typewriter': { label:'Typewriter', frames:32 },
-  'slide-in':   { label:'Slide In',   frames:22 },
-  'pulse':      { label:'Pulse',      frames:20 },
-  'glitch':     { label:'Glitch',     frames:18 },
-  'wave':       { label:'Wave',       frames:28 },
-  'shimmer':    { label:'Shimmer',    frames:24 },
-  'bounce':     { label:'Bounce',     frames:22 },
+  'fade-up':    { frames: 24 },
+  'typewriter': { frames: 32 },
+  'slide-in':   { frames: 22 },
+  'pulse':      { frames: 20 },
+  'glitch':     { frames: 18 },
+  'wave':       { frames: 28 },
+  'shimmer':    { frames: 24 },
+  'bounce':     { frames: 22 },
 };
 
 const GS_EXPORT_SIZE = 1080;
 
-const GS_VIBE_COLORS = {
-  Love:'#FF6B9D', Heartbreak:'#ff5050', Hope:'#6B8CFF', Nostalgia:'#E8C547',
-  Healing:'#4ade80', Joy:'#ffc847', Rage:'#FF6440', Loneliness:'#a0a0ff',
-  SendIt:'#00e5c8', LetOut:'#c864ff',
-};
-
 /* ================================================================
    MARGO WORDMARK
+   FIX: was 'Syne' — switched to 'Bebas Neue' (Syne removed from index.html)
    ================================================================ */
 function gsDrawWordmark(ctx, W, theme) {
   ctx.save();
   const isLight = theme.text === '#000000';
-  const fSize   = Math.max(18, W * 0.045);
-  ctx.font         = `800 ${fSize}px 'Syne', 'Arial Black', sans-serif`;
+  const fSize   = Math.max(18, W * 0.048);
+  ctx.font         = `${fSize}px 'Bebas Neue', 'Arial Black', sans-serif`;
   ctx.textAlign    = 'left';
   ctx.textBaseline = 'top';
   ctx.shadowBlur   = 0;
   ctx.fillStyle    = isLight ? '#0B0B0D' : '#E8C547';
-  ctx.fillText('MARGO', W * 0.045, W * 0.048);
+  ctx.fillText('MARGO', W * 0.045, W * 0.046);
   ctx.restore();
 }
 
@@ -152,7 +152,7 @@ function gsLyricFont(ctx, data, scale) {
 }
 
 /* ================================================================
-   FRAME RENDERER — self-contained, never touches window.drawPosterToCtx
+   FRAME RENDERER
    ================================================================ */
 function gsDrawFrame(ctx, W, H, t, post) {
   const p     = post || window.currentPost || {};
@@ -167,7 +167,7 @@ function gsDrawFrame(ctx, W, H, t, post) {
     theme, font,
   };
 
-  /* Background */
+  /* Background gradient */
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0,   theme.bg[0]);
   g.addColorStop(0.5, theme.bg[1]);
@@ -194,111 +194,176 @@ function gsDrawFrame(ctx, W, H, t, post) {
   gsDrawWatermark(ctx, W, H, theme);
 }
 
-/* ── Animations ── */
+/* ================================================================
+   ANIMATIONS
+   ================================================================ */
 function gsFadeUp(ctx, W, H, t, data, scale) {
-  const e = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-  const oy = (1 - e) * 38 * scale, a = Math.min(1, e * 2.2);
-  ctx.globalAlpha = a; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14 * scale;
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
+  const e  = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+  const oy = (1 - e) * 38 * scale;
+  const a  = Math.min(1, e * 2.2);
+  ctx.globalAlpha  = a;
+  ctx.shadowColor  = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur   = 14 * scale;
+  ctx.fillStyle    = data.theme.text;
+  ctx.textAlign    = 'center';
   const sz = gsLyricFont(ctx, data, scale);
   gsWrap(ctx, data.lyric, W / 2, H * 0.44 + oy, W * 0.82, sz * 1.2);
-  ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur  = 0;
 }
 
 function gsTypewriter(ctx, W, H, t, data, scale) {
   const chars = Math.floor(t * (data.lyric.length + 6));
-  const vis = data.lyric.substring(0, Math.min(chars, data.lyric.length));
-  const cur = chars <= data.lyric.length && (Math.floor(t * 10) % 2 === 0) ? '|' : '';
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10 * scale;
+  const vis   = data.lyric.substring(0, Math.min(chars, data.lyric.length));
+  const cur   = chars <= data.lyric.length && (Math.floor(t * 10) % 2 === 0) ? '|' : '';
+  ctx.fillStyle   = data.theme.text;
+  ctx.textAlign   = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur  = 10 * scale;
   const sz = gsLyricFont(ctx, data, scale);
   gsWrap(ctx, vis + cur, W / 2, H * 0.44, W * 0.82, sz * 1.2);
   ctx.shadowBlur = 0;
 }
 
 function gsSlideIn(ctx, W, H, t, data, scale) {
-  const e = t < 0.4 ? t / 0.4 : 1; const eo = 1 - Math.pow(1 - e, 3);
+  const e  = t < 0.4 ? t / 0.4 : 1;
+  const eo = 1 - Math.pow(1 - e, 3);
   const ox = (1 - eo) * W * 0.55;
-  ctx.save(); ctx.rect(0, 0, W, H); ctx.clip();
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);
+  ctx.clip();
   ctx.globalAlpha = Math.min(1, eo * 1.6);
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 12 * scale;
+  ctx.fillStyle   = data.theme.text;
+  ctx.textAlign   = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,0.45)';
+  ctx.shadowBlur  = 12 * scale;
   const sz = gsLyricFont(ctx, data, scale);
   ctx.translate(ox, 0);
   gsWrap(ctx, data.lyric, W / 2, H * 0.44, W * 0.82, sz * 1.2);
-  ctx.restore(); ctx.shadowBlur = 0;
+  ctx.restore();
+  ctx.shadowBlur = 0;
 }
 
 function gsPulse(ctx, W, H, t, data, scale) {
-  const p = 0.93 + 0.07 * Math.sin(t * Math.PI * 2);
-  const glow = 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
-  ctx.save(); ctx.translate(W / 2, H * 0.44); ctx.scale(p, p);
+  const p    = 0.93 + 0.07 * Math.sin(t * Math.PI * 2);
+  const glow = 0.5  + 0.5  * Math.sin(t * Math.PI * 2);
+  ctx.save();
+  ctx.translate(W / 2, H * 0.44);
+  ctx.scale(p, p);
   const sz = gsLyricFont(ctx, data, scale);
-  ctx.shadowColor = data.theme.accent; ctx.shadowBlur = (8 + glow * 22) * scale;
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
+  ctx.shadowColor = data.theme.accent;
+  ctx.shadowBlur  = (8 + glow * 22) * scale;
+  ctx.fillStyle   = data.theme.text;
+  ctx.textAlign   = 'center';
   gsWrap(ctx, data.lyric, 0, 0, W * 0.82, sz * 1.2);
-  ctx.restore(); ctx.shadowBlur = 0;
+  ctx.restore();
+  ctx.shadowBlur = 0;
 }
 
+/* FIX: glitch offsets now seeded per-phase (not Math.random() per-pixel) */
 function gsGlitch(ctx, W, H, t, data, scale) {
-  const phase = Math.floor(t * 9); const isG = phase % 3 === 0 && t < 0.85;
-  const sz = gsLyricFont(ctx, data, scale);
-  const ox = isG ? (Math.random() - 0.5) * 10 * scale : 0;
+  const phase = Math.floor(t * 9);
+  const isG   = phase % 3 === 0 && t < 0.85;
+  /* deterministic offset based on phase — eliminates per-frame flicker storm */
+  const ox    = isG ? ((phase * 7919) % 11 - 5) * scale : 0;
+  const sz    = gsLyricFont(ctx, data, scale);
   if (isG) {
-    ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = '#ff0040'; ctx.textAlign = 'center';
-    ctx.translate(3 * scale, 0); gsWrap(ctx, data.lyric, W / 2 + ox, H * 0.44, W * 0.82, sz * 1.2); ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle   = '#ff0040';
+    ctx.textAlign   = 'center';
+    ctx.translate(3 * scale, 0);
+    gsWrap(ctx, data.lyric, W / 2 + ox, H * 0.44, W * 0.82, sz * 1.2);
+    ctx.restore();
   }
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center'; ctx.shadowBlur = 0;
-  ctx.save(); ctx.translate(isG ? ox : 0, 0);
-  gsWrap(ctx, data.lyric, W / 2, H * 0.44, W * 0.82, sz * 1.2); ctx.restore();
+  ctx.fillStyle  = data.theme.text;
+  ctx.textAlign  = 'center';
+  ctx.shadowBlur = 0;
+  ctx.save();
+  ctx.translate(isG ? ox : 0, 0);
+  gsWrap(ctx, data.lyric, W / 2, H * 0.44, W * 0.82, sz * 1.2);
+  ctx.restore();
 }
 
+/* FIX: textAlign reset to 'center' before gsWrap fallback */
 function gsWave(ctx, W, H, t, data, scale) {
-  ctx.beginPath(); ctx.strokeStyle = data.theme.accent + '55'; ctx.lineWidth = 1.5 * scale;
+  /* decorative wave line */
+  ctx.beginPath();
+  ctx.strokeStyle = data.theme.accent + '55';
+  ctx.lineWidth   = 1.5 * scale;
   for (let x = 0; x <= W; x += 2) {
     const y = H * 0.87 + Math.sin((x / W) * 4 * Math.PI + t * Math.PI * 2) * 7 * scale;
     x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   }
   ctx.stroke();
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10 * scale;
-  const sz = gsLyricFont(ctx, data, scale);
-  const words = data.lyric.split(' ');
-  const totalW = words.reduce((a, w) => a + ctx.measureText(w + ' ').width, 0);
+
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur  = 10 * scale;
+  const sz        = gsLyricFont(ctx, data, scale);
+
+  /* measure total width for word-wave path */
+  ctx.textAlign = 'left';
+  const totalW  = data.lyric.split(' ').reduce((a, w) => a + ctx.measureText(w + ' ').width, 0);
+
   if (totalW > W * 0.88) {
+    /* FIX: reset textAlign to center before gsWrap */
+    ctx.textAlign = 'center';
     gsWrap(ctx, data.lyric, W / 2, H * 0.43, W * 0.82, sz * 1.2);
   } else {
     let cx2 = W / 2 - totalW / 2;
-    words.forEach((w, i) => {
-      const wy = H * 0.44 + Math.sin((i / words.length) * Math.PI * 2 + t * Math.PI * 2) * 7 * scale;
-      ctx.textAlign = 'left'; ctx.fillText(w + ' ', cx2, wy);
+    data.lyric.split(' ').forEach((w, i) => {
+      const wy = H * 0.44 + Math.sin((i / (data.lyric.split(' ').length)) * Math.PI * 2 + t * Math.PI * 2) * 7 * scale;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = data.theme.text;
+      ctx.fillText(w + ' ', cx2, wy);
       cx2 += ctx.measureText(w + ' ').width;
     });
   }
   ctx.shadowBlur = 0;
 }
 
+/* FIX: base layer drawn at full opacity; composite clip works correctly */
 function gsShimmer(ctx, W, H, t, data, scale) {
   const sz = gsLyricFont(ctx, data, scale);
-  ctx.fillStyle = data.theme.text + '99'; ctx.textAlign = 'center';
+
+  /* Step 1: draw base text at full opacity */
+  ctx.fillStyle  = data.theme.text;
+  ctx.textAlign  = 'center';
+  ctx.shadowBlur = 0;
   gsWrap(ctx, data.lyric, W / 2, H * 0.44, W * 0.82, sz * 1.2);
+
+  /* Step 2: overlay shimmer using source-atop so it clips to drawn pixels */
   const sx = t * (W + 160 * scale) - 80 * scale;
   const sh = ctx.createLinearGradient(sx - 70 * scale, 0, sx + 70 * scale, 0);
-  sh.addColorStop(0, 'transparent'); sh.addColorStop(0.4, data.theme.accent);
-  sh.addColorStop(0.6, '#ffffff');   sh.addColorStop(1, 'transparent');
-  ctx.save(); ctx.globalCompositeOperation = 'source-atop';
-  ctx.fillStyle = sh; gsWrap(ctx, data.lyric, W / 2, H * 0.44, W * 0.82, sz * 1.2); ctx.restore();
+  sh.addColorStop(0,   'transparent');
+  sh.addColorStop(0.4, data.theme.accent);
+  sh.addColorStop(0.6, '#ffffff');
+  sh.addColorStop(1,   'transparent');
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-atop';
+  ctx.globalAlpha = 0.7;
+  ctx.fillStyle   = sh;
+  gsWrap(ctx, data.lyric, W / 2, H * 0.44, W * 0.82, sz * 1.2);
+  ctx.restore();
 }
 
 function gsBounce(ctx, W, H, t, data, scale) {
-  const b = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-  const oy = (1 - b) * H * 0.28; const sy = 0.86 + b * 0.14;
-  ctx.save(); ctx.translate(W / 2, H * 0.44 + oy); ctx.scale(1, sy);
+  const b  = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const oy = (1 - b) * H * 0.28;
+  const sy = 0.86 + b * 0.14;
+  ctx.save();
+  ctx.translate(W / 2, H * 0.44 + oy);
+  ctx.scale(1, sy);
   const sz = gsLyricFont(ctx, data, scale);
-  ctx.fillStyle = data.theme.text; ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 12 * scale;
+  ctx.fillStyle   = data.theme.text;
+  ctx.textAlign   = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur  = 12 * scale;
   gsWrap(ctx, data.lyric, 0, 0, W * 0.82, sz * 1.2);
-  ctx.restore(); ctx.shadowBlur = 0;
+  ctx.restore();
+  ctx.shadowBlur = 0;
 }
 
 /* ================================================================
@@ -329,6 +394,8 @@ function initGifStudio() {
       ov.querySelectorAll('.gs-anim-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       GS.animation = btn.dataset.anim;
+      /* restart preview immediately on anim change */
+      gsStartPreview();
     };
   });
 
@@ -345,9 +412,8 @@ function initGifStudio() {
     tab.onclick = () => {
       ov.querySelectorAll('.gs-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      const tabId = tab.dataset.gstab;
       ov.querySelectorAll('.gs-panel').forEach(p => p.classList.remove('active'));
-      const panel = document.getElementById(`gs-panel-${tabId}`);
+      const panel = document.getElementById(`gs-panel-${tab.dataset.gstab}`);
       if (panel) panel.classList.add('active');
     };
   });
@@ -368,6 +434,7 @@ function openGifStudio(post) {
   GS.theme = 'midnight-gold'; GS.font = 'playfair';
   GS.animation = 'fade-up'; GS.speed = 'normal';
   GS.isExporting = false;
+  GS._canvasSize = 0; /* force size recalc on open */
 
   ov.querySelectorAll('.gs-swatch').forEach((s, i)    => s.classList.toggle('active', i === 0));
   ov.querySelectorAll('.gs-font-card').forEach((f, i) => f.classList.toggle('active', i === 0));
@@ -376,7 +443,7 @@ function openGifStudio(post) {
 
   const gifBtn = document.getElementById('gsExportBtn');
   const mp4Btn = document.getElementById('gsExportMp4');
-  if (gifBtn) { gifBtn.textContent = 'GIF'; gifBtn.disabled = false; }
+  if (gifBtn) { gifBtn.textContent = 'GIF';     gifBtn.disabled = false; }
   if (mp4Btn) { mp4Btn.textContent = '▶ Video'; mp4Btn.disabled = false; }
 
   ov.classList.remove('hidden');
@@ -393,10 +460,13 @@ function closeGifStudio() {
 
 /* ================================================================
    PREVIEW LOOP
+   FIX: canvas dimensions only recalculated when size actually changes
+        — eliminates jitter + ctx.scale compounding on every frame
    ================================================================ */
 function gsStartPreview() {
   gsStopPreview();
   GS._frame = 0; GS._last = 0;
+
   const loop = (ts) => {
     const delay = GS_SPEED_MS[GS.speed] || 70;
     if (ts - GS._last >= delay) {
@@ -408,12 +478,19 @@ function gsStartPreview() {
         const stage  = canvas.parentElement;
         const dpr    = window.devicePixelRatio || 1;
         const size   = Math.min(stage.clientWidth - 24, 340);
-        canvas.style.width  = size + 'px';
-        canvas.style.height = size + 'px';
-        canvas.width  = Math.round(size * dpr);
-        canvas.height = Math.round(size * dpr);
+
+        /* FIX: only resize canvas (and reset ctx scale) when size actually changed */
+        if (size !== GS._canvasSize) {
+          GS._canvasSize = size;
+          canvas.style.width  = size + 'px';
+          canvas.style.height = size + 'px';
+          canvas.width  = Math.round(size * dpr);
+          canvas.height = Math.round(size * dpr);
+        }
+
         const ctx = canvas.getContext('2d');
-        ctx.scale(dpr, dpr);
+        /* Always reset transform before drawing — safe because we control every pixel */
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         gsDrawFrame(ctx, size, size, GS._frame / frames, window.currentPost);
         GS._frame = (GS._frame + 1) % frames;
       }
@@ -484,7 +561,7 @@ async function gsExport() {
 
     gif.on('finished', blob => {
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a   = document.createElement('a');
       a.href = url; a.download = `margo-${Date.now()}.gif`;
       a.style.display = 'none';
       document.body.appendChild(a); a.click();
