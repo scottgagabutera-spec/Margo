@@ -1,5 +1,5 @@
 /* ============================================================
-   MARGO — js/duet-export.js  v2.0
+   MARGO — js/duet-export.js  v2.1
    Pure canvas export — no html2canvas, no DOM screenshots.
    Same approach as gif-studio.js: draw everything with ctx calls.
 
@@ -185,7 +185,6 @@
     const bubH     = uFsz * 1.5 + bPad * 2 + lh * 3.5 + songFsz * 2.4 + bPad;
     const divH     = Math.max(24, B * 0.044);
     const barH     = Math.max(40, B * 0.062);
-    const wmarkH   = Math.max(20, B * 0.032);
 
     /* animation states — stagger right bubble by 18% */
     const animL = _animState(mot, t01, 0);
@@ -544,14 +543,14 @@
       off.height = H;
       const oc   = off.getContext('2d');
 
+      /* ── FIXED: use local worker path + quality/dither matching gif-studio.js ── */
       const gif = new GIF({
-        workers: 4,
-        quality: 2,
-        width:   W,
-        height:  H,
-        workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',
-        dither: 'FloydSteinberg',
-        globalPalette: false,
+        workers:      4,
+        quality:      1,
+        width:        W,
+        height:       H,
+        workerScript: '/js/gif.worker.js',
+        dither:       false,
       });
 
       for (let i = 0; i < FRAMES; i++) {
