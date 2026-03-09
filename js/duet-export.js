@@ -138,6 +138,67 @@
      GIF EXPORT
   ════════════════════════════════════════ */
 
+  /*
+   * Per-frame inline style computer.
+   * html2canvas cannot see CSS @keyframes — it always captures the element
+   * at its static/initial state. So for export we skip CSS animations entirely
+   * and instead compute opacity + transform inline for each frame index.
+   *
+   * t01  = frame progress 0..1 over the full animation cycle
+   * delay = normalised delay offset (0..1) so elements stagger correctly
+   */
+  function _frameStyle(mot, t01, delayN) {
+    // shift t01 by delay, wrap around 0..1
+    let p = (t01 - delayN + 1) % 1;
+
+    // ease in-out curve
+    const ease = p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
+
+    // fade window: visible 20%–80% of cycle
+    const inWindow  = p > 0.08 && p < 0.88;
+    const fadeIn    = p < 0.25 ? p / 0.25 : 1;
+    const fadeOut   = p > 0.75 ? 1 - (p - 0.75) / 0.13 : 1;
+    const opacity   = inWindow ? Math.min(fadeIn, fadeOut) : Math.max(0, p < 0.08 ? p / 0.08 : 1 - (p - 0.88) / 0.12);
+
+    if (mot === 'fade-up') {
+      const oy = (1 - ease) * 20;
+      return `opacity:${opacity.toFixed(3)};transform:translateY(${oy.toFixed(1)}px)`;
+    }
+    if (mot === 'slide-in') {
+      const ox = (1 - ease) * -30;
+      return `opacity:${opacity.toFixed(3)};transform:translateX(${ox.toFixed(1)}px)`;
+    }
+    if (mot === 'pulse') {
+      const sc = 0.93 + 0.07 * Math.sin(p * Math.PI * 2);
+      return `opacity:${(0.4 + 0.6 * Math.abs(Math.sin(p * Math.PI))).toFixed(3)};transform:scale(${sc.toFixed(3)})`;
+    }
+    if (mot === 'bounce') {
+      const oy = (1 - ease) * -18;
+      return `opacity:${opacity.toFixed(3)};transform:translateY(${oy.toFixed(1)}px)`;
+    }
+    if (mot === 'wave') {
+      const oy = Math.sin(p * Math.PI * 2) * 10;
+      return `opacity:${opacity.toFixed(3)};transform:translateY(${oy.toFixed(1)}px)`;
+    }
+    if (mot === 'glitch') {
+      const isG = Math.floor(p * 9) % 3 === 0 && p < 0.85;
+      const ox  = isG ? (Math.random() - 0.5) * 10 : 0;
+      const fil = isG ? 'hue-rotate(90deg) brightness(1.4)' : 'none';
+      return `opacity:1;transform:translateX(${ox.toFixed(1)}px);filter:${fil}`;
+    }
+    if (mot === 'shimmer') {
+      // shimmer: background-position moves — express as translateX on a gradient overlay
+      return `opacity:1`;
+    }
+    if (mot === 'typewriter') {
+      const chars = Math.floor(p * 100);
+      return `opacity:1;clip-path:inset(0 ${Math.max(0,100-chars)}% 0 0)`;
+    }
+    // default: fade-up
+    const oy = (1 - ease) * 20;
+    return `opacity:${opacity.toFixed(3)};transform:translateY(${oy.toFixed(1)}px)`;
+  }
+
   async function exportGif(plat, action) {
     const DS       = window._DS;
     const themes   = window._DSThemes;
@@ -154,6 +215,7 @@
     const FRAMES = 24;
     const DELAY  = Math.round((DS.dur * 1000) / FRAMES);
     const color  = '#00E5FF';
+    const mot    = DS.motion;
 
     if (dlBtn) dlBtn.disabled = true;
     if (shBtn) shBtn.disabled = true;
@@ -176,27 +238,50 @@
         globalPalette: false,
       });
 
-      // Inject the animated HTML once into the offscreen div and let it run.
-      // Capture a frame every DELAY ms so CSS animations actually progress between frames.
-      const el = _getOff();
-      el.style.width  = W + 'px';
-      el.style.height = H + 'px';
-      el.innerHTML = buildFn(W, H, t, false);  // false = animated (not still)
-      // Wait one frame for the browser to paint before starting captures
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
       for (let i = 0; i < FRAMES; i++) {
         _setProgress(btn, Math.round((i / FRAMES) * 72), 'Frame ' + (i + 1) + '/' + FRAMES, color);
+
+        // Build a still frame first, then patch in per-element inline styles
+        const html = buildFn(W, H, t, true);
+
+        // Parse into a temp element so we can surgically apply per-frame styles
+        const el = _getOff();
+        el.style.width  = W + 'px';
+        el.style.height = H + 'px';
+        el.innerHTML    = html;
+
+        const t01 = i / FRAMES;
+
+        // Target the animated elements by their data attributes or structure.
+        // duet-sheet builds: left bubble, divider, right bubble each with
+        // animation strings at delays 0.10, 0.30, 0.50 of the full cycle.
+        // We replicate those same delays here.
+        const delayMap = [0.10, 0.30, 0.50];
+        const animated = el.querySelectorAll('[style*="align-self"]');
+        animated.forEach((node, idx) => {
+          const d = (delayMap[idx] || 0) / DS.dur; // normalise delay to 0..1
+          const fs = _frameStyle(mot, t01, d);
+          node.style.cssText += ';' + fs;
+        });
+
+        // Also animate lyric text nodes (first div inside each bubble card)
+        el.querySelectorAll('[style*="line-height:1.42"], [style*="line-height:1.38"]').forEach((node, idx) => {
+          const d = (idx === 0 ? 0.10 : 0.50) / DS.dur;
+          const fs = _frameStyle(mot, t01, d);
+          node.style.cssText += ';' + fs;
+        });
+
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
         const snap = await window.html2canvas(el, {
           width: W, height: H, scale: 1,
           backgroundColor: null, logging: false,
           useCORS: true, allowTaint: true, foreignObjectRendering: false,
         });
         gif.addFrame(snap, { copy: true, delay: DELAY });
-        // Wait DELAY ms so the CSS animation moves forward before next capture
-        await new Promise(r => setTimeout(r, DELAY));
+        el.innerHTML = '';
+        await new Promise(r => setTimeout(r, 4));
       }
-      el.innerHTML = '';
 
       gif.on('progress', p =>
         _setProgress(btn, Math.round(72 + p * 26), 'Encoding ' + Math.round(72 + p * 26) + '%', color)
