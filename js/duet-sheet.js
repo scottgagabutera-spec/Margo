@@ -300,7 +300,7 @@ let _offEl=null;
 function _getOff(){
   if(_offEl)return _offEl;
   _offEl=document.createElement('div');
-  _offEl.style.cssText='position:fixed;left:-99999px;top:0;z-index:-1;pointer-events:none;overflow:hidden';
+  _offEl.style.cssText='position:fixed;left:0;top:0;z-index:9999;pointer-events:none;overflow:hidden;opacity:0';
   document.body.appendChild(_offEl);
   return _offEl;
 }
