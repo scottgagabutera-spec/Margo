@@ -176,13 +176,27 @@
         globalPalette: false,
       });
 
+      // Inject the animated HTML once into the offscreen div and let it run.
+      // Capture a frame every DELAY ms so CSS animations actually progress between frames.
+      const el = _getOff();
+      el.style.width  = W + 'px';
+      el.style.height = H + 'px';
+      el.innerHTML = buildFn(W, H, t, false);  // false = animated (not still)
+      // Wait one frame for the browser to paint before starting captures
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
       for (let i = 0; i < FRAMES; i++) {
         _setProgress(btn, Math.round((i / FRAMES) * 72), 'Frame ' + (i + 1) + '/' + FRAMES, color);
-        const html = buildFn(W, H, t, 'animated');
-        const snap = await _captureFrame(html, W, H);
+        const snap = await window.html2canvas(el, {
+          width: W, height: H, scale: 1,
+          backgroundColor: null, logging: false,
+          useCORS: true, allowTaint: true, foreignObjectRendering: false,
+        });
         gif.addFrame(snap, { copy: true, delay: DELAY });
-        await new Promise(r => setTimeout(r, 4));
+        // Wait DELAY ms so the CSS animation moves forward before next capture
+        await new Promise(r => setTimeout(r, DELAY));
       }
+      el.innerHTML = '';
 
       gif.on('progress', p =>
         _setProgress(btn, Math.round(72 + p * 26), 'Encoding ' + Math.round(72 + p * 26) + '%', color)
@@ -253,7 +267,7 @@
       _setProgress(btn, 30, 'Rendering…', color);
 
       const t    = themes[DS.bgColor] || themes['#07060E'];
-      const html = buildFn(W, H, t, 'still');
+      const html = buildFn(W, H, t, true);
       const snap = await _captureFrame(html, W, H);
 
       _setProgress(btn, 85, 'Saving…', color);
