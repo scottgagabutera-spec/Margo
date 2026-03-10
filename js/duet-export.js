@@ -332,63 +332,81 @@ function drawConvoFrame(ctx, W, H, t, DS, theme) {
       ctx.fillStyle = col; ctx.fill();
     }
 
-    /* lyric */
-    const lFs    = q(B * 0.048);
-    const lLineH = lFs * 1.42;
+    /* lyric — clamped to 3 lines max to prevent overflow into meta */
+    const lFs    = q(B * 0.040);
+    const lLineH = q(lFs * 1.45);
     const lX     = dx + bW*0.07;
-    const lY     = dy + q(bH * 0.22);
+    const lY     = dy + q(bH * 0.15);
     const lMaxW  = bW * 0.86;
+    const maxLyricLines = 3;
     ctx.font         = `${italic?'italic ':''}600 ${lFs}px ${fStack(ff)}`;
     ctx.textAlign    = 'left'; ctx.textBaseline = 'top';
 
+    /* clamp wrap to maxLines */
+    function wrapClamped(txt, x, y, maxW, lh, maxL) {
+      const words = String(txt||'').split(' ');
+      let line='', lines=[];
+      words.forEach(w=>{
+        const test=line+w+' ';
+        if(ctx.measureText(test).width>maxW&&line){lines.push(line.trim());line=w+' ';}
+        else line=test;
+      });
+      if(line.trim())lines.push(line.trim());
+      if(lines.length>maxL){lines=lines.slice(0,maxL);lines[maxL-1]=lines[maxL-1].replace(/\s*\w+\s*$/,'…');}
+      lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lh));
+      return lines.length;
+    }
+
     if (mot === 'shimmer') {
-      ctx.fillStyle = bodyTxt; wrap(ctx, lyric, lX, lY, lMaxW, lLineH);
+      ctx.fillStyle = bodyTxt; wrapClamped(lyric, lX, lY, lMaxW, lLineH, maxLyricLines);
       const sx = (t*(bW+80*scale)) - 40*scale + dx;
       const sh = ctx.createLinearGradient(sx-40*scale, 0, sx+40*scale, 0);
       sh.addColorStop(0,'transparent'); sh.addColorStop(0.4,theme.acc);
       sh.addColorStop(0.6,'#ffffff');   sh.addColorStop(1,'transparent');
       ctx.save(); ctx.globalCompositeOperation='source-atop'; ctx.globalAlpha=0.7;
-      ctx.fillStyle=sh; wrap(ctx,lyric,lX,lY,lMaxW,lLineH); ctx.restore();
+      ctx.fillStyle=sh; wrapClamped(lyric,lX,lY,lMaxW,lLineH,maxLyricLines); ctx.restore();
     } else if (mot === 'typewriter') {
       const chars = Math.floor(animT(delay) * (lyric.length + 4));
       const vis   = lyric.substring(0, Math.min(chars, lyric.length));
       const cur   = chars <= lyric.length && (Math.floor(t*10)%2===0) ? '|' : '';
-      ctx.fillStyle = bodyTxt; wrap(ctx, vis+cur, lX, lY, lMaxW, lLineH);
+      ctx.fillStyle = bodyTxt; wrapClamped(vis+cur, lX, lY, lMaxW, lLineH, maxLyricLines);
     } else {
       ctx.fillStyle   = bodyTxt;
       ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 5*scale;
-      wrap(ctx, lyric, lX, lY, lMaxW, lLineH);
+      wrapClamped(lyric, lX, lY, lMaxW, lLineH, maxLyricLines);
       ctx.shadowBlur = 0;
     }
 
-    /* divider */
-    const divY = dy + q(bH * 0.72);
+    /* divider — fixed distance from bubble bottom so meta always has room */
+    const metaH  = q(bH * 0.28); /* reserve 28% of bubble for meta section */
+    const divY   = dy + bH - metaH;
     ctx.strokeStyle = light ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
     ctx.lineWidth   = Math.max(1, scale*0.7);
     ctx.beginPath(); ctx.moveTo(dx+bW*0.04, divY); ctx.lineTo(dx+bW*0.96, divY); ctx.stroke();
 
     /* song / artist */
-    const sFs2 = q(B*0.034), aFs2 = q(B*0.024);
-    const mY   = divY + q(bH * 0.04);
+    const sFs2 = q(B*0.028), aFs2 = q(B*0.020);
+    const mY   = divY + q(metaH * 0.08);
     ctx.textBaseline = 'top'; ctx.textAlign = 'left'; ctx.shadowBlur = 0;
     ctx.font      = `700 ${sFs2}px 'DM Sans',sans-serif`;
     ctx.fillStyle = bodyTxt; ctx.fillText(song, dx+bW*0.05, mY);
     ctx.font      = `400 ${aFs2}px 'Space Mono',monospace`;
-    ctx.fillStyle = mutedTxt; ctx.fillText(artist, dx+bW*0.05, mY+sFs2*1.2);
+    ctx.fillStyle = mutedTxt; ctx.fillText(artist, dx+bW*0.05, mY+sFs2*1.15);
 
-    /* emotion pill */
+    /* emotion pill — anchored to meta area */
     if (emotion) {
-      const eFs = q(B*0.024);
+      const eFs = q(B*0.020);
       ctx.font  = `800 ${eFs}px 'Syne','DM Sans',sans-serif`;
       const etW = ctx.measureText(emotion).width;
-      const epX = q(B*0.018), epY2 = q(B*0.014);
+      const epX = q(B*0.015), epY2 = q(B*0.011);
       const epW = etW+epX*2, epH = eFs+epY2*2;
-      const epL = dx+bW*0.95-epW, epT = mY+(sFs2*1.2+aFs2)/2-epH/2;
+      const epCy = mY + sFs2*0.6; /* vertically centered in meta top row */
+      const epL  = dx+bW*0.94-epW, epT = epCy - epH/2;
       roundRect(ctx, epL, epT, epW, epH, epH/2);
       ctx.fillStyle   = col+'25'; ctx.fill();
       ctx.strokeStyle = col+'55'; ctx.lineWidth = scale; ctx.stroke();
       ctx.fillStyle   = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(emotion, epL+epW/2, epT+epH/2);
+      ctx.fillText(emotion, epL+epW/2, epCy);
     }
     ctx.restore();
   }
@@ -671,9 +689,11 @@ function _startPreview() {
         const ctx    = canvas.getContext('2d');
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         const isCard = document.getElementById('dsViewCard')?.style.display !== 'none';
-        if (isCard) drawCardFrame(ctx, w, h, PV._frame/24, DS, theme);
-        else        drawConvoFrame(ctx, w, h, PV._frame/24, DS, theme);
-        PV._frame = (PV._frame + 1) % 24;
+        const isPoster = DS.format === 'poster';
+        const frameT = isPoster ? 1 : PV._frame/24;
+        if (isCard) drawCardFrame(ctx, w, h, frameT, DS, theme);
+        else        drawConvoFrame(ctx, w, h, frameT, DS, theme);
+        if (!isPoster) PV._frame = (PV._frame + 1) % 24;
       }
     }
     PV._raf = requestAnimationFrame(loop);
