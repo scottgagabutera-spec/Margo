@@ -790,19 +790,20 @@ async function _dsExportPoster(plat,action){
   const dlBtn=document.getElementById('dsBtnDownload'),shBtn=document.getElementById('dsBtnShare');
   const btn=action==='download'?dlBtn:shBtn;
   const origDl=dlBtn?dlBtn.innerHTML:'',origSh=shBtn?shBtn.innerHTML:'';
+  const isCard=document.getElementById('dsViewCard').style.display==='none';
   const W=plat.w,H=plat.h,color='#E8C547';
   if(dlBtn)dlBtn.disabled=true;if(shBtn)shBtn.disabled=true;
   _dsSetProgress(btn,0,'Preparing\u2026',color);
   try{
     await _dsPreloadFonts();
     _dsSetProgress(btn,30,'Rendering\u2026',color);
+    const t=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'];
     const off=document.createElement('canvas');off.width=W;off.height=H;
     const oc=off.getContext('2d');
-    if(typeof window._duetPosterDraw==='function'){
-      window._duetPosterDraw(oc,W,H,DS);
-    } else if(typeof window._duetDrawCard==='function'){
-      window._duetDrawCard(oc,W,H,null,DS);
-    }
+    const drawFn=isCard
+      ?(window._duetDrawCard||function(){})
+      :(window._duetDrawConvo||function(){});
+    drawFn(oc,W,H,null,DS,t);
     _dsSetProgress(btn,85,'Saving\u2026',color);
     const name=((DS.parentPost&&(DS.parentPost.knowledge&&DS.parentPost.knowledge.song||DS.parentPost.song))||'duet').replace(/\s+/g,'-').toLowerCase();
     const fname='margo-poster-'+name+'-'+plat.id+'.png';
