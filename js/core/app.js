@@ -1,6 +1,7 @@
 /* ============================================================
-   MARGO — js/app.js
-   v6.1 — concept-v2 branch:
+   MARGO — js/core/app.js
+   v6.2 — concept-v2-clean:
+          • initStudio() call removed — studio.js self-inits
           • patchStudioBackButtons uses onclick (overrides studio.js addEventListener)
           • closeStudio() called via window.closeStudio() for full state cleanup
           • studios return via reopenShareSheet()
@@ -153,12 +154,11 @@ function setupScrollToTop() {
 /* ────────────────────────────────────────────────────────────
    STUDIO BACK BUTTON PATCH
    Uses .onclick to fully override any addEventListener bound
-   earlier by studio.js initStudio(). Single handler, no double-fire.
+   earlier by studio.js. Single handler, no double-fire.
    Calls window.closeStudio() / window.closeGifStudio() for full
    state cleanup, then reopens the share sheet.
 ──────────────────────────────────────────────────────────── */
 function patchStudioBackButtons() {
-  // Image studio — .onclick overrides any prior addEventListener
   const closeStudioBtn = document.getElementById('closeStudio');
   if (closeStudioBtn) {
     closeStudioBtn.onclick = (e) => {
@@ -173,7 +173,6 @@ function patchStudioBackButtons() {
     };
   }
 
-  // GIF studio — same pattern
   const closeGifBtn = document.getElementById('closeGifStudio');
   if (closeGifBtn) {
     closeGifBtn.onclick = (e) => {
@@ -230,13 +229,9 @@ initRoomTabs();
 if (typeof initCardTilt === 'function') initCardTilt();
 initComposer();
 
-try {
-  initStudio();
-} catch (err) {
-  console.warn('[Margo] initStudio error (non-fatal):', err.message);
-}
+// NOTE: initStudio() removed — studio.js self-initialises on DOMContentLoaded
 
-// concept-v2 patches — run AFTER initStudio() so .onclick overrides addEventListener
+// concept-v2 patches — run after DOM is ready
 patchStudioBackButtons();
 patchComposerForShareSheet();
 wireSharPosterBtn();
@@ -244,4 +239,4 @@ wireSharPosterBtn();
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v6.1 concept-v2 — studio back buttons patched, share sheet active.');
+console.log('MARGO v6.2 concept-v2-clean — duet sheet active, studio self-init.');
