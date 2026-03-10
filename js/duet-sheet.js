@@ -681,13 +681,16 @@ function _dsSwitchFormat(fmt){
     if(dlL)dlL.textContent='Download GIF';if(shL)shL.textContent='Share GIF';
     if(dl)dl.querySelector('.ds-export-icon').textContent='\u2193';
     if(sh)sh.querySelector('.ds-export-icon').textContent='\u2197';
+    /* show motion tab for GIF */
     const mt=document.querySelector('[data-opt="motion"]');if(mt)mt.style.display='';
   }else{
     if(dl)dl.className='ds-export-btn ds-btn-dl-poster';if(sh)sh.className='ds-export-btn ds-btn-sh-poster';
     if(dlL)dlL.textContent='Download Poster';if(shL)shL.textContent='Share Poster';
     if(dl)dl.querySelector('.ds-export-icon').textContent='\u2193';
     if(sh)sh.querySelector('.ds-export-icon').textContent='\u2197';
+    /* hide motion tab — posters are still images */
     const mt=document.querySelector('[data-opt="motion"]');if(mt)mt.style.display='none';
+    /* if motion was active, switch to color */
     const ao=document.querySelector('.ds-option-tab.active');
     if(ao&&ao.dataset.opt==='motion'){
       document.querySelectorAll('.ds-option-tab').forEach(b=>b.classList.remove('active'));
