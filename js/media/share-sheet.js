@@ -11,7 +11,10 @@
      reopenShareSheet()
        Called by studios' back buttons — brings sheet back to front
 
-   v1.1 — z-index raised to 700 so it sits above echo sheet (650)
+   v1.2 — Duet canvas renderer added
+          When isDuet=true, preview draws both lyrics (conversation
+          layout) instead of the single-post fallback.
+          z-index 700 — sits above echo sheet (650).
    ============================================================ */
 
 /* ── Shared state ── */
@@ -151,6 +154,21 @@ function injectShareSheetStyles() {
       animation: ssDotPulse 1.8s ease-in-out infinite;
     }
     @keyframes ssDotPulse { 0%,100%{opacity:0.7;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
+
+    /* Duet badge shown in header when isDuet */
+    .ss-duet-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-family: 'Space Mono', monospace; font-size: 0.44rem;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      padding: 3px 9px; border-radius: 20px;
+      background: rgba(232,197,71,0.09);
+      border: 1px solid rgba(232,197,71,0.25);
+      color: #E8C547; margin-top: 4px;
+    }
+    .ss-duet-badge-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: #E8C547; opacity: 0.8;
+    }
 
     .ss-canvas-wrap {
       padding: 14px 18px; flex-shrink: 0;
@@ -309,6 +327,436 @@ const SS_EMOTION_CFG = {
 const SS_EMOTION_DEFAULT = { bg:'rgba(232,197,71,0.11)', text:'#E8C547', border:'rgba(232,197,71,0.25)' };
 
 /* ────────────────────────────────────────────────────────────
+   DUET CANVAS RENDERER
+   Draws the conversation layout (two bubbles + divider) directly
+   on canvas — matches the prototype's conversation view.
+──────────────────────────────────────────────────────────── */
+
+/**
+ * ssDrawDuet — renders the full duet conversation layout onto a canvas context.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} W   — canvas logical width  (already scaled by dpr upstream)
+ * @param {number} H   — canvas logical height
+ * @param {object} post      — original post  { text, emotion, knowledge: {song, artist}, username }
+ * @param {object} echoPost  — echo post       { text, emotion, knowledge: {song, artist}, username }
+ */
+function ssDrawDuet(ctx, W, H, post, echoPost) {
+  const acc   = '#E8C547';
+  const leftC = '#FF6B9D';   // original post colour
+  const rightC= '#6B8CFF';   // echo colour
+
+  /* ── background ── */
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0c0a04');
+  bg.addColorStop(1, '#1a1306');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  /* subtle noise overlay via repeated small dots */
+  ctx.save();
+  ctx.globalAlpha = 0.025;
+  for (let i = 0; i < W; i += 4) {
+    for (let j = 0; j < H; j += 4) {
+      if (Math.random() > 0.5) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(i, j, 1, 1);
+      }
+    }
+  }
+  ctx.restore();
+
+  /* top-left glow */
+  const gl1 = ctx.createRadialGradient(W * 0.15, H * 0.2, 0, W * 0.15, H * 0.2, W * 0.55);
+  gl1.addColorStop(0, 'rgba(232,197,71,0.14)');
+  gl1.addColorStop(1, 'transparent');
+  ctx.fillStyle = gl1;
+  ctx.fillRect(0, 0, W, H);
+
+  /* bottom-right glow */
+  const gl2 = ctx.createRadialGradient(W * 0.85, H * 0.8, 0, W * 0.85, H * 0.8, W * 0.5);
+  gl2.addColorStop(0, 'rgba(107,140,255,0.1)');
+  gl2.addColorStop(1, 'transparent');
+  ctx.fillStyle = gl2;
+  ctx.fillRect(0, 0, W, H);
+
+  /* top edge line */
+  const el = ctx.createLinearGradient(0, 0, W, 0);
+  el.addColorStop(0, 'transparent');
+  el.addColorStop(0.4, 'rgba(255,107,157,0.35)');
+  el.addColorStop(1, 'transparent');
+  ctx.fillStyle = el;
+  ctx.fillRect(0, 0, W, 2);
+
+  /* bottom edge line */
+  const el2 = ctx.createLinearGradient(0, 0, W, 0);
+  el2.addColorStop(0, 'transparent');
+  el2.addColorStop(0.6, 'rgba(107,140,255,0.28)');
+  el2.addColorStop(1, 'transparent');
+  ctx.fillStyle = el2;
+  ctx.fillRect(0, H - 2, W, 2);
+
+  const pad  = Math.round(W * 0.052);
+  const usW  = W - pad * 2;   // usable width
+
+  /* ── MARGO wordmark (faint, top-left) ── */
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle   = acc;
+  ctx.font        = `800 ${Math.round(W * 0.032)}px 'Syne', sans-serif`;
+  ctx.textAlign   = 'left';
+  ctx.letterSpacing = '0.22em';
+  ctx.fillText('MARGO', pad, pad + Math.round(W * 0.032));
+  ctx.restore();
+
+  /* ── layout zones ── */
+  const headerH  = Math.round(H * 0.09);
+  const songsH   = Math.round(H * 0.09);
+  const wmarkH   = Math.round(H * 0.055);
+  const divH     = Math.round(H * 0.072);
+  const bubblesH = H - headerH - songsH - wmarkH - divH - pad * 2;
+  const bubbleH  = Math.round((bubblesH - Math.round(H * 0.025)) / 2);
+
+  const zone = {
+    topBubble: { y: headerH, h: bubbleH },
+    divider:   { y: headerH + bubbleH + Math.round(H * 0.012) },
+    botBubble: { y: headerH + bubbleH + Math.round(H * 0.012) + divH + Math.round(H * 0.012), h: bubbleH },
+    songs:     { y: H - songsH - wmarkH - pad },
+    wmark:     { y: H - wmarkH - pad },
+  };
+
+  /* ─── helper: draw rounded rect ─── */
+  function rRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  /* ─── helper: wrap text, return lines array ─── */
+  function wrapLines(text, maxW, fontSize, fontStr) {
+    ctx.font = fontStr;
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  /* ─── helper: draw a single bubble card ─── */
+  function drawBubble(side, data, color, zoneY, zoneH) {
+    const bPad  = Math.round(W * 0.038);
+    const bRad  = Math.round(W * 0.032);
+    const bRad2 = Math.round(W * 0.006);
+    const maxBW = Math.round(usW * 0.86);
+
+    // username
+    const uFs    = Math.round(W * 0.024);
+    const uFont  = `800 ${uFs}px 'Syne', sans-serif`;
+    const dotSz  = Math.round(W * 0.009);
+    const dotGap = Math.round(W * 0.009);
+
+    ctx.font      = uFont;
+    ctx.fillStyle = color;
+    ctx.textAlign = side === 'left' ? 'left' : 'right';
+    const uLabel  = `@${(data.username || 'Anonymous').toUpperCase()}`;
+    const ux      = side === 'left' ? pad + dotSz + dotGap : W - pad;
+    const uy      = zoneY + uFs;
+
+    // dot
+    ctx.beginPath();
+    ctx.arc(
+      side === 'left' ? pad + dotSz / 2 : W - pad - dotSz / 2,
+      uy - uFs * 0.35,
+      dotSz / 2, 0, Math.PI * 2
+    );
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.fillStyle = color;
+    ctx.font      = uFont;
+    ctx.fillText(uLabel, ux, uy);
+
+    // card rect
+    const cardY = uy + Math.round(W * 0.012);
+    const lFs   = Math.round(W * 0.042);
+    const sFs   = Math.round(W * 0.026);
+    const aFs   = Math.round(W * 0.018);
+    const vFs   = Math.round(W * 0.016);
+    const innerW = maxBW - bPad * 2;
+    const lyricFont = `italic 600 ${lFs}px 'DM Serif Display', serif`;
+    const lyricLines = wrapLines(data.text || '', innerW, lFs, lyricFont);
+    const lyricH = lyricLines.length * Math.round(lFs * 1.42);
+    const metaH  = sFs + Math.round(W * 0.006) + aFs;
+    const cardH  = bPad * 2 + lyricH + Math.round(W * 0.018) + metaH;
+
+    const cardX = side === 'left' ? pad : W - pad - maxBW;
+
+    // card radii — pointed corner on inside
+    const tl = bRad, tr = bRad;
+    const bl = side === 'left' ? bRad2 : bRad;
+    const br = side === 'left' ? bRad  : bRad2;
+
+    // glass bg
+    ctx.save();
+    rRect(cardX, cardY, maxBW, cardH, bRad);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(cardX, cardY, maxBW, cardH);
+
+    // inner glow
+    const ig = ctx.createRadialGradient(
+      side === 'left' ? cardX : cardX + maxBW,
+      side === 'left' ? cardY : cardY + cardH,
+      0,
+      side === 'left' ? cardX : cardX + maxBW,
+      side === 'left' ? cardY : cardY + cardH,
+      maxBW * 0.7
+    );
+    ig.addColorStop(0, color.replace(')', ',0.07)').replace('rgb', 'rgba'));
+    ig.addColorStop(1, 'transparent');
+    ctx.fillStyle = ig;
+    ctx.fillRect(cardX, cardY, maxBW, cardH);
+
+    ctx.restore();
+
+    // card border
+    ctx.save();
+    rRect(cardX, cardY, maxBW, cardH, bRad);
+    ctx.strokeStyle = 'rgba(255,255,255,0.11)';
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+    ctx.restore();
+
+    // lyric text
+    ctx.fillStyle = '#ffffff';
+    ctx.font      = lyricFont;
+    ctx.textAlign = 'left';
+    lyricLines.forEach((line, i) => {
+      ctx.fillText(line, cardX + bPad, cardY + bPad + lFs + i * Math.round(lFs * 1.42) - Math.round(lFs * 0.15));
+    });
+
+    // divider line
+    const divY = cardY + bPad + lyricH + Math.round(W * 0.016);
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(cardX + bPad, divY);
+    ctx.lineTo(cardX + maxBW - bPad, divY);
+    ctx.stroke();
+
+    // song name
+    const songY = divY + Math.round(W * 0.014) + sFs;
+    ctx.fillStyle = '#ffffff';
+    ctx.font      = `700 ${sFs}px 'DM Sans', sans-serif`;
+    ctx.textAlign = 'left';
+    const songName = ((data.knowledge || {}).song || 'Unknown Song').substring(0, 28);
+    ctx.fillText(songName, cardX + bPad, songY);
+
+    // artist
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font      = `400 ${aFs}px 'Space Mono', monospace`;
+    const artist  = ((data.knowledge || {}).artist || '').substring(0, 28);
+    ctx.fillText(artist, cardX + bPad, songY + Math.round(W * 0.006) + aFs);
+
+    // emotion vibe pill (right side of meta)
+    const emotion = (data.emotion || 'Nostalgia').toUpperCase();
+    const ecfg    = SS_EMOTION_CFG[data.emotion] || SS_EMOTION_DEFAULT;
+    ctx.font      = `700 ${vFs}px 'Space Mono', monospace`;
+    const eW      = ctx.measureText(emotion).width + Math.round(W * 0.032);
+    const eH      = Math.round(vFs * 1.8);
+    const eX      = cardX + maxBW - bPad - eW;
+    const eY      = songY - Math.round(vFs * 0.2);
+    ctx.save();
+    rRect(eX, eY - eH * 0.78, eW, eH, eH / 2);
+    ctx.fillStyle = ecfg.bg.replace('0.11)', '0.22)').replace('0.13)', '0.22)');
+    ctx.fill();
+    ctx.strokeStyle = ecfg.border;
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = ecfg.text;
+    ctx.font      = `700 ${vFs}px 'Space Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(emotion, eX + eW / 2, eY + vFs * 0.1);
+
+    return cardY + cardH;  // return bottom Y for layout
+  }
+
+  /* ─── DRAW TOP BUBBLE (original post, left-aligned) ─── */
+  const topBottom = drawBubble('left', post, leftC, zone.topBubble.y, zone.topBubble.h);
+
+  /* ─── LYRIC BACK DIVIDER ─── */
+  const dvY    = zone.divider.y;
+  const dvH    = divH;
+  const dvMidY = dvY + dvH / 2;
+  const dvFs   = Math.round(W * 0.019);
+  const dvFont = `800 ${dvFs}px 'Syne', sans-serif`;
+  ctx.font     = dvFont;
+  const echoUName = (echoPost.username || 'Anonymous').toUpperCase();
+  const dvText    = `LYRIC BACK ↩ @${echoUName}`;
+  const dvTW      = ctx.measureText(dvText).width;
+  const dvPadH    = Math.round(W * 0.014);
+  const dvPadV    = Math.round(W * 0.01);
+  const pillW     = dvTW + dvPadH * 2;
+  const pillH     = dvFs + dvPadV * 2;
+  const pillX     = (W - pillW) / 2;
+  const pillY     = dvMidY - pillH / 2;
+
+  // lines either side
+  const lineY  = dvMidY;
+  const margin = Math.round(W * 0.028);
+
+  const ll = ctx.createLinearGradient(pad, 0, pillX - margin, 0);
+  ll.addColorStop(0, 'transparent');
+  ll.addColorStop(1, 'rgba(232,197,71,0.3)');
+  ctx.strokeStyle = ll;
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad, lineY);
+  ctx.lineTo(pillX - margin, lineY);
+  ctx.stroke();
+
+  const lr = ctx.createLinearGradient(pillX + pillW + margin, 0, W - pad, 0);
+  lr.addColorStop(0, 'rgba(232,197,71,0.3)');
+  lr.addColorStop(1, 'transparent');
+  ctx.strokeStyle = lr;
+  ctx.beginPath();
+  ctx.moveTo(pillX + pillW + margin, lineY);
+  ctx.lineTo(W - pad, lineY);
+  ctx.stroke();
+
+  // pill
+  ctx.save();
+  rRect(pillX, pillY, pillW, pillH, pillH / 2);
+  ctx.fillStyle   = 'rgba(232,197,71,0.09)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(232,197,71,0.28)';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = acc;
+  ctx.font      = dvFont;
+  ctx.textAlign = 'center';
+  ctx.fillText(dvText, W / 2, pillY + dvPadV + dvFs * 0.85);
+
+  /* ─── DRAW BOTTOM BUBBLE (echo, right-aligned) ─── */
+  drawBubble('right', echoPost, rightC, zone.botBubble.y, zone.botBubble.h);
+
+  /* ─── SONGS BAR ─── */
+  const sbY  = zone.songs.y;
+  const sbH  = Math.round(H * 0.075);
+  const sbR  = Math.round(W * 0.018);
+  ctx.save();
+  rRect(pad, sbY, usW, sbH, sbR);
+  ctx.fillStyle   = 'rgba(255,255,255,0.05)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+  ctx.restore();
+
+  const sbPad  = Math.round(W * 0.026);
+  const slFs   = Math.round(W * 0.018);
+  const ssFs   = Math.round(W * 0.022);
+  const saFs   = Math.round(W * 0.015);
+  const sbMidY = sbY + sbH / 2;
+
+  // "SONGS" label
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.font      = `800 ${slFs}px 'Syne', sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('SONGS', pad + sbPad, sbMidY + slFs * 0.35);
+
+  // left song name + artist
+  const postSong   = ((post.knowledge   || {}).song   || '').substring(0, 20);
+  const postArtist = ((post.knowledge   || {}).artist || '').substring(0, 20);
+  const echoSong   = ((echoPost.knowledge || {}).song   || '').substring(0, 20);
+  const echoArtist = ((echoPost.knowledge || {}).artist || '').substring(0, 20);
+  const sepX       = W / 2;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font      = `700 ${ssFs}px 'DM Sans', sans-serif`;
+  ctx.textAlign = 'right';
+  ctx.fillText(postSong, sepX - Math.round(W * 0.022), sbMidY);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font      = `400 ${saFs}px 'Space Mono', monospace`;
+  ctx.fillText(postArtist, sepX - Math.round(W * 0.022), sbMidY + saFs + Math.round(W * 0.005));
+
+  // separator arrow
+  ctx.fillStyle = acc;
+  ctx.font      = `700 ${ssFs}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.globalAlpha = 0.7;
+  ctx.fillText('↔', sepX, sbMidY + ssFs * 0.35);
+  ctx.globalAlpha = 1;
+
+  // right song name + artist
+  ctx.fillStyle = '#ffffff';
+  ctx.font      = `700 ${ssFs}px 'DM Sans', sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText(echoSong, sepX + Math.round(W * 0.022), sbMidY);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font      = `400 ${saFs}px 'Space Mono', monospace`;
+  ctx.fillText(echoArtist, sepX + Math.round(W * 0.022), sbMidY + saFs + Math.round(W * 0.005));
+
+  /* ─── WATERMARK ─── */
+  const wmY = zone.wmark.y + Math.round(W * 0.014);
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.font      = `700 ${Math.round(W * 0.016)}px 'Space Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('trymargo.com', W / 2, wmY);
+
+  /* ─── M MARK (bottom-right circle) ─── */
+  const mSz  = Math.round(Math.min(W, H) * 0.058);
+  const mX   = W - Math.round(W * 0.036) - mSz / 2;
+  const mY   = H - Math.round(H * 0.034) - mSz / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(mX, mY, mSz / 2, 0, Math.PI * 2);
+  ctx.fillStyle   = acc;
+  ctx.fill();
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur  = 12;
+  ctx.restore();
+  // M path inside
+  const mIC = mSz * 0.58;
+  const mFX = mX - mIC / 2;
+  const mFY = mY - mIC / 2;
+  const sc  = mIC / 46;
+  ctx.save();
+  ctx.strokeStyle = '#0B0B0D';
+  ctx.lineWidth   = 4 * sc;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.beginPath();
+  ctx.moveTo(mFX + 8  * sc, mFY + 32 * sc);
+  ctx.lineTo(mFX + 8  * sc, mFY + 14 * sc);
+  ctx.lineTo(mFX + 17 * sc, mFY + 24 * sc);
+  ctx.lineTo(mFX + 23 * sc, mFY + 12 * sc);
+  ctx.lineTo(mFX + 29 * sc, mFY + 24 * sc);
+  ctx.lineTo(mFX + 38 * sc, mFY + 14 * sc);
+  ctx.lineTo(mFX + 38 * sc, mFY + 32 * sc);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ────────────────────────────────────────────────────────────
    CANVAS PREVIEW RENDERER
 ──────────────────────────────────────────────────────────── */
 
@@ -331,6 +779,18 @@ function ssStartPreview(canvas) {
   canvas.width  = Math.round(size * dpr);
   canvas.height = Math.round(size * dpr);
 
+  /* ── DUET MODE: use our own renderer ── */
+  if (SS.isDuet && SS.echoPost) {
+    document.fonts.ready.then(() => {
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      ssDrawDuet(ctx, size, size, SS.post, SS.echoPost);
+    });
+    return;
+  }
+
+  /* ── SINGLE POST MODES (unchanged) ── */
   if (SS.activeTab === 'poster') {
     const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
@@ -444,8 +904,11 @@ function mountShareSheet() {
       <div class="ss-handle" id="ssDragHandle"></div>
       <div class="ss-header">
         <div class="ss-title-wrap">
-          <span class="ss-title">Share</span>
+          <span class="ss-title" id="ssTitle">Share</span>
           <span class="ss-lyric-preview" id="ssLyricPreview"></span>
+          <span class="ss-duet-badge" id="ssDuetBadge" style="display:none">
+            <span class="ss-duet-badge-dot"></span>LYRIC BACK
+          </span>
         </div>
         <button class="ss-close" id="ssClose" aria-label="Close">×</button>
       </div>
@@ -532,10 +995,28 @@ function openShareSheet(post, opts = {}) {
 
   window.currentPost = post;
 
-  populateSSInfoStrip(post);
+  // Duet badge visibility
+  const badge = document.getElementById('ssDuetBadge');
+  if (badge) badge.style.display = SS.isDuet ? 'inline-flex' : 'none';
+
+  // Header title
+  const title = document.getElementById('ssTitle');
+  if (title) title.textContent = SS.isDuet ? 'Lyric Back' : 'Share';
+
+  // Info strip — show both posts if duet
+  if (SS.isDuet && SS.echoPost) {
+    populateSSDuetInfoStrip(post, SS.echoPost);
+  } else {
+    populateSSInfoStrip(post);
+  }
 
   const prev = document.getElementById('ssLyricPreview');
-  if (prev) prev.textContent = (post.text || '').substring(0, 48) + (post.text?.length > 48 ? '…' : '');
+  if (prev) {
+    const previewText = SS.isDuet
+      ? `"${(post.text || '').substring(0, 32)}…" ↩ "${(SS.echoPost.text || '').substring(0, 24)}…"`
+      : (post.text || '').substring(0, 48) + (post.text?.length > 48 ? '…' : '');
+    prev.textContent = previewText;
+  }
 
   document.getElementById('ssTabGif')?.classList.add('active');
   document.getElementById('ssTabPoster')?.classList.remove('active');
@@ -602,7 +1083,7 @@ function switchSSTab(tab) {
 }
 
 /* ────────────────────────────────────────────────────────────
-   INFO STRIP
+   INFO STRIPS
 ──────────────────────────────────────────────────────────── */
 
 function populateSSInfoStrip(post) {
@@ -628,6 +1109,31 @@ function populateSSInfoStrip(post) {
   `;
 }
 
+function populateSSDuetInfoStrip(post, echoPost) {
+  const strip = document.getElementById('ssInfoStrip');
+  if (!strip) return;
+
+  const kP  = post.knowledge     || {};
+  const kE  = echoPost.knowledge || {};
+  const eP  = SS_EMOTION_CFG[post.emotion]      || SS_EMOTION_DEFAULT;
+  const eE  = SS_EMOTION_CFG[echoPost.emotion]  || SS_EMOTION_DEFAULT;
+
+  strip.innerHTML = `
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+      <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:700;color:#FF6B9D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kP.song || 'Unknown'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.52rem;color:rgba(255,255,255,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kP.artist || ''}</div>
+    </div>
+    <span style="font-family:'Space Mono',monospace;font-size:0.55rem;font-weight:700;color:rgba(232,197,71,0.6);flex-shrink:0;padding:0 4px">↔</span>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;text-align:right">
+      <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:700;color:#6B8CFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kE.song || 'Unknown'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.52rem;color:rgba(255,255,255,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kE.artist || ''}</div>
+    </div>
+    <span class="ss-emotion-tag" style="background:${eE.bg};color:${eE.text};border:1px solid ${eE.border};flex-shrink:0;margin-left:4px">
+      ${echoPost.emotion || 'Echo'}
+    </span>
+  `;
+}
+
 /* ────────────────────────────────────────────────────────────
    DOWNLOAD / SHARE
 ──────────────────────────────────────────────────────────── */
@@ -640,7 +1146,7 @@ async function ssDownload() {
     if (!SS.posterBlob) return;
     const url = URL.createObjectURL(SS.posterBlob);
     const a   = document.createElement('a');
-    a.href = url; a.download = `margo-poster-${Date.now()}.png`; a.style.display = 'none';
+    a.href = url; a.download = `margo-${SS.isDuet ? 'duet-' : ''}poster-${Date.now()}.png`; a.style.display = 'none';
     document.body.appendChild(a); a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
     if (typeof showToast === 'function') showToast('Poster saved ✓');
@@ -659,9 +1165,11 @@ async function ssShare() {
 
   const ext      = isGif ? 'gif' : 'png';
   const mime     = isGif ? 'image/gif' : 'image/png';
-  const fileName = `margo-${ext}-${Date.now()}.${ext}`;
+  const fileName = `margo-${SS.isDuet ? 'duet-' : ''}${ext}-${Date.now()}.${ext}`;
+  const text     = SS.isDuet
+    ? `"${SS.post?.text?.substring(0,40) || ''}" ↩ "${SS.echoPost?.text?.substring(0,40) || ''}" — trymargo.com`
+    : `"${SS.post?.text?.substring(0, 60) || ''}" — trymargo.com`;
   const file     = new File([blob], fileName, { type: mime });
-  const text     = `"${SS.post?.text?.substring(0, 60) || ''}" — trymargo.com`;
 
   try {
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -683,21 +1191,28 @@ async function ssShare() {
 async function ssGeneratePoster() {
   if (SS.posterBlob) return;
   SS.isEncoding = true;
-  setSSEncoding(true, 'Generating poster…');
+  setSSEncoding(true, SS.isDuet ? 'Generating duet poster…' : 'Generating poster…');
 
   try {
-    const prev = window.currentPost;
-    window.currentPost = SS.post;
     const offscreen = document.createElement('canvas');
     offscreen.width = 1080; offscreen.height = 1080;
     const ctx = offscreen.getContext('2d');
     await document.fonts.ready;
-    if (typeof drawPosterToCtx === 'function') {
-      drawPosterToCtx(ctx, 1080, 1080);
+
+    if (SS.isDuet && SS.echoPost) {
+      // Use our duet renderer at full export resolution
+      ssDrawDuet(ctx, 1080, 1080, SS.post, SS.echoPost);
     } else {
-      ssDrawFallback(ctx, 1080, 1080);
+      const prev = window.currentPost;
+      window.currentPost = SS.post;
+      if (typeof drawPosterToCtx === 'function') {
+        drawPosterToCtx(ctx, 1080, 1080);
+      } else {
+        ssDrawFallback(ctx, 1080, 1080);
+      }
+      window.currentPost = prev;
     }
-    window.currentPost = prev;
+
     SS.posterBlob = await new Promise((res, rej) => {
       offscreen.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png');
     });
@@ -712,6 +1227,32 @@ async function ssGeneratePoster() {
 
 async function ssGenerateGif() {
   if (SS.gifBlob) return;
+
+  // Duet GIF: for now export a static PNG of the duet layout
+  // (animated duet GIF can be wired up later via gif-studio)
+  if (SS.isDuet && SS.echoPost) {
+    SS.isEncoding = true;
+    setSSEncoding(true, 'Creating duet GIF…');
+    try {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = 1080; offscreen.height = 1080;
+      const ctx = offscreen.getContext('2d');
+      await document.fonts.ready;
+      ssDrawDuet(ctx, 1080, 1080, SS.post, SS.echoPost);
+      SS.gifBlob = await new Promise((res, rej) => {
+        offscreen.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png');
+      });
+      if (typeof showToast === 'function') showToast('Duet image ready ✓');
+    } catch (err) {
+      console.error('[SS] duet gif gen error:', err);
+      if (typeof showToast === 'function') showToast('Could not generate duet image');
+    } finally {
+      SS.isEncoding = false;
+      setSSEncoding(false);
+    }
+    return;
+  }
+
   if (typeof gsExportForShareSheet !== 'function') {
     if (typeof showToast === 'function') showToast('Open Studio to export GIF');
     ssOpenStudio(); return;
