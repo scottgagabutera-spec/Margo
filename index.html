@@ -107,15 +107,15 @@
   }
   </script>
 
-  <!-- CHANGE: Syne removed, DM Serif Display removed. Bebas Neue + Instrument Serif are the lyric/display fonts. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <!-- Studio fonts — deferred non-render-blocking -->
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Josefin+Sans:wght@300;400;700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 
-  <link rel="stylesheet" href="style.css"/>
-  <link rel="stylesheet" href="gif-studio.css"/>
+  <!-- ↓ UPDATED: paths now match /assets/ folder -->
+  <link rel="stylesheet" href="/assets/style.css"/>
+  <link rel="stylesheet" href="/assets/gif-studio.css"/>
 
   <!-- MP4 export button style -->
   <style>
@@ -169,7 +169,6 @@
       <span class="nav-logo-text">MARGO</span>
     </a>
     <div class="nav-right">
-      <!-- nav pill: browse without committing -->
       <button class="nav-pill" id="enterFeedBtn">See what's live</button>
     </div>
   </nav>
@@ -182,19 +181,15 @@
 
     <h1 class="seo-h1">Communicate Through Song Lyrics</h1>
 
-    <!-- CHANGE: Bebas Neue headline — larger, tighter -->
     <div class="headline">
       <span class="headline-word">Drop a lyric.</span>
       <span class="headline-word accent">Say everything.</span>
     </div>
 
-    <!-- CHANGE: tagline — shorter, more poetic -->
     <p class="tagline">The place where a song line says what you can't.</p>
 
     <div class="cta-group">
-      <!-- Primary: full gold button -->
       <button class="btn-primary" id="enterBtn">Drop a Lyric</button>
-      <!-- CHANGE: secondary is ghost/text — clearly subordinate, no border clutter -->
       <button class="btn-ghost" id="enterFeedBtn2">Read the room</button>
     </div>
 
@@ -204,7 +199,6 @@
     </div>
   </div>
 
-  <!-- CHANGE: "Trending Feeling" label replaces old "Top Emotion" -->
   <div class="stats-bar-wrap">
     <div class="stats-bar">
       <div class="stat-item">
@@ -245,7 +239,6 @@
 ══════════════════════════════ -->
 <section id="feed">
 
-  <!-- Sticky header -->
   <header class="feed-header" id="feedHeader">
     <button class="header-btn" id="backBtn" style="display:none">Back</button>
     <div class="feed-center" id="feedLogoHome" title="Back to top">
@@ -265,35 +258,29 @@
             </svg>
           </span>
         </span>
-        <!-- CHANGE: feed logo uses Bebas Neue via CSS — no font override needed here -->
         <span class="feed-logo">MARGO</span>
       </div>
       <span class="post-count"><span id="postCount">0</span> posts</span>
     </div>
     <div id="headerUsernamePill" style="display:none"></div>
-    <!-- CHANGE: primary header button — Bebas Neue via .header-btn.primary CSS -->
     <button class="header-btn primary" id="openComposer" style="display:none">+ Drop</button>
   </header>
 
-  <!-- New posts notification -->
   <div class="new-posts-bar" id="newPostsIndicator">
     <span id="newPostsCount">0</span> new lyrics — tap to see
   </div>
 
-  <!-- Search -->
   <div class="feed-search-wrap">
     <div class="feed-search-inner">
       <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <!-- CHANGE: placeholder updated — "emotions" → "vibes" -->
       <input id="feedSearchInput" type="text" placeholder="Search lyrics, artists, vibes…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <button class="search-clear-btn" id="searchClearBtn" style="display:none" aria-label="Clear search">×</button>
       <span class="search-result-count" id="searchResultCount"></span>
     </div>
   </div>
 
-  <!-- Vibe filter tabs — CHANGE: "emotion" → "vibe" in aria label -->
   <div class="room-tabs-wrap" role="tablist" aria-label="Filter by vibe">
     <div class="room-tabs">
       <button class="room-tab active" data-room="all"        role="tab" aria-selected="true">All</button>
@@ -321,7 +308,6 @@
   Drop a Lyric
 </button>
 
-<!-- CHANGE: scroll-top button now has proper inner HTML (ring + label) -->
 <button id="margoScrollTop" aria-label="Back to top">
   <span class="scroll-top-ring">↑</span>
   <span class="scroll-top-label">Top</span>
@@ -359,7 +345,6 @@
         <div id="inspireSuggestions" style="display:none;margin-top:8px;flex-direction:column;gap:6px;"></div>
       </div>
 
-      <!-- CHANGE: label updated "Emotion" → "Vibe" -->
       <span class="field-label">Vibe</span>
       <div class="emotion-grid">
         <button class="emotion-btn" data-emotion="Love">Love</button>
@@ -678,27 +663,45 @@
   </div>
 </div>
 
-<!-- Firebase + scripts — order preserved exactly -->
+<!-- ↓ UPDATED: all script paths now match new folder structure -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="js/state.js"></script>
-<script src="js/firebase.js"></script>
-<script src="js/feed.js"></script>
-<script src="js/composer.js"></script>
-<script src="js/studio.js"></script>
-<script src="js/poster.js"></script>
-<script src="js/duet-sheet.js"></script>
-<script src="js/duet-export.js"></script>
-<script src="js/gif-studio.js"></script>
-<script src="js/username.js"></script>
-<script src="js/share-sheet.js"></script>
-<script src="js/echoes.js"></script>
-<script src="js/duet-mode.js"></script>
-<script src="js/resonate.js"></script>
-<script src="js/admin.js"></script>
-<script src="js/app.js"></script>
-<script src="js/motion.js"></script>
+
+<!-- CORE -->
+<script src="/js/core/state.js"></script>
+<script src="/js/core/firebase.js"></script>
+<script src="/js/core/username.js"></script>
+
+<!-- UI -->
+<script src="/js/ui/feed.js"></script>
+<script src="/js/ui/composer.js"></script>
+<script src="/js/ui/resonate.js"></script>
+<script src="/js/ui/admin.js"></script>
+
+<!-- FEATURES -->
+<script src="/js/features/echoes.js"></script>
+<script src="/js/features/duet-mode.js"></script>
+<script src="/js/features/duet-sheet.js"></script>
+<script src="/js/features/motion.js"></script>
+<script src="/js/features/poster.js"></script>
+
+<!-- MEDIA : POSTER -->
+<script src="/js/media/poster/studio.js"></script>
+<script src="/js/media/poster/renderer.js"></script>
+<script src="/js/media/poster/exporter.js"></script>
+
+<!-- MEDIA : GIF -->
+<script src="/js/media/gif/studio.js"></script>
+<script src="/js/media/gif/renderer.js"></script>
+<script src="/js/media/gif/exporter.js"></script>
+
+<!-- SHARE -->
+<script src="/js/media/share-sheet.js"></script>
+
+<!-- APP ENTRY — always last -->
+<script src="/js/core/app.js"></script>
 
 <script>
 /*
