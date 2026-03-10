@@ -34,7 +34,7 @@
   <meta name="twitter:image:alt"   content="MARGO — Drop a Lyric"/>
 
   <meta name="theme-color" content="#E8C547" media="(prefers-color-scheme: light)"/>
-  <meta name="theme-color" content="#0B0B0D" media="(prefers-color-scheme: dark)"/>
+  <meta name="theme-color" content="#07060A" media="(prefers-color-scheme: dark)"/>
   <meta name="color-scheme" content="dark light"/>
   <meta name="application-name" content="MARGO"/>
   <meta name="mobile-web-app-capable" content="yes">
@@ -107,9 +107,11 @@
   }
   </script>
 
+  <!-- CHANGE: Syne removed, DM Serif Display removed. Bebas Neue + Instrument Serif are the lyric/display fonts. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=Syne:wght@700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Studio fonts — deferred non-render-blocking -->
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Josefin+Sans:wght@300;400;700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 
   <link rel="stylesheet" href="style.css"/>
@@ -135,7 +137,6 @@
     }
     #gsExportMp4:hover:not(:disabled) { background: #33eeff; transform: scale(1.03); }
     #gsExportMp4:disabled { opacity: 0.6; cursor: wait; }
-    /* Make topbar accommodate two buttons */
     .gs-topbar { gap: 8px; }
   </style>
 
@@ -144,6 +145,9 @@
 <div class="ambient ambient-1"></div>
 <div class="ambient ambient-2"></div>
 
+<!-- ══════════════════════════════
+     LANDING
+══════════════════════════════ -->
 <section id="landing">
   <nav class="nav">
     <a class="nav-logo" href="/" aria-label="Margo home">
@@ -165,48 +169,83 @@
       <span class="nav-logo-text">MARGO</span>
     </a>
     <div class="nav-right">
-      <button class="nav-pill" id="enterFeedBtn">Read the room</button>
+      <!-- nav pill: browse without committing -->
+      <button class="nav-pill" id="enterFeedBtn">See what's live</button>
     </div>
   </nav>
+
   <div class="hero">
     <div class="status-pill">
       <span class="status-dot"></span>
       <span class="status-text"><span class="status-count" id="liveCount">—</span> lyrics live right now</span>
     </div>
+
     <h1 class="seo-h1">Communicate Through Song Lyrics</h1>
+
+    <!-- CHANGE: Bebas Neue headline — larger, tighter -->
     <div class="headline">
       <span class="headline-word">Drop a lyric.</span>
       <span class="headline-word accent">Say everything.</span>
     </div>
-    <p class="tagline">When words fail, drop a lyric.</p>
+
+    <!-- CHANGE: tagline — shorter, more poetic -->
+    <p class="tagline">The place where a song line says what you can't.</p>
+
     <div class="cta-group">
+      <!-- Primary: full gold button -->
       <button class="btn-primary" id="enterBtn">Drop a Lyric</button>
-      <button class="btn-secondary" id="enterFeedBtn2">See what people are feeling</button>
+      <!-- CHANGE: secondary is ghost/text — clearly subordinate, no border clutter -->
+      <button class="btn-ghost" id="enterFeedBtn2">Read the room</button>
     </div>
+
     <div class="lyric-stream">
       <div class="lyric-track" id="track1"></div>
       <div class="lyric-track" id="track2"></div>
     </div>
   </div>
+
+  <!-- CHANGE: "Trending Feeling" label replaces old "Top Emotion" -->
   <div class="stats-bar-wrap">
     <div class="stats-bar">
-      <div class="stat-item"><span class="stat-num" id="statTotal">—</span><span class="stat-label">Lyrics</span></div>
+      <div class="stat-item">
+        <span class="stat-num" id="statTotal">—</span>
+        <span class="stat-label">Lyrics</span>
+      </div>
       <div class="stat-divider"></div>
-      <div class="stat-item"><span class="stat-num" id="featuredArtistCount">—</span><span class="stat-label">Artists Featured</span></div>
+      <div class="stat-item">
+        <span class="stat-num" id="featuredArtistCount">—</span>
+        <span class="stat-label">Artists Featured</span>
+      </div>
       <div class="stat-divider"></div>
-      <div class="stat-item"><span class="stat-num" id="featuredSongCount">—</span><span class="stat-label">Songs Featured</span></div>
+      <div class="stat-item">
+        <span class="stat-num" id="featuredSongCount">—</span>
+        <span class="stat-label">Songs Featured</span>
+      </div>
       <div class="stat-divider"></div>
-      <div class="stat-item"><span class="stat-num stat-sm" id="topArtistName">—</span><span class="stat-label">Top Artist</span></div>
+      <div class="stat-item">
+        <span class="stat-num stat-sm" id="topArtistName">—</span>
+        <span class="stat-label">Top Artist</span>
+      </div>
       <div class="stat-divider"></div>
-      <div class="stat-item"><span class="stat-num stat-sm" id="topSongName">—</span><span class="stat-label">Top Song</span></div>
+      <div class="stat-item">
+        <span class="stat-num stat-sm" id="topSongName">—</span>
+        <span class="stat-label">Top Song</span>
+      </div>
       <div class="stat-divider"></div>
-      <div class="stat-item"><span class="stat-num stat-sm" id="topEmotion">—</span><span class="stat-label">Trending Feeling</span></div>
+      <div class="stat-item">
+        <span class="stat-num stat-sm" id="topEmotion">—</span>
+        <span class="stat-label">Trending Vibe</span>
+      </div>
     </div>
   </div>
 </section>
 
+<!-- ══════════════════════════════
+     FEED
+══════════════════════════════ -->
 <section id="feed">
-  <!-- ── Sticky header ── -->
+
+  <!-- Sticky header -->
   <header class="feed-header" id="feedHeader">
     <button class="header-btn" id="backBtn" style="display:none">Back</button>
     <div class="feed-center" id="feedLogoHome" title="Back to top">
@@ -226,42 +265,48 @@
             </svg>
           </span>
         </span>
+        <!-- CHANGE: feed logo uses Bebas Neue via CSS — no font override needed here -->
         <span class="feed-logo">MARGO</span>
       </div>
       <span class="post-count"><span id="postCount">0</span> posts</span>
     </div>
-    <button class="header-btn primary" id="openComposer" style="display:none">Drop a Lyric</button>
+    <div id="headerUsernamePill" style="display:none"></div>
+    <!-- CHANGE: primary header button — Bebas Neue via .header-btn.primary CSS -->
+    <button class="header-btn primary" id="openComposer" style="display:none">+ Drop</button>
   </header>
 
-  <!-- ── New posts notification bar ── -->
+  <!-- New posts notification -->
   <div class="new-posts-bar" id="newPostsIndicator">
     <span id="newPostsCount">0</span> new lyrics — tap to see
   </div>
 
-  <!-- ── Search ── -->
+  <!-- Search -->
   <div class="feed-search-wrap">
     <div class="feed-search-inner">
       <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <input id="feedSearchInput" type="text" placeholder="Search lyrics, artists, emotions…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <!-- CHANGE: placeholder updated — "emotions" → "vibes" -->
+      <input id="feedSearchInput" type="text" placeholder="Search lyrics, artists, vibes…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <button class="search-clear-btn" id="searchClearBtn" style="display:none" aria-label="Clear search">×</button>
       <span class="search-result-count" id="searchResultCount"></span>
     </div>
   </div>
 
-  <!-- ── Emotion filter tabs ── -->
-  <div class="room-tabs-wrap" role="tablist" aria-label="Filter by emotion">
+  <!-- Vibe filter tabs — CHANGE: "emotion" → "vibe" in aria label -->
+  <div class="room-tabs-wrap" role="tablist" aria-label="Filter by vibe">
     <div class="room-tabs">
-      <button class="room-tab active" data-room="all" role="tab" aria-selected="true">All</button>
-      <button class="room-tab" data-room="Love" role="tab" aria-selected="false">Love</button>
-      <button class="room-tab" data-room="Heartbreak" role="tab" aria-selected="false">Heartbreak</button>
-      <button class="room-tab" data-room="Hope" role="tab" aria-selected="false">Hope</button>
-      <button class="room-tab" data-room="Nostalgia" role="tab" aria-selected="false">Nostalgia</button>
-      <button class="room-tab" data-room="Healing" role="tab" aria-selected="false">Healing</button>
-      <button class="room-tab" data-room="Joy" role="tab" aria-selected="false">Joy</button>
-      <button class="room-tab" data-room="Rage" role="tab" aria-selected="false">Rage</button>
-      <button class="room-tab" data-room="Loneliness" role="tab" aria-selected="false">Loneliness</button>
+      <button class="room-tab active" data-room="all"        role="tab" aria-selected="true">All</button>
+      <button class="room-tab" data-room="Love"        role="tab" aria-selected="false">Love</button>
+      <button class="room-tab" data-room="Heartbreak"  role="tab" aria-selected="false">Heartbreak</button>
+      <button class="room-tab" data-room="Hope"        role="tab" aria-selected="false">Hope</button>
+      <button class="room-tab" data-room="Nostalgia"   role="tab" aria-selected="false">Nostalgia</button>
+      <button class="room-tab" data-room="Healing"     role="tab" aria-selected="false">Healing</button>
+      <button class="room-tab" data-room="Joy"         role="tab" aria-selected="false">Joy</button>
+      <button class="room-tab" data-room="Rage"        role="tab" aria-selected="false">Rage</button>
+      <button class="room-tab" data-room="Loneliness"  role="tab" aria-selected="false">Loneliness</button>
+      <button class="room-tab" data-room="SendIt"      role="tab" aria-selected="false">Send It</button>
+      <button class="room-tab" data-room="LetOut"      role="tab" aria-selected="false">Let Out</button>
     </div>
   </div>
 
@@ -276,14 +321,18 @@
   Drop a Lyric
 </button>
 
-<button id="margoScrollTop" aria-label="Back to top"></button>
+<!-- CHANGE: scroll-top button now has proper inner HTML (ring + label) -->
+<button id="margoScrollTop" aria-label="Back to top">
+  <span class="scroll-top-ring">↑</span>
+  <span class="scroll-top-label">Top</span>
+</button>
 
 <footer class="site-footer">
   <div class="footer-inner">
     <nav class="footer-links" aria-label="Footer navigation">
-      <a href="/about" class="footer-link">About</a>
+      <a href="/about"   class="footer-link">About</a>
       <a href="/privacy" class="footer-link">Privacy</a>
-      <a href="/terms" class="footer-link">Terms</a>
+      <a href="/terms"   class="footer-link">Terms</a>
       <a href="/contact" class="footer-link">Contact</a>
       <a href="https://linkedin.com/company/trymargo" class="footer-link" target="_blank" rel="noopener">LinkedIn</a>
     </nav>
@@ -291,19 +340,27 @@
   </div>
 </footer>
 
-<!-- COMPOSER -->
+<!-- ══════════════════════════════
+     COMPOSER
+══════════════════════════════ -->
 <div id="composer" class="modal hidden">
   <div class="modal-sheet">
-    <div class="modal-top"><span class="modal-title">Drop a Lyric</span><button class="modal-close" id="closeComposer">×</button></div>
+    <div class="modal-top">
+      <span class="modal-title">Drop a Lyric</span>
+      <button class="modal-close" id="closeComposer">×</button>
+    </div>
     <div class="modal-body">
       <span class="field-label">Lyric</span>
       <textarea id="textInput" maxlength="140" placeholder="The line living in your head…" inputmode="text"></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
+
       <div id="inspireWrap" style="display:none;">
         <button id="inspireBtn" type="button" style="width:100%;padding:10px;border-radius:10px;background:rgba(232,197,71,0.07);border:1px dashed rgba(232,197,71,0.3);color:#E8C547;font-family:'Space Mono',monospace;font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;cursor:pointer;transition:all 0.2s;">Need inspiration?</button>
         <div id="inspireSuggestions" style="display:none;margin-top:8px;flex-direction:column;gap:6px;"></div>
       </div>
-      <span class="field-label">Emotion</span>
+
+      <!-- CHANGE: label updated "Emotion" → "Vibe" -->
+      <span class="field-label">Vibe</span>
       <div class="emotion-grid">
         <button class="emotion-btn" data-emotion="Love">Love</button>
         <button class="emotion-btn" data-emotion="Heartbreak">Heartbreak</button>
@@ -313,41 +370,48 @@
         <button class="emotion-btn" data-emotion="Joy">Joy</button>
         <button class="emotion-btn" data-emotion="Rage">Rage</button>
         <button class="emotion-btn" data-emotion="Loneliness">Loneliness</button>
+        <button class="emotion-btn" data-emotion="SendIt">Send It</button>
+        <button class="emotion-btn" data-emotion="LetOut">Let Out</button>
       </div>
+
       <span class="field-label">Mode</span>
       <div class="mode-row-form">
         <button class="mode-btn active" data-mode="share">Share</button>
         <button class="mode-btn" data-mode="guess">Guess</button>
         <button class="mode-btn" data-mode="discover">Discover</button>
       </div>
+
       <div id="shareInputs" class="conditional show">
         <span class="field-label">Song Details</span>
-        <input id="songInput" placeholder="Song title" inputmode="text"/>
-        <input id="artistInput" placeholder="Artist" inputmode="text"/>
+        <input id="songInput"   placeholder="Song title" inputmode="text"/>
+        <input id="artistInput" placeholder="Artist"     inputmode="text"/>
       </div>
       <div id="guessInputs" class="conditional">
         <span class="field-label">Answer Key</span>
-        <label class="check-row"><input type="checkbox" id="guessSongCheck" checked><span>Let them guess the song</span></label>
+        <label class="check-row"><input type="checkbox" id="guessSongCheck"   checked><span>Let them guess the song</span></label>
         <label class="check-row"><input type="checkbox" id="guessArtistCheck" checked><span>Let them guess the artist</span></label>
-        <input id="guessSongAnswer" placeholder="Correct song title" inputmode="text"/>
-        <input id="guessArtistAnswer" placeholder="Correct artist" inputmode="text"/>
+        <input id="guessSongAnswer"   placeholder="Correct song title" inputmode="text"/>
+        <input id="guessArtistAnswer" placeholder="Correct artist"     inputmode="text"/>
       </div>
       <div id="discoverInputs" class="conditional">
         <p class="hint">Don't know the song? The community will help identify it.</p>
-        <input id="discoverSongInput" placeholder="Maybe the song? (optional)" inputmode="text"/>
+        <input id="discoverSongInput"   placeholder="Maybe the song? (optional)"   inputmode="text"/>
         <input id="discoverArtistInput" placeholder="Maybe the artist? (optional)" inputmode="text"/>
       </div>
+
       <details id="streamingSection">
         <summary class="stream-toggle">Add Streaming Links (optional)</summary>
         <div class="stream-grid">
-          <div class="stream-field"><span class="field-label">Spotify</span><input id="spotifyLink" type="url" inputmode="url"/></div>
-          <div class="stream-field"><span class="field-label">Apple Music</span><input id="appleLink" type="url" inputmode="url"/></div>
-          <div class="stream-field"><span class="field-label">YouTube</span><input id="youtubeLink" type="url" inputmode="url"/></div>
+          <div class="stream-field"><span class="field-label">Spotify</span><input id="spotifyLink"    type="url" inputmode="url"/></div>
+          <div class="stream-field"><span class="field-label">Apple Music</span><input id="appleLink"  type="url" inputmode="url"/></div>
+          <div class="stream-field"><span class="field-label">YouTube</span><input id="youtubeLink"    type="url" inputmode="url"/></div>
           <div class="stream-field"><span class="field-label">SoundCloud</span><input id="soundcloudLink" type="url" inputmode="url"/></div>
         </div>
       </details>
     </div>
-    <div class="modal-footer"><button class="btn-primary full-btn" id="postBtn">Post</button></div>
+    <div class="modal-footer">
+      <button class="btn-primary full-btn" id="postBtn">Post</button>
+    </div>
   </div>
 </div>
 
@@ -359,8 +423,8 @@
       <div class="lyric-display" id="guessLyric"></div>
       <p class="hint" id="guessHint"></p>
       <div id="guessInputFields">
-        <input id="guessSongInput" placeholder="Song title" class="guess-field" inputmode="text" style="margin-bottom:8px;"/>
-        <input id="guessArtistInput" placeholder="Artist" class="guess-field" inputmode="text"/>
+        <input id="guessSongInput"   placeholder="Song title" class="guess-field" inputmode="text" style="margin-bottom:8px;"/>
+        <input id="guessArtistInput" placeholder="Artist"     class="guess-field" inputmode="text"/>
       </div>
       <div id="guessResult" class="result-msg hidden"></div>
       <div id="guessLinksSection" class="guess-links hidden"></div>
@@ -379,14 +443,14 @@
     <div class="modal-body">
       <div class="lyric-display" id="discoverLyric"></div>
       <p class="hint">Know this one? Help them out.</p>
-      <input id="discoverSongAnswer" placeholder="Song title" inputmode="text"/>
-      <input id="discoverArtistAnswer" placeholder="Artist" inputmode="text"/>
+      <input id="discoverSongAnswer"   placeholder="Song title" inputmode="text"/>
+      <input id="discoverArtistAnswer" placeholder="Artist"     inputmode="text"/>
       <details>
         <summary class="stream-toggle">Add Streaming Links (optional)</summary>
         <div class="stream-grid">
-          <div class="stream-field"><span class="field-label">Spotify</span><input id="discoverSpotifyLink" type="url" inputmode="url"/></div>
-          <div class="stream-field"><span class="field-label">Apple Music</span><input id="discoverAppleLink" type="url" inputmode="url"/></div>
-          <div class="stream-field"><span class="field-label">YouTube</span><input id="discoverYoutubeLink" type="url" inputmode="url"/></div>
+          <div class="stream-field"><span class="field-label">Spotify</span><input id="discoverSpotifyLink"    type="url" inputmode="url"/></div>
+          <div class="stream-field"><span class="field-label">Apple Music</span><input id="discoverAppleLink"  type="url" inputmode="url"/></div>
+          <div class="stream-field"><span class="field-label">YouTube</span><input id="discoverYoutubeLink"    type="url" inputmode="url"/></div>
           <div class="stream-field"><span class="field-label">SoundCloud</span><input id="discoverSoundcloudLink" type="url" inputmode="url"/></div>
         </div>
       </details>
@@ -414,13 +478,17 @@
   </div>
 </div>
 
-<!-- MARGO IMAGE STUDIO -->
+<!-- ══════════════════════════════
+     MARGO IMAGE STUDIO
+══════════════════════════════ -->
 <div id="studioOverlay" class="studio-overlay hidden">
   <div class="studio-stage">
     <canvas id="studioCanvas"></canvas>
     <div class="studio-topbar">
       <button class="studio-back-btn" id="closeStudio">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
       </button>
       <span class="studio-title">
         <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="14" height="14" style="vertical-align:middle;margin-right:5px">
@@ -610,6 +678,7 @@
   </div>
 </div>
 
+<!-- Firebase + scripts — order preserved exactly -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -618,6 +687,9 @@
 <script src="js/feed.js"></script>
 <script src="js/composer.js"></script>
 <script src="js/studio.js"></script>
+<script src="js/poster.js"></script>
+<script src="js/duet-sheet.js"></script>
+<script src="js/duet-export.js"></script>
 <script src="js/gif-studio.js"></script>
 <script src="js/username.js"></script>
 <script src="js/share-sheet.js"></script>
@@ -707,18 +779,35 @@
       if (header) {
         header.style.borderBottomColor = y > 8
           ? 'rgba(232,197,71,0.22)'
-          : 'rgba(232,197,71,0.12)';
+          : 'rgba(232,197,71,0.10)';
       }
       if (feedIsActive() && !fab.classList.contains('hidden-fab')) {
         if (down && d > FAB_MIN && y > 100) fab.classList.add('scroll-hidden');
-        else if (!down && d > FAB_MIN) fab.classList.remove('scroll-hidden');
+        else if (!down && d > FAB_MIN)      fab.classList.remove('scroll-hidden');
         if (y < 60) fab.classList.remove('scroll-hidden');
       }
+
+      /* scroll-to-top button */
+      var scrollBtn = document.getElementById('margoScrollTop');
+      if (scrollBtn) {
+        if (y > 400) scrollBtn.classList.add('visible');
+        else         scrollBtn.classList.remove('visible');
+      }
+
       lastY = y; pending = false;
     });
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
+
+  /* scroll-to-top click handler */
+  var scrollBtn = document.getElementById('margoScrollTop');
+  if (scrollBtn) {
+    scrollBtn.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
   onScroll();
 }());
 </script>

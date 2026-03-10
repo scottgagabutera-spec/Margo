@@ -1,8 +1,9 @@
 /* ============================================================
    MARGO — js/firebase.js
-   v4.9 — Stats fix: updateLandingStats only fires after posts
-          are loaded. analyticsRef listener also updates stats
-          and re-renders feed correctly.
+   v5.0 — concept-v2 clean:
+          • analyticsRef listener no longer calls renderFeed()
+            — resonate.js owns targeted button updates only
+          • All other sync logic unchanged
    ============================================================ */
 const firebaseConfig = {
   apiKey:            'AIzaSyA1AuUethACF_9aBqbOONjra7X5NbGnfZM',
@@ -69,8 +70,6 @@ async function processYoutubeQueue() {
     if (meta) {
       await postsRef.child(postId).child('youtubeMeta').set(meta);
       console.log(`[YT] ✓ saved: ${song} — ${artist}`);
-    } else {
-      console.log(`[YT] no match: ${song} — ${artist}`);
     }
   } catch (err) {
     console.log(`[YT] error ${song}: ${err.message}`);
@@ -117,9 +116,6 @@ async function fetchAndSaveYoutubeMeta(postId, song, artist) {
 
 /* ══════════════════════════════════════════════════════════
    STATS HELPER
-   Single place that updates all stat elements.
-   Only runs if posts have loaded — prevents dashes persisting
-   because calcFeatured() read an empty posts array.
 ══════════════════════════════════════════════════════════ */
 function _refreshStats() {
   if (!postsLoaded) return;
@@ -169,9 +165,7 @@ function startFirebaseSync() {
     const isInitialLoad  = !postsLoaded;
     const isBackfillOnly = postsLoaded && posts.length === prevCount;
 
-    // Set postsLoaded BEFORE _refreshStats so the guard inside passes
     postsLoaded = true;
-
     _refreshStats();
     buildLyricStream();
 
@@ -185,21 +179,16 @@ function startFirebaseSync() {
     }
   });
 
+  /* ── Analytics listener ──
+     IMPORTANT: This listener must NOT call renderFeed().
+     resonate.js owns all resonate UI updates via
+     refreshVisibleResonateCounts() — targeted button updates only.
+     Calling renderFeed() here caused full page flash on every
+     resonate click from any user. ── */
   analyticsRef.on('value', snapshot => {
     postAnalytics = snapshot.val() || {};
-
-    // Guard: only refresh stats once posts are loaded
-    // (analyticsRef often fires before postsRef on cold start)
+    // Stats only — no renderFeed
     _refreshStats();
-
-    // Re-render feed if active — refreshes resonate counts on cards
-    if (postsLoaded) {
-      const feedEl = document.getElementById('feed');
-      if (feedEl && feedEl.classList.contains('active') && typeof renderFeed === 'function') {
-        renderFeed();
-      }
-    }
-
-    buildLyricStream();
+    // resonate.js hookAnalytics() handles the button refresh
   });
 }

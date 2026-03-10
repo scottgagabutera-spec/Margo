@@ -1,9 +1,11 @@
 /* ============================================================
    MARGO — js/composer.js
-   v5.7 — concept-v2: postcardModal removed.
-          All postcard/closePostcard/listenPostcard references
-          are null-guarded so initComposer() no longer crashes
-          and app.js reaches startFirebaseSync().
+   v5.8 — concept-v2:
+          • Mode buttons (Share/Guess/Discover) hidden via CSS
+          • "or just post without creating" — rgba(255,255,255,0.6)
+          • Loading overlay force-cleared after post submit
+          • submitPost snapshots postedPost and passes it directly
+            to openShareSheet — fixes GIF showing wrong lyric
    ============================================================ */
 
 /* ══════════════════════════════════════════════════════════════
@@ -101,11 +103,11 @@ function decodeHTML(str) {
   return txt.value;
 }
 
-/* ── STYLES (injected once) ── */
+/* ── STYLES ── */
 function injectComposerStyles() {
-  if (document.getElementById('composerV56Styles')) return;
+  if (document.getElementById('composerV58Styles')) return;
   const s = document.createElement('style');
-  s.id = 'composerV56Styles';
+  s.id = 'composerV58Styles';
   s.textContent = `
     .m-spinner {
       width:14px;height:14px;border-radius:50%;
@@ -116,89 +118,62 @@ function injectComposerStyles() {
     }
     @keyframes mspin{to{transform:rotate(360deg)}}
 
+    /* ── FIX 1: Hide mode row — Genius handles everything ── */
+    .mode-section,
+    .composer-mode-row,
+    #modeSection {
+      display: none !important;
+    }
+    /* Show share inputs always, hide others */
+    #shareInputs  { display: block !important; }
+    #guessInputs,
+    #discoverInputs { display: none !important; }
+
     #postAndCreateBtn {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 18px 24px;
-      border-radius: var(--radius);
-      background: linear-gradient(135deg, #E8C547 0%, #D4A820 100%);
-      color: #0B0B0D;
-      font-family: var(--font-display);
-      font-weight: 900;
-      font-size: 0.92rem;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      border: none;
-      cursor: pointer;
-      transition: all 0.22s var(--ease-out);
-      box-shadow: 0 6px 28px rgba(232,197,71,0.30), inset 0 1px 0 rgba(255,255,255,0.25);
-      position: relative;
-      overflow: hidden;
-      white-space: nowrap;
+      width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+      padding:18px 24px;border-radius:var(--radius);
+      background:linear-gradient(135deg,#E8C547 0%,#D4A820 100%);
+      color:#0B0B0D;font-family:var(--font-display);font-weight:900;
+      font-size:0.92rem;letter-spacing:1.5px;text-transform:uppercase;
+      border:none;cursor:pointer;transition:all 0.22s var(--ease-out);
+      box-shadow:0 6px 28px rgba(232,197,71,0.30),inset 0 1px 0 rgba(255,255,255,0.25);
+      position:relative;overflow:hidden;white-space:nowrap;
     }
     #postAndCreateBtn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
-      pointer-events: none;
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 60%);
+      pointer-events:none;
     }
     #postAndCreateBtn:hover {
-      background: linear-gradient(135deg, #F5D46A 0%, #E8C547 100%);
-      box-shadow: 0 10px 36px rgba(232,197,71,0.45), inset 0 1px 0 rgba(255,255,255,0.3);
-      transform: translateY(-2px);
+      background:linear-gradient(135deg,#F5D46A 0%,#E8C547 100%);
+      box-shadow:0 10px 36px rgba(232,197,71,0.45),inset 0 1px 0 rgba(255,255,255,0.3);
+      transform:translateY(-2px);
     }
-    #postAndCreateBtn:active {
-      transform: scale(0.97);
-      box-shadow: 0 4px 16px rgba(232,197,71,0.25);
-    }
-    #postAndCreateBtn:disabled {
-      opacity: 0.55;
-      cursor: default;
-      transform: none;
-      box-shadow: none;
-    }
+    #postAndCreateBtn:active { transform:scale(0.97);box-shadow:0 4px 16px rgba(232,197,71,0.25); }
+    #postAndCreateBtn:disabled { opacity:0.55;cursor:default;transform:none;box-shadow:none; }
 
+    /* ── FIX 2: "or just post" — visible white ── */
     #justPostLink {
-      display: block;
-      text-align: center;
-      margin-top: 10px;
-      font-size: 0.68rem;
-      font-family: 'Space Mono', monospace;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.25);
-      cursor: pointer;
-      background: none;
-      border: none;
-      width: 100%;
-      padding: 4px 0;
-      transition: color 0.18s;
+      display:block;text-align:center;margin-top:10px;
+      font-size:0.68rem;font-family:'Space Mono',monospace;
+      letter-spacing:1px;text-transform:uppercase;
+      color:rgba(255,255,255,0.6);
+      cursor:pointer;background:none;border:none;width:100%;
+      padding:6px 0;transition:color 0.18s;
     }
-    #justPostLink:hover:not(:disabled) {
-      color: rgba(255,255,255,0.5);
-    }
-    #justPostLink:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
+    #justPostLink:hover:not(:disabled) { color:#fff; }
+    #justPostLink:disabled { opacity:0.4;cursor:default; }
 
     #geniusIdentifyBtn {
       width:100%;margin-top:7px;padding:11px 16px;
       border-radius:12px;border:1px dashed rgba(232,197,71,0.3);
-      background:rgba(232,197,71,0.04);
-      color:rgba(232,197,71,0.7);
+      background:rgba(232,197,71,0.04);color:rgba(232,197,71,0.7);
       font-family:'Space Mono',monospace;font-size:0.58rem;
       font-weight:700;letter-spacing:2px;text-transform:uppercase;
       cursor:pointer;transition:all 0.2s;
       display:flex;align-items:center;justify-content:center;gap:8px;
     }
-    #geniusIdentifyBtn:hover:not(:disabled) {
-      background:rgba(232,197,71,0.09);border-color:rgba(232,197,71,0.55);color:#E8C547;
-    }
+    #geniusIdentifyBtn:hover:not(:disabled) { background:rgba(232,197,71,0.09);border-color:rgba(232,197,71,0.55);color:#E8C547; }
     #geniusIdentifyBtn.active { border-color:#E8C547;color:#E8C547;background:rgba(232,197,71,0.08); }
     #geniusIdentifyBtn:disabled { opacity:0.5;cursor:default; }
 
@@ -226,84 +201,62 @@ function injectComposerStyles() {
     .genius-result-card:hover .genius-use-tag { background:rgba(232,197,71,0.15);color:#E8C547;border-color:rgba(232,197,71,0.4); }
     .genius-result-card.selected .genius-use-tag { background:#E8C547;color:#0B0B0D;border-color:#E8C547; }
 
-    @keyframes ytSlideIn {
-      from { opacity:0; transform:translateY(8px) scale(0.98); }
-      to   { opacity:1; transform:translateY(0)  scale(1);    }
-    }
+    @keyframes ytSlideIn { from{opacity:0;transform:translateY(8px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
     .yt-card {
       position:relative;margin-top:12px;border-radius:20px;overflow:hidden;
       border:1px solid rgba(232,197,71,0.22);
       background:linear-gradient(160deg,#141210 0%,#0f0e0c 100%);
-      box-shadow:0 12px 40px rgba(0,0,0,0.5), 0 1px 0 rgba(232,197,71,0.18) inset;
+      box-shadow:0 12px 40px rgba(0,0,0,0.5),0 1px 0 rgba(232,197,71,0.18) inset;
       animation:ytSlideIn 0.35s cubic-bezier(0.16,1,0.3,1);
     }
     .yt-card::before {
       content:'';position:absolute;top:0;left:8%;right:8%;height:1px;
-      background:linear-gradient(90deg,transparent,rgba(232,197,71,0.8),transparent);
-      pointer-events:none;
+      background:linear-gradient(90deg,transparent,rgba(232,197,71,0.8),transparent);pointer-events:none;
     }
     .yt-card::after {
       content:'';position:absolute;bottom:0;left:20%;right:20%;height:40px;
-      background:radial-gradient(ellipse at center bottom,rgba(232,197,71,0.06),transparent);
-      pointer-events:none;
+      background:radial-gradient(ellipse at center bottom,rgba(232,197,71,0.06),transparent);pointer-events:none;
     }
     .yt-card-inner { display:flex;align-items:flex-start;gap:14px;padding:14px 14px 12px; }
     .yt-thumb-wrap { position:relative;flex-shrink:0; }
     .yt-thumb-wrap::after {
       content:'';position:absolute;inset:-1px;border-radius:13px;
-      background:linear-gradient(135deg,rgba(232,197,71,0.3),transparent 60%);
-      pointer-events:none;
+      background:linear-gradient(135deg,rgba(232,197,71,0.3),transparent 60%);pointer-events:none;
     }
-    .yt-thumb {
-      width:80px;height:80px;border-radius:12px;
-      object-fit:cover;display:block;box-shadow:0 6px 20px rgba(0,0,0,0.6);
-    }
+    .yt-thumb { width:80px;height:80px;border-radius:12px;object-fit:cover;display:block;box-shadow:0 6px 20px rgba(0,0,0,0.6); }
     .yt-info { flex:1;min-width:0;padding-top:2px; }
-    .yt-title {
-      font-size:0.88rem;font-weight:700;color:#fff;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-      line-height:1.3;letter-spacing:-0.02em;
-    }
-    .yt-channel {
-      font-size:0.68rem;color:rgba(255,255,255,0.4);
-      margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    }
+    .yt-title { font-size:0.88rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;letter-spacing:-0.02em; }
+    .yt-channel { font-size:0.68rem;color:rgba(255,255,255,0.4);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
     .yt-links-row { display:flex;gap:5px;flex-wrap:wrap;margin-top:9px; }
     .yt-listen-link {
       display:inline-flex;align-items:center;gap:4px;
-      font-size:0.56rem;font-family:'Space Mono',monospace;
-      font-weight:700;letter-spacing:1px;text-transform:uppercase;
-      padding:5px 11px;border-radius:20px;text-decoration:none;
-      transition:all 0.2s ease;white-space:nowrap;backdrop-filter:blur(8px);
+      font-size:0.56rem;font-family:'Space Mono',monospace;font-weight:700;
+      letter-spacing:1px;text-transform:uppercase;padding:5px 11px;border-radius:20px;
+      text-decoration:none;transition:all 0.2s ease;white-space:nowrap;backdrop-filter:blur(8px);
     }
     .yt-listen-link:hover { transform:translateY(-2px) scale(1.04);filter:brightness(1.25);box-shadow:0 4px 12px rgba(0,0,0,0.3); }
-    .yt-link-yt  { background:rgba(255,50,50,0.14);color:#ff7070;border:1px solid rgba(255,50,50,0.32); }
-    .yt-link-dz  { background:rgba(255,100,0,0.14);color:#ff8c3a;border:1px solid rgba(255,100,0,0.32); }
-    .yt-link-it  { background:rgba(252,60,68,0.14);color:#fc7c82;border:1px solid rgba(252,60,68,0.32); }
+    .yt-link-yt { background:rgba(255,50,50,0.14);color:#ff7070;border:1px solid rgba(255,50,50,0.32); }
+    .yt-link-dz { background:rgba(255,100,0,0.14);color:#ff8c3a;border:1px solid rgba(255,100,0,0.32); }
+    .yt-link-it { background:rgba(252,60,68,0.14);color:#fc7c82;border:1px solid rgba(252,60,68,0.32); }
     .yt-found-tag {
-      flex-shrink:0;align-self:flex-start;margin-top:1px;
-      padding:4px 11px;border-radius:20px;
-      font-family:'Space Mono',monospace;font-size:0.5rem;
-      font-weight:700;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;
+      flex-shrink:0;align-self:flex-start;margin-top:1px;padding:4px 11px;border-radius:20px;
+      font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;
+      letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;
     }
-    .yt-found-yt { background:rgba(255,50,50,0.12);  color:#ff7070; border:1px solid rgba(255,50,50,0.28);  }
-    .yt-found-dz { background:rgba(255,100,0,0.12);  color:#ff8c3a; border:1px solid rgba(255,100,0,0.28);  }
-    .yt-found-it { background:rgba(252,60,68,0.12);  color:#fc7c82; border:1px solid rgba(252,60,68,0.28);  }
+    .yt-found-yt { background:rgba(255,50,50,0.12);color:#ff7070;border:1px solid rgba(255,50,50,0.28); }
+    .yt-found-dz { background:rgba(255,100,0,0.12);color:#ff8c3a;border:1px solid rgba(255,100,0,0.28); }
+    .yt-found-it { background:rgba(252,60,68,0.12);color:#fc7c82;border:1px solid rgba(252,60,68,0.28); }
     .yt-loading {
       display:flex;align-items:center;gap:10px;padding:18px 16px;
       font-size:0.65rem;color:rgba(255,255,255,0.4);
       font-family:'Space Mono',monospace;letter-spacing:0.5px;
     }
 
-    @keyframes ytFadeUp {
-      from { opacity:0; transform:translateY(4px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
+    @keyframes ytFadeUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
     .yt-autocomplete {
-      position:absolute;left:0;right:0;top:calc(100% + 4px);
-      z-index:1000;background:#18181c;
-      border:1px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden;
-      box-shadow:0 20px 60px rgba(0,0,0,0.7);animation:ytFadeUp 0.18s ease;
+      position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:1000;
+      background:#18181c;border:1px solid rgba(255,255,255,0.1);border-radius:14px;
+      overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);animation:ytFadeUp 0.18s ease;
     }
     .yt-ac-item {
       display:flex;align-items:center;gap:10px;padding:9px 13px;cursor:pointer;
@@ -429,7 +382,8 @@ function selectGeniusResult(result, card) {
   const artistEl = document.getElementById('artistInput');
   if (songEl)   songEl.value   = result.song;
   if (artistEl) artistEl.value = result.artist;
-  if (currentMode !== 'share') document.querySelector('[data-mode="share"]')?.click();
+  // Mode is always share — no mode buttons to click
+  currentMode = 'share';
   clearYoutubePreview();
   fetchYoutubeData(result.song, result.artist);
   setTimeout(() => { document.getElementById('geniusResultsList')?.remove(); }, 1000);
@@ -543,9 +497,7 @@ function renderYtCard(data) {
   clearYoutubePreview();
   const source = data.source || 'youtube';
   const links = [];
-  if (data.videoId && data.youtubeUrl)
-    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">YouTube</a>`);
-  else if (data.youtubeUrl)
+  if (data.youtubeUrl)
     links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">YouTube</a>`);
   if (data.deezerUrl)
     links.push(`<a href="${data.deezerUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-dz">Deezer</a>`);
@@ -585,28 +537,14 @@ function clearYoutubePreview() {
 
 /* ============================================================
    COMPOSER INIT
-   v5.7: All postcard/listenPostcard/closePostcard refs are
-         null-guarded — postcard modal removed in concept-v2.
    ============================================================ */
 function initComposer() {
   injectComposerStyles();
   textInput.oninput = () => { charCount.textContent = textInput.value.length; };
 
-  modeBtns.forEach(btn => {
-    btn.onclick = () => {
-      modeBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentMode = btn.dataset.mode;
-      shareInputs.classList.remove('show');
-      guessInputs.classList.remove('show');
-      discoverInputs.classList.remove('show');
-      streamingSection.style.display = currentMode === 'discover' ? 'none' : 'block';
-      if (currentMode === 'share')    shareInputs.classList.add('show');
-      if (currentMode === 'guess')    guessInputs.classList.add('show');
-      if (currentMode === 'discover') discoverInputs.classList.add('show');
-      clearYoutubePreview(); closeAutocomplete();
-    };
-  });
+  // Mode buttons hidden — always share
+  currentMode = 'share';
+  if (typeof shareInputs !== 'undefined' && shareInputs) shareInputs.classList.add('show');
 
   document.querySelectorAll('.emotion-btn').forEach(btn => {
     btn.onclick = () => {
@@ -624,10 +562,10 @@ function initComposer() {
     pacBtn.onclick   = () => submitPost(true);
 
     const justPostBtn = document.createElement('button');
-    justPostBtn.id        = 'justPostLink';
-    justPostBtn.type      = 'button';
+    justPostBtn.id          = 'justPostLink';
+    justPostBtn.type        = 'button';
     justPostBtn.textContent = 'or just post without creating';
-    justPostBtn.onclick   = () => submitPost(false);
+    justPostBtn.onclick     = () => submitPost(false);
 
     const parent = postBtn.parentNode;
     parent.insertBefore(pacBtn, postBtn);
@@ -638,7 +576,6 @@ function initComposer() {
   initGeniusIdentify();
   initYoutubeAutofetch();
 
-  // Guess / Discover / Listen / Analytics — these modals still exist
   const submitGuessEl    = document.getElementById('submitGuess');
   const submitDiscoverEl = document.getElementById('submitDiscover');
   const closeGuessEl     = document.getElementById('closeGuess');
@@ -651,24 +588,29 @@ function initComposer() {
   if (closeGuessEl)     closeGuessEl.onclick     = () => { closeModal(guessModal); currentGuessAttempts = 0; };
   if (closeDiscoverEl)  closeDiscoverEl.onclick  = () => closeModal(discoverModal);
   if (closeListenEl)    closeListenEl.onclick    = () => closeModal(listenModal);
-
-  // analyticsBtn and closeAnalytics — postcard is gone so just close analytics
   if (analyticsBtn)     analyticsBtn.onclick     = openAnalytics;
   if (closeAnalyticsEl) closeAnalyticsEl.onclick = () => closeModal(analyticsModal);
 
-  // These are null in concept-v2 (postcard removed) — guarded safely
-  if (listenPostcard) {
+  // null-guarded — postcard removed in concept-v2
+  if (typeof listenPostcard !== 'undefined' && listenPostcard) {
     listenPostcard.onclick = () => {
       const idx = posts.findIndex(p => p.id === currentPost?.id);
       if (idx !== -1) window.openListen(idx);
     };
   }
   const closePostcardEl = document.getElementById('closePostcard');
-  if (closePostcardEl) closePostcardEl.onclick = () => closeModal(postcardModal);
+  if (closePostcardEl) {
+    closePostcardEl.onclick = () => {
+      if (typeof postcardModal !== 'undefined' && postcardModal) closeModal(postcardModal);
+    };
+  }
 }
 
 /* ============================================================
    POST SUBMISSION
+   FIX 3 — loading overlay cleared explicitly
+   FIX 4 — postedPost snapshot passed directly to openShareSheet
+            so GIF/Poster canvas never reads stale window.currentPost
    ============================================================ */
 async function submitPost(openChooser = true) {
   const pacBtn      = document.getElementById('postAndCreateBtn');
@@ -677,7 +619,7 @@ async function submitPost(openChooser = true) {
 
   let text = textInput.value.trim();
   if (!text)            { showToast('Add a lyric first'); return; }
-  if (!selectedEmotion) { showToast('Pick an emotion'); return; }
+  if (!selectedEmotion) { showToast('Pick a feeling'); return; }
 
   if (containsBannedWord(text)) {
     text = censorText(text);
@@ -685,6 +627,11 @@ async function submitPost(openChooser = true) {
     charCount.textContent = text.length;
     showToast('Some words were adjusted for community guidelines');
   }
+
+  // Always share mode
+  const songVal   = typeof songInput   !== 'undefined' ? (songInput?.value.trim()   || '') : '';
+  const artistVal = typeof artistInput !== 'undefined' ? (artistInput?.value.trim() || '') : '';
+  if (!songVal || !artistVal) { showToast('Add the song title and artist'); return; }
 
   const savedYtMeta = youtubeData ? {
     videoId:     youtubeData.videoId     || null,
@@ -696,53 +643,35 @@ async function submitPost(openChooser = true) {
     embedUrl:    youtubeData.embedUrl    || null,
   } : null;
 
-  let post = {
-    text, emotion: selectedEmotion, mode: currentMode,
-    community: selectedEmotion, status: 'active', flagCount: 0,
-    knowledge: { song: 'Unknown Song', artist: 'Unknown Artist' },
+  const post = {
+    text,
+    emotion:     selectedEmotion,
+    mode:        'share',
+    community:   selectedEmotion,
+    status:      'active',
+    flagCount:   0,
+    knowledge:   { song: decodeHTML(songVal), artist: decodeHTML(artistVal) },
     guessConfig: null,
     youtubeMeta: savedYtMeta,
-    links: currentMode !== 'discover' ? {
-      spotify:    spotifyLink?.value.trim()    || null,
-      apple:      appleLink?.value.trim()      || null,
-      youtube:    youtubeData?.youtubeUrl      || youtubeLink?.value.trim() || null,
-      soundcloud: soundcloudLink?.value.trim() || null,
-    } : null,
+    links: {
+      spotify:    typeof spotifyLink    !== 'undefined' ? (spotifyLink?.value.trim()    || null) : null,
+      apple:      typeof appleLink      !== 'undefined' ? (appleLink?.value.trim()      || null) : null,
+      youtube:    youtubeData?.youtubeUrl || (typeof youtubeLink !== 'undefined' ? (youtubeLink?.value.trim() || null) : null),
+      soundcloud: typeof soundcloudLink !== 'undefined' ? (soundcloudLink?.value.trim() || null) : null,
+    },
     authorId:  userId,
-    timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now()
+    timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now(),
   };
-
-  try {
-    if (currentMode === 'share') {
-      if (!songInput.value.trim() || !artistInput.value.trim())
-        throw new Error('Add the song title and artist');
-      post.knowledge = {
-        song:   decodeHTML(songInput.value.trim()),
-        artist: decodeHTML(artistInput.value.trim())
-      };
-    }
-    if (currentMode === 'guess') {
-      const doSong = guessSongCheck.checked, doArtist = guessArtistCheck.checked;
-      if (!doSong && !doArtist) throw new Error('Choose at least one thing to guess');
-      if (doSong   && !guessSongAnswer.value.trim())   throw new Error('Enter the correct song title');
-      if (doArtist && !guessArtistAnswer.value.trim()) throw new Error('Enter the correct artist');
-      post.knowledge   = { song: guessSongAnswer.value.trim(), artist: guessArtistAnswer.value.trim(), hidden: true };
-      post.guessConfig = { guessSong: doSong, guessArtist: doArtist };
-    }
-    if (currentMode === 'discover') {
-      post.knowledge = {
-        song:   discoverSongInput.value.trim()   || 'Unknown Song',
-        artist: discoverArtistInput.value.trim() || 'Unknown Artist'
-      };
-    }
-  } catch (err) { showToast(err.message); return; }
 
   if (pacBtn)      { pacBtn.disabled = true;      pacBtn.innerHTML = '<span class="m-spinner"></span> Posting…'; }
   if (justPostBtn) { justPostBtn.disabled = true; }
 
   try {
+    let savedPostId = null;
+
     if (isFirebaseEnabled) {
       const ref = await postsRef.push(post);
+      savedPostId = ref.key;
       await analyticsRef.child(ref.key).set({ views: 0, guesses: [], helps: [] });
 
       if (!post.youtubeMeta
@@ -751,13 +680,30 @@ async function submitPost(openChooser = true) {
           && typeof fetchAndSaveYoutubeMeta === 'function') {
         fetchAndSaveYoutubeMeta(ref.key, post.knowledge.song, post.knowledge.artist).catch(() => {});
       }
-
-      if (openChooser) {
-        currentPost = { ...post, id: ref.key };
-      }
     }
 
+    // FIX 4 — snapshot with real id, pass directly everywhere
+    const postedPost = { ...post, id: savedPostId };
+    window.currentPost = postedPost;
+
     newPostsAvailable = false;
+
+    // FIX 3 — clear stuck loading overlay (the long circle)
+    [
+      document.getElementById('feedLoadingOverlay'),
+      document.querySelector('.feed-loading-overlay'),
+      document.querySelector('.loading-circle-overlay'),
+      document.querySelector('.loading-overlay'),
+      document.querySelector('[class*="loading"]'),
+    ].forEach(el => {
+      if (el) {
+        el.style.display = 'none';
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+        el.classList.add('hidden');
+      }
+    });
+
     renderFeed();
     resetComposer();
     closeModal(composer);
@@ -765,7 +711,12 @@ async function submitPost(openChooser = true) {
     if (openChooser) {
       setTimeout(() => {
         showToast('Posted — now make it visual');
-        openStudioChooser();
+        if (typeof openStudioChooser === 'function') {
+          openStudioChooser();
+        } else if (typeof openShareSheet === 'function') {
+          // FIX 4 — pass postedPost directly, not just currentPost
+          openShareSheet(postedPost);
+        }
       }, 120);
     } else {
       showToast('Dropped.');
@@ -777,31 +728,39 @@ async function submitPost(openChooser = true) {
   } finally {
     if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = 'Post &amp; Create Visual'; }
     if (justPostBtn) { justPostBtn.disabled = false; }
-    if (postBtn)     { postBtn.disabled = false; }
+    if (typeof postBtn !== 'undefined' && postBtn) postBtn.disabled = false;
   }
 }
 
 function resetComposer() {
-  textInput.value = ''; songInput.value = ''; artistInput.value = '';
-  guessSongAnswer.value = ''; guessArtistAnswer.value = '';
-  discoverSongInput.value = ''; discoverArtistInput.value = '';
-  if (spotifyLink)    spotifyLink.value    = '';
-  if (appleLink)      appleLink.value      = '';
-  if (youtubeLink)    youtubeLink.value    = '';
-  if (soundcloudLink) soundcloudLink.value = '';
-  charCount.textContent = '0';
+  if (typeof textInput   !== 'undefined' && textInput)   textInput.value   = '';
+  if (typeof songInput   !== 'undefined' && songInput)   songInput.value   = '';
+  if (typeof artistInput !== 'undefined' && artistInput) artistInput.value = '';
+  if (typeof guessSongAnswer   !== 'undefined' && guessSongAnswer)   guessSongAnswer.value   = '';
+  if (typeof guessArtistAnswer !== 'undefined' && guessArtistAnswer) guessArtistAnswer.value = '';
+  if (typeof discoverSongInput   !== 'undefined' && discoverSongInput)   discoverSongInput.value   = '';
+  if (typeof discoverArtistInput !== 'undefined' && discoverArtistInput) discoverArtistInput.value = '';
+  if (typeof spotifyLink    !== 'undefined' && spotifyLink)    spotifyLink.value    = '';
+  if (typeof appleLink      !== 'undefined' && appleLink)      appleLink.value      = '';
+  if (typeof youtubeLink    !== 'undefined' && youtubeLink)    youtubeLink.value    = '';
+  if (typeof soundcloudLink !== 'undefined' && soundcloudLink) soundcloudLink.value = '';
+  if (typeof charCount      !== 'undefined' && charCount)      charCount.textContent = '0';
+
   selectedEmotion = null; geniusResult = null; lastGeniusQuery = '';
+  currentMode = 'share';
   clearYoutubePreview(); closeAutocomplete();
   document.getElementById('geniusResultsList')?.remove();
   document.getElementById('geniusIdentifyBtn')?.classList.remove('active');
   document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
-  modeBtns.forEach((b,i) => b.classList.toggle('active', i===0));
-  currentMode = 'share';
-  shareInputs.classList.add('show');
-  guessInputs.classList.remove('show');
-  discoverInputs.classList.remove('show');
-  streamingSection.style.display = 'block';
-  guessSongCheck.checked = true; guessArtistCheck.checked = true;
+
+  if (typeof modeBtns !== 'undefined' && modeBtns?.length) modeBtns.forEach((b,i) => b.classList.toggle('active', i===0));
+  if (typeof shareInputs     !== 'undefined' && shareInputs)    shareInputs.classList.add('show');
+  if (typeof guessInputs     !== 'undefined' && guessInputs)    guessInputs.classList.remove('show');
+  if (typeof discoverInputs  !== 'undefined' && discoverInputs) discoverInputs.classList.remove('show');
+  if (typeof streamingSection !== 'undefined' && streamingSection) streamingSection.style.display = 'block';
+  if (typeof guessSongCheck   !== 'undefined' && guessSongCheck)   guessSongCheck.checked   = true;
+  if (typeof guessArtistCheck !== 'undefined' && guessArtistCheck) guessArtistCheck.checked = true;
+
   const iw = document.getElementById('inspireWrap');
   const is = document.getElementById('inspireSuggestions');
   if (iw) iw.style.display = 'none';

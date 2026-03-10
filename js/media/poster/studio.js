@@ -1,609 +1,823 @@
+(function() {
 /* ============================================================
    MARGO — js/studio.js
-   Image Studio (canvas → PNG) + Studio Chooser wiring
-   v5.3 — Dev branch.
-          Image studio = exact working code from main.
-          Chooser wiring added for Motion→Image, GIF→gif-studio.
-          No buildStudioHTML() — HTML already in index.html.
+   v5.6 — FINAL
+   • NO CANONICAL FLAG — gif-studio.js is fully independent
+   • Wired to actual HTML panel IDs: panel-color, panel-font, panel-photo
+   • Canvas redraws on every control change
+   • Color swatches, fonts, photo all working
+   • MARGO wordmark correct size
    ============================================================ */
 
-/* ════════════════════════════════════════
-   STUDIO CHOOSER WIRING
-   ════════════════════════════════════════ */
-function initStudioChooser() {
-  const chooser   = document.getElementById('studioChooser');
-  if (!chooser) return;
+/* ══════════════════════════════════════════════════════════
+   DESIGN CONFIG — matches GIF studio themes
+══════════════════════════════════════════════════════════ */
+const STUDIO_DESIGNS = [
+  { id:'midnight-gold',   label:'Gold',    swatchCss:'linear-gradient(135deg,#0d0d0d,#E8C547)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#0B0B0D'); g.addColorStop(1,'#1a1400'); return g; }, accentColor:'#E8C547', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'royal-purple',    label:'Violet',  swatchCss:'linear-gradient(135deg,#1a0033,#c77dff)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#0d0014'); g.addColorStop(1,'#1a003a'); return g; }, accentColor:'#c77dff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'neon-cyan',       label:'Ocean',   swatchCss:'linear-gradient(135deg,#0a1420,#00e5ff)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#050e1a'); g.addColorStop(1,'#0a1e2e'); return g; }, accentColor:'#00e5ff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'sunset-coral',    label:'Ember',   swatchCss:'linear-gradient(135deg,#1a0a0a,#ff6b6b)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#1a0505'); g.addColorStop(1,'#2d0808'); return g; }, accentColor:'#ff6b6b', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'emerald-night',   label:'Forest',  swatchCss:'linear-gradient(135deg,#051a0d,#50fa7b)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#051a0d'); g.addColorStop(1,'#0a2e18'); return g; }, accentColor:'#50fa7b', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'rose-gold',       label:'Rose',    swatchCss:'linear-gradient(135deg,#1a0d0f,#f4a4c0)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#1a0d0f'); g.addColorStop(1,'#2d1219'); return g; }, accentColor:'#f4a4c0', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'monochrome',      label:'Mono',    swatchCss:'linear-gradient(135deg,#000,#fff)',          bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#000000'); g.addColorStop(1,'#111111'); return g; }, accentColor:'#ffffff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'vaporwave',       label:'Wave',    swatchCss:'linear-gradient(135deg,#ff71ce,#05ffa1)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#1a0533'); g.addColorStop(1,'#001a1a'); return g; }, accentColor:'#ff71ce', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'neon-dark',       label:'Neon',    swatchCss:'linear-gradient(135deg,#0a0a0a,#ff00ff)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#0a0a0a'); g.addColorStop(1,'#141414'); return g; }, accentColor:'#ff00ff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'y2k-chrome',      label:'Chrome',  swatchCss:'linear-gradient(135deg,#000033,#0ff)',      bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#000033'); g.addColorStop(1,'#000824'); return g; }, accentColor:'#00ffff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'brutalist',       label:'Brutal',  swatchCss:'linear-gradient(135deg,#fff,#000)',          bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#ffffff'); g.addColorStop(1,'#f0f0f0'); return g; }, accentColor:'#000000', textColor:'#000000', metaColor:'rgba(0,0,0,0.5)' },
+  { id:'cream-editorial', label:'Bone',    swatchCss:'linear-gradient(135deg,#f5f1e8,#2a2520)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#f5f1e8'); g.addColorStop(1,'#ede8dc'); return g; }, accentColor:'#B8901A', textColor:'#1a1a20', metaColor:'rgba(26,26,32,0.5)' },
+];
 
-  const motionBtn = document.getElementById('chooserMotionBtn');
-  const gifBtn    = document.getElementById('chooserGifBtn');
-  const backBtn   = document.getElementById('chooserBackBtn');
+const STUDIO_FONTS = [
+  { id:'playfair',      label:'Playfair',     css:"'Playfair Display', serif",      weight:'700', style:'italic',  preview:'Say everything' },
+  { id:'cormorant',     label:'Cormorant',    css:"'Cormorant Garamond', serif",     weight:'600', style:'italic',  preview:'Say everything' },
+  { id:'lora',          label:'Lora',         css:"'Lora', serif",                  weight:'600', style:'italic',  preview:'Say everything' },
+  { id:'merriweather',  label:'Merriweather', css:"'Merriweather', serif",           weight:'700', style:'normal',  preview:'Say everything' },
+  { id:'josefin',       label:'Josefin',      css:"'Josefin Sans', sans-serif",      weight:'700', style:'normal',  preview:'Say everything' },
+  { id:'bebas',         label:'Bebas',        css:"'Bebas Neue', sans-serif",        weight:'400', style:'normal',  preview:'SAY EVERYTHING' },
+  { id:'oswald',        label:'Oswald',       css:"'Oswald', sans-serif",            weight:'600', style:'normal',  preview:'Say everything' },
+  { id:'dancing',       label:'Dancing',      css:"'Dancing Script', cursive",       weight:'700', style:'normal',  preview:'Say everything' },
+];
 
-  if (motionBtn) motionBtn.addEventListener('click', () => {
-    chooser.classList.add('hidden');
-    openStudio();   // opens the working image studio
-  });
+const VIBE_COLORS = {
+  Love:'#FF6B9D', Heartbreak:'#ff5050', Hope:'#6B8CFF', Nostalgia:'#E8C547',
+  Healing:'#4ade80', Joy:'#ffc847', Rage:'#FF6440', Loneliness:'#a0a0ff',
+  SendIt:'#00e5c8', LetOut:'#c864ff',
+};
+const VIBE_LABELS = {
+  Love:'Love', Heartbreak:'Heartbreak', Hope:'Hope', Nostalgia:'Nostalgia',
+  Healing:'Healing', Joy:'Joy', Rage:'Rage', Loneliness:'Loneliness',
+  SendIt:'Send It', LetOut:'Let Out',
+};
 
-  if (gifBtn) gifBtn.addEventListener('click', () => {
-    chooser.classList.add('hidden');
-    if (typeof openGifStudio === 'function') openGifStudio();
-  });
+const CANVAS_SIZES = {
+  square:    { w:1080, h:1080 },
+  portrait:  { w:1080, h:1350 },
+  story:     { w:1080, h:1920 },
+  landscape: { w:1280, h:720  },
+};
 
-  if (backBtn) backBtn.addEventListener('click', () => {
-    chooser.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-    openModal(postcardModal);
-  });
-}
+/* ══════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════ */
+let studioDesign      = 'midnight-gold';
+let studioFont        = 'playfair';
+let studioBrightness  = 100;
+let studioCanvasSize  = 'square';
+let studioPhotoData   = null;
+let studioPhotoFilter = 'none';
+let studioPhotoOpacity= 0.4;
+let studioBlur        = 0;
+let studioDim         = 50;
+let studioPost        = null;
 
-function openStudioChooser() {
-  closeModal(postcardModal);
-  const chooser = document.getElementById('studioChooser');
-  if (!chooser) { openStudio(); return; }   // fallback if chooser missing
-  chooser.classList.remove('hidden');
-  document.body.classList.add('modal-open');
-}
+/* ══════════════════════════════════════════════════════════
+   INJECT STYLES
+══════════════════════════════════════════════════════════ */
+function injectStudioStyles() {
+  if (document.getElementById('studioV56styles')) return;
+  const s = document.createElement('style');
+  s.id = 'studioV56styles';
+  s.textContent = `
+    .studio-overlay { position:fixed;inset:0;z-index:800;display:flex;flex-direction:column;background:#090910; }
+    .studio-overlay.hidden { display:none!important; }
 
-/* ── Wire GIF studio dock tabs ── */
-function initGifStudioTabs() {
-  const ov = document.getElementById('gifStudioOverlay');
-  if (!ov) return;
-  ov.querySelectorAll('.gs-tab').forEach(tab => {
-    tab.onclick = () => {
-      ov.querySelectorAll('.gs-tab').forEach(t  => t.classList.remove('active'));
-      ov.querySelectorAll('.gs-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      const panel = ov.querySelector(`#gs-panel-${tab.dataset.gstab}`);
-      if (panel) panel.classList.add('active');
-    };
-  });
-}
-
-/* ════════════════════════════════════════
-   IMAGE STUDIO — working code from main
-   ════════════════════════════════════════ */
-function initStudio() {
-  // Route "Create Poster" → chooser (dev) instead of direct to studio (main)
-  sharePosterBtn.onclick = openStudioChooser;
-
-  closeStudio.onclick = () => {
-    studioOverlay.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-    openModal(postcardModal);
-  };
-
-  // Dock tabs
-  document.querySelectorAll('.dock-tab').forEach(tab => {
-    tab.onclick = () => {
-      document.querySelectorAll('.dock-tab').forEach(t  => t.classList.remove('active'));
-      document.querySelectorAll('.dock-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      const panel = document.getElementById('panel-' + tab.dataset.tab);
-      if (panel) panel.classList.add('active');
-    };
-  });
-
-  // Color swatches
-  document.querySelectorAll('.scene-swatch').forEach(swatch => {
-    swatch.onclick = () => {
-      document.querySelectorAll('.scene-swatch').forEach(s => s.classList.remove('active'));
-      swatch.classList.add('active');
-      studioDesign = swatch.dataset.design;
-      refreshStageCanvas();
-    };
-  });
-
-  // Brightness slider
-  const bSlider = document.getElementById('studiobrightness');
-  const bValEl  = document.getElementById('studioBrightnessVal');
-  if (bSlider) {
-    bSlider.oninput = () => {
-      studioBrightness = parseInt(bSlider.value);
-      if (bValEl) bValEl.textContent = studioBrightness + '%';
-      refreshStageCanvas();
-    };
-  }
-
-  // Font cards
-  document.querySelectorAll('.font-card').forEach(card => {
-    card.onclick = () => {
-      document.querySelectorAll('.font-card').forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
-      studioFont = card.dataset.font;
-      refreshStageCanvas();
-    };
-  });
-
-  // Photo upload zone
-  const photoDropZone = document.getElementById('photoUploadZone');
-  if (photoDropZone) {
-    photoDropZone.onclick = () => studioPhotoInput?.click();
-    photoDropZone.addEventListener('dragover', e => {
-      e.preventDefault();
-      photoDropZone.classList.add('has-photo');
-    });
-    photoDropZone.addEventListener('dragleave', e => {
-      if (!photoDropZone.contains(e.relatedTarget)) photoDropZone.classList.remove('has-photo');
-    });
-    photoDropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      const f = e.dataTransfer.files[0];
-      if (f) handleStudioPhoto(f);
-    });
-  }
-  if (studioPhotoInput) {
-    studioPhotoInput.onchange = e => { const f = e.target.files[0]; if (f) handleStudioPhoto(f); };
-  }
-
-  // Blur / Dim sliders
-  const blurSlider = document.getElementById('studioBlur');
-  const blurValEl  = document.getElementById('studioBlurVal');
-  const dimSlider  = document.getElementById('studioDim');
-  const dimValEl   = document.getElementById('studioDimVal');
-  if (blurSlider) blurSlider.oninput = () => { studioBlur = parseInt(blurSlider.value); if (blurValEl) blurValEl.textContent = studioBlur; refreshStageCanvas(); };
-  if (dimSlider)  dimSlider.oninput  = () => { studioDim  = parseInt(dimSlider.value);  if (dimValEl)  dimValEl.textContent  = studioDim + '%'; refreshStageCanvas(); };
-
-  // Photo filters
-  document.querySelectorAll('.photo-filter').forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll('.photo-filter').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      studioFilter = btn.dataset.filter;
-      refreshStageCanvas();
-    };
-  });
-
-  // Remove photo
-  const removeBtn = document.getElementById('studioRemovePhoto');
-  if (removeBtn) removeBtn.onclick = () => {
-    studioBgImage = null;
-    const photoDropText = document.getElementById('photoDropText');
-    const photoDropZone = document.getElementById('photoUploadZone');
-    const photoControls = document.getElementById('photoControls');
-    if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
-    if (photoDropZone) photoDropZone.classList.remove('has-photo');
-    if (photoControls) photoControls.classList.add('hidden');
-    if (studioPhotoInput) studioPhotoInput.value = '';
-    const ytOpt = document.getElementById('ytBgOption');
-    if (ytOpt) { ytOpt.style.background = ''; ytOpt.style.borderColor = ''; }
-    refreshStageCanvas();
-  };
-
-  // Export / size picker
-  studioExportBtn.onclick = () => sizePicker.classList.remove('hidden');
-  sizeCancelBtn.onclick   = () => sizePicker.classList.add('hidden');
-
-  document.querySelectorAll('.size-opt').forEach(btn => {
-    btn.onclick = async () => {
-      selectedSize = btn.dataset.size;
-      sizePicker.classList.add('hidden');
-      studioCanvas.classList.add('zoom-in');
-
-      ceremonyOverlay.classList.remove('hidden');
-      const headlineEl = ceremonyOverlay.querySelector('.ceremony-headline');
-      if (headlineEl) headlineEl.textContent = 'Generating your poster…';
-      const actionsEl = ceremonyOverlay.querySelector('.ceremony-actions');
-      if (actionsEl) actionsEl.style.opacity = '0.4';
-
-      try {
-        generatedBlob = await generateFinalPoster(selectedSize);
-      } catch (err) {
-        console.error('Poster generation error:', err);
-        showToast('Error generating poster — try again');
-        studioCanvas.classList.remove('zoom-in');
-        ceremonyOverlay.classList.add('hidden');
-        return;
-      }
-
-      setTimeout(() => {
-        studioCanvas.classList.remove('zoom-in');
-        drawCeremonyThumb();
-        if (headlineEl) headlineEl.textContent = 'Your poster is ready.';
-        if (actionsEl) actionsEl.style.opacity = '1';
-      }, 400);
-    };
-  });
-
-  // Ceremony actions
-  ceremonyBack.onclick = () => {
-    ceremonyOverlay.classList.add('hidden');
-    generatedBlob = null;
-  };
-
-  cerDownload.onclick = async () => {
-    if (!generatedBlob) { showToast('Generating poster…'); return; }
-    try {
-      downloadPosterBlob();
-      showToast('Saved to device ✓');
-    } catch (err) {
-      showToast('Download failed — try again');
-      console.error('Download error:', err);
+    .studio-stage {
+      flex:1;position:relative;display:flex;align-items:center;justify-content:center;
+      background:#0a0a12;overflow:hidden;min-height:0;
     }
-  };
+    #studioCanvas { border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.7); max-width:100%; max-height:100%; }
 
-  cerShare.onclick = shareOrDownloadPoster;
+    .studio-topbar {
+      position:absolute;top:0;left:0;right:0;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 16px;background:linear-gradient(to bottom,rgba(0,0,0,0.8),transparent);
+      z-index:10;
+    }
+    .studio-back-btn {
+      width:36px;height:36px;border-radius:50%;
+      background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+      color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      transition:all 0.18s;
+    }
+    .studio-back-btn:hover { background:rgba(255,255,255,0.16); }
+    .studio-title {
+      font-family:'Syne',sans-serif;font-weight:800;font-size:0.8rem;
+      letter-spacing:2px;color:#E8C547;text-transform:uppercase;
+    }
+    .studio-export-btn {
+      padding:8px 18px;border-radius:20px;
+      background:#E8C547;border:none;color:#0B0B0D;
+      font-family:'Space Mono',monospace;font-weight:700;font-size:0.6rem;
+      letter-spacing:1px;text-transform:uppercase;cursor:pointer;
+      transition:all 0.18s;
+    }
+    .studio-export-btn:hover { background:#f5d560;transform:scale(1.04); }
+    .studio-export-btn:disabled { opacity:0.5;cursor:wait; }
 
-  // GIF studio tabs + chooser
-  initGifStudioTabs();
-  initStudioChooser();
+    .studio-dock {
+      flex-shrink:0;background:#0f0e15;border-top:1px solid rgba(255,255,255,0.07);
+      display:flex;flex-direction:column;max-height:42dvh;overflow:hidden;
+    }
 
-  if (typeof initGifStudio === 'function') initGifStudio();
+    .dock-tabs {
+      display:flex;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;
+    }
+    .dock-tab {
+      flex:1;padding:12px 8px;background:none;border:none;
+      font-family:'Space Mono',monospace;font-size:0.52rem;font-weight:700;
+      color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:1px;
+      cursor:pointer;transition:all 0.18s;border-bottom:2px solid transparent;
+    }
+    .dock-tab:hover { color:rgba(255,255,255,0.65); }
+    .dock-tab.active { color:#E8C547;border-bottom-color:#E8C547; }
+
+    .dock-panel { display:none;padding:14px 16px;overflow-y:auto;flex:1; scrollbar-width:none; }
+    .dock-panel::-webkit-scrollbar { display:none; }
+    .dock-panel.active { display:block; }
+
+    /* Color swatches */
+    .color-scenes {
+      display:grid!important;grid-template-columns:repeat(6,1fr)!important;
+      gap:8px!important;margin-bottom:14px!important;
+    }
+    .scene-swatch {
+      display:flex;flex-direction:column;align-items:center;gap:4px;
+      background:none;border:none;cursor:pointer;padding:0;
+    }
+    .swatch-preview {
+      width:100%;aspect-ratio:1;border-radius:8px;
+      border:2px solid rgba(255,255,255,0.1);transition:all 0.18s;display:block;
+    }
+    .scene-swatch:hover .swatch-preview { border-color:rgba(255,255,255,0.35);transform:scale(1.07); }
+    .scene-swatch.active .swatch-preview { border-color:#E8C547;box-shadow:0 0 0 2px rgba(232,197,71,0.35); }
+    .swatch-label {
+      font-family:'Space Mono',monospace;font-size:0.4rem;font-weight:700;
+      color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.5px;transition:color 0.18s;
+    }
+    .scene-swatch.active .swatch-label { color:#E8C547; }
+
+    /* Brightness row */
+    .brightness-row {
+      display:flex;align-items:center;gap:10px;padding-top:10px;
+      border-top:1px solid rgba(255,255,255,0.07);
+    }
+    .dock-label {
+      font-family:'Space Mono',monospace;font-size:0.46rem;font-weight:700;
+      color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1.5px;
+      display:block;margin-bottom:6px;flex-shrink:0;
+    }
+    .studio-slider {
+      flex:1;-webkit-appearance:none;appearance:none;
+      height:3px;border-radius:2px;outline:none;cursor:pointer;
+    }
+    .studio-slider::-webkit-slider-thumb {
+      -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+      background:#E8C547;cursor:pointer;box-shadow:0 0 8px rgba(232,197,71,0.5);
+    }
+    .studio-slider-val {
+      font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;
+      color:#E8C547;min-width:36px;text-align:right;
+    }
+
+    /* Font cards */
+    .font-cards { display:flex;flex-direction:column;gap:5px; }
+    .font-card {
+      display:flex;align-items:center;justify-content:space-between;
+      padding:9px 13px;border-radius:10px;
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+      cursor:pointer;transition:all 0.18s;
+    }
+    .font-card:hover { border-color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.06); }
+    .font-card.active { border-color:rgba(232,197,71,0.5);background:rgba(232,197,71,0.07); }
+    .font-card-preview { font-size:0.9rem;color:rgba(255,255,255,0.7); }
+    .font-card.active .font-card-preview { color:#fff; }
+    .font-card-name {
+      font-family:'Space Mono',monospace;font-size:0.44rem;font-weight:700;
+      color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;
+    }
+    .font-card.active .font-card-name { color:#E8C547; }
+
+    /* Photo zone */
+    .photo-drop-zone {
+      border:1.5px dashed rgba(255,255,255,0.2);border-radius:12px;padding:18px;
+      display:flex;flex-direction:column;align-items:center;gap:8px;
+      cursor:pointer;transition:all 0.2s;background:rgba(255,255,255,0.02);
+      margin-bottom:12px;text-align:center;
+    }
+    .photo-drop-zone:hover,.photo-drop-zone.has-photo {
+      border-color:rgba(232,197,71,0.4);background:rgba(232,197,71,0.03);
+    }
+    .photo-drop-icon { font-size:1.5rem;opacity:0.45; }
+    .photo-drop-text {
+      font-family:'Space Mono',monospace;font-size:0.52rem;font-weight:700;
+      color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:1px;
+    }
+    .photo-controls { display:flex;flex-direction:column;gap:10px; }
+    .photo-controls.hidden { display:none; }
+    .photo-effect-row { display:flex;align-items:center;gap:10px; }
+    .photo-filter-row { display:flex;gap:6px;flex-wrap:wrap; }
+    .photo-filter {
+      padding:5px 11px;border-radius:20px;
+      background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+      color:rgba(255,255,255,0.5);font-family:'Space Mono',monospace;
+      font-size:0.48rem;font-weight:700;text-transform:uppercase;
+      cursor:pointer;transition:all 0.18s;
+    }
+    .photo-filter:hover { border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.8); }
+    .photo-filter.active { background:rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.4);color:#E8C547; }
+    .photo-remove-btn {
+      width:100%;padding:9px;border-radius:9px;
+      background:rgba(255,80,80,0.07);border:1px solid rgba(255,80,80,0.2);
+      color:rgba(255,130,130,0.9);font-family:'Space Mono',monospace;
+      font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+      cursor:pointer;transition:all 0.18s;
+    }
+    .photo-remove-btn:hover { background:rgba(255,80,80,0.14);color:#ff6464; }
+
+    /* Spinner */
+    .studio-spinner {
+      width:14px;height:14px;border-radius:50%;
+      border:2px solid rgba(232,197,71,0.2);border-top-color:#E8C547;
+      animation:stSpin 0.7s linear infinite;display:inline-block;vertical-align:middle;
+    }
+    @keyframes stSpin { to { transform:rotate(360deg); } }
+  `;
+  document.head.appendChild(s);
 }
 
-/* ── Open Image Studio (from main, unchanged) ── */
-function openStudio() {
-  closeModal(postcardModal);
-  studioBgImage    = null;
-  studioFont       = 'playfair';
-  studioBrightness = 100;
-  studioBlur       = 0;
-  studioDim        = 50;
-  studioFilter     = 'none';
-  generatedBlob    = null;
-  selectedSize     = null;
-  studioDesign     = EMOTION_DESIGN_MAP[currentPost?.emotion] || 'midnight-gold';
-  studioOverlay.classList.remove('hidden');
-  document.body.classList.add('modal-open');
-  resetStudioUI();
-
-  const meta = currentPost?.youtubeMeta;
-  if (meta?.thumbnail) setTimeout(() => injectYoutubeBgOption(meta), 80);
-  setTimeout(refreshStageCanvas, 60);
+/* ══════════════════════════════════════════════════════════
+   WORD WRAP HELPER
+══════════════════════════════════════════════════════════ */
+function _studioWrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    const test = current ? current + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
 }
 
-// Alias so chooser and any other callers all work
-const openImageStudio = openStudio;
+/* ══════════════════════════════════════════════════════════
+   CANVAS DRAW — window.drawPosterToCtx
+   FIX v5.7: Guard with || so poster.js (loads after) wins if
+   it has already claimed this function.
+══════════════════════════════════════════════════════════ */
+window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, options) {
+  options = options || {};
+  if (!post) return;
 
-/* ── YouTube thumbnail as one-tap background ── */
-function injectYoutubeBgOption(meta) {
+  const designId    = options.design      || studioDesign;
+  const fontId      = options.font        || studioFont;
+  const brightness  = options.brightness  != null ? options.brightness  : studioBrightness;
+  const photoData   = options.photoData   || studioPhotoData;
+  const photoFilter = options.photoFilter || studioPhotoFilter;
+  const photoOpacity= options.photoOpacity!= null ? options.photoOpacity : studioPhotoOpacity;
+
+  const design = STUDIO_DESIGNS.find(d => d.id === designId) || STUDIO_DESIGNS[0];
+  const font   = STUDIO_FONTS.find(f => f.id === fontId)     || STUDIO_FONTS[0];
+  const emotion= post.emotion || 'Nostalgia';
+  const vibeColor = VIBE_COLORS[emotion] || design.accentColor;
+
+  const pad    = W * 0.07;
+  const innerW = W - pad * 2;
+
+  /* ── Background ── */
+  ctx.save();
+  ctx.fillStyle = design.bg(W, H, ctx);
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  /* ── Photo layer ── */
+  if (photoData) {
+    try {
+      const imgEl = document.getElementById('_studioPhotoImg');
+      if (imgEl && imgEl.complete && imgEl.naturalWidth) {
+        ctx.save();
+        const ratio = Math.max(W / imgEl.naturalWidth, H / imgEl.naturalHeight);
+        const iw = imgEl.naturalWidth  * ratio;
+        const ih = imgEl.naturalHeight * ratio;
+        const ix = (W - iw) / 2;
+        const iy = (H - ih) / 2;
+        if (photoFilter === 'mono')  ctx.filter = 'grayscale(100%)';
+        else if (photoFilter === 'warm') ctx.filter = 'sepia(60%) saturate(120%)';
+        else if (photoFilter === 'cool') ctx.filter = 'hue-rotate(20deg) saturate(80%)';
+        else if (photoFilter === 'dramatic') ctx.filter = 'contrast(130%) saturate(80%)';
+        else if (photoFilter === 'vintage')  ctx.filter = 'sepia(40%) contrast(90%)';
+        ctx.globalAlpha = photoOpacity;
+        ctx.drawImage(imgEl, ix, iy, iw, ih);
+        ctx.filter = 'none';
+        /* Dark overlay for readability */
+        ctx.globalAlpha = studioDim / 100;
+        const ov = ctx.createLinearGradient(0, 0, 0, H);
+        ov.addColorStop(0, 'rgba(0,0,0,0.8)');
+        ov.addColorStop(0.5, 'rgba(0,0,0,0.35)');
+        ov.addColorStop(1, 'rgba(0,0,0,0.85)');
+        ctx.fillStyle = ov;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+    } catch (_) {}
+  }
+
+  /* ── Brightness overlay ── */
+  if (brightness !== 100) {
+    ctx.save();
+    ctx.globalAlpha = Math.abs(brightness - 100) / 100 * 0.6;
+    ctx.fillStyle   = brightness < 100 ? '#000' : '#fff';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  /* ── Noise texture ── */
+  ctx.save();
+  ctx.globalAlpha = 0.025;
+  for (let y = 0; y < H; y += 3) {
+    for (let x = 0; x < W; x += 3) {
+      const v = Math.random() * 255 | 0;
+      ctx.fillStyle = `rgb(${v},${v},${v})`;
+      ctx.fillRect(x, y, 3, 3);
+    }
+  }
+  ctx.restore();
+
+  /* ── Top shimmer line ── */
+  ctx.save();
+  const sh = ctx.createLinearGradient(pad, 0, W - pad, 0);
+  sh.addColorStop(0, 'transparent');
+  sh.addColorStop(0.3, vibeColor);
+  sh.addColorStop(0.7, vibeColor);
+  sh.addColorStop(1, 'transparent');
+  ctx.globalAlpha = 0.7;
+  ctx.fillStyle   = sh;
+  ctx.fillRect(pad, 0, innerW, 2);
+  ctx.restore();
+
+  /* ── Left accent bar ── */
+  ctx.save();
+  const lH  = H * 0.42;
+  const lY  = (H - lH) / 2;
+  const lGr = ctx.createLinearGradient(0, lY, 0, lY + lH);
+  lGr.addColorStop(0, 'transparent');
+  lGr.addColorStop(0.3, vibeColor);
+  lGr.addColorStop(0.7, vibeColor);
+  lGr.addColorStop(1, 'transparent');
+  ctx.fillStyle   = lGr;
+  ctx.globalAlpha = 0.85;
+  ctx.fillRect(pad - W * 0.025, lY, W * 0.007, lH);
+  ctx.restore();
+
+  /* ── MARGO wordmark ── */
+  const margoSz = Math.max(22, W * 0.055);
+  ctx.save();
+  ctx.font         = `800 ${margoSz}px 'Syne', sans-serif`;
+  ctx.fillStyle    = vibeColor;
+  ctx.globalAlpha  = 0.9;
+  ctx.textBaseline = 'top';
+  ctx.fillText('MARGO', pad, pad * 0.75);
+  ctx.restore();
+
+  /* ── Lyric text ── */
+  const lyricText = post.text || '';
+  let fontSize = Math.min(W * 0.072, H * 0.055);
+  const fStyle = font.style === 'italic' ? 'italic ' : '';
+  ctx.font = `${fStyle}${font.weight} ${fontSize}px ${font.css}`;
+
+  const lines = _studioWrapText(ctx, lyricText, innerW);
+  if (lines.length > 6) {
+    fontSize = Math.max(W * 0.032, fontSize * (6 / lines.length));
+    ctx.font = `${fStyle}${font.weight} ${fontSize}px ${font.css}`;
+  }
+
+  const lh     = fontSize * 1.45;
+  const blockH = lines.length * lh;
+  const startY = H * 0.38 - blockH / 2;
+
+  ctx.save();
+  ctx.textBaseline  = 'top';
+  ctx.textAlign     = 'left';
+  ctx.shadowColor   = 'rgba(0,0,0,0.7)';
+  ctx.shadowBlur    = 16;
+  ctx.shadowOffsetY = 2;
+  lines.forEach((line, i) => {
+    ctx.globalAlpha = 1 - (i / lines.length) * 0.08;
+    ctx.fillStyle   = design.textColor;
+    ctx.fillText(line, pad, startY + i * lh);
+  });
+  ctx.restore();
+
+  /* ── Vibe tag ── */
+  const vibeLabel = VIBE_LABELS[emotion] || emotion;
+  const tagFS  = Math.max(14, W * 0.022);
+  const tagY   = startY + blockH + lh * 0.6;
+  ctx.save();
+  ctx.font         = `700 ${tagFS}px 'Space Mono', monospace`;
+  ctx.textBaseline = 'middle';
+  const tagPad = W * 0.022;
+  const tagW   = ctx.measureText(vibeLabel.toUpperCase()).width + tagPad * 2;
+  const tagH   = tagFS + W * 0.012;
+  const tagR   = tagH / 2;
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle   = vibeColor;
+  if (ctx.roundRect) ctx.roundRect(pad, tagY, tagW, tagH, tagR);
+  else { ctx.beginPath(); ctx.rect(pad, tagY, tagW, tagH); }
+  ctx.fill();
+  ctx.globalAlpha = 0.55;
+  ctx.strokeStyle = vibeColor;
+  ctx.lineWidth   = 1.5;
+  if (ctx.roundRect) ctx.roundRect(pad, tagY, tagW, tagH, tagR);
+  else { ctx.beginPath(); ctx.rect(pad, tagY, tagW, tagH); }
+  ctx.stroke();
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle   = vibeColor;
+  ctx.fillText(vibeLabel.toUpperCase(), pad + tagPad, tagY + tagH / 2);
+  ctx.restore();
+
+  /* ── Song + artist ── */
+  const k = post.knowledge || {};
+  if (k.song || k.artist) {
+    ctx.save();
+    const metaFS = Math.max(14, W * 0.022);
+    ctx.font         = `700 ${metaFS}px 'DM Sans', sans-serif`;
+    ctx.fillStyle    = design.textColor;
+    ctx.globalAlpha  = 0.85;
+    ctx.textBaseline = 'bottom';
+    let str = (k.song ? `♪ ${k.song}` : '') + (k.artist ? ` — ${k.artist}` : '');
+    const maxW = innerW * 0.75;
+    while (ctx.measureText(str).width > maxW && str.length > 4) str = str.slice(0, -4) + '…';
+    ctx.fillText(str, pad, H - pad * 0.9);
+    ctx.restore();
+  }
+
+  /* ── Thumbnail ── */
+  const thumbImg = document.getElementById('_studioThumbImg');
+  if (thumbImg && thumbImg.complete && thumbImg.naturalWidth) {
+    try {
+      const tSz = Math.round(W * 0.09);
+      const tX  = W - pad - tSz;
+      const tY  = H - pad * 0.9 - tSz - 4;
+      ctx.save();
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(tX, tY, tSz, tSz, tSz * 0.15);
+      else ctx.rect(tX, tY, tSz, tSz);
+      ctx.clip();
+      ctx.drawImage(thumbImg, tX, tY, tSz, tSz);
+      ctx.restore();
+      ctx.save();
+      ctx.strokeStyle = vibeColor;
+      ctx.lineWidth   = 2;
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(tX, tY, tSz, tSz, tSz * 0.15);
+      else ctx.rect(tX, tY, tSz, tSz);
+      ctx.stroke();
+      ctx.restore();
+    } catch (_) {}
+  }
+};
+
+/* ══════════════════════════════════════════════════════════
+   STAGE CANVAS REFRESH
+══════════════════════════════════════════════════════════ */
+function refreshStageCanvas() {
+  const canvas = document.getElementById('studioCanvas');
+  if (!canvas) return;
+  const post = studioPost || window.currentPost;
+  if (!post)  return;
+
+  const size  = CANVAS_SIZES[studioCanvasSize] || CANVAS_SIZES.square;
+  const stage = canvas.parentElement;
+  if (!stage) return;
+
+  const maxW  = stage.clientWidth  || 320;
+  const maxH  = (stage.clientHeight || 380) - 20;
+  const scale = Math.min(maxW / size.w, maxH / size.h, 1);
+
+  canvas.width        = size.w;
+  canvas.height       = size.h;
+  canvas.style.width  = Math.round(size.w * scale) + 'px';
+  canvas.style.height = Math.round(size.h * scale) + 'px';
+
+  const ctx = canvas.getContext('2d');
+  window.drawPosterToCtx(ctx, size.w, size.h, post);
+}
+
+/* ══════════════════════════════════════════════════════════
+   SLIDER GRADIENT HELPER
+══════════════════════════════════════════════════════════ */
+function _updateSlider(slider, value) {
+  const min = parseInt(slider.min || 0);
+  const max = parseInt(slider.max || 100);
+  const pct = ((value - min) / (max - min)) * 100;
+  slider.style.background = `linear-gradient(to right,#E8C547 ${pct}%,rgba(255,255,255,0.12) ${pct}%)`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   WIRE UP THE HTML PANELS (panel-color, panel-font, panel-photo)
+   These IDs come directly from index.html
+══════════════════════════════════════════════════════════ */
+function wireColorPanel() {
+  const panel = document.getElementById('panel-color');
+  if (!panel) return;
+
+  /* Wire existing scene swatches from HTML */
+  panel.querySelectorAll('.scene-swatch').forEach(btn => {
+    const designId = btn.dataset.design;
+    if (designId === studioDesign) btn.classList.add('active');
+    btn.onclick = () => {
+      studioDesign = designId;
+      panel.querySelectorAll('.scene-swatch').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      refreshStageCanvas();
+    };
+  });
+
+  /* Brightness slider */
+  const slider = document.getElementById('studiobrightness');
+  const val    = document.getElementById('studioBrightnessVal');
+  if (slider) {
+    _updateSlider(slider, studioBrightness);
+    slider.oninput = () => {
+      studioBrightness = parseInt(slider.value);
+      if (val) val.textContent = studioBrightness + '%';
+      _updateSlider(slider, studioBrightness);
+      refreshStageCanvas();
+    };
+  }
+}
+
+function wireFontPanel() {
+  const panel = document.getElementById('panel-font');
+  if (!panel) return;
+
+  panel.querySelectorAll('.font-card').forEach(btn => {
+    const fontId = btn.dataset.font;
+    if (fontId === studioFont) btn.classList.add('active');
+    btn.onclick = () => {
+      studioFont = fontId;
+      panel.querySelectorAll('.font-card').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      refreshStageCanvas();
+    };
+  });
+}
+
+function wirePhotoPanel() {
   const panel = document.getElementById('panel-photo');
   if (!panel) return;
-  document.getElementById('ytBgOption')?.remove();
 
-  const opt = document.createElement('div');
-  opt.id        = 'ytBgOption';
-  opt.className = 'yt-bg-option';
-  opt.innerHTML = `
-    <img src="${meta.thumbnail}" alt="" onerror="this.parentElement.style.display='none'"/>
-    <div class="yt-bg-option-text">
-      <div class="yt-bg-option-label">▶ Use Video Thumbnail</div>
-      <div class="yt-bg-option-title">${meta.title || meta.channel || ''}</div>
-    </div>
-  `;
+  const dropZone  = document.getElementById('photoUploadZone');
+  const fileInput = document.getElementById('studioPhotoInput');
+  const controls  = document.getElementById('photoControls');
+  const dropText  = document.getElementById('photoDropText');
+  const blurSlider= document.getElementById('studioBlur');
+  const blurVal   = document.getElementById('studioBlurVal');
+  const dimSlider = document.getElementById('studioDim');
+  const dimVal    = document.getElementById('studioDimVal');
+  const removeBtn = document.getElementById('studioRemovePhoto');
 
-  opt.onclick = () => {
-    const tryLoad = (src) => new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload  = () => resolve(img);
-      img.onerror = () => reject(new Error('CORS'));
-      img.src = src;
-    });
+  if (dropZone && fileInput) {
+    dropZone.onclick = () => fileInput.click();
+    dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('has-photo'); };
+    dropZone.ondragleave = () => { if (!studioPhotoData) dropZone.classList.remove('has-photo'); };
+    dropZone.ondrop = e => {
+      e.preventDefault();
+      const file = e.dataTransfer?.files?.[0];
+      if (file && file.type.startsWith('image/')) _loadPhotoFile(file, dropZone, controls, dropText);
+    };
+    fileInput.onchange = () => {
+      const file = fileInput.files?.[0];
+      if (file) _loadPhotoFile(file, dropZone, controls, dropText);
+    };
+  }
 
-    const applyImage = (img) => {
-      studioBgImage = img;
-      const photoDropText = document.getElementById('photoDropText');
-      const photoDropZone = document.getElementById('photoUploadZone');
-      const photoControls = document.getElementById('photoControls');
-      if (photoDropText) photoDropText.textContent = 'YouTube thumbnail';
-      if (photoDropZone) photoDropZone.classList.add('has-photo');
-      if (photoControls) photoControls.classList.remove('hidden');
-      opt.style.background  = 'rgba(255,0,0,0.18)';
-      opt.style.borderColor = 'rgba(255,0,0,0.55)';
-      showToast('Thumbnail set as background ✓');
+  if (blurSlider) {
+    _updateSlider(blurSlider, studioBlur);
+    blurSlider.oninput = () => {
+      studioBlur = parseInt(blurSlider.value);
+      if (blurVal) blurVal.textContent = studioBlur;
+      _updateSlider(blurSlider, studioBlur);
       refreshStageCanvas();
     };
-
-    tryLoad(meta.thumbnail)
-      .then(applyImage)
-      .catch(() => {
-        fetch(meta.thumbnail)
-          .then(r => r.blob())
-          .then(blob => { const url = URL.createObjectURL(blob); return tryLoad(url); })
-          .then(applyImage)
-          .catch(() => showToast('Could not load thumbnail — upload manually'));
-      });
-  };
-
-  panel.insertBefore(opt, panel.firstChild);
-  document.querySelector('[data-tab="photo"]')?.click();
-}
-
-/* ── Reset Studio UI ── */
-function resetStudioUI() {
-  document.querySelectorAll('.dock-tab').forEach((t, i)   => t.classList.toggle('active', i === 0));
-  document.querySelectorAll('.dock-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
-  document.querySelectorAll('.scene-swatch').forEach(s    => s.classList.toggle('active', s.dataset.design === studioDesign));
-  document.querySelectorAll('.font-card').forEach((fc, i) => fc.classList.toggle('active', i === 0));
-
-  const bSlider = document.getElementById('studiobrightness');
-  const bVal    = document.getElementById('studioBrightnessVal');
-  if (bSlider) bSlider.value    = 100;
-  if (bVal)    bVal.textContent = '100%';
-
-  const photoDropText = document.getElementById('photoDropText');
-  const photoDropZone = document.getElementById('photoUploadZone');
-  const photoControls = document.getElementById('photoControls');
-  if (photoDropText) photoDropText.textContent = 'Tap to add a photo';
-  if (photoDropZone) photoDropZone.classList.remove('has-photo');
-  if (photoControls) photoControls.classList.add('hidden');
-  if (studioPhotoInput) studioPhotoInput.value = '';
-
-  const bsl = document.getElementById('studioBlur'),  bvl = document.getElementById('studioBlurVal');
-  const dsl = document.getElementById('studioDim'),   dvl = document.getElementById('studioDimVal');
-  if (bsl) bsl.value = 0;  if (bvl) bvl.textContent = '0';
-  if (dsl) dsl.value = 50; if (dvl) dvl.textContent  = '50%';
-
-  document.querySelectorAll('.photo-filter').forEach((f, i) => f.classList.toggle('active', i === 0));
-  sizePicker.classList.add('hidden');
-  ceremonyOverlay.classList.add('hidden');
-  document.getElementById('ytBgOption')?.remove();
-}
-
-/* ════════════════════════════════════════
-   CANVAS RENDERING
-   ════════════════════════════════════════ */
-function getPhotoFilter() {
-  let f = `brightness(${studioBrightness}%)`;
-  const filters = {
-    warm:     ' sepia(0.3) saturate(1.3) hue-rotate(-10deg)',
-    cool:     ' saturate(0.85) hue-rotate(15deg)',
-    dramatic: ' contrast(1.5) saturate(1.2) brightness(0.9)',
-    vintage:  ' sepia(0.5) contrast(1.2)',
-  };
-  if (filters[studioFilter]) f += filters[studioFilter];
-  return f;
-}
-
-function drawPosterToCtx(ctx, W, H) {
-  const c     = POSTER_DESIGNS[studioDesign] || POSTER_DESIGNS['midnight-gold'];
-  const fd    = FONT_FAMILIES[studioFont]    || FONT_FAMILIES['playfair'];
-  const scale = W / 1080;
-
-  ctx.filter = 'none';
-
-  if (studioBgImage) {
-    const tmp = document.createElement('canvas');
-    tmp.width = W; tmp.height = H;
-    const tc  = tmp.getContext('2d');
-    const iw  = studioBgImage.naturalWidth  || studioBgImage.width;
-    const ih  = studioBgImage.naturalHeight || studioBgImage.height;
-    const imgScale = Math.max(W / iw, H / ih);
-    tc.filter = getPhotoFilter();
-    tc.drawImage(studioBgImage, (W - iw * imgScale) / 2, (H - ih * imgScale) / 2, iw * imgScale, ih * imgScale);
-    tc.filter = 'none';
-    if (studioBlur > 0) {
-      const tmp2 = document.createElement('canvas');
-      tmp2.width = W; tmp2.height = H;
-      const tc2  = tmp2.getContext('2d');
-      tc2.filter = `blur(${Math.max(1, studioBlur) * 2}px)`;
-      tc2.drawImage(tmp, 0, 0);
-      tc2.filter = 'none';
-      ctx.drawImage(tmp2, 0, 0);
-    } else {
-      ctx.drawImage(tmp, 0, 0);
-    }
-    ctx.filter    = 'none';
-    ctx.fillStyle = `rgba(0,0,0,${studioDim / 100})`;
-    ctx.fillRect(0, 0, W, H);
-  } else {
-    ctx.filter    = 'none';
-    const g       = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, c.bg[0]);
-    g.addColorStop(0.5, c.bg[1]);
-    g.addColorStop(1, c.bg[2]);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-    if (studioBrightness !== 100) {
-      const bDelta  = (studioBrightness - 100) / 100;
-      ctx.fillStyle = bDelta < 0
-        ? `rgba(0,0,0,${Math.abs(bDelta) * 0.9})`
-        : `rgba(255,255,255,${bDelta * 0.6})`;
-      ctx.fillRect(0, 0, W, H);
-    }
   }
 
-  ctx.filter = 'none';
-  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-
-  const textColor = studioBgImage ? '#ffffff' : c.text;
-  if (studioBgImage) {
-    ctx.shadowColor   = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur    = 14 * scale;
-    ctx.shadowOffsetY = 2 * scale;
+  if (dimSlider) {
+    _updateSlider(dimSlider, studioDim);
+    dimSlider.oninput = () => {
+      studioDim = parseInt(dimSlider.value);
+      if (dimVal) dimVal.textContent = studioDim + '%';
+      _updateSlider(dimSlider, studioDim);
+      refreshStageCanvas();
+    };
   }
 
-  // MARGO wordmark
-  ctx.textAlign  = 'left';
-  ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
-  ctx.fillStyle  = studioBgImage ? 'rgba(255,255,255,0.32)' : (c.primary + '88');
-  ctx.font       = `700 ${22 * scale}px 'Space Mono', monospace`;
-  ctx.fillText('MARGO', 52 * scale, 58 * scale);
-  ctx.textAlign  = 'center';
-
-  // Lyric text
-  const lyricText = currentPost.text.length > 100
-    ? currentPost.text.substring(0, 97) + '…'
-    : currentPost.text;
-
-  if (studioBgImage) { ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 18 * scale; }
-  ctx.fillStyle = textColor;
-
-  const lyricLen  = lyricText.length;
-  const lyricSize = lyricLen < 40 ? 82 * scale
-    : lyricLen < 65 ? 64 * scale
-    : lyricLen < 90 ? 52 * scale
-    : 42 * scale;
-
-  const isBold = ['bebas','josefin','oswald'].includes(studioFont);
-  ctx.font = `${fd.style === 'italic' ? 'italic ' : ''}${isBold ? '700' : '600'} ${lyricSize}px ${fd.family}`;
-  wrapTextCenter(ctx, lyricText, W / 2, H * 0.46, W * 0.82, lyricSize * 1.18);
-
-  // Song & Artist
-  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  ctx.filter = 'none'; ctx.textAlign = 'center';
-
-  const k        = currentPost.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
-  const songSize = Math.max(Math.round(lyricSize * 0.42), 28 * scale);
-  const artSize  = Math.max(Math.round(lyricSize * 0.30), 20 * scale);
-  const songY    = H * 0.76;
-  const artistY  = songY + songSize + 16 * scale;
-
-  let songColor, artistColor;
-  if (studioBgImage) {
-    songColor = '#ffffff'; artistColor = 'rgba(255,255,255,0.82)';
-    ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = 14 * scale; ctx.shadowOffsetY = 1 * scale;
-  } else if (c.light) {
-    songColor = c.primary; artistColor = 'rgba(42,37,32,0.7)';
-  } else {
-    songColor = c.primary; artistColor = 'rgba(255,255,255,0.72)';
-  }
-
-  ctx.fillStyle = songColor;
-  ctx.font      = `700 ${songSize}px ${fd.family}`;
-  ctx.fillText(k.song.length > 32 ? k.song.substring(0, 32) + '…' : k.song, W / 2, songY);
-
-  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-  ctx.fillStyle = artistColor;
-  ctx.font      = `700 ${artSize}px 'Space Mono', monospace`;
-  ctx.fillText(k.artist.length > 40 ? k.artist.substring(0, 40) + '…' : k.artist, W / 2, artistY);
-
-  // Domain watermark
-  const markSize  = Math.max(Math.round(18 * scale), 14);
-  const markColor = studioBgImage ? 'rgba(255,255,255,0.75)'
-    : c.light ? 'rgba(42,37,32,0.6)'
-    : c.primary + 'cc';
-  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-  ctx.fillStyle = markColor;
-  ctx.font      = `700 ${markSize}px 'Space Mono', monospace`;
-  ctx.textAlign = 'center';
-  ctx.fillText(APP_DOMAIN, W / 2, H * 0.94);
-}
-
-function wrapTextCenter(ctx, text, x, centerY, maxW, lineHeight) {
-  const words = text.split(' ');
-  let line    = '';
-  const lines = [];
-  words.forEach(word => {
-    const test = line + word + ' ';
-    if (ctx.measureText(test).width > maxW && line) {
-      lines.push(line.trim()); line = word + ' ';
-    } else { line = test; }
+  panel.querySelectorAll('.photo-filter').forEach(btn => {
+    btn.onclick = () => {
+      studioPhotoFilter = btn.dataset.filter;
+      panel.querySelectorAll('.photo-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      refreshStageCanvas();
+    };
   });
-  if (line.trim()) lines.push(line.trim());
-  const startY = centerY - ((lines.length - 1) * lineHeight) / 2;
-  lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lineHeight));
+
+  if (removeBtn) {
+    removeBtn.onclick = () => {
+      studioPhotoData = null;
+      document.getElementById('_studioPhotoImg')?.remove();
+      if (dropZone)  dropZone.classList.remove('has-photo');
+      if (controls)  controls.classList.add('hidden');
+      if (dropText)  dropText.textContent = 'Tap to add a photo';
+      refreshStageCanvas();
+    };
+  }
 }
 
-function refreshStageCanvas() {
-  if (!currentPost || !studioCanvas) return;
-  const stage  = studioCanvas.parentElement;
-  const dpr    = window.devicePixelRatio || 1;
-  const availW = stage.clientWidth  - 40;
-  const availH = stage.clientHeight - 40;
-  const size   = Math.max(80, Math.min(availW, availH, 700));
-  studioCanvas.style.width  = size + 'px';
-  studioCanvas.style.height = size + 'px';
-  const res = Math.round(size * dpr);
-  studioCanvas.width  = res;
-  studioCanvas.height = res;
-  const ctx = studioCanvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  document.fonts.ready.then(() => drawPosterToCtx(ctx, size, size));
-}
-
-async function generateFinalPoster(sizeKey) {
-  const dim = POSTER_SIZES[sizeKey];
-  if (!dim || !currentPost) throw new Error('Invalid size or no post');
-  const offscreen = document.createElement('canvas');
-  offscreen.width  = dim.w;
-  offscreen.height = dim.h;
-  const ctx = offscreen.getContext('2d');
-  await document.fonts.ready;
-  drawPosterToCtx(ctx, dim.w, dim.h);
-  return new Promise((resolve, reject) => {
-    offscreen.toBlob(blob => {
-      if (blob) resolve(blob);
-      else reject(new Error('Canvas toBlob returned null'));
-    }, 'image/png');
-  });
-}
-
-function drawCeremonyThumb() {
-  const dpr  = window.devicePixelRatio || 1;
-  const size = 600;
-  ceremonyThumb.width        = Math.round(size * dpr);
-  ceremonyThumb.height       = Math.round(size * dpr);
-  ceremonyThumb.style.width  = '';
-  ceremonyThumb.style.height = '';
-  const ctx = ceremonyThumb.getContext('2d');
-  ctx.scale(dpr, dpr);
-  document.fonts.ready.then(() => drawPosterToCtx(ctx, size, size));
-}
-
-function handleStudioPhoto(file) {
-  if (!file.type.startsWith('image/')) { showToast('Please upload an image'); return; }
-  if (file.size > 15 * 1024 * 1024)   { showToast('File too large (max 15MB)'); return; }
+function _loadPhotoFile(file, dropZone, controls, dropText) {
   const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = () => {
-      studioBgImage = img;
-      const photoDropText = document.getElementById('photoDropText');
-      const photoDropZone = document.getElementById('photoUploadZone');
-      const photoControls = document.getElementById('photoControls');
-      if (photoDropText) photoDropText.textContent = file.name;
-      if (photoDropZone) photoDropZone.classList.add('has-photo');
-      if (photoControls) photoControls.classList.remove('hidden');
-      const ytOpt = document.getElementById('ytBgOption');
-      if (ytOpt) { ytOpt.style.background = ''; ytOpt.style.borderColor = ''; }
-      showToast('Photo added');
+  reader.onload = e => {
+    studioPhotoData = e.target.result;
+    let imgEl = document.getElementById('_studioPhotoImg');
+    if (!imgEl) {
+      imgEl = document.createElement('img');
+      imgEl.id = '_studioPhotoImg';
+      imgEl.style.display = 'none';
+      document.body.appendChild(imgEl);
+    }
+    imgEl.onload = () => {
+      if (dropZone) dropZone.classList.add('has-photo');
+      if (controls) controls.classList.remove('hidden');
+      if (dropText)  dropText.textContent = 'Tap to change photo';
       refreshStageCanvas();
     };
-    img.src = ev.target.result;
+    imgEl.src = studioPhotoData;
   };
   reader.readAsDataURL(file);
 }
 
-async function shareOrDownloadPoster() {
-  if (!generatedBlob) { showToast('Poster not ready yet'); return; }
-
-  const fileName  = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
-  const file      = new File([generatedBlob], fileName, { type: 'image/png' });
-  const shareData = {
-    title: `MARGO — ${currentPost?.text?.substring(0, 50) || 'Lyric'}`,
-    text:  `"${currentPost?.text || ''}" — drop your lyric at trymargo.com`,
-    files: [file]
+/* ══════════════════════════════════════════════════════════
+   DOCK TAB SWITCHING
+══════════════════════════════════════════════════════════ */
+function _switchDockTab(tabId) {
+  document.querySelectorAll('.dock-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tabId);
+  });
+  const panelIds = {
+    color: ['panel-color', 'dockColorPanel'],
+    font:  ['panel-font',  'dockFontPanel'],
+    photo: ['panel-photo', 'dockPhotoPanel'],
   };
+  Object.values(panelIds).flat().forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  (panelIds[tabId] || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
+  });
+}
 
-  try {
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-      await navigator.share(shareData);
-      showToast('Shared!');
-      return;
+/* ══════════════════════════════════════════════════════════
+   OPEN / CLOSE
+   FIX v5.7: openStudio now delegates to openPosterStudio
+   if poster.js is loaded, so the share sheet "Studio" button
+   never navigates to the landing page.
+══════════════════════════════════════════════════════════ */
+window.openStudio = function(post) {
+  /* Delegate to poster.js if available — it owns the overlay */
+  if (typeof window.openPosterStudio === 'function') {
+    return window.openPosterStudio(post || window.currentPost);
+  }
+
+  /* Fallback: studio.js direct open (poster.js not loaded) */
+  studioPost = post || window.currentPost;
+  if (!studioPost) return;
+
+  injectStudioStyles();
+
+  const overlay = document.getElementById('studioOverlay');
+  if (!overlay) return;
+
+  /* Preload thumbnail */
+  const thumb = studioPost.youtubeMeta?.thumbnailSm || studioPost.youtubeMeta?.thumbnail;
+  if (thumb) {
+    let thumbEl = document.getElementById('_studioThumbImg');
+    if (!thumbEl) {
+      thumbEl = document.createElement('img');
+      thumbEl.id = '_studioThumbImg';
+      thumbEl.style.display = 'none';
+      thumbEl.crossOrigin = 'anonymous';
+      document.body.appendChild(thumbEl);
     }
-  } catch (e) {
-    if (e.name === 'AbortError') return;
+    thumbEl.src = thumb;
   }
 
-  downloadPosterBlob();
-  showToast('Saved to device!');
-}
+  overlay.classList.remove('hidden');
+  document.body.classList.add('modal-open');
 
-function downloadPosterBlob() {
-  if (!generatedBlob) { showToast('Poster not ready'); return; }
+  wireColorPanel();
+  wireFontPanel();
+  wirePhotoPanel();
+
+  _switchDockTab('color');
+
+  requestAnimationFrame(() => refreshStageCanvas());
+};
+
+window.closeStudio = function() {
+  document.getElementById('studioOverlay')?.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+};
+
+/* ══════════════════════════════════════════════════════════
+   EXPORT
+══════════════════════════════════════════════════════════ */
+async function exportPoster() {
+  const btn = document.getElementById('studioExportBtn');
+  if (btn) { btn.innerHTML = '<span class="studio-spinner"></span>'; btn.disabled = true; }
+
+  const size   = CANVAS_SIZES[studioCanvasSize] || CANVAS_SIZES.square;
+  const canvas = document.createElement('canvas');
+  canvas.width  = size.w;
+  canvas.height = size.h;
+  const ctx = canvas.getContext('2d');
+
   try {
-    const url = URL.createObjectURL(generatedBlob);
-    const a   = document.createElement('a');
-    a.href     = url;
-    a.download = `margo-${selectedSize || 'poster'}-${Date.now()}.png`;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
-  } catch (err) {
-    console.error('Download error:', err);
-    showToast('Could not download — try again');
+    const font = STUDIO_FONTS.find(f => f.id === studioFont) || STUDIO_FONTS[0];
+    await document.fonts.load(`${font.weight} 48px ${font.css}`);
+    await document.fonts.load(`800 48px 'Syne', sans-serif`);
+    await document.fonts.load(`700 24px 'Space Mono', monospace`);
+    await document.fonts.load(`700 24px 'DM Sans', sans-serif`);
+  } catch (_) {}
+
+  window.drawPosterToCtx(ctx, size.w, size.h, studioPost || window.currentPost);
+
+  const post = studioPost || window.currentPost || {};
+  const name = (post.knowledge?.song || 'lyric').replace(/\s+/g, '-').toLowerCase();
+  const link = document.createElement('a');
+  link.download = `margo-${name}.png`;
+  link.href     = canvas.toDataURL('image/png', 0.93);
+  link.click();
+
+  if (btn) {
+    btn.disabled    = false;
+    btn.textContent = '✓ Saved!';
+    btn.style.background = '#4ade80';
+    btn.style.color      = '#0B0B0D';
+    setTimeout(() => {
+      btn.style.background = '';
+      btn.style.color      = '';
+      btn.textContent = 'Export';
+    }, 2200);
   }
+  if (typeof showToast === 'function') showToast('Saved to downloads ✓');
 }
+
+/* ══════════════════════════════════════════════════════════
+   STUDIO CHOOSER
+══════════════════════════════════════════════════════════ */
+window.openStudioChooser = function(post) {
+  if (post) { studioPost = post; window.currentPost = post; }
+  if (typeof window.openShareSheet === 'function') {
+    window.openShareSheet(studioPost || window.currentPost);
+  }
+};
+window.closeStudioChooser = function() {
+  // No-op — share sheet handles its own close
+};
+
+/* ══════════════════════════════════════════════════════════
+   RESIZE
+══════════════════════════════════════════════════════════ */
+let _studioResizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_studioResizeTimer);
+  _studioResizeTimer = setTimeout(() => {
+    if (!document.getElementById('studioOverlay')?.classList.contains('hidden')) {
+      refreshStageCanvas();
+    }
+  }, 150);
+});
+
+/* ══════════════════════════════════════════════════════════
+   INIT — bind events already in HTML
+   NOTE: studioExportBtn is NOT bound here — poster.js owns
+   it when openPosterStudio() is called, preventing double-fire.
+══════════════════════════════════════════════════════════ */
+(function initStudio() {
+  injectStudioStyles();
+
+  /* Close button is handled by app.js patchStudioBackButtons — do not bind here */
+
+  /* Bind dock tabs */
+  document.querySelectorAll('.dock-tab').forEach(tab => {
+    tab.onclick = () => _switchDockTab(tab.dataset.tab);
+  });
+})();
+})();

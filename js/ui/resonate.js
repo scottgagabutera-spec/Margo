@@ -1,200 +1,247 @@
 /* ============================================================
    MARGO — js/resonate.js
-   Resonate system — heart/like for posts.
-   Stored in Firebase: analytics/{postId}/resonates/{userId} = true
-   Also wires up the new feed card action buttons:
-     • Resonate (♥)
-     • Lyric Back (opens echo sheet)
-     • Share · GIF · Poster (opens share sheet)
-   And patches the feed card renderer to use new buttons.
-   v1.0
+   v1.3 — concept-v2
+   • Optimistic resonate — instant UI update, no page flash
+   • No renderFeed() calls — only targeted DOM updates
+   • upgradeCardActions replaces action row on all cards
+   • viewPost patched to open share sheet
    ============================================================ */
 
-/* ────────────────────────────────────────────────────────────
-   STYLES
-──────────────────────────────────────────────────────────── */
 function injectResonateStyles() {
   if (document.getElementById('resonateStyles')) return;
   const s = document.createElement('style');
   s.id = 'resonateStyles';
   s.textContent = `
-    /* ── Resonate button ── */
+    #feedList .card-actions-v2 {
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      padding: 8px 12px 10px !important;
+      border-top: 1px solid rgba(255,255,255,0.07) !important;
+      flex-shrink: 0 !important;
+    }
+
     .card-resonate-btn {
-      display: flex; align-items: center; justify-content: center; gap: 5px;
-      padding: 7px 10px; border-radius: 9px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: rgba(255,255,255,0.38);
-      font-family: 'Space Mono', monospace;
-      font-size: 0.55rem; font-weight: 700;
-      cursor: pointer; transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+      display: flex; align-items: center; gap: 5px;
+      padding: 7px 12px; border-radius: 50px;
+      background: rgba(192,132,252,0.08);
+      border: 1px solid rgba(192,132,252,0.25);
+      color: rgba(192,132,252,0.9);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.68rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
       white-space: nowrap; flex-shrink: 0;
       position: relative; overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
     }
     .card-resonate-btn:hover {
-      border-color: rgba(255,107,157,0.35);
-      color: #FF6B9D;
-      background: rgba(255,107,157,0.07);
+      background: rgba(192,132,252,0.16);
+      border-color: rgba(192,132,252,0.5);
     }
     .card-resonate-btn.resonated {
-      background: rgba(255,107,157,0.1);
-      border-color: rgba(255,107,157,0.38);
-      color: #FF6B9D;
+      background: rgba(192,132,252,0.18);
+      border-color: rgba(192,132,252,0.55);
+      color: #C084FC;
     }
-    .card-resonate-btn:active { transform: scale(0.92); }
+    .card-resonate-btn:active { opacity: 0.75; }
+    .r-icon { font-size: 0.82rem; line-height: 1; transition: transform 0.2s; }
+    .card-resonate-btn.resonated .r-icon { transform: scale(1.3) rotate(20deg); }
+    .r-count {
+      color: #00E5FF; font-size: 0.62rem;
+      font-family: 'Space Mono', monospace; font-weight: 700;
+    }
+    @keyframes rBurst {
+      0%{opacity:1;transform:scale(0)} 65%{opacity:.4;transform:scale(2.4)} 100%{opacity:0;transform:scale(3.8)}
+    }
+    .r-ripple {
+      position:absolute;inset:0;border-radius:50px;
+      background:radial-gradient(circle,rgba(192,132,252,.5) 0%,transparent 70%);
+      opacity:0;pointer-events:none;
+    }
+    .r-ripple.go { animation: rBurst .5s ease-out forwards; }
 
-    /* Heart pop animation */
-    @keyframes heartPop {
-      0%   { transform: scale(1); }
-      40%  { transform: scale(1.45); }
-      70%  { transform: scale(0.9); }
-      100% { transform: scale(1); }
-    }
-    .card-resonate-btn.pop .resonate-heart {
-      animation: heartPop 0.38s cubic-bezier(0.16,1,0.3,1);
-    }
-    .resonate-heart { display: inline-block; font-size: 0.8rem; line-height: 1; }
-    .resonate-count { font-size: 0.55rem; }
-
-    /* ── Lyric Back button ── */
     .card-lyric-back-btn {
-      flex: 1; padding: 8px 6px; border-radius: 9px;
-      background: rgba(107,140,255,0.06);
-      border: 1px solid rgba(107,140,255,0.18);
-      color: rgba(107,140,255,0.75);
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 7px 8px; border-radius: 50px;
+      background: rgba(232,197,71,0.06);
+      border: 1px solid rgba(232,197,71,0.2);
+      color: rgba(232,197,71,0.85);
       font-family: 'DM Sans', sans-serif;
-      font-size: 0.7rem; font-weight: 600;
-      cursor: pointer; transition: all 0.18s;
-      white-space: nowrap;
+      font-size: 0.68rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap; text-align: center;
+      -webkit-tap-highlight-color: transparent;
     }
     .card-lyric-back-btn:hover {
-      background: rgba(107,140,255,0.12);
-      border-color: rgba(107,140,255,0.4);
-      color: #6B8CFF;
-    }
-    .card-lyric-back-btn:active { transform: scale(0.96); }
-
-    /* ── Share button ── */
-    .card-share-btn {
-      padding: 8px 10px; border-radius: 9px;
-      background: rgba(232,197,71,0.06);
-      border: 1px solid rgba(232,197,71,0.18);
-      color: rgba(232,197,71,0.7);
-      font-family: 'Space Mono', monospace;
-      font-size: 0.52rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.5px;
-      cursor: pointer; transition: all 0.18s;
-      white-space: nowrap; flex-shrink: 0;
-    }
-    .card-share-btn:hover {
-      background: rgba(232,197,71,0.12);
-      border-color: rgba(232,197,71,0.4);
+      background: rgba(232,197,71,0.13);
+      border-color: rgba(232,197,71,0.45);
       color: #E8C547;
     }
-    .card-share-btn:active { transform: scale(0.96); }
-
-    /* ── Updated card actions row ── */
-    #feedList .card-actions-v2 {
-      margin-top: auto !important;
-      padding-top: 8px !important;
-      border-top: 1px solid rgba(232,197,71,0.10) !important;
-      flex-shrink: 0 !important;
-      display: flex !important;
-      gap: 5px !important;
-      align-items: center !important;
+    .card-lyric-back-btn:active { opacity: 0.75; }
+    .lyric-back-count {
+      font-size: 0.58rem; font-family: 'Space Mono', monospace;
+      font-weight: 700; color: #E8C547; opacity: 0.8;
     }
 
-    /* ── View count chip ── */
-    .card-view-count {
+    .card-share-btn {
+      display: flex; align-items: center; gap: 4px;
+      padding: 7px 12px; border-radius: 50px;
+      background: rgba(232,197,71,0.08);
+      border: 1px solid rgba(232,197,71,0.28);
+      color: rgba(232,197,71,0.9);
       font-family: 'Space Mono', monospace;
       font-size: 0.48rem; font-weight: 700;
-      color: rgba(255,255,255,0.2); letter-spacing: 0.5px;
-      white-space: nowrap; flex-shrink: 0; padding: 0 2px;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
     }
+    .card-share-btn:hover {
+      background: rgba(232,197,71,0.16);
+      border-color: rgba(232,197,71,0.5);
+      box-shadow: 0 0 16px rgba(232,197,71,0.15);
+    }
+    .card-share-btn:active { opacity: 0.75; }
+    .card-share-dot { opacity: 0.4; margin: 0 1px; }
   `;
   document.head.appendChild(s);
 }
 
-/* ────────────────────────────────────────────────────────────
-   RESONATE LOGIC
-──────────────────────────────────────────────────────────── */
-
-/** Get resonates count for a post */
+/* ── Resonate state helpers ── */
 function getResonateCount(postId) {
   if (typeof postAnalytics === 'undefined') return 0;
-  const an = postAnalytics[postId] || {};
-  return Object.keys(an.resonates || {}).length;
+  return Object.keys((postAnalytics[postId]?.resonates) || {}).length;
 }
 
-/** Whether the current user has resonated with a post */
 function hasResonated(postId) {
   if (typeof postAnalytics === 'undefined') return false;
-  const an = postAnalytics[postId] || {};
   const myId = typeof userId !== 'undefined' ? userId : '';
-  return !!(an.resonates && an.resonates[myId]);
+  return !!(postAnalytics[postId]?.resonates?.[myId]);
 }
 
-/** Toggle resonate for the current user */
-function toggleResonate(postId) {
-  if (!postId) return;
-  if (typeof isFirebaseEnabled === 'undefined' || !isFirebaseEnabled) return;
+/* ── Optimistic resonate toggle ──
+   Updates UI instantly, writes to Firebase in background.
+   No re-render. No flash. ── */
+function toggleResonate(postId, btn) {
+  if (!postId || typeof isFirebaseEnabled === 'undefined' || !isFirebaseEnabled) return;
   const myId = typeof userId !== 'undefined' ? userId : 'anon';
-  const ref  = analyticsRef.child(postId).child('resonates').child(myId);
-  ref.once('value').then(snap => {
-    if (snap.exists()) ref.remove();
-    else ref.set(true);
-  });
+
+  // Read current local state
+  const currently = hasResonated(postId);
+  const currentCount = getResonateCount(postId);
+
+  // Optimistic local update
+  if (!postAnalytics) window.postAnalytics = {};
+  if (!postAnalytics[postId]) postAnalytics[postId] = {};
+  if (!postAnalytics[postId].resonates) postAnalytics[postId].resonates = {};
+
+  if (currently) {
+    delete postAnalytics[postId].resonates[myId];
+  } else {
+    postAnalytics[postId].resonates[myId] = true;
+  }
+
+  // Update just this button's UI — no re-render
+  if (btn) updateResonateBtn(btn, postId);
+
+  // Write to Firebase (no callback that triggers re-render)
+  const ref = analyticsRef.child(postId).child('resonates').child(myId);
+  if (currently) {
+    ref.remove().catch(err => {
+      // Rollback on failure
+      postAnalytics[postId].resonates[myId] = true;
+      if (btn) updateResonateBtn(btn, postId);
+      console.warn('[Resonate] remove failed:', err.message);
+    });
+  } else {
+    ref.set(true).catch(err => {
+      // Rollback on failure
+      delete postAnalytics[postId].resonates[myId];
+      if (btn) updateResonateBtn(btn, postId);
+      console.warn('[Resonate] set failed:', err.message);
+    });
+  }
 }
 
-/* ────────────────────────────────────────────────────────────
-   BUILD NEW ACTION ROW
-   Called from feed card renderer to produce the new button set.
-──────────────────────────────────────────────────────────── */
+/* ── Update a single resonate button in place ── */
+function updateResonateBtn(btn, postId) {
+  const count     = getResonateCount(postId);
+  const resonated = hasResonated(postId);
+  const countEl   = btn.querySelector('.r-count');
+
+  btn.classList.toggle('resonated', resonated);
+
+  if (count > 0) {
+    if (countEl) {
+      countEl.textContent = count;
+    } else {
+      const span = document.createElement('span');
+      span.className   = 'r-count';
+      span.textContent = count;
+      btn.appendChild(span);
+    }
+  } else if (countEl) {
+    countEl.remove();
+  }
+}
+
+/* ── Build single action row ── */
 function buildCardActionsV2(post, postIdx) {
   injectResonateStyles();
+  const postId    = post.id;
+  const rCount    = getResonateCount(postId);
+  const resonated = hasResonated(postId);
 
-  const postId       = post.id;
-  const count        = getResonateCount(postId);
-  const resonated    = hasResonated(postId);
-  const views        = (postAnalytics?.[postId]?.views) || 0;
-  const echoCount    = 0; // echoes aren't counted in postAnalytics yet — can add later
+  // Echo count — from postAnalytics or post.echoes
+  const echoCount = Object.keys(
+    (postAnalytics?.[postId]?.echoes) ||
+    (post.echoes) ||
+    {}
+  ).length;
 
   const row = document.createElement('div');
   row.className = 'card-actions-v2';
 
-  /* Resonate button */
+  // ✦ Resonate
   const resonateBtn = document.createElement('button');
-  resonateBtn.className = `card-resonate-btn ${resonated ? 'resonated' : ''}`;
-  resonateBtn.setAttribute('aria-label', 'Resonate');
+  resonateBtn.className = `card-resonate-btn${resonated ? ' resonated' : ''}`;
+  resonateBtn.setAttribute('data-post-id', postId);
   resonateBtn.innerHTML = `
-    <span class="resonate-heart">♥</span>
-    <span class="resonate-count">${count > 0 ? count : ''}</span>
+    <div class="r-ripple"></div>
+    <span class="r-icon">✦</span>
+    <span>Resonate</span>
+    ${rCount > 0 ? `<span class="r-count">${rCount}</span>` : ''}
   `;
   resonateBtn.onclick = (e) => {
     e.stopPropagation();
-    toggleResonate(postId);
-    // Optimistic animation
-    resonateBtn.classList.add('pop');
-    setTimeout(() => resonateBtn.classList.remove('pop'), 400);
+    // Ripple
+    const rip = resonateBtn.querySelector('.r-ripple');
+    rip.classList.remove('go');
+    void rip.offsetWidth;
+    rip.classList.add('go');
+    // Optimistic toggle — pass btn for targeted update
+    toggleResonate(postId, resonateBtn);
   };
   row.appendChild(resonateBtn);
 
-  /* Lyric Back button */
+  // ↩ Lyric Back
   const lyrBackBtn = document.createElement('button');
   lyrBackBtn.className = 'card-lyric-back-btn';
-  lyrBackBtn.textContent = 'Lyric Back';
+  lyrBackBtn.innerHTML = `↩ Lyric Back${echoCount > 0 ? ` <span class="lyric-back-count">·${echoCount}</span>` : ''}`;
   lyrBackBtn.onclick = (e) => {
     e.stopPropagation();
     if (typeof openEchoSheet === 'function') openEchoSheet(postIdx);
   };
   row.appendChild(lyrBackBtn);
 
-  /* Share button */
+  // GIF · Poster
   const shareBtn = document.createElement('button');
   shareBtn.className = 'card-share-btn';
-  shareBtn.textContent = '↗ Share';
+  shareBtn.innerHTML = `GIF <span class="card-share-dot">·</span> Poster`;
   shareBtn.onclick = (e) => {
     e.stopPropagation();
+    window.currentPost = post;
     if (typeof openShareSheet === 'function') openShareSheet(post);
   };
   row.appendChild(shareBtn);
@@ -202,80 +249,44 @@ function buildCardActionsV2(post, postIdx) {
   return row;
 }
 
-/* ────────────────────────────────────────────────────────────
-   PATCH renderFeed
-   Overrides the card `actions` HTML in feed.js to use the
-   new action row instead of the old Open/Guess/Watch buttons.
-   We do this by monkey-patching window.viewPost and injecting
-   a post-render hook.
-
-   Strategy: after renderFeed() runs, we find every .card-actions
-   and replace it with a .card-actions-v2 row. This avoids
-   modifying feed.js directly.
-──────────────────────────────────────────────────────────── */
+/* ── Patch renderFeed ── */
 (function patchFeedCardActions() {
   const tryPatch = () => {
     if (typeof renderFeed !== 'function') { setTimeout(tryPatch, 100); return; }
-
-    const _origRenderFeed = renderFeed;
+    const _orig = renderFeed;
     window.renderFeed = function() {
-      _origRenderFeed.apply(this, arguments);
+      _orig.apply(this, arguments);
       upgradeCardActions();
     };
   };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tryPatch);
-  } else {
-    setTimeout(tryPatch, 50);
-  }
+  document.readyState === 'loading'
+    ? document.addEventListener('DOMContentLoaded', tryPatch)
+    : setTimeout(tryPatch, 50);
 })();
 
 function upgradeCardActions() {
   injectResonateStyles();
-  const feedList = document.getElementById('feedList');
-  if (!feedList) return;
+  const feedListEl = document.getElementById('feedList');
+  if (!feedListEl || typeof posts === 'undefined') return;
 
-  // Get rendered cards — each corresponds to posts array order (via renderFeed)
-  const cards = feedList.querySelectorAll('.feed-card:not(.skeleton-card)');
-  if (typeof posts === 'undefined') return;
-
-  // Rebuild ranked post order to match what renderFeed rendered
-  // We use the same getRankedPosts() from feed.js if available
-  let rankedPosts = [];
-  if (typeof getRankedPosts === 'function') {
-    rankedPosts = getRankedPosts();
-  } else if (typeof posts !== 'undefined') {
-    rankedPosts = posts.filter(p => p.status !== 'hidden');
-  }
+  const cards = feedListEl.querySelectorAll('.feed-card:not(.skeleton-card)');
+  const rankedPosts = typeof getRankedPosts === 'function'
+    ? getRankedPosts()
+    : posts.filter(p => p.status !== 'hidden');
 
   cards.forEach((card, i) => {
     const post = rankedPosts[i];
     if (!post) return;
-
-    // Find the global index in posts[] for openEchoSheet
-    const globalIdx = (typeof posts !== 'undefined')
-      ? posts.findIndex(p => p.id === post.id)
-      : i;
-
-    // Replace old .card-actions with new .card-actions-v2
-    const oldActions = card.querySelector('.card-actions');
-    if (oldActions) {
-      const newActions = buildCardActionsV2(post, globalIdx);
-      oldActions.replaceWith(newActions);
-    }
+    const globalIdx  = posts.findIndex(p => p.id === post.id);
+    const oldActions = card.querySelector('.card-actions, .card-actions-v2, .reaction-bar');
+    if (oldActions) oldActions.replaceWith(buildCardActionsV2(post, globalIdx));
   });
 }
 
-/* ────────────────────────────────────────────────────────────
-   PATCH viewPost
-   The old viewPost opened the postcard modal. Now it opens
-   the share sheet directly (postcard is removed).
-──────────────────────────────────────────────────────────── */
+/* ── Patch viewPost ── */
 (function patchViewPost() {
   const tryPatch = () => {
     if (typeof posts === 'undefined') { setTimeout(tryPatch, 100); return; }
-
     window.viewPost = function(index) {
       const post = posts[index];
       if (!post) return;
@@ -284,52 +295,54 @@ function upgradeCardActions() {
       if (typeof openShareSheet === 'function') openShareSheet(post);
     };
   };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tryPatch);
-  } else {
-    setTimeout(tryPatch, 60);
-  }
+  document.readyState === 'loading'
+    ? document.addEventListener('DOMContentLoaded', tryPatch)
+    : setTimeout(tryPatch, 60);
 })();
 
-/* ────────────────────────────────────────────────────────────
-   RESONATE COUNT LIVE UPDATE
-   When Firebase updates postAnalytics, refresh resonate
-   counts on visible cards without full re-render.
-──────────────────────────────────────────────────────────── */
+/* ── Live count refresh (analytics changes from OTHER users)
+   Only updates button counts — never re-renders the feed ── */
 function refreshVisibleResonateCounts() {
-  const buttons = document.querySelectorAll('.card-resonate-btn[data-post-id]');
-  buttons.forEach(btn => {
-    const postId   = btn.dataset.postId;
-    const count    = getResonateCount(postId);
-    const resonated= hasResonated(postId);
-    const countEl  = btn.querySelector('.resonate-count');
-    if (countEl) countEl.textContent = count > 0 ? count : '';
-    btn.classList.toggle('resonated', resonated);
+  document.querySelectorAll('.card-resonate-btn[data-post-id]').forEach(btn => {
+    updateResonateBtn(btn, btn.dataset.postId);
   });
 }
 
-// Hook into the existing analytics Firebase listener
-// by patching startFirebaseSync's analytics handler
+/* ── Hook analytics listener for OTHER users' resonates
+   We patch the firebase.js analyticsRef listener so it
+   ONLY calls refreshVisibleResonateCounts, not renderFeed ── */
 (function hookAnalytics() {
   const tryHook = () => {
-    // analyticsRef is set in firebase.js — wait for it
     if (typeof analyticsRef === 'undefined') { setTimeout(tryHook, 200); return; }
-
-    // Add our own listener on top of the existing one
-    analyticsRef.on('value', () => {
-      // Small delay to let postAnalytics update first
-      setTimeout(refreshVisibleResonateCounts, 50);
+    analyticsRef.on('value', (snap) => {
+      // Update local postAnalytics without triggering full re-render
+      const newData = snap.val() || {};
+      // Merge in counts from other users without overwriting our optimistic updates
+      if (typeof postAnalytics !== 'undefined') {
+        Object.keys(newData).forEach(postId => {
+          if (!postAnalytics[postId]) {
+            postAnalytics[postId] = newData[postId];
+          } else {
+            // Merge resonates from server (other users)
+            if (newData[postId]?.resonates) {
+              if (!postAnalytics[postId].resonates) postAnalytics[postId].resonates = {};
+              Object.assign(postAnalytics[postId].resonates, newData[postId].resonates);
+            }
+          }
+        });
+      } else {
+        window.postAnalytics = newData;
+      }
+      // Just refresh the visible buttons — no renderFeed
+      setTimeout(refreshVisibleResonateCounts, 30);
     });
   };
-  setTimeout(tryHook, 500);
+  setTimeout(tryHook, 600);
 })();
 
-/* ────────────────────────────────────────────────────────────
-   GLOBAL EXPOSE
-──────────────────────────────────────────────────────────── */
-window.toggleResonate      = toggleResonate;
-window.getResonateCount    = getResonateCount;
-window.hasResonated        = hasResonated;
-window.buildCardActionsV2  = buildCardActionsV2;
-window.upgradeCardActions  = upgradeCardActions;
+/* ── Global expose ── */
+window.toggleResonate     = toggleResonate;
+window.getResonateCount   = getResonateCount;
+window.hasResonated       = hasResonated;
+window.buildCardActionsV2 = buildCardActionsV2;
+window.upgradeCardActions = upgradeCardActions;
