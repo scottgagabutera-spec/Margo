@@ -1,9 +1,9 @@
 {
   "rewrites": [
-    { "source": "/about",   "destination": "/about.html"   },
-    { "source": "/privacy", "destination": "/privacy.html" },
-    { "source": "/terms",   "destination": "/terms.html"   },
-    { "source": "/contact", "destination": "/contact.html" }
+    { "source": "/about",   "destination": "/public/about.html"   },
+    { "source": "/privacy", "destination": "/public/privacy.html" },
+    { "source": "/terms",   "destination": "/public/terms.html"   },
+    { "source": "/contact", "destination": "/public/contact.html" }
   ],
   "headers": [
     {
@@ -13,6 +13,14 @@
     {
       "source": "/favicon-:size.png",
       "headers": [{ "key": "Content-Type", "value": "image/png" }]
+    },
+    {
+      "source": "/favicons/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     }
   ]
 }
