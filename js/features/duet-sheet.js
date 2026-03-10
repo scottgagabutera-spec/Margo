@@ -1,6 +1,6 @@
 /* ============================================================
    MARGO — js/features/duet-sheet.js
-   v1.0
+   v1.1
    Handles the GIF · POSTER button inside Lyric Back (echoes).
    When a user taps GIF · POSTER on an echo card, this file
    receives both the original post and the echo, then opens
@@ -37,17 +37,15 @@ function openDuetSheet(originalPost, echo) {
     // No youtubeMeta for echoes — that's fine, share sheet handles missing thumb
   };
 
+  // Close the echo sheet first so share sheet isn't hidden behind it
+  if (typeof closeEchoSheet === 'function') closeEchoSheet();
+
   // Delegate to share-sheet.js with duet opts
   if (typeof openShareSheet === 'function') {
     openShareSheet(originalPost, {
       isDuet:   true,
       echoPost: echoPost,
     });
-  } else {
-    // Fallback — just open share sheet with the echo alone
-    if (typeof openShareSheet === 'function') {
-      openShareSheet(echoPost);
-    }
   }
 }
 
