@@ -11,15 +11,15 @@
      reopenShareSheet()
        Called by studios' back buttons — brings sheet back to front
 
-   v1.0
+   v1.1 — z-index raised to 700 so it sits above echo sheet (650)
    ============================================================ */
 
 /* ── Shared state ── */
 window._shareSheet = window._shareSheet || {
   post:          null,
-  echoPost:      null,   // second post for duet mode
+  echoPost:      null,
   isDuet:        false,
-  activeTab:     'gif',  // 'gif' | 'poster'
+  activeTab:     'gif',
   gifBlob:       null,
   posterBlob:    null,
   isEncoding:    false,
@@ -37,9 +37,8 @@ function injectShareSheetStyles() {
   const s = document.createElement('style');
   s.id = 'shareSheetStyles';
   s.textContent = `
-    /* ── Backdrop ── */
     #shareSheetBackdrop {
-      position: fixed; inset: 0; z-index: 600;
+      position: fixed; inset: 0; z-index: 700;
       background: rgba(0,0,0,0.75);
       backdrop-filter: blur(14px) saturate(0.7);
       -webkit-backdrop-filter: blur(14px) saturate(0.7);
@@ -54,7 +53,6 @@ function injectShareSheetStyles() {
       #shareSheetBackdrop { align-items: center; padding: 24px; }
     }
 
-    /* ── Sheet ── */
     #shareSheet {
       width: 100%;
       max-width: 560px;
@@ -94,14 +92,12 @@ function injectShareSheetStyles() {
       to { transform: translateY(80px); opacity: 0; }
     }
 
-    /* ── Drag handle ── */
     .ss-handle {
       width: 36px; height: 4px; border-radius: 2px;
       background: rgba(255,255,255,0.12);
       margin: 12px auto 0; flex-shrink: 0;
     }
 
-    /* ── Header ── */
     .ss-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 18px 0; flex-shrink: 0;
@@ -130,7 +126,6 @@ function injectShareSheetStyles() {
     }
     .ss-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
 
-    /* ── Tabs ── */
     .ss-tabs {
       display: flex; gap: 6px; padding: 14px 18px 0; flex-shrink: 0;
     }
@@ -157,7 +152,6 @@ function injectShareSheetStyles() {
     }
     @keyframes ssDotPulse { 0%,100%{opacity:0.7;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
 
-    /* ── Canvas preview ── */
     .ss-canvas-wrap {
       padding: 14px 18px; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -197,7 +191,6 @@ function injectShareSheetStyles() {
       width: 0%;
     }
 
-    /* ── Song/artist info strip ── */
     .ss-info-strip {
       display: flex; align-items: center; gap: 10px;
       padding: 0 18px 12px; flex-shrink: 0;
@@ -224,7 +217,6 @@ function injectShareSheetStyles() {
       padding: 3px 9px; border-radius: 20px; flex-shrink: 0;
     }
 
-    /* ── Actions ── */
     .ss-actions {
       display: flex; gap: 8px; padding: 0 18px 10px; flex-shrink: 0;
     }
@@ -273,7 +265,6 @@ function injectShareSheetStyles() {
       flex: 0 0 auto; padding: 13px 14px;
     }
 
-    /* ── Customize strip ── */
     .ss-customize-strip {
       padding: 4px 18px 20px; flex-shrink: 0;
     }
@@ -293,7 +284,6 @@ function injectShareSheetStyles() {
     .ss-customize-btn:hover .ss-customize-arrow { transform: translateX(3px); }
     .ss-customize-arrow { transition: transform 0.18s; display: inline-block; }
 
-    /* swipe-to-close hint */
     @media (max-width: 559px) {
       .ss-handle { cursor: grab; }
     }
@@ -302,7 +292,7 @@ function injectShareSheetStyles() {
 }
 
 /* ────────────────────────────────────────────────────────────
-   EMOTION CONFIG (mirrors feed.js EMOTION_CFG)
+   EMOTION CONFIG
 ──────────────────────────────────────────────────────────── */
 const SS_EMOTION_CFG = {
   Love:       { bg:'rgba(255,107,157,0.13)', text:'#FF6B9D', border:'rgba(255,107,157,0.22)' },
@@ -313,13 +303,13 @@ const SS_EMOTION_CFG = {
   Joy:        { bg:'rgba(255,200,71,0.11)',  text:'#ffc847', border:'rgba(255,200,71,0.22)'  },
   Rage:       { bg:'rgba(255,100,100,0.13)', text:'#FF6464', border:'rgba(255,100,100,0.22)' },
   Loneliness: { bg:'rgba(160,160,255,0.11)', text:'#a0a0ff', border:'rgba(160,160,255,0.22)' },
+  SendIt:     { bg:'rgba(0,229,255,0.11)',   text:'#00E5FF', border:'rgba(0,229,255,0.22)'   },
+  LetOut:     { bg:'rgba(255,160,50,0.11)',  text:'#FFA032', border:'rgba(255,160,50,0.22)'  },
 };
 const SS_EMOTION_DEFAULT = { bg:'rgba(232,197,71,0.11)', text:'#E8C547', border:'rgba(232,197,71,0.25)' };
 
 /* ────────────────────────────────────────────────────────────
    CANVAS PREVIEW RENDERER
-   Delegates to the single-source-of-truth in studio.js for
-   poster rendering. For GIF, runs its own lightweight loop.
 ──────────────────────────────────────────────────────────── */
 
 function ssStopPreview() {
@@ -331,10 +321,10 @@ function ssStartPreview(canvas) {
   ssStopPreview();
   if (!canvas || !SS.post) return;
 
-  const dpr    = Math.min(window.devicePixelRatio || 1, 2);
-  const wrap   = canvas.parentElement;
-  const maxSz  = Math.min(wrap.clientWidth - 0, 320);
-  const size   = Math.max(120, maxSz);
+  const dpr   = Math.min(window.devicePixelRatio || 1, 2);
+  const wrap  = canvas.parentElement;
+  const maxSz = Math.min(wrap.clientWidth - 0, 320);
+  const size  = Math.max(120, maxSz);
 
   canvas.style.width  = size + 'px';
   canvas.style.height = size + 'px';
@@ -342,11 +332,9 @@ function ssStartPreview(canvas) {
   canvas.height = Math.round(size * dpr);
 
   if (SS.activeTab === 'poster') {
-    // Static poster — delegate to studio.js _drawPosterCanvas
     const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
     document.fonts.ready.then(() => {
-      // Temporarily set currentPost so drawPosterToCtx works
       const prev = window.currentPost;
       window.currentPost = SS.post;
       if (typeof drawPosterToCtx === 'function') {
@@ -357,10 +345,9 @@ function ssStartPreview(canvas) {
       window.currentPost = prev;
     });
   } else {
-    // Animated GIF preview — use gif-studio.js gsDrawFrame
     let frame = 0;
     let last  = 0;
-    const delay = 70;
+    const delay  = 70;
     const frames = 24;
 
     const loop = (ts) => {
@@ -386,13 +373,11 @@ function ssStartPreview(canvas) {
   }
 }
 
-/** Fallback renderer if studios haven't loaded yet */
 function ssDrawFallback(ctx, W, H) {
   if (!SS.post) return;
   const emotion = SS.post.emotion || 'Nostalgia';
   const cfg     = SS_EMOTION_CFG[emotion] || SS_EMOTION_DEFAULT;
 
-  // Background
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, '#0B0B0D');
   g.addColorStop(0.5, '#1a1410');
@@ -400,24 +385,20 @@ function ssDrawFallback(ctx, W, H) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  // Top line accent
   ctx.fillStyle = cfg.text;
   ctx.fillRect(0, 0, W, 2);
 
-  // MARGO wordmark
   ctx.fillStyle = 'rgba(232,197,71,0.4)';
   ctx.font = `700 ${Math.round(W * 0.04)}px 'Space Mono', monospace`;
   ctx.textAlign = 'left';
   ctx.fillText('MARGO', W * 0.05, W * 0.08);
 
-  // Lyric
   ctx.fillStyle = '#F0F0F0';
   ctx.textAlign = 'center';
   const sz = SS.post.text.length < 50 ? W * 0.065 : W * 0.048;
   ctx.font = `italic 600 ${sz}px 'DM Serif Display', serif`;
   wrapTextFallback(ctx, SS.post.text.substring(0, 100), W / 2, H * 0.44, W * 0.84, sz * 1.25);
 
-  // Song
   const k = SS.post.knowledge || {};
   ctx.fillStyle = cfg.text;
   ctx.font = `700 ${W * 0.038}px 'Space Mono', monospace`;
@@ -426,7 +407,6 @@ function ssDrawFallback(ctx, W, H) {
   ctx.font = `400 ${W * 0.028}px 'Space Mono', monospace`;
   ctx.fillText((k.artist || '').substring(0, 32), W / 2, H * 0.76 + W * 0.048);
 
-  // Domain
   ctx.fillStyle = 'rgba(232,197,71,0.5)';
   ctx.font = `700 ${W * 0.026}px 'Space Mono', monospace`;
   ctx.fillText('trymargo.com', W / 2, H * 0.92);
@@ -447,7 +427,7 @@ function wrapTextFallback(ctx, text, x, cy, maxW, lineH) {
 }
 
 /* ────────────────────────────────────────────────────────────
-   BUILD SHEET DOM (mounted once, reused)
+   BUILD SHEET DOM
 ──────────────────────────────────────────────────────────── */
 
 function mountShareSheet() {
@@ -491,9 +471,7 @@ function mountShareSheet() {
         </div>
       </div>
 
-      <div class="ss-info-strip" id="ssInfoStrip">
-        <!-- populated per post -->
-      </div>
+      <div class="ss-info-strip" id="ssInfoStrip"></div>
 
       <div class="ss-actions">
         <button class="ss-btn ss-btn-download" id="ssBtnDownload">
@@ -504,8 +482,7 @@ function mountShareSheet() {
           <span class="ss-btn-icon">↗</span>
           <span>Share</span>
         </button>
-        <button class="ss-btn ss-btn-studio" id="ssBtnStudio"
-          title="Open full studio">
+        <button class="ss-btn ss-btn-studio" id="ssBtnStudio" title="Open full studio">
           <span class="ss-btn-icon">✦</span>
           <span>Studio</span>
         </button>
@@ -523,21 +500,18 @@ function mountShareSheet() {
   document.body.appendChild(backdrop);
   SS.mounted = true;
 
-  // Wire up events
-  backdrop.querySelector('#ssClose').onclick       = closeShareSheet;
-  backdrop.querySelector('#ssTabGif').onclick      = () => switchSSTab('gif');
-  backdrop.querySelector('#ssTabPoster').onclick   = () => switchSSTab('poster');
-  backdrop.querySelector('#ssBtnDownload').onclick = ssDownload;
-  backdrop.querySelector('#ssBtnShare').onclick    = ssShare;
-  backdrop.querySelector('#ssBtnStudio').onclick   = ssOpenStudio;
-  backdrop.querySelector('#ssCustomizeBtn').onclick= ssOpenStudio;
+  backdrop.querySelector('#ssClose').onclick        = closeShareSheet;
+  backdrop.querySelector('#ssTabGif').onclick       = () => switchSSTab('gif');
+  backdrop.querySelector('#ssTabPoster').onclick    = () => switchSSTab('poster');
+  backdrop.querySelector('#ssBtnDownload').onclick  = ssDownload;
+  backdrop.querySelector('#ssBtnShare').onclick     = ssShare;
+  backdrop.querySelector('#ssBtnStudio').onclick    = ssOpenStudio;
+  backdrop.querySelector('#ssCustomizeBtn').onclick = ssOpenStudio;
 
-  // Tap backdrop to close
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeShareSheet();
   });
 
-  // Swipe-to-close on mobile
   initSSSwipeClose();
 }
 
@@ -549,34 +523,28 @@ function openShareSheet(post, opts = {}) {
   if (!post) return;
 
   mountShareSheet();
-  SS.post     = post;
-  SS.isDuet   = !!(opts.isDuet && opts.echoPost);
-  SS.echoPost = opts.echoPost || null;
-  SS.gifBlob  = null;
+  SS.post       = post;
+  SS.isDuet     = !!(opts.isDuet && opts.echoPost);
+  SS.echoPost   = opts.echoPost || null;
+  SS.gifBlob    = null;
   SS.posterBlob = null;
   SS.activeTab  = 'gif';
 
-  // Set currentPost for studio delegates
   window.currentPost = post;
 
-  // Populate info strip
   populateSSInfoStrip(post);
 
-  // Lyric preview in header
   const prev = document.getElementById('ssLyricPreview');
   if (prev) prev.textContent = (post.text || '').substring(0, 48) + (post.text?.length > 48 ? '…' : '');
 
-  // Reset tab UI
   document.getElementById('ssTabGif')?.classList.add('active');
   document.getElementById('ssTabPoster')?.classList.remove('active');
   document.getElementById('ssBtnDownloadLabel').textContent = 'Download GIF';
 
-  // Show sheet
   const backdrop = document.getElementById('shareSheetBackdrop');
   backdrop.classList.remove('ss-hidden');
   document.body.classList.add('modal-open');
 
-  // Small delay so DOM has painted before canvas sizes correctly
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       ssStartPreview(document.getElementById('ssCanvas'));
@@ -602,15 +570,12 @@ function closeShareSheet() {
   }, 300);
 }
 
-/** Called by studio back buttons — bring sheet back without re-mounting */
 function reopenShareSheet() {
   const backdrop = document.getElementById('shareSheetBackdrop');
   if (!backdrop) return;
   backdrop.classList.remove('ss-hidden');
   document.body.classList.add('modal-open');
-  // Re-sync currentPost
   window.currentPost = SS.post;
-  // Restart preview
   requestAnimationFrame(() => ssStartPreview(document.getElementById('ssCanvas')));
 }
 window.reopenShareSheet = reopenShareSheet;
@@ -621,8 +586,8 @@ window.reopenShareSheet = reopenShareSheet;
 
 function switchSSTab(tab) {
   if (SS.activeTab === tab) return;
-  SS.activeTab = tab;
-  SS.gifBlob   = null;
+  SS.activeTab  = tab;
+  SS.gifBlob    = null;
   SS.posterBlob = null;
 
   document.querySelectorAll('.ss-tab').forEach(t => {
@@ -675,9 +640,7 @@ async function ssDownload() {
     if (!SS.posterBlob) return;
     const url = URL.createObjectURL(SS.posterBlob);
     const a   = document.createElement('a');
-    a.href     = url;
-    a.download = `margo-poster-${Date.now()}.png`;
-    a.style.display = 'none';
+    a.href = url; a.download = `margo-poster-${Date.now()}.png`; a.style.display = 'none';
     document.body.appendChild(a); a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
     if (typeof showToast === 'function') showToast('Poster saved ✓');
@@ -688,8 +651,6 @@ async function ssDownload() {
 
 async function ssShare() {
   const isGif = SS.activeTab === 'gif';
-
-  // Generate if needed
   if (isGif && !SS.gifBlob) await ssGenerateGif();
   if (!isGif && !SS.posterBlob) await ssGeneratePoster();
 
@@ -711,7 +672,6 @@ async function ssShare() {
     if (e.name === 'AbortError') return;
   }
 
-  // Fallback — download
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
   a.href = url; a.download = fileName; a.style.display = 'none';
@@ -720,7 +680,6 @@ async function ssShare() {
   if (typeof showToast === 'function') showToast('Saved to device ✓');
 }
 
-/* ── Poster generation ── */
 async function ssGeneratePoster() {
   if (SS.posterBlob) return;
   SS.isEncoding = true;
@@ -730,17 +689,15 @@ async function ssGeneratePoster() {
     const prev = window.currentPost;
     window.currentPost = SS.post;
     const offscreen = document.createElement('canvas');
-    const dim = { w: 1080, h: 1080 };
-    offscreen.width = dim.w; offscreen.height = dim.h;
+    offscreen.width = 1080; offscreen.height = 1080;
     const ctx = offscreen.getContext('2d');
     await document.fonts.ready;
     if (typeof drawPosterToCtx === 'function') {
-      drawPosterToCtx(ctx, dim.w, dim.h);
+      drawPosterToCtx(ctx, 1080, 1080);
     } else {
-      ssDrawFallback(ctx, dim.w, dim.h);
+      ssDrawFallback(ctx, 1080, 1080);
     }
     window.currentPost = prev;
-
     SS.posterBlob = await new Promise((res, rej) => {
       offscreen.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png');
     });
@@ -753,11 +710,9 @@ async function ssGeneratePoster() {
   }
 }
 
-/* ── GIF generation ── delegates to gif-studio.js ── */
 async function ssGenerateGif() {
   if (SS.gifBlob) return;
   if (typeof gsExportForShareSheet !== 'function') {
-    // Fallback: tell user to use studio
     if (typeof showToast === 'function') showToast('Open Studio to export GIF');
     ssOpenStudio(); return;
   }
@@ -791,8 +746,6 @@ function setSSEncoding(on, label = '') {
   if (overlay) overlay.classList.toggle('hidden', !on);
   if (lbl && label) lbl.textContent = label;
   if (bar && !on) bar.style.width = '0%';
-
-  // Disable buttons while encoding
   ['ssBtnDownload','ssBtnShare','ssBtnStudio','ssCustomizeBtn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = on;
@@ -800,17 +753,14 @@ function setSSEncoding(on, label = '') {
 }
 
 /* ────────────────────────────────────────────────────────────
-   OPEN STUDIO (hide sheet, open correct studio)
+   OPEN STUDIO
 ──────────────────────────────────────────────────────────── */
 
 function ssOpenStudio() {
   ssStopPreview();
-  // Hide sheet (don't close — keeps state)
   const backdrop = document.getElementById('shareSheetBackdrop');
   if (backdrop) backdrop.classList.add('ss-hidden');
-
   window.currentPost = SS.post;
-
   if (SS.activeTab === 'poster') {
     if (typeof openStudio === 'function') openStudio();
   } else {
@@ -819,7 +769,7 @@ function ssOpenStudio() {
 }
 
 /* ────────────────────────────────────────────────────────────
-   SWIPE TO CLOSE (mobile)
+   SWIPE TO CLOSE
 ──────────────────────────────────────────────────────────── */
 
 function initSSSwipeClose() {
@@ -831,9 +781,8 @@ function initSSSwipeClose() {
   const THRESHOLD = 80;
 
   const onStart = (e) => {
-    startY   = e.touches ? e.touches[0].clientY : e.clientY;
-    currentY = startY;
-    dragging = true;
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    currentY = startY; dragging = true;
     sheet.style.transition = 'none';
   };
   const onMove = (e) => {
@@ -868,7 +817,6 @@ window.openShareSheet   = openShareSheet;
 window.closeShareSheet  = closeShareSheet;
 window.reopenShareSheet = reopenShareSheet;
 
-// Mount on DOM ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', mountShareSheet);
 } else {
