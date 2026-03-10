@@ -79,30 +79,33 @@ function drawBg(ctx, W, H, theme) {
 }
 
 /* ════════════════════════════════════════════════════════
-   M ICON — shared
+   M ICON — shared, matches original _mmark SVG exactly
    ════════════════════════════════════════════════════════ */
 function drawMIcon(ctx, W, H, B, scale, theme) {
-  const sz = q(B*0.055);
-  const mx = W - q(W*0.034) - sz/2;
-  const my = H - q(H*0.030) - sz/2;
+  const sz  = q(Math.min(W,H)*0.070);
+  const mx  = W - q(W*0.036) - sz/2;
+  const my  = H - q(H*0.034) - sz/2;
+  const ic  = q(sz*0.62);
+  const ix  = mx - ic/2, iy = my - ic/2;
+  const stroke = theme.light ? '#ffffff' : '#0B0B0D';
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.4)';
-  ctx.shadowBlur  = 8 * scale;
+  ctx.shadowColor = 'rgba(0,0,0,0.45)';
+  ctx.shadowBlur  = 10*scale;
   ctx.fillStyle   = theme.acc;
   ctx.beginPath(); ctx.arc(mx, my, sz/2, 0, Math.PI*2); ctx.fill();
   ctx.shadowBlur  = 0;
-  ctx.strokeStyle = theme.light ? '#ffffff' : '#0B0B0D';
-  ctx.lineWidth   = 2.8 * scale;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth   = q(4.5*scale);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  const ic = sz*0.52, ix = mx - ic/2, iy = my - ic/2;
+  /* matches: M8 32 L8 14 L17 24 L23 12 L29 24 L38 14 L38 32 scaled to ic */
   ctx.beginPath();
-  ctx.moveTo(ix,        iy+ic*0.72);
-  ctx.lineTo(ix,        iy+ic*0.18);
-  ctx.lineTo(ix+ic*0.38,iy+ic*0.54);
-  ctx.lineTo(ix+ic*0.5, iy+ic*0.12);
-  ctx.lineTo(ix+ic*0.62,iy+ic*0.54);
-  ctx.lineTo(ix+ic,     iy+ic*0.18);
-  ctx.lineTo(ix+ic,     iy+ic*0.72);
+  ctx.moveTo(ix,         iy+ic*0.696);
+  ctx.lineTo(ix,         iy+ic*0.130);
+  ctx.lineTo(ix+ic*0.370,iy+ic*0.522);
+  ctx.lineTo(ix+ic*0.500,iy+ic*0.000);
+  ctx.lineTo(ix+ic*0.630,iy+ic*0.522);
+  ctx.lineTo(ix+ic,      iy+ic*0.130);
+  ctx.lineTo(ix+ic,      iy+ic*0.696);
   ctx.stroke();
   ctx.restore();
 }
@@ -201,151 +204,225 @@ function drawConvoFrame(ctx, W, H, t, DS, theme) {
 
   drawBg(ctx, W, H, theme);
 
-  /* accent lines */
+  /* ── top + bottom accent lines ── */
   ctx.save();
   const lL = ctx.createLinearGradient(0,0,W,0);
   lL.addColorStop(0,'transparent'); lL.addColorStop(0.4,colL+'73'); lL.addColorStop(1,'transparent');
-  ctx.fillStyle = lL; ctx.globalAlpha = 0.45;
-  ctx.fillRect(0, 0, W, q(2*scale));
+  ctx.fillStyle=lL; ctx.globalAlpha=0.45; ctx.fillRect(0,0,W,q(2*scale));
   const lR = ctx.createLinearGradient(0,0,W,0);
   lR.addColorStop(0,'transparent'); lR.addColorStop(0.6,colR+'73'); lR.addColorStop(1,'transparent');
-  ctx.fillStyle = lR; ctx.globalAlpha = 0.35;
-  ctx.fillRect(0, H - q(2*scale), W, q(2*scale));
+  ctx.fillStyle=lR; ctx.globalAlpha=0.35; ctx.fillRect(0,H-q(2*scale),W,q(2*scale));
   ctx.restore();
 
-  /* animation helpers */
-  function animT(delay) { return Math.max(0, Math.min(1, (t - delay) / Math.max(0.01, 1 - delay))); }
-  function getAm(delay) {
-    const ta = animT(delay), e = easeInOut(ta);
-    switch (mot) {
-      case 'fade-up':  return { ox:0, oy:(1-e)*16*scale, alpha:Math.min(1,e*2.2) };
-      case 'slide-in': return { ox:(1-easeInOut(Math.min(1,ta/0.7)))*W*0.28, oy:0, alpha:Math.min(1,ta*2) };
-      case 'pulse':    return { ox:0, oy:0, alpha:1, pulse:0.94+0.06*Math.sin(t*Math.PI*2) };
-      case 'glitch': {
-        const ph = Math.floor(t*9), isG = ph%3===0 && t<0.85;
-        return { ox:isG?((ph*7919)%11-5)*scale:0, oy:0, alpha:1 };
-      }
-      case 'wave':   return { ox:0, oy:Math.sin(t*Math.PI*2+delay*3)*5*scale, alpha:1 };
-      case 'bounce': {
-        const b = ta<0.5?4*ta*ta*ta:1-Math.pow(-2*ta+2,3)/2;
-        return { ox:0, oy:(1-b)*H*0.06, alpha:1 };
-      }
-      default: return { ox:0, oy:(1-e)*16*scale, alpha:Math.min(1,e*2.2) };
+  /* ── lyric animation helpers (applied to text only, not the bubble) ── */
+  function animT(delay) { return Math.max(0,Math.min(1,(t-delay)/Math.max(0.01,1-delay))); }
+
+  function lyricAlpha(delay) {
+    const ta=animT(delay), e=easeInOut(ta);
+    switch(mot){
+      case 'fade-up': case 'slide-in': case 'bounce':
+        return Math.min(1,e*2.2);
+      default: return 1;
     }
+  }
+  function lyricOffsetY(delay) {
+    const ta=animT(delay), e=easeInOut(ta);
+    switch(mot){
+      case 'fade-up':  return (1-e)*18*scale;
+      case 'bounce': { const b=ta<0.5?4*ta*ta*ta:1-Math.pow(-2*ta+2,3)/2; return (1-b)*14*scale; }
+      default: return 0;
+    }
+  }
+  function lyricOffsetX(delay) {
+    const ta=animT(delay), e=easeInOut(Math.min(1,ta/0.7));
+    if(mot==='slide-in') return (1-e)*W*0.18;
+    return 0;
+  }
+  function lyricScale(delay) {
+    if(mot==='pulse') return 0.96+0.08*Math.sin(t*Math.PI*2+delay);
+    return 1;
+  }
+  function lyricGlitch(delay) {
+    if(mot!=='glitch') return {ox:0,oy:0};
+    const ph=Math.floor(t*9),isG=ph%3===0&&t<0.85;
+    return isG?{ox:((ph*7919)%11-5)*scale,oy:((ph*3571)%7-3)*scale}:{ox:0,oy:0};
+  }
+  function lyricWave(delay) {
+    if(mot!=='wave') return 0;
+    return Math.sin(t*Math.PI*2+delay*4)*6*scale;
   }
 
   /* ── layout ── */
-  const pad     = q(B * 0.048);
-  const innerW  = W - pad*2;
-  const headerH = q(H * 0.080);
-  const divH    = q(H * 0.068);
-  const songsH  = q(H * 0.090);
-  const wmH     = q(H * 0.055);
+  const pad      = q(B*0.046);
+  const innerW   = W - pad*2;
+  const headerH  = q(H*0.082);
+  const gapH     = q(H*0.018); /* explicit gap between elements */
+  const divH     = q(H*0.068);
+  const songsH   = q(H*0.090);
+  const wmH      = q(H*0.052);
 
-  /* reserve space for 2 bubbles + divider, then share remainder */
-  const bubbleArea = H - pad - headerH - divH - songsH - wmH - pad;
-  const bubbleH    = q(bubbleArea * 0.47);
+  /* calculate bubble height from remaining space */
+  const bubbleArea = H - pad - headerH - gapH - divH - gapH - songsH - wmH - pad;
+  const bubbleH    = q(bubbleArea * 0.485);
 
   let curY = pad;
 
-  /* ── HEADER ── */
+  /* ── HEADER — MARGO wordmark + ghost M ── */
   {
-    const mFs = q(B*0.034);
+    const mFs = q(B*0.036);
+    /* wordmark */
     ctx.save();
-    ctx.font         = `800 ${mFs}px 'Syne','DM Sans',sans-serif`;
-    ctx.textAlign    = 'left'; ctx.textBaseline = 'middle';
-    ctx.globalAlpha  = 0.28;
-    ctx.fillStyle    = light ? '#0B0B0D' : theme.acc;
+    ctx.font        = `800 ${mFs}px 'Syne','DM Sans',sans-serif`;
+    ctx.textAlign   = 'left'; ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.30;
+    ctx.fillStyle   = light ? '#0B0B0D' : theme.acc;
+    ctx.letterSpacing = '0.22em';
     ctx.fillText('MARGO', pad, curY + headerH/2);
     ctx.restore();
 
-    /* ghost M icon top-right */
-    const msz = q(B*0.050), mx = W - pad - msz/2, my = curY + headerH/2;
+    /* ghost M icon — matches _ghostM from duet-sheet.js */
+    const msz = q(B*0.052);
+    const mx  = W - pad - msz/2;
+    const my  = curY + headerH/2;
+    const ic  = q(msz*0.58);
+    const ix  = mx - ic/2, iy = my - ic/2;
+    const stroke = light ? '#ffffff' : '#0B0B0D';
+    const bgClr  = light ? 'rgba(0,0,0,0.12)' : theme.acc;
     ctx.save();
-    ctx.globalAlpha  = 0.15; ctx.fillStyle = theme.acc;
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle   = bgClr;
     ctx.beginPath(); ctx.arc(mx, my, msz/2, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha  = 0.4;
-    ctx.strokeStyle  = light ? '#ffffff' : '#0B0B0D';
-    ctx.lineWidth    = 2*scale; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    const ic = msz*0.52, ix = mx - ic/2, iy = my - ic/2;
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth   = q(3.5*scale); ctx.lineCap='round'; ctx.lineJoin='round';
     ctx.beginPath();
-    ctx.moveTo(ix, iy+ic*0.72); ctx.lineTo(ix, iy+ic*0.18);
-    ctx.lineTo(ix+ic*0.38, iy+ic*0.54); ctx.lineTo(ix+ic*0.5, iy+ic*0.12);
-    ctx.lineTo(ix+ic*0.62, iy+ic*0.54); ctx.lineTo(ix+ic, iy+ic*0.18);
-    ctx.lineTo(ix+ic, iy+ic*0.72); ctx.stroke();
+    ctx.moveTo(ix,        iy+ic*0.72);
+    ctx.lineTo(ix,        iy+ic*0.18);
+    ctx.lineTo(ix+ic*0.38,iy+ic*0.54);
+    ctx.lineTo(ix+ic*0.5, iy+ic*0.12);
+    ctx.lineTo(ix+ic*0.62,iy+ic*0.54);
+    ctx.lineTo(ix+ic,     iy+ic*0.18);
+    ctx.lineTo(ix+ic,     iy+ic*0.72);
+    ctx.stroke();
     ctx.restore();
     curY += headerH;
   }
 
-  /* ── BUBBLE DRAW ── */
+  /* ── BUBBLE DRAW — static box, animated lyric only ── */
   function drawBubble(side, post, yTop, bH) {
-    const col    = side === 'left' ? colL : colR;
+    const col    = side==='left' ? colL : colR;
     const pk     = post.knowledge || {};
     const song   = (pk.song   || post.song   || '').substring(0,26);
     const artist = (pk.artist || post.artist || '').substring(0,28);
     const lyric  = (post.lyric || post.text  || '').substring(0,120);
     const emotion= (post.emotion || '').substring(0,14);
-    const uname  = ('@' + (post.username || 'anonymous')).toUpperCase();
-    const delay  = side === 'left' ? 0.05 : 0.50;
-    const am     = getAm(delay);
-    const p      = am.pulse || 1;
+    const uname  = ('@'+(post.username||'anonymous')).toUpperCase();
+    const delay  = side==='left' ? 0.05 : 0.50;
     const bW     = q(innerW * 0.88);
-    const bX     = side === 'left' ? pad : W - pad - bW;
-    const cx     = bX + bW/2, cy = yTop + bH/2;
+    const bX     = side==='left' ? pad : W-pad-bW;
 
-    ctx.save();
-    ctx.globalAlpha = am.alpha !== undefined ? am.alpha : 1;
-    ctx.translate(cx + (am.ox||0), cy + (am.oy||0));
-    ctx.scale(p, p);
-
-    const dx = -bW/2, dy = -bH/2, r = q(B*0.026);
-
-    /* bubble bg */
-    roundRect(ctx, dx, dy, bW, bH, r);
-    ctx.fillStyle   = col + '22'; ctx.fill();
-    ctx.strokeStyle = col + '55'; ctx.lineWidth = Math.max(1, scale*0.8); ctx.stroke();
+    /* ── bubble box — STATIC, no translate ── */
+    const r = q(B*0.026);
+    roundRect(ctx, bX, yTop, bW, bH, r);
+    ctx.fillStyle   = col+'22'; ctx.fill();
+    ctx.strokeStyle = col+'55'; ctx.lineWidth=Math.max(1,scale*0.8); ctx.stroke();
 
     /* inner glow */
     const ig = ctx.createRadialGradient(
-      dx + (side==='left' ? 0 : bW), dy, 0,
-      dx + (side==='left' ? 0 : bW), dy + bH, bW*0.7
+      side==='left'?bX:bX+bW, yTop, 0,
+      side==='left'?bX:bX+bW, yTop+bH, bW*0.7
     );
-    ig.addColorStop(0, col+'18'); ig.addColorStop(1, 'transparent');
-    roundRect(ctx, dx, dy, bW, bH, r);
-    ctx.fillStyle = ig; ctx.fill();
+    ig.addColorStop(0,col+'18'); ig.addColorStop(1,'transparent');
+    roundRect(ctx,bX,yTop,bW,bH,r); ctx.fillStyle=ig; ctx.fill();
 
-    /* username row */
-    const uFs  = q(B*0.030), dotR = q(uFs*0.26);
-    const uY   = dy + q(bH * 0.06);
-    ctx.font         = `800 ${uFs}px 'Syne','DM Sans',sans-serif`;
-    ctx.textBaseline = 'top'; ctx.shadowBlur = 0;
-    if (side === 'left') {
-      ctx.textAlign = 'left';
-      ctx.beginPath(); ctx.arc(dx + dotR*2.2, uY + uFs*0.5, dotR, 0, Math.PI*2);
-      ctx.fillStyle = col; ctx.fill();
-      ctx.fillText(uname, dx + dotR*5, uY);
+    /* username row — static */
+    const uFs=q(B*0.028), dotR=q(uFs*0.24);
+    const uY=yTop+q(bH*0.06);
+    ctx.save();
+    ctx.font=`800 ${uFs}px 'Syne','DM Sans',sans-serif`;
+    ctx.textBaseline='top'; ctx.shadowBlur=0;
+    if(side==='left'){
+      ctx.textAlign='left';
+      ctx.beginPath(); ctx.arc(bX+dotR*2.2, uY+uFs*0.52, dotR, 0, Math.PI*2);
+      ctx.fillStyle=col; ctx.fill();
+      ctx.fillText(uname, bX+dotR*5, uY);
     } else {
-      ctx.textAlign = 'right';
-      ctx.fillStyle = col;
-      ctx.fillText(uname, dx + bW - dotR*5, uY);
-      ctx.beginPath(); ctx.arc(dx + bW - dotR*2.2, uY + uFs*0.5, dotR, 0, Math.PI*2);
-      ctx.fillStyle = col; ctx.fill();
+      ctx.textAlign='right';
+      ctx.fillStyle=col;
+      ctx.fillText(uname, bX+bW-dotR*5, uY);
+      ctx.beginPath(); ctx.arc(bX+bW-dotR*2.2, uY+uFs*0.52, dotR, 0, Math.PI*2);
+      ctx.fillStyle=col; ctx.fill();
+    }
+    ctx.restore();
+
+    /* meta section — static, anchored from bottom of bubble */
+    const metaH  = q(bH*0.30);
+    const divY   = yTop + bH - metaH;
+    ctx.strokeStyle = light?'rgba(0,0,0,0.1)':'rgba(255,255,255,0.1)';
+    ctx.lineWidth   = Math.max(1,scale*0.7);
+    ctx.beginPath(); ctx.moveTo(bX+bW*0.04,divY); ctx.lineTo(bX+bW*0.96,divY); ctx.stroke();
+
+    const sFs2=q(B*0.028), aFs2=q(B*0.020);
+    const mY=divY+q(metaH*0.10);
+    ctx.textBaseline='top'; ctx.textAlign='left'; ctx.shadowBlur=0;
+    ctx.font=`700 ${sFs2}px 'DM Sans',sans-serif`;
+    ctx.fillStyle=bodyTxt; ctx.fillText(song, bX+bW*0.05, mY);
+    ctx.font=`400 ${aFs2}px 'Space Mono',monospace`;
+    ctx.fillStyle=mutedTxt; ctx.fillText(artist, bX+bW*0.05, mY+sFs2*1.15);
+
+    if(emotion){
+      const eFs=q(B*0.020);
+      ctx.font=`800 ${eFs}px 'Syne','DM Sans',sans-serif`;
+      const etW=ctx.measureText(emotion).width;
+      const epX=q(B*0.015),epY2=q(B*0.011);
+      const epW=etW+epX*2, epH=eFs+epY2*2;
+      const epCy=mY+sFs2*0.6, epL=bX+bW*0.94-epW, epT=epCy-epH/2;
+      roundRect(ctx,epL,epT,epW,epH,epH/2);
+      ctx.fillStyle=col+'25'; ctx.fill();
+      ctx.strokeStyle=col+'55'; ctx.lineWidth=scale; ctx.stroke();
+      ctx.fillStyle=col; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(emotion, epL+epW/2, epCy);
     }
 
-    /* lyric — clamped to 3 lines max to prevent overflow into meta */
-    const lFs    = q(B * 0.040);
-    const lLineH = q(lFs * 1.45);
-    const lX     = dx + bW*0.07;
-    const lY     = dy + q(bH * 0.15);
-    const lMaxW  = bW * 0.86;
-    const maxLyricLines = 3;
-    ctx.font         = `${italic?'italic ':''}600 ${lFs}px ${fStack(ff)}`;
-    ctx.textAlign    = 'left'; ctx.textBaseline = 'top';
+    /* ── LYRIC — ANIMATED independently inside the bubble ── */
+    const lFs    = q(B*0.042);
+    const lLineH = q(lFs*1.44);
+    const lX     = bX + bW*0.07;
+    const lY0    = yTop + q(bH*0.17); /* base Y inside bubble */
+    const lMaxW  = bW*0.86;
+    const maxLines = 3;
 
-    /* clamp wrap to maxLines */
-    function wrapClamped(txt, x, y, maxW, lh, maxL) {
-      const words = String(txt||'').split(' ');
-      let line='', lines=[];
+    /* apply animation transforms to lyric only */
+    const alpha = lyricAlpha(delay);
+    const oy    = lyricOffsetY(delay);
+    const ox    = lyricOffsetX(delay);
+    const sc    = lyricScale(delay);
+    const gl    = lyricGlitch(delay);
+    const wy    = lyricWave(delay);
+    const lY    = lY0 + oy + wy;
+
+    ctx.save();
+    /* clip to lyric area so animated text can't bleed into meta */
+    ctx.beginPath();
+    ctx.rect(bX+bW*0.04, yTop, bW*0.92, divY-yTop-2);
+    ctx.clip();
+
+    ctx.globalAlpha = alpha;
+    ctx.font = `${italic?'italic ':''}600 ${lFs}px ${fStack(ff)}`;
+    ctx.textAlign='left'; ctx.textBaseline='top';
+
+    if(sc!==1){
+      const cx2=bX+bW/2, cy2=lY+lLineH;
+      ctx.translate(cx2+(ox+gl.ox),cy2+(gl.oy));
+      ctx.scale(sc,sc);
+      ctx.translate(-(cx2),-(cy2));
+    } else {
+      ctx.translate(ox+gl.ox, gl.oy);
+    }
+
+    function wrapClamped(txt,x,y,maxW,lh,maxL){
+      const words=String(txt||'').split(' ');
+      let line='',lines=[];
       words.forEach(w=>{
         const test=line+w+' ';
         if(ctx.measureText(test).width>maxW&&line){lines.push(line.trim());line=w+' ';}
@@ -357,117 +434,105 @@ function drawConvoFrame(ctx, W, H, t, DS, theme) {
       return lines.length;
     }
 
-    if (mot === 'shimmer') {
-      ctx.fillStyle = bodyTxt; wrapClamped(lyric, lX, lY, lMaxW, lLineH, maxLyricLines);
-      const sx = (t*(bW+80*scale)) - 40*scale + dx;
-      const sh = ctx.createLinearGradient(sx-40*scale, 0, sx+40*scale, 0);
+    if(mot==='shimmer'){
+      ctx.fillStyle=bodyTxt; wrapClamped(lyric,lX,lY,lMaxW,lLineH,maxLines);
+      const sx=(t*(bW+80*scale))-40*scale+bX;
+      const sh=ctx.createLinearGradient(sx-40*scale,0,sx+40*scale,0);
       sh.addColorStop(0,'transparent'); sh.addColorStop(0.4,theme.acc);
       sh.addColorStop(0.6,'#ffffff');   sh.addColorStop(1,'transparent');
       ctx.save(); ctx.globalCompositeOperation='source-atop'; ctx.globalAlpha=0.7;
-      ctx.fillStyle=sh; wrapClamped(lyric,lX,lY,lMaxW,lLineH,maxLyricLines); ctx.restore();
-    } else if (mot === 'typewriter') {
-      const chars = Math.floor(animT(delay) * (lyric.length + 4));
-      const vis   = lyric.substring(0, Math.min(chars, lyric.length));
-      const cur   = chars <= lyric.length && (Math.floor(t*10)%2===0) ? '|' : '';
-      ctx.fillStyle = bodyTxt; wrapClamped(vis+cur, lX, lY, lMaxW, lLineH, maxLyricLines);
+      ctx.fillStyle=sh; wrapClamped(lyric,lX,lY,lMaxW,lLineH,maxLines); ctx.restore();
+    } else if(mot==='typewriter'){
+      const chars=Math.floor(animT(delay)*(lyric.length+4));
+      const vis=lyric.substring(0,Math.min(chars,lyric.length));
+      const cur=chars<=lyric.length&&(Math.floor(t*10)%2===0)?'|':'';
+      ctx.fillStyle=bodyTxt; wrapClamped(vis+cur,lX,lY,lMaxW,lLineH,maxLines);
     } else {
-      ctx.fillStyle   = bodyTxt;
-      ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 5*scale;
-      wrapClamped(lyric, lX, lY, lMaxW, lLineH, maxLyricLines);
-      ctx.shadowBlur = 0;
-    }
-
-    /* divider — fixed distance from bubble bottom so meta always has room */
-    const metaH  = q(bH * 0.28); /* reserve 28% of bubble for meta section */
-    const divY   = dy + bH - metaH;
-    ctx.strokeStyle = light ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
-    ctx.lineWidth   = Math.max(1, scale*0.7);
-    ctx.beginPath(); ctx.moveTo(dx+bW*0.04, divY); ctx.lineTo(dx+bW*0.96, divY); ctx.stroke();
-
-    /* song / artist */
-    const sFs2 = q(B*0.028), aFs2 = q(B*0.020);
-    const mY   = divY + q(metaH * 0.08);
-    ctx.textBaseline = 'top'; ctx.textAlign = 'left'; ctx.shadowBlur = 0;
-    ctx.font      = `700 ${sFs2}px 'DM Sans',sans-serif`;
-    ctx.fillStyle = bodyTxt; ctx.fillText(song, dx+bW*0.05, mY);
-    ctx.font      = `400 ${aFs2}px 'Space Mono',monospace`;
-    ctx.fillStyle = mutedTxt; ctx.fillText(artist, dx+bW*0.05, mY+sFs2*1.15);
-
-    /* emotion pill — anchored to meta area */
-    if (emotion) {
-      const eFs = q(B*0.020);
-      ctx.font  = `800 ${eFs}px 'Syne','DM Sans',sans-serif`;
-      const etW = ctx.measureText(emotion).width;
-      const epX = q(B*0.015), epY2 = q(B*0.011);
-      const epW = etW+epX*2, epH = eFs+epY2*2;
-      const epCy = mY + sFs2*0.6; /* vertically centered in meta top row */
-      const epL  = dx+bW*0.94-epW, epT = epCy - epH/2;
-      roundRect(ctx, epL, epT, epW, epH, epH/2);
-      ctx.fillStyle   = col+'25'; ctx.fill();
-      ctx.strokeStyle = col+'55'; ctx.lineWidth = scale; ctx.stroke();
-      ctx.fillStyle   = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(emotion, epL+epW/2, epCy);
+      ctx.fillStyle=bodyTxt;
+      ctx.shadowColor='rgba(0,0,0,0.3)'; ctx.shadowBlur=6*scale;
+      wrapClamped(lyric,lX,lY,lMaxW,lLineH,maxLines);
+      ctx.shadowBlur=0;
     }
     ctx.restore();
   }
 
   /* ── LEFT BUBBLE ── */
   drawBubble('left', parent, curY, bubbleH);
-  curY += bubbleH;
+  curY += bubbleH + gapH;
 
   /* ── LYRIC BACK DIVIDER ── */
   {
-    const am    = getAm(0.3);
     const lineY = curY + divH/2;
-    const eU    = ('@' + (echo.username || 'anonymous')).toUpperCase();
-    ctx.save();
-    ctx.globalAlpha = am.alpha !== undefined ? am.alpha : 1;
-    ctx.translate(am.ox||0, am.oy||0);
+    const eU    = ('@'+(echo.username||'anonymous')).toUpperCase();
+    const aRgba = light?'rgba(0,0,0,0.22)':'rgba(232,197,71,0.28)';
 
-    const aRgba = light ? 'rgba(0,0,0,0.22)' : 'rgba(232,197,71,0.28)';
-    const gl    = ctx.createLinearGradient(pad, 0, W*0.28, 0);
+    const gl = ctx.createLinearGradient(pad,0,W*0.28,0);
     gl.addColorStop(0,'transparent'); gl.addColorStop(1,aRgba);
-    ctx.strokeStyle = gl; ctx.lineWidth = scale;
-    ctx.beginPath(); ctx.moveTo(pad, lineY); ctx.lineTo(W*0.28, lineY); ctx.stroke();
+    ctx.strokeStyle=gl; ctx.lineWidth=scale;
+    ctx.beginPath(); ctx.moveTo(pad,lineY); ctx.lineTo(W*0.28,lineY); ctx.stroke();
 
-    const pFs    = q(B*0.020);
-    const pillTxt= 'LYRIC BACK ↩ ' + eU;
-    ctx.font     = `800 ${pFs}px 'Syne','DM Sans',sans-serif`;
-    const ptW    = ctx.measureText(pillTxt).width;
-    const ppPX   = pFs*0.65, ppPY = pFs*0.38;
-    const ppW    = ptW+ppPX*2, ppH = pFs+ppPY*2;
-    const ppX    = q(W*0.285), ppY = lineY - ppH/2;
+    const pFs=q(B*0.020);
+    const pillTxt='LYRIC BACK ↩ '+eU;
+    ctx.font=`800 ${pFs}px 'Syne','DM Sans',sans-serif`;
+    const ptW=ctx.measureText(pillTxt).width;
+    const ppPX=pFs*0.65, ppPY=pFs*0.38;
+    const ppW=ptW+ppPX*2, ppH=pFs+ppPY*2;
+    const ppX=q(W*0.285), ppY=lineY-ppH/2;
 
-    roundRect(ctx, ppX, ppY, ppW, ppH, ppH/2);
-    ctx.fillStyle   = light?'rgba(0,0,0,0.06)':'rgba(232,197,71,0.09)'; ctx.fill();
-    ctx.strokeStyle = light?'rgba(0,0,0,0.18)':'rgba(232,197,71,0.28)';
-    ctx.lineWidth = scale; ctx.stroke();
-    ctx.fillStyle = light?'#0B0B0D':theme.acc;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(pillTxt, ppX+ppPX, lineY);
+    roundRect(ctx,ppX,ppY,ppW,ppH,ppH/2);
+    ctx.fillStyle=light?'rgba(0,0,0,0.06)':'rgba(232,197,71,0.09)'; ctx.fill();
+    ctx.strokeStyle=light?'rgba(0,0,0,0.18)':'rgba(232,197,71,0.28)';
+    ctx.lineWidth=scale; ctx.stroke();
+    ctx.fillStyle=light?'#0B0B0D':theme.acc;
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(pillTxt,ppX+ppPX,lineY);
 
-    const grStart = ppX + ppW + W*0.008;
-    const gr      = ctx.createLinearGradient(grStart, 0, W-pad, 0);
+    const grStart=ppX+ppW+W*0.008;
+    const gr=ctx.createLinearGradient(grStart,0,W-pad,0);
     gr.addColorStop(0,aRgba); gr.addColorStop(1,'transparent');
-    ctx.strokeStyle = gr; ctx.lineWidth = scale;
-    ctx.beginPath(); ctx.moveTo(grStart, lineY); ctx.lineTo(W-pad, lineY); ctx.stroke();
-    ctx.restore();
-    curY += divH;
+    ctx.strokeStyle=gr; ctx.lineWidth=scale;
+    ctx.beginPath(); ctx.moveTo(grStart,lineY); ctx.lineTo(W-pad,lineY); ctx.stroke();
+    curY += divH + gapH;
   }
 
   /* ── RIGHT BUBBLE ── */
   drawBubble('right', echo, curY, bubbleH);
   curY += bubbleH;
 
-  /* ── SONGS BAR ── */
-  drawSongsBar(ctx, W, curY, songsH, pad, B, scale, DS, theme);
-  curY += songsH;
+  /* ── SONGS BAR — with explicit gap above ── */
+  const songsGap = q(H*0.012);
+  drawSongsBar(ctx, W, curY+songsGap, songsH, pad, B, scale, DS, theme);
+  curY += songsGap + songsH;
 
   /* ── WATERMARK ── */
   drawWatermark(ctx, W, curY, wmH, B, scale, theme);
 
-  /* ── M ICON ── */
-  drawMIcon(ctx, W, H, B, scale, theme);
+  /* ── M ICON — full quality, matches original _mmark ── */
+  {
+    const sz=q(Math.min(W,H)*0.070);
+    const mx=W-q(W*0.036)-sz/2;
+    const my=H-q(H*0.034)-sz/2;
+    const ic=q(sz*0.62);
+    const ix=mx-ic/2, iy=my-ic/2;
+    const stroke=light?'#ffffff':'#0B0B0D';
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,0.45)'; ctx.shadowBlur=10*scale;
+    ctx.fillStyle=theme.acc;
+    ctx.beginPath(); ctx.arc(mx,my,sz/2,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.strokeStyle=stroke;
+    ctx.lineWidth=q(4.5*scale); ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    ctx.moveTo(ix,        iy+ic*0.72);
+    ctx.lineTo(ix,        iy+ic*0.14);
+    ctx.lineTo(ix+ic*0.37,iy+ic*0.52);
+    ctx.lineTo(ix+ic*0.5, iy+ic*0.10);
+    ctx.lineTo(ix+ic*0.63,iy+ic*0.52);
+    ctx.lineTo(ix+ic,     iy+ic*0.14);
+    ctx.lineTo(ix+ic,     iy+ic*0.72);
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 /* ════════════════════════════════════════════════════════
