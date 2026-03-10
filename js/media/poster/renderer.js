@@ -1,317 +1,504 @@
 /* ============================================================
-   MARGO — js/media/poster/duet-renderer.js
-   v1.0 — Card Poster renderer for the Duet Sheet.
+   MARGO — js/media/poster/duet-renderer.js  v2.0
+   Full port from prototype v3 (margo-duet-export-prototype-v3.html)
 
-   Draws a static editorial poster layout for the duet
-   conversation — distinct from the GIF card view.
-   Designed to look like a designed artefact: bold type,
-   strong vibe colour blocks, both lyrics given equal weight.
+   Static 1080×1080 PNG. Layout matches prototype "Card" view.
+   Card styles: glass · contrast · mesh · grain · neon · depth
+   Color themes fully applied to background + glows
+   MARGO ghost wordmark top-left (0.28 opacity)
+   Solid M-mark circle bottom-right
+   trymargo.com pill — always readable regardless of theme
 
-   Layout (1080×1080):
-     ┌─────────────────────────────┐
-     │ MARGO wordmark              │
-     │ ─── vibe colour bar ───     │
-     │ Original lyric (large)      │
-     │ Song · Artist               │
-     │ ═══ LYRIC BACK @user ═══   │
-     │ Echo lyric (large)          │
-     │ Song · Artist               │
-     │ ─── vibe colour bar ───     │
-     │ trymargo.com watermark      │
-     └─────────────────────────────┘
-
-   Exports (via window):
-     dsPosterDraw(ctx, W, H, post1, post2, opts)
-       — draw once, static
-     dsPosterExport(post1, post2, opts) → Promise<Blob>
-       — returns PNG blob at 1080×1080
+   window.dsPosterDraw(ctx, W, H, post1, post2, opts)
+   window.dsPosterExport(post1, post2, opts) → Promise<Blob>
    ============================================================ */
 
 (function () {
+'use strict';
 
-/* ── Vibe colours ── */
-const VIBE = {
-  Love:'#FF6B9D', Heartbreak:'#ff5050', Hope:'#6B8CFF', Nostalgia:'#E8C547',
-  Healing:'#4ade80', Joy:'#ffc847', Rage:'#FF6440', Loneliness:'#a0a0ff',
-  SendIt:'#00e5c8', LetOut:'#c864ff',
+/* ─────────────────────────────────────────────
+   THEMES — identical to gif renderer
+───────────────────────────────────────────── */
+const THEMES = {
+  gold:   {g1:'#0c0a04',g2:'#1a1306',acc:'#E8C547',glow1:'rgba(232,197,71,0.22)',glow2:'rgba(180,140,30,0.12)',l:'#FF6B9D',r:'#6B8CFF',light:false},
+  violet: {g1:'#100020',g2:'#1c0730',acc:'#c77dff',glow1:'rgba(199,125,255,0.22)',glow2:'rgba(120,50,200,0.12)',l:'#ff71ce',r:'#05ffa1',light:false},
+  ocean:  {g1:'#040f18',g2:'#071622',acc:'#00e5ff',glow1:'rgba(0,229,255,0.18)',glow2:'rgba(0,150,200,0.1)',l:'#00e5ff',r:'#0070ff',light:false},
+  ember:  {g1:'#140505',g2:'#1e0a0a',acc:'#ff6b6b',glow1:'rgba(255,107,107,0.22)',glow2:'rgba(200,50,50,0.12)',l:'#ff6b6b',r:'#ffb347',light:false},
+  forest: {g1:'#020d06',g2:'#05160a',acc:'#50fa7b',glow1:'rgba(80,250,123,0.18)',glow2:'rgba(40,180,80,0.1)',l:'#50fa7b',r:'#00e5c0',light:false},
+  rose:   {g1:'#120708',g2:'#1c0c0f',acc:'#f4a4c0',glow1:'rgba(244,164,192,0.18)',glow2:'rgba(180,80,120,0.1)',l:'#f4a4c0',r:'#c084fc',light:false},
+  mono:   {g1:'#000000',g2:'#0a0a0a',acc:'#E8C547',glow1:'rgba(255,255,255,0.08)',glow2:'rgba(200,200,200,0.04)',l:'#ffffff',r:'#aaaaaa',light:false},
+  wave:   {g1:'#110317',g2:'#09140f',acc:'#05ffa1',glow1:'rgba(255,113,206,0.22)',glow2:'rgba(5,255,161,0.12)',l:'#ff71ce',r:'#05ffa1',light:false},
+  white:  {g1:'#ffffff',g2:'#ece8e0',acc:'#0B0B0D',glow1:'rgba(0,0,0,0.06)',glow2:'rgba(0,0,0,0.04)',l:'#c0392b',r:'#1a6fbd',light:true},
 };
-function _vc(e){ return VIBE[e] || '#E8C547'; }
 
-/* ── Color theme backgrounds ── */
-const BG_THEMES = {
-  '#07060E': ['#090810','#0d0b12','#06080a'],
-  '#0e0018': ['#100022','#1e0040','#0a0014'],
-  '#04090f': ['#060d18','#0c1e30','#040810'],
-  '#0f0404': ['#140808','#261010','#0a0404'],
-  '#020f06': ['#040f08','#091a0e','#020a04'],
-  '#0f0508': ['#12060a','#201010','#0a0406'],
-  '#080808': ['#060606','#111111','#040404'],
-  '#150520': ['#1a0830','#2d1250','#0e0420'],
-};
-function _bgColors(bgColor) {
-  return BG_THEMES[bgColor] || ['#090810','#0d0b12','#06080a'];
+function _theme(name) { return THEMES[name] || THEMES['gold']; }
+
+/* ─────────────────────────────────────────────
+   UTILS
+───────────────────────────────────────────── */
+function hexA(hex, a) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0,2),16);
+  const g = parseInt(h.slice(2,4),16);
+  const b = parseInt(h.slice(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
 }
 
-/* ── Word-wrap helper ── */
-function _wrap(ctx, text, maxW) {
-  const words=text.split(' '),lines=[];let cur='';
-  for(const w of words){const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=w;}else cur=t;}
-  if(cur)lines.push(cur);return lines;
+function wrapText(ctx, text, maxW) {
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const test = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+    else cur = test;
+  }
+  if (cur) lines.push(cur);
+  return lines;
 }
 
-/* ══════════════════════════════════════════════════════════
-   MAIN DRAW FUNCTION
-══════════════════════════════════════════════════════════ */
+function fStack(f) {
+  const m = {
+    'DM Serif Display': "'DM Serif Display',serif",
+    'Space Mono':       "'Space Mono',monospace",
+    'Georgia':          'Georgia,serif',
+  };
+  return m[f] || `'${f}',sans-serif`;
+}
+function isItalic(f) { return ['DM Serif Display','Georgia'].includes(f); }
+
+/* ─────────────────────────────────────────────
+   BACKGROUND
+───────────────────────────────────────────── */
+function drawBg(ctx, W, H, th) {
+  const bg = ctx.createLinearGradient(0, 0, W * 0.7, H);
+  bg.addColorStop(0, th.g1); bg.addColorStop(1, th.g2);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  const g1 = ctx.createRadialGradient(W*.20, H*.25, 0, W*.20, H*.25, W*.65);
+  g1.addColorStop(0, th.glow1); g1.addColorStop(1, 'transparent');
+  ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
+
+  const g2 = ctx.createRadialGradient(W*.80, H*.75, 0, W*.80, H*.75, W*.65);
+  g2.addColorStop(0, th.glow2); g2.addColorStop(1, 'transparent');
+  ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+
+  /* noise */
+  ctx.save(); ctx.globalAlpha = th.light ? 0.018 : 0.032;
+  for (let y = 0; y < H; y += 3)
+    for (let x = 0; x < W; x += 3) {
+      const v = Math.random() * 255 | 0;
+      ctx.fillStyle = `rgb(${v},${v},${v})`; ctx.fillRect(x, y, 3, 3);
+    }
+  ctx.restore();
+
+  /* edge lines */
+  const edgeL = th.light ? 'rgba(0,0,0,0.15)' : th.l;
+  ctx.save(); ctx.globalAlpha = 0.45;
+  const tl = ctx.createLinearGradient(0,0,W,0);
+  tl.addColorStop(0,'transparent'); tl.addColorStop(0.4,edgeL); tl.addColorStop(1,'transparent');
+  ctx.fillStyle=tl; ctx.fillRect(0,0,W,2); ctx.restore();
+
+  const edgeR = th.light ? 'rgba(0,0,0,0.1)' : th.r;
+  ctx.save(); ctx.globalAlpha = 0.35;
+  const bl = ctx.createLinearGradient(0,0,W,0);
+  bl.addColorStop(0,'transparent'); bl.addColorStop(0.6,edgeR); bl.addColorStop(1,'transparent');
+  ctx.fillStyle=bl; ctx.fillRect(0,H-2,W,2); ctx.restore();
+}
+
+/* ─────────────────────────────────────────────
+   MARGO GHOST WORDMARK
+───────────────────────────────────────────── */
+function drawMargoWordmark(ctx, W, H, th) {
+  const sz  = Math.max(14, Math.round(W * 0.034));
+  const pad = Math.round(W * 0.048);
+  ctx.save();
+  ctx.font         = `800 ${sz}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle    = th.light ? '#0B0B0D' : th.acc;
+  ctx.globalAlpha  = 0.28;
+  ctx.textBaseline = 'top';
+  ctx.textAlign    = 'left';
+  const spacing = sz * 0.22;
+  let cx = pad;
+  for (const ch of 'MARGO'.split('')) {
+    ctx.fillText(ch, cx, pad * 0.55);
+    cx += ctx.measureText(ch).width + spacing;
+  }
+  ctx.restore();
+}
+
+/* ─────────────────────────────────────────────
+   SOLID M-MARK CIRCLE
+───────────────────────────────────────────── */
+function drawMmark(ctx, W, H, th) {
+  const sz = Math.round(Math.min(W,H) * 0.07);
+  const bx = W - Math.round(W * 0.036) - sz;
+  const by = H - Math.round(H * 0.034) - sz;
+  const cx = bx + sz/2, cy = by + sz/2, r = sz/2, ic = sz * 0.62;
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fillStyle = th.acc;
+  ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=18;
+  ctx.fill(); ctx.shadowBlur=0;
+
+  const s  = ic, mx = cx-s/2, my = cy-s/2;
+  ctx.strokeStyle = th.light ? '#ffffff' : '#0B0B0D';
+  ctx.lineWidth   = sz * 0.098;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(mx,          my+s*0.78);
+  ctx.lineTo(mx,          my+s*0.13);
+  ctx.lineTo(mx+s*0.35,   my+s*0.60);
+  ctx.lineTo(mx+s*0.50,   my+s*0.06);
+  ctx.lineTo(mx+s*0.65,   my+s*0.60);
+  ctx.lineTo(mx+s,        my+s*0.13);
+  ctx.lineTo(mx+s,        my+s*0.78);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ─────────────────────────────────────────────
+   WATERMARK PILL
+───────────────────────────────────────────── */
+function drawWatermark(ctx, W, H, th) {
+  const fs    = Math.max(9, Math.round(W * 0.017));
+  const light = th.light;
+  ctx.save();
+  ctx.font = `700 ${fs}px 'Space Mono',monospace`;
+  ctx.textBaseline='middle'; ctx.textAlign='center';
+  const txt = 'trymargo.com';
+  const tw  = ctx.measureText(txt).width;
+  const pw  = tw + W * 0.044, ph = fs * 1.9;
+  const px  = W/2-pw/2, py = H - W*0.038 - ph/2;
+
+  ctx.globalAlpha = light ? 0.20 : 0.13;
+  ctx.fillStyle   = light ? '#000000' : '#ffffff';
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(px,py,pw,ph,ph/2); else ctx.rect(px,py,pw,ph);
+  ctx.fill();
+
+  ctx.globalAlpha = light ? 0.35 : 0.22;
+  ctx.strokeStyle = light ? '#000000' : '#ffffff'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(px,py,pw,ph,ph/2); else ctx.rect(px,py,pw,ph);
+  ctx.stroke();
+
+  ctx.globalAlpha = light ? 0.78 : 0.62;
+  ctx.fillStyle   = light ? '#0B0B0D' : '#ffffff';
+  ctx.fillText(txt, W/2, py+ph/2);
+  ctx.restore();
+}
+
+/* ─────────────────────────────────────────────
+   CARD BACKGROUND — 6 styles
+───────────────────────────────────────────── */
+function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
+  ctx.save();
+  const path = () => {
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x,y,w,h,r); else ctx.rect(x,y,w,h);
+  };
+
+  switch (style) {
+    case 'contrast':
+      path(); ctx.fillStyle = light ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.92)'; ctx.fill();
+      path(); ctx.strokeStyle = light ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.08)'; ctx.lineWidth=1.5; ctx.stroke();
+      break;
+    case 'mesh': {
+      const mg = ctx.createLinearGradient(x,y,x+w,y+h);
+      mg.addColorStop(0, hexA(sideColor,0.18));
+      mg.addColorStop(0.45, light?'rgba(240,235,220,0.80)':'rgba(0,0,0,0.65)');
+      mg.addColorStop(1, hexA(sideColor,0.18));
+      path(); ctx.fillStyle=mg; ctx.fill();
+      path(); ctx.strokeStyle=light?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.stroke();
+      break;
+    }
+    case 'grain':
+      path(); ctx.fillStyle=light?'rgba(245,240,232,0.92)':'rgba(18,16,12,0.94)'; ctx.fill();
+      path(); ctx.strokeStyle=light?'rgba(0,0,0,0.12)':'rgba(232,197,71,0.14)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.save(); ctx.globalAlpha=0.30; ctx.globalCompositeOperation=light?'multiply':'overlay';
+      for (let gy=y;gy<y+h;gy+=2)
+        for (let gx=x;gx<x+w;gx+=2) {
+          const v=Math.random()*255|0; ctx.fillStyle=`rgb(${v},${v},${v})`; ctx.fillRect(gx,gy,2,2);
+        }
+      ctx.restore();
+      break;
+    case 'neon':
+      path(); ctx.fillStyle=light?'rgba(255,255,255,0.70)':'rgba(0,0,0,0.78)'; ctx.fill();
+      ctx.shadowColor=acc; ctx.shadowBlur=20;
+      path(); ctx.strokeStyle=acc; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.shadowBlur=0;
+      ctx.save();
+      const nl=ctx.createLinearGradient(x,0,x+w*0.38,0);
+      nl.addColorStop(0,acc); nl.addColorStop(1,'transparent');
+      ctx.strokeStyle=nl; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w*0.38,y); ctx.stroke();
+      ctx.restore();
+      break;
+    case 'depth':
+      path(); ctx.fillStyle=light?'rgba(240,235,228,0.90)':'rgba(10,8,4,0.96)'; ctx.fill();
+      path(); ctx.strokeStyle=light?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.05)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.save(); ctx.globalAlpha=0.025;
+      for (let sl=y;sl<y+h;sl+=3) { ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(x,sl,w,1); }
+      ctx.restore();
+      break;
+    default: /* glass */
+      path(); ctx.fillStyle=light?'rgba(255,255,255,0.55)':'rgba(255,255,255,0.06)'; ctx.fill();
+      path(); ctx.strokeStyle=light?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.13)'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  const rg=ctx.createRadialGradient(x,y,0,x,y,Math.max(w,h)*0.8);
+  rg.addColorStop(0, hexA(sideColor,0.08)); rg.addColorStop(1,'transparent');
+  path(); ctx.fillStyle=rg; ctx.fill();
+  ctx.restore();
+}
+
+/* ─────────────────────────────────────────────
+   DIVIDER PILL  (static, fully visible)
+───────────────────────────────────────────── */
+function drawDivider(ctx, W, divY, echoUser, th) {
+  const light   = th.light;
+  const accRgba = light ? 'rgba(0,0,0,0.22)' : 'rgba(232,197,71,0.28)';
+  const pillBg  = light ? 'rgba(0,0,0,0.06)' : 'rgba(232,197,71,0.09)';
+  const pillBdr = light ? 'rgba(0,0,0,0.18)' : 'rgba(232,197,71,0.28)';
+  const pillClr = light ? '#0B0B0D'          : th.acc;
+  const dText   = `LYRIC BACK \u21A9  @${(echoUser || 'ANONYMOUS').toUpperCase()}`;
+  const dFS     = Math.max(10, Math.round(W * 0.020));
+
+  ctx.save();
+  ctx.font = `800 ${dFS}px 'Syne','Arial Black',sans-serif`;
+  const dTW  = ctx.measureText(dText).width;
+  const pH   = dFS * 2.0, pPad = W * 0.028;
+  const pW   = dTW + pPad * 2;
+  const pX   = W/2 - pW/2, pY = divY - pH/2, pR = pH/2;
+  const gap  = pW/2 + W*0.020;
+
+  [[W*0.05, W/2-gap],[W/2+gap, W*0.95]].forEach(([x1,x2]) => {
+    const lg = ctx.createLinearGradient(x1,0,x2,0);
+    if (x1 < W/2) { lg.addColorStop(0,'transparent'); lg.addColorStop(1,accRgba); }
+    else           { lg.addColorStop(0,accRgba);       lg.addColorStop(1,'transparent'); }
+    ctx.fillStyle=lg; ctx.fillRect(x1, divY-0.75, x2-x1, 1.5);
+  });
+
+  ctx.shadowColor=light?'rgba(0,0,0,0.15)':th.acc; ctx.shadowBlur=12;
+  ctx.strokeStyle=pillBdr; ctx.lineWidth=1.5;
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(pX,pY,pW,pH,pR); else ctx.rect(pX,pY,pW,pH); ctx.stroke();
+  ctx.shadowBlur=0;
+
+  const pf=ctx.createLinearGradient(pX,pY,pX,pY+pH);
+  pf.addColorStop(0,light?'rgba(0,0,0,0.07)':'rgba(232,197,71,0.13)');
+  pf.addColorStop(1,light?'rgba(0,0,0,0.03)':'rgba(232,197,71,0.05)');
+  ctx.fillStyle=pf;
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(pX,pY,pW,pH,pR); else ctx.rect(pX,pY,pW,pH); ctx.fill();
+
+  ctx.font=`800 ${dFS}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle=pillClr; ctx.textBaseline='middle'; ctx.textAlign='center';
+  ctx.fillText(dText, W/2, divY);
+  ctx.restore();
+}
+
+/* ─────────────────────────────────────────────
+   SONGS BAR
+───────────────────────────────────────────── */
+function drawSongsBar(ctx, W, byY, post1, post2, th) {
+  const light = th.light;
+  const B     = W;
+  const bh    = Math.round(B*0.072), px=Math.round(B*0.048), br=Math.round(B*0.018);
+  const lFs   = Math.max(9,Math.round(B*0.020));
+  const sFs   = Math.max(9,Math.round(B*0.022));
+  const aFs   = Math.max(8,Math.round(B*0.017));
+  const cy    = byY + bh/2;
+
+  ctx.save();
+  ctx.fillStyle  =light?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.05)';
+  ctx.strokeStyle=light?'rgba(0,0,0,0.12)':'rgba(255,255,255,0.10)';
+  ctx.lineWidth=1;
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(px*0.8,byY,W-px*1.6,bh,br); else ctx.rect(px*0.8,byY,W-px*1.6,bh);
+  ctx.fill(); ctx.stroke();
+
+  ctx.font=`800 ${lFs}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle=light?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.70)';
+  ctx.textBaseline='middle'; ctx.textAlign='left';
+  ctx.fillText('SONGS',px,cy);
+
+  const k1=post1.knowledge||{}, s1=(k1.song||post1.song||'').substring(0,20), a1=(k1.artist||post1.artist||'');
+  const k2=post2.knowledge||{}, s2=(k2.song||post2.song||'').substring(0,20), a2=(k2.artist||post2.artist||'');
+  const sc=light?'#0B0B0D':'#ffffff', ac=light?'rgba(0,0,0,0.45)':'rgba(255,255,255,0.45)';
+
+  ctx.font=`700 ${sFs}px 'DM Sans',sans-serif`; ctx.fillStyle=sc; ctx.textAlign='left';
+  ctx.fillText(s1,W*0.28,cy-aFs*0.5);
+  ctx.font=`400 ${aFs}px 'Space Mono',monospace`; ctx.fillStyle=ac;
+  ctx.fillText(a1,W*0.28,cy+sFs*0.55);
+
+  ctx.font=`400 ${sFs}px sans-serif`; ctx.fillStyle=th.acc; ctx.globalAlpha=0.7; ctx.textAlign='center';
+  ctx.fillText('\u2194',W/2,cy); ctx.globalAlpha=1;
+
+  ctx.font=`700 ${sFs}px 'DM Sans',sans-serif`; ctx.fillStyle=sc; ctx.textAlign='right';
+  ctx.fillText(s2,W-px,cy-aFs*0.5);
+  ctx.font=`400 ${aFs}px 'Space Mono',monospace`; ctx.fillStyle=ac;
+  ctx.fillText(a2,W-px,cy+sFs*0.55);
+
+  ctx.restore();
+}
+
+/* ─────────────────────────────────────────────
+   LYRIC CARD (poster — static, fully visible)
+   Matches prototype renderCard()
+───────────────────────────────────────────── */
+function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
+  const { fontFamily='DM Serif Display', cardStyle='glass' } = opts;
+  const light   = th.light;
+  const col     = side==='left' ? th.l : th.r;
+  const bodyTxt = light ? '#0B0B0D' : '#ffffff';
+  const mutedTxt= light ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.48)';
+  const divLine = light ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
+
+  const text   = (post.text||post.lyric||'').substring(0,120);
+  const k      = post.knowledge||{};
+  const song   = (k.song||post.song||'');
+  const artist = (k.artist||post.artist||'');
+  const user   = ('@'+(post.username||'anonymous')).toUpperCase();
+  const vibe   = (post.emotion||'').toUpperCase();
+
+  /* font sizes — matches prototype renderCard() with B = W */
+  const B      = W;
+  const padH   = Math.round(B*0.058), padV=Math.round(Math.min(W*0.052,B*0.062));
+  const lFsRaw = side==='right' ? B*0.058 : B*0.050;
+  const sFs    = Math.max(9,Math.round(B*0.026));
+  const aFs    = Math.max(8,Math.round(B*0.018));
+  const vFs    = Math.max(8,Math.round(B*0.016));
+  const uFs    = Math.max(10,Math.round(B*0.022));
+  const cPad   = Math.round(Math.min(B*0.034,W*0.025));
+  const cRad   = Math.round(B*0.022);
+  const fStyle = isItalic(fontFamily) ? 'italic 600' : '600';
+
+  let lfs = lFsRaw;
+  ctx.font = `${fStyle} ${lfs}px ${fStack(fontFamily)}`;
+  const innerW = W - padH*2;
+  let lines = wrapText(ctx, text, innerW - cPad*2);
+  if (lines.length > 4) {
+    lfs = Math.max(B*0.026, lfs*(4/lines.length));
+    ctx.font=`${fStyle} ${lfs}px ${fStack(fontFamily)}`;
+    lines = wrapText(ctx, text, innerW - cPad*2);
+  }
+  const lh     = lfs * 1.42;
+  const cardH  = Math.min(areaH*0.88, lines.length*lh + cPad*2 + sFs*2.5 + lfs*0.5);
+  const cardX  = padH;
+  const cardY  = areaTop + (areaH-cardH)/2;
+  const cardW  = innerW;
+
+  ctx.save();
+
+  /* username — Syne 800 */
+  ctx.font=`800 ${uFs}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle=col; ctx.globalAlpha=0.90;
+  ctx.textBaseline='middle'; ctx.textAlign='left';
+  ctx.fillText('\u25CF @'+user, padH, cardY - uFs*0.5 - Math.round(B*0.010));
+
+  ctx.globalAlpha=1;
+
+  /* card bg */
+  drawCardBg(ctx, cardX, cardY, cardW, cardH, cRad, cardStyle, th.acc, col, light);
+
+  /* inner radial tint */
+  const rg=ctx.createRadialGradient(cardX,cardY,0,cardX,cardY,Math.max(cardW,cardH)*0.7);
+  rg.addColorStop(0,hexA(col,0.08)); rg.addColorStop(1,'transparent');
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(cardX,cardY,cardW,cardH,cRad); else ctx.rect(cardX,cardY,cardW,cardH);
+  ctx.fillStyle=rg; ctx.fill();
+
+  /* lyric */
+  ctx.font=`${fStyle} ${lfs}px ${fStack(fontFamily)}`;
+  ctx.fillStyle=bodyTxt; ctx.textBaseline='top'; ctx.textAlign='left';
+  ctx.shadowColor='rgba(0,0,0,0.7)'; ctx.shadowBlur=10;
+  lines.forEach((l,i)=>ctx.fillText(l, cardX+cPad, cardY+cPad+i*lh));
+  ctx.shadowBlur=0;
+
+  /* divider */
+  const divLineY=cardY+cardH-sFs*2.8;
+  ctx.save(); ctx.globalAlpha=0.35; ctx.strokeStyle=divLine; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cardX+cPad,divLineY); ctx.lineTo(cardX+cardW-cPad,divLineY); ctx.stroke(); ctx.restore();
+
+  /* song / artist */
+  if (song) {
+    ctx.font=`700 ${sFs}px 'DM Sans',sans-serif`; ctx.fillStyle=bodyTxt;
+    ctx.textBaseline='bottom'; ctx.textAlign='left';
+    ctx.fillText(song, cardX+cPad, cardY+cardH-cPad*0.6);
+    ctx.font=`400 ${aFs}px 'Space Mono',monospace`; ctx.fillStyle=mutedTxt;
+    ctx.fillText(artist, cardX+cPad, cardY+cardH-cPad*0.6+aFs*1.3);
+  }
+
+  /* vibe badge */
+  if (vibe) {
+    ctx.font=`800 ${vFs}px 'Syne','Arial Black',sans-serif`;
+    const vw=ctx.measureText(vibe).width;
+    const bw=vw+Math.round(B*0.022), bh=vFs*2.0;
+    const bx=cardX+cardW-cPad*0.3-bw, by=cardY+cardH-bh-Math.round(B*0.014);
+    ctx.fillStyle=hexA(col,0.16); ctx.strokeStyle=hexA(col,0.45); ctx.lineWidth=1.5;
+    ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(bx,by,bw,bh,bh/2); else ctx.rect(bx,by,bw,bh);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle=col; ctx.textBaseline='middle'; ctx.textAlign='center';
+    ctx.fillText(vibe, bx+bw/2, by+bh/2);
+  }
+
+  ctx.restore();
+}
+
+/* ═══════════════════════════════════════════════════════
+   PUBLIC: dsPosterDraw
+   Renders the full duet card layout onto ctx at W×H
+   Matches prototype renderCard()
+═══════════════════════════════════════════════════════ */
 function dsPosterDraw(ctx, W, H, post1, post2, opts = {}) {
   if (!post1 || !post2) return;
 
-  const bgColor    = opts.bgColor    || '#07060E';
-  const fontFamily = opts.fontFamily || 'DM Serif Display';
-  const italic     = opts.fontItalic !== false;
-  const fStyle     = italic ? 'italic' : 'normal';
+  const th  = _theme(opts.theme || 'gold');
+  const ff  = opts.fontFamily || 'DM Serif Display';
+  const cs  = opts.cardStyle  || 'glass';
 
-  const pVibe = _vc(post1.emotion || 'Nostalgia');
-  const eVibe = _vc(post2.emotion || 'Nostalgia');
-  const [bgTop, bgMid, bgBot] = _bgColors(bgColor);
+  const B      = Math.min(W, H);
+  const padV   = Math.round(Math.min(H*0.052, B*0.062));
+  const padH   = Math.round(B*0.058);
+  const vGap   = Math.round(H*0.015);
 
-  const pad    = W * .07;
-  const innerW = W - pad * 2;
+  const divY   = H * 0.500;
+  const divH   = Math.round(B * 0.040);          // approx divider pill height
+  const topArea = { top: padV + Math.round(B*0.036) + vGap, h: divY - padV - Math.round(B*0.036) - vGap*2 - divH/2 };
+  const botArea = { top: divY + divH/2 + vGap,              h: H*0.840 - divY - divH/2 - vGap };
+  const songsY  = Math.round(H * 0.852);
 
-  /* ── Background ── */
-  const bg = ctx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0,bgTop); bg.addColorStop(.5,bgMid); bg.addColorStop(1,bgBot);
-  ctx.fillStyle = bg;
-  ctx.fillRect(0,0,W,H);
-
-  /* Subtle vibe glows */
-  ctx.save();
-  ctx.globalAlpha = 0.18;
-  const pg = ctx.createRadialGradient(W*.12,H*.14,0,W*.12,H*.14,W*.7);
-  pg.addColorStop(0,pVibe); pg.addColorStop(1,'transparent');
-  ctx.fillStyle=pg; ctx.fillRect(0,0,W,H);
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = 0.18;
-  const eg = ctx.createRadialGradient(W*.88,H*.86,0,W*.88,H*.86,W*.7);
-  eg.addColorStop(0,eVibe); eg.addColorStop(1,'transparent');
-  ctx.fillStyle=eg; ctx.fillRect(0,0,W,H);
-  ctx.restore();
-
-  /* Fine grain texture */
-  ctx.save(); ctx.globalAlpha=0.014;
-  for(let y=0;y<H;y+=3){for(let x=0;x<W;x+=3){const v=Math.random()*255|0;ctx.fillStyle=`rgb(${v},${v},${v})`;ctx.fillRect(x,y,3,3);}}
-  ctx.restore();
-
-  /* ── Top vibe accent bar ── */
-  const barH  = Math.max(3, W*.006);
-  const barY  = pad * .55;
-  const tBar  = ctx.createLinearGradient(0,0,W,0);
-  tBar.addColorStop(0,'transparent'); tBar.addColorStop(.3,pVibe+'cc');
-  tBar.addColorStop(.5,pVibe); tBar.addColorStop(.7,pVibe+'cc'); tBar.addColorStop(1,'transparent');
-  ctx.save(); ctx.globalAlpha=.9; ctx.fillStyle=tBar; ctx.fillRect(0,barY,W,barH); ctx.restore();
-
-  /* ── MARGO wordmark ── */
-  const mSz = Math.max(18,W*.052);
-  ctx.save();
-  ctx.font=`800 ${mSz}px 'Syne','Arial Black',sans-serif`;
-  ctx.fillStyle='#E8C547'; ctx.globalAlpha=.92;
-  ctx.textBaseline='top'; ctx.textAlign='left';
-  ctx.fillText('MARGO', pad, pad*.68);
-  ctx.restore();
-
-  /* ── Layout zones ── */
-  /* Divider sits at 50% */
-  const divY   = H * .50;
-  const dText  = `LYRIC BACK ↩  @${(post2.username||'anonymous').toUpperCase()}`;
-  const dFS    = Math.max(11, W*.023);
-  ctx.font=`700 ${dFS}px 'Space Mono',monospace`;
-  const dTW  = ctx.measureText(dText).width;
-  const dpH  = dFS*2, dpPad=W*.032, dpW=dTW+dpPad*2;
-  const dpX  = W/2-dpW/2, dpY=divY-dpH/2, dpR=dpH/2;
-
-  const topContentBot = divY - dpH/2 - W*.03;
-  const botContentTop = divY + dpH/2 + W*.03;
-  const topContentTop = pad  + mSz   + pad*.6;
-  const botContentBot = H * .87;
-
-  /* ── Original lyric ── */
-  _drawPosterLyric(ctx, W, topContentTop, topContentBot, post1, pVibe, {
-    fontFamily, fStyle, align:'left', opacity:1
-  });
-
-  /* ── Divider ── */
-  _drawPosterDivider(ctx, W, divY, dpH, dpW, dpX, dpY, dpR, dText, dFS, pVibe, eVibe);
-
-  /* ── Echo lyric ── */
-  _drawPosterLyric(ctx, W, botContentTop, botContentBot, post2, eVibe, {
-    fontFamily, fStyle, align:'right', opacity:1
-  });
-
-  /* ── Bottom vibe accent bar ── */
-  const bBar = ctx.createLinearGradient(0,0,W,0);
-  bBar.addColorStop(0,'transparent'); bBar.addColorStop(.3,eVibe+'cc');
-  bBar.addColorStop(.5,eVibe); bBar.addColorStop(.7,eVibe+'cc'); bBar.addColorStop(1,'transparent');
-  ctx.save();
-  ctx.globalAlpha=.9;
-  ctx.fillStyle=bBar;
-  ctx.fillRect(0,H-barY-barH,W,barH);
-  ctx.restore();
-
-  /* ── Watermark ── */
-  _drawPosterWatermark(ctx, W, H, pad);
+  drawBg(ctx, W, H, th);
+  drawMargoWordmark(ctx, W, H, th);
+  drawLyricCard(ctx, W, topArea.top, topArea.h, post1, th, 'left',  { fontFamily:ff, cardStyle:cs });
+  drawDivider(ctx, W, divY, post2.username, th);
+  drawLyricCard(ctx, W, botArea.top, botArea.h, post2, th, 'right', { fontFamily:ff, cardStyle:cs });
+  drawSongsBar(ctx, W, songsY, post1, post2, th);
+  drawWatermark(ctx, W, H, th);
+  drawMmark(ctx, W, H, th);
 }
 
-/* ── Lyric block ── */
-function _drawPosterLyric(ctx, W, areaTop, areaBot, post, vibe, opts) {
-  const { fontFamily, fStyle, align, opacity } = opts;
-  const pad    = W*.07;
-  const innerW = W*.82;
-  const areaH  = areaBot - areaTop;
-
-  const text   = (post.text||post.lyric||'').substring(0,130);
-  const k      = post.knowledge||{};
-  const song   = k.song   || post.song   || '';
-  const artist = k.artist || post.artist || '';
-  const emotion= post.emotion || '';
-  const user   = ('@'+(post.username||'anonymous')).toUpperCase();
-  const isRight= align === 'right';
-
-  ctx.save(); ctx.globalAlpha = opacity;
-
-  /* username label */
-  const ulFS = Math.max(9,W*.016);
-  ctx.font=`700 ${ulFS}px 'Space Mono',monospace`;
-  ctx.fillStyle=vibe; ctx.globalAlpha=opacity*.7;
-  ctx.textBaseline='top'; ctx.textAlign=isRight?'right':'left';
-  ctx.fillText(`● ${user}`, isRight?W-pad:pad, areaTop+W*.005);
-  ctx.restore();
-
-  /* lyric */
-  ctx.save();
-  const lyricTop = areaTop + ulFS*1.8;
-  const lyricH   = areaH - ulFS*1.8;
-
-  let fs = Math.min(W*.068, lyricH*.3);
-  ctx.font=`${fStyle} 700 ${fs}px '${fontFamily}',serif`;
-  let lines = _wrap(ctx, text, innerW);
-  if(lines.length>4){fs=Math.max(W*.032,fs*(4/lines.length));ctx.font=`${fStyle} 700 ${fs}px '${fontFamily}',serif`;lines=_wrap(ctx,text,innerW);}
-  const lh=fs*1.48, blockH=lines.length*lh;
-  const startY=lyricTop + (lyricH-blockH)/2;
-
-  ctx.textBaseline='top'; ctx.textAlign=isRight?'right':'left';
-  const xPos = isRight ? W-pad : pad;
-
-  ctx.shadowColor='rgba(0,0,0,.9)'; ctx.shadowBlur=18;
-  lines.forEach((l,i) => {
-    ctx.globalAlpha = opacity*(1-i*.04);
-    ctx.fillStyle='#ffffff';
-    ctx.fillText(l, xPos, startY+i*lh);
-  });
-  ctx.restore();
-
-  /* song attribution line */
-  if (song) {
-    const afs=Math.max(9,W*.02);
-    ctx.save();
-    ctx.font=`700 ${afs}px 'Space Mono',monospace`;
-    ctx.fillStyle=vibe; ctx.globalAlpha=opacity*.55;
-    ctx.textBaseline='bottom';
-    ctx.textAlign=isRight?'right':'left';
-    let aStr=song+(artist?' — '+artist:'');
-    const maxAW = innerW*.82;
-    while(ctx.measureText(aStr).width>maxAW&&aStr.length>4)aStr=aStr.slice(0,-4)+'…';
-    ctx.fillText(aStr,isRight?W-pad:pad,areaBot-W*.01);
-    ctx.restore();
-  }
-
-  /* emotion badge */
-  if (emotion) {
-    const bFS=Math.max(8,W*.016);
-    ctx.save();
-    ctx.font=`700 ${bFS}px 'Space Mono',monospace`;
-    const bTW=ctx.measureText(emotion.toUpperCase()).width;
-    const bPad=W*.02, bW=bTW+bPad*2, bH=bFS*2;
-    const bX=isRight?W-pad-bW:pad, bY=areaTop+W*.005+ulFS*1.2;
-    ctx.fillStyle=vibe+'22'; ctx.strokeStyle=vibe+'66'; ctx.lineWidth=1.5;
-    ctx.beginPath();
-    if(ctx.roundRect)ctx.roundRect(bX,bY,bW,bH,bH/2); else ctx.rect(bX,bY,bW,bH);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle=vibe; ctx.globalAlpha=opacity*.85;
-    ctx.textBaseline='middle'; ctx.textAlign=isRight?'right':'left';
-    ctx.fillText(emotion.toUpperCase(),isRight?W-pad-bPad:pad+bPad,bY+bH/2);
-    ctx.restore();
-  }
-}
-
-/* ── Divider ── */
-function _drawPosterDivider(ctx, W, divY, dpH, dpW, dpX, dpY, dpR, dText, dFS, pVibe, eVibe) {
-  const gap = dpW/2+W*.022;
-
-  ctx.save();
-  /* left line */
-  const ll=ctx.createLinearGradient(W*.07,0,W/2-gap,0);
-  ll.addColorStop(0,'transparent'); ll.addColorStop(1,'rgba(232,197,71,.3)');
-  ctx.fillStyle=ll; ctx.fillRect(W*.07,divY-.75,W/2-gap-W*.07,1.5);
-  /* right line */
-  const rl=ctx.createLinearGradient(W/2+gap,0,W*.93,0);
-  rl.addColorStop(0,'rgba(232,197,71,.3)'); rl.addColorStop(1,'transparent');
-  ctx.fillStyle=rl; ctx.fillRect(W/2+gap,divY-.75,W*.93-(W/2+gap),1.5);
-  ctx.restore();
-
-  /* pill */
-  ctx.save();
-  ctx.shadowColor='#E8C547'; ctx.shadowBlur=18;
-  ctx.strokeStyle='rgba(232,197,71,.7)'; ctx.lineWidth=2;
-  ctx.beginPath();
-  if(ctx.roundRect)ctx.roundRect(dpX,dpY,dpW,dpH,dpR); else ctx.rect(dpX,dpY,dpW,dpH);
-  ctx.stroke(); ctx.shadowBlur=0;
-  const pf=ctx.createLinearGradient(dpX,dpY,dpX,dpY+dpH);
-  pf.addColorStop(0,'rgba(232,197,71,.16)'); pf.addColorStop(1,'rgba(232,197,71,.07)');
-  ctx.fillStyle=pf;
-  ctx.beginPath();
-  if(ctx.roundRect)ctx.roundRect(dpX,dpY,dpW,dpH,dpR); else ctx.rect(dpX,dpY,dpW,dpH);
-  ctx.fill();
-  ctx.font=`700 ${dFS}px 'Space Mono',monospace`;
-  ctx.fillStyle='#E8C547'; ctx.globalAlpha=.98;
-  ctx.textBaseline='middle'; ctx.textAlign='center';
-  ctx.fillText(dText,W/2,divY);
-  ctx.restore();
-}
-
-/* ── Watermark ── */
-function _drawPosterWatermark(ctx, W, H, pad) {
-  const wfs=Math.max(9,W*.02);
-  ctx.save();
-  ctx.font=`700 ${wfs}px 'Space Mono',monospace`;
-  ctx.textBaseline='middle'; ctx.textAlign='center';
-  const ww=ctx.measureText('trymargo.com').width+W*.044, wh=wfs*1.7;
-  const wx=W/2-ww/2, wy=H-pad*.8-wh/2;
-  ctx.globalAlpha=.15; ctx.fillStyle='#ffffff';
-  ctx.beginPath();
-  if(ctx.roundRect)ctx.roundRect(wx,wy,ww,wh,wh/2); else ctx.rect(wx,wy,ww,wh);
-  ctx.fill();
-  ctx.globalAlpha=.48; ctx.fillStyle='#ffffff';
-  ctx.fillText('trymargo.com',W/2,wy+wh/2);
-  ctx.restore();
-}
-
-/* ══════════════════════════════════════════════════════════
-   EXPORT — returns PNG blob at 1080×1080
-══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   PUBLIC: dsPosterExport → Promise<Blob>
+   1080×1080 PNG
+═══════════════════════════════════════════════════════ */
 async function dsPosterExport(post1, post2, opts = {}) {
   const SIZE = 1080;
   const off  = document.createElement('canvas');
   off.width  = off.height = SIZE;
-  const ctx  = off.getContext('2d');
+  const oc   = off.getContext('2d');
+
   await document.fonts.ready;
-  dsPosterDraw(ctx, SIZE, SIZE, post1, post2, opts);
-  return new Promise(resolve => {
-    off.toBlob(resolve, 'image/png', 1.0);
+  dsPosterDraw(oc, SIZE, SIZE, post1, post2, opts);
+
+  return new Promise((resolve, reject) => {
+    off.toBlob(blob => {
+      if (blob) resolve(blob);
+      else reject(new Error('Canvas toBlob failed'));
+    }, 'image/png');
   });
 }
 
-/* ── Global expose ── */
+/* ── expose ── */
 window.dsPosterDraw   = dsPosterDraw;
 window.dsPosterExport = dsPosterExport;
 
