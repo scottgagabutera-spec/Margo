@@ -1,14 +1,16 @@
 /* ============================================================
    MARGO — js/duet-sheet.js
-   v2.2 — Card view canvas preview:
-          • Card tab now renders a live <canvas> preview via
-            _dsDrawCard() — matches the downloaded PNG exactly.
-          • _dsStartCardPreview / _dsStopCardPreview manage the
-            preview render (static for Poster mode, animated
-            fade-up in GIF mode so users see motion).
-          • Motion animations still apply to both Conversation
-            bubble lyrics and Card view (.ds-anim elements).
-          • All v2.1 fixes retained.
+   v2.3 — Real motion GIF + editorial Poster renderers:
+          • _dsStartCardPreview (GIF) now calls dsGifDrawFrame()
+            from js/media/gif/duet-renderer.js — real per-frame
+            motion animations (fade-up, glitch, shimmer etc.)
+          • _dsStartCardPreview (Poster) now calls dsPosterDraw()
+            from js/media/poster/duet-renderer.js — editorial
+            static layout distinct from the GIF card view.
+          • _dsRoute('gif') calls dsGifExport() for animated GIF.
+          • _dsRoute('poster') calls dsPosterExport() for PNG.
+          • _dsDrawCard() kept as internal fallback only.
+          • All v2.2 UI/styles/motion CSS unchanged.
    ============================================================ */
 
 (function () {
@@ -186,7 +188,6 @@ function injectDuetStyles() {
     /* ══ CARD VIEW — canvas-based ══ */
     .ds-card-view { padding:16px 18px 0; }
 
-    /* Canvas preview ring */
     .ds-canvas-ring {
       position:relative; border-radius:16px; overflow:hidden;
       box-shadow:0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(232,197,71,0.12);
@@ -570,9 +571,10 @@ function _dsPopulateConvo() {
 
 /* ══════════════════════════════════════════════════════════
    CARD CANVAS PREVIEW
-   Renders _dsDrawCard() into #dsCardCanvas in real time.
-   In GIF mode: animates with a simple fade cycle.
-   In Poster mode: single static draw.
+   GIF mode  → calls dsGifDrawFrame() from gif/duet-renderer.js
+               real per-frame motion animations
+   Poster mode → calls dsPosterDraw() from poster/duet-renderer.js
+               editorial static layout
 ══════════════════════════════════════════════════════════ */
 function _dsStopCardPreview() {
   if (DS._cardAnimFrame) { cancelAnimationFrame(DS._cardAnimFrame); DS._cardAnimFrame = null; }
@@ -583,54 +585,73 @@ function _dsStartCardPreview() {
   const canvas = document.getElementById('dsCardCanvas');
   if (!canvas) return;
 
-  const ring  = canvas.parentElement;
-  const dpr   = Math.min(window.devicePixelRatio || 1, 2);
-  const size  = ring.clientWidth || 280;
+  const ring = canvas.parentElement;
+  const dpr  = Math.min(window.devicePixelRatio || 1, 2);
+  const size = ring.clientWidth || 280;
 
-  canvas.width        = Math.round(size * dpr);
-  canvas.height       = Math.round(size * dpr);
+  canvas.width  = Math.round(size * dpr);
+  canvas.height = Math.round(size * dpr);
   canvas.style.width  = size + 'px';
   canvas.style.height = size + 'px';
 
+  const ctx = canvas.getContext('2d');
+
   if (DS.format === 'poster') {
-    /* Static draw */
+    /* ── POSTER: static editorial layout via poster/duet-renderer.js ── */
     document.fonts.ready.then(() => {
-      const ctx = canvas.getContext('2d');
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      _dsDrawCard(ctx, size, size, DS.parentPost, DS.echoPost);
+      if (typeof window.dsPosterDraw === 'function') {
+        window.dsPosterDraw(ctx, size, size, DS.parentPost, DS.echoPost, {
+          bgColor:    DS.bgColor,
+          fontFamily: DS.fontFamily,
+          fontItalic: DS.fontItalic,
+        });
+      } else {
+        /* fallback */
+        _dsDrawCard(ctx, size, size, DS.parentPost, DS.echoPost);
+      }
     });
+
   } else {
-    /* Animated: pulse alpha to suggest motion */
-    let frame = 0;
-    const frames = 24;
-    const delay  = Math.round(DS.dur * 1000 / frames);
-    let last = 0;
+    /* ── GIF: animated frame loop via gif/duet-renderer.js ── */
+    const frames = 36;
+    const delay  = Math.round((DS.dur * 1000) / frames);
+    let frame = 0, last = 0;
 
     const loop = (ts) => {
       if (ts - last >= delay) {
         last = ts;
-        const ctx = canvas.getContext('2d');
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        /* Draw base card then overlay animated alpha hint */
-        _dsDrawCard(ctx, size, size, DS.parentPost, DS.echoPost);
-        /* Subtle fade pulse overlay so user knows it's animated */
-        const t   = frame / frames;
-        const osc = 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
-        ctx.save();
-        ctx.globalAlpha = osc * 0.08;
-        ctx.fillStyle   = '#E8C547';
-        ctx.fillRect(0, 0, size, size);
-        ctx.restore();
+
+        if (typeof window.dsGifDrawFrame === 'function') {
+          window.dsGifDrawFrame(ctx, size, size, frame / frames, DS.motion,
+            DS.parentPost, DS.echoPost, {
+              fontFamily: DS.fontFamily,
+              fontItalic: DS.fontItalic,
+            });
+        } else {
+          /* fallback: old pulse overlay */
+          _dsDrawCard(ctx, size, size, DS.parentPost, DS.echoPost);
+          const t   = frame / frames;
+          const osc = 0.5 + 0.5 * Math.sin(t * Math.PI * 2);
+          ctx.save();
+          ctx.globalAlpha = osc * 0.08;
+          ctx.fillStyle   = '#E8C547';
+          ctx.fillRect(0, 0, size, size);
+          ctx.restore();
+        }
         frame = (frame + 1) % frames;
       }
       DS._cardAnimFrame = requestAnimationFrame(loop);
     };
-    DS._cardAnimFrame = requestAnimationFrame(loop);
+
+    document.fonts.ready.then(() => {
+      DS._cardAnimFrame = requestAnimationFrame(loop);
+    });
   }
 }
 
 function _dsRefreshCardCanvas() {
-  /* Only refresh if card view is currently visible */
   const cardView = document.getElementById('dsViewCard');
   if (cardView && cardView.style.display !== 'none') {
     _dsStartCardPreview();
@@ -641,8 +662,8 @@ function _dsRefreshCardCanvas() {
    APPLY THEME
 ══════════════════════════════════════════════════════════ */
 function _dsApplyTheme(bg) {
-  const theme    = DS_THEMES[bg] || { grad: bg, text: '#ffffff', isLight: false };
-  const isDark   = !theme.isLight;
+  const theme  = DS_THEMES[bg] || { grad: bg, text: '#ffffff', isLight: false };
+  const isDark = !theme.isLight;
 
   document.querySelectorAll('.ds-bubble.original .ds-bubble-card').forEach(el => {
     el.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
@@ -676,7 +697,6 @@ function _dsShowView(v) {
   tk.classList.toggle('active', v === 'card');
 
   if (v === 'card') {
-    /* Give the DOM a frame to lay out, then start canvas preview */
     requestAnimationFrame(() => {
       requestAnimationFrame(() => _dsStartCardPreview());
     });
@@ -763,18 +783,58 @@ function _dsPlayMotion() {
 
 /* ══════════════════════════════════════════════════════════
    ACTIONS
+   GIF export  → dsGifExport()    from gif/duet-renderer.js
+   Poster export → dsPosterExport() from poster/duet-renderer.js
 ══════════════════════════════════════════════════════════ */
 function _dsRoute(tab) {
+  const p1 = DS.parentPost;
+  const p2 = DS.echoPost;
+  const exportOpts = {
+    bgColor:    DS.bgColor,
+    fontFamily: DS.fontFamily,
+    fontItalic: DS.fontItalic,
+  };
+
   if (tab === 'poster') {
-    _dsDownload();
+    /* ── Poster PNG export via poster/duet-renderer.js ── */
+    if (typeof window.dsPosterExport === 'function') {
+      if (typeof showToast === 'function') showToast('Preparing poster…');
+      window.dsPosterExport(p1, p2, exportOpts).then(blob => {
+        if (!blob) { _dsDownload(); return; }
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+        a.href     = url;
+        a.download = `margo-duet-poster-${Date.now()}.png`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        if (typeof showToast === 'function') showToast('Poster saved ✓');
+      }).catch(() => _dsDownload());
+    } else {
+      _dsDownload();
+    }
+
   } else {
-    if (typeof gsExportForShareSheet === 'function') {
+    /* ── Animated GIF export via gif/duet-renderer.js ── */
+    if (typeof window.dsGifExport === 'function') {
       if (typeof showToast === 'function') showToast('Preparing GIF…');
-      window.currentPost = DS.parentPost;
+      window.dsGifExport(p1, p2, DS.motion, DS.dur, exportOpts).then(blob => {
+        if (!blob) { _dsDownload(); return; }
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+        a.href     = url;
+        a.download = `margo-duet-${DS.motion}-${Date.now()}.gif`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        if (typeof showToast === 'function') showToast('GIF saved ✓');
+      }).catch(() => _dsDownload());
+    } else if (typeof gsExportForShareSheet === 'function') {
+      /* older fallback path */
+      if (typeof showToast === 'function') showToast('Preparing GIF…');
+      window.currentPost = p1;
       gsExportForShareSheet(() => {}).then(blob => {
         if (!blob) { _dsDownload(); return; }
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a   = document.createElement('a');
         a.href = url; a.download = `margo-duet-${Date.now()}.gif`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -787,22 +847,24 @@ function _dsRoute(tab) {
 }
 
 function _dsDownload() {
+  /* Fallback PNG — uses _dsDrawCard (conversation layout) */
   const offscreen = document.createElement('canvas');
-  offscreen.width = 1080; offscreen.height = 1080;
+  offscreen.width = offscreen.height = 1080;
   const ctx = offscreen.getContext('2d');
   document.fonts.ready.then(() => {
     _dsDrawCard(ctx, 1080, 1080, DS.parentPost, DS.echoPost);
-    const link    = document.createElement('a');
     const pSong   = (DS.parentPost?.knowledge?.song || DS.parentPost?.song || 'lyric').replace(/\s+/g,'-').toLowerCase();
+    const link    = document.createElement('a');
     link.download = `margo-conversation-${pSong}.png`;
     link.href     = offscreen.toDataURL('image/png', 0.93);
     link.click();
-    if (typeof showToast === 'function') showToast('Conversation saved ✓');
+    if (typeof showToast === 'function') showToast('Saved ✓');
   });
 }
 
 /* ══════════════════════════════════════════════════════════
-   CANVAS DRAW — shared by preview and download
+   CANVAS DRAW — internal fallback only (not primary path)
+   Primary paths: dsGifDrawFrame / dsPosterDraw
 ══════════════════════════════════════════════════════════ */
 function _dsDrawCard(ctx, W, H, parent, echo) {
   if (!parent || !echo) return;
