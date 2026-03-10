@@ -1,5 +1,5 @@
 /* ============================================================
-   MARGO — js/duet-export.js  v2.1
+   MARGO — js/duet-export.js  v2.2
    Pure canvas export — no html2canvas, no DOM screenshots.
    Same approach as gif-studio.js: draw everything with ctx calls.
 
@@ -9,6 +9,8 @@
 
    Exposes: window._duetExport.gif(plat, action)
             window._duetExport.poster(plat, action)
+
+   IMPORTANT: this file must load AFTER duet-sheet.js in your HTML.
    ============================================================ */
 
 (function () {
@@ -207,7 +209,6 @@
       ctx.globalAlpha = anim.alpha;
       if (anim.hue) ctx.filter = `hue-rotate(${anim.hue}deg)`;
 
-      /* translate from centre of card */
       const cx = bx + bw / 2;
       const cy = by + bubH / 2;
       ctx.translate(cx + anim.dx, cy + anim.dy);
@@ -543,7 +544,7 @@
       off.height = H;
       const oc   = off.getContext('2d');
 
-      /* ── FIXED: use local worker path + quality/dither matching gif-studio.js ── */
+      /* local worker — no CORS issues on Vercel */
       const gif = new GIF({
         workers:      4,
         quality:      1,
