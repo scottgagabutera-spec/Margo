@@ -1,9 +1,9 @@
 /* ============================================================
-   MARGO — js/duet-sheet.js  v4.0
-   Export strategy: identical to prototype renderConvo/renderCard.
-   Build full-resolution HTML at exact export dimensions in a
-   hidden offscreen div → html2canvas at scale=1.
-   What you see in the preview IS what you download.
+   MARGO — js/duet-sheet.js  v4.1
+   PATCH v4.1: Canvas preview now handles BOTH convo + card views.
+   _dsRefreshPreview → delegates to window._duetExport.startPreview
+   _dsShowView       → moves canvas wrap into the active view container
+   Everything else identical to v4.0.
    ============================================================ */
 (function () {
 
@@ -15,9 +15,9 @@ const DS = {
 };
 
 const DS_PLATFORMS = [
-  {id:'square', label:'Square',         sub:'IG \u00b7 FB \u00b7 Reddit \u00b7 Discord',  w:1080,h:1080,ratio:'1:1' },
-  {id:'story',  label:'Story / TikTok', sub:'IG Stories \u00b7 Snap \u00b7 TikTok',  w:1080,h:1920,ratio:'9:16'},
-  {id:'wide',   label:'Wide',           sub:'Twitter/X \u00b7 LinkedIn',        w:1200,h:675, ratio:'16:9'},
+  {id:'square', label:'Square',         sub:'IG · FB · Reddit · Discord',  w:1080,h:1080,ratio:'1:1' },
+  {id:'story',  label:'Story / TikTok', sub:'IG Stories · Snap · TikTok',  w:1080,h:1920,ratio:'9:16'},
+  {id:'wide',   label:'Wide',           sub:'Twitter/X · LinkedIn',        w:1200,h:675, ratio:'16:9'},
 ];
 
 const DS_VIBE = {
@@ -39,7 +39,7 @@ const DS_THEMES = {
 };
 
 /* ═══════════════════════════════════════
-   HTML FRAME BUILDERS (mirrors prototype)
+   HTML FRAME BUILDERS (kept for fallback export only — not used for preview)
 ═══════════════════════════════════════ */
 
 function q(n){return Math.round(n);}
@@ -192,7 +192,7 @@ function _lyricAnim(mot,acc,dur,delay,still,bodyTxt){
   return 'color:'+bodyTxt+';'+_anim(mot,dur,delay+0.06,false);
 }
 
-/* ── CONVO HTML BUILDER ── */
+/* ── CONVO HTML BUILDER (fallback export only) ── */
 function _buildConvoHTML(W,H,t,still){
   const parent=DS.parentPost, echo=DS.echoPost;
   const mot=DS.motion, dur=DS.dur;
@@ -231,7 +231,7 @@ function _buildConvoHTML(W,H,t,still){
     +'</div>';
 }
 
-/* ── CARD HTML BUILDER ── */
+/* ── CARD HTML BUILDER (fallback export only) ── */
 function _buildCardHTML(W,H,t,still){
   const parent=DS.parentPost, echo=DS.echoPost;
   const mot=DS.motion, dur=DS.dur;
@@ -295,7 +295,7 @@ function _buildCardHTML(W,H,t,still){
     +'</div>';
 }
 
-/* ── OFFSCREEN CAPTURE ── */
+/* ── OFFSCREEN CAPTURE (fallback only) ── */
 let _offEl=null;
 function _getOff(){
   if(_offEl)return _offEl;
@@ -458,8 +458,8 @@ function mountDuetSheet(){
     <button class="ds-toggle-btn" id="dsToggleCard">Card</button>
   </div>
   <div id="dsViewConvo">
-    <div class="ds-convo" id="dsConvoBubbles"></div>
-    <div class="ds-song-strip" id="dsSongStrip"></div>
+    <div class="ds-convo" id="dsConvoBubbles" style="display:none"></div>
+    <div class="ds-song-strip" id="dsSongStrip" style="display:none"></div>
   </div>
   <div id="dsViewCard" style="display:none">
     <div style="padding:16px 18px 0">
@@ -515,7 +515,7 @@ function mountDuetSheet(){
       <div class="ds-panel-section" id="ds-section-font">
         <div class="ds-panel-label">Lyric font</div>
         <div class="ds-font-grid">
-          <div class="ds-font-card active" data-family="DM Serif Display" data-italic="true"><div class="ds-font-preview" style="font-family:'DM Serif Display',serif;font-style:italic">Say everything</div><div class="ds-font-card-name">Serif \u00b7 Default</div></div>
+          <div class="ds-font-card active" data-family="DM Serif Display" data-italic="true"><div class="ds-font-preview" style="font-family:'DM Serif Display',serif;font-style:italic">Say everything</div><div class="ds-font-card-name">Serif · Default</div></div>
           <div class="ds-font-card" data-family="Playfair Display" data-italic="true"><div class="ds-font-preview" style="font-family:'Playfair Display',serif;font-style:italic">Say everything</div><div class="ds-font-card-name">Playfair</div></div>
           <div class="ds-font-card" data-family="Space Mono" data-italic="false"><div class="ds-font-preview" style="font-family:'Space Mono',monospace">Say everything</div><div class="ds-font-card-name">Mono</div></div>
           <div class="ds-font-card" data-family="DM Sans" data-italic="false"><div class="ds-font-preview" style="font-family:'DM Sans',sans-serif;font-weight:700">Say everything</div><div class="ds-font-card-name">Sans Bold</div></div>
@@ -524,8 +524,8 @@ function mountDuetSheet(){
     </div>
   </div>
   <div class="ds-export-row">
-    <button class="ds-export-btn ds-btn-dl-gif" id="dsBtnDownload"><span class="ds-export-icon">\u2193</span><span id="dsBtnDlLabel">Download GIF</span></button>
-    <button class="ds-export-btn ds-btn-sh-gif" id="dsBtnShare"><span class="ds-export-icon">\u2197</span><span id="dsBtnShLabel">Share GIF</span></button>
+    <button class="ds-export-btn ds-btn-dl-gif" id="dsBtnDownload"><span class="ds-export-icon">↓</span><span id="dsBtnDlLabel">Download GIF</span></button>
+    <button class="ds-export-btn ds-btn-sh-gif" id="dsBtnShare"><span class="ds-export-icon">↗</span><span id="dsBtnShLabel">Share GIF</span></button>
   </div>
 </div>`;
   document.body.appendChild(backdrop);
@@ -628,32 +628,48 @@ function _dsPopulateConvo(){
     '<span class="ds-strip-label">SONGS</span><div class="ds-strip-songs"><div class="ds-strip-song"><span class="ds-strip-song-name">'+_esc(pS)+'</span><span class="ds-strip-song-artist">'+_esc(pA)+'</span></div><span class="ds-strip-sep">\u2194</span><div class="ds-strip-song"><span class="ds-strip-song-name">'+_esc(eS)+'</span><span class="ds-strip-song-artist">'+_esc(eA)+'</span></div></div>';
 }
 
+/* ════════════════════════════════════════════════════════
+   v4.1 PATCH: _dsRefreshPreview now delegates to canvas preview
+   ════════════════════════════════════════════════════════ */
 function _dsRefreshPreview(){
-  const isCard=document.getElementById('dsViewCard').style.display!=='none';
-  if(!isCard)return;
-  const wrap=document.getElementById('dsCardPreviewWrap');if(!wrap)return;
-  const t=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'];
-  const still=DS.format==='poster';
-  const PW=1080,PH=1080;
-  const wrapW=wrap.clientWidth||340;
-  const scale=wrapW/PW;
-  wrap.style.height=(PH*scale)+'px';
-  wrap.style.overflow='hidden';
-  wrap.style.position='relative';
-  const inner=document.createElement('div');
-  inner.style.cssText='position:absolute;top:0;left:0;width:'+PW+'px;height:'+PH+'px;transform:scale('+scale+');transform-origin:top left;pointer-events:none';
-  inner.innerHTML=_buildCardHTML(PW,PH,t,still);
-  wrap.innerHTML='';
-  wrap.appendChild(inner);
+  if(window._duetExport){
+    window._duetExport.stopPreview();
+    setTimeout(window._duetExport.startPreview,50);
+  }
 }
 
+/* ════════════════════════════════════════════════════════
+   v4.1 PATCH: _dsShowView moves canvas into active view
+   ════════════════════════════════════════════════════════ */
 function _dsShowView(v){
   document.getElementById('dsViewConvo').style.display=v==='convo'?'':'none';
   document.getElementById('dsViewCard').style.display=v==='card'?'':'none';
   document.getElementById('dsToggleConvo').classList.toggle('active',v==='convo');
   document.getElementById('dsToggleCard').classList.toggle('active',v==='card');
-  if(v==='card')_dsRefreshPreview();
+
+  /* Move canvas wrap into whichever view is now active */
+  const cvWrap=document.getElementById('dsConvoCanvasWrap');
+  if(cvWrap){
+    const target=v==='card'
+      ?document.getElementById('dsCardPreviewWrap')
+      :document.getElementById('dsViewConvo');
+    if(target&&cvWrap.parentElement!==target){
+      target.insertBefore(cvWrap,target.firstChild);
+    }
+    const canvas=document.getElementById('dsConvoPreviewCanvas');
+    if(canvas){
+      if(v==='card'){
+        cvWrap.style.padding='0';
+        canvas.style.borderRadius='0';
+      }else{
+        cvWrap.style.padding='10px 18px 0';
+        canvas.style.borderRadius='14px';
+      }
+    }
+  }
+  _dsRefreshPreview();
 }
+
 function _dsSwitchFormat(fmt){
   DS.format=fmt;
   document.getElementById('dsFmtGif').className='ds-format-tab'+(fmt==='gif'?' active-gif':'');
@@ -714,39 +730,38 @@ async function _dsLoadH2C(){
   });
 }
 
-/* ════ GIF EXPORT (fallback) ════
-   FIXED: workerScript now uses local /js/gif.worker.js (was CDN — blocked by CORS on Vercel)
-   FIXED: dither:false, quality:1 (matches gif-studio.js and duet-export.js)
-*/
+/* ════ GIF EXPORT fallback (only fires if window._duetExport missing) ════ */
 async function _dsExportGif(plat,action){
   const dlBtn=document.getElementById('dsBtnDownload'),shBtn=document.getElementById('dsBtnShare');
   const btn=action==='download'?dlBtn:shBtn;
   const origDl=dlBtn?dlBtn.innerHTML:'',origSh=shBtn?shBtn.innerHTML:'';
-  const isConvo=document.getElementById('dsViewCard').style.display==='none';
   const W=plat.w,H=plat.h,FRAMES=24;
   const DELAY=Math.round((DS.dur*1000)/FRAMES);
   const color='#00E5FF';
   if(dlBtn)dlBtn.disabled=true;if(shBtn)shBtn.disabled=true;
   _dsSetProgress(btn,0,'Starting\u2026',color);
   try{
-    await _dsPreloadFonts();await _dsLoadH2C();
+    await _dsPreloadFonts();
     if(typeof GIF==='undefined'){
       await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
     }
     const t=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'];
-    const gif=new GIF({workers:4,quality:1,width:W,height:H,workerScript:'/js/gif.worker.js',dither:false,globalPalette:false});
-    const buildFn=isConvo?_buildConvoHTML:_buildCardHTML;
-    const _offGif=_getOff();
-    _offGif.style.width=W+'px';_offGif.style.height=H+'px';
-    _offGif.innerHTML=buildFn(W,H,t,false);
-    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const isCard=document.getElementById('dsViewCard').style.display!=='none';
+    /* pure canvas fallback — same as duet-export.js */
+    const gif=new GIF({workers:4,quality:1,width:W,height:H,workerScript:'/js/gif.worker.js',dither:false});
+    const off=document.createElement('canvas');off.width=W;off.height=H;
+    const oc=off.getContext('2d');
+    /* import draw functions from duet-export if available */
+    const drawFn=isCard
+      ?(window._duetDrawCard||function(){})
+      :(window._duetDrawConvo||function(){});
     for(let i=0;i<FRAMES;i++){
+      oc.clearRect(0,0,W,H);
+      drawFn(oc,W,H,i/FRAMES,DS,t);
+      gif.addFrame(off,{copy:true,delay:DELAY});
       _dsSetProgress(btn,Math.round((i/FRAMES)*72),'Frame '+(i+1)+'/'+FRAMES,color);
-      const snap=await window.html2canvas(_offGif,{width:W,height:H,scale:1,backgroundColor:null,logging:false,useCORS:true,allowTaint:true,foreignObjectRendering:false});
-      gif.addFrame(snap,{copy:true,delay:DELAY});
-      await new Promise(r=>setTimeout(r,DELAY));
+      await new Promise(r=>setTimeout(r,0));
     }
-    _offGif.innerHTML='';
     gif.on('progress',p=>_dsSetProgress(btn,Math.round(72+p*26),'Encoding '+Math.round(72+p*26)+'%',color));
     gif.on('finished',async blob=>{
       _dsSetProgress(btn,100,'\u2713 Done!',color);
@@ -767,12 +782,12 @@ async function _dsExportGif(plat,action){
   }
 }
 
-/* ════ POSTER EXPORT (fallback — kept intact) ════ */
+/* ════ POSTER EXPORT fallback ════ */
 async function _dsExportPoster(plat,action){
   const dlBtn=document.getElementById('dsBtnDownload'),shBtn=document.getElementById('dsBtnShare');
   const btn=action==='download'?dlBtn:shBtn;
   const origDl=dlBtn?dlBtn.innerHTML:'',origSh=shBtn?shBtn.innerHTML:'';
-  const isConvo=document.getElementById('dsViewCard').style.display==='none';
+  const isCard=document.getElementById('dsViewCard').style.display==='none';
   const W=plat.w,H=plat.h,color='#E8C547';
   if(dlBtn)dlBtn.disabled=true;if(shBtn)shBtn.disabled=true;
   _dsSetProgress(btn,0,'Preparing\u2026',color);
@@ -780,7 +795,7 @@ async function _dsExportPoster(plat,action){
     await _dsPreloadFonts();await _dsLoadH2C();
     _dsSetProgress(btn,30,'Rendering\u2026',color);
     const t=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'];
-    const buildFn=isConvo?_buildConvoHTML:_buildCardHTML;
+    const buildFn=isCard?_buildConvoHTML:_buildCardHTML;
     const html=buildFn(W,H,t,true);
     const snap=await _captureFrame(html,W,H);
     _dsSetProgress(btn,85,'Saving\u2026',color);
