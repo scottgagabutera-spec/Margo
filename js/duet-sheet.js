@@ -583,7 +583,6 @@ let _dsPickerAction='download';
 function _dsOpenPicker(a){_dsPickerAction=a;document.getElementById('dsPlatformPicker').classList.remove('ds-hidden');}
 function _dsClosePicker(){document.getElementById('dsPlatformPicker').classList.add('ds-hidden');}
 
-/* ── CHANGE 2: _dsStartExport delegates to duet-export.js ── */
 function _dsStartExport(plat){
   _dsClosePicker();
   if(window._duetExport){
@@ -591,7 +590,6 @@ function _dsStartExport(plat){
       ? window._duetExport.gif(plat,_dsPickerAction)
       : window._duetExport.poster(plat,_dsPickerAction);
   }else{
-    /* fallback: original export functions still present below */
     DS.format==='gif'?_dsExportGif(plat,_dsPickerAction):_dsExportPoster(plat,_dsPickerAction);
   }
 }
@@ -716,7 +714,10 @@ async function _dsLoadH2C(){
   });
 }
 
-/* ════ GIF EXPORT (fallback — kept intact) ════ */
+/* ════ GIF EXPORT (fallback) ════
+   FIXED: workerScript now uses local /js/gif.worker.js (was CDN — blocked by CORS on Vercel)
+   FIXED: dither:false, quality:1 (matches gif-studio.js and duet-export.js)
+*/
 async function _dsExportGif(plat,action){
   const dlBtn=document.getElementById('dsBtnDownload'),shBtn=document.getElementById('dsBtnShare');
   const btn=action==='download'?dlBtn:shBtn;
@@ -733,7 +734,7 @@ async function _dsExportGif(plat,action){
       await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
     }
     const t=DS_THEMES[DS.bgColor]||DS_THEMES['#07060E'];
-    const gif=new GIF({workers:4,quality:2,width:W,height:H,workerScript:'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js',dither:'FloydSteinberg',globalPalette:false});
+    const gif=new GIF({workers:4,quality:1,width:W,height:H,workerScript:'/js/gif.worker.js',dither:false,globalPalette:false});
     const buildFn=isConvo?_buildConvoHTML:_buildCardHTML;
     const _offGif=_getOff();
     _offGif.style.width=W+'px';_offGif.style.height=H+'px';
@@ -821,7 +822,6 @@ function _initDsSwipe(){
 window.openDuetSheet=openDuetSheet;
 window.closeDuetSheet=closeDuetSheet;
 
-/* ── CHANGE 1: expose internals for duet-export.js ── */
 window._DS             = DS;
 window._DSThemes       = DS_THEMES;
 window._buildConvoHTML = _buildConvoHTML;
