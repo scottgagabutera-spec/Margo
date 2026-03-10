@@ -24,6 +24,8 @@ const DS = {
   dur:        2.4,
   format:     'gif',
   bgColor:    '#07060E',
+  theme:      'gold',       /* renderer theme name — kept in sync with bgColor swatch */
+  cardStyle:  'glass',      /* lyric card style: glass|contrast|mesh|grain|neon|depth */
   fontFamily: 'DM Serif Display',
   fontItalic: true,
   _cardAnimFrame: null,
@@ -47,6 +49,19 @@ const DS_THEMES = {
   '#0f0508': { grad:'linear-gradient(135deg,#1a0d0f,#2d1a1f)',  text:'#ffffff', isLight:false },
   '#080808': { grad:'linear-gradient(135deg,#000000,#111111)',   text:'#ffffff', isLight:false },
   '#150520': { grad:'linear-gradient(135deg,#2d0a3d,#6b1fa8)',   text:'#ffffff', isLight:false },
+};
+
+/* u2500u2500 bgColor hex u2192 renderer theme name u2500u2500 */
+const DS_BG_TO_THEME = {
+  '#07060E': 'gold',
+  '#0e0018': 'violet',
+  '#04090f': 'ocean',
+  '#0f0404': 'ember',
+  '#020f06': 'forest',
+  '#0f0508': 'rose',
+  '#080808': 'mono',
+  '#150520': 'wave',
+  '#ffffff': 'white',
 };
 
 /* ══════════════════════════════════════════════════════════
@@ -251,6 +266,11 @@ function injectDuetStyles() {
     .ds-font-card-name { font-family:'Space Mono',monospace; font-size:0.48rem; font-weight:700; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; }
     .ds-font-card.active .ds-font-card-name { color:#E8C547; }
 
+    .ds-cstyle-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .ds-cstyle-btn { padding:10px 7px; border-radius:10px; background:#1E1D28; border:1px solid rgba(255,255,255,0.07); color:rgba(255,255,255,0.55); font-family:'DM Sans',sans-serif; font-size:0.65rem; font-weight:700; cursor:pointer; transition:all 0.18s; text-align:center; line-height:1.3; }
+    .ds-cstyle-btn:hover { background:rgba(255,255,255,0.08); color:#fff; border-color:rgba(255,255,255,0.18); }
+    .ds-cstyle-btn.active { background:rgba(232,197,71,0.10); border-color:rgba(232,197,71,0.38); color:#E8C547; }
+
     .ds-share-row { display:flex; gap:9px; padding:14px 18px 22px; }
     .ds-share-btn { flex:1; padding:16px 10px; border-radius:17px; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; transition:all 0.22s cubic-bezier(0.16,1,0.3,1); font-family:'Space Mono',monospace; font-weight:700; font-size:0.54rem; letter-spacing:1.2px; text-transform:uppercase; }
     .ds-share-btn:hover  { transform:translateY(-2px); }
@@ -329,6 +349,7 @@ function mountDuetSheet() {
         <div class="ds-option-tabs" id="dsOptionTabs">
           <button class="ds-option-tab active" data-opt="motion">Motion</button>
           <button class="ds-option-tab"        data-opt="color">Color</button>
+          <button class="ds-option-tab"        data-opt="style">Style</button>
           <button class="ds-option-tab"        data-opt="font">Font</button>
         </div>
 
@@ -366,6 +387,19 @@ function mountDuetSheet() {
               <div class="ds-color-swatch" data-bg="#0f0508"><div class="ds-swatch-fill" style="background:linear-gradient(135deg,#1a0d0f,#f4a4c0)"></div><div class="ds-swatch-name">Rose</div></div>
               <div class="ds-color-swatch" data-bg="#080808"><div class="ds-swatch-fill" style="background:linear-gradient(135deg,#000,#fff)"></div><div class="ds-swatch-name">Mono</div></div>
               <div class="ds-color-swatch" data-bg="#150520"><div class="ds-swatch-fill" style="background:linear-gradient(135deg,#ff71ce,#05ffa1)"></div><div class="ds-swatch-name">Wave</div></div>
+            </div>
+          </div>
+
+          <!-- CARD STYLE -->
+          <div class="ds-panel-section" id="ds-section-style">
+            <div class="ds-panel-label">Lyric card style</div>
+            <div class="ds-cstyle-grid">
+              <button class="ds-cstyle-btn active" data-style="glass">Frosted Glass</button>
+              <button class="ds-cstyle-btn"        data-style="contrast">Deep Contrast</button>
+              <button class="ds-cstyle-btn"        data-style="mesh">Gradient Mesh</button>
+              <button class="ds-cstyle-btn"        data-style="grain">Grain / Editorial</button>
+              <button class="ds-cstyle-btn"        data-style="neon">Neon Outline</button>
+              <button class="ds-cstyle-btn"        data-style="depth">Cinematic</button>
             </div>
           </div>
 
@@ -442,6 +476,7 @@ function mountDuetSheet() {
       document.querySelectorAll('.ds-color-swatch').forEach(s => s.classList.remove('active'));
       sw.classList.add('active');
       DS.bgColor = sw.dataset.bg;
+      DS.theme   = DS_BG_TO_THEME[DS.bgColor] || 'gold';
       _dsApplyTheme(DS.bgColor);
       _dsRefreshCardCanvas();
     };
@@ -454,6 +489,16 @@ function mountDuetSheet() {
       DS.fontFamily = card.dataset.family;
       DS.fontItalic = card.dataset.italic === 'true';
       _dsUpdateCardFonts();
+      _dsRefreshCardCanvas();
+    };
+  });
+
+  /* ── Card style buttons ── */
+  document.querySelectorAll('.ds-cstyle-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.ds-cstyle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      DS.cardStyle = btn.dataset.style || 'glass';
       _dsRefreshCardCanvas();
     };
   });
@@ -471,9 +516,11 @@ function openDuetSheet(parentPost, echoPost) {
 
   DS.parentPost = parentPost;
   DS.echoPost   = echoPost;
-  DS.motion = 'fade-up';
-  DS.dur    = 2.4;
-  DS.format = 'gif';
+  DS.motion    = 'fade-up';
+  DS.dur       = 2.4;
+  DS.format    = 'gif';
+  DS.theme     = DS_BG_TO_THEME[DS.bgColor] || 'gold';
+  DS.cardStyle = 'glass';
 
   _dsPopulateConvo();
 
@@ -602,9 +649,11 @@ function _dsStartCardPreview() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (typeof window.dsPosterDraw === 'function') {
         window.dsPosterDraw(ctx, size, size, DS.parentPost, DS.echoPost, {
+          theme:      DS.theme      || 'gold',
+          cardStyle:  DS.cardStyle  || 'glass',
+          fontFamily: DS.fontFamily || 'DM Serif Display',
+          fontItalic: DS.fontItalic !== false,
           bgColor:    DS.bgColor,
-          fontFamily: DS.fontFamily,
-          fontItalic: DS.fontItalic,
         });
       } else {
         /* fallback */
@@ -626,8 +675,11 @@ function _dsStartCardPreview() {
         if (typeof window.dsGifDrawFrame === 'function') {
           window.dsGifDrawFrame(ctx, size, size, frame / frames, DS.motion,
             DS.parentPost, DS.echoPost, {
-              fontFamily: DS.fontFamily,
-              fontItalic: DS.fontItalic,
+              theme:      DS.theme      || 'gold',
+              cardStyle:  DS.cardStyle  || 'glass',
+              fontFamily: DS.fontFamily || 'DM Serif Display',
+              fontItalic: DS.fontItalic !== false,
+              bgColor:    DS.bgColor,
             });
         } else {
           /* fallback: old pulse overlay */
@@ -789,58 +841,82 @@ function _dsPlayMotion() {
 function _dsRoute(tab) {
   const p1 = DS.parentPost;
   const p2 = DS.echoPost;
+
+  /* opts — theme name + cardStyle now included so renderers apply correct colours/styles */
   const exportOpts = {
-    bgColor:    DS.bgColor,
-    fontFamily: DS.fontFamily,
-    fontItalic: DS.fontItalic,
+    theme:      DS.theme      || 'gold',
+    cardStyle:  DS.cardStyle  || 'glass',
+    fontFamily: DS.fontFamily || 'DM Serif Display',
+    fontItalic: DS.fontItalic !== false,
+    bgColor:    DS.bgColor,           /* kept for backward compat */
   };
 
   if (tab === 'poster') {
     /* ── Poster PNG export via poster/duet-renderer.js ── */
-    if (typeof window.dsPosterExport === 'function') {
-      if (typeof showToast === 'function') showToast('Preparing poster…');
-      window.dsPosterExport(p1, p2, exportOpts).then(blob => {
+    if (typeof window.dsPosterExport !== 'function') { _dsDownload(); return; }
+    const btn = document.getElementById('dsBtnPoster');
+    const orig = btn ? btn.innerHTML : null;
+    if (btn) { btn.innerHTML = '<span class="ds-share-btn-icon">⏳</span>Rendering…'; btn.disabled = true; }
+    if (typeof showToast === 'function') showToast('Preparing poster…');
+    window.dsPosterExport(p1, p2, exportOpts)
+      .then(blob => {
         if (!blob) { _dsDownload(); return; }
         const url = URL.createObjectURL(blob);
         const a   = document.createElement('a');
         a.href     = url;
         a.download = `margo-duet-poster-${Date.now()}.png`;
+        document.body.appendChild(a);
         a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
         if (typeof showToast === 'function') showToast('Poster saved ✓');
-      }).catch(() => _dsDownload());
-    } else {
-      _dsDownload();
-    }
+      })
+      .catch(err => {
+        console.error('[Margo] Poster export failed:', err);
+        _dsDownload();
+      })
+      .finally(() => {
+        if (btn && orig) { btn.innerHTML = orig; btn.disabled = false; }
+      });
 
   } else {
     /* ── Animated GIF export via gif/duet-renderer.js ── */
+    const btn = document.getElementById('dsBtnGif');
+    const orig = btn ? btn.innerHTML : null;
+    if (btn) { btn.innerHTML = '<span class="ds-share-btn-icon">⏳</span>Rendering…'; btn.disabled = true; }
+    if (typeof showToast === 'function') showToast('Preparing GIF…');
+
+    const _doDownload = blob => {
+      if (!blob) { _dsDownload(); return; }
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = `margo-duet-${DS.motion}-${Date.now()}.gif`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      if (typeof showToast === 'function') showToast('GIF saved ✓');
+    };
+    const _doError = err => {
+      console.error('[Margo] GIF export failed:', err);
+      if (typeof showToast === 'function') showToast('Export failed — try again');
+      _dsDownload();
+    };
+    const _doFinally = () => {
+      if (btn && orig) { btn.innerHTML = orig; btn.disabled = false; }
+    };
+
     if (typeof window.dsGifExport === 'function') {
-      if (typeof showToast === 'function') showToast('Preparing GIF…');
-      window.dsGifExport(p1, p2, DS.motion, DS.dur, exportOpts).then(blob => {
-        if (!blob) { _dsDownload(); return; }
-        const url = URL.createObjectURL(blob);
-        const a   = document.createElement('a');
-        a.href     = url;
-        a.download = `margo-duet-${DS.motion}-${Date.now()}.gif`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        if (typeof showToast === 'function') showToast('GIF saved ✓');
-      }).catch(() => _dsDownload());
+      window.dsGifExport(p1, p2, DS.motion, DS.dur, exportOpts)
+        .then(_doDownload).catch(_doError).finally(_doFinally);
     } else if (typeof gsExportForShareSheet === 'function') {
       /* older fallback path */
-      if (typeof showToast === 'function') showToast('Preparing GIF…');
       window.currentPost = p1;
-      gsExportForShareSheet(() => {}).then(blob => {
-        if (!blob) { _dsDownload(); return; }
-        const url = URL.createObjectURL(blob);
-        const a   = document.createElement('a');
-        a.href = url; a.download = `margo-duet-${Date.now()}.gif`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        if (typeof showToast === 'function') showToast('GIF saved ✓');
-      }).catch(() => _dsDownload());
+      gsExportForShareSheet(() => {})
+        .then(_doDownload).catch(_doError).finally(_doFinally);
     } else {
+      _doFinally();
       _dsDownload();
     }
   }
