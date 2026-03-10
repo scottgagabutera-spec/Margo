@@ -113,7 +113,6 @@
   <!-- Studio fonts — deferred non-render-blocking -->
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Josefin+Sans:wght@300;400;700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 
-  <!-- ↓ UPDATED: paths now match /assets/ folder -->
   <link rel="stylesheet" href="/assets/style.css"/>
   <link rel="stylesheet" href="/assets/gif-studio.css"/>
 
@@ -663,7 +662,11 @@
   </div>
 </div>
 
-<!-- ↓ UPDATED: all script paths now match new folder structure -->
+<!-- ══════════════════════════════
+     SCRIPTS
+     Order matters — dependencies load first, app.js always last
+══════════════════════════════ -->
+
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
@@ -685,7 +688,7 @@
 <script src="/js/features/duet-mode.js"></script>
 <script src="/js/features/duet-sheet.js"></script>
 <script src="/js/features/motion.js"></script>
-<script src="/js/features/poster.js"></script>
+<!-- poster.js removed — file deleted from repo -->
 
 <!-- MEDIA : POSTER -->
 <script src="/js/media/poster/studio.js"></script>
@@ -790,7 +793,6 @@
         if (y < 60) fab.classList.remove('scroll-hidden');
       }
 
-      /* scroll-to-top button */
       var scrollBtn = document.getElementById('margoScrollTop');
       if (scrollBtn) {
         if (y > 400) scrollBtn.classList.add('visible');
@@ -803,7 +805,6 @@
 
   window.addEventListener('scroll', onScroll, { passive: true });
 
-  /* scroll-to-top click handler */
   var scrollBtn = document.getElementById('margoScrollTop');
   if (scrollBtn) {
     scrollBtn.addEventListener('click', function () {
