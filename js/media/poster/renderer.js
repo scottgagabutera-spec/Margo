@@ -1,5 +1,5 @@
 /* ============================================================
-   MARGO — js/media/poster/duet-renderer.js  v2.0
+   MARGO — js/media/poster/duet-renderer.js  v2.1
    Full port from prototype v3 (margo-duet-export-prototype-v3.html)
 
    Static 1080×1080 PNG. Layout matches prototype "Card" view.
@@ -17,7 +17,7 @@
 'use strict';
 
 /* ─────────────────────────────────────────────
-   THEMES — identical to gif renderer
+   THEMES
 ───────────────────────────────────────────── */
 const THEMES = {
   gold:   {g1:'#0c0a04',g2:'#1a1306',acc:'#E8C547',glow1:'rgba(232,197,71,0.22)',glow2:'rgba(180,140,30,0.12)',l:'#FF6B9D',r:'#6B8CFF',light:false},
@@ -57,15 +57,28 @@ function wrapText(ctx, text, maxW) {
   return lines;
 }
 
+/* ─────────────────────────────────────────────
+   FONT STACK — v2.1 fix: no sans fallback,
+   unknown font → default DM Serif Display
+───────────────────────────────────────────── */
 function fStack(f) {
   const m = {
-    'DM Serif Display': "'DM Serif Display',serif",
-    'Space Mono':       "'Space Mono',monospace",
-    'Georgia':          'Georgia,serif',
+    'DM Serif Display': "'DM Serif Display', serif",
+    'Playfair Display': "'Playfair Display', serif",
+    'Lora':             "'Lora', serif",
+    'Space Mono':       "'Space Mono', monospace",
+    'Syne Mono':        "'Syne Mono', monospace",
+    'DM Sans':          "'DM Sans', sans-serif",
+    'Syne':             "'Syne', sans-serif",
+    'Comic Sans MS':    "'Comic Sans MS', cursive",
+    'Georgia':          "Georgia, serif",
   };
-  return m[f] || `'${f}',sans-serif`;
+  return m[f] || m['DM Serif Display'];
 }
-function isItalic(f) { return ['DM Serif Display','Georgia'].includes(f); }
+
+function isItalic(f) {
+  return ['DM Serif Display', 'Playfair Display', 'Lora', 'Georgia'].includes(f);
+}
 
 /* ─────────────────────────────────────────────
    BACKGROUND
@@ -83,7 +96,6 @@ function drawBg(ctx, W, H, th) {
   g2.addColorStop(0, th.glow2); g2.addColorStop(1, 'transparent');
   ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
 
-  /* noise */
   ctx.save(); ctx.globalAlpha = th.light ? 0.018 : 0.032;
   for (let y = 0; y < H; y += 3)
     for (let x = 0; x < W; x += 3) {
@@ -92,7 +104,6 @@ function drawBg(ctx, W, H, th) {
     }
   ctx.restore();
 
-  /* edge lines */
   const edgeL = th.light ? 'rgba(0,0,0,0.15)' : th.l;
   ctx.save(); ctx.globalAlpha = 0.45;
   const tl = ctx.createLinearGradient(0,0,W,0);
@@ -243,7 +254,7 @@ function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
       for (let sl=y;sl<y+h;sl+=3) { ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(x,sl,w,1); }
       ctx.restore();
       break;
-    default: /* glass */
+    default:
       path(); ctx.fillStyle=light?'rgba(255,255,255,0.55)':'rgba(255,255,255,0.06)'; ctx.fill();
       path(); ctx.strokeStyle=light?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.13)'; ctx.lineWidth=1.5; ctx.stroke();
   }
@@ -255,12 +266,11 @@ function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
 }
 
 /* ─────────────────────────────────────────────
-   DIVIDER PILL  (static, fully visible)
+   DIVIDER PILL
 ───────────────────────────────────────────── */
 function drawDivider(ctx, W, divY, echoUser, th) {
   const light   = th.light;
   const accRgba = light ? 'rgba(0,0,0,0.22)' : 'rgba(232,197,71,0.28)';
-  const pillBg  = light ? 'rgba(0,0,0,0.06)' : 'rgba(232,197,71,0.09)';
   const pillBdr = light ? 'rgba(0,0,0,0.18)' : 'rgba(232,197,71,0.28)';
   const pillClr = light ? '#0B0B0D'          : th.acc;
   const dText   = `LYRIC BACK \u21A9  @${(echoUser || 'ANONYMOUS').toString().replace(/^@/,'').toUpperCase()}`;
@@ -343,8 +353,7 @@ function drawSongsBar(ctx, W, byY, post1, post2, th) {
 }
 
 /* ─────────────────────────────────────────────
-   LYRIC CARD (poster — static, fully visible)
-   Matches prototype renderCard()
+   LYRIC CARD
 ───────────────────────────────────────────── */
 function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
   const { fontFamily='DM Serif Display', cardStyle='glass' } = opts;
@@ -361,7 +370,6 @@ function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
   const user   = ('@'+(post.username||'anonymous').toString().replace(/^@/,'')).toUpperCase();
   const vibe   = (post.emotion||'').toUpperCase();
 
-  /* font sizes — matches prototype renderCard() with B = W */
   const B      = W;
   const padH   = Math.round(B*0.058), padV=Math.round(Math.min(W*0.052,B*0.062));
   const lFsRaw = side==='right' ? B*0.058 : B*0.050;
@@ -390,7 +398,6 @@ function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
 
   ctx.save();
 
-  /* username — Syne 800 */
   ctx.font=`800 ${uFs}px 'Syne','Arial Black',sans-serif`;
   ctx.fillStyle=col; ctx.globalAlpha=0.90;
   ctx.textBaseline='middle'; ctx.textAlign='left';
@@ -398,28 +405,23 @@ function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
 
   ctx.globalAlpha=1;
 
-  /* card bg */
   drawCardBg(ctx, cardX, cardY, cardW, cardH, cRad, cardStyle, th.acc, col, light);
 
-  /* inner radial tint */
   const rg=ctx.createRadialGradient(cardX,cardY,0,cardX,cardY,Math.max(cardW,cardH)*0.7);
   rg.addColorStop(0,hexA(col,0.08)); rg.addColorStop(1,'transparent');
   ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(cardX,cardY,cardW,cardH,cRad); else ctx.rect(cardX,cardY,cardW,cardH);
   ctx.fillStyle=rg; ctx.fill();
 
-  /* lyric */
   ctx.font=`${fStyle} ${lfs}px ${fStack(fontFamily)}`;
   ctx.fillStyle=bodyTxt; ctx.textBaseline='top'; ctx.textAlign='left';
   ctx.shadowColor='rgba(0,0,0,0.7)'; ctx.shadowBlur=10;
   lines.forEach((l,i)=>ctx.fillText(l, cardX+cPad, cardY+cPad+i*lh));
   ctx.shadowBlur=0;
 
-  /* divider */
   const divLineY=cardY+cardH-sFs*2.8;
   ctx.save(); ctx.globalAlpha=0.35; ctx.strokeStyle=divLine; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(cardX+cPad,divLineY); ctx.lineTo(cardX+cardW-cPad,divLineY); ctx.stroke(); ctx.restore();
 
-  /* song / artist */
   if (song) {
     ctx.font=`700 ${sFs}px 'DM Sans',sans-serif`; ctx.fillStyle=bodyTxt;
     ctx.textBaseline='bottom'; ctx.textAlign='left';
@@ -428,7 +430,6 @@ function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
     ctx.fillText(artist, cardX+cPad, cardY+cardH-cPad*0.6+aFs*1.3);
   }
 
-  /* vibe badge */
   if (vibe) {
     ctx.font=`800 ${vFs}px 'Syne','Arial Black',sans-serif`;
     const vw=ctx.measureText(vibe).width;
@@ -446,8 +447,6 @@ function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
 
 /* ═══════════════════════════════════════════════════════
    PUBLIC: dsPosterDraw
-   Renders the full duet card layout onto ctx at W×H
-   Matches prototype renderCard()
 ═══════════════════════════════════════════════════════ */
 function dsPosterDraw(ctx, W, H, post1, post2, opts = {}) {
   if (!post1 || !post2) return;
@@ -458,11 +457,10 @@ function dsPosterDraw(ctx, W, H, post1, post2, opts = {}) {
 
   const B      = Math.min(W, H);
   const padV   = Math.round(Math.min(H*0.052, B*0.062));
-  const padH   = Math.round(B*0.058);
   const vGap   = Math.round(H*0.015);
 
   const divY   = H * 0.500;
-  const divH   = Math.round(B * 0.040);          // approx divider pill height
+  const divH   = Math.round(B * 0.040);
   const topArea = { top: padV + Math.round(B*0.036) + vGap, h: divY - padV - Math.round(B*0.036) - vGap*2 - divH/2 };
   const botArea = { top: divY + divH/2 + vGap,              h: H*0.840 - divY - divH/2 - vGap };
   const songsY  = Math.round(H * 0.852);
@@ -479,7 +477,6 @@ function dsPosterDraw(ctx, W, H, post1, post2, opts = {}) {
 
 /* ═══════════════════════════════════════════════════════
    PUBLIC: dsPosterExport → Promise<Blob>
-   1080×1080 PNG
 ═══════════════════════════════════════════════════════ */
 async function dsPosterExport(post1, post2, opts = {}) {
   const SIZE = 1080;
@@ -498,7 +495,6 @@ async function dsPosterExport(post1, post2, opts = {}) {
   });
 }
 
-/* ── expose ── */
 window.dsPosterDraw   = dsPosterDraw;
 window.dsPosterExport = dsPosterExport;
 
