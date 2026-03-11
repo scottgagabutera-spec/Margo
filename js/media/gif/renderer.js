@@ -222,7 +222,7 @@ function drawWatermark(ctx, W, H, th) {
   const py  = H - W * 0.038 - ph / 2;
 
   /* pill background */
-  ctx.globalAlpha = light ? 0.20 : 0.13;
+  ctx.globalAlpha = light ? 0.25 : 0.22;
   ctx.fillStyle   = light ? '#000000' : '#ffffff';
   ctx.beginPath();
   if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, ph / 2);
@@ -230,7 +230,7 @@ function drawWatermark(ctx, W, H, th) {
   ctx.fill();
 
   /* pill border */
-  ctx.globalAlpha = light ? 0.35 : 0.22;
+  ctx.globalAlpha = light ? 0.45 : 0.36;
   ctx.strokeStyle = light ? '#000000' : '#ffffff';
   ctx.lineWidth   = 1;
   ctx.beginPath();
@@ -239,7 +239,7 @@ function drawWatermark(ctx, W, H, th) {
   ctx.stroke();
 
   /* text */
-  ctx.globalAlpha = light ? 0.78 : 0.62;
+  ctx.globalAlpha = light ? 0.90 : 0.82;
   ctx.fillStyle   = light ? '#0B0B0D' : '#ffffff';
   ctx.fillText(txt, W / 2, py + ph / 2);
   ctx.restore();
@@ -354,7 +354,7 @@ function drawDivider(ctx, W, divY, echoUser, alpha, th) {
   const pillBg   = light ? 'rgba(0,0,0,0.06)'         : 'rgba(232,197,71,0.09)';
   const pillBdr  = light ? 'rgba(0,0,0,0.18)'         : 'rgba(232,197,71,0.28)';
   const pillClr  = light ? '#0B0B0D'                  : th.acc;
-  const dText    = `LYRIC BACK \u21A9  @${(echoUser || 'ANONYMOUS').toUpperCase()}`;
+  const dText    = `LYRIC BACK \u21A9  @${(echoUser || 'ANONYMOUS').toString().replace(/^@/,'').toUpperCase()}`;
   const dFS      = Math.max(10, Math.round(W * 0.020));
 
   ctx.save();
@@ -569,7 +569,7 @@ function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion,
   const k        = post.knowledge || {};
   const song     = (k.song   || post.song   || '');
   const artist   = (k.artist || post.artist || '');
-  const username = ('@' + (post.username || 'anonymous')).toUpperCase();
+  const username = ('@' + (post.username || 'anonymous').toString().replace(/^@/,'')).toUpperCase();
   const vibe     = (post.emotion || '').toUpperCase();
   const areaH    = areaBot - areaTop;
 
