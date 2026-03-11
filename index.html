@@ -664,7 +664,7 @@
 
 <!-- ══════════════════════════════
      SCRIPTS
-     Order matters — dependencies load first, app.js always last
+     Order matters — duet-mode MUST load before duet-sheet
 ══════════════════════════════ -->
 
 <!-- Firebase -->
@@ -683,10 +683,9 @@
 <script src="/js/ui/resonate.js"></script>
 <script src="/js/ui/admin.js"></script>
 
-<!-- FEATURES -->
+<!-- FEATURES — duet-mode first, duet-sheet after media so all functions exist -->
 <script src="/js/features/echoes.js"></script>
 <script src="/js/features/duet-mode.js"></script>
-<script src="/js/features/duet-sheet.js"></script>
 <script src="/js/features/motion.js"></script>
 <!-- poster.js removed — file deleted from repo -->
 
@@ -699,6 +698,9 @@
 <script src="/js/media/gif/studio.js"></script>
 <script src="/js/media/gif/renderer.js"></script>
 <script src="/js/media/gif/exporter.js"></script>
+
+<!-- DUET SHEET — loads after duet-mode so window.dsGifDrawFrame etc. already exist -->
+<script src="/js/features/duet-sheet.js"></script>
 
 <!-- SHARE -->
 <script src="/js/media/share-sheet.js"></script>
