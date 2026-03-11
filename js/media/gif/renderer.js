@@ -1,5 +1,5 @@
 /* ============================================================
-   MARGO — js/media/gif/duet-renderer.js  v2.0
+   MARGO — js/media/gif/duet-renderer.js  v2.1
    Full port from prototype v3 (margo-duet-export-prototype-v3.html)
 
    Card styles: glass · contrast · mesh · grain · neon · depth
@@ -17,7 +17,7 @@
 'use strict';
 
 /* ─────────────────────────────────────────────
-   THEMES  (keyed by theme name, matches duet-sheet.js S.theme)
+   THEMES
 ───────────────────────────────────────────── */
 const THEMES = {
   gold:   {g1:'#0c0a04',g2:'#1a1306',acc:'#E8C547',glow1:'rgba(232,197,71,0.22)',glow2:'rgba(180,140,30,0.12)',l:'#FF6B9D',r:'#6B8CFF',light:false},
@@ -73,32 +73,50 @@ function hexA(hex, a) {
 }
 
 /* ─────────────────────────────────────────────
-   BACKGROUND — gradient + radial glows + noise + edge lines
-   Matches prototype bgLayers()
+   FONT STACK — v2.1 fix: no sans fallback,
+   unknown font → default DM Serif Display
+───────────────────────────────────────────── */
+function fStack(f) {
+  const m = {
+    'DM Serif Display': "'DM Serif Display', serif",
+    'Playfair Display': "'Playfair Display', serif",
+    'Lora':             "'Lora', serif",
+    'Space Mono':       "'Space Mono', monospace",
+    'Syne Mono':        "'Syne Mono', monospace",
+    'DM Sans':          "'DM Sans', sans-serif",
+    'Syne':             "'Syne', sans-serif",
+    'Comic Sans MS':    "'Comic Sans MS', cursive",
+    'Georgia':          "Georgia, serif",
+  };
+  return m[f] || m['DM Serif Display'];
+}
+
+function isItalic(f) {
+  return ['DM Serif Display', 'Playfair Display', 'Lora', 'Georgia'].includes(f);
+}
+
+/* ─────────────────────────────────────────────
+   BACKGROUND
 ───────────────────────────────────────────── */
 function drawBg(ctx, W, H, th) {
-  /* base gradient */
   const bg = ctx.createLinearGradient(0, 0, W * 0.7, H);
   bg.addColorStop(0, th.g1);
   bg.addColorStop(1, th.g2);
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  /* glow top-left */
   const g1 = ctx.createRadialGradient(W*.20, H*.25, 0, W*.20, H*.25, W*.65);
   g1.addColorStop(0, th.glow1);
   g1.addColorStop(1, 'transparent');
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, W, H);
 
-  /* glow bottom-right */
   const g2 = ctx.createRadialGradient(W*.80, H*.75, 0, W*.80, H*.75, W*.65);
   g2.addColorStop(0, th.glow2);
   g2.addColorStop(1, 'transparent');
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, W, H);
 
-  /* noise grain */
   ctx.save();
   ctx.globalAlpha = th.light ? 0.018 : 0.032;
   for (let y = 0; y < H; y += 3) {
@@ -110,7 +128,6 @@ function drawBg(ctx, W, H, th) {
   }
   ctx.restore();
 
-  /* top edge line */
   const edgeL = th.light ? 'rgba(0,0,0,0.15)' : th.l;
   ctx.save();
   ctx.globalAlpha = 0.45;
@@ -122,7 +139,6 @@ function drawBg(ctx, W, H, th) {
   ctx.fillRect(0, 0, W, 2);
   ctx.restore();
 
-  /* bottom edge line */
   const edgeR = th.light ? 'rgba(0,0,0,0.1)' : th.r;
   ctx.save();
   ctx.globalAlpha = 0.35;
@@ -136,8 +152,7 @@ function drawBg(ctx, W, H, th) {
 }
 
 /* ─────────────────────────────────────────────
-   MARGO GHOST WORDMARK — top-left, 0.28 opacity
-   Matches prototype: Syne 800, letter-spacing 0.22em
+   MARGO GHOST WORDMARK
 ───────────────────────────────────────────── */
 function drawMargoWordmark(ctx, W, H, th) {
   const sz  = Math.max(14, Math.round(W * 0.034));
@@ -148,7 +163,6 @@ function drawMargoWordmark(ctx, W, H, th) {
   ctx.globalAlpha = 0.28;
   ctx.textBaseline = 'top';
   ctx.textAlign    = 'left';
-  /* letter-spacing simulation: draw char by char */
   const letters = 'MARGO'.split('');
   const spacing = sz * 0.22;
   let cx = pad;
@@ -160,8 +174,7 @@ function drawMargoWordmark(ctx, W, H, th) {
 }
 
 /* ─────────────────────────────────────────────
-   SOLID M-MARK CIRCLE — bottom-right
-   Matches prototype mmark()
+   SOLID M-MARK CIRCLE
 ───────────────────────────────────────────── */
 function drawMmark(ctx, W, H, th) {
   const sz = Math.round(Math.min(W, H) * 0.07);
@@ -173,7 +186,6 @@ function drawMmark(ctx, W, H, th) {
   const ic = sz * 0.62;
 
   ctx.save();
-  /* circle */
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fillStyle = th.acc;
@@ -182,7 +194,6 @@ function drawMmark(ctx, W, H, th) {
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  /* M path — matches SVG in prototype */
   const stroke = th.light ? '#ffffff' : '#0B0B0D';
   const s  = ic;
   const mx = cx - s / 2;
@@ -204,8 +215,7 @@ function drawMmark(ctx, W, H, th) {
 }
 
 /* ─────────────────────────────────────────────
-   trymargo.com WATERMARK PILL — always readable
-   Matches prototype watermarkPill()
+   trymargo.com WATERMARK PILL
 ───────────────────────────────────────────── */
 function drawWatermark(ctx, W, H, th) {
   const fs   = Math.max(9, Math.round(W * 0.017));
@@ -221,7 +231,6 @@ function drawWatermark(ctx, W, H, th) {
   const px  = W / 2 - pw / 2;
   const py  = H - W * 0.038 - ph / 2;
 
-  /* pill background */
   ctx.globalAlpha = light ? 0.25 : 0.22;
   ctx.fillStyle   = light ? '#000000' : '#ffffff';
   ctx.beginPath();
@@ -229,7 +238,6 @@ function drawWatermark(ctx, W, H, th) {
   else ctx.rect(px, py, pw, ph);
   ctx.fill();
 
-  /* pill border */
   ctx.globalAlpha = light ? 0.45 : 0.36;
   ctx.strokeStyle = light ? '#000000' : '#ffffff';
   ctx.lineWidth   = 1;
@@ -238,7 +246,6 @@ function drawWatermark(ctx, W, H, th) {
   else ctx.rect(px, py, pw, ph);
   ctx.stroke();
 
-  /* text */
   ctx.globalAlpha = light ? 0.90 : 0.82;
   ctx.fillStyle   = light ? '#0B0B0D' : '#ffffff';
   ctx.fillText(txt, W / 2, py + ph / 2);
@@ -247,7 +254,6 @@ function drawWatermark(ctx, W, H, th) {
 
 /* ─────────────────────────────────────────────
    CARD BACKGROUND — 6 styles
-   Matches prototype cardStyleCSS()
 ───────────────────────────────────────────── */
 function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
   ctx.save();
@@ -286,7 +292,6 @@ function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
       path();
       ctx.strokeStyle = light ? 'rgba(0,0,0,0.12)' : 'rgba(232,197,71,0.14)';
       ctx.lineWidth = 1; ctx.stroke();
-      /* grain texture */
       ctx.save(); ctx.globalAlpha = 0.30; ctx.globalCompositeOperation = light ? 'multiply' : 'overlay';
       for (let gy = y; gy < y + h; gy += 2)
         for (let gx = x; gx < x + w; gx += 2) {
@@ -304,7 +309,6 @@ function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
       ctx.shadowColor = acc; ctx.shadowBlur = 20;
       path(); ctx.strokeStyle = acc; ctx.lineWidth = 1.5; ctx.stroke();
       ctx.shadowBlur = 0;
-      /* top accent line */
       ctx.save();
       const nl = ctx.createLinearGradient(x, 0, x + w * 0.38, 0);
       nl.addColorStop(0, acc); nl.addColorStop(1, 'transparent');
@@ -318,7 +322,6 @@ function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
       ctx.fillStyle = light ? 'rgba(240,235,228,0.90)' : 'rgba(10,8,4,0.96)';
       ctx.fill();
       path(); ctx.strokeStyle = light ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1; ctx.stroke();
-      /* scanlines */
       ctx.save(); ctx.globalAlpha = 0.025;
       for (let sl = y; sl < y + h; sl += 3) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -334,7 +337,6 @@ function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
       path(); ctx.strokeStyle = light ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.13)'; ctx.lineWidth = 1.5; ctx.stroke();
   }
 
-  /* inner radial colour tint */
   const rg = ctx.createRadialGradient(x, y, 0, x, y, Math.max(w, h) * 0.8);
   rg.addColorStop(0, hexA(sideColor, 0.08));
   rg.addColorStop(1, 'transparent');
@@ -345,13 +347,11 @@ function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
 
 /* ─────────────────────────────────────────────
    LYRIC BACK DIVIDER PILL
-   Matches prototype lbDiv()  — Syne 800
 ───────────────────────────────────────────── */
 function drawDivider(ctx, W, divY, echoUser, alpha, th) {
   if (alpha <= 0) return;
   const light    = th.light;
   const accRgba  = light ? 'rgba(0,0,0,0.22)'        : 'rgba(232,197,71,0.28)';
-  const pillBg   = light ? 'rgba(0,0,0,0.06)'         : 'rgba(232,197,71,0.09)';
   const pillBdr  = light ? 'rgba(0,0,0,0.18)'         : 'rgba(232,197,71,0.28)';
   const pillClr  = light ? '#0B0B0D'                  : th.acc;
   const dText    = `LYRIC BACK \u21A9  @${(echoUser || 'ANONYMOUS').toString().replace(/^@/,'').toUpperCase()}`;
@@ -370,7 +370,6 @@ function drawDivider(ctx, W, divY, echoUser, alpha, th) {
   const pR  = pH / 2;
   const gap = pW / 2 + W * 0.020;
 
-  /* side lines */
   [[W * 0.05, W / 2 - gap], [W / 2 + gap, W * 0.95]].forEach(([x1, x2]) => {
     const lg = ctx.createLinearGradient(x1, 0, x2, 0);
     if (x1 < W / 2) { lg.addColorStop(0, 'transparent'); lg.addColorStop(1, accRgba); }
@@ -379,7 +378,6 @@ function drawDivider(ctx, W, divY, echoUser, alpha, th) {
     ctx.fillRect(x1, divY - 0.75, x2 - x1, 1.5);
   });
 
-  /* pill shadow */
   ctx.shadowColor = light ? 'rgba(0,0,0,0.15)' : th.acc;
   ctx.shadowBlur  = 12;
   ctx.strokeStyle = pillBdr; ctx.lineWidth = 1.5;
@@ -388,7 +386,6 @@ function drawDivider(ctx, W, divY, echoUser, alpha, th) {
   ctx.stroke();
   ctx.shadowBlur = 0;
 
-  /* pill fill */
   const pf = ctx.createLinearGradient(pX, pY, pX, pY + pH);
   pf.addColorStop(0, light ? 'rgba(0,0,0,0.07)' : 'rgba(232,197,71,0.13)');
   pf.addColorStop(1, light ? 'rgba(0,0,0,0.03)' : 'rgba(232,197,71,0.05)');
@@ -397,7 +394,6 @@ function drawDivider(ctx, W, divY, echoUser, alpha, th) {
   if (ctx.roundRect) ctx.roundRect(pX, pY, pW, pH, pR); else ctx.rect(pX, pY, pW, pH);
   ctx.fill();
 
-  /* pill text */
   ctx.font = `800 ${dFS}px 'Syne','Arial Black',sans-serif`;
   ctx.fillStyle    = pillClr;
   ctx.globalAlpha  = alpha * 0.96;
@@ -408,8 +404,7 @@ function drawDivider(ctx, W, divY, echoUser, alpha, th) {
 }
 
 /* ─────────────────────────────────────────────
-   SONGS BAR — Syne 800 label, fully legible
-   Matches prototype songsBar()
+   SONGS BAR
 ───────────────────────────────────────────── */
 function drawSongsBar(ctx, W, byY, post1, post2, th) {
   const light    = th.light;
@@ -431,7 +426,6 @@ function drawSongsBar(ctx, W, byY, post1, post2, th) {
   else ctx.rect(px * 0.8, byY, W - px * 1.6, bh);
   ctx.fill(); ctx.stroke();
 
-  /* SONGS label — Syne 800 */
   ctx.font = `800 ${lFs}px 'Syne','Arial Black',sans-serif`;
   ctx.fillStyle    = light ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.70)';
   ctx.textBaseline = 'middle';
@@ -444,10 +438,9 @@ function drawSongsBar(ctx, W, byY, post1, post2, th) {
   const k2   = post2.knowledge || {};
   const s2   = (k2.song   || post2.song   || '').substring(0, 20);
   const a2   = (k2.artist || post2.artist || '');
-  const songC = light ? '#0B0B0D'                     : '#ffffff';
-  const artC  = light ? 'rgba(0,0,0,0.45)'            : 'rgba(255,255,255,0.45)';
+  const songC = light ? '#0B0B0D' : '#ffffff';
+  const artC  = light ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.45)';
 
-  /* left song */
   ctx.font = `700 ${sFs}px 'DM Sans',sans-serif`;
   ctx.fillStyle = songC; ctx.textAlign = 'left';
   ctx.fillText(s1, W * 0.28, cy - aFs * 0.5);
@@ -455,7 +448,6 @@ function drawSongsBar(ctx, W, byY, post1, post2, th) {
   ctx.fillStyle = artC;
   ctx.fillText(a1, W * 0.28, cy + sFs * 0.55);
 
-  /* separator */
   ctx.font = `400 ${sFs}px sans-serif`;
   ctx.fillStyle    = th.acc;
   ctx.globalAlpha  = 0.7;
@@ -463,7 +455,6 @@ function drawSongsBar(ctx, W, byY, post1, post2, th) {
   ctx.fillText('\u2194', W / 2, cy);
   ctx.globalAlpha = 1;
 
-  /* right song */
   ctx.font = `700 ${sFs}px 'DM Sans',sans-serif`;
   ctx.fillStyle = songC; ctx.textAlign = 'right';
   ctx.fillText(s2, W - px, cy - aFs * 0.5);
@@ -498,21 +489,7 @@ function drawVibeBadge(ctx, vibe, bx, by, bw, bh, col, alpha) {
 }
 
 /* ─────────────────────────────────────────────
-   FONT STACK helper
-───────────────────────────────────────────── */
-function fStack(f) {
-  const m = {
-    'DM Serif Display': "'DM Serif Display',serif",
-    'Space Mono':       "'Space Mono',monospace",
-    'Georgia':          'Georgia,serif',
-  };
-  return m[f] || `'${f}',sans-serif`;
-}
-function isItalic(f) { return ['DM Serif Display','Georgia'].includes(f); }
-
-/* ─────────────────────────────────────────────
    PER-FRAME MOTION TRANSFORM + ALPHA
-   phaseT: 0→1 within this post's phase window
 ───────────────────────────────────────────── */
 function motionTransform(motion, phaseT, side) {
   let tx = 0, ty = 0, alpha = easeOut(phaseT), scaleX = 1;
@@ -546,7 +523,6 @@ function motionTransform(motion, phaseT, side) {
       break;
     case 'shimmer':
     case 'typewriter':
-      /* handled separately in lyric draw */
       break;
   }
   return { tx, ty, alpha, scaleX };
@@ -554,8 +530,6 @@ function motionTransform(motion, phaseT, side) {
 
 /* ─────────────────────────────────────────────
    DRAW ONE LYRIC BUBBLE
-   side: 'left' | 'right'
-   phaseT: 0→1 (this post's animation phase)
 ───────────────────────────────────────────── */
 function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion, opts) {
   const { fontFamily = 'DM Serif Display', cardStyle = 'glass' } = opts;
@@ -576,7 +550,6 @@ function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion,
   const { tx, ty, alpha, scaleX } = motionTransform(motion, phaseT, side);
   if (alpha <= 0.01) return;
 
-  /* card sizing */
   const pad    = Math.round(W * 0.048);
   const innerW = W - pad * 2;
   let lfs      = Math.min(W * 0.043, areaH * 0.28);
@@ -607,10 +580,7 @@ function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion,
   ctx.translate(tx, ty);
   if (scaleX !== 1) { ctx.translate(W / 2, 0); ctx.scale(scaleX, 1); ctx.translate(-W / 2, 0); }
 
-  /* username row — Syne 800 */
-  const dot   = Math.round(W * 0.009);
-  const uGap  = Math.round(W * 0.008);
-  const uY    = cardY - uFs * 0.5 - Math.round(W * 0.010);
+  const uY = cardY - uFs * 0.5 - Math.round(W * 0.010);
   ctx.font         = `800 ${uFs}px 'Syne','Arial Black',sans-serif`;
   ctx.fillStyle    = col;
   ctx.globalAlpha  = alpha * 0.90;
@@ -623,9 +593,7 @@ function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion,
     ctx.fillText('\u25CF ' + username, pad, uY + uFs * 0.5);
   }
 
-  /* card background */
   ctx.globalAlpha = alpha;
-  /* rounded rect path helper for non-uniform radii */
   const pathCard = () => {
     const [tl, tr, br2, bl] = radii;
     ctx.beginPath();
@@ -642,7 +610,6 @@ function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion,
   };
   drawCardBg(ctx, pad, cardY, innerW, cardH, cRad, cardStyle, th.acc, col, light);
 
-  /* inner radial tint */
   ctx.save();
   const rg = ctx.createRadialGradient(
     side === 'left' ? pad : pad + innerW, cardY, 0,
@@ -652,7 +619,6 @@ function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion,
   pathCard(); ctx.fillStyle = rg; ctx.fill();
   ctx.restore();
 
-  /* lyric text */
   const lyricTop = cardY + cPad;
   ctx.globalAlpha  = alpha;
   ctx.textBaseline = 'top';
@@ -696,7 +662,6 @@ function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion,
   }
   ctx.shadowBlur = 0;
 
-  /* divider line in card */
   const divLineY = cardY + cardH - sFs * 2.8;
   ctx.save();
   ctx.globalAlpha  = alpha * 0.35;
@@ -705,7 +670,6 @@ function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion,
   ctx.beginPath(); ctx.moveTo(pad + cPad, divLineY); ctx.lineTo(pad + innerW - cPad, divLineY); ctx.stroke();
   ctx.restore();
 
-  /* song / artist */
   if (song) {
     ctx.font         = `700 ${sFs}px 'DM Sans',sans-serif`;
     ctx.fillStyle    = bodyTxt;
@@ -718,7 +682,6 @@ function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion,
     ctx.fillText(artist, pad + cPad, cardY + cardH - cPad * 0.6 + aFs * 1.3);
   }
 
-  /* vibe badge */
   if (vibe) {
     ctx.font = `800 ${vFs}px 'Syne','Arial Black',sans-serif`;
     const vw  = ctx.measureText(vibe).width;
@@ -734,11 +697,6 @@ function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion,
 
 /* ═══════════════════════════════════════════════════════
    PUBLIC: dsGifDrawFrame
-   t ∈ [0,1)  — normalised animation time for the loop
-   Phase model (mirrors prototype keyframes):
-     post1 (left)  fades in  t 0.00 → 0.40   (bubbleLeft)
-     divider       sweeps in t 0.20 → 0.38   (dividerIn)
-     post2 (right) fades in  t 0.35 → 0.75   (bubbleRight)
 ═══════════════════════════════════════════════════════ */
 function dsGifDrawFrame(ctx, W, H, t, motion, post1, post2, opts = {}) {
   if (!post1 || !post2) return;
@@ -747,28 +705,24 @@ function dsGifDrawFrame(ctx, W, H, t, motion, post1, post2, opts = {}) {
   const ff    = opts.fontFamily || 'DM Serif Display';
   const cs    = opts.cardStyle  || 'glass';
 
-  /* background */
   drawBg(ctx, W, H, th);
   drawMargoWordmark(ctx, W, H, th);
 
-  /* zones */
   const divY   = H * 0.500;
   const topT   = H * 0.110;
   const topB   = divY - H * 0.050;
   const botT   = divY + H * 0.050;
   const botB   = H    * 0.840;
 
-  /* phase scalars (clamp 0→1) */
-  const p1t = Math.max(0, Math.min(1, t / 0.40));           // post1: 0→0.40
-  const dT  = Math.max(0, Math.min(1, (t - 0.20) / 0.18)); // divider: 0.20→0.38
-  const p2t = Math.max(0, Math.min(1, (t - 0.35) / 0.40)); // post2: 0.35→0.75
+  const p1t = Math.max(0, Math.min(1, t / 0.40));
+  const dT  = Math.max(0, Math.min(1, (t - 0.20) / 0.18));
+  const p2t = Math.max(0, Math.min(1, (t - 0.35) / 0.40));
 
   drawBubble(ctx, W, H, topT, topB, post1, th, 'left',  p1t, motion, { fontFamily: ff, cardStyle: cs });
   drawDivider(ctx, W, divY, post2.username, dT, th);
   if (p2t > 0)
     drawBubble(ctx, W, H, botT, botB, post2, th, 'right', p2t, motion, { fontFamily: ff, cardStyle: cs });
 
-  /* songs bar */
   const songsY = H * 0.852;
   drawSongsBar(ctx, W, songsY, post1, post2, th);
 
@@ -778,7 +732,6 @@ function dsGifDrawFrame(ctx, W, H, t, motion, post1, post2, opts = {}) {
 
 /* ═══════════════════════════════════════════════════════
    PUBLIC: dsGifExport → Promise<Blob>
-   Renders full animated GIF via gif.js
 ═══════════════════════════════════════════════════════ */
 async function dsGifExport(post1, post2, motion, dur, opts = {}) {
   const SIZE   = 600;
@@ -786,21 +739,16 @@ async function dsGifExport(post1, post2, motion, dur, opts = {}) {
   const frames = Math.round(FPS * Math.min(Math.max(dur || 2.4, 1), 6));
   const delay  = Math.round(1000 / FPS);
 
-  /* offscreen canvas */
   const off = document.createElement('canvas');
   off.width = off.height = SIZE;
   const oc  = off.getContext('2d');
 
-  /* wait for fonts */
   await document.fonts.ready;
 
-  /* load gif.js if needed */
   if (typeof GIF === 'undefined') {
     await new Promise((res, rej) => {
       const s   = document.createElement('script');
-      s.src     = '/js/gif.worker.js'
-        ? 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js'
-        : 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
+      s.src     = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
       s.onload  = res;
       s.onerror = rej;
       document.head.appendChild(s);
@@ -822,7 +770,6 @@ async function dsGifExport(post1, post2, motion, dur, opts = {}) {
         oc.clearRect(0, 0, SIZE, SIZE);
         dsGifDrawFrame(oc, SIZE, SIZE, i / frames, motion, post1, post2, opts);
         gif.addFrame(off, { copy: true, delay });
-        /* yield to keep UI responsive */
         await new Promise(r => setTimeout(r, 0));
       }
       gif.on('finished', resolve);
@@ -832,7 +779,6 @@ async function dsGifExport(post1, post2, motion, dur, opts = {}) {
   });
 }
 
-/* ── expose ── */
 window.dsGifDrawFrame = dsGifDrawFrame;
 window.dsGifExport    = dsGifExport;
 
