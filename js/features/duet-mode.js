@@ -1,19 +1,7 @@
 /* ============================================================
-   MARGO — js/media/duet-mode.js   (concept-v2-clean)
-   v1.0 — Self-contained duet canvas renderer.
-   No dependency on main-branch duet-mode.js.
-
-   Reads duet data directly from window._shareSheet:
-     window._shareSheet.post      → original post
-     window._shareSheet.echoPost  → echo post
-     window._shareSheet.isDuet    → boolean flag
-
-   Exports (via window):
-     isDuetMode()           → true when share sheet is in duet mode
-     getDuetData()          → { post1, post2 }
-     drawDuetPosterToCtx(ctx, W, H)
-     gsDrawDuetFrame(ctx, W, H, t)
-     gsExportForShareSheet(onProgress) → Promise<Blob>
+   MARGO — js/features/duet-mode.js
+   v1.1 — Aliases added at bottom so duet-sheet.js wires up correctly.
+   All original code unchanged above the alias block.
    ============================================================ */
 
 /* ── Duet state helpers ── */
@@ -39,9 +27,7 @@ function _dmVibeColor(emotion) {
   return DM_VIBE[emotion] || '#E8C547';
 }
 
-/* ────────────────────────────────────────────────────────────
-   SHARED WORD-WRAP HELPER
-──────────────────────────────────────────────────────────── */
+/* ── Word-wrap helper ── */
 function _dmWrap(ctx, text, cx, startY, maxW, lineH) {
   const words = text.split(' ');
   let line = '';
@@ -58,13 +44,10 @@ function _dmWrap(ctx, text, cx, startY, maxW, lineH) {
 
 /* ────────────────────────────────────────────────────────────
    DUET POSTER RENDERER
-   Layout: conversation-style — top half original, bottom echo,
-   gold "LYRIC BACK ↩ @user" divider at 50%.
 ──────────────────────────────────────────────────────────── */
 function drawDuetPosterToCtx(ctx, W, H) {
   const { post1, post2 } = getDuetData();
   if (!post1 || !post2) {
-    /* Fallback: render single post if data missing */
     if (typeof window.drawPosterPreview === 'function') {
       window.drawPosterPreview(ctx, W, H, post1 || window.currentPost);
     }
@@ -76,7 +59,7 @@ function drawDuetPosterToCtx(ctx, W, H) {
   const pad   = W * 0.07;
   const divY  = H * 0.495;
 
-  /* ── Background ── */
+  /* Background */
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0,    '#090810');
   bg.addColorStop(0.48, '#0d0b12');
@@ -121,7 +104,7 @@ function drawDuetPosterToCtx(ctx, W, H) {
   ctx.fillStyle = bl; ctx.fillRect(0, H - 2, W, 2);
   ctx.restore();
 
-  /* ── MARGO wordmark ── */
+  /* MARGO wordmark */
   const mSz = Math.max(14, W * 0.044);
   ctx.save();
   ctx.font = `800 ${mSz}px 'Syne','Arial Black',sans-serif`;
@@ -130,7 +113,7 @@ function drawDuetPosterToCtx(ctx, W, H) {
   ctx.fillText('MARGO', pad, pad * 0.65);
   ctx.restore();
 
-  /* ── Top lyric (original post) ── */
+  /* Top lyric */
   const topZoneTop = pad * 2;
   const topZoneBot = divY - W * 0.05;
   const topH = topZoneBot - topZoneTop;
@@ -143,7 +126,7 @@ function drawDuetPosterToCtx(ctx, W, H) {
     ctx.font = `italic 600 ${pFS}px 'DM Serif Display',serif`;
     pLines = _splitWrap(ctx, pText, W - pad * 2.2);
   }
-  const pLH     = pFS * 1.52;
+  const pLH = pFS * 1.52;
   const pBlockH = pLines * pLH;
   const pStartY = topZoneTop + (topH - pBlockH) / 2 - pFS * 0.3;
   ctx.save();
@@ -153,7 +136,7 @@ function drawDuetPosterToCtx(ctx, W, H) {
   _dmWrap(ctx, pText, W / 2, pStartY, W - pad * 2.2, pLH);
   ctx.restore();
 
-  /* Original song attribution */
+  /* Original attribution */
   const pk = post1.knowledge || {};
   const pSongStr = pk.song || post1.song || '';
   if (pSongStr) {
@@ -169,8 +152,9 @@ function drawDuetPosterToCtx(ctx, W, H) {
     ctx.restore();
   }
 
-  /* ── Divider pill ── */
-  const dText = `LYRIC BACK ↩  @${(post2.username || 'anonymous').toUpperCase()}`;
+  /* Divider pill */
+  const pUser2  = (post2.username || 'anonymous').replace(/^@/, '');
+  const dText = `LYRIC BACK ↩  @${pUser2.toUpperCase()}`;
   const dFS   = Math.max(10, W * 0.021);
   ctx.font = `700 ${dFS}px 'Space Mono',monospace`;
   const dTW = ctx.measureText(dText).width;
@@ -208,7 +192,7 @@ function drawDuetPosterToCtx(ctx, W, H) {
   ctx.fillText(dText, W / 2, divY);
   ctx.restore();
 
-  /* ── Bottom lyric (echo) ── */
+  /* Bottom lyric */
   const botZoneTop = divY + pH / 2 + W * 0.025;
   const botZoneBot = H * 0.88;
   const botH  = botZoneBot - botZoneTop;
@@ -231,7 +215,7 @@ function drawDuetPosterToCtx(ctx, W, H) {
   _dmWrap(ctx, eText, W / 2, eStartY, W - pad * 2.2, eLH);
   ctx.restore();
 
-  /* Echo song attribution */
+  /* Echo attribution */
   if (post2.knowledge?.song || post2.song) {
     const eaFS = Math.max(9, W * 0.019);
     ctx.save();
@@ -246,7 +230,7 @@ function drawDuetPosterToCtx(ctx, W, H) {
     ctx.restore();
   }
 
-  /* ── Watermark ── */
+  /* Watermark — always readable */
   const wFS = Math.max(9, W * 0.02);
   ctx.save();
   ctx.font = `700 ${wFS}px 'Space Mono',monospace`;
@@ -256,16 +240,20 @@ function drawDuetPosterToCtx(ctx, W, H) {
   const wH2  = wFS * 1.7;
   const wX   = W / 2 - wW2 / 2;
   const wY   = H - pad * 0.85 - wH2 / 2;
-  ctx.globalAlpha = 0.16; ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.80; ctx.fillStyle = 'rgba(0,0,0,0.80)';
   ctx.beginPath();
   if (ctx.roundRect) ctx.roundRect(wX, wY, wW2, wH2, wH2 / 2); else ctx.rect(wX, wY, wW2, wH2);
   ctx.fill();
-  ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.55; ctx.strokeStyle = '#E8C547'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(wX, wY, wW2, wH2, wH2 / 2); else ctx.rect(wX, wY, wW2, wH2);
+  ctx.stroke();
+  ctx.globalAlpha = 1; ctx.fillStyle = '#ffffff';
   ctx.fillText(wTxt, W / 2, wY + wH2 / 2);
   ctx.restore();
 }
 
-/* Helper: count wrap lines without drawing */
+/* Helper: count wrap lines */
 function _splitWrap(ctx, text, maxW) {
   const words = text.split(' ');
   let line = '', count = 0;
@@ -280,9 +268,6 @@ function _splitWrap(ctx, text, maxW) {
 
 /* ────────────────────────────────────────────────────────────
    DUET GIF FRAME RENDERER
-   Two-phase animation:
-   Phase 1 (t 0→0.5): original lyric fades in + holds
-   Phase 2 (t 0.5→1): echo lyric fades in below divider
 ──────────────────────────────────────────────────────────── */
 function gsDrawDuetFrame(ctx, W, H, t) {
   const { post1, post2 } = getDuetData();
@@ -295,7 +280,6 @@ function gsDrawDuetFrame(ctx, W, H, t) {
   const eVibe = _dmVibeColor(post2.emotion || 'Nostalgia');
   const scale = W / 500;
 
-  /* Background blends from pVibe theme → eVibe theme */
   const blend = Math.min(1, Math.max(0, (t - 0.38) / 0.38));
   const bgC1  = _blendHex('#090810', '#08080f', blend);
   const bgC2  = _blendHex('#1a0d12', '#0d0820', blend);
@@ -303,7 +287,6 @@ function gsDrawDuetFrame(ctx, W, H, t) {
   bg.addColorStop(0, bgC1); bg.addColorStop(0.5, bgC2); bg.addColorStop(1, bgC1);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  /* Vibe glows */
   ctx.save();
   ctx.globalAlpha = 0.22;
   const pg2 = ctx.createRadialGradient(W*0.2, H*0.25, 0, W*0.2, H*0.25, W*0.55);
@@ -335,7 +318,7 @@ function gsDrawDuetFrame(ctx, W, H, t) {
   _drawGifLyric(ctx, W, H, scale, post1, H * 0.36, pVibe, false);
   ctx.restore();
 
-  /* Divider sweeps in at t=0.42 */
+  /* Divider */
   if (t > 0.40) {
     const da = Math.min(1, (t - 0.40) / 0.10);
     ctx.save(); ctx.globalAlpha = da * 0.35;
@@ -364,10 +347,19 @@ function gsDrawDuetFrame(ctx, W, H, t) {
 
   /* Watermark */
   ctx.save();
-  ctx.fillStyle = 'rgba(255,255,255,0.22)';
-  ctx.font = `700 ${Math.round(12 * scale)}px 'Space Mono',monospace`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-  ctx.fillText('trymargo.com', W / 2, H * 0.97);
+  const wfs = Math.round(12 * scale);
+  ctx.font = `700 ${wfs}px 'Space Mono',monospace`;
+  const wTxt = 'trymargo.com';
+  const wW = ctx.measureText(wTxt).width + W * 0.04;
+  const wH = wfs * 1.7;
+  const wX = W / 2 - wW / 2;
+  const wY = H * 0.95 - wH / 2;
+  ctx.globalAlpha = 0.80; ctx.fillStyle = 'rgba(0,0,0,0.80)';
+  ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(wX, wY, wW, wH, wH/2); else ctx.rect(wX, wY, wW, wH);
+  ctx.fill();
+  ctx.globalAlpha = 1; ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(wTxt, W / 2, wY + wH / 2);
   ctx.restore();
 }
 
@@ -378,8 +370,8 @@ function _drawGifLyric(ctx, W, H, scale, post, yCenter, color, isEcho) {
   const artist = (k.artist || post.artist || '').substring(0, 30);
 
   ctx.textAlign = 'center';
-  const len  = lyric.length;
-  const sz   = (len < 35 ? 34 : len < 55 ? 27 : 21) * scale;
+  const len = lyric.length;
+  const sz  = (len < 35 ? 34 : len < 55 ? 27 : 21) * scale;
 
   ctx.fillStyle = isEcho ? '#ffffff' : 'rgba(255,255,255,0.88)';
   ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 8 * scale;
@@ -396,7 +388,6 @@ function _drawGifLyric(ctx, W, H, scale, post, yCenter, color, isEcho) {
   ctx.fillText(artist, W / 2, metaY + 13 * scale);
 }
 
-/* ── Hex blend helper ── */
 function _blendHex(h1, h2, t) {
   const p = s => [parseInt(s.slice(1,3),16), parseInt(s.slice(3,5),16), parseInt(s.slice(5,7),16)];
   const a = p(h1), b = p(h2);
@@ -406,8 +397,6 @@ function _blendHex(h1, h2, t) {
 
 /* ────────────────────────────────────────────────────────────
    GIF EXPORT FOR SHARE SHEET
-   Called by share-sheet.js as gsExportForShareSheet(progressCb)
-   Returns Promise<Blob>
 ──────────────────────────────────────────────────────────── */
 window.gsExportForShareSheet = async function(onProgress) {
   const SIZE   = 600;
@@ -459,9 +448,55 @@ window.gsExportForShareSheet = async function(onProgress) {
 };
 
 /* ────────────────────────────────────────────────────────────
-   GLOBAL EXPOSE
+   GLOBAL EXPOSE — original names
 ──────────────────────────────────────────────────────────── */
 window.isDuetMode          = isDuetMode;
 window.getDuetData         = getDuetData;
 window.drawDuetPosterToCtx = drawDuetPosterToCtx;
 window.gsDrawDuetFrame     = gsDrawDuetFrame;
+
+/* ────────────────────────────────────────────────────────────
+   ALIASES — bridge to duet-sheet.js expected names
+   duet-sheet.js calls: dsGifDrawFrame, dsGifExport,
+                        dsPosterDraw, dsPosterExport
+──────────────────────────────────────────────────────────── */
+
+window.dsGifDrawFrame = function(ctx, W, H, t, motion, p1, p2, opts) {
+  const prev = window._shareSheet;
+  window._shareSheet = { post: p1, echoPost: p2, isDuet: true };
+  gsDrawDuetFrame(ctx, W, H, t);
+  window._shareSheet = prev;
+};
+
+window.dsGifExport = function(p1, p2, motion, dur, opts) {
+  const prev = window._shareSheet;
+  window._shareSheet = { post: p1, echoPost: p2, isDuet: true };
+  return window.gsExportForShareSheet(null).finally(() => {
+    window._shareSheet = prev;
+  });
+};
+
+window.dsPosterDraw = function(ctx, W, H, p1, p2, opts) {
+  const prev = window._shareSheet;
+  window._shareSheet = { post: p1, echoPost: p2, isDuet: true };
+  drawDuetPosterToCtx(ctx, W, H);
+  window._shareSheet = prev;
+};
+
+window.dsPosterExport = function(p1, p2, opts) {
+  return new Promise((resolve, reject) => {
+    try {
+      const size = 1080;
+      const off  = document.createElement('canvas');
+      off.width  = size; off.height = size;
+      const ctx  = off.getContext('2d');
+      document.fonts.ready.then(() => {
+        window.dsPosterDraw(ctx, size, size, p1, p2, opts);
+        off.toBlob(blob => {
+          if (blob) resolve(blob);
+          else reject(new Error('Canvas toBlob failed'));
+        }, 'image/png', 0.95);
+      });
+    } catch(err) { reject(err); }
+  });
+};
