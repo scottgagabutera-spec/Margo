@@ -602,22 +602,28 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="js/state.js"></script>
-<script src="js/firebase.js"></script>
-<script src="js/feed.js"></script>
-<script src="js/composer.js"></script>
-<script src="js/studio.js"></script>
-<script src="js/poster.js"></script>
-<script src="js/gif-studio.js"></script>
-<script src="js/username.js"></script>
-<script src="js/echoes.js"></script>
-<script src="js/duet-mode.js"></script><!-- ← MUST be before duet-sheet -->
-<script src="js/duet-sheet.js"></script><!-- ← loads after so aliases exist -->
-<script src="js/share-sheet.js"></script>
-<script src="js/resonate.js"></script>
-<script src="js/admin.js"></script>
-<script src="js/motion.js"></script>
-<script src="js/app.js"></script><!-- ← always last -->
+
+<!-- core -->
+<script src="js/core/state.js"></script>
+<script src="js/core/firebase.js"></script>
+<script src="js/core/username.js"></script>
+<script src="js/core/app.js"></script>
+
+<!-- ui -->
+<script src="js/ui/feed.js"></script>
+<script src="js/ui/composer.js"></script>
+<script src="js/ui/admin.js"></script>
+<script src="js/ui/resonate.js"></script>
+
+<!-- media -->
+<script src="js/media/gif/gif-studio.js"></script>
+<script src="js/media/poster/share-sheet.js"></script>
+
+<!-- features — duet-mode MUST load before duet-sheet -->
+<script src="js/features/echoes.js"></script>
+<script src="js/features/motion.js"></script>
+<script src="js/features/duet-mode.js"></script>
+<script src="js/features/duet-sheet.js"></script>
 
 <script>
 (function () {
