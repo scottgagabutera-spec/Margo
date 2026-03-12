@@ -1,16 +1,11 @@
 /* ============================================================
-   MARGO — js/media/gif/duet-renderer.js  v2.1
-   Full port from prototype v3 (margo-duet-export-prototype-v3.html)
-
-   Card styles: glass · contrast · mesh · grain · neon · depth
-   All 8 motion styles with real per-frame animation
-   Color themes fully applied to background + glows
-   MARGO ghost wordmark top-left (0.28 opacity)
-   Solid M-mark circle bottom-right
-   trymargo.com pill — always readable regardless of theme
-
-   window.dsGifDrawFrame(ctx, W, H, t, motion, post1, post2, opts)
-   window.dsGifExport(post1, post2, motion, dur, opts) → Promise<Blob>
+   MARGO — js/media/gif/duet-renderer.js  v2.2
+   FIXED vs v2.1:
+   • gif.worker.js path auto-resolved (works on all branches)
+   • Registers as window._dsGifDrawFrameRich + window._dsGifExportRich
+     so duet-mode.js delegates here automatically
+   • Still sets window.dsGifDrawFrame + window.dsGifExport (wins
+     over duet-mode.js stubs because this loads AFTER it)
    ============================================================ */
 
 (function () {
@@ -31,15 +26,13 @@ const THEMES = {
   white:  {g1:'#ffffff',g2:'#ece8e0',acc:'#0B0B0D',glow1:'rgba(0,0,0,0.06)',glow2:'rgba(0,0,0,0.04)',l:'#c0392b',r:'#1a6fbd',light:true},
 };
 
-function _theme(name) {
-  return THEMES[name] || THEMES['gold'];
-}
+function _theme(name) { return THEMES[name] || THEMES['gold']; }
 
 /* ─────────────────────────────────────────────
    EASING
 ───────────────────────────────────────────── */
-function easeOut(t)    { return 1 - Math.pow(1 - t, 3); }
-function easeInOut(t)  { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+function easeOut(t)   { return 1 - Math.pow(1 - t, 3); }
+function easeInOut(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
 
 /* ─────────────────────────────────────────────
    WORD WRAP
@@ -50,12 +43,8 @@ function wrapText(ctx, text, maxW) {
   let cur = '';
   for (const w of words) {
     const test = cur ? cur + ' ' + w : w;
-    if (ctx.measureText(test).width > maxW && cur) {
-      lines.push(cur);
-      cur = w;
-    } else {
-      cur = test;
-    }
+    if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+    else cur = test;
   }
   if (cur) lines.push(cur);
   return lines;
@@ -73,8 +62,7 @@ function hexA(hex, a) {
 }
 
 /* ─────────────────────────────────────────────
-   FONT STACK — v2.1 fix: no sans fallback,
-   unknown font → default DM Serif Display
+   FONT STACK
 ───────────────────────────────────────────── */
 function fStack(f) {
   const m = {
@@ -100,55 +88,36 @@ function isItalic(f) {
 ───────────────────────────────────────────── */
 function drawBg(ctx, W, H, th) {
   const bg = ctx.createLinearGradient(0, 0, W * 0.7, H);
-  bg.addColorStop(0, th.g1);
-  bg.addColorStop(1, th.g2);
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  bg.addColorStop(0, th.g1); bg.addColorStop(1, th.g2);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
   const g1 = ctx.createRadialGradient(W*.20, H*.25, 0, W*.20, H*.25, W*.65);
-  g1.addColorStop(0, th.glow1);
-  g1.addColorStop(1, 'transparent');
-  ctx.fillStyle = g1;
-  ctx.fillRect(0, 0, W, H);
+  g1.addColorStop(0, th.glow1); g1.addColorStop(1, 'transparent');
+  ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
 
   const g2 = ctx.createRadialGradient(W*.80, H*.75, 0, W*.80, H*.75, W*.65);
-  g2.addColorStop(0, th.glow2);
-  g2.addColorStop(1, 'transparent');
-  ctx.fillStyle = g2;
-  ctx.fillRect(0, 0, W, H);
+  g2.addColorStop(0, th.glow2); g2.addColorStop(1, 'transparent');
+  ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
 
-  ctx.save();
-  ctx.globalAlpha = th.light ? 0.018 : 0.032;
-  for (let y = 0; y < H; y += 3) {
+  ctx.save(); ctx.globalAlpha = th.light ? 0.018 : 0.032;
+  for (let y = 0; y < H; y += 3)
     for (let x = 0; x < W; x += 3) {
       const v = Math.random() * 255 | 0;
-      ctx.fillStyle = `rgb(${v},${v},${v})`;
-      ctx.fillRect(x, y, 3, 3);
+      ctx.fillStyle = `rgb(${v},${v},${v})`; ctx.fillRect(x, y, 3, 3);
     }
-  }
   ctx.restore();
 
   const edgeL = th.light ? 'rgba(0,0,0,0.15)' : th.l;
-  ctx.save();
-  ctx.globalAlpha = 0.45;
-  const tl = ctx.createLinearGradient(0, 0, W, 0);
-  tl.addColorStop(0, 'transparent');
-  tl.addColorStop(0.4, edgeL);
-  tl.addColorStop(1, 'transparent');
-  ctx.fillStyle = tl;
-  ctx.fillRect(0, 0, W, 2);
-  ctx.restore();
+  ctx.save(); ctx.globalAlpha = 0.45;
+  const tl = ctx.createLinearGradient(0,0,W,0);
+  tl.addColorStop(0,'transparent'); tl.addColorStop(0.4,edgeL); tl.addColorStop(1,'transparent');
+  ctx.fillStyle=tl; ctx.fillRect(0,0,W,2); ctx.restore();
 
   const edgeR = th.light ? 'rgba(0,0,0,0.1)' : th.r;
-  ctx.save();
-  ctx.globalAlpha = 0.35;
-  const bl = ctx.createLinearGradient(0, 0, W, 0);
-  bl.addColorStop(0, 'transparent');
-  bl.addColorStop(0.6, edgeR);
-  bl.addColorStop(1, 'transparent');
-  ctx.fillStyle = bl;
-  ctx.fillRect(0, H - 2, W, 2);
-  ctx.restore();
+  ctx.save(); ctx.globalAlpha = 0.35;
+  const bl = ctx.createLinearGradient(0,0,W,0);
+  bl.addColorStop(0,'transparent'); bl.addColorStop(0.6,edgeR); bl.addColorStop(1,'transparent');
+  ctx.fillStyle=bl; ctx.fillRect(0,H-2,W,2); ctx.restore();
 }
 
 /* ─────────────────────────────────────────────
@@ -158,15 +127,12 @@ function drawMargoWordmark(ctx, W, H, th) {
   const sz  = Math.max(14, Math.round(W * 0.034));
   const pad = Math.round(W * 0.048);
   ctx.save();
-  ctx.font = `800 ${sz}px 'Syne','Arial Black',sans-serif`;
-  ctx.fillStyle  = th.light ? '#0B0B0D' : th.acc;
-  ctx.globalAlpha = 0.28;
-  ctx.textBaseline = 'top';
-  ctx.textAlign    = 'left';
-  const letters = 'MARGO'.split('');
-  const spacing = sz * 0.22;
-  let cx = pad;
-  for (const ch of letters) {
+  ctx.font         = `800 ${sz}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle    = th.light ? '#0B0B0D' : th.acc;
+  ctx.globalAlpha  = 0.28;
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  const spacing = sz * 0.22; let cx = pad;
+  for (const ch of 'MARGO'.split('')) {
     ctx.fillText(ch, cx, pad * 0.55);
     cx += ctx.measureText(ch).width + spacing;
   }
@@ -177,40 +143,25 @@ function drawMargoWordmark(ctx, W, H, th) {
    SOLID M-MARK CIRCLE
 ───────────────────────────────────────────── */
 function drawMmark(ctx, W, H, th) {
-  const sz = Math.round(Math.min(W, H) * 0.07);
+  const sz = Math.round(Math.min(W,H) * 0.07);
   const bx = W - Math.round(W * 0.036) - sz;
   const by = H - Math.round(H * 0.034) - sz;
-  const cx = bx + sz / 2;
-  const cy = by + sz / 2;
-  const r  = sz / 2;
-  const ic = sz * 0.62;
+  const cx = bx + sz/2, cy = by + sz/2, r = sz/2, ic = sz * 0.62;
 
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
   ctx.fillStyle = th.acc;
-  ctx.shadowColor = 'rgba(0,0,0,0.4)';
-  ctx.shadowBlur  = 18;
-  ctx.fill();
-  ctx.shadowBlur = 0;
+  ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=18;
+  ctx.fill(); ctx.shadowBlur=0;
 
-  const stroke = th.light ? '#ffffff' : '#0B0B0D';
-  const s  = ic;
-  const mx = cx - s / 2;
-  const my = cy - s / 2;
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth   = sz * 0.098;
-  ctx.lineCap     = 'round';
-  ctx.lineJoin    = 'round';
+  const s=ic, mx=cx-s/2, my=cy-s/2;
+  ctx.strokeStyle = th.light ? '#ffffff' : '#0B0B0D';
+  ctx.lineWidth=sz*0.098; ctx.lineCap='round'; ctx.lineJoin='round';
   ctx.beginPath();
-  ctx.moveTo(mx,          my + s * 0.78);
-  ctx.lineTo(mx,          my + s * 0.13);
-  ctx.lineTo(mx + s * 0.35, my + s * 0.60);
-  ctx.lineTo(mx + s * 0.50, my + s * 0.06);
-  ctx.lineTo(mx + s * 0.65, my + s * 0.60);
-  ctx.lineTo(mx + s,      my + s * 0.13);
-  ctx.lineTo(mx + s,      my + s * 0.78);
-  ctx.stroke();
+  ctx.moveTo(mx, my+s*0.78); ctx.lineTo(mx, my+s*0.13);
+  ctx.lineTo(mx+s*0.35, my+s*0.60); ctx.lineTo(mx+s*0.50, my+s*0.06);
+  ctx.lineTo(mx+s*0.65, my+s*0.60); ctx.lineTo(mx+s, my+s*0.13);
+  ctx.lineTo(mx+s, my+s*0.78); ctx.stroke();
   ctx.restore();
 }
 
@@ -218,37 +169,24 @@ function drawMmark(ctx, W, H, th) {
    trymargo.com WATERMARK PILL
 ───────────────────────────────────────────── */
 function drawWatermark(ctx, W, H, th) {
-  const fs   = Math.max(9, Math.round(W * 0.017));
-  const light = th.light;
+  const fs=Math.max(9,Math.round(W*0.017)), light=th.light;
   ctx.save();
-  ctx.font = `700 ${fs}px 'Space Mono',monospace`;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign    = 'center';
-  const txt = 'trymargo.com';
-  const tw  = ctx.measureText(txt).width;
-  const pw  = tw + W * 0.044;
-  const ph  = fs * 1.9;
-  const px  = W / 2 - pw / 2;
-  const py  = H - W * 0.038 - ph / 2;
+  ctx.font=`700 ${fs}px 'Space Mono',monospace`;
+  ctx.textBaseline='middle'; ctx.textAlign='center';
+  const txt='trymargo.com', tw=ctx.measureText(txt).width;
+  const pw=tw+W*0.044, ph=fs*1.9, px=W/2-pw/2, py=H-W*0.038-ph/2;
 
-  ctx.globalAlpha = light ? 0.25 : 0.22;
-  ctx.fillStyle   = light ? '#000000' : '#ffffff';
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, ph / 2);
-  else ctx.rect(px, py, pw, ph);
-  ctx.fill();
+  ctx.globalAlpha=light?0.25:0.22;
+  ctx.fillStyle=light?'#000000':'#ffffff';
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(px,py,pw,ph,ph/2); else ctx.rect(px,py,pw,ph); ctx.fill();
 
-  ctx.globalAlpha = light ? 0.45 : 0.36;
-  ctx.strokeStyle = light ? '#000000' : '#ffffff';
-  ctx.lineWidth   = 1;
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(px, py, pw, ph, ph / 2);
-  else ctx.rect(px, py, pw, ph);
-  ctx.stroke();
+  ctx.globalAlpha=light?0.45:0.36;
+  ctx.strokeStyle=light?'#000000':'#ffffff'; ctx.lineWidth=1;
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(px,py,pw,ph,ph/2); else ctx.rect(px,py,pw,ph); ctx.stroke();
 
-  ctx.globalAlpha = light ? 0.90 : 0.82;
-  ctx.fillStyle   = light ? '#0B0B0D' : '#ffffff';
-  ctx.fillText(txt, W / 2, py + ph / 2);
+  ctx.globalAlpha=light?0.90:0.82;
+  ctx.fillStyle=light?'#0B0B0D':'#ffffff';
+  ctx.fillText(txt, W/2, py+ph/2);
   ctx.restore();
 }
 
@@ -257,91 +195,57 @@ function drawWatermark(ctx, W, H, th) {
 ───────────────────────────────────────────── */
 function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
   ctx.save();
-
   const path = () => {
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
-    else ctx.rect(x, y, w, h);
+    if (ctx.roundRect) ctx.roundRect(x,y,w,h,r); else ctx.rect(x,y,w,h);
   };
 
   switch (style) {
     case 'contrast':
-      path();
-      ctx.fillStyle = light ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.92)';
-      ctx.fill();
-      path();
-      ctx.strokeStyle = light ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.08)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      path(); ctx.fillStyle=light?'rgba(0,0,0,0.06)':'rgba(0,0,0,0.92)'; ctx.fill();
+      path(); ctx.strokeStyle=light?'rgba(0,0,0,0.15)':'rgba(255,255,255,0.08)'; ctx.lineWidth=1.5; ctx.stroke();
       break;
-
     case 'mesh': {
-      const mg = ctx.createLinearGradient(x, y, x + w, y + h);
-      mg.addColorStop(0, hexA(sideColor, 0.18));
-      mg.addColorStop(0.45, light ? 'rgba(240,235,220,0.80)' : 'rgba(0,0,0,0.65)');
-      mg.addColorStop(1, hexA(sideColor, 0.18));
-      path(); ctx.fillStyle = mg; ctx.fill();
-      path(); ctx.strokeStyle = light ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke();
+      const mg=ctx.createLinearGradient(x,y,x+w,y+h);
+      mg.addColorStop(0,hexA(sideColor,0.18));
+      mg.addColorStop(0.45,light?'rgba(240,235,220,0.80)':'rgba(0,0,0,0.65)');
+      mg.addColorStop(1,hexA(sideColor,0.18));
+      path(); ctx.fillStyle=mg; ctx.fill();
+      path(); ctx.strokeStyle=light?'rgba(0,0,0,0.08)':'rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.stroke();
       break;
     }
-
     case 'grain':
-      path();
-      ctx.fillStyle = light ? 'rgba(245,240,232,0.92)' : 'rgba(18,16,12,0.94)';
-      ctx.fill();
-      path();
-      ctx.strokeStyle = light ? 'rgba(0,0,0,0.12)' : 'rgba(232,197,71,0.14)';
-      ctx.lineWidth = 1; ctx.stroke();
-      ctx.save(); ctx.globalAlpha = 0.30; ctx.globalCompositeOperation = light ? 'multiply' : 'overlay';
-      for (let gy = y; gy < y + h; gy += 2)
-        for (let gx = x; gx < x + w; gx += 2) {
-          const v = Math.random() * 255 | 0;
-          ctx.fillStyle = `rgb(${v},${v},${v})`;
-          ctx.fillRect(gx, gy, 2, 2);
-        }
-      ctx.restore();
-      break;
-
-    case 'neon':
-      path();
-      ctx.fillStyle = light ? 'rgba(255,255,255,0.70)' : 'rgba(0,0,0,0.78)';
-      ctx.fill();
-      ctx.shadowColor = acc; ctx.shadowBlur = 20;
-      path(); ctx.strokeStyle = acc; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.save();
-      const nl = ctx.createLinearGradient(x, 0, x + w * 0.38, 0);
-      nl.addColorStop(0, acc); nl.addColorStop(1, 'transparent');
-      ctx.strokeStyle = nl; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w * 0.38, y); ctx.stroke();
-      ctx.restore();
-      break;
-
-    case 'depth':
-      path();
-      ctx.fillStyle = light ? 'rgba(240,235,228,0.90)' : 'rgba(10,8,4,0.96)';
-      ctx.fill();
-      path(); ctx.strokeStyle = light ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1; ctx.stroke();
-      ctx.save(); ctx.globalAlpha = 0.025;
-      for (let sl = y; sl < y + h; sl += 3) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(x, sl, w, 1);
+      path(); ctx.fillStyle=light?'rgba(245,240,232,0.92)':'rgba(18,16,12,0.94)'; ctx.fill();
+      path(); ctx.strokeStyle=light?'rgba(0,0,0,0.12)':'rgba(232,197,71,0.14)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.save(); ctx.globalAlpha=0.30; ctx.globalCompositeOperation=light?'multiply':'overlay';
+      for(let gy=y;gy<y+h;gy+=2) for(let gx=x;gx<x+w;gx+=2) {
+        const v=Math.random()*255|0; ctx.fillStyle=`rgb(${v},${v},${v})`; ctx.fillRect(gx,gy,2,2);
       }
-      ctx.restore();
-      break;
-
+      ctx.restore(); break;
+    case 'neon':
+      path(); ctx.fillStyle=light?'rgba(255,255,255,0.70)':'rgba(0,0,0,0.78)'; ctx.fill();
+      ctx.shadowColor=acc; ctx.shadowBlur=20;
+      path(); ctx.strokeStyle=acc; ctx.lineWidth=1.5; ctx.stroke(); ctx.shadowBlur=0;
+      ctx.save();
+      const nl=ctx.createLinearGradient(x,0,x+w*0.38,0);
+      nl.addColorStop(0,acc); nl.addColorStop(1,'transparent');
+      ctx.strokeStyle=nl; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w*0.38,y); ctx.stroke();
+      ctx.restore(); break;
+    case 'depth':
+      path(); ctx.fillStyle=light?'rgba(240,235,228,0.90)':'rgba(10,8,4,0.96)'; ctx.fill();
+      path(); ctx.strokeStyle=light?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.05)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.save(); ctx.globalAlpha=0.025;
+      for(let sl=y;sl<y+h;sl+=3) { ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(x,sl,w,1); }
+      ctx.restore(); break;
     default: /* glass */
-      path();
-      ctx.fillStyle = light ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.06)';
-      ctx.fill();
-      path(); ctx.strokeStyle = light ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.13)'; ctx.lineWidth = 1.5; ctx.stroke();
+      path(); ctx.fillStyle=light?'rgba(255,255,255,0.55)':'rgba(255,255,255,0.06)'; ctx.fill();
+      path(); ctx.strokeStyle=light?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.13)'; ctx.lineWidth=1.5; ctx.stroke();
   }
 
-  const rg = ctx.createRadialGradient(x, y, 0, x, y, Math.max(w, h) * 0.8);
-  rg.addColorStop(0, hexA(sideColor, 0.08));
-  rg.addColorStop(1, 'transparent');
-  path(); ctx.fillStyle = rg; ctx.fill();
-
+  const rg=ctx.createRadialGradient(x,y,0,x,y,Math.max(w,h)*0.8);
+  rg.addColorStop(0,hexA(sideColor,0.08)); rg.addColorStop(1,'transparent');
+  path(); ctx.fillStyle=rg; ctx.fill();
   ctx.restore();
 }
 
@@ -351,55 +255,42 @@ function drawCardBg(ctx, x, y, w, h, r, style, acc, sideColor, light) {
 function drawDivider(ctx, W, divY, echoUser, alpha, th) {
   if (alpha <= 0) return;
   const light    = th.light;
-  const accRgba  = light ? 'rgba(0,0,0,0.22)'        : 'rgba(232,197,71,0.28)';
-  const pillBdr  = light ? 'rgba(0,0,0,0.18)'         : 'rgba(232,197,71,0.28)';
-  const pillClr  = light ? '#0B0B0D'                  : th.acc;
-  const dText    = `LYRIC BACK \u21A9  @${(echoUser || 'ANONYMOUS').toString().replace(/^@/,'').toUpperCase()}`;
-  const dFS      = Math.max(10, Math.round(W * 0.020));
+  const accRgba  = light?'rgba(0,0,0,0.22)':'rgba(232,197,71,0.28)';
+  const pillBdr  = light?'rgba(0,0,0,0.18)':'rgba(232,197,71,0.28)';
+  const pillClr  = light?'#0B0B0D':th.acc;
+  const dText    = `LYRIC BACK \u21A9  @${(echoUser||'ANONYMOUS').toString().replace(/^@/,'').toUpperCase()}`;
+  const dFS      = Math.max(10,Math.round(W*0.020));
 
   ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.font = `800 ${dFS}px 'Syne','Arial Black',sans-serif`;
+  ctx.globalAlpha=alpha;
+  ctx.font=`800 ${dFS}px 'Syne','Arial Black',sans-serif`;
+  const dTW=ctx.measureText(dText).width;
+  const pH=dFS*2.0, pPad=W*0.028, pW=dTW+pPad*2;
+  const pX=W/2-pW/2, pY=divY-pH/2, pR=pH/2;
+  const gap=pW/2+W*0.020;
 
-  const dTW = ctx.measureText(dText).width;
-  const pH  = dFS * 2.0;
-  const pPad = W * 0.028;
-  const pW  = dTW + pPad * 2;
-  const pX  = W / 2 - pW / 2;
-  const pY  = divY - pH / 2;
-  const pR  = pH / 2;
-  const gap = pW / 2 + W * 0.020;
-
-  [[W * 0.05, W / 2 - gap], [W / 2 + gap, W * 0.95]].forEach(([x1, x2]) => {
-    const lg = ctx.createLinearGradient(x1, 0, x2, 0);
-    if (x1 < W / 2) { lg.addColorStop(0, 'transparent'); lg.addColorStop(1, accRgba); }
-    else             { lg.addColorStop(0, accRgba);       lg.addColorStop(1, 'transparent'); }
-    ctx.fillStyle = lg;
-    ctx.fillRect(x1, divY - 0.75, x2 - x1, 1.5);
+  [[W*0.05,W/2-gap],[W/2+gap,W*0.95]].forEach(([x1,x2])=>{
+    const lg=ctx.createLinearGradient(x1,0,x2,0);
+    if(x1<W/2){lg.addColorStop(0,'transparent');lg.addColorStop(1,accRgba);}
+    else{lg.addColorStop(0,accRgba);lg.addColorStop(1,'transparent');}
+    ctx.fillStyle=lg; ctx.fillRect(x1,divY-0.75,x2-x1,1.5);
   });
 
-  ctx.shadowColor = light ? 'rgba(0,0,0,0.15)' : th.acc;
-  ctx.shadowBlur  = 12;
-  ctx.strokeStyle = pillBdr; ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(pX, pY, pW, pH, pR); else ctx.rect(pX, pY, pW, pH);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
+  ctx.shadowColor=light?'rgba(0,0,0,0.15)':th.acc; ctx.shadowBlur=12;
+  ctx.strokeStyle=pillBdr; ctx.lineWidth=1.5;
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(pX,pY,pW,pH,pR); else ctx.rect(pX,pY,pW,pH); ctx.stroke();
+  ctx.shadowBlur=0;
 
-  const pf = ctx.createLinearGradient(pX, pY, pX, pY + pH);
-  pf.addColorStop(0, light ? 'rgba(0,0,0,0.07)' : 'rgba(232,197,71,0.13)');
-  pf.addColorStop(1, light ? 'rgba(0,0,0,0.03)' : 'rgba(232,197,71,0.05)');
-  ctx.fillStyle = pf;
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(pX, pY, pW, pH, pR); else ctx.rect(pX, pY, pW, pH);
-  ctx.fill();
+  const pf=ctx.createLinearGradient(pX,pY,pX,pY+pH);
+  pf.addColorStop(0,light?'rgba(0,0,0,0.07)':'rgba(232,197,71,0.13)');
+  pf.addColorStop(1,light?'rgba(0,0,0,0.03)':'rgba(232,197,71,0.05)');
+  ctx.fillStyle=pf;
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(pX,pY,pW,pH,pR); else ctx.rect(pX,pY,pW,pH); ctx.fill();
 
-  ctx.font = `800 ${dFS}px 'Syne','Arial Black',sans-serif`;
-  ctx.fillStyle    = pillClr;
-  ctx.globalAlpha  = alpha * 0.96;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign    = 'center';
-  ctx.fillText(dText, W / 2, divY);
+  ctx.font=`800 ${dFS}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle=pillClr; ctx.globalAlpha=alpha*0.96;
+  ctx.textBaseline='middle'; ctx.textAlign='center';
+  ctx.fillText(dText,W/2,divY);
   ctx.restore();
 }
 
@@ -407,63 +298,42 @@ function drawDivider(ctx, W, divY, echoUser, alpha, th) {
    SONGS BAR
 ───────────────────────────────────────────── */
 function drawSongsBar(ctx, W, byY, post1, post2, th) {
-  const light    = th.light;
-  const B        = W;
-  const bh       = Math.round(B * 0.072);
-  const px       = Math.round(B * 0.048);
-  const br       = Math.round(B * 0.018);
-  const lFs      = Math.max(9,  Math.round(B * 0.020));
-  const sFs      = Math.max(9,  Math.round(B * 0.022));
-  const aFs      = Math.max(8,  Math.round(B * 0.017));
-  const cy       = byY + bh / 2;
+  const light=th.light, B=W;
+  const bh=Math.round(B*0.072), px=Math.round(B*0.048), br=Math.round(B*0.018);
+  const lFs=Math.max(9,Math.round(B*0.020));
+  const sFs=Math.max(9,Math.round(B*0.022));
+  const aFs=Math.max(8,Math.round(B*0.017));
+  const cy=byY+bh/2;
 
   ctx.save();
-  ctx.fillStyle   = light ? 'rgba(0,0,0,0.06)'  : 'rgba(255,255,255,0.05)';
-  ctx.strokeStyle = light ? 'rgba(0,0,0,0.12)'  : 'rgba(255,255,255,0.10)';
-  ctx.lineWidth   = 1;
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(px * 0.8, byY, W - px * 1.6, bh, br);
-  else ctx.rect(px * 0.8, byY, W - px * 1.6, bh);
+  ctx.fillStyle=light?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.05)';
+  ctx.strokeStyle=light?'rgba(0,0,0,0.12)':'rgba(255,255,255,0.10)';
+  ctx.lineWidth=1;
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(px*0.8,byY,W-px*1.6,bh,br); else ctx.rect(px*0.8,byY,W-px*1.6,bh);
   ctx.fill(); ctx.stroke();
 
-  ctx.font = `800 ${lFs}px 'Syne','Arial Black',sans-serif`;
-  ctx.fillStyle    = light ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.70)';
-  ctx.textBaseline = 'middle';
-  ctx.textAlign    = 'left';
-  ctx.fillText('SONGS', px, cy);
+  ctx.font=`800 ${lFs}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle=light?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.70)';
+  ctx.textBaseline='middle'; ctx.textAlign='left';
+  ctx.fillText('SONGS',px,cy);
 
-  const k1   = post1.knowledge || {};
-  const s1   = (k1.song   || post1.song   || '').substring(0, 20);
-  const a1   = (k1.artist || post1.artist || '');
-  const k2   = post2.knowledge || {};
-  const s2   = (k2.song   || post2.song   || '').substring(0, 20);
-  const a2   = (k2.artist || post2.artist || '');
-  const songC = light ? '#0B0B0D' : '#ffffff';
-  const artC  = light ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.45)';
+  const k1=post1.knowledge||{},s1=(k1.song||post1.song||'').substring(0,20),a1=(k1.artist||post1.artist||'');
+  const k2=post2.knowledge||{},s2=(k2.song||post2.song||'').substring(0,20),a2=(k2.artist||post2.artist||'');
+  const sc=light?'#0B0B0D':'#ffffff', ac=light?'rgba(0,0,0,0.45)':'rgba(255,255,255,0.45)';
 
-  ctx.font = `700 ${sFs}px 'DM Sans',sans-serif`;
-  ctx.fillStyle = songC; ctx.textAlign = 'left';
-  ctx.fillText(s1, W * 0.28, cy - aFs * 0.5);
-  ctx.font = `400 ${aFs}px 'Space Mono',monospace`;
-  ctx.fillStyle = artC;
-  ctx.fillText(a1, W * 0.28, cy + sFs * 0.55);
+  ctx.font=`700 ${sFs}px 'DM Sans',sans-serif`; ctx.fillStyle=sc; ctx.textAlign='left';
+  ctx.fillText(s1,W*0.28,cy-aFs*0.5);
+  ctx.font=`400 ${aFs}px 'Space Mono',monospace`; ctx.fillStyle=ac;
+  ctx.fillText(a1,W*0.28,cy+sFs*0.55);
 
-  ctx.font = `400 ${sFs}px sans-serif`;
-  ctx.fillStyle    = th.acc;
-  ctx.globalAlpha  = 0.7;
-  ctx.textAlign    = 'center';
-  ctx.fillText('\u2194', W / 2, cy);
-  ctx.globalAlpha = 1;
+  ctx.font=`400 ${sFs}px sans-serif`; ctx.fillStyle=th.acc; ctx.globalAlpha=0.7; ctx.textAlign='center';
+  ctx.fillText('\u2194',W/2,cy); ctx.globalAlpha=1;
 
-  ctx.font = `700 ${sFs}px 'DM Sans',sans-serif`;
-  ctx.fillStyle = songC; ctx.textAlign = 'right';
-  ctx.fillText(s2, W - px, cy - aFs * 0.5);
-  ctx.font = `400 ${aFs}px 'Space Mono',monospace`;
-  ctx.fillStyle = artC;
-  ctx.fillText(a2, W - px, cy + sFs * 0.55);
-
+  ctx.font=`700 ${sFs}px 'DM Sans',sans-serif`; ctx.fillStyle=sc; ctx.textAlign='right';
+  ctx.fillText(s2,W-px,cy-aFs*0.5);
+  ctx.font=`400 ${aFs}px 'Space Mono',monospace`; ctx.fillStyle=ac;
+  ctx.fillText(a2,W-px,cy+sFs*0.55);
   ctx.restore();
-  return byY + bh;
 }
 
 /* ─────────────────────────────────────────────
@@ -472,19 +342,14 @@ function drawSongsBar(ctx, W, byY, post1, post2, th) {
 function drawVibeBadge(ctx, vibe, bx, by, bw, bh, col, alpha) {
   if (!vibe) return;
   ctx.save();
-  ctx.globalAlpha = alpha * 0.80;
-  const vfs = Math.max(8, bh * 0.48);
-  ctx.font = `800 ${vfs}px 'Syne','Arial Black',sans-serif`;
-  ctx.fillStyle   = hexA(col, 0.16);
-  ctx.strokeStyle = hexA(col, 0.45);
-  ctx.lineWidth   = 1.5;
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, bh / 2); else ctx.rect(bx, by, bw, bh);
+  ctx.globalAlpha=alpha*0.80;
+  const vfs=Math.max(8,bh*0.48);
+  ctx.font=`800 ${vfs}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle=hexA(col,0.16); ctx.strokeStyle=hexA(col,0.45); ctx.lineWidth=1.5;
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(bx,by,bw,bh,bh/2); else ctx.rect(bx,by,bw,bh);
   ctx.fill(); ctx.stroke();
-  ctx.fillStyle    = col;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign    = 'center';
-  ctx.fillText(vibe.toUpperCase(), bx + bw / 2, by + bh / 2);
+  ctx.fillStyle=col; ctx.textBaseline='middle'; ctx.textAlign='center';
+  ctx.fillText(vibe.toUpperCase(),bx+bw/2,by+bh/2);
   ctx.restore();
 }
 
@@ -492,294 +357,244 @@ function drawVibeBadge(ctx, vibe, bx, by, bw, bh, col, alpha) {
    PER-FRAME MOTION TRANSFORM + ALPHA
 ───────────────────────────────────────────── */
 function motionTransform(motion, phaseT, side) {
-  let tx = 0, ty = 0, alpha = easeOut(phaseT), scaleX = 1;
-  const flip = side === 'right' ? 1 : -1;
-
-  switch (motion) {
-    case 'fade-up':
-      ty = (1 - easeOut(phaseT)) * 20;
-      break;
-    case 'slide-in':
-      tx = flip * (1 - easeOut(phaseT)) * 28;
-      break;
-    case 'pulse': {
-      const o = 0.5 + 0.5 * Math.sin(phaseT * Math.PI * 2 + (side === 'right' ? Math.PI : 0));
-      alpha  = 0.45 + 0.55 * o;
-      scaleX = 0.97 + 0.04 * o;
-      break;
-    }
-    case 'glitch':
-      if (phaseT > 0.88 && phaseT < 0.96) {
-        tx = (Math.random() - 0.5) * 8;
-        ty = (Math.random() - 0.5) * 4;
-        alpha = 0.82;
-      }
-      break;
-    case 'wave':
-      ty = Math.sin(phaseT * Math.PI * 3 + (side === 'right' ? Math.PI : 0)) * 10;
-      break;
-    case 'bounce':
-      ty = -Math.abs(Math.sin(phaseT * Math.PI * 2.5)) * 14;
-      break;
-    case 'shimmer':
-    case 'typewriter':
-      break;
+  let tx=0,ty=0,alpha=easeOut(phaseT),scaleX=1;
+  const flip=side==='right'?1:-1;
+  switch(motion){
+    case 'fade-up': ty=(1-easeOut(phaseT))*20; break;
+    case 'slide-in': tx=flip*(1-easeOut(phaseT))*28; break;
+    case 'pulse':{const o=0.5+0.5*Math.sin(phaseT*Math.PI*2+(side==='right'?Math.PI:0));alpha=0.45+0.55*o;scaleX=0.97+0.04*o;break;}
+    case 'glitch': if(phaseT>0.88&&phaseT<0.96){tx=(Math.random()-0.5)*8;ty=(Math.random()-0.5)*4;alpha=0.82;} break;
+    case 'wave': ty=Math.sin(phaseT*Math.PI*3+(side==='right'?Math.PI:0))*10; break;
+    case 'bounce': ty=-Math.abs(Math.sin(phaseT*Math.PI*2.5))*14; break;
+    case 'shimmer': case 'typewriter': break;
   }
-  return { tx, ty, alpha, scaleX };
+  return {tx,ty,alpha,scaleX};
 }
 
 /* ─────────────────────────────────────────────
    DRAW ONE LYRIC BUBBLE
 ───────────────────────────────────────────── */
 function drawBubble(ctx, W, H, areaTop, areaBot, post, th, side, phaseT, motion, opts) {
-  const { fontFamily = 'DM Serif Display', cardStyle = 'glass' } = opts;
-  const light    = th.light;
-  const col      = side === 'left' ? th.l : th.r;
-  const bodyTxt  = light ? '#0B0B0D' : '#ffffff';
-  const mutedTxt = light ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.48)';
-  const divLine  = light ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
+  const {fontFamily='DM Serif Display',cardStyle='glass'}=opts;
+  const light=th.light;
+  const col=side==='left'?th.l:th.r;
+  const bodyTxt=light?'#0B0B0D':'#ffffff';
+  const mutedTxt=light?'rgba(0,0,0,0.5)':'rgba(255,255,255,0.48)';
+  const divLine=light?'rgba(0,0,0,0.1)':'rgba(255,255,255,0.1)';
 
-  const text     = (post.text || post.lyric || '').substring(0, 120);
-  const k        = post.knowledge || {};
-  const song     = (k.song   || post.song   || '');
-  const artist   = (k.artist || post.artist || '');
-  const username = ('@' + (post.username || 'anonymous').toString().replace(/^@/,'')).toUpperCase();
-  const vibe     = (post.emotion || '').toUpperCase();
-  const areaH    = areaBot - areaTop;
+  const text=(post.text||post.lyric||'').substring(0,120);
+  const k=post.knowledge||{};
+  const song=(k.song||post.song||'');
+  const artist=(k.artist||post.artist||'');
+  const username=('@'+(post.username||'anonymous').toString().replace(/^@/,'')).toUpperCase();
+  const vibe=(post.emotion||'').toUpperCase();
+  const areaH=areaBot-areaTop;
 
-  const { tx, ty, alpha, scaleX } = motionTransform(motion, phaseT, side);
-  if (alpha <= 0.01) return;
+  const {tx,ty,alpha,scaleX}=motionTransform(motion,phaseT,side);
+  if(alpha<=0.01) return;
 
-  const pad    = Math.round(W * 0.048);
-  const innerW = W - pad * 2;
-  let lfs      = Math.min(W * 0.043, areaH * 0.28);
-  const fStyle  = isItalic(fontFamily) ? 'italic 600' : '600';
-  ctx.font = `${fStyle} ${lfs}px ${fStack(fontFamily)}`;
-  let lines = wrapText(ctx, text, innerW * 0.82);
-  if (lines.length > 4) {
-    lfs = Math.max(W * 0.026, lfs * (4 / lines.length));
-    ctx.font = `${fStyle} ${lfs}px ${fStack(fontFamily)}`;
-    lines = wrapText(ctx, text, innerW * 0.82);
+  const pad=Math.round(W*0.048), innerW=W-pad*2;
+  let lfs=Math.min(W*0.043,areaH*0.28);
+  const fStyle=isItalic(fontFamily)?'italic 600':'600';
+  ctx.font=`${fStyle} ${lfs}px ${fStack(fontFamily)}`;
+  let lines=wrapText(ctx,text,innerW*0.82);
+  if(lines.length>4){
+    lfs=Math.max(W*0.026,lfs*(4/lines.length));
+    ctx.font=`${fStyle} ${lfs}px ${fStack(fontFamily)}`;
+    lines=wrapText(ctx,text,innerW*0.82);
   }
-  const lh    = lfs * 1.42;
-  const cPad  = Math.round(W * 0.036);
-  const sFs   = Math.max(9,  Math.round(W * 0.026));
-  const aFs   = Math.max(8,  Math.round(W * 0.018));
-  const vFs   = Math.max(8,  Math.round(W * 0.016));
-  const uFs   = Math.max(10, Math.round(W * 0.022));
-  const cardH = Math.min(areaH * 0.88, lines.length * lh + cPad * 2 + sFs * 2.5 + lfs * 0.5);
-  const cardY = areaTop + (areaH - cardH) / 2;
-  const cRad  = Math.round(W * 0.030);
-  const cR2   = Math.round(W * 0.005);
-  const radii = side === 'left'
-    ? [cRad, cRad, cRad, cR2]
-    : [cRad, cRad, cR2, cRad];
+  const lh=lfs*1.42;
+  const cPad=Math.round(W*0.036), sFs=Math.max(9,Math.round(W*0.026));
+  const aFs=Math.max(8,Math.round(W*0.018)), vFs=Math.max(8,Math.round(W*0.016));
+  const uFs=Math.max(10,Math.round(W*0.022));
+  const cardH=Math.min(areaH*0.88,lines.length*lh+cPad*2+sFs*2.5+lfs*0.5);
+  const cardY=areaTop+(areaH-cardH)/2;
+  const cRad=Math.round(W*0.030), cR2=Math.round(W*0.005);
+  const radii=side==='left'?[cRad,cRad,cRad,cR2]:[cRad,cRad,cR2,cRad];
 
   ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.translate(tx, ty);
-  if (scaleX !== 1) { ctx.translate(W / 2, 0); ctx.scale(scaleX, 1); ctx.translate(-W / 2, 0); }
+  ctx.globalAlpha=alpha; ctx.translate(tx,ty);
+  if(scaleX!==1){ctx.translate(W/2,0);ctx.scale(scaleX,1);ctx.translate(-W/2,0);}
 
-  const uY = cardY - uFs * 0.5 - Math.round(W * 0.010);
-  ctx.font         = `800 ${uFs}px 'Syne','Arial Black',sans-serif`;
-  ctx.fillStyle    = col;
-  ctx.globalAlpha  = alpha * 0.90;
-  ctx.textBaseline = 'middle';
-  if (side === 'right') {
-    ctx.textAlign = 'right';
-    ctx.fillText('\u25CF ' + username, W - pad, uY + uFs * 0.5);
-  } else {
-    ctx.textAlign = 'left';
-    ctx.fillText('\u25CF ' + username, pad, uY + uFs * 0.5);
-  }
+  const uY=cardY-uFs*0.5-Math.round(W*0.010);
+  ctx.font=`800 ${uFs}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle=col; ctx.globalAlpha=alpha*0.90;
+  ctx.textBaseline='middle';
+  if(side==='right'){ctx.textAlign='right';ctx.fillText('\u25CF '+username,W-pad,uY+uFs*0.5);}
+  else{ctx.textAlign='left';ctx.fillText('\u25CF '+username,pad,uY+uFs*0.5);}
 
-  ctx.globalAlpha = alpha;
-  const pathCard = () => {
-    const [tl, tr, br2, bl] = radii;
-    ctx.beginPath();
-    ctx.moveTo(pad + tl, cardY);
-    ctx.lineTo(pad + innerW - tr, cardY);
-    ctx.quadraticCurveTo(pad + innerW, cardY, pad + innerW, cardY + tr);
-    ctx.lineTo(pad + innerW, cardY + cardH - br2);
-    ctx.quadraticCurveTo(pad + innerW, cardY + cardH, pad + innerW - br2, cardY + cardH);
-    ctx.lineTo(pad + bl, cardY + cardH);
-    ctx.quadraticCurveTo(pad, cardY + cardH, pad, cardY + cardH - bl);
-    ctx.lineTo(pad, cardY + tl);
-    ctx.quadraticCurveTo(pad, cardY, pad + tl, cardY);
-    ctx.closePath();
+  ctx.globalAlpha=alpha;
+  const pathCard=()=>{
+    const[tl,tr,br2,bl]=radii; ctx.beginPath();
+    ctx.moveTo(pad+tl,cardY); ctx.lineTo(pad+innerW-tr,cardY);
+    ctx.quadraticCurveTo(pad+innerW,cardY,pad+innerW,cardY+tr);
+    ctx.lineTo(pad+innerW,cardY+cardH-br2);
+    ctx.quadraticCurveTo(pad+innerW,cardY+cardH,pad+innerW-br2,cardY+cardH);
+    ctx.lineTo(pad+bl,cardY+cardH);
+    ctx.quadraticCurveTo(pad,cardY+cardH,pad,cardY+cardH-bl);
+    ctx.lineTo(pad,cardY+tl); ctx.quadraticCurveTo(pad,cardY,pad+tl,cardY); ctx.closePath();
   };
-  drawCardBg(ctx, pad, cardY, innerW, cardH, cRad, cardStyle, th.acc, col, light);
+  drawCardBg(ctx,pad,cardY,innerW,cardH,cRad,cardStyle,th.acc,col,light);
 
   ctx.save();
-  const rg = ctx.createRadialGradient(
-    side === 'left' ? pad : pad + innerW, cardY, 0,
-    side === 'left' ? pad : pad + innerW, cardY, Math.max(innerW, cardH) * 0.7
-  );
-  rg.addColorStop(0, hexA(col, 0.08)); rg.addColorStop(1, 'transparent');
-  pathCard(); ctx.fillStyle = rg; ctx.fill();
+  const rg=ctx.createRadialGradient(side==='left'?pad:pad+innerW,cardY,0,side==='left'?pad:pad+innerW,cardY,Math.max(innerW,cardH)*0.7);
+  rg.addColorStop(0,hexA(col,0.08)); rg.addColorStop(1,'transparent');
+  pathCard(); ctx.fillStyle=rg; ctx.fill();
   ctx.restore();
 
-  const lyricTop = cardY + cPad;
-  ctx.globalAlpha  = alpha;
-  ctx.textBaseline = 'top';
-  ctx.textAlign    = 'left';
-  ctx.font         = `${fStyle} ${lfs}px ${fStack(fontFamily)}`;
-  ctx.shadowColor  = 'rgba(0,0,0,0.7)';
-  ctx.shadowBlur   = 10;
+  const lyricTop=cardY+cPad;
+  ctx.globalAlpha=alpha; ctx.textBaseline='top'; ctx.textAlign='left';
+  ctx.font=`${fStyle} ${lfs}px ${fStack(fontFamily)}`;
+  ctx.shadowColor='rgba(0,0,0,0.7)'; ctx.shadowBlur=10;
 
-  if (motion === 'shimmer') {
-    const sp  = (phaseT * 2.5 + (side === 'right' ? 0.5 : 0)) % 1.2 - 0.1;
-    const sg  = ctx.createLinearGradient(W * sp - W * 0.4, 0, W * sp + W * 0.4, 0);
-    sg.addColorStop(0,   'rgba(255,255,255,0.5)');
-    sg.addColorStop(0.35,'#ffffff');
-    sg.addColorStop(0.5,  th.acc);
-    sg.addColorStop(0.65,'#ffffff');
-    sg.addColorStop(1,   'rgba(255,255,255,0.5)');
-    ctx.fillStyle = sg;
-  } else {
-    ctx.fillStyle = bodyTxt;
-  }
+  if(motion==='shimmer'){
+    const sp=(phaseT*2.5+(side==='right'?0.5:0))%1.2-0.1;
+    const sg=ctx.createLinearGradient(W*sp-W*0.4,0,W*sp+W*0.4,0);
+    sg.addColorStop(0,'rgba(255,255,255,0.5)'); sg.addColorStop(0.35,'#ffffff');
+    sg.addColorStop(0.5,th.acc); sg.addColorStop(0.65,'#ffffff'); sg.addColorStop(1,'rgba(255,255,255,0.5)');
+    ctx.fillStyle=sg;
+  } else { ctx.fillStyle=bodyTxt; }
 
-  if (motion === 'typewriter') {
-    const full   = lines.join(' ');
-    const show   = Math.floor(phaseT * full.length);
-    let revealed = 0;
-    lines.forEach((line, i) => {
-      const s = Math.max(0, Math.min(line.length, show - revealed));
-      ctx.fillText(line.slice(0, s), pad + cPad, lyricTop + i * lh);
-      if (show >= revealed && show < revealed + line.length) {
-        const curX = pad + cPad + ctx.measureText(line.slice(0, s)).width + 2;
-        ctx.save();
-        ctx.globalAlpha  = 0.9;
-        ctx.fillStyle    = th.acc;
-        ctx.fillRect(curX, lyricTop + i * lh, Math.max(2, lfs * 0.06), lfs * 0.88);
+  if(motion==='typewriter'){
+    const full=lines.join(' '), show=Math.floor(phaseT*full.length);
+    let revealed=0;
+    lines.forEach((line,i)=>{
+      const s=Math.max(0,Math.min(line.length,show-revealed));
+      ctx.fillText(line.slice(0,s),pad+cPad,lyricTop+i*lh);
+      if(show>=revealed&&show<revealed+line.length){
+        const curX=pad+cPad+ctx.measureText(line.slice(0,s)).width+2;
+        ctx.save(); ctx.globalAlpha=0.9; ctx.fillStyle=th.acc;
+        ctx.fillRect(curX,lyricTop+i*lh,Math.max(2,lfs*0.06),lfs*0.88);
         ctx.restore();
       }
-      revealed += line.length + 1;
+      revealed+=line.length+1;
     });
-  } else {
-    lines.forEach((line, i) => ctx.fillText(line, pad + cPad, lyricTop + i * lh));
-  }
-  ctx.shadowBlur = 0;
+  } else { lines.forEach((line,i)=>ctx.fillText(line,pad+cPad,lyricTop+i*lh)); }
+  ctx.shadowBlur=0;
 
-  const divLineY = cardY + cardH - sFs * 2.8;
-  ctx.save();
-  ctx.globalAlpha  = alpha * 0.35;
-  ctx.strokeStyle  = divLine;
-  ctx.lineWidth    = 1;
-  ctx.beginPath(); ctx.moveTo(pad + cPad, divLineY); ctx.lineTo(pad + innerW - cPad, divLineY); ctx.stroke();
+  const divLineY=cardY+cardH-sFs*2.8;
+  ctx.save(); ctx.globalAlpha=alpha*0.35; ctx.strokeStyle=divLine; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad+cPad,divLineY); ctx.lineTo(pad+innerW-cPad,divLineY); ctx.stroke();
   ctx.restore();
 
-  if (song) {
-    ctx.font         = `700 ${sFs}px 'DM Sans',sans-serif`;
-    ctx.fillStyle    = bodyTxt;
-    ctx.globalAlpha  = alpha;
-    ctx.textBaseline = 'bottom';
-    ctx.textAlign    = 'left';
-    ctx.fillText(song, pad + cPad, cardY + cardH - cPad * 0.6);
-    ctx.font         = `400 ${aFs}px 'Space Mono',monospace`;
-    ctx.fillStyle    = mutedTxt;
-    ctx.fillText(artist, pad + cPad, cardY + cardH - cPad * 0.6 + aFs * 1.3);
+  if(song){
+    ctx.font=`700 ${sFs}px 'DM Sans',sans-serif`; ctx.fillStyle=bodyTxt;
+    ctx.globalAlpha=alpha; ctx.textBaseline='bottom'; ctx.textAlign='left';
+    ctx.fillText(song,pad+cPad,cardY+cardH-cPad*0.6);
+    ctx.font=`400 ${aFs}px 'Space Mono',monospace`; ctx.fillStyle=mutedTxt;
+    ctx.fillText(artist,pad+cPad,cardY+cardH-cPad*0.6+aFs*1.3);
   }
 
-  if (vibe) {
-    ctx.font = `800 ${vFs}px 'Syne','Arial Black',sans-serif`;
-    const vw  = ctx.measureText(vibe).width;
-    const bw2 = vw + Math.round(W * 0.022);
-    const bh2 = vFs * 2.0;
-    const bx2 = pad + innerW - cPad * 0.3 - bw2;
-    const by2 = cardY + cardH - bh2 - Math.round(W * 0.014);
-    drawVibeBadge(ctx, vibe, bx2, by2, bw2, bh2, col, alpha);
+  if(vibe){
+    ctx.font=`800 ${vFs}px 'Syne','Arial Black',sans-serif`;
+    const vw=ctx.measureText(vibe).width;
+    const bw2=vw+Math.round(W*0.022), bh2=vFs*2.0;
+    const bx2=pad+innerW-cPad*0.3-bw2, by2=cardY+cardH-bh2-Math.round(W*0.014);
+    drawVibeBadge(ctx,vibe,bx2,by2,bw2,bh2,col,alpha);
   }
-
   ctx.restore();
 }
+
+/* ─────────────────────────────────────────────
+   WORKER PATH RESOLVER
+───────────────────────────────────────────── */
+function resolveWorkerPath() {
+  /* Check if gif.worker.js is already registered as a script tag */
+  const scripts = Array.from(document.querySelectorAll('script[src]'));
+  for (const sc of scripts) {
+    if (sc.src && sc.src.includes('gif.worker')) return sc.src;
+  }
+  /* Derive from this script's own src */
+  const mine = document.currentScript && document.currentScript.src;
+  if (mine) {
+    const base = mine.substring(0, mine.lastIndexOf('/') + 1);
+    return base + 'gif.worker.js';
+  }
+  /* Ordered fallbacks */
+  return '/js/media/gif/gif.worker.js';
+}
+
+const _WORKER_PATH = resolveWorkerPath();
 
 /* ═══════════════════════════════════════════════════════
    PUBLIC: dsGifDrawFrame
 ═══════════════════════════════════════════════════════ */
-function dsGifDrawFrame(ctx, W, H, t, motion, post1, post2, opts = {}) {
+function dsGifDrawFrame(ctx, W, H, t, motion, post1, post2, opts={}) {
   if (!post1 || !post2) return;
+  const th=_theme(opts.theme||'gold');
+  const ff=opts.fontFamily||'DM Serif Display';
+  const cs=opts.cardStyle||'glass';
 
-  const th    = _theme(opts.theme || 'gold');
-  const ff    = opts.fontFamily || 'DM Serif Display';
-  const cs    = opts.cardStyle  || 'glass';
+  drawBg(ctx,W,H,th);
+  drawMargoWordmark(ctx,W,H,th);
 
-  drawBg(ctx, W, H, th);
-  drawMargoWordmark(ctx, W, H, th);
+  const divY=H*0.500, topT=H*0.110, topB=divY-H*0.050;
+  const botT=divY+H*0.050, botB=H*0.840;
+  const p1t=Math.max(0,Math.min(1,t/0.40));
+  const dT=Math.max(0,Math.min(1,(t-0.20)/0.18));
+  const p2t=Math.max(0,Math.min(1,(t-0.35)/0.40));
 
-  const divY   = H * 0.500;
-  const topT   = H * 0.110;
-  const topB   = divY - H * 0.050;
-  const botT   = divY + H * 0.050;
-  const botB   = H    * 0.840;
+  drawBubble(ctx,W,H,topT,topB,post1,th,'left',p1t,motion,{fontFamily:ff,cardStyle:cs});
+  drawDivider(ctx,W,divY,post2.username,dT,th);
+  if(p2t>0) drawBubble(ctx,W,H,botT,botB,post2,th,'right',p2t,motion,{fontFamily:ff,cardStyle:cs});
 
-  const p1t = Math.max(0, Math.min(1, t / 0.40));
-  const dT  = Math.max(0, Math.min(1, (t - 0.20) / 0.18));
-  const p2t = Math.max(0, Math.min(1, (t - 0.35) / 0.40));
-
-  drawBubble(ctx, W, H, topT, topB, post1, th, 'left',  p1t, motion, { fontFamily: ff, cardStyle: cs });
-  drawDivider(ctx, W, divY, post2.username, dT, th);
-  if (p2t > 0)
-    drawBubble(ctx, W, H, botT, botB, post2, th, 'right', p2t, motion, { fontFamily: ff, cardStyle: cs });
-
-  const songsY = H * 0.852;
-  drawSongsBar(ctx, W, songsY, post1, post2, th);
-
-  drawWatermark(ctx, W, H, th);
-  drawMmark(ctx, W, H, th);
+  drawSongsBar(ctx,W,H*0.852,post1,post2,th);
+  drawWatermark(ctx,W,H,th);
+  drawMmark(ctx,W,H,th);
 }
 
 /* ═══════════════════════════════════════════════════════
    PUBLIC: dsGifExport → Promise<Blob>
 ═══════════════════════════════════════════════════════ */
-async function dsGifExport(post1, post2, motion, dur, opts = {}) {
-  const SIZE   = 600;
-  const FPS    = 18;
-  const frames = Math.round(FPS * Math.min(Math.max(dur || 2.4, 1), 6));
-  const delay  = Math.round(1000 / FPS);
+async function dsGifExport(post1, post2, motion, dur, opts={}) {
+  const SIZE=600, FPS=18;
+  const frames=Math.round(FPS*Math.min(Math.max(dur||2.4,1),6));
+  const delay=Math.round(1000/FPS);
 
-  const off = document.createElement('canvas');
-  off.width = off.height = SIZE;
-  const oc  = off.getContext('2d');
-
+  const off=document.createElement('canvas');
+  off.width=off.height=SIZE;
+  const oc=off.getContext('2d');
   await document.fonts.ready;
 
-  if (typeof GIF === 'undefined') {
-    await new Promise((res, rej) => {
-      const s   = document.createElement('script');
-      s.src     = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
-      s.onload  = res;
-      s.onerror = rej;
+  if(typeof GIF==='undefined'){
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
+      s.onload=res; s.onerror=rej;
       document.head.appendChild(s);
     });
   }
 
-  return new Promise((resolve, reject) => {
-    const gif = new GIF({
-      workers:      2,
-      quality:      6,
-      width:        SIZE,
-      height:       SIZE,
-      workerScript: '/js/gif.worker.js',
-      dither:       false,
+  return new Promise((resolve,reject)=>{
+    const gif=new GIF({
+      workers:2, quality:6,
+      width:SIZE, height:SIZE,
+      workerScript: _WORKER_PATH,
+      dither:false,
     });
 
-    (async () => {
-      for (let i = 0; i < frames; i++) {
-        oc.clearRect(0, 0, SIZE, SIZE);
-        dsGifDrawFrame(oc, SIZE, SIZE, i / frames, motion, post1, post2, opts);
-        gif.addFrame(off, { copy: true, delay });
-        await new Promise(r => setTimeout(r, 0));
+    (async()=>{
+      for(let i=0;i<frames;i++){
+        oc.clearRect(0,0,SIZE,SIZE);
+        dsGifDrawFrame(oc,SIZE,SIZE,i/frames,motion||'fade-up',post1,post2,opts);
+        gif.addFrame(off,{copy:true,delay});
+        await new Promise(r=>setTimeout(r,0));
       }
-      gif.on('finished', resolve);
-      gif.on('error',    reject);
+      gif.on('finished',resolve);
+      gif.on('error',reject);
       gif.render();
     })();
   });
 }
 
-window.dsGifDrawFrame = dsGifDrawFrame;
-window.dsGifExport    = dsGifExport;
+/* ═══════════════════════════════════════════════════════
+   EXPOSE — rich names (for duet-mode.js delegation)
+   AND standard names (override duet-mode.js stubs)
+═══════════════════════════════════════════════════════ */
+window._dsGifDrawFrameRich = dsGifDrawFrame;  // for duet-mode.js gsDrawDuetFrame fallback
+window._dsGifExportRich    = dsGifExport;     // for duet-mode.js gsExportForShareSheet
+
+window.dsGifDrawFrame = dsGifDrawFrame;       // overrides stub in duet-mode.js
+window.dsGifExport    = dsGifExport;          // overrides stub in duet-mode.js
 
 })();
