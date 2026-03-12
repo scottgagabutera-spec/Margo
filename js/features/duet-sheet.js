@@ -1,14 +1,9 @@
 /* ============================================================
-   MARGO — js/duet-sheet.js  v3.0
-   Complete rewrite. All bugs fixed:
-   ✓ NO FREEZING — single RAF loop guard, debounced refresh
-   ✓ GIF / Poster toggle at TOP of sheet
-   ✓ Download label matches format (Download GIF / Download Poster)
-   ✓ Style / Color / Motion / Font all update canvas preview live
-   ✓ Card view matches Conversation view quality
-   ✓ No overlapping elements
-   ✓ Flat js/ paths — works on concept-v2-clean branch
-   ✓ duet-mode.js aliases called safely with existence check
+   MARGO — js/features/duet-sheet.js  v3.1
+   FIX: Download now respects the active view.
+   • Conversation view → renders conversation layout to canvas → exports
+   • Card view         → uses existing card canvas → exports
+   Same logic applied to both GIF and Poster.
    ============================================================ */
 
 (function () {
@@ -31,9 +26,9 @@ const DS = {
   fontItalic: true,
   // RAF state — only ONE loop ever runs
   _raf:       null,
-  _loopId:    0,         // incremented on every stop; loop checks its own id
+  _loopId:    0,
   _frame:     0,
-  _refreshTimer: null,   // debounce timer
+  _refreshTimer: null,
   _savedScrollY: 0,
 };
 
@@ -529,7 +524,7 @@ function _wireEvents() {
     _schedRefresh();
   }));
 
-  // Style — debounced to prevent freeze
+  // Style
   _qAll('._dsStlB').forEach(b => b.addEventListener('click', () => {
     _qAll('._dsStlB').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
@@ -623,9 +618,8 @@ function _setFormat(fmt) {
   gBtn.className = '_dsFmtBtn' + (fmt === 'gif' ? ' gif-active' : '');
   pBtn.className = '_dsFmtBtn' + (fmt === 'poster' ? ' poster-active' : '');
 
-  // Update download button labels
-  _el('_dsDlALbl').textContent = fmt === 'gif' ? 'Download GIF' : 'Download Poster';
-  _el('_dsDlBLbl').textContent = fmt === 'gif' ? 'Share GIF'    : 'Save Image';
+  // Update download button labels based on BOTH format AND view
+  _updateDownloadLabels();
 
   // Hide Motion tab when Poster (static)
   const mtnTab = _el('_dsTabMtn');
@@ -647,6 +641,20 @@ function _setFormat(fmt) {
   if (DS.view === 'card') _schedRefresh();
 }
 
+/* ── Update button labels to match current view + format ── */
+function _updateDownloadLabels() {
+  const isGif    = DS.format === 'gif';
+  const isConvo  = DS.view   === 'convo';
+
+  if (isGif) {
+    _el('_dsDlALbl').textContent = isConvo ? 'Download GIF' : 'Download GIF';
+    _el('_dsDlBLbl').textContent = isConvo ? 'Share GIF'    : 'Share GIF';
+  } else {
+    _el('_dsDlALbl').textContent = isConvo ? 'Download Poster' : 'Download Poster';
+    _el('_dsDlBLbl').textContent = isConvo ? 'Save Image'      : 'Save Image';
+  }
+}
+
 /* ══════════════════════════════════════════════════════════
    VIEW — CONVO / CARD
 ══════════════════════════════════════════════════════════ */
@@ -657,9 +665,11 @@ function _setView(v) {
   _el('_dsCvoView').style.display = v === 'convo' ? '' : 'none';
   _el('_dsCrdView').style.display = v === 'card'  ? '' : 'none';
 
+  // Update labels when view changes
+  _updateDownloadLabels();
+
   if (v === 'card') {
     _stopCanvas();
-    // Double rAF ensures ring has painted and has dimensions
     requestAnimationFrame(() => requestAnimationFrame(() => _startCanvas()));
   } else {
     _stopCanvas();
@@ -742,7 +752,7 @@ function _populateConvo() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   APPLY THEME — updates CSS vars so convo view changes too
+   APPLY THEME
 ══════════════════════════════════════════════════════════ */
 function _applyTheme() {
   const m = DS_THEMES[DS.theme] || DS_THEMES.gold;
@@ -760,10 +770,9 @@ function _applyTheme() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   APPLY MOTION — CSS animations on convo bubbles
+   APPLY MOTION
 ══════════════════════════════════════════════════════════ */
 function _applyMotion() {
-  // Always refresh canvas when motion changes
   _schedRefresh();
   if (DS.view !== 'convo' || DS.format === 'poster') return;
 
@@ -773,7 +782,6 @@ function _applyMotion() {
   const acc = (DS_THEMES[DS.theme] || DS_THEMES.gold).accent;
 
   els.forEach(el => { el.style.cssText = ''; });
-  // Force reflow so animations restart cleanly
   const bubs = _el('_dsCvoBubs');
   if (bubs) void bubs.offsetHeight;
 
@@ -811,7 +819,7 @@ function _applyMotion() {
    CANVAS — single loop, guarded by loopId
 ══════════════════════════════════════════════════════════ */
 function _stopCanvas() {
-  DS._loopId++;                              // invalidates any running loop
+  DS._loopId++;
   if (DS._raf) { cancelAnimationFrame(DS._raf); DS._raf = null; }
   DS._frame = 0;
 }
@@ -826,7 +834,6 @@ function _startCanvas() {
   const size = ring.clientWidth || 300;
 
   if (size < 10) {
-    // Layout not ready — retry once
     requestAnimationFrame(() => _startCanvas());
     return;
   }
@@ -837,7 +844,7 @@ function _startCanvas() {
   canvas.style.height = size + 'px';
 
   const ctx     = canvas.getContext('2d');
-  const myId    = DS._loopId;              // capture — if DS._loopId changes, this loop stops
+  const myId    = DS._loopId;
   const opts    = _buildOpts();
   const p1      = DS.post1;
   const p2      = DS.post2;
@@ -846,14 +853,13 @@ function _startCanvas() {
   let lastTs    = 0;
 
   const draw = (ts) => {
-    if (DS._loopId !== myId) return;       // ← FREEZE FIX: bail if superseded
+    if (DS._loopId !== myId) return;
 
     if (ts - lastTs >= frameMs) {
       lastTs = ts;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       if (DS.format === 'poster') {
-        // Static draw — stop loop after first frame
         _drawCanvas(ctx, size, size, 0, p1, p2, opts);
         return;
       }
@@ -869,7 +875,6 @@ function _startCanvas() {
   });
 }
 
-/* Debounced refresh — prevents rapid clicks causing multiple concurrent loops */
 function _schedRefresh() {
   if (DS._refreshTimer) clearTimeout(DS._refreshTimer);
   DS._refreshTimer = setTimeout(() => {
@@ -881,9 +886,7 @@ function _schedRefresh() {
   }, 80);
 }
 
-/* ── Draw one canvas frame ── */
 function _drawCanvas(ctx, W, H, t, p1, p2, opts) {
-  // Try the renderer from duet-mode.js first
   if (opts.format === 'poster' && typeof window.dsPosterDraw === 'function') {
     window.dsPosterDraw(ctx, W, H, p1, p2, opts);
     return;
@@ -892,7 +895,6 @@ function _drawCanvas(ctx, W, H, t, p1, p2, opts) {
     window.dsGifDrawFrame(ctx, W, H, t, DS.motion, p1, p2, opts);
     return;
   }
-  // Fallback: built-in canvas renderer (always works even if duet-mode not loaded)
   _fallbackDraw(ctx, W, H, t, p1, p2, opts);
 }
 
@@ -909,8 +911,6 @@ function _buildOpts() {
 
 /* ══════════════════════════════════════════════════════════
    BUILT-IN FALLBACK CANVAS RENDERER
-   Matches the conversation view quality exactly.
-   Runs even if duet-mode.js aliases haven't loaded yet.
 ══════════════════════════════════════════════════════════ */
 function _fallbackDraw(ctx, W, H, t, p1, p2, opts) {
   if (!p1 || !p2) return;
@@ -919,15 +919,12 @@ function _fallbackDraw(ctx, W, H, t, p1, p2, opts) {
   const eVibe  = DS_VIBE[p2.emotion] || m.r;
   const isAnim = opts.format === 'gif';
 
-  /* Background */
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, m.bg);
   bg.addColorStop(1, _mix(m.bg, '#000', 0.4));
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  /* Vibe glows */
-  ctx.save();
-  ctx.globalAlpha = 0.18;
+  ctx.save(); ctx.globalAlpha = 0.18;
   const g1 = ctx.createRadialGradient(W*.2, H*.22, 0, W*.2, H*.22, W*.6);
   g1.addColorStop(0, pVibe); g1.addColorStop(1, 'transparent');
   ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
@@ -941,13 +938,11 @@ function _fallbackDraw(ctx, W, H, t, p1, p2, opts) {
   ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
   ctx.restore();
 
-  // Card style overlay
   _applyCardStyle(ctx, W, H, opts.cardStyle, m, pVibe, eVibe);
 
   const pad  = W * 0.065;
   const divY = H * 0.490;
 
-  /* MARGO wordmark */
   const mSz = Math.max(12, W * 0.038);
   ctx.save();
   ctx.font = `800 ${mSz}px 'Syne','Arial Black',sans-serif`;
@@ -956,21 +951,17 @@ function _fallbackDraw(ctx, W, H, t, p1, p2, opts) {
   ctx.fillText('MARGO', pad, pad * 0.55);
   ctx.restore();
 
-  /* Accent top bar */
-  ctx.save();
-  ctx.globalAlpha = 0.7;
+  ctx.save(); ctx.globalAlpha = 0.7;
   const tbar = ctx.createLinearGradient(0, 0, W, 0);
   tbar.addColorStop(0,'transparent'); tbar.addColorStop(0.5, pVibe); tbar.addColorStop(1,'transparent');
   ctx.fillStyle = tbar; ctx.fillRect(0, 0, W, 2);
   ctx.restore();
 
-  /* Zone boundaries */
   const topT = pad + mSz * 1.7;
   const topB = divY - W * 0.055;
   const botT = divY + W * 0.055;
   const botB = H * 0.830;
 
-  /* Lyric zones */
   const e1 = isAnim ? Math.min(1, t / 0.28) : 1;
   const e2 = isAnim ? (t > 0.46 ? Math.min(1, (t-0.46)/0.28) : 0) : 1;
 
@@ -978,7 +969,6 @@ function _fallbackDraw(ctx, W, H, t, p1, p2, opts) {
   _drawZone(ctx, W, topT, topB, p1, m, pad, opts);
   ctx.restore();
 
-  /* Divider */
   const dAlpha = isAnim ? Math.min(1, Math.max(0, (t-0.38)/0.12)) : 1;
   _drawDivider(ctx, W, divY, p2, m, dAlpha);
 
@@ -986,10 +976,7 @@ function _fallbackDraw(ctx, W, H, t, p1, p2, opts) {
   _drawZone(ctx, W, botT, botB, p2, m, pad, opts);
   ctx.restore();
 
-  /* Songs bar */
   _drawSongsBar(ctx, W, H * 0.842, H * 0.918, p1, p2, m, pad);
-
-  /* Watermark + M-mark */
   _drawWatermark(ctx, W, H, m);
   _drawMmark(ctx, W, H, m);
 }
@@ -1060,7 +1047,6 @@ function _drawZone(ctx, W, zT, zB, post, m, pad, opts) {
   lines.forEach((ln, i) => ctx.fillText(ln, pad * 1.15, startY + i*lh));
   ctx.shadowBlur = 0;
 
-  // Attribution
   const pk   = post.knowledge || {};
   const song = pk.song || post.song || '';
   if (song) {
@@ -1185,7 +1171,10 @@ function _drawMmark(ctx, W, H, m) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   DOWNLOAD
+   DOWNLOAD — THE MAIN FIX
+   Checks DS.view first:
+   • 'convo' → renders the conversation layout to offscreen canvas
+   • 'card'  → uses the existing rich card renderers
 ══════════════════════════════════════════════════════════ */
 function _download(which) {
   const p1 = DS.post1, p2 = DS.post2;
@@ -1193,14 +1182,13 @@ function _download(which) {
   const opts = _buildOpts();
 
   if (which === 'primary') {
-    // Primary = GIF download or Poster download
     if (DS.format === 'gif') {
-      _exportGif(p1, p2, opts);
+      DS.view === 'convo' ? _exportConvoGif(p1, p2, opts) : _exportCardGif(p1, p2, opts);
     } else {
-      _exportPoster(p1, p2, opts);
+      DS.view === 'convo' ? _exportConvoPoster(p1, p2, opts) : _exportCardPoster(p1, p2, opts);
     }
   } else {
-    // Secondary = Share GIF (native share or fallback) or Save Image (canvas snapshot)
+    // Secondary = Share / Save
     if (DS.format === 'gif') {
       _shareGif(p1, p2, opts);
     } else {
@@ -1209,13 +1197,40 @@ function _download(which) {
   }
 }
 
-function _exportGif(p1, p2, opts) {
+/* ── CONVERSATION VIEW: export as GIF (animated conversation layout) ── */
+function _exportConvoGif(p1, p2, opts) {
   const btn = _el('_dsDlA');
   const orig = btn.innerHTML;
   btn.innerHTML = '<span class="_dsDlIco">⏳</span><span>Rendering…</span>';
   btn.disabled  = true;
 
-  // Set up _shareSheet for duet-mode.js
+  // Pass view flag so the renderer knows to use conversation layout
+  const exportOpts = Object.assign({}, opts, { view: 'convo' });
+
+  const doExport = () => {
+    if (typeof window.dsGifExport === 'function') {
+      window.dsGifExport(p1, p2, DS.motion, DS.dur, exportOpts)
+        .then(blob => _triggerDl(blob, `margo-duet-${Date.now()}.gif`))
+        .catch(() => _snapConvoPng(p1, p2, opts).then(b => _triggerDl(b, `margo-duet-${Date.now()}.png`)))
+        .finally(() => { btn.innerHTML = orig; btn.disabled = false; });
+    } else {
+      // Fallback: snapshot the conversation view as a PNG
+      _snapConvoPng(p1, p2, opts).then(blob => {
+        _triggerDl(blob, `margo-duet-${Date.now()}.png`);
+        btn.innerHTML = orig; btn.disabled = false;
+      });
+    }
+  };
+  doExport();
+}
+
+/* ── CARD VIEW: export as GIF (existing card layout) ── */
+function _exportCardGif(p1, p2, opts) {
+  const btn = _el('_dsDlA');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="_dsDlIco">⏳</span><span>Rendering…</span>';
+  btn.disabled  = true;
+
   const prev = window._shareSheet;
   window._shareSheet = { post: p1, echoPost: p2, isDuet: true };
 
@@ -1231,7 +1246,6 @@ function _exportGif(p1, p2, opts) {
         .catch(() => _savePng())
         .finally(() => { btn.innerHTML = orig; btn.disabled = false; window._shareSheet = prev; });
     } else {
-      // No GIF encoder — fall back to PNG
       _savePng();
       btn.innerHTML = orig; btn.disabled = false; window._shareSheet = prev;
     }
@@ -1239,7 +1253,26 @@ function _exportGif(p1, p2, opts) {
   doExport();
 }
 
-function _exportPoster(p1, p2, opts) {
+/* ── CONVERSATION VIEW: export as Poster PNG ── */
+function _exportConvoPoster(p1, p2, opts) {
+  const btn = _el('_dsDlA');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="_dsDlIco">⏳</span><span>Rendering…</span>';
+  btn.disabled  = true;
+
+  // Render the conversation layout at 1080×1350 (tall to fit both bubbles nicely)
+  _snapConvoPng(p1, p2, opts, 1080, 1350).then(blob => {
+    _triggerDl(blob, `margo-poster-${Date.now()}.png`);
+    btn.innerHTML = orig; btn.disabled = false;
+  }).catch(() => {
+    // Fallback to card poster
+    _exportCardPoster(p1, p2, opts);
+    btn.innerHTML = orig; btn.disabled = false;
+  });
+}
+
+/* ── CARD VIEW: export as Poster PNG ── */
+function _exportCardPoster(p1, p2, opts) {
   const btn = _el('_dsDlA');
   const orig = btn.innerHTML;
   btn.innerHTML = '<span class="_dsDlIco">⏳</span><span>Rendering…</span>';
@@ -1251,7 +1284,6 @@ function _exportPoster(p1, p2, opts) {
       .catch(() => _savePng())
       .finally(() => { btn.innerHTML = orig; btn.disabled = false; });
   } else {
-    // Render to offscreen canvas
     const off = document.createElement('canvas');
     off.width = off.height = 1080;
     const ctx = off.getContext('2d');
@@ -1269,27 +1301,254 @@ function _exportPoster(p1, p2, opts) {
   }
 }
 
-function _shareGif(p1, p2, opts) {
-  // Try Web Share API, fall back to download
-  if (navigator.share) {
-    // Render offscreen then share
+/* ── Snapshot the CONVERSATION VIEW to an offscreen canvas → Blob ── */
+function _snapConvoPng(p1, p2, opts, W = 1080, H = 1080) {
+  return document.fonts.ready.then(() => {
     const off = document.createElement('canvas');
-    off.width = off.height = 600;
+    off.width = W; off.height = H;
     const ctx = off.getContext('2d');
-    document.fonts.ready.then(() => {
-      _fallbackDraw(ctx, 600, 600, 0, p1, p2, opts);
-      off.toBlob(async blob => {
-        if (!blob) return;
-        try {
-          const file = new File([blob], 'margo-duet.png', { type: 'image/png' });
-          await navigator.share({ files: [file], title: 'Lyric Back on Margo', url: 'https://trymargo.com' });
-        } catch {
-          _triggerDl(blob, `margo-duet-${Date.now()}.png`);
-        }
-      }, 'image/png');
+
+    // Use the rich poster renderer but with conversation layout proportions
+    // The conversation layout IS the fallback draw — two bubble zones + divider + songs bar
+    _drawConvoLayout(ctx, W, H, p1, p2, opts);
+
+    return new Promise((resolve, reject) => {
+      off.toBlob(blob => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/png', 0.95);
+    });
+  });
+}
+
+/* ── Draw CONVERSATION LAYOUT to any canvas context ──
+   This mirrors exactly what the user sees in the Conversation tab,
+   rendered at export resolution. ── */
+function _drawConvoLayout(ctx, W, H, p1, p2, opts) {
+  if (!p1 || !p2) return;
+  const m     = DS_THEMES[opts.theme] || DS_THEMES.gold;
+  const pVibe = DS_VIBE[p1.emotion] || m.l;
+  const eVibe = DS_VIBE[p2.emotion] || m.r;
+
+  // ── Background ──
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, m.bg);
+  bg.addColorStop(1, _mix(m.bg, '#000', 0.4));
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  ctx.save(); ctx.globalAlpha = 0.22;
+  const g1 = ctx.createRadialGradient(W*.2, H*.22, 0, W*.2, H*.22, W*.65);
+  g1.addColorStop(0, pVibe); g1.addColorStop(1, 'transparent');
+  ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H); ctx.restore();
+
+  ctx.save(); ctx.globalAlpha = 0.18;
+  const g2 = ctx.createRadialGradient(W*.8, H*.78, 0, W*.8, H*.78, W*.65);
+  g2.addColorStop(0, eVibe); g2.addColorStop(1, 'transparent');
+  ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H); ctx.restore();
+
+  // ── Noise grain ──
+  ctx.save(); ctx.globalAlpha = 0.025;
+  for (let y = 0; y < H; y += 3) for (let x = 0; x < W; x += 3) {
+    const v = Math.random()*255|0; ctx.fillStyle = `rgb(${v},${v},${v})`; ctx.fillRect(x,y,3,3);
+  }
+  ctx.restore();
+
+  // ── Top bar ──
+  ctx.save(); ctx.globalAlpha = 0.6;
+  const tbar = ctx.createLinearGradient(0, 0, W, 0);
+  tbar.addColorStop(0,'transparent'); tbar.addColorStop(0.5, pVibe); tbar.addColorStop(1,'transparent');
+  ctx.fillStyle = tbar; ctx.fillRect(0, 0, W, 3); ctx.restore();
+
+  // ── MARGO wordmark ──
+  const mSz = Math.max(16, W * 0.038);
+  const pad  = W * 0.060;
+  ctx.save();
+  ctx.font = `800 ${mSz}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle = m.accent; ctx.globalAlpha = 0.24;
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.fillText('MARGO', pad, pad * 0.55);
+  ctx.restore();
+
+  // ── Layout zones (conversation has 2 bubbles, divider, songs) ──
+  const headerH = pad + mSz * 1.8;
+  const footerH = H * 0.16;           // songs bar + watermark area
+  const innerH  = H - headerH - footerH;
+  const divY    = headerH + innerH * 0.50;
+  const gap     = W * 0.04;
+
+  const topT = headerH + gap;
+  const topB = divY - W * 0.04;
+  const botT = divY + W * 0.04;
+  const botB = H - footerH + gap * 0.5;
+
+  // ── Bubble 1 (original post) ──
+  _drawConvoBubble(ctx, W, topT, topB, p1, m, 'left', opts);
+
+  // ── Divider ──
+  _drawDivider(ctx, W, divY, p2, m, 1.0);
+
+  // ── Bubble 2 (echo/reply) ──
+  _drawConvoBubble(ctx, W, botT, botB, p2, m, 'right', opts);
+
+  // ── Songs bar ──
+  const songsT = H - footerH + gap * 0.3;
+  const songsB = songsT + W * 0.072;
+  _drawSongsBar(ctx, W, songsT, songsB, p1, p2, m, pad);
+
+  // ── Watermark + M-mark ──
+  _drawWatermark(ctx, W, H, m);
+  _drawMmark(ctx, W, H, m);
+}
+
+/* ── Draw a single conversation bubble (matches the HTML bubble style) ── */
+function _drawConvoBubble(ctx, W, areaT, areaB, post, m, side, opts) {
+  const areaH  = areaB - areaT;
+  const pad    = W * 0.060;
+  const col    = side === 'left' ? m.l : m.r;
+  const align  = side === 'left' ? 'left' : 'right';
+  const text   = (post.text || post.lyric || '').substring(0, 120);
+  const pk     = post.knowledge || {};
+  const song   = pk.song   || post.song   || '';
+  const artist = pk.artist || post.artist || '';
+  const user   = '@' + (post.username || 'anonymous').replace(/^@/,'').toUpperCase();
+  const vibe   = (post.emotion || '').toUpperCase();
+  const fStyle = opts.fontItalic ? 'italic 600' : '600';
+  const ff     = `'${opts.fontFamily}',serif`;
+
+  // Username pill
+  const uFs = Math.max(12, W * 0.022);
+  ctx.save();
+  ctx.font = `800 ${uFs}px 'Syne','Arial Black',sans-serif`;
+  ctx.fillStyle = col; ctx.globalAlpha = 0.9;
+  ctx.textBaseline = 'bottom';
+  if (side === 'left') {
+    ctx.textAlign = 'left';
+    ctx.fillText('● ' + user, pad, areaT - W * 0.006);
+  } else {
+    ctx.textAlign = 'right';
+    ctx.fillText(user + ' ●', W - pad, areaT - W * 0.006);
+  }
+  ctx.restore();
+
+  // Card sizing — bubble fills its area with padding
+  const bubbleW = W * 0.84;
+  const bubbleX = side === 'left' ? pad : W - pad - bubbleW;
+  const cPad    = W * 0.034;
+  const sFs     = Math.max(10, W * 0.026);
+  const aFs     = Math.max(9,  W * 0.018);
+  const vFs     = Math.max(9,  W * 0.017);
+
+  // Measure text to compute card height
+  let lfs = Math.min(W * 0.048, areaH * 0.26);
+  ctx.font = `${fStyle} ${lfs}px ${ff}`;
+  let lines = _wrapText(ctx, text, bubbleW - cPad * 2);
+  if (lines.length > 4) {
+    lfs = Math.max(W * 0.028, lfs * 4 / lines.length);
+    ctx.font = `${fStyle} ${lfs}px ${ff}`;
+    lines = _wrapText(ctx, text, bubbleW - cPad * 2);
+  }
+  const lh     = lfs * 1.42;
+  const cardH  = Math.min(areaH * 0.92, lines.length * lh + cPad * 2 + sFs * 2.6 + lfs * 0.4);
+  const cardY  = areaT + (areaH - cardH) / 2;
+  const cRad   = W * 0.028;
+  const corner = side === 'left' ? cRad : W * 0.004;
+
+  // Card background
+  ctx.save();
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    if (side === 'left') ctx.roundRect(bubbleX, cardY, bubbleW, cardH, [cRad, cRad, cRad, corner]);
+    else                 ctx.roundRect(bubbleX, cardY, bubbleW, cardH, [cRad, cRad, corner, cRad]);
+  } else { ctx.rect(bubbleX, cardY, bubbleW, cardH); }
+  ctx.fillStyle   = side === 'left' ? m.bb1.replace('0.10','0.14') : m.bb2.replace('0.09','0.12');
+  ctx.globalAlpha = 1;
+  ctx.fill();
+  ctx.strokeStyle = side === 'left' ? m.bd1 : m.bd2;
+  ctx.lineWidth   = 1.5; ctx.stroke();
+  ctx.restore();
+
+  // Corner accent glow
+  ctx.save();
+  const rg = ctx.createRadialGradient(
+    side === 'left' ? bubbleX : bubbleX + bubbleW, cardY, 0,
+    side === 'left' ? bubbleX : bubbleX + bubbleW, cardY, bubbleW * 0.7
+  );
+  rg.addColorStop(0, col + '18'); rg.addColorStop(1, 'transparent');
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(bubbleX, cardY, bubbleW, cardH, cRad); else ctx.rect(bubbleX, cardY, bubbleW, cardH);
+  ctx.fillStyle = rg; ctx.fill();
+  ctx.restore();
+
+  // Lyric text
+  ctx.save();
+  ctx.font = `${fStyle} ${lfs}px ${ff}`;
+  ctx.fillStyle = m.light ? '#0B0B0D' : '#ffffff';
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 8;
+  lines.forEach((ln, i) => ctx.fillText(ln, bubbleX + cPad, cardY + cPad + i * lh));
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // Divider line inside card
+  const divLineY = cardY + cardH - sFs * 2.8;
+  ctx.save();
+  ctx.globalAlpha = 0.28; ctx.strokeStyle = m.light ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(bubbleX + cPad, divLineY); ctx.lineTo(bubbleX + bubbleW - cPad, divLineY); ctx.stroke();
+  ctx.restore();
+
+  // Song + artist
+  if (song) {
+    ctx.save();
+    ctx.font = `700 ${sFs}px 'DM Sans',sans-serif`;
+    ctx.fillStyle = m.light ? '#0B0B0D' : '#ffffff';
+    ctx.textBaseline = 'bottom'; ctx.textAlign = 'left';
+    ctx.fillText(song, bubbleX + cPad, cardY + cardH - cPad * 0.6);
+    ctx.font = `400 ${aFs}px 'Space Mono',monospace`;
+    ctx.fillStyle = m.light ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.48)';
+    ctx.fillText(artist, bubbleX + cPad, cardY + cardH - cPad * 0.6 + aFs * 1.3);
+    ctx.restore();
+  }
+
+  // Vibe badge
+  if (vibe) {
+    ctx.save();
+    ctx.font = `800 ${vFs}px 'Syne','Arial Black',sans-serif`;
+    const vw  = ctx.measureText(vibe).width;
+    const bw  = vw + W * 0.022, bh = vFs * 2.0;
+    const bx  = bubbleX + bubbleW - cPad * 0.3 - bw;
+    const by  = cardY + cardH - bh - W * 0.014;
+    ctx.fillStyle   = col + '28'; ctx.strokeStyle = col + '77'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, bh/2); else ctx.rect(bx, by, bw, bh);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = col; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+    ctx.fillText(vibe, bx + bw/2, by + bh/2);
+    ctx.restore();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   SHARE GIF
+══════════════════════════════════════════════════════════ */
+function _shareGif(p1, p2, opts) {
+  if (navigator.share) {
+    const snapOpts = Object.assign({}, opts);
+    const snapFn   = DS.view === 'convo'
+      ? () => _snapConvoPng(p1, p2, snapOpts)
+      : () => new Promise(res => {
+          const canvas = _el('_dsCvs');
+          if (canvas) canvas.toBlob(b => res(b), 'image/png');
+          else res(null);
+        });
+
+    snapFn().then(async blob => {
+      if (!blob) return;
+      try {
+        const file = new File([blob], 'margo-duet.png', { type: 'image/png' });
+        await navigator.share({ files: [file], title: 'Lyric Back on Margo', url: 'https://trymargo.com' });
+      } catch {
+        _triggerDl(blob, `margo-duet-${Date.now()}.png`);
+      }
     });
   } else {
-    _exportGif(p1, p2, opts);
+    // No Web Share API — fall back to download
+    DS.view === 'convo' ? _exportConvoGif(p1, p2, opts) : _exportCardGif(p1, p2, opts);
   }
 }
 
@@ -1337,7 +1596,6 @@ function _mix(h1, h2, t) {
 window.openDuetSheet  = openSheet;
 window.closeDuetSheet = closeSheet;
 
-// Mount on DOMContentLoaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', _mount);
 } else {
