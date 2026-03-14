@@ -91,7 +91,12 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,600;1,400;1,600&family=Lora:ital,wght@0,600;1,400;1,600&family=Merriweather:ital,wght@0,700;1,400&family=Josefin+Sans:wght@300;400;700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 
   <!-- FIXED: both CSS files now load from assets/ -->
-  <link rel="stylesheet" href="assets/style.css"/>
+  <link rel="stylesheet" href="assets/css/base.css"/>
+  <link rel="stylesheet" href="assets/css/landing.css"/>
+  <link rel="stylesheet" href="assets/css/feed.css"/>
+  <link rel="stylesheet" href="assets/css/modals.css"/>
+  <link rel="stylesheet" href="assets/css/composer.css"/>
+  <link rel="stylesheet" href="assets/css/features.css"/>
   <link rel="stylesheet" href="assets/gif-studio.css"/>
 
   <style>
@@ -579,7 +584,11 @@
 
 <!-- ui -->
 <script src="js/ui/feed.js"></script>
-<script src="js/ui/composer.js"></script>
+<script src="js/ui/composer/text-utils.js"></script>
+  <script src="js/ui/composer/styles.js"></script>
+  <script src="js/ui/composer/integrations.js"></script>
+  <script src="js/ui/composer/core.js"></script>
+  <script src="js/ui/composer/submit.js"></script>
 <script src="js/ui/admin.js"></script>
 <script src="js/ui/resonate.js"></script>
 
@@ -602,7 +611,12 @@
 <script src="js/features/duet-mode.js"></script>
 <script src="js/media/gif/duet-renderer.js"></script>
 <script src="js/media/poster/duet-renderer.js"></script>
-<script src="js/features/duet-sheet.js"></script>
+<script src="js/features/duet/sheet-css.js"></script>
+  <script src="js/features/duet/sheet-dom.js"></script>
+  <script src="js/features/duet/sheet-controls.js"></script>
+  <script src="js/features/duet/sheet-canvas.js"></script>
+  <script src="js/features/duet/sheet-export.js"></script>
+  <script src="js/features/duet/sheet-utils.js"></script>
 
 <!-- app bootstrap — always last -->
 <script src="js/core/app.js"></script>
