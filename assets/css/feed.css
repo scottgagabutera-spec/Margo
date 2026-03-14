@@ -211,10 +211,7 @@ mark.search-highlight {
 .room-tabs-wrap::-webkit-scrollbar { display: none; }
 .room-tabs-wrap::before,
 .room-tabs-wrap::after { display: none; }
-.room-tabs {
-  display: flex; gap: 6px; overflow: visible;
-  scrollbar-width: none; flex-shrink: 0; padding-bottom: 0;
-}
+
 .room-tabs::-webkit-scrollbar { display: none; }
 .room-tab {
   flex-shrink: 0; padding: 6px 14px; border-radius: 50px;
