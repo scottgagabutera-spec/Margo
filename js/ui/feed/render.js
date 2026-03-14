@@ -6,7 +6,7 @@ function buildSwipeCard(post, i) {
   const resonateCount = (post.resonates || 0);
 
   const div = document.createElement('div');
-  div.className = 'lyric-card';
+  div.className = 'swipe-card';
   div.dataset.postId = post.id;
   div.style.transform = i === 0 ? 'translateY(0)' : 'translateY(105%)';
   div.style.zIndex = 1000 - i;

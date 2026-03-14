@@ -23,21 +23,6 @@
 @keyframes scrollR { from{transform:translateX(-50%)} to{transform:translateX(0)}    }
 
 
-.lyric-card.featured { border-color: var(--gold-border); }
-.lyric-card-text {
-  font-family: var(--font-lyric);
-  font-style: italic;
-  font-size: 0.92rem;
-  color: var(--text); line-height: 1.45;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.lyric-card-meta { display: flex; align-items: center; gap: 6px; }
-.lyric-card-emotion {
-  font-family: var(--font-mono);
-  font-size: 0.48rem; font-weight: 700;
-  padding: 2px 7px; border-radius: 20px;
-  letter-spacing: 0.3px; text-transform: uppercase;
-}
 .emotion-love       { background:rgba(255,107,157,0.12); color:#FF6B9D; }
 .emotion-nostalgia  { background:rgba(232,197,71,0.10);  color:var(--gold); }
 .emotion-hope       { background:rgba(107,140,255,0.12); color:#6B8CFF; }
@@ -488,7 +473,7 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 #cardStack{position:absolute;top:56px;left:0;right:0;bottom:82px;overflow:hidden;touch-action:none}
 @media(max-width:600px){#cardStack{top:50px;bottom:82px}}
 
-#cardStack .lyric-card{position:absolute;inset:0;display:flex;flex-direction:column;will-change:transform;overflow:hidden;user-select:none;background:#07060A}
+#cardStack .swipe-card{position:absolute;inset:0;display:flex;flex-direction:column;will-change:transform;overflow:hidden;user-select:none;background:#07060A}
 #cardStack .card-bg{position:absolute;inset:0;pointer-events:none;z-index:0}
 #cardStack .card-glow-strip{position:absolute;top:0;left:0;right:0;height:2px;z-index:5;pointer-events:none}
 #cardStack .card-content{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px 48px 24px;text-align:center;min-height:0}

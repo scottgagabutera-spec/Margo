@@ -43,7 +43,7 @@ function swipeGoTo(direction) {
 
   swipeAnim = true;
   const stack = document.getElementById('cardStack');
-  const cards = stack.querySelectorAll('.lyric-card');
+  const cards = stack.querySelectorAll('.swipe-card');
   const from = cards[swipeIndex];
   const toIdx = direction === 'next' ? swipeIndex + 1 : swipeIndex - 1;
   const to = cards[toIdx];
@@ -84,7 +84,7 @@ function onSwipeTouchMove(e) {
   swipeActive.style.transform = 'translateY(' + swipeDeltaY + 'px)';
 
   const stack = document.getElementById('cardStack');
-  const cards = stack.querySelectorAll('.lyric-card');
+  const cards = stack.querySelectorAll('.swipe-card');
   const thr = 40;
   if (swipeDeltaY < -thr && swipeIndex < filtered.length - 1) {
     const next = cards[swipeIndex + 1];
@@ -116,7 +116,7 @@ function onSwipeTouchEnd() {
       swipeActive.style.transform = 'translateY(0)';
     }
     const stack = document.getElementById('cardStack');
-    const cards = stack.querySelectorAll('.lyric-card');
+    const cards = stack.querySelectorAll('.swipe-card');
     const filtered = getRankedPosts();
     if (swipeIndex < filtered.length - 1) {
       cards[swipeIndex + 1].style.transition = 'transform 0.35s cubic-bezier(0.4,0,0.2,1)';
@@ -135,7 +135,7 @@ function initSwipeEngine() {
   stack.dataset.swipeReady = '1';
 
   swipeIndex = 0;
-  swipeActive = stack.querySelector('.lyric-card');
+  swipeActive = stack.querySelector('.swipe-card');
 
   stack.addEventListener('touchstart', onSwipeTouchStart, { passive: true });
   stack.addEventListener('touchmove', onSwipeTouchMove, { passive: false });
