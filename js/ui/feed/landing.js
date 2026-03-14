@@ -16,7 +16,7 @@ function injectSortBar() {
     currentSort = btn.dataset.sort;
     renderFeed();
   });
-  feedList?.parentNode?.insertBefore(bar, feedList);
+  document.getElementById('feed')?.appendChild(bar);
 }
 
 function preloadStudioFonts() {
