@@ -22,16 +22,7 @@
 @keyframes scrollL { from{transform:translateX(0)}    to{transform:translateX(-50%)} }
 @keyframes scrollR { from{transform:translateX(-50%)} to{transform:translateX(0)}    }
 
-.lyric-card {
-  flex-shrink: 0;
-  background: rgba(255,255,255,0.04);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 18px;
-  display: flex; flex-direction: column; gap: 6px;
-  min-width: 220px; max-width: 300px;
-}
+
 .lyric-card.featured { border-color: var(--gold-border); }
 .lyric-card-text {
   font-family: var(--font-lyric);
