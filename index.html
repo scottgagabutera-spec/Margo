@@ -225,6 +225,17 @@
       <button class="room-tab" data-room="LetOut" role="tab" aria-selected="false">Let Out</button>
     </div>
   </div>
+  <div class="swipe-card-counter" id="cardCounter"></div>
+  <div id="cardStack"></div>
+  <div class="swipe-hint" id="swipeHint">
+    <div class="swipe-hint-arrow">↑</div>
+    <div>swipe</div>
+  </div>
+  <div class="nav-arrows-wrap">
+    <button class="swipe-nav-arrow" id="navUp">↑</button>
+    <button class="swipe-nav-arrow" id="navDown">↓</button>
+  </div>
+  <div class="swipe-progress-dots" id="progressDots"></div>
   <div id="feedList"></div>
 </section>
 
@@ -587,6 +598,7 @@
   <script src="js/ui/feed/landing.js"></script>
   <script src="js/ui/feed/filters.js"></script>
   <script src="js/ui/feed/render.js"></script>
+  <script src="js/ui/feed/swipe.js"></script>
 <script src="js/ui/composer/text-utils.js"></script>
   <script src="js/ui/composer/styles.js"></script>
   <script src="js/ui/composer/integrations.js"></script>
