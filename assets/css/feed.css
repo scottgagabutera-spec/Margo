@@ -208,18 +208,6 @@ mark.search-highlight {
 }
 
 /* ── VIBE TABS ── */
-.room-tabs-wrap {
-  position: sticky; top: 108px; z-index: 98; height: 42px;
-  width: 100%; max-width: none;
-  display: flex; align-items: center;
-  background: rgba(7,6,10,0.97);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  padding: 0 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  box-sizing: border-box; margin: 0;
-  overflow-x: auto; overflow-y: visible;
-  -webkit-overflow-scrolling: touch; flex-shrink: 0;
-}
 .room-tabs-wrap::-webkit-scrollbar { display: none; }
 .room-tabs-wrap::before,
 .room-tabs-wrap::after { display: none; }
@@ -243,16 +231,6 @@ mark.search-highlight {
 }
 
 /* ── SORT BAR ── */
-#feedSortBar {
-  position: sticky !important; top: 150px !important; z-index: 97 !important;
-  height: 38px !important; width: 100% !important; max-width: none !important;
-  display: flex !important; align-items: center !important;
-  padding: 0 14px !important; gap: 6px !important;
-  background: rgba(7,6,10,0.97) !important;
-  backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important;
-  border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-  box-sizing: border-box !important; margin: 0 !important;
-}
 
 /* ── NEW POSTS BAR ── */
 #newPostsIndicator,
