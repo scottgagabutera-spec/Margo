@@ -56,10 +56,12 @@ function swipeGoTo(direction) {
 
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
-      from.style.transition = 'transform 0.38s cubic-bezier(0.4,0,0.2,1)';
+      from.style.transition = 'transform 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.38s ease';
       from.style.transform = direction === 'next' ? 'translateY(-105%)' : 'translateY(105%)';
-      to.style.transition = 'transform 0.42s cubic-bezier(0.34,1.2,0.64,1)';
+      from.style.opacity = '0';
+      to.style.transition = 'transform 0.42s cubic-bezier(0.34,1.2,0.64,1), opacity 0.3s ease';
       to.style.transform = 'translateY(0)';
+      to.style.opacity = '1';
       swipeIndex = toIdx;
       swipeActive = to;
       setTimeout(function() { swipeAnim = false; updateSwipeUI(); }, 420);
@@ -145,6 +147,7 @@ function initSwipeEngine() {
 
   swipeIndex = 0;
   swipeActive = stack.querySelector('.swipe-card');
+  stack.querySelectorAll('.swipe-card').forEach((c,i) => { c.style.opacity = i === 0 ? '1' : '0'; });
 
   stack.addEventListener('touchstart', onSwipeTouchStart, { passive: true });
   stack.addEventListener('touchmove', onSwipeTouchMove, { passive: false });
