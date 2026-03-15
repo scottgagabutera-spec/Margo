@@ -61,16 +61,7 @@ function buildSwipeCard(post, i) {
   if (resonateBtn) {
     resonateBtn.onclick = function(e) {
       e.stopPropagation();
-      if (typeof toggleResonate === 'function') {
-        toggleResonate(post.id, resonateBtn);
-        const countEl = resonateBtn.querySelector('.seg-count');
-        if (countEl) {
-          const current = parseInt(countEl.textContent) || 0;
-          const resonated = resonateBtn.classList.contains('resonated');
-          countEl.textContent = resonated ? current - 1 : current + 1;
-          resonateBtn.classList.toggle('resonated');
-        }
-      }
+      if (typeof toggleResonate === 'function') toggleResonate(post.id, resonateBtn);
     };
   }
 
