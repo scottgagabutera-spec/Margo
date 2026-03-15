@@ -93,7 +93,7 @@
 @keyframes swipeHintFade{0%{opacity:0}15%{opacity:1}70%{opacity:1}100%{opacity:0}}
 
 /* FAB */
-#dropLyricFAB{display:none;background:var(--gold);color:#07060A;border:none;border-radius:50px;padding:6px 12px 6px 9px;font-family:var(--font-mono);font-size:0.38rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0}
+#dropLyricFAB{position:relative;display:none;background:var(--gold);color:#07060A;border:none;border-radius:50px;padding:6px 12px 6px 9px;font-family:var(--font-mono);font-size:0.38rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0}
 #dropLyricFAB:hover{background:var(--gold-warm);transform:scale(1.04)}
 #dropLyricFAB:active{transform:scale(0.96)}
 #dropLyricFAB svg{width:11px;height:11px;flex-shrink:0}
