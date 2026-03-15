@@ -125,12 +125,9 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   #cardStack .card-song{padding:9px 14px}
   #cardStack .song-icon{width:32px;height:32px}
   #cardStack .card-actions{height:48px}
-  #dropLyricFAB{top:10px;right:14px;padding:8px 13px 8px 10px;font-size:0.4rem}
 }
 
-#feed.active #dropLyricFAB{display:flex!important}
 
 /* FAB always visible in feed, never hidden by scroll */
 #feed.active #dropLyricFAB{display:flex!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
-#dropLyricFAB.scroll-hidden{display:flex!important}
 .feed-header-right{display:flex;align-items:center;gap:8px;margin-left:auto}
