@@ -61,7 +61,15 @@ function buildSwipeCard(post, i) {
   if (resonateBtn) {
     resonateBtn.onclick = function(e) {
       e.stopPropagation();
-      if (typeof toggleResonate === 'function') toggleResonate(post.id, resonateBtn);
+      if (typeof toggleResonate === 'function') {
+        toggleResonate(post.id, resonateBtn);
+        // Sync seg-count from r-count after toggleResonate updates it
+        setTimeout(function() {
+          const rCount = resonateBtn.querySelector('.r-count');
+          const segCount = resonateBtn.querySelector('.seg-count');
+          if (rCount && segCount) segCount.textContent = rCount.textContent;
+        }, 100);
+      }
     };
   }
 
