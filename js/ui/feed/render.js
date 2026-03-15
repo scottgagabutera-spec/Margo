@@ -58,7 +58,21 @@ function buildSwipeCard(post, i) {
     </div>`;
 
   const resonateBtn = div.querySelector('.resonate-seg');
-  if (typeof upgradeResonateButton === 'function') upgradeResonateButton(resonateBtn, post);
+  if (resonateBtn) {
+    resonateBtn.onclick = function(e) {
+      e.stopPropagation();
+      if (typeof toggleResonate === 'function') {
+        toggleResonate(post.id, resonateBtn);
+        const countEl = resonateBtn.querySelector('.seg-count');
+        if (countEl) {
+          const current = parseInt(countEl.textContent) || 0;
+          const resonated = resonateBtn.classList.contains('resonated');
+          countEl.textContent = resonated ? current - 1 : current + 1;
+          resonateBtn.classList.toggle('resonated');
+        }
+      }
+    };
+  }
 
   const lyricBackBtn = div.querySelector('.lyric-back-seg');
   if (typeof openEchoes === 'function')
