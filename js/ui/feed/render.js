@@ -72,12 +72,20 @@ function buildSwipeCard(post, i) {
   }
 
   const lyricBackBtn = div.querySelector('.lyric-back-seg');
-  if (typeof openEchoSheet === 'function')
-    lyricBackBtn.addEventListener('click', function(e) { e.stopPropagation(); openEchoSheet(post); });
+  if (lyricBackBtn) {
+    lyricBackBtn.onclick = function(e) {
+      e.stopPropagation();
+      if (typeof openEchoSheet === 'function') openEchoSheet(post);
+    };
+  }
 
   const shareBtn = div.querySelector('.share-seg');
-  if (typeof openShareSheet === 'function')
-    shareBtn.addEventListener('click', function(e) { e.stopPropagation(); openShareSheet(post); });
+  if (shareBtn) {
+    shareBtn.onclick = function(e) {
+      e.stopPropagation();
+      if (typeof openShareSheet === 'function') openShareSheet(post);
+    };
+  }
 
   return div;
 }
