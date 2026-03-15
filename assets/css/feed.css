@@ -131,3 +131,7 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 .feed-header-right{display:flex;align-items:center;gap:8px;margin-left:auto}
 
 #cardStack .r-count{display:none}
+
+/* Make seg-count highly visible */
+#cardStack .seg-count{font-size:0.52rem!important;opacity:1!important;color:#fff!important;font-weight:800!important}
+#cardStack .resonate-seg .seg-count{color:#C084FC!important;font-size:0.52rem!important;opacity:1!important;font-weight:800!important}
