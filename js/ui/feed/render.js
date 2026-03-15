@@ -68,7 +68,7 @@ function buildSwipeCard(post, i) {
           const rCount = resonateBtn.querySelector('.r-count');
           const segCount = resonateBtn.querySelector('.seg-count');
           if (rCount && segCount) segCount.textContent = rCount.textContent;
-        }, 100);
+        }, 600);
       }
     };
   }
