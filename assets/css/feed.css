@@ -125,7 +125,6 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   #cardStack .card-actions{height:48px}
 }
 
-
 /* FAB always visible in feed, never hidden by scroll */
 #feed.active #dropLyricFAB{display:flex!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
 .feed-header-right{display:flex;align-items:center;gap:8px;margin-left:auto}
