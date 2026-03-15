@@ -69,6 +69,8 @@ function mountUsernamePill() {
 }
 
 function goToLanding() {
+  const stack = document.getElementById('cardStack');
+  if (stack) delete stack.dataset.swipeReady;
   feed.classList.remove('active');
   landing.classList.add('active');
   setPageState('landing');

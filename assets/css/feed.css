@@ -82,7 +82,7 @@
 .nav-arrows-left{left:12px}
 .nav-arrows-right{right:12px}
 @media(max-width:600px){.nav-arrows-left{left:6px}.nav-arrows-right{right:6px}}
-.swipe-nav-arrow{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);font-size:1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.18s;backdrop-filter:blur(12px)}
+.swipe-nav-arrow{width:36px;height:36px;border-radius:50%;background:rgba(20,18,24,0.85);border:1.5px solid rgba(255,255,255,0.35);color:rgba(255,255,255,0.85);font-size:1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.18s;backdrop-filter:blur(12px);box-shadow:0 2px 12px rgba(0,0,0,0.5)}
 .swipe-nav-arrow:hover{background:rgba(255,255,255,0.13);color:#fff;border-color:rgba(255,255,255,0.25);transform:scale(1.08)}
 .swipe-nav-arrow:active{transform:scale(0.92)}
 
