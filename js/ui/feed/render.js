@@ -72,8 +72,8 @@ function buildSwipeCard(post, i) {
   }
 
   const lyricBackBtn = div.querySelector('.lyric-back-seg');
-  if (typeof openEchoes === 'function')
-    lyricBackBtn.addEventListener('click', function(e) { e.stopPropagation(); openEchoes(post); });
+  if (typeof openEchoSheet === 'function')
+    lyricBackBtn.addEventListener('click', function(e) { e.stopPropagation(); openEchoSheet(post); });
 
   const shareBtn = div.querySelector('.share-seg');
   if (typeof openShareSheet === 'function')
