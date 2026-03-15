@@ -3,7 +3,7 @@ function buildSwipeCard(post, i) {
   const k = post.knowledge || { song: 'Unknown Song', artist: 'Unknown Artist' };
   const vibeLabel = VIBE_LABELS[post.emotion] || post.emotion;
   const echoCnt = getEchoCount(post.id);
-  const resonateCount = (post.resonates || 0);
+  const resonateCount = (typeof getEchoCount === "function" ? Object.keys((typeof postAnalytics !== "undefined" && postAnalytics[post.id]?.resonates) || {}).length : (post.resonates || 0));
 
   const div = document.createElement('div');
   div.className = 'swipe-card';
