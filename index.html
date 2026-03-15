@@ -176,7 +176,7 @@
 <section id="feed">
   <header class="feed-header" id="feedHeader">
     <button class="header-btn" id="backBtn" style="display:none">Back</button>
-    <div class="feed-center" id="feedLogoHome" title="Back to landing" style="cursor:pointer" onclick="if(typeof showLanding==='function')showLanding();else{document.getElementById('feed').classList.remove('active');document.getElementById('landing').classList.remove('hidden')}">
+    <div class="feed-center" id="feedLogoHome" title="Back to landing" style="cursor:pointer" onclick="goToLanding()">
       <div class="feed-logo-wrap">
         <span class="feed-logo-mark">
           <span class="logo-ring"></span>
@@ -194,7 +194,7 @@
       </div>
       <span class="post-count"><span id="postCount">0</span> posts</span>
     </div>
-    <div id="headerUsernamePill" style="display:none"></div><button id="dropLyricFAB" aria-label="Drop a Lyric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Drop a Lyric</button>
+    <div class="feed-header-right"><div id="headerUsernamePill" style="display:none"></div><button id="dropLyricFAB" aria-label="Drop a Lyric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Drop a Lyric</button></div>
     <button class="header-btn primary" id="openComposer" style="display:none">Drop a Lyric</button>
   </header>
   <div class="new-posts-bar" id="newPostsIndicator">
