@@ -74,4 +74,3 @@ if (document.readyState === 'loading') {
   _mount();
 }
 
-})();
