@@ -176,7 +176,7 @@
 <section id="feed">
   <header class="feed-header" id="feedHeader">
     <button class="header-btn" id="backBtn" style="display:none">Back</button>
-    <div class="feed-center" id="feedLogoHome" title="Back to top">
+    <div class="feed-center" id="feedLogoHome" title="Back to landing" style="cursor:pointer" onclick="if(typeof showLanding==='function')showLanding();else{document.getElementById('feed').classList.remove('active');document.getElementById('landing').classList.remove('hidden')}">
       <div class="feed-logo-wrap">
         <span class="feed-logo-mark">
           <span class="logo-ring"></span>
@@ -232,8 +232,10 @@
     <div class="swipe-hint-arrow">↑</div>
     <div>swipe</div>
   </div>
-  <div class="nav-arrows-wrap">
+  <div class="nav-arrows-left">
     <button class="swipe-nav-arrow" id="navUp">↑</button>
+  </div>
+  <div class="nav-arrows-right">
     <button class="swipe-nav-arrow" id="navDown">↓</button>
   </div>
   <div class="swipe-progress-dots" id="progressDots"></div>

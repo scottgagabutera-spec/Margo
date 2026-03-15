@@ -6,7 +6,9 @@
 let swipeIndex = 0;
 let swipeDragging = false;
 let swipeStartY = 0;
+let swipeStartX = 0;
 let swipeDeltaY = 0;
+let swipeDeltaX = 0;
 let swipeActive = null;
 let swipeAnim = false;
 
@@ -69,6 +71,7 @@ function onSwipeTouchStart(e) {
   if (swipeAnim || e.target.closest('button')) return;
   swipeDragging = true;
   swipeStartY = e.touches ? e.touches[0].clientY : e.clientY;
+  swipeStartX = e.touches ? e.touches[0].clientX : e.clientX;
   swipeDeltaY = 0;
   if (swipeActive) swipeActive.style.transition = 'none';
 }
@@ -77,7 +80,9 @@ function onSwipeTouchMove(e) {
   if (!swipeDragging || !swipeActive) return;
   e.preventDefault();
   const y = e.touches ? e.touches[0].clientY : e.clientY;
+  const x = e.touches ? e.touches[0].clientX : e.clientX;
   swipeDeltaY = y - swipeStartY;
+  swipeDeltaX = x - swipeStartX;
   const filtered = getRankedPosts();
   if (swipeDeltaY > 0 && swipeIndex === 0) swipeDeltaY *= 0.15;
   if (swipeDeltaY < 0 && swipeIndex === filtered.length - 1) swipeDeltaY *= 0.15;
@@ -105,8 +110,12 @@ function onSwipeTouchMove(e) {
 function onSwipeTouchEnd() {
   if (!swipeDragging) return;
   swipeDragging = false;
-  const thr = window.innerHeight * 0.22;
-  if (swipeDeltaY < -thr) {
+  const thr = window.innerHeight * 0.12;
+  const thrX = window.innerWidth * 0.2;
+  if (Math.abs(swipeDeltaX) > Math.abs(swipeDeltaY) && Math.abs(swipeDeltaX) > thrX) {
+    if (swipeDeltaX < 0) swipeGoTo('next');
+    else swipeGoTo('prev');
+  } else if (swipeDeltaY < -thr) {
     swipeGoTo('next');
   } else if (swipeDeltaY > thr) {
     swipeGoTo('prev');
