@@ -75,7 +75,10 @@ function buildSwipeCard(post, i) {
   if (lyricBackBtn) {
     lyricBackBtn.onclick = function(e) {
       e.stopPropagation();
-      if (typeof openEchoSheet === 'function') openEchoSheet(post);
+      if (typeof openEchoSheet === 'function') {
+        const idx = posts.findIndex(p => p.id === post.id);
+        openEchoSheet(idx >= 0 ? idx : post);
+      }
     };
   }
 
