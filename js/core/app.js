@@ -44,6 +44,12 @@ function setPageState(page) {
 }
 
 // ── Navigation ──
+function setArrows(show) {
+  const al = document.querySelector('.nav-arrows-left');
+  const ar = document.querySelector('.nav-arrows-right');
+  if (al) al.style.display = show ? 'flex' : 'none';
+  if (ar) ar.style.display = show ? 'flex' : 'none';
+}
 function goToFeed() {
   landing.classList.remove('active');
   feed.classList.add('active');
@@ -53,6 +59,7 @@ function goToFeed() {
   setPageState('feed');
   mountUsernamePill();
   renderFeed();
+  setArrows(true);
 }
 
 /* ── Mount username pill into header ── */
@@ -69,6 +76,7 @@ function mountUsernamePill() {
 }
 
 function goToLanding() {
+  setArrows(false);
   const stack = document.getElementById('cardStack');
   if (stack) delete stack.dataset.swipeReady;
   feed.classList.remove('active');
