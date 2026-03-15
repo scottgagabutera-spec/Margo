@@ -18,7 +18,7 @@
 .username-pill{font-family:var(--font-mono);font-size:0.42rem;color:var(--text-3);letter-spacing:1px;text-transform:uppercase;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);padding:5px 12px;border-radius:20px}
 
 /* CARD STACK */
-#cardStack{position:absolute;top:56px;left:0;right:0;bottom:82px;overflow:hidden;touch-action:none}
+#cardStack{position:absolute;top:56px;left:0;right:0;bottom:86px;overflow:hidden;touch-action:none}
 @media(max-width:600px){#cardStack{top:50px;bottom:82px}}
 
 /* SWIPE CARD */
@@ -39,8 +39,8 @@
 
 /* ACTION STRIP */
 #cardStack .card-actions{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr 1fr;height:52px;background:rgba(0,0,0,0.7);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.05);flex-shrink:0}
-#cardStack .action-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;color:rgba(255,255,255,0.38);font-family:var(--font-mono);font-size:0.36rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;cursor:pointer;transition:color 0.15s,background 0.15s;position:relative;padding:0 6px}
-#cardStack .action-seg svg{width:16px;height:16px;transition:transform 0.2s,opacity 0.2s;opacity:0.5}
+#cardStack .action-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;color:rgba(255,255,255,0.6);font-family:var(--font-mono);font-size:0.38rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;cursor:pointer;transition:color 0.15s,background 0.15s;position:relative;padding:0 6px}
+#cardStack .action-seg svg{width:19px;height:19px;transition:transform 0.2s,opacity 0.2s;opacity:0.7}
 #cardStack .action-seg:hover{color:#fff;background:rgba(255,255,255,0.03)}
 #cardStack .action-seg:hover svg{opacity:1;transform:scale(1.15)}
 #cardStack .action-seg+.action-seg::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:1px;background:rgba(255,255,255,0.06)}
@@ -56,7 +56,7 @@
 #cardStack .share-dot{opacity:0.3;font-size:0.5rem}
 
 /* BOTTOM BAR */
-.room-tabs-wrap{position:absolute;bottom:38px;left:0;right:0;height:44px;display:flex;align-items:center;padding:0 14px;background:rgba(7,6,10,0.98);border-top:1px solid rgba(255,255,255,0.05);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;z-index:98}
+.room-tabs-wrap{position:absolute;bottom:38px;left:0;right:0;height:44px;display:flex;align-items:center;padding:0 14px;background:rgba(7,6,10,0.98);border-top:2px solid rgba(255,255,255,0.08);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;z-index:98}
 .room-tabs-wrap::-webkit-scrollbar{display:none}
 .room-tabs{display:flex;gap:20px;flex-shrink:0}
 .room-tab{flex-shrink:0;padding:0;border:none;background:none;color:var(--text-3);font-family:var(--font-mono);font-size:0.46rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;transition:color 0.15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
@@ -70,7 +70,7 @@
 .sort-sep{color:rgba(255,255,255,0.1);font-size:0.5rem;user-select:none}
 
 /* PROGRESS DOTS */
-.swipe-progress-dots{position:absolute;bottom:56px;left:0;right:0;z-index:96;display:flex;justify-content:center;align-items:center;gap:5px;padding:4px 0;pointer-events:none}
+.swipe-progress-dots{display:none}
 .prog-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.15);transition:all 0.35s;flex-shrink:0}
 .prog-dot.active{width:22px;border-radius:2px;background:var(--gold)}
 
