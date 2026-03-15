@@ -135,7 +135,6 @@ function initNavigation() {
       const dy = Math.abs(tSY - e.changedTouches[0].clientY);
       if (Math.abs(dx) > dy && Math.abs(dx) > 100) {
         if (dx > 0 && landing.classList.contains('active')) goToFeed();
-        if (dx < 0 && feed.classList.contains('active'))   goToLanding();
       }
     });
   });
