@@ -129,4 +129,5 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 /* FAB always visible in feed, never hidden by scroll */
 #feed.active #dropLyricFAB{display:flex!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
 .feed-header-right{display:flex;align-items:center;gap:8px;margin-left:auto}
-#cardStack .resonate-seg .seg-count{display:none}
+
+#cardStack .r-count{display:none}
