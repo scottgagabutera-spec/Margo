@@ -182,16 +182,7 @@ function initSwipeEngine() {
     Loneliness:'#a0a0ff', SendIt:'#00e5c8', LetOut:'#c864ff'
   };
 
-  document.querySelectorAll('.room-tab').forEach(function(tab) {
-    const room = tab.dataset.room;
-    if (TAB_COLORS[room]) tab.style.setProperty('--tab-dot', TAB_COLORS[room]);
-    tab.onclick = function() {
-      document.querySelectorAll('.room-tab').forEach(function(t) { t.classList.remove('active'); });
-      tab.classList.add('active');
-      if (typeof setActiveRoom === 'function') setActiveRoom(room);
-      renderFeed();
-    };
-  });
+  
 
   document.querySelectorAll('.sort-btn').forEach(function(btn) {
     btn.onclick = function() {
