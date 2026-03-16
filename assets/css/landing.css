@@ -255,3 +255,6 @@
 .stat-num.stat-sm{font-size:1.1rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--gold)}
 .stat-label{font-family:var(--font-mono);font-size:0.38rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,0.3)}
 .stat-divider{width:1px;background:rgba(255,255,255,0.08);align-self:stretch;flex-shrink:0;min-height:40px}
+
+/* Ticker label */
+.ticker-label{font-family:var(--font-mono);font-size:0.38rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,0.25);text-align:center;margin:0 0 10px;pointer-events:none}
