@@ -134,3 +134,12 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 /* Make seg-count highly visible */
 #cardStack .seg-count{font-size:0.52rem!important;opacity:1!important;color:#fff!important;font-weight:800!important}
 #cardStack .resonate-seg .seg-count{color:#C084FC!important;font-size:0.52rem!important;opacity:1!important;font-weight:800!important}
+
+/* Mobile action bar fixes */
+@media(max-width:600px){
+  #cardStack .card-actions{height:58px}
+  #cardStack .action-seg{font-size:0.42rem;gap:5px}
+  #cardStack .action-seg svg{width:20px;height:20px}
+  #cardStack .seg-count{font-size:0.48rem!important;min-width:12px;text-align:center}
+  #cardStack .resonate-seg .seg-count{font-size:0.48rem!important}
+}
