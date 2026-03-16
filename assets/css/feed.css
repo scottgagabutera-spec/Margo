@@ -161,3 +161,7 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 /* Post count and card counter more visible */
 .post-count{font-family:var(--font-mono);font-size:0.38rem;font-weight:700;color:rgba(255,255,255,0.45);letter-spacing:1.5px;text-transform:uppercase}
 .header-card-counter{font-family:var(--font-mono);font-size:0.38rem;font-weight:700;color:var(--gold);letter-spacing:2px;margin-left:6px}
+
+/* Album art blurred background */
+.card-artwork-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(40px);opacity:0.18;z-index:1;pointer-events:none;transform:scale(1.1)}
+.card-artwork-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,6,10,0.4) 0%,rgba(7,6,10,0.2) 50%,rgba(7,6,10,0.7) 100%);z-index:1;pointer-events:none}
