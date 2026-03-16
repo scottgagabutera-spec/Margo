@@ -264,3 +264,16 @@
 .ticker-label{color:rgba(255,255,255,0.55)!important;font-size:0.42rem!important}
 .btn-ghost{color:rgba(255,255,255,0.7)!important;border:1px solid rgba(255,255,255,0.25)!important;padding:10px 24px!important;border-radius:50px!important;font-size:0.75rem!important}
 .btn-ghost:hover{color:#fff!important;border-color:rgba(255,255,255,0.6)!important}
+
+/* Tagline and ticker label visibility boost */
+.tagline{
+  font-size:1.15rem!important;
+  color:rgba(255,255,255,0.82)!important;
+  font-style:italic!important;
+  letter-spacing:0.01em!important;
+}
+.ticker-label{
+  font-size:0.52rem!important;
+  color:rgba(255,255,255,0.6)!important;
+  letter-spacing:3px!important;
+}
