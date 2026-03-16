@@ -149,3 +149,15 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   #dropLyricFAB .fab-label{display:none}
   #dropLyricFAB{padding:6px 8px;gap:0}
 }
+
+/* Header mobile fixes */
+@media(max-width:600px){
+  #dropLyricFAB{font-size:0.32rem!important;padding:5px 8px 5px 6px!important;gap:4px!important}
+  #dropLyricFAB svg{width:8px!important;height:8px!important}
+  .username-pill{font-size:0.3rem!important;padding:3px 7px!important}
+  .feed-header-right{gap:5px}
+}
+
+/* Post count and card counter more visible */
+.post-count{font-family:var(--font-mono);font-size:0.38rem;font-weight:700;color:rgba(255,255,255,0.45);letter-spacing:1.5px;text-transform:uppercase}
+.header-card-counter{font-family:var(--font-mono);font-size:0.38rem;font-weight:700;color:var(--gold);letter-spacing:2px;margin-left:6px}
