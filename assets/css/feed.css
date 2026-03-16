@@ -143,3 +143,9 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   #cardStack .seg-count{font-size:0.48rem!important;min-width:12px;text-align:center}
   #cardStack .resonate-seg .seg-count{font-size:0.48rem!important}
 }
+
+.header-card-counter{font-family:var(--font-mono);font-size:0.4rem;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:2px;margin-left:6px}
+@media(max-width:600px){
+  #dropLyricFAB .fab-label{display:none}
+  #dropLyricFAB{padding:6px 8px;gap:0}
+}
