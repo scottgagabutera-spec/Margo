@@ -121,8 +121,8 @@ function scrollToFeed() {
 function initNavigation() {
   if (enterBtn) {
     enterBtn.onclick = () => {
-      goToFeed();
-      setTimeout(() => { openModal(composer); setTimeout(() => textInput?.focus(), 200); }, 100);
+      openModal(composer);
+      setTimeout(() => textInput?.focus(), 200);
     };
   }
 
