@@ -43,6 +43,8 @@ function initRoomTabs() {
       tabs.forEach(t=>t.classList.remove('active'));
       tab.classList.add('active');
       activeRoom = tab.dataset.room;
+      const stack = document.getElementById('cardStack');
+      if (stack) delete stack.dataset.swipeReady;
       renderFeed();
     };
   });
