@@ -57,8 +57,9 @@ function swipeGoTo(direction) {
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
       // Outgoing card
-      from.style.transition = 'transform 0.32s cubic-bezier(0.4,0,1,1)';
+      from.style.transition = 'transform 0.32s cubic-bezier(0.4,0,1,1), opacity 0.28s ease';
       from.style.transform = direction === 'next' ? 'translateY(-100%)' : 'translateY(100%)';
+      from.style.opacity = '0';
       // Incoming card — spring overshoot feel
       to.style.transition = 'transform 0.38s cubic-bezier(0.22,1.2,0.36,1)';
       to.style.transform = 'translateY(0) scale(1)';
@@ -171,8 +172,8 @@ function initSwipeEngine() {
   swipeIndex = 0;
   swipeActive = stack.querySelector('.swipe-card');
   stack.querySelectorAll('.swipe-card').forEach((c,i) => {
-    c.style.opacity = '1';
-    c.style.transform = i === 0 ? 'translateY(0)' : i > 0 ? 'translateY(100%)' : 'translateY(-100%)';
+    c.style.opacity = i === 0 ? '1' : '0';
+    c.style.transform = i === 0 ? 'translateY(0)' : 'translateY(100%)';
   });
 
   stack.addEventListener('touchstart', onSwipeTouchStart, { passive: true });
