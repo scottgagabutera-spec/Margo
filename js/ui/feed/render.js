@@ -110,6 +110,8 @@ function renderSkeleton() {
    RENDER FEED
 ══════════════════════════════════════════════════════════ */
 function renderFeed() {
+  const stack = document.getElementById('cardStack');
+  if (stack) delete stack.dataset.swipeReady;
   injectFeedStyles();
   injectSortBar();
   if (postsLoaded) updateLandingStats();
