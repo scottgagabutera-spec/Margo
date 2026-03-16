@@ -34,7 +34,10 @@ function buildSwipeCard(post, i) {
     </div>
     <div class="card-song">
       ${thumbHtml}
-      <div class="song-icon" style="background:${ecfg.bg};color:${ecfg.text}">&#9834;</div>
+      ${artworkUrl 
+        ? `<div class="song-icon song-icon-art" style="background-image:url('${artworkUrl}');background-size:cover;background-position:center;border:none"></div>`
+        : `<div class="song-icon" style="background:${ecfg.bg};color:${ecfg.text}">&#9834;</div>`
+      }
       <div class="song-text">
         <div class="song-title">${k.song}</div>
         <div class="song-artist">${k.artist}</div>
