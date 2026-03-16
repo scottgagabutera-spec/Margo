@@ -259,9 +259,9 @@
 <!-- COMPOSER -->
 <div id="composer" class="modal hidden">
   <div class="modal-sheet">
-    <div class="modal-top"><span class="modal-title">Drop a Lyric</span><button class="modal-close" id="closeComposer">×</button></div>
+    <div class="modal-top"><span class="modal-title">Share a Lyric</span><button class="modal-close" id="closeComposer">×</button></div>
     <div class="modal-body">
-      <span class="field-label">Lyric</span>
+
       <textarea id="textInput" maxlength="140" placeholder="The line living in your head…" inputmode="text"></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
       <div id="inspireWrap" style="display:none;">
@@ -281,40 +281,49 @@
         <button class="emotion-btn" data-emotion="SendIt">Send It</button>
         <button class="emotion-btn" data-emotion="LetOut">Let Out</button>
       </div>
-      <span class="field-label">Mode</span>
-      <div class="mode-row-form">
-        <button class="mode-btn active" data-mode="share">Share</button>
-        <button class="mode-btn" data-mode="guess">Guess</button>
-        <button class="mode-btn" data-mode="discover">Discover</button>
-      </div>
+
+
+
+
+
+
+
       <div id="shareInputs" class="conditional show">
-        <span class="field-label">Song Details</span>
-        <input id="songInput" placeholder="Song title" inputmode="text"/>
+
         <input id="artistInput" placeholder="Artist" inputmode="text"/>
       </div>
-      <div id="guessInputs" class="conditional">
+      <div id="guessInputs" class="conditional" style="display:none">
         <span class="field-label">Answer Key</span>
         <label class="check-row"><input type="checkbox" id="guessSongCheck" checked><span>Let them guess the song</span></label>
         <label class="check-row"><input type="checkbox" id="guessArtistCheck" checked><span>Let them guess the artist</span></label>
         <input id="guessSongAnswer" placeholder="Correct song title" inputmode="text"/>
         <input id="guessArtistAnswer" placeholder="Correct artist" inputmode="text"/>
       </div>
-      <div id="discoverInputs" class="conditional">
+      <div id="discoverInputs" class="conditional" style="display:none">
         <p class="hint">Don't know the song? The community will help identify it.</p>
         <input id="discoverSongInput" placeholder="Maybe the song? (optional)" inputmode="text"/>
         <input id="discoverArtistInput" placeholder="Maybe the artist? (optional)" inputmode="text"/>
       </div>
-      <details id="streamingSection">
-        <summary class="stream-toggle">Add Streaming Links (optional)</summary>
-        <div class="stream-grid">
-          <div class="stream-field"><span class="field-label">Spotify</span><input id="spotifyLink" type="url" inputmode="url"/></div>
-          <div class="stream-field"><span class="field-label">Apple Music</span><input id="appleLink" type="url" inputmode="url"/></div>
-          <div class="stream-field"><span class="field-label">YouTube</span><input id="youtubeLink" type="url" inputmode="url"/></div>
-          <div class="stream-field"><span class="field-label">SoundCloud</span><input id="soundcloudLink" type="url" inputmode="url"/></div>
+
+
+
+
+
+
+
+
+
+
+    <div class="modal-footer">
+      <button class="btn-primary full-btn" id="postBtn" style="display:none">Post</button>
+      <div class="composer-actions">
+        <button class="composer-btn composer-btn-primary" id="postAndCreateBtn" type="button">Post &amp; Create Visual</button>
+        <div class="composer-secondary-actions">
+          <button class="composer-btn composer-btn-secondary" id="justPostLink" type="button">Post Only</button>
+          <button class="composer-btn composer-btn-secondary" id="createOnlyBtn" type="button">Create Only</button>
         </div>
-      </details>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn-primary full-btn" id="postBtn">Post</button></div>
   </div>
 </div>
 
