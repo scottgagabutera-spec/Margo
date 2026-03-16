@@ -110,7 +110,13 @@ async function submitPost(openChooser = true) {
     community:   selectedEmotion,
     status:      'active',
     flagCount:   0,
-    knowledge:   { song: decodeHTML(songVal), artist: decodeHTML(artistVal) },
+    knowledge:   { 
+      song:       decodeHTML(songVal), 
+      artist:     decodeHTML(artistVal),
+      artwork:    geniusResult?.artwork     || null,
+      artworkFull:geniusResult?.artworkFull || null,
+      geniusId:   geniusResult?.id          || null,
+    },
     guessConfig: null,
     youtubeMeta: savedYtMeta,
     links: {
