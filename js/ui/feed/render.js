@@ -4,6 +4,8 @@ function buildSwipeCard(post, i) {
   const vibeLabel = VIBE_LABELS[post.emotion] || post.emotion;
   const echoCnt = getEchoCount(post.id);
   const resonateCount = (typeof getEchoCount === "function" ? Object.keys((typeof postAnalytics !== "undefined" && postAnalytics[post.id]?.resonates) || {}).length : (post.resonates || 0));
+  const artworkUrl = k.artwork || k.artworkFull || null;
+  const artworkHtml = artworkUrl ? `<div class="card-artwork-bg" style="background-image:url('${artworkUrl}')"></div><div class="card-artwork-overlay"></div>` : '';
 
   const div = document.createElement('div');
   div.className = 'swipe-card';
