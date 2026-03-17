@@ -1,6 +1,6 @@
 function initComposer() {
   injectComposerStyles();
-  textInput.oninput = () => { charCount.textContent = textInput.value.length; };
+  textInput.oninput = () => { charCount.textContent = textInput.value.length; updateComposerPreview(); };
 
   // Mode buttons hidden — always share
   currentMode = 'share';
@@ -11,6 +11,7 @@ function initComposer() {
       document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       selectedEmotion = btn.dataset.emotion;
+      updateComposerPreview();
     };
   });
   const pacBtn        = document.getElementById('postAndCreateBtn');
@@ -270,3 +271,139 @@ window.openGuess = function(index) {
   openModal(guessModal);
 };
 
+
+/* ============================================================
+   LIVE CARD PREVIEW
+   ============================================================ */
+function updateComposerPreview() {
+  const preview    = document.getElementById('composerPreview');
+  const lyricEl    = document.getElementById('previewLyric');
+  const emotionEl  = document.getElementById('previewEmotion');
+  const songStrip  = document.getElementById('previewSongStrip');
+  const artEl      = document.getElementById('previewArt');
+  const titleEl    = document.getElementById('previewSongTitle');
+  const artistEl   = document.getElementById('previewSongArtist');
+  const artworkBg  = document.getElementById('previewArtworkBg');
+  const artworkOv  = document.getElementById('previewArtworkOverlay');
+  if (!preview) return;
+
+  const lyric = typeof textInput !== 'undefined' ? textInput.value.trim() : '';
+  const song  = document.getElementById('songInput')?.value.trim()   || '';
+  const artist= document.getElementById('artistInput')?.value.trim() || '';
+
+  // Show preview as soon as user types
+  if (lyric.length > 0) {
+    preview.style.display = 'block';
+    lyricEl.textContent   = lyric;
+    lyricEl.style.opacity = '1';
+    lyricEl.style.fontStyle = 'normal';
+  } else {
+    preview.style.display = 'none';
+    return;
+  }
+
+  // Emotion glow
+  const ECFG = typeof EMOTION_CFG !== 'undefined' ? EMOTION_CFG : {};
+  const E_DEF = typeof E_DEFAULT  !== 'undefined' ? E_DEFAULT  : { bg:'#333', text:'#fff', border:'#555', cardBg:'#111', strip:'#333' };
+  const ecfg  = ECFG[selectedEmotion] || E_DEF;
+  if (selectedEmotion) {
+    emotionEl.style.display    = 'inline-block';
+    emotionEl.textContent      = selectedEmotion;
+    emotionEl.style.background = ecfg.bg;
+    emotionEl.style.color      = ecfg.text;
+    emotionEl.style.border     = `1px solid ${ecfg.border}`;
+    preview.style.borderColor  = ecfg.border || 'rgba(255,255,255,0.07)';
+  } else {
+    emotionEl.style.display = 'none';
+    preview.style.borderColor = 'rgba(255,255,255,0.07)';
+  }
+
+  // Album art background
+  const artwork = geniusResult?.artwork || geniusResult?.artworkFull || null;
+  if (artwork) {
+    artworkBg.style.backgroundImage = `url('${artwork}')`;
+    artworkBg.style.display = 'block';
+    artworkOv.style.display = 'block';
+  } else {
+    artworkBg.style.display = 'none';
+    artworkOv.style.display = 'none';
+  }
+
+  // Song strip
+  if (song && artist) {
+    songStrip.style.display = 'flex';
+    titleEl.textContent     = song;
+    const ft = geniusResult?.featuredArtists?.length ? ` ft. ${geniusResult.featuredArtists.join(', ')}` : '';
+    artistEl.textContent    = artist + ft;
+    if (artwork) {
+      artEl.style.backgroundImage = `url('${artwork}')`;
+    } else {
+      artEl.style.backgroundImage = 'none';
+      artEl.style.background      = ecfg.bg || 'rgba(255,255,255,0.1)';
+    }
+  } else {
+    songStrip.style.display = 'none';
+  }
+}
+
+/* ============================================================
+   LIVE CARD PREVIEW
+   ============================================================ */
+function updateComposerPreview() {
+  const preview   = document.getElementById('composerPreview');
+  const lyricEl   = document.getElementById('previewLyric');
+  const emotionEl = document.getElementById('previewEmotion');
+  const songStrip = document.getElementById('previewSongStrip');
+  const artEl     = document.getElementById('previewArt');
+  const titleEl   = document.getElementById('previewSongTitle');
+  const artistEl  = document.getElementById('previewSongArtist');
+  const artworkBg = document.getElementById('previewArtworkBg');
+  const artworkOv = document.getElementById('previewArtworkOverlay');
+  if (!preview) return;
+  const lyric  = typeof textInput !== 'undefined' ? textInput.value.trim() : '';
+  const song   = document.getElementById('songInput')?.value.trim()   || '';
+  const artist = document.getElementById('artistInput')?.value.trim() || '';
+  if (lyric.length > 0) {
+    preview.style.display   = 'block';
+    lyricEl.textContent     = lyric;
+    lyricEl.style.opacity   = '1';
+    lyricEl.style.fontStyle = 'normal';
+  } else {
+    preview.style.display = 'none';
+    return;
+  }
+  const ECFG  = typeof EMOTION_CFG !== 'undefined' ? EMOTION_CFG : {};
+  const E_DEF = { bg:'#333', text:'#fff', border:'#555' };
+  const ecfg  = ECFG[selectedEmotion] || E_DEF;
+  if (selectedEmotion) {
+    emotionEl.style.display    = 'inline-block';
+    emotionEl.textContent      = selectedEmotion;
+    emotionEl.style.background = ecfg.bg;
+    emotionEl.style.color      = ecfg.text;
+    emotionEl.style.border     = '1px solid ' + ecfg.border;
+    preview.style.borderColor  = ecfg.border || 'rgba(255,255,255,0.07)';
+  } else {
+    emotionEl.style.display   = 'none';
+    preview.style.borderColor = 'rgba(255,255,255,0.07)';
+  }
+  const artwork = geniusResult && (geniusResult.artwork || geniusResult.artworkFull);
+  if (artwork) {
+    artworkBg.style.backgroundImage = 'url(' + artwork + ')';
+    artworkBg.style.display = 'block';
+    artworkOv.style.display = 'block';
+  } else {
+    artworkBg.style.display = 'none';
+    artworkOv.style.display = 'none';
+  }
+  if (song && artist) {
+    songStrip.style.display = 'flex';
+    titleEl.textContent     = song;
+    const ft = geniusResult && geniusResult.featuredArtists && geniusResult.featuredArtists.length
+      ? ' ft. ' + geniusResult.featuredArtists.join(', ') : '';
+    artistEl.textContent = artist + ft;
+    artEl.style.backgroundImage = artwork ? 'url(' + artwork + ')' : 'none';
+    if (!artwork) artEl.style.background = ecfg.bg || 'rgba(255,255,255,0.1)';
+  } else {
+    songStrip.style.display = 'none';
+  }
+}

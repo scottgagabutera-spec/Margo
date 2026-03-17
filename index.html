@@ -264,6 +264,21 @@
 
       <textarea id="textInput" maxlength="140" placeholder="The line living in your head…" inputmode="text"></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
+      <div id="composerPreview" style="display:none;margin:12px 0;border-radius:16px;overflow:hidden;position:relative;min-height:120px;background:#07060A;border:1px solid rgba(255,255,255,0.07);">
+        <div id="previewArtworkBg" class="card-artwork-bg" style="display:none;"></div>
+        <div id="previewArtworkOverlay" class="card-artwork-overlay" style="display:none;"></div>
+        <div style="position:relative;z-index:2;padding:16px;">
+          <span id="previewEmotion" style="display:none;font-size:0.58rem;font-family:'Space Mono',monospace;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:20px;margin-bottom:10px;display:inline-block;"></span>
+          <div id="previewLyric" style="font-size:1.1rem;font-weight:700;color:#fff;line-height:1.4;margin:8px 0 12px;min-height:24px;opacity:0.4;font-style:italic;">Your lyric will appear here…</div>
+          <div id="previewSongStrip" style="display:none;align-items:center;gap:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">
+            <div id="previewArt" style="width:32px;height:32px;border-radius:6px;background:rgba(255,255,255,0.1);flex-shrink:0;background-size:cover;background-position:center;"></div>
+            <div>
+              <div id="previewSongTitle" style="font-size:0.78rem;font-weight:700;color:#fff;"></div>
+              <div id="previewSongArtist" style="font-size:0.65rem;color:rgba(255,255,255,0.5);margin-top:1px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div id="inspireWrap" style="display:none;">
         <button id="inspireBtn" type="button" style="width:100%;padding:10px;border-radius:10px;background:rgba(232,197,71,0.07);border:1px dashed rgba(232,197,71,0.3);color:#E8C547;font-family:'Space Mono',monospace;font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;cursor:pointer;transition:all 0.2s;">Need inspiration?</button>
         <div id="inspireSuggestions" style="display:none;margin-top:8px;flex-direction:column;gap:6px;"></div>
