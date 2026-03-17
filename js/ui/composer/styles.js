@@ -208,9 +208,6 @@ function injectComposerStyles() {
     .composer-btn-secondary:active { transform:scale(0.97); }
     .composer-btn-secondary:disabled { opacity:0.4;cursor:default; }
 
-    /* Hide old postBtn and identifyBtn */
-    #postBtn { display:none !important; }
-    #geniusIdentifyBtn { display:none !important; }
 
     /* Char count position fix */
     .char-count {
