@@ -13,25 +13,12 @@ function initComposer() {
       selectedEmotion = btn.dataset.emotion;
     };
   });
-
-  if (!document.getElementById('postAndCreateBtn')) {
-    const pacBtn = document.createElement('button');
-    pacBtn.id        = 'postAndCreateBtn';
-    pacBtn.type      = 'button';
-    pacBtn.innerHTML = 'Post &amp; Create Visual';
-    pacBtn.onclick   = () => submitPost(true);
-
-    const justPostBtn = document.createElement('button');
-    justPostBtn.id          = 'justPostLink';
-    justPostBtn.type        = 'button';
-    justPostBtn.textContent = 'or just post without creating';
-    justPostBtn.onclick     = () => submitPost(false);
-
-    const parent = postBtn.parentNode;
-    parent.insertBefore(pacBtn, postBtn);
-    parent.insertBefore(justPostBtn, postBtn);
-    postBtn.style.display = 'none';
-  }
+  const pacBtn        = document.getElementById('postAndCreateBtn');
+  const justPostBtn   = document.getElementById('justPostLink');
+  const createOnlyBtn = document.getElementById('createOnlyBtn');
+  if (pacBtn)         pacBtn.onclick        = () => submitPost('post+visual');
+  if (justPostBtn)    justPostBtn.onclick   = () => submitPost('post');
+  if (createOnlyBtn)  createOnlyBtn.onclick = () => submitPost('create');
 
   initGeniusIdentify();
   initYoutubeAutofetch();
