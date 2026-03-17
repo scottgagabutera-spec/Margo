@@ -171,27 +171,64 @@ function injectComposerStyles() {
         max-height:50vh;overflow-y:auto;
         box-shadow:0 -8px 40px rgba(0,0,0,0.6) !important;
       }
-    /* ── Composer action buttons ── */
-    .composer-actions{display:flex;flex-direction:column;gap:10px;width:100%}
-    .composer-secondary-actions{display:flex;gap:10px;width:100%}
-    .composer-btn-secondary{flex:1;padding:14px 16px;border-radius:var(--radius);background:transparent;border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.8);font-family:var(--font-display);font-weight:700;font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.2s}
-    .composer-btn-secondary:hover{border-color:rgba(255,255,255,0.45);color:#fff;background:rgba(255,255,255,0.05)}
-    .composer-btn-secondary:active{transform:scale(0.97)}
-    .composer-btn-secondary:disabled{opacity:0.4;cursor:default}
     }
+
+    /* ── Composer action buttons ── */
+    .composer-actions {
+      display:flex;flex-direction:column;gap:10px;width:100%;
+      margin-top:4px;
+    }
+    .composer-secondary-actions {
+      display:flex;gap:10px;width:100%;
+    }
+
+    /* Primary — gold */
+    .composer-btn-primary {
+      width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+      padding:18px 24px;border-radius:var(--radius);
+      background:linear-gradient(135deg,#E8C547 0%,#D4A820 100%);
+      color:#0B0B0D;font-family:var(--font-display);font-weight:900;
+      font-size:0.92rem;letter-spacing:1.5px;text-transform:uppercase;
+      border:none;cursor:pointer;transition:all 0.22s;
+      box-shadow:0 6px 28px rgba(232,197,71,0.30);
+    }
+    .composer-btn-primary:hover {
+      background:linear-gradient(135deg,#F5D46A 0%,#E8C547 100%);
+      box-shadow:0 10px 36px rgba(232,197,71,0.45);
+      transform:translateY(-2px);
+    }
+    .composer-btn-primary:active { transform:scale(0.97); }
+    .composer-btn-primary:disabled { opacity:0.55;cursor:default;transform:none;box-shadow:none; }
+
+    /* Secondary — outlined */
+    .composer-btn-secondary {
+      flex:1;padding:14px 16px;border-radius:var(--radius);
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.18);
+      color:rgba(255,255,255,0.75);
+      font-family:var(--font-display);font-weight:700;
+      font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;
+      cursor:pointer;transition:all 0.2s;
+    }
+    .composer-btn-secondary:hover {
+      border-color:rgba(255,255,255,0.45);
+      color:#fff;
+      background:rgba(255,255,255,0.05);
+    }
+    .composer-btn-secondary:active { transform:scale(0.97); }
+    .composer-btn-secondary:disabled { opacity:0.4;cursor:default; }
+
+    /* Hide old postBtn and identifyBtn */
+    #postBtn { display:none !important; }
+    #geniusIdentifyBtn { display:none !important; }
+
+    /* Char count position fix */
+    .char-count {
+      text-align:right;font-size:0.62rem;
+      color:rgba(255,255,255,0.3);
+      font-family:'Space Mono',monospace;
+      margin-top:4px;margin-bottom:8px;
+    }
+
   `;
-
-  document.head.appendChild(s);
-}
-
-/* ── STATE ── */
-let youtubeData    = null;
-let geniusResult   = null;
-let geniusTimer    = null;
-let ytSuggestTimer = null;
-let ytFetchTimer   = null;
-let lastGeniusQuery = '';
-
-/* ============================================================
-   GENIUS ENGINE
-   ============================================================ */
+  document.head.appendChild(s);}
