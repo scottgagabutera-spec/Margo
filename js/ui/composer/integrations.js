@@ -1,3 +1,11 @@
+/* ── STATE ── */
+let youtubeData     = null;
+let geniusResult    = null;
+let geniusTimer     = null;
+let ytSuggestTimer  = null;
+let ytFetchTimer    = null;
+let lastGeniusQuery = '';
+
 function initGeniusIdentify() {
   const textArea = document.getElementById('textInput');
   if (!textArea) return;
