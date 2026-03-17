@@ -83,6 +83,8 @@ function selectGeniusResult(result, card) {
   card.classList.add('selected');
   card.querySelector('.genius-use-tag').textContent = 'Selected';
   geniusResult = result;
+  // Fetch full song details silently
+  if (result.id) fetchGeniusDetail(result.id);
   const songEl   = document.getElementById('songInput');
   const artistEl = document.getElementById('artistInput');
   if (songEl)   songEl.value   = result.song;
@@ -243,3 +245,26 @@ function clearYoutubePreview() {
 /* ============================================================
    COMPOSER INIT
    ============================================================ */
+
+/* ============================================================
+   GENIUS DETAIL ENGINE
+   Fetches full song metadata silently after song selection
+   ============================================================ */
+async function fetchGeniusDetail(id) {
+  try {
+    const res  = await fetch(`/api/genius?id=${id}`);
+    const data = await res.json();
+    if (!res.ok || data.error) return;
+    geniusResult = {
+      ...geniusResult,
+      album:           data.album           || null,
+      releaseDate:     data.releaseDate      || null,
+      featuredArtists: data.featuredArtists  || [],
+      writers:         data.writers          || [],
+      producers:       data.producers        || [],
+    };
+    console.log('[Genius detail]', geniusResult.song, '·', geniusResult.album, '·', geniusResult.writers);
+  } catch (err) {
+    console.warn('[Genius detail failed]', err.message);
+  }
+}
