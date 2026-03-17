@@ -12,6 +12,18 @@ function initGeniusIdentify() {
   textArea.addEventListener('input', () => {
     clearTimeout(geniusTimer);
     const val = textArea.value.trim();
+    // If user clears the lyric — reset song, artist, YouTube and allow Genius to re-fire
+    if (val.length === 0) {
+      const songEl   = document.getElementById('songInput');
+      const artistEl = document.getElementById('artistInput');
+      if (songEl)   songEl.value   = '';
+      if (artistEl) artistEl.value = '';
+      geniusResult    = null;
+      lastGeniusQuery = '';
+      clearYoutubePreview();
+      document.getElementById('geniusResultsList')?.remove();
+      return;
+    }
     const songFilled = document.getElementById('songInput')?.value.trim();
     if (val.length >= 5 && !songFilled) {
       geniusTimer = setTimeout(() => {
