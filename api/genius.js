@@ -21,8 +21,38 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET')    return res.status(405).json({ error: 'Method not allowed' });
 
-  const { lyric, song } = req.query;
+  const { lyric, song, id } = req.query;
+
+  // ── Song detail by Genius ID ──
+  if (id) {
+    try {
+      const r = await fetch(
+        `https://api.genius.com/songs/${id}?text_format=plain`,
+        { headers: { 'Authorization': `Bearer ${process.env.GENIUS_API_KEY}` } }
+      );
+      if (!r.ok) return res.status(404).json({ error: 'Song not found' });
+      const data = await r.json();
+      const s = data.response?.song;
+      if (!s) return res.status(404).json({ error: 'Song not found' });
+      return res.status(200).json({
+        song:            s.title,
+        artist:          s.primary_artist?.name || null,
+        album:           s.album?.name          || null,
+        releaseDate:     s.release_date_for_display || null,
+        featuredArtists: s.featured_artists?.map(a => a.name) || [],
+        producers:       s.producer_artists?.map(a => a.name) || [],
+        writers:         s.writer_artists?.map(a => a.name)   || [],
+        artwork:         s.song_art_image_thumbnail_url        || null,
+        artworkFull:     s.song_art_image_url                  || null,
+        geniusUrl:       s.url                                 || null,
+      });
+    } catch (err) {
+      return res.status(500).json({ error: 'Song detail lookup failed' });
+    }
+  }
+
   const query = lyric || song;
+  if (!query) return res.status(400).json({ error: 'lyric or song query required' });
   if (!query) return res.status(400).json({ error: 'lyric or song query required' });
 
   if (!process.env.GENIUS_API_KEY) {
