@@ -173,21 +173,6 @@ function injectComposerStyles() {
       }
     }
   `;
-  document.head.appendChild(s);
-}
-
-/* ── STATE ── */
-let youtubeData    = null;
-let geniusResult   = null;
-let geniusTimer    = null;
-let ytSuggestTimer = null;
-let ytFetchTimer   = null;
-let lastGeniusQuery = '';
-
-/* ============================================================
-   GENIUS ENGINE
-   ============================================================ */
-
 /* ── Composer action buttons ── */
 .composer-actions{display:flex;flex-direction:column;gap:10px;width:100%}
 .composer-secondary-actions{display:flex;gap:10px;width:100%}
@@ -208,3 +193,18 @@ let lastGeniusQuery = '';
 }
 .composer-btn-secondary:active{transform:scale(0.97)}
 .composer-btn-secondary:disabled{opacity:0.4;cursor:default}
+
+  document.head.appendChild(s);
+}
+
+/* ── STATE ── */
+let youtubeData    = null;
+let geniusResult   = null;
+let geniusTimer    = null;
+let ytSuggestTimer = null;
+let ytFetchTimer   = null;
+let lastGeniusQuery = '';
+
+/* ============================================================
+   GENIUS ENGINE
+   ============================================================ */
