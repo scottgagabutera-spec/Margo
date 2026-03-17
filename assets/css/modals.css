@@ -92,6 +92,15 @@ input::placeholder { color: rgba(255,255,255,0.22); }
 @media(max-width:768px){ input,textarea{ font-size:16px!important; } }
 
 textarea#textInput {
+  min-height: 120px; resize: none;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  font-family: var(--font-lyric);
+  font-size: 1.25rem; line-height: 1.7; color: #fff; padding: 20px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  letter-spacing: -0.01em;
+}
   min-height: 90px; resize: none;
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.09);
@@ -195,6 +204,10 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
 @media(min-width:520px) { .modal-footer { padding-bottom: 14px; } }
 
 .field-label {
+  font-family: var(--font-mono); font-size: 0.55rem; font-weight: 700;
+  color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 3px;
+  margin-bottom: -4px;
+}
   font-family: var(--font-mono); font-size: 0.48rem; font-weight: 700;
   color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 2px;
 }
@@ -202,8 +215,19 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
 /* ══════════════════════════════════════
    VIBE BUTTONS
 ══════════════════════════════════════ */
-.emotion-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 7px; }
+.emotion-grid {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  gap: 8px;
+  padding: 4px 0 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.emotion-grid::-webkit-scrollbar { display: none; }
 .emotion-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 10px 4px 9px; border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.55);
@@ -278,10 +302,16 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
 .guess-field:focus { outline: none; border-color: var(--gold-border); box-shadow: 0 0 0 3px rgba(232,197,71,0.07); }
 /* v6.8 — composer inputs explicit font to fix inconsistency */
 #songInput,
-#artistInput,
-#guessSongInput,
-#guessArtistInput {
+#artistInput {
   font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 14px 16px;
+  letter-spacing: -0.01em;
+}
   font-size: 0.88rem;
   font-weight: 400;
 }
