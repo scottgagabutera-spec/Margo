@@ -1,0 +1,121 @@
+[1mdiff --git a/js/ui/composer/core.js b/js/ui/composer/core.js[m
+[1mindex cc45dfd..54feb1c 100644[m
+[1m--- a/js/ui/composer/core.js[m
+[1m+++ b/js/ui/composer/core.js[m
+[36m@@ -13,25 +13,12 @@[m [mfunction initComposer() {[m
+       selectedEmotion = btn.dataset.emotion;[m
+     };[m
+   });[m
+[31m-[m
+[31m-  if (!document.getElementById('postAndCreateBtn')) {[m
+[31m-    const pacBtn = document.createElement('button');[m
+[31m-    pacBtn.id        = 'postAndCreateBtn';[m
+[31m-    pacBtn.type      = 'button';[m
+[31m-    pacBtn.innerHTML = 'Post &amp; Create Visual';[m
+[31m-    pacBtn.onclick   = () => submitPost(true);[m
+[31m-[m
+[31m-    const justPostBtn = document.createElement('button');[m
+[31m-    justPostBtn.id          = 'justPostLink';[m
+[31m-    justPostBtn.type        = 'button';[m
+[31m-    justPostBtn.textContent = 'or just post without creating';[m
+[31m-    justPostBtn.onclick     = () => submitPost(false);[m
+[31m-[m
+[31m-    const parent = postBtn.parentNode;[m
+[31m-    parent.insertBefore(pacBtn, postBtn);[m
+[31m-    parent.insertBefore(justPostBtn, postBtn);[m
+[31m-    postBtn.style.display = 'none';[m
+[31m-  }[m
+[32m+[m[32m  const pacBtn        = document.getElementById('postAndCreateBtn');[m
+[32m+[m[32m  const justPostBtn   = document.getElementById('justPostLink');[m
+[32m+[m[32m  const createOnlyBtn = document.getElementById('createOnlyBtn');[m
+[32m+[m[32m  if (pacBtn)         pacBtn.onclick        = () => submitPost('post+visual');[m
+[32m+[m[32m  if (justPostBtn)    justPostBtn.onclick   = () => submitPost('post');[m
+[32m+[m[32m  if (createOnlyBtn)  createOnlyBtn.onclick = () => submitPost('create');[m
+ [m
+   initGeniusIdentify();[m
+   initYoutubeAutofetch();[m
+[36m@@ -72,7 +59,7 @@[m [mfunction initComposer() {[m
+    FIX 4 — postedPost snapshot passed directly to openShareSheet[m
+             so GIF/Poster canvas never reads stale window.currentPost[m
+    ============================================================ */[m
+[31m-async function submitPost(openChooser = true) {[m
+[32m+[m[32masync function submitPost(mode = 'post+visual') {[m
+   const pacBtn      = document.getElementById('postAndCreateBtn');[m
+   const justPostBtn = document.getElementById('justPostLink');[m
+   if (pacBtn?.disabled) return;[m
+[36m@@ -110,7 +97,18 @@[m [masync function submitPost(openChooser = true) {[m
+     community:   selectedEmotion,[m
+     status:      'active',[m
+     flagCount:   0,[m
+[31m-    knowledge:   { song: decodeHTML(songVal), artist: decodeHTML(artistVal) },[m
+[32m+[m[32m    knowledge:   {[m[41m [m
+[32m+[m[32m      song:       decodeHTML(songVal),[m[41m [m
+[32m+[m[32m      artist:     decodeHTML(artistVal),[m
+[32m+[m[32m      artwork:    geniusResult?.artwork     || null,[m
+[32m+[m[32m      artworkFull:geniusResult?.artworkFull || null,[m
+[32m+[m[32m      geniusId:   geniusResult?.id          || null,[m
+[32m+[m[32m      album:          geniusResult?.album           || null,[m
+[32m+[m[32m      releaseDate:    geniusResult?.releaseDate      || null,[m
+[32m+[m[32m      featuredArtists:geniusResult?.featuredArtists  || [],[m
+[32m+[m[32m      writers:        geniusResult?.writers          || [],[m
+[32m+[m[32m      producers:      geniusResult?.producers        || [],[m
+[32m+[m[32m    },[m
+     guessConfig: null,[m
+     youtubeMeta: savedYtMeta,[m
+     links: {[m
+[36m@@ -125,11 +123,13 @@[m [masync function submitPost(openChooser = true) {[m
+ [m
+   if (pacBtn)      { pacBtn.disabled = true;      pacBtn.innerHTML = '<span class="m-spinner"></span> Posting…'; }[m
+   if (justPostBtn) { justPostBtn.disabled = true; }[m
+[32m+[m[32m  const createOnlyBtn = document.getElementById('createOnlyBtn');[m
+[32m+[m[32m  if (createOnlyBtn) createOnlyBtn.disabled = true;[m
+ [m
+   try {[m
+     let savedPostId = null;[m
+ [m
+[31m-    if (isFirebaseEnabled) {[m
+[32m+[m[32m    if (isFirebaseEnabled && mode !== 'create') {[m
+       const ref = await postsRef.push(post);[m
+       savedPostId = ref.key;[m
+       await analyticsRef.child(ref.key).set({ views: 0, guesses: [], helps: [] });[m
+[36m@@ -168,18 +168,17 @@[m [masync function submitPost(openChooser = true) {[m
+     resetComposer();[m
+     closeModal(composer);[m
+ [m
+[31m-    if (openChooser) {[m
+[32m+[m[32m    if (mode === 'post+visual') {[m
+[32m+[m[32m      setTimeout(() => {[m
+[32m+[m[32m        if (typeof openShareSheet === 'function') openShareSheet(postedPost);[m
+[32m+[m[32m      }, 120);[m
+[32m+[m[32m    } else if (mode === 'post') {[m
+[32m+[m[32m      showToast('Your lyric is live.');[m
+[32m+[m[32m    } else if (mode === 'create') {[m
+       setTimeout(() => {[m
+[31m-        showToast('Posted — now make it visual');[m
+[31m-        if (typeof openStudioChooser === 'function') {[m
+[31m-          openStudioChooser();[m
+[31m-        } else if (typeof openShareSheet === 'function') {[m
+[31m-          // FIX 4 — pass postedPost directly, not just currentPost[m
+[31m-          openShareSheet(postedPost);[m
+[31m-        }[m
+[32m+[m[32m        if (typeof openGifStudio === 'function') openGifStudio(postedPost);[m
+[32m+[m[32m        else if (typeof openShareSheet === 'function') openShareSheet(postedPost);[m
+       }, 120);[m
+[31m-    } else {[m
+[31m-      showToast('Dropped.');[m
+     }[m
+ [m
+   } catch (err) {[m
+[36m@@ -187,6 +186,7 @@[m [masync function submitPost(openChooser = true) {[m
+     showToast(err.message || 'Something went wrong. Try again.');[m
+   } finally {[m
+     if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = 'Post &amp; Create Visual'; }[m
+[32m+[m[32m    if (createOnlyBtn) createOnlyBtn.disabled = false;[m
+     if (justPostBtn) { justPostBtn.disabled = false; }[m
+     if (typeof postBtn !== 'undefined' && postBtn) postBtn.disabled = false;[m
+   }[m
+[36m@@ -270,3 +270,4 @@[m [mwindow.openGuess = function(index) {[m
+   openModal(guessModal);[m
+ };[m
+ [m
+[41m+[m

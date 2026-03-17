@@ -53,7 +53,6 @@ export default async function handler(req, res) {
 
   const query = lyric || song;
   if (!query) return res.status(400).json({ error: 'lyric or song query required' });
-  if (!query) return res.status(400).json({ error: 'lyric or song query required' });
 
   if (!process.env.GENIUS_API_KEY) {
     return res.status(503).json({ error: 'Genius not configured' });
