@@ -187,3 +187,24 @@ let lastGeniusQuery = '';
 /* ============================================================
    GENIUS ENGINE
    ============================================================ */
+
+/* ── Composer action buttons ── */
+.composer-actions{display:flex;flex-direction:column;gap:10px;width:100%}
+.composer-secondary-actions{display:flex;gap:10px;width:100%}
+
+.composer-btn-secondary{
+  flex:1;padding:14px 16px;border-radius:var(--radius);
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.18);
+  color:rgba(255,255,255,0.8);
+  font-family:var(--font-display);font-weight:700;
+  font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:all 0.2s;
+}
+.composer-btn-secondary:hover{
+  border-color:rgba(255,255,255,0.45);
+  color:#fff;
+  background:rgba(255,255,255,0.05);
+}
+.composer-btn-secondary:active{transform:scale(0.97)}
+.composer-btn-secondary:disabled{opacity:0.4;cursor:default}
