@@ -47,16 +47,6 @@ function injectComposerStyles() {
     #postAndCreateBtn:disabled { opacity:0.55;cursor:default;transform:none;box-shadow:none; }
 
     /* ── FIX 2: "or just post" — visible white ── */
-    #justPostLink {
-      display:block;text-align:center;margin-top:10px;
-      font-size:0.68rem;font-family:'Space Mono',monospace;
-      letter-spacing:1px;text-transform:uppercase;
-      color:rgba(255,255,255,0.6);
-      cursor:pointer;background:none;border:none;width:100%;
-      padding:6px 0;transition:color 0.18s;
-    }
-    #justPostLink:hover:not(:disabled) { color:#fff; }
-    #justPostLink:disabled { opacity:0.4;cursor:default; }
 
     #geniusIdentifyBtn {
       width:100%;margin-top:7px;padding:11px 16px;
