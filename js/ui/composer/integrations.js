@@ -1,48 +1,30 @@
 function initGeniusIdentify() {
-  injectComposerStyles();
   const textArea = document.getElementById('textInput');
-  if (!textArea || document.getElementById('geniusIdentifyBtn')) return;
-  const btn = document.createElement('button');
-  btn.id = 'geniusIdentifyBtn'; btn.type = 'button';
-  btn.innerHTML = `Identify Song`;
-  textArea.parentNode.insertBefore(btn, textArea.nextSibling);
-  btn.onclick = () => {
-    const lyric = textArea.value.trim();
-    if (lyric.length < 5) { showToast('Type a lyric first'); return; }
-    runGeniusSearch(lyric);
-  };
+  if (!textArea) return;
   textArea.addEventListener('input', () => {
     clearTimeout(geniusTimer);
     const val = textArea.value.trim();
     const songFilled = document.getElementById('songInput')?.value.trim();
-    if (val.length >= 20 && !songFilled) {
-      btn.classList.add('active');
+    if (val.length >= 5 && !songFilled) {
       geniusTimer = setTimeout(() => {
         if (val === lastGeniusQuery) return;
         runGeniusSearch(val);
-      }, 1200);
-    } else {
-      btn.classList.remove('active');
+      }, 600);
     }
   });
 }
 
 async function runGeniusSearch(query) {
-  const btn = document.getElementById('geniusIdentifyBtn');
   lastGeniusQuery = query;
-  if (btn) { btn.innerHTML = `<span class="m-spinner"></span> Searching…`; btn.disabled = true; }
   document.getElementById('geniusResultsList')?.remove();
   try {
     const res  = await fetch(`/api/genius?lyric=${encodeURIComponent(query)}`);
     const data = await res.json();
-    if (btn) { btn.innerHTML = `Identify Song`; btn.disabled = false; }
     if (!res.ok || !data.results?.length) {
-      if (query.length > 20) showToast('No song found — try a different line');
       return;
     }
     renderGeniusResults(data.results);
   } catch (err) {
-    if (btn) { btn.innerHTML = `Identify Song`; btn.disabled = false; }
   }
 }
 
@@ -73,9 +55,8 @@ function renderGeniusResults(results) {
     list.appendChild(card);
   });
   wrap.appendChild(list);
-  document.getElementById('geniusIdentifyBtn')?.parentNode?.insertBefore(
-    wrap, document.getElementById('geniusIdentifyBtn').nextSibling
-  );
+  const textArea = document.getElementById('textInput');
+  if (textArea) textArea.parentNode.insertBefore(wrap, textArea.nextSibling);
 }
 
 function selectGeniusResult(result, card) {
