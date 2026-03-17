@@ -42,7 +42,7 @@ function buildSwipeCard(post, i) {
       }
       <div class="song-text">
         <div class="song-title">${k.song}</div>
-        <div class="song-artist">${k.artist}</div>
+        <div class="song-artist">${k.artist}${k.featuredArtists?.length ? ` ft. ${k.featuredArtists.join(', ')}` : ''}</div>
       </div>
     </div>
     <div class="card-actions">
