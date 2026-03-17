@@ -117,8 +117,8 @@
   #dropLyricFAB   { bottom: 22px; padding: 10px 22px; font-size: 0.75rem; }
   #margoScrollTop { bottom: 72px; right: 12px; }
   .scroll-top-label { font-size: 0.5rem; }
-  .emotion-grid { grid-template-columns: repeat(5,1fr); gap: 5px; }
-  .emotion-btn  { padding: 9px 2px 8px; font-size: 0.62rem; }
+  .emotion-grid { display: flex; overflow-x: auto; gap: 8px; }
+  .emotion-btn { flex-shrink: 0; white-space: nowrap; font-size: 0.72rem; }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
