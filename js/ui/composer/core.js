@@ -129,7 +129,7 @@ async function submitPost(mode = 'post+visual') {
   try {
     let savedPostId = null;
 
-    if (isFirebaseEnabled) {
+    if (isFirebaseEnabled && mode !== 'create') {
       const ref = await postsRef.push(post);
       savedPostId = ref.key;
       await analyticsRef.child(ref.key).set({ views: 0, guesses: [], helps: [] });
@@ -174,6 +174,11 @@ async function submitPost(mode = 'post+visual') {
       }, 120);
     } else if (mode === 'post') {
       showToast('Your lyric is live.');
+    } else if (mode === 'create') {
+      setTimeout(() => {
+        if (typeof openGifStudio === 'function') openGifStudio(postedPost);
+        else if (typeof openShareSheet === 'function') openShareSheet(postedPost);
+      }, 120);
     }
 
   } catch (err) {
