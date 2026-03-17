@@ -341,3 +341,15 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
   border-color: rgba(232,197,71,0.6);
   box-shadow: 0 0 0 3px rgba(232,197,71,0.08);
 }
+
+#songInput {
+  margin-bottom: 10px;
+}
+#songInput::placeholder,
+#artistInput::placeholder {
+  color: rgba(255,255,255,0.5);
+}
+#songInput,
+#artistInput {
+  color: #ffffff;
+}
