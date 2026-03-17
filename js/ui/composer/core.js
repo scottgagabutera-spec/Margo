@@ -59,7 +59,7 @@ function initComposer() {
    FIX 4 — postedPost snapshot passed directly to openShareSheet
             so GIF/Poster canvas never reads stale window.currentPost
    ============================================================ */
-async function submitPost(openChooser = true) {
+async function submitPost(mode = 'post+visual') {
   const pacBtn      = document.getElementById('postAndCreateBtn');
   const justPostBtn = document.getElementById('justPostLink');
   if (pacBtn?.disabled) return;
@@ -118,6 +118,8 @@ async function submitPost(openChooser = true) {
 
   if (pacBtn)      { pacBtn.disabled = true;      pacBtn.innerHTML = '<span class="m-spinner"></span> Posting…'; }
   if (justPostBtn) { justPostBtn.disabled = true; }
+  const createOnlyBtn = document.getElementById('createOnlyBtn');
+  if (createOnlyBtn) createOnlyBtn.disabled = true;
 
   try {
     let savedPostId = null;
@@ -161,18 +163,12 @@ async function submitPost(openChooser = true) {
     resetComposer();
     closeModal(composer);
 
-    if (openChooser) {
+    if (mode === 'post+visual') {
       setTimeout(() => {
-        showToast('Posted — now make it visual');
-        if (typeof openStudioChooser === 'function') {
-          openStudioChooser();
-        } else if (typeof openShareSheet === 'function') {
-          // FIX 4 — pass postedPost directly, not just currentPost
-          openShareSheet(postedPost);
-        }
+        if (typeof openShareSheet === 'function') openShareSheet(postedPost);
       }, 120);
-    } else {
-      showToast('Dropped.');
+    } else if (mode === 'post') {
+      showToast('Your lyric is live.');
     }
 
   } catch (err) {
@@ -180,6 +176,7 @@ async function submitPost(openChooser = true) {
     showToast(err.message || 'Something went wrong. Try again.');
   } finally {
     if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = 'Post &amp; Create Visual'; }
+    if (createOnlyBtn) createOnlyBtn.disabled = false;
     if (justPostBtn) { justPostBtn.disabled = false; }
     if (typeof postBtn !== 'undefined' && postBtn) postBtn.disabled = false;
   }
