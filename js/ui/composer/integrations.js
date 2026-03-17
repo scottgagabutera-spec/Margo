@@ -78,7 +78,6 @@ function selectGeniusResult(result, card) {
   const artistEl = document.getElementById('artistInput');
   if (songEl)   songEl.value   = result.song;
   if (artistEl) artistEl.value = result.artist;
-  if (typeof updateComposerPreview === 'function') updateComposerPreview();
   // Mode is always share — no mode buttons to click
   currentMode = 'share';
   clearYoutubePreview();
