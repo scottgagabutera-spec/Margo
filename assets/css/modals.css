@@ -137,6 +137,16 @@ textarea#textInput:focus {
   z-index: 200; padding: 0;
   backdrop-filter: blur(16px) saturate(0.8);
 }
+
+@media (max-width: 519px) {
+  .modal-sheet {
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border: none;
+  }
+  .modal { align-items: flex-end; padding: 0; }
+}
 @media(min-width:520px) { .modal { align-items: center; padding: 16px; } }
 .modal.hidden { display: none; }
 body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
