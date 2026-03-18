@@ -348,3 +348,8 @@
   .lyric-track:nth-child(2) { animation-duration: 40s; }
   .lyric-card { max-width: 280px; }
 }
+
+/* Prevent scroll bounce on landing page */
+html, body {
+  overscroll-behavior: none;
+}
