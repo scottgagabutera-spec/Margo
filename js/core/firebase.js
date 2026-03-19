@@ -16,6 +16,7 @@ const firebaseConfig = {
 };
 let isFirebaseEnabled = false;
 let postsRef          = null;
+let _pageSize = 20;
 let analyticsRef      = null;
 let adminConfigRef    = null;
 let firebaseAuth      = null;
@@ -137,7 +138,7 @@ function startFirebaseSync() {
     return;
   }
 
-  postsRef.orderByChild('timestamp').limitToLast(200).on('value', snapshot => {
+  postsRef.orderByChild('timestamp').limitToLast(_pageSize).on('value', snapshot => {
     const prevCount = posts.length;
     posts = [];
     snapshot.forEach(child => {
@@ -192,3 +193,17 @@ function startFirebaseSync() {
     // resonate.js hookAnalytics() handles the button refresh
   });
 }
+
+
+function loadMorePosts() {
+  _pageSize += 20;
+  postsRef.orderByChild('timestamp').limitToLast(_pageSize).on('value', snapshot => {
+    posts = [];
+    snapshot.forEach(child => {
+      const p = child.val(); p.id = child.key; posts.unshift(p);
+    });
+    posts.sort((a, b) => b.timestamp - a.timestamp);
+    if (typeof renderFeed === 'function') renderFeed();
+  });
+}
+window.loadMorePosts = loadMorePosts;

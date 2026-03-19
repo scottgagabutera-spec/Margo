@@ -62,6 +62,11 @@ function swipeGoTo(direction) {
       to.style.transition = 'transform 0.38s cubic-bezier(0.22,1.2,0.36,1)';
       to.style.transform = 'translateY(0) scale(1)';
       swipeIndex = toIdx;
+      // Pagination trigger - load more when 5 from end
+      const filtered2 = getRankedPosts();
+      if (toIdx >= filtered2.length - 5 && typeof loadMorePosts === 'function') {
+        loadMorePosts();
+      }
       swipeActive = to;
       setTimeout(function() { swipeAnim = false; updateSwipeUI(); }, 400);
     });
