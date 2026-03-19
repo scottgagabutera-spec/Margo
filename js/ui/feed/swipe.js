@@ -16,8 +16,6 @@ let swipeAnim = false;
 function updateSwipeUI() {
   const filtered = getRankedPosts();
   const total = filtered.length;
-  const counter = document.getElementById('cardCounter');
-  if (counter) counter.textContent = total ? (swipeIndex + 1) + ' / ' + total : '';
   const dotsEl = document.getElementById('progressDots');
   if (dotsEl) {
     dotsEl.innerHTML = '';
