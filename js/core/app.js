@@ -59,6 +59,14 @@ function goToFeed() {
   setPageState('feed');
   mountUsernamePill();
   renderFeed();
+  // Show swipe hint briefly on first feed load
+  const hint = document.getElementById('swipeHint');
+  if (hint) {
+    hint.style.display = 'flex';
+    setTimeout(() => { hint.style.display = 'none'; }, 4000);
+    const hideHint = () => { hint.style.display = 'none'; document.removeEventListener('touchstart', hideHint); };
+    document.addEventListener('touchstart', hideHint, { once: true });
+  }
   setArrows(true);
 }
 
