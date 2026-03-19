@@ -118,6 +118,7 @@ async function submitPost(mode = 'post+visual') {
       soundcloud: typeof soundcloudLink !== 'undefined' ? (soundcloudLink?.value.trim() || null) : null,
     },
     authorId:  userId,
+    username:  typeof getUsername === 'function' ? getUsername() : null,
     timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now(),
   };
 
