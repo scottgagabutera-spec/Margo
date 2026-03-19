@@ -62,9 +62,9 @@ function goToFeed() {
   // Show swipe hint briefly on first feed load
   const hint = document.getElementById('swipeHint');
   if (hint) {
-    hint.style.display = 'flex';
-    setTimeout(() => { hint.style.display = 'none'; }, 4000);
-    const hideHint = () => { hint.style.display = 'none'; document.removeEventListener('touchstart', hideHint); };
+    hint.classList.add('active');
+    setTimeout(() => { hint.classList.remove('active'); }, 4000);
+    const hideHint = () => { hint.classList.remove('active'); document.removeEventListener('touchstart', hideHint); };
     document.addEventListener('touchstart', hideHint, { once: true });
   }
   setArrows(true);

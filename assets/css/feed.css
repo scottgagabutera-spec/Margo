@@ -85,7 +85,8 @@
 .swipe-nav-arrow:active{transform:scale(0.92)}
 
 /* SWIPE HINT */
-.swipe-hint{position:absolute;bottom:200px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none;animation:swipeHintFade 4s ease forwards;}
+.swipe-hint{position:absolute;bottom:200px;left:50%;transform:translateX(-50%);z-index:200;display:none;flex-direction:column;align-items:center;gap:10px;pointer-events:none;}
+.swipe-hint.active{display:flex;animation:swipeHintFade 4s ease forwards;}
 .swipe-hint-arrow{display:flex;align-items:flex-end;gap:3px;height:28px;}
 .swipe-hint-arrow span{display:inline-block;width:3px;border-radius:3px;background:rgba(232,197,71,0.6);}
 .swipe-hint-arrow span:nth-child(1){height:10px;animation:margoWave 1.2s ease-in-out infinite 0s;}
