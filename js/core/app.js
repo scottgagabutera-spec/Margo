@@ -62,10 +62,10 @@ function goToFeed() {
   // Show swipe hint briefly on first feed load
   const hint = document.getElementById('swipeHint');
   if (hint) {
-    hint.classList.add('active');
-    setTimeout(() => { hint.classList.remove('active'); }, 4000);
-    const hideHint = () => { hint.classList.remove('active'); document.removeEventListener('touchstart', hideHint); };
-    document.addEventListener('touchstart', hideHint, { once: true });
+    hint.style.cssText = 'display:flex!important;opacity:1;visibility:visible;position:absolute;bottom:200px;left:50%;transform:translateX(-50%);z-index:200;flex-direction:column;align-items:center;gap:10px;pointer-events:none;transition:opacity 1s ease;';
+    setTimeout(() => { hint.style.opacity = '0'; }, 3000);
+    setTimeout(() => { hint.style.display = 'none'; }, 4000);
+    document.addEventListener('touchstart', () => { hint.style.opacity = '0'; setTimeout(() => { hint.style.display = 'none'; }, 1000); }, { once: true });
   }
   setArrows(true);
 }
