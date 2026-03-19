@@ -63,7 +63,7 @@ function goToFeed() {
   const hint = document.getElementById('swipeHint');
   if (hint) {
     setTimeout(() => {
-      hint.style.cssText = 'display:flex;opacity:1;visibility:visible;position:absolute;bottom:180px;left:50%;transform:translateX(-50%);z-index:9999;flex-direction:column;align-items:center;gap:10px;pointer-events:none;transition:opacity 0.8s ease;';
+      hint.style.cssText = 'display:flex;opacity:1;visibility:visible;position:absolute;bottom:240px;left:50%;transform:translateX(-50%);z-index:9999;flex-direction:column;align-items:center;gap:10px;pointer-events:none;transition:opacity 0.8s ease;';
       const hideHint = () => {
         hint.style.opacity = '0';
         setTimeout(() => { hint.style.display = 'none'; }, 800);
