@@ -118,22 +118,6 @@ async function fetchAndSaveYoutubeMeta(postId, song, artist) {
 /* ══════════════════════════════════════════════════════════
    STATS HELPER
 ══════════════════════════════════════════════════════════ */
-// Get real total count from Firebase separately
-function _fetchRealCount() {
-  postsRef.orderByChild('timestamp').once('value', snapshot => {
-    let total = 0;
-    snapshot.forEach(child => {
-      const p = child.val();
-      if (p.status !== 'hidden') total++;
-    });
-    window._realPostCount = total;
-    const postCountEl = document.getElementById('postCount');
-    if (postCountEl) postCountEl.textContent = total;
-    const liveCountEl = document.getElementById('liveCount');
-    if (liveCountEl) liveCountEl.textContent = total;
-  });
-}
-
 function _refreshStats() {
   if (!postsLoaded) return;
   if (typeof updateLandingStats === 'function') updateLandingStats();
@@ -154,7 +138,6 @@ function startFirebaseSync() {
     return;
   }
 
-  _fetchRealCount();
   postsRef.orderByChild('timestamp').limitToLast(_pageSize).on('value', snapshot => {
     const prevCount = posts.length;
     posts = [];
