@@ -63,9 +63,17 @@ function goToFeed() {
   const hint = document.getElementById('swipeHint');
   if (hint) {
     setTimeout(() => {
-      hint.style.cssText = 'display:flex;opacity:1;visibility:visible;position:absolute;bottom:200px;left:50%;transform:translateX(-50%);z-index:9999;flex-direction:column;align-items:center;gap:10px;pointer-events:none;transition:opacity 1s ease;';
-      setTimeout(() => { hint.style.opacity = '0'; }, 3000);
-      setTimeout(() => { hint.style.display = 'none'; }, 4200);
+      hint.style.cssText = 'display:flex;opacity:1;visibility:visible;position:absolute;bottom:280px;left:50%;transform:translateX(-50%);z-index:9999;flex-direction:column;align-items:center;gap:10px;pointer-events:none;transition:opacity 0.8s ease;';
+      const hideHint = () => {
+        hint.style.opacity = '0';
+        setTimeout(() => { hint.style.display = 'none'; }, 800);
+        document.removeEventListener('touchstart', hideHint);
+        document.removeEventListener('keydown', hideHint);
+        document.removeEventListener('wheel', hideHint);
+      };
+      document.addEventListener('touchstart', hideHint, { once: true });
+      document.addEventListener('keydown', hideHint, { once: true });
+      document.addEventListener('wheel', hideHint, { once: true });
     }, 800);
   }
   setArrows(true);
