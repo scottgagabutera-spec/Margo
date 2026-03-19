@@ -213,7 +213,6 @@ function resetComposer() {
   document.getElementById('geniusIdentifyBtn')?.classList.remove('active');
   document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
 
-  if (typeof modeBtns !== 'undefined' && modeBtns?.length) modeBtns.forEach((b,i) => b.classList.toggle('active', i===0));
   if (typeof shareInputs     !== 'undefined' && shareInputs)    shareInputs.classList.add('show');
   if (typeof guessInputs     !== 'undefined' && guessInputs)    guessInputs.classList.remove('show');
   if (typeof discoverInputs  !== 'undefined' && discoverInputs) discoverInputs.classList.remove('show');
@@ -221,7 +220,6 @@ function resetComposer() {
   if (typeof guessSongCheck   !== 'undefined' && guessSongCheck)   guessSongCheck.checked   = true;
   if (typeof guessArtistCheck !== 'undefined' && guessArtistCheck) guessArtistCheck.checked = true;
 
-  const iw = document.getElementById('inspireWrap');
   const is = document.getElementById('inspireSuggestions');
   if (iw) iw.style.display = 'none';
   if (is) { is.innerHTML = ''; is.style.display = 'none'; }
