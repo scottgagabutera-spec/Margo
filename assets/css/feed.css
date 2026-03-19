@@ -85,10 +85,17 @@
 .swipe-nav-arrow:active{transform:scale(0.92)}
 
 /* SWIPE HINT */
-.swipe-hint{position:absolute;bottom:240px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:var(--font-mono);font-size:0.46rem;color:rgba(255,255,255,0.22);letter-spacing:2px;text-transform:uppercase;animation:swipeHintFade 3.5s ease forwards;pointer-events:none}
-.swipe-hint-arrow{font-size:1.1rem;animation:swipeHintBounce 0.8s ease-in-out infinite alternate}
-@keyframes swipeHintBounce{from{transform:translateY(0)}to{transform:translateY(-7px)}}
-@keyframes swipeHintFade{0%{opacity:0}15%{opacity:1}70%{opacity:1}100%{opacity:0}}
+.swipe-hint{position:absolute;bottom:200px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none;animation:swipeHintFade 4s ease forwards;}
+.swipe-hint-arrow{display:flex;align-items:flex-end;gap:3px;height:28px;}
+.swipe-hint-arrow span{display:inline-block;width:3px;border-radius:3px;background:rgba(232,197,71,0.6);}
+.swipe-hint-arrow span:nth-child(1){height:10px;animation:margoWave 1.2s ease-in-out infinite 0s;}
+.swipe-hint-arrow span:nth-child(2){height:20px;animation:margoWave 1.2s ease-in-out infinite 0.15s;}
+.swipe-hint-arrow span:nth-child(3){height:28px;animation:margoWave 1.2s ease-in-out infinite 0.3s;}
+.swipe-hint-arrow span:nth-child(4){height:20px;animation:margoWave 1.2s ease-in-out infinite 0.45s;}
+.swipe-hint-arrow span:nth-child(5){height:10px;animation:margoWave 1.2s ease-in-out infinite 0.6s;}
+.swipe-hint-label{font-family:var(--font-mono);font-size:0.42rem;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;}
+@keyframes margoWave{0%,100%{transform:scaleY(0.4);opacity:0.4;}50%{transform:scaleY(1);opacity:1;}}
+@keyframes swipeHintFade{0%{opacity:0}20%{opacity:1}70%{opacity:1}100%{opacity:0}}
 
 /* FAB */
 #dropLyricFAB{position:relative;display:none;background:var(--gold);color:#07060A;border:none;border-radius:50px;padding:6px 12px 6px 9px;font-family:var(--font-mono);font-size:0.38rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0}
