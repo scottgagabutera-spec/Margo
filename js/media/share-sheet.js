@@ -311,18 +311,47 @@ function ssDrawFallback(ctx, W, H, post) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = cfg.text; ctx.fillRect(0, 0, W, 2);
 
-  ctx.fillStyle = 'rgba(232,197,71,0.5)';
-  ctx.font = `700 ${Math.round(W*0.04)}px 'Space Mono',monospace`;
-  ctx.textAlign = 'left';
-  ctx.fillText('MARGO', W*0.05, W*0.09);
+  // Ghost wordmark top left
+  const wSz = Math.max(14, Math.round(W*0.034));
+  const wPad = Math.round(W*0.048);
+  ctx.save();
+  ctx.font = `800 ${wSz}px Syne,"Arial Black",sans-serif`;
+  ctx.fillStyle = cfg.acc || "rgba(232,197,71,0.9)";
+  ctx.globalAlpha = 0.28;
+  ctx.textBaseline = "top"; ctx.textAlign = "left";
+  const wSpacing = wSz * 0.22; let wCx = wPad;
+  for (const ch of "MARGO".split("")) {
+    ctx.fillText(ch, wCx, wPad * 0.55);
+    wCx += ctx.measureText(ch).width + wSpacing;
+  }
+  ctx.restore();
 
   const lyric = (post.text || '').substring(0, 120);
   ctx.fillStyle = '#F0F0F0'; ctx.textAlign = 'center';
   const sz = lyric.length < 50 ? W*0.065 : W*0.048;
   ctx.font = `italic 600 ${sz}px 'DM Serif Display',serif`;
-  ssWrapText(ctx, lyric, W/2, H*0.44, W*0.84, sz*1.25);
+  ssWrapText(ctx, lyric, W/2, H*0.38, W*0.84, sz*1.25);
 
   ctx.fillStyle = cfg.text;
+  // M-mark circle bottom right
+  const mSz = Math.round(Math.min(W,H)*0.07);
+  const mbx = W - Math.round(W*0.036) - mSz;
+  const mby = H - Math.round(H*0.034) - mSz;
+  const mcx = mbx+mSz/2, mcy = mby+mSz/2;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(mcx,mcy,mSz/2,0,Math.PI*2);
+  ctx.fillStyle = cfg.acc || "#E8C547";
+  ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
+  ctx.fill(); ctx.shadowBlur=0;
+  const ms=mSz*0.62, mmx=mcx-ms/2, mmy=mcy-ms/2;
+  ctx.strokeStyle="#0B0B0D";
+  ctx.lineWidth=mSz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath();
+  ctx.moveTo(mmx,mmy+ms*0.78); ctx.lineTo(mmx,mmy+ms*0.13);
+  ctx.lineTo(mmx+ms*0.35,mmy+ms*0.60); ctx.lineTo(mmx+ms*0.50,mmy+ms*0.06);
+  ctx.lineTo(mmx+ms*0.65,mmy+ms*0.60); ctx.lineTo(mmx+ms,mmy+ms*0.13);
+  ctx.lineTo(mmx+ms,mmy+ms*0.78); ctx.stroke();
+  ctx.restore();
   ctx.font = `700 ${W*0.038}px 'Space Mono',monospace`;
   ctx.fillText((k.song||'').substring(0,28), W/2, H*0.76);
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
