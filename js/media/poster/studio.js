@@ -374,16 +374,39 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   ctx.fillRect(pad - W * 0.025, lY, W * 0.007, lH);
   ctx.restore();
 
-  /* ── MARGO wordmark ── */
-  const margoSz = Math.max(22, W * 0.055);
+  /* ── MARGO ghost wordmark ── */
+  const _isLight = design.textColor === "#000000" || design.textColor === "#1a1a20";
+  const _wSz = Math.max(14, Math.round(W*0.034));
+  const _wPad = Math.round(W*0.048);
   ctx.save();
-  ctx.font         = `800 ${margoSz}px 'Syne', sans-serif`;
-  ctx.fillStyle    = vibeColor;
-  ctx.globalAlpha  = 0.9;
-  ctx.textBaseline = 'top';
-  ctx.fillText('MARGO', pad, pad * 0.75);
+  ctx.font = "800 " + _wSz + "px Syne, Arial Black, sans-serif";
+  ctx.fillStyle = _isLight ? "#0B0B0D" : (design.accentColor || "#E8C547");
+  ctx.globalAlpha = 0.28;
+  ctx.textBaseline = "top"; ctx.textAlign = "left";
+  const _wSpacing = _wSz*0.22; let _wCx = _wPad;
+  for (const ch of "MARGO".split("")) {
+    ctx.fillText(ch, _wCx, _wPad*0.55);
+    _wCx += ctx.measureText(ch).width + _wSpacing;
+  }
   ctx.restore();
-
+  /* ── M-mark ── */
+  const _mSz = Math.round(Math.min(W,H)*0.07);
+  const _bx = W-Math.round(W*0.036)-_mSz, _by = H-Math.round(H*0.034)-_mSz;
+  const _mcx = _bx+_mSz/2, _mcy = _by+_mSz/2;
+  const _ms = _mSz*0.62, _mmx = _mcx-_ms/2, _mmy = _mcy-_ms/2;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(_mcx,_mcy,_mSz/2,0,Math.PI*2);
+  ctx.fillStyle = _isLight ? "#0B0B0D" : (design.accentColor || "#E8C547");
+  ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
+  ctx.fill(); ctx.shadowBlur=0;
+  ctx.strokeStyle = _isLight ? "#ffffff" : "#0B0B0D";
+  ctx.lineWidth=_mSz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath();
+  ctx.moveTo(_mmx,_mmy+_ms*0.78); ctx.lineTo(_mmx,_mmy+_ms*0.13);
+  ctx.lineTo(_mmx+_ms*0.35,_mmy+_ms*0.60); ctx.lineTo(_mmx+_ms*0.50,_mmy+_ms*0.06);
+  ctx.lineTo(_mmx+_ms*0.65,_mmy+_ms*0.60); ctx.lineTo(_mmx+_ms,_mmy+_ms*0.13);
+  ctx.lineTo(_mmx+_ms,_mmy+_ms*0.78); ctx.stroke();
+  ctx.restore();
   /* ── Lyric text ── */
   const lyricText = post.text || '';
   let fontSize = Math.min(W * 0.072, H * 0.055);
