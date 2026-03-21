@@ -62,13 +62,18 @@ const GS_ANIMS = {
 
 const GS_EXPORT_SIZE = 1080;
 
-/* ── MARGO GHOST WORDMARK (matches Lyric Back GIF) ── */
-function gsDrawWordmark(ctx, W, H, th) {
+/* ================================================================
+   MARGO WORDMARK
+   FIX: was 'Syne' — switched to 'Bebas Neue' (Syne removed from index.html)
+   ================================================================ */
+function gsDrawWordmark(ctx, W, H, theme) {
+  const isLight = theme.text === "#000000";
+  // Ghost wordmark top left - matches Lyric Back GIF
   const sz = Math.max(14, Math.round(W*0.034));
   const pad = Math.round(W*0.048);
   ctx.save();
   ctx.font = `800 ${sz}px "Syne","Arial Black",sans-serif`;
-  ctx.fillStyle = th.light ? "#0B0B0D" : th.acc;
+  ctx.fillStyle = isLight ? "#0B0B0D" : (theme.acc || "#E8C547");
   ctx.globalAlpha = 0.28;
   ctx.textBaseline = "top"; ctx.textAlign = "left";
   const spacing = sz*0.22; let cx = pad;
@@ -79,19 +84,20 @@ function gsDrawWordmark(ctx, W, H, th) {
   ctx.restore();
 }
 
-/* ── M-MARK CIRCLE (matches Lyric Back GIF) ── */
-  const sz = Math.round(Math.min(W,H)*0.07);
-  const bx = W - Math.round(W*0.036) - sz;
-  const by = H - Math.round(H*0.034) - sz;
-  const cx = bx+sz/2, cy = by+sz/2;
-  const s = sz*0.62, mx = cx-s/2, my = cy-s/2;
+function gsDrawMmark(ctx, W, H, theme) {
+  const isLight = theme.text === "#000000";
+  const mSz = Math.round(Math.min(W,H)*0.07);
+  const bx = W - Math.round(W*0.036) - mSz;
+  const by = H - Math.round(H*0.034) - mSz;
+  const mcx = bx+mSz/2, mcy = by+mSz/2;
+  const s = mSz*0.62, mx = mcx-s/2, my = mcy-s/2;
   ctx.save();
-  ctx.beginPath(); ctx.arc(cx,cy,sz/2,0,Math.PI*2);
-  ctx.fillStyle = th.acc;
+  ctx.beginPath(); ctx.arc(mcx,mcy,mSz/2,0,Math.PI*2);
+  ctx.fillStyle = isLight ? "#0B0B0D" : (theme.acc || "#E8C547");
   ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
   ctx.fill(); ctx.shadowBlur=0;
-  ctx.strokeStyle = th.light ? "#ffffff" : "#0B0B0D";
-  ctx.lineWidth=sz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.strokeStyle = isLight ? "#ffffff" : "#0B0B0D";
+  ctx.lineWidth=mSz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
   ctx.beginPath();
   ctx.moveTo(mx,my+s*0.78); ctx.lineTo(mx,my+s*0.13);
   ctx.lineTo(mx+s*0.35,my+s*0.60); ctx.lineTo(mx+s*0.50,my+s*0.06);
@@ -100,13 +106,28 @@ function gsDrawWordmark(ctx, W, H, th) {
   ctx.restore();
 }
 
-
-/* ================================================================
-   MARGO WORDMARK
-   FIX: was 'Syne' — switched to 'Bebas Neue' (Syne removed from index.html)
-   ================================================================ */
-
-
+function gsDrawMmark(ctx, W, H, theme) {
+  const isLight = theme.text === "#000000";
+  // M-mark circle bottom right - matches Lyric Back GIF
+  const mSz = Math.round(Math.min(W,H)*0.07);
+  const bx = W - Math.round(W*0.036) - mSz;
+  const by = H - Math.round(H*0.034) - mSz;
+  const mcx = bx+mSz/2, mcy = by+mSz/2;
+  const s = mSz*0.62, mx = mcx-s/2, my = mcy-s/2;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(mcx,mcy,mSz/2,0,Math.PI*2);
+  ctx.fillStyle = isLight ? "#0B0B0D" : "#E8C547";
+  ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
+  ctx.fill(); ctx.shadowBlur=0;
+  ctx.strokeStyle = isLight ? "#ffffff" : "#0B0B0D";
+  ctx.lineWidth=mSz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath();
+  ctx.moveTo(mx,my+s*0.78); ctx.lineTo(mx,my+s*0.13);
+  ctx.lineTo(mx+s*0.35,my+s*0.60); ctx.lineTo(mx+s*0.50,my+s*0.06);
+  ctx.lineTo(mx+s*0.65,my+s*0.60); ctx.lineTo(mx+s,my+s*0.13);
+  ctx.lineTo(mx+s,my+s*0.78); ctx.stroke();
+  ctx.restore();
+}
 function gsDrawWordmark(ctx, W, H, theme) {
   ctx.save();
   const isLight = theme.text === '#000000';
@@ -124,6 +145,7 @@ function gsDrawWordmark(ctx, W, H, theme) {
    WATERMARK PILL
    ================================================================ */
 function gsDrawWatermark(ctx, W, H, theme) {
+  gsDrawMmark(ctx, W, H, theme);
   gsDrawMmark(ctx, W, H, theme);
   ctx.save();
   const isLight = theme.text === '#000000';
