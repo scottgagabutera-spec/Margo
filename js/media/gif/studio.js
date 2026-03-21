@@ -674,7 +674,7 @@ function gsDrawMmark(ctx, W, H, th) {
   const cx = bx+sz/2, cy = by+sz/2, s = sz*0.62, mx = cx-s/2, my = cy-s/2;
   ctx.save();
   ctx.beginPath(); ctx.arc(cx,cy,sz/2,0,Math.PI*2);
-  ctx.fillStyle = th.light ? "#0B0B0D" : th.acc;
+  ctx.fillStyle = (th.text === "#000000" || th.text === "#1a1a20") ? "#0B0B0D" : th.accent;
   ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
   ctx.fill(); ctx.shadowBlur=0;
   ctx.strokeStyle = th.light ? "#ffffff" : "#0B0B0D";
