@@ -81,6 +81,23 @@ function gsDrawWordmark(ctx, W, H, th) {
   }
   ctx.restore();
 }
+function gsDrawWordmark(ctx, W, H, theme) {
+  const isLight = theme.text === "#000000";
+  // Ghost wordmark top left - matches Lyric Back GIF
+  const sz = Math.max(14, Math.round(W*0.034));
+  const pad = Math.round(W*0.048);
+  ctx.save();
+  ctx.font = `800 ${sz}px "Syne","Arial Black",sans-serif`;
+  ctx.fillStyle = isLight ? "#0B0B0D" : (theme.acc || "#E8C547");
+  ctx.globalAlpha = 0.28;
+  ctx.textBaseline = "top"; ctx.textAlign = "left";
+  const spacing = sz*0.22; let cx = pad;
+  for (const ch of "MARGO".split("")) {
+    ctx.fillText(ch, cx, pad*0.55);
+    cx += ctx.measureText(ch).width + spacing;
+  }
+  ctx.restore();
+}
 
 function gsDrawMmark(ctx, W, H, theme) {
   const isLight = theme.text === "#000000";
@@ -104,6 +121,40 @@ function gsDrawMmark(ctx, W, H, theme) {
   ctx.restore();
 }
 
+function gsDrawMmark(ctx, W, H, theme) {
+  const isLight = theme.text === "#000000";
+  // M-mark circle bottom right - matches Lyric Back GIF
+  const mSz = Math.round(Math.min(W,H)*0.07);
+  const bx = W - Math.round(W*0.036) - mSz;
+  const by = H - Math.round(H*0.034) - mSz;
+  const mcx = bx+mSz/2, mcy = by+mSz/2;
+  const s = mSz*0.62, mx = mcx-s/2, my = mcy-s/2;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(mcx,mcy,mSz/2,0,Math.PI*2);
+  ctx.fillStyle = isLight ? "#0B0B0D" : "#E8C547";
+  ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
+  ctx.fill(); ctx.shadowBlur=0;
+  ctx.strokeStyle = isLight ? "#ffffff" : "#0B0B0D";
+  ctx.lineWidth=mSz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath();
+  ctx.moveTo(mx,my+s*0.78); ctx.lineTo(mx,my+s*0.13);
+  ctx.lineTo(mx+s*0.35,my+s*0.60); ctx.lineTo(mx+s*0.50,my+s*0.06);
+  ctx.lineTo(mx+s*0.65,my+s*0.60); ctx.lineTo(mx+s,my+s*0.13);
+  ctx.lineTo(mx+s,my+s*0.78); ctx.stroke();
+  ctx.restore();
+}
+function gsDrawWordmark(ctx, W, H, theme) {
+  ctx.save();
+  const isLight = theme.text === '#000000';
+  const fSize   = Math.max(18, W * 0.048);
+  ctx.font         = `${fSize}px 'Bebas Neue', 'Arial Black', sans-serif`;
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'top';
+  ctx.shadowBlur   = 0;
+  ctx.fillStyle    = isLight ? '#0B0B0D' : '#E8C547';
+  ctx.fillText('MARGO', W * 0.045, W * 0.046);
+  ctx.restore();
+}
 
 /* ================================================================
    WATERMARK PILL
