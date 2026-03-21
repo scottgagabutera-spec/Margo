@@ -1,3 +1,22 @@
+
+function gsDrawMmark(ctx, W, H, th) {
+  const sz = Math.round(Math.min(W,H)*0.07);
+  const bx = W-Math.round(W*0.036)-sz, by = H-Math.round(H*0.034)-sz;
+  const cx = bx+sz/2, cy = by+sz/2, s = sz*0.62, mx = cx-s/2, my = cy-s/2;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx,cy,sz/2,0,Math.PI*2);
+  ctx.fillStyle = th.light ? "#0B0B0D" : th.acc;
+  ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
+  ctx.fill(); ctx.shadowBlur=0;
+  ctx.strokeStyle = th.light ? "#ffffff" : "#0B0B0D";
+  ctx.lineWidth=sz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath();
+  ctx.moveTo(mx,my+s*0.78); ctx.lineTo(mx,my+s*0.13);
+  ctx.lineTo(mx+s*0.35,my+s*0.60); ctx.lineTo(mx+s*0.50,my+s*0.06);
+  ctx.lineTo(mx+s*0.65,my+s*0.60); ctx.lineTo(mx+s,my+s*0.13);
+  ctx.lineTo(mx+s,my+s*0.78); ctx.stroke();
+  ctx.restore();
+}
 /* ============================================================
    MARGO — js/gif-studio.js
    v1.8 — FIXED
@@ -66,7 +85,22 @@ const GS_EXPORT_SIZE = 1080;
    MARGO WORDMARK
    FIX: was 'Syne' — switched to 'Bebas Neue' (Syne removed from index.html)
    ================================================================ */
-function gsDrawWordmark(ctx, W, theme) {
+function gsDrawWordmark(ctx, W, H, th) {
+  const sz = Math.max(14, Math.round(W*0.034));
+  const pad = Math.round(W*0.048);
+  ctx.save();
+  ctx.font = `800 ${sz}px "Syne","Arial Black",sans-serif`;
+  ctx.fillStyle = th.light ? "#0B0B0D" : th.acc;
+  ctx.globalAlpha = 0.28;
+  ctx.textBaseline = "top"; ctx.textAlign = "left";
+  const spacing = sz*0.22; let cx = pad;
+  for (const ch of "MARGO".split("")) {
+    ctx.fillText(ch, cx, pad*0.55);
+    cx += ctx.measureText(ch).width + spacing;
+  }
+  ctx.restore();
+}
+  gsDrawWordmark(ctx, W, H, theme);
   ctx.save();
   const isLight = theme.text === '#000000';
   const fSize   = Math.max(18, W * 0.048);
@@ -83,6 +117,7 @@ function gsDrawWordmark(ctx, W, theme) {
    WATERMARK PILL
    ================================================================ */
 function gsDrawWatermark(ctx, W, H, theme) {
+  gsDrawMmark(ctx, W, H, theme);
   ctx.save();
   const isLight = theme.text === '#000000';
   const text    = 'trymargo.com';
