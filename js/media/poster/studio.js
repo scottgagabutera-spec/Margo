@@ -12,53 +12,6 @@
 /* ══════════════════════════════════════════════════════════
    DESIGN CONFIG — matches GIF studio themes
 ══════════════════════════════════════════════════════════ */
-
-  /* ── Logo matching Lyric Back Poster ── */
-  const _th = { acc: design.accentColor || "#E8C547", light: design.textColor === "#000000" || design.textColor === "#1a1a20" };
-  ssDrawMargoWordmark(ctx, W, H, _th);
-  ssDrawWatermark(ctx, W, H, _th);
-  ssDrawMmark(ctx, W, H, _th);
-}
-/* ── M-MARK CIRCLE ── */
-function ssDrawMmark(ctx, W, H, th) {
-  const sz = Math.round(Math.min(W,H) * 0.07);
-  const bx = W - Math.round(W * 0.036) - sz;
-  const by = H - Math.round(H * 0.034) - sz;
-  const cx = bx + sz/2, cy = by + sz/2, ic = sz * 0.62;
-  ctx.save();
-  ctx.beginPath(); ctx.arc(cx,cy,sz/2,0,Math.PI*2);
-  ctx.fillStyle = th.acc;
-  ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=18;
-  ctx.fill(); ctx.shadowBlur=0;
-  const s=ic, mx=cx-s/2, my=cy-s/2;
-  ctx.strokeStyle = th.light ? '#ffffff' : '#0B0B0D';
-  ctx.lineWidth=sz*0.098; ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.beginPath();
-  ctx.moveTo(mx, my+s*0.78); ctx.lineTo(mx, my+s*0.13);
-  ctx.lineTo(mx+s*0.35, my+s*0.60); ctx.lineTo(mx+s*0.50, my+s*0.06);
-  ctx.lineTo(mx+s*0.65, my+s*0.60); ctx.lineTo(mx+s, my+s*0.13);
-  ctx.lineTo(mx+s, my+s*0.78); ctx.stroke();
-  ctx.restore();
-}
-/* ── WATERMARK PILL ── */
-function ssDrawWatermark(ctx, W, H, th) {
-  const fs=Math.max(9,Math.round(W*0.017)), light=th.light;
-  ctx.save();
-  ctx.font=`700 ${fs}px 'Space Mono',monospace`;
-  ctx.textBaseline='middle'; ctx.textAlign='center';
-  const txt='trymargo.com', tw=ctx.measureText(txt).width;
-  const pw=tw+W*0.044, ph=fs*1.9, px=W/2-pw/2, py=H-W*0.038-ph/2;
-  ctx.globalAlpha=light?0.25:0.22;
-  ctx.fillStyle=light?'#000000':'#ffffff';
-  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(px,py,pw,ph,ph/2); else ctx.rect(px,py,pw,ph); ctx.fill();
-  ctx.globalAlpha=light?0.45:0.36;
-  ctx.strokeStyle=light?'#000000':'#ffffff'; ctx.lineWidth=1;
-  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(px,py,pw,ph,ph/2); else ctx.rect(px,py,pw,ph); ctx.stroke();
-  ctx.globalAlpha=light?0.90:0.82;
-  ctx.fillStyle=light?'#0B0B0D':'#ffffff';
-  ctx.fillText(txt, W/2, py+ph/2);
-  ctx.restore();
-}
 const STUDIO_DESIGNS = [
   { id:'midnight-gold',   label:'Gold',    swatchCss:'linear-gradient(135deg,#0d0d0d,#E8C547)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#0B0B0D'); g.addColorStop(1,'#1a1400'); return g; }, accentColor:'#E8C547', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
   { id:'royal-purple',    label:'Violet',  swatchCss:'linear-gradient(135deg,#1a0033,#c77dff)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#0d0014'); g.addColorStop(1,'#1a003a'); return g; }, accentColor:'#c77dff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
