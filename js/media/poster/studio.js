@@ -389,25 +389,6 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
     wCx += ctx.measureText(ch).width + wSpacing;
   }
   ctx.restore();
-  // M-mark circle bottom right
-  const pmSz = Math.round(Math.min(W,H)*0.07);
-  const pbx = W - Math.round(W*0.036) - pmSz;
-  const pby = H - Math.round(H*0.034) - pmSz;
-  const pmcx = pbx+pmSz/2, pmcy = pby+pmSz/2;
-  const ps = pmSz*0.62, pmx = pmcx-ps/2, pmy = pmcy-ps/2;
-  ctx.save();
-  ctx.beginPath(); ctx.arc(pmcx,pmcy,pmSz/2,0,Math.PI*2);
-  ctx.fillStyle = isLight ? "#0B0B0D" : (design.accentColor || "#E8C547");
-  ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
-  ctx.fill(); ctx.shadowBlur=0;
-  ctx.strokeStyle = isLight ? "#ffffff" : "#0B0B0D";
-  ctx.lineWidth=pmSz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
-  ctx.beginPath();
-  ctx.moveTo(pmx,pmy+ps*0.78); ctx.lineTo(pmx,pmy+ps*0.13);
-  ctx.lineTo(pmx+ps*0.35,pmy+ps*0.60); ctx.lineTo(pmx+ps*0.50,pmy+ps*0.06);
-  ctx.lineTo(pmx+ps*0.65,pmy+ps*0.60); ctx.lineTo(pmx+ps,pmy+ps*0.13);
-  ctx.lineTo(pmx+ps,pmy+ps*0.78); ctx.stroke();
-  ctx.restore();
 
   /* ── Lyric text ── */
   const lyricText = post.text || '';
