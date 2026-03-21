@@ -1,3 +1,40 @@
+  /* ── Watermark + M-mark (matches Lyric Back Poster) ── */
+  const _isLight = design.textColor === "#000000" || design.textColor === "#1a1a20";
+  const _th = { acc: design.accentColor || "#E8C547", light: _isLight };
+  const _fs = Math.max(9, Math.round(W*0.017));
+  ctx.save();
+  ctx.font = `700 ${_fs}px "Space Mono",monospace`;
+  ctx.textBaseline = "middle"; ctx.textAlign = "center";
+  const _txt = "trymargo.com", _tw = ctx.measureText(_txt).width;
+  const _pw = _tw+W*0.044, _ph = _fs*1.9, _px = W/2-_pw/2, _py = H-W*0.038-_ph/2;
+  ctx.globalAlpha = _isLight ? 0.25 : 0.22;
+  ctx.fillStyle = _isLight ? "#000000" : "#ffffff";
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(_px,_py,_pw,_ph,_ph/2); else ctx.rect(_px,_py,_pw,_ph); ctx.fill();
+  ctx.globalAlpha = _isLight ? 0.45 : 0.36;
+  ctx.strokeStyle = _isLight ? "#000000" : "#ffffff"; ctx.lineWidth = 1;
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(_px,_py,_pw,_ph,_ph/2); else ctx.rect(_px,_py,_pw,_ph); ctx.stroke();
+  ctx.globalAlpha = _isLight ? 0.90 : 0.82;
+  ctx.fillStyle = _isLight ? "#0B0B0D" : "#ffffff";
+  ctx.fillText(_txt, W/2, _py+_ph/2);
+  ctx.restore();
+  /* M-mark */
+  const _mSz = Math.round(Math.min(W,H)*0.07);
+  const _bx = W-Math.round(W*0.036)-_mSz, _by = H-Math.round(H*0.034)-_mSz;
+  const _mcx = _bx+_mSz/2, _mcy = _by+_mSz/2;
+  const _s = _mSz*0.62, _mmx = _mcx-_s/2, _mmy = _mcy-_s/2;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(_mcx,_mcy,_mSz/2,0,Math.PI*2);
+  ctx.fillStyle = _th.acc;
+  ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
+  ctx.fill(); ctx.shadowBlur=0;
+  ctx.strokeStyle = _isLight ? "#ffffff" : "#0B0B0D";
+  ctx.lineWidth=_mSz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath();
+  ctx.moveTo(_mmx,_mmy+_s*0.78); ctx.lineTo(_mmx,_mmy+_s*0.13);
+  ctx.lineTo(_mmx+_s*0.35,_mmy+_s*0.60); ctx.lineTo(_mmx+_s*0.50,_mmy+_s*0.06);
+  ctx.lineTo(_mmx+_s*0.65,_mmy+_s*0.60); ctx.lineTo(_mmx+_s,_mmy+_s*0.13);
+  ctx.lineTo(_mmx+_s,_mmy+_s*0.78); ctx.stroke();
+  ctx.restore();
 (function() {
 /* ============================================================
    MARGO — js/studio.js
