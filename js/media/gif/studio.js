@@ -109,6 +109,8 @@ function gsDrawMmark(ctx, W, H, theme) {
    WATERMARK PILL
    ================================================================ */
 function gsDrawWatermark(ctx, W, H, theme) {
+  gsDrawMmark(ctx, W, H, theme);
+  gsDrawMmark(ctx, W, H, theme);
   ctx.save();
   const isLight = theme.text === '#000000';
   const text    = 'trymargo.com';
