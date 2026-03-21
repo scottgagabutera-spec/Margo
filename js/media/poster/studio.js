@@ -378,20 +378,10 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   const margoSz = Math.max(22, W * 0.055);
   ctx.save();
   ctx.font         = `800 ${margoSz}px 'Syne', sans-serif`;
-  /* ── Ghost wordmark ── */
-  const _isLight = design.textColor === "#000000" || design.textColor === "#1a1a20";
-  const _wSz = Math.max(14, Math.round(W*0.034));
-  const _wPad = Math.round(W*0.048);
-  ctx.save();
-  ctx.font = `800 ${_wSz}px "Syne","Arial Black",sans-serif`;
-  ctx.fillStyle = _isLight ? "#0B0B0D" : (design.accentColor || "#E8C547");
-  ctx.globalAlpha = 0.28;
-  ctx.textBaseline = "top"; ctx.textAlign = "left";
-  const _wSpacing = _wSz*0.22; let _wCx = _wPad;
-  for (const ch of "MARGO".split("")) {
-    ctx.fillText(ch, _wCx, _wPad*0.55);
-    _wCx += ctx.measureText(ch).width + _wSpacing;
-  }
+  ctx.fillStyle    = vibeColor;
+  ctx.globalAlpha  = 0.9;
+  ctx.textBaseline = 'top';
+  ctx.fillText('MARGO', pad, pad * 0.75);
   ctx.restore();
 
   /* ── Lyric text ── */
