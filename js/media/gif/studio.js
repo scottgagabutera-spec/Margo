@@ -101,6 +101,12 @@ function gsDrawWordmark(ctx, W, H, th) {
 }
 
 
+/* ================================================================
+   MARGO WORDMARK
+   FIX: was 'Syne' — switched to 'Bebas Neue' (Syne removed from index.html)
+   ================================================================ */
+
+
 function gsDrawWordmark(ctx, W, H, theme) {
   ctx.save();
   const isLight = theme.text === '#000000';
