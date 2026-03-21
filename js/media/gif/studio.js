@@ -66,6 +66,21 @@ const GS_EXPORT_SIZE = 1080;
    MARGO WORDMARK
    FIX: was 'Syne' — switched to 'Bebas Neue' (Syne removed from index.html)
    ================================================================ */
+function gsDrawWordmark(ctx, W, H, th) {
+  const sz = Math.max(14, Math.round(W*0.034));
+  const pad = Math.round(W*0.048);
+  ctx.save();
+  ctx.font = `800 ${sz}px "Syne","Arial Black",sans-serif`;
+  ctx.fillStyle = th.light ? "#0B0B0D" : th.acc;
+  ctx.globalAlpha = 0.28;
+  ctx.textBaseline = "top"; ctx.textAlign = "left";
+  const spacing = sz*0.22; let cx = pad;
+  for (const ch of "MARGO".split("")) {
+    ctx.fillText(ch, cx, pad*0.55);
+    cx += ctx.measureText(ch).width + spacing;
+  }
+  ctx.restore();
+}
 function gsDrawWordmark(ctx, W, H, theme) {
   const isLight = theme.text === "#000000";
   // Ghost wordmark top left - matches Lyric Back GIF
