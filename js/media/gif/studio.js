@@ -71,7 +71,7 @@ function gsDrawWordmark(ctx, W, H, th) {
   const pad = Math.round(W*0.048);
   ctx.save();
   ctx.font = '800 ' + sz + 'px Syne, Arial Black, sans-serif';
-  ctx.fillStyle = th.light ? '#0B0B0D' : th.acc;
+  ctx.fillStyle = (th.text === '#000000' || th.text === '#1a1a20') ? '#0B0B0D' : th.accent;
   ctx.globalAlpha = 0.28;
   ctx.textBaseline = 'top'; ctx.textAlign = 'left';
   const spacing = sz*0.22; let cx = pad;
@@ -677,7 +677,7 @@ function gsDrawMmark(ctx, W, H, th) {
   ctx.fillStyle = (th.text === "#000000" || th.text === "#1a1a20") ? "#0B0B0D" : th.accent;
   ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
   ctx.fill(); ctx.shadowBlur=0;
-  ctx.strokeStyle = th.light ? "#ffffff" : "#0B0B0D";
+  ctx.strokeStyle = (th.text === '#000000') ? '#ffffff' : '#0B0B0D';
   ctx.lineWidth=sz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
   ctx.beginPath();
   ctx.moveTo(mx,my+s*0.78); ctx.lineTo(mx,my+s*0.13);
