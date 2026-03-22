@@ -82,7 +82,7 @@ function gsDrawWordmark(ctx, W, H, th) {
   ctx.restore();
 }
 
-function gsDrawWatermark(ctx, W, H, theme) {
+function stDrawWatermark(ctx, W, H, {acc: theme.accent, light: theme.text==="#000000"}) {
   ctx.save();
   const isLight = theme.text === '#000000';
   const text    = 'trymargo.com';
@@ -175,7 +175,7 @@ function gsDrawFrame(ctx, W, H, t, post) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  gsDrawWordmark(ctx, W, H, theme);
+  stDrawWordmark(ctx, W, H, {acc: theme.accent, light: theme.text==="#000000"});
 
   const scale = W / 500;
   ctx.save();
@@ -192,7 +192,7 @@ function gsDrawFrame(ctx, W, H, t, post) {
 
   gsMeta(ctx, W, H, data, scale);
   gsDrawWatermark(ctx, W, H, theme);
-  gsDrawMmark(ctx, W, H, theme);
+  stDrawMmark(ctx, W, H, {acc: theme.accent, light: theme.text==="#000000"});
 }
 
 /* ================================================================
