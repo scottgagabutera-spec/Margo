@@ -1,8 +1,403 @@
-/* ── Logo matching Lyric Back Poster ── */
-  const _th = {acc: design.accentColor || "#E8C547", light: design.textColor==="#000000"||design.textColor==="#1a1a20"};
-  stDrawWordmark(ctx, W, H, _th);
-  stDrawWatermark(ctx, W, H, _th);
-  stDrawMmark(ctx, W, H, _th);
+(function() {
+/* ============================================================
+   MARGO — js/studio.js
+   v5.6 — FINAL
+   • NO CANONICAL FLAG — gif-studio.js is fully independent
+   • Wired to actual HTML panel IDs: panel-color, panel-font, panel-photo
+   • Canvas redraws on every control change
+   • Color swatches, fonts, photo all working
+   • MARGO wordmark correct size
+   ============================================================ */
+
+/* ══════════════════════════════════════════════════════════
+   DESIGN CONFIG — matches GIF studio themes
+══════════════════════════════════════════════════════════ */
+const STUDIO_DESIGNS = [
+  { id:'midnight-gold',   label:'Gold',    swatchCss:'linear-gradient(135deg,#0d0d0d,#E8C547)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#0B0B0D'); g.addColorStop(1,'#1a1400'); return g; }, accentColor:'#E8C547', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'royal-purple',    label:'Violet',  swatchCss:'linear-gradient(135deg,#1a0033,#c77dff)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#0d0014'); g.addColorStop(1,'#1a003a'); return g; }, accentColor:'#c77dff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'neon-cyan',       label:'Ocean',   swatchCss:'linear-gradient(135deg,#0a1420,#00e5ff)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#050e1a'); g.addColorStop(1,'#0a1e2e'); return g; }, accentColor:'#00e5ff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'sunset-coral',    label:'Ember',   swatchCss:'linear-gradient(135deg,#1a0a0a,#ff6b6b)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#1a0505'); g.addColorStop(1,'#2d0808'); return g; }, accentColor:'#ff6b6b', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'emerald-night',   label:'Forest',  swatchCss:'linear-gradient(135deg,#051a0d,#50fa7b)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#051a0d'); g.addColorStop(1,'#0a2e18'); return g; }, accentColor:'#50fa7b', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'rose-gold',       label:'Rose',    swatchCss:'linear-gradient(135deg,#1a0d0f,#f4a4c0)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#1a0d0f'); g.addColorStop(1,'#2d1219'); return g; }, accentColor:'#f4a4c0', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'monochrome',      label:'Mono',    swatchCss:'linear-gradient(135deg,#000,#fff)',          bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#000000'); g.addColorStop(1,'#111111'); return g; }, accentColor:'#ffffff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'vaporwave',       label:'Wave',    swatchCss:'linear-gradient(135deg,#ff71ce,#05ffa1)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#1a0533'); g.addColorStop(1,'#001a1a'); return g; }, accentColor:'#ff71ce', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'neon-dark',       label:'Neon',    swatchCss:'linear-gradient(135deg,#0a0a0a,#ff00ff)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#0a0a0a'); g.addColorStop(1,'#141414'); return g; }, accentColor:'#ff00ff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'y2k-chrome',      label:'Chrome',  swatchCss:'linear-gradient(135deg,#000033,#0ff)',      bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#000033'); g.addColorStop(1,'#000824'); return g; }, accentColor:'#00ffff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.5)' },
+  { id:'brutalist',       label:'Brutal',  swatchCss:'linear-gradient(135deg,#fff,#000)',          bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#ffffff'); g.addColorStop(1,'#f0f0f0'); return g; }, accentColor:'#000000', textColor:'#000000', metaColor:'rgba(0,0,0,0.5)' },
+  { id:'cream-editorial', label:'Bone',    swatchCss:'linear-gradient(135deg,#f5f1e8,#2a2520)',   bg:(w,h,ctx)=>{ const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,'#f5f1e8'); g.addColorStop(1,'#ede8dc'); return g; }, accentColor:'#B8901A', textColor:'#1a1a20', metaColor:'rgba(26,26,32,0.5)' },
+];
+
+const STUDIO_FONTS = [
+  { id:'playfair',      label:'Playfair',     css:"'Playfair Display', serif",      weight:'700', style:'italic',  preview:'Say everything' },
+  { id:'cormorant',     label:'Cormorant',    css:"'Cormorant Garamond', serif",     weight:'600', style:'italic',  preview:'Say everything' },
+  { id:'lora',          label:'Lora',         css:"'Lora', serif",                  weight:'600', style:'italic',  preview:'Say everything' },
+  { id:'merriweather',  label:'Merriweather', css:"'Merriweather', serif",           weight:'700', style:'normal',  preview:'Say everything' },
+  { id:'josefin',       label:'Josefin',      css:"'Josefin Sans', sans-serif",      weight:'700', style:'normal',  preview:'Say everything' },
+  { id:'bebas',         label:'Bebas',        css:"'Bebas Neue', sans-serif",        weight:'400', style:'normal',  preview:'SAY EVERYTHING' },
+  { id:'oswald',        label:'Oswald',       css:"'Oswald', sans-serif",            weight:'600', style:'normal',  preview:'Say everything' },
+  { id:'dancing',       label:'Dancing',      css:"'Dancing Script', cursive",       weight:'700', style:'normal',  preview:'Say everything' },
+];
+
+const VIBE_COLORS = {
+  Love:'#FF6B9D', Heartbreak:'#ff5050', Hope:'#6B8CFF', Nostalgia:'#E8C547',
+  Healing:'#4ade80', Joy:'#ffc847', Rage:'#FF6440', Loneliness:'#a0a0ff',
+  SendIt:'#00e5c8', LetOut:'#c864ff',
+};
+const VIBE_LABELS = {
+  Love:'Love', Heartbreak:'Heartbreak', Hope:'Hope', Nostalgia:'Nostalgia',
+  Healing:'Healing', Joy:'Joy', Rage:'Rage', Loneliness:'Loneliness',
+  SendIt:'Send It', LetOut:'Let Out',
+};
+
+const CANVAS_SIZES = {
+  square:    { w:1080, h:1080 },
+  portrait:  { w:1080, h:1350 },
+  story:     { w:1080, h:1920 },
+  landscape: { w:1280, h:720  },
+};
+
+/* ══════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════ */
+let studioDesign      = 'midnight-gold';
+let studioFont        = 'playfair';
+let studioBrightness  = 100;
+let studioCanvasSize  = 'square';
+let studioPhotoData   = null;
+let studioPhotoFilter = 'none';
+let studioPhotoOpacity= 0.4;
+let studioBlur        = 0;
+let studioDim         = 50;
+let studioPost        = null;
+
+/* ══════════════════════════════════════════════════════════
+   INJECT STYLES
+══════════════════════════════════════════════════════════ */
+function injectStudioStyles() {
+  if (document.getElementById('studioV56styles')) return;
+  const s = document.createElement('style');
+  s.id = 'studioV56styles';
+  s.textContent = `
+    .studio-overlay { position:fixed;inset:0;z-index:800;display:flex;flex-direction:column;background:#090910; }
+    .studio-overlay.hidden { display:none!important; }
+
+    .studio-stage {
+      flex:1;position:relative;display:flex;align-items:center;justify-content:center;
+      background:#0a0a12;overflow:hidden;min-height:0;
+    }
+    #studioCanvas { border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.7); max-width:100%; max-height:100%; }
+
+    .studio-topbar {
+      position:absolute;top:0;left:0;right:0;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 16px;background:linear-gradient(to bottom,rgba(0,0,0,0.8),transparent);
+      z-index:10;
+    }
+    .studio-back-btn {
+      width:36px;height:36px;border-radius:50%;
+      background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+      color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      transition:all 0.18s;
+    }
+    .studio-back-btn:hover { background:rgba(255,255,255,0.16); }
+    .studio-title {
+      font-family:'Syne',sans-serif;font-weight:800;font-size:0.8rem;
+      letter-spacing:2px;color:#E8C547;text-transform:uppercase;
+    }
+    .studio-export-btn {
+      padding:8px 18px;border-radius:20px;
+      background:#E8C547;border:none;color:#0B0B0D;
+      font-family:'Space Mono',monospace;font-weight:700;font-size:0.6rem;
+      letter-spacing:1px;text-transform:uppercase;cursor:pointer;
+      transition:all 0.18s;
+    }
+    .studio-export-btn:hover { background:#f5d560;transform:scale(1.04); }
+    .studio-export-btn:disabled { opacity:0.5;cursor:wait; }
+
+    .studio-dock {
+      flex-shrink:0;background:#0f0e15;border-top:1px solid rgba(255,255,255,0.07);
+      display:flex;flex-direction:column;max-height:42dvh;overflow:hidden;
+    }
+
+    .dock-tabs {
+      display:flex;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;
+    }
+    .dock-tab {
+      flex:1;padding:12px 8px;background:none;border:none;
+      font-family:'Space Mono',monospace;font-size:0.52rem;font-weight:700;
+      color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:1px;
+      cursor:pointer;transition:all 0.18s;border-bottom:2px solid transparent;
+    }
+    .dock-tab:hover { color:rgba(255,255,255,0.65); }
+    .dock-tab.active { color:#E8C547;border-bottom-color:#E8C547; }
+
+    .dock-panel { display:none;padding:14px 16px;overflow-y:auto;flex:1; scrollbar-width:none; }
+    .dock-panel::-webkit-scrollbar { display:none; }
+    .dock-panel.active { display:block; }
+
+    /* Color swatches */
+    .color-scenes {
+      display:grid!important;grid-template-columns:repeat(6,1fr)!important;
+      gap:8px!important;margin-bottom:14px!important;
+    }
+    .scene-swatch {
+      display:flex;flex-direction:column;align-items:center;gap:4px;
+      background:none;border:none;cursor:pointer;padding:0;
+    }
+    .swatch-preview {
+      width:100%;aspect-ratio:1;border-radius:8px;
+      border:2px solid rgba(255,255,255,0.1);transition:all 0.18s;display:block;
+    }
+    .scene-swatch:hover .swatch-preview { border-color:rgba(255,255,255,0.35);transform:scale(1.07); }
+    .scene-swatch.active .swatch-preview { border-color:#E8C547;box-shadow:0 0 0 2px rgba(232,197,71,0.35); }
+    .swatch-label {
+      font-family:'Space Mono',monospace;font-size:0.4rem;font-weight:700;
+      color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.5px;transition:color 0.18s;
+    }
+    .scene-swatch.active .swatch-label { color:#E8C547; }
+
+    /* Brightness row */
+    .brightness-row {
+      display:flex;align-items:center;gap:10px;padding-top:10px;
+      border-top:1px solid rgba(255,255,255,0.07);
+    }
+    .dock-label {
+      font-family:'Space Mono',monospace;font-size:0.46rem;font-weight:700;
+      color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1.5px;
+      display:block;margin-bottom:6px;flex-shrink:0;
+    }
+    .studio-slider {
+      flex:1;-webkit-appearance:none;appearance:none;
+      height:3px;border-radius:2px;outline:none;cursor:pointer;
+    }
+    .studio-slider::-webkit-slider-thumb {
+      -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+      background:#E8C547;cursor:pointer;box-shadow:0 0 8px rgba(232,197,71,0.5);
+    }
+    .studio-slider-val {
+      font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;
+      color:#E8C547;min-width:36px;text-align:right;
+    }
+
+    /* Font cards */
+    .font-cards { display:flex;flex-direction:column;gap:5px; }
+    .font-card {
+      display:flex;align-items:center;justify-content:space-between;
+      padding:9px 13px;border-radius:10px;
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+      cursor:pointer;transition:all 0.18s;
+    }
+    .font-card:hover { border-color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.06); }
+    .font-card.active { border-color:rgba(232,197,71,0.5);background:rgba(232,197,71,0.07); }
+    .font-card-preview { font-size:0.9rem;color:rgba(255,255,255,0.7); }
+    .font-card.active .font-card-preview { color:#fff; }
+    .font-card-name {
+      font-family:'Space Mono',monospace;font-size:0.44rem;font-weight:700;
+      color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1px;
+    }
+    .font-card.active .font-card-name { color:#E8C547; }
+
+    /* Photo zone */
+    .photo-drop-zone {
+      border:1.5px dashed rgba(255,255,255,0.2);border-radius:12px;padding:18px;
+      display:flex;flex-direction:column;align-items:center;gap:8px;
+      cursor:pointer;transition:all 0.2s;background:rgba(255,255,255,0.02);
+      margin-bottom:12px;text-align:center;
+    }
+    .photo-drop-zone:hover,.photo-drop-zone.has-photo {
+      border-color:rgba(232,197,71,0.4);background:rgba(232,197,71,0.03);
+    }
+    .photo-drop-icon { font-size:1.5rem;opacity:0.45; }
+    .photo-drop-text {
+      font-family:'Space Mono',monospace;font-size:0.52rem;font-weight:700;
+      color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:1px;
+    }
+    .photo-controls { display:flex;flex-direction:column;gap:10px; }
+    .photo-controls.hidden { display:none; }
+    .photo-effect-row { display:flex;align-items:center;gap:10px; }
+    .photo-filter-row { display:flex;gap:6px;flex-wrap:wrap; }
+    .photo-filter {
+      padding:5px 11px;border-radius:20px;
+      background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+      color:rgba(255,255,255,0.5);font-family:'Space Mono',monospace;
+      font-size:0.48rem;font-weight:700;text-transform:uppercase;
+      cursor:pointer;transition:all 0.18s;
+    }
+    .photo-filter:hover { border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.8); }
+    .photo-filter.active { background:rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.4);color:#E8C547; }
+    .photo-remove-btn {
+      width:100%;padding:9px;border-radius:9px;
+      background:rgba(255,80,80,0.07);border:1px solid rgba(255,80,80,0.2);
+      color:rgba(255,130,130,0.9);font-family:'Space Mono',monospace;
+      font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+      cursor:pointer;transition:all 0.18s;
+    }
+    .photo-remove-btn:hover { background:rgba(255,80,80,0.14);color:#ff6464; }
+
+    /* Spinner */
+    .studio-spinner {
+      width:14px;height:14px;border-radius:50%;
+      border:2px solid rgba(232,197,71,0.2);border-top-color:#E8C547;
+      animation:stSpin 0.7s linear infinite;display:inline-block;vertical-align:middle;
+    }
+    @keyframes stSpin { to { transform:rotate(360deg); } }
+  `;
+  document.head.appendChild(s);
+}
+
+/* ══════════════════════════════════════════════════════════
+   WORD WRAP HELPER
+══════════════════════════════════════════════════════════ */
+function _studioWrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    const test = current ? current + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CANVAS DRAW — window.drawPosterToCtx
+   FIX v5.7: Guard with || so poster.js (loads after) wins if
+   it has already claimed this function.
+══════════════════════════════════════════════════════════ */
+window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, options) {
+  options = options || {};
+  if (!post) return;
+
+  const designId    = options.design      || studioDesign;
+  const fontId      = options.font        || studioFont;
+  const brightness  = options.brightness  != null ? options.brightness  : studioBrightness;
+  const photoData   = options.photoData   || studioPhotoData;
+  const photoFilter = options.photoFilter || studioPhotoFilter;
+  const photoOpacity= options.photoOpacity!= null ? options.photoOpacity : studioPhotoOpacity;
+
+  const design = STUDIO_DESIGNS.find(d => d.id === designId) || STUDIO_DESIGNS[0];
+  const font   = STUDIO_FONTS.find(f => f.id === fontId)     || STUDIO_FONTS[0];
+  const emotion= post.emotion || 'Nostalgia';
+  const vibeColor = VIBE_COLORS[emotion] || design.accentColor;
+
+  const pad    = W * 0.07;
+  const innerW = W - pad * 2;
+
+  /* ── Background ── */
+  ctx.save();
+  ctx.fillStyle = design.bg(W, H, ctx);
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  /* ── Photo layer ── */
+  if (photoData) {
+    try {
+      const imgEl = document.getElementById('_studioPhotoImg');
+      if (imgEl && imgEl.complete && imgEl.naturalWidth) {
+        ctx.save();
+        const ratio = Math.max(W / imgEl.naturalWidth, H / imgEl.naturalHeight);
+        const iw = imgEl.naturalWidth  * ratio;
+        const ih = imgEl.naturalHeight * ratio;
+        const ix = (W - iw) / 2;
+        const iy = (H - ih) / 2;
+        if (photoFilter === 'mono')  ctx.filter = 'grayscale(100%)';
+        else if (photoFilter === 'warm') ctx.filter = 'sepia(60%) saturate(120%)';
+        else if (photoFilter === 'cool') ctx.filter = 'hue-rotate(20deg) saturate(80%)';
+        else if (photoFilter === 'dramatic') ctx.filter = 'contrast(130%) saturate(80%)';
+        else if (photoFilter === 'vintage')  ctx.filter = 'sepia(40%) contrast(90%)';
+        ctx.globalAlpha = photoOpacity;
+        ctx.drawImage(imgEl, ix, iy, iw, ih);
+        ctx.filter = 'none';
+        /* Dark overlay for readability */
+        ctx.globalAlpha = studioDim / 100;
+        const ov = ctx.createLinearGradient(0, 0, 0, H);
+        ov.addColorStop(0, 'rgba(0,0,0,0.8)');
+        ov.addColorStop(0.5, 'rgba(0,0,0,0.35)');
+        ov.addColorStop(1, 'rgba(0,0,0,0.85)');
+        ctx.fillStyle = ov;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+    } catch (_) {}
+  }
+
+  /* ── Brightness overlay ── */
+  if (brightness !== 100) {
+    ctx.save();
+    ctx.globalAlpha = Math.abs(brightness - 100) / 100 * 0.6;
+    ctx.fillStyle   = brightness < 100 ? '#000' : '#fff';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  /* ── Noise texture ── */
+  ctx.save();
+  ctx.globalAlpha = 0.025;
+  for (let y = 0; y < H; y += 3) {
+    for (let x = 0; x < W; x += 3) {
+      const v = Math.random() * 255 | 0;
+      ctx.fillStyle = `rgb(${v},${v},${v})`;
+      ctx.fillRect(x, y, 3, 3);
+    }
+  }
+  ctx.restore();
+
+  /* ── Top shimmer line ── */
+  ctx.save();
+  const sh = ctx.createLinearGradient(pad, 0, W - pad, 0);
+  sh.addColorStop(0, 'transparent');
+  sh.addColorStop(0.3, vibeColor);
+  sh.addColorStop(0.7, vibeColor);
+  sh.addColorStop(1, 'transparent');
+  ctx.globalAlpha = 0.7;
+  ctx.fillStyle   = sh;
+  ctx.fillRect(pad, 0, innerW, 2);
+  ctx.restore();
+
+  /* ── Left accent bar ── */
+  ctx.save();
+  const lH  = H * 0.42;
+  const lY  = (H - lH) / 2;
+  const lGr = ctx.createLinearGradient(0, lY, 0, lY + lH);
+  lGr.addColorStop(0, 'transparent');
+  lGr.addColorStop(0.3, vibeColor);
+  lGr.addColorStop(0.7, vibeColor);
+  lGr.addColorStop(1, 'transparent');
+  ctx.fillStyle   = lGr;
+  ctx.globalAlpha = 0.85;
+  ctx.fillRect(pad - W * 0.025, lY, W * 0.007, lH);
+  ctx.restore();
+
+  /* ── Ghost wordmark + M-mark ── */
+  const _iL = design.textColor === "#000000" || design.textColor === "#1a1a20";
+  const _wSz = Math.max(14, Math.round(W*0.034)), _wPad = Math.round(W*0.048);
+  ctx.save();
+  ctx.font = "800 " + _wSz + "px Syne, Arial Black, sans-serif";
+  ctx.fillStyle = _iL ? "#0B0B0D" : (design.accentColor || "#E8C547");
+  ctx.globalAlpha = 0.28; ctx.textBaseline = "top"; ctx.textAlign = "left";
+  let _wCx = _wPad;
+  for (const ch of "MARGO".split("")) { ctx.fillText(ch, _wCx, _wPad*0.55); _wCx += ctx.measureText(ch).width + _wSz*0.22; }
+  ctx.restore();
+  const _mSz = Math.round(Math.min(W,H)*0.07);
+  const _mcx = W-Math.round(W*0.036)-_mSz/2*2+_mSz/2, _mcy = H-Math.round(H*0.034)-_mSz/2*2+_mSz/2;
+  const _ms = _mSz*0.62, _mmx = _mcx-_ms/2, _mmy = _mcy-_ms/2;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(_mcx,_mcy,_mSz/2,0,Math.PI*2);
+  ctx.fillStyle = _iL ? "#0B0B0D" : (design.accentColor || "#E8C547");
+  ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18; ctx.fill(); ctx.shadowBlur=0;
+  ctx.strokeStyle = _iL ? "#ffffff" : "#0B0B0D";
+  ctx.lineWidth=_mSz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath();
+  ctx.moveTo(_mmx,_mmy+_ms*0.78); ctx.lineTo(_mmx,_mmy+_ms*0.13);
+  ctx.lineTo(_mmx+_ms*0.35,_mmy+_ms*0.60); ctx.lineTo(_mmx+_ms*0.50,_mmy+_ms*0.06);
+  ctx.lineTo(_mmx+_ms*0.65,_mmy+_ms*0.60); ctx.lineTo(_mmx+_ms,_mmy+_ms*0.13);
+  ctx.lineTo(_mmx+_ms,_mmy+_ms*0.78); ctx.stroke(); ctx.restore();
   /* ── Lyric text ── */
   const lyricText = post.text || '';
   let fontSize = Math.min(W * 0.072, H * 0.055);
