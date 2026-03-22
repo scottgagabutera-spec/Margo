@@ -398,6 +398,23 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   ctx.lineTo(_mmx+_ms*0.35,_mmy+_ms*0.60); ctx.lineTo(_mmx+_ms*0.50,_mmy+_ms*0.06);
   ctx.lineTo(_mmx+_ms*0.65,_mmy+_ms*0.60); ctx.lineTo(_mmx+_ms,_mmy+_ms*0.13);
   ctx.lineTo(_mmx+_ms,_mmy+_ms*0.78); ctx.stroke(); ctx.restore();
+  /* watermark */
+  const _wfs=Math.max(9,Math.round(W*0.017));
+  ctx.save();
+  ctx.font="700 "+_wfs+"px Space Mono,monospace";
+  ctx.textBaseline="middle"; ctx.textAlign="center";
+  const _wtxt="trymargo.com",_wtw=ctx.measureText(_wtxt).width;
+  const _wpw=_wtw+W*0.044,_wph=_wfs*1.9,_wpx=W/2-_wpw/2,_wpy=H-W*0.038-_wph/2;
+  ctx.globalAlpha=_iL?0.25:0.22;
+  ctx.fillStyle=_iL?"#000000":"#ffffff";
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(_wpx,_wpy,_wpw,_wph,_wph/2);else ctx.rect(_wpx,_wpy,_wpw,_wph);ctx.fill();
+  ctx.globalAlpha=_iL?0.45:0.36;
+  ctx.strokeStyle=_iL?"#000000":"#ffffff";ctx.lineWidth=1;
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(_wpx,_wpy,_wpw,_wph,_wph/2);else ctx.rect(_wpx,_wpy,_wpw,_wph);ctx.stroke();
+  ctx.globalAlpha=_iL?0.90:0.82;
+  ctx.fillStyle=_iL?"#0B0B0D":"#ffffff";
+  ctx.fillText(_wtxt,W/2,_wpy+_wph/2);
+  ctx.restore();
   /* ── Lyric text ── */
   const lyricText = post.text || '';
   let fontSize = Math.min(W * 0.072, H * 0.055);
