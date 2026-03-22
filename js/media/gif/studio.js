@@ -100,7 +100,7 @@ function gsDrawWordmark(ctx, W, H, th) {
   ctx.stroke();
   // MARGO text
   const sz = Math.max(14, Math.round(W * 0.042));
-  ctx.font = '400 ' + sz + 'px Bebas Neue, Arial Black, sans-serif';
+  ctx.font = '800 ' + sz + 'px Syne, Arial Black, sans-serif'; ctx.letterSpacing = '4px';
   ctx.fillStyle = '#E8C547';
   ctx.globalAlpha = 1;
   ctx.textBaseline = 'middle';
