@@ -81,6 +81,10 @@ function gsDrawWordmark(ctx, W, H, th) {
   ctx.fillStyle = accent;
   ctx.fill();
   ctx.shadowBlur = 0;
+  // Ring around circle
+  ctx.beginPath(); ctx.arc(cx, cy, r*1.4, 0, Math.PI*2);
+  ctx.strokeStyle = "rgba(232,197,71,0.65)"; ctx.lineWidth = Math.max(1, r*0.08);
+  ctx.stroke();
   // M letter inside
   const s = r * 1.1, mx = cx - s/2, my = cy - s/2;
   ctx.strokeStyle = isLight ? '#ffffff' : '#0B0B0D';
