@@ -67,45 +67,56 @@ const GS_EXPORT_SIZE = 1080;
    FIX: was 'Syne' — switched to 'Bebas Neue' (Syne removed from index.html)
    ================================================================ */
 function gsDrawWordmark(ctx, W, H, th) {
-  const pad = Math.round(W*0.048);
-  const r = Math.round(W*0.048);
+  const pad = Math.round(W*0.06);
+  const r = Math.round(W*0.044);
   const cx = pad + r, cy = pad + r;
   const sc = r / 40;
   ctx.save();
-  // 3 ripple rings at different scales
-  [0.9, 1.5, 2.1].forEach((scale, i) => {
+  // Animated rings - use time-based scale from GS frame
+  const now = Date.now() / 1000;
+  [[0, 0.6], [1.1, 0.6], [2.2, 0.6]].forEach(([offset]) => {
+    const phase = ((now + offset) % 3.4) / 3.4;
+    const s = 0.55 + phase * (2.8 - 0.55);
+    const op = (1 - phase) * 0.65;
     ctx.beginPath();
-    ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(232,197,71,' + [0.5, 0.3, 0.15][i] + ')';
-    ctx.lineWidth = Math.max(1, W * 0.002);
+    ctx.arc(cx, cy, r * s, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(232,197,71,' + op + ')';
+    ctx.lineWidth = Math.max(1, W*0.002);
     ctx.stroke();
   });
-  // Gold circle
+  // Gold circle with glow
   ctx.shadowColor = 'rgba(232,197,71,0.8)';
-  ctx.shadowBlur = Math.round(W * 0.016);
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.shadowBlur = Math.round(W*0.016);
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
   ctx.fillStyle = '#E8C547'; ctx.fill();
   ctx.shadowBlur = 0;
-  // M path scaled to circle
+  // M path
   ctx.strokeStyle = '#0B0B0D';
-  ctx.lineWidth = 5 * sc; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.lineWidth = 5*sc; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.beginPath();
-  ctx.moveTo(cx + (17-40)*sc, cy + (57-40)*sc);
-  ctx.lineTo(cx + (17-40)*sc, cy + (27-40)*sc);
-  ctx.lineTo(cx + (29-40)*sc, cy + (45-40)*sc);
-  ctx.lineTo(cx + (40-40)*sc, cy + (26-40)*sc);
-  ctx.lineTo(cx + (51-40)*sc, cy + (45-40)*sc);
-  ctx.lineTo(cx + (63-40)*sc, cy + (27-40)*sc);
-  ctx.lineTo(cx + (63-40)*sc, cy + (57-40)*sc);
+  ctx.moveTo(cx+(17-40)*sc, cy+(57-40)*sc);
+  ctx.lineTo(cx+(17-40)*sc, cy+(27-40)*sc);
+  ctx.lineTo(cx+(29-40)*sc, cy+(45-40)*sc);
+  ctx.lineTo(cx+(40-40)*sc, cy+(26-40)*sc);
+  ctx.lineTo(cx+(51-40)*sc, cy+(45-40)*sc);
+  ctx.lineTo(cx+(63-40)*sc, cy+(27-40)*sc);
+  ctx.lineTo(cx+(63-40)*sc, cy+(57-40)*sc);
   ctx.stroke();
-  // MARGO text
-  const sz = Math.max(14, Math.round(W * 0.042));
-  ctx.font = '800 ' + sz + 'px Syne, Arial Black, sans-serif'; ctx.letterSpacing = '4px';
-  ctx.fillStyle = '#E8C547';
+  // Small dot under M
+  ctx.fillStyle = '#0B0B0D';
+  ctx.globalAlpha = 0.55;
+  const dw = 10*sc, dh = 3.5*sc;
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(cx+(35-40)*sc, cy+(60-40)*sc, dw, dh, dh/2);
+  else ctx.rect(cx+(35-40)*sc, cy+(60-40)*sc, dw, dh);
+  ctx.fill();
   ctx.globalAlpha = 1;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'left';
-  ctx.fillText('MARGO', cx + r + Math.round(W * 0.022), cy);
+  // MARGO text
+  const sz = Math.max(14, Math.round(W*0.042));
+  ctx.font = '800 ' + sz + 'px Syne, Arial Black, sans-serif';
+  ctx.fillStyle = '#E8C547';
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText('MARGO', cx + r + Math.round(W*0.022), cy);
   ctx.restore();
 }
 function gsDrawWatermark(ctx, W, H, theme) {

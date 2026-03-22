@@ -380,13 +380,13 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   const _cx = _pad + _r, _cy = _pad + _r;
   const _sc = _r / 40;
   ctx.save();
-  ctx.shadowColor = "rgba(232,197,71,0.8)";
+  ctx.shadowColor = 'rgba(232,197,71,0.8)';
   ctx.shadowBlur = Math.round(W*0.016);
   ctx.beginPath(); ctx.arc(_cx, _cy, _r, 0, Math.PI*2);
-  ctx.fillStyle = "#E8C547"; ctx.fill();
+  ctx.fillStyle = '#E8C547'; ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = "#0B0B0D";
-  ctx.lineWidth = 5*_sc; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = '#0B0B0D';
+  ctx.lineWidth = 5*_sc; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.beginPath();
   ctx.moveTo(_cx+(17-40)*_sc, _cy+(57-40)*_sc);
   ctx.lineTo(_cx+(17-40)*_sc, _cy+(27-40)*_sc);
@@ -396,14 +396,18 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   ctx.lineTo(_cx+(63-40)*_sc, _cy+(27-40)*_sc);
   ctx.lineTo(_cx+(63-40)*_sc, _cy+(57-40)*_sc);
   ctx.stroke();
+  ctx.fillStyle = '#0B0B0D'; ctx.globalAlpha = 0.55;
+  const _dw=10*_sc, _dh=3.5*_sc;
+  ctx.beginPath();
+  if(ctx.roundRect)ctx.roundRect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh,_dh/2);
+  else ctx.rect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh);
+  ctx.fill(); ctx.globalAlpha = 1;
   const _sz = Math.max(14, Math.round(W*0.042));
-  ctx.font = "800 " + _sz + "px Syne, Arial Black, sans-serif";
-  ctx.fillStyle = "#E8C547";
-  ctx.globalAlpha = 1;
-  ctx.textBaseline = "middle"; ctx.textAlign = "left";
-  ctx.fillText("MARGO", _cx + _r + Math.round(W*0.022), _cy);
+  ctx.font = '800 ' + _sz + 'px Syne, Arial Black, sans-serif';
+  ctx.fillStyle = '#E8C547';
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText('MARGO', _cx + _r + Math.round(W*0.022), _cy);
   ctx.restore();
-
   /* ── Lyric text ── */
   const lyricText = post.text || '';
   let fontSize = Math.min(W * 0.072, H * 0.055);
