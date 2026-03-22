@@ -67,21 +67,42 @@ const GS_EXPORT_SIZE = 1080;
    FIX: was 'Syne' — switched to 'Bebas Neue' (Syne removed from index.html)
    ================================================================ */
 function gsDrawWordmark(ctx, W, H, th) {
-  const sz = Math.max(14, Math.round(W*0.034));
+  const isLight = th.text === '#000000' || th.text === '#1a1a20';
+  const accent = th.accent || '#E8C547';
   const pad = Math.round(W*0.048);
+  const r = Math.round(W*0.044);
+  const cx = pad + r, cy = pad + r;
   ctx.save();
-  ctx.font = '800 ' + sz + 'px Syne, Arial Black, sans-serif';
-  ctx.fillStyle = (th.text === '#000000' || th.text === '#1a1a20') ? '#0B0B0D' : th.accent;
-  ctx.globalAlpha = 0.28;
-  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-  const spacing = sz*0.22; let cx = pad;
-  for (const ch of 'MARGO'.split('')) {
-    ctx.fillText(ch, cx, pad*0.55);
-    cx += ctx.measureText(ch).width + spacing;
-  }
+  // Glow
+  ctx.shadowColor = 'rgba(232,197,71,0.8)';
+  ctx.shadowBlur = Math.round(W*0.016);
+  // M circle filled
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = accent;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // M letter inside
+  const s = r * 1.1, mx = cx - s/2, my = cy - s/2;
+  ctx.strokeStyle = isLight ? '#ffffff' : '#0B0B0D';
+  ctx.lineWidth = r * 0.18; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(mx, my+s*0.78); ctx.lineTo(mx, my+s*0.13);
+  ctx.lineTo(mx+s*0.35, my+s*0.60); ctx.lineTo(mx+s*0.50, my+s*0.06);
+  ctx.lineTo(mx+s*0.65, my+s*0.60); ctx.lineTo(mx+s, my+s*0.13);
+  ctx.lineTo(mx+s, my+s*0.78); ctx.stroke();
+  // MARGO text
+  const sz = Math.max(12, Math.round(W*0.038));
+  ctx.font = '800 ' + sz + 'px Bebas Neue, Arial Black, sans-serif';
+  ctx.fillStyle = accent;
+  ctx.globalAlpha = 1;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.fillText('MARGO', cx + r + Math.round(W*0.018), cy);
   ctx.restore();
 }
-
+function gsDrawMmark(ctx, W, H, th) {
+  // Empty - M mark now part of gsDrawWordmark
+}
 function gsDrawWatermark(ctx, W, H, theme) {
   ctx.save();
   const isLight = theme.text === '#000000';
