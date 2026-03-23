@@ -692,3 +692,13 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
 .composer-logo-mark .logo-circle{width:14px;height:14px;}
 .composer-logo-mark .logo-ring{width:14px;height:14px;border-width:1px;}
 .composer-logo-text{font-size:0.68rem;letter-spacing:3px;}
+
+/* Fix logo clip + placeholder brightness */
+#composer .modal-sheet{overflow:visible!important;}
+#composer .modal-body{overflow-y:auto;}
+.composer-topbar{padding:14px 20px 8px!important;overflow:visible!important;}
+.composer-logo-mark{width:18px!important;height:18px!important;margin-left:2px;}
+.composer-logo-mark .logo-circle{width:16px!important;height:16px!important;}
+.composer-logo-mark .logo-ring{width:16px!important;height:16px!important;}
+#composer .smart-search-input::placeholder{color:rgba(232,197,71,0.7)!important;font-style:normal!important;font-weight:500!important;}
+#composer .smart-search-input{color:#F4F1ED!important;font-size:1rem!important;}
