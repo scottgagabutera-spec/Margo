@@ -374,3 +374,16 @@
 #composer .modal-body > *:not(.smart-search-wrap):not(#shareInputs){
   outline: 2px solid red !important;
 }
+
+/* SLOW DEBUG - make flash visible */
+#composer .modal-body > * {
+  transition: none !important;
+  animation: none !important;
+}
+#composer{
+  animation: none !important;
+  transition: none !important;
+}
+#composer .modal-sheet{
+  animation: none !important;
+}
