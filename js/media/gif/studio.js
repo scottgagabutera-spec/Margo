@@ -94,7 +94,7 @@ function gsDrawWordmark(ctx, W, H, th) {
   ctx.shadowBlur = 0;
   // M path
   ctx.globalAlpha = 0.8;
-  ctx.strokeStyle = '#0B0B0D';
+  ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 5*sc; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.beginPath();
   ctx.moveTo(cx+(17-40)*sc, cy+(57-40)*sc);
