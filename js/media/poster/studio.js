@@ -387,7 +387,7 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   ctx.beginPath();
   if(ctx.roundRect)ctx.roundRect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh,_dh/2);
   else ctx.rect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh);
-  ctx.fill(); ctx.globalAlpha = 1;
+  ctx.globalAlpha = 0.35;
   const _sz = Math.max(10, Math.round(W*0.028));
   ctx.font = '800 ' + _sz + 'px Syne, Arial Black, sans-serif';
   ctx.fillStyle = '#E8C547';
