@@ -98,11 +98,6 @@
 @keyframes margoWave{0%,100%{transform:scaleY(0.4);opacity:0.4;}50%{transform:scaleY(1);opacity:1;}}
 @keyframes swipeHintFade{0%{opacity:0;transform:translateX(-50%) translateY(8px)}15%{opacity:1;transform:translateX(-50%) translateY(0)}75%{opacity:1}100%{opacity:0}}
 
-/* FAB */
-#dropLyricFAB{position:fixed;top:68px;right:14px;z-index:400;display:none;background:var(--gold);color:#07060A;border:none;border-radius:50px;padding:7px 12px 7px 10px;font-family:var(--font-mono);font-size:0.48rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:opacity 0.2s,transform 0.2s;align-items:center;gap:5px;white-space:nowrap;box-shadow:0 2px 12px rgba(0,0,0,0.4)}
-#dropLyricFAB:hover{background:var(--gold-warm);transform:scale(1.04)}
-#dropLyricFAB:active{transform:scale(0.96)}
-#dropLyricFAB svg{width:11px;height:11px;flex-shrink:0}
 
 /* YOUTUBE THUMBNAIL */
 .card-yt-thumb-wrap{position:relative;flex-shrink:0;width:56px;height:38px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);cursor:pointer}
@@ -133,8 +128,6 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   #cardStack .card-actions{height:48px}
 }
 
-/* FAB always visible in feed, never hidden by scroll */
-#feed.active #dropLyricFAB{display:flex!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
 .feed-header-right{display:flex;align-items:center;gap:8px;margin-left:auto}
 
 #cardStack .r-count{display:none}
@@ -154,14 +147,10 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 
 .header-card-counter{font-family:var(--font-mono);font-size:0.4rem;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:2px;margin-left:6px}
 @media(max-width:600px){
-  #dropLyricFAB .fab-label{display:none}
-  #dropLyricFAB{padding:6px 8px;gap:0}
 }
 
 /* Header mobile fixes */
 @media(max-width:600px){
-  #dropLyricFAB{font-size:0.32rem!important;padding:5px 8px 5px 6px!important;gap:4px!important}
-  #dropLyricFAB svg{width:8px!important;height:8px!important}
   .username-pill{font-size:0.3rem!important;padding:3px 7px!important}
   .feed-header-right{gap:5px}
 }
@@ -193,4 +182,3 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 .feed-search-empty{padding:24px 18px;text-align:center;font-family:var(--font-mono,monospace);font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.2);}
 @media(max-width:600px){.feed-search-overlay{height:50px;}.feed-search-results{top:50px;}}
 
-body.on-feed #dropLyricFAB{display:flex!important;opacity:1!important;pointer-events:auto!important;transform:none!important;}
