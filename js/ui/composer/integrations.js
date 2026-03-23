@@ -232,6 +232,7 @@ function hideVibeSection(){
 
 /* ── Sheet open/close ── */
 function openSheet(){
+  console.log("openSheet called from:", new Error().stack);
   var sheet=document.getElementById("searchSheet");
   if(!sheet||isSheetOpen)return;
   sheet.classList.remove("hidden");
