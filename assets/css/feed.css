@@ -99,7 +99,7 @@
 @keyframes swipeHintFade{0%{opacity:0;transform:translateX(-50%) translateY(8px)}15%{opacity:1;transform:translateX(-50%) translateY(0)}75%{opacity:1}100%{opacity:0}}
 
 /* FAB */
-#dropLyricFAB{position:relative;display:none;background:var(--gold);color:#07060A;border:none;border-radius:50px;padding:6px 12px 6px 9px;font-family:var(--font-mono);font-size:0.38rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0}
+#dropLyricFAB{position:fixed;top:68px;right:14px;z-index:400;display:none;background:var(--gold);color:#07060A;border:none;border-radius:50px;padding:7px 12px 7px 10px;font-family:var(--font-mono);font-size:0.48rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:opacity 0.2s,transform 0.2s;align-items:center;gap:5px;white-space:nowrap;box-shadow:0 2px 12px rgba(0,0,0,0.4)}
 #dropLyricFAB:hover{background:var(--gold-warm);transform:scale(1.04)}
 #dropLyricFAB:active{transform:scale(0.96)}
 #dropLyricFAB svg{width:11px;height:11px;flex-shrink:0}
@@ -192,13 +192,3 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 .feed-search-result-lyric mark{background:none;color:#E8C547;font-weight:700;}
 .feed-search-empty{padding:24px 18px;text-align:center;font-family:var(--font-mono,monospace);font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.2);}
 @media(max-width:600px){.feed-search-overlay{height:50px;}.feed-search-results{top:50px;}}
-
-/* FAB floating bottom-right */
-#dropLyricFAB{position:fixed!important;bottom:32px!important;right:18px!important;z-index:300!important;border-radius:50px!important;padding:10px 18px 10px 14px!important;font-size:0.55rem!important;gap:6px!important;box-shadow:0 4px 24px rgba(0,0,0,0.5)!important;}
-#feed.active #dropLyricFAB{display:flex!important;}
-@media(max-width:600px){#dropLyricFAB{bottom:24px!important;right:14px!important;padding:9px 14px 9px 11px!important;font-size:0.5rem!important;}}
-
-/* FAB on card - top right */
-#dropLyricFAB{position:fixed!important;top:72px!important;right:16px!important;bottom:auto!important;z-index:300!important;padding:7px 13px 7px 10px!important;font-size:0.48rem!important;gap:5px!important;box-shadow:0 2px 16px rgba(0,0,0,0.5)!important;border-radius:50px!important;}
-#feed.active #dropLyricFAB{display:flex!important;}
-@media(max-width:600px){#dropLyricFAB{top:62px!important;right:12px!important;}}
