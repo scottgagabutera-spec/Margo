@@ -114,6 +114,8 @@ function renderSkeleton() {
 /* ══════════════════════════════════════════════════════════
    RENDER FEED
 ══════════════════════════════════════════════════════════ */
+var _renderFeedTimer=null;
+function renderFeedDebounced(){clearTimeout(_renderFeedTimer);_renderFeedTimer=setTimeout(renderFeed,80);}
 function renderFeed() {
   injectFeedStyles();
   injectSortBar();
