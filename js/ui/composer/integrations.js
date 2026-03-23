@@ -45,6 +45,7 @@ async function runSmartSearch(query){
 }
 
 function injectSearchSheet(){
+  console.log("injectSearchSheet called", new Error().stack);
   if(document.getElementById("searchSheet"))return;
   var shareInputs=document.getElementById("shareInputs");
   if(!shareInputs)return;
