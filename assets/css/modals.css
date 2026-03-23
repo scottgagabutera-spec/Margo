@@ -684,3 +684,11 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
   line-height: 1;
   opacity: 0.75;
 }
+
+/* Fix composer logo position */
+.composer-topbar{padding:14px 18px 8px;overflow:hidden;}
+.composer-logo{opacity:0.75;}
+.composer-logo-mark{width:16px;height:16px;}
+.composer-logo-mark .logo-circle{width:14px;height:14px;}
+.composer-logo-mark .logo-ring{width:14px;height:14px;border-width:1px;}
+.composer-logo-text{font-size:0.68rem;letter-spacing:3px;}
