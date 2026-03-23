@@ -324,6 +324,12 @@ function ssDrawFallback(ctx, W, H, post) {
   ctx.lineTo(_cx+(29-40)*_sc,_cy+(45-40)*_sc); ctx.lineTo(_cx+(40-40)*_sc,_cy+(26-40)*_sc);
   ctx.lineTo(_cx+(51-40)*_sc,_cy+(45-40)*_sc); ctx.lineTo(_cx+(63-40)*_sc,_cy+(27-40)*_sc);
   ctx.lineTo(_cx+(63-40)*_sc,_cy+(57-40)*_sc); ctx.stroke();
+  ctx.fillStyle="#0B0B0D"; ctx.globalAlpha=0.55;
+  const _dw=10*_sc,_dh=3.5*_sc;
+  ctx.beginPath();
+  if(ctx.roundRect)ctx.roundRect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh,_dh/2);
+  else ctx.rect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh);
+  ctx.fill(); ctx.globalAlpha=1;
   const _sz=Math.max(14,Math.round(W*0.042));
   ctx.font="800 "+_sz+"px Syne, Arial Black, sans-serif";
   ctx.fillStyle="#E8C547"; ctx.globalAlpha=1;
