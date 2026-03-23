@@ -315,7 +315,8 @@ function ssDrawFallback(ctx, W, H, post) {
   const _r = Math.round(W*0.028), _pad = Math.round(W*0.035);
   const _cx = _pad + _r, _cy = _pad + _r, _sc = _r/40;
   ctx.save();
-  ctx.shadowColor="rgba(232,197,71,0.8)"; ctx.shadowBlur=Math.round(W*0.016);
+  ctx.globalAlpha = 0.35;
+  ctx.shadowColor="rgba(232,197,71,0.6)"; ctx.shadowBlur=Math.round(W*0.016);
   ctx.beginPath(); ctx.arc(_cx,_cy,_r,0,Math.PI*2);
   ctx.fillStyle="#E8C547"; ctx.fill(); ctx.shadowBlur=0;
   ctx.strokeStyle="#0B0B0D"; ctx.lineWidth=5*_sc; ctx.lineCap="round"; ctx.lineJoin="round";
