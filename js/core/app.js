@@ -1,3 +1,6 @@
+  if (studioExportBtn) studioExportBtn.addEventListener("click", () => {
+    if (typeof exportPoster === "function") exportPoster();
+  });
 /* ============================================================
    MARGO — js/core/app.js
    v6.2 — concept-v2-clean:
