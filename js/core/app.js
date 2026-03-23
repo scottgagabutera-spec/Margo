@@ -27,7 +27,7 @@ function openModal(modal) {
   savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
   modal.classList.remove('hidden');
   document.body.classList.add('modal-open');
-  document.body.style.top = `-${savedScrollPosition}px`;
+  /* body top offset removed — caused flash on modal open */
 }
 
 function closeModal(modal) {
@@ -35,7 +35,7 @@ function closeModal(modal) {
   modal.classList.add('hidden');
   document.body.classList.remove('modal-open');
   document.body.style.top = '';
-  window.scrollTo(0, savedScrollPosition);
+  /* scroll restore removed */
 }
 
 // ── Page state helpers ──
@@ -142,7 +142,7 @@ function initNavigation() {
   if (enterBtn) {
     enterBtn.onclick = () => {
       openModal(composer);
-      setTimeout(() => textInput?.focus(), 200);
+      setTimeout(() => { var si = document.getElementById("smartSearchInput"); if(si) si.focus(); }, 200);
     };
   }
 
