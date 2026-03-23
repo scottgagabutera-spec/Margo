@@ -129,8 +129,7 @@ function wireLyricChip(){
   var ta=document.getElementById("textInput");
   if(!chipText)return;
 
-  // Make chip text directly editable
-  chipText.contentEditable="true";
+  // contentEditable set in showLyricChip only
   chipText.spellcheck=false;
   chipText.setAttribute("data-placeholder","");
 
@@ -196,10 +195,14 @@ function showLyricChip(lyric){
   if(cc){cc.textContent=text.length;}
   if(editWrap)editWrap.classList.add("hidden");
   wrap.classList.remove("hidden");
+  wrap.style.display="";
+  chipText.contentEditable="true";
   showVibeSection();
 }
 
 function hideLyricChip(){
+  var ct=document.getElementById("lyricChipText");
+  if(ct)ct.contentEditable="false";
   var wrap=document.getElementById("lyricChipWrap");
   if(wrap)wrap.classList.add("hidden");
   var editWrap=document.getElementById("lyricEditWrap");
