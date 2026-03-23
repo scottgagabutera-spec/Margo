@@ -436,8 +436,14 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
     ctx.fillText((k.artist||"").substring(0,32), W/2, H*0.76 + W*0.048);
     ctx.restore();
   }
+  // trymargo.com watermark
+  ctx.save();
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(232,197,71,0.5)";
+  ctx.font = "700 " + Math.max(10, W*0.026) + "px Space Mono,monospace";
+  ctx.fillText("trymargo.com", W/2, H*0.92);
+  ctx.restore();
 
-  const thumbImg = document.getElementById('_studioThumbImg');
   if (thumbImg && thumbImg.complete && thumbImg.naturalWidth) {
     try {
       const tSz = Math.round(W * 0.09);
