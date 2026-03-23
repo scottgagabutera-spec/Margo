@@ -7,7 +7,7 @@ function initGeniusIdentify(){
   var input=document.getElementById("smartSearchInput");
   if(!input)return;
   input.addEventListener("input",onSmartInput);
-  input.addEventListener("focus",function(){if(input.value.trim().length>=2)openSheet();});
+  input.addEventListener("focus",function(){if(input.value.trim().length>=2&&!geniusResult)openSheet();});
   document.addEventListener("pointerdown",function(e){
     var sheet=document.getElementById("searchSheet");
     var wrap=document.getElementById("smartSearchWrap");
