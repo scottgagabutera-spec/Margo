@@ -383,6 +383,7 @@ function showYtLoading(){
 }
 
 function renderYtCard(data){
+  if(window._composerOpening)return;
   clearYoutubePreview();
   var source=data.source||"youtube";
   var links=[];

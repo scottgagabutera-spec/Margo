@@ -25,6 +25,7 @@ function showToast(msg) {
 function openModal(modal) {
   if (!modal) return;
   var yp=document.getElementById("youtubePreview");if(yp)yp.remove();
+  window._composerOpening=true;setTimeout(function(){window._composerOpening=false;},600);
   var sp=document.getElementById("songPill");if(sp)sp.classList.add("hidden");
   var sc=document.getElementById("songConfirmBlock");if(sc)sc.classList.add("hidden");
   var lw=document.getElementById("lyricChipWrap");if(lw){lw.classList.add("hidden");lw.style.display="none";}
