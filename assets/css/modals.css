@@ -702,3 +702,8 @@ body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
 .composer-logo-mark .logo-ring{width:16px!important;height:16px!important;}
 #composer .smart-search-input::placeholder{color:rgba(232,197,71,0.7)!important;font-style:normal!important;font-weight:500!important;}
 #composer .smart-search-input{color:#F4F1ED!important;font-size:1rem!important;}
+
+/* Fix vibe active state visibility */
+#composer .emotion-btn.active{background:rgba(232,197,71,0.18)!important;border-color:rgba(232,197,71,0.6)!important;color:#E8C547!important;box-shadow:0 0 12px rgba(232,197,71,0.15)!important;}
+#composer .emotion-btn[data-emotion="Heartbreak"].active{background:rgba(255,80,100,0.15)!important;border-color:rgba(255,80,100,0.5)!important;color:#ff6b7a!important;}
+#composer .emotion-btn[data-emotion="Rage"].active{background:rgba(255,80,60,0.15)!important;border-color:rgba(255,80,60,0.5)!important;color:#ff6b5a!important;}
