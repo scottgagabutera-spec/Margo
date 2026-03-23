@@ -316,3 +316,9 @@
 .smart-search-input{font-family:var(--font-ui,sans-serif);letter-spacing:0.01em;}
 .smart-search-input::placeholder{color:rgba(232,197,71,0.35)!important;font-style:italic;}
 .smart-search-icon svg{stroke:rgba(232,197,71,0.5)!important;}
+
+/* Remove double box - search field borderless inside modal */
+.smart-search-field{border:none!important;background:transparent!important;box-shadow:none!important;padding:4px 20px 14px!important;border-bottom:1px solid rgba(255,255,255,0.07)!important;border-radius:0!important;}
+.smart-search-field:focus-within{border-bottom-color:rgba(232,197,71,0.5)!important;box-shadow:none!important;}
+.smart-search-input{font-size:1rem!important;}
+.smart-search-wrap{margin-top:0!important;}
