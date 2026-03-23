@@ -152,7 +152,7 @@ function initNavigation() {
   if (efb2) efb2.onclick = () => { goToFeed(); scrollToFeed(); };
 
   if (backBtn)          backBtn.onclick          = goToLanding;
-  if (openComposerBtn)  openComposerBtn.onclick  = () => { if(typeof clearYoutubePreview==="function")clearYoutubePreview(); openModal(composer); };
+  if (openComposerBtn)  openComposerBtn.onclick  = () => { if(typeof resetComposer==="function")resetComposer(); openModal(composer); };
   if (closeComposerBtn) closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
 
   let tSX = 0, tSY = 0;
