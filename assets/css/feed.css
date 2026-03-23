@@ -192,3 +192,5 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 .feed-search-result-lyric mark{background:none;color:#E8C547;font-weight:700;}
 .feed-search-empty{padding:24px 18px;text-align:center;font-family:var(--font-mono,monospace);font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.2);}
 @media(max-width:600px){.feed-search-overlay{height:50px;}.feed-search-results{top:50px;}}
+
+body.on-feed #dropLyricFAB{display:flex!important;opacity:1!important;pointer-events:auto!important;transform:none!important;}
