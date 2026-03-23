@@ -314,7 +314,8 @@ function selectResult(result,card){
   if(result.id)fetchGeniusDetail(result.id);
   clearYoutubePreview();
   fetchYoutubeData(result.song,result.artist);
-  setTimeout(function(){closeSheet();},280);
+  closeSheet();
+  var si=document.getElementById("smartSearchInput");if(si){si.blur();si.value="";}
 }
 
 function showSongPill(result){
