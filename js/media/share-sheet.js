@@ -335,7 +335,7 @@ function ssDrawFallback(ctx, W, H, post) {
   ctx.globalAlpha = 0.35;
   ctx.globalAlpha = 0.35;
   ctx.font="800 "+_sz+"px Syne, Arial Black, sans-serif";
-  ctx.fillStyle="#E8C547"; ctx.globalAlpha=1;
+  ctx.fillStyle="#E8C547"; ctx.globalAlpha=0.35;
   ctx.textBaseline="middle"; ctx.textAlign="left";
   ctx.fillText("MARGO", _cx+_r+Math.round(W*0.022), _cy);
   ctx.restore();
