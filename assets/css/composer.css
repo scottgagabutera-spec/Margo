@@ -402,3 +402,8 @@
   position: relative;
   z-index: 40;
 }
+
+/* Remove gap between LYRICS label and lyric chip */
+#lyricChipLabel{margin-top:14px;margin-bottom:4px;display:block;}
+#lyricChipWrap{margin-top:0!important;}
+.lyric-chip-wrap{margin-top:0!important;}
