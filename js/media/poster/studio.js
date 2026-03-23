@@ -1,9 +1,3 @@
-  const _dw=10*_sc, _dh=3.5*_sc;
-  ctx.fillStyle="#0B0B0D";
-  ctx.beginPath();
-  if(ctx.roundRect)ctx.roundRect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh,_dh/2);
-  else ctx.rect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh);
-  ctx.fill();
 (function() {
 /* ============================================================
    MARGO — js/studio.js
@@ -372,7 +366,6 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   const _cx = _pad + _r, _cy = _pad + _r;
   const _sc = _r / 40;
   ctx.save();
-  ctx.globalAlpha = 0.35;
   ctx.shadowColor = 'rgba(232,197,71,0.8)';
   ctx.shadowBlur = Math.round(W*0.016);
   ctx.beginPath(); ctx.arc(_cx, _cy, _r, 0, Math.PI*2);
