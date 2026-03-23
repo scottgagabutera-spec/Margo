@@ -162,7 +162,7 @@ textarea#textInput:focus {
 }
 @media(min-width:520px) { .modal { align-items: center; padding: 16px; } }
 .modal.hidden { display: none; }
-body.modal-open { overflow: hidden !important; }
+body.modal-open { overflow: hidden !important; position: fixed; width: 100%; }
 
 .modal-sheet {
   background: #0f0e14;
