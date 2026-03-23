@@ -262,7 +262,13 @@
     <div class="modal-top"><span class="modal-title">Share a Lyric</span><button class="modal-close" id="closeComposer">×</button></div>
     <div class="modal-body">
 
-      <textarea id="textInput" maxlength="140" placeholder="Write a line…" inputmode="text"></textarea>
+      <div id="shareInputs" class="conditional show">
+        <input id="songInput" placeholder="Song title" inputmode="text"/>
+        <input id="artistInput" placeholder="Artist" inputmode="text"/>
+      </div>
+
+      <span class="field-label" style="margin-top:14px">Your Line</span>
+      <textarea id="textInput" maxlength="140" placeholder="Write the exact line you want to share…" inputmode="text"></textarea>
       <div class="char-count"><span id="charCount">0</span>/140</div>
       <span class="field-label">Vibe</span>
       <div class="emotion-grid">
@@ -276,10 +282,6 @@
         <button class="emotion-btn" data-emotion="Joy">Joy</button>
         <button class="emotion-btn" data-emotion="Rage">Rage</button>
         <button class="emotion-btn" data-emotion="Loneliness">Loneliness</button>
-      </div>
-      <div id="shareInputs" class="conditional show">
-        <input id="songInput" placeholder="Song title" inputmode="text"/>
-        <input id="artistInput" placeholder="Artist" inputmode="text"/>
       </div>
     </div>
     <div class="modal-footer">

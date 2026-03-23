@@ -2,7 +2,7 @@
 
 let youtubeData=null,geniusResult=null,geniusTimer=null,lastQuery="",searchCache={},isSheetOpen=false;
 
-const PLACEHOLDERS=["Type a lyric…","Or a song title…","Or an artist name…","Any words you remember…"];
+const PLACEHOLDERS=["Search by lyric, song or artist…"];
 
 function startAnimatedPlaceholder(){
   const input=document.getElementById("smartSearchInput");
