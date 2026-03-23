@@ -369,44 +369,72 @@
 .song-confirm-block{transition:opacity 0.22s ease!important;}
 .song-confirm-block.hidden{opacity:0;display:block!important;pointer-events:none;height:0;overflow:hidden;margin:0;}
 .search-spinner{transition:opacity 0.15s ease!important;}
-/* Vibe section visibility fix */
-#vibeLabel[style*="display: block"],
-#vibeLabel[style*="display:block"] {
-  display: block !important;
-}
-#emotionGrid[style*="display: grid"],
-#emotionGrid[style*="display:grid"] {
-  display: grid !important;
-}
-/* Lyrics label style - match SONG/ARTIST labels */
+
+/* ── LYRICS label - matches SONG/ARTIST exactly ── */
 #lyricChipLabel {
   display: none;
-  font-size: 0.65rem;
-  font-family: var(--font-mono, 'Space Mono', monospace);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.5rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  color: rgba(232,197,71,0.55);
+  letter-spacing: 2px;
   text-transform: uppercase;
-  margin-top: 14px;
+  color: rgba(232,197,71,0.7);
+  margin-top: 10px;
   margin-bottom: 4px;
 }
 
-/* Allow search sheet to float over modal body content */
-#composer .modal-body {
-  overflow: visible !important;
+/* ── Lyric chip wrap - no extra top margin ── */
+#lyricChipWrap {
+  margin-top: 0 !important;
 }
-#composer .modal-sheet {
-  overflow: visible !important;
+.lyric-chip-wrap {
+  margin-top: 0 !important;
 }
+
+/* ── Vibe section - wrap inside modal, no overflow ── */
+#vibeLabel {
+  display: none;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(232,197,71,0.7);
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+.emotion-grid {
+  display: none;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.emotion-btn {
+  flex: 0 0 auto !important;
+  white-space: nowrap;
+  font-size: 0.75rem !important;
+  padding: 6px 12px !important;
+  border-radius: 20px !important;
+}
+
+/* ── Fix vibe active state ── */
+#composer .emotion-btn.active {
+  background: rgba(232,197,71,0.18) !important;
+  border-color: rgba(232,197,71,0.6) !important;
+  color: #E8C547 !important;
+}
+
+/* ── Allow search sheet to float over content ── */
 #shareInputs {
   position: relative;
   z-index: 40;
 }
-
-/* Remove gap between LYRICS label and lyric chip */
-#lyricChipLabel{margin-top:14px;margin-bottom:4px;display:block;}
-#lyricChipWrap{margin-top:0!important;}
-.lyric-chip-wrap{margin-top:0!important;}
-
-#lyricChipLabel{font-family:var(--font-mono,monospace);font-size:0.5rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(232,197,71,0.7);margin-top:10px;margin-bottom:4px;}
-#lyricChipWrap{margin-top:0!important;}
+#composer .modal-body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
