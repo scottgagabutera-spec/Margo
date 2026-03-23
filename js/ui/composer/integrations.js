@@ -132,19 +132,15 @@ function hideLyricChip(){
 function showVibeSection(){
   const vl=document.getElementById("vibeLabel");
   const eg=document.getElementById("emotionGrid");
-  const footer=document.querySelector(".modal-footer");
   if(vl)vl.style.display="";
   if(eg)eg.style.display="";
-  if(footer)footer.style.display="";
 }
 
 function hideVibeSection(){
   const vl=document.getElementById("vibeLabel");
   const eg=document.getElementById("emotionGrid");
-  const footer=document.querySelector(".modal-footer");
   if(vl)vl.style.display="none";
   if(eg)eg.style.display="none";
-  if(footer)footer.style.display="none";
 }
 
 /* ── Sheet open/close ── */

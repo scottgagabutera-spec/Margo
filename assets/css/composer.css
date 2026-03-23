@@ -306,3 +306,13 @@
 .lyric-edit-wrap.hidden{display:none;}
 .lyric-edit-wrap textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(232,197,71,0.3);border-radius:12px;padding:12px 14px;color:#fff;font-size:0.9rem;resize:none;outline:none;min-height:72px;caret-color:#E8C547;box-sizing:border-box;}
 .lyric-edit-wrap textarea:focus{border-color:rgba(232,197,71,0.55);box-shadow:0 0 0 3px rgba(232,197,71,0.08);}
+/* Edit pen pulse */
+@keyframes editPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.9)}}
+.lyric-chip-edit{animation:editPulse 2s ease-in-out 3;}
+.lyric-chip-edit:hover{animation:none;}
+/* Search field Margo style */
+.smart-search-field{border-color:rgba(232,197,71,0.25)!important;background:rgba(232,197,71,0.03)!important;}
+.smart-search-field:focus-within{border-color:rgba(232,197,71,0.6)!important;box-shadow:0 0 0 3px rgba(232,197,71,0.1),0 0 20px rgba(232,197,71,0.08)!important;}
+.smart-search-input{font-family:var(--font-ui,sans-serif);letter-spacing:0.01em;}
+.smart-search-input::placeholder{color:rgba(232,197,71,0.35)!important;font-style:italic;}
+.smart-search-icon svg{stroke:rgba(232,197,71,0.5)!important;}
