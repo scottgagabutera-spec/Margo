@@ -360,20 +360,6 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   ctx.fillRect(pad, 0, innerW, 2);
   ctx.restore();
 
-  /* ── Left accent bar ── */
-  ctx.save();
-  const lH  = H * 0.42;
-  const lY  = (H - lH) / 2;
-  const lGr = ctx.createLinearGradient(0, lY, 0, lY + lH);
-  lGr.addColorStop(0, 'transparent');
-  lGr.addColorStop(0.3, vibeColor);
-  lGr.addColorStop(0.7, vibeColor);
-  lGr.addColorStop(1, 'transparent');
-  ctx.fillStyle   = lGr;
-  ctx.globalAlpha = 0.85;
-  ctx.fillRect(pad - W * 0.025, lY, W * 0.007, lH);
-  ctx.restore();
-
   /* ── Logo matching website header (no rings for poster) ── */
   const _pad = Math.round(W*0.06);
   const _r = Math.round(W*0.044);
@@ -464,19 +450,17 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   ctx.fillText(vibeLabel.toUpperCase(), pad + tagPad, tagY + tagH / 2);
   ctx.restore();
 
-  /* ── Song + artist ── */
+  /* ── Song + artist (centered, matches share sheet) ── */
   const k = post.knowledge || {};
   if (k.song || k.artist) {
     ctx.save();
-    const metaFS = Math.max(14, W * 0.022);
-    ctx.font         = `700 ${metaFS}px 'DM Sans', sans-serif`;
-    ctx.fillStyle    = design.textColor;
-    ctx.globalAlpha  = 0.85;
-    ctx.textBaseline = 'bottom';
-    let str = (k.song ? `♪ ${k.song}` : '') + (k.artist ? ` — ${k.artist}` : '');
-    const maxW = innerW * 0.75;
-    while (ctx.measureText(str).width > maxW && str.length > 4) str = str.slice(0, -4) + '…';
-    ctx.fillText(str, pad, H - pad * 0.9);
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "center";
+    ctx.fillStyle = design.textColor; ctx.globalAlpha = 0.85;
+    ctx.font = "700 " + Math.max(14, W*0.038) + "px Space Mono,monospace";
+    ctx.fillText((k.song||"").substring(0,28), W/2, H*0.76);
+    ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.globalAlpha = 1;
+    ctx.font = "400 " + Math.max(10, W*0.028) + "px Space Mono,monospace";
+    ctx.fillText((k.artist||"").substring(0,32), W/2, H*0.76 + W*0.048);
     ctx.restore();
   }
 
