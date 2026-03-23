@@ -319,7 +319,7 @@ function ssDrawFallback(ctx, W, H, post) {
   ctx.shadowColor="rgba(232,197,71,0.6)"; ctx.shadowBlur=Math.round(W*0.016);
   ctx.beginPath(); ctx.arc(_cx,_cy,_r,0,Math.PI*2);
   ctx.fillStyle="#E8C547"; ctx.fill(); ctx.shadowBlur=0;
-  ctx.strokeStyle="#0B0B0D"; ctx.lineWidth=5*_sc; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.globalAlpha=0.8; ctx.strokeStyle="#0B0B0D"; ctx.lineWidth=5*_sc; ctx.lineCap="round"; ctx.lineJoin="round";
   ctx.beginPath();
   ctx.moveTo(_cx+(17-40)*_sc,_cy+(57-40)*_sc); ctx.lineTo(_cx+(17-40)*_sc,_cy+(27-40)*_sc);
   ctx.lineTo(_cx+(29-40)*_sc,_cy+(45-40)*_sc); ctx.lineTo(_cx+(40-40)*_sc,_cy+(26-40)*_sc);
