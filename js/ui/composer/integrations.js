@@ -123,26 +123,63 @@ function hideSongConfirm(){
 
 /* ── Lyric chip ── */
 function wireLyricChip(){
+  // Make chip text itself a contenteditable — no second textarea revealed
+  var chipText=document.getElementById("lyricChipText");
   var editBtn=document.getElementById("lyricChipEdit");
-  if(!editBtn)return;
-  editBtn.addEventListener("click",function(){
-    var editWrap=document.getElementById("lyricEditWrap");
-    if(!editWrap)return;
-    var isHidden=editWrap.classList.contains("hidden");
-    editWrap.classList.toggle("hidden",!isHidden);
-    if(isHidden){
-      var ta=document.getElementById("textInput");
-      if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}
+  var ta=document.getElementById("textInput");
+  if(!chipText)return;
+
+  // Make chip text directly editable
+  chipText.contentEditable="true";
+  chipText.spellcheck=false;
+  chipText.setAttribute("data-placeholder","Write your line here…");
+
+  chipText.addEventListener("focus",function(){
+    chipText.classList.add("editing");
+    // select all on focus
+    var range=document.createRange();
+    range.selectNodeContents(chipText);
+    var sel=window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+
+  chipText.addEventListener("blur",function(){
+    chipText.classList.remove("editing");
+    syncChipToTextarea();
+  });
+
+  chipText.addEventListener("input",function(){
+    syncChipToTextarea();
+    // enforce 140 char limit
+    var text=chipText.textContent||"";
+    if(text.length>140){
+      chipText.textContent=text.substring(0,140);
+      // move cursor to end
+      var range=document.createRange();
+      range.selectNodeContents(chipText);
+      range.collapse(false);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
     }
   });
-  var ta=document.getElementById("textInput");
-  if(ta){
-    ta.addEventListener("input",function(){
-      var chip=document.getElementById("lyricChipText");
-      if(chip)chip.textContent=ta.value||"Tap ✎ to write your line…";
-      var cc=document.getElementById("charCount");
-      if(cc)cc.textContent=ta.value.length;
+
+  chipText.addEventListener("keydown",function(e){
+    if(e.key==="Enter"){e.preventDefault();chipText.blur();}
+  });
+
+  // Edit button just focuses the chip text
+  if(editBtn){
+    editBtn.addEventListener("click",function(){
+      chipText.focus();
     });
+  }
+
+  function syncChipToTextarea(){
+    var text=(chipText.textContent||"").substring(0,140);
+    if(ta)ta.value=text;
+    var cc=document.getElementById("charCount");
+    if(cc)cc.textContent=text.length;
   }
 }
 
@@ -151,11 +188,13 @@ function showLyricChip(lyric){
   var chip=document.getElementById("lyricChipText");
   var ta=document.getElementById("textInput");
   var cc=document.getElementById("charCount");
+  var editWrap=document.getElementById("lyricEditWrap");
   if(!wrap||!chip)return;
   var text=lyric.substring(0,140);
-  chip.textContent=text||"Tap ✎ to write your line…";
+  chip.textContent=text;
   if(ta){ta.value=text;}
   if(cc){cc.textContent=text.length;}
+  if(editWrap)editWrap.classList.add("hidden");
   wrap.classList.remove("hidden");
   showVibeSection();
 }

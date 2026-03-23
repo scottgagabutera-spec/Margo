@@ -300,61 +300,59 @@
 .lyric-chip{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);transition:border-color 0.2s;}
 .lyric-chip:focus-within{border-color:rgba(232,197,71,0.35);}
 .lyric-chip-text{flex:1;font-size:0.9rem;color:#fff;font-style:italic;opacity:0.85;line-height:1.4;min-width:0;word-break:break-word;}
-.lyric-chip-edit{flex-shrink:0;background:none;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.4);width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.75rem;transition:all 0.15s;}
-.lyric-chip-edit:hover{border-color:rgba(232,197,71,0.4);color:#E8C547;background:rgba(232,197,71,0.06);}
+.lyric-chip-edit{flex-shrink:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;transition:all 0.18s;}
+
 .lyric-edit-wrap{margin-top:10px;}
 .lyric-edit-wrap.hidden{display:none;}
 .lyric-edit-wrap textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(232,197,71,0.3);border-radius:12px;padding:12px 14px;color:#fff;font-size:0.9rem;resize:none;outline:none;min-height:72px;caret-color:#E8C547;box-sizing:border-box;}
 .lyric-edit-wrap textarea:focus{border-color:rgba(232,197,71,0.55);box-shadow:0 0 0 3px rgba(232,197,71,0.08);}
-/* ══ SONG CONFIRM + VISUAL v9 ══ */
+/* ══ COMPOSER v9 — inline edit, gold buttons ══ */
+
+/* Lyric chip — contenteditable inline */
+.lyric-chip{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);transition:border-color 0.2s,box-shadow 0.2s;cursor:text;}
+.lyric-chip:focus-within{border-color:rgba(232,197,71,0.45);box-shadow:0 0 0 3px rgba(232,197,71,0.08);}
+.lyric-chip-text{flex:1;font-size:0.9rem;color:#fff;font-style:italic;opacity:0.85;line-height:1.5;min-width:0;word-break:break-word;outline:none;caret-color:#E8C547;}
+.lyric-chip-text:empty:before{content:attr(data-placeholder);color:rgba(255,255,255,0.25);font-style:italic;}
+.lyric-chip-text.editing{opacity:1;font-style:normal;}
+
+/* Edit pen — solid gold circle */
+@keyframes editGlow{
+  0%,100%{box-shadow:0 0 0 0 rgba(232,197,71,0),0 2px 8px rgba(232,197,71,0.35);}
+  50%{box-shadow:0 0 0 6px rgba(232,197,71,0.12),0 2px 16px rgba(232,197,71,0.55);}
+}
+.lyric-chip-edit{
+  width:32px;height:32px;border-radius:50%;
+  background:#E8C547;
+  border:none;color:#0B0B0D;
+  font-size:0.85rem;font-weight:900;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 2px 10px rgba(232,197,71,0.4);
+  animation:editGlow 1.8s ease-in-out 5;
+  transition:transform 0.18s,box-shadow 0.18s;
+}
+.lyric-chip-edit:hover{transform:scale(1.1);box-shadow:0 4px 20px rgba(232,197,71,0.65);animation:none;}
+.lyric-chip-edit:active{transform:scale(0.95);}
+
+/* Change button — solid gold */
+.song-pill-change{
+  background:#E8C547;
+  border:none;border-radius:20px;
+  color:#0B0B0D;
+  font-family:var(--font-mono,monospace);font-size:0.52rem;font-weight:900;
+  letter-spacing:1.5px;text-transform:uppercase;
+  padding:7px 13px;cursor:pointer;flex-shrink:0;
+  box-shadow:0 2px 10px rgba(232,197,71,0.35);
+  transition:all 0.2s;
+}
+.song-pill-change:hover{background:#f5d878;box-shadow:0 4px 18px rgba(232,197,71,0.55);transform:scale(1.04);}
+.song-pill-change:active{transform:scale(0.97);}
+
+/* Song confirm fields */
 .song-confirm-block{margin-top:10px;animation:pillIn 0.25s cubic-bezier(0.16,1,0.3,1);}
 .song-confirm-block.hidden{display:none;}
 .song-confirm-row{display:flex;gap:8px;}
 .song-confirm-field{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
 .song-confirm-label{font-family:var(--font-mono,monospace);font-size:0.5rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(232,197,71,0.7);}
-.song-confirm-input{background:rgba(232,197,71,0.04);border:1px solid rgba(232,197,71,0.22);border-radius:10px;padding:9px 12px;color:#fff;font-size:0.82rem;font-weight:600;outline:none;width:100%;transition:border-color 0.2s,box-shadow 0.2s,background 0.2s;}
+.song-confirm-input{background:rgba(232,197,71,0.04);border:1px solid rgba(232,197,71,0.22);border-radius:10px;padding:9px 12px;color:#fff;font-size:0.82rem;font-weight:600;outline:none;width:100%;transition:border-color 0.2s,box-shadow 0.2s,background 0.2s;box-sizing:border-box;}
 .song-confirm-input:focus{border-color:rgba(232,197,71,0.6);box-shadow:0 0 0 3px rgba(232,197,71,0.1);background:rgba(232,197,71,0.07);}
 .song-confirm-input::placeholder{color:rgba(255,255,255,0.2);font-weight:400;}
-
-/* Edit pen — gold shiny pulsing */
-@keyframes editGlow{
-  0%,100%{box-shadow:0 0 0 0 rgba(232,197,71,0),0 0 6px rgba(232,197,71,0.3);opacity:1;}
-  50%{box-shadow:0 0 0 6px rgba(232,197,71,0.12),0 0 14px rgba(232,197,71,0.5);opacity:0.85;}
-}
-@keyframes editShine{
-  0%{background-position:200% center;}
-  100%{background-position:-200% center;}
-}
-.lyric-chip-edit{
-  width:32px;height:32px;border-radius:50%;
-  background:linear-gradient(135deg,#f5d878 0%,#E8C547 40%,#b8922a 100%);
-  background-size:200% auto;
-  border:none;
-  color:#0B0B0D;font-size:0.9rem;font-weight:900;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  animation:editGlow 1.6s ease-in-out 5, editShine 2.5s linear 3;
-  transition:transform 0.18s,box-shadow 0.18s;
-  box-shadow:0 2px 12px rgba(232,197,71,0.4);
-}
-.lyric-chip-edit:hover{transform:scale(1.12);box-shadow:0 4px 20px rgba(232,197,71,0.6);animation:none;}
-.lyric-chip-edit:active{transform:scale(0.95);}
-
-/* Change button — gold outlined pill */
-.song-pill-change{
-  background:linear-gradient(135deg,rgba(232,197,71,0.12),rgba(232,197,71,0.06));
-  border:1.5px solid rgba(232,197,71,0.55);
-  border-radius:20px;
-  color:#E8C547;
-  font-family:var(--font-mono,monospace);font-size:0.52rem;font-weight:800;
-  letter-spacing:1.5px;text-transform:uppercase;
-  padding:6px 12px;cursor:pointer;
-  transition:all 0.2s;flex-shrink:0;
-  box-shadow:0 0 8px rgba(232,197,71,0.15);
-}
-.song-pill-change:hover{
-  background:linear-gradient(135deg,rgba(232,197,71,0.25),rgba(232,197,71,0.15));
-  border-color:#E8C547;
-  box-shadow:0 0 16px rgba(232,197,71,0.35);
-  transform:scale(1.04);
-}
-.song-pill-change:active{transform:scale(0.97);}
