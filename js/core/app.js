@@ -268,4 +268,4 @@ wireSharPosterBtn();
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v6.2 concept-v2-clean — duet sheet active, studio self-init.');
+console.log('MARGO v6.3 concept-v4-design');

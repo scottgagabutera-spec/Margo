@@ -704,21 +704,4 @@ if (document.readyState === 'loading') {
 
 window.openGifStudio  = openGifStudio;
 window.closeGifStudio = closeGifStudio;
-function gsDrawMmark(ctx, W, H, th) {
-  const sz = Math.round(Math.min(W,H)*0.07);
-  const bx = W-Math.round(W*0.036)-sz, by = H-Math.round(H*0.034)-sz;
-  const cx = bx+sz/2, cy = by+sz/2, s = sz*0.62, mx = cx-s/2, my = cy-s/2;
-  ctx.save();
-  ctx.beginPath(); ctx.arc(cx,cy,sz/2,0,Math.PI*2);
-  ctx.fillStyle = (th.text === "#000000" || th.text === "#1a1a20") ? "#0B0B0D" : th.accent;
-  ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=18;
-  ctx.fill(); ctx.shadowBlur=0;
-  ctx.strokeStyle = (th.text === '#000000') ? '#ffffff' : '#0B0B0D';
-  ctx.lineWidth=sz*0.098; ctx.lineCap="round"; ctx.lineJoin="round";
-  ctx.beginPath();
-  ctx.moveTo(mx,my+s*0.78); ctx.lineTo(mx,my+s*0.13);
-  ctx.lineTo(mx+s*0.35,my+s*0.60); ctx.lineTo(mx+s*0.50,my+s*0.06);
-  ctx.lineTo(mx+s*0.65,my+s*0.60); ctx.lineTo(mx+s,my+s*0.13);
-  ctx.lineTo(mx+s,my+s*0.78); ctx.stroke();
-  ctx.restore();
-}
+
