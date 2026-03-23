@@ -356,3 +356,16 @@
 .song-confirm-input{background:rgba(232,197,71,0.04);border:1px solid rgba(232,197,71,0.22);border-radius:10px;padding:9px 12px;color:#fff;font-size:0.82rem;font-weight:600;outline:none;width:100%;transition:border-color 0.2s,box-shadow 0.2s,background 0.2s;box-sizing:border-box;}
 .song-confirm-input:focus{border-color:rgba(232,197,71,0.6);box-shadow:0 0 0 3px rgba(232,197,71,0.1);background:rgba(232,197,71,0.07);}
 .song-confirm-input::placeholder{color:rgba(255,255,255,0.2);font-weight:400;}
+
+/* Smooth search transitions */
+.search-sheet{transition:opacity 0.25s ease,transform 0.25s cubic-bezier(0.16,1,0.3,1)!important;}
+.search-result-card{transition:background 0.15s ease,opacity 0.2s ease!important;}
+.search-sheet-status{transition:opacity 0.2s ease!important;}
+.search-sheet-results{transition:opacity 0.18s ease!important;}
+.lyric-chip-wrap{transition:opacity 0.22s ease,transform 0.22s cubic-bezier(0.16,1,0.3,1)!important;}
+.lyric-chip-wrap.hidden{opacity:0;transform:translateY(4px);display:block!important;pointer-events:none;}
+.song-pill{transition:opacity 0.22s ease,transform 0.22s cubic-bezier(0.16,1,0.3,1)!important;}
+.song-pill.hidden{opacity:0;transform:translateY(4px);display:block!important;pointer-events:none;height:0;overflow:hidden;margin:0;padding:0;border:none!important;}
+.song-confirm-block{transition:opacity 0.22s ease!important;}
+.song-confirm-block.hidden{opacity:0;display:block!important;pointer-events:none;height:0;overflow:hidden;margin:0;}
+.search-spinner{transition:opacity 0.15s ease!important;}
