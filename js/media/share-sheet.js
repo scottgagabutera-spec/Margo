@@ -311,11 +311,25 @@ function ssDrawFallback(ctx, W, H, post) {
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = cfg.text; ctx.fillRect(0, 0, W, 2);
 
-  ctx.fillStyle = 'rgba(232,197,71,0.5)';
-  ctx.font = `700 ${Math.round(W*0.04)}px 'Space Mono',monospace`;
-  ctx.textAlign = 'left';
-  ctx.fillText('MARGO', W*0.05, W*0.09);
-
+  // M circle + MARGO logo
+  const _r = Math.round(W*0.044), _pad = Math.round(W*0.06);
+  const _cx = _pad + _r, _cy = _pad + _r, _sc = _r/40;
+  ctx.save();
+  ctx.shadowColor="rgba(232,197,71,0.8)"; ctx.shadowBlur=Math.round(W*0.016);
+  ctx.beginPath(); ctx.arc(_cx,_cy,_r,0,Math.PI*2);
+  ctx.fillStyle="#E8C547"; ctx.fill(); ctx.shadowBlur=0;
+  ctx.strokeStyle="#0B0B0D"; ctx.lineWidth=5*_sc; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath();
+  ctx.moveTo(_cx+(17-40)*_sc,_cy+(57-40)*_sc); ctx.lineTo(_cx+(17-40)*_sc,_cy+(27-40)*_sc);
+  ctx.lineTo(_cx+(29-40)*_sc,_cy+(45-40)*_sc); ctx.lineTo(_cx+(40-40)*_sc,_cy+(26-40)*_sc);
+  ctx.lineTo(_cx+(51-40)*_sc,_cy+(45-40)*_sc); ctx.lineTo(_cx+(63-40)*_sc,_cy+(27-40)*_sc);
+  ctx.lineTo(_cx+(63-40)*_sc,_cy+(57-40)*_sc); ctx.stroke();
+  const _sz=Math.max(14,Math.round(W*0.042));
+  ctx.font="800 "+_sz+"px Syne, Arial Black, sans-serif";
+  ctx.fillStyle="#E8C547"; ctx.globalAlpha=1;
+  ctx.textBaseline="middle"; ctx.textAlign="left";
+  ctx.fillText("MARGO", _cx+_r+Math.round(W*0.022), _cy);
+  ctx.restore();
   const lyric = (post.text || '').substring(0, 120);
   ctx.fillStyle = '#F0F0F0'; ctx.textAlign = 'center';
   const sz = lyric.length < 50 ? W*0.065 : W*0.048;
