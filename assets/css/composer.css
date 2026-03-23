@@ -369,3 +369,8 @@
 .song-confirm-block{transition:opacity 0.22s ease!important;}
 .song-confirm-block.hidden{opacity:0;display:block!important;pointer-events:none;height:0;overflow:hidden;margin:0;}
 .search-spinner{transition:opacity 0.15s ease!important;}
+
+/* DEBUG - identify flash element */
+#composer .modal-body > *:not(.smart-search-wrap):not(#shareInputs){
+  outline: 2px solid red !important;
+}
