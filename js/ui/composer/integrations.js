@@ -129,7 +129,7 @@ function wireLyricChip(){
   var ta=document.getElementById("textInput");
   if(!chipText)return;
 
-  // contentEditable set in showLyricChip only
+  chipText.contentEditable="true";
   chipText.spellcheck=false;
   chipText.setAttribute("data-placeholder","");
 
