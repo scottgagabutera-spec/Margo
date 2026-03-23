@@ -142,7 +142,7 @@ function initNavigation() {
   if (enterBtn) {
     enterBtn.onclick = () => {
       openModal(composer);
-      setTimeout(() => { var si = document.getElementById("smartSearchInput"); if(si) si.focus(); }, 200);
+      openModal(composer);
     };
   }
 
@@ -152,7 +152,7 @@ function initNavigation() {
   if (efb2) efb2.onclick = () => { goToFeed(); scrollToFeed(); };
 
   if (backBtn)          backBtn.onclick          = goToLanding;
-  if (openComposerBtn)  openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => { var si = document.getElementById("smartSearchInput"); if(si) si.focus(); }, 200); };
+  if (openComposerBtn)  openComposerBtn.onclick  = () => { openModal(composer); };
   if (closeComposerBtn) closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
 
   let tSX = 0, tSY = 0;
