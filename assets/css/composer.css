@@ -369,21 +369,6 @@
 .song-confirm-block{transition:opacity 0.22s ease!important;}
 .song-confirm-block.hidden{opacity:0;display:block!important;pointer-events:none;height:0;overflow:hidden;margin:0;}
 .search-spinner{transition:opacity 0.15s ease!important;}
-
-/* DEBUG - identify flash element */
-#composer .modal-body > *:not(.smart-search-wrap):not(#shareInputs){
-  outline: 2px solid red !important;
-}
-
-/* SLOW DEBUG - make flash visible */
-#composer .modal-body > * {
-  transition: none !important;
-  animation: none !important;
-}
-#composer{
-  animation: none !important;
-  transition: none !important;
-}
-#composer .modal-sheet{
-  animation: none !important;
-}
+/* Flash fix - all modal body children start invisible */
+#composer .modal-body > * { opacity: 0; transition: opacity 0.2s ease; }
+#composer:not(.hidden) .modal-body > * { opacity: 1; transition: opacity 0.2s ease 0.3s; }
