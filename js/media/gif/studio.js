@@ -115,6 +115,7 @@ function gsDrawWordmark(ctx, W, H, th) {
   ctx.globalAlpha = 1;
   // MARGO text
   const sz = Math.max(10, Math.round(W*0.028));
+  ctx.globalAlpha = 0.35;
   ctx.font = '800 ' + sz + 'px Syne, Arial Black, sans-serif';
   ctx.fillStyle = '#E8C547';
   ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
