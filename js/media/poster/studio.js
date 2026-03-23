@@ -423,33 +423,6 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   });
   ctx.restore();
 
-  /* ── Vibe tag ── */
-  const vibeLabel = VIBE_LABELS[emotion] || emotion;
-  const tagFS  = Math.max(14, W * 0.022);
-  const tagY   = startY + blockH + lh * 0.6;
-  ctx.save();
-  ctx.font         = `700 ${tagFS}px 'Space Mono', monospace`;
-  ctx.textBaseline = 'middle';
-  const tagPad = W * 0.022;
-  const tagW   = ctx.measureText(vibeLabel.toUpperCase()).width + tagPad * 2;
-  const tagH   = tagFS + W * 0.012;
-  const tagR   = tagH / 2;
-  ctx.globalAlpha = 0.18;
-  ctx.fillStyle   = vibeColor;
-  if (ctx.roundRect) ctx.roundRect(pad, tagY, tagW, tagH, tagR);
-  else { ctx.beginPath(); ctx.rect(pad, tagY, tagW, tagH); }
-  ctx.fill();
-  ctx.globalAlpha = 0.55;
-  ctx.strokeStyle = vibeColor;
-  ctx.lineWidth   = 1.5;
-  if (ctx.roundRect) ctx.roundRect(pad, tagY, tagW, tagH, tagR);
-  else { ctx.beginPath(); ctx.rect(pad, tagY, tagW, tagH); }
-  ctx.stroke();
-  ctx.globalAlpha = 0.9;
-  ctx.fillStyle   = vibeColor;
-  ctx.fillText(vibeLabel.toUpperCase(), pad + tagPad, tagY + tagH / 2);
-  ctx.restore();
-
   /* ── Song + artist (centered, matches share sheet) ── */
   const k = post.knowledge || {};
   if (k.song || k.artist) {
@@ -464,7 +437,6 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
     ctx.restore();
   }
 
-  /* ── Thumbnail ── */
   const thumbImg = document.getElementById('_studioThumbImg');
   if (thumbImg && thumbImg.complete && thumbImg.naturalWidth) {
     try {
