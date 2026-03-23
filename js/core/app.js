@@ -24,6 +24,13 @@ function showToast(msg) {
 // ── Modal helpers (kept for guess/discover/listen/analytics) ──
 function openModal(modal) {
   if (!modal) return;
+  var yp=document.getElementById("youtubePreview");if(yp)yp.remove();
+  var sp=document.getElementById("songPill");if(sp)sp.classList.add("hidden");
+  var sc=document.getElementById("songConfirmBlock");if(sc)sc.classList.add("hidden");
+  var lw=document.getElementById("lyricChipWrap");if(lw){lw.classList.add("hidden");lw.style.display="none";}
+  var ll=document.getElementById("lyricChipLabel");if(ll)ll.style.display="none";
+  var eg=document.getElementById("emotionGrid");if(eg)eg.style.display="none";
+  var vl=document.getElementById("vibeLabel");if(vl)vl.style.display="none";
   savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
   modal.classList.remove('hidden');
   document.body.classList.add('modal-open');
