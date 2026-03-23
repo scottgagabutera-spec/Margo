@@ -361,8 +361,8 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   ctx.restore();
 
   /* ── Logo matching website header (no rings for poster) ── */
-  const _pad = Math.round(W*0.06);
-  const _r = Math.round(W*0.044);
+  const _pad = Math.round(W*0.035);
+  const _r = Math.round(W*0.028);
   const _cx = _pad + _r, _cy = _pad + _r;
   const _sc = _r / 40;
   ctx.save();
