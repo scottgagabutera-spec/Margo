@@ -72,7 +72,8 @@ function gsDrawWordmark(ctx, W, H, th) {
   const cx = pad + r, cy = pad + r;
   const sc = r / 40;
   ctx.save();
-  ctx.globalAlpha = 0.35; - use time-based scale from GS frame
+  ctx.globalAlpha = 0.35;
+  // Animated rings - use time-based scale from GS frame
   const now = Date.now() / 1000;
   [[0, 0.6], [1.1, 0.6], [2.2, 0.6]].forEach(([offset]) => {
     const phase = ((now + offset) % 3.4) / 3.4;
