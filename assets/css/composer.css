@@ -438,3 +438,6 @@
   overflow-y: auto !important;
   overflow-x: hidden !important;
 }
+
+.smart-search-wrap{position:relative;z-index:40;}
+.search-sheet{position:absolute;left:0;right:0;top:100%;z-index:50;}
