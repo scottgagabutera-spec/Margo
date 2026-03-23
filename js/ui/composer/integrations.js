@@ -195,9 +195,9 @@ function showLyricChip(lyric){
   if(cc){cc.textContent=text.length;}
   if(editWrap)editWrap.classList.add("hidden");
   wrap.classList.remove("hidden");
-  wrap.style.display="";
-  chipText.contentEditable="true";
-  var lbl=document.getElementById("lyricChipLabel");if(lbl)lbl.style.display="";
+  wrap.style.display="block";
+  chip.contentEditable="true";
+  var lbl=document.getElementById("lyricChipLabel");if(lbl){lbl.style.removeProperty("display");lbl.style.display="block";}
   showVibeSection();
 }
 
@@ -219,8 +219,8 @@ function hideLyricChip(){
 function showVibeSection(){
   var vl=document.getElementById("vibeLabel");
   var eg=document.getElementById("emotionGrid");
-  if(vl)vl.style.display="";
-  if(eg)eg.style.display="";
+  if(vl){vl.style.removeProperty("display");vl.style.display="block";}
+  if(eg){eg.style.removeProperty("display");eg.style.display="flex";}
 }
 
 function hideVibeSection(){
