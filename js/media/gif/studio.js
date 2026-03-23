@@ -581,7 +581,7 @@ async function gsExport() {
     const gif = new GIF({
       workers: 4, quality: 1,
       width: SIZE, height: SIZE,
-      workerScript: '/js/gif.worker.js',
+      workerScript: '/js/media/gif/gif.worker.js',
       dither: false,
     });
 
