@@ -100,3 +100,15 @@ body::before {
   bottom: 15%; right: -60px;
 }
 
+
+/* Freeze landing content when modal is open - prevents flash */
+body.modal-open .lyric-stream,
+body.modal-open .lyric-track,
+body.modal-open .ticker-label,
+body.modal-open .stats-bar-wrap,
+body.modal-open .headline,
+body.modal-open .tagline,
+body.modal-open .cta-group{
+  visibility: hidden;
+  animation-play-state: paused !important;
+}

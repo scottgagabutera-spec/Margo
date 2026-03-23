@@ -354,8 +354,8 @@
   /* ══════════════════════════════════════════════════════════
      TOAST SYSTEM
   ══════════════════════════════════════════════════════════ */
-  const TOAST_DURATION = 4000;
-  const MAX_TOASTS     = 4;
+  const TOAST_DURATION = 1600;
+  const MAX_TOASTS     = 1;
 
   /* Clean typographic marks — no emoji, no AI aesthetics */
   const TOAST_TYPES = {

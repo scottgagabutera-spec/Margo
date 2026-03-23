@@ -1,6 +1,11 @@
 function initComposer() {
   injectComposerStyles();
-  textInput.oninput = () => { charCount.textContent = textInput.value.length; };
+  // Wire textInput lazily — it lives inside lyricEditWrap which is injected later
+  setTimeout(function(){
+    var ta  = document.getElementById("textInput");
+    var cc  = document.getElementById("charCount");
+    if(ta && cc) ta.oninput = function(){ cc.textContent = ta.value.length; };
+  }, 400);
 
   // Mode buttons hidden — always share
   currentMode = 'share';
@@ -64,7 +69,14 @@ async function submitPost(mode = 'post+visual') {
   const justPostBtn = document.getElementById('justPostLink');
   if (pacBtn?.disabled) return;
 
-  let text = textInput.value.trim();
+  // Sync confirm inputs → hidden fields (fallback in case oninput was missed)
+    var _sci = document.getElementById('songConfirmInput');
+    var _aci = document.getElementById('artistConfirmInput');
+    var _sih = getSongInput();
+    var _aih = getArtistInput();
+    if(_sci && _sih && _sci.value.trim()) _sih.value = _sci.value.trim();
+    if(_aci && _aih && _aci.value.trim()) _aih.value = _aci.value.trim();
+    let text = (getTextInput() ? getTextInput().value.trim() : '');
   if (!text)            { showToast('Add a lyric first'); return; }
   if (!selectedEmotion) { showToast('Pick a feeling'); return; }
 
@@ -76,8 +88,8 @@ async function submitPost(mode = 'post+visual') {
   }
 
   // Always share mode
-  const songVal   = typeof songInput   !== 'undefined' ? (songInput?.value.trim()   || '') : '';
-  const artistVal = typeof artistInput !== 'undefined' ? (artistInput?.value.trim() || '') : '';
+  const songVal   = getSongInput()   ? (getSongInput().value.trim()   || '') : '';
+  const artistVal = getArtistInput() ? (getArtistInput().value.trim() || '') : '';
   if (!songVal || !artistVal) { showToast('Add the song title and artist'); return; }
 
   const savedYtMeta = youtubeData ? {
@@ -194,9 +206,9 @@ async function submitPost(mode = 'post+visual') {
 }
 
 function resetComposer() {
-  if (typeof textInput   !== 'undefined' && textInput)   textInput.value   = '';
-  if (typeof songInput   !== 'undefined' && songInput)   songInput.value   = '';
-  if (typeof artistInput !== 'undefined' && artistInput) artistInput.value = '';
+  var _ti = getTextInput(); if(_ti) _ti.value = '';
+  var _si = getSongInput(); if(_si) _si.value = '';
+  var _ai = getArtistInput(); if(_ai) _ai.value = '';
   if (typeof guessSongAnswer   !== 'undefined' && guessSongAnswer)   guessSongAnswer.value   = '';
   if (typeof guessArtistAnswer !== 'undefined' && guessArtistAnswer) guessArtistAnswer.value = '';
   if (typeof discoverSongInput   !== 'undefined' && discoverSongInput)   discoverSongInput.value   = '';
@@ -205,9 +217,19 @@ function resetComposer() {
   if (typeof appleLink      !== 'undefined' && appleLink)      appleLink.value      = '';
   if (typeof youtubeLink    !== 'undefined' && youtubeLink)    youtubeLink.value    = '';
   if (typeof soundcloudLink !== 'undefined' && soundcloudLink) soundcloudLink.value = '';
-  if (typeof charCount      !== 'undefined' && charCount)      charCount.textContent = '0';
+  var _cc = getCharCount(); if(_cc) _cc.textContent = '0';
 
   selectedEmotion = null; geniusResult = null; lastGeniusQuery = '';
+  // Reset smart search UI
+  var ssi = document.getElementById("smartSearchInput");
+  if(ssi) ssi.value = "";
+  var sf  = ssi && ssi.closest(".smart-search-field");
+  if(sf)  sf.style.display = "";
+  if(typeof clearSongSelection === "function") clearSongSelection();
+  if(typeof hideLyricChip     === "function") hideLyricChip();
+  if(typeof hideVibeSection   === "function") hideVibeSection();
+  var lw = document.getElementById("lyricEditWrap");
+  if(lw) lw.classList.add("hidden");
   currentMode = 'share';
   clearYoutubePreview(); closeAutocomplete();
   document.getElementById('geniusResultsList')?.remove();
@@ -222,7 +244,7 @@ function resetComposer() {
   if (typeof guessArtistCheck !== 'undefined' && guessArtistCheck) guessArtistCheck.checked = true;
 
   const is = document.getElementById('inspireSuggestions');
-  if (iw) iw.style.display = 'none';
+  
   if (is) { is.innerHTML = ''; is.style.display = 'none'; }
 }
 

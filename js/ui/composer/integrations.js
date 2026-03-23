@@ -1,271 +1,429 @@
-/* ── STATE ── */
-let youtubeData     = null;
-let geniusResult    = null;
-let geniusTimer     = null;
-let ytSuggestTimer  = null;
-let ytFetchTimer    = null;
-let lastGeniusQuery = '';
+/* MARGO integrations.js v8.0 */
 
-function initGeniusIdentify() {
-  const textArea = document.getElementById('textInput');
-  if (!textArea) return;
-  textArea.addEventListener('input', () => {
-    clearTimeout(geniusTimer);
-    const val = textArea.value.trim();
-    // If user clears the lyric — reset song, artist, YouTube and allow Genius to re-fire
-    if (val.length === 0) {
-      const songEl   = document.getElementById('songInput');
-      const artistEl = document.getElementById('artistInput');
-      if (songEl)   songEl.value   = '';
-      if (artistEl) artistEl.value = '';
-      geniusResult    = null;
-      lastGeniusQuery = '';
-      clearYoutubePreview();
-      document.getElementById('geniusResultsList')?.remove();
-      return;
-    }
-    const songFilled = document.getElementById('songInput')?.value.trim();
-    if (val.length >= 5 && !songFilled) {
-      geniusTimer = setTimeout(() => {
-        if (val === lastGeniusQuery) return;
-        runGeniusSearch(val);
-      }, 600);
-    }
+let youtubeData=null,geniusResult=null,geniusTimer=null,lastQuery="",searchCache={},isSheetOpen=false;
+
+function initGeniusIdentify(){
+  injectSearchSheet();
+  var input=document.getElementById("smartSearchInput");
+  if(!input)return;
+  input.addEventListener("input",onSmartInput);
+  input.addEventListener("focus",function(){if(input.value.trim().length>=2)openSheet();});
+  document.addEventListener("pointerdown",function(e){
+    var sheet=document.getElementById("searchSheet");
+    var wrap=document.getElementById("smartSearchWrap");
+    if(sheet&&!sheet.contains(e.target)&&wrap&&!wrap.contains(e.target))closeSheet();
+  });
+  wireLyricChip();
+  wireSongConfirm();
+}
+
+function onSmartInput(){
+  var input=document.getElementById("smartSearchInput");
+  var val=input.value.trim();
+  clearTimeout(geniusTimer);
+  if(!val){clearSongSelection();closeSheet();return;}
+  if(geniusResult){geniusResult=null;clearSongPill();clearYoutubePreview();hideLyricChip();}
+  if(val.length<2)return;
+  showSearchingState();
+  openSheet();
+  var cacheKey=val.toLowerCase();
+  if(searchCache[cacheKey]){renderSheetResults(searchCache[cacheKey]);return;}
+  geniusTimer=setTimeout(function(){runSmartSearch(val);},380);
+}
+
+async function runSmartSearch(query){
+  if(query===lastQuery)return;
+  lastQuery=query;
+  try{
+    var res=await fetch("/api/genius?lyric="+encodeURIComponent(query));
+    var data=await res.json();
+    var results=(res.ok&&data.results&&data.results.length)?data.results:[];
+    searchCache[query.toLowerCase()]=results;
+    if(results.length)renderSheetResults(results);
+    else showNoResults();
+  }catch(err){showNoResults();}
+}
+
+function injectSearchSheet(){
+  if(document.getElementById("searchSheet"))return;
+  var shareInputs=document.getElementById("shareInputs");
+  if(!shareInputs)return;
+  var q='"';
+  shareInputs.innerHTML=
+    "<div id="+q+"smartSearchWrap"+q+" class="+q+"smart-search-wrap"+q+">"
+    +"<div class="+q+"smart-search-field"+q+">"
+    +"<span class="+q+"smart-search-icon"+q+"><svg width="+q+"16"+q+" height="+q+"16"+q+" viewBox="+q+"0 0 24 24"+q+" fill="+q+"none"+q+" stroke="+q+"currentColor"+q+" stroke-width="+q+"2"+q+" stroke-linecap="+q+"round"+q+" stroke-linejoin="+q+"round"+q+"><circle cx="+q+"11"+q+" cy="+q+"11"+q+" r="+q+"8"+q+"/><path d="+q+"m21 21-4.35-4.35"+q+"/></svg></span>"
+    +"<input id="+q+"smartSearchInput"+q+" type="+q+"text"+q+" inputmode="+q+"text"+q+" autocomplete="+q+"off"+q+" autocorrect="+q+"off"+q+" spellcheck="+q+"false"+q+" class="+q+"smart-search-input"+q+" placeholder="+q+"Search by lyric, song or artist…"+q+"/>"
+    +"<span id="+q+"searchSpinner"+q+" class="+q+"search-spinner hidden"+q+"></span>"
+    +"<button id="+q+"clearSearchBtn"+q+" class="+q+"clear-search-btn hidden"+q+" aria-label="+q+"Clear"+q+">×</button>"
+    +"</div>"
+    +"<div id="+q+"songPill"+q+" class="+q+"song-pill hidden"+q+">"
+    +"<span class="+q+"song-pill-art-wrap"+q+"><img id="+q+"songPillArt"+q+" class="+q+"song-pill-art"+q+" src="+q+q+" alt="+q+q+"/><span class="+q+"song-pill-art-fallback"+q+">♪</span></span>"
+    +"<span class="+q+"song-pill-info"+q+"><span id="+q+"songPillName"+q+" class="+q+"song-pill-name"+q+"></span><span id="+q+"songPillArtist"+q+" class="+q+"song-pill-artist"+q+"></span></span>"
+    +"<button id="+q+"changeSongBtn"+q+" class="+q+"song-pill-change"+q+">Change</button>"
+    +"</div></div>"
+    +"<div id="+q+"searchSheet"+q+" class="+q+"search-sheet hidden"+q+">"
+    +"<div class="+q+"search-sheet-inner"+q+">"
+    +"<div id="+q+"searchSheetStatus"+q+" class="+q+"search-sheet-status"+q+"></div>"
+    +"<div id="+q+"searchSheetResults"+q+" class="+q+"search-sheet-results"+q+"></div>"
+    +"</div></div>"
+    +"<input id="+q+"songInput"+q+" type="+q+"hidden"+q+" value="+q+q+"/>"
+    +"<input id="+q+"artistInput"+q+" type="+q+"hidden"+q+" value="+q+q+"/>";
+  document.getElementById("clearSearchBtn").addEventListener("click",function(){
+    clearSongSelection();
+    var inp=document.getElementById("smartSearchInput");
+    if(inp){inp.value="";inp.focus();}
+    closeSheet();
+  });
+  document.getElementById("changeSongBtn").addEventListener("click",function(){
+    geniusResult=null;clearSongPill();clearYoutubePreview();hideLyricChip();hideVibeSection();hideSongConfirm();
+    var inp=document.getElementById("smartSearchInput");
+    if(inp){inp.value="";inp.focus();}
+    hideSongPill();
   });
 }
 
-async function runGeniusSearch(query) {
-  lastGeniusQuery = query;
-  document.getElementById('geniusResultsList')?.remove();
-  try {
-    const res  = await fetch(`/api/genius?lyric=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    if (!res.ok || !data.results?.length) {
-      return;
+/* ── Song confirm (editable song + artist) ── */
+function wireSongConfirm(){
+  var si=document.getElementById("songConfirmInput");
+  var ai=document.getElementById("artistConfirmInput");
+  if(si) si.addEventListener("input",function(){
+    var hidden=document.getElementById("songInput");
+    if(hidden)hidden.value=si.value;
+    if(geniusResult)geniusResult.song=si.value;
+    var pill=document.getElementById("songPillName");
+    if(pill)pill.textContent=si.value;
+  });
+  if(ai) ai.addEventListener("input",function(){
+    var hidden=document.getElementById("artistInput");
+    if(hidden)hidden.value=ai.value;
+    if(geniusResult)geniusResult.artist=ai.value;
+    var pill=document.getElementById("songPillArtist");
+    if(pill)pill.textContent=ai.value;
+  });
+}
+
+function showSongConfirm(song,artist){
+  var block=document.getElementById("songConfirmBlock");
+  var si=document.getElementById("songConfirmInput");
+  var ai=document.getElementById("artistConfirmInput");
+  if(si)si.value=song||"";
+  if(ai)ai.value=artist||"";
+  if(block)block.classList.remove("hidden");
+}
+
+function hideSongConfirm(){
+  var block=document.getElementById("songConfirmBlock");
+  if(block)block.classList.add("hidden");
+  var si=document.getElementById("songConfirmInput");
+  var ai=document.getElementById("artistConfirmInput");
+  if(si)si.value="";
+  if(ai)ai.value="";
+}
+
+/* ── Lyric chip ── */
+function wireLyricChip(){
+  // Make chip text itself a contenteditable — no second textarea revealed
+  var chipText=document.getElementById("lyricChipText");
+  var editBtn=document.getElementById("lyricChipEdit");
+  var ta=document.getElementById("textInput");
+  if(!chipText)return;
+
+  // contentEditable set in showLyricChip only
+  chipText.spellcheck=false;
+  chipText.setAttribute("data-placeholder","");
+
+  chipText.addEventListener("focus",function(){
+    chipText.classList.add("editing");
+    // select all on focus
+    var range=document.createRange();
+    range.selectNodeContents(chipText);
+    var sel=window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+
+  chipText.addEventListener("blur",function(){
+    chipText.classList.remove("editing");
+    syncChipToTextarea();
+  });
+
+  chipText.addEventListener("input",function(){
+    syncChipToTextarea();
+    // enforce 140 char limit
+    var text=chipText.textContent||"";
+    if(text.length>140){
+      chipText.textContent=text.substring(0,140);
+      // move cursor to end
+      var range=document.createRange();
+      range.selectNodeContents(chipText);
+      range.collapse(false);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
     }
-    renderGeniusResults(data.results);
-  } catch (err) {
+  });
+
+  chipText.addEventListener("keydown",function(e){
+    if(e.key==="Enter"){e.preventDefault();chipText.blur();}
+  });
+
+  // Edit button just focuses the chip text
+  if(editBtn){
+    editBtn.addEventListener("click",function(){
+      chipText.focus();
+    });
+  }
+
+  function syncChipToTextarea(){
+    var text=(chipText.textContent||"").substring(0,140);
+    if(ta)ta.value=text;
+    var cc=document.getElementById("charCount");
+    if(cc)cc.textContent=text.length;
   }
 }
 
-function renderGeniusResults(results) {
-  document.getElementById('geniusResultsList')?.remove();
-  const wrap = document.createElement('div');
-  wrap.id = 'geniusResultsList';
-  const label = document.createElement('div');
-  label.className = 'genius-section-label';
-  label.textContent = 'Select the right song';
-  wrap.appendChild(label);
-  const list = document.createElement('div');
-  list.className = 'genius-results-list';
-  results.forEach(r => {
-    const card = document.createElement('div');
-    card.className = 'genius-result-card';
-    const songName   = decodeHTML(r.song);
-    const artistName = decodeHTML(r.artist);
-    card.innerHTML = `
-      ${r.artwork ? `<img src="${r.artwork}" class="genius-art" alt=""/>` : `<div class="genius-art"></div>`}
-      <div class="genius-info">
-        <div class="genius-song">${songName}</div>
-        <div class="genius-artist">${artistName}</div>
-      </div>
-      <span class="genius-use-tag">Use</span>
-    `;
-    card.onclick = () => selectGeniusResult({ ...r, song: songName, artist: artistName }, card);
+function showLyricChip(lyric){
+  var wrap=document.getElementById("lyricChipWrap");
+  var chip=document.getElementById("lyricChipText");
+  var ta=document.getElementById("textInput");
+  var cc=document.getElementById("charCount");
+  var editWrap=document.getElementById("lyricEditWrap");
+  if(!wrap||!chip)return;
+  var text=lyric.substring(0,140);
+  chip.textContent=text;
+  if(ta){ta.value=text;}
+  if(cc){cc.textContent=text.length;}
+  if(editWrap)editWrap.classList.add("hidden");
+  wrap.classList.remove("hidden");
+  wrap.style.display="";
+  chipText.contentEditable="true";
+  showVibeSection();
+}
+
+function hideLyricChip(){
+  var ct=document.getElementById("lyricChipText");
+  if(ct)ct.contentEditable="false";
+  var wrap=document.getElementById("lyricChipWrap");
+  if(wrap)wrap.classList.add("hidden");
+  var editWrap=document.getElementById("lyricEditWrap");
+  if(editWrap)editWrap.classList.add("hidden");
+  var ta=document.getElementById("textInput");
+  if(ta)ta.value="";
+  var cc=document.getElementById("charCount");
+  if(cc)cc.textContent="0";
+  hideVibeSection();
+}
+
+function showVibeSection(){
+  var vl=document.getElementById("vibeLabel");
+  var eg=document.getElementById("emotionGrid");
+  if(vl)vl.style.display="";
+  if(eg)eg.style.display="";
+}
+
+function hideVibeSection(){
+  var vl=document.getElementById("vibeLabel");
+  var eg=document.getElementById("emotionGrid");
+  if(vl)vl.style.display="none";
+  if(eg)eg.style.display="none";
+}
+
+/* ── Sheet open/close ── */
+function openSheet(){
+  var sheet=document.getElementById("searchSheet");
+  if(!sheet||isSheetOpen)return;
+  sheet.classList.remove("hidden");
+  requestAnimationFrame(function(){sheet.classList.add("open");});
+  isSheetOpen=true;
+}
+
+function closeSheet(){
+  var sheet=document.getElementById("searchSheet");
+  if(!sheet)return;
+  sheet.classList.remove("open");
+  setTimeout(function(){sheet.classList.add("hidden");},220);
+  isSheetOpen=false;
+}
+
+function showSearchingState(){
+  var status=document.getElementById("searchSheetStatus");
+  var results=document.getElementById("searchSheetResults");
+  var spinner=document.getElementById("searchSpinner");
+  var q='"';
+  if(status)status.innerHTML="<span class="+q+"search-identifying"+q+"><span class="+q+"search-pulse"+q+"></span>Identifying…</span>";
+  if(results)results.innerHTML="";
+  if(spinner)spinner.classList.remove("hidden");
+}
+
+function showNoResults(){
+  var status=document.getElementById("searchSheetStatus");
+  var results=document.getElementById("searchSheetResults");
+  var spinner=document.getElementById("searchSpinner");
+  var q='"';
+  if(status)status.innerHTML="<span class="+q+"search-no-result"+q+">Try a different line or song name</span>";
+  if(results)results.innerHTML="";
+  if(spinner)spinner.classList.add("hidden");
+}
+
+function renderSheetResults(results){
+  var status=document.getElementById("searchSheetStatus");
+  var list=document.getElementById("searchSheetResults");
+  var spinner=document.getElementById("searchSpinner");
+  var q='"';
+  if(spinner)spinner.classList.add("hidden");
+  if(status)status.innerHTML="<span class="+q+"search-found-label"+q+">Select the right song</span>";
+  if(!list)return;
+  list.innerHTML="";
+  results.forEach(function(r,idx){
+    var song=decodeHTML(r.song||""),artist=decodeHTML(r.artist||"");
+    var card=document.createElement("div");
+    card.className="search-result-card";
+    card.style.animationDelay=idx*55+"ms";
+    var img=r.artwork
+      ? "<img src="+q+r.artwork+q+" class="+q+"search-result-art"+q+" alt="+q+q+"/>"
+      : "<div class="+q+"search-result-art search-result-art-fallback"+q+">♪</div>";
+    card.innerHTML=img
+      +"<div class="+q+"search-result-info"+q+"><div class="+q+"search-result-song"+q+">"+song+"</div><div class="+q+"search-result-artist"+q+">"+artist+"</div></div>"
+      +"<span class="+q+"search-result-use"+q+">Use</span>";
+    card.addEventListener("pointerdown",function(e){
+      e.preventDefault();
+      selectResult(Object.assign({},r,{song:song,artist:artist}),card);
+    });
     list.appendChild(card);
   });
-  wrap.appendChild(list);
-  const textArea = document.getElementById('textInput');
-  if (textArea) textArea.parentNode.insertBefore(wrap, textArea.nextSibling);
 }
 
-function selectGeniusResult(result, card) {
-  document.querySelectorAll('.genius-result-card').forEach(c => c.classList.remove('selected'));
-  card.classList.add('selected');
-  card.querySelector('.genius-use-tag').textContent = 'Selected';
-  geniusResult = result;
-  // Fetch full song details silently
-  if (result.id) fetchGeniusDetail(result.id);
-  const songEl   = document.getElementById('songInput');
-  const artistEl = document.getElementById('artistInput');
-  if (songEl)   songEl.value   = result.song;
-  if (artistEl) artistEl.value = result.artist;
-  // Mode is always share — no mode buttons to click
-  currentMode = 'share';
-  clearYoutubePreview();
-  fetchYoutubeData(result.song, result.artist);
-  setTimeout(() => { document.getElementById('geniusResultsList')?.remove(); }, 1000);
-}
-
-/* ============================================================
-   YOUTUBE ENGINE
-   ============================================================ */
-function initYoutubeAutofetch() {
-  const songEl   = document.getElementById('songInput');
-  const artistEl = document.getElementById('artistInput');
-  if (!songEl || !artistEl) return;
-
-  if (!songEl.parentElement.classList.contains('song-input-wrap')) {
-    const wrap = document.createElement('div');
-    wrap.className = 'song-input-wrap';
-    songEl.parentNode.insertBefore(wrap, songEl);
-    wrap.appendChild(songEl);
+function selectResult(result,card){
+  document.querySelectorAll(".search-result-card").forEach(function(c){c.classList.remove("selected");});
+  if(card){
+    card.classList.add("selected");
+    var tag=card.querySelector(".search-result-use");
+    if(tag)tag.textContent="✓";
   }
-
-  songEl.addEventListener('input', () => {
-    clearTimeout(ytSuggestTimer);
-    clearTimeout(ytFetchTimer);
-    closeAutocomplete();
-    const val = songEl.value.trim();
-    if (val.length < 2) { clearYoutubePreview(); return; }
-    ytSuggestTimer = setTimeout(() => fetchYoutubeSuggestions(val), 350);
-  });
-
-  songEl.addEventListener('blur', () => setTimeout(closeAutocomplete, 180));
-
-  artistEl.addEventListener('input', () => {
-    clearTimeout(ytFetchTimer);
-    const song   = songEl.value.trim();
-    const artist = artistEl.value.trim();
-    if (song.length > 1 && artist.length > 1) {
-      ytFetchTimer = setTimeout(() => fetchYoutubeData(song, artist), 700);
-    }
-  });
-}
-
-async function fetchYoutubeSuggestions(query) {
-  try {
-    const res  = await fetch(`/api/youtube?suggest=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    if (!res.ok || !data.suggestions?.length) return;
-    renderAutocomplete(data.suggestions);
-  } catch (_) {}
-}
-
-function renderAutocomplete(suggestions) {
-  closeAutocomplete();
-  const songEl = document.getElementById('songInput');
-  if (!songEl) return;
-  const drop = document.createElement('div');
-  drop.id = 'ytAutocomplete';
-  drop.className = 'yt-autocomplete';
-  suggestions.slice(0, 4).forEach(s => {
-    const item = document.createElement('div');
-    item.className = 'yt-ac-item';
-    item.innerHTML = `
-      ${s.thumbnail ? `<img src="${s.thumbnail}" class="yt-ac-thumb" alt=""/>` : `<div class="yt-ac-thumb"></div>`}
-      <div style="flex:1;min-width:0">
-        <div class="yt-ac-song">${decodeHTML(s.song)}</div>
-        <div class="yt-ac-artist">${decodeHTML(s.artist)}</div>
-      </div>
-    `;
-    item.onmousedown = (e) => { e.preventDefault(); selectAutocomplete(s); };
-    drop.appendChild(item);
-  });
-  songEl.parentElement.appendChild(drop);
-}
-
-function selectAutocomplete(s) {
-  closeAutocomplete();
-  const songEl   = document.getElementById('songInput');
-  const artistEl = document.getElementById('artistInput');
-  if (songEl)   songEl.value   = decodeHTML(s.song);
-  if (artistEl) artistEl.value = decodeHTML(s.artist);
+  geniusResult=result;
+  var songEl=document.getElementById("songInput");
+  var artistEl=document.getElementById("artistInput");
+  if(songEl)songEl.value=result.song;
+  if(artistEl)artistEl.value=result.artist;
+  showSongPill(result);
+  showSongConfirm(result.song,result.artist);
+  var searchVal=document.getElementById("smartSearchInput").value.trim();
+  showLyricChip(searchVal);
+  if(result.id)fetchGeniusDetail(result.id);
   clearYoutubePreview();
-  fetchYoutubeData(s.song, s.artist);
+  fetchYoutubeData(result.song,result.artist);
+  setTimeout(function(){closeSheet();},280);
 }
 
-function closeAutocomplete() { document.getElementById('ytAutocomplete')?.remove(); }
-
-async function fetchYoutubeData(song, artist) {
-  const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
-  const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
-  showYtLoading();
-  youtubeData = null;
-  try {
-    const res  = await fetch(`/api/youtube?song=${encodeURIComponent(cleanSong)}&artist=${encodeURIComponent(cleanArtist)}`);
-    const data = await res.json();
-    if (!res.ok || data.error || (!data.videoId && !data.thumbnail)) {
-      clearYoutubePreview(); return;
-    }
-    youtubeData = data;
-    renderYtCard(data);
-  } catch (_) { clearYoutubePreview(); }
+function showSongPill(result){
+  var pill=document.getElementById("songPill");
+  var nameEl=document.getElementById("songPillName");
+  var artEl=document.getElementById("songPillArtist");
+  var imgEl=document.getElementById("songPillArt");
+  var input=document.getElementById("smartSearchInput");
+  if(nameEl)nameEl.textContent=result.song;
+  if(artEl)artEl.textContent=result.artist;
+  if(imgEl&&result.artwork){imgEl.src=result.artwork;imgEl.style.display="block";}
+  if(pill)pill.classList.remove("hidden");
+  var field=input&&input.closest(".smart-search-field");
+  if(field)field.style.display="none";
+  var wrap=document.getElementById("smartSearchWrap");
+  if(wrap)wrap.classList.add("has-selection");
 }
 
-function showYtLoading() {
+function hideSongPill(){
+  var pill=document.getElementById("songPill");
+  var input=document.getElementById("smartSearchInput");
+  var wrap=document.getElementById("smartSearchWrap");
+  if(pill)pill.classList.add("hidden");
+  var field=input&&input.closest(".smart-search-field");
+  if(field)field.style.display="";
+  if(wrap)wrap.classList.remove("has-selection");
+}
+
+function clearSongPill(){
+  hideSongPill();
+  var s=document.getElementById("songInput"),a=document.getElementById("artistInput");
+  if(s)s.value="";if(a)a.value="";
+}
+
+function clearSongSelection(){
+  geniusResult=null;lastQuery="";
+  clearSongPill();clearYoutubePreview();hideLyricChip();hideSongConfirm();
+  var sp=document.getElementById("searchSpinner");
+  if(sp)sp.classList.add("hidden");
+}
+
+function initYoutubeAutofetch(){}
+
+async function fetchYoutubeData(song,artist){
+  var cleanSong=song.replace(/\s*[\(\[].*?[\)\]]/g,"").trim();
+  var cleanArtist=artist.replace(/\s*feat\..*$/i,"").replace(/\s*ft\..*$/i,"").trim();
+  showYtLoading();youtubeData=null;
+  try{
+    var res=await fetch("/api/youtube?song="+encodeURIComponent(cleanSong)+"&artist="+encodeURIComponent(cleanArtist));
+    var data=await res.json();
+    if(!res.ok||data.error||(!data.videoId&&!data.thumbnail)){clearYoutubePreview();return;}
+    youtubeData=data;renderYtCard(data);
+  }catch(_){clearYoutubePreview();}
+}
+
+function showYtLoading(){
   clearYoutubePreview();
-  const card = document.createElement('div');
-  card.id = 'youtubePreview'; card.className = 'yt-card';
-  card.innerHTML = `<div class="yt-loading"><span class="m-spinner"></span>Looking up on YouTube, Deezer, Apple Music…</div>`;
-  insertAfterArtist(card);
+  var q='"';
+  var card=document.createElement("div");
+  card.id="youtubePreview";card.className="yt-card";
+  card.innerHTML="<div class="+q+"yt-loading"+q+"><span class="+q+"m-spinner"+q+"></span>Looking up on YouTube, Deezer, Apple Music…</div>";
+  insertAfterSearch(card);
 }
 
-function renderYtCard(data) {
+function renderYtCard(data){
   clearYoutubePreview();
-  const source = data.source || 'youtube';
-  const links = [];
-  if (data.youtubeUrl)
-    links.push(`<a href="${data.youtubeUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-yt">YouTube</a>`);
-  if (data.deezerUrl)
-    links.push(`<a href="${data.deezerUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-dz">Deezer</a>`);
-  if (data.itunesUrl)
-    links.push(`<a href="${data.itunesUrl}" target="_blank" rel="noopener" class="yt-listen-link yt-link-it">Apple Music</a>`);
-
-  const sourceBadgeCls = source === 'youtube' ? 'yt-found-yt' : source === 'deezer' ? 'yt-found-dz' : 'yt-found-it';
-  const thumb = data.thumbnail || data.thumbnailSm;
-
-  const card = document.createElement('div');
-  card.id = 'youtubePreview'; card.className = 'yt-card';
-  card.innerHTML = `
-    <div class="yt-card-inner">
-      ${thumb ? `<div class="yt-thumb-wrap"><img src="${thumb}" class="yt-thumb" alt="${decodeHTML(data.title||'')}"/></div>` : ''}
-      <div class="yt-info">
-        <div class="yt-title">${decodeHTML(data.title || '')}</div>
-        <div class="yt-channel">${decodeHTML(data.channel || data.collectionName || '')}</div>
-        ${links.length ? `<div class="yt-links-row">${links.join('')}</div>` : ''}
-      </div>
-      <span class="yt-found-tag ${sourceBadgeCls}">Found</span>
-    </div>
-  `;
-  insertAfterArtist(card);
-  const ytLink = document.getElementById('youtubeLink');
-  if (ytLink && !ytLink.value && data.videoId && data.youtubeUrl) ytLink.value = data.youtubeUrl;
+  var source=data.source||"youtube";
+  var links=[];
+  var q='"';
+  if(data.youtubeUrl)links.push("<a href="+q+data.youtubeUrl+q+" target="+q+"_blank"+q+" rel="+q+"noopener"+q+" class="+q+"yt-listen-link yt-link-yt"+q+">YouTube</a>");
+  if(data.deezerUrl)links.push("<a href="+q+data.deezerUrl+q+" target="+q+"_blank"+q+" rel="+q+"noopener"+q+" class="+q+"yt-listen-link yt-link-dz"+q+">Deezer</a>");
+  if(data.itunesUrl)links.push("<a href="+q+data.itunesUrl+q+" target="+q+"_blank"+q+" rel="+q+"noopener"+q+" class="+q+"yt-listen-link yt-link-it"+q+">Apple Music</a>");
+  var cls=source==="youtube"?"yt-found-yt":source==="deezer"?"yt-found-dz":"yt-found-it";
+  var thumb=data.thumbnail||data.thumbnailSm;
+  var card=document.createElement("div");
+  card.id="youtubePreview";card.className="yt-card";
+  card.innerHTML="<div class="+q+"yt-card-inner"+q+">"
+    +(thumb?"<div class="+q+"yt-thumb-wrap"+q+"><img src="+q+thumb+q+" class="+q+"yt-thumb"+q+" alt="+q+decodeHTML(data.title||"")+q+"/></div>":"")
+    +"<div class="+q+"yt-info"+q+"><div class="+q+"yt-title"+q+">"+decodeHTML(data.title||"")+"</div>"
+    +"<div class="+q+"yt-channel"+q+">"+decodeHTML(data.channel||data.collectionName||"")+"</div>"
+    +(links.length?"<div class="+q+"yt-links-row"+q+">"+links.join("")+"</div>":"")
+    +"</div><span class="+q+"yt-found-tag "+cls+q+">Found</span></div>";
+  insertAfterSearch(card);
+  var ytLink=document.getElementById("youtubeLink");
+  if(ytLink&&!ytLink.value&&data.videoId&&data.youtubeUrl)ytLink.value=data.youtubeUrl;
 }
 
-function insertAfterArtist(el) {
-  const artistEl = document.getElementById('artistInput');
-  artistEl?.parentNode?.insertBefore(el, artistEl.nextSibling);
+function insertAfterSearch(el){
+  var wrap=document.getElementById("smartSearchWrap");
+  if(wrap)wrap.parentNode.insertBefore(el,wrap.nextSibling);
 }
 
-function clearYoutubePreview() {
-  youtubeData = null;
-  document.getElementById('youtubePreview')?.remove();
+function clearYoutubePreview(){
+  youtubeData=null;
+  var el=document.getElementById("youtubePreview");
+  if(el)el.remove();
 }
 
-/* ============================================================
-   COMPOSER INIT
-   ============================================================ */
-
-/* ============================================================
-   GENIUS DETAIL ENGINE
-   Fetches full song metadata silently after song selection
-   ============================================================ */
-async function fetchGeniusDetail(id) {
-  try {
-    const res  = await fetch(`/api/genius?id=${id}`);
-    const data = await res.json();
-    if (!res.ok || data.error) return;
-    geniusResult = {
-      ...geniusResult,
-      album:           data.album           || null,
-      releaseDate:     data.releaseDate      || null,
-      featuredArtists: data.featuredArtists  || [],
-      writers:         data.writers          || [],
-      producers:       data.producers        || [],
-    };
-    console.log('[Genius detail]', geniusResult.song, '·', geniusResult.album, '·', geniusResult.writers);
-  } catch (err) {
-    console.warn('[Genius detail failed]', err.message);
-  }
+async function fetchGeniusDetail(id){
+  try{
+    var res=await fetch("/api/genius?id="+id);
+    var data=await res.json();
+    if(!res.ok||data.error)return;
+    geniusResult=Object.assign({},geniusResult,{
+      album:data.album||null,
+      releaseDate:data.releaseDate||null,
+      featuredArtists:data.featuredArtists||[],
+      writers:data.writers||[],
+      producers:data.producers||[]
+    });
+  }catch(_){}
 }
+
+function closeAutocomplete(){closeSheet();}
