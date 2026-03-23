@@ -441,3 +441,7 @@
 
 .smart-search-wrap{position:relative;z-index:40;}
 .search-sheet{position:absolute;left:0;right:0;top:100%;z-index:50;}
+
+#composer .modal-body{overflow:visible!important;}
+#composer .modal-sheet{overflow:visible!important;}
+#shareInputs{position:relative;z-index:50;overflow:visible!important;}
