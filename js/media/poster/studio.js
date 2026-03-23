@@ -360,30 +360,42 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   ctx.fillRect(pad, 0, innerW, 2);
   ctx.restore();
 
-  /* ── Left accent bar ── */
+  /* ── Logo matching website header (no rings for poster) ── */
+  const _pad = Math.round(W*0.035);
+  const _r = Math.round(W*0.028);
+  const _cx = _pad + _r, _cy = _pad + _r;
+  const _sc = _r / 40;
   ctx.save();
-  const lH  = H * 0.42;
-  const lY  = (H - lH) / 2;
-  const lGr = ctx.createLinearGradient(0, lY, 0, lY + lH);
-  lGr.addColorStop(0, 'transparent');
-  lGr.addColorStop(0.3, vibeColor);
-  lGr.addColorStop(0.7, vibeColor);
-  lGr.addColorStop(1, 'transparent');
-  ctx.fillStyle   = lGr;
-  ctx.globalAlpha = 0.85;
-  ctx.fillRect(pad - W * 0.025, lY, W * 0.007, lH);
+  ctx.globalAlpha = 0.35;
+  ctx.shadowColor = 'rgba(232,197,71,0.8)';
+  ctx.shadowBlur = Math.round(W*0.016);
+  ctx.beginPath(); ctx.arc(_cx, _cy, _r, 0, Math.PI*2);
+  ctx.fillStyle = '#E8C547'; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#0B0B0D';
+  ctx.lineWidth = 5*_sc; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(_cx+(17-40)*_sc, _cy+(57-40)*_sc);
+  ctx.lineTo(_cx+(17-40)*_sc, _cy+(27-40)*_sc);
+  ctx.lineTo(_cx+(29-40)*_sc, _cy+(45-40)*_sc);
+  ctx.lineTo(_cx+(40-40)*_sc, _cy+(26-40)*_sc);
+  ctx.lineTo(_cx+(51-40)*_sc, _cy+(45-40)*_sc);
+  ctx.lineTo(_cx+(63-40)*_sc, _cy+(27-40)*_sc);
+  ctx.lineTo(_cx+(63-40)*_sc, _cy+(57-40)*_sc);
+  ctx.stroke();
+  ctx.fillStyle = '#0B0B0D'; ctx.globalAlpha = 0.55;
+  const _dw=10*_sc, _dh=3.5*_sc;
+  ctx.beginPath();
+  if(ctx.roundRect)ctx.roundRect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh,_dh/2);
+  else ctx.rect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh);
+  ctx.fill();
+  ctx.globalAlpha = 0.35;
+  const _sz = Math.max(10, Math.round(W*0.028));
+  ctx.font = '800 ' + _sz + 'px Syne, Arial Black, sans-serif';
+  ctx.fillStyle = '#E8C547';
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText('MARGO', _cx + _r + Math.round(W*0.022), _cy);
   ctx.restore();
-
-  /* ── MARGO wordmark ── */
-  const margoSz = Math.max(22, W * 0.055);
-  ctx.save();
-  ctx.font         = `800 ${margoSz}px 'Syne', sans-serif`;
-  ctx.fillStyle    = vibeColor;
-  ctx.globalAlpha  = 0.9;
-  ctx.textBaseline = 'top';
-  ctx.fillText('MARGO', pad, pad * 0.75);
-  ctx.restore();
-
   /* ── Lyric text ── */
   const lyricText = post.text || '';
   let fontSize = Math.min(W * 0.072, H * 0.055);
@@ -413,51 +425,27 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   });
   ctx.restore();
 
-  /* ── Vibe tag ── */
-  const vibeLabel = VIBE_LABELS[emotion] || emotion;
-  const tagFS  = Math.max(14, W * 0.022);
-  const tagY   = startY + blockH + lh * 0.6;
-  ctx.save();
-  ctx.font         = `700 ${tagFS}px 'Space Mono', monospace`;
-  ctx.textBaseline = 'middle';
-  const tagPad = W * 0.022;
-  const tagW   = ctx.measureText(vibeLabel.toUpperCase()).width + tagPad * 2;
-  const tagH   = tagFS + W * 0.012;
-  const tagR   = tagH / 2;
-  ctx.globalAlpha = 0.18;
-  ctx.fillStyle   = vibeColor;
-  if (ctx.roundRect) ctx.roundRect(pad, tagY, tagW, tagH, tagR);
-  else { ctx.beginPath(); ctx.rect(pad, tagY, tagW, tagH); }
-  ctx.fill();
-  ctx.globalAlpha = 0.55;
-  ctx.strokeStyle = vibeColor;
-  ctx.lineWidth   = 1.5;
-  if (ctx.roundRect) ctx.roundRect(pad, tagY, tagW, tagH, tagR);
-  else { ctx.beginPath(); ctx.rect(pad, tagY, tagW, tagH); }
-  ctx.stroke();
-  ctx.globalAlpha = 0.9;
-  ctx.fillStyle   = vibeColor;
-  ctx.fillText(vibeLabel.toUpperCase(), pad + tagPad, tagY + tagH / 2);
-  ctx.restore();
-
-  /* ── Song + artist ── */
+  /* ── Song + artist (centered, matches share sheet) ── */
   const k = post.knowledge || {};
   if (k.song || k.artist) {
     ctx.save();
-    const metaFS = Math.max(14, W * 0.022);
-    ctx.font         = `700 ${metaFS}px 'DM Sans', sans-serif`;
-    ctx.fillStyle    = design.textColor;
-    ctx.globalAlpha  = 0.85;
-    ctx.textBaseline = 'bottom';
-    let str = (k.song ? `♪ ${k.song}` : '') + (k.artist ? ` — ${k.artist}` : '');
-    const maxW = innerW * 0.75;
-    while (ctx.measureText(str).width > maxW && str.length > 4) str = str.slice(0, -4) + '…';
-    ctx.fillText(str, pad, H - pad * 0.9);
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "center";
+    ctx.fillStyle = design.textColor; ctx.globalAlpha = 0.85;
+    ctx.font = "700 " + Math.max(14, W*0.038) + "px Space Mono,monospace";
+    ctx.fillText((k.song||"").substring(0,28), W/2, H*0.76);
+    ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.globalAlpha = 1;
+    ctx.font = "400 " + Math.max(10, W*0.028) + "px Space Mono,monospace";
+    ctx.fillText((k.artist||"").substring(0,32), W/2, H*0.76 + W*0.048);
     ctx.restore();
   }
+  // trymargo.com watermark
+  ctx.save();
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(232,197,71,0.5)";
+  ctx.font = "700 " + Math.max(10, W*0.026) + "px Space Mono,monospace";
+  ctx.fillText("trymargo.com", W/2, H*0.92);
+  ctx.restore();
 
-  /* ── Thumbnail ── */
-  const thumbImg = document.getElementById('_studioThumbImg');
   if (thumbImg && thumbImg.complete && thumbImg.naturalWidth) {
     try {
       const tSz = Math.round(W * 0.09);
@@ -738,7 +726,7 @@ window.closeStudio = function() {
 /* ══════════════════════════════════════════════════════════
    EXPORT
 ══════════════════════════════════════════════════════════ */
-async function exportPoster() {
+window.exportPoster = async function exportPoster() {
   const btn = document.getElementById('studioExportBtn');
   if (btn) { btn.innerHTML = '<span class="studio-spinner"></span>'; btn.disabled = true; }
 
@@ -756,7 +744,7 @@ async function exportPoster() {
     await document.fonts.load(`700 24px 'DM Sans', sans-serif`);
   } catch (_) {}
 
-  window.drawPosterToCtx(ctx, size.w, size.h, studioPost || window.currentPost);
+  const _post = studioPost || window.currentPost; window.drawPosterToCtx(ctx, size.w, size.h, _post);
 
   const post = studioPost || window.currentPost || {};
   const name = (post.knowledge?.song || 'lyric').replace(/\s+/g, '-').toLowerCase();

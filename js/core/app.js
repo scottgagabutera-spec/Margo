@@ -1,6 +1,10 @@
+  if (studioExportBtn) studioExportBtn.addEventListener("click", () => {
+    if (typeof exportPoster === "function") exportPoster();
+  });
 /* ============================================================
-   MARGO — js/app.js
-   v6.1 — concept-v2 branch:
+   MARGO — js/core/app.js
+   v6.2 — concept-v2-clean:
+          • initStudio() call removed — studio.js self-inits
           • patchStudioBackButtons uses onclick (overrides studio.js addEventListener)
           • closeStudio() called via window.closeStudio() for full state cleanup
           • studios return via reopenShareSheet()
@@ -43,6 +47,12 @@ function setPageState(page) {
 }
 
 // ── Navigation ──
+function setArrows(show) {
+  const al = document.querySelector('.nav-arrows-left');
+  const ar = document.querySelector('.nav-arrows-right');
+  if (al) al.style.display = show ? 'flex' : 'none';
+  if (ar) ar.style.display = show ? 'flex' : 'none';
+}
 function goToFeed() {
   landing.classList.remove('active');
   feed.classList.add('active');
@@ -52,6 +62,24 @@ function goToFeed() {
   setPageState('feed');
   mountUsernamePill();
   renderFeed();
+  // Show swipe hint briefly on first feed load
+  const hint = document.getElementById('swipeHint');
+  if (hint) {
+    setTimeout(() => {
+      hint.style.cssText = 'display:flex;opacity:1;visibility:visible;position:absolute;bottom:240px;left:50%;transform:translateX(-50%);z-index:9999;flex-direction:column;align-items:center;gap:10px;pointer-events:none;transition:opacity 0.8s ease;';
+      const hideHint = () => {
+        hint.style.opacity = '0';
+        setTimeout(() => { hint.style.display = 'none'; }, 800);
+        document.removeEventListener('touchstart', hideHint);
+        document.removeEventListener('keydown', hideHint);
+        document.removeEventListener('wheel', hideHint);
+      };
+      document.addEventListener('touchstart', hideHint, { once: true });
+      document.addEventListener('keydown', hideHint, { once: true });
+      document.addEventListener('wheel', hideHint, { once: true });
+    }, 800);
+  }
+  setArrows(true);
 }
 
 /* ── Mount username pill into header ── */
@@ -68,6 +96,9 @@ function mountUsernamePill() {
 }
 
 function goToLanding() {
+  setArrows(false);
+  const stack = document.getElementById('cardStack');
+  if (stack) delete stack.dataset.swipeReady;
   feed.classList.remove('active');
   landing.classList.add('active');
   setPageState('landing');
@@ -110,8 +141,8 @@ function scrollToFeed() {
 function initNavigation() {
   if (enterBtn) {
     enterBtn.onclick = () => {
-      goToFeed();
-      setTimeout(() => { openModal(composer); setTimeout(() => textInput?.focus(), 200); }, 100);
+      openModal(composer);
+      setTimeout(() => textInput?.focus(), 200);
     };
   }
 
@@ -132,7 +163,6 @@ function initNavigation() {
       const dy = Math.abs(tSY - e.changedTouches[0].clientY);
       if (Math.abs(dx) > dy && Math.abs(dx) > 100) {
         if (dx > 0 && landing.classList.contains('active')) goToFeed();
-        if (dx < 0 && feed.classList.contains('active'))   goToLanding();
       }
     });
   });
@@ -153,12 +183,11 @@ function setupScrollToTop() {
 /* ────────────────────────────────────────────────────────────
    STUDIO BACK BUTTON PATCH
    Uses .onclick to fully override any addEventListener bound
-   earlier by studio.js initStudio(). Single handler, no double-fire.
+   earlier by studio.js. Single handler, no double-fire.
    Calls window.closeStudio() / window.closeGifStudio() for full
    state cleanup, then reopens the share sheet.
 ──────────────────────────────────────────────────────────── */
 function patchStudioBackButtons() {
-  // Image studio — .onclick overrides any prior addEventListener
   const closeStudioBtn = document.getElementById('closeStudio');
   if (closeStudioBtn) {
     closeStudioBtn.onclick = (e) => {
@@ -173,7 +202,6 @@ function patchStudioBackButtons() {
     };
   }
 
-  // GIF studio — same pattern
   const closeGifBtn = document.getElementById('closeGifStudio');
   if (closeGifBtn) {
     closeGifBtn.onclick = (e) => {
@@ -230,13 +258,9 @@ initRoomTabs();
 if (typeof initCardTilt === 'function') initCardTilt();
 initComposer();
 
-try {
-  initStudio();
-} catch (err) {
-  console.warn('[Margo] initStudio error (non-fatal):', err.message);
-}
+// NOTE: initStudio() removed — studio.js self-initialises on DOMContentLoaded
 
-// concept-v2 patches — run AFTER initStudio() so .onclick overrides addEventListener
+// concept-v2 patches — run after DOM is ready
 patchStudioBackButtons();
 patchComposerForShareSheet();
 wireSharPosterBtn();
@@ -244,4 +268,4 @@ wireSharPosterBtn();
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v6.1 concept-v2 — studio back buttons patched, share sheet active.');
+console.log('MARGO v6.3 concept-v4-design');

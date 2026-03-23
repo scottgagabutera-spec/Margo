@@ -1,18 +1,16 @@
 {
+  "outputDirectory": ".",
   "rewrites": [
-    { "source": "/about",   "destination": "/about.html"   },
-    { "source": "/privacy", "destination": "/privacy.html" },
-    { "source": "/terms",   "destination": "/terms.html"   },
-    { "source": "/contact", "destination": "/contact.html" }
+    { "source": "/about",   "destination": "/public/about.html" },
+    { "source": "/privacy", "destination": "/public/privacy.html" },
+    { "source": "/terms",   "destination": "/public/terms.html" },
+    { "source": "/contact", "destination": "/public/contact.html" },
+    { "source": "/(.*)",    "destination": "/index.html" }
   ],
   "headers": [
-    {
-      "source": "/favicon.ico",
-      "headers": [{ "key": "Content-Type", "value": "image/x-icon" }]
-    },
-    {
-      "source": "/favicon-:size.png",
-      "headers": [{ "key": "Content-Type", "value": "image/png" }]
-    }
+    { "source": "/favicon.ico", "headers": [{ "key": "Content-Type", "value": "image/x-icon" }] },
+    { "source": "/favicons/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }] },
+    { "source": "/js/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }] }
   ]
 }

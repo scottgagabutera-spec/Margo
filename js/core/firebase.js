@@ -28,7 +28,6 @@ try {
   adminConfigRef = database.ref('adminConfig');
   firebaseAuth   = firebase.auth();
   isFirebaseEnabled = true;
-  console.log('[Margo] Firebase OK');
 } catch (e) {
   console.warn('[Margo] Firebase failed:', e.message);
 }
@@ -69,10 +68,8 @@ async function processYoutubeQueue() {
     const meta = await _fetchYoutubeMeta(song, artist);
     if (meta) {
       await postsRef.child(postId).child('youtubeMeta').set(meta);
-      console.log(`[YT] ✓ saved: ${song} — ${artist}`);
     }
   } catch (err) {
-    console.log(`[YT] error ${song}: ${err.message}`);
     _ytDoneIds.delete(postId);
   }
   setTimeout(processYoutubeQueue, 1200);
@@ -105,11 +102,9 @@ async function fetchAndSaveYoutubeMeta(postId, song, artist) {
     if (meta) {
       _ytDoneIds.add(postId);
       await postsRef.child(postId).child('youtubeMeta').set(meta);
-      console.log(`[YT] ✓ new post: ${cleanSong} — ${cleanArtist}`);
     }
     return meta;
   } catch (err) {
-    console.log(`[YT] new post error: ${err.message}`);
     return null;
   }
 }

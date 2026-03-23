@@ -126,7 +126,6 @@ const feedList          = document.getElementById('feedList');
 const newPostsIndicator = document.getElementById('newPostsIndicator');
 const scrollToTopBtn    = document.getElementById('scrollToTopBtn');
 
-const modeBtns          = document.querySelectorAll('.mode-btn');
 const shareInputs       = document.getElementById('shareInputs');
 const guessInputs       = document.getElementById('guessInputs');
 const discoverInputs    = document.getElementById('discoverInputs');

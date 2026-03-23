@@ -1,9 +1,15 @@
 /* ============================================================
    MARGO — js/share-sheet.js
-   The Share Sheet — single-tap access from any feed card.
-   v1.3 — poster preview uses window.drawPosterPreview (poster.js)
-          ssGeneratePoster uses window.drawPosterPreview
-          so blank canvas on poster tab is fixed.
+   v1.4 — Duet preview + export now correctly routed:
+          • ssStartPreview  → gsDrawDuetFrame  when isDuet + GIF
+          • ssStartPreview  → drawDuetPosterToCtx when isDuet + Poster
+          • ssGenerateGif   → gsExportForShareSheet (duet-mode.js
+                               already branches on isDuetMode())
+          • ssGeneratePoster→ drawDuetPosterToCtx at 1080×1080
+          • Info strip shows both songs in duet mode
+          • Header title + lyric preview updated for duet
+   z-index kept at 600 (duet-sheet uses 700, share-sheet
+   is opened from feed so 600 is correct here).
    ============================================================ */
 
 window._shareSheet = window._shareSheet || {
@@ -80,6 +86,17 @@ function injectShareSheetStyles() {
       line-height:1.4;max-width:260px;
       overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
     }
+    .ss-duet-badge{
+      display:none;align-items:center;gap:5px;margin-top:3px;
+      font-family:'Space Mono',monospace;font-size:0.44rem;font-weight:700;
+      letter-spacing:1.5px;text-transform:uppercase;
+      padding:3px 9px;border-radius:20px;
+      background:rgba(232,197,71,0.09);border:1px solid rgba(232,197,71,0.25);
+      color:#E8C547;
+    }
+    .ss-duet-badge.visible{display:inline-flex}
+    .ss-duet-badge-dot{width:5px;height:5px;border-radius:50%;background:#E8C547;opacity:0.8}
+
     .ss-close{
       background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
       color:rgba(255,255,255,0.38);width:30px;height:30px;
@@ -187,6 +204,7 @@ const SS_FEELING_DEFAULT = { bg:'rgba(232,197,71,0.11)', text:'#E8C547', border:
 
 /* ══════════════════════════════════════════════════════════
    CANVAS PREVIEW
+   KEY FIX: isDuet branches to duet-mode.js renderers
 ══════════════════════════════════════════════════════════ */
 
 function ssStopPreview() {
@@ -209,8 +227,45 @@ function ssStartPreview(canvas) {
   canvas.width  = Math.round(size * dpr);
   canvas.height = Math.round(size * dpr);
 
+  /* ══ DUET MODE — route to duet-mode.js ══ */
+  if (SS.isDuet && SS.echoPost) {
+    if (SS.activeTab === 'poster') {
+      document.fonts.ready.then(() => {
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+        if (typeof drawDuetPosterToCtx === 'function') {
+          drawDuetPosterToCtx(ctx, size, size);
+        } else {
+          ssDrawFallback(ctx, size, size, post);
+        }
+      });
+    } else {
+      /* Animated duet GIF preview */
+      let frame = 0, last = 0;
+      const delay = 70, frames = 24;
+      const loop = (ts) => {
+        if (ts - last >= delay) {
+          last = ts;
+          const ctx = canvas.getContext('2d');
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.scale(dpr, dpr);
+          if (typeof gsDrawDuetFrame === 'function') {
+            gsDrawDuetFrame(ctx, size, size, frame / frames);
+          } else {
+            ssDrawFallback(ctx, size, size, post);
+          }
+          frame = (frame + 1) % frames;
+        }
+        SS.animFrame = requestAnimationFrame(loop);
+      };
+      SS.animFrame = requestAnimationFrame(loop);
+    }
+    return;
+  }
+
+  /* ══ SINGLE POST MODE (unchanged) ══ */
   if (SS.activeTab === 'poster') {
-    /* ── Poster preview — uses window.drawPosterPreview exposed by poster.js ── */
     const ctx = canvas.getContext('2d');
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
@@ -222,12 +277,8 @@ function ssStartPreview(canvas) {
       }
     });
   } else {
-    /* ── GIF animated preview ── */
-    let frame = 0;
-    let last  = 0;
-    const delay  = 70;
-    const frames = 24;
-
+    let frame = 0, last = 0;
+    const delay = 70, frames = 24;
     const loop = (ts) => {
       if (ts - last >= delay) {
         last = ts;
@@ -256,56 +307,69 @@ function ssDrawFallback(ctx, W, H, post) {
   const k       = post.knowledge || {};
 
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#0B0B0D');
-  g.addColorStop(0.5, '#1a1410');
-  g.addColorStop(1, '#0B0B0D');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  g.addColorStop(0, '#0B0B0D'); g.addColorStop(0.5, '#1a1410'); g.addColorStop(1, '#0B0B0D');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = cfg.text; ctx.fillRect(0, 0, W, 2);
 
-  ctx.fillStyle = cfg.text;
-  ctx.fillRect(0, 0, W, 2);
-
-  ctx.fillStyle = 'rgba(232,197,71,0.5)';
-  ctx.font = `700 ${Math.round(W * 0.04)}px 'Space Mono', monospace`;
-  ctx.textAlign = 'left';
-  ctx.fillText('MARGO', W * 0.05, W * 0.09);
-
+  // M circle + MARGO logo
+  const _r = Math.round(W*0.028), _pad = Math.round(W*0.035);
+  const _cx = _pad + _r, _cy = _pad + _r, _sc = _r/40;
+  ctx.save();
+  ctx.globalAlpha = 0.35;
+  ctx.shadowColor="rgba(232,197,71,0.6)"; ctx.shadowBlur=Math.round(W*0.016);
+  ctx.beginPath(); ctx.arc(_cx,_cy,_r,0,Math.PI*2);
+  ctx.fillStyle="#E8C547"; ctx.fill(); ctx.shadowBlur=0;
+  ctx.globalAlpha=0.8; ctx.strokeStyle="#0B0B0D"; ctx.lineWidth=5*_sc; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath();
+  ctx.moveTo(_cx+(17-40)*_sc,_cy+(57-40)*_sc); ctx.lineTo(_cx+(17-40)*_sc,_cy+(27-40)*_sc);
+  ctx.lineTo(_cx+(29-40)*_sc,_cy+(45-40)*_sc); ctx.lineTo(_cx+(40-40)*_sc,_cy+(26-40)*_sc);
+  ctx.lineTo(_cx+(51-40)*_sc,_cy+(45-40)*_sc); ctx.lineTo(_cx+(63-40)*_sc,_cy+(27-40)*_sc);
+  ctx.lineTo(_cx+(63-40)*_sc,_cy+(57-40)*_sc); ctx.stroke();
+  ctx.fillStyle="#0B0B0D"; ctx.globalAlpha=0.55;
+  const _dw=10*_sc,_dh=3.5*_sc;
+  ctx.beginPath();
+  if(ctx.roundRect)ctx.roundRect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh,_dh/2);
+  else ctx.rect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh);
+  ctx.fill();
+  ctx.fillStyle="#E8C547"; ctx.globalAlpha=0.35;
+  const _sz=Math.max(10,Math.round(W*0.028));
+  ctx.globalAlpha = 0.35;
+  ctx.font="800 "+_sz+"px Syne, Arial Black, sans-serif";
+  ctx.fillStyle="#E8C547"; ctx.globalAlpha=0.35;
+  ctx.textBaseline="middle"; ctx.textAlign="left";
+  ctx.fillText("MARGO", _cx+_r+Math.round(W*0.022), _cy);
+  ctx.restore();
   const lyric = (post.text || '').substring(0, 120);
-  ctx.fillStyle = '#F0F0F0';
-  ctx.textAlign = 'center';
-  const sz = lyric.length < 50 ? W * 0.065 : W * 0.048;
-  ctx.font = `italic 600 ${sz}px 'DM Serif Display', serif`;
-  ssWrapText(ctx, lyric, W / 2, H * 0.44, W * 0.84, sz * 1.25);
+  ctx.fillStyle = '#F0F0F0'; ctx.textAlign = 'center';
+  const sz = lyric.length < 50 ? W*0.065 : W*0.048;
+  ctx.font = `italic 600 ${sz}px 'DM Serif Display',serif`;
+  ssWrapText(ctx, lyric, W/2, H*0.44, W*0.84, sz*1.25);
 
   ctx.fillStyle = cfg.text;
-  ctx.font = `700 ${W * 0.038}px 'Space Mono', monospace`;
-  ctx.fillText((k.song || '').substring(0, 28), W / 2, H * 0.76);
-
+  ctx.font = `700 ${W*0.038}px 'Space Mono',monospace`;
+  ctx.fillText((k.song||'').substring(0,28), W/2, H*0.76);
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  ctx.font = `400 ${W * 0.028}px 'Space Mono', monospace`;
-  ctx.fillText((k.artist || '').substring(0, 32), W / 2, H * 0.76 + W * 0.048);
-
+  ctx.font = `400 ${W*0.028}px 'Space Mono',monospace`;
+  ctx.fillText((k.artist||'').substring(0,32), W/2, H*0.76 + W*0.048);
   ctx.fillStyle = 'rgba(232,197,71,0.5)';
-  ctx.font = `700 ${W * 0.026}px 'Space Mono', monospace`;
-  ctx.fillText('trymargo.com', W / 2, H * 0.92);
+  ctx.font = `700 ${W*0.026}px 'Space Mono',monospace`;
+  ctx.fillText('trymargo.com', W/2, H*0.92);
 }
 
 function ssWrapText(ctx, text, x, cy, maxW, lineH) {
-  const words = text.split(' ');
-  let line = '';
-  const lines = [];
+  const words = text.split(' '); let line = ''; const lines = [];
   words.forEach(w => {
     const t = line + w + ' ';
-    if (ctx.measureText(t).width > maxW && line) { lines.push(line.trim()); line = w + ' '; }
+    if (ctx.measureText(t).width > maxW && line) { lines.push(line.trim()); line = w+' '; }
     else line = t;
   });
   if (line.trim()) lines.push(line.trim());
-  const startY = cy - ((lines.length - 1) * lineH) / 2;
-  lines.forEach((l, i) => ctx.fillText(l, x, startY + i * lineH));
+  const startY = cy - ((lines.length-1)*lineH)/2;
+  lines.forEach((l,i) => ctx.fillText(l, x, startY + i*lineH));
 }
 
 /* ══════════════════════════════════════════════════════════
-   MOUNT SHEET DOM (once)
+   MOUNT SHEET DOM
 ══════════════════════════════════════════════════════════ */
 function mountShareSheet() {
   if (document.getElementById('shareSheetBackdrop')) return;
@@ -319,8 +383,11 @@ function mountShareSheet() {
       <div class="ss-handle" id="ssDragHandle"></div>
       <div class="ss-header">
         <div class="ss-title-wrap">
-          <span class="ss-title">Share</span>
+          <span class="ss-title" id="ssTitle">Share</span>
           <span class="ss-lyric-preview" id="ssLyricPreview"></span>
+          <span class="ss-duet-badge" id="ssDuetBadge">
+            <span class="ss-duet-badge-dot"></span>LYRIC BACK
+          </span>
         </div>
         <button class="ss-close" id="ssClose" aria-label="Close">×</button>
       </div>
@@ -386,22 +453,32 @@ function mountShareSheet() {
 ══════════════════════════════════════════════════════════ */
 function openShareSheet(post, opts = {}) {
   if (!post) return;
-
   mountShareSheet();
 
   SS.post       = post;
   window.currentPost = post;
-
   SS.isDuet     = !!(opts.isDuet && opts.echoPost);
   SS.echoPost   = opts.echoPost || null;
   SS.gifBlob    = null;
   SS.posterBlob = null;
   SS.activeTab  = 'gif';
 
-  populateSSInfoStrip(post);
+  const titleEl = document.getElementById('ssTitle');
+  const badgeEl = document.getElementById('ssDuetBadge');
+  const prevEl  = document.getElementById('ssLyricPreview');
 
-  const prev = document.getElementById('ssLyricPreview');
-  if (prev) prev.textContent = (post.text || '').substring(0, 48) + (post.text?.length > 48 ? '…' : '');
+  if (SS.isDuet && SS.echoPost) {
+    if (titleEl) titleEl.textContent = 'Lyric Back';
+    if (badgeEl) badgeEl.classList.add('visible');
+    if (prevEl)  prevEl.textContent =
+      `"${(post.text||'').substring(0,28)}…" ↩ "${(SS.echoPost.text||'').substring(0,22)}…"`;
+    populateSSDuetInfoStrip(post, SS.echoPost);
+  } else {
+    if (titleEl) titleEl.textContent = 'Share';
+    if (badgeEl) badgeEl.classList.remove('visible');
+    if (prevEl)  prevEl.textContent = (post.text||'').substring(0,48) + (post.text?.length > 48 ? '…' : '');
+    populateSSInfoStrip(post);
+  }
 
   document.getElementById('ssTabGif')?.classList.add('active');
   document.getElementById('ssTabPoster')?.classList.remove('active');
@@ -424,16 +501,12 @@ function closeShareSheet() {
   const backdrop = document.getElementById('shareSheetBackdrop');
   const sheet    = document.getElementById('shareSheet');
   if (!backdrop || backdrop.classList.contains('ss-hidden')) return;
-
   sheet?.classList.add('ss-exit');
   document.body.classList.remove('modal-open');
-
   setTimeout(() => {
     backdrop.classList.add('ss-hidden');
     sheet?.classList.remove('ss-exit');
-    SS.gifBlob    = null;
-    SS.posterBlob = null;
-    SS.isEncoding = false;
+    SS.gifBlob = null; SS.posterBlob = null; SS.isEncoding = false;
   }, 300);
 }
 
@@ -447,44 +520,52 @@ function reopenShareSheet() {
 }
 window.reopenShareSheet = reopenShareSheet;
 
-/* ── Tab switching ── */
 function switchSSTab(tab) {
   if (SS.activeTab === tab) return;
-  SS.activeTab  = tab;
-  SS.gifBlob    = null;
-  SS.posterBlob = null;
-
-  document.querySelectorAll('.ss-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.sstab === tab);
-  });
-
+  SS.activeTab = tab; SS.gifBlob = null; SS.posterBlob = null;
+  document.querySelectorAll('.ss-tab').forEach(t => { t.classList.toggle('active', t.dataset.sstab === tab); });
   const label = document.getElementById('ssBtnDownloadLabel');
   if (label) label.textContent = tab === 'gif' ? 'Download GIF' : 'Download Poster';
-
   ssStopPreview();
   requestAnimationFrame(() => ssStartPreview(document.getElementById('ssCanvas')));
 }
 
-/* ── Info strip ── */
+/* ── Info strips ── */
 function populateSSInfoStrip(post) {
   const strip = document.getElementById('ssInfoStrip');
   if (!strip) return;
-
   const k       = post.knowledge || {};
   const feeling = post.emotion || post.feeling || 'Nostalgia';
   const ecfg    = SS_FEELING_CFG[feeling] || SS_FEELING_DEFAULT;
   const meta    = post.youtubeMeta;
   const thumb   = meta?.thumbnailSm || meta?.thumbnail;
-
   strip.innerHTML = `
     ${thumb ? `<img src="${thumb}" class="ss-song-thumb" alt="" loading="lazy" onerror="this.style.display='none'"/>` : ''}
     <div class="ss-song-info">
-      <div class="ss-song-title">${k.song || 'Unknown Song'}</div>
-      <div class="ss-song-artist">${k.artist || 'Unknown Artist'}</div>
+      <div class="ss-song-title">${k.song||'Unknown Song'}</div>
+      <div class="ss-song-artist">${k.artist||'Unknown Artist'}</div>
     </div>
-    <span class="ss-feeling-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">
-      ${feeling}
-    </span>
+    <span class="ss-feeling-tag" style="background:${ecfg.bg};color:${ecfg.text};border:1px solid ${ecfg.border}">${feeling}</span>
+  `;
+}
+
+function populateSSDuetInfoStrip(post, echoPost) {
+  const strip = document.getElementById('ssInfoStrip');
+  if (!strip) return;
+  const kP = post.knowledge     || {};
+  const kE = echoPost.knowledge || {};
+  const eE = SS_FEELING_CFG[echoPost.emotion] || SS_FEELING_DEFAULT;
+  strip.innerHTML = `
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+      <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:700;color:#FF6B9D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kP.song||'Unknown'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.5rem;color:rgba(255,255,255,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kP.artist||''}</div>
+    </div>
+    <span style="font-family:'Space Mono',monospace;font-size:0.55rem;font-weight:700;color:rgba(232,197,71,0.55);flex-shrink:0;padding:0 4px">↔</span>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:right">
+      <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:700;color:#6B8CFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kE.song||'Unknown'}</div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.5rem;color:rgba(255,255,255,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kE.artist||''}</div>
+    </div>
+    <span class="ss-feeling-tag" style="background:${eE.bg};color:${eE.text};border:1px solid ${eE.border};flex-shrink:0;margin-left:4px">${echoPost.emotion||'Echo'}</span>
   `;
 }
 
@@ -497,20 +578,18 @@ async function ssDownload() {
     await ssGeneratePoster();
     if (!SS.posterBlob) return;
     const url = URL.createObjectURL(SS.posterBlob);
-    const a   = document.createElement('a');
-    a.href = url; a.download = `margo-poster-${Date.now()}.png`;
-    a.style.display = 'none';
-    document.body.appendChild(a); a.click();
+    const a = document.createElement('a');
+    a.href = url; a.download = `margo-${SS.isDuet?'duet-':''}poster-${Date.now()}.png`;
+    a.style.display = 'none'; document.body.appendChild(a); a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
     if (typeof showToast === 'function') showToast('Poster saved ✓');
   } else {
     await ssGenerateGif();
     if (!SS.gifBlob) return;
     const url = URL.createObjectURL(SS.gifBlob);
-    const a   = document.createElement('a');
-    a.href = url; a.download = `margo-gif-${Date.now()}.gif`;
-    a.style.display = 'none';
-    document.body.appendChild(a); a.click();
+    const a = document.createElement('a');
+    a.href = url; a.download = `margo-${SS.isDuet?'duet-':''}gif-${Date.now()}.gif`;
+    a.style.display = 'none'; document.body.appendChild(a); a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
     if (typeof showToast === 'function') showToast('GIF saved ✓');
   }
@@ -520,95 +599,90 @@ async function ssShare() {
   const isGif = SS.activeTab === 'gif';
   if (isGif && !SS.gifBlob) await ssGenerateGif();
   if (!isGif && !SS.posterBlob) await ssGeneratePoster();
-
   const blob = isGif ? SS.gifBlob : SS.posterBlob;
   if (!blob) return;
-
-  const ext      = isGif ? 'gif' : 'png';
-  const mime     = isGif ? 'image/gif' : 'image/png';
-  const fileName = `margo-${ext}-${Date.now()}.${ext}`;
-  const file     = new File([blob], fileName, { type: mime });
-  const text     = `"${SS.post?.text?.substring(0, 60) || ''}" — trymargo.com`;
-
+  const ext  = isGif ? 'gif' : 'png';
+  const mime = isGif ? 'image/gif' : 'image/png';
+  const fileName = `margo-${SS.isDuet?'duet-':''}${ext}-${Date.now()}.${ext}`;
+  const text = SS.isDuet
+    ? `"${SS.post?.text?.substring(0,40)||''}" ↩ "${SS.echoPost?.text?.substring(0,40)||''}" — trymargo.com`
+    : `"${SS.post?.text?.substring(0,60)||''}" — trymargo.com`;
+  const file = new File([blob], fileName, { type: mime });
   try {
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ title: 'MARGO', text, files: [file] });
-      return;
+    if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })) {
+      await navigator.share({ title:'MARGO', text, files:[file] }); return;
     }
-  } catch (e) {
-    if (e.name === 'AbortError') return;
-  }
-
+  } catch(e) { if (e.name === 'AbortError') return; }
   const url = URL.createObjectURL(blob);
-  const a   = document.createElement('a');
+  const a = document.createElement('a');
   a.href = url; a.download = fileName; a.style.display = 'none';
   document.body.appendChild(a); a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
   if (typeof showToast === 'function') showToast('Saved to device ✓');
 }
 
-/* ── Poster generation ── */
+/* ── Poster generation — KEY FIX: duet uses drawDuetPosterToCtx ── */
 async function ssGeneratePoster() {
   if (SS.posterBlob) return;
   SS.isEncoding = true;
-  setSSEncoding(true, 'Generating poster…');
-
+  setSSEncoding(true, SS.isDuet ? 'Generating duet poster…' : 'Generating poster…');
   try {
     const offscreen = document.createElement('canvas');
     offscreen.width = 1080; offscreen.height = 1080;
     const ctx = offscreen.getContext('2d');
     await document.fonts.ready;
-
-    /* Use window.drawPosterPreview — poster.js public function */
-    if (typeof window.drawPosterPreview === 'function') {
-      window.drawPosterPreview(ctx, 1080, 1080, SS.post);
+    if (SS.isDuet && SS.echoPost) {
+      if (typeof drawDuetPosterToCtx === 'function') {
+        drawDuetPosterToCtx(ctx, 1080, 1080);
+      } else {
+        ssDrawFallback(ctx, 1080, 1080, SS.post);
+      }
     } else {
-      ssDrawFallback(ctx, 1080, 1080, SS.post);
+      if (typeof window.drawPosterPreview === 'function') {
+        window.drawPosterPreview(ctx, 1080, 1080, SS.post);
+      } else {
+        ssDrawFallback(ctx, 1080, 1080, SS.post);
+      }
     }
-
-    SS.posterBlob = await new Promise((res, rej) => {
+    SS.posterBlob = await new Promise((res,rej) => {
       offscreen.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png');
     });
-  } catch (err) {
+  } catch(err) {
     console.error('[SS] poster gen error:', err);
     if (typeof showToast === 'function') showToast('Could not generate poster');
   } finally {
-    SS.isEncoding = false;
-    setSSEncoding(false);
+    SS.isEncoding = false; setSSEncoding(false);
   }
 }
 
-/* ── GIF generation ── */
+/* ── GIF generation — KEY FIX: gsExportForShareSheet already
+   calls isDuetMode() internally and branches to gsDrawDuetFrame ── */
 async function ssGenerateGif() {
   if (SS.gifBlob) return;
-
   if (typeof gsExportForShareSheet !== 'function') {
     if (typeof showToast === 'function') showToast('Open Studio to export GIF');
     ssOpenStudio(); return;
   }
-
   SS.isEncoding = true;
-  setSSEncoding(true, 'Creating GIF…');
-
+  setSSEncoding(true, SS.isDuet ? 'Creating duet GIF…' : 'Creating GIF…');
   try {
     window.currentPost = SS.post;
     SS.gifBlob = await gsExportForShareSheet((pct) => {
       const bar = document.getElementById('ssProgressBar');
-      if (bar) bar.style.width = (pct * 100) + '%';
+      if (bar) bar.style.width = (pct*100) + '%';
       const lbl = document.getElementById('ssEncodingLabel');
-      if (lbl) lbl.textContent = `Creating GIF… ${Math.round(pct * 100)}%`;
+      if (lbl) lbl.textContent = `${SS.isDuet?'Duet GIF':'Creating GIF'}… ${Math.round(pct*100)}%`;
     });
-    if (typeof showToast === 'function') showToast('GIF ready ✓');
-  } catch (err) {
+    if (typeof showToast === 'function') showToast(SS.isDuet ? 'Duet GIF ready ✓' : 'GIF ready ✓');
+  } catch(err) {
     console.error('[SS] GIF gen error:', err);
     if (typeof showToast === 'function') showToast('GIF failed — try Studio');
   } finally {
-    SS.isEncoding = false;
-    setSSEncoding(false);
+    SS.isEncoding = false; setSSEncoding(false);
   }
 }
 
-function setSSEncoding(on, label = '') {
+function setSSEncoding(on, label='') {
   const overlay = document.getElementById('ssEncodingOverlay');
   const lbl     = document.getElementById('ssEncodingLabel');
   const bar     = document.getElementById('ssProgressBar');
@@ -616,63 +690,45 @@ function setSSEncoding(on, label = '') {
   if (lbl && label) lbl.textContent = label;
   if (bar && !on) bar.style.width = '0%';
   ['ssBtnDownload','ssBtnShare','ssBtnStudio','ssCustomizeBtn'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = on;
+    const el = document.getElementById(id); if (el) el.disabled = on;
   });
 }
 
-/* ── Open Studio ── */
 function ssOpenStudio() {
   ssStopPreview();
   const backdrop = document.getElementById('shareSheetBackdrop');
   if (backdrop) backdrop.classList.add('ss-hidden');
-
   window.currentPost = SS.post;
-
   if (SS.activeTab === 'poster') {
-    if (typeof openPosterStudio === 'function') {
-      openPosterStudio(SS.post);
-    } else if (typeof openStudio === 'function') {
-      openStudio(SS.post);
-    }
+    if (typeof openPosterStudio === 'function') openPosterStudio(SS.post);
+    else if (typeof openStudio === 'function') openStudio(SS.post);
   } else {
-    if (typeof openGifStudio === 'function') {
-      openGifStudio();
-    }
+    if (typeof openGifStudio === 'function') openGifStudio();
   }
 }
 
-/* ── Swipe to close ── */
 function initSSSwipeClose() {
   const sheet  = document.getElementById('shareSheet');
   const handle = document.getElementById('ssDragHandle');
   if (!sheet || !handle) return;
-
   let startY = 0, currentY = 0, dragging = false;
-  const THRESHOLD = 80;
-
   const onStart = (e) => { startY = e.touches ? e.touches[0].clientY : e.clientY; currentY = startY; dragging = true; sheet.style.transition = 'none'; };
   const onMove  = (e) => {
     if (!dragging) return;
     currentY = e.touches ? e.touches[0].clientY : e.clientY;
     const dy = Math.max(0, currentY - startY);
-    sheet.style.transform = `translateY(${dy}px)`;
-    sheet.style.opacity   = String(1 - dy / 300);
+    sheet.style.transform = `translateY(${dy}px)`; sheet.style.opacity = String(1 - dy/300);
   };
   const onEnd = () => {
-    if (!dragging) return;
-    dragging = false;
-    sheet.style.transition = '';
-    if (currentY - startY > THRESHOLD) { closeShareSheet(); }
+    if (!dragging) return; dragging = false; sheet.style.transition = '';
+    if (currentY - startY > 80) { closeShareSheet(); }
     else { sheet.style.transform = ''; sheet.style.opacity = ''; }
   };
-
-  handle.addEventListener('touchstart', onStart, { passive: true });
-  handle.addEventListener('touchmove',  onMove,  { passive: true });
+  handle.addEventListener('touchstart', onStart, { passive:true });
+  handle.addEventListener('touchmove',  onMove,  { passive:true });
   handle.addEventListener('touchend',   onEnd);
 }
 
-/* ── Global expose ── */
 window.openShareSheet   = openShareSheet;
 window.closeShareSheet  = closeShareSheet;
 window.reopenShareSheet = reopenShareSheet;
