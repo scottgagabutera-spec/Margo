@@ -445,3 +445,11 @@
 #composer .modal-body{overflow:visible!important;}
 #composer .modal-sheet{overflow:visible!important;}
 #shareInputs{position:relative;z-index:50;overflow:visible!important;}
+
+/* Compact composer to show all buttons */
+#composer .modal-body{padding:10px 16px 8px!important;gap:6px!important;}
+#composer .song-confirm-input{padding:7px 10px!important;font-size:0.78rem!important;}
+#composer .lyric-chip{padding:9px 12px!important;}
+#composer .emotion-btn{padding:5px 10px!important;font-size:0.72rem!important;}
+#composer .yt-card{padding:8px!important;}
+#lyricChipLabel,#vibeLabel,#composer .song-confirm-label{margin-top:8px!important;margin-bottom:2px!important;}
