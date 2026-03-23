@@ -718,7 +718,7 @@ window.closeStudio = function() {
 /* ══════════════════════════════════════════════════════════
    EXPORT
 ══════════════════════════════════════════════════════════ */
-async function exportPoster() {
+window.exportPoster = async function exportPoster() {
   const btn = document.getElementById('studioExportBtn');
   if (btn) { btn.innerHTML = '<span class="studio-spinner"></span>'; btn.disabled = true; }
 
@@ -736,7 +736,7 @@ async function exportPoster() {
     await document.fonts.load(`700 24px 'DM Sans', sans-serif`);
   } catch (_) {}
 
-  window.drawPosterToCtx(ctx, size.w, size.h, studioPost || window.currentPost);
+  const _post = studioPost || window.currentPost; window.drawPosterToCtx(ctx, size.w, size.h, _post);
 
   const post = studioPost || window.currentPost || {};
   const name = (post.knowledge?.song || 'lyric').replace(/\s+/g, '-').toLowerCase();
