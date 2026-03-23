@@ -682,6 +682,7 @@ function _switchDockTab(tabId) {
    if poster.js is loaded, so the share sheet "Studio" button
    never navigates to the landing page.
 ══════════════════════════════════════════════════════════ */
+window.openPosterStudio = function(post) { return window.openStudio(post); };
 window.openStudio = function(post) {
   /* Delegate to poster.js if available — it owns the overlay */
   if (typeof window.openPosterStudio === 'function') {
