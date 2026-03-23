@@ -807,3 +807,4 @@ window.addEventListener('resize', () => {
   });
 })();
 })();
+  ctx.globalAlpha = 0.35;
