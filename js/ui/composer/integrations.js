@@ -132,7 +132,7 @@ function wireLyricChip(){
   // Make chip text directly editable
   chipText.contentEditable="true";
   chipText.spellcheck=false;
-  chipText.setAttribute("data-placeholder","Write your line here…");
+  chipText.setAttribute("data-placeholder","");
 
   chipText.addEventListener("focus",function(){
     chipText.classList.add("editing");
