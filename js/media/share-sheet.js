@@ -312,7 +312,7 @@ function ssDrawFallback(ctx, W, H, post) {
   ctx.fillStyle = cfg.text; ctx.fillRect(0, 0, W, 2);
 
   // M circle + MARGO logo
-  const _r = Math.round(W*0.044), _pad = Math.round(W*0.06);
+  const _r = Math.round(W*0.028), _pad = Math.round(W*0.035);
   const _cx = _pad + _r, _cy = _pad + _r, _sc = _r/40;
   ctx.save();
   ctx.shadowColor="rgba(232,197,71,0.8)"; ctx.shadowBlur=Math.round(W*0.016);
@@ -330,7 +330,7 @@ function ssDrawFallback(ctx, W, H, post) {
   if(ctx.roundRect)ctx.roundRect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh,_dh/2);
   else ctx.rect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh);
   ctx.fill(); ctx.globalAlpha=1;
-  const _sz=Math.max(14,Math.round(W*0.042));
+  const _sz=Math.max(10,Math.round(W*0.028));
   ctx.font="800 "+_sz+"px Syne, Arial Black, sans-serif";
   ctx.fillStyle="#E8C547"; ctx.globalAlpha=1;
   ctx.textBaseline="middle"; ctx.textAlign="left";

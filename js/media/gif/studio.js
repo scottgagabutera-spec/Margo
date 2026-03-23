@@ -67,8 +67,8 @@ const GS_EXPORT_SIZE = 1080;
    FIX: was 'Syne' — switched to 'Bebas Neue' (Syne removed from index.html)
    ================================================================ */
 function gsDrawWordmark(ctx, W, H, th) {
-  const pad = Math.round(W*0.06);
-  const r = Math.round(W*0.044);
+  const pad = Math.round(W*0.035);
+  const r = Math.round(W*0.028);
   const cx = pad + r, cy = pad + r;
   const sc = r / 40;
   ctx.save();
@@ -85,8 +85,9 @@ function gsDrawWordmark(ctx, W, H, th) {
     ctx.stroke();
   });
   // Gold circle with glow
-  ctx.shadowColor = 'rgba(232,197,71,0.8)';
-  ctx.shadowBlur = Math.round(W*0.016);
+  ctx.globalAlpha = 0.5;
+  ctx.shadowColor = 'rgba(232,197,71,0.6)';
+  ctx.shadowBlur = Math.round(W*0.01);
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
   ctx.fillStyle = '#E8C547'; ctx.fill();
   ctx.shadowBlur = 0;
@@ -112,7 +113,7 @@ function gsDrawWordmark(ctx, W, H, th) {
   ctx.fill();
   ctx.globalAlpha = 1;
   // MARGO text
-  const sz = Math.max(14, Math.round(W*0.042));
+  const sz = Math.max(10, Math.round(W*0.028));
   ctx.font = '800 ' + sz + 'px Syne, Arial Black, sans-serif';
   ctx.fillStyle = '#E8C547';
   ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
