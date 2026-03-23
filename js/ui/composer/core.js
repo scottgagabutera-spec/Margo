@@ -244,7 +244,7 @@ function resetComposer() {
   if (typeof guessArtistCheck !== 'undefined' && guessArtistCheck) guessArtistCheck.checked = true;
 
   const is = document.getElementById('inspireSuggestions');
-  if (iw) iw.style.display = 'none';
+  
   if (is) { is.innerHTML = ''; is.style.display = 'none'; }
 }
 
