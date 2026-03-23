@@ -333,6 +333,7 @@ function ssDrawFallback(ctx, W, H, post) {
   ctx.fillStyle="#E8C547"; ctx.globalAlpha=0.35;
   const _sz=Math.max(10,Math.round(W*0.028));
   ctx.globalAlpha = 0.35;
+  ctx.globalAlpha = 0.35;
   ctx.font="800 "+_sz+"px Syne, Arial Black, sans-serif";
   ctx.fillStyle="#E8C547"; ctx.globalAlpha=1;
   ctx.textBaseline="middle"; ctx.textAlign="left";
