@@ -192,3 +192,8 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 .feed-search-result-lyric mark{background:none;color:#E8C547;font-weight:700;}
 .feed-search-empty{padding:24px 18px;text-align:center;font-family:var(--font-mono,monospace);font-size:0.65rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.2);}
 @media(max-width:600px){.feed-search-overlay{height:50px;}.feed-search-results{top:50px;}}
+
+/* FAB floating bottom-right */
+#dropLyricFAB{position:fixed!important;bottom:32px!important;right:18px!important;z-index:300!important;border-radius:50px!important;padding:10px 18px 10px 14px!important;font-size:0.55rem!important;gap:6px!important;box-shadow:0 4px 24px rgba(0,0,0,0.5)!important;}
+#feed.active #dropLyricFAB{display:flex!important;}
+@media(max-width:600px){#dropLyricFAB{bottom:24px!important;right:14px!important;padding:9px 14px 9px 11px!important;font-size:0.5rem!important;}}
