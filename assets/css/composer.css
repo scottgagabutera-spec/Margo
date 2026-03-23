@@ -294,3 +294,15 @@
 .search-result-card:hover .search-result-use{background:rgba(232,197,71,0.14);color:#E8C547;border-color:rgba(232,197,71,0.35);}
 .search-result-card.selected .search-result-use{background:#E8C547;color:#0B0B0D;border-color:#E8C547;}
 @media(max-width:768px){.search-sheet{max-height:45vh;overflow-y:auto;}}
+/* LYRIC CHIP */
+.lyric-chip-wrap{margin-top:14px;}
+.lyric-chip-wrap.hidden{display:none;}
+.lyric-chip{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);transition:border-color 0.2s;}
+.lyric-chip:focus-within{border-color:rgba(232,197,71,0.35);}
+.lyric-chip-text{flex:1;font-size:0.9rem;color:#fff;font-style:italic;opacity:0.85;line-height:1.4;min-width:0;word-break:break-word;}
+.lyric-chip-edit{flex-shrink:0;background:none;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.4);width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.75rem;transition:all 0.15s;}
+.lyric-chip-edit:hover{border-color:rgba(232,197,71,0.4);color:#E8C547;background:rgba(232,197,71,0.06);}
+.lyric-edit-wrap{margin-top:10px;}
+.lyric-edit-wrap.hidden{display:none;}
+.lyric-edit-wrap textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(232,197,71,0.3);border-radius:12px;padding:12px 14px;color:#fff;font-size:0.9rem;resize:none;outline:none;min-height:72px;caret-color:#E8C547;box-sizing:border-box;}
+.lyric-edit-wrap textarea:focus{border-color:rgba(232,197,71,0.55);box-shadow:0 0 0 3px rgba(232,197,71,0.08);}

@@ -1,27 +1,9 @@
-/* MARGO integrations.js v7.0 */
+/* MARGO integrations.js v7.1 */
 
 let youtubeData=null,geniusResult=null,geniusTimer=null,lastQuery="",searchCache={},isSheetOpen=false;
 
-const PLACEHOLDERS=["Search by lyric, song or artist…"];
-
-function startAnimatedPlaceholder(){
-  const input=document.getElementById("smartSearchInput");
-  if(!input)return;
-  let i=0,charIndex=0,isDeleting=false,current=PLACEHOLDERS[0];
-  const speed={type:55,del:28,pause:1800};
-  function tick(){
-    if(document.activeElement===input||input.value)return;
-    if(!isDeleting&&charIndex<=current.length){input.placeholder=current.slice(0,charIndex++);setTimeout(tick,speed.type);}
-    else if(!isDeleting&&charIndex>current.length){isDeleting=true;setTimeout(tick,speed.pause);}
-    else if(isDeleting&&charIndex>0){input.placeholder=current.slice(0,charIndex--);setTimeout(tick,speed.del);}
-    else{isDeleting=false;i=(i+1)%PLACEHOLDERS.length;current=PLACEHOLDERS[i];charIndex=0;setTimeout(tick,300);}
-  }
-  tick();
-}
-
 function initGeniusIdentify(){
   injectSearchSheet();
-  startAnimatedPlaceholder();
   const input=document.getElementById("smartSearchInput");
   if(!input)return;
   input.addEventListener("input",onSmartInput);
@@ -31,6 +13,7 @@ function initGeniusIdentify(){
     const wrap=document.getElementById("smartSearchWrap");
     if(sheet&&!sheet.contains(e.target)&&wrap&&!wrap.contains(e.target))closeSheet();
   });
+  wireLyricChip();
 }
 
 function onSmartInput(){
@@ -38,7 +21,7 @@ function onSmartInput(){
   const val=input.value.trim();
   clearTimeout(geniusTimer);
   if(!val){clearSongSelection();closeSheet();return;}
-  if(geniusResult){geniusResult=null;clearSongPill();clearYoutubePreview();}
+  if(geniusResult){geniusResult=null;clearSongPill();clearYoutubePreview();hideLyricChip();}
   if(val.length<2)return;
   showSearchingState();
   openSheet();
@@ -69,7 +52,7 @@ function injectSearchSheet(){
     "<div id="+q+"smartSearchWrap"+q+" class="+q+"smart-search-wrap"+q+">"
     +"<div class="+q+"smart-search-field"+q+">"
     +"<span class="+q+"smart-search-icon"+q+"><svg width="+q+"14"+q+" height="+q+"14"+q+" viewBox="+q+"0 0 24 24"+q+" fill="+q+"none"+q+" stroke="+q+"currentColor"+q+" stroke-width="+q+"2.5"+q+" stroke-linecap="+q+"round"+q+" stroke-linejoin="+q+"round"+q+"><circle cx="+q+"11"+q+" cy="+q+"11"+q+" r="+q+"8"+q+"/><path d="+q+"m21 21-4.35-4.35"+q+"/></svg></span>"
-    +"<input id="+q+"smartSearchInput"+q+" type="+q+"text"+q+" inputmode="+q+"text"+q+" autocomplete="+q+"off"+q+" autocorrect="+q+"off"+q+" spellcheck="+q+"false"+q+" class="+q+"smart-search-input"+q+" placeholder="+q+"Type a lyric…"+q+"/>"
+    +"<input id="+q+"smartSearchInput"+q+" type="+q+"text"+q+" inputmode="+q+"text"+q+" autocomplete="+q+"off"+q+" autocorrect="+q+"off"+q+" spellcheck="+q+"false"+q+" class="+q+"smart-search-input"+q+" placeholder="+q+"Search by lyric, song or artist…"+q+"/>"
     +"<span id="+q+"searchSpinner"+q+" class="+q+"search-spinner hidden"+q+"></span>"
     +"<button id="+q+"clearSearchBtn"+q+" class="+q+"clear-search-btn hidden"+q+" aria-label="+q+"Clear"+q+">×</button>"
     +"</div>"
@@ -92,13 +75,79 @@ function injectSearchSheet(){
     closeSheet();
   });
   document.getElementById("changeSongBtn").addEventListener("click",function(){
-    geniusResult=null;clearSongPill();clearYoutubePreview();
+    geniusResult=null;clearSongPill();clearYoutubePreview();hideLyricChip();hideVibeSection();
     var input=document.getElementById("smartSearchInput");
     if(input){input.value="";input.focus();}
     hideSongPill();
   });
 }
 
+/* ── Lyric chip ── */
+function wireLyricChip(){
+  const editBtn=document.getElementById("lyricChipEdit");
+  if(!editBtn)return;
+  editBtn.addEventListener("click",function(){
+    const editWrap=document.getElementById("lyricEditWrap");
+    if(!editWrap)return;
+    const isHidden=editWrap.classList.contains("hidden");
+    editWrap.classList.toggle("hidden",!isHidden);
+    if(isHidden){
+      const ta=document.getElementById("textInput");
+      if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}
+    }
+  });
+  const ta=document.getElementById("textInput");
+  if(ta){
+    ta.addEventListener("input",function(){
+      const chip=document.getElementById("lyricChipText");
+      if(chip)chip.textContent=ta.value||"Add your line…";
+      const cc=document.getElementById("charCount");
+      if(cc)cc.textContent=ta.value.length;
+    });
+  }
+}
+
+function showLyricChip(lyric){
+  const wrap=document.getElementById("lyricChipWrap");
+  const chip=document.getElementById("lyricChipText");
+  const ta=document.getElementById("textInput");
+  const cc=document.getElementById("charCount");
+  if(!wrap||!chip)return;
+  const text=lyric.substring(0,140);
+  chip.textContent=text;
+  if(ta){ta.value=text;}
+  if(cc){cc.textContent=text.length;}
+  wrap.classList.remove("hidden");
+  showVibeSection();
+}
+
+function hideLyricChip(){
+  const wrap=document.getElementById("lyricChipWrap");
+  if(wrap)wrap.classList.add("hidden");
+  const ta=document.getElementById("textInput");
+  if(ta)ta.value="";
+  hideVibeSection();
+}
+
+function showVibeSection(){
+  const vl=document.getElementById("vibeLabel");
+  const eg=document.getElementById("emotionGrid");
+  const footer=document.querySelector(".modal-footer");
+  if(vl)vl.style.display="";
+  if(eg)eg.style.display="";
+  if(footer)footer.style.display="";
+}
+
+function hideVibeSection(){
+  const vl=document.getElementById("vibeLabel");
+  const eg=document.getElementById("emotionGrid");
+  const footer=document.querySelector(".modal-footer");
+  if(vl)vl.style.display="none";
+  if(eg)eg.style.display="none";
+  if(footer)footer.style.display="none";
+}
+
+/* ── Sheet open/close ── */
 function openSheet(){
   const sheet=document.getElementById("searchSheet");
   if(!sheet||isSheetOpen)return;
@@ -176,6 +225,9 @@ function selectResult(result,card){
   if(songEl)songEl.value=result.song;
   if(artistEl)artistEl.value=result.artist;
   showSongPill(result);
+  // Auto-fill lyric from search query
+  const searchVal=document.getElementById("smartSearchInput").value.trim();
+  showLyricChip(searchVal);
   if(result.id)fetchGeniusDetail(result.id);
   clearYoutubePreview();
   fetchYoutubeData(result.song,result.artist);
@@ -216,7 +268,7 @@ function clearSongPill(){
 
 function clearSongSelection(){
   geniusResult=null;lastQuery="";
-  clearSongPill();clearYoutubePreview();
+  clearSongPill();clearYoutubePreview();hideLyricChip();
   const sp=document.getElementById("searchSpinner");
   if(sp)sp.classList.add("hidden");
 }

@@ -267,11 +267,19 @@
         <input id="artistInput" placeholder="Artist" inputmode="text"/>
       </div>
 
-      <span class="field-label" style="margin-top:14px">Your Line</span>
-      <textarea id="textInput" maxlength="140" placeholder="Write the exact line you want to share…" inputmode="text"></textarea>
-      <div class="char-count"><span id="charCount">0</span>/140</div>
-      <span class="field-label">Vibe</span>
-      <div class="emotion-grid">
+      <div id="lyricChipWrap" class="lyric-chip-wrap hidden">
+        <div id="lyricChip" class="lyric-chip">
+          <span id="lyricChipText" class="lyric-chip-text"></span>
+          <button id="lyricChipEdit" class="lyric-chip-edit" aria-label="Edit line">✎</button>
+        </div>
+        <div id="lyricEditWrap" class="lyric-edit-wrap hidden">
+          <textarea id="textInput" maxlength="140" placeholder="Write the exact line you want to share…" inputmode="text"></textarea>
+          <div class="char-count"><span id="charCount">0</span>/140</div>
+        </div>
+      </div>
+
+      <span class="field-label" id="vibeLabel" style="display:none">Vibe</span>
+      <div class="emotion-grid" id="emotionGrid" style="display:none">
         <button class="emotion-btn" data-emotion="SendIt">Send It</button>
         <button class="emotion-btn" data-emotion="LetOut">Let Out</button>
         <button class="emotion-btn" data-emotion="Love">Love</button>
@@ -282,6 +290,8 @@
         <button class="emotion-btn" data-emotion="Joy">Joy</button>
         <button class="emotion-btn" data-emotion="Rage">Rage</button>
         <button class="emotion-btn" data-emotion="Loneliness">Loneliness</button>
+      </div>
+    </div>
       </div>
     </div>
     <div class="modal-footer">
