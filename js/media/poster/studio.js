@@ -361,11 +361,12 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   ctx.restore();
 
   /* ── Logo matching website header (no rings for poster) ── */
-  const _pad = Math.round(W*0.06);
-  const _r = Math.round(W*0.044);
+  const _pad = Math.round(W*0.035);
+  const _r = Math.round(W*0.028);
   const _cx = _pad + _r, _cy = _pad + _r;
   const _sc = _r / 40;
   ctx.save();
+  ctx.globalAlpha = 0.35;
   ctx.shadowColor = 'rgba(232,197,71,0.8)';
   ctx.shadowBlur = Math.round(W*0.016);
   ctx.beginPath(); ctx.arc(_cx, _cy, _r, 0, Math.PI*2);
@@ -387,6 +388,7 @@ window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, opt
   ctx.beginPath();
   if(ctx.roundRect)ctx.roundRect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh,_dh/2);
   else ctx.rect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh);
+  ctx.fill();
   ctx.globalAlpha = 0.35;
   const _sz = Math.max(10, Math.round(W*0.028));
   ctx.font = '800 ' + _sz + 'px Syne, Arial Black, sans-serif';
@@ -807,4 +809,3 @@ window.addEventListener('resize', () => {
   });
 })();
 })();
-  ctx.globalAlpha = 0.35;
