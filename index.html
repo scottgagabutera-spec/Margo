@@ -263,8 +263,20 @@
     <div class="modal-body">
 
       <div id="shareInputs" class="conditional show">
-        <input id="songInput" placeholder="Song title" inputmode="text"/>
-        <input id="artistInput" placeholder="Artist" inputmode="text"/>
+        <!-- smart search injected by integrations.js -->
+      </div>
+      <!-- Song+Artist confirm (shown after selection) -->
+      <div id="songConfirmBlock" class="song-confirm-block hidden">
+        <div class="song-confirm-row">
+          <div class="song-confirm-field">
+            <span class="song-confirm-label">Song</span>
+            <input id="songConfirmInput" class="song-confirm-input" type="text" placeholder="Song title" inputmode="text"/>
+          </div>
+          <div class="song-confirm-field">
+            <span class="song-confirm-label">Artist</span>
+            <input id="artistConfirmInput" class="song-confirm-input" type="text" placeholder="Artist" inputmode="text"/>
+          </div>
+        </div>
       </div>
 
       <div id="lyricChipWrap" class="lyric-chip-wrap hidden">

@@ -306,19 +306,19 @@
 .lyric-edit-wrap.hidden{display:none;}
 .lyric-edit-wrap textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(232,197,71,0.3);border-radius:12px;padding:12px 14px;color:#fff;font-size:0.9rem;resize:none;outline:none;min-height:72px;caret-color:#E8C547;box-sizing:border-box;}
 .lyric-edit-wrap textarea:focus{border-color:rgba(232,197,71,0.55);box-shadow:0 0 0 3px rgba(232,197,71,0.08);}
-/* Edit pen pulse */
-@keyframes editPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.9)}}
-.lyric-chip-edit{animation:editPulse 2s ease-in-out 3;}
-.lyric-chip-edit:hover{animation:none;}
-/* Search field Margo style */
-.smart-search-field{border-color:rgba(232,197,71,0.25)!important;background:rgba(232,197,71,0.03)!important;}
-.smart-search-field:focus-within{border-color:rgba(232,197,71,0.6)!important;box-shadow:0 0 0 3px rgba(232,197,71,0.1),0 0 20px rgba(232,197,71,0.08)!important;}
-.smart-search-input{font-family:var(--font-ui,sans-serif);letter-spacing:0.01em;}
-.smart-search-input::placeholder{color:rgba(232,197,71,0.35)!important;font-style:italic;}
-.smart-search-icon svg{stroke:rgba(232,197,71,0.5)!important;}
+/* ══ SONG CONFIRM BLOCK v8 ══ */
+.song-confirm-block{margin-top:10px;animation:pillIn 0.25s cubic-bezier(0.16,1,0.3,1);}
+.song-confirm-block.hidden{display:none;}
+.song-confirm-row{display:flex;gap:8px;}
+.song-confirm-field{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
+.song-confirm-label{font-family:var(--font-mono,monospace);font-size:0.5rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(232,197,71,0.6);}
+.song-confirm-input{background:rgba(232,197,71,0.04);border:1px solid rgba(232,197,71,0.2);border-radius:10px;padding:9px 12px;color:#fff;font-size:0.82rem;font-weight:600;outline:none;width:100%;transition:border-color 0.2s,box-shadow 0.2s;}
+.song-confirm-input:focus{border-color:rgba(232,197,71,0.55);box-shadow:0 0 0 3px rgba(232,197,71,0.08);}
+.song-confirm-input::placeholder{color:rgba(255,255,255,0.2);font-weight:400;}
 
-/* Remove double box - search field borderless inside modal */
-.smart-search-field{border:none!important;background:transparent!important;box-shadow:none!important;padding:4px 20px 14px!important;border-bottom:1px solid rgba(255,255,255,0.07)!important;border-radius:0!important;}
-.smart-search-field:focus-within{border-bottom-color:rgba(232,197,71,0.5)!important;box-shadow:none!important;}
-.smart-search-input{font-size:1rem!important;}
-.smart-search-wrap{margin-top:0!important;}
+/* ══ LYRIC CHIP v8 — pulse on edit btn ══ */
+@keyframes editPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(232,197,71,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(232,197,71,0)}}
+.lyric-chip-edit{width:28px;height:28px;border-radius:50%;background:rgba(232,197,71,0.12);border:1px solid rgba(232,197,71,0.35);color:#E8C547;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.18s;animation:editPulse 1.8s ease-in-out 4;}
+.lyric-chip-edit:hover{background:rgba(232,197,71,0.22);border-color:#E8C547;animation:none;}
+.song-pill-change{background:none;border:1px solid rgba(232,197,71,0.35);border-radius:20px;color:#E8C547;font-family:var(--font-mono,monospace);font-size:0.5rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 10px;cursor:pointer;transition:all 0.15s;flex-shrink:0;}
+.song-pill-change:hover{background:rgba(232,197,71,0.1);border-color:#E8C547;}

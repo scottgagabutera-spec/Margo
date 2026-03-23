@@ -1,6 +1,11 @@
 function initComposer() {
   injectComposerStyles();
-  textInput.oninput = () => { charCount.textContent = textInput.value.length; };
+  // Wire textInput lazily — it lives inside lyricEditWrap which is injected later
+  setTimeout(function(){
+    var ta  = document.getElementById("textInput");
+    var cc  = document.getElementById("charCount");
+    if(ta && cc) ta.oninput = function(){ cc.textContent = ta.value.length; };
+  }, 400);
 
   // Mode buttons hidden — always share
   currentMode = 'share';
@@ -208,6 +213,16 @@ function resetComposer() {
   if (typeof charCount      !== 'undefined' && charCount)      charCount.textContent = '0';
 
   selectedEmotion = null; geniusResult = null; lastGeniusQuery = '';
+  // Reset smart search UI
+  var ssi = document.getElementById("smartSearchInput");
+  if(ssi) ssi.value = "";
+  var sf  = ssi && ssi.closest(".smart-search-field");
+  if(sf)  sf.style.display = "";
+  if(typeof clearSongSelection === "function") clearSongSelection();
+  if(typeof hideLyricChip     === "function") hideLyricChip();
+  if(typeof hideVibeSection   === "function") hideVibeSection();
+  var lw = document.getElementById("lyricEditWrap");
+  if(lw) lw.classList.add("hidden");
   currentMode = 'share';
   clearYoutubePreview(); closeAutocomplete();
   document.getElementById('geniusResultsList')?.remove();
