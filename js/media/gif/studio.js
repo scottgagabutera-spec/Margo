@@ -229,7 +229,6 @@ function gsDrawFrame(ctx, W, H, t, post) {
 
   gsMeta(ctx, W, H, data, scale);
   gsDrawWatermark(ctx, W, H, theme);
-  gsDrawMmark(ctx, W, H, theme);
 }
 
 /* ================================================================
