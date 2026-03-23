@@ -407,3 +407,6 @@
 #lyricChipLabel{margin-top:14px;margin-bottom:4px;display:block;}
 #lyricChipWrap{margin-top:0!important;}
 .lyric-chip-wrap{margin-top:0!important;}
+
+#lyricChipLabel{font-family:var(--font-mono,monospace);font-size:0.5rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(232,197,71,0.7);margin-top:10px;margin-bottom:4px;}
+#lyricChipWrap{margin-top:0!important;}
