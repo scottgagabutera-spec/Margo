@@ -197,11 +197,13 @@ function showLyricChip(lyric){
   wrap.classList.remove("hidden");
   wrap.style.display="";
   chipText.contentEditable="true";
+  var lbl=document.getElementById("lyricChipLabel");if(lbl)lbl.style.display="";
   showVibeSection();
 }
 
 function hideLyricChip(){
   var ct=document.getElementById("lyricChipText");
+  var lbl2=document.getElementById("lyricChipLabel");if(lbl2)lbl2.style.display="none";
   if(ct)ct.contentEditable="false";
   var wrap=document.getElementById("lyricChipWrap");
   if(wrap)wrap.classList.add("hidden");
