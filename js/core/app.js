@@ -152,7 +152,7 @@ function initNavigation() {
   if (efb2) efb2.onclick = () => { goToFeed(); scrollToFeed(); };
 
   if (backBtn)          backBtn.onclick          = goToLanding;
-  if (openComposerBtn)  openComposerBtn.onclick  = () => { if(!composerReady){initComposer();composerReady=true;} openModal(composer); setTimeout(() => { var si = document.getElementById("smartSearchInput"); if(si) si.focus(); }, 200); };
+  if (openComposerBtn)  openComposerBtn.onclick  = () => { openModal(composer); setTimeout(() => { var si = document.getElementById("smartSearchInput"); if(si) si.focus(); }, 200); };
   if (closeComposerBtn) closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
 
   let tSX = 0, tSY = 0;
@@ -256,7 +256,7 @@ buildLyricStream();
 initSearch();
 initRoomTabs();
 if (typeof initCardTilt === 'function') initCardTilt();
-// initComposer called on first open instead of page load
+initComposer();
 
 // NOTE: initStudio() removed — studio.js self-initialises on DOMContentLoaded
 
