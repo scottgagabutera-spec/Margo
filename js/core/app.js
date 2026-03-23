@@ -28,14 +28,14 @@ function openModal(modal) {
   modal.classList.remove('hidden');
   document.body.classList.add('modal-open');
   document.body.style.top = `-${savedScrollPosition}px`;
-  // body top offset removed - caused flash on modal open
+}
 
 function closeModal(modal) {
   if (!modal) return;
   modal.classList.add('hidden');
   document.body.classList.remove('modal-open');
   document.body.style.top = '';
-  // scroll restore removed
+  window.scrollTo(0, savedScrollPosition);
 }
 
 // ── Page state helpers ──
@@ -141,7 +141,7 @@ function scrollToFeed() {
 function initNavigation() {
   if (enterBtn) {
     enterBtn.onclick = () => {
-      setTimeout(() => { var si = document.getElementById("smartSearchInput"); if(si) si.focus(); }, 200);
+      openModal(composer);
       setTimeout(() => textInput?.focus(), 200);
     };
   }
