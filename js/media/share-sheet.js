@@ -332,11 +332,7 @@ function ssDrawFallback(ctx, W, H, post) {
   else ctx.rect(_cx+(35-40)*_sc,_cy+(60-40)*_sc,_dw,_dh);
   ctx.fillStyle="#E8C547"; ctx.globalAlpha=0.35;
   const _sz=Math.max(10,Math.round(W*0.028));
-<<<<<<< HEAD
   ctx.globalAlpha = 0.35;
-  ctx.globalAlpha = 0.35;
-=======
->>>>>>> parent of cbf1cdc (Fix MARGO text alpha in poster and share sheet)
   ctx.font="800 "+_sz+"px Syne, Arial Black, sans-serif";
   ctx.fillStyle="#E8C547"; ctx.globalAlpha=0.35;
   ctx.textBaseline="middle"; ctx.textAlign="left";
