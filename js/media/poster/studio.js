@@ -274,7 +274,7 @@ function _trackNumber(post) {
    CANVAS DRAW — window.drawPosterToCtx
    v6.0: New MARGO layout — left-aligned, track number, rule
 ══════════════════════════════════════════════════════════ */
-window.drawPosterToCtx = window.drawPosterToCtx || function(ctx, W, H, post, options) {
+window.drawPosterToCtx = function(ctx, W, H, post, options) {
   options = options || {};
   if (!post) return;
 
@@ -908,6 +908,11 @@ window.addEventListener('resize', () => {
   document.querySelectorAll('.dock-tab').forEach(tab => {
     tab.onclick = () => _switchDockTab(tab.dataset.tab);
   });
+
+// Alias for share-sheet.js
+window.drawPosterPreview = function(ctx, W, H, post) {
+  window.drawPosterToCtx(ctx, W, H, post);
+};
 })();
 
-})();
+
