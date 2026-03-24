@@ -45,7 +45,6 @@ async function runSmartSearch(query){
 }
 
 function injectSearchSheet(){
-  console.log("injectSearchSheet called", new Error().stack);
   if(document.getElementById("searchSheet"))return;
   var shareInputs=document.getElementById("shareInputs");
   if(!shareInputs)return;
@@ -233,7 +232,6 @@ function hideVibeSection(){
 
 /* ── Sheet open/close ── */
 function openSheet(){
-  console.log("openSheet called from:", new Error().stack);
   var sheet=document.getElementById("searchSheet");
   if(!sheet||isSheetOpen)return;
   sheet.classList.remove("hidden");

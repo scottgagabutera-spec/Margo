@@ -276,4 +276,4 @@ wireSharPosterBtn();
 initAdmin();
 startFirebaseSync();
 
-console.log('MARGO v6.3 concept-v4-design');
+console.log('MARGO v7.0');
