@@ -45,17 +45,17 @@ function swipeGoTo(direction) {
   const from = cards[swipeIndex];
   const toIdx = direction === 'next' ? swipeIndex + 1 : swipeIndex - 1;
   const to = cards[toIdx];
-
-  // Prepare incoming card
+  to.style.opacity = '0';
+  to.style.transform = direction === 'next' ? 'translateY(55px) scale(0.94)' : 'translateY(-55px) scale(0.94)';
   to.style.transition = 'none';
   to.style.opacity = '1';
   to.style.transform = direction === 'next' ? 'translateY(100%)' : 'translateY(-100%)';
-  to.style.zIndex = parseInt(from.style.zIndex || 0) + 1;
-
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      // Outgoing card
-      from.style.transition = 'transform 0.32s cubic-bezier(0.4,0,1,1), opacity 0.28s ease';
+      from.style.transition = 'transform 0.28s cubic-bezier(0.4,0,1,1), opacity 0.22s ease';
+      from.style.transform = direction === 'next' ? 'translateY(-30px) scale(0.9)' : 'translateY(30px) scale(0.9)';
+      from.style.opacity = '0';
+      to.style.transition = 'transform 0.42s cubic-bezier(0.22,1.15,0.36,1), opacity 0.3s ease';
+      to.style.transform = 'translateY(0) scale(1)';
+      to.style.opacity = '1';
       from.style.transform = direction === 'next' ? 'translateY(-100%)' : 'translateY(100%)';
       from.style.opacity = '0';
       // Incoming card — spring overshoot feel
