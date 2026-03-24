@@ -48,20 +48,20 @@ function swipeGoTo(direction) {
 
   // Prepare incoming card
   to.style.transition = 'none';
-  to.style.opacity = '1';
-  to.style.transform = direction === 'next' ? 'translateY(100%)' : 'translateY(-100%)';
+  to.style.opacity = '0';
+  to.style.transform = direction === 'next' ? 'translateY(55px) scale(0.94)' : 'translateY(-55px) scale(0.94)';
   to.style.zIndex = parseInt(from.style.zIndex || 0) + 1;
 
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
       // Outgoing card
-      from.style.transition = 'transform 0.32s cubic-bezier(0.4,0,1,1), opacity 0.28s ease';
-      from.style.transform = direction === 'next' ? 'translateY(-100%)' : 'translateY(100%)';
+      from.style.transition = 'transform 0.28s cubic-bezier(0.4,0,1,1), opacity 0.22s ease';
+      from.style.transform = direction === 'next' ? 'translateY(-30px) scale(0.9)' : 'translateY(30px) scale(0.9)';
       from.style.opacity = '0';
       // Incoming card — spring overshoot feel
-      to.style.transition = 'transform 0.38s cubic-bezier(0.22,1.2,0.36,1)';
+      to.style.transition = 'transform 0.42s cubic-bezier(0.22,1.15,0.36,1), opacity 0.3s ease';
       to.style.transform = 'translateY(0) scale(1)';
-      swipeIndex = toIdx;
+      to.style.opacity = '1';
       swipeActive = to;
       setTimeout(function() { swipeAnim = false; updateSwipeUI(); }, 400);
     });
