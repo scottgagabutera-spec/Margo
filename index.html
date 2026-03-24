@@ -662,8 +662,8 @@
     var isActive = feedIsActive();
     if (isActive && !wasFeedActive) { lastY = 0; pending = false; onScroll(); }
     wasFeedActive = isActive;
-    if (isActive) { fab.style.display = ''; fab.classList.remove('scroll-hidden'); }
-    else { fab.style.display = 'none'; fab.classList.remove('scroll-hidden'); fab.classList.remove('hidden-fab'); }
+    if (isActive) { fab.classList.add("fab-visible"); fab.classList.remove("scroll-hidden"); }
+    else { fab.classList.remove("fab-visible"); fab.classList.remove("scroll-hidden"); fab.classList.remove("hidden-fab"); }
   }
 
   var obs = new MutationObserver(onFeedVisibilityChange);
