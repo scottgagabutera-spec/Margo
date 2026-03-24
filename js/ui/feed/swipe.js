@@ -164,16 +164,16 @@ function onSwipeTouchEnd() {
 
 function initSwipeEngine() {
   const stack = document.getElementById('cardStack');
-  if (!stack || stack.dataset.swipeReady) return;
-  stack.dataset.swipeReady = '1';
-
-  swipeIndex = 0;
-  swipeActive = stack.querySelector('.swipe-card');
-  stack.querySelectorAll('.swipe-card').forEach((c,i) => {
-    c.style.opacity = i === 0 ? '1' : '0';
-    c.style.transform = i === 0 ? 'translateY(0)' : 'translateY(100%)';
-  });
-
+  swipeIndex = 0; swipeAnim = false; swipeDragging = false;
+  if (stack.dataset.swipeReady) {
+    swipeActive = stack.querySelector(".swipe-card");
+    stack.querySelectorAll(".swipe-card").forEach((c,i) => {
+      c.style.opacity = i === 0 ? "1" : "0";
+      c.style.transform = i === 0 ? "translateY(0)" : "translateY(100%)";
+    });
+    updateSwipeUI(); return;
+  }
+  stack.dataset.swipeReady = "1";
   stack.addEventListener('touchstart', onSwipeTouchStart, { passive: true });
   stack.addEventListener('touchmove', onSwipeTouchMove, { passive: false });
   stack.addEventListener('touchend', onSwipeTouchEnd, { passive: true });
