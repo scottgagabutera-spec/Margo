@@ -69,7 +69,7 @@ function goToFeed() {
   window.scrollTo(0, 0);
   setPageState('feed');
   mountUsernamePill();
-  renderFeed();
+  requestAnimationFrame(function() { renderFeed(); });
   // Show swipe hint briefly on first feed load
   const hint = document.getElementById('swipeHint');
   if (hint) {
