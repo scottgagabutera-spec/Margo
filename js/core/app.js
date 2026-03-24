@@ -63,14 +63,14 @@ function setArrows(show) {
 }
 function goToFeed() {
   landing.classList.remove('active');
+  landing.style.display = 'none';
   feed.classList.add('active');
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
   window.scrollTo(0, 0);
   setPageState('feed');
   mountUsernamePill();
-  requestAnimationFrame(function() { renderFeed(); });
-  // Show swipe hint briefly on first feed load
+  requestAnimationFrame(function() { requestAnimationFrame(function() { renderFeed(); }); });
   const hint = document.getElementById('swipeHint');
   if (hint) {
     setTimeout(() => {
@@ -105,13 +105,13 @@ function mountUsernamePill() {
 
 function goToLanding() {
   setArrows(false);
+  landing.style.display = '';
   const stack = document.getElementById('cardStack');
   if (stack) delete stack.dataset.swipeReady;
   feed.classList.remove('active');
   landing.classList.add('active');
   setPageState('landing');
 }
-
 // ── scrollToFeed ──
 function scrollToFeed() {
   let attempts = 0;
