@@ -46,24 +46,25 @@ function swipeGoTo(direction) {
   const toIdx = direction === 'next' ? swipeIndex + 1 : swipeIndex - 1;
   const to = cards[toIdx];
 
-  // Prepare incoming card
+  // Prepare incoming card — close behind, slightly scaled, fully visible
   to.style.transition = 'none';
   to.style.opacity = '1';
-  to.style.transform = direction === 'next' ? 'translateY(100%)' : 'translateY(-100%)';
+  to.style.transform = direction === 'next' ? 'translateY(6%) scale(0.96)' : 'translateY(-6%) scale(0.96)';
   to.style.zIndex = parseInt(from.style.zIndex || 0) + 1;
 
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
-      // Outgoing card
-      from.style.transition = 'transform 0.32s cubic-bezier(0.4,0,1,1), opacity 0.28s ease';
-      from.style.transform = direction === 'next' ? 'translateY(-100%)' : 'translateY(100%)';
+      // Outgoing card — shrinks and fades out fast
+      from.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.6,1), opacity 0.25s ease';
+      from.style.transform = direction === 'next' ? 'translateY(-8%) scale(0.92)' : 'translateY(8%) scale(0.92)';
       from.style.opacity = '0';
-      // Incoming card — spring overshoot feel
-      to.style.transition = 'transform 0.38s cubic-bezier(0.22,1.2,0.36,1)';
+      // Incoming card — rises into place with premium spring
+      to.style.transition = 'transform 0.4s cubic-bezier(0.22,1.1,0.36,1), opacity 0.3s ease';
       to.style.transform = 'translateY(0) scale(1)';
+      to.style.opacity = '1';
       swipeIndex = toIdx;
       swipeActive = to;
-      setTimeout(function() { swipeAnim = false; updateSwipeUI(); }, 400);
+      setTimeout(function() { swipeAnim = false; updateSwipeUI(); }, 420);
     });
   });
 }
