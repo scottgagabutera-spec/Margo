@@ -47,17 +47,17 @@ function swipeGoTo(direction) {
   const to = cards[toIdx];
 
   // Prepare incoming card
-      to.style.transition = "transform 0.42s cubic-bezier(0.22,1.2,0.36,1), opacity 0.32s ease";
-      to.style.transform = "translateY(0) scale(1)";
-    to.style.transform = direction === "next" ? "translateY(60px) scale(0.94)" : "translateY(-60px) scale(0.94)";
-    to.style.opacity = "0";
+  to.style.transition = 'none';
+  to.style.opacity = '1';
+  to.style.transform = direction === 'next' ? 'translateY(100%)' : 'translateY(-100%)';
+  to.style.zIndex = parseInt(from.style.zIndex || 0) + 1;
 
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
       // Outgoing card
-      from.style.transition = "transform 0.35s cubic-bezier(0.4,0,1,1), opacity 0.28s ease";
-      from.style.transform = direction === "next" ? "translateY(-30px) scale(0.88)" : "translateY(30px) scale(0.88)";
-      from.style.opacity = "0";
+      from.style.transition = 'transform 0.32s cubic-bezier(0.4,0,1,1), opacity 0.28s ease';
+      from.style.transform = direction === 'next' ? 'translateY(-100%)' : 'translateY(100%)';
+      from.style.opacity = '0';
       // Incoming card — spring overshoot feel
       to.style.transition = 'transform 0.38s cubic-bezier(0.22,1.2,0.36,1)';
       to.style.transform = 'translateY(0) scale(1)';
