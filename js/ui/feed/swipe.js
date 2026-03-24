@@ -174,6 +174,7 @@ function initSwipeEngine() {
     updateSwipeUI(); return;
   }
   stack.dataset.swipeReady = "1";
+  swipeActive = stack.querySelector(".swipe-card");
   stack.addEventListener('touchstart', onSwipeTouchStart, { passive: true });
   stack.addEventListener('touchmove', onSwipeTouchMove, { passive: false });
   stack.addEventListener('touchend', onSwipeTouchEnd, { passive: true });
