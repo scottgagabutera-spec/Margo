@@ -133,16 +133,23 @@ function renderFeed() {
     return;
   }
 
-  filtered.forEach(function(post, i) {
-    const card = buildSwipeCard(post, i);
-    stack.appendChild(card);
-  });
-
+  // Render first card immediately, rest in batches
+  const first = buildSwipeCard(filtered[0], 0);
+  stack.appendChild(first);
   updateSwipeUI();
   if (typeof initSwipeEngine === 'function') initSwipeEngine();
+  if (filtered.length > 1) {
+    let i = 1;
+    function renderBatch() {
+      const end = Math.min(i + 3, filtered.length);
+      while (i < end) { stack.appendChild(buildSwipeCard(filtered[i], i)); i++; }
+      if (i < filtered.length) requestAnimationFrame(renderBatch);
+    }
+    requestAnimationFrame(renderBatch);
+  }
+
 }
 
-/* ── Utilities ── */
 function timeAgo(ts) {
   const m = Math.floor((Date.now()-ts)/60000);
   if (m<1)  return 'now';
@@ -151,13 +158,8 @@ function timeAgo(ts) {
   if (h<24) return h+'h';
   return Math.floor(h/24)+'d';
 }
-
-function trackView(postId) {
-  if (isFirebaseEnabled && postId)
-    analyticsRef.child(postId).child('views').transaction(v=>(v||0)+1);
-}
-
 function showNewPostsIndicator(count) {
+
   const c = document.getElementById('newPostsCount');
   if (c) c.textContent=count;
   newPostsIndicator?.classList.add('visible');
