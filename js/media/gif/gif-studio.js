@@ -760,3 +760,4 @@ if (document.readyState === 'loading') {
 
 window.openGifStudio  = openGifStudio;
 window.closeGifStudio = closeGifStudio;
+window.gsSetTheme = function(t) { GS.theme = t; };
