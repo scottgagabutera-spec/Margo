@@ -55,9 +55,9 @@ function _songFilename(post, ext) {
   return song + ' — MARGO' + (ext ? '.' + ext : '');
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    STYLES
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function injectShareSheetStyles() {
   if (document.getElementById('shareSheetStyles')) return;
   const s = document.createElement('style');
@@ -260,9 +260,9 @@ function injectShareSheetStyles() {
   document.head.appendChild(s);
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    MOUNT
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function mountShareSheet() {
   if (document.getElementById('shareSheetBackdrop')) return;
   injectShareSheetStyles();
@@ -365,9 +365,9 @@ function mountShareSheet() {
   initSSSwipeClose();
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    CANVAS SIZE HELPER
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function _sizeCanvas(canvas, dpr) {
   const wrap  = canvas.parentElement;
   const maxSz = Math.min(wrap ? wrap.clientWidth : 320, 340);
@@ -379,9 +379,9 @@ function _sizeCanvas(canvas, dpr) {
   return size;
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    PREVIEW
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function ssStopPreview() {
   if (SS.animFrame) { cancelAnimationFrame(SS.animFrame); SS.animFrame = null; }
 }
@@ -442,9 +442,9 @@ function ssStartPreview() {
   SS.animFrame = requestAnimationFrame(loop);
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    OPEN / CLOSE
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function openShareSheet(post, opts = {}) {
   if (!post) return;
   mountShareSheet();
@@ -573,9 +573,9 @@ function populateSSDuetInfoStrip(post, echoPost) {
   `;
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    FORMAT TOGGLE
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function ssTogglePoster() {
   if (SS.isEncoding) return;
   SS.activeFormat = SS.activeFormat === 'poster' ? 'gif' : 'poster';
@@ -591,9 +591,9 @@ function ssTogglePoster() {
   requestAnimationFrame(() => ssStartPreview());
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    ENCODING OVERLAY
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function setSSEncoding(on, label = '') {
   const overlay = document.getElementById('ssEncodingOverlay');
   const lbl     = document.getElementById('ssEncodingLabel');
@@ -607,9 +607,9 @@ function setSSEncoding(on, label = '') {
   });
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    SAVE — download to device
-══════════════════════════════════════════════════════════ */
+========================================================== */
 async function ssSave() {
   if (SS.isEncoding) return;
   const name = _songFilename(SS.post);
@@ -640,9 +640,9 @@ function _downloadBlob(blob, filename) {
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    SHARE TO — opens PlatformPicker
-══════════════════════════════════════════════════════════ */
+========================================================== */
 async function ssShareTo() {
   if (SS.isEncoding) return;
 
@@ -675,9 +675,9 @@ async function ssShareTo() {
   if (typeof showToast === 'function') showToast('Saved to device ✓');
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    GENERATE POSTER
-══════════════════════════════════════════════════════════ */
+========================================================== */
 async function ssGeneratePoster() {
   if (SS.posterBlob) return;
   SS.isEncoding = true;
@@ -706,9 +706,9 @@ async function ssGeneratePoster() {
   }
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    GENERATE GIF
-══════════════════════════════════════════════════════════ */
+========================================================== */
 async function ssGenerateGif() {
   if (SS.gifBlob) return;
   if (typeof gsExportForShareSheet !== 'function') {
@@ -736,9 +736,9 @@ async function ssGenerateGif() {
   }
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    STUDIO
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function ssOpenStudio() {
   if (SS.isEncoding) return;
   ssStopPreview();
@@ -753,9 +753,9 @@ function ssOpenStudio() {
   }
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    SWIPE TO CLOSE
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function initSSSwipeClose() {
   const sheet  = document.getElementById('shareSheet');
   const handle = document.getElementById('ssDragHandle');
@@ -784,9 +784,9 @@ function initSSSwipeClose() {
   handle.addEventListener('touchend',   onEnd);
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    EXPORTS
-══════════════════════════════════════════════════════════ */
+========================================================== */
 window.openShareSheet   = openShareSheet;
 window.closeShareSheet  = closeShareSheet;
 window.reopenShareSheet = reopenShareSheet;
