@@ -50,9 +50,9 @@ const SS_FEELING_CFG = {
 const SS_FEELING_DEFAULT = { bg:'rgba(155,127,232,0.11)', text:'#9B7FE8', border:'rgba(155,127,232,0.25)' };
 
 /* ── Song name for filename ── */
-function _songFilename(post) {
-  const song = post?.knowledge?.song || 'lyric';
-  return song.replace(/\s+/g,'-').replace(/[^a-z0-9\-]/gi,'').toLowerCase().substring(0,40);
+function _songFilename(post, ext) {
+  const song = (post?.knowledge?.song || 'Lyric').trim().substring(0,40);
+  return song + ' — MARGO' + (ext ? '.' + ext : '');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -610,12 +610,12 @@ async function ssSave() {
   if (SS.activeFormat === 'poster') {
     await ssGeneratePoster();
     if (!SS.posterBlob) return;
-    _downloadBlob(SS.posterBlob, `margo-${name}.png`);
+    _downloadBlob(SS.posterBlob, _songFilename(SS.post, 'png'));
     if (typeof showToast === 'function') showToast('Poster saved ✓');
   } else {
     await ssGenerateGif();
     if (!SS.gifBlob) return;
-    _downloadBlob(SS.gifBlob, `margo-${name}.gif`);
+    _downloadBlob(SS.gifBlob, _songFilename(SS.post, 'gif'));
     if (typeof showToast === 'function') showToast('GIF saved ✓');
   }
 
@@ -650,34 +650,10 @@ async function ssShareTo() {
   const name   = _songFilename(SS.post);
   const format = isGif ? 'gif' : 'poster';
 
-  /* Use PlatformPicker if available */
-  if (typeof window.PlatformPicker !== 'undefined') {
-    /* Hide sheet temporarily — picker sits on top */
-    const backdrop = document.getElementById('shareSheetBackdrop');
-    if (backdrop) backdrop.classList.add('ss-hidden');
-
-    window.PlatformPicker.pick({
-      format,
-      view:   'single',
-      p1:     SS.post,
-      p2:     SS.echoPost || null,
-      opts: {
-        onDone:  () => {
-          if (backdrop) backdrop.classList.remove('ss-hidden');
-          ssStartPreview();
-        },
-        onError: () => {
-          if (backdrop) backdrop.classList.remove('ss-hidden');
-        },
-      },
-    });
-    return;
-  }
-
-  /* Fallback — native share or download */
+  /* Native share sheet — hands file to whatever apps user has installed */
   const ext      = isGif ? 'gif' : 'png';
   const mime     = isGif ? 'image/gif' : 'image/png';
-  const fileName = `margo-${name}.${ext}`;
+  const fileName = _songFilename(SS.post, ext);
   const text     = `"${SS.post?.text?.substring(0,60)||''}" — trymargo.com`;
   const file     = new File([blob], fileName, { type: mime });
 

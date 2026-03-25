@@ -738,10 +738,6 @@ function _switchDockTab(tabId) {
    OPEN / CLOSE
 ══════════════════════════════════════════════════════════ */
 window.openStudio = function(post) {
-  if (typeof window.openPosterStudio === 'function') {
-    return window.openPosterStudio(post || window.currentPost);
-  }
-
   studioPost = post || window.currentPost;
   if (!studioPost) return;
 
@@ -909,10 +905,11 @@ window.addEventListener('resize', () => {
     tab.onclick = () => _switchDockTab(tab.dataset.tab);
   });
 
-// Alias for share-sheet.js
+})();
+
+// Alias for share-sheet.js — outside IIFE so always available
 window.drawPosterPreview = function(ctx, W, H, post) {
   window.drawPosterToCtx(ctx, W, H, post);
 };
-})();
 
 
