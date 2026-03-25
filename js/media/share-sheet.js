@@ -406,8 +406,10 @@ function ssStartPreview() {
         }
       } else {
         const _draw = () => {
-          if (typeof window.drawPosterPreview === 'function') {
-            window.drawPosterPreview(ctx, size, size, post);
+          if (typeof window.drawPosterToCtx === 'function') {
+            try { window.drawPosterToCtx(ctx, size, size, post, { design: SS.theme || 'void-violet', font: 'playfair' }); } catch(e) { console.error('[SS poster]', e); }
+          } else if (typeof window.drawPosterPreview === 'function') {
+            try { window.drawPosterPreview(ctx, size, size, post); } catch(e) { console.error('[SS poster]', e); }
           } else {
             setTimeout(_draw, 100);
           }
