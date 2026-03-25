@@ -12,9 +12,9 @@
    • All existing controls (color, font, photo, brightness) intact
    ============================================================ */
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    DESIGN CONFIG
-══════════════════════════════════════════════════════════ */
+========================================================== */
 const STUDIO_DESIGNS = [
   { id:'void-violet',     label:'Violet',  swatchCss:'linear-gradient(135deg,#0E0B1A,#9B7FE8)',   bg:'#0E0B1A', accentColor:'#9B7FE8', textColor:'#EAE5F5', metaColor:'rgba(234,229,245,0.6)' },
   { id:'midnight-gold',   label:'Gold',    swatchCss:'linear-gradient(135deg,#0d0d0d,#E8C547)',   bg:'#0B0B0D', accentColor:'#E8C547', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
@@ -55,9 +55,9 @@ const CANVAS_SIZES = {
   landscape: { w:1200, h:675  },
 };
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    STATE
-══════════════════════════════════════════════════════════ */
+========================================================== */
 let studioDesign      = 'void-violet';
 let studioFont        = 'playfair';
 let studioBrightness  = 100;
@@ -69,9 +69,9 @@ let studioBlur        = 0;
 let studioDim         = 50;
 let studioPost        = null;
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    INJECT STYLES
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function injectStudioStyles() {
   if (document.getElementById('studioV60styles')) return;
   const s = document.createElement('style');
@@ -239,9 +239,9 @@ function injectStudioStyles() {
   document.head.appendChild(s);
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    WORD WRAP HELPER
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function _studioWrapText(ctx, text, maxWidth) {
   const words = text.split(' ');
   const lines = [];
@@ -259,10 +259,10 @@ function _studioWrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    TRACK NUMBER HELPER
    Returns "— track N" string derived from post ID or index
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function _trackNumber(post) {
   if (!post) return '— track 01';
   const id = post.id || post._id || '';
@@ -270,10 +270,10 @@ function _trackNumber(post) {
   return '— track ' + String(num).padStart(2, '0');
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    CANVAS DRAW — window.drawPosterToCtx
    v6.0: New MARGO layout — left-aligned, track number, rule
-══════════════════════════════════════════════════════════ */
+========================================================== */
 window.drawPosterToCtx = function(ctx, W, H, post, options) {
   options = options || {};
   if (!post) return;
@@ -523,9 +523,9 @@ function _hexToRgb(hex) {
   return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    STAGE CANVAS REFRESH
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function refreshStageCanvas() {
   const canvas = document.getElementById('studioCanvas');
   if (!canvas) return;
@@ -549,9 +549,9 @@ function refreshStageCanvas() {
   window.drawPosterToCtx(ctx, size.w, size.h, post);
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    SLIDER GRADIENT HELPER
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function _updateSlider(slider, value) {
   const min = parseInt(slider.min || 0);
   const max = parseInt(slider.max || 100);
@@ -559,9 +559,9 @@ function _updateSlider(slider, value) {
   slider.style.background = `linear-gradient(to right,#9B7FE8 ${pct}%,rgba(255,255,255,0.12) ${pct}%)`;
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    WIRE UP PANELS
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function wireColorPanel() {
   const panel = document.getElementById('panel-color');
   if (!panel) return;
@@ -697,9 +697,9 @@ function _loadPhotoFile(file, dropZone, controls, dropText) {
   reader.readAsDataURL(file);
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    FORMAT PICKER — wires size buttons if present in HTML
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function wireFormatPicker() {
   document.querySelectorAll('[data-format]').forEach(btn => {
     if (btn.dataset.format === studioCanvasSize) btn.classList.add('active');
@@ -712,9 +712,9 @@ function wireFormatPicker() {
   });
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    DOCK TAB SWITCHING
-══════════════════════════════════════════════════════════ */
+========================================================== */
 function _switchDockTab(tabId) {
   document.querySelectorAll('.dock-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === tabId);
@@ -734,9 +734,9 @@ function _switchDockTab(tabId) {
   });
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    OPEN / CLOSE
-══════════════════════════════════════════════════════════ */
+========================================================== */
 window.openStudio = function(post) {
   studioPost = post || window.currentPost;
   if (!studioPost) return;
@@ -784,9 +784,9 @@ window.closeStudio = function() {
   document.body.classList.remove('modal-open');
 };
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    EXPORT — full resolution, all fonts preloaded
-══════════════════════════════════════════════════════════ */
+========================================================== */
 window.exportPoster = async function exportPoster() {
   const btn = document.getElementById('studioExportBtn');
   if (btn) {
@@ -872,9 +872,9 @@ window.exportPoster = async function exportPoster() {
   }
 };
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    STUDIO CHOOSER
-══════════════════════════════════════════════════════════ */
+========================================================== */
 window.openStudioChooser = function(post) {
   if (post) { studioPost = post; window.currentPost = post; }
   if (typeof window.openShareSheet === 'function') {
@@ -883,9 +883,9 @@ window.openStudioChooser = function(post) {
 };
 window.closeStudioChooser = function() {};
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    RESIZE
-══════════════════════════════════════════════════════════ */
+========================================================== */
 let _studioResizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(_studioResizeTimer);
@@ -896,9 +896,9 @@ window.addEventListener('resize', () => {
   }, 150);
 });
 
-/* ══════════════════════════════════════════════════════════
+/* ==========================================================
    INIT
-══════════════════════════════════════════════════════════ */
+========================================================== */
 (function initStudio() {
   injectStudioStyles();
   document.querySelectorAll('.dock-tab').forEach(tab => {
