@@ -405,9 +405,14 @@ function ssStartPreview() {
           drawDuetPosterToCtx(ctx, size, size);
         }
       } else {
-        if (typeof window.drawPosterPreview === 'function') {
-          window.drawPosterPreview(ctx, size, size, post);
-        }
+        const _draw = () => {
+          if (typeof window.drawPosterPreview === 'function') {
+            window.drawPosterPreview(ctx, size, size, post);
+          } else {
+            setTimeout(_draw, 100);
+          }
+        };
+        _draw();
       }
     });
     return;
