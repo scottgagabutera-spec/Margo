@@ -2,10 +2,6 @@
    MARGO — js/firebase.js
    v5.1 — Fetches Firebase config from /api/config (server-side
           env vars) instead of hardcoding keys in source.
-<<<<<<< HEAD
-          All other sync logic unchanged from v5.0.
-=======
->>>>>>> def6d9f (security: move Firebase config to server-side env vars)
    ============================================================ */
 let isFirebaseEnabled = false;
 let postsRef          = null;
@@ -18,10 +14,6 @@ async function initFirebase() {
     const res = await fetch('/api/config');
     if (!res.ok) throw new Error('Config fetch failed: ' + res.status);
     const firebaseConfig = await res.json();
-<<<<<<< HEAD
-
-=======
->>>>>>> def6d9f (security: move Firebase config to server-side env vars)
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     postsRef       = database.ref('posts');
@@ -33,11 +25,6 @@ async function initFirebase() {
     console.warn('[Margo] Firebase failed:', e.message);
     isFirebaseEnabled = false;
   }
-<<<<<<< HEAD
-
-  // Always call startFirebaseSync after init attempt
-=======
->>>>>>> def6d9f (security: move Firebase config to server-side env vars)
   if (typeof startFirebaseSync === 'function') startFirebaseSync();
 }
 
@@ -95,12 +82,6 @@ async function _fetchYoutubeMeta(song, artist) {
   };
 }
 
-<<<<<<< HEAD
-/* ══════════════════════════════════════════════════════════
-   STATS HELPER
-══════════════════════════════════════════════════════════ */
-=======
->>>>>>> def6d9f (security: move Firebase config to server-side env vars)
 function _refreshStats() {
   if (!postsLoaded) return;
   if (typeof updateLandingStats === 'function') updateLandingStats();
@@ -162,20 +143,10 @@ function startFirebaseSync() {
     }
   });
 
-<<<<<<< HEAD
-  /* ── Analytics listener ──
-     Does NOT call renderFeed().
-     resonate.js hookAnalytics() handles button refresh. ── */
-=======
->>>>>>> def6d9f (security: move Firebase config to server-side env vars)
   analyticsRef.on('value', snapshot => {
     postAnalytics = snapshot.val() || {};
     _refreshStats();
   });
 }
 
-<<<<<<< HEAD
-// Boot
-=======
->>>>>>> def6d9f (security: move Firebase config to server-side env vars)
 initFirebase();
