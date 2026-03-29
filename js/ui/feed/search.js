@@ -5,7 +5,7 @@
   function init(){
     iconBtn  = document.getElementById("feedSearchBtn");
     overlay  = document.getElementById("feedSearchOverlay");
-    input    = document.getElementById("feedSearchOverlayInput");
+    input    = document.getElementById("feedSearchInput");
     closeBtn = document.getElementById("feedSearchClose");
     if (!iconBtn || !overlay || !input) return;
     resultsEl = document.createElement("div");
