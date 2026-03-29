@@ -150,7 +150,6 @@ function initNavigation() {
   if (enterBtn) {
     enterBtn.onclick = () => {
       openModal(composer);
-      openModal(composer);
     };
   }
 
