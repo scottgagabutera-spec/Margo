@@ -1,35 +1,35 @@
 /* ============================================================
    MARGO — js/firebase.js
-   v5.0 — concept-v2 clean:
-          • analyticsRef listener no longer calls renderFeed()
-            — resonate.js owns targeted button updates only
-          • All other sync logic unchanged
+   v5.1 — Fetches Firebase config from /api/config (server-side
+          env vars) instead of hardcoding keys in source.
+          All other sync logic unchanged from v5.0.
    ============================================================ */
-const firebaseConfig = {
-  apiKey:            'AIzaSyA1AuUethACF_9aBqbOONjra7X5NbGnfZM',
-  authDomain:        'margo-f6da4.firebaseapp.com',
-  databaseURL:       'https://margo-f6da4-default-rtdb.firebaseio.com',
-  projectId:         'margo-f6da4',
-  storageBucket:     'margo-f6da4.firebasestorage.app',
-  messagingSenderId: '150183564620',
-  appId:             '1:150183564620:web:a42de7fef39740b551ebe9'
-};
 let isFirebaseEnabled = false;
 let postsRef          = null;
 let analyticsRef      = null;
 let adminConfigRef    = null;
 let firebaseAuth      = null;
 
-try {
-  firebase.initializeApp(firebaseConfig);
-  const database = firebase.database();
-  postsRef       = database.ref('posts');
-  analyticsRef   = database.ref('analytics');
-  adminConfigRef = database.ref('adminConfig');
-  firebaseAuth   = firebase.auth();
-  isFirebaseEnabled = true;
-} catch (e) {
-  console.warn('[Margo] Firebase failed:', e.message);
+async function initFirebase() {
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) throw new Error('Config fetch failed: ' + res.status);
+    const firebaseConfig = await res.json();
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    postsRef       = database.ref('posts');
+    analyticsRef   = database.ref('analytics');
+    adminConfigRef = database.ref('adminConfig');
+    firebaseAuth   = firebase.auth();
+    isFirebaseEnabled = true;
+  } catch (e) {
+    console.warn('[Margo] Firebase failed:', e.message);
+    isFirebaseEnabled = false;
+  }
+
+  // Always call startFirebaseSync after init attempt
+  if (typeof startFirebaseSync === 'function') startFirebaseSync();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -54,14 +54,14 @@ function enqueueYoutube(postId, song, artist) {
 }
 
 function startYoutubeRunner() {
-  if (_ytStarted || _ytRunning || !_ytQueue.length) return;
+  if (_ytRunning || !_ytQueue.length) return;
   _ytStarted = true;
   _ytRunning = true;
   processYoutubeQueue();
 }
 
 async function processYoutubeQueue() {
-  if (!_ytQueue.length) { _ytRunning = false; return; }
+  if (!_ytQueue.length) { _ytRunning = false; _ytStarted = false; return; }
   const { postId, song, artist } = _ytQueue.shift();
   _ytDoneIds.add(postId);
   try {
@@ -92,23 +92,6 @@ async function _fetchYoutubeMeta(song, artist) {
   };
 }
 
-async function fetchAndSaveYoutubeMeta(postId, song, artist) {
-  if (!isFirebaseEnabled || !postId || !song || !artist) return null;
-  const cleanSong   = song.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
-  const cleanArtist = artist.replace(/\s*feat\..*$/i, '').replace(/\s*ft\..*$/i, '').trim();
-  if (!cleanSong || !cleanArtist) return null;
-  try {
-    const meta = await _fetchYoutubeMeta(cleanSong, cleanArtist);
-    if (meta) {
-      _ytDoneIds.add(postId);
-      await postsRef.child(postId).child('youtubeMeta').set(meta);
-    }
-    return meta;
-  } catch (err) {
-    return null;
-  }
-}
-
 /* ══════════════════════════════════════════════════════════
    STATS HELPER
 ══════════════════════════════════════════════════════════ */
@@ -128,7 +111,7 @@ function startFirebaseSync() {
   if (!isFirebaseEnabled) {
     postsLoaded = true;
     _refreshStats();
-    buildLyricStream();
+    if (typeof buildLyricStream === 'function') buildLyricStream();
     return;
   }
 
@@ -162,28 +145,28 @@ function startFirebaseSync() {
 
     postsLoaded = true;
     _refreshStats();
-    buildLyricStream();
+    if (typeof buildLyricStream === 'function') buildLyricStream();
 
-    if (!isInitialLoad && !isBackfillOnly && posts.length > prevCount && feed.classList.contains('active')) {
-      showNewPostsIndicator(posts.length - prevCount);
+    if (!isInitialLoad && !isBackfillOnly && posts.length > prevCount && feed && feed.classList.contains('active')) {
+      if (typeof showNewPostsIndicator === 'function') showNewPostsIndicator(posts.length - prevCount);
       newPostsAvailable = true;
     }
 
-    if (feed.classList.contains('active')) {
-      if (isInitialLoad || isBackfillOnly || !newPostsAvailable) renderFeed();
+    if (feed && feed.classList.contains('active')) {
+      if (isInitialLoad || isBackfillOnly || !newPostsAvailable) {
+        if (typeof renderFeed === 'function') renderFeed();
+      }
     }
   });
 
   /* ── Analytics listener ──
-     IMPORTANT: This listener must NOT call renderFeed().
-     resonate.js owns all resonate UI updates via
-     refreshVisibleResonateCounts() — targeted button updates only.
-     Calling renderFeed() here caused full page flash on every
-     resonate click from any user. ── */
+     Does NOT call renderFeed().
+     resonate.js hookAnalytics() handles button refresh. ── */
   analyticsRef.on('value', snapshot => {
     postAnalytics = snapshot.val() || {};
-    // Stats only — no renderFeed
     _refreshStats();
-    // resonate.js hookAnalytics() handles the button refresh
   });
 }
+
+// Boot
+initFirebase();
