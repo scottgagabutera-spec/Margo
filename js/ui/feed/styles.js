@@ -47,7 +47,6 @@ const VIBE_LABELS = {
   SendIt:'Send It', LetOut:'Let Out',
 };
 
-let currentSort = 'fresh';
 
 /* ══════════════════════════════════════════════════════════
    STYLES

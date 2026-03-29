@@ -36,6 +36,7 @@ let savedScrollPosition  = 0;
 let newPostsAvailable    = false;
 let searchQuery          = '';
 let activeRoom           = 'all';
+let currentSort          = 'fresh';
 
 // ── Studio state ──
 // Use window.X = window.X || {} pattern — prevents duplicate-const
