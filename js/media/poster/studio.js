@@ -913,3 +913,4 @@ window.drawPosterPreview = function(ctx, W, H, post) {
 };
 
 
+})();
