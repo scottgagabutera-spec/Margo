@@ -351,43 +351,40 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
-  /* ── M mark (solid circle) + MARGO spaced wordmark ── */
+  /* ── M mark + MARGO wordmark — top-left combined (matches lyric back) ── */
   (function _drawBrand() {
-    var _sz2 = Math.round(Math.min(W,H) * 0.07);
-    var _bx  = W - Math.round(W * 0.036) - _sz2;
-    var _by  = H - Math.round(H * 0.034) - _sz2;
-    var _cx2 = _bx + _sz2/2, _cy2 = _by + _sz2/2;
-    var _ic  = _sz2 * 0.62;
+    var _pad = Math.round(W * 0.035);
+    var _r   = Math.round(W * 0.024);
+    var _cx  = _pad + _r;
+    var _cy  = _pad + _r;
+    var _sc  = _r / 40;
+    var _ic  = _r * 2 * 0.62;
     ctx.save();
-    ctx.beginPath(); ctx.arc(_cx2, _cy2, _sz2/2, 0, Math.PI*2);
+    ctx.beginPath(); ctx.arc(_cx, _cy, _r, 0, Math.PI*2);
     ctx.fillStyle = design.accentColor;
     ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 18;
     ctx.fill(); ctx.shadowBlur = 0;
-    var _s = _ic, _mx = _cx2 - _s/2, _my = _cy2 - _s/2;
+    var _s = _ic, _mx = _cx - _s/2, _my = _cy - _s/2;
     ctx.strokeStyle = isLight ? '#ffffff' : '#0B0B0D';
-    ctx.lineWidth = _sz2 * 0.098; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineWidth = _r * 2 * 0.098; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(_mx, _my+_s*0.78); ctx.lineTo(_mx, _my+_s*0.13);
-    ctx.lineTo(_mx+_s*0.35, _my+_s*0.60); ctx.lineTo(_mx+_s*0.50, _my+_s*0.06);
-    ctx.lineTo(_mx+_s*0.65, _my+_s*0.60); ctx.lineTo(_mx+_s, _my+_s*0.13);
-    ctx.lineTo(_mx+_s, _my+_s*0.78); ctx.stroke();
+    ctx.moveTo(_cx+(_sc*(17-40)), _cy+(_sc*(57-40)));
+    ctx.lineTo(_cx+(_sc*(17-40)), _cy+(_sc*(27-40)));
+    ctx.lineTo(_cx+(_sc*(29-40)), _cy+(_sc*(45-40)));
+    ctx.lineTo(_cx+(_sc*(40-40)), _cy+(_sc*(26-40)));
+    ctx.lineTo(_cx+(_sc*(51-40)), _cy+(_sc*(45-40)));
+    ctx.lineTo(_cx+(_sc*(63-40)), _cy+(_sc*(27-40)));
+    ctx.lineTo(_cx+(_sc*(63-40)), _cy+(_sc*(57-40)));
+    ctx.stroke();
     ctx.restore();
-    var _wSz = Math.max(14, Math.round(W * 0.034));
-    var _wPad = Math.round(W * 0.048);
+    var _wSz = Math.max(9, Math.round(W * 0.022));
     ctx.save();
-    ctx.font = '800 ' + _wSz + 'px Syne, Arial Black, sans-serif';
-    ctx.fillStyle   = isLight ? '#0B0B0D' : design.accentColor;
-    ctx.globalAlpha = 0.28;
-    ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-    var _spacing = _wSz * 0.22; var _wcx = _wPad;
-    'MARGO'.split('').forEach(function(_ch) {
-      ctx.fillText(_ch, _wcx, _wPad * 0.55);
-      _wcx += ctx.measureText(_ch).width + _spacing;
-    });
+    ctx.font = '700 ' + _wSz + 'px Space Mono, monospace';
+    ctx.fillStyle = design.accentColor;
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.fillText('MARGO', _cx + _r + Math.round(W * 0.018), _cy);
     ctx.restore();
   })();
-
-  /* ── Lyric block — left-aligned ── */
   const lyricText = post.text || '';
   let fontSize = Math.min(W * 0.068, H * 0.052);
   const fStyle = font.style === 'italic' ? 'italic ' : '';
