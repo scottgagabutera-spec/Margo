@@ -4,9 +4,9 @@ function injectSortBar() {
   bar.id = 'feedSortBar'; bar.className = 'feed-sort-bar';
   bar.innerHTML = `
     <span class="feed-sort-label">Sort</span>
-    <button class="sort-btn active" data-sort="fresh">Recent</button>
-    <button class="sort-btn" data-sort="hot">Rising</button>
-    <button class="sort-btn" data-sort="top">All time</button>
+    <button class="sort-btn active" data-sort="fresh">New</button>
+    <button class="sort-btn" data-sort="hot">Trending</button>
+    <button class="sort-btn" data-sort="top">Top</button>
   `;
   bar.addEventListener('click', e => {
     const btn = e.target.closest('.sort-btn');
