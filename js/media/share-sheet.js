@@ -357,6 +357,7 @@ function mountShareSheet() {
     if (typeof window.gsSetTheme === 'function') window.gsSetTheme(SS.theme);
     SS.gifBlob = null;
     SS.posterBlob = null;
+    requestAnimationFrame(() => ssStartPreview());
   });
 
   backdrop.addEventListener('click', e => {
@@ -473,6 +474,9 @@ function openShareSheet(post, opts = {}) {
   }
 
   /* Reset buttons */
+  const _posterBtn = document.getElementById('ssBtnPoster');
+  const _posterSpan = _posterBtn ? _posterBtn.querySelector('span:last-child') : null;
+  if (_posterSpan) _posterSpan.textContent = 'Poster';
   document.getElementById('ssBtnPoster')?.classList.remove('active-format');
   const lbl = document.getElementById('ssSaveBtnLabel');
   if (lbl) lbl.textContent = '↓ Save GIF';
@@ -584,6 +588,8 @@ function ssTogglePoster() {
 
   const btn = document.getElementById('ssBtnPoster');
   const lbl = document.getElementById('ssSaveBtnLabel');
+  const btnSpan = btn ? btn.querySelector('span:last-child') : null;
+  if (btnSpan) btnSpan.textContent = SS.activeFormat === 'poster' ? 'GIF' : 'Poster';
   if (btn) btn.classList.toggle('active-format', SS.activeFormat === 'poster');
   if (lbl) lbl.textContent = SS.activeFormat === 'gif' ? '↓ Save GIF' : '↓ Save Poster';
 
