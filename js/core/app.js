@@ -161,6 +161,8 @@ function initNavigation() {
   if (backBtn)          backBtn.onclick          = goToLanding;
   if (openComposerBtn)  openComposerBtn.onclick  = () => { if(typeof resetComposer==="function")resetComposer(); openModal(composer); };
   if (closeComposerBtn) closeComposerBtn.onclick = () => { closeModal(composer); resetComposer(); };
+  const dropLyricNewBtn = document.getElementById('dropLyricNew');
+  if (dropLyricNewBtn) dropLyricNewBtn.onclick = () => { if(typeof resetComposer==="function")resetComposer(); openModal(composer); };
 
   let tSX = 0, tSY = 0;
   [landing, feed].filter(Boolean).forEach(s => {
