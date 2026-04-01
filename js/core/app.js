@@ -149,14 +149,14 @@ function scrollToFeed() {
 function initNavigation() {
   if (enterBtn) {
     enterBtn.onclick = () => {
-      openModal(composer);
+      goToFeed(); scrollToFeed();
     };
   }
 
   const efb1 = document.getElementById('enterFeedBtn');
   const efb2 = document.getElementById('enterFeedBtn2');
   if (efb1) efb1.onclick = () => { goToFeed(); scrollToFeed(); };
-  if (efb2) efb2.onclick = () => { goToFeed(); scrollToFeed(); };
+  if (efb2) efb2.onclick = () => { goToFeed(); scrollToFeed(); setTimeout(() => openModal(composer), 400); };
 
   if (backBtn)          backBtn.onclick          = goToLanding;
   if (openComposerBtn)  openComposerBtn.onclick  = () => { if(typeof resetComposer==="function")resetComposer(); openModal(composer); };
