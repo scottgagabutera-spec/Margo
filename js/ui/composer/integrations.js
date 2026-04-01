@@ -310,7 +310,15 @@ function selectResult(result,card){
   showSongPill(result);
   showSongConfirm(result.song,result.artist);
   var searchVal=document.getElementById("smartSearchInput").value.trim();
-  showLyricChip(searchVal);
+  if(result.source==="itunes"){
+    showLyricChip("");
+    var chip=document.getElementById("lyricChipText");
+    if(chip){chip.textContent="";chip.setAttribute("data-placeholder","Type the lyric from "+result.song+" you want to share…");}
+    var ta=document.getElementById("textInput");if(ta)ta.value="";
+    var cc=document.getElementById("charCount");if(cc)cc.textContent="0";
+  } else {
+    showLyricChip(searchVal);
+  }
   if(result.id)fetchGeniusDetail(result.id);
   clearYoutubePreview();
   fetchYoutubeData(result.song,result.artist);
