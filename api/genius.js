@@ -34,7 +34,7 @@ async function searchGenius(query, apiKey) {
   if (!r.ok) return [];
   const data = await r.json();
   const hits = data.response?.hits || [];
-  return hits.slice(0, 5).map(h => {
+  return hits.slice(0, 2).map(h => {
     const s = h.result;
     return {
       song:        s.title,
@@ -56,7 +56,7 @@ async function searchItunes(query) {
   if (!r.ok) return [];
   const data = await r.json();
   const tracks = (data.results || []).filter(t => t.wrapperType === 'track');
-  return tracks.slice(0, 5).map(t => ({
+  return tracks.slice(0, 3).map(t => ({
     song:        t.trackName,
     artist:      t.artistName || 'Unknown Artist',
     artwork:     t.artworkUrl100 || null,
