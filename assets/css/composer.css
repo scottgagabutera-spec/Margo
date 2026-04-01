@@ -365,9 +365,9 @@
 .lyric-chip-wrap{transition:opacity 0.22s ease,transform 0.22s cubic-bezier(0.16,1,0.3,1)!important;}
 .lyric-chip-wrap.hidden{opacity:0;transform:translateY(4px);display:block!important;pointer-events:none;}
 .song-pill{transition:opacity 0.22s ease,transform 0.22s cubic-bezier(0.16,1,0.3,1)!important;}
-.song-pill.hidden{opacity:0;transform:translateY(4px);display:block!important;pointer-events:none;height:0;overflow:hidden;margin:0;padding:0;border:none!important;}
+.song-pill.hidden{opacity:0;transform:translateY(4px);display:none!important;}
 .song-confirm-block{transition:opacity 0.22s ease!important;}
-.song-confirm-block.hidden{opacity:0;display:block!important;pointer-events:none;height:0;overflow:hidden;margin:0;}
+.song-confirm-block.hidden{opacity:0;display:none!important;}
 .search-spinner{transition:opacity 0.15s ease!important;}
 
 /* ── LYRICS label - matches SONG/ARTIST exactly ── */
