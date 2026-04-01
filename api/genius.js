@@ -5,7 +5,67 @@
    Endpoints:
      GET /api/genius?lyric=X  → identify song from lyric text
      GET /api/genius?song=X   → search by song title
+   v2.0 — parallel Genius + iTunes search with deduplication
    ============================================================ */
+
+// ── Server-side cache (per cold start) ──
+const searchCache = {};
+
+function normalize(str) {
+  return (str || '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function dedupe(results) {
+  const seen = new Set();
+  return results.filter(r => {
+    const key = normalize(r.song) + '|' + normalize(r.artist);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function searchGenius(query, apiKey) {
+  const q = encodeURIComponent(query.trim());
+  const r = await fetch(
+    `https://api.genius.com/search?q=${q}&per_page=5`,
+    { headers: { 'Authorization': `Bearer ${apiKey}` } }
+  );
+  if (!r.ok) return [];
+  const data = await r.json();
+  const hits = data.response?.hits || [];
+  return hits.slice(0, 5).map(h => {
+    const s = h.result;
+    return {
+      song:        s.title,
+      artist:      s.primary_artist?.name || 'Unknown Artist',
+      artwork:     s.song_art_image_thumbnail_url || s.header_image_thumbnail_url || null,
+      artworkFull: s.song_art_image_url || s.header_image_url || null,
+      geniusUrl:   s.url || null,
+      id:          s.id,
+      source:      'genius',
+    };
+  });
+}
+
+async function searchItunes(query) {
+  const q = encodeURIComponent(query.trim());
+  const r = await fetch(
+    `https://itunes.apple.com/search?term=${q}&entity=song&limit=8&version=2`
+  );
+  if (!r.ok) return [];
+  const data = await r.json();
+  const tracks = (data.results || []).filter(t => t.wrapperType === 'track');
+  return tracks.slice(0, 5).map(t => ({
+    song:        t.trackName,
+    artist:      t.artistName || 'Unknown Artist',
+    artwork:     t.artworkUrl100 || null,
+    artworkFull: t.artworkUrl100 ? t.artworkUrl100.replace('100x100bb', '600x600bb') : null,
+    geniusUrl:   null,
+    id:          null,
+    source:      'itunes',
+  }));
+}
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || '';
@@ -58,60 +118,37 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'Genius not configured' });
   }
 
+  // ── Check cache first ──
+  const cacheKey = normalize(query);
+  if (searchCache[cacheKey]) {
+    return res.status(200).json({ results: searchCache[cacheKey], source: 'cache' });
+  }
+
   try {
-    const q   = encodeURIComponent(query.trim());
-    const r   = await fetch(
-      `https://api.genius.com/search?q=${q}&per_page=5`,
-      { headers: { 'Authorization': `Bearer ${process.env.GENIUS_API_KEY}` } }
-    );
+    // ── Fire Genius + iTunes in parallel ──
+    const [geniusResult, itunesResult] = await Promise.allSettled([
+      searchGenius(query, process.env.GENIUS_API_KEY),
+      searchItunes(query),
+    ]);
 
-    if (!r.ok) {
-      const errText = await r.text();
-      console.error('[Genius search error]', r.status, errText);
-      throw new Error('Genius search failed');
+    const geniusResults = geniusResult.status === 'fulfilled' ? geniusResult.value : [];
+    const itunesResults = itunesResult.status === 'fulfilled' ? itunesResult.value : [];
+
+    // ── Merge: Genius first, iTunes fills gaps ──
+    const merged = dedupe([...geniusResults, ...itunesResults]);
+    const results = merged.slice(0, 5);
+
+    if (!results.length) {
+      return res.status(404).json({ error: 'No results found' });
     }
 
-    const data = await r.json();
-    const hits = data.response?.hits || [];
-
-    if (!hits.length) {
-      try {
-        const iq = encodeURIComponent(query.trim());
-        const ir = await fetch(`https://itunes.apple.com/search?term=${iq}&entity=song&limit=5`);
-        const id2 = await ir.json();
-        const itunes = (id2.results || []).filter(t => t.wrapperType === "track");
-        if (!itunes.length) return res.status(404).json({ error: "No results found" });
-        const results = itunes.slice(0, 3).map(t => ({
-          song:        t.trackName,
-          artist:      t.artistName || "Unknown Artist",
-          artwork:     t.artworkUrl100 || null,
-          artworkFull: t.artworkUrl100 ? t.artworkUrl100.replace("100x100bb", "600x600bb") : null,
-          geniusUrl:   null,
-          id:          null,
-        }));
-        return res.status(200).json({ results, source: "itunes" });
-      } catch (e) {
-        return res.status(404).json({ error: "No results found" });
-      }
-    }
-
-    // Return top 3 results for autocomplete
-    const results = hits.slice(0, 3).map(h => {
-      const s = h.result;
-      return {
-        song:        s.title,
-        artist:      s.primary_artist?.name || 'Unknown Artist',
-        artwork:     s.song_art_image_thumbnail_url || s.header_image_thumbnail_url || null,
-        artworkFull: s.song_art_image_url            || s.header_image_url           || null,
-        geniusUrl:   s.url                           || null,
-        id:          s.id,
-      };
-    });
+    // ── Cache the result ──
+    searchCache[cacheKey] = results;
 
     return res.status(200).json({ results });
 
   } catch (err) {
-    console.error('[Genius API Error]', err.message);
-    return res.status(500).json({ error: 'Genius lookup failed', detail: err.message });
+    console.error('[Search Error]', err.message);
+    return res.status(500).json({ error: 'Search failed', detail: err.message });
   }
 }
