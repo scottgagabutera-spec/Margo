@@ -566,7 +566,7 @@ function gsStopPreview() {
    GIF EXPORT
    ================================================================ */
 function gsExport() {
-  if (GS.isExporting) return;
+  GS.isExporting = false;
   const exportPost = window.currentPost || {};
   if (typeof window.PlatformPicker === 'undefined') {
     console.error('[GifStudio] PlatformPicker not loaded'); return;
@@ -604,74 +604,40 @@ function gsExport() {
 }
 async function gsExportMp4() {
   if (GS.isExporting) return;
-  GS.isExporting = true;
-  gsStopPreview();
-
+  const exportPost = window.currentPost || {};
+  if (typeof window.PlatformPicker === 'undefined') {
+    console.error('[GifStudio] PlatformPicker not loaded'); return;
+  }
   const gifBtn = document.getElementById('gsExportBtn');
   const mp4Btn = document.getElementById('gsExportMp4');
-  if (gifBtn) gifBtn.disabled = true;
-  if (mp4Btn) { mp4Btn.disabled = true; mp4Btn.textContent = 'Preparing…'; }
-
-  const SIZE        = GS_EXPORT_SIZE;
-  const anim        = GS_ANIMS[GS.animation];
-  const frames      = anim?.frames || 24;
-  const delay       = GS_SPEED_MS[GS.speed] || 70;
-  const LOOPS       = 3;
-  const totalFrames = frames * LOOPS;
-  const fps         = Math.round(1000 / delay);
-
-  const off = document.createElement('canvas');
-  off.width = SIZE; off.height = SIZE;
-  const oc  = off.getContext('2d');
-  const exportPost = window.currentPost || {};
-
-  try {
-    await document.fonts.ready;
-
-    const mimeType = [
-      'video/mp4;codecs=avc1',
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm',
-    ].find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
-
-    const stream   = off.captureStream(fps);
-    const chunks   = [];
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
-
-    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
-      a.download = `margo-${Date.now()}.mp4`;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
-      if (mp4Btn) { mp4Btn.textContent = '✓ Video Saved!'; mp4Btn.disabled = false; }
-      if (gifBtn) gifBtn.disabled = false;
-      GS.isExporting = false;
-      setTimeout(gsStartPreview, 400);
-    };
-
-    recorder.start();
-    for (let i = 0; i < totalFrames; i++) {
-      oc.clearRect(0, 0, SIZE, SIZE);
-      gsDrawFrame(oc, SIZE, SIZE, (i % frames) / frames, exportPost);
-      if (mp4Btn) mp4Btn.textContent = `Video ${Math.round((i / totalFrames) * 100)}%`;
-      await new Promise(r => setTimeout(r, delay));
-    }
-    recorder.stop();
-
-  } catch (err) {
-    console.error('MP4 export error:', err);
-    if (mp4Btn) { mp4Btn.textContent = '▶ Video'; mp4Btn.disabled = false; }
-    if (gifBtn) gifBtn.disabled = false;
-    GS.isExporting = false;
-    gsStartPreview();
-  }
+  window.PlatformPicker.pick({
+    format: 'gif',
+    view:   'card',
+    p1:     exportPost,
+    p2:     null,
+    opts: {
+      drawFn: (ctx, W, H, t) => { gsDrawFrame(ctx, W, H, t, exportPost); },
+      onStart: () => {
+        GS.isExporting = true;
+        gsStopPreview();
+        if (gifBtn) gifBtn.disabled = true;
+        if (mp4Btn) { mp4Btn.disabled = true; mp4Btn.textContent = 'Preparing…'; }
+      },
+      onDone: () => {
+        GS.isExporting = false;
+        if (mp4Btn) { mp4Btn.disabled = false; mp4Btn.textContent = '▶ Video'; }
+        if (gifBtn) gifBtn.disabled = false;
+        if (typeof showToast === 'function') showToast('Video saved ✓');
+        setTimeout(gsStartPreview, 400);
+      },
+      onError: () => {
+        GS.isExporting = false;
+        if (mp4Btn) { mp4Btn.disabled = false; mp4Btn.textContent = '▶ Video'; }
+        if (gifBtn) gifBtn.disabled = false;
+        gsStartPreview();
+      },
+    },
+  });
 }
 
 /* ================================================================
