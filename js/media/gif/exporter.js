@@ -109,7 +109,7 @@ const GifExporter = {
 
       await new Promise((resolve, reject) => {
         gif.on('progress', p => onProgress(0.75 + p * 0.25));
-        gif.on('finished', blob => { _download(blob, `margo-${Date.now()}.gif`); onDone(); resolve(); });
+        gif.on('finished', blob => { _download(blob, (opts.filename || `margo-${Date.now()}`) + '.gif'); onDone(); resolve(); });
         gif.on('error', err => { onError(err); reject(err); });
         gif.render();
       });
