@@ -728,83 +728,39 @@ window.closeStudio = function() {
 /* ==========================================================
    EXPORT — full resolution, all fonts preloaded
 ========================================================== */
-window.exportPoster = async function exportPoster() {
-  const btn = document.getElementById('studioExportBtn');
-  if (btn) {
-    btn.innerHTML = '<span class="studio-spinner"></span>';
-    btn.disabled  = true;
-  }
-
-  const size   = CANVAS_SIZES[studioCanvasSize] || CANVAS_SIZES.square;
-  const canvas = document.createElement('canvas');
-  canvas.width  = size.w;
-  canvas.height = size.h;
-  const ctx = canvas.getContext('2d');
-
-  /* Preload all fonts used in the draw */
-  try {
-    const font = STUDIO_FONTS.find(f => f.id === studioFont) || STUDIO_FONTS[0];
-    await Promise.all([
-      document.fonts.load(`${font.weight} 72px ${font.css}`),
-      document.fonts.load(`700 48px 'Space Mono', monospace`),
-    ]);
-  } catch (_) {}
-
+window.exportPoster = function exportPoster() {
+  const btn  = document.getElementById('studioExportBtn');
   const _post = studioPost || window.currentPost;
-  if (!_post) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Export'; }
-    return;
+  if (!_post) return;
+  if (typeof window.PlatformPicker === 'undefined') {
+    console.error('[Studio] PlatformPicker not loaded'); return;
   }
-
-  /* Draw at full export resolution */
-  window.drawPosterToCtx(ctx, size.w, size.h, _post, {
-    design:       studioDesign,
-    font:         studioFont,
-    brightness:   studioBrightness,
-    photoData:    studioPhotoData,
-    photoFilter:  studioPhotoFilter,
-    photoOpacity: studioPhotoOpacity,
+  window.PlatformPicker.pick({
+    format: 'poster',
+    view:   'card',
+    p1:     _post,
+    p2:     null,
+    opts: {
+      drawFn: (ctx, W, H) => {
+        window.drawPosterToCtx(ctx, W, H, _post, {
+          design:       studioDesign,
+          font:         studioFont,
+          brightness:   studioBrightness,
+          photoData:    studioPhotoData,
+          photoFilter:  studioPhotoFilter,
+          photoOpacity: studioPhotoOpacity,
+        });
+      },
+      onDone: () => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Export'; }
+        if (typeof showToast === 'function') showToast('Poster saved ✓');
+      },
+      onError: () => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Export'; }
+        if (typeof showToast === 'function') showToast('Export failed');
+      },
+    },
   });
-  const _song   = (_post.knowledge?.song || 'Lyric').trim().substring(0, 40);
-  const _fmt    = studioCanvasSize !== 'square' ? ' — ' + studioCanvasSize : '';
-  const filename = _song + ' — MARGO' + _fmt + '.png';
-
-  try {
-    canvas.toBlob(blob => {
-      if (!blob) throw new Error('toBlob failed');
-      const url  = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href     = url;
-      link.download = filename;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 2000);
-
-      if (btn) {
-        btn.disabled         = false;
-        btn.textContent      = '✓ Saved!';
-        btn.style.background = '#4ade80';
-        btn.style.color      = '#0B0B0D';
-        setTimeout(() => {
-          btn.style.background = '';
-          btn.style.color      = '';
-          btn.textContent      = 'Export';
-        }, 2400);
-      }
-      if (typeof showToast === 'function') showToast('Saved to downloads ✓');
-    }, 'image/png', 0.95);
-  } catch (_) {
-    /* Fallback to dataURL if toBlob fails */
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href     = canvas.toDataURL('image/png', 0.95);
-    link.click();
-    if (btn) { btn.disabled = false; btn.textContent = 'Export'; }
-  }
 };
 
 /* ==========================================================
