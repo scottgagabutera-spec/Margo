@@ -616,25 +616,30 @@ function setSSEncoding(on, label = '') {
 /* ==========================================================
    SAVE — download to device
 ========================================================== */
-async function ssSave() {
+function ssSave() {
   if (SS.isEncoding) return;
-  const name = _songFilename(SS.post);
-
-  if (SS.activeFormat === 'poster') {
-    await ssGeneratePoster();
-    if (!SS.posterBlob) return;
-    _downloadBlob(SS.posterBlob, _songFilename(SS.post, 'png'));
-    if (typeof showToast === 'function') showToast('Poster saved ✓');
-  } else {
-    await ssGenerateGif();
-    if (!SS.gifBlob) return;
-    _downloadBlob(SS.gifBlob, _songFilename(SS.post, 'gif'));
-    if (typeof showToast === 'function') showToast('GIF saved ✓');
+  if (typeof window.PlatformPicker === 'undefined') {
+    console.error('[SS] PlatformPicker not loaded'); return;
   }
-
-  /* Always restart preview and clear overlay after save */
-  setSSEncoding(false);
-  ssStartPreview();
+  const fmt  = SS.activeFormat;
+  const post = SS.post;
+  const theme = SS.theme || 'void-violet';
+  window.PlatformPicker.pick({
+    format: fmt,
+    view:   'card',
+    p1:     post,
+    p2:     null,
+    opts: {
+      drawFn: fmt === 'gif'
+        ? (ctx, W, H, t) => { if (typeof window.gsDrawFrame === 'function') window.gsDrawFrame(ctx, W, H, t, post); }
+        : (ctx, W, H)    => { if (typeof window.drawPosterToCtx === 'function') window.drawPosterToCtx(ctx, W, H, post, { design: theme, font: 'playfair' }); },
+      design:  theme,
+      font:    'playfair',
+      post:    post,
+      onDone:  () => { if (typeof showToast === 'function') showToast(fmt === 'gif' ? 'GIF saved ✓' : 'Poster saved ✓'); ssStartPreview(); },
+      onError: () => { if (typeof showToast === 'function') showToast('Export failed'); ssStartPreview(); },
+    },
+  });
 }
 
 function _downloadBlob(blob, filename) {
