@@ -160,7 +160,7 @@ function gsDrawFrame(ctx, W, H, t, post) {
 
   const pad    = Math.round(W * 0.075);
   const innerW = W - pad * 2;
-  const scale  = W / 600;
+  const scale  = Math.min(W, H) / 600;
   const isLight = theme.text === '#000000' || theme.text === '#1a1a20';
 
   /* ── Background ── */
@@ -565,156 +565,81 @@ function gsStopPreview() {
 /* ================================================================
    GIF EXPORT
    ================================================================ */
-async function gsExport() {
-  if (GS.isExporting) return;
-  GS.isExporting = true;
-  gsStopPreview();
-
+function gsExport() {
+  GS.isExporting = false;
+  const exportPost = window.currentPost || {};
+  if (typeof window.PlatformPicker === 'undefined') {
+    console.error('[GifStudio] PlatformPicker not loaded'); return;
+  }
   const gifBtn = document.getElementById('gsExportBtn');
   const mp4Btn = document.getElementById('gsExportMp4');
-  if (gifBtn) gifBtn.disabled = true;
-  if (mp4Btn) mp4Btn.disabled = true;
-
-  const SIZE   = GS_EXPORT_SIZE;
-  const anim   = GS_ANIMS[GS.animation];
-  const frames = anim?.frames || 24;
-  const delay  = GS_SPEED_MS[GS.speed] || 70;
-
-  const off = document.createElement('canvas');
-  off.width = SIZE; off.height = SIZE;
-  const oc  = off.getContext('2d');
-  const exportPost = window.currentPost || {};
-
-  try {
-    await document.fonts.ready;
-
-    if (typeof GIF === 'undefined') {
-      await new Promise((res, rej) => {
-        const sc = document.createElement('script');
-        sc.src   = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js';
-        sc.onload = res; sc.onerror = rej;
-        document.head.appendChild(sc);
-      });
-    }
-
-    const gif = new GIF({
-      workers: 4, quality: 1,
-      width: SIZE, height: SIZE,
-      workerScript: '/js/media/gif/gif.worker.js',
-      dither: false,
-    });
-
-    for (let i = 0; i < frames; i++) {
-      oc.clearRect(0, 0, SIZE, SIZE);
-      gsDrawFrame(oc, SIZE, SIZE, i / frames, exportPost);
-      gif.addFrame(off, { copy: true, delay });
-      if (gifBtn) gifBtn.textContent = `GIF ${Math.round((i / frames) * 75)}%`;
-      await new Promise(r => setTimeout(r, 0));
-    }
-
-    gif.on('progress', p => {
-      if (gifBtn) gifBtn.textContent = `Encoding… ${Math.round(75 + p * 25)}%`;
-    });
-
-    gif.on('finished', blob => {
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
-      a.download = `margo-${Date.now()}.gif`;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
-      if (gifBtn) { gifBtn.textContent = '✓ GIF Saved!'; gifBtn.disabled = false; }
-      if (mp4Btn) mp4Btn.disabled = false;
-      GS.isExporting = false;
-      setTimeout(gsStartPreview, 400);
-    });
-
-    gif.render();
-
-  } catch (err) {
-    console.error('GIF export error:', err);
-    if (gifBtn) { gifBtn.textContent = 'GIF'; gifBtn.disabled = false; }
-    if (mp4Btn) mp4Btn.disabled = false;
-    GS.isExporting = false;
-    gsStartPreview();
-  }
+  window.PlatformPicker.pick({
+    format: 'gif',
+    view:   'card',
+    p1:     exportPost,
+    p2:     null,
+    opts: {
+      drawFn: (ctx, W, H, t) => { gsDrawFrame(ctx, W, H, t, exportPost); },
+      filename: ((exportPost?.knowledge?.song || 'Lyric').trim().substring(0, 40)) + ' — MARGO',
+      onStart: () => {
+        GS.isExporting = true;
+        gsStopPreview();
+        if (gifBtn) gifBtn.disabled = true;
+        if (mp4Btn) mp4Btn.disabled = true;
+      },
+      onDone: () => {
+        GS.isExporting = false;
+        if (gifBtn) { gifBtn.disabled = false; gifBtn.textContent = 'GIF'; }
+        if (mp4Btn) mp4Btn.disabled = false;
+        if (typeof showToast === 'function') showToast('GIF saved ✓');
+        setTimeout(gsStartPreview, 400);
+      },
+      onError: () => {
+        GS.isExporting = false;
+        if (gifBtn) { gifBtn.disabled = false; gifBtn.textContent = 'GIF'; }
+        if (mp4Btn) mp4Btn.disabled = false;
+        gsStartPreview();
+      },
+    },
+  });
 }
-
-/* ================================================================
-   MP4 EXPORT
-   ================================================================ */
 async function gsExportMp4() {
   if (GS.isExporting) return;
-  GS.isExporting = true;
-  gsStopPreview();
-
+  const exportPost = window.currentPost || {};
+  if (typeof window.PlatformPicker === 'undefined') {
+    console.error('[GifStudio] PlatformPicker not loaded'); return;
+  }
   const gifBtn = document.getElementById('gsExportBtn');
   const mp4Btn = document.getElementById('gsExportMp4');
-  if (gifBtn) gifBtn.disabled = true;
-  if (mp4Btn) { mp4Btn.disabled = true; mp4Btn.textContent = 'Preparing…'; }
-
-  const SIZE        = GS_EXPORT_SIZE;
-  const anim        = GS_ANIMS[GS.animation];
-  const frames      = anim?.frames || 24;
-  const delay       = GS_SPEED_MS[GS.speed] || 70;
-  const LOOPS       = 3;
-  const totalFrames = frames * LOOPS;
-  const fps         = Math.round(1000 / delay);
-
-  const off = document.createElement('canvas');
-  off.width = SIZE; off.height = SIZE;
-  const oc  = off.getContext('2d');
-  const exportPost = window.currentPost || {};
-
-  try {
-    await document.fonts.ready;
-
-    const mimeType = [
-      'video/mp4;codecs=avc1',
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm',
-    ].find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
-
-    const stream   = off.captureStream(fps);
-    const chunks   = [];
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
-
-    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
-      a.download = `margo-${Date.now()}.mp4`;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
-      if (mp4Btn) { mp4Btn.textContent = '✓ Video Saved!'; mp4Btn.disabled = false; }
-      if (gifBtn) gifBtn.disabled = false;
-      GS.isExporting = false;
-      setTimeout(gsStartPreview, 400);
-    };
-
-    recorder.start();
-    for (let i = 0; i < totalFrames; i++) {
-      oc.clearRect(0, 0, SIZE, SIZE);
-      gsDrawFrame(oc, SIZE, SIZE, (i % frames) / frames, exportPost);
-      if (mp4Btn) mp4Btn.textContent = `Video ${Math.round((i / totalFrames) * 100)}%`;
-      await new Promise(r => setTimeout(r, delay));
-    }
-    recorder.stop();
-
-  } catch (err) {
-    console.error('MP4 export error:', err);
-    if (mp4Btn) { mp4Btn.textContent = '▶ Video'; mp4Btn.disabled = false; }
-    if (gifBtn) gifBtn.disabled = false;
-    GS.isExporting = false;
-    gsStartPreview();
-  }
+  window.PlatformPicker.pick({
+    format: 'gif',
+    view:   'card',
+    p1:     exportPost,
+    p2:     null,
+    opts: {
+      drawFn: (ctx, W, H, t) => { gsDrawFrame(ctx, W, H, t, exportPost); },
+      filename: ((exportPost?.knowledge?.song || 'Lyric').trim().substring(0, 40)) + ' — MARGO',
+      onStart: () => {
+        GS.isExporting = true;
+        gsStopPreview();
+        if (gifBtn) gifBtn.disabled = true;
+        if (mp4Btn) { mp4Btn.disabled = true; mp4Btn.textContent = 'Preparing…'; }
+      },
+      onDone: () => {
+        GS.isExporting = false;
+        if (mp4Btn) { mp4Btn.disabled = false; mp4Btn.textContent = '▶ Video'; }
+        if (gifBtn) gifBtn.disabled = false;
+        if (typeof showToast === 'function') showToast('Video saved ✓');
+        setTimeout(gsStartPreview, 400);
+      },
+      onError: () => {
+        GS.isExporting = false;
+        if (mp4Btn) { mp4Btn.disabled = false; mp4Btn.textContent = '▶ Video'; }
+        if (gifBtn) gifBtn.disabled = false;
+        gsStartPreview();
+      },
+    },
+  });
 }
 
 /* ================================================================
@@ -729,3 +654,4 @@ if (document.readyState === 'loading') {
 window.openGifStudio  = openGifStudio;
 window.closeGifStudio = closeGifStudio;
 window.gsSetTheme = function(t) { GS.theme = t; };
+window.gsDrawFrame = gsDrawFrame;
