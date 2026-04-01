@@ -74,7 +74,26 @@ export default async function handler(req, res) {
     const data = await r.json();
     const hits = data.response?.hits || [];
 
-    if (!hits.length) return res.status(404).json({ error: 'No results found' });
+    if (!hits.length) {
+      try {
+        const iq = encodeURIComponent(query.trim());
+        const ir = await fetch(`https://itunes.apple.com/search?term=${iq}&entity=song&limit=5`);
+        const id2 = await ir.json();
+        const itunes = (id2.results || []).filter(t => t.wrapperType === "track");
+        if (!itunes.length) return res.status(404).json({ error: "No results found" });
+        const results = itunes.slice(0, 3).map(t => ({
+          song:        t.trackName,
+          artist:      t.artistName || "Unknown Artist",
+          artwork:     t.artworkUrl100 || null,
+          artworkFull: t.artworkUrl100 ? t.artworkUrl100.replace("100x100bb", "600x600bb") : null,
+          geniusUrl:   null,
+          id:          null,
+        }));
+        return res.status(200).json({ results, source: "itunes" });
+      } catch (e) {
+        return res.status(404).json({ error: "No results found" });
+      }
+    }
 
     // Return top 3 results for autocomplete
     const results = hits.slice(0, 3).map(h => {
