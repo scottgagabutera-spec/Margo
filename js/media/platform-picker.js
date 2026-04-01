@@ -50,7 +50,7 @@ function _injectStyles() {
   s.id = '_ppCSS';
   s.textContent = `
     #_ppBd {
-      position:fixed;inset:0;z-index:1100;
+      position:fixed;inset:0;z-index:1300;
       background:rgba(0,0,0,0.72);
       backdrop-filter:blur(12px) saturate(0.6);
       -webkit-backdrop-filter:blur(12px) saturate(0.6);
