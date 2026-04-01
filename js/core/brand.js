@@ -13,6 +13,7 @@ window.drawMargoLockup = function(ctx, x, y, size, accentColor, isLight) {
   var cy = y + r;
   var sc = size / 80;
   ctx.save();
+  ctx.globalAlpha = 0.25;
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fillStyle   = accentColor;
