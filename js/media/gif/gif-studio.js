@@ -119,41 +119,9 @@ function gsLyricFont(ctx, data, scale) {
 
 /* ================================================================
    MARGO WORDMARK — ghost, low opacity
-   ================================================================ */
 function gsDrawWordmark(ctx, W, H, theme) {
-  const pad = Math.round(W * 0.035);
-  const r   = Math.round(W * 0.024);
-  const cx  = pad + r;
-  const cy  = pad + r;
-  const sc  = r / 40;
-  const isLight = theme.text === '#000000' || theme.text === '#1a1a20';
-
-  ctx.save();
-  ctx.globalAlpha = 0.22;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = theme.accent;
-  ctx.fill();
-  ctx.strokeStyle  = isLight ? '#ffffff' : '#0B0B0D';
-  ctx.lineWidth    = 4.5 * sc;
-  ctx.lineCap      = 'round';
-  ctx.lineJoin     = 'round';
-  ctx.beginPath();
-  ctx.moveTo(cx+(17-40)*sc, cy+(57-40)*sc);
-  ctx.lineTo(cx+(17-40)*sc, cy+(27-40)*sc);
-  ctx.lineTo(cx+(29-40)*sc, cy+(45-40)*sc);
-  ctx.lineTo(cx+(40-40)*sc, cy+(26-40)*sc);
-  ctx.lineTo(cx+(51-40)*sc, cy+(45-40)*sc);
-  ctx.lineTo(cx+(63-40)*sc, cy+(27-40)*sc);
-  ctx.lineTo(cx+(63-40)*sc, cy+(57-40)*sc);
-  ctx.stroke();
-  const sz = Math.max(9, Math.round(W * 0.022));
-  ctx.font         = `700 ${sz}px Space Mono, monospace`;
-  ctx.fillStyle    = theme.accent;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign    = 'left';
-  ctx.fillText('MARGO', cx + r + Math.round(W * 0.018), cy);
-  ctx.restore();
+  var _isLight = theme.text === '#000000' || theme.text === '#1a1a20';
+  drawMargoLockup(ctx, Math.round(W*0.035), Math.round(W*0.035), W*0.048, theme.accent, _isLight);
 }
 
 /* ================================================================

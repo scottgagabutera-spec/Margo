@@ -351,35 +351,8 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
-  /* ── Brand: M circle + dot + MARGO text top-left — exact gsDrawWordmark style ── */
-  (function(){
-    var pad=Math.round(W*0.035), r=Math.round(W*0.024);
-    var cx=pad+r, cy=pad+r, sc=r/40;
-    ctx.save();
-    ctx.globalAlpha=0.22;
-    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
-    ctx.fillStyle=design.accentColor; ctx.fill();
-    ctx.strokeStyle=isLight?"#ffffff":"#0B0B0D";
-    ctx.lineWidth=4.5*sc; ctx.lineCap="round"; ctx.lineJoin="round";
-    ctx.beginPath();
-    ctx.moveTo(cx+(17-40)*sc,cy+(57-40)*sc);
-    ctx.lineTo(cx+(17-40)*sc,cy+(27-40)*sc);
-    ctx.lineTo(cx+(29-40)*sc,cy+(45-40)*sc);
-    ctx.lineTo(cx+(40-40)*sc,cy+(26-40)*sc);
-    ctx.lineTo(cx+(51-40)*sc,cy+(45-40)*sc);
-    ctx.lineTo(cx+(63-40)*sc,cy+(27-40)*sc);
-    ctx.lineTo(cx+(63-40)*sc,cy+(57-40)*sc);
-    ctx.stroke();
-    ctx.globalAlpha=0.55;
-    ctx.fillStyle=isLight?"#0C0C0E":"#0C0C0E";
-    ctx.beginPath(); ctx.arc(cx+(0)*sc,cy+(20)*sc,3*sc,0,Math.PI*2); ctx.fill();
-    var sz=Math.max(9,Math.round(W*0.022));
-    ctx.font="700 "+sz+"px Space Mono,monospace";
-    ctx.fillStyle=design.accentColor; ctx.globalAlpha=1;
-    ctx.textBaseline="middle"; ctx.textAlign="left";
-    ctx.fillText("MARGO",cx+r+Math.round(W*0.018),cy);
-    ctx.restore();
-  })();
+  /* ── Brand lockup ── */
+  drawMargoLockup(ctx, Math.round(W*0.035), Math.round(W*0.035), W*0.048, design.accentColor, isLight);
   /* ── Lyric block — left-aligned ── */
   const lyricText = post.text || '';
   let fontSize = Math.min(W * 0.068, H * 0.052);
