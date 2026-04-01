@@ -116,9 +116,9 @@ function gsLyricFont(ctx, data, scale) {
   ctx.font   = `${data.font.style === 'italic' ? 'italic ' : ''}${bold ? '700' : '600'} ${sz}px ${data.font.family}`;
   return sz;
 }
-
 /* ================================================================
-   MARGO WORDMARK — ghost, low opacity
+   MARGO WORDMARK
+   ================================================================ */
 function gsDrawWordmark(ctx, W, H, theme) {
   var _isLight = theme.text === '#000000' || theme.text === '#1a1a20';
   drawMargoLockup(ctx, Math.round(W*0.035), Math.round(W*0.035), W*0.048, theme.accent, _isLight);
