@@ -696,8 +696,8 @@ async function ssGeneratePoster() {
     if (SS.isDuet && SS.echoPost) {
       if (typeof drawDuetPosterToCtx === 'function') drawDuetPosterToCtx(ctx, 1080, 1080);
     } else {
-      if (typeof window.drawPosterPreview === 'function') {
-        window.drawPosterPreview(ctx, 1080, 1080, SS.post);
+      if (typeof window.drawPosterToCtx === 'function') {
+        window.drawPosterToCtx(ctx, 1080, 1080, SS.post, { design: SS.theme || 'void-violet', font: 'playfair' });
       }
     }
     SS.posterBlob = await new Promise((res, rej) => {
