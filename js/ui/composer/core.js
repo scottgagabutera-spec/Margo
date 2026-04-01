@@ -198,7 +198,7 @@ async function submitPost(mode = 'post+visual') {
     console.error(err);
     showToast(err.message || 'Something went wrong. Try again.');
   } finally {
-    if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = 'Post &amp; Create Visual'; }
+    if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = 'Post + Make Visual'; }
     if (createOnlyBtn) createOnlyBtn.disabled = false;
     if (justPostBtn) { justPostBtn.disabled = false; }
     if (typeof postBtn !== 'undefined' && postBtn) postBtn.disabled = false;
