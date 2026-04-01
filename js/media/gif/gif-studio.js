@@ -119,9 +119,9 @@ function gsLyricFont(ctx, data, scale) {
 /* ================================================================
    MARGO WORDMARK
    ================================================================ */
-function gsDrawWordmark(ctx, W, H, theme) {
+function gsDrawWordmark(ctx, W, H, theme, t) {
   var _isLight = theme.text === '#000000' || theme.text === '#1a1a20';
-  drawMargoLockup(ctx, Math.round(W*0.035), Math.round(W*0.035), W*0.048, theme.accent, _isLight);
+  drawMargoLockupAnimated(ctx, Math.round(W*0.035), Math.round(W*0.035), W*0.048, theme.accent, _isLight, t);
 }
 
 /* ================================================================
@@ -186,7 +186,7 @@ function gsDrawFrame(ctx, W, H, t, post) {
   ctx.restore();
 
   /* ── Logo ── */
-  gsDrawWordmark(ctx, W, H, theme);
+  gsDrawWordmark(ctx, W, H, theme, t);
 
   /* ── Lyric block position ── */
   const sz = gsLyricFont(ctx, data, scale);
