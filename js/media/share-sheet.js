@@ -636,6 +636,7 @@ function ssSave() {
       design:  theme,
       font:    'playfair',
       post:    post,
+      filename: (post?.knowledge?.song || 'Lyric').trim().substring(0, 40) + ' — MARGO',
       onDone:  () => { if (typeof showToast === 'function') showToast(fmt === 'gif' ? 'GIF saved ✓' : 'Poster saved ✓'); ssStartPreview(); },
       onError: () => { if (typeof showToast === 'function') showToast('Export failed'); ssStartPreview(); },
     },

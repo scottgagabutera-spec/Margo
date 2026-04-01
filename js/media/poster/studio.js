@@ -749,6 +749,7 @@ window.exportPoster = function exportPoster() {
           photoData:    studioPhotoData,
           photoFilter:  studioPhotoFilter,
           photoOpacity: studioPhotoOpacity,
+      filename: ((_post.knowledge?.song || 'Lyric').trim().substring(0, 40)) + ' — MARGO',
         });
       },
       onDone: () => {

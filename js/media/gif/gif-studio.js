@@ -580,6 +580,7 @@ function gsExport() {
     p2:     null,
     opts: {
       drawFn: (ctx, W, H, t) => { gsDrawFrame(ctx, W, H, t, exportPost); },
+      filename: ((exportPost?.knowledge?.song || 'Lyric').trim().substring(0, 40)) + ' — MARGO',
       onStart: () => {
         GS.isExporting = true;
         gsStopPreview();
@@ -617,6 +618,7 @@ async function gsExportMp4() {
     p2:     null,
     opts: {
       drawFn: (ctx, W, H, t) => { gsDrawFrame(ctx, W, H, t, exportPost); },
+      filename: ((exportPost?.knowledge?.song || 'Lyric').trim().substring(0, 40)) + ' — MARGO',
       onStart: () => {
         GS.isExporting = true;
         gsStopPreview();
