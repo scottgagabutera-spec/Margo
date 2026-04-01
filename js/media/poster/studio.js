@@ -432,33 +432,6 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
     ctx.restore();
   }
 
-  /* ── Album art thumbnail bottom-right ── */
-  const thumbImg = document.getElementById('_studioThumbImg');
-  if (thumbImg && thumbImg.complete && thumbImg.naturalWidth) {
-    try {
-      const tSz = Math.round(W * 0.085);
-      const tX  = W - pad - tSz;
-      const tY  = H - pad * 0.85 - tSz;
-      ctx.save();
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(tX, tY, tSz, tSz, tSz * 0.12);
-      else ctx.rect(tX, tY, tSz, tSz);
-      ctx.clip();
-      ctx.globalAlpha = 0.7;
-      ctx.drawImage(thumbImg, tX, tY, tSz, tSz);
-      ctx.restore();
-      ctx.save();
-      ctx.strokeStyle = design.accentColor;
-      ctx.lineWidth   = 1.5;
-      ctx.globalAlpha = 0.4;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(tX, tY, tSz, tSz, tSz * 0.12);
-      else ctx.rect(tX, tY, tSz, tSz);
-      ctx.stroke();
-      ctx.restore();
-    } catch (_) {}
-  }
-
   /* ── Near-invisible watermark ── */
   ctx.save();
   ctx.textBaseline = 'alphabetic';
@@ -792,15 +765,9 @@ window.exportPoster = async function exportPoster() {
     photoFilter:  studioPhotoFilter,
     photoOpacity: studioPhotoOpacity,
   });
-
-  /* Download */
-  const name = (_post.knowledge?.song || 'lyric')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9\-]/gi, '')
-    .toLowerCase()
-    .substring(0, 40);
-  const format   = studioCanvasSize !== 'square' ? `-${studioCanvasSize}` : '';
-  const filename = `margo-${name}${format}.png`;
+  const _song   = (_post.knowledge?.song || 'Lyric').trim().substring(0, 40);
+  const _fmt    = studioCanvasSize !== 'square' ? ' — ' + studioCanvasSize : '';
+  const filename = _song + ' — MARGO' + _fmt + '.png';
 
   try {
     canvas.toBlob(blob => {
