@@ -29,12 +29,15 @@ function injectEchoStyles() {
     #echoSheetBackdrop {
       position:fixed;inset:0;z-index:650;
       background:rgba(0,0,0,0.82);
-      backdrop-filter:blur(16px) saturate(0.7);
-      -webkit-backdrop-filter:blur(16px) saturate(0.7);
+      backdrop-filter:blur(4px) saturate(0.8);
+      -webkit-backdrop-filter:blur(4px) saturate(0.8);
       display:flex;align-items:flex-end;justify-content:center;
       animation:echoFadeIn 0.28s ease;
     }
     @keyframes echoFadeIn{from{opacity:0}to{opacity:1}}
+    @media(max-width:560px){
+      #echoSheetBackdrop{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(0,0,0,0.92);}
+    }
     #echoSheetBackdrop.echo-hidden{display:none!important}
 
     @media(min-width:560px){
@@ -49,7 +52,7 @@ function injectEchoStyles() {
       overflow:hidden;display:flex;flex-direction:column;
       max-height:92dvh;
       box-shadow:0 -8px 60px rgba(0,0,0,0.8),0 0 0 1px rgba(232,197,71,0.04) inset;
-      animation:echoSlideUp 0.38s cubic-bezier(0.16,1,0.3,1);
+      will-change:transform,opacity;animation:echoSlideUp 0.38s cubic-bezier(0.16,1,0.3,1);
     }
     @media(min-width:560px){
       #echoSheet{

@@ -112,3 +112,31 @@ body.modal-open .cta-group{
   visibility: hidden;
   animation-play-state: paused !important;
 }
+
+/* ── Mobile tap delay fix ── */
+button, a, [role="tab"], [role="button"], input, textarea, select,
+.room-tab, .emotion-btn, .feed-card, .echo-action-btn,
+.echo-vibe-opt, .composer-btn, .btn-primary, .btn-ghost,
+.echo-compose-trigger, .echo-submit-btn, .echo-cancel-btn {
+  touch-action: manipulation;
+}
+
+/* ── Disable grain on mobile to reduce compositor load ── */
+@media (max-width: 768px) {
+  body::before { display: none; }
+}
+
+/* ── Disable ambient blurs on mobile ── */
+@media (max-width: 768px) {
+  .ambient { display: none; }
+}
+
+/* ── Scroll performance ── */
+html {
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+.echo-list-wrap, .feed-search-wrap, .room-tabs {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
