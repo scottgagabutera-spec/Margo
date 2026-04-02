@@ -202,15 +202,8 @@ function initSwipeEngine() {
   const navUp = document.getElementById('navUp');
   if (navDown) navDown.onclick = function() { swipeGoTo('next'); };
   if (navUp) navUp.onclick = function() { swipeGoTo('prev'); };
-
-  document.querySelectorAll('.sort-btn').forEach(function(btn) {
-    btn.onclick = function() {
-      document.querySelectorAll('.sort-btn').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      currentSort = btn.dataset.sort || 'fresh';
-      renderFeed();
-    };
-  });
+  /* sort-btn wiring lives exclusively in landing.js — never wire here */
+  
 
   updateSwipeUI();
 }
