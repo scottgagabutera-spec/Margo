@@ -1,2 +1,5 @@
 .vercel
 .env*.local
+patch_*.js
+fix_*.js
+*.bak
