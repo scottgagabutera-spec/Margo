@@ -18,7 +18,7 @@
 .username-pill{font-family:var(--font-mono);font-size:0.42rem;color:var(--text-3);letter-spacing:1px;text-transform:uppercase;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);padding:5px 12px;border-radius:20px}
 
 /* CARD STACK */
-#cardStack{position:absolute;top:56px;left:0;right:0;bottom:86px;overflow:hidden;touch-action:none}
+#cardStack{position:absolute;top:56px;left:0;right:0;bottom:86px;overflow:hidden;touch-action:none;will-change:opacity;transform:translateZ(0)}
 @media(max-width:600px){#cardStack{top:50px;bottom:82px}}
 
 /* SWIPE CARD */
@@ -185,3 +185,25 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
 #dropLyricNew{background:var(--gold);color:#07060A;border:none;border-radius:50px;padding:7px 13px;font-family:var(--font-mono);font-size:0.48rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;}
 #dropLyricNew:hover{background:var(--gold-warm,#f0d060);transform:translateY(-1px);}
 #dropLyricNew:active{transform:scale(0.97);}
+
+/* ── FIX 8: kill card inner blurs on mobile ── */
+@media (max-width: 768px) {
+  #cardStack .card-song {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(0,0,0,0.6);
+  }
+  #cardStack .card-actions {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(0,0,0,0.82);
+  }
+  #cardStack .card-emotion-label {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .feed-header {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
