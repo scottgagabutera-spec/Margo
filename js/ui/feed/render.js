@@ -115,7 +115,8 @@ function renderSkeleton() {
    RENDER FEED
 ══════════════════════════════════════════════════════════ */
 var _renderFeedTimer=null;
-function renderFeedDebounced(){clearTimeout(_renderFeedTimer);_renderFeedTimer=setTimeout(renderFeed,80);}
+var _renderGeneration=0;
+function renderFeedDebounced(){clearTimeout(_renderFeedTimer);_renderFeedTimer=setTimeout(renderFeed,100);}
 function renderFeed() {
   injectFeedStyles();
   injectSortBar();
@@ -125,29 +126,38 @@ function renderFeed() {
   const filtered = getRankedPosts();
   const stack = document.getElementById('cardStack');
   if (!stack) return;
+  var myGen = ++_renderGeneration;
+  if (typeof swipeAnim !== 'undefined') swipeAnim = false;
+  if (typeof swipeDragging !== 'undefined') swipeDragging = false;
+  delete stack.dataset.swipeReady;
+  stack.style.opacity = '0';
+  stack.style.transition = 'none';
   stack.innerHTML = '';
-
   if (!filtered.length) {
+    stack.style.opacity = '1';
     stack.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.25);font-family:var(--font-mono);font-size:0.65rem;letter-spacing:3px;text-transform:uppercase">No lyrics here yet</div>';
     updateSwipeUI();
     return;
   }
-
-  // Render first card immediately, rest in batches
   const first = buildSwipeCard(filtered[0], 0);
   stack.appendChild(first);
-  updateSwipeUI();
   if (typeof initSwipeEngine === 'function') initSwipeEngine();
+  updateSwipeUI();
+  requestAnimationFrame(function() {
+    if (myGen !== _renderGeneration) return;
+    stack.style.transition = 'opacity 0.18s ease';
+    stack.style.opacity = '1';
+  });
   if (filtered.length > 1) {
-    let i = 1;
+    var i = 1;
     function renderBatch() {
-      const end = Math.min(i + 3, filtered.length);
+      if (myGen !== _renderGeneration) return;
+      var end = Math.min(i + 4, filtered.length);
       while (i < end) { stack.appendChild(buildSwipeCard(filtered[i], i)); i++; }
       if (i < filtered.length) requestAnimationFrame(renderBatch);
     }
     requestAnimationFrame(renderBatch);
   }
-
 }
 
 function timeAgo(ts) {

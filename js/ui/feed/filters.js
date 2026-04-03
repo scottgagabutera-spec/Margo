@@ -38,14 +38,20 @@ function initSearch() {
 function initRoomTabs() {
   const tabs = document.querySelectorAll('.room-tab');
   if (!tabs.length) return;
+  var _tabTimer;
   tabs.forEach(tab => {
     tab.onclick = () => {
-      tabs.forEach(t=>t.classList.remove('active'));
+      tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       activeRoom = tab.dataset.room;
-      const stack = document.getElementById('cardStack');
-      if (stack) delete stack.dataset.swipeReady;
-      renderFeed();
+      if (typeof swipeIndex !== 'undefined') swipeIndex = 0;
+      if (typeof swipeAnim !== 'undefined') swipeAnim = false;
+      clearTimeout(_tabTimer);
+      _tabTimer = setTimeout(function() {
+        const stack = document.getElementById('cardStack');
+        if (stack) delete stack.dataset.swipeReady;
+        renderFeed();
+      }, 50);
     };
   });
 }
