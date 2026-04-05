@@ -316,7 +316,10 @@ function mountShareSheet() {
         <span id="ssSaveBtnLabel">↓ Save GIF</span>
       </button>
       <button class="ss-copy-text-btn hidden" id="ssCopyTextBtn">
-        <span>⎘ Copy Text for Comments</span>
+        <span>⎘ Copy Text</span>
+      </button>
+      <button class="ss-copy-text-btn hidden" id="ssCopyTikTokBtn">
+        <span>⎘ Copy for TikTok</span>
       </button>
 
       <div class="ss-secondary">
@@ -350,6 +353,7 @@ function mountShareSheet() {
   backdrop.querySelector('#ssBtnStudio').onclick = ssOpenStudio;
   backdrop.querySelector('#ssBtnText').onclick   = ssToggleText;
   backdrop.querySelector('#ssCopyTextBtn').onclick = ssCopyText;
+  backdrop.querySelector('#ssCopyTikTokBtn').onclick = ssCopyTikTok;
 
   /* Theme dots */
   backdrop.querySelector('#ssThemes').addEventListener('click', e => {
@@ -619,6 +623,8 @@ function ssToggleText() {
   if (lbl) lbl.textContent = SS.activeFormat === 'text' ? '↓ Save Text Card' : '↓ Save GIF';
   const copyBtn = document.getElementById('ssCopyTextBtn');
   if (copyBtn) copyBtn.classList.toggle('hidden', SS.activeFormat !== 'text');
+  const copyTikTokBtn = document.getElementById('ssCopyTikTokBtn');
+  if (copyTikTokBtn) copyTikTokBtn.classList.toggle('hidden', SS.activeFormat !== 'text');
   ssStopPreview();
   requestAnimationFrame(() => ssStartPreview());
 }
@@ -735,17 +741,34 @@ function ssCopyText() {
   const song   = post?.knowledge?.song   || '';
   const artist = post?.knowledge?.artist || '';
   const text = [
-    '∿ M A R G O',
+    'MARGO',
     '',
     '❝ ' + lyric + ' ❞',
     '',
     (song ? song.toUpperCase() : ''),
-    (artist ? artist : ''),
+    (artist ? '— ' + artist : ''),
     '',
     'trymargo.com'
-  ].filter(l => l !== null && l !== undefined && !(l === '' && false)).join('\n');
+  ].filter(Boolean).join('\n');
+  const tiktokText = (() => {
+    const base = '❝ ' + lyric + ' ❞' + '\n' + (song ? song.toUpperCase() : '') + (artist ? ' — ' + artist : '') + '\n' + 'MARGO · trymargo.com';
+    return base.length > 150 ? base.substring(0, 147) + '…' : base;
+  })();
   navigator.clipboard.writeText(text).then(() => {
     if (typeof showToast === 'function') showToast('Copied to clipboard ✓');
+  }).catch(() => {
+    if (typeof showToast === 'function') showToast('Copy failed — try again');
+  });
+}
+function ssCopyTikTok() {
+  const post   = SS.post;
+  const lyric  = post?.text || '';
+  const song   = post?.knowledge?.song   || '';
+  const artist = post?.knowledge?.artist || '';
+  const base = '❝ ' + lyric + ' ❞' + '\n' + (song ? song.toUpperCase() : '') + (artist ? ' — ' + artist : '') + '\n' + 'MARGO · trymargo.com';
+  const text = base.length > 150 ? base.substring(0, 147) + '…' : base;
+  navigator.clipboard.writeText(text).then(() => {
+    if (typeof showToast === 'function') showToast('Copied for TikTok ✓');
   }).catch(() => {
     if (typeof showToast === 'function') showToast('Copy failed — try again');
   });
