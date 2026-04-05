@@ -229,6 +229,9 @@ function injectShareSheetStyles() {
     }
     .ss-save-btn:active{transform:scale(0.98)}
     .ss-save-btn:disabled{opacity:0.5;cursor:wait;transform:none;box-shadow:none}
+    .ss-copy-text-btn{width:100%;margin-top:8px;padding:11px;border-radius:12px;border:1px solid rgba(232,197,71,0.3);background:rgba(232,197,71,0.06);color:#E8C547;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.18s;}
+    .ss-copy-text-btn:hover{background:rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.6);}
+    .ss-copy-text-btn.hidden{display:none;}
 
     /* Secondary row */
     .ss-secondary{
@@ -312,6 +315,9 @@ function mountShareSheet() {
       <button class="ss-save-btn" id="ssSaveBtn">
         <span id="ssSaveBtnLabel">↓ Save GIF</span>
       </button>
+      <button class="ss-copy-text-btn hidden" id="ssCopyTextBtn">
+        <span>⎘ Copy Text for Comments</span>
+      </button>
 
       <div class="ss-secondary">
         <button class="ss-sec-btn" id="ssBtnPoster">
@@ -343,6 +349,7 @@ function mountShareSheet() {
   backdrop.querySelector('#ssBtnShare').onclick  = ssShareTo;
   backdrop.querySelector('#ssBtnStudio').onclick = ssOpenStudio;
   backdrop.querySelector('#ssBtnText').onclick   = ssToggleText;
+  backdrop.querySelector('#ssCopyTextBtn').onclick = ssCopyText;
 
   /* Theme dots */
   backdrop.querySelector('#ssThemes').addEventListener('click', e => {
@@ -610,6 +617,8 @@ function ssToggleText() {
   const lbl = document.getElementById('ssSaveBtnLabel');
   if (btn) btn.classList.toggle('active-format', SS.activeFormat === 'text');
   if (lbl) lbl.textContent = SS.activeFormat === 'text' ? '↓ Save Text Card' : '↓ Save GIF';
+  const copyBtn = document.getElementById('ssCopyTextBtn');
+  if (copyBtn) copyBtn.classList.toggle('hidden', SS.activeFormat !== 'text');
   ssStopPreview();
   requestAnimationFrame(() => ssStartPreview());
 }
@@ -720,6 +729,23 @@ function ssSave() {
   });
 }
 
+function ssCopyText() {
+  const post   = SS.post;
+  const lyric  = post?.text || '';
+  const song   = post?.knowledge?.song   || '';
+  const artist = post?.knowledge?.artist || '';
+  const text = [
+    '❝ ' + lyric + ' ❞',
+    '',
+    '— ' + (song ? song : '') + (artist ? ' · ' + artist : ''),
+    'via trymargo.com'
+  ].join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    if (typeof showToast === 'function') showToast('Copied to clipboard ✓');
+  }).catch(() => {
+    if (typeof showToast === 'function') showToast('Copy failed — try again');
+  });
+}
 function _downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
