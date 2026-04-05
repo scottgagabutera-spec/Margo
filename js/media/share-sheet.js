@@ -735,11 +735,15 @@ function ssCopyText() {
   const song   = post?.knowledge?.song   || '';
   const artist = post?.knowledge?.artist || '';
   const text = [
+    '∿ M A R G O',
+    '',
     '❝ ' + lyric + ' ❞',
     '',
-    '— ' + (song ? song : '') + (artist ? ' · ' + artist : ''),
-    'via trymargo.com'
-  ].join('\n');
+    (song ? song.toUpperCase() : ''),
+    (artist ? artist : ''),
+    '',
+    'trymargo.com'
+  ].filter(l => l !== null && l !== undefined && !(l === '' && false)).join('\n');
   navigator.clipboard.writeText(text).then(() => {
     if (typeof showToast === 'function') showToast('Copied to clipboard ✓');
   }).catch(() => {
