@@ -326,6 +326,10 @@ function mountShareSheet() {
           <span class="ss-sec-btn-icon">✦</span>
           <span>Studio</span>
         </button>
+        <button class="ss-sec-btn" id="ssBtnText">
+          <span class="ss-sec-btn-icon">T</span>
+          <span>Text</span>
+        </button>
       </div>
     </div>
   `;
@@ -338,6 +342,7 @@ function mountShareSheet() {
   backdrop.querySelector('#ssBtnPoster').onclick = ssTogglePoster;
   backdrop.querySelector('#ssBtnShare').onclick  = ssShareTo;
   backdrop.querySelector('#ssBtnStudio').onclick = ssOpenStudio;
+  backdrop.querySelector('#ssBtnText').onclick   = ssToggleText;
 
   /* Theme dots */
   backdrop.querySelector('#ssThemes').addEventListener('click', e => {
@@ -695,7 +700,6 @@ function ssSave() {
   if (typeof window.PlatformPicker === 'undefined') {
     console.error('[SS] PlatformPicker not loaded'); return;
   }
-  const post = SS.post;
   const theme = SS.theme || 'void-violet';
   window.PlatformPicker.pick({
     format: fmt,
