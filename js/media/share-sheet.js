@@ -596,7 +596,18 @@ function ssTogglePoster() {
   ssStopPreview();
   requestAnimationFrame(() => ssStartPreview());
 }
-
+function ssToggleText() {
+  if (SS.isEncoding) return;
+  SS.activeFormat = SS.activeFormat === 'text' ? 'gif' : 'text';
+  SS.gifBlob    = null;
+  SS.posterBlob = null;
+  const btn = document.getElementById('ssBtnText');
+  const lbl = document.getElementById('ssSaveBtnLabel');
+  if (btn) btn.classList.toggle('active-format', SS.activeFormat === 'text');
+  if (lbl) lbl.textContent = SS.activeFormat === 'text' ? '↓ Save Text Card' : '↓ Save GIF';
+  ssStopPreview();
+  requestAnimationFrame(() => ssStartPreview());
+}
 /* ==========================================================
    ENCODING OVERLAY
 ========================================================== */
@@ -607,7 +618,7 @@ function setSSEncoding(on, label = '') {
   if (overlay) overlay.classList.toggle('hidden', !on);
   if (lbl && label) lbl.textContent = label;
   if (bar && !on) bar.style.width = '0%';
-  ['ssSaveBtn','ssBtnPoster','ssBtnShare','ssBtnStudio'].forEach(id => {
+  ['ssSaveBtn','ssBtnPoster','ssBtnShare','ssBtnStudio','ssBtnText'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = !!on;
   });
@@ -618,10 +629,72 @@ function setSSEncoding(on, label = '') {
 ========================================================== */
 function ssSave() {
   if (SS.isEncoding) return;
+  const fmt  = SS.activeFormat;
+  const post = SS.post;
+  if (fmt === 'text') {
+    const lyric  = post?.text || '';
+    const song   = post?.knowledge?.song   || '';
+    const artist = post?.knowledge?.artist || '';
+    const W = 1080, H = 1080;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    // Background
+    ctx.fillStyle = '#07060A';
+    ctx.fillRect(0, 0, W, H);
+    // Subtle border
+    ctx.strokeStyle = 'rgba(232,197,71,0.18)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(40, 40, W - 80, H - 80);
+    // MARGO wordmark
+    ctx.fillStyle = '#E8C547';
+    ctx.font = 'bold 38px monospace';
+    ctx.letterSpacing = '8px';
+    ctx.textAlign = 'center';
+    ctx.fillText('MARGO', W / 2, 120);
+    // Lyric text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'italic 52px serif';
+    ctx.letterSpacing = '0px';
+    const words = lyric.split(' ');
+    const lines = [];
+    let line = '';
+    const maxW = W - 160;
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    const lineH = 70;
+    const totalH = lines.length * lineH;
+    let y = (H - totalH) / 2;
+    for (const l of lines) {
+      ctx.fillText(l, W / 2, y);
+      y += lineH;
+    }
+    // Song attribution
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '32px monospace';
+    ctx.fillText((song ? song.toUpperCase() : '') + (artist ? '  —  ' + artist : ''), W / 2, H - 140);
+    // trymargo.com
+    ctx.fillStyle = 'rgba(232,197,71,0.5)';
+    ctx.font = '24px monospace';
+    ctx.fillText('trymargo.com', W / 2, H - 80);
+    canvas.toBlob(blob => {
+      const filename = (song || 'Lyric').trim().substring(0, 40) + ' — MARGO.png';
+      _downloadBlob(blob, filename);
+      if (typeof showToast === 'function') showToast('Text card saved ✓');
+    }, 'image/png');
+    return;
+  }
   if (typeof window.PlatformPicker === 'undefined') {
     console.error('[SS] PlatformPicker not loaded'); return;
   }
-  const fmt  = SS.activeFormat;
   const post = SS.post;
   const theme = SS.theme || 'void-violet';
   window.PlatformPicker.pick({
