@@ -321,7 +321,7 @@ function mountShareSheet() {
           <span>⎘ Copy Text</span>
         </button>
         <button class="ss-copy-text-btn" id="ssCopyTikTokBtn">
-          <span>⎘ TikTok</span>
+          <span>⎘ Copy for TikTok</span>
         </button>
       </div>
 
@@ -720,6 +720,7 @@ function ssSave() {
     ctx.fillStyle = '#FFFFFF';
     ctx.font = 'italic 48px "Instrument Serif", serif';
     ctx.letterSpacing = '0px';
+    ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const words = lyric.split(' ');
     const lines = [];
