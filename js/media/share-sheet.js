@@ -766,7 +766,8 @@ function ssCopyTikTok() {
   const song   = post?.knowledge?.song   || '';
   const artist = post?.knowledge?.artist || '';
   const footer = '\n' + (song ? song.toUpperCase() : '') + (artist ? ' — ' + artist : '') + '\nMARGO · trymargo.com';
-  const maxLyric = (150 - footer.length - 4);
+  const wrapper = '❝  ❞';
+  const maxLyric = 150 - footer.length - wrapper.length - 1;
   const trimmedLyric = lyric.length > maxLyric ? lyric.substring(0, maxLyric) + '…' : lyric;
   const text = '❝ ' + trimmedLyric + ' ❞' + footer;
   navigator.clipboard.writeText(text).then(() => {
