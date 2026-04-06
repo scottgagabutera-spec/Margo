@@ -765,8 +765,10 @@ function ssCopyTikTok() {
   const lyric  = post?.text || '';
   const song   = post?.knowledge?.song   || '';
   const artist = post?.knowledge?.artist || '';
-  const base = '❝ ' + lyric + ' ❞' + '\n' + (song ? song.toUpperCase() : '') + (artist ? ' — ' + artist : '') + '\n' + 'MARGO · trymargo.com';
-  const text = base.length > 150 ? base.substring(0, 147) + '…' : base;
+  const footer = '\n' + (song ? song.toUpperCase() : '') + (artist ? ' — ' + artist : '') + '\nMARGO · trymargo.com';
+  const maxLyric = (150 - footer.length - 4);
+  const trimmedLyric = lyric.length > maxLyric ? lyric.substring(0, maxLyric) + '…' : lyric;
+  const text = '❝ ' + trimmedLyric + ' ❞' + footer;
   navigator.clipboard.writeText(text).then(() => {
     if (typeof showToast === 'function') showToast('Copied for TikTok ✓');
   }).catch(() => {
