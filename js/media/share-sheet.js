@@ -694,20 +694,26 @@ function ssSave() {
     ctx.lineTo(lCx + (61-40)*sc, lCy + (55-40)*sc);
     ctx.stroke();
     ctx.restore();
-    // MARGO wordmark
+    // MARGO wordmark — ghost, Syne 800 (real Margo brand font)
+    ctx.save();
+    ctx.globalAlpha = 0.2;
     ctx.fillStyle = '#E8C547';
-    ctx.font = '800 52px "Bebas Neue", sans-serif';
+    ctx.font = '800 36px "Syne", "Arial Black", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.letterSpacing = '6px';
-    ctx.fillText('MARGO', W / 2, logoY + logoSize + 42);
-    // Divider line
-    ctx.strokeStyle = 'rgba(232,197,71,0.2)';
+    ctx.letterSpacing = '8px';
+    ctx.fillText('MARGO', W / 2, logoY + logoSize + 38);
+    ctx.restore();
+    // Divider line — very subtle
+    ctx.save();
+    ctx.globalAlpha = 0.1;
+    ctx.strokeStyle = '#E8C547';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(W / 2 - 120, logoY + logoSize + 80);
-    ctx.lineTo(W / 2 + 120, logoY + logoSize + 80);
+    ctx.moveTo(W / 2 - 80, logoY + logoSize + 62);
+    ctx.lineTo(W / 2 + 80, logoY + logoSize + 62);
     ctx.stroke();
+    ctx.restore();
     // Lyric text
     ctx.fillStyle = '#FFFFFF';
     ctx.font = 'italic 54px "Instrument Serif", serif';
@@ -758,11 +764,18 @@ function ssSave() {
     ctx.font = '400 24px "Space Mono", monospace';
     ctx.letterSpacing = '2px';
     ctx.fillText('trymargo.com', W / 2, H - 76);
-    canvas.toBlob(blob => {
-      const filename = (song || 'Lyric').trim().substring(0, 40) + ' — MARGO.png';
-      _downloadBlob(blob, filename);
-      if (typeof showToast === 'function') showToast('Text card saved ✓');
-    }, 'image/png');
+    const _drawAndSave = () => {
+      canvas.toBlob(blob => {
+        const filename = (song || 'Lyric').trim().substring(0, 40) + ' — MARGO.png';
+        _downloadBlob(blob, filename);
+        if (typeof showToast === 'function') showToast('Text card saved ✓');
+      }, 'image/png');
+    };
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(_drawAndSave);
+    } else {
+      _drawAndSave();
+    }
     return;
   }
   if (typeof window.PlatformPicker === 'undefined') {
