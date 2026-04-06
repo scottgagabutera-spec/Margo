@@ -662,24 +662,61 @@ function ssSave() {
     // Background
     ctx.fillStyle = '#07060A';
     ctx.fillRect(0, 0, W, H);
-    // Subtle border
-    ctx.strokeStyle = 'rgba(232,197,71,0.18)';
+    // Gold border
+    ctx.strokeStyle = 'rgba(232,197,71,0.22)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(40, 40, W - 80, H - 80);
+    ctx.strokeRect(48, 48, W - 96, H - 96);
+    // M logo — gold circle
+    const logoSize = 72;
+    const logoX = W / 2 - logoSize / 2;
+    const logoY = 100;
+    const lR = logoSize / 2;
+    const lCx = logoX + lR;
+    const lCy = logoY + lR;
+    const sc = logoSize / 80;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(lCx, lCy, lR, 0, Math.PI * 2);
+    ctx.fillStyle = '#E8C547';
+    ctx.fill();
+    // M wave path
+    ctx.strokeStyle = '#07060A';
+    ctx.lineWidth = 5 * sc;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(lCx + (19-40)*sc, lCy + (55-40)*sc);
+    ctx.lineTo(lCx + (19-40)*sc, lCy + (27-40)*sc);
+    ctx.lineTo(lCx + (31-40)*sc, lCy + (44-40)*sc);
+    ctx.lineTo(lCx + (40-40)*sc, lCy + (28-40)*sc);
+    ctx.lineTo(lCx + (49-40)*sc, lCy + (44-40)*sc);
+    ctx.lineTo(lCx + (61-40)*sc, lCy + (27-40)*sc);
+    ctx.lineTo(lCx + (61-40)*sc, lCy + (55-40)*sc);
+    ctx.stroke();
+    ctx.restore();
     // MARGO wordmark
     ctx.fillStyle = '#E8C547';
-    ctx.font = 'bold 38px monospace';
-    ctx.letterSpacing = '8px';
+    ctx.font = '800 52px "Bebas Neue", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('MARGO', W / 2, 120);
+    ctx.textBaseline = 'middle';
+    ctx.letterSpacing = '6px';
+    ctx.fillText('MARGO', W / 2, logoY + logoSize + 42);
+    // Divider line
+    ctx.strokeStyle = 'rgba(232,197,71,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 120, logoY + logoSize + 80);
+    ctx.lineTo(W / 2 + 120, logoY + logoSize + 80);
+    ctx.stroke();
     // Lyric text
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'italic 52px serif';
+    ctx.font = 'italic 54px "Instrument Serif", serif';
     ctx.letterSpacing = '0px';
+    ctx.textBaseline = 'middle';
     const words = lyric.split(' ');
     const lines = [];
     let line = '';
-    const maxW = W - 160;
+    const maxW = W - 180;
     for (const word of words) {
       const test = line ? line + ' ' + word : word;
       if (ctx.measureText(test).width > maxW && line) {
@@ -690,21 +727,37 @@ function ssSave() {
       }
     }
     if (line) lines.push(line);
-    const lineH = 70;
+    const lineH = 72;
     const totalH = lines.length * lineH;
-    let y = (H - totalH) / 2;
+    const lyricStartY = (H - totalH) / 2 + 40;
+    let y = lyricStartY;
     for (const l of lines) {
       ctx.fillText(l, W / 2, y);
       y += lineH;
     }
-    // Song attribution
+    // Song name
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = '700 34px "Bebas Neue", sans-serif';
+    ctx.letterSpacing = '3px';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(song ? song.toUpperCase() : '', W / 2, H - 180);
+    // Artist name
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '32px monospace';
-    ctx.fillText((song ? song.toUpperCase() : '') + (artist ? '  —  ' + artist : ''), W / 2, H - 140);
+    ctx.font = '400 28px "DM Sans", sans-serif';
+    ctx.letterSpacing = '0px';
+    ctx.fillText(artist || '', W / 2, H - 138);
+    // Divider line bottom
+    ctx.strokeStyle = 'rgba(232,197,71,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 120, H - 108);
+    ctx.lineTo(W / 2 + 120, H - 108);
+    ctx.stroke();
     // trymargo.com
-    ctx.fillStyle = 'rgba(232,197,71,0.5)';
-    ctx.font = '24px monospace';
-    ctx.fillText('trymargo.com', W / 2, H - 80);
+    ctx.fillStyle = 'rgba(232,197,71,0.6)';
+    ctx.font = '400 24px "Space Mono", monospace';
+    ctx.letterSpacing = '2px';
+    ctx.fillText('trymargo.com', W / 2, H - 76);
     canvas.toBlob(blob => {
       const filename = (song || 'Lyric').trim().substring(0, 40) + ' — MARGO.png';
       _downloadBlob(blob, filename);
