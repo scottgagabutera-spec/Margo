@@ -229,9 +229,10 @@ function injectShareSheetStyles() {
     }
     .ss-save-btn:active{transform:scale(0.98)}
     .ss-save-btn:disabled{opacity:0.5;cursor:wait;transform:none;box-shadow:none}
-    .ss-copy-text-btn{width:100%;margin-top:8px;padding:11px;border-radius:12px;border:1px solid rgba(232,197,71,0.3);background:rgba(232,197,71,0.06);color:#E8C547;font-family:var(--font-mono);font-size:0.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.18s;}
+    .ss-copy-row{display:flex;gap:8px;margin-top:8px;}
+    .ss-copy-row.hidden{display:none;}
+    .ss-copy-text-btn{flex:1;padding:9px 6px;border-radius:10px;border:1px solid rgba(232,197,71,0.3);background:rgba(232,197,71,0.06);color:#E8C547;font-family:var(--font-mono);font-size:0.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.18s;}
     .ss-copy-text-btn:hover{background:rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.6);}
-    .ss-copy-text-btn.hidden{display:none;}
 
     /* Secondary row */
     .ss-secondary{
@@ -315,12 +316,14 @@ function mountShareSheet() {
       <button class="ss-save-btn" id="ssSaveBtn">
         <span id="ssSaveBtnLabel">↓ Save GIF</span>
       </button>
-      <button class="ss-copy-text-btn hidden" id="ssCopyTextBtn">
-        <span>⎘ Copy Text</span>
-      </button>
-      <button class="ss-copy-text-btn hidden" id="ssCopyTikTokBtn">
-        <span>⎘ Copy for TikTok</span>
-      </button>
+      <div class="ss-copy-row hidden" id="ssCopyRow">
+        <button class="ss-copy-text-btn" id="ssCopyTextBtn">
+          <span>⎘ Copy Text</span>
+        </button>
+        <button class="ss-copy-text-btn" id="ssCopyTikTokBtn">
+          <span>⎘ TikTok</span>
+        </button>
+      </div>
 
       <div class="ss-secondary">
         <button class="ss-sec-btn" id="ssBtnPoster">
@@ -621,10 +624,8 @@ function ssToggleText() {
   const lbl = document.getElementById('ssSaveBtnLabel');
   if (btn) btn.classList.toggle('active-format', SS.activeFormat === 'text');
   if (lbl) lbl.textContent = SS.activeFormat === 'text' ? '↓ Save Text Card' : '↓ Save GIF';
-  const copyBtn = document.getElementById('ssCopyTextBtn');
-  if (copyBtn) copyBtn.classList.toggle('hidden', SS.activeFormat !== 'text');
-  const copyTikTokBtn = document.getElementById('ssCopyTikTokBtn');
-  if (copyTikTokBtn) copyTikTokBtn.classList.toggle('hidden', SS.activeFormat !== 'text');
+  const copyRow = document.getElementById('ssCopyRow');
+  if (copyRow) copyRow.classList.toggle('hidden', SS.activeFormat !== 'text');
   ssStopPreview();
   requestAnimationFrame(() => ssStartPreview());
 }
@@ -675,6 +676,7 @@ function ssSave() {
     const lCy = logoY + lR;
     const sc = logoSize / 80;
     ctx.save();
+    ctx.globalAlpha = 0.9;
     ctx.beginPath();
     ctx.arc(lCx, lCy, lR, 0, Math.PI * 2);
     ctx.fillStyle = '#E8C547';
@@ -716,13 +718,13 @@ function ssSave() {
     ctx.restore();
     // Lyric text
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'italic 54px "Instrument Serif", serif';
+    ctx.font = 'italic 48px "Instrument Serif", serif';
     ctx.letterSpacing = '0px';
     ctx.textBaseline = 'middle';
     const words = lyric.split(' ');
     const lines = [];
     let line = '';
-    const maxW = W - 180;
+    const maxW = W - 240;
     for (const word of words) {
       const test = line ? line + ' ' + word : word;
       if (ctx.measureText(test).width > maxW && line) {
