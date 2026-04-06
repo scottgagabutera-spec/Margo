@@ -676,7 +676,7 @@ function ssSave() {
     const lCy = logoY + lR;
     const sc = logoSize / 80;
     ctx.save();
-    ctx.globalAlpha = 0.9;
+    ctx.globalAlpha = 0.22;
     ctx.beginPath();
     ctx.arc(lCx, lCy, lR, 0, Math.PI * 2);
     ctx.fillStyle = '#E8C547';
