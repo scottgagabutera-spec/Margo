@@ -17,6 +17,24 @@ window._echoState = window._echoState || {
   isSubmitting: false,
 };
 const ES = window._echoState;
+const ECHO_VIBES = [
+  { value: "Nostalgia", label: "Nostalgia" },
+  { value: "Heartbreak", label: "Heartbreak" },
+  { value: "Hope", label: "Hope" },
+  { value: "Anger", label: "Anger" },
+  { value: "Joy", label: "Joy" },
+  { value: "Reflection", label: "Reflection" }
+];
+
+const ECHO_VIBE_CFG = {
+  "Nostalgia": { bg: "rgba(232,197,71,0.12)", text: "#E8C547", border: "rgba(232,197,71,0.25)" },
+  "Heartbreak": { bg: "rgba(180,80,120,0.12)", text: "#B45078", border: "rgba(180,80,120,0.25)" },
+  "Hope": { bg: "rgba(80,180,120,0.12)", text: "#50B478", border: "rgba(80,180,120,0.25)" },
+  "Anger": { bg: "rgba(200,60,50,0.12)", text: "#C83C32", border: "rgba(200,60,50,0.25)" },
+  "Joy": { bg: "rgba(232,197,71,0.12)", text: "#E8C547", border: "rgba(232,197,71,0.25)" },
+  "Reflection": { bg: "rgba(100,120,180,0.12)", text: "#6478B4", border: "rgba(100,120,180,0.25)" }
+};
+
 
 /* ────────────────────────────────────────────────────────────
    STYLES
