@@ -164,6 +164,7 @@ body.composer-page-open {
 
 /* Desktop: keep it looking like a modal (centered card) */
 @media (min-width: 768px) {
+  #composer.hidden { display: none !important; }
   #composer {
     background: rgba(0, 0, 0, 0.8);
     display: flex;
