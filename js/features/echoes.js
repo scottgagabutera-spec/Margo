@@ -600,8 +600,6 @@ function clearEchoForm() {
   const submitBtn = document.getElementById('echoSubmitBtn');
   if (submitBtn) submitBtn.disabled = true;
   document.querySelectorAll('.echo-vibe-opt').forEach(b => b.classList.remove('active'));
-  if (gr) gr.innerHTML = '';
-  if (lh) lh.style.display = 'none';
   const smartInp = document.getElementById("echoSmartInput");
   if (smartInp) smartInp.value = "";
   const pill = document.getElementById("echoSongPill");
