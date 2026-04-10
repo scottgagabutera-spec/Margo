@@ -200,3 +200,12 @@ body.composer-page-open {
     overflow: hidden;
   }
 }
+
+
+/* Echo sheet page pattern - prevent body scroll */
+body.echo-page-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}

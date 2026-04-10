@@ -501,30 +501,28 @@ function mountEchoSheet() {
    OPEN / CLOSE
 ──────────────────────────────────────────────────────────── */
 async function openEchoSheet(postIndex) {
-  mountEchoSheet();
-
-  const post = (typeof posts !== 'undefined' ? posts : [])[postIndex];
+  if (!postIndex && postIndex !== 0) return;
+  const post = (typeof posts !== "undefined" ? posts : [])[postIndex];
   if (!post) return;
-
-  if (typeof MargoUsername !== 'undefined' && !MargoUsername.hasBeenRevealed()) {
+  if (typeof MargoUsername !== "undefined" && !MargoUsername.hasBeenRevealed()) {
     await MargoUsername.showReveal();
   }
-
-  ES.post      = post;
+  ES.post = post;
   ES.postIndex = postIndex;
-  ES.echoes    = [];
-
-  const parentLyricEl = document.getElementById('echoParentLyric');
-  if (parentLyricEl) parentLyricEl.textContent = (post.text || '').substring(0, 50) + '…';
-
+  ES.echoes = [];
+  const parentLyricEl = document.getElementById("echoParentLyric");
+  if (parentLyricEl) parentLyricEl.textContent = (post.text || "").substring(0, 50) + "…";
   populateEchoOgCard(post);
   populateEchoComposeUser();
   collapseEchoCompose();
   clearEchoForm();
   renderEchoList([]);
+  const backdrop = document.getElementById("echoSheetBackdrop");
+  backdrop.classList.remove("echo-hidden");
+  if (window.feed) window.feed.style.display = "none";
+  document.body.classList.add("echo-page-open");
+  subscribeEchoes(post.id);
 
-  const backdrop = document.getElementById('echoSheetBackdrop');
-  backdrop.classList.remove('echo-hidden');
   if (window.feed) window.feed.style.display = "none";
 
   subscribeEchoes(post.id);
@@ -532,8 +530,13 @@ async function openEchoSheet(postIndex) {
 
 function closeEchoSheet() {
   unsubscribeEchoes();
-  const backdrop = document.getElementById('echoSheetBackdrop');
-  if (backdrop) backdrop.classList.add('echo-hidden');
+  const backdrop = document.getElementById("echoSheetBackdrop");
+  if (backdrop) backdrop.classList.add("echo-hidden");
+  if (window.feed) window.feed.style.display = "";
+  document.body.classList.remove("echo-page-open");
+  collapseEchoCompose();
+  clearEchoForm();
+
   if (window.feed) window.feed.style.display = "";
   collapseEchoCompose();
   clearEchoForm();
