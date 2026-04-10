@@ -358,6 +358,36 @@ function mountEchoSheet() {
             <div id="echoFormAvatar"></div>
             <span class="echo-form-username" id="echoFormUsername"></span>
           </div>
+          <div class="echo-smart-search-wrap" id="echoSmartSearchWrap">
+            <div class="echo-search-field" id="echoSearchField">
+              <span class="echo-search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+              <input id="echoSmartInput" type="text" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Search by song or artist…" style="flex:1;background:none;border:none;outline:none;color:#fff;font-size:0.9rem;padding:0;"/>
+            </div>
+            <div id="echoSearchResults" style="display:none"></div>
+            <div id="echoSongPill" style="display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(232,197,71,0.07);border:1px solid rgba(232,197,71,0.2);">
+              <img id="echoSongPillArt" style="width:32px;height:32px;border-radius:6px;object-fit:cover;" src="" alt=""/>
+              <div style="flex:1;min-width:0"><div id="echoSongPillName" style="font-size:0.8rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div><div id="echoSongPillArtist" style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div></div>
+              <button id="echoChangeSongBtn" style="font-size:0.65rem;font-family:Space Mono,monospace;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);cursor:pointer;">Change</button>
+            </div>
+          </div>
+          <input type="hidden" id="echoSongInput"/>
+          <input type="hidden" id="echoArtistInput"/>
+          <div id="echoLyricSection" style="display:none">
+            <textarea class="echo-lyric-input" id="echoLyricInput" maxlength="140" placeholder="The lyric that answers this one…" rows="3"></textarea>
+            <div class="echo-char-count"><span id="echoCharCount">0</span>/140</div>
+          </div>
+          <div class="echo-vibe-label" id="echoVibeLabel" style="display:none">Vibe</div>
+          <div class="echo-vibe-row" id="echoVibeRow" style="display:none">${vibeButtons}</div>
+          <div class="echo-form-submit-row" id="echoSubmitRow" style="display:none">
+            <button class="echo-cancel-btn" id="echoCancelBtn">Cancel</button>
+            <button class="echo-submit-btn" id="echoSubmitBtn" disabled>Drop Your Lyric Back</button>
+          </div>
+        </div>
+        <div class="echo-compose-form" id="echoComposeForm">
+          <div class="echo-form-user-row">
+            <div id="echoFormAvatar"></div>
+            <span class="echo-form-username" id="echoFormUsername"></span>
+          </div>
           <textarea class="echo-lyric-input" id="echoLyricInput"
             maxlength="140" placeholder="The lyric that answers this one…" rows="3"></textarea>
           <div class="echo-char-count"><span id="echoCharCount">0</span>/140</div>
@@ -450,6 +480,16 @@ function mountEchoSheet() {
               if (searchField) searchField.style.display = "none";
               resultsEl.innerHTML = ""; resultsEl.style.display = "none";
               echoSongSelected = true;
+              const lyricSection = backdrop.querySelector("#echoLyricSection");
+              const vibeLabel = backdrop.querySelector("#echoVibeLabel");
+              const vibeRow = backdrop.querySelector("#echoVibeRow");
+              const submitRow = backdrop.querySelector("#echoSubmitRow");
+              if (lyricSection) lyricSection.style.display = "block";
+              if (vibeLabel) vibeLabel.style.display = "block";
+              if (vibeRow) vibeRow.style.display = "flex";
+              if (submitRow) submitRow.style.display = "flex";
+              const lyricInput = backdrop.querySelector("#echoLyricInput");
+              if (lyricInput) setTimeout(function(){ lyricInput.focus(); }, 100);
               echoLastQuery = "";
             };
             resultsEl.appendChild(card);
@@ -634,6 +674,14 @@ function clearEchoForm() {
   if (searchField) searchField.style.display = "flex";
   const resultsEl = document.getElementById("echoSearchResults");
   if (resultsEl) { resultsEl.innerHTML = ""; resultsEl.style.display = "none"; }
+  const lyricSection2 = document.getElementById("echoLyricSection");
+  if (lyricSection2) lyricSection2.style.display = "none";
+  const vibeLabel2 = document.getElementById("echoVibeLabel");
+  if (vibeLabel2) vibeLabel2.style.display = "none";
+  const vibeRow2 = document.getElementById("echoVibeRow");
+  if (vibeRow2) vibeRow2.style.display = "none";
+  const submitRow2 = document.getElementById("echoSubmitRow");
+  if (submitRow2) submitRow2.style.display = "none";
 }
 
 /* ────────────────────────────────────────────────────────────
