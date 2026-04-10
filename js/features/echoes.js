@@ -114,7 +114,7 @@ function mountEchoSheet() {
                 pill.querySelector("#echoChangeSongBtn").onclick = function() {
                   pill.style.display = "none";
                   pill.innerHTML = "";
-                  const sf = backdrop.querySelector("#echoSearchField");
+                  const sf = document.getElementById("echoSearchField");
                   if (sf) sf.style.display = "flex";
                   if (songInput) songInput.value = "";
                   if (artistInput) artistInput.value = "";
@@ -132,7 +132,7 @@ function mountEchoSheet() {
                   if (sr) sr.style.display = "none";
                 };
               }
-              const searchField = backdrop.querySelector("#echoSearchField");
+              const searchField = document.getElementById("echoSearchField");
               if (searchField) searchField.style.display = "none";
               resultsEl.innerHTML = ""; resultsEl.style.display = "none";
               echoSongSelected = true;
@@ -239,6 +239,7 @@ function expandEchoCompose() {
   if (collapsed) collapsed.style.display = 'none';
   const form = document.getElementById('echoComposeForm');
   if (form) { form.classList.add('open'); form.style.display = 'flex'; }
+  const si = document.getElementById('echoSmartInput'); if (si) setTimeout(() => si.focus(), 80);
 }
 
 function collapseEchoCompose() {
