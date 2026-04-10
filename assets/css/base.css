@@ -141,18 +141,6 @@ html {
   overscroll-behavior: contain;
 }
 
-/* ── Echo Sheet — mobile page pattern ── */
-@media (max-width: 767px) {
-  #echoSheetBackdrop {
-    background: #0f0e14 !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    align-items: flex-start !important;
-    padding: 0 !important;
-    will-change: transform;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-  }
   #echoSheet {
     width: 100% !important;
     max-width: 100% !important;
@@ -178,6 +166,9 @@ body.composer-page-open {
   z-index: 1000;
   background: #0f0e14;
   overflow-y: auto;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 #composer:not(.hidden) {
@@ -202,13 +193,6 @@ body.composer-page-open {
 }
 
 
-/* Echo sheet page pattern - prevent body scroll */
-body.echo-page-open {
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  height: 100%;
-}
 
 /* ── Echo Sheet page fixes (matching composer pattern) ── */
 body.echo-page-open {
