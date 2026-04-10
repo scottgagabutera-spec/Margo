@@ -286,6 +286,11 @@ function injectEchoStyles() {
       animation:echoSpin 0.7s linear infinite;display:inline-block;
     }
     @keyframes echoSpin{to{transform:rotate(360deg)}}
+    .echo-smart-search-wrap { margin-bottom: 8px; }
+    .echo-search-field { display:flex; align-items:center; gap:8px; padding:10px 14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:12px; transition:border-color 0.2s; }
+    .echo-search-field:focus-within { border-color:rgba(232,197,71,0.35); }
+    .echo-search-icon { color:rgba(255,255,255,0.3); flex-shrink:0; }
+    #echoSearchResults { margin-top:6px; max-height:260px; overflow-y:auto; }
   `;
   document.head.appendChild(s);
 }
@@ -363,15 +368,20 @@ function mountEchoSheet() {
           <textarea class="echo-lyric-input" id="echoLyricInput"
             maxlength="140" placeholder="The lyric that answers this one…" rows="3"></textarea>
           <div class="echo-char-count"><span id="echoCharCount">0</span>/140</div>
-          <button class="echo-identify-btn" id="echoIdentifyBtn">Identify Song</button>
-          <div id="echoLiveHint" class="echo-live-hint" style="display:none">
-            <span class="echo-live-dot"></span> Searching for song…
+          <div class="echo-smart-search-wrap" id="echoSmartSearchWrap">
+            <div class="echo-search-field" id="echoSearchField">
+              <span class="echo-search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+              <input id="echoSmartInput" type="text" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Search by song or artist…" style="flex:1;background:none;border:none;outline:none;color:#fff;font-size:0.9rem;padding:0;"/>
+            </div>
+            <div id="echoSearchResults" style="display:none"></div>
+            <div id="echoSongPill" style="display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(232,197,71,0.07);border:1px solid rgba(232,197,71,0.2);">
+              <img id="echoSongPillArt" style="width:32px;height:32px;border-radius:6px;object-fit:cover;" src="" alt=""/>
+              <div style="flex:1;min-width:0"><div id="echoSongPillName" style="font-size:0.8rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div><div id="echoSongPillArtist" style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div></div>
+              <button id="echoChangeSongBtn" style="font-size:0.65rem;font-family:Space Mono,monospace;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);cursor:pointer;">Change</button>
+            </div>
           </div>
-          <div id="echoGeniusResults"></div>
-          <div class="echo-form-row">
-            <input class="echo-form-input" id="echoSongInput" placeholder="Song title" type="text" maxlength="80"/>
-            <input class="echo-form-input" id="echoArtistInput" placeholder="Artist" type="text" maxlength="80"/>
-          </div>
+          <input type="hidden" id="echoSongInput"/>
+          <input type="hidden" id="echoArtistInput"/>
           <div class="echo-vibe-label">Vibe</div>
           <div class="echo-vibe-row" id="echoVibeRow">${vibeButtons}</div>
           <div class="echo-form-submit-row">
@@ -396,6 +406,84 @@ function mountEchoSheet() {
     backdrop.querySelector('#echoCharCount').textContent = n;
     backdrop.querySelector('#echoSubmitBtn').disabled = n < 2;
   };
+
+  // Smart search wiring
+  let echoSearchTimer = null;
+  let echoLastQuery = "";
+  let echoSearchCache = {};
+  let echoSongSelected = false;
+
+  const smartInput = backdrop.querySelector("#echoSmartInput");
+  if (smartInput) {
+    smartInput.addEventListener("input", function() {
+      const val = this.value.trim();
+      clearTimeout(echoSearchTimer);
+      const resultsEl = backdrop.querySelector("#echoSearchResults");
+      if (!val) { if(resultsEl) { resultsEl.innerHTML=""; resultsEl.style.display="none"; } return; }
+      if (val.length < 2) return;
+      if (echoSongSelected) return;
+      echoSearchTimer = setTimeout(async function() {
+        if (val === echoLastQuery) return;
+        echoLastQuery = val;
+        try {
+          const cached = echoSearchCache[val.toLowerCase()];
+          const results = cached || await fetch("/api/genius?lyric="+encodeURIComponent(val)).then(r=>r.json()).then(d=>d.results||[]);
+          if (!cached) echoSearchCache[val.toLowerCase()] = results;
+          if (!resultsEl) return;
+          if (!results.length) { resultsEl.innerHTML="<div style='padding:10px;font-size:0.75rem;color:rgba(255,255,255,0.3)'>No results found</div>"; resultsEl.style.display="block"; return; }
+          resultsEl.innerHTML = "<div style='font-family:Space Mono,monospace;font-size:0.5rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;'>Select the right song</div>";
+          results.slice(0,5).forEach(function(r) {
+            const card = document.createElement("div");
+            card.style.cssText = "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.18s;margin-bottom:5px;";
+            card.innerHTML = (r.artwork ? "<img src=""+r.artwork+"" style="width:36px;height:36px;border-radius:7px;object-fit:cover;flex-shrink:0;"/>" : "")
+              + "<div style="flex:1;min-width:0"><div style="font-size:0.78rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"+r.song+"</div><div style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"+r.artist+"</div></div>"
+              + "<span style="font-family:Space Mono,monospace;font-size:0.5rem;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(232,197,71,0.08);color:rgba(232,197,71,0.7);border:1px solid rgba(232,197,71,0.2);flex-shrink:0">USE</span>";
+            card.onmouseenter = function(){ card.style.background="rgba(232,197,71,0.07)"; };
+            card.onmouseleave = function(){ card.style.background="rgba(255,255,255,0.03)"; };
+            card.onclick = function() {
+              const songInput = backdrop.querySelector("#echoSongInput");
+              const artistInput = backdrop.querySelector("#echoArtistInput");
+              if (songInput) songInput.value = r.song;
+              if (artistInput) artistInput.value = r.artist;
+              const pill = backdrop.querySelector("#echoSongPill");
+              const pillName = backdrop.querySelector("#echoSongPillName");
+              const pillArtist = backdrop.querySelector("#echoSongPillArtist");
+              const pillArt = backdrop.querySelector("#echoSongPillArt");
+              const searchField = backdrop.querySelector("#echoSearchField");
+              if (pillName) pillName.textContent = r.song;
+              if (pillArtist) pillArtist.textContent = r.artist;
+              if (pillArt && r.artwork) pillArt.src = r.artwork;
+              if (pill) pill.style.display = "flex";
+              if (searchField) searchField.style.display = "none";
+              resultsEl.innerHTML = ""; resultsEl.style.display = "none";
+              echoSongSelected = true;
+              echoLastQuery = "";
+            };
+            resultsEl.appendChild(card);
+          });
+          resultsEl.style.display = "block";
+        } catch(e) { console.error(e); }
+      }, 380);
+    });
+  }
+
+  const changeSongBtn = backdrop.querySelector("#echoChangeSongBtn");
+  if (changeSongBtn) {
+    changeSongBtn.onclick = function() {
+      const pill = backdrop.querySelector("#echoSongPill");
+      const searchField = backdrop.querySelector("#echoSearchField");
+      const songInput = backdrop.querySelector("#echoSongInput");
+      const artistInput = backdrop.querySelector("#echoArtistInput");
+      if (pill) pill.style.display = "none";
+      if (searchField) searchField.style.display = "flex";
+      if (songInput) songInput.value = "";
+      if (artistInput) artistInput.value = "";
+      echoSongSelected = false;
+      echoLastQuery = "";
+      const smartInp = backdrop.querySelector("#echoSmartInput");
+      if (smartInp) { smartInp.value = ""; smartInp.focus(); }
+    };
+  }
 
   backdrop.querySelectorAll('.echo-vibe-opt').forEach(btn => {
     btn.onclick = () => {
@@ -464,6 +552,7 @@ async function openEchoSheet(postIndex) {
 
   const backdrop = document.getElementById('echoSheetBackdrop');
   backdrop.classList.remove('echo-hidden');
+  if (window.feed) window.feed.style.display = "none";
   document.body.classList.add('modal-open');
 
   subscribeEchoes(post.id);
@@ -473,6 +562,7 @@ function closeEchoSheet() {
   unsubscribeEchoes();
   const backdrop = document.getElementById('echoSheetBackdrop');
   if (backdrop) backdrop.classList.add('echo-hidden');
+  if (window.feed) window.feed.style.display = "";
   document.body.classList.remove('modal-open');
   collapseEchoCompose();
   clearEchoForm();
@@ -543,6 +633,14 @@ function clearEchoForm() {
   if (gr) gr.innerHTML = '';
   const lh = document.getElementById('echoLiveHint');
   if (lh) lh.style.display = 'none';
+  const smartInp = document.getElementById("echoSmartInput");
+  if (smartInp) smartInp.value = "";
+  const pill = document.getElementById("echoSongPill");
+  if (pill) pill.style.display = "none";
+  const searchField = document.getElementById("echoSearchField");
+  if (searchField) searchField.style.display = "flex";
+  const resultsEl = document.getElementById("echoSearchResults");
+  if (resultsEl) { resultsEl.innerHTML = ""; resultsEl.style.display = "none"; }
 }
 
 /* ────────────────────────────────────────────────────────────
