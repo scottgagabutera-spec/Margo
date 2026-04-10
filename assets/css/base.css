@@ -149,6 +149,9 @@ html {
     -webkit-backdrop-filter: none !important;
     align-items: flex-start !important;
     padding: 0 !important;
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
   #echoSheet {
     width: 100% !important;
