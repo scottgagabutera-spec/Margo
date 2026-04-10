@@ -435,9 +435,9 @@ function mountEchoSheet() {
           results.slice(0,5).forEach(function(r) {
             const card = document.createElement("div");
             card.style.cssText = "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.18s;margin-bottom:5px;";
-            card.innerHTML = (r.artwork ? "<img src=""+r.artwork+"" style="width:36px;height:36px;border-radius:7px;object-fit:cover;flex-shrink:0;"/>" : "")
-              + "<div style="flex:1;min-width:0"><div style="font-size:0.78rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"+r.song+"</div><div style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"+r.artist+"</div></div>"
-              + "<span style="font-family:Space Mono,monospace;font-size:0.5rem;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(232,197,71,0.08);color:rgba(232,197,71,0.7);border:1px solid rgba(232,197,71,0.2);flex-shrink:0">USE</span>";
+            card.innerHTML = (r.artwork ? `<img src="${r.artwork}" style="width:36px;height:36px;border-radius:7px;object-fit:cover;flex-shrink:0;"/>` : "")
+              + `<div style="flex:1;min-width:0"><div style="font-size:0.78rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song}</div><div style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.artist}</div></div>`
+              + `<span style="font-family:Space Mono,monospace;font-size:0.5rem;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(232,197,71,0.08);color:rgba(232,197,71,0.7);border:1px solid rgba(232,197,71,0.2);flex-shrink:0">USE</span>`;
             card.onmouseenter = function(){ card.style.background="rgba(232,197,71,0.07)"; };
             card.onmouseleave = function(){ card.style.background="rgba(255,255,255,0.03)"; };
             card.onclick = function() {
