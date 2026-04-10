@@ -209,3 +209,42 @@ body.echo-page-open {
   width: 100%;
   height: 100%;
 }
+
+/* ── Echo Sheet page fixes (matching composer pattern) ── */
+body.echo-page-open {
+  overflow: hidden;
+}
+
+#echoSheetBackdrop {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: #0f0e14;
+  overflow-y: auto;
+}
+
+#echoSheetBackdrop:not(.echo-hidden) {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  #echoSheetBackdrop.echo-hidden { display: none !important; }
+  #echoSheetBackdrop {
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #echoSheet {
+    max-width: 500px;
+    width: 90%;
+    margin: 0 auto;
+    border-radius: 28px;
+    overflow: hidden;
+    max-height: 88dvh;
+  }
+}
