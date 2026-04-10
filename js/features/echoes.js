@@ -237,10 +237,8 @@ function populateEchoComposeUser() {
   const fAvatar= document.getElementById('echoFormAvatar');
   const fName  = document.getElementById('echoFormUsername');
   const { color } = MargoUsername.getColor(name);
-  if (avatar)  { avatar.innerHTML  = ''; avatar.appendChild(MargoUsername.buildAvatar(name, 28)); }
   if (fAvatar) { fAvatar.innerHTML = ''; fAvatar.appendChild(MargoUsername.buildAvatar(name, 22)); }
   if (fName)   { fName.textContent = name; fName.style.color = color; }
-  if (form) { form.classList.remove('open'); form.style.display = 'none'; }
 }
 
 function clearEchoForm() {
