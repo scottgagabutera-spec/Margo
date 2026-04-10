@@ -42,18 +42,121 @@ const ECHO_VIBE_CFG = {
 function mountEchoSheet() {
   const backdrop = document.getElementById("echoSheetBackdrop");
   if (!backdrop) return;
-  // Element exists in HTML, wire it up
+
   backdrop.querySelector("#echoClose").onclick = closeEchoSheet;
   backdrop.querySelector("#echoComposeTrigger").onclick = expandEchoCompose;
   backdrop.querySelector("#echoCancelBtn").onclick = collapseEchoCompose;
   backdrop.querySelector("#echoSubmitBtn").onclick = submitEcho;
   backdrop.addEventListener("click", e => { if (e.target === backdrop) closeEchoSheet(); });
+
   backdrop.querySelector("#echoLyricInput").oninput = e => {
     const n = e.target.value.length;
     backdrop.querySelector("#echoCharCount").textContent = n;
     backdrop.querySelector("#echoSubmitBtn").disabled = n < 2;
   };
-}/* ────────────────────────────────────────────────────────────
+
+  // Wire vibe buttons
+  backdrop.querySelectorAll('.echo-vibe-opt').forEach(btn => {
+    btn.onclick = () => {
+      backdrop.querySelectorAll('.echo-vibe-opt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+
+  // Smart search wiring
+  let echoSearchTimer = null;
+  let echoLastQuery = "";
+  let echoSearchCache = {};
+  let echoSongSelected = false;
+
+  const smartInput = backdrop.querySelector("#echoSmartInput");
+  if (smartInput) {
+    smartInput.addEventListener("input", function() {
+      const val = this.value.trim();
+      clearTimeout(echoSearchTimer);
+      const resultsEl = backdrop.querySelector("#echoSearchResults");
+      if (!val) { if(resultsEl) { resultsEl.innerHTML=""; resultsEl.style.display="none"; } return; }
+      if (val.length < 2) return;
+      if (echoSongSelected) return;
+      echoSearchTimer = setTimeout(async function() {
+        if (val === echoLastQuery) return;
+        echoLastQuery = val;
+        try {
+          const cached = echoSearchCache[val.toLowerCase()];
+          const results = cached || await fetch("/api/genius?lyric="+encodeURIComponent(val)).then(r=>r.json()).then(d=>d.results||[]);
+          if (!cached) echoSearchCache[val.toLowerCase()] = results;
+          if (!resultsEl) return;
+          if (!results.length) { resultsEl.innerHTML="<div style='padding:10px;font-size:0.75rem;color:rgba(255,255,255,0.3)'>No results found</div>"; resultsEl.style.display="block"; return; }
+          resultsEl.innerHTML = "<div style='font-family:Space Mono,monospace;font-size:0.5rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;'>Select the right song</div>";
+          results.slice(0,5).forEach(function(r) {
+            const card = document.createElement("div");
+            card.style.cssText = "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.18s;margin-bottom:5px;";
+            card.innerHTML = (r.artwork ? `<img src="${r.artwork}" style="width:36px;height:36px;border-radius:7px;object-fit:cover;flex-shrink:0;"/>` : "")
+              + `<div style="flex:1;min-width:0"><div style="font-size:0.78rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song}</div><div style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.artist}</div></div>`
+              + `<span style="font-family:Space Mono,monospace;font-size:0.5rem;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(232,197,71,0.08);color:rgba(232,197,71,0.7);border:1px solid rgba(232,197,71,0.2);flex-shrink:0">USE</span>`;
+            card.onmouseenter = function(){ card.style.background="rgba(232,197,71,0.07)"; };
+            card.onmouseleave = function(){ card.style.background="rgba(255,255,255,0.03)"; };
+            card.onclick = function() {
+              const songInput = backdrop.querySelector("#echoSongInput");
+              const artistInput = backdrop.querySelector("#echoArtistInput");
+              if (songInput) songInput.value = r.song;
+              if (artistInput) artistInput.value = r.artist;
+              const pill = backdrop.querySelector("#echoSongPill");
+              if (pill) {
+                pill.innerHTML = `<img src="${r.artwork||''}" style="width:32px;height:32px;border-radius:6px;object-fit:cover;"/><div style="flex:1;min-width:0"><div style="font-size:0.8rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song}</div><div style="font-size:0.65rem;color:rgba(255,255,255,0.4)">${r.artist}</div></div><button id="echoChangeSongBtn" style="font-size:0.65rem;font-family:Space Mono,monospace;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);cursor:pointer;">Change</button>`;
+                pill.style.display = "flex";
+                pill.style.alignItems = "center";
+                pill.style.gap = "10px";
+                pill.style.padding = "9px 12px";
+                pill.style.borderRadius = "11px";
+                pill.style.background = "rgba(232,197,71,0.07)";
+                pill.style.border = "1px solid rgba(232,197,71,0.2)";
+                pill.querySelector("#echoChangeSongBtn").onclick = function() {
+                  pill.style.display = "none";
+                  pill.innerHTML = "";
+                  const sf = backdrop.querySelector("#echoSearchField");
+                  if (sf) sf.style.display = "flex";
+                  if (songInput) songInput.value = "";
+                  if (artistInput) artistInput.value = "";
+                  echoSongSelected = false;
+                  echoLastQuery = "";
+                  const si = backdrop.querySelector("#echoSmartInput");
+                  if (si) { si.value = ""; si.focus(); }
+                  const ls = backdrop.querySelector("#echoLyricSection");
+                  if (ls) ls.style.display = "none";
+                  const vl = backdrop.querySelector("#echoVibeLabel");
+                  if (vl) vl.style.display = "none";
+                  const vr = backdrop.querySelector("#echoVibeRow");
+                  if (vr) vr.style.display = "none";
+                  const sr = backdrop.querySelector("#echoSubmitRow");
+                  if (sr) sr.style.display = "none";
+                };
+              }
+              const searchField = backdrop.querySelector("#echoSearchField");
+              if (searchField) searchField.style.display = "none";
+              resultsEl.innerHTML = ""; resultsEl.style.display = "none";
+              echoSongSelected = true;
+              echoLastQuery = "";
+              const lyricSection = backdrop.querySelector("#echoLyricSection");
+              if (lyricSection) lyricSection.style.display = "block";
+              const vibeLabel = backdrop.querySelector("#echoVibeLabel");
+              if (vibeLabel) vibeLabel.style.display = "block";
+              const vibeRow = backdrop.querySelector("#echoVibeRow");
+              if (vibeRow) vibeRow.style.display = "flex";
+              const submitRow = backdrop.querySelector("#echoSubmitRow");
+              if (submitRow) submitRow.style.display = "flex";
+              const lyricInput = backdrop.querySelector("#echoLyricInput");
+              if (lyricInput) setTimeout(function(){ lyricInput.focus(); }, 100);
+            };
+            resultsEl.appendChild(card);
+          });
+          resultsEl.style.display = "block";
+        } catch(e) { console.error(e); }
+      }, 380);
+    });
+  }
+}
+/* ────────────────────────────────────────────────────────────
    OPEN / CLOSE
 ──────────────────────────────────────────────────────────── */
 async function openEchoSheet(postIndex) {
