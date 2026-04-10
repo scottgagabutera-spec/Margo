@@ -495,36 +495,6 @@ function mountEchoSheet() {
     };
   });
 
-  backdrop.querySelector('#echoIdentifyBtn').onclick = () => {
-    const lyric = backdrop.querySelector('#echoLyricInput').value.trim();
-    if (lyric.length < 3) { if (typeof showToast === 'function') showToast('Type a lyric first'); return; }
-    runEchoGeniusSearch(lyric);
-  };
-
-  let geniusDebounce;
-  backdrop.querySelector('#echoLyricInput').addEventListener('input', e => {
-    clearTimeout(geniusDebounce);
-    const val = e.target.value.trim();
-    const songFilled = backdrop.querySelector('#echoSongInput').value.trim();
-    const liveHint = document.getElementById('echoLiveHint');
-    if (val.length >= 3 && !songFilled) {
-      if (liveHint) liveHint.style.display = 'inline-flex';
-      const ms = val.length < 8 ? 900 : val.length < 15 ? 700 : 500;
-      geniusDebounce = setTimeout(() => runEchoGeniusSearch(val), ms);
-    } else {
-      if (liveHint) liveHint.style.display = 'none';
-    }
-  });
-
-  let ytDebounce;
-  backdrop.querySelector('#echoSongInput').addEventListener('input', () => {
-    clearTimeout(ytDebounce);
-    const song   = backdrop.querySelector('#echoSongInput').value.trim();
-    const artist = backdrop.querySelector('#echoArtistInput').value.trim();
-    if (song.length > 1 && artist.length > 1) {
-      ytDebounce = setTimeout(() => fillEchoSongMeta(song, artist), 700);
-    }
-  });
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -630,9 +600,7 @@ function clearEchoForm() {
   const submitBtn = document.getElementById('echoSubmitBtn');
   if (submitBtn) submitBtn.disabled = true;
   document.querySelectorAll('.echo-vibe-opt').forEach(b => b.classList.remove('active'));
-  const gr = document.getElementById('echoGeniusResults');
   if (gr) gr.innerHTML = '';
-  const lh = document.getElementById('echoLiveHint');
   if (lh) lh.style.display = 'none';
   const smartInp = document.getElementById("echoSmartInput");
   if (smartInp) smartInp.value = "";
@@ -885,75 +853,6 @@ async function submitEcho() {
 /* ────────────────────────────────────────────────────────────
    GENIUS SEARCH
 ──────────────────────────────────────────────────────────── */
-let _echoLastQuery = '';
-
-async function runEchoGeniusSearch(query) {
-  if (query === _echoLastQuery) return;
-  _echoLastQuery = query;
-
-  const btn      = document.getElementById('echoIdentifyBtn');
-  const liveHint = document.getElementById('echoLiveHint');
-  if (btn) { btn.innerHTML = '<span class="echo-spinner"></span> Searching…'; btn.disabled = true; }
-  if (liveHint) liveHint.style.display = 'none';
-  const resultsEl = document.getElementById('echoGeniusResults');
-  if (resultsEl) resultsEl.innerHTML = '';
-
-  try {
-    const res  = await fetch(`/api/genius?lyric=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    if (btn) { btn.textContent = 'Identify Song'; btn.disabled = false; }
-    if (!res.ok || !data.results?.length) return;
-    renderEchoGeniusResults(data.results);
-  } catch (_) {
-    if (btn) { btn.textContent = 'Identify Song'; btn.disabled = false; }
-  }
-}
-
-function renderEchoGeniusResults(results) {
-  const el = document.getElementById('echoGeniusResults');
-  if (!el) return;
-  el.innerHTML = '';
-
-  const label = document.createElement('div');
-  label.style.cssText = `font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;
-    color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;`;
-  label.textContent = 'Select the right song';
-  el.appendChild(label);
-
-  results.slice(0, 3).forEach(r => {
-    const card = document.createElement('div');
-    card.style.cssText = `display:flex;align-items:center;gap:10px;padding:9px 12px;
-      border-radius:11px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
-      cursor:pointer;transition:all 0.18s;margin-bottom:5px;`;
-    card.innerHTML = `
-      ${r.artwork ? `<img src="${r.artwork}" style="width:36px;height:36px;border-radius:7px;object-fit:cover;flex-shrink:0;" alt=""/>` : ''}
-      <div style="flex:1;min-width:0">
-        <div style="font-size:0.78rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song}</div>
-        <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.artist}</div>
-      </div>
-      <span style="font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;
-        padding:3px 8px;border-radius:6px;background:rgba(232,197,71,0.08);
-        color:rgba(232,197,71,0.7);border:1px solid rgba(232,197,71,0.2);flex-shrink:0">Use</span>
-    `;
-    card.onmouseenter = () => card.style.background = 'rgba(232,197,71,0.07)';
-    card.onmouseleave = () => card.style.background = 'rgba(255,255,255,0.03)';
-    card.onclick = () => {
-      const songInput   = document.getElementById('echoSongInput');
-      const artistInput = document.getElementById('echoArtistInput');
-      if (songInput)   songInput.value   = r.song;
-      if (artistInput) artistInput.value = r.artist;
-      el.innerHTML = '';
-      _echoLastQuery = '';
-      const lh = document.getElementById('echoLiveHint');
-      if (lh) lh.style.display = 'none';
-    };
-    el.appendChild(card);
-  });
-}
-
-async function fillEchoSongMeta(song, artist) {
-  // No-op — song/artist set from Genius or manual input
-}
 
 /* ────────────────────────────────────────────────────────────
    GLOBAL EXPOSE
