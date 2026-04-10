@@ -146,9 +146,8 @@ function mountEchoSheet() {
               resultsEl.innerHTML = ""; resultsEl.style.display = "none";
               echoSongSelected = true;
               // Auto-open compose form when song selected
-              if (collapsed) collapsed.style.display = 'none';
               const form = document.getElementById('echoComposeForm');
-              if (form) { form.style.display = 'flex'; }
+              if (form) { form.classList.add('open'); form.style.display = 'flex'; }
               echoLastQuery = "";
               const lyricSection = backdrop.querySelector("#echoLyricSection");
               if (lyricSection) lyricSection.style.display = "block";
@@ -242,6 +241,8 @@ function populateEchoComposeUser() {
 }
 
 function clearEchoForm() {
+  const composeForm = document.getElementById('echoComposeForm');
+  if (composeForm) { composeForm.classList.remove('open'); composeForm.style.display = 'none'; }
   ['echoLyricInput','echoSongInput','echoArtistInput'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';

@@ -191,7 +191,6 @@
 /* ── TOP BAR: fixed, never pushed by keyboard ── */
 .echo-top-bar {
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
   padding-bottom: 10px;
 }
 
@@ -728,9 +727,12 @@
   color: #E8C547;
 }
 
-/* ── Compose form always visible (no trigger) ── */
+/* ── Compose form hidden until song selected ── */
 .echo-compose-form {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 10px;
+}
+.echo-compose-form.open {
+  display: flex;
 }
