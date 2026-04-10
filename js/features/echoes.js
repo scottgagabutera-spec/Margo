@@ -28,37 +28,30 @@ function injectEchoStyles() {
   s.textContent = `
     #echoSheetBackdrop {
       position:fixed;inset:0;z-index:650;
-      background:rgba(0,0,0,0.82);
-      backdrop-filter:blur(4px) saturate(0.8);
-      -webkit-backdrop-filter:blur(4px) saturate(0.8);
-      display:flex;align-items:flex-end;justify-content:center;
-      animation:echoFadeIn 0.28s ease;
+      background:#0f0e14;
+      backdrop-filter:none;
+      -webkit-backdrop-filter:none;
+      display:flex;align-items:flex-start;justify-content:center;
+      animation:echoFadeIn 0.18s ease;
     }
     @keyframes echoFadeIn{from{opacity:0}to{opacity:1}}
     @media(max-width:560px){
-      #echoSheetBackdrop{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(0,0,0,0.92);}
+      #echoSheetBackdrop{background:#0f0e14;align-items:flex-start;padding:0;}
     }
     #echoSheetBackdrop.echo-hidden{display:none!important}
 
-    @media(min-width:560px){
-      #echoSheetBackdrop{align-items:center;padding:24px}
-    }
 
     #echoSheet {
-      width:100%;max-width:560px;
-      background:#0f0e12;
-      border:1px solid rgba(255,255,255,0.07);
-      border-bottom:none;border-radius:28px 28px 0 0;
-      overflow:hidden;display:flex;flex-direction:column;
-      max-height:92dvh;
-      box-shadow:0 -8px 60px rgba(0,0,0,0.8),0 0 0 1px rgba(232,197,71,0.04) inset;
-      will-change:transform,opacity;animation:echoSlideUp 0.38s cubic-bezier(0.16,1,0.3,1);
+      width:100%;max-width:100%;
+      background:#0f0e14;
+      border:none;border-radius:0;
+      display:flex;flex-direction:column;
+      height:100%;max-height:100%;
+      overflow-y:auto;
     }
     @media(min-width:560px){
-      #echoSheet{
-        border-radius:24px;border-bottom:1px solid rgba(255,255,255,0.07);
-        max-height:88dvh;animation:echoFadeUp 0.32s cubic-bezier(0.16,1,0.3,1);
-      }
+      #echoSheetBackdrop{background:rgba(0,0,0,0.8);align-items:center;padding:24px;}
+      #echoSheet{ width:90%;max-width:500px;height:auto;max-height:88dvh;border-radius:24px;border:1px solid rgba(255,255,255,0.08);overflow:hidden; }
     }
     @keyframes echoSlideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
     @keyframes echoFadeUp{from{transform:translateY(20px) scale(0.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
