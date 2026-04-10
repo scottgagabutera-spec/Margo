@@ -105,6 +105,7 @@ let adminSearch = '';
 // ── DOM Elements — always present ──
 const landing           = document.getElementById('landing');
 const feed              = document.getElementById('feed');
+window.feed = feed;
 const composer          = document.getElementById('composer');
 const guessModal        = document.getElementById('guessModal');
 const discoverModal     = document.getElementById('discoverModal');
