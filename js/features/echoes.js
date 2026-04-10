@@ -21,9 +21,311 @@ const ES = window._echoState;
 /* ────────────────────────────────────────────────────────────
    STYLES
 ──────────────────────────────────────────────────────────── */
+function injectEchoStyles() {
+  if (document.getElementById('echoStylesV13')) return;
+  const s = document.createElement('style');
+  s.id = 'echoStylesV13';
+  s.textContent = `
+    #echoSheetBackdrop {
+      position:fixed;inset:0;z-index:650;
+      background:rgba(0,0,0,0.82);
+      backdrop-filter:blur(4px) saturate(0.8);
+      -webkit-backdrop-filter:blur(4px) saturate(0.8);
+      display:flex;align-items:flex-end;justify-content:center;
+      animation:echoFadeIn 0.28s ease;
+    }
+    @keyframes echoFadeIn{from{opacity:0}to{opacity:1}}
+    @media(max-width:560px){
+      #echoSheetBackdrop{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(0,0,0,0.92);}
+    }
+    #echoSheetBackdrop.echo-hidden{display:none!important}
+
+    @media(min-width:560px){
+      #echoSheetBackdrop{align-items:center;padding:24px}
+    }
+
+    #echoSheet {
+      width:100%;max-width:560px;
+      background:#0f0e12;
+      border:1px solid rgba(255,255,255,0.07);
+      border-bottom:none;border-radius:28px 28px 0 0;
+      overflow:hidden;display:flex;flex-direction:column;
+      max-height:92dvh;
+      box-shadow:0 -8px 60px rgba(0,0,0,0.8),0 0 0 1px rgba(232,197,71,0.04) inset;
+      will-change:transform,opacity;animation:echoSlideUp 0.38s cubic-bezier(0.16,1,0.3,1);
+    }
+    @media(min-width:560px){
+      #echoSheet{
+        border-radius:24px;border-bottom:1px solid rgba(255,255,255,0.07);
+        max-height:88dvh;animation:echoFadeUp 0.32s cubic-bezier(0.16,1,0.3,1);
+      }
+    }
+    @keyframes echoSlideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes echoFadeUp{from{transform:translateY(20px) scale(0.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+
+    .echo-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.12);margin:12px auto 0;flex-shrink:0}
+
+    .echo-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 0;flex-shrink:0}
+    .echo-header-left{display:flex;flex-direction:column;gap:2px}
+    .echo-title{
+      font-family:'Syne',sans-serif;font-weight:800;font-size:0.9rem;
+      letter-spacing:2px;text-transform:uppercase;
+      background:linear-gradient(90deg,#fff 20%,#E8C547 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    }
+    .echo-parent-lyric{
+      font-family:'DM Serif Display',serif;font-style:italic;
+      font-size:0.75rem;color:rgba(255,255,255,0.32);line-height:1.4;
+      max-width:240px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    }
+    .echo-close{
+      background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+      color:rgba(255,255,255,0.38);width:30px;height:30px;border-radius:50%;
+      font-size:1.1rem;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      transition:all 0.18s;flex-shrink:0;
+    }
+    .echo-close:hover{background:rgba(255,255,255,0.12);color:#fff}
+
+    .echo-og-card{
+      margin:12px 18px 0;border-radius:14px;
+      background:rgba(232,197,71,0.05);
+      border:1px solid rgba(232,197,71,0.18);
+      padding:12px 14px;flex-shrink:0;
+    }
+    .echo-og-lyric{
+      font-family:'DM Serif Display',serif;font-style:italic;
+      font-size:0.92rem;line-height:1.55;color:#F0F0F0;margin-bottom:8px;
+    }
+    .echo-og-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .echo-og-song{
+      font-family:'Space Mono',monospace;font-size:0.58rem;font-weight:700;
+      color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+
+    .echo-divider{display:flex;align-items:center;gap:10px;padding:10px 18px;flex-shrink:0}
+    .echo-divider-line{flex:1;height:1px;background:rgba(255,255,255,0.06)}
+    .echo-divider-label{
+      font-family:'Space Mono',monospace;font-size:0.48rem;font-weight:700;
+      color:rgba(255,255,255,0.22);text-transform:uppercase;letter-spacing:2px;white-space:nowrap;
+    }
+
+    .echo-list-wrap{
+      flex:1;overflow-y:auto;padding:0 18px 10px;
+      scrollbar-width:none;display:flex;flex-direction:column;gap:10px;
+    }
+    .echo-list-wrap::-webkit-scrollbar{display:none}
+
+    .echo-card{
+      background:#161619;border:1px solid rgba(255,255,255,0.07);
+      border-radius:16px;padding:14px;
+      display:flex;flex-direction:column;gap:10px;
+      animation:echoCardIn 0.3s cubic-bezier(0.16,1,0.3,1) both;
+      transition:border-color 0.2s,box-shadow 0.2s;
+    }
+    .echo-card:hover{border-color:rgba(255,255,255,0.13);box-shadow:0 6px 24px rgba(0,0,0,0.4)}
+    @keyframes echoCardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+    .echo-card-header{display:flex;align-items:center;justify-content:space-between}
+    .echo-user-row{display:flex;align-items:center;gap:8px}
+    .echo-username{font-family:'Space Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.3px}
+    .echo-time{font-family:'Space Mono',monospace;font-size:0.52rem;color:rgba(255,255,255,0.25);font-weight:400}
+
+    .echo-lyric{font-family:'DM Serif Display',serif;font-style:italic;font-size:0.95rem;line-height:1.6;color:#F0F0F0}
+
+    .echo-song-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .echo-song-info{min-width:0}
+    .echo-song-name{font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:600;color:rgba(255,255,255,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .echo-artist-name{font-family:'Space Mono',monospace;font-size:0.58rem;color:rgba(255,255,255,0.35);letter-spacing:0.3px}
+    .echo-vibe-tag{font-family:'Space Mono',monospace;font-size:0.48rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:3px 9px;border-radius:20px;flex-shrink:0}
+
+    /* ── Action buttons — FULLY READABLE ── */
+    .echo-card-actions{display:flex;gap:6px;margin-top:2px}
+    .echo-action-btn{
+      flex:1;padding:9px 6px;border-radius:10px;
+      font-family:'Space Mono',monospace;font-size:0.54rem;font-weight:700;
+      text-transform:uppercase;letter-spacing:0.8px;
+      cursor:pointer;transition:all 0.18s;
+      display:flex;align-items:center;justify-content:center;gap:5px;
+      white-space:nowrap;
+    }
+    .echo-resonate-btn{
+      background:rgba(192,132,252,0.10);
+      border:1px solid rgba(192,132,252,0.35);
+      color:rgba(255,255,255,0.9);
+    }
+    .echo-resonate-btn:hover{
+      background:rgba(192,132,252,0.22);border-color:rgba(192,132,252,0.6);
+      color:#fff;transform:translateY(-1px);
+    }
+    .echo-resonate-btn.resonated{
+      background:rgba(192,132,252,0.22);border-color:rgba(192,132,252,0.65);color:#C084FC;
+    }
+    .echo-share-btn{
+      background:rgba(232,197,71,0.08);
+      border:1px solid rgba(232,197,71,0.28);
+      color:rgba(255,255,255,0.88);
+    }
+    .echo-share-btn:hover{
+      background:rgba(232,197,71,0.18);border-color:rgba(232,197,71,0.55);
+      color:#fff;transform:translateY(-1px);
+    }
+
+    .echo-empty{text-align:center;padding:32px 20px;display:flex;flex-direction:column;align-items:center;gap:12px}
+    .echo-empty-icon{font-size:2rem;opacity:0.35}
+    .echo-empty-title{font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;color:rgba(255,255,255,0.45)}
+    .echo-empty-sub{font-family:'DM Serif Display',serif;font-style:italic;font-size:0.78rem;color:rgba(255,255,255,0.25);max-width:220px;line-height:1.5}
+
+    .echo-compose{
+      padding:12px 18px 20px;flex-shrink:0;
+      border-top:1px solid rgba(255,255,255,0.06);
+      display:flex;flex-direction:column;gap:8px;
+      background:rgba(0,0,0,0.2);
+    }
+    .echo-compose-collapsed{display:flex;align-items:center;gap:10px}
+    .echo-compose-trigger{
+      flex:1;padding:12px 16px;border-radius:50px;
+      background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+      color:rgba(255,255,255,0.3);
+      font-family:'DM Serif Display',serif;font-style:italic;font-size:0.85rem;
+      text-align:left;cursor:pointer;transition:all 0.2s;
+    }
+    .echo-compose-trigger:hover{border-color:rgba(232,197,71,0.3);color:rgba(255,255,255,0.5);background:rgba(232,197,71,0.03)}
+    .echo-compose-avatar{flex-shrink:0}
+
+    .echo-compose-form{display:none;flex-direction:column;gap:8px;animation:echoFadeIn 0.2s ease}
+    .echo-compose-form.open{display:flex}
+
+    .echo-form-user-row{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+    .echo-form-username{font-family:'Space Mono',monospace;font-size:0.65rem;font-weight:700}
+
+    .echo-vibe-label{
+      font-family:'Space Mono',monospace;font-size:0.46rem;font-weight:700;
+      color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;
+    }
+
+    .echo-lyric-input{
+      width:100%;min-height:70px;resize:none;
+      padding:13px 15px;border-radius:14px;
+      background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+      color:#fff;font-family:'DM Serif Display',serif;
+      font-style:italic;font-size:1rem;line-height:1.6;
+      outline:none;transition:border-color 0.2s,box-shadow 0.2s;box-sizing:border-box;
+    }
+    .echo-lyric-input::placeholder{color:rgba(255,255,255,0.2)}
+    .echo-lyric-input:focus{border-color:rgba(232,197,71,0.38);box-shadow:0 0 0 3px rgba(232,197,71,0.07)}
+
+    .echo-form-row{display:flex;gap:8px}
+    .echo-form-input{
+      flex:1;padding:10px 12px;border-radius:11px;
+      background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
+      color:#fff;font-family:'DM Sans',sans-serif;font-size:0.85rem;
+      outline:none;transition:border-color 0.2s;box-sizing:border-box;
+    }
+    .echo-form-input::placeholder{color:rgba(255,255,255,0.2)}
+    .echo-form-input:focus{border-color:rgba(232,197,71,0.3);box-shadow:0 0 0 3px rgba(232,197,71,0.06)}
+
+    .echo-vibe-row{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
+    .echo-vibe-opt{
+      padding:8px 4px;border-radius:9px;
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+      color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;
+      font-size:0.62rem;font-weight:600;cursor:pointer;transition:all 0.18s;text-align:center;
+    }
+    .echo-vibe-opt:hover{background:rgba(255,255,255,0.08);color:#fff;border-color:rgba(255,255,255,0.2)}
+    .echo-vibe-opt.active{background:rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.45);color:#E8C547}
+
+    .echo-form-submit-row{display:flex;gap:8px;align-items:center}
+    .echo-cancel-btn{
+      padding:12px 14px;border-radius:12px;
+      background:none;border:1px solid rgba(255,255,255,0.1);
+      color:rgba(255,255,255,0.5);font-family:'Space Mono',monospace;
+      font-size:0.52rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+      cursor:pointer;transition:all 0.18s;
+    }
+    .echo-cancel-btn:hover{border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.85)}
+    .echo-submit-btn{
+      flex:1;padding:13px;border-radius:12px;
+      background:rgba(232,197,71,0.12);border:1px solid rgba(232,197,71,0.4);
+      color:#E8C547;font-family:'Syne',sans-serif;
+      font-weight:800;font-size:0.82rem;letter-spacing:1px;text-transform:uppercase;
+      cursor:pointer;transition:all 0.22s cubic-bezier(0.16,1,0.3,1);
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .echo-submit-btn:hover{background:rgba(232,197,71,0.22);border-color:rgba(232,197,71,0.7);color:#fff;transform:translateY(-1px);box-shadow:0 8px 24px rgba(232,197,71,0.2)}
+    .echo-submit-btn:active{transform:scale(0.97)}
+    .echo-submit-btn:disabled{opacity:0.45;cursor:default;transform:none;box-shadow:none}
+
+    .echo-char-count{font-family:'Space Mono',monospace;font-size:0.5rem;color:rgba(255,255,255,0.2);text-align:right;font-weight:700}
+
+    .echo-identify-btn{
+      width:100%;padding:9px 12px;border-radius:10px;
+      background:rgba(232,197,71,0.04);border:1px dashed rgba(232,197,71,0.25);
+      color:rgba(232,197,71,0.7);font-family:'Space Mono',monospace;
+      font-size:0.52rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+      cursor:pointer;transition:all 0.18s;
+      display:flex;align-items:center;justify-content:center;gap:6px;
+    }
+    .echo-identify-btn:hover:not(:disabled){background:rgba(232,197,71,0.09);border-color:rgba(232,197,71,0.5);color:#E8C547}
+    .echo-identify-btn:disabled{opacity:0.4;cursor:default}
+
+    .echo-live-hint{
+      display:inline-flex;align-items:center;gap:5px;
+      font-family:'Space Mono',monospace;font-size:0.46rem;font-weight:700;
+      color:rgba(232,197,71,0.5);letter-spacing:1px;text-transform:uppercase;padding:2px 0;
+    }
+    .echo-live-dot{
+      width:5px;height:5px;border-radius:50%;background:#E8C547;opacity:0.6;
+      animation:echoLD 1.2s ease-in-out infinite;
+    }
+    @keyframes echoLD{0%,100%{opacity:0.2;transform:scale(0.8)}50%{opacity:1;transform:scale(1)}}
+
+    .echo-spinner{
+      width:12px;height:12px;border-radius:50%;
+      border:2px solid rgba(232,197,71,0.2);border-top-color:#E8C547;
+      animation:echoSpin 0.7s linear infinite;display:inline-block;
+    }
+    @keyframes echoSpin{to{transform:rotate(360deg)}}
+  `;
+  document.head.appendChild(s);
+}
+
+/* ────────────────────────────────────────────────────────────
+   VIBE CONFIG
+──────────────────────────────────────────────────────────── */
+const ECHO_VIBES = [
+  { value: 'Love',       label: 'Love'       },
+  { value: 'Heartbreak', label: 'Heartbreak' },
+  { value: 'Hope',       label: 'Hope'       },
+  { value: 'Nostalgia',  label: 'Nostalgia'  },
+  { value: 'Healing',    label: 'Healing'    },
+  { value: 'Joy',        label: 'Joy'        },
+  { value: 'Rage',       label: 'Rage'       },
+  { value: 'Loneliness', label: 'Loneliness' },
+  { value: 'SendIt',     label: 'Send It'    },
+  { value: 'LetOut',     label: 'Let Out'    },
+];
+
+const ECHO_VIBE_CFG = {
+  Love:       { bg:'rgba(255,107,157,0.13)', text:'#FF6B9D', border:'rgba(255,107,157,0.22)' },
+  Heartbreak: { bg:'rgba(255,80,80,0.11)',   text:'#ff5050', border:'rgba(255,80,80,0.2)'    },
+  Hope:       { bg:'rgba(107,140,255,0.13)', text:'#6B8CFF', border:'rgba(107,140,255,0.22)' },
+  Nostalgia:  { bg:'rgba(232,197,71,0.11)',  text:'#E8C547', border:'rgba(232,197,71,0.25)'  },
+  Healing:    { bg:'rgba(74,222,128,0.13)',  text:'#4ade80', border:'rgba(74,222,128,0.22)'  },
+  Joy:        { bg:'rgba(255,200,71,0.11)',  text:'#ffc847', border:'rgba(255,200,71,0.22)'  },
+  Rage:       { bg:'rgba(255,100,100,0.13)', text:'#FF6464', border:'rgba(255,100,100,0.22)' },
+  Loneliness: { bg:'rgba(160,160,255,0.11)', text:'#a0a0ff', border:'rgba(160,160,255,0.22)' },
+  SendIt:     { bg:'rgba(0,229,255,0.11)',   text:'#00E5FF', border:'rgba(0,229,255,0.22)'   },
+  LetOut:     { bg:'rgba(255,160,50,0.11)',  text:'#FFA032', border:'rgba(255,160,50,0.22)'  },
+};
+
+/* ────────────────────────────────────────────────────────────
+   MOUNT
+──────────────────────────────────────────────────────────── */
 function mountEchoSheet() {
   if (document.getElementById('echoSheetBackdrop')) return;
-  
+  injectEchoStyles();
+
   const vibeButtons = ECHO_VIBES.map(v =>
     `<button class="echo-vibe-opt" data-emotion="${v.value}">${v.label}</button>`
   ).join('');
@@ -58,32 +360,28 @@ function mountEchoSheet() {
             <div id="echoFormAvatar"></div>
             <span class="echo-form-username" id="echoFormUsername"></span>
           </div>
-          <div class="echo-smart-search-wrap" id="echoSmartSearchWrap">
-            <div class="echo-search-field" id="echoSearchField">
-              <span class="echo-search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
-              <input id="echoSmartInput" type="text" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Search by song or artist…" style="flex:1;background:none;border:none;outline:none;color:#fff;font-size:0.9rem;padding:0;"/>
-            </div>
-            <div id="echoSearchResults" style="display:none"></div>
-            <div id="echoSongPill" style="display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(232,197,71,0.07);border:1px solid rgba(232,197,71,0.2);">
-              <img id="echoSongPillArt" style="width:32px;height:32px;border-radius:6px;object-fit:cover;" src="" alt=""/>
-              <div style="flex:1;min-width:0"><div id="echoSongPillName" style="font-size:0.8rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div><div id="echoSongPillArtist" style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div></div>
-              <button id="echoChangeSongBtn" style="font-size:0.65rem;font-family:Space Mono,monospace;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);cursor:pointer;">Change</button>
-            </div>
+          <textarea class="echo-lyric-input" id="echoLyricInput"
+            maxlength="140" placeholder="The lyric that answers this one…" rows="3"></textarea>
+          <div class="echo-char-count"><span id="echoCharCount">0</span>/140</div>
+          <button class="echo-identify-btn" id="echoIdentifyBtn">Identify Song</button>
+          <div id="echoLiveHint" class="echo-live-hint" style="display:none">
+            <span class="echo-live-dot"></span> Searching for song…
           </div>
-          <input type="hidden" id="echoSongInput"/>
-          <input type="hidden" id="echoArtistInput"/>
-          <div id="echoLyricSection" style="display:none">
-            <textarea class="echo-lyric-input" id="echoLyricInput" maxlength="140" placeholder="The lyric that answers this one…" rows="3"></textarea>
-            <div class="echo-char-count"><span id="echoCharCount">0</span>/140</div>
+          <div id="echoGeniusResults"></div>
+          <div class="echo-form-row">
+            <input class="echo-form-input" id="echoSongInput" placeholder="Song title" type="text" maxlength="80"/>
+            <input class="echo-form-input" id="echoArtistInput" placeholder="Artist" type="text" maxlength="80"/>
           </div>
-          <div class="echo-vibe-label" id="echoVibeLabel" style="display:none">Vibe</div>
-          <div class="echo-vibe-row" id="echoVibeRow" style="display:none">${vibeButtons}</div>
-          <div class="echo-form-submit-row" id="echoSubmitRow" style="display:none">
+          <div class="echo-vibe-label">Vibe</div>
+          <div class="echo-vibe-row" id="echoVibeRow">${vibeButtons}</div>
+          <div class="echo-form-submit-row">
             <button class="echo-cancel-btn" id="echoCancelBtn">Cancel</button>
             <button class="echo-submit-btn" id="echoSubmitBtn" disabled>Drop Your Lyric Back</button>
           </div>
         </div>
-          `;
+      </div>
+    </div>
+  `;
 
   document.body.appendChild(backdrop);
 
@@ -99,94 +397,6 @@ function mountEchoSheet() {
     backdrop.querySelector('#echoSubmitBtn').disabled = n < 2;
   };
 
-  // Smart search wiring
-  let echoSearchTimer = null;
-  let echoLastQuery = "";
-  let echoSearchCache = {};
-  let echoSongSelected = false;
-
-  const smartInput = backdrop.querySelector("#echoSmartInput");
-  if (smartInput) {
-    smartInput.addEventListener("input", function() {
-      const val = this.value.trim();
-      clearTimeout(echoSearchTimer);
-      const resultsEl = backdrop.querySelector("#echoSearchResults");
-      if (!val) { if(resultsEl) { resultsEl.innerHTML=""; resultsEl.style.display="none"; } return; }
-      if (val.length < 2) return;
-      if (echoSongSelected) return;
-      echoSearchTimer = setTimeout(async function() {
-        if (val === echoLastQuery) return;
-        echoLastQuery = val;
-        try {
-          const cached = echoSearchCache[val.toLowerCase()];
-          const results = cached || await fetch("/api/genius?lyric="+encodeURIComponent(val)).then(r=>r.json()).then(d=>d.results||[]);
-          if (!cached) echoSearchCache[val.toLowerCase()] = results;
-          if (!resultsEl) return;
-          if (!results.length) { resultsEl.innerHTML="<div style='padding:10px;font-size:0.75rem;color:rgba(255,255,255,0.3)'>No results found</div>"; resultsEl.style.display="block"; return; }
-          resultsEl.innerHTML = "<div style='font-family:Space Mono,monospace;font-size:0.5rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;'>Select the right song</div>";
-          results.slice(0,5).forEach(function(r) {
-            const card = document.createElement("div");
-            card.style.cssText = "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.18s;margin-bottom:5px;";
-            card.innerHTML = (r.artwork ? `<img src="${r.artwork}" style="width:36px;height:36px;border-radius:7px;object-fit:cover;flex-shrink:0;"/>` : "")
-              + `<div style="flex:1;min-width:0"><div style="font-size:0.78rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song}</div><div style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.artist}</div></div>`
-              + `<span style="font-family:Space Mono,monospace;font-size:0.5rem;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(232,197,71,0.08);color:rgba(232,197,71,0.7);border:1px solid rgba(232,197,71,0.2);flex-shrink:0">USE</span>`;
-            card.onmouseenter = function(){ card.style.background="rgba(232,197,71,0.07)"; };
-            card.onmouseleave = function(){ card.style.background="rgba(255,255,255,0.03)"; };
-            card.onclick = function() {
-              const songInput = backdrop.querySelector("#echoSongInput");
-              const artistInput = backdrop.querySelector("#echoArtistInput");
-              if (songInput) songInput.value = r.song;
-              if (artistInput) artistInput.value = r.artist;
-              const pill = backdrop.querySelector("#echoSongPill");
-              const pillName = backdrop.querySelector("#echoSongPillName");
-              const pillArtist = backdrop.querySelector("#echoSongPillArtist");
-              const pillArt = backdrop.querySelector("#echoSongPillArt");
-              const searchField = backdrop.querySelector("#echoSearchField");
-              if (pillName) pillName.textContent = r.song;
-              if (pillArtist) pillArtist.textContent = r.artist;
-              if (pillArt && r.artwork) pillArt.src = r.artwork;
-              if (pill) pill.style.display = "flex";
-              if (searchField) searchField.style.display = "none";
-              resultsEl.innerHTML = ""; resultsEl.style.display = "none";
-              echoSongSelected = true;
-              const lyricSection = backdrop.querySelector("#echoLyricSection");
-              const vibeLabel = backdrop.querySelector("#echoVibeLabel");
-              const vibeRow = backdrop.querySelector("#echoVibeRow");
-              const submitRow = backdrop.querySelector("#echoSubmitRow");
-              if (lyricSection) lyricSection.style.display = "block";
-              if (vibeLabel) vibeLabel.style.display = "block";
-              if (vibeRow) vibeRow.style.display = "flex";
-              if (submitRow) submitRow.style.display = "flex";
-              const lyricInput = backdrop.querySelector("#echoLyricInput");
-              if (lyricInput) setTimeout(function(){ lyricInput.focus(); }, 100);
-              echoLastQuery = "";
-            };
-            resultsEl.appendChild(card);
-          });
-          resultsEl.style.display = "block";
-        } catch(e) { console.error(e); }
-      }, 380);
-    });
-  }
-
-  const changeSongBtn = backdrop.querySelector("#echoChangeSongBtn");
-  if (changeSongBtn) {
-    changeSongBtn.onclick = function() {
-      const pill = backdrop.querySelector("#echoSongPill");
-      const searchField = backdrop.querySelector("#echoSearchField");
-      const songInput = backdrop.querySelector("#echoSongInput");
-      const artistInput = backdrop.querySelector("#echoArtistInput");
-      if (pill) pill.style.display = "none";
-      if (searchField) searchField.style.display = "flex";
-      if (songInput) songInput.value = "";
-      if (artistInput) artistInput.value = "";
-      echoSongSelected = false;
-      echoLastQuery = "";
-      const smartInp = backdrop.querySelector("#echoSmartInput");
-      if (smartInp) { smartInp.value = ""; smartInp.focus(); }
-    };
-  }
-
   backdrop.querySelectorAll('.echo-vibe-opt').forEach(btn => {
     btn.onclick = () => {
       backdrop.querySelectorAll('.echo-vibe-opt').forEach(b => b.classList.remove('active'));
@@ -194,49 +404,78 @@ function mountEchoSheet() {
     };
   });
 
+  backdrop.querySelector('#echoIdentifyBtn').onclick = () => {
+    const lyric = backdrop.querySelector('#echoLyricInput').value.trim();
+    if (lyric.length < 3) { if (typeof showToast === 'function') showToast('Type a lyric first'); return; }
+    runEchoGeniusSearch(lyric);
+  };
+
+  let geniusDebounce;
+  backdrop.querySelector('#echoLyricInput').addEventListener('input', e => {
+    clearTimeout(geniusDebounce);
+    const val = e.target.value.trim();
+    const songFilled = backdrop.querySelector('#echoSongInput').value.trim();
+    const liveHint = document.getElementById('echoLiveHint');
+    if (val.length >= 3 && !songFilled) {
+      if (liveHint) liveHint.style.display = 'inline-flex';
+      const ms = val.length < 8 ? 900 : val.length < 15 ? 700 : 500;
+      geniusDebounce = setTimeout(() => runEchoGeniusSearch(val), ms);
+    } else {
+      if (liveHint) liveHint.style.display = 'none';
+    }
+  });
+
+  let ytDebounce;
+  backdrop.querySelector('#echoSongInput').addEventListener('input', () => {
+    clearTimeout(ytDebounce);
+    const song   = backdrop.querySelector('#echoSongInput').value.trim();
+    const artist = backdrop.querySelector('#echoArtistInput').value.trim();
+    if (song.length > 1 && artist.length > 1) {
+      ytDebounce = setTimeout(() => fillEchoSongMeta(song, artist), 700);
+    }
+  });
 }
 
 /* ────────────────────────────────────────────────────────────
    OPEN / CLOSE
 ──────────────────────────────────────────────────────────── */
 async function openEchoSheet(postIndex) {
-  if (!postIndex && postIndex !== 0) return;
-  const post = (typeof posts !== "undefined" ? posts : [])[postIndex];
+  mountEchoSheet();
+
+  const post = (typeof posts !== 'undefined' ? posts : [])[postIndex];
   if (!post) return;
-  if (typeof MargoUsername !== "undefined" && !MargoUsername.hasBeenRevealed()) {
+
+  if (typeof MargoUsername !== 'undefined' && !MargoUsername.hasBeenRevealed()) {
     await MargoUsername.showReveal();
   }
-  ES.post = post;
+
+  ES.post      = post;
   ES.postIndex = postIndex;
-  ES.echoes = [];
-  const parentLyricEl = document.getElementById("echoParentLyric");
-  if (parentLyricEl) parentLyricEl.textContent = (post.text || "").substring(0, 50) + "…";
+  ES.echoes    = [];
+
+  const parentLyricEl = document.getElementById('echoParentLyric');
+  if (parentLyricEl) parentLyricEl.textContent = (post.text || '').substring(0, 50) + '…';
+
   populateEchoOgCard(post);
   populateEchoComposeUser();
   collapseEchoCompose();
   clearEchoForm();
   renderEchoList([]);
-  const backdrop = document.getElementById("echoSheetBackdrop");
-  backdrop.classList.remove("echo-hidden");
-  if (window.feed) window.feed.style.display = "none";
-  document.body.classList.add("echo-page-open");
-  subscribeEchoes(post.id);
 
-  if (window.feed) window.feed.style.display = "none";
+  const backdrop = document.getElementById('echoSheetBackdrop');
+  backdrop.classList.remove('echo-hidden');
+  if(window.feed) window.feed.style.display = "none";
+  document.body.classList.add("echo-page-open");
 
   subscribeEchoes(post.id);
 }
 
 function closeEchoSheet() {
   unsubscribeEchoes();
-  const backdrop = document.getElementById("echoSheetBackdrop");
-  if (backdrop) backdrop.classList.add("echo-hidden");
-  if (window.feed) window.feed.style.display = "";
+  const backdrop = document.getElementById('echoSheetBackdrop');
+  if (backdrop) backdrop.classList.add('echo-hidden');
+  if(window.feed) window.feed.style.display = "";
   document.body.classList.remove("echo-page-open");
-  collapseEchoCompose();
-  clearEchoForm();
-
-  if (window.feed) window.feed.style.display = "";
   collapseEchoCompose();
   clearEchoForm();
 }
@@ -302,22 +541,10 @@ function clearEchoForm() {
   const submitBtn = document.getElementById('echoSubmitBtn');
   if (submitBtn) submitBtn.disabled = true;
   document.querySelectorAll('.echo-vibe-opt').forEach(b => b.classList.remove('active'));
-  const smartInp = document.getElementById("echoSmartInput");
-  if (smartInp) smartInp.value = "";
-  const pill = document.getElementById("echoSongPill");
-  if (pill) pill.style.display = "none";
-  const searchField = document.getElementById("echoSearchField");
-  if (searchField) searchField.style.display = "flex";
-  const resultsEl = document.getElementById("echoSearchResults");
-  if (resultsEl) { resultsEl.innerHTML = ""; resultsEl.style.display = "none"; }
-  const lyricSection2 = document.getElementById("echoLyricSection");
-  if (lyricSection2) lyricSection2.style.display = "none";
-  const vibeLabel2 = document.getElementById("echoVibeLabel");
-  if (vibeLabel2) vibeLabel2.style.display = "none";
-  const vibeRow2 = document.getElementById("echoVibeRow");
-  if (vibeRow2) vibeRow2.style.display = "none";
-  const submitRow2 = document.getElementById("echoSubmitRow");
-  if (submitRow2) submitRow2.style.display = "none";
+  const gr = document.getElementById('echoGeniusResults');
+  if (gr) gr.innerHTML = '';
+  const lh = document.getElementById('echoLiveHint');
+  if (lh) lh.style.display = 'none';
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -553,6 +780,75 @@ async function submitEcho() {
 /* ────────────────────────────────────────────────────────────
    GENIUS SEARCH
 ──────────────────────────────────────────────────────────── */
+let _echoLastQuery = '';
+
+async function runEchoGeniusSearch(query) {
+  if (query === _echoLastQuery) return;
+  _echoLastQuery = query;
+
+  const btn      = document.getElementById('echoIdentifyBtn');
+  const liveHint = document.getElementById('echoLiveHint');
+  if (btn) { btn.innerHTML = '<span class="echo-spinner"></span> Searching…'; btn.disabled = true; }
+  if (liveHint) liveHint.style.display = 'none';
+  const resultsEl = document.getElementById('echoGeniusResults');
+  if (resultsEl) resultsEl.innerHTML = '';
+
+  try {
+    const res  = await fetch(`/api/genius?lyric=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    if (btn) { btn.textContent = 'Identify Song'; btn.disabled = false; }
+    if (!res.ok || !data.results?.length) return;
+    renderEchoGeniusResults(data.results);
+  } catch (_) {
+    if (btn) { btn.textContent = 'Identify Song'; btn.disabled = false; }
+  }
+}
+
+function renderEchoGeniusResults(results) {
+  const el = document.getElementById('echoGeniusResults');
+  if (!el) return;
+  el.innerHTML = '';
+
+  const label = document.createElement('div');
+  label.style.cssText = `font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;
+    color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;`;
+  label.textContent = 'Select the right song';
+  el.appendChild(label);
+
+  results.slice(0, 3).forEach(r => {
+    const card = document.createElement('div');
+    card.style.cssText = `display:flex;align-items:center;gap:10px;padding:9px 12px;
+      border-radius:11px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+      cursor:pointer;transition:all 0.18s;margin-bottom:5px;`;
+    card.innerHTML = `
+      ${r.artwork ? `<img src="${r.artwork}" style="width:36px;height:36px;border-radius:7px;object-fit:cover;flex-shrink:0;" alt=""/>` : ''}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.78rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song}</div>
+        <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.artist}</div>
+      </div>
+      <span style="font-family:'Space Mono',monospace;font-size:0.5rem;font-weight:700;
+        padding:3px 8px;border-radius:6px;background:rgba(232,197,71,0.08);
+        color:rgba(232,197,71,0.7);border:1px solid rgba(232,197,71,0.2);flex-shrink:0">Use</span>
+    `;
+    card.onmouseenter = () => card.style.background = 'rgba(232,197,71,0.07)';
+    card.onmouseleave = () => card.style.background = 'rgba(255,255,255,0.03)';
+    card.onclick = () => {
+      const songInput   = document.getElementById('echoSongInput');
+      const artistInput = document.getElementById('echoArtistInput');
+      if (songInput)   songInput.value   = r.song;
+      if (artistInput) artistInput.value = r.artist;
+      el.innerHTML = '';
+      _echoLastQuery = '';
+      const lh = document.getElementById('echoLiveHint');
+      if (lh) lh.style.display = 'none';
+    };
+    el.appendChild(card);
+  });
+}
+
+async function fillEchoSongMeta(song, artist) {
+  // No-op — song/artist set from Genius or manual input
+}
 
 /* ────────────────────────────────────────────────────────────
    GLOBAL EXPOSE
