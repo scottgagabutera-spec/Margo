@@ -240,16 +240,6 @@ function populateEchoComposeUser() {
   if (avatar)  { avatar.innerHTML  = ''; avatar.appendChild(MargoUsername.buildAvatar(name, 28)); }
   if (fAvatar) { fAvatar.innerHTML = ''; fAvatar.appendChild(MargoUsername.buildAvatar(name, 22)); }
   if (fName)   { fName.textContent = name; fName.style.color = color; }
-}
-
-  if (collapsed) collapsed.style.display = 'none';
-  const form = document.getElementById('echoComposeForm');
-  if (form) { form.classList.add('open'); form.style.display = 'flex'; }
-  const si = document.getElementById('echoSmartInput'); if (si) setTimeout(() => si.focus(), 80);
-}
-
-  if (collapsed) collapsed.style.display = '';
-  const form = document.getElementById('echoComposeForm');
   if (form) { form.classList.remove('open'); form.style.display = 'none'; }
 }
 
