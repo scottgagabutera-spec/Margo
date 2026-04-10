@@ -22,25 +22,20 @@ const ES = window._echoState;
    STYLES
 ──────────────────────────────────────────────────────────── */
 function mountEchoSheet() {
-  if (document.getElementById("echoSheetBackdrop")) return;
-  // Element already exists in HTML, just wire it up
   const backdrop = document.getElementById("echoSheetBackdrop");
   if (!backdrop) return;
-  
+  // Element exists in HTML, wire it up
   backdrop.querySelector("#echoClose").onclick = closeEchoSheet;
   backdrop.querySelector("#echoComposeTrigger").onclick = expandEchoCompose;
   backdrop.querySelector("#echoCancelBtn").onclick = collapseEchoCompose;
   backdrop.querySelector("#echoSubmitBtn").onclick = submitEcho;
   backdrop.addEventListener("click", e => { if (e.target === backdrop) closeEchoSheet(); });
-  
   backdrop.querySelector("#echoLyricInput").oninput = e => {
     const n = e.target.value.length;
     backdrop.querySelector("#echoCharCount").textContent = n;
     backdrop.querySelector("#echoSubmitBtn").disabled = n < 2;
   };
-}
-
-/* ────────────────────────────────────────────────────────────
+}/* ────────────────────────────────────────────────────────────
    OPEN / CLOSE
 ──────────────────────────────────────────────────────────── */
 async function openEchoSheet(postIndex) {
