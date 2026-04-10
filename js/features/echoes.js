@@ -173,7 +173,6 @@ async function openEchoSheet(postIndex) {
   ES.postIndex = postIndex;
   ES.echoes    = [];
 
-  if (parentLyricEl) parentLyricEl.textContent = (post.text || '').substring(0, 50) + '…';
 
   populateEchoOgCard(post);
   populateEchoComposeUser();
