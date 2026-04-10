@@ -173,7 +173,6 @@ async function openEchoSheet(postIndex) {
   ES.postIndex = postIndex;
   ES.echoes    = [];
 
-  const parentLyricEl = document.getElementById('echoParentLyric');
   if (parentLyricEl) parentLyricEl.textContent = (post.text || '').substring(0, 50) + '…';
 
   populateEchoOgCard(post);
@@ -241,7 +240,6 @@ function expandEchoCompose() {
   if (collapsed) collapsed.style.display = 'none';
   const form = document.getElementById('echoComposeForm');
   if (form) { form.classList.add('open'); form.style.display = 'flex'; }
-  document.getElementById('echoLyricInput')?.focus();
 }
 
 function collapseEchoCompose() {

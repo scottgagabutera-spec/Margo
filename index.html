@@ -708,21 +708,36 @@
   <!-- Echo Sheet - static page pattern (same as composer) -->
   <div id="echoSheetBackdrop" class="echo-hidden">
     <div id="echoSheet">
-      <div class="echo-handle"></div>
-      <div class="echo-header">
-        <div class="echo-header-left">
+
+      <!-- FIXED TOP: handle + header + og card + search (never moves when keyboard opens) -->
+      <div class="echo-top-bar">
+        <div class="echo-handle"></div>
+        <div class="echo-header">
           <span class="echo-title">Lyric Back</span>
-          <span class="echo-parent-lyric" id="echoParentLyric"></span>
+          <button class="echo-close" id="echoClose" aria-label="Close">&#10005;</button>
         </div>
-        <button class="echo-close" id="echoClose" aria-label="Close">×</button>
+        <div class="echo-og-card" id="echoOgCard"></div>
+        <div class="echo-search-zone">
+          <div class="echo-search-field" id="echoSearchField">
+            <svg class="echo-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input id="echoSmartInput" type="text" placeholder="Find the song you want to answer with…" autocomplete="off">
+          </div>
+          <div id="echoSongPill" style="display:none"></div>
+          <div id="echoSearchResults" style="display:none"></div>
+        </div>
       </div>
-      <div class="echo-og-card" id="echoOgCard"></div>
-      <div class="echo-divider">
-        <div class="echo-divider-line"></div>
-        <span class="echo-divider-label" id="echoCountLabel">0 echoes</span>
-        <div class="echo-divider-line"></div>
+
+      <!-- SCROLLABLE MIDDLE: echo list -->
+      <div class="echo-body">
+        <div class="echo-divider">
+          <div class="echo-divider-line"></div>
+          <span class="echo-divider-label" id="echoCountLabel">0 echoes</span>
+          <div class="echo-divider-line"></div>
+        </div>
+        <div class="echo-list-wrap" id="echoList"></div>
       </div>
-      <div class="echo-list-wrap" id="echoList"></div>
+
+      <!-- FIXED BOTTOM: compose -->
       <div class="echo-compose" id="echoCompose">
         <div class="echo-compose-collapsed" id="echoCollapsed">
           <div class="echo-compose-avatar" id="echoComposeAvatar"></div>
@@ -732,14 +747,6 @@
           <div class="echo-form-user-row">
             <div id="echoFormAvatar"></div>
             <span class="echo-form-username" id="echoFormUsername"></span>
-          </div>
-          <div class="echo-smart-search-wrap" id="echoSmartSearchWrap">
-            <div class="echo-search-field" id="echoSearchField">
-              <span class="echo-search-icon">🔍</span>
-              <input id="echoSmartInput" type="text" placeholder="Search by song or artist…">
-            </div>
-            <div id="echoSearchResults" style="display:none"></div>
-            <div id="echoSongPill" style="display:none"></div>
           </div>
           <input type="hidden" id="echoSongInput">
           <input type="hidden" id="echoArtistInput">
@@ -755,5 +762,6 @@
           </div>
         </div>
       </div>
+
     </div>
   </div>
