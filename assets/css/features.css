@@ -279,6 +279,8 @@
 /* Search zone */
 .echo-search-zone {
   padding: 0 14px 8px;
+  background: none;
+  border: none;
 }
 .echo-search-field {
   display: flex;

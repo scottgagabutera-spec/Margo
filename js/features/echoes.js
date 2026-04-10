@@ -136,6 +136,11 @@ function mountEchoSheet() {
               if (searchField) searchField.style.display = "none";
               resultsEl.innerHTML = ""; resultsEl.style.display = "none";
               echoSongSelected = true;
+              // Auto-open compose form when song selected
+              const collapsed = document.getElementById('echoCollapsed');
+              if (collapsed) collapsed.style.display = 'none';
+              const form = document.getElementById('echoComposeForm');
+              if (form) { form.style.display = 'flex'; }
               echoLastQuery = "";
               const lyricSection = backdrop.querySelector("#echoLyricSection");
               if (lyricSection) lyricSection.style.display = "block";
