@@ -669,3 +669,68 @@
   border-color: rgba(232,197,71,0.3);
   color: #E8C547;
 }
+
+/* ── Lyric Chip (composer pattern) ── */
+.echo-lyric-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: text;
+}
+.echo-lyric-chip:focus-within {
+  border-color: rgba(232,197,71,0.45);
+  box-shadow: 0 0 0 3px rgba(232,197,71,0.08);
+}
+.echo-lyric-chip-text {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #fff;
+  font-style: italic;
+  opacity: 0.85;
+  line-height: 1.5;
+  min-width: 0;
+  word-break: break-word;
+  outline: none;
+  caret-color: #E8C547;
+  min-height: 24px;
+}
+.echo-lyric-chip-text:empty:before {
+  content: attr(data-placeholder);
+  color: rgba(255,255,255,0.25);
+  font-style: italic;
+}
+.echo-lyric-chip-text.editing {
+  opacity: 1;
+  font-style: normal;
+}
+.echo-lyric-chip-edit {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  background: rgba(232,197,71,0.08);
+  border: 1px solid rgba(232,197,71,0.2);
+  border-radius: 8px;
+  color: rgba(232,197,71,0.7);
+  transition: all 0.18s;
+}
+.echo-lyric-chip-edit:hover {
+  background: rgba(232,197,71,0.15);
+  color: #E8C547;
+}
+
+/* ── Compose form always visible (no trigger) ── */
+.echo-compose-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

@@ -709,7 +709,7 @@
   <div id="echoSheetBackdrop" class="echo-hidden">
     <div id="echoSheet">
 
-      <!-- FIXED TOP: handle + header + og card + search (never moves when keyboard opens) -->
+      <!-- FIXED TOP -->
       <div class="echo-top-bar">
         <div class="echo-handle"></div>
         <div class="echo-header">
@@ -727,7 +727,7 @@
         </div>
       </div>
 
-      <!-- SCROLLABLE MIDDLE: echo list -->
+      <!-- SCROLLABLE MIDDLE -->
       <div class="echo-body">
         <div class="echo-divider">
           <div class="echo-divider-line"></div>
@@ -737,13 +737,9 @@
         <div class="echo-list-wrap" id="echoList"></div>
       </div>
 
-      <!-- FIXED BOTTOM: compose -->
+      <!-- FIXED BOTTOM: compose (no trigger, always ready) -->
       <div class="echo-compose" id="echoCompose">
-        <div class="echo-compose-collapsed" id="echoCollapsed">
-          <div class="echo-compose-avatar" id="echoComposeAvatar"></div>
-          <button class="echo-compose-trigger" id="echoComposeTrigger">Drop a lyric back…</button>
-        </div>
-        <div class="echo-compose-form" id="echoComposeForm" style="display:none">
+        <div class="echo-compose-form" id="echoComposeForm">
           <div class="echo-form-user-row">
             <div id="echoFormAvatar"></div>
             <span class="echo-form-username" id="echoFormUsername"></span>
@@ -751,8 +747,12 @@
           <input type="hidden" id="echoSongInput">
           <input type="hidden" id="echoArtistInput">
           <div id="echoLyricSection" style="display:none">
-            <textarea id="echoLyricInput" maxlength="140" placeholder="The lyric that answers this one…" rows="3"></textarea>
+            <div class="echo-lyric-chip" id="echoLyricChip">
+              <span class="echo-lyric-chip-text" id="echoLyricChipText" contenteditable="true" data-placeholder="The lyric that answers this one…"></span>
+              <button class="echo-lyric-chip-edit" id="echoLyricChipEdit" aria-label="Edit">&#9998;</button>
+            </div>
             <div class="echo-char-count"><span id="echoCharCount">0</span>/140</div>
+            <input type="hidden" id="echoLyricInput">
           </div>
           <div class="echo-vibe-label" id="echoVibeLabel" style="display:none">Vibe</div>
           <div class="echo-vibe-row" id="echoVibeRow" style="display:none"></div>

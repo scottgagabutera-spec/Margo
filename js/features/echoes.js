@@ -44,16 +44,25 @@ function mountEchoSheet() {
   if (!backdrop) return;
 
   backdrop.querySelector("#echoClose").onclick = closeEchoSheet;
-  backdrop.querySelector("#echoComposeTrigger").onclick = expandEchoCompose;
-  backdrop.querySelector("#echoCancelBtn").onclick = collapseEchoCompose;
   backdrop.querySelector("#echoSubmitBtn").onclick = submitEcho;
+
+  // Lyric chip wiring (contenteditable matching composer pattern)
+  const chipText = backdrop.querySelector("#echoLyricChipText");
+  const hiddenInput = backdrop.querySelector("#echoLyricInput");
+  const charCount = backdrop.querySelector("#echoCharCount");
+  const submitBtn = backdrop.querySelector("#echoSubmitBtn");
+  if (chipText) {
+    chipText.addEventListener("input", function() {
+      const val = this.textContent.trim();
+      if (hiddenInput) hiddenInput.value = val;
+      if (charCount) charCount.textContent = val.length;
+      if (submitBtn) submitBtn.disabled = val.length < 2;
+    });
+  }
+  const chipEdit = backdrop.querySelector("#echoLyricChipEdit");
+  if (chipEdit) chipEdit.onclick = () => { if (chipText) chipText.focus(); };
   backdrop.addEventListener("click", e => { if (e.target === backdrop) closeEchoSheet(); });
 
-  backdrop.querySelector("#echoLyricInput").oninput = e => {
-    const n = e.target.value.length;
-    backdrop.querySelector("#echoCharCount").textContent = n;
-    backdrop.querySelector("#echoSubmitBtn").disabled = n < 2;
-  };
 
   // Wire vibe buttons
   backdrop.querySelectorAll('.echo-vibe-opt').forEach(btn => {
@@ -137,7 +146,6 @@ function mountEchoSheet() {
               resultsEl.innerHTML = ""; resultsEl.style.display = "none";
               echoSongSelected = true;
               // Auto-open compose form when song selected
-              const collapsed = document.getElementById('echoCollapsed');
               if (collapsed) collapsed.style.display = 'none';
               const form = document.getElementById('echoComposeForm');
               if (form) { form.style.display = 'flex'; }
@@ -150,8 +158,6 @@ function mountEchoSheet() {
               if (vibeRow) vibeRow.style.display = "flex";
               const submitRow = backdrop.querySelector("#echoSubmitRow");
               if (submitRow) submitRow.style.display = "flex";
-              const lyricInput = backdrop.querySelector("#echoLyricInput");
-              if (lyricInput) setTimeout(function(){ lyricInput.focus(); }, 100);
             };
             resultsEl.appendChild(card);
           });
@@ -181,7 +187,6 @@ async function openEchoSheet(postIndex) {
 
   populateEchoOgCard(post);
   populateEchoComposeUser();
-  collapseEchoCompose();
   clearEchoForm();
   renderEchoList([]);
 
@@ -199,7 +204,6 @@ function closeEchoSheet() {
   if (backdrop) backdrop.classList.add('echo-hidden');
   if(window.feed) window.feed.style.display = "";
   document.body.classList.remove("echo-page-open");
-  collapseEchoCompose();
   clearEchoForm();
 }
 
@@ -230,7 +234,6 @@ function populateEchoOgCard(post) {
 function populateEchoComposeUser() {
   if (typeof MargoUsername === 'undefined') return;
   const name   = MargoUsername.get();
-  const avatar = document.getElementById('echoComposeAvatar');
   const fAvatar= document.getElementById('echoFormAvatar');
   const fName  = document.getElementById('echoFormUsername');
   const { color } = MargoUsername.getColor(name);
@@ -239,16 +242,12 @@ function populateEchoComposeUser() {
   if (fName)   { fName.textContent = name; fName.style.color = color; }
 }
 
-function expandEchoCompose() {
-  const collapsed = document.getElementById('echoCollapsed');
   if (collapsed) collapsed.style.display = 'none';
   const form = document.getElementById('echoComposeForm');
   if (form) { form.classList.add('open'); form.style.display = 'flex'; }
   const si = document.getElementById('echoSmartInput'); if (si) setTimeout(() => si.focus(), 80);
 }
 
-function collapseEchoCompose() {
-  const collapsed = document.getElementById('echoCollapsed');
   if (collapsed) collapsed.style.display = '';
   const form = document.getElementById('echoComposeForm');
   if (form) { form.classList.remove('open'); form.style.display = 'none'; }
@@ -258,6 +257,8 @@ function clearEchoForm() {
   ['echoLyricInput','echoSongInput','echoArtistInput'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
+  const chip = document.getElementById('echoLyricChipText');
+  if (chip) chip.textContent = '';
   });
   const cc = document.getElementById('echoCharCount');
   if (cc) cc.textContent = '0';
@@ -436,7 +437,8 @@ function openDuetShareSheet(echo) {
 async function submitEcho() {
   if (ES.isSubmitting) return;
 
-  const lyric  = document.getElementById('echoLyricInput')?.value.trim();
+  const chipEl = document.getElementById('echoLyricChipText');
+  const lyric  = (document.getElementById('echoLyricInput')?.value || chipEl?.textContent || '').trim();
   const song   = document.getElementById('echoSongInput')?.value.trim()   || 'Unknown Song';
   const artist = document.getElementById('echoArtistInput')?.value.trim() || 'Unknown Artist';
   const vibe   = document.querySelector('.echo-vibe-opt.active')?.dataset.emotion || 'Nostalgia';
@@ -483,7 +485,6 @@ async function submitEcho() {
     /* ── DIRECT db reference — bypasses any stale postsRef ── */
     await _db.ref('posts').child(ES.post.id).child('echoes').push(echoData);
 
-    collapseEchoCompose();
     clearEchoForm();
     if (typeof showToast === 'function') showToast('Lyric dropped ♪');
 
