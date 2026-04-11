@@ -96,66 +96,57 @@ function mountEchoSheet() {
           if (!cached) echoSearchCache[val.toLowerCase()] = results;
           if (!resultsEl) return;
           if (!results.length) { resultsEl.innerHTML="<div style='padding:10px;font-size:0.75rem;color:rgba(255,255,255,0.3)'>No results found</div>"; resultsEl.style.display="block"; return; }
-          resultsEl.innerHTML = "<div style='font-family:Space Mono,monospace;font-size:0.5rem;font-weight:700;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;'>Select the right song</div>";
-          results.slice(0,5).forEach(function(r) {
+          resultsEl.innerHTML = "";
+          results.forEach((r, ri) => {
             const card = document.createElement("div");
-            card.style.cssText = "display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);cursor:pointer;transition:all 0.18s;margin-bottom:5px;";
-            card.innerHTML = (r.artwork ? `<img src="${r.artwork}" style="width:36px;height:36px;border-radius:7px;object-fit:cover;flex-shrink:0;"/>` : "")
-              + `<div style="flex:1;min-width:0"><div style="font-size:0.78rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song}</div><div style="font-size:0.65rem;color:rgba(255,255,255,0.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.artist}</div></div>`
-              + `<span style="font-family:Space Mono,monospace;font-size:0.5rem;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(232,197,71,0.08);color:rgba(232,197,71,0.7);border:1px solid rgba(232,197,71,0.2);flex-shrink:0">USE</span>`;
-            card.onmouseenter = function(){ card.style.background="rgba(232,197,71,0.07)"; };
-            card.onmouseleave = function(){ card.style.background="rgba(255,255,255,0.03)"; };
-            card.onclick = function() {
-              const songInput = backdrop.querySelector("#echoSongInput");
-              const artistInput = backdrop.querySelector("#echoArtistInput");
-              if (songInput) songInput.value = r.song;
-              if (artistInput) artistInput.value = r.artist;
-              const pill = backdrop.querySelector("#echoSongPill");
+            card.className = "echo-result-card";
+            card.style.animationDelay = (ri * 0.04) + "s";
+            const art = r.album_art
+              ? `<img class="echo-result-art" src="${r.album_art}" loading="lazy" alt="">`
+              : `<div class="echo-result-art echo-result-art-fallback">♪</div>`;
+            card.innerHTML = `${art}<div class="echo-result-info"><div class="echo-result-song">${r.song || ""}</div><div class="echo-result-artist">${r.artist || ""}</div></div>`;
+            card.addEventListener("pointerdown", function(e) {
+              e.preventDefault();
+              const songInput = document.getElementById("echoSongInput");
+              const artistInput = document.getElementById("echoArtistInput");
+              if (songInput) songInput.value = r.song || "";
+              if (artistInput) artistInput.value = r.artist || "";
+              const pill = document.getElementById("echoSongPill");
               if (pill) {
-                pill.innerHTML = `<img src="${r.artwork||''}" style="width:32px;height:32px;border-radius:6px;object-fit:cover;"/><div style="flex:1;min-width:0"><div style="font-size:0.8rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song}</div><div style="font-size:0.65rem;color:rgba(255,255,255,0.4)">${r.artist}</div></div><button id="echoChangeSongBtn" style="font-size:0.65rem;font-family:Space Mono,monospace;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);cursor:pointer;">Change</button>`;
-                pill.style.display = "flex";
-                pill.style.alignItems = "center";
-                pill.style.gap = "10px";
-                pill.style.padding = "9px 12px";
-                pill.style.borderRadius = "11px";
-                pill.style.background = "rgba(232,197,71,0.07)";
-                pill.style.border = "1px solid rgba(232,197,71,0.2)";
-                pill.querySelector("#echoChangeSongBtn").onclick = function() {
+                pill.innerHTML = `<img src="${r.album_art||""" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0"> <div style="flex:1;min-width:0"><div style="font-size:0.8rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song||""}</div><div style="font-size:0.68rem;color:rgba(255,255,255,0.4)">${r.artist||""}</div></div><button class="echo-change-btn">Change</button>`;
+                pill.querySelector(".echo-change-btn").onclick = function() {
+                  const ls2 = document.getElementById("echoLyricSection");
+                  if (ls2) ls2.style.display = "none";
+                  const vl2 = document.getElementById("echoVibeLabel");
+                  if (vl2) vl2.style.display = "none";
+                  const vr2 = document.getElementById("echoVibeRow");
+                  if (vr2) vr2.style.display = "none";
+                  const sr2 = document.getElementById("echoSubmitRow");
+                  if (sr2) sr2.style.display = "none";
                   pill.style.display = "none";
-                  pill.innerHTML = "";
-                  const sf = document.getElementById("echoSearchField");
-                  if (sf) sf.style.display = "flex";
-                  if (songInput) songInput.value = "";
-                  if (artistInput) artistInput.value = "";
-                  echoSongSelected = false;
-                  echoLastQuery = "";
-                  const si = backdrop.querySelector("#echoSmartInput");
-                  if (si) { si.value = ""; si.focus(); }
-                  const ls = backdrop.querySelector("#echoLyricSection");
-                  if (ls) ls.style.display = "none";
-                  const vl = backdrop.querySelector("#echoVibeLabel");
-                  if (vl) vl.style.display = "none";
-                  const vr = backdrop.querySelector("#echoVibeRow");
-                  if (vr) vr.style.display = "none";
-                  const sr = backdrop.querySelector("#echoSubmitRow");
-                  if (sr) sr.style.display = "none";
+                  const sf2 = document.getElementById("echoSearchField");
+                  if (sf2) sf2.style.display = "flex";
+                  const si2 = document.getElementById("echoSmartInput");
+                  if (si2) { si2.value = ""; si2.focus(); }
                 };
+                pill.style.display = "flex";
               }
               const searchField = document.getElementById("echoSearchField");
               if (searchField) searchField.style.display = "none";
               resultsEl.innerHTML = ""; resultsEl.style.display = "none";
               echoSongSelected = true;
-              // Auto-open compose form when song selected
               echoLastQuery = "";
-              const lyricSection = backdrop.querySelector("#echoLyricSection");
+              const lyricSection = document.getElementById("echoLyricSection");
               if (lyricSection) lyricSection.style.display = "block";
-              const vibeLabel = backdrop.querySelector("#echoVibeLabel");
+              const vibeLabel = document.getElementById("echoVibeLabel");
               if (vibeLabel) vibeLabel.style.display = "block";
-              const vibeRow = backdrop.querySelector("#echoVibeRow");
+              const vibeRow = document.getElementById("echoVibeRow");
               if (vibeRow) vibeRow.style.display = "flex";
-              const submitRow = backdrop.querySelector("#echoSubmitRow");
+              const submitRow = document.getElementById("echoSubmitRow");
               if (submitRow) submitRow.style.display = "flex";
-            };
+              const chipText = document.getElementById("echoLyricChipText");
+              if (chipText) setTimeout(() => chipText.focus(), 80);
+            });
             resultsEl.appendChild(card);
           });
           resultsEl.style.display = "block";
