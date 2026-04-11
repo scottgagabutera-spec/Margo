@@ -55,7 +55,7 @@
 }
 .studio-export-btn:active { transform: scale(0.97); }
 .studio-dock {
-  background: #0f0e14; border-top: 1px solid rgba(255,255,255,0.07);
+  background: var(--surface); border-top: 1px solid rgba(255,255,255,0.07);
   flex-shrink: 0; max-height: 46vh;
   display: flex; flex-direction: column; overflow: hidden;
 }
@@ -292,7 +292,7 @@
 .search-result-artist{font-size:0.7rem;color:rgba(255,255,255,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .search-result-use{flex-shrink:0;font-family:'Lora', serif;font-size: 0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 10px;border-radius:20px;background:rgba(232,197,71,0.08);color:rgba(232,197,71,0.65);border:1px solid rgba(232,197,71,0.18);transition:all 0.15s;}
 .search-result-card:hover .search-result-use{background:rgba(232,197,71,0.14);color:#E8C547;border-color:rgba(232,197,71,0.35);}
-.search-result-card.selected .search-result-use{background:#E8C547;color:#0B0B0D;border-color:#E8C547;}
+.search-result-card.selected .search-result-use{background:#E8C547;color: var(--bg);border-color:#E8C547;}
 @media(max-width:768px){.search-sheet{max-height:45vh;overflow-y:auto;}}
 /* LYRIC CHIP */
 .lyric-chip-wrap{margin-top:14px;}
@@ -323,7 +323,7 @@
 .lyric-chip-edit{
   width:32px;height:32px;border-radius:50%;
   background:#E8C547;
-  border:none;color:#0B0B0D;
+  border:none;color: var(--bg);
   font-size: 0.95rem;font-weight:900;
   cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
   box-shadow:0 2px 10px rgba(232,197,71,0.4);
@@ -337,7 +337,7 @@
 .song-pill-change{
   background:#E8C547;
   border:none;border-radius:20px;
-  color:#0B0B0D;
+  color: var(--bg);
   font-family:'Lora', serif;font-size: 0.6rem;font-weight:900;
   letter-spacing:1.5px;text-transform:uppercase;
   padding:7px 13px;cursor:pointer;flex-shrink:0;
