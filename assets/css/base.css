@@ -83,8 +83,16 @@
   --gold-glow:    rgba(232,197,71,0.12);
 
   /* Resonate — the emotional reaction color */
-  --resonate:       #C084FC;
-  --resonate-faint: rgba(192,132,252,0.08);
+  --resonate:       #E8C547;
+  --resonate-faint: rgba(232,197,71,0.08);
+
+  /* Status colors */
+  --success:        #4ade80;
+  --success-faint:  rgba(74,222,128,0.08);
+  --success-border: rgba(74,222,128,0.28);
+  --partial:        var(--gold);
+  --partial-faint:  var(--gold-faint);
+  --partial-border: var(--gold-border);
 
   --bg:           #07060A;
   --surface:      #0F0E13;

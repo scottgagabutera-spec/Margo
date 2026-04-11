@@ -291,9 +291,9 @@ body.modal-open { overflow: hidden !important; }
   line-height: 1.4; text-align: center;
 }
 .result-msg.hidden { display: none; }
-.result-success { background: rgba(74,222,128,0.08);  border: 1px solid rgba(74,222,128,0.28);  color: #4ade80; }
+.result-success { background: var(--success-faint); border: 1px solid var(--success-border); color: var(--success); }
 .result-error   { background: rgba(255,100,100,0.08); border: 1px solid rgba(255,100,100,0.28); color: #ff6464; }
-.result-partial { background: rgba(255,200,71,0.08);  border: 1px solid rgba(255,200,71,0.28);  color: #ffc847; }
+.result-partial { background: var(--partial-faint); border: 1px solid var(--partial-border); color: var(--partial); }
 
 .listen-link {
   display: block; padding: 12px 14px; background: var(--surface-2);
