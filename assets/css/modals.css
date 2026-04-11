@@ -147,7 +147,7 @@ textarea#textInput:focus {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.88);
   display: flex; align-items: flex-end; justify-content: center;
-  z-index: 200; padding: 0;
+  z-index: 1100; padding: 0;
   backdrop-filter: blur(16px) saturate(0.8);
   animation: modalFadeIn 0.18s ease forwards;
 }

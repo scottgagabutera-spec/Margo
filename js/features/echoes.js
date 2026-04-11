@@ -239,6 +239,15 @@ function populateEchoComposeUser() {
 }
 
 function clearEchoForm() {
+  // Reset song pill and search field
+  const pill = document.getElementById('echoSongPill');
+  if (pill) { pill.style.display = 'none'; pill.innerHTML = ''; }
+  const sf = document.getElementById('echoSearchField');
+  if (sf) sf.style.display = 'flex';
+  const sr = document.getElementById('echoSearchResults');
+  if (sr) { sr.innerHTML = ''; sr.style.display = 'none'; }
+  const si = document.getElementById('echoSmartInput');
+  if (si) si.value = '';
   ['echoLyricInput','echoSongInput','echoArtistInput'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -411,6 +420,7 @@ function resonateEcho(echoId) {
 ──────────────────────────────────────────────────────────── */
 function openDuetShareSheet(echo) {
   if (typeof openDuetSheet === 'function') {
+  closeEchoSheet();
     openDuetSheet(ES.post, echo);
   }
 }
