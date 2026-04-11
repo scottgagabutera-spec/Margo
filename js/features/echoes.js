@@ -240,7 +240,6 @@ function populateEchoComposeUser() {
 }
 
 function clearEchoForm() {
-  if (composeForm) { composeForm.classList.remove('open'); composeForm.style.display = 'none'; }
   ['echoLyricInput','echoSongInput','echoArtistInput'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
