@@ -283,16 +283,17 @@
 .echo-search-field {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 12px;
-  padding: 9px 14px;
-  transition: border-color 0.2s, background 0.2s;
+  gap: 10px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  border-radius: 0;
+  padding: 8px 2px;
+  transition: border-color 0.2s;
 }
 .echo-search-field:focus-within {
-  border-color: rgba(232,197,71,0.35);
-  background: rgba(255,255,255,0.07);
+  border-bottom-color: rgba(232,197,71,0.5);
+  background: none;
 }
 .echo-search-icon {
   color: rgba(255,255,255,0.3);
@@ -306,12 +307,13 @@
   border: none;
   outline: none;
   color: #fff;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-family: var(--font-body, inherit);
   min-width: 0;
 }
 .echo-search-field input::placeholder {
-  color: rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.28);
+  font-style: italic;
 }
 
 /* Song pill */
