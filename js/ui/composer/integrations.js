@@ -287,8 +287,8 @@ function renderSheetResults(results){
     card.innerHTML=img
       +"<div class="+q+"search-result-info"+q+"><div class="+q+"search-result-song"+q+">"+song+"</div><div class="+q+"search-result-artist"+q+">"+artist+"</div></div>"
       +"<span class="+q+"search-result-use"+q+">Use</span>";
-    card.addEventListener("pointerdown",function(e){
-      e.preventDefault();
+    card.addEventListener("click",function(e){
+
       selectResult(Object.assign({},r,{song:song,artist:artist}),card);
     });
     list.appendChild(card);

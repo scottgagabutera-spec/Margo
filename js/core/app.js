@@ -24,6 +24,7 @@ function showToast(msg) {
 // ── Modal helpers (kept for guess/discover/listen/analytics) ──
 function openModal(modal) {
   if (!modal) return;
+  if (modal.id === "composer") { if(window.feed) window.feed.style.display = "none"; modal.classList.remove("hidden"); document.body.classList.add("composer-page-open"); return; }
   var yp=document.getElementById("youtubePreview");if(yp)yp.remove();
   window._composerOpening=true;setTimeout(function(){window._composerOpening=false;},600);
   var sp=document.getElementById("songPill");if(sp)sp.classList.add("hidden");
@@ -40,6 +41,7 @@ function openModal(modal) {
 
 function closeModal(modal) {
   if (!modal) return;
+  if (modal.id === "composer") { modal.classList.add("hidden"); if(window.feed) window.feed.style.display = ""; document.body.classList.remove("composer-page-open"); return; }
   modal.classList.add('hidden');
   document.body.classList.remove('modal-open');
   document.body.style.top = '';

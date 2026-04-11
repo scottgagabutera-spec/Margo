@@ -140,3 +140,61 @@ html {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
+
+  #echoSheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+}
+
+/* ── Composer page fixes ── */
+body.composer-page-open {
+  overflow: hidden;
+}
+
+#composer {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: #0f0e14;
+  overflow-y: auto;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+#composer:not(.hidden) {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  #composer.hidden { display: none !important; }
+  #composer {
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #composer .modal-sheet {
+    max-width: 500px;
+    width: 90%;
+    margin: 0 auto;
+    border-radius: 28px;
+    overflow: hidden;
+  }
+}
+
+    overflow: hidden;
+    max-height: 88dvh;
+  }
+}
+
+

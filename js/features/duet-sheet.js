@@ -379,6 +379,9 @@ function closeSheet() {
   document.body.classList.remove('_dsOpen');
   _qAll('._dsBblL').forEach(el => { el.style.cssText = ''; });
   requestAnimationFrame(() => window.scrollTo({ top: DS._savedScrollY, behavior: 'instant' }));
+  // Restore echo sheet if hidden by echo→duet flow
+  const _eb = document.getElementById('echoSheetBackdrop');
+  if (_eb) _eb.style.visibility = '';
 }
 
 function _setFormat(fmt) {

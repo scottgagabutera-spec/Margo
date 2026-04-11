@@ -705,3 +705,69 @@
 <script src="js/ui/feed/search.js" defer></script>
 </body>
 </html>
+  <!-- Echo Sheet - static page pattern (same as composer) -->
+  <div id="echoSheetBackdrop" class="echo-hidden">
+    <div id="echoSheet">
+
+      <!-- TOP BAR: header + og card + search + compose (all stays put when keyboard opens) -->
+      <div class="echo-top-bar">
+        <div class="echo-handle"></div>
+        <div class="echo-header">
+          <a class="composer-logo" href="/" aria-label="Margo home"><span class="composer-logo-mark"><span class="logo-ring"></span><span class="logo-ring"></span><span class="logo-ring"></span><span class="logo-circle"><svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="40" cy="40" r="36" fill="#E8C547"/><path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/></svg></span></span><span class="composer-logo-text">MARGO</span></a>
+          <button class="echo-close modal-close" id="echoClose" aria-label="Close">×</button>
+        </div>
+        <div class="echo-og-card" id="echoOgCard"></div>
+
+        <!-- COMPOSE ZONE: search → song pill → lyric → vibe → submit -->
+        <div class="echo-compose-zone">
+          <input type="hidden" id="echoSongInput">
+          <input type="hidden" id="echoArtistInput">
+
+          <!-- Step 1: search field -->
+          <div class="echo-search-field" id="echoSearchField">
+            <svg class="echo-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input id="echoSmartInput" type="text" placeholder="Search by lyric, song or artist…" autocomplete="off">
+          </div>
+          <div id="echoSearchResults" style="display:none"></div>
+
+          <!-- Step 2: selected song pill (replaces search) -->
+          <div id="echoSongPill" style="display:none"></div>
+
+          <!-- Step 3: lyric chip (shows after song selected) -->
+          <div id="echoLyricSection" style="display:none">
+            <div class="echo-form-user-row">
+              <div id="echoFormAvatar"></div>
+              <span class="echo-form-username" id="echoFormUsername"></span>
+            </div>
+            <div class="echo-lyric-chip" id="echoLyricChip">
+              <span class="echo-lyric-chip-text" id="echoLyricChipText" contenteditable="true" data-placeholder="The lyric that answers this one…"></span>
+              <button class="echo-lyric-chip-edit" id="echoLyricChipEdit" aria-label="Edit">&#9998;</button>
+            </div>
+            <div class="echo-char-count"><span id="echoCharCount">0</span>/140</div>
+            <input type="hidden" id="echoLyricInput">
+          </div>
+
+          <!-- Step 4: vibe -->
+          <div class="echo-vibe-label" id="echoVibeLabel" style="display:none">Vibe</div>
+          <div class="echo-vibe-row" id="echoVibeRow" style="display:none"></div>
+
+          <!-- Step 5: submit -->
+          <div class="echo-form-submit-row" id="echoSubmitRow" style="display:none">
+            <button class="echo-cancel-btn" id="echoCancelBtn">Cancel</button>
+            <button class="echo-submit-btn" id="echoSubmitBtn" disabled>Drop Your Lyric Back</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCROLLABLE MIDDLE: echo list -->
+      <div class="echo-body">
+        <div class="echo-divider">
+          <div class="echo-divider-line"></div>
+          <span class="echo-divider-label" id="echoCountLabel">0 echoes</span>
+          <div class="echo-divider-line"></div>
+        </div>
+        <div class="echo-list-wrap" id="echoList"></div>
+      </div>
+
+    </div>
+  </div>
