@@ -239,7 +239,7 @@ function populateEchoComposeUser() {
 }
 
 function clearEchoForm() {
-  // Reset song pill and search field
+  // Reset search field
   const pill = document.getElementById('echoSongPill');
   if (pill) { pill.style.display = 'none'; pill.innerHTML = ''; }
   const sf = document.getElementById('echoSearchField');
@@ -248,24 +248,29 @@ function clearEchoForm() {
   if (sr) { sr.innerHTML = ''; sr.style.display = 'none'; }
   const si = document.getElementById('echoSmartInput');
   if (si) si.value = '';
+  // Hide lyric/vibe/submit — back to search-only state
+  const ls = document.getElementById('echoLyricSection');
+  if (ls) ls.style.display = 'none';
+  const vl = document.getElementById('echoVibeLabel');
+  if (vl) vl.style.display = 'none';
+  const vr = document.getElementById('echoVibeRow');
+  if (vr) vr.style.display = 'none';
+  const sub = document.getElementById('echoSubmitRow');
+  if (sub) sub.style.display = 'none';
+  // Clear values
   ['echoLyricInput','echoSongInput','echoArtistInput'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
+  });
   const chip = document.getElementById('echoLyricChipText');
   if (chip) chip.textContent = '';
-  });
   const cc = document.getElementById('echoCharCount');
   if (cc) cc.textContent = '0';
   const submitBtn = document.getElementById('echoSubmitBtn');
   if (submitBtn) submitBtn.disabled = true;
   document.querySelectorAll('.echo-vibe-opt').forEach(b => b.classList.remove('active'));
-  const gr = document.getElementById('echoGeniusResults');
-  if (gr) gr.innerHTML = '';
-  const lh = document.getElementById('echoLiveHint');
-  if (lh) lh.style.display = 'none';
 }
 
-/* ────────────────────────────────────────────────────────────
    FIREBASE SUBSCRIBE / UNSUBSCRIBE
 ──────────────────────────────────────────────────────────── */
 function subscribeEchoes(postId) {
