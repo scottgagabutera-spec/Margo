@@ -101,8 +101,8 @@ function mountEchoSheet() {
             const card = document.createElement("div");
             card.className = "echo-result-card";
             card.style.animationDelay = (ri * 0.04) + "s";
-            const art = r.album_art
-              ? `<img class="echo-result-art" src="${r.album_art}" loading="lazy" alt="">`
+            const art = r.artwork
+              ? `<img class="echo-result-art" src="${r.artwork}" loading="lazy" alt="">`
               : `<div class="echo-result-art echo-result-art-fallback">♪</div>`;
             card.innerHTML = `${art}<div class="echo-result-info"><div class="echo-result-song">${r.song || ""}</div><div class="echo-result-artist">${r.artist || ""}</div></div>`;
             card.addEventListener("pointerdown", function(e) {
@@ -113,7 +113,7 @@ function mountEchoSheet() {
               if (artistInput) artistInput.value = r.artist || "";
               const pill = document.getElementById("echoSongPill");
               if (pill) {
-                pill.innerHTML = `<img src="${r.album_art||''}" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:0.8rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song||''}</div><div style="font-size:0.68rem;color:rgba(255,255,255,0.4)">${r.artist||''}</div></div><button class="echo-change-btn">Change</button>`;
+                pill.innerHTML = `<img src="${r.artwork||''}" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0"><div style="flex:1;min-width:0"><div style="font-size:0.8rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.song||''}</div><div style="font-size:0.68rem;color:rgba(255,255,255,0.4)">${r.artist||''}</div></div><button class="echo-change-btn">Change</button>`;
                 pill.querySelector(".echo-change-btn").onclick = function() {
                   const ls2 = document.getElementById("echoLyricSection");
                   if (ls2) ls2.style.display = "none";
