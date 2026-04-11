@@ -146,7 +146,6 @@ function mountEchoSheet() {
               resultsEl.innerHTML = ""; resultsEl.style.display = "none";
               echoSongSelected = true;
               // Auto-open compose form when song selected
-              if (form) { form.classList.add('open'); form.style.display = 'flex'; }
               echoLastQuery = "";
               const lyricSection = backdrop.querySelector("#echoLyricSection");
               if (lyricSection) lyricSection.style.display = "block";
