@@ -335,8 +335,11 @@
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 16px;
   padding: 8px;
-  max-height: 200px;
   overflow-y: auto;
+  max-height: 320px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 /* ── SCROLLABLE BODY ── */
@@ -800,7 +803,7 @@
   transition: background 0.15s;
   animation: echoCardIn 0.22s cubic-bezier(0.16,1,0.3,1) both;
   border-bottom: 1px solid rgba(255,255,255,0.04);
-  touch-action: manipulation;
+  touch-action: pan-y;
   -webkit-tap-highlight-color: transparent;
 }
 .echo-result-card:last-child { border-bottom: none; }

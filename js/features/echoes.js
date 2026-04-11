@@ -105,8 +105,7 @@ function mountEchoSheet() {
               ? `<img class="echo-result-art" src="${r.artwork}" loading="lazy" alt="">`
               : `<div class="echo-result-art echo-result-art-fallback">♪</div>`;
             card.innerHTML = `${art}<div class="echo-result-info"><div class="echo-result-song">${r.song || ""}</div><div class="echo-result-artist">${r.artist || ""}</div></div>`;
-            card.addEventListener("pointerdown", function(e) {
-              e.preventDefault();
+            card.addEventListener("pointerup", function(e) {
               const songInput = document.getElementById("echoSongInput");
               const artistInput = document.getElementById("echoArtistInput");
               if (songInput) songInput.value = r.song || "";
@@ -539,7 +538,7 @@ function renderEchoGeniusResults(results) {
   label.textContent = 'Select the right song';
   el.appendChild(label);
 
-  results.slice(0, 3).forEach(r => {
+  results.slice(0, 5).forEach(r => {
     const card = document.createElement('div');
     card.style.cssText = `display:flex;align-items:center;gap:10px;padding:9px 12px;
       border-radius:11px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
