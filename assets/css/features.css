@@ -290,8 +290,6 @@
   border-radius: 50px;
   padding: 8px 14px;
   transition: border-color 0.18s, background 0.18s;
-  max-width: 480px;
-  margin: 0 auto;
   width: 100%;
 }
 .echo-search-field:focus-within {
