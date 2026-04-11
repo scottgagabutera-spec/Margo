@@ -208,7 +208,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px 10px;
+  padding: 10px 16px 8px;
 }
 .echo-title {
   font-family: var(--font-mono, 'Space Mono', monospace);
@@ -240,10 +240,10 @@
 
 /* OG card */
 .echo-og-card {
-  margin: 0 14px 10px;
-  padding: 11px 14px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.03);
+  margin: 0 16px 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.025);
   border: none;
 }
 .echo-og-lyric {
@@ -284,12 +284,15 @@
 .echo-search-field {
   display: flex;
   align-items: center;
-  gap: 9px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.09);
+  gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 50px;
-  padding: 10px 16px;
+  padding: 8px 14px;
   transition: border-color 0.18s, background 0.18s;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
 }
 .echo-search-field:focus-within {
   border-color: rgba(232,197,71,0.35);
@@ -739,8 +742,8 @@
 
 /* ── Compose zone (top bar, below og card) ── */
 .echo-compose-zone {
-  padding: 0 14px 14px;
+  padding: 0 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }

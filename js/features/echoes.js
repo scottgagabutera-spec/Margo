@@ -426,7 +426,15 @@ function resonateEcho(echoId) {
 ──────────────────────────────────────────────────────────── */
 function openDuetShareSheet(echo) {
   if (typeof openDuetSheet === 'function') {
-  closeEchoSheet();
+  // Temporarily hide echo sheet, restore after duet closes
+  const echoBackdrop = document.getElementById('echoSheetBackdrop');
+  if (echoBackdrop) echoBackdrop.style.visibility = 'hidden';
+  const _origClose = window.closeDuetSheet;
+  window.closeDuetSheet = function() {
+    _origClose && _origClose();
+    if (echoBackdrop) echoBackdrop.style.visibility = '';
+    window.closeDuetSheet = _origClose;
+  };
     openDuetSheet(ES.post, echo);
   }
 }
