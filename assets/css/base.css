@@ -1,3 +1,64 @@
+/* ══════════════════════════════════════
+   LORA — Self-hosted, no Google dependency
+   v37 — woff2 only (all modern browsers + apps)
+══════════════════════════════════════ */
+@font-face {
+  font-family: 'Lora';
+  src: url('../fonts/lora/lora-v37-latin-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lora';
+  src: url('../fonts/lora/lora-v37-latin-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lora';
+  src: url('../fonts/lora/lora-v37-latin-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lora';
+  src: url('../fonts/lora/lora-v37-latin-500italic.woff2') format('woff2');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lora';
+  src: url('../fonts/lora/lora-v37-latin-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lora';
+  src: url('../fonts/lora/lora-v37-latin-600italic.woff2') format('woff2');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lora';
+  src: url('../fonts/lora/lora-v37-latin-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lora';
+  src: url('../fonts/lora/lora-v37-latin-700italic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 /*
   MARGO — style.css v6.8
   v6.8 — card-lyric font-size 1.28rem, line-height 1.45, padding-left 10px,
@@ -32,10 +93,10 @@
   --text-2:       #9A98A4;
   --text-3:       #555360;
 
-  --font-display: 'Bebas Neue', sans-serif;
-  --font-lyric:   'Instrument Serif', serif;
-  --font-mono:    'Space Mono', monospace;
-  --font-ui:      'DM Sans', sans-serif;
+  --font-display: 'Lora', serif;
+  --font-lyric:   'Lora', serif;
+  --font-mono:    'Lora', serif;
+  --font-ui:      'Lora', serif;
 
   --radius:    14px;
   --radius-sm: 9px;
@@ -62,7 +123,7 @@ html { height: 100%; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-ui);
+  font-family: 'Lora', serif;
   min-height: 100%;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
