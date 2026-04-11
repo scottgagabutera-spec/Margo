@@ -105,10 +105,7 @@ function mountEchoSheet() {
               ? `<img class="echo-result-art" src="${r.artwork}" loading="lazy" alt="">`
               : `<div class="echo-result-art echo-result-art-fallback">♪</div>`;
             card.innerHTML = `${art}<div class="echo-result-info"><div class="echo-result-song">${r.song || ""}</div><div class="echo-result-artist">${r.artist || ""}</div></div>`;
-            var _startY = 0;
-            card.addEventListener("pointerdown", function(e) { _startY = e.clientY; });
-            card.addEventListener("pointerup", function(e) {
-              if (Math.abs(e.clientY - _startY) >= 8) return;
+            card.addEventListener("click", function(e) {
               const songInput = document.getElementById("echoSongInput");
               const artistInput = document.getElementById("echoArtistInput");
               if (songInput) songInput.value = r.song || "";
