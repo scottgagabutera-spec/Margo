@@ -6,7 +6,7 @@
   transform: none; z-index: 400;
   display: none; align-items: center; gap: 5px;
   padding: 7px 12px 7px 10px; border-radius: 50px;
-  background: var(--gold); color: #07060A;
+  background: var(--gold); color: var(--bg);
   font-family: 'Lora', serif;
   font-weight: 700;
   font-size: 0.6rem; letter-spacing: 1.5px; text-transform: uppercase;
@@ -166,7 +166,7 @@ textarea#textInput:focus {
 body.modal-open { overflow: hidden !important; }
 
 .modal-sheet {
-  background: #0f0e14;
+  background: var(--surface);
   border: 1px solid rgba(255,255,255,0.08);
   border-bottom: none; border-radius: 28px 28px 0 0;
   width: 100%; max-width: 480px;
@@ -562,7 +562,7 @@ body.modal-open { overflow: hidden !important; }
   border-color: rgba(255,255,255,0.2) !important;
 }
 #composer .emotion-btn.active {
-  color: #0B0B0D !important;
+  color: var(--bg) !important;
 }
 
 /* Footer — glass effect */
@@ -581,7 +581,7 @@ body.modal-open { overflow: hidden !important; }
   padding: 16px !important;
   border-radius: 16px !important;
   background: linear-gradient(135deg, #f5d878 0%, #E8C547 50%, #D4A832 100%) !important;
-  color: #07060A !important;
+  color: var(--bg) !important;
   box-shadow: 0 4px 24px rgba(232,197,71,0.35), 0 1px 0 rgba(255,255,255,0.2) inset !important;
   transition: all 0.2s var(--ease-out) !important;
   border: none !important;

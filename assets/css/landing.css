@@ -176,7 +176,7 @@
 .btn-primary {
   position: relative; overflow: hidden;
   padding: 17px 28px; border-radius: 50px;
-  background: var(--gold); color: #07060A;
+  background: var(--gold); color: var(--bg);
   font-family: 'Lora', serif;
   font-weight: 400;
   font-size: 1rem;
