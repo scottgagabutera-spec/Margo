@@ -271,6 +271,7 @@ function clearEchoForm() {
   document.querySelectorAll('.echo-vibe-opt').forEach(b => b.classList.remove('active'));
 }
 
+/* ────────────────────────────────────────────────────────────
    FIREBASE SUBSCRIBE / UNSUBSCRIBE
 ──────────────────────────────────────────────────────────── */
 function subscribeEchoes(postId) {
