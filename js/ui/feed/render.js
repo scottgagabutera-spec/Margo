@@ -105,7 +105,7 @@ function renderSkeleton() {
   stack.innerHTML = `
     <div class="swipe-card sk-swipe-card">
       <div class="card-content sk-content">
-        <div class="sk-loading-msg">Finding lyrics for you…</div>
+        <div class="sk-loading-msg">The lyrics are coming…</div>
         <div class="sk-pill"></div>
         <div class="sk-lyric-1"></div>
         <div class="sk-lyric-2"></div>
@@ -154,8 +154,8 @@ function renderFeed() {
     stack.style.opacity = '1';
     stack.innerHTML = `<div class="feed-empty-state">
     <div class="feed-empty-icon">♪</div>
-    <div class="feed-empty-title">No lyrics here yet</div>
-    <div class="feed-empty-sub">Be the first to drop a lyric that says what you can't</div>
+    <div class="feed-empty-title">First lyric here is yours</div>
+    <div class="feed-empty-sub">Drop it. 🎵</div>
   </div>`;
     updateSwipeUI();
     return;
