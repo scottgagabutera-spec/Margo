@@ -308,3 +308,38 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   display: flex;
   flex-direction: column;
 }
+
+/* ── Feed empty state ── */
+.feed-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+}
+.feed-empty-icon {
+  font-size: 2rem;
+  color: var(--gold);
+  opacity: 0.4;
+  margin-bottom: 4px;
+}
+.feed-empty-title {
+  font-family: 'Lora', serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.6;
+}
+.feed-empty-sub {
+  font-family: 'Lora', serif;
+  font-size: 0.82rem;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text-2);
+  max-width: 280px;
+  line-height: 1.6;
+}

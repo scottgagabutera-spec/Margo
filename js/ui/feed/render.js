@@ -151,7 +151,11 @@ function renderFeed() {
   stack.innerHTML = '';
   if (!filtered.length) {
     stack.style.opacity = '1';
-    stack.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.25);font-family:var(--font-mono);font-size:0.65rem;letter-spacing:3px;text-transform:uppercase">No lyrics here yet</div>';
+    stack.innerHTML = `<div class="feed-empty-state">
+    <div class="feed-empty-icon">♪</div>
+    <div class="feed-empty-title">No lyrics here yet</div>
+    <div class="feed-empty-sub">Be the first to drop a lyric that says what you can't</div>
+  </div>`;
     updateSwipeUI();
     return;
   }

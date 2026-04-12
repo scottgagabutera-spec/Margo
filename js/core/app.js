@@ -76,7 +76,12 @@ function goToFeed() {
   requestAnimationFrame(function() { requestAnimationFrame(function() { setTimeout(function() { renderFeed(); }, 60); }); });
   const hint = document.getElementById('swipeHint');
   if (hint) {
+    hint.style.display = 'none';
     setTimeout(() => {
+      if (!postsLoaded) return;
+      const stack = document.getElementById('cardStack');
+      const realCards = stack ? stack.querySelectorAll('.swipe-card:not(.sk-swipe-card)').length : 0;
+      if (realCards < 2) return;
       hint.style.cssText = 'display:flex;opacity:1;visibility:visible;position:absolute;bottom:240px;left:50%;transform:translateX(-50%);z-index:9999;flex-direction:column;align-items:center;gap:10px;pointer-events:none;transition:opacity 0.8s ease;';
       const hideHint = () => {
         hint.style.opacity = '0';
