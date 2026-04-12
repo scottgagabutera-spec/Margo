@@ -58,15 +58,24 @@
 /* ══════════════════════════════════════
    FLOATING NEW-POSTS BAR
 ══════════════════════════════════════ */
-.new-posts-bar {
+.new-posts-bar-wrap {
   position: fixed;
   top: 68px;
+  left: 0;
+  right: 0;
   z-index: 9999;
-  left: 50%;
-  transform: translateX(-50%) translateY(-4px);
-  width: auto;
-  max-width: calc(100vw - 48px);
-  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.new-posts-bar-wrap.visible {
+  opacity: 1;
+  pointer-events: all;
+  animation: margoGlow 2.4s ease-in-out infinite;
+}
+.new-posts-bar-pill {
   background: rgba(7,6,10,0.92);
   border: 1px solid rgba(232,197,71,0.35);
   border-radius: 50px;
@@ -78,29 +87,13 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(232,197,71,0.08);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.new-posts-bar::before {
-  content: "✦"; font-size: 0.7rem;
-  animation: margoPulse 1.8s ease-in-out infinite;
-}
-.new-posts-bar.visible {
-  opacity: 1;
-  pointer-events: all;
-  transform: translateX(-50%) translateY(0);
-  animation: margoGlow 2.4s ease-in-out infinite;
 }
 @keyframes margoPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
 @keyframes margoGlow { 0%,100%{box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 20px rgba(232,197,71,0.08)} 50%{box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 28px rgba(232,197,71,0.18)} }
