@@ -396,3 +396,48 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   50%  { box-shadow: 0 0 0 8px rgba(232,197,71,0); }
   100% { box-shadow: 0 0 0 0 rgba(232,197,71,0); }
 }
+
+/* ── Mobile header refinements ── */
+@media (max-width: 480px) {
+  /* M circle — slightly larger */
+  .feed-logo-circle {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* Search icon — gold to match brand */
+  .feed-search-icon-btn {
+    color: var(--gold);
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* + button — perfectly centered, 44x44 touch target */
+  #dropLyricNew {
+    width: 44px;
+    height: 44px;
+    min-width: unset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #dropLyricNew svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--bg);
+  }
+
+  /* Username pill — brand colors */
+  #headerUsernamePill {
+    background: var(--surface-2) !important;
+    color: var(--text-2) !important;
+    border: 1px solid var(--border) !important;
+    font-size: 0.6rem !important;
+    padding: 6px 10px !important;
+    border-radius: 50px !important;
+  }
+}
