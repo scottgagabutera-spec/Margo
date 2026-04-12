@@ -21,13 +21,13 @@ window._shareSheet = window._shareSheet || {
   isEncoding:   false,
   animFrame:    null,
   mounted:      false,
-  theme:        'void-violet',
+  theme:        'midnight-gold',
 };
 const SS = window._shareSheet;
 
 /* ── 5 core themes ── */
 const SS_THEMES = [
-  { id:'void-violet',   color:'#9B7FE8', bg:'#0E0B1A' },
+  { id:'midnight-gold',   color:'#E8C547', bg:'#0E0B1A' },
   { id:'midnight-gold', color:'#E8C547', bg:'#0B0B0D' },
   { id:'neon-cyan',     color:'#00e5ff', bg:'#050e1a' },
   { id:'sunset-coral',  color:'#ff6b6b', bg:'#1a0505' },
@@ -47,7 +47,7 @@ const SS_FEELING_CFG = {
   SendIt:     { bg:'rgba(0,229,255,0.11)',   text:'#00E5FF', border:'rgba(0,229,255,0.22)'   },
   LetOut:     { bg:'rgba(255,160,50,0.11)',  text:'#FFA032', border:'rgba(255,160,50,0.22)'  },
 };
-const SS_FEELING_DEFAULT = { bg:'rgba(155,127,232,0.11)', text:'#9B7FE8', border:'rgba(155,127,232,0.25)' };
+const SS_FEELING_DEFAULT = { bg:'rgba(232,197,71,0.09)', text:'#E8C547', border:'rgba(232,197,71,0.28)' };
 
 /* ── Song name for filename ── */
 function _songFilename(post, ext) {
@@ -111,25 +111,25 @@ function injectShareSheetStyles() {
     }
     .ss-header-left{display:flex;flex-direction:column;gap:2px}
     .ss-title{
-      font-family:'Syne',sans-serif;font-weight:800;font-size:0.85rem;
-      letter-spacing:2px;text-transform:uppercase;color:#fff;
+      font-family:'Lora',serif;font-weight:800;font-size:0.7rem;
+      letter-spacing:1px;text-transform:uppercase;color:#fff;
     }
     .ss-lyric-preview{
-      font-family:'DM Serif Display',serif;font-style:italic;
-      font-size:0.75rem;color:rgba(255,255,255,0.32);
+      font-family:'Lora',serif;font-style:italic;
+      font-size:0.7rem;font-style:italic;color:rgba(255,255,255,0.32);
       line-height:1.4;max-width:260px;
       overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
     }
     .ss-duet-badge{
       display:none;align-items:center;gap:5px;margin-top:3px;
-      font-family:'Space Mono',monospace;font-size:0.44rem;font-weight:700;
-      letter-spacing:1.5px;text-transform:uppercase;
+      font-family:'Lora',serif;font-size:0.6rem;font-weight:600;
+      letter-spacing:1px;text-transform:uppercase;
       padding:3px 9px;border-radius:20px;
-      background:rgba(155,127,232,0.09);border:1px solid rgba(155,127,232,0.25);
-      color:#9B7FE8;
+      background:rgba(232,197,71,0.09);border:1px solid rgba(232,197,71,0.28);
+      color:#E8C547;
     }
     .ss-duet-badge.visible{display:inline-flex}
-    .ss-duet-badge-dot{width:5px;height:5px;border-radius:50%;background:#9B7FE8;opacity:0.8}
+    .ss-duet-badge-dot{width:5px;height:5px;border-radius:50%;background:#E8C547;opacity:0.8}
     .ss-close{
       background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);
       color:rgba(255,255,255,0.35);width:30px;height:30px;
@@ -145,7 +145,7 @@ function injectShareSheetStyles() {
     }
     .ss-canvas-ring{
       position:relative;border-radius:18px;overflow:hidden;
-      box-shadow:0 16px 56px rgba(0,0,0,0.8),0 0 0 1px rgba(155,127,232,0.15);
+      box-shadow:0 16px 56px rgba(0,0,0,0.8),0 0 0 1px rgba(232,197,71,0.12);
       background:#0E0B1A;
     }
     #ssCanvas{display:block;border-radius:18px}
@@ -157,8 +157,8 @@ function injectShareSheetStyles() {
     }
     .ss-encoding-overlay.hidden{display:none}
     .ss-encoding-label{
-      font-family:'Space Mono',monospace;font-size:0.58rem;
-      font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+      font-family:'Lora',serif;font-size:0.6rem;
+      font-weight:600;letter-spacing:1px;text-transform:uppercase;
       color:rgba(255,255,255,0.5);
     }
     .ss-progress-bar-wrap{
@@ -166,7 +166,7 @@ function injectShareSheetStyles() {
       background:rgba(255,255,255,0.08);overflow:hidden;
     }
     .ss-progress-bar{
-      height:100%;border-radius:2px;background:#9B7FE8;
+      height:100%;border-radius:2px;background:#E8C547;
       transition:width 0.1s linear;width:0%;
     }
 
@@ -199,16 +199,16 @@ function injectShareSheetStyles() {
     }
     .ss-song-info{flex:1;min-width:0}
     .ss-song-title{
-      font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:600;
+      font-family:'Lora',serif;font-size:0.82rem;font-weight:600;
       color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
     .ss-song-artist{
-      font-family:'Space Mono',monospace;font-size:0.55rem;
+      font-family:'Lora',serif;font-size:0.7rem;
       color:rgba(255,255,255,0.35);
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
     .ss-feeling-tag{
-      font-family:'Space Mono',monospace;font-size:0.48rem;font-weight:700;
+      font-family:'Lora',serif;font-size:0.6rem;font-weight:600;
       text-transform:uppercase;letter-spacing:0.5px;
       padding:3px 9px;border-radius:20px;flex-shrink:0;
     }
@@ -216,22 +216,22 @@ function injectShareSheetStyles() {
     /* Primary save button */
     .ss-save-btn{
       margin:0 18px;padding:15px;border-radius:16px;
-      background:#9B7FE8;border:none;color:#0E0B1A;
-      font-family:'Space Mono',monospace;font-size:0.65rem;
-      font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+      background:#E8C547;border:none;color:#07060A;
+      font-family:'Lora',serif;font-size:0.6rem;
+      font-weight:700;letter-spacing:1px;text-transform:uppercase;
       cursor:pointer;transition:all 0.2s cubic-bezier(0.16,1,0.3,1);
       display:flex;align-items:center;justify-content:center;gap:8px;
       flex-shrink:0;
     }
     .ss-save-btn:hover{
-      background:#b09af0;transform:translateY(-1px);
-      box-shadow:0 8px 24px rgba(155,127,232,0.35);
+      background:#F5D46A;transform:translateY(-1px);
+      box-shadow:0 8px 24px rgba(232,197,71,0.35);
     }
     .ss-save-btn:active{transform:scale(0.98)}
     .ss-save-btn:disabled{opacity:0.5;cursor:wait;transform:none;box-shadow:none}
     .ss-copy-row{display:flex;gap:8px;margin-top:8px;}
     .ss-copy-row.hidden{display:none;}
-    .ss-copy-text-btn{flex:1;padding:9px 6px;border-radius:10px;border:1px solid rgba(232,197,71,0.3);background:rgba(232,197,71,0.06);color:#E8C547;font-family:var(--font-mono);font-size:0.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.18s;}
+    .ss-copy-text-btn{flex:1;padding:9px 6px;border-radius:10px;border:1px solid rgba(232,197,71,0.3);background:rgba(232,197,71,0.06);color:#E8C547;font-family:'Lora',serif;font-size:0.6rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.18s;}
     .ss-copy-text-btn:hover{background:rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.6);}
 
     /* Secondary row */
@@ -243,8 +243,8 @@ function injectShareSheetStyles() {
       border:1px solid rgba(255,255,255,0.09);
       background:rgba(255,255,255,0.03);
       color:rgba(255,255,255,0.5);
-      font-family:'Space Mono',monospace;
-      font-size:0.5rem;font-weight:700;
+      font-family:'Lora',serif;
+      font-size:0.6rem;font-weight:600;
       text-transform:uppercase;letter-spacing:1px;
       cursor:pointer;transition:all 0.18s;
       display:flex;flex-direction:column;align-items:center;gap:4px;
@@ -256,9 +256,9 @@ function injectShareSheetStyles() {
     .ss-sec-btn:active{transform:scale(0.97)}
     .ss-sec-btn-icon{font-size:1rem;line-height:1}
     .ss-sec-btn.active-format{
-      border-color:rgba(155,127,232,0.45);
-      background:rgba(155,127,232,0.08);
-      color:#9B7FE8;
+      border-color:rgba(232,197,71,0.42);
+      background:rgba(232,197,71,0.08);
+      color:#E8C547;
     }
   `;
   document.head.appendChild(s);
@@ -427,7 +427,7 @@ function ssStartPreview() {
       } else {
         const _draw = () => {
           if (typeof window.drawPosterToCtx === 'function') {
-            try { window.drawPosterToCtx(ctx, size, size, post, { design: SS.theme || 'void-violet', font: 'playfair' }); } catch(e) { console.error('[SS poster]', e); }
+            try { window.drawPosterToCtx(ctx, size, size, post, { design: SS.theme || 'midnight-gold', font: 'lora' }); } catch(e) { console.error('[SS poster]', e); }
           } else if (typeof window.drawPosterPreview === 'function') {
             try { window.drawPosterPreview(ctx, size, size, post); } catch(e) { console.error('[SS poster]', e); }
           } else {
@@ -477,18 +477,18 @@ function openShareSheet(post, opts = {}) {
   SS.posterBlob   = null;
   SS.activeFormat = 'gif';
   SS.isEncoding   = false;
-  SS.theme        = 'void-violet';
+  SS.theme        = 'midnight-gold';
 
   /* Reset theme dots */
   document.querySelectorAll('.ss-theme-dot').forEach((d, i) => {
     d.classList.toggle('active', i === 0);
   });
-  if (typeof window.gsSetTheme === 'function') window.gsSetTheme('void-violet');
+  if (typeof window.gsSetTheme === 'function') window.gsSetTheme('midnight-gold');
 
   /* Reset ring */
   const ring = document.getElementById('ssCanvasRing');
   if (ring) {
-    ring.style.boxShadow = '0 16px 56px rgba(0,0,0,0.8),0 0 0 1px rgba(155,127,232,0.15)';
+    ring.style.boxShadow = '0 16px 56px rgba(0,0,0,0.8),0 0 0 1px rgba(232,197,71,0.12)';
     ring.style.background = '#0E0B1A';
   }
 
@@ -584,13 +584,13 @@ function populateSSDuetInfoStrip(post, echoPost) {
   const eE = SS_FEELING_CFG[echoPost.emotion] || SS_FEELING_DEFAULT;
   strip.innerHTML = `
     <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
-      <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:700;color:#FF6B9D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kP.song||'Unknown'}</div>
-      <div style="font-family:'Space Mono',monospace;font-size:0.5rem;color:rgba(255,255,255,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kP.artist||''}</div>
+      <div style="font-family:'Lora',serif;font-size:0.75rem;font-weight:700;color:#FF6B9D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kP.song||'Unknown'}</div>
+      <div style="font-family:'Lora',serif;font-size:0.5rem;color:rgba(255,255,255,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kP.artist||''}</div>
     </div>
-    <span style="font-family:'Space Mono',monospace;font-size:0.55rem;font-weight:700;color:rgba(155,127,232,0.55);flex-shrink:0;padding:0 4px">↔</span>
+    <span style="font-family:'Lora',serif;font-size:0.55rem;font-weight:700;color:rgba(232,197,71,0.50);flex-shrink:0;padding:0 4px">↔</span>
     <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:right">
-      <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:700;color:#6B8CFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kE.song||'Unknown'}</div>
-      <div style="font-family:'Space Mono',monospace;font-size:0.5rem;color:rgba(255,255,255,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kE.artist||''}</div>
+      <div style="font-family:'Lora',serif;font-size:0.75rem;font-weight:700;color:#6B8CFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kE.song||'Unknown'}</div>
+      <div style="font-family:'Lora',serif;font-size:0.5rem;color:rgba(255,255,255,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${kE.artist||''}</div>
     </div>
     <span class="ss-feeling-tag" style="background:${eE.bg};color:${eE.text};border:1px solid ${eE.border};flex-shrink:0;margin-left:4px">${echoPost.emotion||'Echo'}</span>
   `;
@@ -696,11 +696,11 @@ function ssSave() {
     ctx.lineTo(lCx + (61-40)*sc, lCy + (55-40)*sc);
     ctx.stroke();
     ctx.restore();
-    // MARGO wordmark — ghost, Syne 800 (real Margo brand font)
+    // MARGO wordmark — ghost, Lora 700
     ctx.save();
     ctx.globalAlpha = 0.2;
     ctx.fillStyle = '#E8C547';
-    ctx.font = '800 36px "Syne", "Arial Black", sans-serif';
+    ctx.font = '700 36px "Lora", serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.letterSpacing = '8px';
@@ -752,7 +752,7 @@ function ssSave() {
     ctx.fillText(song ? song.toUpperCase() : '', W / 2, H - 180);
     // Artist name
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '400 28px "DM Sans", sans-serif';
+    ctx.font = '400 28px "Lora", serif';
     ctx.letterSpacing = '0px';
     ctx.fillText(artist || '', W / 2, H - 138);
     // Divider line bottom
@@ -764,7 +764,7 @@ function ssSave() {
     ctx.stroke();
     // trymargo.com
     ctx.fillStyle = 'rgba(232,197,71,0.6)';
-    ctx.font = '400 24px "Space Mono", monospace';
+    ctx.font = '400 24px "Lora", serif';
     ctx.letterSpacing = '2px';
     ctx.fillText('trymargo.com', W / 2, H - 76);
     const _drawAndSave = () => {
@@ -784,7 +784,7 @@ function ssSave() {
   if (typeof window.PlatformPicker === 'undefined') {
     console.error('[SS] PlatformPicker not loaded'); return;
   }
-  const theme = SS.theme || 'void-violet';
+  const theme = SS.theme || 'midnight-gold';
   window.PlatformPicker.pick({
     format: fmt,
     view:   'card',
@@ -793,9 +793,9 @@ function ssSave() {
     opts: {
       drawFn: fmt === 'gif'
         ? (ctx, W, H, t) => { if (typeof window.gsDrawFrame === 'function') window.gsDrawFrame(ctx, W, H, t, post); }
-        : (ctx, W, H)    => { if (typeof window.drawPosterToCtx === 'function') window.drawPosterToCtx(ctx, W, H, post, { design: theme, font: 'playfair' }); },
+        : (ctx, W, H)    => { if (typeof window.drawPosterToCtx === 'function') window.drawPosterToCtx(ctx, W, H, post, { design: theme, font: 'lora' }); },
       design:  theme,
-      font:    'playfair',
+      font: 'lora',
       post:    post,
       filename: (post?.knowledge?.song || 'Lyric').trim().substring(0, 40) + ' — MARGO',
       onDone:  () => { if (typeof showToast === 'function') showToast(fmt === 'gif' ? 'GIF saved ✓' : 'Poster saved ✓'); ssStartPreview(); },
@@ -905,7 +905,7 @@ async function ssGeneratePoster() {
       if (typeof drawDuetPosterToCtx === 'function') drawDuetPosterToCtx(ctx, 1080, 1080);
     } else {
       if (typeof window.drawPosterToCtx === 'function') {
-        window.drawPosterToCtx(ctx, 1080, 1080, SS.post, { design: SS.theme || 'void-violet', font: 'playfair' });
+        window.drawPosterToCtx(ctx, 1080, 1080, SS.post, { design: SS.theme || 'midnight-gold', font: 'lora' });
       }
     }
     SS.posterBlob = await new Promise((res, rej) => {

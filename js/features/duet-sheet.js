@@ -9,7 +9,7 @@
 
 // ── Margo font preloader — self-hosted Lora, no Google dependency ──
 (function _preloadMargoFonts() {
-  const base = 'assets/fonts/lora/';
+  const base = '/assets/fonts/lora/';
   const faces = [
     new FontFace('Lora', 'url(' + base + 'lora-v37-latin-regular.woff2)',     { weight: '400', style: 'normal' }),
     new FontFace('Lora', 'url(' + base + 'lora-v37-latin-italic.woff2)',      { weight: '400', style: 'italic' }),
