@@ -139,6 +139,8 @@ function renderFeed() {
   injectSortBar();
   if (postsLoaded) updateLandingStats();
   if (!postsLoaded) { renderSkeleton(); return; }
+  const _ind = document.getElementById('newPostsIndicator');
+  if (_ind) _ind.classList.remove('visible');
 
   const filtered = getRankedPosts();
   const stack = document.getElementById('cardStack');
