@@ -343,3 +343,15 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   max-width: 280px;
   line-height: 1.6;
 }
+
+/* Loading message inside skeleton */
+.sk-loading-msg {
+  font-family: 'Lora', serif;
+  font-size: 0.82rem;
+  font-weight: 400;
+  font-style: italic;
+  color: rgba(255,255,255,0.25);
+  text-align: center;
+  margin-top: 8px;
+  letter-spacing: 0.3px;
+}

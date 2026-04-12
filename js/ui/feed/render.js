@@ -105,6 +105,7 @@ function renderSkeleton() {
   stack.innerHTML = `
     <div class="swipe-card sk-swipe-card">
       <div class="card-content sk-content">
+        <div class="sk-loading-msg">Finding lyrics for you…</div>
         <div class="sk-pill"></div>
         <div class="sk-lyric-1"></div>
         <div class="sk-lyric-2"></div>

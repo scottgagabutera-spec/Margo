@@ -73,6 +73,8 @@
   box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(232,197,71,0.08);
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   white-space: nowrap; display: flex; align-items: center; gap: 8px;
+  max-width: calc(100vw - 48px);
+  width: max-content;
 }
 .new-posts-bar::before {
   content: "✦"; font-size: 0.7rem;
