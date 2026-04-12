@@ -439,3 +439,20 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   /* M circle — 44px final */
   .feed-logo-circle { width: 44px; height: 44px; }
 }
+
+/* Username pill — reset overrides, let inner pill control itself */
+@media (max-width: 480px) {
+  #headerUsernamePill {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  #headerUsernamePill * {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+  }
+}
