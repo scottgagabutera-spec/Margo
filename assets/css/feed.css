@@ -355,104 +355,22 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   margin-top: 8px;
   letter-spacing: 0.3px;
 }
-
 /* ══════════════════════════════════════
    MOBILE HEADER — compact premium
 ══════════════════════════════════════ */
 @media (max-width: 480px) {
   .feed-logo { display: none !important; }
   .post-count { display: none !important; }
-  .feed-logo-circle { width: 32px; height: 32px; }
-  .feed-search-icon-btn { width: 36px; height: 36px; min-width: 36px; padding: 0; border-radius: 50%; background: none; border: none; color: var(--gold); display: flex; align-items: center; justify-content: center; }
-  #dropLyricNew { width: 36px; height: 36px; min-width: 36px; padding: 0; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; gap: 0; font-size: 0 !important; animation: margoCtaPulse 2.5s ease-in-out infinite; }
-  #dropLyricNew svg { width: 18px; height: 18px; stroke: var(--bg); stroke-width: 3; display: block; flex-shrink: 0; }
-  #headerUsernamePill { background: var(--surface-2) !important; color: var(--text-2) !important; border: 1px solid var(--border) !important; font-size: 0.6rem !important; padding: 5px 10px !important; border-radius: 50px !important; height: 36px !important; display: flex !important; align-items: center !important; }
+  .feed-logo-wrap { height: 100%; align-items: center; display: flex; }
+  .feed-logo-circle { width: 44px; height: 44px; }
+  .feed-search-icon-btn { width: 32px; height: 32px; min-width: 32px; padding: 0; border-radius: 50%; background: none; border: none; color: var(--gold); display: flex; align-items: center; justify-content: center; }
+  #dropLyricNew { width: 32px; height: 32px; min-width: 32px; padding: 0; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; gap: 0; font-size: 0 !important; position: relative; overflow: hidden; animation: margoCtaPulse 2.5s ease-in-out infinite; }
+  #dropLyricNew svg { width: 16px; height: 16px; stroke: var(--bg); stroke-width: 3; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: block; }
+  #headerUsernamePill { background: transparent !important; border: none !important; padding: 0 !important; height: auto !important; border-radius: 0 !important; pointer-events: auto; cursor: pointer; }
+  #headerUsernamePill * { pointer-events: auto !important; cursor: pointer !important; }
 }
-
 @keyframes margoCtaPulse {
   0%   { box-shadow: 0 0 0 0 rgba(232,197,71,0.55); }
   50%  { box-shadow: 0 0 0 8px rgba(232,197,71,0); }
   100% { box-shadow: 0 0 0 0 rgba(232,197,71,0); }
-}
-
-/* M circle bigger than action icons */
-@media (max-width: 480px) {
-  .feed-logo-circle { width: 36px; height: 36px; }
-  .feed-search-icon-btn { width: 32px; height: 32px; min-width: 32px; }
-  #dropLyricNew { width: 32px; height: 32px; min-width: 32px; }
-}
-
-/* M circle vertical center + size fix */
-@media (max-width: 480px) {
-  .feed-logo-wrap {
-    align-items: center;
-    display: flex;
-  }
-  .feed-logo-circle {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  /* + icon true center */
-  #dropLyricNew {
-    position: relative;
-    overflow: hidden;
-  }
-  #dropLyricNew svg {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
-}
-
-/* M circle — vertically centered now post count is gone */
-@media (max-width: 480px) {
-  .feed-logo-wrap {
-    height: 100%;
-    align-items: center;
-  }
-}
-
-/* M circle — 44px final */
-@media (max-width: 480px) {
-  .feed-logo-circle { width: 44px; height: 44px; }
-}
-
-/* M circle — 44px final */
-@media (max-width: 480px) {
-  .feed-logo-circle { width: 44px; height: 44px; }
-}
-
-/* Username pill — ensure inner pill is clickable */
-@media (max-width: 480px) {
-  #headerUsernamePill {
-    pointer-events: auto;
-    overflow: visible;
-    cursor: pointer;
-  }
-  #headerUsernamePill * {
-    pointer-events: auto;
-  }
-  /* M circle — 44px final */
-  .feed-logo-circle { width: 44px; height: 44px; }
-}
-
-/* Username pill — reset overrides, let inner pill control itself */
-@media (max-width: 480px) {
-  #headerUsernamePill {
-    background: transparent !important;
-    border: none !important;
-    padding: 0 !important;
-    height: auto !important;
-    border-radius: 0 !important;
-    pointer-events: auto;
-    cursor: pointer;
-  }
-  #headerUsernamePill * {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-  }
 }
