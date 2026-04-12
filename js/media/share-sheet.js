@@ -114,7 +114,7 @@ function injectShareSheetStyles() {
       font-family:'Lora',serif;font-weight:800;font-size:0.7rem;
       letter-spacing:1px;text-transform:uppercase;color:#fff;
     }
-    .ss-lyric-preview{
+    .ss-lyric-preview{display:none;
       font-family:'Lora',serif;font-style:italic;
       font-size:0.7rem;font-style:italic;color:rgba(255,255,255,0.32);
       line-height:1.4;max-width:260px;
