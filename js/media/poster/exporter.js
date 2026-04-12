@@ -71,8 +71,8 @@ const PosterExporter = {
       await new Promise((resolve, reject) => {
         off.toBlob(blob => {
           if (!blob) { const err = new Error('toBlob returned null'); onError(err); reject(err); return; }
-          _download(blob, (opts.filename || `margo-${Date.now()}`) + '.png');
-          onDone(); resolve();
+
+          onDone(blob); resolve();
         }, 'image/png', quality);
       });
     } catch (err) { onError(err); }

@@ -448,10 +448,27 @@ function _fireExport() {
       _showProgress(pct, `${format === 'gif' ? 'GIF' : 'Poster'} ${Math.round(pct * 100)}%`);
       callerProgress(pct);
     },
-    onDone: () => {
+    onDone: async (blob) => {
       _hideProgress();
       _close();
-      callerDone();
+      const platform = PLATFORMS.find(x => x.id === PP.selected);
+      const ext      = format === 'gif' ? 'gif' : 'png';
+      const mime     = format === 'gif' ? 'image/gif' : 'image/png';
+      const fileName = `margo-${platform ? platform.id : 'share'}-${Date.now()}.${ext}`;
+      const shareText = (opts && opts.shareText) || 'trymargo.com';
+      if (blob && navigator.share && navigator.canShare) {
+        const file = new File([blob], fileName, { type: mime });
+        if (navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ title: 'MARGO', text: shareText, files: [file] }); callerDone(blob); return; }
+          catch(e) { if (e.name === 'AbortError') { callerDone(blob); return; } }
+        }
+      }
+      if (navigator.share) {
+        try { await navigator.share({ title: 'MARGO', text: shareText, url: 'https://trymargo.com' }); callerDone(blob); return; }
+        catch(e) { if (e.name === 'AbortError') { callerDone(blob); return; } }
+      }
+      if (blob) _download(blob, fileName);
+      callerDone(blob);
     },
     onError: (err) => {
       _hideProgress();
