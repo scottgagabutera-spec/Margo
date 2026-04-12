@@ -138,7 +138,9 @@ function startFirebaseSync() {
 
     // Always render on initial load — feed may not be active yet but posts are ready
     if (isInitialLoad) {
-      if (typeof renderFeed === 'function') renderFeed();
+      setTimeout(function() {
+        if (typeof renderFeed === 'function') renderFeed();
+      }, 80);
     } else if (feed && feed.classList.contains('active')) {
       if (isBackfillOnly || !newPostsAvailable) {
         if (typeof renderFeed === 'function') renderFeed();
