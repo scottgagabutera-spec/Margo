@@ -13,7 +13,7 @@
 
 /* ── State ── */
 const GS = {
-  theme: 'void-violet', font: 'playfair', animation: 'fade-up',
+  theme: 'midnight-gold', font: 'lora-intimate', animation: 'fade-up',
   speed: 'normal', isExporting: false,
   _animFrame: null, _frame: 0, _last: 0,
   _canvasSize: 0,
@@ -21,10 +21,10 @@ const GS = {
 
 /* ── Themes — flat dark base, accent only ── */
 const GS_THEMES = {
-  'void-violet':     { bg: ['#0E0B1A','#120E22','#0E0B1A'], accent: '#9B7FE8',  text: '#EAE5F5' },
+  'void-violet':     { bg: ['#0E0B1A','#120E22','#0E0B1A'], accent: '#E8C547',  text: '#EAE5F5' },
   'midnight-gold':   { bg: ['#0B0B0D','#151004','#0B0B0D'], accent: '#E8C547',  text: '#ffffff' },
   'royal-purple':    { bg: ['#0d0014','#110018','#0d0014'], accent: '#c77dff',  text: '#ffffff' },
-  'neon-cyan':       { bg: ['#050e1a','#081420','#050e1a'], accent: '#00e5ff',  text: '#ffffff' },
+  'neon-cyan':       { bg: ['#050e1a','#081420','#050e1a'], accent: '#E8C547',  text: '#ffffff' },
   'sunset-coral':    { bg: ['#1a0505','#200808','#1a0505'], accent: '#ff6b6b',  text: '#ffffff' },
   'emerald-night':   { bg: ['#051a0d','#081f10','#051a0d'], accent: '#50fa7b',  text: '#ffffff' },
   'rose-gold':       { bg: ['#1a0d0f','#200f12','#1a0d0f'], accent: '#f4a4c0', text: '#ffffff' },
@@ -37,14 +37,11 @@ const GS_THEMES = {
 };
 
 const GS_FONTS = {
-  playfair:     { family:"'Playfair Display',serif",    style:'italic'  },
-  cormorant:    { family:"'Cormorant Garamond',serif",  style:'italic'  },
-  lora:         { family:"'Lora',serif",                style:'italic'  },
-  merriweather: { family:"'Merriweather',serif",        style:'normal'  },
-  josefin:      { family:"'Josefin Sans',sans-serif",   style:'normal'  },
-  bebas:        { family:"'Bebas Neue',sans-serif",     style:'normal'  },
-  oswald:       { family:"'Oswald',sans-serif",         style:'normal'  },
-  dancing:      { family:"'Dancing Script',cursive",    style:'normal'  },
+  'lora-intimate':   { family:"'Lora',serif", style:'italic',  weight:'400' },
+  'lora-bold':       { family:"'Lora',serif", style:'normal',  weight:'700' },
+  'lora-passionate': { family:"'Lora',serif", style:'italic',  weight:'700' },
+  'lora-quiet':      { family:"'Lora',serif", style:'normal',  weight:'500' },
+  'lora-tender':     { family:"'Lora',serif", style:'italic',  weight:'500' },
 };
 
 const GS_SPEED_MS = { slow: 130, normal: 70, fast: 35 };
@@ -112,8 +109,8 @@ function gsWrap(ctx, text, x, y, maxW, lineH, align) {
 function gsLyricFont(ctx, data, scale) {
   const len  = data.lyric.length;
   const sz   = len < 40 ? 48 * scale : len < 70 ? 38 * scale : 28 * scale;
-  const bold = ['bebas','josefin','oswald'].includes(GS.font);
-  ctx.font   = `${data.font.style === 'italic' ? 'italic ' : ''}${bold ? '700' : '600'} ${sz}px ${data.font.family}`;
+  const bold = ['lora-bold','lora-passionate'].includes(GS.font);
+  ctx.font   = `${data.font.style === 'italic' ? 'italic ' : ''}${data.font.weight||'400'} ${sz}px ${data.font.family}`;
   return sz;
 }
 /* ================================================================
@@ -136,7 +133,7 @@ function gsDrawWatermark(ctx, W, H, theme) {
   ctx.textBaseline = 'middle';
   ctx.textAlign    = 'center';
   ctx.fillStyle    = wmColor;
-  ctx.font         = `700 ${Math.max(9, W * 0.018)}px Space Mono, monospace`;
+  ctx.font = `700 ${Math.max(9, W * 0.018)}px 'Lora',serif`;
   ctx.fillText('trymargo.com', W / 2, H * 0.955);
   ctx.restore();
 }
@@ -146,8 +143,8 @@ function gsDrawWatermark(ctx, W, H, theme) {
    ================================================================ */
 function gsDrawFrame(ctx, W, H, t, post) {
   const p     = post || window.currentPost || {};
-  const theme = GS_THEMES[GS.theme] || GS_THEMES['void-violet'];
-  const font  = GS_FONTS[GS.font]   || GS_FONTS.playfair;
+  const theme = GS_THEMES[GS.theme] || GS_THEMES['midnight-gold'];
+  const font  = GS_FONTS[GS.font]   || GS_FONTS['lora-intimate'];
   const k     = p.knowledge || {};
 
   const data = {
@@ -215,7 +212,7 @@ function gsDrawTrackAndRule(ctx, W, H, data, scale, pad, lyricStartY, metaY) {
   /* Track number */
   const trackSize = Math.max(8, Math.round(W * 0.020));
   ctx.save();
-  ctx.font         = `700 ${trackSize}px Space Mono, monospace`;
+  ctx.font = `700 ${trackSize}px 'Lora',serif`;
   ctx.fillStyle    = theme.accent;
   ctx.globalAlpha  = 0.55;
   ctx.textBaseline = 'alphabetic';
@@ -246,13 +243,13 @@ function gsMeta(ctx, W, H, data, scale, pad, theme) {
   if (data.song) {
     ctx.fillStyle   = data.theme.text;
     ctx.globalAlpha = 0.9;
-    ctx.font        = `600 ${Math.max(11, Math.round(W * 0.028))}px Space Mono, monospace`;
+    ctx.font = `600 ${Math.max(11, Math.round(W * 0.028))}px 'Lora',serif`;
     ctx.fillText(data.song, pad, metaY);
   }
   if (data.artist) {
     ctx.fillStyle   = data.theme.accent;
     ctx.globalAlpha = 1;
-    ctx.font        = `700 ${Math.max(9, Math.round(W * 0.022))}px Space Mono, monospace`;
+    ctx.font = `700 ${Math.max(9, Math.round(W * 0.022))}px 'Lora',serif`;
     ctx.fillText(data.artist, pad, metaY + Math.round(W * 0.036));
   }
   ctx.restore();
@@ -491,8 +488,8 @@ function openGifStudio(post) {
   const ov = document.getElementById('gifStudioOverlay');
   if (!ov) return;
 
-  GS.theme     = 'void-violet';
-  GS.font      = 'playfair';
+  GS.theme     = 'midnight-gold';
+  GS.font      = 'lora-intimate';
   GS.animation = 'fade-up';
   GS.speed     = 'normal';
   GS.isExporting   = false;
