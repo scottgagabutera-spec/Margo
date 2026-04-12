@@ -611,6 +611,8 @@ function ssTogglePoster() {
   if (btnSpan) btnSpan.textContent = SS.activeFormat === 'poster' ? 'GIF' : 'Poster';
   if (btn) btn.classList.toggle('active-format', SS.activeFormat === 'poster');
   if (lbl) lbl.textContent = SS.activeFormat === 'gif' ? '↓ Save GIF' : '↓ Save Poster';
+  const copyRow = document.getElementById('ssCopyRow');
+  if (copyRow) copyRow.classList.add('hidden');
 
   ssStopPreview();
   requestAnimationFrame(() => ssStartPreview());
@@ -626,6 +628,8 @@ function ssToggleText() {
   if (lbl) lbl.textContent = SS.activeFormat === 'text' ? '↓ Save Text Card' : '↓ Save GIF';
   const copyRow = document.getElementById('ssCopyRow');
   if (copyRow) copyRow.classList.toggle('hidden', SS.activeFormat !== 'text');
+  const posterBtn = document.getElementById('ssBtnPoster');
+  if (posterBtn) posterBtn.classList.remove('active-format');
   ssStopPreview();
   requestAnimationFrame(() => ssStartPreview());
 }
