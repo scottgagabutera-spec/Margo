@@ -863,53 +863,26 @@ function _downloadBlob(blob, filename) {
 ========================================================== */
 async function ssShareTo() {
   if (SS.isEncoding) return;
-
-  /* Generate blob if not cached */
-  if (SS.activeFormat === 'poster' && !SS.posterBlob) await ssGeneratePoster();
-  if (SS.activeFormat === 'gif'    && !SS.gifBlob)    await ssGenerateGif();
-
-  const blob     = SS.activeFormat === 'poster' ? SS.posterBlob : SS.gifBlob;
-  const isGif    = SS.activeFormat === 'gif';
-  const ext      = isGif ? 'gif' : 'png';
-  const mime     = isGif ? 'image/gif' : 'image/png';
-  const fileName = _songFilename(SS.post, ext);
-  const lyric    = SS.post?.text?.substring(0, 60) || '';
+  SS.gifBlob    = null;
+  SS.posterBlob = null;
+  const isGif     = SS.activeFormat !== 'poster';
+  const post      = SS.post;
+  const theme     = SS.theme || 'midnight-gold';
+  const lyric     = post?.text?.substring(0, 60) || '';
   const shareText = `"${lyric}" — trymargo.com`;
-
-  /* Tier 1 — native share with file (mobile, modern desktop) */
-  if (blob && navigator.share && navigator.canShare) {
-    const file = new File([blob], fileName, { type: mime });
-    if (navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ title: 'MARGO', text: shareText, files: [file] });
-        return;
-      } catch(e) { if (e.name === 'AbortError') return; }
-    }
-  }
-
-  /* Tier 2 — native share without file (desktop Chrome/Edge/Safari — opens OS share with email, nearby, etc) */
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: 'MARGO', text: shareText, url: 'https://trymargo.com' });
-      return;
-    } catch(e) { if (e.name === 'AbortError') return; }
-  }
-
-  /* Tier 3 — no Web Share API support — open PlatformPicker */
-  if (blob && typeof window.PlatformPicker?.pick === 'function') {
-    window.PlatformPicker.pick({
-      format: isGif ? 'gif' : 'poster',
-      blob,
-      post: SS.post,
-    });
+  if (typeof window.PlatformPicker?.pick !== 'function') {
+    if (typeof showToast === 'function') showToast('Platform picker not loaded');
     return;
   }
-
-  /* Last resort — download */
-  if (blob) {
-    _downloadBlob(blob, fileName);
-    if (typeof showToast === 'function') showToast('Saved to device ✓');
-  }
+  window.PlatformPicker.pick({
+    format: isGif ? 'gif' : 'poster',
+    shareText,
+    post,
+    view: isGif ? 'gif' : 'poster',
+    p1:   post,
+    p2:   null,
+    opts: { theme, font: 'lora', shareText, design: theme },
+  });
 }
 
 /* ==========================================================

@@ -93,7 +93,7 @@ const GifExporter = {
       const oc  = off.getContext('2d');
 
       const gif = new GIF({
-        workers: 2, quality: 6,
+        workers: 4, quality: 1,
         width: W, height: H,
         workerScript: _resolveWorker(),
         dither: false,
