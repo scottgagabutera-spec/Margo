@@ -381,3 +381,29 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   .feed-search-icon-btn { width: 32px; height: 32px; min-width: 32px; }
   #dropLyricNew { width: 32px; height: 32px; min-width: 32px; }
 }
+
+/* M circle vertical center + size fix */
+@media (max-width: 480px) {
+  .feed-logo-wrap {
+    align-items: center;
+    display: flex;
+  }
+  .feed-logo-circle {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* + icon true center */
+  #dropLyricNew {
+    position: relative;
+    overflow: hidden;
+  }
+  #dropLyricNew svg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
