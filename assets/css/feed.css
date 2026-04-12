@@ -355,3 +355,44 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   margin-top: 8px;
   letter-spacing: 0.3px;
 }
+
+/* ══════════════════════════════════════
+   MOBILE HEADER — compact premium
+══════════════════════════════════════ */
+@media (max-width: 480px) {
+  /* Hide wordmark — M circle is enough */
+  .feed-logo { display: none !important; }
+
+  /* Hide post counter */
+  .post-count { display: none !important; }
+
+  /* Collapse share button to gold + icon only */
+  #dropLyricNew {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+    gap: 0;
+    box-shadow: 0 0 0 0 rgba(232,197,71,0.6);
+    animation: margoCtaPulse 2.5s ease-in-out infinite;
+  }
+
+  /* Hide the text inside the button, keep only the + svg */
+  #dropLyricNew svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Hide "Share a Lyric" text node — target via font-size trick */
+  #dropLyricNew { font-size: 0 !important; }
+  #dropLyricNew svg { display: block; }
+}
+
+/* Gold heartbeat pulse for + CTA */
+@keyframes margoCtaPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(232,197,71,0.55); }
+  50%  { box-shadow: 0 0 0 8px rgba(232,197,71,0); }
+  100% { box-shadow: 0 0 0 0 rgba(232,197,71,0); }
+}
