@@ -154,7 +154,7 @@ function renderFeed() {
     stack.style.opacity = '1';
     stack.innerHTML = `<div class="feed-empty-state">
     <div class="feed-empty-icon">♪</div>
-    <div class="feed-empty-title">First lyric here is yours</div>
+    <div class="feed-empty-title">The lyrics are coming…</div>
   </div>`;
     updateSwipeUI();
     return;
