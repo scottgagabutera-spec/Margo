@@ -99,16 +99,33 @@ function buildSwipeCard(post, i) {
 }
 
 function renderSkeleton() {
-  feedList.innerHTML='';
-  for (let i=0;i<6;i++) {
-    const s=document.createElement('div');
-    s.className='feed-card skeleton-card';
-    s.style.animationDelay=(i*0.07)+'s';
-    s.innerHTML=`<div class="sk-line sk-short"></div><div class="sk-block"></div>
-      <div class="sk-line sk-medium"></div>
-      <div class="sk-row"><div class="sk-long"></div><div class="sk-long"></div></div>`;
-    feedList.appendChild(s);
-  }
+  const stack = document.getElementById('cardStack');
+  if (!stack) return;
+  stack.style.opacity = '1';
+  stack.innerHTML = `
+    <div class="swipe-card sk-swipe-card">
+      <div class="card-content sk-content">
+        <div class="sk-loading-msg">The lyrics are coming…</div>
+        <div class="sk-pill"></div>
+        <div class="sk-lyric-1"></div>
+        <div class="sk-lyric-2"></div>
+        <div class="sk-lyric-3"></div>
+        <div class="sk-time"></div>
+      </div>
+      <div class="card-song">
+        <div class="sk-art"></div>
+        <div class="sk-song-text">
+          <div class="sk-song-title"></div>
+          <div class="sk-song-artist"></div>
+        </div>
+      </div>
+      <div class="card-actions">
+        <div class="sk-action"></div>
+        <div class="sk-action"></div>
+        <div class="sk-action"></div>
+      </div>
+    </div>`,
+  stack.querySelector('.sk-swipe-card').style.transform = 'translateY(0)';
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -122,6 +139,8 @@ function renderFeed() {
   injectSortBar();
   if (postsLoaded) updateLandingStats();
   if (!postsLoaded) { renderSkeleton(); return; }
+  const _ind = document.getElementById('newPostsIndicator');
+  if (_ind) _ind.classList.remove('visible');
 
   const filtered = getRankedPosts();
   const stack = document.getElementById('cardStack');
@@ -135,7 +154,10 @@ function renderFeed() {
   stack.innerHTML = '';
   if (!filtered.length) {
     stack.style.opacity = '1';
-    stack.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.25);font-family:var(--font-mono);font-size:0.65rem;letter-spacing:3px;text-transform:uppercase">No lyrics here yet</div>';
+    stack.innerHTML = `<div class="feed-empty-state">
+    <div class="feed-empty-icon">♪</div>
+    <div class="feed-empty-title">The lyrics are coming…</div>
+  </div>`;
     updateSwipeUI();
     return;
   }

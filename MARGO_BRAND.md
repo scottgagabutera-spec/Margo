@@ -112,3 +112,18 @@ Empty states are invitations, not errors.
 
 ---
 Last updated: April 2026 — Version 3.0
+
+## 11. Mobile-Specific Component Rules
+
+### Floating banners (new-posts-bar, toast notifications)
+- max-width: calc(100vw - 48px) — never touch screen edges
+- top: 68px desktop / 56px mobile — below the header
+- font-size: 0.6rem on all screens — never smaller
+- padding: 10px 22px desktop / 9px 16px mobile
+- Always centered with left:50% + translateX(-50%)
+- Never use white-space:nowrap on mobile — allow text to fit
+
+### Touch targets
+- Minimum 44x44px on all interactive elements
+- Buttons in headers: min-height 36px, min-width 80px
+- Pills and tags: min-height 28px
