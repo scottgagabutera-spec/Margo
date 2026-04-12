@@ -863,7 +863,6 @@ function _downloadBlob(blob, filename) {
 ========================================================== */
 async function ssShareTo() {
   if (SS.isEncoding) return;
-  /* Always re-generate fresh — no size caching */
   SS.gifBlob    = null;
   SS.posterBlob = null;
   if (SS.activeFormat === 'poster') await ssGeneratePoster();
@@ -871,26 +870,31 @@ async function ssShareTo() {
   const blob      = SS.activeFormat === 'poster' ? SS.posterBlob : SS.gifBlob;
   if (!blob) return;
   const isGif     = SS.activeFormat === 'gif';
-  const ext       = isGif ? 'gif' : 'png';
-  const mime      = isGif ? 'image/gif' : 'image/png';
-  const fileName  = _songFilename(SS.post, ext);
   const lyric     = SS.post?.text?.substring(0, 60) || '';
   const shareText = `"${lyric}" — trymargo.com`;
-  /* Tier 1 — native share with file (mobile + modern desktop) */
+  /* Try sharing with file — attempt GIF first, fall back to PNG if GIF not accepted */
   if (navigator.share && navigator.canShare) {
-    const file = new File([blob], fileName, { type: mime });
-    if (navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ title: 'MARGO', text: shareText, files: [file] }); return; }
-      catch(e) { if (e.name === 'AbortError') return; }
+    const attempts = isGif
+      ? [{ ext:'gif', mime:'image/gif' }, { ext:'png', mime:'image/png' }]
+      : [{ ext:'png', mime:'image/png' }];
+    for (const { ext, mime } of attempts) {
+      const fileName = _songFilename(SS.post, ext);
+      const fileBlob = (ext === 'gif') ? blob : blob;
+      const file = new File([fileBlob], fileName, { type: mime });
+      if (navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ title: 'MARGO', text: shareText, files: [file] }); return; }
+        catch(e) { if (e.name === 'AbortError') return; }
+      }
     }
   }
-  /* Tier 2 — native share URL only (desktop fallback — opens OS share with email, nearby etc) */
+  /* Tier 2 — URL only share (opens OS share sheet without file) */
   if (navigator.share) {
     try { await navigator.share({ title: 'MARGO', text: shareText, url: 'https://trymargo.com' }); return; }
     catch(e) { if (e.name === 'AbortError') return; }
   }
-  /* Tier 3 — no Web Share API — download */
-  _downloadBlob(blob, fileName);
+  /* Last resort — download */
+  const fallbackName = _songFilename(SS.post, isGif ? 'gif' : 'png');
+  _downloadBlob(blob, fallbackName);
   if (typeof showToast === 'function') showToast('Saved to device ✓');
 }
 
