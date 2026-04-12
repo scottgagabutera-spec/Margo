@@ -72,7 +72,7 @@
   transition: opacity 0.35s ease, transform 0.35s ease;
   box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(232,197,71,0.08);
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  white-space: nowrap; display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px;
   max-width: calc(100vw - 48px);
   width: max-content;
 }
@@ -728,5 +728,16 @@ body.modal-open { overflow: hidden !important; }
   .new-posts-bar {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+}
+
+/* ── New posts banner — mobile ── */
+@media (max-width: 480px) {
+  .new-posts-bar {
+    top: 56px;
+    font-size: 0.6rem;
+    padding: 9px 16px 9px 12px;
+    text-align: center;
+    justify-content: center;
   }
 }
