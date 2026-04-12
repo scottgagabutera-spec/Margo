@@ -415,3 +415,8 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
     align-items: center;
   }
 }
+
+/* M circle — 44px final */
+@media (max-width: 480px) {
+  .feed-logo-circle { width: 44px; height: 44px; }
+}
