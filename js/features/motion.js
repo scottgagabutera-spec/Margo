@@ -125,7 +125,7 @@
 
       /* "TOP" label */
       #mst-label {
-        font-family: 'Space Mono', monospace;
+        font-family: 'Lora', serif;
         font-size: 0.42rem;
         font-weight: 700;
         letter-spacing: 2.5px;
@@ -250,23 +250,23 @@
         font-size: 0.85rem; flex-shrink: 0; margin-top: 1px;
         line-height: 1; width: 18px; text-align: center;
         color: var(--toast-accent, #E8C547);
-        font-family: 'Space Mono', monospace; font-weight: 700;
+        font-family: 'Lora', serif; font-weight: 700;
       }
       .margo-toast-body  { flex: 1; min-width: 0; }
       .margo-toast-title {
-        font-family: 'Space Mono', monospace; font-size: 0.56rem; font-weight: 700;
+        font-family: 'Lora', serif; font-size: 0.56rem; font-weight: 700;
         text-transform: uppercase; letter-spacing: 1.2px;
         color: var(--toast-accent, #E8C547); margin-bottom: 3px; line-height: 1.2;
       }
       .margo-toast-msg {
-        font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 500;
+        font-family: 'Lora', serif; font-size: 0.8rem; font-weight: 500;
         color: rgba(240,240,240,0.85); line-height: 1.4; word-break: break-word;
       }
       .margo-toast-close {
         flex-shrink: 0; background: none; border: none;
         color: rgba(255,255,255,0.2); font-size: 0.85rem; cursor: pointer;
         padding: 2px; line-height: 1; margin-top: 1px; transition: color 150ms;
-        font-family: 'DM Sans', sans-serif;
+        font-family: 'Lora', serif;
       }
       .margo-toast-close:hover { color: rgba(255,255,255,0.6); }
       .margo-toast-progress {

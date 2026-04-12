@@ -6,6 +6,25 @@
    ============================================================ */
 
 (function () {
+
+// ── Margo font preloader — self-hosted Lora, no Google dependency ──
+(function _preloadMargoFonts() {
+  const base = 'assets/fonts/lora/';
+  const faces = [
+    new FontFace('Lora', 'url(' + base + 'lora-v37-latin-regular.woff2)',     { weight: '400', style: 'normal' }),
+    new FontFace('Lora', 'url(' + base + 'lora-v37-latin-italic.woff2)',      { weight: '400', style: 'italic' }),
+    new FontFace('Lora', 'url(' + base + 'lora-v37-latin-500.woff2)',         { weight: '500', style: 'normal' }),
+    new FontFace('Lora', 'url(' + base + 'lora-v37-latin-500italic.woff2)',   { weight: '500', style: 'italic' }),
+    new FontFace('Lora', 'url(' + base + 'lora-v37-latin-600.woff2)',         { weight: '600', style: 'normal' }),
+    new FontFace('Lora', 'url(' + base + 'lora-v37-latin-600italic.woff2)',   { weight: '600', style: 'italic' }),
+    new FontFace('Lora', 'url(' + base + 'lora-v37-latin-700.woff2)',         { weight: '700', style: 'normal' }),
+    new FontFace('Lora', 'url(' + base + 'lora-v37-latin-700italic.woff2)',   { weight: '700', style: 'italic' }),
+  ];
+  window._margoFontsReady = Promise.all(
+    faces.map(f => f.load().then(loaded => { document.fonts.add(loaded); return loaded; }))
+  ).catch(() => {});
+})();
+
 'use strict';
 
 const DS = {
@@ -13,7 +32,7 @@ const DS = {
   view: 'convo', format: 'gif',
   motion: 'fade-up', dur: 2.4,
   theme: 'gold', cardStyle: 'glass',
-  fontFamily: 'DM Serif Display', fontItalic: true,
+  fontFamily: 'Lora', fontItalic: true,
   _raf: null, _loopId: 0, _frame: 0,
   _refreshTimer: null, _savedScrollY: 0,
 };
@@ -27,7 +46,7 @@ const DS_VIBE = {
 const DS_THEMES = {
   gold:   { accent:'#E8C547', bg:'#07060E', l:'#FF6B9D', r:'#6B8CFF',  bb1:'rgba(232,197,71,0.10)',  bb2:'rgba(107,140,255,0.09)', bd1:'rgba(232,197,71,0.28)',  bd2:'rgba(107,140,255,0.28)',  light:false },
   violet: { accent:'#c77dff', bg:'#0e0018', l:'#ff71ce', r:'#05ffa1',  bb1:'rgba(199,125,255,0.10)', bb2:'rgba(5,255,161,0.09)',   bd1:'rgba(199,125,255,0.28)', bd2:'rgba(5,255,161,0.28)',   light:false },
-  ocean:  { accent:'#00e5ff', bg:'#04090f', l:'#00e5ff', r:'#0070ff',  bb1:'rgba(0,229,255,0.10)',   bb2:'rgba(0,112,255,0.09)',   bd1:'rgba(0,229,255,0.28)',   bd2:'rgba(0,112,255,0.28)',   light:false },
+  ocean:  { accent:'#00e5ff', bg:'#04090f', l:'#00e5ff', r:'#0070ff',  bb1:'rgba(232,197,71,0.10)',   bb2:'rgba(0,112,255,0.09)',   bd1:'rgba(232,197,71,0.28)',   bd2:'rgba(0,112,255,0.28)',   light:false },
   ember:  { accent:'#ff6b6b', bg:'#0f0404', l:'#ff6b6b', r:'#ffb347',  bb1:'rgba(255,107,107,0.10)', bb2:'rgba(255,179,71,0.09)',  bd1:'rgba(255,107,107,0.28)', bd2:'rgba(255,179,71,0.28)',  light:false },
   forest: { accent:'#50fa7b', bg:'#020f06', l:'#50fa7b', r:'#00e5c0',  bb1:'rgba(80,250,123,0.10)',  bb2:'rgba(0,229,192,0.09)',   bd1:'rgba(80,250,123,0.28)',  bd2:'rgba(0,229,192,0.28)',   light:false },
   rose:   { accent:'#f4a4c0', bg:'#0f0508', l:'#f4a4c0', r:'#c084fc',  bb1:'rgba(244,164,192,0.10)', bb2:'rgba(192,132,252,0.09)', bd1:'rgba(244,164,192,0.28)', bd2:'rgba(192,132,252,0.28)', light:false },
@@ -61,25 +80,25 @@ function _injectCSS() {
   @keyframes _dsFd{from{transform:translateY(20px) scale(0.97);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
   ._dsHandle{width:32px;height:4px;border-radius:2px;background:rgba(255,255,255,0.10);margin:10px auto 0;flex-shrink:0}
   ._dsHdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 0;flex-shrink:0}
-  ._dsTtl{font-family:'Syne',sans-serif;font-weight:800;font-size:0.82rem;letter-spacing:2.5px;text-transform:uppercase;
+  ._dsTtl{font-family:'Lora',serif;font-weight:800;font-size:0.82rem;letter-spacing:2.5px;text-transform:uppercase;
     background:linear-gradient(90deg,#fff 20%,var(--_dsAcc,#E8C547) 100%);
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
   ._dsX{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);
     color:rgba(255,255,255,0.4);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.18s}
   ._dsX:hover{background:rgba(255,255,255,0.12);color:#fff}
   ._dsFmtRow{display:flex;gap:6px;padding:12px 16px 0;flex-shrink:0}
-  ._dsFmtBtn{flex:1;padding:10px 8px;border-radius:12px;font-family:'Space Mono',monospace;font-size:0.56rem;
+  ._dsFmtBtn{flex:1;padding:10px 8px;border-radius:12px;font-family:'Lora',serif;font-size:0.56rem;
     font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;
     border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.35);
     display:flex;align-items:center;justify-content:center;gap:6px}
-  ._dsFmtBtn.gif-active{background:rgba(0,229,255,0.10);border-color:rgba(0,229,255,0.35);color:#00E5FF}
+  ._dsFmtBtn.gif-active{background:rgba(232,197,71,0.10);border-color:rgba(232,197,71,0.35);color:#E8C547}
   ._dsFmtBtn.poster-active{background:rgba(232,197,71,0.10);border-color:rgba(232,197,71,0.35);color:#E8C547}
   ._dsFmtBtn:not(.gif-active):not(.poster-active):hover{color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.06)}
   ._dsFmtDot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-  ._dsFmtBtn.gif-active ._dsFmtDot{background:#00E5FF;box-shadow:0 0 6px #00E5FF}
+  ._dsFmtBtn.gif-active ._dsFmtDot{background:#E8C547;box-shadow:0 0 6px #E8C547}
   ._dsFmtBtn.poster-active ._dsFmtDot{background:#E8C547;box-shadow:0 0 6px #E8C547}
   ._dsVwRow{display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 16px 0;flex-shrink:0}
-  ._dsVwBtn{font-family:'Space Mono',monospace;font-size:0.52rem;font-weight:700;letter-spacing:1px;
+  ._dsVwBtn{font-family:'Lora',serif;font-size:0.52rem;font-weight:700;letter-spacing:1px;
     text-transform:uppercase;padding:6px 16px;border-radius:20px;cursor:pointer;transition:all 0.18s;
     border:1px solid transparent;background:none;color:rgba(255,255,255,0.38)}
   ._dsVwBtn.active{background:rgba(232,197,71,0.10);border-color:rgba(232,197,71,0.30);color:var(--_dsAcc,#E8C547)}
@@ -94,7 +113,7 @@ function _injectCSS() {
   @keyframes _dsBblIn{from{opacity:0;transform:translateY(8px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
   ._dsBbl.orig{align-self:flex-start;animation-delay:0.08s}
   ._dsBbl.rply{align-self:flex-end;align-items:flex-end;animation-delay:0.28s}
-  ._dsBblU{font-family:'Syne',sans-serif;font-size:0.58rem;font-weight:800;display:flex;align-items:center;gap:5px;padding:0 4px;letter-spacing:0.04em}
+  ._dsBblU{font-family:'Lora',serif;font-size:0.58rem;font-weight:800;display:flex;align-items:center;gap:5px;padding:0 4px;letter-spacing:0.04em}
   ._dsBbl.orig ._dsBblU{color:var(--_dsL,#FF6B9D)}
   ._dsBbl.rply ._dsBblU{color:var(--_dsR,#6B8CFF);flex-direction:row-reverse}
   ._dsUdot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
@@ -103,54 +122,54 @@ function _injectCSS() {
   ._dsBblC{padding:13px 15px;border-radius:18px;position:relative;overflow:hidden}
   ._dsBbl.orig ._dsBblC{background:var(--_dsBB1,rgba(255,107,157,0.09));border:1px solid var(--_dsBD1,rgba(255,107,157,0.25));border-bottom-left-radius:4px}
   ._dsBbl.rply ._dsBblC{background:var(--_dsBB2,rgba(107,140,255,0.09));border:1px solid var(--_dsBD2,rgba(107,140,255,0.25));border-bottom-right-radius:4px}
-  ._dsBblL{font-family:'DM Serif Display',serif;font-style:italic;font-size:1.12rem;line-height:1.5;color:var(--_dsLyC,#fff);position:relative;z-index:1}
+  ._dsBblL{font-family:'Lora',serif;font-style:italic;font-size:1.12rem;line-height:1.5;color:var(--_dsLyC,#fff);position:relative;z-index:1}
   ._dsBblM{margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.09);position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px}
-  ._dsBblSn{font-family:'DM Sans',sans-serif;font-size:0.76rem;font-weight:700;color:var(--_dsLyC,#fff)}
-  ._dsBblAr{font-family:'Space Mono',monospace;font-size:0.52rem;color:rgba(255,255,255,0.5);margin-top:2px}
-  ._dsBblVb{font-family:'Syne',sans-serif;font-size:0.46rem;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:20px;flex-shrink:0;letter-spacing:0.05em}
+  ._dsBblSn{font-family:'Lora',serif;font-size:0.76rem;font-weight:700;color:var(--_dsLyC,#fff)}
+  ._dsBblAr{font-family:'Lora',serif;font-size:0.52rem;color:rgba(255,255,255,0.5);margin-top:2px}
+  ._dsBblVb{font-family:'Lora',serif;font-size:0.46rem;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:20px;flex-shrink:0;letter-spacing:0.05em}
   ._dsBbl.orig ._dsBblVb{background:rgba(255,107,157,0.14);color:var(--_dsL,#FF9DC0);border:1px solid rgba(255,107,157,0.28)}
   ._dsBbl.rply ._dsBblVb{background:rgba(107,140,255,0.14);color:var(--_dsR,#9DB5FF);border:1px solid rgba(107,140,255,0.28)}
   ._dsDvd{display:flex;align-items:center;gap:8px;padding:1px 0;animation:_dsBblIn 0.36s cubic-bezier(0.16,1,0.3,1) 0.18s both}
   ._dsDvdL{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--_dsAcc,#E8C547)33,transparent)}
-  ._dsDvdP{font-family:'Syne',sans-serif;font-size:0.48rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;
+  ._dsDvdP{font-family:'Lora',serif;font-size:0.48rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;
     color:var(--_dsAcc,#E8C547);background:rgba(232,197,71,0.09);border:1px solid rgba(232,197,71,0.26);padding:5px 12px;border-radius:20px;white-space:nowrap}
   ._dsSng{margin:5px 16px 0;padding:10px 13px;background:#181720;border-radius:12px;border:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-  ._dsSngLbl{font-family:'Syne',sans-serif;font-size:0.46rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.4)}
+  ._dsSngLbl{font-family:'Lora',serif;font-size:0.46rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.4)}
   ._dsSngPair{display:flex;align-items:center;gap:10px}
   ._dsSngItem{display:flex;flex-direction:column;gap:1px}
   ._dsSngItem:last-child{align-items:flex-end}
-  ._dsSngN{font-family:'DM Sans',sans-serif;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.82)}
-  ._dsSngA{font-family:'Space Mono',monospace;font-size:0.46rem;color:rgba(255,255,255,0.38)}
+  ._dsSngN{font-family:'Lora',serif;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.82)}
+  ._dsSngA{font-family:'Lora',serif;font-size:0.46rem;color:rgba(255,255,255,0.38)}
   ._dsSngSep{font-size:0.6rem;color:rgba(255,255,255,0.22)}
   ._dsCrd{padding:12px 16px 0}
   ._dsCrdRing{position:relative;border-radius:14px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.7),0 0 0 1px rgba(232,197,71,0.10);background:#07060E;aspect-ratio:1;width:100%}
   #_dsCvs{display:block;width:100%;height:100%}
   ._dsEdt{margin:10px 16px 0;background:#16151f;border-radius:16px;border:1px solid rgba(255,255,255,0.07);overflow:hidden;flex-shrink:0}
   ._dsOptRow{display:flex;gap:4px;padding:10px 10px 0;flex-wrap:wrap}
-  ._dsOptBtn{padding:5px 10px;border-radius:20px;font-family:'Space Mono',monospace;font-size:0.45rem;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;cursor:pointer;transition:all 0.16s;border:1px solid transparent;background:none}
+  ._dsOptBtn{padding:5px 10px;border-radius:20px;font-family:'Lora',serif;font-size:0.45rem;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;cursor:pointer;transition:all 0.16s;border:1px solid transparent;background:none}
   ._dsOptBtn.active{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.17);color:#fff}
   ._dsOptBtn:not(.active){background:rgba(255,255,255,0.02);border-color:rgba(255,255,255,0.06);color:rgba(255,255,255,0.35)}
   ._dsOptBtn:not(.active):hover{color:rgba(255,255,255,0.60);background:rgba(255,255,255,0.05)}
   ._dsPnl{padding:11px 10px 12px}
   ._dsSec{display:none}
   ._dsSec.on{display:block}
-  ._dsPnlLbl{font-family:'Space Mono',monospace;font-size:0.44rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.26);margin-bottom:8px}
+  ._dsPnlLbl{font-family:'Lora',serif;font-size:0.44rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.26);margin-bottom:8px}
   ._dsMtnG{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-  ._dsMtnB{padding:8px 4px;border-radius:8px;background:#1d1c27;border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.60);font-family:'DM Sans',sans-serif;font-size:0.60rem;font-weight:600;cursor:pointer;transition:all 0.16s;text-align:center}
+  ._dsMtnB{padding:8px 4px;border-radius:8px;background:#1d1c27;border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.60);font-family:'Lora',serif;font-size:0.60rem;font-weight:600;cursor:pointer;transition:all 0.16s;text-align:center}
   ._dsMtnB:hover{background:rgba(255,255,255,0.07);color:#fff;border-color:rgba(255,255,255,0.16)}
-  ._dsMtnB.active{background:rgba(0,229,255,0.10);border-color:rgba(0,229,255,0.38);color:#00E5FF}
+  ._dsMtnB.active{background:rgba(232,197,71,0.10);border-color:rgba(232,197,71,0.35);color:#E8C547}
   ._dsSpdR{display:flex;gap:5px;margin-top:9px}
-  ._dsSpdB{flex:1;padding:7px 5px;border-radius:8px;background:#1d1c27;border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.45);font-family:'Space Mono',monospace;font-size:0.46rem;font-weight:700;cursor:pointer;transition:all 0.16s;text-align:center}
-  ._dsSpdB.active{background:rgba(0,229,255,0.08);border-color:rgba(0,229,255,0.28);color:#00E5FF}
+  ._dsSpdB{flex:1;padding:7px 5px;border-radius:8px;background:#1d1c27;border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.45);font-family:'Lora',serif;font-size:0.46rem;font-weight:700;cursor:pointer;transition:all 0.16s;text-align:center}
+  ._dsSpdB.active{background:rgba(232,197,71,0.08);border-color:rgba(232,197,71,0.28);color:#E8C547}
   ._dsSpdB:hover:not(.active){background:rgba(255,255,255,0.06);color:#fff}
   ._dsClrG{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
   ._dsClrSw{border-radius:9px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all 0.16s;aspect-ratio:1;position:relative}
   ._dsClrSw:hover{transform:scale(1.05)}
   ._dsClrSw.active{border-color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,0.35)}
   ._dsSwFl{width:100%;height:68%}
-  ._dsSwNm{position:absolute;bottom:0;left:0;right:0;padding:2px 2px 3px;background:rgba(0,0,0,0.52);font-family:'Space Mono',monospace;font-size:0.38rem;font-weight:700;color:rgba(255,255,255,0.75);text-align:center}
+  ._dsSwNm{position:absolute;bottom:0;left:0;right:0;padding:2px 2px 3px;background:rgba(0,0,0,0.52);font-family:'Lora',serif;font-size:0.38rem;font-weight:700;color:rgba(255,255,255,0.75);text-align:center}
   ._dsStlG{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-  ._dsStlB{padding:8px 6px;border-radius:8px;background:#1d1c27;border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.50);font-family:'DM Sans',sans-serif;font-size:0.60rem;font-weight:700;cursor:pointer;transition:all 0.16s;text-align:center}
+  ._dsStlB{padding:8px 6px;border-radius:8px;background:#1d1c27;border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.50);font-family:'Lora',serif;font-size:0.60rem;font-weight:700;cursor:pointer;transition:all 0.16s;text-align:center}
   ._dsStlB:hover{background:rgba(255,255,255,0.07);color:#fff;border-color:rgba(255,255,255,0.16)}
   ._dsStlB.active{background:rgba(232,197,71,0.09);border-color:rgba(232,197,71,0.36);color:#E8C547}
   ._dsFntG{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -158,16 +177,16 @@ function _injectCSS() {
   ._dsFntC:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.14)}
   ._dsFntC.active{background:rgba(232,197,71,0.07);border-color:rgba(232,197,71,0.28)}
   ._dsFntPv{font-size:0.90rem;line-height:1.3;color:rgba(255,255,255,0.88)}
-  ._dsFntNm{font-family:'Space Mono',monospace;font-size:0.42rem;font-weight:700;color:rgba(255,255,255,0.36);text-transform:uppercase;letter-spacing:1px}
+  ._dsFntNm{font-family:'Lora',serif;font-size:0.42rem;font-weight:700;color:rgba(255,255,255,0.36);text-transform:uppercase;letter-spacing:1px}
   ._dsFntC.active ._dsFntNm{color:#E8C547}
   ._dsDlRow{display:flex;gap:8px;padding:10px 16px 18px;flex-shrink:0}
-  ._dsDlBtn{flex:1;padding:13px 10px;border-radius:14px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all 0.2s cubic-bezier(0.16,1,0.3,1);font-family:'Space Mono',monospace;font-weight:700;font-size:0.50rem;letter-spacing:1.2px;text-transform:uppercase}
+  ._dsDlBtn{flex:1;padding:13px 10px;border-radius:14px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all 0.2s cubic-bezier(0.16,1,0.3,1);font-family:'Lora',serif;font-weight:700;font-size:0.50rem;letter-spacing:1.2px;text-transform:uppercase}
   ._dsDlBtn:hover{transform:translateY(-2px)}
   ._dsDlBtn:active{transform:scale(0.97)}
   ._dsDlBtn:disabled{opacity:0.55;cursor:not-allowed;transform:none}
   ._dsDlIco{font-size:0.95rem;line-height:1}
-  ._dsDlGif{background:rgba(0,229,255,0.07);border:1px solid rgba(0,229,255,0.22);color:#00E5FF}
-  ._dsDlGif:hover{background:rgba(0,229,255,0.13);border-color:rgba(0,229,255,0.42);box-shadow:0 6px 20px rgba(0,229,255,0.10)}
+  ._dsDlGif{background:rgba(232,197,71,0.07);border:1px solid rgba(232,197,71,0.22);color:#E8C547}
+  ._dsDlGif:hover{background:rgba(232,197,71,0.13);border-color:rgba(232,197,71,0.42);box-shadow:0 6px 20px rgba(232,197,71,0.10)}
   ._dsDlPost{background:rgba(232,197,71,0.09);border:1px solid rgba(232,197,71,0.26);color:#E8C547;flex:1.3}
   ._dsDlPost:hover{background:rgba(232,197,71,0.15);border-color:rgba(232,197,71,0.48);box-shadow:0 6px 20px rgba(232,197,71,0.12)}
   @keyframes _kFU{0%{opacity:0;transform:translateY(18px)}25%,75%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-7px)}}
@@ -270,12 +289,12 @@ function _mount() {
             <div class="_dsSec" id="_dsSec-font">
               <div class="_dsPnlLbl">Lyric font</div>
               <div class="_dsFntG">
-                <div class="_dsFntC active" data-fam="DM Serif Display" data-itl="true"><div class="_dsFntPv" style="font-family:'DM Serif Display',serif;font-style:italic">Say everything</div><div class="_dsFntNm">Serif · Default</div></div>
-                <div class="_dsFntC" data-fam="Playfair Display" data-itl="true"><div class="_dsFntPv" style="font-family:'Playfair Display',serif;font-style:italic">Say everything</div><div class="_dsFntNm">Playfair</div></div>
-                <div class="_dsFntC" data-fam="Lora" data-itl="true"><div class="_dsFntPv" style="font-family:'Lora',serif;font-style:italic">Say everything</div><div class="_dsFntNm">Lora · Romantic</div></div>
-                <div class="_dsFntC" data-fam="Space Mono" data-itl="false"><div class="_dsFntPv" style="font-family:'Space Mono',monospace">Say everything</div><div class="_dsFntNm">Space Mono</div></div>
-                <div class="_dsFntC" data-fam="DM Sans" data-itl="false"><div class="_dsFntPv" style="font-family:'DM Sans',sans-serif;font-weight:700">Say everything</div><div class="_dsFntNm">Sans Bold</div></div>
-                <div class="_dsFntC" data-fam="Comic Sans MS" data-itl="false"><div class="_dsFntPv" style="font-family:'Comic Sans MS',cursive">Say everything</div><div class="_dsFntNm">Playful</div></div>
+                <div class="_dsFntC active" data-fam="Lora" data-itl="true" data-wgt="400"><div class="_dsFntPv" style="font-family:'Lora',serif;font-style:italic">Say everything</div><div class="_dsFntNm">Lora · Default</div></div>
+                <div class="_dsFntC" data-fam="Lora" data-itl="false" data-wgt="700"><div class="_dsFntPv" style="font-family:'Lora',serif;font-weight:700">Say everything</div><div class="_dsFntNm">Lora · Bold</div></div>
+                <div class="_dsFntC" data-fam="Lora" data-itl="true" data-wgt="700"><div class="_dsFntPv" style="font-family:'Lora',serif;font-style:italic;font-weight:700">Say everything</div><div class="_dsFntNm">Lora · Bold Italic</div></div>
+                <div class="_dsFntC" data-fam="Lora" data-itl="false" data-wgt="500"><div class="_dsFntPv" style="font-family:'Lora',serif;font-weight:500">Say everything</div><div class="_dsFntNm">Lora · Light</div></div>
+                
+                
               </div>
             </div>
           </div>
@@ -333,7 +352,7 @@ function _wireEvents() {
   _qAll('._dsFntC').forEach(c => c.addEventListener('click', () => {
     _qAll('._dsFntC').forEach(x => x.classList.remove('active'));
     c.classList.add('active');
-    DS.fontFamily = c.dataset.fam; DS.fontItalic = c.dataset.itl === 'true';
+    DS.fontFamily = c.dataset.fam; DS.fontItalic = c.dataset.itl === 'true'; DS.fontWeight = c.dataset.wgt || '400';
     _qAll('._dsBblL').forEach(el => {
       el.style.fontFamily = `'${DS.fontFamily}',serif`;
       el.style.fontStyle  = DS.fontItalic ? 'italic' : 'normal';
@@ -359,12 +378,12 @@ function openSheet(post1, post2) {
   _mount();
   DS.post1 = post1; DS.post2 = post2;
   DS.motion = 'fade-up'; DS.dur = 2.4; DS.theme = 'gold';
-  DS.cardStyle = 'glass'; DS.fontFamily = 'DM Serif Display'; DS.fontItalic = true;
+  DS.cardStyle = 'glass'; DS.fontFamily = 'Lora'; DS.fontItalic = true;
   _qAll('._dsMtnB').forEach(b => b.classList.toggle('active', b.dataset.m === 'fade-up'));
   _qAll('._dsSpdB').forEach(b => b.classList.toggle('active', b.dataset.d === '2.4'));
   _qAll('._dsClrSw').forEach(b => b.classList.toggle('active', b.dataset.theme === 'gold'));
   _qAll('._dsStlB').forEach(b => b.classList.toggle('active', b.dataset.s === 'glass'));
-  _qAll('._dsFntC').forEach(b => b.classList.toggle('active', b.dataset.fam === 'DM Serif Display'));
+  _qAll('._dsFntC').forEach(b => b.classList.toggle('active', b.dataset.fam === 'Lora'));
   _qAll('._dsOptBtn').forEach((b, i) => b.classList.toggle('active', i === 0));
   _qAll('._dsSec').forEach((s, i) => s.classList.toggle('on', i === 0));
   _populateConvo(); _applyTheme(); _setFormat('gif'); _setView('convo');
@@ -526,7 +545,10 @@ function _startCanvas() {
     }
     DS._raf = requestAnimationFrame(draw);
   };
-  document.fonts.ready.then(() => { if (DS._loopId !== myId) return; DS._raf = requestAnimationFrame(draw); });
+  (window._margoFontsReady || Promise.resolve()).then(() => {
+    if (DS._loopId !== myId) return;
+    DS._raf = requestAnimationFrame(draw);
+  });
 }
 
 function _schedRefresh() {
@@ -543,6 +565,7 @@ function _buildOpts() {
     theme:      DS.theme,
     cardStyle:  DS.cardStyle,
     fontFamily: DS.fontFamily,
+    fontWeight: DS.fontWeight || '400',
     fontItalic: DS.fontItalic,
     motion:     DS.motion,
     dur:        DS.dur,
@@ -619,7 +642,7 @@ function _download(which) {
 }
 
 async function _snapAndShare(p1, p2, opts) {
-  await document.fonts.ready;
+  await (window._margoFontsReady || document.fonts.ready);
   const W = 1080, H = 1080;
   const off = document.createElement('canvas');
   off.width = W; off.height = H;
@@ -680,7 +703,7 @@ function _drawConvoLayoutAnimated(ctx, W, H, t, motion, p1, p2, opts) {
   const ringT = t < 1.0 ? t : -1;
   _drawMargoIcon(ctx, PAD_H, PAD_TOP, iconSz, 0.42, ringT, m);
   ctx.save();
-  ctx.font=`800 ${logoSz}px 'Syne','Arial Black',sans-serif`;
+  ctx.font=`700 ${logoSz}px 'Lora',serif`;
   ctx.fillStyle='#E8C547'; ctx.globalAlpha=0.38;
   ctx.textBaseline='middle'; ctx.textAlign='left';
   ctx.letterSpacing=`${Math.round(3*S)}px`;
@@ -733,19 +756,19 @@ function _drawConvoLayoutAnimated(ctx, W, H, t, motion, p1, p2, opts) {
   const s1=(pk1.song||p1.song||'—').substring(0,22), a1=(pk1.artist||p1.artist||'').substring(0,24);
   const s2=(pk2.song||p2.song||'—').substring(0,22), a2=(pk2.artist||p2.artist||'').substring(0,24);
   const stSz=Math.max(6,Math.round(8*S)), snSz=Math.max(8,Math.round(13*S)), arSz=Math.max(6,Math.round(9*S));
-  ctx.font=`700 ${stSz}px 'Space Mono',monospace`; ctx.fillStyle='rgba(255,255,255,0.38)';
+  ctx.font=`700 ${stSz}px 'Lora',serif`; ctx.fillStyle='rgba(255,255,255,0.38)';
   ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillText('SONGS',sbX+Math.round(10*S),sbCy);
   const lx=sbX+Math.round(60*S);
-  ctx.font=`700 ${snSz}px 'DM Sans',sans-serif`; ctx.fillStyle='#F4F1ED'; ctx.textAlign='left';
+  ctx.font=`700 ${snSz}px 'Lora',serif`; ctx.fillStyle='#F4F1ED'; ctx.textAlign='left';
   ctx.fillText(s1,lx,sbCy-Math.round(5*S));
-  ctx.font=`400 ${arSz}px 'Space Mono',monospace`; ctx.fillStyle='#9A98A4';
+  ctx.font=`400 ${arSz}px 'Lora',serif`; ctx.fillStyle='#9A98A4';
   ctx.fillText(a1,lx,sbCy+Math.round(6*S));
   ctx.font=`400 ${Math.round(14*S)}px sans-serif`; ctx.fillStyle=m.accent; ctx.globalAlpha=0.6;
   ctx.textAlign='center'; ctx.fillText('↔',W/2,sbCy); ctx.globalAlpha=1;
   const rx=sbX+sbW-Math.round(10*S);
-  ctx.font=`700 ${snSz}px 'DM Sans',sans-serif`; ctx.fillStyle='#F4F1ED'; ctx.textAlign='right';
+  ctx.font=`700 ${snSz}px 'Lora',serif`; ctx.fillStyle='#F4F1ED'; ctx.textAlign='right';
   ctx.fillText(s2,rx,sbCy-Math.round(5*S));
-  ctx.font=`400 ${arSz}px 'Space Mono',monospace`; ctx.fillStyle='#9A98A4';
+  ctx.font=`400 ${arSz}px 'Lora',serif`; ctx.fillStyle='#9A98A4';
   ctx.fillText(a2,rx,sbCy+Math.round(6*S));
   ctx.restore();
 
@@ -764,9 +787,10 @@ function _drawBubbleShell(ctx,W,areaT,areaB,post,m,side,opts,S){
   const bubbleW=Math.round(W*0.76);
   const bubbleX=side==='left'?PAD_H:W-PAD_H-bubbleW;
   const cPadV=Math.round(12*S), cPadH=Math.round(14*S);
-  const _fam=(opts&&opts.fontFamily)?opts.fontFamily:'DM Serif Display';
+  const _fam=(opts&&opts.fontFamily)?opts.fontFamily:'Lora';
+  const _fwt=(opts&&opts.fontWeight)?opts.fontWeight:'400';
   const _fitl=!(opts&&opts.fontItalic===false);
-  const ff=`'${_fam}',serif`, _fstyle=_fitl?'italic 600':'600';
+  const ff=`'${_fam}',serif`, _fstyle=_fitl?`italic ${_fwt}`:`${_fwt}`;
   let lyricSz=Math.max(11,Math.round(15*S));
   ctx.font=`${_fstyle} ${lyricSz}px ${ff}`;
   let lines=_wrapText(ctx,text,bubbleW-cPadH*2);
@@ -781,7 +805,7 @@ function _drawBubbleShell(ctx,W,areaT,areaB,post,m,side,opts,S){
   const cardY=areaT+Math.max(0,(areaH-cardH)/2);
   const uSz=Math.max(8,Math.round(9.5*S)), dotR=Math.max(2,Math.round(2.5*S)), dotCy=cardY-Math.round(9*S);
   ctx.save();
-  ctx.font=`800 ${uSz}px 'Syne','Arial Black',sans-serif`;
+  ctx.font=`700 ${uSz}px 'Lora',serif`;
   ctx.fillStyle=col; ctx.globalAlpha=0.90; ctx.textBaseline='middle';
   if(side==='left'){
     ctx.beginPath();ctx.arc(bubbleX+dotR,dotCy,dotR,0,Math.PI*2);ctx.fill();
@@ -803,11 +827,11 @@ function _drawBubbleShell(ctx,W,areaT,areaB,post,m,side,opts,S){
   ctx.beginPath(); ctx.moveTo(bubbleX+cPadH,metaLineY); ctx.lineTo(bubbleX+bubbleW-cPadH,metaLineY); ctx.stroke(); ctx.restore();
   const metaContentY=metaLineY+Math.round(8*S);
   ctx.save();
-  ctx.font=`700 ${snSz}px 'DM Sans',sans-serif`; ctx.fillStyle=m.light?'#0B0B0D':'#ffffff';
+  ctx.font=`700 ${snSz}px 'Lora',serif`; ctx.fillStyle=m.light?'#0B0B0D':'#ffffff';
   ctx.textBaseline='top'; ctx.textAlign='left'; ctx.fillText(song||'—',bubbleX+cPadH,metaContentY);
-  if(artist){ctx.font=`400 ${arSz}px 'Space Mono',monospace`;ctx.fillStyle='rgba(255,255,255,0.50)';ctx.fillText(artist,bubbleX+cPadH,metaContentY+snSz+Math.round(2*S));}
+  if(artist){ctx.font=`400 ${arSz}px 'Lora',serif`;ctx.fillStyle='rgba(255,255,255,0.50)';ctx.fillText(artist,bubbleX+cPadH,metaContentY+snSz+Math.round(2*S));}
   if(vibe){
-    ctx.font=`800 ${vbSz}px 'Syne','Arial Black',sans-serif`;
+    ctx.font=`700 ${vbSz}px 'Lora',serif`;
     const vTW=ctx.measureText(vibe).width, vPH=Math.round(9*S), vPV=Math.round(3*S);
     const vPW=vTW+vPH*2, vPHt=vbSz+vPV*2, vPX=bubbleX+bubbleW-cPadH*0.4-vPW, vPY=metaContentY;
     ctx.fillStyle=col+'28'; ctx.strokeStyle=col+'77'; ctx.lineWidth=1.5;
@@ -824,9 +848,10 @@ function _drawBubbleLyric(ctx,W,areaT,areaB,post,m,side,opts,S,alpha,oX,oY,t,mot
   const bubbleX=side==='left'?PAD_H:W-PAD_H-bubbleW;
   const cPadV=Math.round(12*S), cPadH=Math.round(14*S);
   const text=(post.text||post.lyric||'').substring(0,120);
-  const _fam2=(opts&&opts.fontFamily)?opts.fontFamily:'DM Serif Display';
+  const _fam2=(opts&&opts.fontFamily)?opts.fontFamily:'Lora';
+  const _fwt2=(opts&&opts.fontWeight)?opts.fontWeight:'400';
   const _fitl2=!(opts&&opts.fontItalic===false);
-  const ff=`'${_fam2}',serif`, _fstyle2=_fitl2?'italic 600':'600';
+  const ff=`'${_fam2}',serif`, _fstyle2=_fitl2?`italic ${_fwt2}`:`${_fwt2}`;
   let lyricSz=Math.max(11,Math.round(15*S));
   ctx.font=`${_fstyle2} ${lyricSz}px ${ff}`;
   let lines=_wrapText(ctx,text,bubbleW-cPadH*2);
@@ -878,7 +903,7 @@ function _drawCardFrame(ctx,W,H,t,motion,p1,p2,opts){
   const ringT = isAnim ? t : -1;
   _drawMargoIcon(ctx, pad, pad*0.45, iconSz, 0.42, ringT, m);
   ctx.save();
-  ctx.font=`800 ${mSz}px 'Syne','Arial Black',sans-serif`;
+  ctx.font=`700 ${mSz}px 'Lora',serif`;
   ctx.fillStyle='#E8C547'; ctx.globalAlpha=0.38;
   ctx.textBaseline='middle'; ctx.textAlign='left';
   ctx.letterSpacing=`${Math.round(3*S)}px`;
@@ -940,9 +965,10 @@ function _drawCardZone(ctx,W,zT,zB,post,m,pad,opts,lyricAlpha,oX,oY,t,motion,S){
   const bubbleX = side === 'left' ? pad : W - pad - bubbleW;
 
   // Font sizing — cap relative to zone height so nothing overflows
-  const fam = (opts&&opts.fontFamily) ? opts.fontFamily : 'DM Serif Display';
+  const fam=(opts&&opts.fontFamily)?opts.fontFamily:'Lora';
+  const fwt=(opts&&opts.fontWeight)?opts.fontWeight:'400';
   const fitl = !(opts&&opts.fontItalic===false);
-  const fstyle = fitl ? 'italic 600' : '600';
+  const fstyle = fitl ? `italic ${fwt}` : `${fwt}`;
   const ff = `'${fam}',serif`;
   const cPadH = Math.round(Math.min(16, W*0.014));
   const cPadV = Math.round(Math.min(12, zH*0.07));
@@ -974,7 +1000,7 @@ function _drawCardZone(ctx,W,zT,zB,post,m,pad,opts,lyricAlpha,oX,oY,t,motion,S){
   const dotR = Math.max(2, Math.round(2.5*S));
   const dotCy = cardY - Math.round(Math.max(7, 9*S));
   ctx.save();
-  ctx.font = `800 ${uSz}px 'Syne','Arial Black',sans-serif`;
+  ctx.font = `700 ${uSz}px 'Lora',serif`;
   ctx.fillStyle = col; ctx.globalAlpha = 0.90; ctx.textBaseline = 'middle';
   if (side === 'left') {
     ctx.beginPath(); ctx.arc(bubbleX+dotR, dotCy, dotR, 0, Math.PI*2); ctx.fill();
@@ -1032,17 +1058,17 @@ function _drawCardZone(ctx,W,zT,zB,post,m,pad,opts,lyricAlpha,oX,oY,t,motion,S){
   const metaY = metaLineY + Math.round(Math.max(4, 6*S));
   ctx.save();
   ctx.textBaseline = 'top'; ctx.globalAlpha = Math.max(0, Math.min(1, lyricAlpha));
-  ctx.font = `700 ${snSz}px 'DM Sans',sans-serif`;
+  ctx.font = `700 ${snSz}px 'Lora',serif`;
   ctx.fillStyle = m.light ? '#0B0B0D' : '#ffffff';
   ctx.textAlign = 'left';
   ctx.fillText(song||'—', bubbleX+cPadH, metaY);
   if (artist) {
-    ctx.font = `400 ${arSz}px 'Space Mono',monospace`;
+    ctx.font = `400 ${arSz}px 'Lora',serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.50)';
     ctx.fillText(artist, bubbleX+cPadH, metaY+snSz+Math.round(2*S));
   }
   if (vibe) {
-    ctx.font = `800 ${vbSz}px 'Syne','Arial Black',sans-serif`;
+    ctx.font = `700 ${vbSz}px 'Lora',serif`;
     const vTW = ctx.measureText(vibe).width;
     const vPH = Math.round(Math.min(9*S, zH*0.065));
     const vPV = Math.round(Math.min(3*S, zH*0.025));
@@ -1065,7 +1091,7 @@ function _drawDivider(ctx,W,divY,echoPost,m,alpha){
   if(alpha<=0)return;
   const user='@'+(echoPost.username||'anonymous').replace(/^@/,'').toUpperCase();
   const dText=`LYRIC BACK ↩  ${user}`, dfs=Math.max(9,W*0.020);
-  ctx.save(); ctx.globalAlpha=alpha; ctx.font=`800 ${dfs}px 'Syne','Arial Black',sans-serif`;
+  ctx.save(); ctx.globalAlpha=alpha; ctx.font=`800 ${dfs}px 'Lora',serif`;
   const dTW=ctx.measureText(dText).width, pH=dfs*2.1, pPad=W*0.026, pW=dTW+pPad*2, pX=W/2-pW/2, pY=divY-pH/2, pR=pH/2, gap=pW/2+W*0.018;
   [[W*0.04,W/2-gap],[W/2+gap,W*0.96]].forEach(([x1,x2])=>{const lg=ctx.createLinearGradient(x1,0,x2,0);if(x1<W/2){lg.addColorStop(0,'transparent');lg.addColorStop(1,m.accent+'44');}else{lg.addColorStop(0,m.accent+'44');lg.addColorStop(1,'transparent');}ctx.fillStyle=lg;ctx.fillRect(x1,divY-0.75,x2-x1,1.5);});
   ctx.beginPath();if(ctx.roundRect)ctx.roundRect(pX,pY,pW,pH,pR);else ctx.rect(pX,pY,pW,pH);
@@ -1080,19 +1106,19 @@ function _drawSongsBar(ctx,W,barT,barB,p1,p2,m,pad){
   ctx.fillStyle='rgba(255,255,255,0.04)';ctx.strokeStyle='rgba(255,255,255,0.09)';ctx.lineWidth=1;
   ctx.beginPath();if(ctx.roundRect)ctx.roundRect(pad*0.75,barT,W-pad*1.5,bH,W*0.016);else ctx.rect(pad*0.75,barT,W-pad*1.5,bH);ctx.fill();ctx.stroke();
   const cy=barT+bH/2,lfs=Math.max(8,W*0.019),sfs=Math.max(8,W*0.021),afs=Math.max(7,W*0.014);
-  ctx.font=`800 ${lfs}px 'Syne',sans-serif`;ctx.fillStyle='rgba(255,255,255,0.55)';ctx.textBaseline='middle';ctx.textAlign='left';ctx.fillText('SONGS',pad,cy);
+  ctx.font=`700 ${lfs}px 'Lora',serif`;ctx.fillStyle='rgba(255,255,255,0.55)';ctx.textBaseline='middle';ctx.textAlign='left';ctx.fillText('SONGS',pad,cy);
   const pk1=p1.knowledge||{},s1=(pk1.song||p1.song||'').substring(0,18),pk2=p2.knowledge||{},s2=(pk2.song||p2.song||'').substring(0,18);
-  ctx.font=`700 ${sfs}px 'DM Sans',sans-serif`;ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(s1,W*0.26,cy-afs*0.5);
-  ctx.font=`400 ${afs}px 'Space Mono',monospace`;ctx.fillStyle='rgba(255,255,255,0.38)';ctx.fillText(pk1.artist||p1.artist||'',W*0.26,cy+sfs*0.55);
+  ctx.font=`700 ${sfs}px 'Lora',serif`;ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(s1,W*0.26,cy-afs*0.5);
+  ctx.font=`400 ${afs}px 'Lora',serif`;ctx.fillStyle='rgba(255,255,255,0.38)';ctx.fillText(pk1.artist||p1.artist||'',W*0.26,cy+sfs*0.55);
   ctx.font=`400 ${sfs*1.1}px sans-serif`;ctx.fillStyle=m.accent;ctx.globalAlpha=0.65;ctx.textAlign='center';ctx.fillText('↔',W/2,cy);ctx.globalAlpha=1;
-  ctx.font=`700 ${sfs}px 'DM Sans',sans-serif`;ctx.fillStyle='#fff';ctx.textAlign='right';ctx.fillText(s2,W-pad,cy-afs*0.5);
-  ctx.font=`400 ${afs}px 'Space Mono',monospace`;ctx.fillStyle='rgba(255,255,255,0.38)';ctx.fillText(pk2.artist||p2.artist||'',W-pad,cy+sfs*0.55);
+  ctx.font=`700 ${sfs}px 'Lora',serif`;ctx.fillStyle='#fff';ctx.textAlign='right';ctx.fillText(s2,W-pad,cy-afs*0.5);
+  ctx.font=`400 ${afs}px 'Lora',serif`;ctx.fillStyle='rgba(255,255,255,0.38)';ctx.fillText(pk2.artist||p2.artist||'',W-pad,cy+sfs*0.55);
   ctx.restore();
 }
 
 function _drawWatermark(ctx,W,H,m){
   const fs=Math.max(8,W*0.016),txt='trymargo.com';ctx.save();
-  ctx.font=`700 ${fs}px 'Space Mono',monospace`;ctx.textBaseline='middle';ctx.textAlign='center';
+  ctx.font=`700 ${fs}px 'Lora',serif`;ctx.textBaseline='middle';ctx.textAlign='center';
   const tw=ctx.measureText(txt).width,pw=tw+W*0.040,ph=fs*1.85,px=W/2-pw/2,py=H-W*0.034-ph/2;
   ctx.globalAlpha=0.78;ctx.fillStyle='rgba(0,0,0,0.82)';
   ctx.beginPath();if(ctx.roundRect)ctx.roundRect(px,py,pw,ph,ph/2);else ctx.rect(px,py,pw,ph);ctx.fill();
