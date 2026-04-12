@@ -99,16 +99,32 @@ function buildSwipeCard(post, i) {
 }
 
 function renderSkeleton() {
-  feedList.innerHTML='';
-  for (let i=0;i<6;i++) {
-    const s=document.createElement('div');
-    s.className='feed-card skeleton-card';
-    s.style.animationDelay=(i*0.07)+'s';
-    s.innerHTML=`<div class="sk-line sk-short"></div><div class="sk-block"></div>
-      <div class="sk-line sk-medium"></div>
-      <div class="sk-row"><div class="sk-long"></div><div class="sk-long"></div></div>`;
-    feedList.appendChild(s);
-  }
+  const stack = document.getElementById('cardStack');
+  if (!stack) return;
+  stack.style.opacity = '1';
+  stack.innerHTML = `
+    <div class="swipe-card sk-swipe-card">
+      <div class="card-content sk-content">
+        <div class="sk-pill"></div>
+        <div class="sk-lyric-1"></div>
+        <div class="sk-lyric-2"></div>
+        <div class="sk-lyric-3"></div>
+        <div class="sk-time"></div>
+      </div>
+      <div class="card-song">
+        <div class="sk-art"></div>
+        <div class="sk-song-text">
+          <div class="sk-song-title"></div>
+          <div class="sk-song-artist"></div>
+        </div>
+      </div>
+      <div class="card-actions">
+        <div class="sk-action"></div>
+        <div class="sk-action"></div>
+        <div class="sk-action"></div>
+      </div>
+    </div>`,
+  stack.querySelector('.sk-swipe-card').style.transform = 'translateY(0)';
 }
 
 /* ══════════════════════════════════════════════════════════

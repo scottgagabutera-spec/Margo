@@ -299,3 +299,12 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
   margin: 0 12px;
   animation-delay: 0.1s;
 }
+
+/* sk-content — centers skeleton elements inside card-content */
+.sk-content {
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  display: flex;
+  flex-direction: column;
+}
