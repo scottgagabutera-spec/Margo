@@ -403,7 +403,31 @@ function _layoutHint(layout, format) {
   }
 }
 
-function _fireExport() {
+async function _fireExport() {
+  /* Blob-only mode — called from ssShareTo with pre-rendered blob */
+  if (PP.pending && PP.pending.blob && !PP.pending.view) {
+    const blob     = PP.pending.blob;
+    const format   = PP.pending.format || 'gif';
+    const platform = PLATFORMS.find(x => x.id === PP.selected);
+    const ext      = format === 'gif' ? 'gif' : 'png';
+    const mime     = format === 'gif' ? 'image/gif' : 'image/png';
+    const fileName = `margo-${platform ? platform.id : 'share'}-${Date.now()}.${ext}`;
+    const shareText = (PP.pending.post?.text?.substring(0,60) || '') + ' — trymargo.com';
+    _close();
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], fileName, { type: mime });
+      if (navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ title: 'MARGO', text: shareText, files: [file] }); return; }
+        catch(e) { if (e.name === 'AbortError') return; }
+      }
+    }
+    if (navigator.share) {
+      try { await navigator.share({ title: 'MARGO', text: shareText, url: 'https://trymargo.com' }); return; }
+      catch(e) { if (e.name === 'AbortError') return; }
+    }
+    _download(blob, fileName);
+    return;
+  }
   if (!PP.selected || !PP.pending) return;
   const platform = PLATFORMS.find(p => p.id === PP.selected);
   if (!platform) return;
