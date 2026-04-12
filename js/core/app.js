@@ -73,7 +73,7 @@ function goToFeed() {
   setPageState('feed');
   mountUsernamePill();
   if (typeof renderSkeleton === 'function' && !postsLoaded) renderSkeleton();
-  requestAnimationFrame(function() { requestAnimationFrame(function() { setTimeout(function() { renderFeed(); }, 60); }); });
+  requestAnimationFrame(function() { requestAnimationFrame(function() { renderFeed(); }); });
   const hint = document.getElementById('swipeHint');
   if (hint) {
     hint.style.display = 'none';
