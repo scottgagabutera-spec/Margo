@@ -407,3 +407,11 @@ body.on-feed{overflow:hidden!important;width:100%!important;height:100%!importan
     transform: translate(-50%, -50%);
   }
 }
+
+/* M circle — vertically centered now post count is gone */
+@media (max-width: 480px) {
+  .feed-logo-wrap {
+    height: 100%;
+    align-items: center;
+  }
+}
