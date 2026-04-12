@@ -191,7 +191,7 @@ function setupScrollToTop() {
     newPostsIndicator.onclick = () => {
       newPostsAvailable = false;
       renderFeed();
-      newPostsIndicator.classList.remove('visible');
+      setTimeout(() => { newPostsIndicator.classList.remove('visible'); }, 300);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
   }
