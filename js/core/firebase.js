@@ -136,8 +136,11 @@ function startFirebaseSync() {
       newPostsAvailable = true;
     }
 
-    if (feed && feed.classList.contains('active')) {
-      if (isInitialLoad || isBackfillOnly || !newPostsAvailable) {
+    // Always render on initial load — feed may not be active yet but posts are ready
+    if (isInitialLoad) {
+      if (typeof renderFeed === 'function') renderFeed();
+    } else if (feed && feed.classList.contains('active')) {
+      if (isBackfillOnly || !newPostsAvailable) {
         if (typeof renderFeed === 'function') renderFeed();
       }
     }

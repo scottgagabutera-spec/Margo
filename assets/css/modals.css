@@ -59,6 +59,9 @@
    FLOATING NEW-POSTS BAR
 ══════════════════════════════════════ */
 .new-posts-bar {
+  position: fixed;
+  top: 68px;
+  z-index: 9999;
   left: 50%; transform: translateX(-50%) translateY(-4px);
   background: rgba(7,6,10,0.92);
   border: 1px solid rgba(232,197,71,0.35);
