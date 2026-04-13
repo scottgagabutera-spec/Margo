@@ -420,7 +420,7 @@ function _loadAdminPosts(loadMore = false) {
       font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);
       text-transform:uppercase;letter-spacing:1px;">Loading…</div>`;
   }
-  postsRef.orderByChild('timestamp').limitToLast(ADMIN_PAGE_SIZE).once('value').then(snap => {
+  postsRef.limitToLast(ADMIN_PAGE_SIZE).once('value').then(snap => {
     const batch = [];
     snap.forEach(child => batch.unshift({ id: child.key, ...child.val() }));
     if (batch.length < ADMIN_PAGE_SIZE) _adminExhausted = true;
