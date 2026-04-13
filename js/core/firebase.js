@@ -22,6 +22,7 @@ async function initFirebase() {
     firebaseAuth   = firebase.auth();
     isFirebaseEnabled = true;
     firebase.database().ref('.info/connected').once('value', function(snap) {
+      console.log("[Margo] .info/connected fired, snap.val():", snap.val());
       if (snap.val() === true) loadFeaturedLyric();
     });
   } catch (e) {
