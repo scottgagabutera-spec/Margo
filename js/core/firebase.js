@@ -161,9 +161,16 @@ function loadFeaturedLyric() {
   adminConfigRef.child('featuredLyric').once('value', function(snap) {
     const data = snap.val();
     if (!data || !data.text) return;
-    const textEl = document.getElementById('heroFeaturedText');
-    const attrEl = document.getElementById('heroFeaturedAttr');
-    if (textEl) textEl.textContent = data.text;
-    if (attrEl) attrEl.textContent = (data.artist || '') + (data.song ? ' \u00b7 ' + data.song : '');
+    const applyLyric = () => {
+      const textEl = document.getElementById('heroFeaturedText');
+      const attrEl = document.getElementById('heroFeaturedAttr');
+      if (textEl) textEl.textContent = data.text;
+      if (attrEl) attrEl.textContent = (data.artist || '') + (data.song ? ' · ' + data.song : '');
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', applyLyric);
+    } else {
+      applyLyric();
+    }
   });
 }
