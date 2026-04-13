@@ -39,29 +39,31 @@ function initAdmin() {
   });
   document.addEventListener('keyup', e => _adminKeysHeld.delete(e.key.toLowerCase()));
 
-  /* ── Mobile admin trigger: tap logo 7× in 2s ── */
+  /* ── Mobile admin trigger: long press top-left corner 10s ── */
   (function() {
-    const REQUIRED_TAPS = 5;
-    const WINDOW_MS     = 3000;
-    let taps = 0, resetTimer = null;
-    function onLogoTap() {
-      taps++;
-      clearTimeout(resetTimer);
-      resetTimer = setTimeout(() => { taps = 0; }, WINDOW_MS);
-      if (taps >= REQUIRED_TAPS) {
-        taps = 0;
-        clearTimeout(resetTimer);
-        adminMode ? openAdminPanel() : showAdminLogin();
-      }
+    const HOLD_MS = 10000;
+    let holdTimer = null;
+    let pressing  = false;
+
+    function inCorner(x, y) {
+      return x < 80 && y < 80;
     }
-    function attachToLogos() {
-      document.querySelectorAll('.nav-logo, .nav-logo-mark, .logo-circle').forEach(el => {
-        el.removeEventListener('touchend', onLogoTap);
-        el.addEventListener('touchend', onLogoTap, { passive: true });
-      });
-    }
-    setTimeout(attachToLogos, 1500);
-    new MutationObserver(attachToLogos).observe(document.body, { childList: true, subtree: true });
+
+    document.addEventListener('touchstart', function(e) {
+      const t = e.touches[0];
+      if (!inCorner(t.clientX, t.clientY)) return;
+      pressing = true;
+      holdTimer = setTimeout(() => {
+        if (pressing) {
+          if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
+          adminMode ? openAdminPanel() : showAdminLogin();
+        }
+      }, HOLD_MS);
+    }, { passive: true });
+
+    document.addEventListener('touchend',   function() { pressing = false; clearTimeout(holdTimer); }, { passive: true });
+    document.addEventListener('touchmove',  function() { pressing = false; clearTimeout(holdTimer); }, { passive: true });
+    document.addEventListener('touchcancel',function() { pressing = false; clearTimeout(holdTimer); }, { passive: true });
   })();
   if (firebaseAuth) {
     firebaseAuth.onAuthStateChanged(user => {
