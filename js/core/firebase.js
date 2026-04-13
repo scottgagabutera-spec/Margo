@@ -92,8 +92,8 @@ function _refreshStats() {
 }
 
 function startFirebaseSync() {
-  loadFeaturedLyric();
   if (!isFirebaseEnabled) {
+    if (!postsLoaded) loadFeaturedLyric();
     postsLoaded = true;
     _refreshStats();
     if (typeof buildLyricStream === 'function') buildLyricStream();
