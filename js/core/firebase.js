@@ -159,6 +159,7 @@ initFirebase();
 
 /* ── Featured lyric — loads from adminConfig/featuredLyric on landing ── */
 function loadFeaturedLyric() {
+  console.log("[Margo] loadFeaturedLyric called, isFirebaseEnabled:", isFirebaseEnabled, "adminConfigRef:", !!adminConfigRef);
   if (!isFirebaseEnabled || !adminConfigRef) return;
   adminConfigRef.child('featuredLyric').once('value', function(snap) {
     const data = snap.val();
