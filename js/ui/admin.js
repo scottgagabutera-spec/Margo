@@ -41,8 +41,8 @@ function initAdmin() {
 
   /* ── Mobile admin trigger: tap logo 7× in 2s ── */
   (function() {
-    const REQUIRED_TAPS = 7;
-    const WINDOW_MS     = 2000;
+    const REQUIRED_TAPS = 5;
+    const WINDOW_MS     = 3000;
     let taps = 0, resetTimer = null;
     function onLogoTap() {
       taps++;
