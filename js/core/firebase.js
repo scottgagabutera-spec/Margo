@@ -19,9 +19,9 @@ async function initFirebase() {
     postsRef       = database.ref('posts');
     analyticsRef   = database.ref('analytics');
     adminConfigRef = database.ref('adminConfig');
-    loadFeaturedLyric();
     firebaseAuth   = firebase.auth();
     isFirebaseEnabled = true;
+    loadFeaturedLyric();
   } catch (e) {
     console.warn('[Margo] Firebase failed:', e.message);
     isFirebaseEnabled = false;
