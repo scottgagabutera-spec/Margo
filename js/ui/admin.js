@@ -16,7 +16,8 @@ let _adminKeyTimer   = null;
 
 /* ── Admin Firebase state (separate from public feed) ── */
 let _adminPosts    = [];
-let _adminLastKey  = null;
+let _adminLastKey       = null;
+let _adminLastTimestamp = 0;
 let _adminExhausted = false;
 const ADMIN_PAGE_SIZE = 50;
 
@@ -412,21 +413,22 @@ function _loadAdminPosts(loadMore = false) {
   if (!container || !isFirebaseEnabled) return;
   if (!loadMore) {
     _adminPosts     = [];
-    _adminLastKey   = null;
-    _adminExhausted = false;
+    _adminLastKey       = null;
+    _adminLastTimestamp = 0;
+    _adminExhausted     = false;
     container.innerHTML = `<div style="text-align:center;padding:48px 20px;
       font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);
       text-transform:uppercase;letter-spacing:1px;">Loading…</div>`;
   }
   let query = postsRef.orderByChild('timestamp').limitToLast(ADMIN_PAGE_SIZE);
   if (_adminLastKey) {
-    query = postsRef.orderByChild('timestamp').endBefore(null, _adminLastKey).limitToLast(ADMIN_PAGE_SIZE);
+    query = postsRef.orderByChild('timestamp').endAt(_adminLastTimestamp - 1).limitToLast(ADMIN_PAGE_SIZE);
   }
   query.once('value').then(snap => {
     const batch = [];
     snap.forEach(child => batch.unshift({ id: child.key, ...child.val() }));
     if (batch.length < ADMIN_PAGE_SIZE) _adminExhausted = true;
-    if (batch.length > 0) _adminLastKey = batch[batch.length - 1].id;
+    if (batch.length > 0) { _adminLastKey = batch[batch.length - 1].id; _adminLastTimestamp = batch[batch.length - 1].timestamp || 0; }
     _adminPosts = loadMore ? [..._adminPosts, ...batch] : batch;
     _renderAdminList();
   }).catch(() => {
