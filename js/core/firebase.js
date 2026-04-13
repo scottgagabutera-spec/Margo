@@ -92,6 +92,7 @@ function _refreshStats() {
 }
 
 function startFirebaseSync() {
+  loadFeaturedLyric();
   if (!isFirebaseEnabled) {
     postsLoaded = true;
     _refreshStats();
@@ -153,3 +154,16 @@ function startFirebaseSync() {
 }
 
 initFirebase();
+
+/* ── Featured lyric — loads from adminConfig/featuredLyric on landing ── */
+function loadFeaturedLyric() {
+  if (!isFirebaseEnabled || !adminConfigRef) return;
+  adminConfigRef.child('featuredLyric').once('value', function(snap) {
+    const data = snap.val();
+    if (!data || !data.text) return;
+    const textEl = document.getElementById('heroFeaturedText');
+    const attrEl = document.getElementById('heroFeaturedAttr');
+    if (textEl) textEl.textContent = data.text;
+    if (attrEl) attrEl.textContent = (data.artist || '') + (data.song ? ' \u00b7 ' + data.song : '');
+  });
+}

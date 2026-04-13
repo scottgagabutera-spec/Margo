@@ -219,8 +219,37 @@ function openAdminPanel() {
       <button id="tabPages" style="${adminMainTabStyle(false)}" data-tab="pages">
         Pages
       </button>
+      <button id="tabFeatured" style="${adminMainTabStyle(false)}" data-tab="featured">
+        Featured
+      </button>
     </div>
 
+    <!-- FEATURED PANEL (hidden by default) -->
+    <div id="adminPanelFeatured" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+      <div style="padding:20px;flex:1;overflow-y:auto;">
+        <p style="font-family:'Lora',serif;font-size:0.6rem;color:#707078;text-transform:uppercase;letter-spacing:1px;margin:0 0 16px;">
+          Featured lyric shown on landing page hero — update anytime
+        </p>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label style="font-family:'Lora',serif;font-size:0.6rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Lyric Text</label>
+            <input id="featuredLyricText" type="text" placeholder="Enter lyric here" style="width:100%;padding:10px 13px;background:#141418;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#F0F0F0;font-family:'Lora',serif;font-size:0.95rem;font-style:italic;box-sizing:border-box;outline:none;"/>
+          </div>
+          <div>
+            <label style="font-family:'Lora',serif;font-size:0.6rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Artist</label>
+            <input id="featuredLyricArtist" type="text" placeholder="Artist name" style="width:100%;padding:10px 13px;background:#141418;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#F0F0F0;font-family:'Lora',serif;font-size:0.95rem;box-sizing:border-box;outline:none;"/>
+          </div>
+          <div>
+            <label style="font-family:'Lora',serif;font-size:0.6rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">Song Title</label>
+            <input id="featuredLyricSong" type="text" placeholder="Song title" style="width:100%;padding:10px 13px;background:#141418;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#F0F0F0;font-family:'Lora',serif;font-size:0.95rem;box-sizing:border-box;outline:none;"/>
+          </div>
+          <button id="featuredLyricSave" style="padding:12px 20px;background:#E8C547;color:#07060A;border:none;border-radius:10px;font-family:'Lora',serif;font-size:0.82rem;font-weight:700;cursor:pointer;margin-top:4px;">
+            Save Featured Lyric
+          </button>
+          <div id="featuredLyricStatus" style="font-family:'Lora',serif;font-size:0.7rem;color:rgba(255,255,255,0.4);min-height:20px;"></div>
+        </div>
+      </div>
+    </div>
     <!-- POSTS PANEL -->
     <div id="adminPanelPosts" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
       <div style="
@@ -359,6 +388,8 @@ function openAdminPanel() {
       btn.style.cssText = adminMainTabStyle(true);
       document.getElementById('adminPanelPosts').style.display = _adminActiveTab === 'posts' ? 'flex' : 'none';
       document.getElementById('adminPanelPages').style.display = _adminActiveTab === 'pages' ? 'flex' : 'none';
+      document.getElementById('adminPanelFeatured').style.display = _adminActiveTab === 'featured' ? 'flex' : 'none';
+      if (_adminActiveTab === 'featured') loadFeaturedLyricAdmin();
     };
   });
 
@@ -391,6 +422,10 @@ function openAdminPanel() {
   // ── Pages CMS ──
   let currentPage = 'about';
   initPageEditor(currentPage);
+
+  // Wire featured lyric save button
+  const featSaveBtn = document.getElementById("featuredLyricSave");
+  if (featSaveBtn) featSaveBtn.onclick = saveFeaturedLyric;
 
   modal.querySelectorAll('.page-tab-btn').forEach(btn => {
     btn.onclick = () => {
@@ -461,6 +496,38 @@ function initPageEditor(page) {
   }).catch(() => {
     editor.placeholder = 'Could not load content.';
   });
+}
+
+// ── Featured lyric admin load ──
+function loadFeaturedLyricAdmin() {
+  firebase.database().ref("adminConfig/featuredLyric").once("value").then(snap => {
+    const data = snap.val();
+    if (!data) return;
+    const textEl   = document.getElementById("featuredLyricText");
+    const artistEl = document.getElementById("featuredLyricArtist");
+    const songEl   = document.getElementById("featuredLyricSong");
+    if (textEl && data.text)     textEl.value   = data.text;
+    if (artistEl && data.artist) artistEl.value = data.artist;
+    if (songEl && data.song)     songEl.value   = data.song;
+  }).catch(() => {});
+}
+
+// ── Featured lyric save (wired in openAdminPanel) ──
+function saveFeaturedLyric() {
+  const text   = document.getElementById("featuredLyricText")?.value.trim();
+  const artist = document.getElementById("featuredLyricArtist")?.value.trim();
+  const song   = document.getElementById("featuredLyricSong")?.value.trim();
+  const status = document.getElementById("featuredLyricStatus");
+  if (!text) { if (status) status.textContent = "Lyric text is required."; return; }
+  firebase.database().ref("adminConfig/featuredLyric").set({ text, artist: artist||"", song: song||"", updatedAt: Date.now() })
+    .then(() => {
+      if (status) { status.style.color = "#4ade80"; status.textContent = "✓ Saved — live on landing page"; }
+      const textEl = document.getElementById("heroFeaturedText");
+      const attrEl = document.getElementById("heroFeaturedAttr");
+      if (textEl) textEl.textContent = text;
+      if (attrEl) attrEl.textContent = (artist||"") + (song ? " · " + song : "");
+    })
+    .catch(e => { if (status) { status.style.color = "#ff6060"; status.textContent = "Error: " + e.message; } });
 }
 
 // ── Save page content to Firebase ──
