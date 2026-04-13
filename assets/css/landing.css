@@ -378,6 +378,7 @@ html, body {
 .hero-lyric-attr {
   font-family: 'Lora', serif;
   font-size: 0.7rem;
-  color: var(--text-3);
-  letter-spacing: 0.5px;
+  color: var(--gold);
+  letter-spacing: 1px;
+  opacity: 0.75;
 }
