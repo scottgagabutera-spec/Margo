@@ -411,16 +411,18 @@ function openAdminPanel() {
 function _loadAdminPosts() {
   const container = document.getElementById('adminPostList');
   if (!container || !isFirebaseEnabled) return;
-  _adminPosts     = [];
+  _adminPosts = [];
   _adminExhausted = true;
   container.innerHTML = '<div style="text-align:center;padding:48px 20px;font-family:Lora,serif;font-size:0.6rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;">Loading...</div>';
-  postsRef.orderByChild('timestamp').limitToLast(200).once('value').then(snap => {
+  postsRef.orderByChild('timestamp').limitToLast(200).on('value', snap => {
     _adminPosts = [];
-    snap.forEach(child => _adminPosts.unshift({ id: child.key, ...child.val() }));
+    snap.forEach(child => {
+      const p = child.val();
+      p.id = child.key;
+      _adminPosts.unshift(p);
+    });
     _adminPosts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     _renderAdminList();
-  }).catch(() => {
-    if (container) container.innerHTML = '<div style="text-align:center;padding:48px 20px;font-family:Lora,serif;font-size:0.6rem;color:var(--text-3);">Could not load posts</div>';
   });
 }
 
