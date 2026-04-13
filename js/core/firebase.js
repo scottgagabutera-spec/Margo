@@ -21,7 +21,9 @@ async function initFirebase() {
     adminConfigRef = database.ref('adminConfig');
     firebaseAuth   = firebase.auth();
     isFirebaseEnabled = true;
-    loadFeaturedLyric();
+    firebase.database().ref('.info/connected').once('value', function(snap) {
+      if (snap.val() === true) loadFeaturedLyric();
+    });
   } catch (e) {
     console.warn('[Margo] Firebase failed:', e.message);
     isFirebaseEnabled = false;
