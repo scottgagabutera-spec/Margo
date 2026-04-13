@@ -19,6 +19,7 @@ async function initFirebase() {
     postsRef       = database.ref('posts');
     analyticsRef   = database.ref('analytics');
     adminConfigRef = database.ref('adminConfig');
+    loadFeaturedLyric();
     firebaseAuth   = firebase.auth();
     isFirebaseEnabled = true;
   } catch (e) {
@@ -93,7 +94,6 @@ function _refreshStats() {
 
 function startFirebaseSync() {
   if (!isFirebaseEnabled) {
-    if (!postsLoaded) loadFeaturedLyric();
     postsLoaded = true;
     _refreshStats();
     if (typeof buildLyricStream === 'function') buildLyricStream();
