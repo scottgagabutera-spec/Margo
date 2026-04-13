@@ -39,31 +39,32 @@ function initAdmin() {
   });
   document.addEventListener('keyup', e => _adminKeysHeld.delete(e.key.toLowerCase()));
 
-  /* ── Mobile admin trigger: long press top-left corner 10s ── */
+  /* ── Mobile admin trigger: hold "See What's Live" button for 10s ── */
   (function() {
     const HOLD_MS = 10000;
     let holdTimer = null;
-    let pressing  = false;
 
-    function inCorner(x, y) {
-      return x < 80 && y < 80;
-    }
+    function attach() {
+      const btn = document.getElementById('enterBtn');
+      if (!btn) return;
 
-    document.addEventListener('touchstart', function(e) {
-      const t = e.touches[0];
-      if (!inCorner(t.clientX, t.clientY)) return;
-      pressing = true;
-      holdTimer = setTimeout(() => {
-        if (pressing) {
+      btn.addEventListener('touchstart', function() {
+        holdTimer = setTimeout(() => {
           if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
           adminMode ? openAdminPanel() : showAdminLogin();
-        }
-      }, HOLD_MS);
-    }, { passive: true });
+        }, HOLD_MS);
+      }, { passive: true });
 
-    document.addEventListener('touchend',   function() { pressing = false; clearTimeout(holdTimer); }, { passive: true });
-    document.addEventListener('touchmove',  function() { pressing = false; clearTimeout(holdTimer); }, { passive: true });
-    document.addEventListener('touchcancel',function() { pressing = false; clearTimeout(holdTimer); }, { passive: true });
+      btn.addEventListener('touchend',    function() { clearTimeout(holdTimer); }, { passive: true });
+      btn.addEventListener('touchmove',   function() { clearTimeout(holdTimer); }, { passive: true });
+      btn.addEventListener('touchcancel', function() { clearTimeout(holdTimer); }, { passive: true });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', attach);
+    } else {
+      attach();
+    }
   })();
   if (firebaseAuth) {
     firebaseAuth.onAuthStateChanged(user => {
