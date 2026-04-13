@@ -701,7 +701,7 @@ function _drawConvoLayoutAnimated(ctx, W, H, t, motion, p1, p2, opts) {
   const PAD_H=Math.round(16*S), logoSz=Math.round(17*S), PAD_TOP=Math.round(14*S);
   const iconSz=Math.round(22*S);
   const ringT = t < 1.0 ? t : -1;
-  _drawMargoIcon(ctx, PAD_H, PAD_TOP, iconSz, 0.42, ringT, m);
+  _drawMargoIcon(ctx, PAD_H, PAD_TOP, iconSz, 0.72, ringT, m);
   ctx.save();
   ctx.font=`700 ${logoSz}px 'Lora',serif`;
   ctx.fillStyle='#E8C547'; ctx.globalAlpha=0.38;
@@ -901,7 +901,7 @@ function _drawCardFrame(ctx,W,H,t,motion,p1,p2,opts){
   const pad=W*0.065, mSz=Math.max(12,S*19), divY=H*0.490;
   const iconSz=Math.max(18,S*26);
   const ringT = isAnim ? t : -1;
-  _drawMargoIcon(ctx, pad, pad*0.45, iconSz, 0.42, ringT, m);
+  _drawMargoIcon(ctx, pad, pad*0.45, iconSz, 0.72, ringT, m);
   ctx.save();
   ctx.font=`700 ${mSz}px 'Lora',serif`;
   ctx.fillStyle='#E8C547'; ctx.globalAlpha=0.38;
@@ -935,13 +935,58 @@ function _drawCardFrame(ctx,W,H,t,motion,p1,p2,opts){
 
 function _drawCardBg(ctx,W,H,t,m,pV,eV,style,isAnim){
   const easeOut=x=>1-Math.pow(1-x,3);
+  const a2=isAnim?easeOut(Math.min(1,t/0.7)):1;
   switch(style){
-    case 'contrast':ctx.fillStyle='#000000';ctx.fillRect(0,0,W,H);ctx.save();ctx.globalAlpha=0.22;const gc=ctx.createRadialGradient(W*.15,H*.15,0,W*.15,H*.15,W*.8);gc.addColorStop(0,pV);gc.addColorStop(1,'transparent');ctx.fillStyle=gc;ctx.fillRect(0,0,W,H);ctx.restore();break;
-    case 'mesh':{const mg=ctx.createLinearGradient(0,0,W,H);mg.addColorStop(0,m.bg);mg.addColorStop(0.4,_mix(pV,m.bg,0.75));mg.addColorStop(0.6,_mix(eV,m.bg,0.75));mg.addColorStop(1,m.bg);ctx.fillStyle=mg;ctx.fillRect(0,0,W,H);break;}
-    case 'grain':ctx.fillStyle=m.bg;ctx.fillRect(0,0,W,H);ctx.save();ctx.globalAlpha=0.028;for(let y=0;y<H;y+=3)for(let x=0;x<W;x+=3){const v=Math.random()*255|0;ctx.fillStyle=`rgb(${v},${v},${v})`;ctx.fillRect(x,y,3,3);}ctx.restore();break;
-    case 'neon':ctx.fillStyle='#020202';ctx.fillRect(0,0,W,H);ctx.save();ctx.globalAlpha=0.35;const ng=ctx.createLinearGradient(0,0,W,H);ng.addColorStop(0,pV);ng.addColorStop(1,eV);ctx.strokeStyle=ng;ctx.lineWidth=Math.max(2,W*0.006);ctx.beginPath();if(ctx.roundRect)ctx.roundRect(W*0.016,H*0.016,W*0.968,H*0.968,W*0.025);else ctx.rect(W*0.016,H*0.016,W*0.968,H*0.968);ctx.stroke();ctx.restore();break;
-    case 'depth':{const dg=ctx.createRadialGradient(W*.5,H*.38,0,W*.5,H*.5,W*.82);dg.addColorStop(0,_mix(m.bg,'#1a1520',0.5));dg.addColorStop(1,'#000000');ctx.fillStyle=dg;ctx.fillRect(0,0,W,H);break;}
-    default:{const bg=ctx.createLinearGradient(0,0,W,H);bg.addColorStop(0,m.bg);bg.addColorStop(1,_mix(m.bg,'#000000',0.4));ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.save();ctx.globalAlpha=0.18;const g1=ctx.createRadialGradient(W*.2,H*.22,0,W*.2,H*.22,W*.6);g1.addColorStop(0,pV);g1.addColorStop(1,'transparent');ctx.fillStyle=g1;ctx.fillRect(0,0,W,H);ctx.restore();ctx.save();ctx.globalAlpha=0.18*(isAnim?easeOut(Math.min(1,t/0.7)):1);const g2=ctx.createRadialGradient(W*.8,H*.78,0,W*.8,H*.78,W*.6);g2.addColorStop(0,eV);g2.addColorStop(1,'transparent');ctx.fillStyle=g2;ctx.fillRect(0,0,W,H);ctx.restore();}
+    case 'contrast':
+      /* Pure black + single left accent glow */
+      ctx.fillStyle='#000000'; ctx.fillRect(0,0,W,H);
+      ctx.save(); ctx.globalAlpha=0.18;
+      const gc=ctx.createRadialGradient(W*.15,H*.20,0,W*.15,H*.20,W*.7);
+      gc.addColorStop(0,pV); gc.addColorStop(1,'transparent');
+      ctx.fillStyle=gc; ctx.fillRect(0,0,W,H); ctx.restore();
+      break;
+    case 'mesh':{
+      /* Two-tone gradient — theme bg blending to accent hints */
+      const mg=ctx.createLinearGradient(0,0,W,H);
+      mg.addColorStop(0,m.bg); mg.addColorStop(0.5,_mix(pV,m.bg,0.88)); mg.addColorStop(1,m.bg);
+      ctx.fillStyle=mg; ctx.fillRect(0,0,W,H); break;}
+    case 'grain':
+      /* Editorial: flat dark surface, very faint gold rule at top */
+      ctx.fillStyle=m.bg; ctx.fillRect(0,0,W,H);
+      ctx.save(); ctx.globalAlpha=0.55;
+      ctx.fillStyle=m.accent;
+      ctx.fillRect(W*0.065, Math.round(H*0.008), Math.round(W*0.025), Math.round(H*0.0025));
+      ctx.restore();
+      break;
+    case 'neon':
+      /* Near-black + neon border glow */
+      ctx.fillStyle='#020202'; ctx.fillRect(0,0,W,H);
+      ctx.save(); ctx.globalAlpha=0.45;
+      const ng=ctx.createLinearGradient(0,0,W,H);
+      ng.addColorStop(0,pV); ng.addColorStop(1,eV);
+      ctx.strokeStyle=ng; ctx.lineWidth=Math.max(2,W*0.006);
+      ctx.beginPath();
+      if(ctx.roundRect)ctx.roundRect(W*0.016,H*0.016,W*0.968,H*0.968,W*0.025);
+      else ctx.rect(W*0.016,H*0.016,W*0.968,H*0.968);
+      ctx.stroke(); ctx.restore(); break;
+    case 'depth':{
+      /* Cinematic: deep vignette radial */
+      const dg=ctx.createRadialGradient(W*.5,H*.38,0,W*.5,H*.5,W*.85);
+      dg.addColorStop(0,_mix(m.bg,'#1a1520',0.4)); dg.addColorStop(1,'#000000');
+      ctx.fillStyle=dg; ctx.fillRect(0,0,W,H); break;}
+    default:{
+      /* Glass (default): single flat dark base + one subtle glow top-left */
+      ctx.fillStyle=m.bg; ctx.fillRect(0,0,W,H);
+      ctx.save(); ctx.globalAlpha=0.14;
+      const g1=ctx.createRadialGradient(W*.18,H*.18,0,W*.18,H*.18,W*.55);
+      g1.addColorStop(0,pV); g1.addColorStop(1,'transparent');
+      ctx.fillStyle=g1; ctx.fillRect(0,0,W,H); ctx.restore();
+      /* Second glow — bottom-right, only after first card animates in */
+      ctx.save(); ctx.globalAlpha=0.12*a2;
+      const g2=ctx.createRadialGradient(W*.82,H*.82,0,W*.82,H*.82,W*.55);
+      g2.addColorStop(0,eV); g2.addColorStop(1,'transparent');
+      ctx.fillStyle=g2; ctx.fillRect(0,0,W,H); ctx.restore();
+    }
   }
 }
 
