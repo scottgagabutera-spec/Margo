@@ -103,7 +103,7 @@ function drawBg(ctx, W, H, th) {
 function drawMargoWordmark(ctx, W, H, th) {
   const sz=Math.max(14,Math.round(W*0.034)), pad=Math.round(W*0.048);
   ctx.save();
-  ctx.font=`800 ${sz}px 'Syne','Arial Black',sans-serif`;
+  ctx.font=`700 ${sz}px 'Lora',serif`;
   ctx.fillStyle=th.light?'#0B0B0D':th.acc; ctx.globalAlpha=0.28;
   ctx.textBaseline='top'; ctx.textAlign='left';
   const spacing=sz*0.22; let cx=pad;
@@ -212,7 +212,7 @@ function drawDivider(ctx, W, divY, echoUser, th) {
   const dText=`LYRIC BACK \u21A9  @${(echoUser||'ANONYMOUS').toString().replace(/^@/,'').toUpperCase()}`;
   const dFS=Math.max(10,Math.round(W*0.020));
   ctx.save();
-  ctx.font=`800 ${dFS}px 'Syne','Arial Black',sans-serif`;
+  ctx.font=`700 ${dFS}px 'Lora',serif`;
   const dTW=ctx.measureText(dText).width;
   const pH=dFS*2.0, pPad=W*0.028, pW=dTW+pPad*2;
   const pX=W/2-pW/2, pY=divY-pH/2, pR=pH/2, gap=pW/2+W*0.020;
@@ -235,7 +235,7 @@ function drawDivider(ctx, W, divY, echoUser, th) {
   ctx.fillStyle=pf;
   ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(pX,pY,pW,pH,pR); else ctx.rect(pX,pY,pW,pH); ctx.fill();
 
-  ctx.font=`800 ${dFS}px 'Syne','Arial Black',sans-serif`;
+  ctx.font=`700 ${dFS}px 'Lora',serif`;
   ctx.fillStyle=pillClr; ctx.textBaseline='middle'; ctx.textAlign='center';
   ctx.fillText(dText,W/2,divY);
   ctx.restore();
@@ -254,20 +254,20 @@ function drawSongsBar(ctx, W, byY, post1, post2, th) {
   ctx.strokeStyle=light?'rgba(0,0,0,0.12)':'rgba(255,255,255,0.10)'; ctx.lineWidth=1;
   ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(px*0.8,byY,W-px*1.6,bh,br); else ctx.rect(px*0.8,byY,W-px*1.6,bh);
   ctx.fill(); ctx.stroke();
-  ctx.font=`800 ${lFs}px 'Syne','Arial Black',sans-serif`;
+  ctx.font=`700 ${lFs}px 'Lora',serif`;
   ctx.fillStyle=light?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.70)';
   ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillText('SONGS',px,cy);
   const k1=post1.knowledge||{},s1=(k1.song||post1.song||'').substring(0,20),a1=(k1.artist||post1.artist||'');
   const k2=post2.knowledge||{},s2=(k2.song||post2.song||'').substring(0,20),a2=(k2.artist||post2.artist||'');
   const sc=light?'#0B0B0D':'#ffffff', ac=light?'rgba(0,0,0,0.45)':'rgba(255,255,255,0.45)';
-  ctx.font=`700 ${sFs}px 'DM Sans',sans-serif`; ctx.fillStyle=sc; ctx.textAlign='left';
+  ctx.font=`600 ${sFs}px 'Lora',serif`; ctx.fillStyle=sc; ctx.textAlign='left';
   ctx.fillText(s1,W*0.28,cy-aFs*0.5);
-  ctx.font=`400 ${aFs}px 'Space Mono',monospace`; ctx.fillStyle=ac; ctx.fillText(a1,W*0.28,cy+sFs*0.55);
+  ctx.font=`400 italic ${aFs}px 'Lora',serif`; ctx.fillStyle=ac; ctx.fillText(a1,W*0.28,cy+sFs*0.55);
   ctx.font=`400 ${sFs}px sans-serif`; ctx.fillStyle=th.acc; ctx.globalAlpha=0.7; ctx.textAlign='center';
   ctx.fillText('\u2194',W/2,cy); ctx.globalAlpha=1;
-  ctx.font=`700 ${sFs}px 'DM Sans',sans-serif`; ctx.fillStyle=sc; ctx.textAlign='right';
+  ctx.font=`600 ${sFs}px 'Lora',serif`; ctx.fillStyle=sc; ctx.textAlign='right';
   ctx.fillText(s2,W-px,cy-aFs*0.5);
-  ctx.font=`400 ${aFs}px 'Space Mono',monospace`; ctx.fillStyle=ac; ctx.fillText(a2,W-px,cy+sFs*0.55);
+  ctx.font=`400 italic ${aFs}px 'Lora',serif`; ctx.fillStyle=ac; ctx.fillText(a2,W-px,cy+sFs*0.55);
   ctx.restore();
 }
 
@@ -275,7 +275,7 @@ function drawSongsBar(ctx, W, byY, post1, post2, th) {
    LYRIC CARD
 ───────────────────────────────────────────── */
 function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
-  const{fontFamily='DM Serif Display',cardStyle='glass'}=opts;
+  const{fontFamily='Lora',cardStyle='glass'}=opts;
   const light=th.light, col=side==='left'?th.l:th.r;
   const bodyTxt=light?'#0B0B0D':'#ffffff';
   const mutedTxt=light?'rgba(0,0,0,0.5)':'rgba(255,255,255,0.48)';
@@ -305,7 +305,7 @@ function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
   const cardH=Math.min(areaH*0.88,lines.length*lh+cPad*2+sFs*2.5+lfs*0.5);
   const cardX=padH, cardY=areaTop+(areaH-cardH)/2, cardW=innerW;
   ctx.save();
-  ctx.font=`800 ${uFs}px 'Syne','Arial Black',sans-serif`;
+  ctx.font=`700 ${uFs}px 'Lora',serif`;
   ctx.fillStyle=col; ctx.globalAlpha=0.90;
   ctx.textBaseline='middle'; ctx.textAlign='left';
   ctx.fillText('\u25CF @'+user,padH,cardY-uFs*0.5-Math.round(B*0.010));
@@ -324,14 +324,14 @@ function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
   ctx.save(); ctx.globalAlpha=0.35; ctx.strokeStyle=divLine; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(cardX+cPad,divLineY); ctx.lineTo(cardX+cardW-cPad,divLineY); ctx.stroke(); ctx.restore();
   if(song){
-    ctx.font=`700 ${sFs}px 'DM Sans',sans-serif`; ctx.fillStyle=bodyTxt;
+    ctx.font=`600 ${sFs}px 'Lora',serif`; ctx.fillStyle=bodyTxt;
     ctx.textBaseline='bottom'; ctx.textAlign='left';
     ctx.fillText(song,cardX+cPad,cardY+cardH-cPad*0.6);
-    ctx.font=`400 ${aFs}px 'Space Mono',monospace`; ctx.fillStyle=mutedTxt;
+    ctx.font=`400 italic ${aFs}px 'Lora',serif`; ctx.fillStyle=mutedTxt;
     ctx.fillText(artist,cardX+cPad,cardY+cardH-cPad*0.6+aFs*1.3);
   }
   if(vibe){
-    ctx.font=`800 ${vFs}px 'Syne','Arial Black',sans-serif`;
+    ctx.font=`700 ${vFs}px 'Lora',serif`;
     const vw=ctx.measureText(vibe).width;
     const bw=vw+Math.round(B*0.022), bh=vFs*2.0;
     const bx=cardX+cardW-cPad*0.3-bw, by=cardY+cardH-bh-Math.round(B*0.014);
@@ -350,7 +350,7 @@ function drawLyricCard(ctx, W, areaTop, areaH, post, th, side, opts) {
 function dsPosterDraw(ctx, W, H, post1, post2, opts={}) {
   if(!post1||!post2) return;
   const th=_theme(opts.theme||'gold');
-  const ff=opts.fontFamily||'DM Serif Display';
+  const ff=opts.fontFamily||'Lora';
   const cs=opts.cardStyle||'glass';
   const B=Math.min(W,H);
   const padV=Math.round(Math.min(H*0.052,B*0.062)), vGap=Math.round(H*0.015);

@@ -14,7 +14,7 @@
 
 /* ── State ── */
 const GS = {
-  theme: 'midnight-gold', font: 'playfair', animation: 'fade-up',
+  theme: 'midnight-gold', font: 'lora-intimate', animation: 'fade-up',
   speed: 'normal', isExporting: false,
   _animFrame: null, _frame: 0, _last: 0,
   _canvasSize: 0, /* cached — only recalc on resize */
@@ -117,7 +117,7 @@ function gsDrawWordmark(ctx, W, H, th) {
   // MARGO text
   const sz = Math.max(10, Math.round(W*0.028));
   ctx.globalAlpha = 0.35;
-  ctx.font = '800 ' + sz + 'px Syne, Arial Black, sans-serif';
+  ctx.font = '800 ' + sz + "px 'Lora', serif";
   ctx.fillStyle = '#E8C547';
   ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
   ctx.fillText('MARGO', cx + r + Math.round(W*0.022), cy);
@@ -128,7 +128,7 @@ function gsDrawWatermark(ctx, W, H, theme) {
   const isLight = theme.text === '#000000';
   const text    = 'trymargo.com';
   const fSize   = Math.max(10, W * 0.022);
-  ctx.font = `700 ${fSize}px 'Space Mono', monospace`;
+  ctx.font = `700 ${fSize}px 'Lora', serif`;
   ctx.textBaseline = 'middle';
   const textW = ctx.measureText(text).width;
   const padX  = fSize * 1.0;
@@ -179,7 +179,7 @@ function gsMeta(ctx, W, H, data, scale) {
   ctx.font = `700 ${Math.max(12, 16 * scale)}px ${data.font.family}`;
   ctx.fillText(data.song, W / 2, H * 0.79);
   ctx.fillStyle = data.theme.text === '#000000' ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)';
-  ctx.font = `400 ${Math.max(9, 11 * scale)}px 'Space Mono', monospace`;
+  ctx.font = `400 italic ${Math.max(9, 11 * scale)}px 'Lora', serif`;
   ctx.fillText(data.artist, W / 2, H * 0.79 + 18 * scale);
   ctx.restore();
 }
@@ -198,7 +198,7 @@ function gsLyricFont(ctx, data, scale) {
 function gsDrawFrame(ctx, W, H, t, post) {
   const p     = post || window.currentPost || {};
   const theme = GS_THEMES[GS.theme] || GS_THEMES['midnight-gold'];
-  const font  = GS_FONTS[GS.font]   || GS_FONTS.playfair;
+  const font  = GS_FONTS[GS.font] || GS_FONTS['lora-intimate'];
   const k     = p.knowledge || {};
 
   const data = {
