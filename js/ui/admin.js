@@ -408,29 +408,19 @@ function openAdminPanel() {
 /* ══════════════════════════════════════
    PAGINATED POST LOADING
 ══════════════════════════════════════ */
-function _loadAdminPosts(loadMore = false) {
+function _loadAdminPosts() {
   const container = document.getElementById('adminPostList');
   if (!container || !isFirebaseEnabled) return;
-  if (!loadMore) {
-    _adminPosts     = [];
-    _adminLastKey       = null;
-    _adminLastTimestamp = 0;
-    _adminExhausted     = false;
-    container.innerHTML = `<div style="text-align:center;padding:48px 20px;
-      font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);
-      text-transform:uppercase;letter-spacing:1px;">Loading…</div>`;
-  }
-  postsRef.limitToLast(ADMIN_PAGE_SIZE).once('value').then(snap => {
-    const batch = [];
-    snap.forEach(child => batch.unshift({ id: child.key, ...child.val() }));
-    if (batch.length < ADMIN_PAGE_SIZE) _adminExhausted = true;
-    if (batch.length > 0) { _adminLastKey = batch[batch.length - 1].id; _adminLastTimestamp = batch[batch.length - 1].timestamp || 0; }
-    _adminPosts = loadMore ? [..._adminPosts, ...batch] : batch;
+  _adminPosts     = [];
+  _adminExhausted = true;
+  container.innerHTML = '<div style="text-align:center;padding:48px 20px;font-family:Lora,serif;font-size:0.6rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;">Loading...</div>';
+  postsRef.orderByChild('timestamp').limitToLast(200).once('value').then(snap => {
+    _adminPosts = [];
+    snap.forEach(child => _adminPosts.unshift({ id: child.key, ...child.val() }));
+    _adminPosts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     _renderAdminList();
   }).catch(() => {
-    if (container) container.innerHTML = `<div style="text-align:center;padding:48px 20px;
-      font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);">
-      Could not load posts</div>`;
+    if (container) container.innerHTML = '<div style="text-align:center;padding:48px 20px;font-family:Lora,serif;font-size:0.6rem;color:var(--text-3);">Could not load posts</div>';
   });
 }
 
