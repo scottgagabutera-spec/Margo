@@ -189,6 +189,7 @@
     }
     .lb-size-thumb.lb-vertical { width: 16px; height: 26px; }
     .lb-size-thumb.lb-square  { width: 22px; height: 22px; }
+    .lb-size-thumb.lb-landscape { width: 28px; height: 16px; }
     .lb-size-info { flex: 1; }
     .lb-size-name { font-size: 0.82rem; font-weight: 600; color: #F4F1ED; }
     .lb-size-desc { font-size: 0.6rem; color: #555360; margin-top: 2px; }
@@ -374,6 +375,14 @@
               </div>
               <div class="lb-size-dot"></div>
             </div>
+            <div class="lb-size-option" data-size="landscape">
+              <div class="lb-size-thumb lb-landscape"></div>
+              <div class="lb-size-info">
+                <div class="lb-size-name">Wide</div>
+                <div class="lb-size-desc">YouTube · Twitter banner</div>
+              </div>
+              <div class="lb-size-dot"></div>
+            </div>
           </div>
           <button class="lb-cta" id="lbBtnDownload">↓ Download Card</button>
         </div>
@@ -515,6 +524,10 @@ function openLyricBackShare(originalPost, echoPost) {
     b.classList.toggle('lb-style-selected', b.dataset.theme === 'dark');
   });
 
+  // Hide echo sheet if open
+  const _echoBackdrop = document.getElementById('echoSheetBackdrop');
+  if (_echoBackdrop) _echoBackdrop.style.visibility = 'hidden';
+
   // Show
   const backdrop = document.getElementById('lbBackdrop');
   backdrop.classList.remove('lb-hidden');
@@ -530,6 +543,8 @@ function closeLyricBackShare() {
   setTimeout(() => {
     backdrop.classList.add('lb-hidden');
     sheet.classList.remove('lb-exit');
+    const _echoBackdrop = document.getElementById('echoSheetBackdrop');
+    if (_echoBackdrop) _echoBackdrop.style.visibility = '';
   }, 260);
 }
 
@@ -591,7 +606,7 @@ async function _lbDownloadCard() {
   btn.textContent = 'Generating\u2026';
 
   try {
-    const W = 1080, H = _LB.size === 'vertical' ? 1920 : 1080;
+    const W = _LB.size === 'landscape' ? 1920 : 1080, H = _LB.size === 'vertical' ? 1920 : 1080;
     // Render at 2× for crisp text — canvas pixels are physical, scale then export
     const SCALE = 2;
     const canvas = document.getElementById('lbCardCanvas');
