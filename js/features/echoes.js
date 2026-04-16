@@ -386,7 +386,7 @@ function buildEchoCard(echo, idx) {
   `;
 
   card.querySelector('.echo-resonate-btn').onclick = () => resonateEcho(echo.id);
-  card.querySelector('.echo-share-btn').onclick    = () => openDuetShareSheet(echo);
+  card.querySelector('.echo-share-btn').onclick    = () => openLyricBackShare(ES.post, echo);
 
   return card;
 }
