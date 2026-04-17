@@ -3,18 +3,21 @@
    Dynamic Open Graph tags for Lyric Back share links.
    ============================================================ */
 
+import fs   from 'fs';
+import path from 'path';
+
 export default async function handler(req, res) {
   const url   = req.url || '';
-  const match = url.match(/\/lyricback\/([^?#]+)/);
+  const match = url.match(/\/lyricback\/([^?]+)/);
   if (!match) return res.redirect(302, '/');
 
-  const slug  = decodeURIComponent(match[1]);
+  const slug  = decodeURIComponent(match[1].split('?')[0]);
   const parts = slug.split('___');
   const id1   = parts[2];
   const id2   = parts[3];
 
   const DB  = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
-  const KEY = process.env.NEXT_PUBLIC_FIRE@�SE_API_KEY;
+  const KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 
   let title       = 'A Lyric Back on MARGO';
   let description = 'Someone echoed a lyric. Hear it on MARGO.';
@@ -39,7 +42,7 @@ export default async function handler(req, res) {
         const attr1 = [song1, artist1].filter(Boolean).join(' \u2014 ');
         const attr2 = [song2, artist2].filter(Boolean).join(' \u2014 ');
 
-        title       = `\u201C${lyric1}\u201D \u00B7 lyric back \u00B7 \u201C${lyric2}\u201D`;
+        title       = `\u201C${lyric1}\u201D \u00B7lyric back\u00B7 \u201C${lyric2}\u201D`;
         description = `${attr1} \u2192 ${attr2} \u00B7 Hear this Lyric Back on MARGO`;
       }
     }
@@ -47,11 +50,7 @@ export default async function handler(req, res) {
     // Fall back to defaults silently
   }
 
-  const fsMod   = await import('fs');
-  const pathMod = await import('path');
-  let html      = fsMod.default.readFileSync(
-    pathMod.default.join(process.cwd(), 'index.html'), 'utf8'
-  );
+  let html = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
 
   const esc = s => String(s)
     .replace(/&/g, '&amp;')
@@ -64,8 +63,8 @@ export default async function handler(req, res) {
     .replace(/(<meta property="og:description"[^>]*content=")[^"]*(")/,  `$1${esc(description)}$2`)
     .replace(/(<meta property="og:url"[^>]*content=")[^"]*(")/,          `$1${esc(ogUrl)}$2`)
     .replace(/(<meta name="twitter:title"[^>]*content=")[^"]*(")/,       `$1${esc(title)}$2`)
-    .replace(/(<meta name="twitter:description"[^?]*content=")[^"]*(")/,  `$1${esc(description)}$2`)
-    .replace(/(<link rel="canonical"[^?]*href=")[^"]*(")/,               `$1${esc(ogUrl)}$2`);
+    .replace(/(<meta name="twitter:description"[^>]*content=")[^"]*(")/, `$1${esc(description)}$2`)
+    .replace(/(<link rel="canonical"[^>]*href=")[^"]*(")/,               `$1${esc(ogUrl)}$2`);
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
