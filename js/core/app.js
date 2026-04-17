@@ -285,4 +285,29 @@ wireSharPosterBtn();
 initAdmin();
 startFirebaseSync();
 
+// ════════════════════════════════════════════════════════
+//   DEEP LINK HANDLER
+//   trymargo.com/lyricback/[words]--[postId]--[echoId]
+// ════════════════════════════════════════════════════════
+function handleDeepLink() {
+  const match = window.location.pathname.match(/^\/lyricback\/(.+)/);
+  if (!match) return;
+  const parts = match[1].split("--");
+  const echoId = parts[parts.length - 1];
+  const postId = parts[parts.length - 2];
+  if (!postId || !echoId) return;
+  const postIndex = posts.findIndex(p => p.id === postId);
+  if (postIndex === -1) return;
+  goToFeed();
+  setTimeout(() => {
+    openEchoSheet(postIndex);
+    setTimeout(() => {
+      const echoEl = document.querySelector("[data-echo-id=" + JSON.stringify(echoId) + "]");
+      if (echoEl) echoEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 800);
+  }, 400);
+}
+window.handleDeepLink = handleDeepLink;
+
+
 

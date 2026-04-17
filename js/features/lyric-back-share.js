@@ -503,9 +503,10 @@ function openLyricBackShare(originalPost, echoPost) {
   _lbBuildCopyPreview();
 
   // Link
-  const slug = (p2.username || 'user').replace(/[^a-z0-9]/gi,'').toLowerCase()
-    + '-' + (p2.song || 'lyric').replace(/[^a-z0-9]/gi,'').toLowerCase().slice(0,12);
-  document.getElementById('lbLinkUrl').textContent = 'trymargo.com/lb/' + slug;
+  const _w1 = (p1.text || '').replace(/[^a-z0-9 ]/gi,'').trim().split(/s+/).slice(0,4).join('-').toLowerCase();
+  const _w2 = (p2.text || '').replace(/[^a-z0-9 ]/gi,'').trim().split(/s+/).slice(0,4).join('-').toLowerCase();
+  const slug = _w1 + '--x--' + _w2 + '--' + (p1.id || '') + '--' + (p2.id || '');
+  document.getElementById('lbLinkUrl').textContent = 'trymargo.com/lyricback/' + slug;
 
   // Reset to card tab
   document.querySelectorAll('.lb-tab').forEach((t,i) => t.classList.toggle('lb-active', i===0));
