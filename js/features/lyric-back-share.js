@@ -573,11 +573,15 @@ function _lbCopyText() {
   const p1 = _LB.post1, p2 = _LB.post2;
   const s1 = p1.song + (p1.artist ? ' \u2014 ' + p1.artist : '');
   const s2 = p2.song + (p2.artist ? ' \u2014 ' + p2.artist : '');
+  const url = 'https://' + document.getElementById('lbLinkUrl').textContent;
   const text = [
-    '\u201C' + p1.text + '\u201D', s1, '',
-    '\u21B3 Lyric back:',
-    '\u201C' + p2.text + '\u201D', s2, '',
-    'via MARGO \u00B7 https://' + document.getElementById('lbLinkUrl').textContent
+    '\u201C' + p1.text + '\u201D',
+    '\u2014 ' + s1,
+    '',
+    '\u21B3 \u201C' + p2.text + '\u201D',
+    '\u2014 ' + s2,
+    '',
+    '\uD83C\uDFB5 ' + url
   ].join('\n');
   navigator.clipboard.writeText(text)
     .then(()  => _lbToast('Copied to clipboard'))
