@@ -398,7 +398,7 @@
             <div class="lb-link-url"  id="lbLinkUrl"></div>
             <div class="lb-link-note">Anyone who opens this sees the Lyric Back on Margo</div>
           </div>
-          <button class="lb-cta" id="lbBtnLink">⎘ Copy link</button>
+          <button class="lb-cta lb-cta-share" id="lbBtnLink">↗ Share Lyric Back</button>
         </div>
 
         <div class="lb-bottom-spacer"></div>
@@ -577,19 +577,40 @@ function _lbCopyText() {
     '\u201C' + p1.text + '\u201D', s1, '',
     '\u21B3 Lyric back:',
     '\u201C' + p2.text + '\u201D', s2, '',
-    'via MARGO \u00B7 trymargo.com'
+    'via MARGO \u00B7 https://' + document.getElementById('lbLinkUrl').textContent
   ].join('\n');
   navigator.clipboard.writeText(text)
     .then(()  => _lbToast('Copied to clipboard'))
     .catch(() => _lbToast('Copy failed \u2014 try again'));
 }
 
-/* ── COPY LINK ── */
+/* ── SHARE LINK ── */
 function _lbCopyLink() {
   const url = 'https://' + document.getElementById('lbLinkUrl').textContent;
-  navigator.clipboard.writeText(url)
-    .then(()  => _lbToast('Link copied'))
-    .catch(() => _lbToast('Copy failed \u2014 try again'));
+  const p1 = _LB.post1, p2 = _LB.post2;
+  const shareText = '\u201C' + p1.text + '\u201D \u27A1 \u201C' + p2.text + '\u201D via MARGO';
+  if (navigator.share) {
+    navigator.share({ title: 'Lyric Back on MARGO', text: shareText, url: url })
+      .catch(() => {});
+    return;
+  }
+  // Desktop fallback — show share options
+  const existing = document.getElementById('lbSharePopup');
+  if (existing) { existing.remove(); return; }
+  const popup = document.createElement('div');
+  popup.id = 'lbSharePopup';
+  popup.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:16px;z-index:99999;display:flex;flex-direction:column;gap:10px;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
+  const encoded = encodeURIComponent(url);
+  const encodedText = encodeURIComponent(shareText);
+  popup.innerHTML = `
+    <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Share via</div>
+    <a href="https://x.com/intent/tweet?url=${encoded}&text=${encodedText}" target="_blank" style="color:#fff;text-decoration:none;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.9rem;">𝕏 Twitter / X</a>
+    <a href="https://wa.me/?text=${encodedText}%20${encoded}" target="_blank" style="color:#fff;text-decoration:none;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.9rem;">💬 WhatsApp</a>
+    <a href="mailto:?subject=Lyric Back on MARGO&body=${encodedText}%0A%0A${encoded}" style="color:#fff;text-decoration:none;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.9rem;">✉️ Email</a>
+    <button onclick="navigator.clipboard.writeText('${url}').then(()=>{document.getElementById('lbSharePopup').remove();window._lbToast&&_lbToast('Link copied')})" style="color:#fff;background:rgba(232,197,71,0.15);border:1px solid rgba(232,197,71,0.3);border-radius:10px;padding:10px 14px;font-size:0.9rem;cursor:pointer;text-align:left;">⎘ Copy link</button>
+    <button onclick="document.getElementById('lbSharePopup').remove()" style="color:rgba(255,255,255,0.4);background:none;border:none;padding:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>
+  `;
+  document.body.appendChild(popup);
 }
 
 /* ── FONT CACHE — wait only once ── */
