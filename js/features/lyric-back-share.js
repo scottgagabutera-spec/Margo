@@ -343,7 +343,7 @@
         <div class="lb-tabs" id="lbTabs">
           <button class="lb-tab lb-active" data-tab="card">Save Card</button>
           <button class="lb-tab"           data-tab="copy">Copy Text</button>
-          <button class="lb-tab"           data-tab="link">Copy Link</button>
+          <button class="lb-tab"           data-tab="link">Share Link</button>
         </div>
 
         <div class="lb-screen lb-visible" id="lb-screen-card">

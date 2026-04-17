@@ -289,7 +289,7 @@ startFirebaseSync();
 //   DEEP LINK HANDLER
 //   trymargo.com/lyricback/[words]--[postId]--[echoId]
 // ════════════════════════════════════════════════════════
-function handleDeepLink() {
+window.addEventListener('margoPostsReady', function() {
   const match = window.location.pathname.match(/^\/lyricback\/(.+)/);
   if (!match) return;
   const parts = match[1].split("___");
@@ -300,14 +300,13 @@ function handleDeepLink() {
   if (postIndex === -1) return;
   goToFeed();
   setTimeout(() => {
-    openEchoSheet(postIndex);
+    if (typeof openEchoSheet === 'function') openEchoSheet(postIndex);
     setTimeout(() => {
       const echoEl = document.querySelector("[data-echo-id='" + echoId + "']");
-      if (echoEl) echoEl.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 800);
-  }, 400);
-}
-window.handleDeepLink = handleDeepLink;
+      if (echoEl) echoEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 900);
+  }, 500);
+});
 
 
 
