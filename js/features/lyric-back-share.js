@@ -577,10 +577,10 @@ function _lbCopyText() {
     '\u201C' + p1.text + '\u201D',
     '\u2014 ' + s1,
     '',
+    '\u00B7 lyric back \u00B7',
     '',
-    '\u21B3 \u201C' + p2.text + '\u201D',
+    '\u201C' + p2.text + '\u201D',
     '\u2014 ' + s2,
-    '',
     '',
     'via MARGO \u00B7 trymargo.com'
   ].join('\n');
