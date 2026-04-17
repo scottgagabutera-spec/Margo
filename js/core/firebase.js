@@ -97,6 +97,7 @@ function startFirebaseSync() {
     postsLoaded = true;
     _refreshStats();
     if (typeof buildLyricStream === 'function') buildLyricStream();
+    window.dispatchEvent(new CustomEvent('margoPostsReady'));
     return;
   }
 
@@ -138,7 +139,7 @@ function startFirebaseSync() {
     }
 
     // Always render on initial load — feed may not be active yet but posts are ready
-    if (isInitialLoad) {
+    if (isInitialLoad || window.location.pathname.startsWith('/lyricback/')) {
       if (typeof renderFeed === 'function') renderFeed();
       window.dispatchEvent(new CustomEvent('margoPostsReady'));
     } else if (feed && feed.classList.contains('active')) {
