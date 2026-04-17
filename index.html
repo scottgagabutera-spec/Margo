@@ -90,18 +90,18 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&display=swap" rel="stylesheet">
   <!-- Lora — self-hosted, no Google dependency, app-ready -->
-  <link rel="preload" href="assets/fonts/lora/lora-v37-latin-regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="assets/fonts/lora/lora-v37-latin-italic.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="assets/fonts/lora/lora-v37-latin-600.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/lora/lora-v37-latin-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/lora/lora-v37-latin-italic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/lora/lora-v37-latin-600.woff2" as="font" type="font/woff2" crossorigin>
 
   <!-- FIXED: both CSS files now load from assets/ -->
-  <link rel="stylesheet" href="assets/css/base.css"/>
-  <link rel="stylesheet" href="assets/css/landing.css"/>
-  <link rel="stylesheet" href="assets/css/feed.css"/>
-  <link rel="stylesheet" href="assets/css/modals.css"/>
-  <link rel="stylesheet" href="assets/css/composer.css"/>
-  <link rel="stylesheet" href="assets/css/features.css"/>
-  <link rel="stylesheet" href="assets/gif-studio.css"/>
+  <link rel="stylesheet" href="/assets/css/base.css"/>
+  <link rel="stylesheet" href="/assets/css/landing.css"/>
+  <link rel="stylesheet" href="/assets/css/feed.css"/>
+  <link rel="stylesheet" href="/assets/css/modals.css"/>
+  <link rel="stylesheet" href="/assets/css/composer.css"/>
+  <link rel="stylesheet" href="/assets/css/features.css"/>
+  <link rel="stylesheet" href="/assets/gif-studio.css"/>
 
   <style>
     #gsExportMp4 {
@@ -588,49 +588,49 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
 <!-- core (state before firebase, firebase before everything else) -->
-<script src="js/core/state.js" defer></script>
-<script src="js/core/firebase.js" defer></script>
-<script src="js/core/username.js" defer></script>
+<script src="/js/core/state.js" defer></script>
+<script src="/js/core/firebase.js" defer></script>
+<script src="/js/core/username.js" defer></script>
 
 <!-- ui -->
-<script src="js/ui/feed/styles.js" defer></script>
-  <script src="js/ui/feed/landing.js" defer></script>
-  <script src="js/ui/feed/filters.js" defer></script>
-  <script src="js/ui/feed/render.js" defer></script>
-  <script src="js/ui/feed/swipe.js" defer></script>
-<script src="js/ui/composer/text-utils.js" defer></script>
-  <script src="js/ui/composer/styles.js" defer></script>
-  <script src="js/ui/composer/integrations.js" defer></script>
-  <script src="js/ui/composer/core.js" defer></script>
-  <script src="js/ui/composer/submit.js" defer></script>
-<script src="js/ui/admin.js" defer></script>
-<script src="js/ui/resonate.js" defer></script>
+<script src="/js/ui/feed/styles.js" defer></script>
+  <script src="/js/ui/feed/landing.js" defer></script>
+  <script src="/js/ui/feed/filters.js" defer></script>
+  <script src="/js/ui/feed/render.js" defer></script>
+  <script src="/js/ui/feed/swipe.js" defer></script>
+<script src="/js/ui/composer/text-utils.js" defer></script>
+  <script src="/js/ui/composer/styles.js" defer></script>
+  <script src="/js/ui/composer/integrations.js" defer></script>
+  <script src="/js/ui/composer/core.js" defer></script>
+  <script src="/js/ui/composer/submit.js" defer></script>
+<script src="/js/ui/admin.js" defer></script>
+<script src="/js/ui/resonate.js" defer></script>
 
 <!-- media: gif pipeline -->
-<script src="js/media/gif/renderer.js" defer></script>
-<script src="js/media/gif/exporter.js" defer></script>
-<script src="js/core/brand.js" defer></script>
-<script src="js/media/gif/gif-studio.js" defer></script>
+<script src="/js/media/gif/renderer.js" defer></script>
+<script src="/js/media/gif/exporter.js" defer></script>
+<script src="/js/core/brand.js" defer></script>
+<script src="/js/media/gif/gif-studio.js" defer></script>
 
 <!-- media: poster pipeline -->
-<script src="js/media/poster/renderer.js" defer></script>
-<script src="js/media/poster/exporter.js" defer></script>
-<script src="js/media/poster/studio.js" defer></script>
+<script src="/js/media/poster/renderer.js" defer></script>
+<script src="/js/media/poster/exporter.js" defer></script>
+<script src="/js/media/poster/studio.js" defer></script>
 
 <!-- media: share sheet -->
-<script src="js/media/share-sheet.js" defer></script>
+<script src="/js/media/share-sheet.js" defer></script>
 
 <!-- features: duet-mode MUST come before duet renderers, renderers MUST come before duet-sheet -->
-<script src="js/features/echoes.js" defer></script>
-<script src="js/features/lyric-back-share.js" defer></script>
-<script src="js/features/motion.js" defer></script>
-<script src="js/features/duet-mode.js" defer></script>
-<script src="js/media/platform-picker.js" defer></script>
-<script src="js/features/duet-sheet.js" defer></script>
+<script src="/js/features/echoes.js" defer></script>
+<script src="/js/features/lyric-back-share.js" defer></script>
+<script src="/js/features/motion.js" defer></script>
+<script src="/js/features/duet-mode.js" defer></script>
+<script src="/js/media/platform-picker.js" defer></script>
+<script src="/js/features/duet-sheet.js" defer></script>
 
 <!-- app bootstrap — always last -->
-<script src="js/core/app.js" defer></script>
-<script src="js/ui/pull-to-refresh.js" defer></script>
+<script src="/js/core/app.js" defer></script>
+<script src="/js/ui/pull-to-refresh.js" defer></script>
 
 <button id="dropLyricFAB" aria-label="Drop a Lyric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Share a Lyric</button>
 <script>
@@ -705,7 +705,7 @@
   onScroll();
 }());
 </script>
-<script src="js/ui/feed/search.js" defer></script>
+<script src="/js/ui/feed/search.js" defer></script>
 </body>
 </html>
   <!-- Echo Sheet - static page pattern (same as composer) -->
