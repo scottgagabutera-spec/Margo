@@ -292,7 +292,7 @@ startFirebaseSync();
 function handleDeepLink() {
   const match = window.location.pathname.match(/^\/lyricback\/(.+)/);
   if (!match) return;
-  const parts = match[1].split("--");
+  const parts = match[1].split("___");
   const echoId = parts[parts.length - 1];
   const postId = parts[parts.length - 2];
   if (!postId || !echoId) return;
@@ -302,7 +302,7 @@ function handleDeepLink() {
   setTimeout(() => {
     openEchoSheet(postIndex);
     setTimeout(() => {
-      const echoEl = document.querySelector("[data-echo-id=" + JSON.stringify(echoId) + "]");
+      const echoEl = document.querySelector("[data-echo-id='" + echoId + "']");
       if (echoEl) echoEl.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 800);
   }, 400);

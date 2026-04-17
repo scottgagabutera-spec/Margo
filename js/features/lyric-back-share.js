@@ -503,9 +503,9 @@ function openLyricBackShare(originalPost, echoPost) {
   _lbBuildCopyPreview();
 
   // Link
-  const _w1 = (p1.text || '').replace(/[^a-z0-9 ]/gi,'').trim().split(/s+/).slice(0,4).join('-').toLowerCase();
-  const _w2 = (p2.text || '').replace(/[^a-z0-9 ]/gi,'').trim().split(/s+/).slice(0,4).join('-').toLowerCase();
-  const slug = _w1 + '--x--' + _w2 + '--' + (p1.id || '') + '--' + (p2.id || '');
+  const _w1 = (p1.text || '').replace(/[^a-z0-9 ]/gi,'').trim().split(/\s+/).slice(0,4).join('-').toLowerCase();
+  const _w2 = (p2.text || '').replace(/[^a-z0-9 ]/gi,'').trim().split(/\s+/).slice(0,4).join('-').toLowerCase();
+  const slug = _w1 + '___' + _w2 + '___' + (p1.id || '') + '___' + (p2.id || '');
   document.getElementById('lbLinkUrl').textContent = 'trymargo.com/lyricback/' + slug;
 
   // Reset to card tab

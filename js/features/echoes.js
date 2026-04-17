@@ -351,6 +351,7 @@ function buildEchoCard(echo, idx) {
 
   const card = document.createElement('div');
   card.className = 'echo-card';
+  card.dataset.echoId = echo.id;
   card.style.animationDelay = `${idx * 0.04}s`;
   card.innerHTML = `
     <div class="echo-card-header">
