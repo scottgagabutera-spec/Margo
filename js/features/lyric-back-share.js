@@ -295,16 +295,14 @@
   if (document.getElementById('lbBackdrop')) return;
 
   const logoHTML = `
-    <svg class="lb-logo-mark" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- M waveform -->
-      <polyline
-        points="19,55 19,27 31,44 40,28 49,44 61,27 61,55"
-        stroke="#E8C547" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"
-        fill="none"
-      />
-      <!-- underline accent -->
-      <line x1="28" y1="63" x2="52" y2="63" stroke="#E8C547" stroke-width="5" stroke-linecap="round"/>
-    </svg>
+    <span class="lb-logo-mark">
+      <span class="logo-ring"></span>
+      <span class="logo-ring"></span>
+      <span class="logo-ring"></span>
+      <span class="logo-circle">
+        <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="40" cy="40" r="36" fill="#E8C547"/><path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/></svg>
+      </span>
+    </span>
   `;
 
   document.body.insertAdjacentHTML('beforeend', `
