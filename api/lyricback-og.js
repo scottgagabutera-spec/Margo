@@ -23,8 +23,8 @@ export default async function handler(req, res) {
   try {
     if (id1 && id2 && DB && KEY) {
       const [r1, r2] = await Promise.all([
-        fetch(`${DB}/posts/${id1}.json?auth=${KEY}`),
-        fetch(`${DB}/posts/${id2}.json?auth=${KEY}`)
+        fetch(`${DB}/posts/${id1}.json`),
+        fetch(`${DB}/posts/${id2}.json`)
       ]);
       const [p1, p2] = await Promise.all([r1.json(), r2.json()]);
       if (p1 && p2 && !p1.error && !p2.error) {
