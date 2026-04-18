@@ -74,12 +74,12 @@
       display: flex;
       align-items: center;
       gap: 7px;
-      opacity: 0.28;
+
     }
     .lb-logo-mark {
-      width: 22px; height: 22px;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
-    }
     .lb-logo-wordmark {
       font-family: 'Syne', sans-serif;
       font-weight: 800;
