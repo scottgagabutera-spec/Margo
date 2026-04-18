@@ -5,23 +5,22 @@
 
 import fs   from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 export default async function handler(req, res) {
-  const url   = req.url || '';
-  const match = url.match(/\/lyricback\/([^?]+)/);
-  if (!match) return res.redirect(302, '/');
-
-  const slug  = decodeURIComponent(match[1].split('?')[0]);
-  const parts = slug.split('___');
-  const id1   = parts[2];
-  const id2   = parts[3];
+  const rawSlug = req.query.slug || '';
+  const slug    = decodeURIComponent(rawSlug.split('?')[0]);
+  const parts   = slug.split('___');
+  const id1     = parts[2];
+  const id2     = parts[3];
 
   const DB  = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
-  const KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const KEY = process.env.NEXT_PUBLIC_FIRE@�SE_API_KEY;
 
   let title       = 'A Lyric Back on MARGO';
   let description = 'Someone echoed a lyric. Hear it on MARGO.';
   let ogUrl       = `https://trymargo.com/lyricback/${slug}`;
+  let dbError     = null;
 
   try {
     if (id1 && id2 && DB && KEY) {
@@ -38,19 +37,41 @@ export default async function handler(req, res) {
         const artist1 = p1.artist || (p1.knowledge && p1.knowledge.artist) || '';
         const song2   = p2.song   || (p2.knowledge && p2.knowledge.song)   || '';
         const artist2 = p2.artist || (p2.knowledge && p2.knowledge.artist) || '';
-
         const attr1 = [song1, artist1].filter(Boolean).join(' \u2014 ');
         const attr2 = [song2, artist2].filter(Boolean).join(' \u2014 ');
-
-        title       = `\u201C${lyric1}\u201D \u00B7lyric back\u00B7 \u201C${lyric2}\u201D`;
-        description = `${attr1} \u2192 ${attr2} \u00B7 Hear this Lyric Back on MARGO`;
+        title       = `\u201C${lyric1}\u201D \u00B7 lyric back \u00B7 \u201C${lyric2}\u201D`;
+        description = `${attr1} \u2192 ${attr2} \u00B7 On MARGO`;
+      } else {
+        dbError = JSON.stringify({p1: p1.error, p2: p2.error});
       }
+    } else {
+      dbError = `missing: id1=${id1} id2=${id2} DB=${!!DB} KEY=${!!KEY}`;
     }
   } catch (e) {
-    // Fall back to defaults silently
+    dbError = e.message;
   }
 
-  let html = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
+  // Try multiple paths to find index.html
+  const candidates = [
+    path.join(process.cwd(), 'index.html'),
+    path.join(process.cwd(), '..', 'index.html'),
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'index.html')
+  ];
+
+  let html = null;
+  let tried = [];
+  for (const p of candidates) {
+    try {
+      html = fs.readFileSync(p, 'utf8');
+      break;
+    } catch (e) {
+      tried.push(`${p}: ${e.message}`);
+    }
+  }
+
+  if (!html) {
+    return res.status(500).send(`cwd: ${process.cwd()}\nTried:\n${tried.join('\n')}\ndbError: ${dbError}`);
+  }
 
   const esc = s => String(s)
     .replace(/&/g, '&amp;')
