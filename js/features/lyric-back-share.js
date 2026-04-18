@@ -294,7 +294,7 @@
 (function _lbInjectHTML() {
   if (document.getElementById('lbBackdrop')) return;
 
-  const logoSVG = `
+  const logoHTML = `
     <svg class="lb-logo-mark" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
       <!-- M waveform -->
       <polyline
@@ -315,7 +315,7 @@
         <div class="lb-header">
           <div class="lb-header-left">
             <div class="lb-logo-lockup">
-              ${logoSVG}
+              ${logoHTML}
               <span class="lb-logo-wordmark">Margo</span>
             </div>
             <div class="lb-badge">
