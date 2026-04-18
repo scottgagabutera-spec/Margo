@@ -127,3 +127,60 @@ Last updated: April 2026 — Version 3.0
 - Minimum 44x44px on all interactive elements
 - Buttons in headers: min-height 36px, min-width 80px
 - Pills and tags: min-height 28px
+
+---
+
+## 12. Logo Usage System
+
+### The 3 Tiers
+
+| Tier | Name | What it is | SVG id |
+|---|---|---|---|
+| 1 | The Mark | M in gold circle, no dash | `#margo-mark` |
+| 2 | The Symbol | M in gold circle + dash below | `#margo-symbol` |
+| 3 | The Lockup | Symbol + MARGO wordmark | inline only |
+
+**The Symbol IS the Margo logo.** The dash below the M is what makes it distinctly Margo. Never omit it except at favicon sizes where it becomes invisible.
+
+### Where Each Tier Is Used
+
+| Context | Tier | Size | Rings? |
+|---|---|---|---|
+| Browser favicon | Mark (Tier 1) | 16–32px | No |
+| Nav bar | Symbol (Tier 2) | 32×32px | Yes (CSS) |
+| Feed header | Symbol (Tier 2) | 36×36px | Yes (CSS) |
+| Composer header | Symbol (Tier 2) | 32×32px | Yes (CSS) |
+| Lyric Back share card | Symbol (Tier 2) | 48×48px | No |
+| Landing page nav | Lockup (Tier 3) | 36px tall | Yes (CSS) |
+| GIF export watermark | Ghost Lockup | W×0.048 | Yes (animated canvas) |
+| Poster export watermark | Ghost Lockup | W×0.048 | No (static canvas) |
+| OG/social share image | Lockup (Tier 3) | — | No |
+
+### Ghost Watermark Rules (exports only)
+- Position: always bottom-left, never centered
+- Opacity: exactly 0.18 — not more (distracting), not less (invisible)
+- Color: always white version on dark backgrounds
+- Size: 3.5–4.8% of canvas width
+- Never add shadow to the ghost
+
+### Shadow & Glow Rules
+- In-app Symbol: `filter: drop-shadow(0 2px 8px rgba(232,197,71,0.25))`
+- Canvas exports: `shadowBlur = size * 0.4` with gold color (already in brand.js)
+- Favicon: no shadow ever
+- Ghost watermark: no shadow ever
+
+### Rings Rules
+- Rings are UI animation only — CSS on landing/feed/nav, canvas on GIF
+- Never add rings to static exported images (poster, save card)
+- Never add rings to favicon
+- Ring animation: 3 ripples staggered at 0, 0.33, 0.66 delay
+
+### Master SVG File
+Single source of truth: `/assets/brand/margo-brand.svg`
+All HTML logo instances must use `<use href="/assets/brand/margo-brand.svg#[id]"/>`.
+Canvas exports (GIF, poster) use brand.js — cannot use SVG sprites.
+
+### What Needs Cleaning
+- [ ] Replace 3 duplicate inline SVGs in index.html with `<use href=...>`
+- [ ] Remove stray fix_brand_*.js files from repo root
+- [ ] Add margo-brand.svg to /assets/brand/
