@@ -3,3 +3,4 @@
 patch_*.js
 fix_*.js
 *.bak
+node_modules/
