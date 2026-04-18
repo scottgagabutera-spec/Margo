@@ -709,25 +709,7 @@ async function _lbDrawCard(ctx, W, H, p1, p2) {
   // Ghost logo
   const logoX = 76, logoY = isV ? 84 : 72;
   const markSize = isV ? 40 : (isL ? 34 : 36);
-  const sc = markSize / 80;
-  ctx.save();
-  ctx.globalAlpha = 0.22;
-  ctx.strokeStyle = GOLD; ctx.lineWidth = 7*sc;
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.beginPath();
-  ctx.moveTo(logoX+19*sc,logoY+55*sc); ctx.lineTo(logoX+19*sc,logoY+27*sc);
-  ctx.lineTo(logoX+31*sc,logoY+44*sc); ctx.lineTo(logoX+40*sc,logoY+28*sc);
-  ctx.lineTo(logoX+49*sc,logoY+44*sc); ctx.lineTo(logoX+61*sc,logoY+27*sc);
-  ctx.lineTo(logoX+61*sc,logoY+55*sc); ctx.stroke();
-  ctx.lineWidth=5*sc;
-  ctx.beginPath();
-  ctx.moveTo(logoX+28*sc,logoY+63*sc); ctx.lineTo(logoX+52*sc,logoY+63*sc); ctx.stroke();
-  const wFS = isV ? 28 : 22;
-  ctx.font='800 '+wFS+'px Syne, sans-serif';
-  ctx.textAlign='left'; ctx.textBaseline='middle';
-  ctx.fillStyle=GOLD; ctx.letterSpacing='4px';
-  ctx.fillText('MARGO', logoX+markSize+14, logoY+markSize*0.44);
-  ctx.restore();
+  drawMargoLockup(ctx, logoX, logoY, markSize, '#E8C547', false);
 
   // Layout
   const topPad    = logoY + markSize + (isV ? 48 : 36);
@@ -836,27 +818,9 @@ async function _lbDrawConvoCard(ctx, W, H, p1, p2) {
   ctx.fillStyle=vig2; ctx.fillRect(0,0,W,H);
 
   // Ghost logo
-  const logoX=76,logoY=isV?84:72;
+  const logoX=76, logoY=isV?84:72;
   const markSize=isV?38:(isL?32:34);
-  const sc=markSize/80;
-  ctx.save();
-  ctx.globalAlpha=0.18;
-  ctx.strokeStyle='#E8C547'; ctx.lineWidth=7*sc;
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.beginPath();
-  ctx.moveTo(logoX+19*sc,logoY+55*sc); ctx.lineTo(logoX+19*sc,logoY+27*sc);
-  ctx.lineTo(logoX+31*sc,logoY+44*sc); ctx.lineTo(logoX+40*sc,logoY+28*sc);
-  ctx.lineTo(logoX+49*sc,logoY+44*sc); ctx.lineTo(logoX+61*sc,logoY+27*sc);
-  ctx.lineTo(logoX+61*sc,logoY+55*sc); ctx.stroke();
-  ctx.lineWidth=5*sc;
-  ctx.beginPath();
-  ctx.moveTo(logoX+28*sc,logoY+63*sc); ctx.lineTo(logoX+52*sc,logoY+63*sc); ctx.stroke();
-  const wFS=isV?28:22;
-  ctx.font='800 '+wFS+'px Syne, sans-serif';
-  ctx.textAlign='left'; ctx.textBaseline='middle';
-  ctx.fillStyle='#E8C547'; ctx.letterSpacing='4px';
-  ctx.fillText('MARGO',logoX+markSize+14,logoY+markSize*0.44);
-  ctx.restore();
+  drawMargoLockup(ctx, logoX, logoY, markSize, '#E8C547', false);
 
   const areaTop=logoY+markSize+(isV?56:44);
   const areaBot=H-(isV?100:80);
