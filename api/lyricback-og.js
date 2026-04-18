@@ -1,11 +1,9 @@
 /* ============================================================
    MARGO — api/lyricback-og.js
-   Dynamic Open Graph tags for Lyric Back share links.
+   Minimal OG-tag shell - no filesystem read needed.
+   Social scrapers get dynamic OG tags.
+   Real users get redirected to the SPA immediately.
    ============================================================ */
-
-import fs   from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 export default async function handler(req, res) {
   const rawSlug = req.query.slug || '';
@@ -15,12 +13,12 @@ export default async function handler(req, res) {
   const id2     = parts[3];
 
   const DB  = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
-  const KEY = process.env.NEXT_PUBLIC_FIRE@�SE_API_KEY;
+  const KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 
   let title       = 'A Lyric Back on MARGO';
   let description = 'Someone echoed a lyric. Hear it on MARGO.';
-  let ogUrl       = `https://trymargo.com/lyricback/${slug}`;
-  let dbError     = null;
+  const ogUrl     = `https://trymargo.com/lyricback/${slug}`;
+  const ogImage   = 'https://trymargo.com/og-image.png';
 
   try {
     if (id1 && id2 && DB && KEY) {
@@ -29,48 +27,21 @@ export default async function handler(req, res) {
         fetch(`${DB}/posts/${id2}.json?auth=${KEY}`)
       ]);
       const [p1, p2] = await Promise.all([r1.json(), r2.json()]);
-
       if (p1 && p2 && !p1.error && !p2.error) {
-        const lyric1  = p1.text   || '';
-        const lyric2  = p2.text   || '';
-        const song1   = p1.song   || (p1.knowledge && p1.knowledge.song)   || '';
-        const artist1 = p1.artist || (p1.knowledge && p1.knowledge.artist) || '';
-        const song2   = p2.song   || (p2.knowledge && p2.knowledge.song)   || '';
-        const artist2 = p2.artist || (p2.knowledge && p2.knowledge.artist) || '';
-        const attr1 = [song1, artist1].filter(Boolean).join(' \u2014 ');
-        const attr2 = [song2, artist2].filter(Boolean).join(' \u2014 ');
-        title       = `\u201C${lyric1}\u201D \u00B7 lyric back \u00B7 \u201C${lyric2}\u201D`;
+        const l1 = p1.text || '';
+        const l2 = p2.text || '';
+        const s1 = p1.song   || (p1.knowledge && p1.knowledge.song)   || '';
+        const a1 = p1.artist || (p1.knowledge && p1.knowledge.artist) || '';
+        const s2 = p2.song   || (p2.knowledge && p2.knowledge.song)   || '';
+        const a2 = p2.artist || (p2.knowledge && p2.knowledge.artist) || '';
+        const attr1 = [s1, a1].filter(Boolean).join(' \u2014 ');
+        const attr2 = [s2, a2].filter(Boolean).join(' \u2014 ');
+        title       = `\u201C${l1}\u201D \u00B7 lyric back \u00B7 \u201C${l2}\u201D`;
         description = `${attr1} \u2192 ${attr2} \u00B7 On MARGO`;
-      } else {
-        dbError = JSON.stringify({p1: p1.error, p2: p2.error});
       }
-    } else {
-      dbError = `missing: id1=${id1} id2=${id2} DB=${!!DB} KEY=${!!KEY}`;
     }
   } catch (e) {
-    dbError = e.message;
-  }
-
-  // Try multiple paths to find index.html
-  const candidates = [
-    path.join(process.cwd(), 'index.html'),
-    path.join(process.cwd(), '..', 'index.html'),
-    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'index.html')
-  ];
-
-  let html = null;
-  let tried = [];
-  for (const p of candidates) {
-    try {
-      html = fs.readFileSync(p, 'utf8');
-      break;
-    } catch (e) {
-      tried.push(`${p}: ${e.message}`);
-    }
-  }
-
-  if (!html) {
-    return res.status(500).send(`cwd: ${process.cwd()}\nTried:\n${tried.join('\n')}\ndbError: ${dbError}`);
+    // fall back silently
   }
 
   const esc = s => String(s)
@@ -79,13 +50,30 @@ export default async function handler(req, res) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  html = html
-    .replace(/(<meta property="og:title"[^>]*content=")[^"]*(")/,        `$1${esc(title)}$2`)
-    .replace(/(<meta property="og:description"[^>]*content=")[^"]*(")/,  `$1${esc(description)}$2`)
-    .replace(/(<meta property="og:url"[^>]*content=")[^"]*(")/,          `$1${esc(ogUrl)}$2`)
-    .replace(/(<meta name="twitter:title"[^>]*content=")[^"]*(")/,       `$1${esc(title)}$2`)
-    .replace(/(<meta name="twitter:description"[^>]*content=")[^"]*(")/, `$1${esc(description)}$2`)
-    .replace(/(<link rel="canonical"[^>]*href=")[^"]*(")/,               `$1${esc(ogUrl)}$2`);
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>${esc(title)}</title>
+  <meta property="og:type"         content="website"/>
+  <meta property="og:site_name"    content="MARG�>
+  <meta property="og:title"        content="${esc(title)}"/>
+  <meta property="og:description"  content="${esc(description)}"/>
+  <meta property="og:url"          content="${esc(ogUrl)}"/>
+  <meta property="og:image"        content="${esc(ogImage)}"/>
+  <meta property="og:image:width"  content="1200"/>
+  <meta property="og:image:height" content="630"/>
+  <meta name="twitter:card"        content="summary_large_image"/>
+  <meta name="twitter:title"       content="${esc(title)}"/>
+  <meta name="twitter:description" content="${esc(description)}"/>
+  <meta name="twitter:image"       content="${esc(ogImage)}"/>
+  <link rel="canonical"            href="${esc(ogUrl)}"/>
+  <script>window.location.replace('${ogUrl.replace(/\\'/g, '\\\\\'')}');</script>
+</head>
+<body>
+  <p>Opening MARGO...</p>
+</body>
+</html>`;
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
