@@ -15,7 +15,7 @@ window._shareSheet = window._shareSheet || {
   post:         null,
   echoPost:     null,
   isDuet:       false,
-  activeFormat: 'gif',
+  activeFormat: 'poster',
   gifBlob:      null,
   posterBlob:   null,
   isEncoding:   false,
@@ -314,49 +314,27 @@ function mountShareSheet() {
       <div class="ss-info-strip" id="ssInfoStrip"></div>
 
       <button class="ss-save-btn" id="ssSaveBtn">
-        <span id="ssSaveBtnLabel">↓ Save GIF</span>
+        <span id="ssSaveBtnLabel">↓ Save Card</span>
       </button>
-      <div class="ss-copy-row hidden" id="ssCopyRow">
+      <div class="ss-copy-row" id="ssCopyRow">
         <button class="ss-copy-text-btn" id="ssCopyTextBtn">
           <span>⎘ Copy Text</span>
         </button>
-        <button class="ss-copy-text-btn" id="ssCopyTikTokBtn">
-          <span>⎘ Copy for TikTok</span>
-        </button>
       </div>
-
       <div class="ss-secondary">
-        <button class="ss-sec-btn" id="ssBtnPoster">
-          <span class="ss-sec-btn-icon">◻</span>
-          <span>Poster</span>
-        </button>
-        <button class="ss-sec-btn" id="ssBtnShare">
-          <span class="ss-sec-btn-icon">↗</span>
-          <span>Share to…</span>
-        </button>
-        <button class="ss-sec-btn" id="ssBtnStudio">
-          <span class="ss-sec-btn-icon">✦</span>
-          <span>Studio</span>
-        </button>
-        <button class="ss-sec-btn" id="ssBtnText">
-          <span class="ss-sec-btn-icon">T</span>
-          <span>Text</span>
+        <button class="ss-sec-btn" id="ssBtnShareLink">
+          <span class="ss-sec-btn-icon">🔗</span>
+          <span>Share Link</span>
         </button>
       </div>
-    </div>
-  `;
 
   document.body.appendChild(backdrop);
   SS.mounted = true;
 
   backdrop.querySelector('#ssClose').onclick     = closeShareSheet;
   backdrop.querySelector('#ssSaveBtn').onclick   = ssSave;
-  backdrop.querySelector('#ssBtnPoster').onclick = ssTogglePoster;
-  backdrop.querySelector('#ssBtnShare').onclick  = ssShareTo;
-  backdrop.querySelector('#ssBtnStudio').onclick = ssOpenStudio;
-  backdrop.querySelector('#ssBtnText').onclick   = ssToggleText;
-  backdrop.querySelector('#ssCopyTextBtn').onclick = ssCopyText;
-  backdrop.querySelector('#ssCopyTikTokBtn').onclick = ssCopyTikTok;
+  backdrop.querySelector('#ssBtnShareLink').onclick = ssShareLink;
+  backdrop.querySelector('#ssCopyTextBtn').onclick  = ssCopyText;
 
   /* Theme dots */
   backdrop.querySelector('#ssThemes').addEventListener('click', e => {
@@ -475,8 +453,8 @@ function openShareSheet(post, opts = {}) {
   SS.echoPost     = opts.echoPost || null;
   SS.gifBlob      = null;
   SS.posterBlob   = null;
-  SS.activeFormat = 'gif';
   SS.isEncoding   = false;
+  SS.activeFormat = 'poster';
   SS.theme        = 'midnight-gold';
 
   /* Reset theme dots */
@@ -493,12 +471,8 @@ function openShareSheet(post, opts = {}) {
   }
 
   /* Reset buttons */
-  const _posterBtn = document.getElementById('ssBtnPoster');
-  const _posterSpan = _posterBtn ? _posterBtn.querySelector('span:last-child') : null;
-  if (_posterSpan) _posterSpan.textContent = 'Poster';
-  document.getElementById('ssBtnPoster')?.classList.remove('active-format');
   const lbl = document.getElementById('ssSaveBtnLabel');
-  if (lbl) lbl.textContent = '↓ Save GIF';
+  if (lbl) lbl.textContent = '↓ Save Card';
 
   /* Encoding overlay off */
   setSSEncoding(false);
@@ -599,39 +573,6 @@ function populateSSDuetInfoStrip(post, echoPost) {
 /* ==========================================================
    FORMAT TOGGLE
 ========================================================== */
-function ssTogglePoster() {
-  if (SS.isEncoding) return;
-  SS.activeFormat = SS.activeFormat === 'poster' ? 'gif' : 'poster';
-  SS.gifBlob    = null;
-  SS.posterBlob = null;
-
-  const btn = document.getElementById('ssBtnPoster');
-  const lbl = document.getElementById('ssSaveBtnLabel');
-  const btnSpan = btn ? btn.querySelector('span:last-child') : null;
-  if (btnSpan) btnSpan.textContent = SS.activeFormat === 'poster' ? 'GIF' : 'Poster';
-  if (btn) btn.classList.toggle('active-format', SS.activeFormat === 'poster');
-  if (lbl) lbl.textContent = SS.activeFormat === 'gif' ? '↓ Save GIF' : '↓ Save Poster';
-  const copyRow = document.getElementById('ssCopyRow');
-  if (copyRow) copyRow.classList.add('hidden');
-
-  ssStopPreview();
-  requestAnimationFrame(() => ssStartPreview());
-}
-function ssToggleText() {
-  if (SS.isEncoding) return;
-  SS.activeFormat = SS.activeFormat === 'text' ? 'gif' : 'text';
-  SS.gifBlob    = null;
-  SS.posterBlob = null;
-  const btn = document.getElementById('ssBtnText');
-  const lbl = document.getElementById('ssSaveBtnLabel');
-  if (btn) btn.classList.toggle('active-format', SS.activeFormat === 'text');
-  if (lbl) lbl.textContent = SS.activeFormat === 'text' ? '↓ Save Text Card' : '↓ Save GIF';
-  const copyRow = document.getElementById('ssCopyRow');
-  if (copyRow) copyRow.classList.toggle('hidden', SS.activeFormat !== 'text');
-  const posterBtn = document.getElementById('ssBtnPoster');
-  if (posterBtn) posterBtn.classList.remove('active-format');
-  ssStopPreview();
-  requestAnimationFrame(() => ssStartPreview());
 }
 /* ==========================================================
    ENCODING OVERLAY
@@ -643,7 +584,7 @@ function setSSEncoding(on, label = '') {
   if (overlay) overlay.classList.toggle('hidden', !on);
   if (lbl && label) lbl.textContent = label;
   if (bar && !on) bar.style.width = '0%';
-  ['ssSaveBtn','ssBtnPoster','ssBtnShare','ssBtnStudio','ssBtnText'].forEach(id => {
+  ['ssSaveBtn','ssBtnShareLink'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = !!on;
   });
@@ -833,22 +774,19 @@ function ssCopyText() {
     if (typeof showToast === 'function') showToast('Copy failed — try again');
   });
 }
-function ssCopyTikTok() {
-  const post   = SS.post;
-  const lyric  = post?.text || '';
-  const song   = post?.knowledge?.song   || '';
-  const artist = post?.knowledge?.artist || '';
-  const footer = '\n' + (song ? song.toUpperCase() : '') + (artist ? ' — ' + artist : '') + '\nMARGO · trymargo.com';
-  const wrapper = '❝  ❞';
-  const maxLyric = 150 - footer.length - wrapper.length - 1;
-  const trimmedLyric = lyric.length > maxLyric ? lyric.substring(0, maxLyric) + '…' : lyric;
-  const text = '❝ ' + trimmedLyric + ' ❞' + footer;
-  navigator.clipboard.writeText(text).then(() => {
-    if (typeof showToast === 'function') showToast('Copied for TikTok ✓');
-  }).catch(() => {
-    if (typeof showToast === 'function') showToast('Copy failed — try again');
-  });
+function ssShareLink() {
+  const post = SS.post;
+  const url  = (post && post.id) ? `https://trymargo.com/post/${post.id}` : 'https://trymargo.com';
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('ssBtnShareLink');
+    if (!btn) return;
+    const span = btn.querySelector('span:last-child');
+    const orig = span ? span.textContent : '';
+    if (span) span.textContent = 'Copied!';
+    setTimeout(() => { if (span) span.textContent = orig; }, 2000);
+  }).catch(() => {});
 }
+
 function _downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
@@ -865,13 +803,12 @@ async function ssShareTo() {
   if (SS.isEncoding) return;
 
   /* Generate blob if not cached */
-  if (SS.activeFormat === 'poster' && !SS.posterBlob) await ssGeneratePoster();
-  if (SS.activeFormat === 'gif'    && !SS.gifBlob)    await ssGenerateGif();
+  if (!SS.posterBlob) await ssGeneratePoster();
 
-  const blob     = SS.activeFormat === 'poster' ? SS.posterBlob : SS.gifBlob;
-  const isGif    = SS.activeFormat === 'gif';
-  const ext      = isGif ? 'gif' : 'png';
-  const mime     = isGif ? 'image/gif' : 'image/png';
+
+  const blob     = SS.posterBlob;
+  const ext      = 'png';
+  const mime     = 'image/png';
   const fileName = _songFilename(SS.post, ext);
   const lyric    = SS.post?.text?.substring(0, 60) || '';
   const shareText = `"${lyric}" — trymargo.com`;
@@ -898,7 +835,7 @@ async function ssShareTo() {
   /* Tier 3 — no Web Share API support — open PlatformPicker */
   if (blob && typeof window.PlatformPicker?.pick === 'function') {
     window.PlatformPicker.pick({
-      format: isGif ? 'gif' : 'poster',
+      format: 'poster',
       blob,
       post: SS.post,
     });
