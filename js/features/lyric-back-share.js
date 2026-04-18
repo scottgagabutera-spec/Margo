@@ -76,7 +76,7 @@
       gap: 7px;
 
     }
-    .margo-mark margo-mark--md {
+    .margo-mark.margo-mark--md {
       position: relative;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
