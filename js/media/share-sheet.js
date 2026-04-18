@@ -323,10 +323,12 @@ function mountShareSheet() {
       </div>
       <div class="ss-secondary">
         <button class="ss-sec-btn" id="ssBtnShareLink">
-          <span class="ss-sec-btn-icon">🔗</span>
+          <span class="ss-sec-btn-icon">&#x1F517;</span>
           <span>Share Link</span>
         </button>
       </div>
+    </div>
+  `;
 
   document.body.appendChild(backdrop);
   SS.mounted = true;
@@ -568,11 +570,6 @@ function populateSSDuetInfoStrip(post, echoPost) {
     </div>
     <span class="ss-feeling-tag" style="background:${eE.bg};color:${eE.text};border:1px solid ${eE.border};flex-shrink:0;margin-left:4px">${echoPost.emotion||'Echo'}</span>
   `;
-}
-
-/* ==========================================================
-   FORMAT TOGGLE
-========================================================== */
 }
 /* ==========================================================
    ENCODING OVERLAY
