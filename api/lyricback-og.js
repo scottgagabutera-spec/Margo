@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       }
     }
   } catch (e) {
-    // fall back silently
+    description = "DEBUG: " + (id1||"noid1") + " " + (id2||"noid2") + " DB=" + (DB?"yes":"no") + " KEY=" + (KEY?"yes":"no");
   }
 
   const esc = s => String(s)
