@@ -582,7 +582,7 @@ function _lbCopyText() {
     '\u201C' + p2.text + '\u201D',
     '\u2014 ' + s2,
     '',
-    'via MARGO \u00B7 trymargo.com'
+    'via MARGO \u00B7 https://' + document.getElementById('lbLinkUrl').textContent
   ].join('\n');
   navigator.clipboard.writeText(text)
     .then(()  => _lbToast('Copied to clipboard'))

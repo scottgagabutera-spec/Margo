@@ -56,7 +56,7 @@ export default async function handler(req, res) {
   <meta charset="UTF-8"/>
   <title>${esc(title)}</title>
   <meta property="og:type"         content="website"/>
-  <meta property="og:site_name"    content="MARG�>
+  <meta property="og:site_name"    content="MARGO"/>
   <meta property="og:title"        content="${esc(title)}"/>
   <meta property="og:description"  content="${esc(description)}"/>
   <meta property="og:url"          content="${esc(ogUrl)}"/>
