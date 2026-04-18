@@ -1,6 +1,6 @@
 .vercel
 .env*.local
 patch_*.js
-fix_*.js
+fix*.js
 *.bak
 node_modules/
