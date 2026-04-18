@@ -23,6 +23,7 @@ window.drawMargoLockup = function(ctx, x, y, size, accentColor, isLight) {
   ctx.shadowBlur  = size * 0.4;
   ctx.fill();
   ctx.shadowBlur  = 0;
+  ctx.globalAlpha = 0.65;
   ctx.strokeStyle = isLight ? '#ffffff' : '#0C0C0E';
   ctx.lineWidth   = 6 * sc;
   ctx.lineCap     = 'round';
@@ -40,7 +41,7 @@ window.drawMargoLockup = function(ctx, x, y, size, accentColor, isLight) {
   ctx.beginPath();
   ctx.roundRect(cx + (35-40)*sc, cy + (60-40)*sc, 10*sc, 3.5*sc, 1.75*sc);
   ctx.fillStyle   = isLight ? '#ffffff' : '#0C0C0E';
-  ctx.globalAlpha = 0.14;
+  ctx.globalAlpha = 0.55;
   ctx.fill();
   ctx.font         = '800 ' + Math.max(9, size*0.55) + 'px Syne, Arial Black, sans-serif';
   ctx.fillStyle    = accentColor;
