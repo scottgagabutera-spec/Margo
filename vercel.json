@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/lyricback/:slug",
-      "destination": "/api/lyricback-og?slug=:slug"
+      "destination": "/index.html"
     },
     {
       "source": "/about",
