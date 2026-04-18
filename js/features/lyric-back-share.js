@@ -76,7 +76,7 @@
       gap: 7px;
 
     }
-    .lb-logo-mark {
+    .margo-mark margo-mark--md {
       position: relative;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
@@ -297,7 +297,7 @@
   if (document.getElementById('lbBackdrop')) return;
 
   const logoHTML = `
-    <span class="lb-logo-mark">
+    <span class="margo-mark margo-mark--md">
       <span class="logo-ring"></span>
       <span class="logo-ring"></span>
       <span class="logo-ring"></span>

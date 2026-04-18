@@ -19,58 +19,43 @@
   display: flex; align-items: center; gap: 10px;
   text-decoration: none; user-select: none;
 }
-.nav-logo-mark,
-.feed-logo-mark {
+/* ══ MARGO MARK — single reusable system ══ */
+.margo-mark {
   position: relative;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.nav-logo-mark  { width: 30px; height: 30px; }
-.feed-logo-mark { width: 22px; height: 22px; }
-.nav-logo-mark .logo-circle {
+.margo-mark--lg { width: 30px; height: 30px; }
+.margo-mark--md { width: 22px; height: 22px; }
+.margo-mark--sm { width: 18px; height: 18px; }
+.margo-mark .logo-circle {
   position: relative; z-index: 2;
-  width: 26px; height: 26px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden; flex-shrink: 0;
-  filter: drop-shadow(0 0 8px rgba(232,197,71,0.8));
   animation: core-breathe 3.4s ease-in-out infinite;
 }
-.feed-logo-mark .logo-circle {
-  position: relative; z-index: 2;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden; flex-shrink: 0;
-  filter: drop-shadow(0 0 6px rgba(232,197,71,0.8));
-  animation: core-breathe 3.4s ease-in-out infinite;
-}
-.nav-logo-mark .logo-circle svg,
-.feed-logo-mark .logo-circle svg { width: 100%; height: 100%; display: block; }
+.margo-mark .logo-circle svg { width: 100%; height: 100%; display: block; }
+.margo-mark--lg .logo-circle { width: 26px; height: 26px; filter: drop-shadow(0 0 8px rgba(232,197,71,0.8)); }
+.margo-mark--md .logo-circle { width: 20px; height: 20px; filter: drop-shadow(0 0 6px rgba(232,197,71,0.8)); }
+.margo-mark--sm .logo-circle { width: 16px; height: 16px; filter: drop-shadow(0 0 6px rgba(232,197,71,0.8)); }
 
 @keyframes core-breathe {
   0%,100% { filter: drop-shadow(0 0 6px rgba(232,197,71,0.6));  }
   50%      { filter: drop-shadow(0 0 18px rgba(232,197,71,1.0)); }
 }
 
-.nav-logo-mark .logo-ring {
-  position: absolute; border-radius: 50%;
-  border: 1.5px solid rgba(232,197,71,0.65);
-  width: 26px; height: 26px;
-  animation: nav-ripple 3.4s ease-out infinite;
-}
-.feed-logo-mark .logo-ring {
+.margo-mark .logo-ring {
   position: absolute; border-radius: 50%;
   border: 1px solid rgba(232,197,71,0.65);
-  width: 20px; height: 20px;
   animation: nav-ripple 3.4s ease-out infinite;
 }
-.nav-logo-mark  .logo-ring:nth-child(1),
-.feed-logo-mark .logo-ring:nth-child(1) { animation-delay: 0s;   }
-.nav-logo-mark  .logo-ring:nth-child(2),
-.feed-logo-mark .logo-ring:nth-child(2) { animation-delay: 1.1s; }
-.nav-logo-mark  .logo-ring:nth-child(3),
-.feed-logo-mark .logo-ring:nth-child(3) { animation-delay: 2.2s; }
+.margo-mark--lg .logo-ring { width: 26px; height: 26px; border-width: 1.5px; }
+.margo-mark--md .logo-ring { width: 20px; height: 20px; border-width: 1px; }
+.margo-mark--sm .logo-ring { width: 16px; height: 16px; border-width: 1px; }
+.margo-mark .logo-ring:nth-child(1) { animation-delay: 0s;   }
+.margo-mark .logo-ring:nth-child(2) { animation-delay: 1.1s; }
+.margo-mark .logo-ring:nth-child(3) { animation-delay: 2.2s; }
 
 @keyframes nav-ripple {
   0%   { transform: scale(0.55); opacity: 1; border-color: rgba(232,197,71,0.7); }
