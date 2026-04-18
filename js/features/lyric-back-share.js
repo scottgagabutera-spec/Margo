@@ -80,6 +80,8 @@
       position: relative;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
+      width: 20px; height: 20px;
+    }
     .lb-logo-wordmark {
       font-family: 'Syne', sans-serif;
       font-weight: 800;
