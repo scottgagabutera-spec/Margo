@@ -278,8 +278,23 @@ function mountShareSheet() {
         <button class="ss-close" id="ssClose" aria-label="Close">×</button>
       </div>
 
+      <div class="ss-lyric-strip" id="ssLyricStrip"></div>
 
+      <div class="ss-themes" id="ssThemes">
+        ${SS_THEMES.map((t, i) => `
+          <button
+            class="ss-theme-dot${i === 0 ? ' active' : ''}"
+            data-theme="${t.id}"
+            style="background:radial-gradient(circle at 35% 35%,${t.color},${t.bg})"
+            aria-label="${t.label} theme"
+            title="${t.label}"
+          ></button>
+        `).join('')}
+      </div>
 
+      <div class="ss-size-row" id="ssSizeRow">
+        <button class="ss-size-btn" data-size="square" style="border-color:rgba(232,197,71,0.28);background:rgba(232,197,71,0.08);color:#E8C547;">
+          <div class="ss-size-thumb-s"></div>
           <span>Square</span>
         </button>
         <button class="ss-size-btn" data-size="vertical">
