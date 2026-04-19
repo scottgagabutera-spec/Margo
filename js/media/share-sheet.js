@@ -142,15 +142,16 @@ function injectShareSheetStyles() {
     .ss-close:hover{background:rgba(255,255,255,0.1);color:#fff}
 
     .ss-canvas-wrap{
-      padding:14px 18px 10px;flex-shrink:0;
+      padding:10px 18px 8px;flex:1 1 auto;min-height:0;
       display:flex;align-items:center;justify-content:center;
     }
     .ss-canvas-ring{
-      position:relative;border-radius:18px;overflow:hidden;
+      position:relative;border-radius:14px;overflow:hidden;
       box-shadow:0 16px 56px rgba(0,0,0,0.8),0 0 0 1px rgba(232,197,71,0.12);
       background:#0E0B1A;
+      transition:width 0.25s cubic-bezier(0.16,1,0.3,1), height 0.25s cubic-bezier(0.16,1,0.3,1);
     }
-    #ssCanvas{display:block;border-radius:18px}
+    #ssCanvas{display:block;border-radius:14px;transition:width 0.25s cubic-bezier(0.16,1,0.3,1),height 0.25s cubic-bezier(0.16,1,0.3,1);}
 
     .ss-encoding-overlay{
       position:absolute;inset:0;border-radius:18px;
@@ -218,7 +219,7 @@ function injectShareSheetStyles() {
     .ss-logo-lockup{display:flex;align-items:center;gap:7px;text-decoration:none;}
     .ss-logo-wordmark{font-family:'Syne',sans-serif;font-weight:800;font-size:0.82rem;letter-spacing:4px;color:var(--gold,#E8C547);text-transform:uppercase;line-height:1;opacity:0.75;}
     /* ── SHARE SHEET TABS ── */
-    .ss-size-row{display:flex;gap:8px;padding:12px 18px 0;}
+    .ss-size-row{display:flex;gap:8px;padding:10px 18px 0;flex-shrink:0;}
     .ss-size-btn{
       flex:1;padding:10px 6px;border-radius:10px;
       border:1px solid rgba(255,255,255,0.07);
@@ -228,7 +229,7 @@ function injectShareSheetStyles() {
       letter-spacing:0.5px;text-transform:uppercase;
       cursor:pointer;transition:all 150ms;
       display:flex;flex-direction:column;align-items:center;gap:5px;
-      min-height:52px;
+      min-height:44px;
     }
     .ss-size-btn:hover{border-color:rgba(255,255,255,0.12);color:#9A98A4;}
     .ss-size-btn.ss-size-active{
@@ -239,7 +240,7 @@ function injectShareSheetStyles() {
     .ss-size-thumb-v{width:12px;height:20px;border-radius:2px;background:currentColor;opacity:0.6;}
     .ss-size-thumb-s{width:18px;height:18px;border-radius:2px;background:currentColor;opacity:0.6;}
     .ss-size-thumb-w{width:24px;height:14px;border-radius:2px;background:currentColor;opacity:0.6;}
-    .ss-actions{display:flex;gap:8px;padding:14px 18px 20px;}
+    .ss-actions{display:flex;gap:8px;padding:10px 18px 16px;flex-shrink:0;}
     .ss-action-btn{
       flex:1;padding:13px 8px;
       background:rgba(255,255,255,0.04);
@@ -251,7 +252,7 @@ function injectShareSheetStyles() {
       letter-spacing:0.5px;text-transform:uppercase;
       cursor:pointer;transition:all 150ms;
       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-      min-height:56px;
+      min-height:48px;
     }
     .ss-action-btn:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.18);color:#fff;}
     .ss-action-btn:active{transform:scale(0.97);}
@@ -443,6 +444,9 @@ function ssStartPreview() {
   const dispH = isL ? Math.round(maxSz * (608/1920)) : maxSz;
   canvas.style.width  = dispW + 'px';
   canvas.style.height = dispH + 'px';
+  /* Resize ring to match canvas for smooth transition */
+  const ring = document.getElementById('ssCanvasRing');
+  if (ring) { ring.style.width = dispW + 'px'; ring.style.height = dispH + 'px'; }
   canvas.width  = Math.round(dispW * dpr);
   canvas.height = Math.round(dispH * dpr);
 
