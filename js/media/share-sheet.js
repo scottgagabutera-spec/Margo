@@ -16,6 +16,7 @@ window._shareSheet = window._shareSheet || {
   echoPost:     null,
   isDuet:       false,
   activeFormat: 'poster',
+  size:         'square',
   gifBlob:      null,
   posterBlob:   null,
   isEncoding:   false,
@@ -216,6 +217,27 @@ function injectShareSheetStyles() {
     .ss-logo-lockup{display:flex;align-items:center;gap:7px;text-decoration:none;}
     .ss-logo-wordmark{font-family:'Syne',sans-serif;font-weight:800;font-size:0.82rem;letter-spacing:4px;color:var(--gold,#E8C547);text-transform:uppercase;line-height:1;opacity:0.75;}
     /* ── SHARE SHEET TABS ── */
+    .ss-size-row{display:flex;gap:8px;padding:12px 18px 0;}
+    .ss-size-btn{
+      flex:1;padding:10px 6px;border-radius:10px;
+      border:1px solid rgba(255,255,255,0.07);
+      background:#161420;color:#555360;
+      font-family:'Lora',serif;
+      font-size:0.56rem;font-weight:600;
+      letter-spacing:0.5px;text-transform:uppercase;
+      cursor:pointer;transition:all 150ms;
+      display:flex;flex-direction:column;align-items:center;gap:5px;
+      min-height:52px;
+    }
+    .ss-size-btn:hover{border-color:rgba(255,255,255,0.12);color:#9A98A4;}
+    .ss-size-btn.ss-size-active{
+      background:rgba(232,197,71,0.08);
+      border-color:rgba(232,197,71,0.28);
+      color:#E8C547;
+    }
+    .ss-size-thumb-v{width:12px;height:20px;border-radius:2px;background:currentColor;opacity:0.6;}
+    .ss-size-thumb-s{width:18px;height:18px;border-radius:2px;background:currentColor;opacity:0.6;}
+    .ss-size-thumb-w{width:24px;height:14px;border-radius:2px;background:currentColor;opacity:0.6;}
     .ss-actions{display:flex;gap:8px;padding:14px 18px 20px;}
     .ss-action-btn{
       flex:1;padding:13px 8px;
@@ -299,6 +321,20 @@ function mountShareSheet() {
 
       <div class="ss-info-strip" id="ssInfoStrip"></div>
 
+      <div class="ss-size-row" id="ssSizeRow">
+        <button class="ss-size-btn" data-size="square" style="border-color:rgba(232,197,71,0.28);background:rgba(232,197,71,0.08);color:#E8C547;">
+          <div class="ss-size-thumb-s"></div>
+          <span>Square</span>
+        </button>
+        <button class="ss-size-btn" data-size="vertical">
+          <div class="ss-size-thumb-v"></div>
+          <span>Vertical</span>
+        </button>
+        <button class="ss-size-btn" data-size="landscape">
+          <div class="ss-size-thumb-w"></div>
+          <span>Wide</span>
+        </button>
+      </div>
       <div class="ss-actions">
         <button class="ss-action-btn ss-primary" id="ssSaveBtn">
           <span class="ss-action-icon">&#8595;</span>
@@ -324,6 +360,19 @@ function mountShareSheet() {
   backdrop.querySelector('#ssSaveBtn').onclick    = ssSave;
   backdrop.querySelector('#ssCopyTextBtn').onclick = ssCopyText;
   backdrop.querySelector('#ssBtnShareLink').onclick = ssShareLink;
+  backdrop.querySelector('#ssSizeRow').addEventListener('click', e => {
+    const btn = e.target.closest('.ss-size-btn');
+    if (!btn) return;
+    SS.size = btn.dataset.size;
+    SS.posterBlob = null;
+    backdrop.querySelectorAll('.ss-size-btn').forEach(b => {
+      b.classList.remove('ss-size-active');
+      b.style.borderColor = '';
+      b.style.background  = '';
+      b.style.color       = '';
+    });
+    btn.classList.add('ss-size-active');
+  });
 
   /* Theme dots */
   backdrop.querySelector('#ssThemes').addEventListener('click', e => {
@@ -442,8 +491,22 @@ function openShareSheet(post, opts = {}) {
   SS.echoPost     = opts.echoPost || null;
   SS.gifBlob      = null;
   SS.posterBlob   = null;
+  /* Reset size buttons */
+  setTimeout(() => {
+    const sizeRow = document.getElementById('ssSizeRow');
+    if (sizeRow) {
+      sizeRow.querySelectorAll('.ss-size-btn').forEach(b => {
+        const isSquare = b.dataset.size === 'square';
+        b.classList.toggle('ss-size-active', isSquare);
+        b.style.borderColor = isSquare ? 'rgba(232,197,71,0.28)' : '';
+        b.style.background  = isSquare ? 'rgba(232,197,71,0.08)' : '';
+        b.style.color       = isSquare ? '#E8C547' : '';
+      });
+    }
+  }, 0);
   SS.isEncoding   = false;
   SS.activeFormat = 'poster';
+  SS.size         = 'square';
   SS.theme        = 'midnight-gold';
 
   /* Reset theme dots */
@@ -712,7 +775,10 @@ function ssSave() {
   }
   // Direct download
   const theme = SS.theme || 'midnight-gold';
-  const W = 1080, H = 1080;
+  const isVertical  = SS.size === 'vertical';
+  const isLandscape = SS.size === 'landscape';
+  const W = isLandscape ? 1920 : 1080;
+  const H = isVertical  ? 1920 : (isLandscape ? 608 : 1080);
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -798,15 +864,30 @@ function ssPopulateLinkBox() {
 
 function ssShareLink() {
   const post = SS.post;
-  const url  = (post && post.id) ? `https://trymargo.com/post/${post.id}` : 'https://trymargo.com';
-  navigator.clipboard.writeText(url).then(() => {
-    const btn = document.getElementById('ssBtnShareLink');
-    if (!btn) return;
-    const span = btn.querySelector('span:last-child');
-    const orig = span ? span.textContent : '';
-    if (span) span.textContent = 'Copied!';
-    setTimeout(() => { if (span) span.textContent = orig; }, 2000);
-  }).catch(() => {});
+  const url  = (post && post.id) ? 'https://trymargo.com/post/' + post.id : 'https://trymargo.com';
+  const lyric = (post?.text || '').substring(0, 60);
+  const shareText = '“' + lyric + '” — trymargo.com';
+  if (navigator.share) {
+    navigator.share({ title: 'MARGO', text: shareText, url }).catch(() => {});
+    return;
+  }
+  // Desktop fallback
+  const existing = document.getElementById('ssSharePopup');
+  if (existing) { existing.remove(); return; }
+  const popup = document.createElement('div');
+  popup.id = 'ssSharePopup';
+  popup.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:16px;z-index:99999;display:flex;flex-direction:column;gap:10px;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
+  const encoded = encodeURIComponent(url);
+  const encodedText = encodeURIComponent(shareText);
+  popup.innerHTML = `
+    <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Share via</div>
+    <a href="https://x.com/intent/tweet?url=${encoded}&text=${encodedText}" target="_blank" style="color:#fff;text-decoration:none;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.9rem;">𝕏 Twitter / X</a>
+    <a href="https://wa.me/?text=${encodedText}%20${encoded}" target="_blank" style="color:#fff;text-decoration:none;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.9rem;">&#x1F4AC; WhatsApp</a>
+    <a href="mailto:?subject=Lyric on MARGO&body=${encodedText}%0A%0A${encoded}" style="color:#fff;text-decoration:none;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.9rem;">&#x2709;&#xFE0F; Email</a>
+    <button onclick="navigator.clipboard.writeText('${url}').then(()=>{document.getElementById('ssSharePopup').remove();typeof showToast==='function'&&showToast('Link copied ✓')})" style="color:#fff;background:rgba(232,197,71,0.15);border:1px solid rgba(232,197,71,0.3);border-radius:10px;padding:10px 14px;font-size:0.9rem;cursor:pointer;text-align:left;">&#x2698; Copy link</button>
+    <button onclick="document.getElementById('ssSharePopup').remove()" style="color:rgba(255,255,255,0.4);background:none;border:none;padding:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>
+  `;
+  document.body.appendChild(popup);
 }
 
 function _downloadBlob(blob, filename) {
