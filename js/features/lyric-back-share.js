@@ -663,13 +663,15 @@ async function _lbWaitFonts() {
 function _toTitleCase(str) {
   if (!str) return '';
   const small = new Set(['a','an','the','and','but','or','for','nor','on','at','to','by','in','of','up','as','is']);
-  return str.replace(/[^\s-]+/g, (word, i) => {
-    const lower = word.toLowerCase();
-    if (i === 0 || !small.has(lower)) {
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    }
-    return lower;
-  });
+  return str
+    .replace(/[^\s-]+/g, (word, i) => {
+      const lower = word.toLowerCase();
+      if (i === 0 || !small.has(lower)) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }
+      return lower;
+    })
+    .replace(/\.([a-z])/g, (_, c) => '.' + c.toUpperCase());
 }
 
 /* ── DOWNLOAD CARD ── */
@@ -699,19 +701,21 @@ async function _lbDownloadCard() {
       const p1 = _LB.post1, p2 = _LB.post2;
       function lyricSlug(text) {
         return (text||'')
-          .replace(/[^\w\s']/g, '')
+          .replace(/[^a-z0-9\s]/gi, '')
           .trim()
           .split(/\s+/)
-          .slice(0, 5)
-          .join(' ');
+          .slice(0, 4)
+          .join('-')
+          .toLowerCase()
+          .substring(0, 24);
       }
       const l1Slug    = lyricSlug(p1.text);
       const l2Slug    = lyricSlug(p2.text);
-      const sizeLabel = _LB.size.charAt(0).toUpperCase() + _LB.size.slice(1);
+      const sizeLabel = _LB.size === 'landscape' ? 'Wide' : _LB.size === 'square' ? 'Square' : 'Vertical';
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'Margo_'+l1Slug+'_LyricBack_x_'+l2Slug+'_'+sizeLabel+'.png';
+      a.download = 'MARGO_LyricBack_' + l1Slug + '_' + l2Slug + '_' + sizeLabel + '.png';
       document.body.appendChild(a); a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 5000);
@@ -753,12 +757,15 @@ async function _lbDrawCard(ctx, W, H, p1, p2) {
   ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
 
   // Ghost logo
-  const logoX = 76, logoY = isV ? 84 : 72;
-  const markSize = isV ? 40 : (isL ? 34 : 36);
+  /* MARGO BRAND STANDARD: logo = min(W,H)*0.038, pad = min(W,H)*0.055 */
+  const _logoBase = Math.min(W, H);
+  const markSize  = Math.round(_logoBase * 0.038);
+  const logoX     = Math.round(_logoBase * 0.055);
+  const logoY     = Math.round(_logoBase * 0.055);
   drawMargoLockup(ctx, logoX, logoY, markSize, '#E8C547', false);
 
   // Layout
-  const topPad    = logoY + markSize + (isV ? 48 : 36);
+  const topPad    = logoY + markSize + Math.round(_logoBase * 0.044);
   const bottomPad = isV ? 80 : 64;
   const footerY   = H - bottomPad;
   const contentH  = footerY - 24 - topPad;
@@ -864,11 +871,14 @@ async function _lbDrawConvoCard(ctx, W, H, p1, p2) {
   ctx.fillStyle=vig2; ctx.fillRect(0,0,W,H);
 
   // Ghost logo
-  const logoX=76, logoY=isV?84:72;
-  const markSize=isV?38:(isL?32:34);
+  /* MARGO BRAND STANDARD: logo = min(W,H)*0.038, pad = min(W,H)*0.055 */
+  const _logoBase=Math.min(W,H);
+  const markSize=Math.round(_logoBase*0.038);
+  const logoX=Math.round(_logoBase*0.055);
+  const logoY=Math.round(_logoBase*0.055);
   drawMargoLockup(ctx, logoX, logoY, markSize, '#E8C547', false);
 
-  const areaTop=logoY+markSize+(isV?56:44);
+  const areaTop=logoY+markSize+Math.round(_logoBase*0.044);
   const areaBot=H-(isV?100:80);
   const areaH=areaBot-areaTop;
   const maxBubW=Math.round((W-pad*2)*0.92);

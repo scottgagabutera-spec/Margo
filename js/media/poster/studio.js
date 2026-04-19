@@ -275,13 +275,15 @@ function _trackNumber(post) {
 function _toTitleCase(str) {
   if (!str) return '';
   const small = new Set(['a','an','the','and','but','or','for','nor','on','at','to','by','in','of','up','as','is']);
-  return str.replace(/[^\s-]+/g, (word, i) => {
-    const lower = word.toLowerCase();
-    if (i === 0 || !small.has(lower)) {
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    }
-    return lower;
-  });
+  return str
+    .replace(/[^\s-]+/g, (word, i) => {
+      const lower = word.toLowerCase();
+      if (i === 0 || !small.has(lower)) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }
+      return lower;
+    })
+    .replace(/\.([a-z])/g, (_, c) => '.' + c.toUpperCase());
 }
 
 window.drawPosterToCtx = function(ctx, W, H, post, options) {
@@ -362,7 +364,11 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
     ctx.restore();
   }
   /* ── Brand lockup ── */
-  drawMargoLockup(ctx, Math.round(W*0.035), Math.round(W*0.035), W*0.048, design.accentColor, isLight);
+  /* MARGO BRAND STANDARD: logo = min(W,H)*0.038, pad = min(W,H)*0.055 */
+  const _logoBase = Math.min(W, H);
+  const _markSize = Math.round(_logoBase * 0.038);
+  const _logoPad  = Math.round(_logoBase * 0.055);
+  drawMargoLockup(ctx, _logoPad, _logoPad, _markSize, design.accentColor, isLight);
   /* ── Lyric block — left-aligned ── */
   const lyricText = post.text || '';
   let fontSize = Math.min(W * 0.068, H * 0.052);
@@ -752,7 +758,7 @@ window.exportPoster = function exportPoster() {
           photoOpacity: studioPhotoOpacity,
         });
       },
-      filename: ((_post.knowledge?.song || 'Lyric').trim().substring(0, 40)) + ' — MARGO',
+      filename: 'MARGO_' + ((_post.knowledge?.song || 'Lyric').trim().replace(/[^a-z0-9\s]/gi,'').split(/\s+/).slice(0,4).join('-').toLowerCase()).substring(0,24) + '_' + (typeof SS !== 'undefined' && SS.size === 'landscape' ? 'Wide' : typeof SS !== 'undefined' && SS.size === 'vertical' ? 'Vertical' : 'Square') + '.png',
       onDone: () => {
         if (btn) { btn.disabled = false; btn.textContent = 'Export'; }
         if (typeof showToast === 'function') showToast('Poster saved ✓');
