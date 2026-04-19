@@ -337,34 +337,11 @@ function mountShareSheet() {
   backdrop.querySelector('#ssCopyTextBtn').onclick = ssCopyText;
   backdrop.querySelector('#ssBtnShareLink').onclick = ssShareLink;
 
-  /* Pulse sequencer — cycles gold glow across action buttons until user clicks one */
-  let _pulseIdx = 0, _pulseTimer = null;
-  const _pulseBtns = () => [
-    document.getElementById('ssSaveBtn'),
-    document.getElementById('ssCopyTextBtn'),
-    document.getElementById('ssBtnShareLink')
-  ].filter(Boolean);
-
-  function _startPulse() {
-    _pulseTimer = setInterval(() => {
-      const btns = _pulseBtns();
-      btns.forEach(b => b.classList.remove('ss-pulse'));
-      if (btns[_pulseIdx]) btns[_pulseIdx].classList.add('ss-pulse');
-      _pulseIdx = (_pulseIdx + 1) % btns.length;
-    }, 2400);
-  }
-
-  function _stopPulse() {
-    clearInterval(_pulseTimer);
-    _pulseBtns().forEach(b => b.classList.remove('ss-pulse'));
-  }
-
+  /* Pulse: stop on any action click — restarts on next openShareSheet */
   ['ssSaveBtn','ssCopyTextBtn','ssBtnShareLink'].forEach(id => {
     const btn = backdrop.querySelector('#' + id);
-    if (btn) btn.addEventListener('click', _stopPulse, { once: true });
+    if (btn) btn.addEventListener('click', _stopPulse);
   });
-
-  setTimeout(_startPulse, 800);
   backdrop.querySelector('#ssSizeRow').addEventListener('click', e => {
     const btn = e.target.closest('.ss-size-btn');
     if (!btn) return;
@@ -445,6 +422,32 @@ function ssStartPreview() {
 /* ==========================================================
    OPEN / CLOSE
 ========================================================== */
+/* ── Pulse sequencer — module scope so open/close can control it ── */
+let _pulseIdx = 0, _pulseTimer = null;
+const _pulseBtns = () => [
+  document.getElementById('ssSaveBtn'),
+  document.getElementById('ssCopyTextBtn'),
+  document.getElementById('ssBtnShareLink')
+].filter(Boolean);
+
+function _startPulse() {
+  clearInterval(_pulseTimer);
+  _pulseIdx = 0;
+  _pulseBtns().forEach(b => b.classList.remove('ss-pulse'));
+  _pulseTimer = setInterval(() => {
+    const btns = _pulseBtns();
+    btns.forEach(b => b.classList.remove('ss-pulse'));
+    if (btns[_pulseIdx]) btns[_pulseIdx].classList.add('ss-pulse');
+    _pulseIdx = (_pulseIdx + 1) % btns.length;
+  }, 2400);
+}
+
+function _stopPulse() {
+  clearInterval(_pulseTimer);
+  _pulseTimer = null;
+  _pulseBtns().forEach(b => b.classList.remove('ss-pulse'));
+}
+
 function openShareSheet(post, opts = {}) {
   if (!post) return;
   mountShareSheet();
@@ -472,6 +475,7 @@ function openShareSheet(post, opts = {}) {
   SS.activeFormat = 'poster';
   SS.size         = 'square';
   SS.theme        = 'midnight-gold';
+  setTimeout(_startPulse, 800);
 
   /* Reset theme dots */
   document.querySelectorAll('.ss-theme-dot').forEach((d, i) => {
@@ -524,7 +528,7 @@ function closeShareSheet() {
   const backdrop = document.getElementById('shareSheetBackdrop');
   const sheet    = document.getElementById('shareSheet');
   if (!backdrop || backdrop.classList.contains('ss-hidden')) return;
-  document.querySelectorAll('.ss-action-btn').forEach(b => b.classList.remove('ss-pulse'));
+  _stopPulse();
   sheet?.classList.add('ss-exit');
   document.body.classList.remove('modal-open');
   setTimeout(() => {
