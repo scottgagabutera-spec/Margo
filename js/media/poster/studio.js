@@ -17,7 +17,7 @@
 ========================================================== */
 const STUDIO_DESIGNS = [
   { id:'midnight-gold',     label:'Violet',  swatchCss:'linear-gradient(135deg,#0E0B1A,#E8C547)',   bg:'#0E0B1A', accentColor:'#E8C547', textColor:'#EAE5F5', metaColor:'rgba(234,229,245,0.6)' },
-  { id:'midnight-gold',   label:'Gold',    swatchCss:'linear-gradient(135deg,#0d0d0d,#E8C547)',   bg:'#0B0B0D', accentColor:'#E8C547', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
+  { id:'gold-flat',       label:'Gold',    swatchCss:'linear-gradient(135deg,#0d0d0d,#E8C547)',   bg:'#0B0B0D', accentColor:'#E8C547', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
   { id:'royal-purple',    label:'Amethyst',swatchCss:'linear-gradient(135deg,#1a0033,#c77dff)',   bg:'#0d0014', accentColor:'#c77dff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
   { id:'neon-cyan',       label:'Ocean',   swatchCss:'linear-gradient(135deg,#0a1420,#00e5ff)',   bg:'#050e1a', accentColor:'#00e5ff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
   { id:'sunset-coral',    label:'Ember',   swatchCss:'linear-gradient(135deg,#1a0a0a,#ff6b6b)',   bg:'#1a0505', accentColor:'#ff6b6b', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
@@ -418,23 +418,21 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
 
   /* ── Meta block — rule + song + artist ── */
   const k = post.knowledge || {};
-  /* Landscape: meta sits right side, vertically centered; others: bottom left */
-  const metaPad    = isLandscape ? Math.round(W * 0.62) : pad;
+  /* All formats: meta at bottom, full-width rule */
+  const metaPad    = pad;
   const songSize   = Math.max(12, Math.round(Math.min(W, H) * 0.030));
   const artistSize = Math.max(10, Math.round(Math.min(W, H) * 0.024));
-  /* For landscape: stack rule+song+artist tightly, centered vertically */
-  const metaBlockH = isLandscape ? (songSize + artistSize + 28) : 0;
-  const ruleY      = isLandscape ? (H * 0.5 - metaBlockH * 0.5) : H * 0.80;
-  const songY      = ruleY + (isLandscape ? 20 : Math.round(H * 0.034));
-  const artistY    = songY + songSize + (isLandscape ? 10 : Math.round(H * 0.016));
+  const ruleY      = isLandscape ? H * 0.76 : H * 0.80;
+  const songY      = ruleY + Math.round(H * 0.034);
+  const artistY    = songY + songSize + Math.round(H * 0.016);
 
-  /* Accent rule — wider and thicker on landscape */
+  /* Full-width accent rule */
   ctx.save();
   ctx.fillStyle   = design.accentColor;
   ctx.globalAlpha = 0.85;
-  const ruleW = isLandscape ? Math.round(W * 0.018) : Math.round(W * 0.026);
-  const ruleH = isLandscape ? 3 : Math.round(H * 0.003);
-  ctx.fillRect(metaPad, ruleY, ruleW, ruleH);
+  ctx.fillRect(pad, ruleY, W - pad * 2, isLandscape ? 2 : Math.round(H * 0.003));
+  ctx.restore();
+  ctx.fillRect(pad, ruleY, W - pad * 2, isLandscape ? 2 : Math.round(H * 0.003));
   ctx.restore();
 
   if (k.song || k.artist) {
@@ -447,7 +445,7 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
       ctx.fillStyle   = design.textColor;
       ctx.globalAlpha = 0.88;
       ctx.font        = `600 ${songSize}px 'Lora',serif`;
-      ctx.fillText(_toTitleCase(k.song).substring(0, 32), metaPad, songY);
+      ctx.fillText(_toTitleCase(k.song).substring(0, 32), pad, songY);
     }
 
     if (k.artist) {

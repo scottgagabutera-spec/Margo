@@ -28,11 +28,19 @@ const SS = window._shareSheet;
 
 /* ── 5 core themes ── */
 const SS_THEMES = [
-  { id:'midnight-gold',   color:'#E8C547', bg:'#0E0B1A' },
-  { id:'midnight-gold', color:'#E8C547', bg:'#0B0B0D' },
-  { id:'neon-cyan',     color:'#00e5ff', bg:'#050e1a' },
-  { id:'sunset-coral',  color:'#ff6b6b', bg:'#1a0505' },
-  { id:'monochrome',    color:'#ffffff', bg:'#0a0a0a' },
+  { id:'midnight-gold',  label:'Violet',  color:'#E8C547', bg:'#0E0B1A' },
+  { id:'gold-flat',      label:'Gold',    color:'#E8C547', bg:'#0B0B0D' },
+  { id:'royal-purple',   label:'Amethyst',color:'#c77dff', bg:'#0d0014' },
+  { id:'neon-cyan',      label:'Ocean',   color:'#00e5ff', bg:'#050e1a' },
+  { id:'sunset-coral',   label:'Ember',   color:'#ff6b6b', bg:'#1a0505' },
+  { id:'emerald-night',  label:'Forest',  color:'#50fa7b', bg:'#051a0d' },
+  { id:'rose-gold',      label:'Rose',    color:'#f4a4c0', bg:'#1a0d0f' },
+  { id:'monochrome',     label:'Mono',    color:'#ffffff', bg:'#0a0a0a' },
+  { id:'vaporwave',      label:'Wave',    color:'#ff71ce', bg:'#1a0533' },
+  { id:'neon-dark',      label:'Neon',    color:'#ff00ff', bg:'#0a0a0a' },
+  { id:'y2k-chrome',     label:'Chrome',  color:'#00ffff', bg:'#000033' },
+  { id:'brutalist',      label:'Brutal',  color:'#000000', bg:'#ffffff' },
+  { id:'cream-editorial',label:'Bone',    color:'#B8901A', bg:'#f5f1e8' },
 ];
 
 /* ── Feeling colours ── */
