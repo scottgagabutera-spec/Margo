@@ -242,13 +242,11 @@ function injectShareSheetStyles() {
     }
     .ss-action-btn.ss-pulse{animation:ssPulseGlow 2.4s ease-in-out infinite;}
 
-    #ssSaveBtn{
-      background:#E8C547;
-      border-color:#E8C547;
-      color:#07060A;
-      font-weight:700;
+    #ssSaveBtn:hover{
+      border-color:rgba(232,197,71,0.28);
+      color:#E8C547;
+      background:rgba(232,197,71,0.06);
     }
-    #ssSaveBtn:hover{background:#f0d060;border-color:#f0d060;color:#07060A;}
   `;
   document.head.appendChild(s);
 }
