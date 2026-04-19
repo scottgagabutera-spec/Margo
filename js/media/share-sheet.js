@@ -236,6 +236,12 @@ function injectShareSheetStyles() {
     .ss-action-btn:active{transform:scale(0.97);}
     .ss-action-icon{font-size:1rem;line-height:1;}
 
+    @keyframes ssPulseGlow{
+      0%,100%{box-shadow:none;border-color:rgba(255,255,255,0.07);}
+      50%{box-shadow:0 0 0 3px rgba(232,197,71,0.18),0 0 16px rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.45);}
+    }
+    .ss-action-btn.ss-pulse{animation:ssPulseGlow 2.4s ease-in-out infinite;}
+
     #ssSaveBtn{
       background:#E8C547;
       border-color:#E8C547;
@@ -293,7 +299,7 @@ function mountShareSheet() {
       </div>
 
       <div class="ss-size-row" id="ssSizeRow">
-        <button class="ss-size-btn" data-size="square" style="border-color:rgba(232,197,71,0.28);background:rgba(232,197,71,0.08);color:#E8C547;">
+        <button class="ss-size-btn ss-size-active" data-size="square">
           <div class="ss-size-thumb-s"></div>
           <span>Square</span>
         </button>
@@ -332,6 +338,35 @@ function mountShareSheet() {
   backdrop.querySelector('#ssSaveBtn').onclick    = ssSave;
   backdrop.querySelector('#ssCopyTextBtn').onclick = ssCopyText;
   backdrop.querySelector('#ssBtnShareLink').onclick = ssShareLink;
+
+  /* Pulse sequencer — cycles gold glow across action buttons until user clicks one */
+  let _pulseIdx = 0, _pulseTimer = null;
+  const _pulseBtns = () => [
+    document.getElementById('ssSaveBtn'),
+    document.getElementById('ssCopyTextBtn'),
+    document.getElementById('ssBtnShareLink')
+  ].filter(Boolean);
+
+  function _startPulse() {
+    _pulseTimer = setInterval(() => {
+      const btns = _pulseBtns();
+      btns.forEach(b => b.classList.remove('ss-pulse'));
+      if (btns[_pulseIdx]) btns[_pulseIdx].classList.add('ss-pulse');
+      _pulseIdx = (_pulseIdx + 1) % btns.length;
+    }, 2400);
+  }
+
+  function _stopPulse() {
+    clearInterval(_pulseTimer);
+    _pulseBtns().forEach(b => b.classList.remove('ss-pulse'));
+  }
+
+  ['ssSaveBtn','ssCopyTextBtn','ssBtnShareLink'].forEach(id => {
+    const btn = backdrop.querySelector('#' + id);
+    if (btn) btn.addEventListener('click', _stopPulse, { once: true });
+  });
+
+  setTimeout(_startPulse, 800);
   backdrop.querySelector('#ssSizeRow').addEventListener('click', e => {
     const btn = e.target.closest('.ss-size-btn');
     if (!btn) return;
@@ -491,6 +526,7 @@ function closeShareSheet() {
   const backdrop = document.getElementById('shareSheetBackdrop');
   const sheet    = document.getElementById('shareSheet');
   if (!backdrop || backdrop.classList.contains('ss-hidden')) return;
+  document.querySelectorAll('.ss-action-btn').forEach(b => b.classList.remove('ss-pulse'));
   sheet?.classList.add('ss-exit');
   document.body.classList.remove('modal-open');
   setTimeout(() => {
