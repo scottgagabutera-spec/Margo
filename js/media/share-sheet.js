@@ -155,8 +155,10 @@ function injectShareSheetStyles() {
 
     .ss-canvas-wrap{
       flex:1 1 auto;min-height:0;
+      max-height:280px;
       display:flex;align-items:center;justify-content:center;
       padding:12px 16px 8px;
+      overflow:hidden;
     }
     .ss-canvas-ring{
       position:relative;border-radius:14px;overflow:hidden;
@@ -186,7 +188,8 @@ function injectShareSheetStyles() {
 
     .ss-themes{
       display:flex;align-items:center;justify-content:center;
-      gap:12px;padding:8px 16px 4px;flex-shrink:0;
+      flex-wrap:wrap;
+      gap:10px;padding:8px 16px 4px;flex-shrink:0;
     }
     .ss-theme-dot{
       width:22px;height:22px;border-radius:50%;
@@ -195,11 +198,6 @@ function injectShareSheetStyles() {
     }
     .ss-theme-dot.active{border-color:#E8C547;transform:scale(1.18);}
 
-    .ss-info-strip{
-      padding:0 16px 6px;font-size:0.68rem;
-      color:rgba(255,255,255,0.28);flex-shrink:0;
-      font-family:'Lora',serif;font-style:italic;
-    }
 
     .ss-selector-label{
       font-size:0.55rem;font-weight:600;letter-spacing:2px;
@@ -321,7 +319,6 @@ function mountShareSheet() {
         `).join('')}
       </div>
 
-      <div class="ss-info-strip" id="ssInfoStrip"></div>
 
       <div class="ss-size-row" id="ssSizeRow">
         <button class="ss-size-btn" data-size="square" style="border-color:rgba(232,197,71,0.28);background:rgba(232,197,71,0.08);color:#E8C547;">
