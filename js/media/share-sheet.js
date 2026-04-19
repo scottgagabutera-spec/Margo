@@ -33,7 +33,8 @@ const SS_THEMES = [
   { id:'neon-cyan',      label:'Ocean',   color:'#00e5ff', bg:'#050e1a' },
   { id:'sunset-coral',   label:'Ember',   color:'#ff6b6b', bg:'#1a0505' },
   { id:'emerald-night',  label:'Forest',  color:'#50fa7b', bg:'#051a0d' },
-  { id:'monochrome',     label:'Mono',    color:'#ffffff', bg:'#0a0a0a' },
+  { id:'monochrome',     label:'Black',   color:'#ffffff', bg:'#0a0a0a' },
+  { id:'cream-editorial',label:'Bone',    color:'#B8901A', bg:'#f5f1e8' },
 ];
 
 /* ── Feeling colours ── */
@@ -277,17 +278,6 @@ function mountShareSheet() {
         <button class="ss-close" id="ssClose" aria-label="Close">×</button>
       </div>
 
-      <div class="ss-themes" id="ssThemes">
-        ${SS_THEMES.map((t, i) => `
-          <button
-            class="ss-theme-dot${i === 0 ? ' active' : ''}"
-            data-theme="${t.id}"
-            style="background:radial-gradient(circle at 35% 35%,${t.color},${t.bg})"
-            aria-label="${t.label} theme"
-            title="${t.label}"
-          ></button>
-        `).join('')}
-      </div>
 
 
       <div class="ss-size-row" id="ssSizeRow">
@@ -305,6 +295,18 @@ function mountShareSheet() {
         </button>
       </div>
       <div class="ss-lyric-strip" id="ssLyricStrip"></div>
+      <div class="ss-themes" id="ssThemes">
+        ${SS_THEMES.map((t, i) => `
+          <button
+            class="ss-theme-dot${i === 0 ? ' active' : ''}"
+            data-theme="${t.id}"
+            style="background:radial-gradient(circle at 35% 35%,${t.color},${t.bg})"
+            aria-label="${t.label} theme"
+            title="${t.label}"
+          ></button>
+        `).join('')}
+      </div>
+
       <div class="ss-actions">
         <button class="ss-action-btn" id="ssSaveBtn">
           <span class="ss-action-icon">&#8595;</span>
