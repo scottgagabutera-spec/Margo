@@ -169,6 +169,73 @@
     /* ── SCREENS ── */
     .lb-screen { display: none; padding: 16px; }
     .lb-screen.lb-visible { display: block; }
+    /* ── CARD PREVIEW CANVAS ── */
+    .lb-canvas-wrap {
+      margin: 0 16px 12px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0a090f;
+      aspect-ratio: 9/16;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .lb-canvas-wrap.lb-square { aspect-ratio: 1/1; }
+    .lb-canvas-wrap.lb-landscape { aspect-ratio: 16/9; }
+    #lbPreviewCanvas { width: 100%; height: 100%; display: block; }
+    .lb-preview-generating {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Lora', serif; font-size: 0.68rem;
+      color: rgba(255,255,255,0.3); letter-spacing: 1px;
+    }
+    /* ── DESIGN + SIZE SELECTORS ── */
+    .lb-selector-label {
+      font-size: 0.55rem; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: #555360;
+      padding: 0 0 8px;
+    }
+    .lb-design-row {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .lb-design-btn {
+      flex: 1; padding: 10px 8px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: #161420;
+      color: #555360;
+      font-family: 'Lora', serif;
+      font-size: 0.62rem; font-weight: 600;
+      text-align: center; cursor: pointer; transition: all 150ms;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .lb-design-btn:hover { border-color: rgba(255,255,255,0.12); color: #9A98A4; }
+    .lb-design-btn.lb-design-selected {
+      background: rgba(232,197,71,0.08);
+      border-color: rgba(232,197,71,0.28);
+      color: #E8C547;
+    }
+    .lb-design-sub { font-size: 0.52rem; opacity: 0.5; font-weight: 400; }
+    .lb-size-row {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .lb-size-btn {
+      flex: 1; padding: 10px 6px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: #161420;
+      color: #555360;
+      font-family: 'Lora', serif;
+      font-size: 0.58rem; font-weight: 600;
+      text-align: center; cursor: pointer; transition: all 150ms;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .lb-size-btn:hover { border-color: rgba(255,255,255,0.12); color: #9A98A4; }
+    .lb-size-btn.lb-size-selected {
+      background: rgba(232,197,71,0.08);
+      border-color: rgba(232,197,71,0.28);
+      color: #E8C547;
+    }
+    .lb-size-thumb-v { width: 14px; height: 22px; border-radius: 2px; background: currentColor; opacity: 0.6; }
+    .lb-size-thumb-s { width: 20px; height: 20px; border-radius: 2px; background: currentColor; opacity: 0.6; }
+    .lb-size-thumb-w { width: 26px; height: 15px; border-radius: 2px; background: currentColor; opacity: 0.6; }
 
     .lb-size-grid {
       display: grid; grid-template-columns: 1fr 1fr;
@@ -347,44 +414,37 @@
         </div>
 
         <div class="lb-screen lb-visible" id="lb-screen-card">
-          <div class="lb-style-label">Card Style</div>
-          <div class="lb-style-row" id="lbStyleRow">
-            <button class="lb-style-btn lb-style-dark lb-style-selected" data-theme="dark">
-              <span class="lb-style-name">Card</span>
-              <span class="lb-style-sub">Dark · editorial</span>
+          <div class="lb-canvas-wrap lb-vertical" id="lbCanvasWrap">
+            <canvas id="lbPreviewCanvas"></canvas>
+            <div class="lb-preview-generating" id="lbPreviewGenerating">Rendering…</div>
+          </div>
+          <div class="lb-selector-label">Design</div>
+          <div class="lb-design-row" id="lbDesignRow">
+            <button class="lb-design-btn lb-design-selected" data-theme="convo">
+              <span>Convo</span>
+              <span class="lb-design-sub">Chat bubbles</span>
             </button>
-            <button class="lb-style-btn lb-style-convo" data-theme="convo">
-              <span class="lb-style-name">Convo</span>
-              <span class="lb-style-sub">Chat bubbles</span>
+            <button class="lb-design-btn" data-theme="dark">
+              <span>Card</span>
+              <span class="lb-design-sub">Dark · editorial</span>
             </button>
           </div>
-          <div class="lb-size-grid">
-            <div class="lb-size-option lb-selected" data-size="vertical">
-              <div class="lb-size-thumb lb-vertical"></div>
-              <div class="lb-size-info">
-                <div class="lb-size-name">Vertical</div>
-                <div class="lb-size-desc">TikTok · IG Story · Reels</div>
-              </div>
-              <div class="lb-size-dot lb-on"></div>
-            </div>
-            <div class="lb-size-option" data-size="square">
-              <div class="lb-size-thumb lb-square"></div>
-              <div class="lb-size-info">
-                <div class="lb-size-name">Square</div>
-                <div class="lb-size-desc">Twitter · Feed · Threads</div>
-              </div>
-              <div class="lb-size-dot"></div>
-            </div>
-            <div class="lb-size-option" data-size="landscape">
-              <div class="lb-size-thumb lb-landscape"></div>
-              <div class="lb-size-info">
-                <div class="lb-size-name">Wide</div>
-                <div class="lb-size-desc">YouTube · Twitter banner</div>
-              </div>
-              <div class="lb-size-dot"></div>
-            </div>
+          <div class="lb-selector-label">Size</div>
+          <div class="lb-size-row" id="lbSizeRow">
+            <button class="lb-size-btn lb-size-selected" data-size="vertical">
+              <div class="lb-size-thumb-v"></div>
+              <span>Vertical</span>
+            </button>
+            <button class="lb-size-btn" data-size="square">
+              <div class="lb-size-thumb-s"></div>
+              <span>Square</span>
+            </button>
+            <button class="lb-size-btn" data-size="landscape">
+              <div class="lb-size-thumb-w"></div>
+              <span>Wide</span>
+            </button>
           </div>
-          <button class="lb-cta" id="lbBtnDownload">↓ Download Card</button>
+          <button class="lb-cta" id="lbBtnDownload">↓ Save Card</button>
         </div>
 
         <div class="lb-screen" id="lb-screen-copy">
@@ -413,7 +473,7 @@
 })();
 
 /* ── STATE ── */
-const _LB = { post1: null, post2: null, size: 'vertical', theme: 'dark' };
+const _LB = { post1: null, post2: null, size: 'vertical', theme: 'convo' };
 
 /* ── BIND EVENTS (once) ── */
 function _lbBindEvents() {
@@ -433,26 +493,26 @@ function _lbBindEvents() {
     document.getElementById('lb-screen-' + btn.dataset.tab).classList.add('lb-visible');
   });
 
-  // Card style selection (Dark / Convo)
-  document.getElementById('lbStyleRow').addEventListener('click', e => {
-    const btn = e.target.closest('.lb-style-btn');
+  // Design selection
+  document.getElementById('lbDesignRow').addEventListener('click', e => {
+    const btn = e.target.closest('.lb-design-btn');
     if (!btn) return;
     _LB.theme = btn.dataset.theme;
-    document.querySelectorAll('.lb-style-btn').forEach(b => b.classList.remove('lb-style-selected'));
-    btn.classList.add('lb-style-selected');
+    document.querySelectorAll('.lb-design-btn').forEach(b => b.classList.remove('lb-design-selected'));
+    btn.classList.add('lb-design-selected');
+    _lbRenderPreview();
   });
 
   // Size selection
-  document.querySelector('.lb-size-grid').addEventListener('click', e => {
-    const opt = e.target.closest('.lb-size-option');
-    if (!opt) return;
-    _LB.size = opt.dataset.size;
-    document.querySelectorAll('.lb-size-option').forEach(o => {
-      o.classList.remove('lb-selected');
-      o.querySelector('.lb-size-dot').classList.remove('lb-on');
-    });
-    opt.classList.add('lb-selected');
-    opt.querySelector('.lb-size-dot').classList.add('lb-on');
+  document.getElementById('lbSizeRow').addEventListener('click', e => {
+    const btn = e.target.closest('.lb-size-btn');
+    if (!btn) return;
+    _LB.size = btn.dataset.size;
+    document.querySelectorAll('.lb-size-btn').forEach(b => b.classList.remove('lb-size-selected'));
+    btn.classList.add('lb-size-selected');
+    const wrap = document.getElementById('lbCanvasWrap');
+    wrap.className = 'lb-canvas-wrap ' + (_LB.size === 'landscape' ? 'lb-landscape' : _LB.size === 'square' ? 'lb-square' : 'lb-vertical');
+    _lbRenderPreview();
   });
 
   // CTAs
@@ -489,7 +549,7 @@ function openLyricBackShare(originalPost, echoPost) {
   };
 
   _LB.size = 'vertical';
-  _LB.theme = 'dark';
+  _LB.theme = 'convo';
 
   const p1 = _LB.post1, p2 = _LB.post2;
 
@@ -514,16 +574,17 @@ function openLyricBackShare(originalPost, echoPost) {
   document.getElementById('lb-screen-card').classList.add('lb-visible');
 
   // Reset size selection
-  document.querySelectorAll('.lb-size-option').forEach(o => {
-    const isV = o.dataset.size === 'vertical';
-    o.classList.toggle('lb-selected', isV);
-    o.querySelector('.lb-size-dot').classList.toggle('lb-on', isV);
+  document.querySelectorAll('.lb-size-btn').forEach(b => {
+    b.classList.toggle('lb-size-selected', b.dataset.size === 'vertical');
   });
+  const wrap = document.getElementById('lbCanvasWrap');
+  if (wrap) wrap.className = 'lb-canvas-wrap lb-vertical';
 
-  // Reset style selection to dark
-  document.querySelectorAll('.lb-style-btn').forEach(b => {
-    b.classList.toggle('lb-style-selected', b.dataset.theme === 'dark');
+  // Reset design to convo
+  document.querySelectorAll('.lb-design-btn').forEach(b => {
+    b.classList.toggle('lb-design-selected', b.dataset.theme === 'convo');
   });
+  setTimeout(_lbRenderPreview, 80);
 
   // Hide echo sheet if open
   const _echoBackdrop = document.getElementById('echoSheetBackdrop');
@@ -624,6 +685,38 @@ async function _lbWaitFonts() {
   if (_lbFontsReady) return;
   await document.fonts.ready;
   _lbFontsReady = true;
+}
+
+/* ── PREVIEW RENDER ── */
+let _lbPreviewTimer = null;
+async function _lbRenderPreview() {
+  const canvas = document.getElementById('lbPreviewCanvas');
+  const wrap   = document.getElementById('lbCanvasWrap');
+  const gen    = document.getElementById('lbPreviewGenerating');
+  if (!canvas || !_LB.post1 || !_LB.post2) return;
+  if (gen) gen.style.display = 'flex';
+  clearTimeout(_lbPreviewTimer);
+  _lbPreviewTimer = setTimeout(async () => {
+    try {
+      const isLandscape = _LB.size === 'landscape';
+      const isSquare    = _LB.size === 'square';
+      const W = isLandscape ? 1920 : 1080;
+      const H = _LB.size === 'vertical' ? 1920 : (isSquare ? 1080 : 608);
+      canvas.width  = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      await _lbWaitFonts();
+      if (_LB.theme === 'convo') {
+        await _lbDrawConvoCard(ctx, W, H, _LB.post1, _LB.post2);
+      } else {
+        await _lbDrawCard(ctx, W, H, _LB.post1, _LB.post2);
+      }
+      if (gen) gen.style.display = 'none';
+    } catch(e) {
+      console.error('[LB preview]', e);
+      if (gen) gen.style.display = 'none';
+    }
+  }, 60);
 }
 
 /* ── DOWNLOAD CARD ── */
