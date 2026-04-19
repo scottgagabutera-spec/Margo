@@ -376,7 +376,7 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
   /* Landscape: left 56% of width for lyric, right for meta */
   const lyricWrapW = isLandscape ? W * 0.52 : innerW;
   /* Available height for lyric block — landscape is tight */
-  const maxLyricH = isLandscape ? H * 0.72 : H * 0.55;
+  const maxLyricH = isLandscape ? H * 0.58 : H * 0.55;
   /* Start font size, then shrink until block fits */
   let fontSize = isLandscape
     ? Math.min(H * 0.12, W * 0.036)
@@ -397,7 +397,7 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
   }
 
   /* Landscape: center in middle zone; others: upper-center */
-  const lyricCenterY = isLandscape ? H * 0.44 : H * 0.42;
+  const lyricCenterY = isLandscape ? H * 0.36 : H * 0.42;
   const startY = lyricCenterY - blockH / 2;
 
   /* track label removed — song shown once in meta block only */
@@ -422,8 +422,8 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
   const metaPad    = pad;
   const songSize   = Math.max(12, Math.round(Math.min(W, H) * 0.030));
   const artistSize = Math.max(10, Math.round(Math.min(W, H) * 0.024));
-  const ruleY      = isLandscape ? H * 0.68 : H * 0.80;
-  const songY      = ruleY + Math.round(H * (isLandscape ? 0.08 : 0.034));
+  const ruleY      = isLandscape ? H * 0.72 : H * 0.80;
+  const songY      = ruleY + Math.round(H * (isLandscape ? 0.06 : 0.034));
   const artistY    = songY + songSize + Math.round(H * (isLandscape ? 0.06 : 0.016));
 
   /* Full-width accent rule */
