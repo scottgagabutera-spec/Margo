@@ -369,17 +369,7 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
   const lyricCenterY = H * 0.42;
   const startY = lyricCenterY - blockH / 2;
 
-  /* ── Track number above lyric ── */
-  const trackStr  = _trackNumber(post);
-  const trackSize = Math.max(9, Math.round(W * 0.020));
-  ctx.save();
-  ctx.font         = `700 ${trackSize}px 'Lora',serif`;
-  ctx.fillStyle    = design.accentColor;
-  ctx.globalAlpha  = 0.55;
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign    = 'left';
-  ctx.fillText(trackStr, pad, startY - trackSize * 1.8);
-  ctx.restore();
+  /* track label removed — song shown once in meta block only */
 
   /* ── Lyric lines ── */
   ctx.save();
@@ -397,16 +387,20 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
 
   /* ── Meta block — left-aligned with accent rule ── */
   const k = post.knowledge || {};
-  const metaY = H * 0.76;
+  /* ── Meta block — rule + song + artist, clean spacing ── */
+  const songSize   = Math.max(12, Math.round(W * 0.028));
+  const artistSize = Math.max(10, Math.round(W * 0.022));
+  const ruleY      = H * 0.80;
+  const songY      = ruleY + Math.round(H * 0.034);
+  const artistY    = songY  + Math.round(H * 0.040);
 
-  /* Accent rule — 28px wide, 2px tall */
+  /* Accent rule */
   ctx.save();
   ctx.fillStyle   = design.accentColor;
-  ctx.globalAlpha = 0.9;
-  ctx.fillRect(pad, metaY - Math.round(W * 0.038), Math.round(W * 0.026), Math.round(H * 0.003));
+  ctx.globalAlpha = 0.85;
+  ctx.fillRect(pad, ruleY, Math.round(W * 0.026), Math.round(H * 0.003));
   ctx.restore();
 
-  /* Song title */
   if (k.song || k.artist) {
     ctx.save();
     ctx.textBaseline = 'alphabetic';
@@ -415,31 +409,28 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
 
     if (k.song) {
       ctx.fillStyle   = design.textColor;
-      ctx.globalAlpha = 0.9;
-      ctx.font        = `600 ${Math.max(12, Math.round(W * 0.030))}px 'Lora',serif`;
-      ctx.fillText(k.song.substring(0, 32), pad, metaY);
+      ctx.globalAlpha = 0.88;
+      ctx.font        = `600 ${songSize}px 'Lora',serif`;
+      ctx.fillText(k.song.substring(0, 32), pad, songY);
     }
 
     if (k.artist) {
       ctx.fillStyle   = design.accentColor;
       ctx.globalAlpha = 1;
-      ctx.font        = `700 ${Math.max(10, Math.round(W * 0.024))}px 'Lora',serif`;
-      ctx.fillText(k.artist.substring(0, 32), pad, metaY + Math.round(W * 0.038));
+      ctx.font        = `700 ${artistSize}px 'Lora',serif`;
+      ctx.fillText(k.artist.substring(0, 32), pad, artistY);
     }
     ctx.restore();
   }
 
-  /* ── Near-invisible watermark ── */
+  /* ── Watermark — ghost but legible ── */
   ctx.save();
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign    = 'center';
-  /* Color is bg-family — visible only on zoom */
-  const wmColor = isLight
-    ? 'rgba(26,26,32,0.12)'
-    : _blendWithBg(design.bg, design.accentColor, 0.07);
-  ctx.fillStyle  = wmColor;
-  ctx.globalAlpha = 1;
-  ctx.font = `700 ${Math.max(9, Math.round(W * 0.018))}px 'Lora',serif`;
+  ctx.fillStyle    = isLight ? 'rgba(26,26,32,0.20)' : 'rgba(232,197,71,0.22)';
+  ctx.globalAlpha  = 1;
+  ctx.font         = `600 ${Math.max(9, Math.round(W * 0.016))}px 'Lora',serif`;
+  ctx.letterSpacing = '2px';
   ctx.fillText('trymargo.com', W / 2, H * 0.955);
   ctx.restore();
 };
