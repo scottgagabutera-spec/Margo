@@ -372,26 +372,32 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
   /* ── Lyric block — left-aligned ── */
   const lyricText = post.text || '';
   const isLandscape = W > H;
-  /* Landscape: scale font to height (card is short); others: scale to width */
-  let fontSize = isLandscape
-    ? Math.min(H * 0.14, W * 0.040)
-    : Math.min(W * 0.068, H * 0.052);
   const fStyle = font.style === 'italic' ? 'italic ' : '';
-  /* Landscape wraps in left 55% of width, leaving right side for meta */
+  /* Landscape: left 56% of width for lyric, right for meta */
   const lyricWrapW = isLandscape ? W * 0.52 : innerW;
+  /* Available height for lyric block — landscape is tight */
+  const maxLyricH = isLandscape ? H * 0.72 : H * 0.55;
+  /* Start font size, then shrink until block fits */
+  let fontSize = isLandscape
+    ? Math.min(H * 0.12, W * 0.036)
+    : Math.min(W * 0.068, H * 0.052);
   ctx.font = `${fStyle}${font.weight} ${fontSize}px ${font.css}`;
-
-  const lines = _studioWrapText(ctx, lyricText, lyricWrapW);
-  if (lines.length > 6) {
-    fontSize = Math.max(isLandscape ? H * 0.08 : W * 0.030, fontSize * (6 / lines.length));
+  let lines = _studioWrapText(ctx, lyricText, lyricWrapW);
+  /* Shrink font until block fits within maxLyricH */
+  let lh = fontSize * 1.42;
+  let blockH = lines.length * lh;
+  let iters = 0;
+  while (blockH > maxLyricH && fontSize > (isLandscape ? 18 : 14) && iters < 20) {
+    fontSize *= 0.88;
     ctx.font = `${fStyle}${font.weight} ${fontSize}px ${font.css}`;
+    lines = _studioWrapText(ctx, lyricText, lyricWrapW);
+    lh = fontSize * 1.42;
+    blockH = lines.length * lh;
+    iters++;
   }
 
-  const lh     = fontSize * 1.48;
-  const blockH = lines.length * lh;
-
-  /* Landscape: center vertically in full height; others: upper-center zone */
-  const lyricCenterY = isLandscape ? H * 0.46 : H * 0.42;
+  /* Landscape: center in middle zone; others: upper-center */
+  const lyricCenterY = isLandscape ? H * 0.44 : H * 0.42;
   const startY = lyricCenterY - blockH / 2;
 
   /* track label removed — song shown once in meta block only */
@@ -412,19 +418,23 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
 
   /* ── Meta block — rule + song + artist ── */
   const k = post.knowledge || {};
-  /* Landscape: meta sits right side; others: bottom left */
-  const metaPad    = isLandscape ? Math.round(W * 0.60) : pad;
-  const songSize   = Math.max(12, Math.round(Math.min(W, H) * 0.028));
-  const artistSize = Math.max(10, Math.round(Math.min(W, H) * 0.022));
-  const ruleY      = isLandscape ? H * 0.35 : H * 0.80;
-  const songY      = ruleY + Math.round(H * (isLandscape ? 0.10 : 0.034));
-  const artistY    = songY  + Math.round(H * (isLandscape ? 0.13 : 0.040));
+  /* Landscape: meta sits right side, vertically centered; others: bottom left */
+  const metaPad    = isLandscape ? Math.round(W * 0.62) : pad;
+  const songSize   = Math.max(12, Math.round(Math.min(W, H) * 0.030));
+  const artistSize = Math.max(10, Math.round(Math.min(W, H) * 0.024));
+  /* For landscape: stack rule+song+artist tightly, centered vertically */
+  const metaBlockH = isLandscape ? (songSize + artistSize + 28) : 0;
+  const ruleY      = isLandscape ? (H * 0.5 - metaBlockH * 0.5) : H * 0.80;
+  const songY      = ruleY + (isLandscape ? 20 : Math.round(H * 0.034));
+  const artistY    = songY + songSize + (isLandscape ? 10 : Math.round(H * 0.016));
 
-  /* Accent rule */
+  /* Accent rule — wider and thicker on landscape */
   ctx.save();
   ctx.fillStyle   = design.accentColor;
   ctx.globalAlpha = 0.85;
-  ctx.fillRect(metaPad, ruleY, Math.round(W * 0.026), Math.round(H * 0.003));
+  const ruleW = isLandscape ? Math.round(W * 0.018) : Math.round(W * 0.026);
+  const ruleH = isLandscape ? 3 : Math.round(H * 0.003);
+  ctx.fillRect(metaPad, ruleY, ruleW, ruleH);
   ctx.restore();
 
   if (k.song || k.artist) {
