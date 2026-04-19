@@ -169,25 +169,7 @@
     /* ── SCREENS ── */
     .lb-screen { display: none; padding: 16px; }
     .lb-screen.lb-visible { display: block; }
-    /* ── CARD PREVIEW CANVAS ── */
-    .lb-canvas-wrap {
-      margin: 0 16px 12px;
-      border-radius: 12px;
-      overflow: hidden;
-      background: #0a090f;
-      aspect-ratio: 9/16;
-      display: flex; align-items: center; justify-content: center;
-      position: relative;
-    }
-    .lb-canvas-wrap.lb-square { aspect-ratio: 1/1; }
-    .lb-canvas-wrap.lb-landscape { aspect-ratio: 16/9; }
-    #lbPreviewCanvas { width: 100%; height: 100%; display: block; }
-    .lb-preview-generating {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Lora', serif; font-size: 0.68rem;
-      color: rgba(255,255,255,0.3); letter-spacing: 1px;
-    }
+
     /* ── DESIGN + SIZE SELECTORS ── */
     .lb-selector-label {
       font-size: 0.55rem; font-weight: 600; letter-spacing: 2px;
@@ -414,10 +396,7 @@
         </div>
 
         <div class="lb-screen lb-visible" id="lb-screen-card">
-          <div class="lb-canvas-wrap lb-vertical" id="lbCanvasWrap">
-            <canvas id="lbPreviewCanvas"></canvas>
-            <div class="lb-preview-generating" id="lbPreviewGenerating">Rendering…</div>
-          </div>
+
           <div class="lb-selector-label">Design</div>
           <div class="lb-design-row" id="lbDesignRow">
             <button class="lb-design-btn lb-design-selected" data-theme="convo">
@@ -500,7 +479,6 @@ function _lbBindEvents() {
     _LB.theme = btn.dataset.theme;
     document.querySelectorAll('.lb-design-btn').forEach(b => b.classList.remove('lb-design-selected'));
     btn.classList.add('lb-design-selected');
-    _lbRenderPreview();
   });
 
   // Size selection
@@ -510,9 +488,7 @@ function _lbBindEvents() {
     _LB.size = btn.dataset.size;
     document.querySelectorAll('.lb-size-btn').forEach(b => b.classList.remove('lb-size-selected'));
     btn.classList.add('lb-size-selected');
-    const wrap = document.getElementById('lbCanvasWrap');
-    wrap.className = 'lb-canvas-wrap ' + (_LB.size === 'landscape' ? 'lb-landscape' : _LB.size === 'square' ? 'lb-square' : 'lb-vertical');
-    _lbRenderPreview();
+
   });
 
   // CTAs
@@ -577,14 +553,10 @@ function openLyricBackShare(originalPost, echoPost) {
   document.querySelectorAll('.lb-size-btn').forEach(b => {
     b.classList.toggle('lb-size-selected', b.dataset.size === 'vertical');
   });
-  const wrap = document.getElementById('lbCanvasWrap');
-  if (wrap) wrap.className = 'lb-canvas-wrap lb-vertical';
-
   // Reset design to convo
   document.querySelectorAll('.lb-design-btn').forEach(b => {
     b.classList.toggle('lb-design-selected', b.dataset.theme === 'convo');
   });
-  setTimeout(_lbRenderPreview, 80);
 
   // Hide echo sheet if open
   const _echoBackdrop = document.getElementById('echoSheetBackdrop');
@@ -687,36 +659,17 @@ async function _lbWaitFonts() {
   _lbFontsReady = true;
 }
 
-/* ── PREVIEW RENDER ── */
-let _lbPreviewTimer = null;
-async function _lbRenderPreview() {
-  const canvas = document.getElementById('lbPreviewCanvas');
-  const wrap   = document.getElementById('lbCanvasWrap');
-  const gen    = document.getElementById('lbPreviewGenerating');
-  if (!canvas || !_LB.post1 || !_LB.post2) return;
-  if (gen) gen.style.display = 'flex';
-  clearTimeout(_lbPreviewTimer);
-  _lbPreviewTimer = setTimeout(async () => {
-    try {
-      const isLandscape = _LB.size === 'landscape';
-      const isSquare    = _LB.size === 'square';
-      const W = isLandscape ? 1920 : 1080;
-      const H = _LB.size === 'vertical' ? 1920 : (isSquare ? 1080 : 608);
-      canvas.width  = W;
-      canvas.height = H;
-      const ctx = canvas.getContext('2d');
-      await _lbWaitFonts();
-      if (_LB.theme === 'convo') {
-        await _lbDrawConvoCard(ctx, W, H, _LB.post1, _LB.post2);
-      } else {
-        await _lbDrawCard(ctx, W, H, _LB.post1, _LB.post2);
-      }
-      if (gen) gen.style.display = 'none';
-    } catch(e) {
-      console.error('[LB preview]', e);
-      if (gen) gen.style.display = 'none';
+
+function _toTitleCase(str) {
+  if (!str) return '';
+  const small = new Set(['a','an','the','and','but','or','for','nor','on','at','to','by','in','of','up','as','is']);
+  return str.replace(/[^\s-]+/g, (word, i) => {
+    const lower = word.toLowerCase();
+    if (i === 0 || !small.has(lower)) {
+      return word.charAt(0).toUpperCase() + word.slice(1);
     }
-  }, 60);
+    return lower;
+  });
 }
 
 /* ── DOWNLOAD CARD ── */
@@ -886,12 +839,12 @@ function _lbDrawSection(ctx, W, pad, startY, sectionH, post, isV, isL, TEXT, TEX
   ctx.letterSpacing='0.5px';
   ctx.font='600 '+sFS+'px Lora, serif';
   ctx.fillStyle=TEXT;
-  ctx.fillText(post.song||'',mid,metaY);
+  ctx.fillText(_toTitleCase(post.song||''),mid,metaY);
 
   ctx.letterSpacing='0px';
   ctx.font='400 '+aFS+'px Lora, serif';
   ctx.fillStyle=TEXT2;
-  ctx.fillText(post.artist||'',mid,metaY+sFS+12);
+  ctx.fillText(_toTitleCase(post.artist||''),mid,metaY+sFS+12);
   ctx.letterSpacing='0px';
 }
 
@@ -961,9 +914,9 @@ async function _lbDrawConvoCard(ctx, W, H, p1, p2) {
   ctx.beginPath(); ctx.moveTo(l1TextX,l1RuleY); ctx.lineTo(b1X+b1W-bPadH,l1RuleY); ctx.stroke();
   const l1MetaY=l1RuleY+metaGap;
   ctx.font='600 '+songFS+'px Lora, serif'; ctx.fillStyle='rgba(7,6,10,0.75)';
-  ctx.fillText(p1.song||'',l1TextX,l1MetaY);
+  ctx.fillText(_toTitleCase(p1.song||''),l1TextX,l1MetaY);
   ctx.font='400 '+artistFS+'px Lora, serif'; ctx.fillStyle='rgba(7,6,10,0.50)';
-  ctx.fillText(p1.artist||'',l1TextX,l1MetaY+songFS+10);
+  ctx.fillText(_toTitleCase(p1.artist||''),l1TextX,l1MetaY+songFS+10);
   // tail
   ctx.fillStyle='#E8C547';
   ctx.beginPath();
@@ -989,9 +942,9 @@ async function _lbDrawConvoCard(ctx, W, H, p1, p2) {
   ctx.beginPath(); ctx.moveTo(l2TextX,l2RuleY); ctx.lineTo(b2X+b2W-bPadH,l2RuleY); ctx.stroke();
   const l2MetaY=l2RuleY+metaGap;
   ctx.font='600 '+songFS+'px Lora, serif'; ctx.fillStyle='rgba(244,241,237,0.70)';
-  ctx.fillText(p2.song||'',l2TextX,l2MetaY);
+  ctx.fillText(_toTitleCase(p2.song||''),l2TextX,l2MetaY);
   ctx.font='400 '+artistFS+'px Lora, serif'; ctx.fillStyle='rgba(154,152,164,0.80)';
-  ctx.fillText(p2.artist||'',l2TextX,l2MetaY+songFS+10);
+  ctx.fillText(_toTitleCase(p2.artist||''),l2TextX,l2MetaY+songFS+10);
   // tail
   ctx.fillStyle='#1E1B2A';
   const tailBase=b2X+b2W-4;

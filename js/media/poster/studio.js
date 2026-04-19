@@ -271,6 +271,19 @@ function _trackNumber(post) {
    CANVAS DRAW — window.drawPosterToCtx
    v6.0: New MARGO layout — left-aligned, track number, rule
 ========================================================== */
+
+function _toTitleCase(str) {
+  if (!str) return '';
+  const small = new Set(['a','an','the','and','but','or','for','nor','on','at','to','by','in','of','up','as','is']);
+  return str.replace(/[^\s-]+/g, (word, i) => {
+    const lower = word.toLowerCase();
+    if (i === 0 || !small.has(lower)) {
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }
+    return lower;
+  });
+}
+
 window.drawPosterToCtx = function(ctx, W, H, post, options) {
   options = options || {};
   if (!post) return;
@@ -411,14 +424,14 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
       ctx.fillStyle   = design.textColor;
       ctx.globalAlpha = 0.88;
       ctx.font        = `600 ${songSize}px 'Lora',serif`;
-      ctx.fillText(k.song.substring(0, 32), pad, songY);
+      ctx.fillText(_toTitleCase(k.song).substring(0, 32), pad, songY);
     }
 
     if (k.artist) {
       ctx.fillStyle   = design.accentColor;
       ctx.globalAlpha = 1;
       ctx.font        = `700 ${artistSize}px 'Lora',serif`;
-      ctx.fillText(k.artist.substring(0, 32), pad, artistY);
+      ctx.fillText(_toTitleCase(k.artist).substring(0, 32), pad, artistY);
     }
     ctx.restore();
   }
