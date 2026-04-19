@@ -52,8 +52,9 @@ const SS_FEELING_DEFAULT = { bg:'rgba(232,197,71,0.09)', text:'#E8C547', border:
 
 /* ── Song name for filename ── */
 function _songFilename(post, ext) {
-  const song = (post?.knowledge?.song || 'Lyric').trim().substring(0,40);
-  return song + ' — MARGO' + (ext ? '.' + ext : '');
+  const slug = ((post?.knowledge?.song || 'Lyric').trim().replace(/[^a-z0-9\s]/gi,'').split(/\s+/).slice(0,4).join('-').toLowerCase()).substring(0,24);
+  const size = (typeof SS !== 'undefined' && SS.size === 'landscape') ? 'Wide' : (typeof SS !== 'undefined' && SS.size === 'vertical') ? 'Vertical' : 'Square';
+  return 'MARGO_' + slug + '_' + size + (ext ? '.' + ext : '');
 }
 
 /* ==========================================================
@@ -424,30 +425,45 @@ function ssStopPreview() {
   if (SS.animFrame) { cancelAnimationFrame(SS.animFrame); SS.animFrame = null; }
 }
 
+/* Preview render token — cancels stale renders */
+let _ssPreviewToken = 0;
+
 function ssStartPreview() {
   ssStopPreview();
   const canvas = document.getElementById('ssCanvas');
   const post   = SS.post;
   if (!canvas || !post) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-  const dpr  = Math.min(window.devicePixelRatio || 1, 2);
-  const size = _sizeCanvas(canvas, dpr);
+  /* Size-aware preview dimensions */
+  const isV = SS.size === 'vertical';
+  const isL = SS.size === 'landscape';
+  const maxSz = Math.min(Math.max(120, window.innerWidth * 0.68), 460);
+  const dispW = isL ? maxSz       : isV ? Math.round(maxSz * (1080/1920)) : maxSz;
+  const dispH = isL ? Math.round(maxSz * (608/1920)) : maxSz;
+  canvas.style.width  = dispW + 'px';
+  canvas.style.height = dispH + 'px';
+  canvas.width  = Math.round(dispW * dpr);
+  canvas.height = Math.round(dispH * dpr);
 
   if (SS.activeFormat === 'poster') {
+    const token = ++_ssPreviewToken;
     document.fonts.ready.then(() => {
+      if (token !== _ssPreviewToken) return;
       const ctx = canvas.getContext('2d');
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
       if (SS.isDuet && SS.echoPost) {
         if (typeof drawDuetPosterToCtx === 'function') {
-          drawDuetPosterToCtx(ctx, size, size);
+          drawDuetPosterToCtx(ctx, dispW, dispH);
         }
       } else {
         const _draw = () => {
+          if (token !== _ssPreviewToken) return;
           if (typeof window.drawPosterToCtx === 'function') {
-            try { window.drawPosterToCtx(ctx, size, size, post, { design: SS.theme || 'midnight-gold', font: 'lora' }); } catch(e) { console.error('[SS poster]', e); }
+            try { window.drawPosterToCtx(ctx, dispW, dispH, post, { design: SS.theme || 'midnight-gold', font: 'lora' }); } catch(e) { console.error('[SS poster]', e); }
           } else if (typeof window.drawPosterPreview === 'function') {
-            try { window.drawPosterPreview(ctx, size, size, post); } catch(e) { console.error('[SS poster]', e); }
+            try { window.drawPosterPreview(ctx, dispW, dispH, post); } catch(e) { console.error('[SS poster]', e); }
           } else {
             setTimeout(_draw, 100);
           }

@@ -416,9 +416,9 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
   const metaPad    = isLandscape ? Math.round(W * 0.60) : pad;
   const songSize   = Math.max(12, Math.round(Math.min(W, H) * 0.028));
   const artistSize = Math.max(10, Math.round(Math.min(W, H) * 0.022));
-  const ruleY      = isLandscape ? H * 0.30 : H * 0.80;
-  const songY      = ruleY + Math.round(H * (isLandscape ? 0.14 : 0.034));
-  const artistY    = songY  + Math.round(H * (isLandscape ? 0.18 : 0.040));
+  const ruleY      = isLandscape ? H * 0.35 : H * 0.80;
+  const songY      = ruleY + Math.round(H * (isLandscape ? 0.10 : 0.034));
+  const artistY    = songY  + Math.round(H * (isLandscape ? 0.13 : 0.040));
 
   /* Accent rule */
   ctx.save();
