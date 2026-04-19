@@ -336,7 +336,7 @@ function mountShareSheet() {
         </button>
       </div>
       <div class="ss-actions">
-        <button class="ss-action-btn ss-primary" id="ssSaveBtn">
+        <button class="ss-action-btn" id="ssSaveBtn">
           <span class="ss-action-icon">&#8595;</span>
           <span>Save Card</span>
         </button>
@@ -363,6 +363,7 @@ function mountShareSheet() {
   backdrop.querySelector('#ssSizeRow').addEventListener('click', e => {
     const btn = e.target.closest('.ss-size-btn');
     if (!btn) return;
+    if (SS.isEncoding) return;
     SS.size = btn.dataset.size;
     SS.posterBlob = null;
     backdrop.querySelectorAll('.ss-size-btn').forEach(b => {
@@ -372,6 +373,7 @@ function mountShareSheet() {
       b.style.color       = '';
     });
     btn.classList.add('ss-size-active');
+    requestAnimationFrame(() => ssStartPreview());
   });
 
   /* Theme dots */
@@ -957,18 +959,23 @@ async function ssShareTo() {
 ========================================================== */
 async function ssGeneratePoster() {
   if (SS.posterBlob) return;
+  if (SS.isEncoding) return;
   SS.isEncoding = true;
-  setSSEncoding(true, 'Generating poster…');
+  setSSEncoding(true, 'Generating…');
   try {
+    const _isV = SS.size === 'vertical';
+    const _isL = SS.size === 'landscape';
+    const PW   = _isL ? 1920 : 1080;
+    const PH   = _isV ? 1920 : (_isL ? 608 : 1080);
     const off = document.createElement('canvas');
-    off.width = 1080; off.height = 1080;
+    off.width = PW; off.height = PH;
     const ctx = off.getContext('2d');
     await document.fonts.ready;
     if (SS.isDuet && SS.echoPost) {
-      if (typeof drawDuetPosterToCtx === 'function') drawDuetPosterToCtx(ctx, 1080, 1080);
+      if (typeof drawDuetPosterToCtx === 'function') drawDuetPosterToCtx(ctx, PW, PH);
     } else {
       if (typeof window.drawPosterToCtx === 'function') {
-        window.drawPosterToCtx(ctx, 1080, 1080, SS.post, { design: SS.theme || 'midnight-gold', font: 'lora' });
+        window.drawPosterToCtx(ctx, PW, PH, SS.post, { design: SS.theme || 'midnight-gold', font: 'lora' });
       }
     }
     SS.posterBlob = await new Promise((res, rej) => {

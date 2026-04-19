@@ -371,21 +371,27 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
   drawMargoLockup(ctx, _logoPad, _logoPad, _markSize, design.accentColor, isLight);
   /* ── Lyric block — left-aligned ── */
   const lyricText = post.text || '';
-  let fontSize = Math.min(W * 0.068, H * 0.052);
+  const isLandscape = W > H;
+  /* Landscape: scale font to height (card is short); others: scale to width */
+  let fontSize = isLandscape
+    ? Math.min(H * 0.14, W * 0.040)
+    : Math.min(W * 0.068, H * 0.052);
   const fStyle = font.style === 'italic' ? 'italic ' : '';
+  /* Landscape wraps in left 55% of width, leaving right side for meta */
+  const lyricWrapW = isLandscape ? W * 0.52 : innerW;
   ctx.font = `${fStyle}${font.weight} ${fontSize}px ${font.css}`;
 
-  const lines = _studioWrapText(ctx, lyricText, innerW);
+  const lines = _studioWrapText(ctx, lyricText, lyricWrapW);
   if (lines.length > 6) {
-    fontSize = Math.max(W * 0.030, fontSize * (6 / lines.length));
+    fontSize = Math.max(isLandscape ? H * 0.08 : W * 0.030, fontSize * (6 / lines.length));
     ctx.font = `${fStyle}${font.weight} ${fontSize}px ${font.css}`;
   }
 
   const lh     = fontSize * 1.48;
   const blockH = lines.length * lh;
 
-  /* Vertical center of lyric block — sits in upper-center zone */
-  const lyricCenterY = H * 0.42;
+  /* Landscape: center vertically in full height; others: upper-center zone */
+  const lyricCenterY = isLandscape ? H * 0.46 : H * 0.42;
   const startY = lyricCenterY - blockH / 2;
 
   /* track label removed — song shown once in meta block only */
@@ -404,20 +410,21 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
   });
   ctx.restore();
 
-  /* ── Meta block — left-aligned with accent rule ── */
+  /* ── Meta block — rule + song + artist ── */
   const k = post.knowledge || {};
-  /* ── Meta block — rule + song + artist, clean spacing ── */
-  const songSize   = Math.max(12, Math.round(W * 0.028));
-  const artistSize = Math.max(10, Math.round(W * 0.022));
-  const ruleY      = H * 0.80;
-  const songY      = ruleY + Math.round(H * 0.034);
-  const artistY    = songY  + Math.round(H * 0.040);
+  /* Landscape: meta sits right side; others: bottom left */
+  const metaPad    = isLandscape ? Math.round(W * 0.60) : pad;
+  const songSize   = Math.max(12, Math.round(Math.min(W, H) * 0.028));
+  const artistSize = Math.max(10, Math.round(Math.min(W, H) * 0.022));
+  const ruleY      = isLandscape ? H * 0.30 : H * 0.80;
+  const songY      = ruleY + Math.round(H * (isLandscape ? 0.14 : 0.034));
+  const artistY    = songY  + Math.round(H * (isLandscape ? 0.18 : 0.040));
 
   /* Accent rule */
   ctx.save();
   ctx.fillStyle   = design.accentColor;
   ctx.globalAlpha = 0.85;
-  ctx.fillRect(pad, ruleY, Math.round(W * 0.026), Math.round(H * 0.003));
+  ctx.fillRect(metaPad, ruleY, Math.round(W * 0.026), Math.round(H * 0.003));
   ctx.restore();
 
   if (k.song || k.artist) {
@@ -430,14 +437,14 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
       ctx.fillStyle   = design.textColor;
       ctx.globalAlpha = 0.88;
       ctx.font        = `600 ${songSize}px 'Lora',serif`;
-      ctx.fillText(_toTitleCase(k.song).substring(0, 32), pad, songY);
+      ctx.fillText(_toTitleCase(k.song).substring(0, 32), metaPad, songY);
     }
 
     if (k.artist) {
       ctx.fillStyle   = design.accentColor;
       ctx.globalAlpha = 1;
       ctx.font        = `700 ${artistSize}px 'Lora',serif`;
-      ctx.fillText(_toTitleCase(k.artist).substring(0, 32), pad, artistY);
+      ctx.fillText(_toTitleCase(k.artist).substring(0, 32), metaPad, artistY);
     }
     ctx.restore();
   }
