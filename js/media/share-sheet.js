@@ -213,53 +213,57 @@ function injectShareSheetStyles() {
       padding:3px 9px;border-radius:20px;flex-shrink:0;
     }
 
-    /* Primary save button */
-    .ss-save-btn{
-      margin:0 18px;padding:15px;border-radius:16px;
-      background:#E8C547;border:none;color:#07060A;
-      font-family:'Lora',serif;font-size:0.6rem;
-      font-weight:700;letter-spacing:1px;text-transform:uppercase;
-      cursor:pointer;transition:all 0.2s cubic-bezier(0.16,1,0.3,1);
-      display:flex;align-items:center;justify-content:center;gap:8px;
-      flex-shrink:0;
-    }
-    .ss-save-btn:hover{
-      background:#F5D46A;transform:translateY(-1px);
-      box-shadow:0 8px 24px rgba(232,197,71,0.35);
-    }
-    .ss-save-btn:active{transform:scale(0.98)}
-    .ss-save-btn:disabled{opacity:0.5;cursor:wait;transform:none;box-shadow:none}
-    .ss-copy-row{display:flex;gap:8px;margin-top:8px;}
-    .ss-copy-row.hidden{display:none;}
-    .ss-copy-text-btn{flex:1;padding:9px 6px;border-radius:10px;border:1px solid rgba(232,197,71,0.3);background:rgba(232,197,71,0.06);color:#E8C547;font-family:'Lora',serif;font-size:0.6rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.18s;}
-    .ss-copy-text-btn:hover{background:rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.6);}
-
-    /* Secondary row */
-    .ss-secondary{
-      display:flex;gap:8px;padding:10px 18px 22px;flex-shrink:0;
-    }
-    .ss-sec-btn{
-      flex:1;padding:11px 8px;border-radius:12px;
-      border:1px solid rgba(255,255,255,0.09);
-      background:rgba(255,255,255,0.03);
-      color:rgba(255,255,255,0.5);
+    /* ── SHARE SHEET TABS ── */
+    .ss-tabs{display:flex;gap:8px;padding:14px 18px 0;}
+    .ss-tab{
+      flex:1;padding:10px 8px;
+      background:#161420;
+      border:1px solid rgba(255,255,255,0.07);
+      border-radius:8px;
+      color:#555360;
       font-family:'Lora',serif;
-      font-size:0.6rem;font-weight:600;
-      text-transform:uppercase;letter-spacing:1px;
-      cursor:pointer;transition:all 0.18s;
-      display:flex;flex-direction:column;align-items:center;gap:4px;
+      font-size:0.58rem;font-weight:600;
+      letter-spacing:0.5px;text-transform:uppercase;text-align:center;
+      cursor:pointer;transition:all 150ms;
+      min-height:44px;
+      display:flex;align-items:center;justify-content:center;
     }
-    .ss-sec-btn:hover{
-      border-color:rgba(255,255,255,0.18);
-      background:rgba(255,255,255,0.06);color:#fff;
-    }
-    .ss-sec-btn:active{transform:scale(0.97)}
-    .ss-sec-btn-icon{font-size:1rem;line-height:1}
-    .ss-sec-btn.active-format{
-      border-color:rgba(232,197,71,0.42);
+    .ss-tab:hover{color:#9A98A4;border-color:rgba(255,255,255,0.12);}
+    .ss-tab.ss-tab-active{
       background:rgba(232,197,71,0.08);
+      border-color:rgba(232,197,71,0.28);
       color:#E8C547;
     }
+    .ss-screen{display:none;padding:16px;}
+    .ss-screen.ss-visible{display:block;}
+    .ss-cta{
+      width:100%;padding:15px;
+      background:#E8C547;border:none;border-radius:16px;
+      color:#07060A;
+      font-family:'Lora',serif;
+      font-size:0.7rem;font-weight:700;
+      letter-spacing:1px;text-transform:uppercase;
+      cursor:pointer;transition:all 220ms cubic-bezier(0.16,1,0.3,1);
+      min-height:52px;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .ss-cta:hover{background:#F5D46A;transform:translateY(-1px);}
+    .ss-cta:active{transform:scale(0.98);}
+    .ss-cta:disabled{opacity:0.5;cursor:wait;transform:none;}
+    .ss-copy-preview{
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+      border-radius:12px;padding:14px;margin-bottom:14px;
+      font-family:'Lora',serif;font-size:0.78rem;color:rgba(255,255,255,0.7);
+      line-height:1.6;white-space:pre-wrap;word-break:break-word;
+    }
+    .ss-link-box{
+      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+      border-radius:12px;padding:14px;margin-bottom:14px;
+    }
+    .ss-link-label{font-size:0.58rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#555360;margin-bottom:8px;}
+    .ss-link-url{font-size:0.82rem;color:#E8C547;font-weight:600;word-break:break-all;}
+    .ss-link-note{font-size:0.68rem;color:#555360;margin-top:8px;}
+    .ss-bottom-spacer{height:24px;}
   `;
   document.head.appendChild(s);
 }
@@ -313,30 +317,52 @@ function mountShareSheet() {
 
       <div class="ss-info-strip" id="ssInfoStrip"></div>
 
-      <button class="ss-save-btn" id="ssSaveBtn">
-        <span id="ssSaveBtnLabel">↓ Save Card</span>
-      </button>
-      <div class="ss-copy-row" id="ssCopyRow">
-        <button class="ss-copy-text-btn" id="ssCopyTextBtn">
-          <span>⎘ Copy Text</span>
-        </button>
+            <div class="ss-tabs" id="ssTabs">
+        <button class="ss-tab ss-tab-active" data-tab="card">Save Card</button>
+        <button class="ss-tab" data-tab="copy">Copy Text</button>
+        <button class="ss-tab" data-tab="link">Share Link</button>
       </div>
-      <div class="ss-secondary">
-        <button class="ss-sec-btn" id="ssBtnShareLink">
-          <span class="ss-sec-btn-icon">&#x1F517;</span>
-          <span>Share Link</span>
-        </button>
+
+      <div class="ss-screen ss-visible" id="ss-screen-card">
+        <button class="ss-cta" id="ssSaveBtn">&#8595; Download Card</button>
       </div>
+
+      <div class="ss-screen" id="ss-screen-copy">
+        <div class="ss-copy-preview" id="ssCopyPreview"></div>
+        <button class="ss-cta" id="ssCopyTextBtn">&#8696; Copy to clipboard</button>
+      </div>
+
+      <div class="ss-screen" id="ss-screen-link">
+        <div class="ss-link-box">
+          <div class="ss-link-label">Shareable link</div>
+          <div class="ss-link-url" id="ssLinkUrl">trymargo.com</div>
+          <div class="ss-link-note">Opens this lyric on Margo</div>
+        </div>
+        <button class="ss-cta" id="ssBtnShareLink">&#8599; Share Link</button>
+      </div>
+
+      <div class="ss-bottom-spacer"></div>
     </div>
   `;
+
 
   document.body.appendChild(backdrop);
   SS.mounted = true;
 
   backdrop.querySelector('#ssClose').onclick     = closeShareSheet;
-  backdrop.querySelector('#ssSaveBtn').onclick   = ssSave;
+  backdrop.querySelector('#ssSaveBtn').onclick    = ssSave;
+  backdrop.querySelector('#ssCopyTextBtn').onclick = ssCopyText;
   backdrop.querySelector('#ssBtnShareLink').onclick = ssShareLink;
-  backdrop.querySelector('#ssCopyTextBtn').onclick  = ssCopyText;
+  backdrop.querySelector('#ssTabs').addEventListener('click', e => {
+    const tab = e.target.closest('.ss-tab');
+    if (!tab) return;
+    backdrop.querySelectorAll('.ss-tab').forEach(t => t.classList.remove('ss-tab-active'));
+    tab.classList.add('ss-tab-active');
+    backdrop.querySelectorAll('.ss-screen').forEach(sc => sc.classList.remove('ss-visible'));
+    backdrop.querySelector('#ss-screen-' + tab.dataset.tab).classList.add('ss-visible');
+    if (tab.dataset.tab === 'copy') ssPopulateCopyPreview();
+    if (tab.dataset.tab === 'link') ssPopulateLinkBox();
+  });
 
   /* Theme dots */
   backdrop.querySelector('#ssThemes').addEventListener('click', e => {
@@ -723,27 +749,31 @@ function ssSave() {
     }
     return;
   }
-  if (typeof window.PlatformPicker === 'undefined') {
-    console.error('[SS] PlatformPicker not loaded'); return;
-  }
+  // Direct download
   const theme = SS.theme || 'midnight-gold';
-  window.PlatformPicker.pick({
-    format: fmt,
-    view:   'card',
-    p1:     post,
-    p2:     null,
-    opts: {
-      drawFn: fmt === 'gif'
-        ? (ctx, W, H, t) => { if (typeof window.gsDrawFrame === 'function') window.gsDrawFrame(ctx, W, H, t, post); }
-        : (ctx, W, H)    => { if (typeof window.drawPosterToCtx === 'function') window.drawPosterToCtx(ctx, W, H, post, { design: theme, font: 'lora' }); },
-      design:  theme,
-      font: 'lora',
-      post:    post,
-      filename: (post?.knowledge?.song || 'Lyric').trim().substring(0, 40) + ' — MARGO',
-      onDone:  () => { if (typeof showToast === 'function') showToast(fmt === 'gif' ? 'GIF saved ✓' : 'Poster saved ✓'); ssStartPreview(); },
-      onError: () => { if (typeof showToast === 'function') showToast('Export failed'); ssStartPreview(); },
-    },
-  });
+  const W = 1080, H = 1080;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const _doSave = () => {
+    try {
+      if (typeof window.drawPosterToCtx === 'function') {
+        window.drawPosterToCtx(ctx, W, H, post, { design: theme, font: 'lora' });
+      } else if (typeof window.drawPosterPreview === 'function') {
+        window.drawPosterPreview(ctx, W, H, post);
+      }
+      canvas.toBlob(blob => {
+        if (!blob) { if (typeof showToast === 'function') showToast('Export failed'); return; }
+        const filename = (post?.knowledge?.song || 'Lyric').trim().substring(0, 40) + ' — MARGO.png';
+        _downloadBlob(blob, filename);
+        if (typeof showToast === 'function') showToast('Card saved ✓');
+      }, 'image/png');
+    } catch(e) {
+      console.error('[SS save]', e);
+      if (typeof showToast === 'function') showToast('Export failed');
+    }
+  };
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(_doSave); } else { _doSave(); }
 }
 
 function ssCopyText() {
@@ -771,6 +801,40 @@ function ssCopyText() {
     if (typeof showToast === 'function') showToast('Copy failed — try again');
   });
 }
+function ssPopulateCopyPreview() {
+  const post   = SS.post;
+  const lyric  = post?.text || '';
+  const song   = post?.knowledge?.song   || '';
+  const artist = post?.knowledge?.artist || '';
+  const text = ['MARGO', '', '\u275d ' + lyric + ' \u275e', '', (song ? song.toUpperCase() : ''), (artist ? '\u2014 ' + artist : ''), '', 'trymargo.com'].filter(Boolean).join('\n');
+  const el = document.getElementById('ssCopyPreview');
+  if (el) el.textContent = text;
+}
+
+function ssPopulateLinkBox() {
+  const post = SS.post;
+  const url  = (post && post.id) ? 'https://trymargo.com/post/' + post.id : 'https://trymargo.com';
+  const el = document.getElementById('ssLinkUrl');
+  if (el) el.textContent = url;
+}
+
+function ssPopulateCopyPreview() {
+  const post   = SS.post;
+  const lyric  = post?.text || '';
+  const song   = post?.knowledge?.song   || '';
+  const artist = post?.knowledge?.artist || '';
+  const text = ['MARGO', '', '\u275d ' + lyric + ' \u275e', '', song ? song.toUpperCase() : '', artist ? '\u2014 ' + artist : '', '', 'trymargo.com'].filter(Boolean).join('\n');
+  const el = document.getElementById('ssCopyPreview');
+  if (el) el.textContent = text;
+}
+
+function ssPopulateLinkBox() {
+  const post = SS.post;
+  const url  = (post && post.id) ? 'https://trymargo.com/post/' + post.id : 'https://trymargo.com';
+  const el = document.getElementById('ssLinkUrl');
+  if (el) el.textContent = url;
+}
+
 function ssShareLink() {
   const post = SS.post;
   const url  = (post && post.id) ? `https://trymargo.com/post/${post.id}` : 'https://trymargo.com';
