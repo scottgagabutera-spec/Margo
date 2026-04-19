@@ -67,183 +67,65 @@ function injectShareSheetStyles() {
   s.textContent = `
     #shareSheetBackdrop {
       position:fixed;inset:0;z-index:600;
-      background:#09080f;
-      display:flex;align-items:stretch;justify-content:center;
-      animation:ssBackdropIn 0.28s cubic-bezier(0.16,1,0.3,1);
+      background:rgba(0,0,0,0.82);
+      backdrop-filter:blur(18px) saturate(0.55);
+      -webkit-backdrop-filter:blur(18px) saturate(0.55);
+      display:flex;align-items:flex-end;justify-content:center;
+      animation:ssBackdropIn 0.22s ease;
     }
-    @keyframes ssBackdropIn{from{opacity:0;transform:scale(0.98)}to{opacity:1;transform:scale(1)}}
+    @keyframes ssBackdropIn{from{opacity:0}to{opacity:1}}
     #shareSheetBackdrop.ss-hidden{display:none!important}
+    @media(min-width:560px){
+      #shareSheetBackdrop{align-items:center;padding:24px}
+    }
 
     #shareSheet {
-      width:100%;max-width:560px;margin:0 auto;
+      width:100%;max-width:560px;
       background:#0c0b12;
-      display:flex;flex-direction:column;
-      height:100dvh;
-      overflow:hidden;
+      border:1px solid rgba(255,255,255,0.07);
+      border-bottom:none;border-radius:28px 28px 0 0;
+      overflow:hidden;display:flex;flex-direction:column;
+      max-height:92dvh;
+      box-shadow:0 -8px 60px rgba(0,0,0,0.9);
+      animation:ssSlideUp 0.38s cubic-bezier(0.16,1,0.3,1);
+    }
+    @media(min-width:560px){
+      #shareSheet{
+        border-radius:24px;
+        border-bottom:1px solid rgba(255,255,255,0.07);
+        max-height:90dvh;
+        animation:ssFadeUp 0.32s cubic-bezier(0.16,1,0.3,1);
+      }
     }
     @keyframes ssSlideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
     @keyframes ssFadeUp{from{transform:translateY(20px) scale(0.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
     #shareSheet.ss-exit{animation:ssSlideDown 0.26s cubic-bezier(0.4,0,1,1) forwards}
     @keyframes ssSlideDown{to{transform:translateY(80px);opacity:0}}
 
-    .ss-handle{display:none;}
+    .ss-handle{
+      width:36px;height:4px;border-radius:2px;
+      background:rgba(255,255,255,0.1);
+      margin:12px auto 0;flex-shrink:0;
+    }
 
     .ss-header{
       display:flex;align-items:center;justify-content:space-between;
-      padding:20px 24px 0;flex-shrink:0;
+      padding:14px 18px 0;flex-shrink:0;
     }
     .ss-header-left{display:flex;flex-direction:column;gap:2px}
-    .ss-title{
-      font-family:'Lora',serif;font-weight:800;font-size:0.7rem;
-      letter-spacing:1px;text-transform:uppercase;color:#fff;
-    }
-    .ss-lyric-preview{display:none;
-      font-family:'Lora',serif;font-style:italic;
-      font-size:0.7rem;font-style:italic;color:rgba(255,255,255,0.32);
-      line-height:1.4;max-width:260px;
-      overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-    }
-    .ss-duet-badge{
-      display:none;align-items:center;gap:5px;margin-top:3px;
-      font-family:'Lora',serif;font-size:0.6rem;font-weight:600;
-      letter-spacing:1px;text-transform:uppercase;
-      padding:3px 9px;border-radius:20px;
-      background:rgba(232,197,71,0.09);border:1px solid rgba(232,197,71,0.28);
-      color:#E8C547;
-    }
-    .ss-duet-badge.visible{display:inline-flex}
-    .ss-duet-badge-dot{width:5px;height:5px;border-radius:50%;background:#E8C547;opacity:0.8}
-    .ss-close{
-      background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);
-      color:rgba(255,255,255,0.35);width:30px;height:30px;
-      border-radius:50%;font-size:1.1rem;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-      transition:all 0.16s;flex-shrink:0;
-    }
-    .ss-close:hover{background:rgba(255,255,255,0.1);color:#fff}
 
     .ss-canvas-wrap{
       flex:1 1 auto;min-height:0;
       display:flex;align-items:center;justify-content:center;
-      padding:16px 24px;
+      padding:10px 18px 8px;
+    }
     .ss-canvas-ring{
       position:relative;border-radius:14px;overflow:hidden;
       box-shadow:0 16px 56px rgba(0,0,0,0.8),0 0 0 1px rgba(232,197,71,0.12);
       background:#0E0B1A;
-      transition:width 0.25s cubic-bezier(0.16,1,0.3,1), height 0.25s cubic-bezier(0.16,1,0.3,1);
+      transition:width 0.25s cubic-bezier(0.16,1,0.3,1),height 0.25s cubic-bezier(0.16,1,0.3,1);
     }
     #ssCanvas{display:block;border-radius:14px;transition:width 0.25s cubic-bezier(0.16,1,0.3,1),height 0.25s cubic-bezier(0.16,1,0.3,1);}
-
-    .ss-encoding-overlay{
-      position:absolute;inset:0;border-radius:18px;
-      background:rgba(12,11,18,0.9);backdrop-filter:blur(6px);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
-    }
-    .ss-encoding-overlay.hidden{display:none}
-    .ss-encoding-label{
-      font-family:'Lora',serif;font-size:0.6rem;
-      font-weight:600;letter-spacing:1px;text-transform:uppercase;
-      color:rgba(255,255,255,0.5);
-    }
-    .ss-progress-bar-wrap{
-      width:120px;height:2px;border-radius:2px;
-      background:rgba(255,255,255,0.08);overflow:hidden;
-    }
-    .ss-progress-bar{
-      height:100%;border-radius:2px;background:#E8C547;
-      transition:width 0.1s linear;width:0%;
-    }
-
-    /* Theme dots */
-    .ss-themes{
-      display:flex;align-items:center;justify-content:center;
-      display:flex;align-items:center;justify-content:center;
-      gap:14px;padding:8px 24px 4px;flex-shrink:0;
-    .ss-theme-dot{
-      width:20px;height:20px;border-radius:50%;cursor:pointer;
-      border:2px solid rgba(255,255,255,0.0);
-      transition:all 0.2s cubic-bezier(0.16,1,0.3,1);
-      flex-shrink:0;outline:none;
-    }
-    .ss-theme-dot:hover{transform:scale(1.2)}
-    .ss-theme-dot.active{
-      border-color:rgba(255,255,255,0.9);
-      transform:scale(1.25);
-      box-shadow:0 0 0 3px rgba(255,255,255,0.1);
-    }
-
-    /* Info strip */
-    .ss-info-strip{
-      display:flex;align-items:center;gap:10px;
-      padding:0 24px 8px;flex-shrink:0;
-    }
-    .ss-song-thumb{
-      width:34px;height:34px;border-radius:8px;object-fit:cover;
-      flex-shrink:0;border:1px solid rgba(255,255,255,0.08);
-    }
-    .ss-song-info{flex:1;min-width:0}
-    .ss-song-title{
-      font-family:'Lora',serif;font-size:0.82rem;font-weight:600;
-      color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .ss-song-artist{
-      font-family:'Lora',serif;font-size:0.7rem;
-      color:rgba(255,255,255,0.35);
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .ss-feeling-tag{
-      font-family:'Lora',serif;font-size:0.6rem;font-weight:600;
-      text-transform:uppercase;letter-spacing:0.5px;
-      padding:3px 9px;border-radius:20px;flex-shrink:0;
-    }
-
-    .ss-logo-lockup{display:flex;align-items:center;gap:7px;text-decoration:none;}
-    .ss-logo-wordmark{font-family:'Syne',sans-serif;font-weight:800;font-size:0.82rem;letter-spacing:4px;color:var(--gold,#E8C547);text-transform:uppercase;line-height:1;opacity:0.75;}
-    /* ── SHARE SHEET TABS ── */
-    .ss-size-row{display:flex;gap:10px;padding:12px 24px 0;flex-shrink:0;}
-    .ss-size-btn{
-      flex:1;padding:10px 6px;border-radius:10px;
-      border:1px solid rgba(255,255,255,0.07);
-      background:#161420;color:#555360;
-      font-family:'Lora',serif;
-      font-size:0.56rem;font-weight:600;
-      letter-spacing:0.5px;text-transform:uppercase;
-      cursor:pointer;transition:all 150ms;
-      display:flex;flex-direction:column;align-items:center;gap:5px;
-      min-height:44px;
-    }
-    .ss-size-btn:hover{border-color:rgba(255,255,255,0.12);color:#9A98A4;}
-    .ss-size-btn.ss-size-active{
-      background:rgba(232,197,71,0.08);
-      border-color:rgba(232,197,71,0.28);
-      color:#E8C547;
-    }
-    .ss-size-thumb-v{width:12px;height:20px;border-radius:2px;background:currentColor;opacity:0.6;}
-    .ss-size-thumb-s{width:18px;height:18px;border-radius:2px;background:currentColor;opacity:0.6;}
-    .ss-size-thumb-w{width:24px;height:14px;border-radius:2px;background:currentColor;opacity:0.6;}
-    .ss-actions{display:flex;gap:10px;padding:12px 24px 32px;flex-shrink:0;}
-    .ss-action-btn{
-      flex:1;padding:13px 8px;
-      background:rgba(255,255,255,0.04);
-      border:1px solid rgba(255,255,255,0.09);
-      border-radius:12px;
-      color:rgba(255,255,255,0.55);
-      font-family:'Lora',serif;
-      font-size:0.58rem;font-weight:600;
-      letter-spacing:0.5px;text-transform:uppercase;
-      cursor:pointer;transition:all 150ms;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-      min-height:48px;
-    }
-    .ss-action-btn:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.18);color:#fff;}
-    .ss-action-btn:active{transform:scale(0.97);}
-    .ss-action-btn.ss-primary{
-      background:rgba(232,197,71,0.10);
-      border-color:rgba(232,197,71,0.35);
-      color:#E8C547;
-    }
-    .ss-action-btn.ss-primary:hover{background:rgba(232,197,71,0.18);border-color:rgba(232,197,71,0.6);}
-    .ss-action-icon{font-size:1rem;line-height:1;}
   `;
   document.head.appendChild(s);
 }
