@@ -213,6 +213,8 @@ function injectShareSheetStyles() {
       padding:3px 9px;border-radius:20px;flex-shrink:0;
     }
 
+    .ss-logo-lockup{display:flex;align-items:center;gap:7px;text-decoration:none;}
+    .ss-logo-wordmark{font-family:'Syne',sans-serif;font-weight:800;font-size:0.82rem;letter-spacing:4px;color:var(--gold,#E8C547);text-transform:uppercase;line-height:1;opacity:0.75;}
     /* ── SHARE SHEET TABS ── */
     .ss-tabs{display:flex;gap:8px;padding:14px 18px 0;}
     .ss-tab{
@@ -234,7 +236,7 @@ function injectShareSheetStyles() {
       border-color:rgba(232,197,71,0.28);
       color:#E8C547;
     }
-    .ss-screen{display:none;padding:16px;}
+    .ss-screen{display:none;padding:16px;overflow-y:auto;max-height:220px;}
     .ss-screen.ss-visible{display:block;}
     .ss-cta{
       width:100%;padding:15px;
@@ -283,9 +285,16 @@ function mountShareSheet() {
       <div class="ss-handle" id="ssDragHandle"></div>
       <div class="ss-header">
         <div class="ss-header-left">
-          <span class="ss-title" id="ssTitle">Share</span>
-          <span class="ss-lyric-preview" id="ssLyricPreview"></span>
-          <span class="ss-duet-badge" id="ssDuetBadge">
+          <a class="ss-logo-lockup" href="/" aria-label="Margo home">
+            <span class="margo-mark margo-mark--md">
+              <span class="logo-ring"></span>
+              <span class="logo-ring"></span>
+              <span class="logo-ring"></span>
+              <span class="logo-circle"><svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="40" cy="40" r="36" fill="#E8C547"/><path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/></svg></span>
+            </span>
+            <span class="ss-logo-wordmark">MARGO</span>
+          </a>
+          <span class="ss-duet-badge" id="ssDuetBadge" style="display:none">
             <span class="ss-duet-badge-dot"></span>LYRIC BACK
           </span>
         </div>
@@ -324,7 +333,7 @@ function mountShareSheet() {
       </div>
 
       <div class="ss-screen ss-visible" id="ss-screen-card">
-        <button class="ss-cta" id="ssSaveBtn">&#8595; Download Card</button>
+        <button class="ss-cta" id="ssSaveBtn">&#8595; Save Card</button>
       </div>
 
       <div class="ss-screen" id="ss-screen-copy">

@@ -261,10 +261,10 @@ function _studioWrapText(ctx, text, maxWidth) {
    Returns "— track N" string derived from post ID or index
 ========================================================== */
 function _trackNumber(post) {
-  if (!post) return '— track 01';
-  const id = post.id || post._id || '';
-  const num = id ? (parseInt(id.toString().replace(/\D/g,'').slice(-2) || '1', 10) % 99) + 1 : 1;
-  return '— track ' + String(num).padStart(2, '0');
+  if (!post) return '';
+  const song = (post.knowledge && post.knowledge.song) || post.song || '';
+  if (song) return '— ' + song;
+  return '';
 }
 
 /* ==========================================================
