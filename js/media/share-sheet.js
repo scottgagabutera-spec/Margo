@@ -216,56 +216,29 @@ function injectShareSheetStyles() {
     .ss-logo-lockup{display:flex;align-items:center;gap:7px;text-decoration:none;}
     .ss-logo-wordmark{font-family:'Syne',sans-serif;font-weight:800;font-size:0.82rem;letter-spacing:4px;color:var(--gold,#E8C547);text-transform:uppercase;line-height:1;opacity:0.75;}
     /* ── SHARE SHEET TABS ── */
-    .ss-tabs{display:flex;gap:8px;padding:14px 18px 0;}
-    .ss-tab{
-      flex:1;padding:10px 8px;
-      background:#161420;
-      border:1px solid rgba(255,255,255,0.07);
-      border-radius:8px;
-      color:#555360;
+    .ss-actions{display:flex;gap:8px;padding:14px 18px 20px;}
+    .ss-action-btn{
+      flex:1;padding:13px 8px;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.09);
+      border-radius:12px;
+      color:rgba(255,255,255,0.55);
       font-family:'Lora',serif;
       font-size:0.58rem;font-weight:600;
-      letter-spacing:0.5px;text-transform:uppercase;text-align:center;
+      letter-spacing:0.5px;text-transform:uppercase;
       cursor:pointer;transition:all 150ms;
-      min-height:44px;
-      display:flex;align-items:center;justify-content:center;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+      min-height:56px;
     }
-    .ss-tab:hover{color:#9A98A4;border-color:rgba(255,255,255,0.12);}
-    .ss-tab.ss-tab-active{
-      background:rgba(232,197,71,0.08);
-      border-color:rgba(232,197,71,0.28);
+    .ss-action-btn:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.18);color:#fff;}
+    .ss-action-btn:active{transform:scale(0.97);}
+    .ss-action-btn.ss-primary{
+      background:rgba(232,197,71,0.10);
+      border-color:rgba(232,197,71,0.35);
       color:#E8C547;
     }
-    .ss-screen{display:none;padding:16px;overflow-y:auto;max-height:220px;}
-    .ss-screen.ss-visible{display:block;}
-    .ss-cta{
-      width:100%;padding:15px;
-      background:#E8C547;border:none;border-radius:16px;
-      color:#07060A;
-      font-family:'Lora',serif;
-      font-size:0.7rem;font-weight:700;
-      letter-spacing:1px;text-transform:uppercase;
-      cursor:pointer;transition:all 220ms cubic-bezier(0.16,1,0.3,1);
-      min-height:52px;
-      display:flex;align-items:center;justify-content:center;gap:8px;
-    }
-    .ss-cta:hover{background:#F5D46A;transform:translateY(-1px);}
-    .ss-cta:active{transform:scale(0.98);}
-    .ss-cta:disabled{opacity:0.5;cursor:wait;transform:none;}
-    .ss-copy-preview{
-      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
-      border-radius:12px;padding:14px;margin-bottom:14px;
-      font-family:'Lora',serif;font-size:0.78rem;color:rgba(255,255,255,0.7);
-      line-height:1.6;white-space:pre-wrap;word-break:break-word;
-    }
-    .ss-link-box{
-      background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
-      border-radius:12px;padding:14px;margin-bottom:14px;
-    }
-    .ss-link-label{font-size:0.58rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#555360;margin-bottom:8px;}
-    .ss-link-url{font-size:0.82rem;color:#E8C547;font-weight:600;word-break:break-all;}
-    .ss-link-note{font-size:0.68rem;color:#555360;margin-top:8px;}
-    .ss-bottom-spacer{height:24px;}
+    .ss-action-btn.ss-primary:hover{background:rgba(232,197,71,0.18);border-color:rgba(232,197,71,0.6);}
+    .ss-action-icon{font-size:1rem;line-height:1;}
   `;
   document.head.appendChild(s);
 }
@@ -326,31 +299,20 @@ function mountShareSheet() {
 
       <div class="ss-info-strip" id="ssInfoStrip"></div>
 
-            <div class="ss-tabs" id="ssTabs">
-        <button class="ss-tab ss-tab-active" data-tab="card">Save Card</button>
-        <button class="ss-tab" data-tab="copy">Copy Text</button>
-        <button class="ss-tab" data-tab="link">Share Link</button>
+      <div class="ss-actions">
+        <button class="ss-action-btn ss-primary" id="ssSaveBtn">
+          <span class="ss-action-icon">&#8595;</span>
+          <span>Save Card</span>
+        </button>
+        <button class="ss-action-btn" id="ssCopyTextBtn">
+          <span class="ss-action-icon">&#8696;</span>
+          <span>Copy Text</span>
+        </button>
+        <button class="ss-action-btn" id="ssBtnShareLink">
+          <span class="ss-action-icon">&#8599;</span>
+          <span>Share Link</span>
+        </button>
       </div>
-
-      <div class="ss-screen ss-visible" id="ss-screen-card">
-        <button class="ss-cta" id="ssSaveBtn">&#8595; Save Card</button>
-      </div>
-
-      <div class="ss-screen" id="ss-screen-copy">
-        <div class="ss-copy-preview" id="ssCopyPreview"></div>
-        <button class="ss-cta" id="ssCopyTextBtn">&#8696; Copy to clipboard</button>
-      </div>
-
-      <div class="ss-screen" id="ss-screen-link">
-        <div class="ss-link-box">
-          <div class="ss-link-label">Shareable link</div>
-          <div class="ss-link-url" id="ssLinkUrl">trymargo.com</div>
-          <div class="ss-link-note">Opens this lyric on Margo</div>
-        </div>
-        <button class="ss-cta" id="ssBtnShareLink">&#8599; Share Link</button>
-      </div>
-
-      <div class="ss-bottom-spacer"></div>
     </div>
   `;
 
@@ -362,16 +324,6 @@ function mountShareSheet() {
   backdrop.querySelector('#ssSaveBtn').onclick    = ssSave;
   backdrop.querySelector('#ssCopyTextBtn').onclick = ssCopyText;
   backdrop.querySelector('#ssBtnShareLink').onclick = ssShareLink;
-  backdrop.querySelector('#ssTabs').addEventListener('click', e => {
-    const tab = e.target.closest('.ss-tab');
-    if (!tab) return;
-    backdrop.querySelectorAll('.ss-tab').forEach(t => t.classList.remove('ss-tab-active'));
-    tab.classList.add('ss-tab-active');
-    backdrop.querySelectorAll('.ss-screen').forEach(sc => sc.classList.remove('ss-visible'));
-    backdrop.querySelector('#ss-screen-' + tab.dataset.tab).classList.add('ss-visible');
-    if (tab.dataset.tab === 'copy') ssPopulateCopyPreview();
-    if (tab.dataset.tab === 'link') ssPopulateLinkBox();
-  });
 
   /* Theme dots */
   backdrop.querySelector('#ssThemes').addEventListener('click', e => {
