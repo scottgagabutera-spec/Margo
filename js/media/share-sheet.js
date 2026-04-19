@@ -67,50 +67,35 @@ function injectShareSheetStyles() {
   s.textContent = `
     #shareSheetBackdrop {
       position:fixed;inset:0;z-index:600;
-      background:rgba(0,0,0,0.82);
-      backdrop-filter:blur(18px) saturate(0.55);
-      -webkit-backdrop-filter:blur(18px) saturate(0.55);
-      display:flex;align-items:flex-end;justify-content:center;
-      animation:ssBackdropIn 0.22s ease;
+      background:#09080f;
+      display:flex;align-items:stretch;justify-content:center;
+      animation:ssBackdropIn 0.28s cubic-bezier(0.16,1,0.3,1);
     }
-    @keyframes ssBackdropIn{from{opacity:0}to{opacity:1}}
+    @keyframes ssBackdropIn{from{opacity:0;transform:scale(0.98)}to{opacity:1;transform:scale(1)}}
     #shareSheetBackdrop.ss-hidden{display:none!important}
-    @media(min-width:560px){
-      #shareSheetBackdrop{align-items:center;padding:24px}
-    }
 
     #shareSheet {
-      width:100%;max-width:480px;
+      width:100%;max-width:560px;margin:0 auto;
       background:#0c0b12;
-      border:1px solid rgba(255,255,255,0.07);
-      border-bottom:none;border-radius:28px 28px 0 0;
-      overflow:hidden;display:flex;flex-direction:column;
-      max-height:92dvh;
-      box-shadow:0 -8px 60px rgba(0,0,0,0.9);
-      animation:ssSlideUp 0.38s cubic-bezier(0.16,1,0.3,1);
-    }
-    @media(min-width:560px){
-      #shareSheet{
-        border-radius:24px;
-        border-bottom:1px solid rgba(255,255,255,0.07);
-        animation:ssFadeUp 0.32s cubic-bezier(0.16,1,0.3,1);
-      }
+      display:flex;flex-direction:column;
+      height:100dvh;
+      overflow:hidden;
     }
     @keyframes ssSlideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
     @keyframes ssFadeUp{from{transform:translateY(20px) scale(0.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
     #shareSheet.ss-exit{animation:ssSlideDown 0.26s cubic-bezier(0.4,0,1,1) forwards}
     @keyframes ssSlideDown{to{transform:translateY(80px);opacity:0}}
 
-    .ss-handle{
-      width:36px;height:4px;border-radius:2px;
-      background:rgba(255,255,255,0.1);
-      margin:12px auto 0;flex-shrink:0;
+    .ss-handle{display:none;}
+
+
+
     }
 
     .ss-header{
       display:flex;align-items:center;justify-content:space-between;
-      padding:14px 18px 0;flex-shrink:0;
-    }
+      display:flex;align-items:center;justify-content:space-between;
+      padding:20px 24px 0;flex-shrink:0;
     .ss-header-left{display:flex;flex-direction:column;gap:2px}
     .ss-title{
       font-family:'Lora',serif;font-weight:800;font-size:0.7rem;
@@ -142,9 +127,9 @@ function injectShareSheetStyles() {
     .ss-close:hover{background:rgba(255,255,255,0.1);color:#fff}
 
     .ss-canvas-wrap{
-      padding:10px 18px 8px;flex:1 1 auto;min-height:0;
+      flex:1 1 auto;min-height:0;
       display:flex;align-items:center;justify-content:center;
-    }
+      padding:16px 24px;
     .ss-canvas-ring{
       position:relative;border-radius:14px;overflow:hidden;
       box-shadow:0 16px 56px rgba(0,0,0,0.8),0 0 0 1px rgba(232,197,71,0.12);
@@ -176,8 +161,8 @@ function injectShareSheetStyles() {
     /* Theme dots */
     .ss-themes{
       display:flex;align-items:center;justify-content:center;
-      gap:12px;padding:2px 18px 12px;flex-shrink:0;
-    }
+      display:flex;align-items:center;justify-content:center;
+      gap:14px;padding:8px 24px 4px;flex-shrink:0;
     .ss-theme-dot{
       width:20px;height:20px;border-radius:50%;cursor:pointer;
       border:2px solid rgba(255,255,255,0.0);
@@ -194,7 +179,7 @@ function injectShareSheetStyles() {
     /* Info strip */
     .ss-info-strip{
       display:flex;align-items:center;gap:10px;
-      padding:0 18px 12px;flex-shrink:0;
+      padding:0 24px 8px;flex-shrink:0;
     }
     .ss-song-thumb{
       width:34px;height:34px;border-radius:8px;object-fit:cover;
@@ -219,7 +204,7 @@ function injectShareSheetStyles() {
     .ss-logo-lockup{display:flex;align-items:center;gap:7px;text-decoration:none;}
     .ss-logo-wordmark{font-family:'Syne',sans-serif;font-weight:800;font-size:0.82rem;letter-spacing:4px;color:var(--gold,#E8C547);text-transform:uppercase;line-height:1;opacity:0.75;}
     /* ── SHARE SHEET TABS ── */
-    .ss-size-row{display:flex;gap:8px;padding:10px 18px 0;flex-shrink:0;}
+    .ss-size-row{display:flex;gap:10px;padding:12px 24px 0;flex-shrink:0;}
     .ss-size-btn{
       flex:1;padding:10px 6px;border-radius:10px;
       border:1px solid rgba(255,255,255,0.07);
@@ -240,7 +225,7 @@ function injectShareSheetStyles() {
     .ss-size-thumb-v{width:12px;height:20px;border-radius:2px;background:currentColor;opacity:0.6;}
     .ss-size-thumb-s{width:18px;height:18px;border-radius:2px;background:currentColor;opacity:0.6;}
     .ss-size-thumb-w{width:24px;height:14px;border-radius:2px;background:currentColor;opacity:0.6;}
-    .ss-actions{display:flex;gap:8px;padding:10px 18px 16px;flex-shrink:0;}
+    .ss-actions{display:flex;gap:10px;padding:12px 24px 32px;flex-shrink:0;}
     .ss-action-btn{
       flex:1;padding:13px 8px;
       background:rgba(255,255,255,0.04);
