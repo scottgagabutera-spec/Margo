@@ -88,14 +88,10 @@ function injectShareSheetStyles() {
 
     .ss-handle{display:none;}
 
-
-
-    }
-
     .ss-header{
       display:flex;align-items:center;justify-content:space-between;
-      display:flex;align-items:center;justify-content:space-between;
       padding:20px 24px 0;flex-shrink:0;
+    }
     .ss-header-left{display:flex;flex-direction:column;gap:2px}
     .ss-title{
       font-family:'Lora',serif;font-weight:800;font-size:0.7rem;
