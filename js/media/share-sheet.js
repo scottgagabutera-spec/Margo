@@ -146,37 +146,25 @@ function injectShareSheetStyles() {
     }
     .ss-close:hover{background:rgba(255,255,255,0.1);color:#F4F1ED;}
 
-    .ss-canvas-wrap{
-      flex:1 1 auto;min-height:0;
-      max-height:280px;
-      display:flex;align-items:center;justify-content:center;
-      padding:12px 16px 8px;
-      overflow:hidden;
+    .ss-lyric-strip{
+      margin:14px 16px 0;
+      background:#161420;
+      border:1px solid rgba(255,255,255,0.07);
+      border-radius:12px;
+      padding:14px 16px;
+      flex-shrink:0;
     }
-    .ss-canvas-ring{
-      position:relative;border-radius:14px;overflow:hidden;
-      box-shadow:0 8px 40px rgba(0,0,0,0.7),0 0 0 1px rgba(232,197,71,0.10);
-      background:#0E0B1A;
-      transition:width 0.25s cubic-bezier(0.16,1,0.3,1),height 0.25s cubic-bezier(0.16,1,0.3,1);
+    .ss-lyric-strip-text{
+      font-family:'Lora',serif;font-style:italic;
+      font-size:0.88rem;color:#F4F1ED;line-height:1.5;
+      margin-bottom:8px;
     }
-    #ssCanvas{display:block;border-radius:14px;}
-
-    .ss-encoding-overlay{
-      position:absolute;inset:0;border-radius:14px;
-      background:rgba(12,11,18,0.9);backdrop-filter:blur(6px);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    .ss-lyric-strip-meta{
+      font-family:'Lora',serif;
+      font-size:0.68rem;color:#9A98A4;
     }
-    .ss-encoding-overlay.hidden{display:none}
-    .ss-encoding-label{
-      font-family:'Lora',serif;font-size:0.7rem;
-      color:rgba(232,197,71,0.7);letter-spacing:1px;
-    }
-    .ss-progress-bar-wrap{
-      width:80px;height:2px;background:rgba(255,255,255,0.08);border-radius:1px;
-    }
-    .ss-progress-bar{
-      height:100%;width:0%;background:#E8C547;border-radius:1px;
-      transition:width 0.3s ease;
+    .ss-lyric-strip-meta span{
+      color:#E8C547;font-weight:600;
     }
 
     .ss-themes{
@@ -289,18 +277,6 @@ function mountShareSheet() {
         <button class="ss-close" id="ssClose" aria-label="Close">×</button>
       </div>
 
-      <div class="ss-canvas-wrap">
-        <div class="ss-canvas-ring" id="ssCanvasRing">
-          <canvas id="ssCanvas"></canvas>
-          <div class="ss-encoding-overlay hidden" id="ssEncodingOverlay">
-            <span class="ss-encoding-label" id="ssEncodingLabel">Creating…</span>
-            <div class="ss-progress-bar-wrap">
-              <div class="ss-progress-bar" id="ssProgressBar"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="ss-themes" id="ssThemes">
         ${SS_THEMES.map((t, i) => `
           <button
@@ -328,6 +304,7 @@ function mountShareSheet() {
           <span>Wide</span>
         </button>
       </div>
+      <div class="ss-lyric-strip" id="ssLyricStrip"></div>
       <div class="ss-actions">
         <button class="ss-action-btn" id="ssSaveBtn">
           <span class="ss-action-icon">&#8595;</span>
@@ -417,78 +394,17 @@ function ssStopPreview() {
   if (SS.animFrame) { cancelAnimationFrame(SS.animFrame); SS.animFrame = null; }
 }
 
-/* Preview render token — cancels stale renders */
-let _ssPreviewToken = 0;
-
 function ssStartPreview() {
-  ssStopPreview();
-  const canvas = document.getElementById('ssCanvas');
-  const post   = SS.post;
-  if (!canvas || !post) return;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-  /* Size-aware preview dimensions */
-  const isV = SS.size === 'vertical';
-  const isL = SS.size === 'landscape';
-  const maxSz = Math.min(Math.max(120, window.innerWidth * 0.68), 460);
-  const dispW = isL ? maxSz       : isV ? Math.round(maxSz * (1080/1920)) : maxSz;
-  const dispH = isL ? Math.round(maxSz * (608/1920)) : maxSz;
-  canvas.style.width  = dispW + 'px';
-  canvas.style.height = dispH + 'px';
-  /* Resize ring to match canvas for smooth transition */
-  const ring = document.getElementById('ssCanvasRing');
-  if (ring) { ring.style.width = dispW + 'px'; ring.style.height = dispH + 'px'; }
-  canvas.width  = Math.round(dispW * dpr);
-  canvas.height = Math.round(dispH * dpr);
-
-  if (SS.activeFormat === 'poster') {
-    const token = ++_ssPreviewToken;
-    document.fonts.ready.then(() => {
-      if (token !== _ssPreviewToken) return;
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-      if (SS.isDuet && SS.echoPost) {
-        if (typeof drawDuetPosterToCtx === 'function') {
-          drawDuetPosterToCtx(ctx, dispW, dispH);
-        }
-      } else {
-        const _draw = () => {
-          if (token !== _ssPreviewToken) return;
-          if (typeof window.drawPosterToCtx === 'function') {
-            try { window.drawPosterToCtx(ctx, dispW, dispH, post, { design: SS.theme || 'midnight-gold', font: 'lora' }); } catch(e) { console.error('[SS poster]', e); }
-          } else if (typeof window.drawPosterPreview === 'function') {
-            try { window.drawPosterPreview(ctx, dispW, dispH, post); } catch(e) { console.error('[SS poster]', e); }
-          } else {
-            setTimeout(_draw, 100);
-          }
-        };
-        _draw();
-      }
-    });
-    return;
-  }
-
-  /* Animated GIF preview */
-  let frame = 0, last = 0;
-  const delay = 70, frames = 24;
-  const loop = (ts) => {
-    if (ts - last >= delay) {
-      last = ts;
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-      window.currentPost = post;
-      if (SS.isDuet && SS.echoPost) {
-        if (typeof gsDrawDuetFrame === 'function') gsDrawDuetFrame(ctx, size, size, frame / frames);
-      } else {
-        if (typeof gsDrawFrame === 'function') gsDrawFrame(ctx, size, size, frame / frames, post);
-      }
-      frame = (frame + 1) % frames;
-    }
-    SS.animFrame = requestAnimationFrame(loop);
-  };
-  SS.animFrame = requestAnimationFrame(loop);
+  const strip = document.getElementById('ssLyricStrip');
+  if (!strip || !SS.post) return;
+  const lyric  = (SS.post.text || '').substring(0, 120);
+  const song   = SS.post.knowledge?.song || '';
+  const artist = SS.post.knowledge?.artist || '';
+  const meta   = [song, artist].filter(Boolean).join(' — ');
+  strip.innerHTML = `
+    <div class="ss-lyric-strip-text">"${lyric}${lyric.length >= 120 ? '…' : ''}"</div>
+    ${meta ? `<div class="ss-lyric-strip-meta"><span>${meta}</span></div>` : ''}
+  `;
 }
 
 /* ==========================================================
