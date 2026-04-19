@@ -422,16 +422,14 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
   const metaPad    = pad;
   const songSize   = Math.max(12, Math.round(Math.min(W, H) * 0.030));
   const artistSize = Math.max(10, Math.round(Math.min(W, H) * 0.024));
-  const ruleY      = isLandscape ? H * 0.76 : H * 0.80;
-  const songY      = ruleY + Math.round(H * 0.034);
-  const artistY    = songY + songSize + Math.round(H * 0.016);
+  const ruleY      = isLandscape ? H * 0.68 : H * 0.80;
+  const songY      = ruleY + Math.round(H * (isLandscape ? 0.08 : 0.034));
+  const artistY    = songY + songSize + Math.round(H * (isLandscape ? 0.06 : 0.016));
 
   /* Full-width accent rule */
   ctx.save();
   ctx.fillStyle   = design.accentColor;
   ctx.globalAlpha = 0.85;
-  ctx.fillRect(pad, ruleY, W - pad * 2, isLandscape ? 2 : Math.round(H * 0.003));
-  ctx.restore();
   ctx.fillRect(pad, ruleY, W - pad * 2, isLandscape ? 2 : Math.round(H * 0.003));
   ctx.restore();
 
