@@ -614,25 +614,37 @@
   gap: 7px;
 }
 .echo-action-btn {
-  padding: 5px 12px;
+  padding: 6px 14px;
   border-radius: 50px;
-  border: 1px solid rgba(255,255,255,0.09);
-  background: rgba(255,255,255,0.03);
-  color: rgba(255,255,255,0.35);
-  font-size: 0.7rem;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   cursor: pointer;
-  transition: all 0.18s;
+  transition: all 150ms;
   font-family: 'Lora', serif;
-  letter-spacing: 0.5px;
 }
 .echo-action-btn:hover {
-  background: rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.65);
+  border-color: var(--gold-border);
+  color: var(--gold);
+  background: var(--gold-faint);
 }
 .echo-resonate-btn.resonated {
-  background: rgba(232,197,71,0.1);
-  border-color: rgba(232,197,71,0.3);
-  color: #E8C547;
+  background: var(--gold-faint);
+  border-color: var(--gold-border);
+  color: var(--gold);
+}
+.echo-share-btn {
+  background: var(--gold-faint);
+  border-color: var(--gold-border);
+  color: var(--gold);
+}
+.echo-share-btn:hover {
+  background: rgba(232,197,71,0.18);
+  border-color: rgba(232,197,71,0.55);
 }
 
 /* ── Lyric Chip (composer pattern) ── */
