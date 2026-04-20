@@ -207,6 +207,21 @@ function injectComposerStyles() {
     }
     .composer-btn-secondary:active { transform:scale(0.97); }
     .composer-btn-secondary:disabled { opacity:0.4;cursor:default; }
+    .composer-btn-private {
+      flex:1;padding:14px 16px;border-radius:var(--radius);
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.12);
+      color:rgba(255,255,255,0.45);
+      font-family:var(--font-display);font-weight:600;
+      font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;
+      cursor:pointer;transition:all 0.2s;
+    }
+    .composer-btn-private:hover {
+      border-color:rgba(255,255,255,0.25);
+      color:rgba(255,255,255,0.7);
+    }
+    .composer-btn-private:active { transform:scale(0.97); }
+    .composer-btn-private:disabled { opacity:0.3;cursor:default; }
 
 
     /* Char count position fix */

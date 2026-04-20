@@ -139,6 +139,7 @@ function injectShareSheetStyles() {
     .ss-close{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-3);width:32px;height:32px;min-width:44px;min-height:44px;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 150ms;flex-shrink:0;padding:0;}
     .ss-close:hover{background:rgba(255,255,255,0.1);color:#F4F1ED;}
 
+    .ss-context-msg{padding:4px 16px 0;font-family:'Lora',serif;font-size:0.6rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--gold);opacity:0.8;text-align:center;}
     .ss-lyric-strip{
       margin:14px 16px 0;
       background:#161420;
@@ -274,6 +275,7 @@ function mountShareSheet() {
         <button class="ss-close" id="ssClose" aria-label="Close">×</button>
       </div>
 
+      <div class="ss-context-msg" id="ssContextMsg" style="display:none"></div>
       <div class="ss-lyric-strip" id="ssLyricStrip"></div>
 
       <div class="ss-themes" id="ssThemes">
@@ -468,6 +470,13 @@ function openShareSheet(post, opts = {}) {
   SS.size         = 'square';
   SS.theme        = 'midnight-gold';
   setTimeout(_startPulse, 800);
+  /* Context message */
+  const _ctxEl = document.getElementById('ssContextMsg');
+  if (_ctxEl) {
+    const _ctx = opts.context || '';
+    if (_ctx) { _ctxEl.textContent = _ctx; _ctxEl.style.display = 'block'; }
+    else { _ctxEl.style.display = 'none'; }
+  }
 
   /* Reset theme dots */
   document.querySelectorAll('.ss-theme-dot').forEach((d, i) => {
