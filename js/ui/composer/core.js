@@ -64,7 +64,8 @@ function initComposer() {
    ============================================================ */
 async function submitPost(mode = 'post+visual') {
   const pacBtn      = document.getElementById('postAndCreateBtn');
-  if (pacBtn?.disabled) return;
+  const pvtBtn      = document.getElementById('privateCardBtn');
+  if (pacBtn?.disabled || pvtBtn?.disabled) return;
 
   // Sync confirm inputs → hidden fields (fallback in case oninput was missed)
     var _sci = document.getElementById('songConfirmInput');
@@ -132,7 +133,7 @@ async function submitPost(mode = 'post+visual') {
   };
 
   if (pacBtn)      { pacBtn.disabled = true;      pacBtn.innerHTML = '<span class="m-spinner"></span> Sharing…'; }
-  if (createOnlyBtn) createOnlyBtn.disabled = true;
+  if (pvtBtn)      { pvtBtn.disabled = true; }
 
   try {
     let savedPostId = null;
