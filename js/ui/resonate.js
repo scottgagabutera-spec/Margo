@@ -48,7 +48,7 @@ function injectResonateStyles() {
     .card-resonate-btn.resonated .r-icon { transform: scale(1.3) rotate(20deg); }
     .r-count {
       color: #00E5FF; font-size: 0.62rem;
-      font-family: 'Space Mono', monospace; font-weight: 700;
+      font-family: 'Lora', serif; font-weight: 700;
     }
     @keyframes rBurst {
       0%{opacity:1;transform:scale(0)} 65%{opacity:.4;transform:scale(2.4)} 100%{opacity:0;transform:scale(3.8)}
@@ -80,7 +80,7 @@ function injectResonateStyles() {
     }
     .card-lyric-back-btn:active { opacity: 0.75; }
     .lyric-back-count {
-      font-size: 0.58rem; font-family: 'Space Mono', monospace;
+      font-size: 0.58rem; font-family: 'Lora', serif;
       font-weight: 700; color: #E8C547; opacity: 0.8;
     }
 
@@ -90,7 +90,7 @@ function injectResonateStyles() {
       background: rgba(232,197,71,0.08);
       border: 1px solid rgba(232,197,71,0.28);
       color: rgba(232,197,71,0.9);
-      font-family: 'Space Mono', monospace;
+      font-family: 'Lora', serif;
       font-size: 0.48rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.8px;
       cursor: pointer; transition: background 0.15s, border-color 0.15s;

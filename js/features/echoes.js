@@ -381,7 +381,7 @@ function buildEchoCard(echo, idx) {
         ♥ ${resonateCount > 0 ? resonateCount : 'Resonate'}
       </button>
       <button class="echo-action-btn echo-share-btn" data-echo-idx="${idx}">
-        ↗ LYRIC BACK
+        CARD
       </button>
     </div>
   `;
