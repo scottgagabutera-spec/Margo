@@ -278,17 +278,17 @@
   gap: 10px;
   background: none;
   border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.12);
+  border-bottom: 1px solid rgba(232,197,71,0.25);
   border-radius: 0;
   padding: 8px 2px;
   transition: border-color 0.2s;
 }
 .echo-search-field:focus-within {
-  border-bottom-color: rgba(232,197,71,0.5);
+  border-bottom-color: rgba(232,197,71,0.6);
   background: none;
 }
 .echo-search-icon {
-  color: rgba(255,255,255,0.3);
+  color: rgba(232,197,71,0.45);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -298,16 +298,15 @@
   background: none;
   border: none;
   outline: none;
-  color: #fff;
+  color: var(--text);
   font-size: 0.95rem;
-  font-family: var(--font-body, inherit);
+  font-family: 'Lora', serif;
   min-width: 0;
 }
 .echo-search-field input::placeholder {
-  color: rgba(255,255,255,0.28);
+  color: rgba(232,197,71,0.4);
   font-style: italic;
 }
-
 /* Song pill */
 #echoSongPill {
   display: flex;
