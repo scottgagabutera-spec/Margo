@@ -185,8 +185,7 @@ async function submitPost(mode = 'post+visual') {
       showToast('Your lyric is live.');
     } else if (mode === 'create') {
       setTimeout(() => {
-        if (typeof openGifStudio === 'function') openGifStudio(postedPost);
-        else if (typeof openShareSheet === 'function') openShareSheet(postedPost);
+        if (typeof openShareSheet === 'function') openShareSheet(postedPost);
       }, 120);
     }
 
