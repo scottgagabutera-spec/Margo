@@ -30,8 +30,8 @@
     #lbSheet {
       width: 100%;
       max-width: 480px;
-      background: #0F0E13;
-      border: 1px solid rgba(255,255,255,0.07);
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-bottom: none;
       border-radius: 24px 24px 0 0;
       overflow: hidden;
@@ -39,7 +39,7 @@
       max-height: 92dvh;
       overflow-y: auto;
       font-family: 'Lora', serif;
-      color: #F4F1ED;
+      color: var(--text);
     }
     @media (min-width: 560px) {
       #lbSheet {
@@ -87,7 +87,7 @@
       font-weight: 800;
       font-size: 0.62rem;
       letter-spacing: 4px;
-      color: #E8C547;
+      color: var(--gold);
       text-transform: uppercase;
       line-height: 1;
     }
@@ -96,27 +96,27 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      font-size: 0.58rem;
+      font-size: 0.6rem;
       font-weight: 600;
       letter-spacing: 1px;
       text-transform: uppercase;
       padding: 3px 10px;
       border-radius: 50px;
-      background: rgba(232,197,71,0.08);
+      background: var(--gold-faint);
       border: 1px solid rgba(232,197,71,0.28);
-      color: #E8C547;
+      color: var(--gold);
     }
     .lb-badge-dot {
       width: 5px; height: 5px;
       border-radius: 50%;
-      background: #E8C547;
+      background: var(--gold);
       opacity: 0.8;
     }
 
     .lb-close {
       background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.07);
-      color: #9A98A4;
+      border: 1px solid var(--border);
+      color: var(--text-2);
       width: 32px; height: 32px;
       border-radius: 50%;
       font-size: 1.1rem;
@@ -125,45 +125,45 @@
       transition: all 150ms;
       flex-shrink: 0;
     }
-    .lb-close:hover { background: rgba(255,255,255,0.1); color: #F4F1ED; }
+    .lb-close:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 
     /* ── PREVIEW STRIP ── */
     .lb-preview-strip {
       margin: 14px 16px 0;
-      background: #161420;
-      border: 1px solid rgba(255,255,255,0.07);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 14px;
     }
     .lb-preview-row { display: flex; flex-direction: column; gap: 8px; }
     .lb-preview-original, .lb-preview-reply { display: flex; flex-direction: column; gap: 2px; }
-    .lb-preview-lyric { font-size: 0.82rem; font-style: italic; color: #F4F1ED; line-height: 1.4; }
-    .lb-preview-song { font-size: 0.68rem; color: #9A98A4; }
+    .lb-preview-lyric { font-size: 0.82rem; font-style: italic; color: var(--text); line-height: 1.4; }
+    .lb-preview-song { font-size: 0.68rem; color: var(--text-2); }
     .lb-preview-arrow {
-      font-size: 0.58rem; font-weight: 600; letter-spacing: 1px;
-      text-transform: uppercase; color: #E8C547; opacity: 0.7;
+      font-size: 0.6rem; font-weight: 600; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--gold); opacity: 0.7;
     }
 
     /* ── TABS ── */
     .lb-tabs { display: flex; gap: 8px; padding: 14px 16px 0; }
     .lb-tab {
       flex: 1; padding: 10px 8px;
-      background: #161420;
-      border: 1px solid rgba(255,255,255,0.07);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      color: #555360;
+      color: var(--text-3);
       font-family: 'Lora', serif;
-      font-size: 0.58rem; font-weight: 600;
+      font-size: 0.6rem; font-weight: 600;
       letter-spacing: 0.5px; text-transform: uppercase; text-align: center;
       cursor: pointer; transition: all 150ms;
       min-height: 44px;
       display: flex; align-items: center; justify-content: center;
     }
-    .lb-tab:hover { color: #9A98A4; border-color: rgba(255,255,255,0.12); }
+    .lb-tab:hover { color: var(--text-2); border-color: rgba(255,255,255,0.12); }
     .lb-tab.lb-active {
-      background: rgba(232,197,71,0.08);
-      border-color: rgba(232,197,71,0.28);
-      color: #E8C547;
+      background: var(--gold-faint);
+      border-color: var(--gold-border);
+      color: var(--gold);
     }
 
     /* ── SCREENS ── */
@@ -172,8 +172,8 @@
 
     /* ── DESIGN + SIZE SELECTORS ── */
     .lb-selector-label {
-      font-size: 0.55rem; font-weight: 600; letter-spacing: 2px;
-      text-transform: uppercase; color: #555360;
+      font-size: 0.6rem; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text-3);
       padding: 0 0 8px;
     }
     .lb-design-row {
@@ -181,39 +181,39 @@
     }
     .lb-design-btn {
       flex: 1; padding: 10px 8px; border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.07);
-      background: #161420;
-      color: #555360;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-3);
       font-family: 'Lora', serif;
       font-size: 0.62rem; font-weight: 600;
       text-align: center; cursor: pointer; transition: all 150ms;
       display: flex; flex-direction: column; align-items: center; gap: 3px;
     }
-    .lb-design-btn:hover { border-color: rgba(255,255,255,0.12); color: #9A98A4; }
+    .lb-design-btn:hover { border-color: rgba(255,255,255,0.12); color: var(--text-2); }
     .lb-design-btn.lb-design-selected {
-      background: rgba(232,197,71,0.08);
-      border-color: rgba(232,197,71,0.28);
-      color: #E8C547;
+      background: var(--gold-faint);
+      border-color: var(--gold-border);
+      color: var(--gold);
     }
-    .lb-design-sub { font-size: 0.52rem; opacity: 0.5; font-weight: 400; }
+    .lb-design-sub { font-size: 0.6rem; opacity: 0.5; font-weight: 400; }
     .lb-size-row {
       display: flex; gap: 8px; margin-bottom: 16px;
     }
     .lb-size-btn {
       flex: 1; padding: 10px 6px; border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.07);
-      background: #161420;
-      color: #555360;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-3);
       font-family: 'Lora', serif;
-      font-size: 0.58rem; font-weight: 600;
+      font-size: 0.6rem; font-weight: 600;
       text-align: center; cursor: pointer; transition: all 150ms;
       display: flex; flex-direction: column; align-items: center; gap: 6px;
     }
-    .lb-size-btn:hover { border-color: rgba(255,255,255,0.12); color: #9A98A4; }
+    .lb-size-btn:hover { border-color: rgba(255,255,255,0.12); color: var(--text-2); }
     .lb-size-btn.lb-size-selected {
-      background: rgba(232,197,71,0.08);
-      border-color: rgba(232,197,71,0.28);
-      color: #E8C547;
+      background: var(--gold-faint);
+      border-color: var(--gold-border);
+      color: var(--gold);
     }
     .lb-size-thumb-v { width: 14px; height: 22px; border-radius: 2px; background: currentColor; opacity: 0.6; }
     .lb-size-thumb-s { width: 20px; height: 20px; border-radius: 2px; background: currentColor; opacity: 0.6; }
@@ -224,16 +224,16 @@
       gap: 8px; margin-bottom: 16px;
     }
     .lb-size-option {
-      background: #161420;
-      border: 1px solid rgba(255,255,255,0.07);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
       border-radius: 12px; padding: 14px 12px;
       display: flex; align-items: center; gap: 12px;
       cursor: pointer; transition: all 150ms; min-height: 44px;
     }
     .lb-size-option:hover { border-color: rgba(255,255,255,0.12); }
     .lb-size-option.lb-selected {
-      background: rgba(232,197,71,0.08);
-      border-color: rgba(232,197,71,0.28);
+      background: var(--gold-faint);
+      border-color: var(--gold-border);
     }
     .lb-size-thumb {
       background: #1E1B2A; border-radius: 4px; flex-shrink: 0;
@@ -242,38 +242,38 @@
     .lb-size-thumb.lb-square  { width: 22px; height: 22px; }
     .lb-size-thumb.lb-landscape { width: 28px; height: 16px; }
     .lb-size-info { flex: 1; }
-    .lb-size-name { font-size: 0.82rem; font-weight: 600; color: #F4F1ED; }
-    .lb-size-desc { font-size: 0.6rem; color: #555360; margin-top: 2px; }
+    .lb-size-name { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+    .lb-size-desc { font-size: 0.6rem; color: var(--text-3); margin-top: 2px; }
     .lb-size-dot {
       width: 8px; height: 8px; border-radius: 50%;
       border: 1.5px solid #555360; flex-shrink: 0; transition: all 150ms;
     }
-    .lb-size-dot.lb-on { background: #E8C547; border-color: #E8C547; }
+    .lb-size-dot.lb-on { background: var(--gold); border-color: var(--gold); }
 
     .lb-copy-preview {
-      background: #161420;
-      border: 1px solid rgba(255,255,255,0.07);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
       border-radius: 12px; padding: 14px;
       margin-bottom: 16px;
-      font-size: 0.82rem; line-height: 1.6; color: #9A98A4;
+      font-size: 0.82rem; line-height: 1.6; color: var(--text-2);
     }
-    .lb-copy-preview .lbcp-orig  { color: #F4F1ED; font-style: italic; }
-    .lb-copy-preview .lbcp-arrow { color: #E8C547; font-size: 0.7rem; font-weight: 600; margin: 6px 0; }
-    .lb-copy-preview .lbcp-reply { color: #F4F1ED; font-style: italic; }
-    .lb-copy-preview .lbcp-foot  { color: #555360; font-size: 0.7rem; margin-top: 8px; }
+    .lb-copy-preview .lbcp-orig  { color: var(--text); font-style: italic; }
+    .lb-copy-preview .lbcp-arrow { color: var(--gold); font-size: 0.7rem; font-weight: 600; margin: 6px 0; }
+    .lb-copy-preview .lbcp-reply { color: var(--text); font-style: italic; }
+    .lb-copy-preview .lbcp-foot  { color: var(--text-3); font-size: 0.7rem; margin-top: 8px; }
 
     .lb-link-box {
-      background: #161420;
-      border: 1px solid rgba(255,255,255,0.07);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
       border-radius: 12px; padding: 14px; margin-bottom: 16px;
     }
-    .lb-link-label { font-size: 0.58rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #555360; margin-bottom: 8px; }
-    .lb-link-url   { font-size: 0.82rem; color: #E8C547; font-weight: 600; word-break: break-all; }
-    .lb-link-note  { font-size: 0.68rem; color: #555360; margin-top: 8px; }
+    .lb-link-label { font-size: 0.6rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-3); margin-bottom: 8px; }
+    .lb-link-url   { font-size: 0.82rem; color: var(--gold); font-weight: 600; word-break: break-all; }
+    .lb-link-note  { font-size: 0.68rem; color: var(--text-3); margin-top: 8px; }
 
     .lb-cta {
       width: 100%; padding: 15px;
-      background: #E8C547; border: none; border-radius: 16px;
+      background: var(--gold); border: none; border-radius: 16px;
       color: #07060A;
       font-family: 'Lora', serif;
       font-size: 0.7rem; font-weight: 700;
@@ -291,8 +291,8 @@
 
     /* ── CARD STYLE SELECTOR ── */
     .lb-style-label {
-      font-size: 0.58rem; font-weight: 600; letter-spacing: 2px;
-      text-transform: uppercase; color: #555360; padding: 14px 16px 8px;
+      font-size: 0.6rem; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text-3); padding: 14px 16px 8px;
     }
     .lb-style-row {
       display: flex; gap: 8px; padding: 0 16px; margin-bottom: 14px;
@@ -305,18 +305,18 @@
       gap: 3px; padding: 10px 8px; font-family: 'Lora', serif;
     }
     .lb-style-dark  { background: #07060A; }
-    .lb-style-convo { background: #0F0E13; }
+    .lb-style-convo { background: var(--surface); }
     .lb-style-name {
       font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px;
     }
     .lb-style-sub {
-      font-size: 0.55rem; font-weight: 500; letter-spacing: 0.5px; opacity: 0.55;
+      font-size: 0.6rem; font-weight: 500; letter-spacing: 0.5px; opacity: 0.55;
     }
-    .lb-style-dark  .lb-style-name { color: #E8C547; }
-    .lb-style-dark  .lb-style-sub  { color: #E8C547; }
-    .lb-style-convo .lb-style-name { color: #9A98A4; }
-    .lb-style-convo .lb-style-sub  { color: #9A98A4; }
-    .lb-style-btn.lb-style-selected { border-color: #E8C547; box-shadow: 0 0 0 1px #E8C547; }
+    .lb-style-dark  .lb-style-name { color: var(--gold); }
+    .lb-style-dark  .lb-style-sub  { color: var(--gold); }
+    .lb-style-convo .lb-style-name { color: var(--text-2); }
+    .lb-style-convo .lb-style-sub  { color: var(--text-2); }
+    .lb-style-btn.lb-style-selected { border-color: var(--gold); box-shadow: 0 0 0 1px #E8C547; }
 
     #lbToast {
       position: fixed;
@@ -324,7 +324,7 @@
       transform: translateX(-50%);
       background: #1E1B2A;
       border: 1px solid rgba(232,197,71,0.28);
-      color: #E8C547;
+      color: var(--gold);
       font-family: 'Lora', serif;
       font-size: 0.7rem; font-weight: 600;
       padding: 10px 20px; border-radius: 50px;
