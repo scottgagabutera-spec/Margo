@@ -221,13 +221,14 @@ body.modal-open { overflow: hidden !important; }
 }
 .modal-close {
   background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.38); width: 30px; height: 30px; border-radius: 50%;
-  font-size: 1.1rem; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: var(--text);
+  width: 32px; height: 32px; min-width: 44px; min-height: 44px;
+  border-radius: 50%; font-size: 1.1rem; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.18s; line-height: 1;
+  transition: all 150ms; line-height: 1; flex-shrink: 0;
 }
-.modal-close:hover { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.2); }
+.modal-close:hover { background: var(--gold-faint); color: var(--gold); border-color: var(--gold-border); }
 .modal-body {
   padding: 18px 20px; overflow-y: auto; flex: 1;
   display: flex; flex-direction: column; gap: 10px;
