@@ -1,3 +1,8 @@
+# ⚠️ READ BOTH FILES BEFORE TOUCHING ANY CODE
+# Design & Brand rules → MARGO_BRAND.md
+# Performance & Mobile rules → this file (CLAUDE.md)
+# Both are laws. Neither is optional.
+
 # MARGO — Mobile Performance & Responsiveness Rules
 > Version 1.0 — April 2026
 > **Any AI assistant or developer working on Margo MUST follow these rules.**

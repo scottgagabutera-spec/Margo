@@ -186,17 +186,17 @@ function injectFeedStyles() {
       gap: 5px !important;
       height: 30px !important;
       padding: 0 12px !important;
-      border-radius: 8px !important;
-      background: rgba(192,132,252,0.10) !important;
-      border: 1px solid rgba(192,132,252,0.28) !important;
-      color: rgba(255,255,255,0.9) !important;
-      font-family: 'Space Mono', monospace !important;
-      font-size: 0.56rem !important;
-      font-weight: 700 !important;
-      letter-spacing: 0.3px !important;
+      border-radius: 50px !important;
+      background: rgba(255,255,255,0.06) !important;
+      border: 1px solid rgba(255,255,255,0.18) !important;
+      color: var(--text) !important;
+      font-family: 'Lora', serif !important;
+      font-size: 0.6rem !important;
+      font-weight: 600 !important;
+      letter-spacing: 1px !important;
       text-transform: uppercase !important;
       cursor: pointer !important;
-      transition: background 0.14s, border-color 0.14s, transform 0.1s !important;
+      transition: all 150ms !important;
       white-space: nowrap !important;
       flex-shrink: 0 !important;
       position: relative !important;
@@ -204,16 +204,15 @@ function injectFeedStyles() {
       -webkit-tap-highlight-color: transparent !important;
     }
     #feedList .card-resonate-btn:hover {
-      background: rgba(192,132,252,0.2) !important;
-      border-color: rgba(192,132,252,0.55) !important;
-      color: #fff !important;
-      transform: translateY(-1px) !important;
+      background: var(--gold-faint) !important;
+      border-color: var(--gold-border) !important;
+      color: var(--gold) !important;
     }
     #feedList .card-resonate-btn:active { transform: scale(0.94) !important; }
     #feedList .card-resonate-btn.resonated {
-      background: rgba(192,132,252,0.2) !important;
-      border-color: rgba(192,132,252,0.6) !important;
-      color: #C084FC !important;
+      background: var(--gold-faint) !important;
+      border-color: var(--gold-border) !important;
+      color: var(--gold) !important;
     }
     #feedList .r-icon {
       font-size: 0.82rem !important;
@@ -222,12 +221,12 @@ function injectFeedStyles() {
     }
     #feedList .card-resonate-btn.resonated .r-icon {
       transform: scale(1.4) rotate(20deg) !important;
-    }
     #feedList .r-count {
-      color: #00E5FF !important;
-      font-size: 0.58rem !important;
-      font-family: 'Space Mono', monospace !important;
+      color: var(--gold) !important;
+      font-size: 0.6rem !important;
+      font-family: 'Lora', serif !important;
       font-weight: 700 !important;
+    }
     }
 
     /* ─── LYRIC BACK BUTTON ─── */
@@ -238,34 +237,34 @@ function injectFeedStyles() {
       justify-content: center !important;
       gap: 5px !important;
       height: 30px !important;
-      padding: 0 8px !important;
-      border-radius: 8px !important;
-      background: rgba(232,197,71,0.07) !important;
-      border: 1px solid rgba(232,197,71,0.22) !important;
+      padding: 0 12px !important;
+      border-radius: 50px !important;
+      background: rgba(255,255,255,0.06) !important;
+      border: 1px solid rgba(255,255,255,0.22) !important;
       color: rgba(255,255,255,0.88) !important;
-      font-family: 'Space Mono', monospace !important;
-      font-size: 0.53rem !important;
+      font-family: 'Lora', serif !important;
+      font-size: 0.6rem !important;
       font-weight: 700 !important;
-      letter-spacing: 0.3px !important;
+      letter-spacing: 1px !important;
       text-transform: uppercase !important;
       cursor: pointer !important;
-      transition: background 0.14s, border-color 0.14s, transform 0.1s !important;
+      transition: all 150ms !important;
       white-space: nowrap !important;
       -webkit-tap-highlight-color: transparent !important;
     }
     #feedList .card-lyric-back-btn:hover {
       background: rgba(232,197,71,0.15) !important;
       border-color: rgba(232,197,71,0.5) !important;
-      color: #fff !important;
-      transform: translateY(-1px) !important;
+      color: var(--gold) !important;
+    }
     }
     #feedList .card-lyric-back-btn:active { transform: scale(0.94) !important; }
     #feedList .lyric-back-count {
-      font-size: 0.53rem !important;
-      font-family: 'Space Mono', monospace !important;
+      font-size: 0.6rem !important;
+      font-family: 'Lora', serif !important;
       font-weight: 700 !important;
-      color: #E8C547 !important;
-      opacity: 0.75 !important;
+      color: var(--gold) !important;
+    }
     }
 
     /* ─── GIF · POSTER BUTTON ─── */
@@ -274,18 +273,18 @@ function injectFeedStyles() {
       align-items: center !important;
       gap: 3px !important;
       height: 30px !important;
-      padding: 0 11px !important;
-      border-radius: 8px !important;
-      background: rgba(255,255,255,0.05) !important;
-      border: 1px solid rgba(255,255,255,0.15) !important;
-      color: rgba(255,255,255,0.75) !important;
-      font-family: 'Space Mono', monospace !important;
-      font-size: 0.5rem !important;
-      font-weight: 700 !important;
+      padding: 0 14px !important;
+      border-radius: 50px !important;
+      background: var(--gold-faint) !important;
+      border: 1px solid var(--gold-border) !important;
+      color: var(--gold) !important;
+      font-family: 'Lora', serif !important;
+      font-size: 0.6rem !important;
+      font-weight: 600 !important;
       text-transform: uppercase !important;
-      letter-spacing: 0.3px !important;
+      letter-spacing: 1px !important;
       cursor: pointer !important;
-      transition: background 0.14s, border-color 0.14s, color 0.14s, transform 0.1s !important;
+      transition: all 150ms !important;
       white-space: nowrap !important;
       flex-shrink: 0 !important;
       -webkit-tap-highlight-color: transparent !important;
@@ -293,8 +292,8 @@ function injectFeedStyles() {
     #feedList .card-share-btn:hover {
       background: rgba(232,197,71,0.12) !important;
       border-color: rgba(232,197,71,0.4) !important;
-      color: #fff !important;
-      transform: translateY(-1px) !important;
+      color: var(--gold) !important;
+    }
     }
     #feedList .card-share-btn:active { transform: scale(0.94) !important; }
     #feedList .card-share-dot {

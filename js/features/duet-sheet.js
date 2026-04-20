@@ -83,9 +83,9 @@ function _injectCSS() {
   ._dsTtl{font-family:'Lora',serif;font-weight:800;font-size:0.82rem;letter-spacing:2.5px;text-transform:uppercase;
     background:linear-gradient(90deg,#fff 20%,var(--_dsAcc,#E8C547) 100%);
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-  ._dsX{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);
+  ._dsX{width:32px;height:32px;min-width:44px;min-height:44px;border-radius:50%;background:rgba(255,255,255,0.05);border:1px solid var(--border);
     color:rgba(255,255,255,0.4);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.18s}
-  ._dsX:hover{background:rgba(255,255,255,0.12);color:#fff}
+  ._dsX:hover{background:rgba(255,255,255,0.10);color:var(--text)}
   ._dsFmtRow{display:flex;gap:6px;padding:12px 16px 0;flex-shrink:0}
   ._dsFmtBtn{flex:1;padding:10px 8px;border-radius:12px;font-family:'Lora',serif;font-size:0.56rem;
     font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;

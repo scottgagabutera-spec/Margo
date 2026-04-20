@@ -17,7 +17,7 @@
 ========================================================== */
 const STUDIO_DESIGNS = [
   { id:'midnight-gold',     label:'Violet',  swatchCss:'linear-gradient(135deg,#0E0B1A,#E8C547)',   bg:'#0E0B1A', accentColor:'#E8C547', textColor:'#EAE5F5', metaColor:'rgba(234,229,245,0.6)' },
-  { id:'midnight-gold',   label:'Gold',    swatchCss:'linear-gradient(135deg,#0d0d0d,#E8C547)',   bg:'#0B0B0D', accentColor:'#E8C547', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
+  { id:'gold-flat',       label:'Gold',    swatchCss:'linear-gradient(135deg,#0d0d0d,#E8C547)',   bg:'#0B0B0D', accentColor:'#E8C547', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
   { id:'royal-purple',    label:'Amethyst',swatchCss:'linear-gradient(135deg,#1a0033,#c77dff)',   bg:'#0d0014', accentColor:'#c77dff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
   { id:'neon-cyan',       label:'Ocean',   swatchCss:'linear-gradient(135deg,#0a1420,#00e5ff)',   bg:'#050e1a', accentColor:'#00e5ff', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
   { id:'sunset-coral',    label:'Ember',   swatchCss:'linear-gradient(135deg,#1a0a0a,#ff6b6b)',   bg:'#1a0505', accentColor:'#ff6b6b', textColor:'#ffffff', metaColor:'rgba(255,255,255,0.6)' },
@@ -261,16 +261,31 @@ function _studioWrapText(ctx, text, maxWidth) {
    Returns "— track N" string derived from post ID or index
 ========================================================== */
 function _trackNumber(post) {
-  if (!post) return '— track 01';
-  const id = post.id || post._id || '';
-  const num = id ? (parseInt(id.toString().replace(/\D/g,'').slice(-2) || '1', 10) % 99) + 1 : 1;
-  return '— track ' + String(num).padStart(2, '0');
+  if (!post) return '';
+  const song = (post.knowledge && post.knowledge.song) || post.song || '';
+  if (song) return '— ' + song;
+  return '';
 }
 
 /* ==========================================================
    CANVAS DRAW — window.drawPosterToCtx
    v6.0: New MARGO layout — left-aligned, track number, rule
 ========================================================== */
+
+function _toTitleCase(str) {
+  if (!str) return '';
+  const small = new Set(['a','an','the','and','but','or','for','nor','on','at','to','by','in','of','up','as','is']);
+  return str
+    .replace(/[^\s-]+/g, (word, i) => {
+      const lower = word.toLowerCase();
+      if (i === 0 || !small.has(lower)) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }
+      return lower;
+    })
+    .replace(/\.([a-z])/g, (_, c) => '.' + c.toUpperCase());
+}
+
 window.drawPosterToCtx = function(ctx, W, H, post, options) {
   options = options || {};
   if (!post) return;
@@ -349,37 +364,43 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
     ctx.restore();
   }
   /* ── Brand lockup ── */
-  drawMargoLockup(ctx, Math.round(W*0.035), Math.round(W*0.035), W*0.048, design.accentColor, isLight);
+  /* MARGO BRAND STANDARD: logo = min(W,H)*0.038, pad = min(W,H)*0.055 */
+  const _logoBase = Math.min(W, H);
+  const _markSize = Math.round(_logoBase * 0.038);
+  const _logoPad  = Math.round(_logoBase * 0.055);
+  drawMargoLockup(ctx, _logoPad, _logoPad, _markSize, design.accentColor, isLight);
   /* ── Lyric block — left-aligned ── */
   const lyricText = post.text || '';
-  let fontSize = Math.min(W * 0.068, H * 0.052);
+  const isLandscape = W > H;
   const fStyle = font.style === 'italic' ? 'italic ' : '';
+  /* Landscape: left 56% of width for lyric, right for meta */
+  const lyricWrapW = isLandscape ? W * 0.52 : innerW;
+  /* Available height for lyric block — landscape is tight */
+  const maxLyricH = isLandscape ? H * 0.58 : H * 0.55;
+  /* Start font size, then shrink until block fits */
+  let fontSize = isLandscape
+    ? Math.min(H * 0.12, W * 0.036)
+    : Math.min(W * 0.068, H * 0.052);
   ctx.font = `${fStyle}${font.weight} ${fontSize}px ${font.css}`;
-
-  const lines = _studioWrapText(ctx, lyricText, innerW);
-  if (lines.length > 6) {
-    fontSize = Math.max(W * 0.030, fontSize * (6 / lines.length));
+  let lines = _studioWrapText(ctx, lyricText, lyricWrapW);
+  /* Shrink font until block fits within maxLyricH */
+  let lh = fontSize * 1.42;
+  let blockH = lines.length * lh;
+  let iters = 0;
+  while (blockH > maxLyricH && fontSize > (isLandscape ? 18 : 14) && iters < 20) {
+    fontSize *= 0.88;
     ctx.font = `${fStyle}${font.weight} ${fontSize}px ${font.css}`;
+    lines = _studioWrapText(ctx, lyricText, lyricWrapW);
+    lh = fontSize * 1.42;
+    blockH = lines.length * lh;
+    iters++;
   }
 
-  const lh     = fontSize * 1.48;
-  const blockH = lines.length * lh;
-
-  /* Vertical center of lyric block — sits in upper-center zone */
-  const lyricCenterY = H * 0.42;
+  /* Landscape: center in middle zone; others: upper-center */
+  const lyricCenterY = isLandscape ? H * 0.36 : H * 0.42;
   const startY = lyricCenterY - blockH / 2;
 
-  /* ── Track number above lyric ── */
-  const trackStr  = _trackNumber(post);
-  const trackSize = Math.max(9, Math.round(W * 0.020));
-  ctx.save();
-  ctx.font         = `700 ${trackSize}px 'Lora',serif`;
-  ctx.fillStyle    = design.accentColor;
-  ctx.globalAlpha  = 0.55;
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign    = 'left';
-  ctx.fillText(trackStr, pad, startY - trackSize * 1.8);
-  ctx.restore();
+  /* track label removed — song shown once in meta block only */
 
   /* ── Lyric lines ── */
   ctx.save();
@@ -395,18 +416,23 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
   });
   ctx.restore();
 
-  /* ── Meta block — left-aligned with accent rule ── */
+  /* ── Meta block — rule + song + artist ── */
   const k = post.knowledge || {};
-  const metaY = H * 0.76;
+  /* All formats: meta at bottom, full-width rule */
+  const metaPad    = pad;
+  const songSize   = Math.max(12, Math.round(Math.min(W, H) * 0.030));
+  const artistSize = Math.max(10, Math.round(Math.min(W, H) * 0.024));
+  const ruleY      = isLandscape ? H * 0.72 : H * 0.80;
+  const songY      = ruleY + Math.round(H * (isLandscape ? 0.06 : 0.034));
+  const artistY    = songY + songSize + Math.round(H * (isLandscape ? 0.06 : 0.016));
 
-  /* Accent rule — 28px wide, 2px tall */
+  /* Full-width accent rule */
   ctx.save();
   ctx.fillStyle   = design.accentColor;
-  ctx.globalAlpha = 0.9;
-  ctx.fillRect(pad, metaY - Math.round(W * 0.038), Math.round(W * 0.026), Math.round(H * 0.003));
+  ctx.globalAlpha = 0.85;
+  ctx.fillRect(pad, ruleY, W - pad * 2, isLandscape ? 2 : Math.round(H * 0.003));
   ctx.restore();
 
-  /* Song title */
   if (k.song || k.artist) {
     ctx.save();
     ctx.textBaseline = 'alphabetic';
@@ -415,31 +441,28 @@ window.drawPosterToCtx = function(ctx, W, H, post, options) {
 
     if (k.song) {
       ctx.fillStyle   = design.textColor;
-      ctx.globalAlpha = 0.9;
-      ctx.font        = `600 ${Math.max(12, Math.round(W * 0.030))}px 'Lora',serif`;
-      ctx.fillText(k.song.substring(0, 32), pad, metaY);
+      ctx.globalAlpha = 0.88;
+      ctx.font        = `600 ${songSize}px 'Lora',serif`;
+      ctx.fillText(_toTitleCase(k.song).substring(0, 32), pad, songY);
     }
 
     if (k.artist) {
       ctx.fillStyle   = design.accentColor;
       ctx.globalAlpha = 1;
-      ctx.font        = `700 ${Math.max(10, Math.round(W * 0.024))}px 'Lora',serif`;
-      ctx.fillText(k.artist.substring(0, 32), pad, metaY + Math.round(W * 0.038));
+      ctx.font        = `700 ${artistSize}px 'Lora',serif`;
+      ctx.fillText(_toTitleCase(k.artist).substring(0, 32), metaPad, artistY);
     }
     ctx.restore();
   }
 
-  /* ── Near-invisible watermark ── */
+  /* ── Watermark — ghost but legible ── */
   ctx.save();
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign    = 'center';
-  /* Color is bg-family — visible only on zoom */
-  const wmColor = isLight
-    ? 'rgba(26,26,32,0.12)'
-    : _blendWithBg(design.bg, design.accentColor, 0.07);
-  ctx.fillStyle  = wmColor;
-  ctx.globalAlpha = 1;
-  ctx.font = `700 ${Math.max(9, Math.round(W * 0.018))}px 'Lora',serif`;
+  ctx.fillStyle    = isLight ? 'rgba(26,26,32,0.20)' : 'rgba(232,197,71,0.22)';
+  ctx.globalAlpha  = 1;
+  ctx.font         = `600 ${Math.max(9, Math.round(W * 0.016))}px 'Lora',serif`;
+  ctx.letterSpacing = '2px';
   ctx.fillText('trymargo.com', W / 2, H * 0.955);
   ctx.restore();
 };
@@ -748,7 +771,7 @@ window.exportPoster = function exportPoster() {
           photoOpacity: studioPhotoOpacity,
         });
       },
-      filename: ((_post.knowledge?.song || 'Lyric').trim().substring(0, 40)) + ' — MARGO',
+      filename: 'MARGO_' + ((_post.knowledge?.song || 'Lyric').trim().replace(/[^a-z0-9\s]/gi,'').split(/\s+/).slice(0,4).join('-').toLowerCase()).substring(0,24) + '_' + (typeof SS !== 'undefined' && SS.size === 'landscape' ? 'Wide' : typeof SS !== 'undefined' && SS.size === 'vertical' ? 'Vertical' : 'Square') + '.png',
       onDone: () => {
         if (btn) { btn.disabled = false; btn.textContent = 'Export'; }
         if (typeof showToast === 'function') showToast('Poster saved ✓');

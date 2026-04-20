@@ -18,12 +18,10 @@ function initComposer() {
       selectedEmotion = btn.dataset.emotion;
     };
   });
-  const pacBtn        = document.getElementById('postAndCreateBtn');
-  const justPostBtn   = document.getElementById('justPostLink');
-  const createOnlyBtn = document.getElementById('createOnlyBtn');
-  if (pacBtn)         pacBtn.onclick        = () => submitPost('post+visual');
-  if (justPostBtn)    justPostBtn.onclick   = () => submitPost('post');
-  if (createOnlyBtn)  createOnlyBtn.onclick = () => submitPost('create');
+  const pacBtn         = document.getElementById('postAndCreateBtn');
+  const privateCardBtn = document.getElementById('privateCardBtn');
+  if (pacBtn)          pacBtn.onclick        = () => submitPost('post+visual');
+  if (privateCardBtn)  privateCardBtn.onclick = () => submitPost('create');
 
   initGeniusIdentify();
   initYoutubeAutofetch();
@@ -66,8 +64,8 @@ function initComposer() {
    ============================================================ */
 async function submitPost(mode = 'post+visual') {
   const pacBtn      = document.getElementById('postAndCreateBtn');
-  const justPostBtn = document.getElementById('justPostLink');
-  if (pacBtn?.disabled) return;
+  const pvtBtn      = document.getElementById('privateCardBtn');
+  if (pacBtn?.disabled || pvtBtn?.disabled) return;
 
   // Sync confirm inputs → hidden fields (fallback in case oninput was missed)
     var _sci = document.getElementById('songConfirmInput');
@@ -134,10 +132,8 @@ async function submitPost(mode = 'post+visual') {
     timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now(),
   };
 
-  if (pacBtn)      { pacBtn.disabled = true;      pacBtn.innerHTML = '<span class="m-spinner"></span> Posting…'; }
-  if (justPostBtn) { justPostBtn.disabled = true; }
-  const createOnlyBtn = document.getElementById('createOnlyBtn');
-  if (createOnlyBtn) createOnlyBtn.disabled = true;
+  if (pacBtn)      { pacBtn.disabled = true;      pacBtn.innerHTML = '<span class="m-spinner"></span> Sharing…'; }
+  if (pvtBtn)      { pvtBtn.disabled = true; }
 
   try {
     let savedPostId = null;
@@ -177,7 +173,7 @@ async function submitPost(mode = 'post+visual') {
       }
     });
 
-    renderFeed();
+    setTimeout(() => renderFeed(), 0);
     resetComposer();
     closeModal(composer);
 
@@ -189,8 +185,7 @@ async function submitPost(mode = 'post+visual') {
       showToast('Your lyric is live.');
     } else if (mode === 'create') {
       setTimeout(() => {
-        if (typeof openGifStudio === 'function') openGifStudio(postedPost);
-        else if (typeof openShareSheet === 'function') openShareSheet(postedPost);
+        if (typeof openShareSheet === 'function') openShareSheet(postedPost);
       }, 120);
     }
 
@@ -198,9 +193,9 @@ async function submitPost(mode = 'post+visual') {
     console.error(err);
     showToast(err.message || 'Something went wrong. Try again.');
   } finally {
-    if (pacBtn)      { pacBtn.disabled = false;      pacBtn.innerHTML = 'Post + Make Visual'; }
-    if (createOnlyBtn) createOnlyBtn.disabled = false;
-    if (justPostBtn) { justPostBtn.disabled = false; }
+    if (pacBtn)         { pacBtn.disabled = false;         pacBtn.innerHTML = 'Share Lyric'; }
+    const _pvtBtn = document.getElementById('privateCardBtn');
+    if (_pvtBtn)        { _pvtBtn.disabled = false; }
     if (typeof postBtn !== 'undefined' && postBtn) postBtn.disabled = false;
   }
 }

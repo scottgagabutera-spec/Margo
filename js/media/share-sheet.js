@@ -15,7 +15,8 @@ window._shareSheet = window._shareSheet || {
   post:         null,
   echoPost:     null,
   isDuet:       false,
-  activeFormat: 'gif',
+  activeFormat: 'poster',
+  size:         'square',
   gifBlob:      null,
   posterBlob:   null,
   isEncoding:   false,
@@ -27,11 +28,13 @@ const SS = window._shareSheet;
 
 /* ── 5 core themes ── */
 const SS_THEMES = [
-  { id:'midnight-gold',   color:'#E8C547', bg:'#0E0B1A' },
-  { id:'midnight-gold', color:'#E8C547', bg:'#0B0B0D' },
-  { id:'neon-cyan',     color:'#00e5ff', bg:'#050e1a' },
-  { id:'sunset-coral',  color:'#ff6b6b', bg:'#1a0505' },
-  { id:'monochrome',    color:'#ffffff', bg:'#0a0a0a' },
+  { id:'midnight-gold',  label:'Violet',  color:'#E8C547', bg:'#0E0B1A' },
+  { id:'royal-purple',   label:'Purple',  color:'#c77dff', bg:'#0d0014' },
+  { id:'neon-cyan',      label:'Ocean',   color:'#00e5ff', bg:'#050e1a' },
+  { id:'sunset-coral',   label:'Ember',   color:'#ff6b6b', bg:'#1a0505' },
+  { id:'emerald-night',  label:'Forest',  color:'#50fa7b', bg:'#051a0d' },
+  { id:'monochrome',     label:'Black',   color:'#ffffff', bg:'#0a0a0a' },
+  { id:'cream-editorial',label:'Bone',    color:'#B8901A', bg:'#f5f1e8' },
 ];
 
 /* ── Feeling colours ── */
@@ -51,8 +54,9 @@ const SS_FEELING_DEFAULT = { bg:'rgba(232,197,71,0.09)', text:'#E8C547', border:
 
 /* ── Song name for filename ── */
 function _songFilename(post, ext) {
-  const song = (post?.knowledge?.song || 'Lyric').trim().substring(0,40);
-  return song + ' — MARGO' + (ext ? '.' + ext : '');
+  const slug = ((post?.knowledge?.song || 'Lyric').trim().replace(/[^a-z0-9\s]/gi,'').split(/\s+/).slice(0,4).join('-').toLowerCase()).substring(0,24);
+  const size = (typeof SS !== 'undefined' && SS.size === 'landscape') ? 'Wide' : (typeof SS !== 'undefined' && SS.size === 'vertical') ? 'Vertical' : 'Square';
+  return 'MARGO_' + slug + '_' + size + (ext ? '.' + ext : '');
 }
 
 /* ==========================================================
@@ -65,38 +69,38 @@ function injectShareSheetStyles() {
   s.textContent = `
     #shareSheetBackdrop {
       position:fixed;inset:0;z-index:600;
-      background:rgba(0,0,0,0.82);
-      backdrop-filter:blur(18px) saturate(0.55);
-      -webkit-backdrop-filter:blur(18px) saturate(0.55);
+      background:rgba(0,0,0,0.85);
       display:flex;align-items:flex-end;justify-content:center;
-      animation:ssBackdropIn 0.22s ease;
+      animation:ssBackdropIn 220ms ease;
+      padding:0;
     }
-    @keyframes ssBackdropIn{from{opacity:0}to{opacity:1}}
     #shareSheetBackdrop.ss-hidden{display:none!important}
+    @keyframes ssBackdropIn{from{opacity:0}to{opacity:1}}
     @media(min-width:560px){
       #shareSheetBackdrop{align-items:center;padding:24px}
     }
 
     #shareSheet {
       width:100%;max-width:480px;
-      background:#0c0b12;
+      background:#0F0E13;
       border:1px solid rgba(255,255,255,0.07);
-      border-bottom:none;border-radius:28px 28px 0 0;
+      border-bottom:none;border-radius:24px 24px 0 0;
       overflow:hidden;display:flex;flex-direction:column;
       max-height:92dvh;
-      box-shadow:0 -8px 60px rgba(0,0,0,0.9);
-      animation:ssSlideUp 0.38s cubic-bezier(0.16,1,0.3,1);
+      animation:ssSlideUp 380ms cubic-bezier(0.16,1,0.3,1);
+      font-family:'Lora',serif;
+      color:#F4F1ED;
     }
     @media(min-width:560px){
       #shareSheet{
         border-radius:24px;
         border-bottom:1px solid rgba(255,255,255,0.07);
-        animation:ssFadeUp 0.32s cubic-bezier(0.16,1,0.3,1);
+        animation:ssFadeUp 320ms cubic-bezier(0.16,1,0.3,1);
       }
     }
     @keyframes ssSlideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
-    @keyframes ssFadeUp{from{transform:translateY(20px) scale(0.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
-    #shareSheet.ss-exit{animation:ssSlideDown 0.26s cubic-bezier(0.4,0,1,1) forwards}
+    @keyframes ssFadeUp{from{transform:translateY(16px) scale(0.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+    #shareSheet.ss-exit{animation:ssSlideDown 260ms cubic-bezier(0.4,0,1,1) forwards}
     @keyframes ssSlideDown{to{transform:translateY(80px);opacity:0}}
 
     .ss-handle{
@@ -107,158 +111,134 @@ function injectShareSheetStyles() {
 
     .ss-header{
       display:flex;align-items:center;justify-content:space-between;
-      padding:14px 18px 0;flex-shrink:0;
+      padding:14px 16px 0;flex-shrink:0;
     }
-    .ss-header-left{display:flex;flex-direction:column;gap:2px}
-    .ss-title{
-      font-family:'Lora',serif;font-weight:800;font-size:0.7rem;
-      letter-spacing:1px;text-transform:uppercase;color:#fff;
+    .ss-header-left{display:flex;flex-direction:column;gap:6px}
+    .ss-logo-lockup{
+      display:flex;align-items:center;gap:7px;
+      text-decoration:none;
     }
-    .ss-lyric-preview{display:none;
-      font-family:'Lora',serif;font-style:italic;
-      font-size:0.7rem;font-style:italic;color:rgba(255,255,255,0.32);
-      line-height:1.4;max-width:260px;
-      overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    .ss-logo-wordmark{
+      font-family:'Syne',sans-serif;font-weight:800;
+      font-size:0.62rem;letter-spacing:4px;
+      color:#E8C547;text-transform:uppercase;line-height:1;
     }
     .ss-duet-badge{
-      display:none;align-items:center;gap:5px;margin-top:3px;
-      font-family:'Lora',serif;font-size:0.6rem;font-weight:600;
-      letter-spacing:1px;text-transform:uppercase;
-      padding:3px 9px;border-radius:20px;
-      background:rgba(232,197,71,0.09);border:1px solid rgba(232,197,71,0.28);
+      display:inline-flex;align-items:center;gap:5px;
+      font-size:0.58rem;font-weight:600;letter-spacing:1px;
+      text-transform:uppercase;padding:3px 10px;
+      border-radius:50px;
+      background:rgba(232,197,71,0.08);
+      border:1px solid rgba(232,197,71,0.28);
       color:#E8C547;
     }
-    .ss-duet-badge.visible{display:inline-flex}
-    .ss-duet-badge-dot{width:5px;height:5px;border-radius:50%;background:#E8C547;opacity:0.8}
-    .ss-close{
-      background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);
-      color:rgba(255,255,255,0.35);width:30px;height:30px;
-      border-radius:50%;font-size:1.1rem;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-      transition:all 0.16s;flex-shrink:0;
+    .ss-duet-badge-dot{
+      width:5px;height:5px;border-radius:50%;
+      background:#E8C547;opacity:0.8;
     }
-    .ss-close:hover{background:rgba(255,255,255,0.1);color:#fff}
+    .ss-close{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-3);width:32px;height:32px;min-width:44px;min-height:44px;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 150ms;flex-shrink:0;padding:0;}
+    .ss-close:hover{background:rgba(255,255,255,0.1);color:#F4F1ED;}
 
-    .ss-canvas-wrap{
-      padding:14px 18px 10px;flex-shrink:0;
-      display:flex;align-items:center;justify-content:center;
-    }
-    .ss-canvas-ring{
-      position:relative;border-radius:18px;overflow:hidden;
-      box-shadow:0 16px 56px rgba(0,0,0,0.8),0 0 0 1px rgba(232,197,71,0.12);
-      background:#0E0B1A;
-    }
-    #ssCanvas{display:block;border-radius:18px}
-
-    .ss-encoding-overlay{
-      position:absolute;inset:0;border-radius:18px;
-      background:rgba(12,11,18,0.9);backdrop-filter:blur(6px);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
-    }
-    .ss-encoding-overlay.hidden{display:none}
-    .ss-encoding-label{
-      font-family:'Lora',serif;font-size:0.6rem;
-      font-weight:600;letter-spacing:1px;text-transform:uppercase;
-      color:rgba(255,255,255,0.5);
-    }
-    .ss-progress-bar-wrap{
-      width:120px;height:2px;border-radius:2px;
-      background:rgba(255,255,255,0.08);overflow:hidden;
-    }
-    .ss-progress-bar{
-      height:100%;border-radius:2px;background:#E8C547;
-      transition:width 0.1s linear;width:0%;
-    }
-
-    /* Theme dots */
-    .ss-themes{
-      display:flex;align-items:center;justify-content:center;
-      gap:12px;padding:2px 18px 12px;flex-shrink:0;
-    }
-    .ss-theme-dot{
-      width:20px;height:20px;border-radius:50%;cursor:pointer;
-      border:2px solid rgba(255,255,255,0.0);
-      transition:all 0.2s cubic-bezier(0.16,1,0.3,1);
-      flex-shrink:0;outline:none;
-    }
-    .ss-theme-dot:hover{transform:scale(1.2)}
-    .ss-theme-dot.active{
-      border-color:rgba(255,255,255,0.9);
-      transform:scale(1.25);
-      box-shadow:0 0 0 3px rgba(255,255,255,0.1);
-    }
-
-    /* Info strip */
-    .ss-info-strip{
-      display:flex;align-items:center;gap:10px;
-      padding:0 18px 12px;flex-shrink:0;
-    }
-    .ss-song-thumb{
-      width:34px;height:34px;border-radius:8px;object-fit:cover;
-      flex-shrink:0;border:1px solid rgba(255,255,255,0.08);
-    }
-    .ss-song-info{flex:1;min-width:0}
-    .ss-song-title{
-      font-family:'Lora',serif;font-size:0.82rem;font-weight:600;
-      color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .ss-song-artist{
-      font-family:'Lora',serif;font-size:0.7rem;
-      color:rgba(255,255,255,0.35);
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .ss-feeling-tag{
-      font-family:'Lora',serif;font-size:0.6rem;font-weight:600;
-      text-transform:uppercase;letter-spacing:0.5px;
-      padding:3px 9px;border-radius:20px;flex-shrink:0;
-    }
-
-    /* Primary save button */
-    .ss-save-btn{
-      margin:0 18px;padding:15px;border-radius:16px;
-      background:#E8C547;border:none;color:#07060A;
-      font-family:'Lora',serif;font-size:0.6rem;
-      font-weight:700;letter-spacing:1px;text-transform:uppercase;
-      cursor:pointer;transition:all 0.2s cubic-bezier(0.16,1,0.3,1);
-      display:flex;align-items:center;justify-content:center;gap:8px;
+    .ss-context-msg{padding:4px 16px 0;font-family:'Lora',serif;font-size:0.6rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--gold);opacity:0.8;text-align:center;}
+    .ss-lyric-strip{
+      margin:14px 16px 0;
+      background:#161420;
+      border:1px solid rgba(255,255,255,0.07);
+      border-radius:12px;
+      padding:14px 16px;
       flex-shrink:0;
     }
-    .ss-save-btn:hover{
-      background:#F5D46A;transform:translateY(-1px);
-      box-shadow:0 8px 24px rgba(232,197,71,0.35);
+    .ss-lyric-strip-text{
+      font-family:'Lora',serif;font-style:italic;
+      font-size:0.88rem;color:#F4F1ED;line-height:1.5;
+      margin-bottom:8px;
     }
-    .ss-save-btn:active{transform:scale(0.98)}
-    .ss-save-btn:disabled{opacity:0.5;cursor:wait;transform:none;box-shadow:none}
-    .ss-copy-row{display:flex;gap:8px;margin-top:8px;}
-    .ss-copy-row.hidden{display:none;}
-    .ss-copy-text-btn{flex:1;padding:9px 6px;border-radius:10px;border:1px solid rgba(232,197,71,0.3);background:rgba(232,197,71,0.06);color:#E8C547;font-family:'Lora',serif;font-size:0.6rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.18s;}
-    .ss-copy-text-btn:hover{background:rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.6);}
+    .ss-lyric-strip-meta{
+      font-family:'Lora',serif;
+      font-size:0.68rem;color:#9A98A4;
+    }
+    .ss-lyric-strip-meta span{
+      color:#E8C547;font-weight:600;
+    }
 
-    /* Secondary row */
-    .ss-secondary{
-      display:flex;gap:8px;padding:10px 18px 22px;flex-shrink:0;
+    .ss-themes{
+      display:flex;align-items:center;justify-content:center;
+      flex-wrap:wrap;
+      gap:10px;padding:8px 16px 4px;flex-shrink:0;
     }
-    .ss-sec-btn{
-      flex:1;padding:11px 8px;border-radius:12px;
-      border:1px solid rgba(255,255,255,0.09);
-      background:rgba(255,255,255,0.03);
-      color:rgba(255,255,255,0.5);
+    .ss-theme-dot{
+      width:26px;height:26px;border-radius:50%;
+      border:2px solid transparent;
+      cursor:pointer;transition:all 150ms;flex-shrink:0;
+    }
+    .ss-theme-dot.active{border-color:#E8C547;transform:scale(1.2);box-shadow:0 0 0 3px rgba(232,197,71,0.25);}
+
+
+    .ss-selector-label{
+      font-size:0.55rem;font-weight:600;letter-spacing:2px;
+      text-transform:uppercase;color:#555360;
+      padding:0 16px 6px;flex-shrink:0;
+    }
+
+    .ss-size-row{
+      display:flex;gap:8px;padding:4px 16px 0;flex-shrink:0;
+    }
+    .ss-size-btn{
+      flex:1;padding:10px 6px;border-radius:10px;
+      border:1px solid rgba(255,255,255,0.07);
+      background:#161420;
+      color:#555360;
+      font-family:'Lora',serif;
+      font-size:0.58rem;font-weight:600;
+      text-align:center;cursor:pointer;transition:all 150ms;
+      display:flex;flex-direction:column;align-items:center;gap:6px;
+      min-height:52px;
+    }
+    .ss-size-btn:hover{border-color:rgba(255,255,255,0.12);color:#9A98A4;}
+    .ss-size-btn.ss-size-active,
+    .ss-size-btn[style*='E8C547']{
+      background:rgba(232,197,71,0.08);
+      border-color:rgba(232,197,71,0.28);
+      color:#E8C547;
+    }
+    .ss-size-thumb-s{width:20px;height:20px;border-radius:2px;background:currentColor;opacity:0.6;}
+    .ss-size-thumb-v{width:14px;height:22px;border-radius:2px;background:currentColor;opacity:0.6;}
+    .ss-size-thumb-w{width:26px;height:15px;border-radius:2px;background:currentColor;opacity:0.6;}
+
+    .ss-actions{
+      display:flex;gap:8px;padding:10px 16px 20px;flex-shrink:0;
+    }
+    .ss-action-btn{
+      flex:1;padding:11px 8px;
+      background:#161420;
+      border:1px solid rgba(255,255,255,0.07);
+      border-radius:10px;
+      color:#9A98A4;
       font-family:'Lora',serif;
       font-size:0.6rem;font-weight:600;
-      text-transform:uppercase;letter-spacing:1px;
-      cursor:pointer;transition:all 0.18s;
+      letter-spacing:0.5px;text-transform:uppercase;
+      cursor:pointer;transition:all 150ms;
       display:flex;flex-direction:column;align-items:center;gap:4px;
+      min-height:52px;justify-content:center;
     }
-    .ss-sec-btn:hover{
-      border-color:rgba(255,255,255,0.18);
-      background:rgba(255,255,255,0.06);color:#fff;
-    }
-    .ss-sec-btn:active{transform:scale(0.97)}
-    .ss-sec-btn-icon{font-size:1rem;line-height:1}
-    .ss-sec-btn.active-format{
-      border-color:rgba(232,197,71,0.42);
-      background:rgba(232,197,71,0.08);
+    .ss-action-btn:hover{
+      border-color:rgba(232,197,71,0.28);
       color:#E8C547;
+      background:rgba(232,197,71,0.06);
+    }
+    .ss-action-btn:active{transform:scale(0.97);}
+    .ss-action-icon{font-size:1rem;line-height:1;}
+
+    @keyframes ssPulseGlow{
+      0%,100%{box-shadow:none;border-color:rgba(255,255,255,0.07);}
+      50%{box-shadow:0 0 0 3px rgba(232,197,71,0.18),0 0 16px rgba(232,197,71,0.12);border-color:rgba(232,197,71,0.45);}
+    }
+    .ss-action-btn.ss-pulse{animation:ssPulseGlow 2.4s ease-in-out infinite;}
+
+    #ssSaveBtn:hover{
+      border-color:rgba(232,197,71,0.28);
+      color:#E8C547;
+      background:rgba(232,197,71,0.06);
     }
   `;
   document.head.appendChild(s);
@@ -279,26 +259,24 @@ function mountShareSheet() {
       <div class="ss-handle" id="ssDragHandle"></div>
       <div class="ss-header">
         <div class="ss-header-left">
-          <span class="ss-title" id="ssTitle">Share</span>
-          <span class="ss-lyric-preview" id="ssLyricPreview"></span>
-          <span class="ss-duet-badge" id="ssDuetBadge">
+          <a class="ss-logo-lockup" href="/" aria-label="Margo home">
+            <span class="margo-mark margo-mark--md">
+              <span class="logo-ring"></span>
+              <span class="logo-ring"></span>
+              <span class="logo-ring"></span>
+              <span class="logo-circle"><svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="40" cy="40" r="36" fill="#E8C547"/><path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/></svg></span>
+            </span>
+            <span class="ss-logo-wordmark">MARGO</span>
+          </a>
+          <span class="ss-duet-badge" id="ssDuetBadge" style="display:none">
             <span class="ss-duet-badge-dot"></span>LYRIC BACK
           </span>
         </div>
         <button class="ss-close" id="ssClose" aria-label="Close">×</button>
       </div>
 
-      <div class="ss-canvas-wrap">
-        <div class="ss-canvas-ring" id="ssCanvasRing">
-          <canvas id="ssCanvas"></canvas>
-          <div class="ss-encoding-overlay hidden" id="ssEncodingOverlay">
-            <span class="ss-encoding-label" id="ssEncodingLabel">Creating…</span>
-            <div class="ss-progress-bar-wrap">
-              <div class="ss-progress-bar" id="ssProgressBar"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div class="ss-context-msg" id="ssContextMsg" style="display:none"></div>
+      <div class="ss-lyric-strip" id="ssLyricStrip"></div>
 
       <div class="ss-themes" id="ssThemes">
         ${SS_THEMES.map((t, i) => `
@@ -306,57 +284,73 @@ function mountShareSheet() {
             class="ss-theme-dot${i === 0 ? ' active' : ''}"
             data-theme="${t.id}"
             style="background:radial-gradient(circle at 35% 35%,${t.color},${t.bg})"
-            aria-label="${t.id} theme"
+            aria-label="${t.label} theme"
+            title="${t.label}"
           ></button>
         `).join('')}
       </div>
 
-      <div class="ss-info-strip" id="ssInfoStrip"></div>
-
-      <button class="ss-save-btn" id="ssSaveBtn">
-        <span id="ssSaveBtnLabel">↓ Save GIF</span>
-      </button>
-      <div class="ss-copy-row hidden" id="ssCopyRow">
-        <button class="ss-copy-text-btn" id="ssCopyTextBtn">
-          <span>⎘ Copy Text</span>
+      <div class="ss-size-row" id="ssSizeRow">
+        <button class="ss-size-btn ss-size-active" data-size="square">
+          <div class="ss-size-thumb-s"></div>
+          <span>Square</span>
         </button>
-        <button class="ss-copy-text-btn" id="ssCopyTikTokBtn">
-          <span>⎘ Copy for TikTok</span>
+        <button class="ss-size-btn" data-size="vertical">
+          <div class="ss-size-thumb-v"></div>
+          <span>Vertical</span>
+        </button>
+        <button class="ss-size-btn" data-size="landscape">
+          <div class="ss-size-thumb-w"></div>
+          <span>Wide</span>
         </button>
       </div>
 
-      <div class="ss-secondary">
-        <button class="ss-sec-btn" id="ssBtnPoster">
-          <span class="ss-sec-btn-icon">◻</span>
-          <span>Poster</span>
+      <div class="ss-actions">
+        <button class="ss-action-btn" id="ssSaveBtn">
+          <span class="ss-action-icon">&#8595;</span>
+          <span>Save Card</span>
         </button>
-        <button class="ss-sec-btn" id="ssBtnShare">
-          <span class="ss-sec-btn-icon">↗</span>
-          <span>Share to…</span>
+        <button class="ss-action-btn" id="ssCopyTextBtn">
+          <span class="ss-action-icon">&#8696;</span>
+          <span>Copy Text</span>
         </button>
-        <button class="ss-sec-btn" id="ssBtnStudio">
-          <span class="ss-sec-btn-icon">✦</span>
-          <span>Studio</span>
-        </button>
-        <button class="ss-sec-btn" id="ssBtnText">
-          <span class="ss-sec-btn-icon">T</span>
-          <span>Text</span>
+        <button class="ss-action-btn" id="ssBtnShareLink">
+          <span class="ss-action-icon">&#8599;</span>
+          <span>Share Link</span>
         </button>
       </div>
     </div>
   `;
 
+
   document.body.appendChild(backdrop);
   SS.mounted = true;
 
   backdrop.querySelector('#ssClose').onclick     = closeShareSheet;
-  backdrop.querySelector('#ssSaveBtn').onclick   = ssSave;
-  backdrop.querySelector('#ssBtnPoster').onclick = ssTogglePoster;
-  backdrop.querySelector('#ssBtnShare').onclick  = ssShareTo;
-  backdrop.querySelector('#ssBtnStudio').onclick = ssOpenStudio;
-  backdrop.querySelector('#ssBtnText').onclick   = ssToggleText;
+  backdrop.querySelector('#ssSaveBtn').onclick    = ssSave;
   backdrop.querySelector('#ssCopyTextBtn').onclick = ssCopyText;
-  backdrop.querySelector('#ssCopyTikTokBtn').onclick = ssCopyTikTok;
+  backdrop.querySelector('#ssBtnShareLink').onclick = ssShareLink;
+
+  /* Pulse: stop on any action click — restarts on next openShareSheet */
+  ['ssSaveBtn','ssCopyTextBtn','ssBtnShareLink'].forEach(id => {
+    const btn = backdrop.querySelector('#' + id);
+    if (btn) btn.addEventListener('click', _stopPulse);
+  });
+  backdrop.querySelector('#ssSizeRow').addEventListener('click', e => {
+    const btn = e.target.closest('.ss-size-btn');
+    if (!btn) return;
+    if (SS.isEncoding) return;
+    SS.size = btn.dataset.size;
+    SS.posterBlob = null;
+    backdrop.querySelectorAll('.ss-size-btn').forEach(b => {
+      b.classList.remove('ss-size-active');
+      b.style.borderColor = '';
+      b.style.background  = '';
+      b.style.color       = '';
+    });
+    btn.classList.add('ss-size-active');
+    requestAnimationFrame(() => ssStartPreview());
+  });
 
   /* Theme dots */
   backdrop.querySelector('#ssThemes').addEventListener('click', e => {
@@ -407,64 +401,47 @@ function ssStopPreview() {
 }
 
 function ssStartPreview() {
-  ssStopPreview();
-  const canvas = document.getElementById('ssCanvas');
-  const post   = SS.post;
-  if (!canvas || !post) return;
-
-  const dpr  = Math.min(window.devicePixelRatio || 1, 2);
-  const size = _sizeCanvas(canvas, dpr);
-
-  if (SS.activeFormat === 'poster') {
-    document.fonts.ready.then(() => {
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-      if (SS.isDuet && SS.echoPost) {
-        if (typeof drawDuetPosterToCtx === 'function') {
-          drawDuetPosterToCtx(ctx, size, size);
-        }
-      } else {
-        const _draw = () => {
-          if (typeof window.drawPosterToCtx === 'function') {
-            try { window.drawPosterToCtx(ctx, size, size, post, { design: SS.theme || 'midnight-gold', font: 'lora' }); } catch(e) { console.error('[SS poster]', e); }
-          } else if (typeof window.drawPosterPreview === 'function') {
-            try { window.drawPosterPreview(ctx, size, size, post); } catch(e) { console.error('[SS poster]', e); }
-          } else {
-            setTimeout(_draw, 100);
-          }
-        };
-        _draw();
-      }
-    });
-    return;
-  }
-
-  /* Animated GIF preview */
-  let frame = 0, last = 0;
-  const delay = 70, frames = 24;
-  const loop = (ts) => {
-    if (ts - last >= delay) {
-      last = ts;
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-      window.currentPost = post;
-      if (SS.isDuet && SS.echoPost) {
-        if (typeof gsDrawDuetFrame === 'function') gsDrawDuetFrame(ctx, size, size, frame / frames);
-      } else {
-        if (typeof gsDrawFrame === 'function') gsDrawFrame(ctx, size, size, frame / frames, post);
-      }
-      frame = (frame + 1) % frames;
-    }
-    SS.animFrame = requestAnimationFrame(loop);
-  };
-  SS.animFrame = requestAnimationFrame(loop);
+  const strip = document.getElementById('ssLyricStrip');
+  if (!strip || !SS.post) return;
+  const lyric  = (SS.post.text || '').substring(0, 120);
+  const song   = SS.post.knowledge?.song || '';
+  const artist = SS.post.knowledge?.artist || '';
+  const meta   = [song, artist].filter(Boolean).join(' — ');
+  strip.innerHTML = `
+    <div class="ss-lyric-strip-text">"${lyric}${lyric.length >= 120 ? '…' : ''}"</div>
+    ${meta ? `<div class="ss-lyric-strip-meta"><span>${meta}</span></div>` : ''}
+  `;
 }
 
 /* ==========================================================
    OPEN / CLOSE
 ========================================================== */
+/* ── Pulse sequencer — module scope so open/close can control it ── */
+let _pulseIdx = 0, _pulseTimer = null;
+const _pulseBtns = () => [
+  document.getElementById('ssSaveBtn'),
+  document.getElementById('ssCopyTextBtn'),
+  document.getElementById('ssBtnShareLink')
+].filter(Boolean);
+
+function _startPulse() {
+  clearInterval(_pulseTimer);
+  _pulseIdx = 0;
+  _pulseBtns().forEach(b => b.classList.remove('ss-pulse'));
+  _pulseTimer = setInterval(() => {
+    const btns = _pulseBtns();
+    btns.forEach(b => b.classList.remove('ss-pulse'));
+    if (btns[_pulseIdx]) btns[_pulseIdx].classList.add('ss-pulse');
+    _pulseIdx = (_pulseIdx + 1) % btns.length;
+  }, 2400);
+}
+
+function _stopPulse() {
+  clearInterval(_pulseTimer);
+  _pulseTimer = null;
+  _pulseBtns().forEach(b => b.classList.remove('ss-pulse'));
+}
+
 function openShareSheet(post, opts = {}) {
   if (!post) return;
   mountShareSheet();
@@ -475,9 +452,31 @@ function openShareSheet(post, opts = {}) {
   SS.echoPost     = opts.echoPost || null;
   SS.gifBlob      = null;
   SS.posterBlob   = null;
-  SS.activeFormat = 'gif';
+  /* Reset size buttons */
+  setTimeout(() => {
+    const sizeRow = document.getElementById('ssSizeRow');
+    if (sizeRow) {
+      sizeRow.querySelectorAll('.ss-size-btn').forEach(b => {
+        const isSquare = b.dataset.size === 'square';
+        b.classList.toggle('ss-size-active', isSquare);
+        b.style.borderColor = isSquare ? 'rgba(232,197,71,0.28)' : '';
+        b.style.background  = isSquare ? 'rgba(232,197,71,0.08)' : '';
+        b.style.color       = isSquare ? '#E8C547' : '';
+      });
+    }
+  }, 0);
   SS.isEncoding   = false;
+  SS.activeFormat = 'poster';
+  SS.size         = 'square';
   SS.theme        = 'midnight-gold';
+  setTimeout(_startPulse, 800);
+  /* Context message */
+  const _ctxEl = document.getElementById('ssContextMsg');
+  if (_ctxEl) {
+    const _ctx = opts.context || '';
+    if (_ctx) { _ctxEl.textContent = _ctx; _ctxEl.style.display = 'block'; }
+    else { _ctxEl.style.display = 'none'; }
+  }
 
   /* Reset theme dots */
   document.querySelectorAll('.ss-theme-dot').forEach((d, i) => {
@@ -493,12 +492,8 @@ function openShareSheet(post, opts = {}) {
   }
 
   /* Reset buttons */
-  const _posterBtn = document.getElementById('ssBtnPoster');
-  const _posterSpan = _posterBtn ? _posterBtn.querySelector('span:last-child') : null;
-  if (_posterSpan) _posterSpan.textContent = 'Poster';
-  document.getElementById('ssBtnPoster')?.classList.remove('active-format');
   const lbl = document.getElementById('ssSaveBtnLabel');
-  if (lbl) lbl.textContent = '↓ Save GIF';
+  if (lbl) lbl.textContent = '↓ Save Card';
 
   /* Encoding overlay off */
   setSSEncoding(false);
@@ -534,6 +529,7 @@ function closeShareSheet() {
   const backdrop = document.getElementById('shareSheetBackdrop');
   const sheet    = document.getElementById('shareSheet');
   if (!backdrop || backdrop.classList.contains('ss-hidden')) return;
+  _stopPulse();
   sheet?.classList.add('ss-exit');
   document.body.classList.remove('modal-open');
   setTimeout(() => {
@@ -595,44 +591,6 @@ function populateSSDuetInfoStrip(post, echoPost) {
     <span class="ss-feeling-tag" style="background:${eE.bg};color:${eE.text};border:1px solid ${eE.border};flex-shrink:0;margin-left:4px">${echoPost.emotion||'Echo'}</span>
   `;
 }
-
-/* ==========================================================
-   FORMAT TOGGLE
-========================================================== */
-function ssTogglePoster() {
-  if (SS.isEncoding) return;
-  SS.activeFormat = SS.activeFormat === 'poster' ? 'gif' : 'poster';
-  SS.gifBlob    = null;
-  SS.posterBlob = null;
-
-  const btn = document.getElementById('ssBtnPoster');
-  const lbl = document.getElementById('ssSaveBtnLabel');
-  const btnSpan = btn ? btn.querySelector('span:last-child') : null;
-  if (btnSpan) btnSpan.textContent = SS.activeFormat === 'poster' ? 'GIF' : 'Poster';
-  if (btn) btn.classList.toggle('active-format', SS.activeFormat === 'poster');
-  if (lbl) lbl.textContent = SS.activeFormat === 'gif' ? '↓ Save GIF' : '↓ Save Poster';
-  const copyRow = document.getElementById('ssCopyRow');
-  if (copyRow) copyRow.classList.add('hidden');
-
-  ssStopPreview();
-  requestAnimationFrame(() => ssStartPreview());
-}
-function ssToggleText() {
-  if (SS.isEncoding) return;
-  SS.activeFormat = SS.activeFormat === 'text' ? 'gif' : 'text';
-  SS.gifBlob    = null;
-  SS.posterBlob = null;
-  const btn = document.getElementById('ssBtnText');
-  const lbl = document.getElementById('ssSaveBtnLabel');
-  if (btn) btn.classList.toggle('active-format', SS.activeFormat === 'text');
-  if (lbl) lbl.textContent = SS.activeFormat === 'text' ? '↓ Save Text Card' : '↓ Save GIF';
-  const copyRow = document.getElementById('ssCopyRow');
-  if (copyRow) copyRow.classList.toggle('hidden', SS.activeFormat !== 'text');
-  const posterBtn = document.getElementById('ssBtnPoster');
-  if (posterBtn) posterBtn.classList.remove('active-format');
-  ssStopPreview();
-  requestAnimationFrame(() => ssStartPreview());
-}
 /* ==========================================================
    ENCODING OVERLAY
 ========================================================== */
@@ -643,7 +601,7 @@ function setSSEncoding(on, label = '') {
   if (overlay) overlay.classList.toggle('hidden', !on);
   if (lbl && label) lbl.textContent = label;
   if (bar && !on) bar.style.width = '0%';
-  ['ssSaveBtn','ssBtnPoster','ssBtnShare','ssBtnStudio','ssBtnText'].forEach(id => {
+  ['ssSaveBtn','ssBtnShareLink'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = !!on;
   });
@@ -785,27 +743,34 @@ function ssSave() {
     }
     return;
   }
-  if (typeof window.PlatformPicker === 'undefined') {
-    console.error('[SS] PlatformPicker not loaded'); return;
-  }
+  // Direct download
   const theme = SS.theme || 'midnight-gold';
-  window.PlatformPicker.pick({
-    format: fmt,
-    view:   'card',
-    p1:     post,
-    p2:     null,
-    opts: {
-      drawFn: fmt === 'gif'
-        ? (ctx, W, H, t) => { if (typeof window.gsDrawFrame === 'function') window.gsDrawFrame(ctx, W, H, t, post); }
-        : (ctx, W, H)    => { if (typeof window.drawPosterToCtx === 'function') window.drawPosterToCtx(ctx, W, H, post, { design: theme, font: 'lora' }); },
-      design:  theme,
-      font: 'lora',
-      post:    post,
-      filename: (post?.knowledge?.song || 'Lyric').trim().substring(0, 40) + ' — MARGO',
-      onDone:  () => { if (typeof showToast === 'function') showToast(fmt === 'gif' ? 'GIF saved ✓' : 'Poster saved ✓'); ssStartPreview(); },
-      onError: () => { if (typeof showToast === 'function') showToast('Export failed'); ssStartPreview(); },
-    },
-  });
+  const isVertical  = SS.size === 'vertical';
+  const isLandscape = SS.size === 'landscape';
+  const W = isLandscape ? 1920 : 1080;
+  const H = isVertical  ? 1920 : (isLandscape ? 608 : 1080);
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const _doSave = () => {
+    try {
+      if (typeof window.drawPosterToCtx === 'function') {
+        window.drawPosterToCtx(ctx, W, H, post, { design: theme, font: 'lora' });
+      } else if (typeof window.drawPosterPreview === 'function') {
+        window.drawPosterPreview(ctx, W, H, post);
+      }
+      canvas.toBlob(blob => {
+        if (!blob) { if (typeof showToast === 'function') showToast('Export failed'); return; }
+        const filename = (post?.knowledge?.song || 'Lyric').trim().substring(0, 40) + ' — MARGO.png';
+        _downloadBlob(blob, filename);
+        if (typeof showToast === 'function') showToast('Card saved ✓');
+      }, 'image/png');
+    } catch(e) {
+      console.error('[SS save]', e);
+      if (typeof showToast === 'function') showToast('Export failed');
+    }
+  };
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(_doSave); } else { _doSave(); }
 }
 
 function ssCopyText() {
@@ -833,22 +798,68 @@ function ssCopyText() {
     if (typeof showToast === 'function') showToast('Copy failed — try again');
   });
 }
-function ssCopyTikTok() {
+function ssPopulateCopyPreview() {
   const post   = SS.post;
   const lyric  = post?.text || '';
   const song   = post?.knowledge?.song   || '';
   const artist = post?.knowledge?.artist || '';
-  const footer = '\n' + (song ? song.toUpperCase() : '') + (artist ? ' — ' + artist : '') + '\nMARGO · trymargo.com';
-  const wrapper = '❝  ❞';
-  const maxLyric = 150 - footer.length - wrapper.length - 1;
-  const trimmedLyric = lyric.length > maxLyric ? lyric.substring(0, maxLyric) + '…' : lyric;
-  const text = '❝ ' + trimmedLyric + ' ❞' + footer;
-  navigator.clipboard.writeText(text).then(() => {
-    if (typeof showToast === 'function') showToast('Copied for TikTok ✓');
-  }).catch(() => {
-    if (typeof showToast === 'function') showToast('Copy failed — try again');
-  });
+  const text = ['MARGO', '', '\u275d ' + lyric + ' \u275e', '', (song ? song.toUpperCase() : ''), (artist ? '\u2014 ' + artist : ''), '', 'trymargo.com'].filter(Boolean).join('\n');
+  const el = document.getElementById('ssCopyPreview');
+  if (el) el.textContent = text;
 }
+
+function ssPopulateLinkBox() {
+  const post = SS.post;
+  const url  = (post && post.id) ? 'https://trymargo.com/post/' + post.id : 'https://trymargo.com';
+  const el = document.getElementById('ssLinkUrl');
+  if (el) el.textContent = url;
+}
+
+function ssPopulateCopyPreview() {
+  const post   = SS.post;
+  const lyric  = post?.text || '';
+  const song   = post?.knowledge?.song   || '';
+  const artist = post?.knowledge?.artist || '';
+  const text = ['MARGO', '', '\u275d ' + lyric + ' \u275e', '', song ? song.toUpperCase() : '', artist ? '\u2014 ' + artist : '', '', 'trymargo.com'].filter(Boolean).join('\n');
+  const el = document.getElementById('ssCopyPreview');
+  if (el) el.textContent = text;
+}
+
+function ssPopulateLinkBox() {
+  const post = SS.post;
+  const url  = (post && post.id) ? 'https://trymargo.com/post/' + post.id : 'https://trymargo.com';
+  const el = document.getElementById('ssLinkUrl');
+  if (el) el.textContent = url;
+}
+
+function ssShareLink() {
+  const post = SS.post;
+  const url  = (post && post.id) ? 'https://trymargo.com/post/' + post.id : 'https://trymargo.com';
+  const lyric = (post?.text || '').substring(0, 60);
+  const shareText = '“' + lyric + '” — trymargo.com';
+  if (navigator.share) {
+    navigator.share({ title: 'MARGO', text: shareText, url }).catch(() => {});
+    return;
+  }
+  // Desktop fallback
+  const existing = document.getElementById('ssSharePopup');
+  if (existing) { existing.remove(); return; }
+  const popup = document.createElement('div');
+  popup.id = 'ssSharePopup';
+  popup.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:16px;z-index:99999;display:flex;flex-direction:column;gap:10px;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
+  const encoded = encodeURIComponent(url);
+  const encodedText = encodeURIComponent(shareText);
+  popup.innerHTML = `
+    <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Share via</div>
+    <a href="https://x.com/intent/tweet?url=${encoded}&text=${encodedText}" target="_blank" style="color:#fff;text-decoration:none;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.9rem;">𝕏 Twitter / X</a>
+    <a href="https://wa.me/?text=${encodedText}%20${encoded}" target="_blank" style="color:#fff;text-decoration:none;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.9rem;">&#x1F4AC; WhatsApp</a>
+    <a href="mailto:?subject=Lyric on MARGO&body=${encodedText}%0A%0A${encoded}" style="color:#fff;text-decoration:none;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px;font-size:0.9rem;">&#x2709;&#xFE0F; Email</a>
+    <button onclick="navigator.clipboard.writeText('${url}').then(()=>{document.getElementById('ssSharePopup').remove();typeof showToast==='function'&&showToast('Link copied ✓')})" style="color:#fff;background:rgba(232,197,71,0.15);border:1px solid rgba(232,197,71,0.3);border-radius:10px;padding:10px 14px;font-size:0.9rem;cursor:pointer;text-align:left;">&#x2698; Copy link</button>
+    <button onclick="document.getElementById('ssSharePopup').remove()" style="color:rgba(255,255,255,0.4);background:none;border:none;padding:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>
+  `;
+  document.body.appendChild(popup);
+}
+
 function _downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
@@ -865,13 +876,12 @@ async function ssShareTo() {
   if (SS.isEncoding) return;
 
   /* Generate blob if not cached */
-  if (SS.activeFormat === 'poster' && !SS.posterBlob) await ssGeneratePoster();
-  if (SS.activeFormat === 'gif'    && !SS.gifBlob)    await ssGenerateGif();
+  if (!SS.posterBlob) await ssGeneratePoster();
 
-  const blob     = SS.activeFormat === 'poster' ? SS.posterBlob : SS.gifBlob;
-  const isGif    = SS.activeFormat === 'gif';
-  const ext      = isGif ? 'gif' : 'png';
-  const mime     = isGif ? 'image/gif' : 'image/png';
+
+  const blob     = SS.posterBlob;
+  const ext      = 'png';
+  const mime     = 'image/png';
   const fileName = _songFilename(SS.post, ext);
   const lyric    = SS.post?.text?.substring(0, 60) || '';
   const shareText = `"${lyric}" — trymargo.com`;
@@ -898,7 +908,7 @@ async function ssShareTo() {
   /* Tier 3 — no Web Share API support — open PlatformPicker */
   if (blob && typeof window.PlatformPicker?.pick === 'function') {
     window.PlatformPicker.pick({
-      format: isGif ? 'gif' : 'poster',
+      format: 'poster',
       blob,
       post: SS.post,
     });
@@ -917,18 +927,23 @@ async function ssShareTo() {
 ========================================================== */
 async function ssGeneratePoster() {
   if (SS.posterBlob) return;
+  if (SS.isEncoding) return;
   SS.isEncoding = true;
-  setSSEncoding(true, 'Generating poster…');
+  setSSEncoding(true, 'Generating…');
   try {
+    const _isV = SS.size === 'vertical';
+    const _isL = SS.size === 'landscape';
+    const PW   = _isL ? 1920 : 1080;
+    const PH   = _isV ? 1920 : (_isL ? 608 : 1080);
     const off = document.createElement('canvas');
-    off.width = 1080; off.height = 1080;
+    off.width = PW; off.height = PH;
     const ctx = off.getContext('2d');
     await document.fonts.ready;
     if (SS.isDuet && SS.echoPost) {
-      if (typeof drawDuetPosterToCtx === 'function') drawDuetPosterToCtx(ctx, 1080, 1080);
+      if (typeof drawDuetPosterToCtx === 'function') drawDuetPosterToCtx(ctx, PW, PH);
     } else {
       if (typeof window.drawPosterToCtx === 'function') {
-        window.drawPosterToCtx(ctx, 1080, 1080, SS.post, { design: SS.theme || 'midnight-gold', font: 'lora' });
+        window.drawPosterToCtx(ctx, PW, PH, SS.post, { design: SS.theme || 'midnight-gold', font: 'lora' });
       }
     }
     SS.posterBlob = await new Promise((res, rej) => {

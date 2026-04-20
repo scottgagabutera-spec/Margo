@@ -184,3 +184,75 @@ Canvas exports (GIF, poster) use brand.js — cannot use SVG sprites.
 - [ ] Replace 3 duplicate inline SVGs in index.html with `<use href=...>`
 - [ ] Remove stray fix_brand_*.js files from repo root
 - [ ] Add margo-brand.svg to /assets/brand/
+---
+
+## 13. Button System
+
+Every button in Margo belongs to one of six tiers.
+Font is always Lora. Colors are always CSS variables. Never hardcode hex. Never use Space Mono.
+
+### Tier 1 — Primary CTA
+One per screen. The unmissable action. (SAVE CARD, DROP IT, + SHARE A LYRIC)
+- Background: var(--gold)
+- Color: #07060A
+- Font: Lora 700, 0.7rem, uppercase, letter-spacing 1px
+- Padding: 14px 24px — Border-radius: 12px — Min-height: 52px
+- Hover: var(--gold-warm), scale(1.01) — Active: var(--gold-2), scale(0.98)
+- Never more than one on screen at a time
+
+### Tier 2 — Secondary Action
+Supporting actions alongside a Primary CTA. (COPY TEXT, SHARE LINK, Save)
+- Background: var(--surface-2) — Color: var(--text-2)
+- Border: 1px solid var(--border)
+- Font: Lora 600, 0.6rem, uppercase, letter-spacing 0.5px
+- Padding: 11px 16px — Border-radius: 10px — Min-height: 52px
+- Hover: border var(--gold-border), color var(--gold)
+- Active: scale(0.97)
+
+### Tier 3 — Inline Feed Action (pill)
+Small actions on post cards. Never the hero. (RESONATE, LYRIC BACK, CARD)
+- Background: rgba(255,255,255,0.05) — Color: var(--text-2)
+- Border: 1px solid rgba(255,255,255,0.10)
+- Font: Lora 600, 0.6rem, uppercase, letter-spacing 1px
+- Padding: 6px 14px — Border-radius: 50px — Min-height: 28px visual, 44px touch
+- Hover: border var(--gold-border), color var(--gold)
+- Active/resonated: background var(--gold-faint), border var(--gold-border), color var(--gold)
+
+### Tier 4 — Selector/Toggle
+Pick one from a set. Always in a row. (Square/Vertical/Wide, themes, Motion/Color)
+- Default: background var(--surface-2), color var(--text-3), border var(--border)
+- Active: background var(--gold-faint), border var(--gold-border), color var(--gold)
+- Font: Lora 600, 0.58rem — Border-radius: 10px — Transition: all 150ms
+
+### Tier 5 — Ghost/Dismiss
+Never competes with content. Always top-right. (× close, Cancel)
+- Background: rgba(255,255,255,0.05) — Color: var(--text-3)
+- Border: 1px solid var(--border)
+- Size: 32×32px visual, border-radius 50%
+- Font: 1.1rem for × symbol only
+- Hover: background rgba(255,255,255,0.10), color var(--text)
+- Touch target: 44×44px via padding — never smaller
+
+### Tier 6 — Pulse CTA Hint
+Cycles gold glow across Tier 2 buttons to guide first interaction.
+- Animation: 2.4s ease-in-out infinite, box-shadow gold glow
+- Stops on first click — restarts on new post/session open
+- Never on Tier 1 (already gold) — Never on Tier 5 (dismiss must never be highlighted)
+
+### Rules for ALL tiers
+- Font: Lora only — never Space Mono, never system font
+- Colors: CSS variables only — never hardcoded hex
+- Touch target: minimum 44×44px always
+- Transition: all 150ms ease
+- Text: uppercase, letter-spacing minimum 0.5px
+- Animate only transform and opacity — never width/height/top/left
+
+### Tech debt — Space Mono cleanup
+Space Mono violates brand rules and must be replaced with Lora across:
+- js/ui/resonate.js (partially fixed April 2026)
+- js/ui/feed/styles.js
+- js/core/username.js
+- js/features/echoes.js
+- js/features/duet-mode.js
+- js/media/gif/renderer.js
+Do in a dedicated branch: feature/spacemono-cleanup
