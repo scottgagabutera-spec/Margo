@@ -64,9 +64,9 @@ function injectResonateStyles() {
       flex: 1;
       display: flex; align-items: center; justify-content: center; gap: 5px;
       padding: 7px 12px; border-radius: 50px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.10);
-      color: var(--text-2);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: var(--text);
       font-family: 'Lora', serif;
       font-size: 0.6rem; font-weight: 600;
       text-transform: uppercase; letter-spacing: 1px;
@@ -88,9 +88,9 @@ function injectResonateStyles() {
     .card-share-btn {
       display: flex; align-items: center; gap: 4px;
       padding: 7px 14px; border-radius: 50px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.10);
-      color: var(--text-2);
+      background: var(--gold-faint);
+      border: 1px solid var(--gold-border);
+      color: var(--gold);
       font-family: 'Lora', serif;
       font-size: 0.6rem; font-weight: 600;
       text-transform: uppercase; letter-spacing: 1px;
