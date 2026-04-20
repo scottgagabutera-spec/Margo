@@ -39,15 +39,15 @@ function injectResonateStyles() {
       border-color: rgba(192,132,252,0.5);
     }
     .card-resonate-btn.resonated {
-      background: rgba(192,132,252,0.18);
-      border-color: rgba(192,132,252,0.55);
-      color: #C084FC;
+      background: var(--gold-faint);
+      border-color: var(--gold-border);
+      color: var(--gold);
     }
     .card-resonate-btn:active { opacity: 0.75; }
     .r-icon { font-size: 0.82rem; line-height: 1; transition: transform 0.2s; }
     .card-resonate-btn.resonated .r-icon { transform: scale(1.3) rotate(20deg); }
     .r-count {
-      color: #00E5FF; font-size: 0.62rem;
+      color: var(--gold); font-size: 0.62rem;
       font-family: 'Lora', serif; font-weight: 700;
     }
     @keyframes rBurst {
@@ -63,20 +63,21 @@ function injectResonateStyles() {
     .card-lyric-back-btn {
       flex: 1;
       display: flex; align-items: center; justify-content: center; gap: 5px;
-      padding: 7px 8px; border-radius: 50px;
-      background: rgba(232,197,71,0.06);
-      border: 1px solid rgba(232,197,71,0.2);
-      color: rgba(232,197,71,0.85);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.68rem; font-weight: 600;
-      cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+      padding: 7px 12px; border-radius: 50px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: var(--text-2);
+      font-family: 'Lora', serif;
+      font-size: 0.6rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px;
+      cursor: pointer; transition: all 150ms;
       white-space: nowrap; text-align: center;
       -webkit-tap-highlight-color: transparent;
     }
     .card-lyric-back-btn:hover {
-      background: rgba(232,197,71,0.13);
-      border-color: rgba(232,197,71,0.45);
-      color: #E8C547;
+      background: var(--gold-faint);
+      border-color: var(--gold-border);
+      color: var(--gold);
     }
     .card-lyric-back-btn:active { opacity: 0.75; }
     .lyric-back-count {
@@ -86,21 +87,21 @@ function injectResonateStyles() {
 
     .card-share-btn {
       display: flex; align-items: center; gap: 4px;
-      padding: 7px 12px; border-radius: 50px;
-      background: rgba(232,197,71,0.08);
-      border: 1px solid rgba(232,197,71,0.28);
-      color: rgba(232,197,71,0.9);
+      padding: 7px 14px; border-radius: 50px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: var(--text-2);
       font-family: 'Lora', serif;
-      font-size: 0.48rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.8px;
-      cursor: pointer; transition: background 0.15s, border-color 0.15s;
+      font-size: 0.6rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px;
+      cursor: pointer; transition: all 150ms;
       white-space: nowrap; flex-shrink: 0;
       -webkit-tap-highlight-color: transparent;
     }
     .card-share-btn:hover {
-      background: rgba(232,197,71,0.16);
-      border-color: rgba(232,197,71,0.5);
-      box-shadow: 0 0 16px rgba(232,197,71,0.15);
+      background: var(--gold-faint);
+      border-color: var(--gold-border);
+      color: var(--gold);
     }
     .card-share-btn:active { opacity: 0.75; }
     .card-share-dot { opacity: 0.4; margin: 0 1px; }

@@ -136,15 +136,7 @@ function injectShareSheetStyles() {
       width:5px;height:5px;border-radius:50%;
       background:#E8C547;opacity:0.8;
     }
-    .ss-close{
-      background:rgba(255,255,255,0.05);
-      border:1px solid rgba(255,255,255,0.07);
-      color:#9A98A4;
-      width:32px;height:32px;border-radius:50%;
-      font-size:1.1rem;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-      transition:all 150ms;flex-shrink:0;
-    }
+    .ss-close{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text-3);width:32px;height:32px;min-width:44px;min-height:44px;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 150ms;flex-shrink:0;padding:0;}
     .ss-close:hover{background:rgba(255,255,255,0.1);color:#F4F1ED;}
 
     .ss-lyric-strip{
