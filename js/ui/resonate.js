@@ -238,7 +238,7 @@ function buildCardActionsV2(post, postIdx) {
   // GIF · Poster
   const shareBtn = document.createElement('button');
   shareBtn.className = 'card-share-btn';
-  shareBtn.innerHTML = `GIF <span class="card-share-dot">·</span> Poster`;
+  shareBtn.innerHTML = `CARD`;
   shareBtn.onclick = (e) => {
     e.stopPropagation();
     window.currentPost = post;

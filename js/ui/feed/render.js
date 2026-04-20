@@ -58,7 +58,7 @@ function buildSwipeCard(post, i) {
       </button>
       <button class="action-seg share-seg" data-id="${post.id}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L4 11 L8 15 L12 8 L16 15 L20 11 L20 17"/><path d="M12 3 L12 8" stroke-width="1.5"/><path d="M9 6 L12 3 L15 6" stroke-width="1.5"/></svg>
-        <div class="share-label">GIF<span class="share-dot"> &middot; </span>Poster</div>
+        <div class="share-label">CARD</div>
       </button>
     </div>`;
 
