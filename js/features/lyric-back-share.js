@@ -36,7 +36,7 @@
       border-radius: 24px 24px 0 0;
       overflow: hidden;
       animation: lbSheetUp 380ms cubic-bezier(0.16,1,0.3,1);
-      max-height: 92dvh;
+      max-height: 92dvh; min-height: 70dvh; display: flex; flex-direction: column;
       overflow-y: auto;
       font-family: 'Lora', serif;
       color: var(--text);
