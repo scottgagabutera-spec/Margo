@@ -86,7 +86,7 @@ function injectShareSheetStyles() {
       border:1px solid rgba(255,255,255,0.07);
       border-bottom:none;border-radius:24px 24px 0 0;
       overflow:hidden;display:flex;flex-direction:column;
-      max-height:92dvh;
+      max-height:92dvh;min-height:70dvh;display:flex;flex-direction:column;
       animation:ssSlideUp 380ms cubic-bezier(0.16,1,0.3,1);
       font-family:'Lora',serif;
       color:#F4F1ED;
