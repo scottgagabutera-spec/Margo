@@ -1,121 +1,112 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang='en'>
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta charset='UTF-8'/>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'/>
   <title>Terms — Margo</title>
-  <meta name="description" content="Margo's terms of use. Clear language, no legal drama."/>
-  <meta property="og:type"        content="website"/>
-  <meta property="og:site_name"   content="MARGO"/>
-  <meta property="og:title"       content="Terms — Margo"/>
-  <meta property="og:description" content="Margo's terms of use. Clear language, no legal drama."/>
-  <meta property="og:url"         content="https://trymargo.com/terms"/>
-  <meta property="og:image"       content="https://trymargo.com/og-image.png"/>
-  <meta name="twitter:card"       content="summary_large_image"/>
-  <meta name="twitter:title"      content="Terms — Margo"/>
-  <meta name="twitter:description" content="Margo's terms of use. Clear language, no legal drama."/>
-  <meta name="twitter:image"      content="https://trymargo.com/og-image.png"/>
-  <link rel="canonical" href="https://trymargo.com/terms"/>
-  <link rel="icon" href="/favicons/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="/favicons/favicon.ico" sizes="32x32">
-  <link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&family=DM+Serif+Display:ital@0;1&family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css"/>
+  <meta name='description' content='Margo terms of use. Clear language, no legal drama.'/>
+  <meta property='og:type' content='website'/>
+  <meta property='og:site_name' content='MARGO'/>
+  <meta property='og:title' content='Terms — Margo'/>
+  <meta property='og:url' content='https://trymargo.com/terms'/>
+  <meta property='og:image' content='https://trymargo.com/og-image.png'/>
+  <link rel='canonical' href='https://trymargo.com/terms'/>
+  <link rel='icon' href='/favicons/favicon.svg' type='image/svg+xml'>
+  <link rel='icon' href='/favicons/favicon.ico' sizes='32x32'>
+  <link rel='apple-touch-icon' href='/favicons/apple-touch-icon.png'>
+  <link rel='preconnect' href='https://fonts.googleapis.com'>
+  <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
+  <link href='https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Syne:wght@800&display=swap' rel='stylesheet'>
   <style>
-    body { background:#0B0B0D;color:#F0F0F0;margin:0; }
-    .legal-wrap { max-width:680px;margin:0 auto;padding:80px 24px 120px; }
-    .legal-nav { display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid rgba(232,197,71,0.1);position:sticky;top:0;background:rgba(11,11,13,0.92);backdrop-filter:blur(16px);z-index:100; }
-    .legal-nav-logo { font-family:'Syne',sans-serif;font-weight:800;font-size:0.9rem;letter-spacing:3px;color:#E8C547;text-decoration:none;text-transform:uppercase; }
-    .legal-nav-back { font-family:'Space Mono',monospace;font-size:0.6rem;color:rgba(255,255,255,0.4);text-decoration:none;letter-spacing:1px;text-transform:uppercase;transition:color 0.18s; }
-    .legal-nav-back:hover { color:#E8C547; }
-    .legal-eyebrow { font-family:'Space Mono',monospace;font-size:0.58rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#E8C547;margin-bottom:16px; }
-    .legal-title { font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3.2rem);color:#F0F0F0;line-height:1.15;margin-bottom:12px; }
-    .legal-date { font-family:'Space Mono',monospace;font-size:0.55rem;color:rgba(255,255,255,0.25);letter-spacing:1px;text-transform:uppercase;margin-bottom:32px; }
-    .legal-body { font-family:'DM Sans',sans-serif;font-size:1rem;line-height:1.75;color:rgba(240,240,240,0.72); }
-    .legal-body p { margin-bottom:1.4em; }
-    .legal-body h2 { font-family:'DM Serif Display',serif;font-size:1.2rem;color:#F0F0F0;margin:2.4em 0 0.8em;font-style:italic; }
-    .legal-body ul { padding-left:20px;margin-bottom:1.4em; }
-    .legal-body ul li { margin-bottom:0.5em; }
-    .legal-body strong { color:rgba(240,240,240,0.9);font-weight:600; }
-    .legal-body a { color:#E8C547;text-decoration:none; }
-    .legal-body a:hover { text-decoration:underline; }
-    .legal-divider { width:48px;height:2px;background:linear-gradient(90deg,#E8C547,transparent);margin:32px 0;border:none; }
-    .legal-footer-links { display:flex;gap:24px;flex-wrap:wrap;margin-top:64px;padding-top:32px;border-top:1px solid rgba(255,255,255,0.06); }
-    .legal-footer-links a { font-family:'Space Mono',monospace;font-size:0.58rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.3);text-decoration:none;transition:color 0.18s; }
-    .legal-footer-links a:hover { color:#E8C547; }
-    .ambient { position:fixed;pointer-events:none;z-index:-1;border-radius:50%;filter:blur(80px);opacity:0.06; }
-    .ambient-1 { width:500px;height:500px;background:#E8C547;top:-100px;right:-100px; }
-    .ambient-2 { width:400px;height:400px;background:#6B4EFF;bottom:-100px;left:-100px; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #07060A; color: #F4F1ED; margin: 0; font-family: 'Lora', serif; -webkit-font-smoothing: antialiased; }
+    .ambient { position: fixed; pointer-events: none; z-index: 0; border-radius: 50%; filter: blur(80px); opacity: 0.06; }
+    .ambient-1 { width: 500px; height: 500px; background: #E8C547; top: -100px; right: -100px; }
+    .ambient-2 { width: 400px; height: 400px; background: #6B4EFF; bottom: -100px; left: -100px; }
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid rgba(232,197,71,0.1); position: sticky; top: 0; background: rgba(7,6,10,0.92); backdrop-filter: blur(16px); z-index: 100; }
+    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.9rem; letter-spacing: 3px; color: #E8C547; text-decoration: none; text-transform: uppercase; }
+    .nav-back { font-family: 'Lora', serif; font-size: 0.7rem; color: rgba(255,255,255,0.4); text-decoration: none; letter-spacing: 1px; text-transform: uppercase; transition: color 0.18s; }
+    .nav-back:hover { color: #E8C547; }
+    .wrap { max-width: 680px; margin: 0 auto; padding: 64px 24px 120px; position: relative; z-index: 1; }
+    .eyebrow { font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #E8C547; margin-bottom: 16px; }
+    h1 { font-family: 'Lora', serif; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; color: #F4F1ED; line-height: 1.15; margin-bottom: 12px; }
+    .date { font-family: 'Lora', serif; font-size: 0.6rem; color: rgba(255,255,255,0.25); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 32px; }
+    .divider { width: 48px; height: 2px; background: linear-gradient(90deg, #E8C547, transparent); margin: 32px 0; border: none; }
+    .body { font-family: 'Lora', serif; font-size: 0.95rem; line-height: 1.75; color: rgba(244,241,237,0.72); }
+    .body p { margin-bottom: 1.4em; }
+    .body h2 { font-family: 'Lora', serif; font-size: 1.15rem; font-weight: 600; font-style: italic; color: #F4F1ED; margin: 2.4em 0 0.8em; }
+    .body ul { padding-left: 20px; margin-bottom: 1.4em; }
+    .body ul li { margin-bottom: 0.5em; }
+    .body strong { color: rgba(244,241,237,0.9); font-weight: 600; }
+    .body a { color: #E8C547; text-decoration: none; }
+    .body a:hover { text-decoration: underline; }
+    .footer-links { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 64px; padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .footer-links a { font-family: 'Lora', serif; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); text-decoration: none; transition: color 0.18s; }
+    .footer-links a:hover { color: #E8C547; }
   </style>
 </head>
 <body>
-<div class="ambient ambient-1"></div>
-<div class="ambient ambient-2"></div>
-<nav class="legal-nav">
-  <a href="/" class="legal-nav-logo">Margo</a>
-  <a href="/" class="legal-nav-back">← Back to Margo</a>
+<div class='ambient ambient-1'></div>
+<div class='ambient ambient-2'></div>
+<nav>
+  <a href='/' class='nav-logo'>Margo</a>
+  <a href='/' class='nav-back'>← Back</a>
 </nav>
-<div class="legal-wrap">
-  <div class="legal-eyebrow">Terms of Use</div>
-  <h1 class="legal-title">Clear rules.<br/>No surprises.</h1>
-  <div class="legal-date" id="page-date">Effective: January 2025</div>
-  <hr class="legal-divider"/>
-  <div class="legal-body" id="page-content">
-    <p>By using Margo, you agree to these terms. They're written to be readable — not to trap you.</p>
+<div class='wrap'>
+  <div class='eyebrow'>Terms of Use</div>
+  <h1>Clear rules.<br/>No surprises.</h1>
+  <div class='date'>Effective: April 2026</div>
+  <hr class='divider'/>
+  <div class='body'>
+    <p>By using Margo, you agree to these terms. They are written to be readable — not to trap you.</p>
+
     <h2>What Margo is</h2>
-    <p>Margo is a social expression platform. Users post short lyric-inspired moments to share how they feel. Margo does not host full songs or store copyrighted music content.</p>
-    <p>Song information on Margo comes from metadata provided by licensed third-party platforms. Streaming always happens on official services — Spotify, Apple Music, YouTube, and others.</p>
+    <p>Margo is a music-first social expression platform. People communicate through song lyrics — sharing feelings, moments, and culture through the lines that say what words alone cannot.</p>
+    <p>Margo does not host full songs or store copyrighted music recordings. Song information displayed on Margo comes from metadata provided by licensed third-party platforms. Streaming always happens on official licensed services — Spotify, Apple Music, YouTube, and others.</p>
+
     <h2>What you post</h2>
-    <p>You are responsible for the content you submit to Margo.</p>
-    <p>By posting, you confirm that your content:</p>
+    <p>You are responsible for the content you submit to Margo. No account is required to post, but by posting you confirm that your content:</p>
     <ul>
       <li>Does not violate copyright or anyone else's rights</li>
-      <li>Does not contain unlawful, abusive, or harmful material</li>
-      <li>Is not spam, misinformation, or impersonation</li>
+      <li>Does not contain unlawful, abusive, threatening, or harmful material</li>
+      <li>Is not spam, deliberate misinformation, or impersonation</li>
+      <li>Does not violate the rights or dignity of any person or group</li>
     </ul>
-    <p>You keep ownership of anything you post. You give Margo permission to display it within the platform.</p>
-    <p><strong>Margo reserves the right to remove any content at its discretion.</strong></p>
+    <p>You keep ownership of anything you post. By posting, you give Margo a non-exclusive, royalty-free licence to display your content within the platform. This does not affect your ownership in any way.</p>
+    <p><strong>Margo reserves the right to remove any content at its discretion, without notice.</strong></p>
+
     <h2>Lyrics and copyright</h2>
-    <p>Margo does not claim ownership of any song lyrics, recordings, or third-party intellectual property.</p>
-    <p>Short lyric excerpts shared for expressive, social purposes generally fall within fair use principles — but you are responsible for what you post.</p>
-    <p>If you are a rights holder and believe content on Margo infringes your rights, contact us at <a href="mailto:contact@trymargo.com">contact@trymargo.com</a> and we will review and act promptly.</p>
+    <p>Margo does not claim ownership of any song lyrics, recordings, or third-party intellectual property displayed on the platform.</p>
+    <p>Short lyric excerpts shared for personal, expressive, and social purposes are consistent with fair use and fair dealing principles in many jurisdictions. However, you are solely responsible for the content you post. Margo is not liable for user-generated content that may infringe third-party rights.</p>
+    <p>If you are a rights holder and believe content on Margo infringes your rights, contact us at <a href='mailto:contact@trymargo.com'>contact@trymargo.com</a> and we will review and act promptly.</p>
+
+    <h2>Original music</h2>
+    <p>Margo creates and publishes original music owned entirely by Margo. This music is commercially licensed and distributed across major streaming platforms. All rights are reserved. You may not reproduce, redistribute, or claim ownership of any original Margo music without explicit written permission.</p>
+
+    <h2>Anonymous usernames</h2>
+    <p>Margo assigns you a randomly generated username when you post. You do not choose your username. This system is designed to keep the focus on the lyric and the feeling — not on identity or follower counts. Margo reserves the right to retire or reassign usernames at any time.</p>
+
     <h2>Third-party platforms</h2>
-    <p>Margo links out to streaming services operated by third parties. We are not responsible for their content, availability, or policies. Your use of those services is governed by their own terms.</p>
+    <p>Margo links to streaming services and platforms operated by third parties. We are not responsible for their content, availability, pricing, or policies. Your use of those services is governed entirely by their own terms.</p>
+
     <h2>Platform changes</h2>
-    <p>Margo is evolving. Features, integrations, and these terms may change over time. We'll let users know when something significant changes.</p>
+    <p>Margo is evolving. Features, integrations, and these terms may change over time. When something significant changes, we will update the effective date of this document. Continued use of Margo after changes constitutes acceptance of the updated terms.</p>
+
     <h2>Limitation of liability</h2>
-    <p>Margo is provided as-is. To the extent permitted by applicable law, Margo is not liable for user-generated content, third-party services, or any indirect damages arising from use of the platform.</p>
-    <h2>Questions</h2>
-    <p>Reach us at <a href="mailto:contact@trymargo.com">contact@trymargo.com</a></p>
+    <p>Margo is provided as-is. To the fullest extent permitted by applicable law, Margo is not liable for user-generated content, third-party services, service interruptions, data loss, or any indirect or consequential damages arising from use of the platform.</p>
+
+    <h2>Governing law</h2>
+    <p>These terms are governed by applicable law. If any provision of these terms is found unenforceable, the remaining provisions continue in full force.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about these terms? Reach us at <a href='mailto:contact@trymargo.com'>contact@trymargo.com</a></p>
   </div>
-  <div class="legal-footer-links">
-    <a href="/about">About</a>
-    <a href="/privacy">Privacy</a>
-    <a href="/terms">Terms</a>
-    <a href="/contact">Contact</a>
+  <div class='footer-links'>
+    <a href='/about'>About</a>
+    <a href='/privacy'>Privacy</a>
+    <a href='/terms'>Terms</a>
+    <a href='/contact'>Contact</a>
   </div>
 </div>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-<script>
-  try {
-    firebase.initializeApp({
-      apiKey:'AIzaSyA1AuUethACF_9aBqbOONjra7X5NbGnfZM',
-      authDomain:'margo-f6da4.firebaseapp.com',
-      databaseURL:'https://margo-f6da4-default-rtdb.firebaseio.com',
-      projectId:'margo-f6da4',storageBucket:'margo-f6da4.firebasestorage.app',
-      messagingSenderId:'150183564620',appId:'1:150183564620:web:a42de7fef39740b551ebe9'
-    });
-    firebase.database().ref('pages/terms').once('value').then(snap => {
-      const data = snap.val();
-      if (data && data.content && data.content.trim().length > 20) {
-        document.getElementById('page-content').innerHTML = data.content;
-        if (data.date) document.getElementById('page-date').textContent = 'Effective: ' + data.date;
-      }
-    }).catch(() => {});
-  } catch(e) {}
-</script>
 </body>
 </html>
