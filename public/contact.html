@@ -55,7 +55,7 @@
     .footer-links a:hover { color: var(--gold); }
   </style>
 </head>
-<body>
+<body data-page="contact">
 <div class='ambient ambient-1'></div>
 <div class='ambient ambient-2'></div>
 <nav>
@@ -95,5 +95,27 @@
     <a href='/contact'>Contact</a>
   </div>
 </div>
+<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'></script>
+<script src='https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js'></script>
+<script>
+(async function() {
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) return;
+    const cfg = await res.json();
+    firebase.initializeApp(cfg);
+    const db = firebase.database();
+    const PAGE = document.body.dataset.page;
+    db.ref('pages/' + PAGE).once('value').then(snap => {
+      const data = snap.val();
+      if (!data) return;
+      const content = typeof data === 'string' ? data : (data.content || '');
+      if (!content) return;
+      const bodyEl = document.querySelector('.body');
+      if (bodyEl) bodyEl.innerHTML = content;
+    });
+  } catch(e) {}
+})();
+</script>
 </body>
 </html>
