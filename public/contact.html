@@ -1,183 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang='en'>
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta charset='UTF-8'/>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'/>
   <title>Contact — Margo</title>
-  <meta name="description" content="Get in touch with Margo."/>
-  <meta property="og:type"        content="website"/>
-  <meta property="og:site_name"   content="MARGO"/>
-  <meta property="og:title"       content="Contact — Margo"/>
-  <meta property="og:description" content="Get in touch with Margo."/>
-  <meta property="og:url"         content="https://trymargo.com/contact"/>
-  <meta property="og:image"       content="https://trymargo.com/og-image.png"/>
-  <meta name="twitter:card"       content="summary_large_image"/>
-  <meta name="twitter:title"      content="Contact — Margo"/>
-  <meta name="twitter:description" content="Get in touch with Margo."/>
-  <meta name="twitter:image"      content="https://trymargo.com/og-image.png"/>
-  <link rel="canonical" href="https://trymargo.com/contact"/>
-  <link rel="icon" href="/favicons/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="/favicons/favicon.ico" sizes="32x32">
-  <link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&family=DM+Serif+Display:ital@0;1&family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css"/>
+  <meta name='description' content='Get in touch with Margo.'/>
+  <meta property='og:type' content='website'/>
+  <meta property='og:site_name' content='MARGO'/>
+  <meta property='og:title' content='Contact — Margo'/>
+  <meta property='og:url' content='https://trymargo.com/contact'/>
+  <meta property='og:image' content='https://trymargo.com/og-image.png'/>
+  <link rel='canonical' href='https://trymargo.com/contact'/>
+  <link rel='icon' href='/favicons/favicon.svg' type='image/svg+xml'>
+  <link rel='icon' href='/favicons/favicon.ico' sizes='32x32'>
+  <link rel='apple-touch-icon' href='/favicons/apple-touch-icon.png'>
+  <link rel='preconnect' href='https://fonts.googleapis.com'>
+  <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
+  <link href='https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Syne:wght@800&display=swap' rel='stylesheet'>
   <style>
-    .legal-wrap {
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 80px 24px 120px;
-    }
-    .legal-nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 24px;
-      border-bottom: 1px solid rgba(232,197,71,0.1);
-      position: sticky;
-      top: 0;
-      background: rgba(11,11,13,0.92);
-      backdrop-filter: blur(16px);
-      z-index: 100;
-    }
-    .legal-nav-logo {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: 0.9rem;
-      letter-spacing: 3px;
-      color: #E8C547;
-      text-decoration: none;
-      text-transform: uppercase;
-    }
-    .legal-nav-back {
-      font-family: 'Space Mono', monospace;
-      font-size: 0.6rem;
-      color: rgba(255,255,255,0.4);
-      text-decoration: none;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      transition: color 0.18s;
-    }
-    .legal-nav-back:hover { color: #E8C547; }
-    .legal-eyebrow {
-      font-family: 'Space Mono', monospace;
-      font-size: 0.58rem;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #E8C547;
-      margin-bottom: 16px;
-    }
-    .legal-title {
-      font-family: 'DM Serif Display', serif;
-      font-size: clamp(2rem, 5vw, 3.2rem);
-      color: #F0F0F0;
-      line-height: 1.15;
-      margin-bottom: 32px;
-    }
-    .legal-divider {
-      width: 48px;
-      height: 2px;
-      background: linear-gradient(90deg, #E8C547, transparent);
-      margin: 32px 0;
-      border: none;
-    }
-    .contact-block {
-      margin-bottom: 40px;
-    }
-    .contact-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 0.55rem;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.3);
-      margin-bottom: 8px;
-    }
-    .contact-value {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 1rem;
-      color: rgba(240,240,240,0.85);
-    }
-    .contact-value a {
-      color: #E8C547;
-      text-decoration: none;
-      transition: opacity 0.18s;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #07060A; color: #F4F1ED; margin: 0; font-family: 'Lora', serif; -webkit-font-smoothing: antialiased; }
+    .ambient { position: fixed; pointer-events: none; z-index: 0; border-radius: 50%; filter: blur(80px); opacity: 0.06; }
+    .ambient-1 { width: 500px; height: 500px; background: #E8C547; top: -100px; right: -100px; }
+    .ambient-2 { width: 400px; height: 400px; background: #6B4EFF; bottom: -100px; left: -100px; }
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid rgba(232,197,71,0.1); position: sticky; top: 0; background: rgba(7,6,10,0.92); backdrop-filter: blur(16px); z-index: 100; }
+    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.9rem; letter-spacing: 3px; color: #E8C547; text-decoration: none; text-transform: uppercase; }
+    .nav-back { font-family: 'Lora', serif; font-size: 0.7rem; color: rgba(255,255,255,0.4); text-decoration: none; letter-spacing: 1px; text-transform: uppercase; transition: color 0.18s; }
+    .nav-back:hover { color: #E8C547; }
+    .wrap { max-width: 680px; margin: 0 auto; padding: 64px 24px 120px; position: relative; z-index: 1; }
+    .eyebrow { font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #E8C547; margin-bottom: 16px; }
+    h1 { font-family: 'Lora', serif; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; color: #F4F1ED; line-height: 1.15; margin-bottom: 32px; }
+    .divider { width: 48px; height: 2px; background: linear-gradient(90deg, #E8C547, transparent); margin: 32px 0; border: none; }
+    .contact-card { background: rgba(232,197,71,0.04); border: 1px solid rgba(232,197,71,0.12); border-radius: 16px; padding: 28px; margin-bottom: 16px; }
+    .contact-block { margin-bottom: 32px; }
+    .contact-block:last-child { margin-bottom: 0; }
+    .contact-label { font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: rgba(244,241,237,0.3); margin-bottom: 8px; }
+    .contact-value { font-family: 'Lora', serif; font-size: 1rem; color: rgba(244,241,237,0.85); margin-bottom: 4px; }
+    .contact-value a { color: #E8C547; text-decoration: none; transition: opacity 0.18s; }
     .contact-value a:hover { opacity: 0.75; }
-    .contact-note {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.82rem;
-      color: rgba(255,255,255,0.3);
-      margin-top: 4px;
-      line-height: 1.5;
-    }
-    .contact-card {
-      background: rgba(232,197,71,0.04);
-      border: 1px solid rgba(232,197,71,0.12);
-      border-radius: 16px;
-      padding: 28px;
-      margin-bottom: 16px;
-    }
-    .legal-footer-links {
-      display: flex;
-      gap: 24px;
-      flex-wrap: wrap;
-      margin-top: 64px;
-      padding-top: 32px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-    }
-    .legal-footer-links a {
-      font-family: 'Space Mono', monospace;
-      font-size: 0.58rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: rgba(255,255,255,0.3);
-      text-decoration: none;
-      transition: color 0.18s;
-    }
-    .legal-footer-links a:hover { color: #E8C547; }
+    .contact-note { font-family: 'Lora', serif; font-size: 0.82rem; color: rgba(244,241,237,0.3); line-height: 1.5; }
+    .contact-intro { font-family: 'Lora', serif; font-size: 0.95rem; line-height: 1.75; color: rgba(244,241,237,0.72); margin-bottom: 32px; }
+    .footer-links { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 64px; padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .footer-links a { font-family: 'Lora', serif; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); text-decoration: none; transition: color 0.18s; }
+    .footer-links a:hover { color: #E8C547; }
   </style>
 </head>
 <body>
-<div class="ambient ambient-1"></div>
-<div class="ambient ambient-2"></div>
-
-<nav class="legal-nav">
-  <a href="/" class="legal-nav-logo">Margo</a>
-  <a href="/" class="legal-nav-back">← Back to Margo</a>
+<div class='ambient ambient-1'></div>
+<div class='ambient ambient-2'></div>
+<nav>
+  <a href='/' class='nav-logo'>Margo</a>
+  <a href='/' class='nav-back'>← Back</a>
 </nav>
-
-<div class="legal-wrap">
-  <div class="legal-eyebrow">Contact</div>
-  <h1 class="legal-title">We're here.</h1>
-  <hr class="legal-divider"/>
-
-  <div id="page-content">
-    <div class="contact-card">
-      <div class="contact-block">
-        <div class="contact-label">General</div>
-        <div class="contact-value"><a href="mailto:contact@trymargo.com">contact@trymargo.com</a></div>
-        <div class="contact-note">Questions, feedback, partnerships, press.</div>
-      </div>
-      <div class="contact-block">
-        <div class="contact-label">Copyright &amp; Legal</div>
-        <div class="contact-value"><a href="mailto:contact@trymargo.com">contact@trymargo.com</a></div>
-        <div class="contact-note">Rights holder requests and content removal. We review all requests and respond promptly.</div>
-      </div>
-      <div class="contact-block" style="margin-bottom:0">
-        <div class="contact-label">LinkedIn</div>
-        <div class="contact-value"><a href="https://linkedin.com/company/trymargo" target="_blank" rel="noopener">linkedin.com/company/trymargo</a></div>
-      </div>
+<div class='wrap'>
+  <div class='eyebrow'>Contact</div>
+  <h1>We are here.<br/>Say something.</h1>
+  <hr class='divider'/>
+  <p class='contact-intro'>Whether you have a question, a partnership idea, a press enquiry, or a rights concern — we read everything and respond to what matters. Reach out.</p>
+  <div class='contact-card'>
+    <div class='contact-block'>
+      <div class='contact-label'>General</div>
+      <div class='contact-value'><a href='mailto:contact@trymargo.com'>contact@trymargo.com</a></div>
+      <div class='contact-note'>Questions, feedback, partnerships, press — anything really.</div>
+    </div>
+    <div class='contact-block'>
+      <div class='contact-label'>Copyright and Legal</div>
+      <div class='contact-value'><a href='mailto:contact@trymargo.com'>contact@trymargo.com</a></div>
+      <div class='contact-note'>Rights holder requests and content removal. We review all requests and act promptly.</div>
+    </div>
+    <div class='contact-block'>
+      <div class='contact-label'>Investors and Partners</div>
+      <div class='contact-value'><a href='mailto:contact@trymargo.com'>contact@trymargo.com</a></div>
+      <div class='contact-note'>Margo is actively seeking partners, collaborators, and investors who believe music is the world's most universal social language.</div>
+    </div>
+    <div class='contact-block'>
+      <div class='contact-label'>LinkedIn</div>
+      <div class='contact-value'><a href='https://linkedin.com/company/trymargo' target='_blank' rel='noopener'>linkedin.com/company/trymargo</a></div>
     </div>
   </div>
-
-  <div class="legal-footer-links">
-    <a href="/about">About</a>
-    <a href="/privacy">Privacy</a>
-    <a href="/terms">Terms</a>
-    <a href="/contact">Contact</a>
+  <div class='footer-links'>
+    <a href='/about'>About</a>
+    <a href='/privacy'>Privacy</a>
+    <a href='/terms'>Terms</a>
+    <a href='/contact'>Contact</a>
   </div>
 </div>
 </body>
