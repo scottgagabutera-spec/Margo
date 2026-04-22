@@ -130,6 +130,8 @@ async function submitPost(mode = 'post+visual') {
     authorId:  userId,
     username:  typeof getUsername === 'function' ? getUsername() : null,
     timestamp: isFirebaseEnabled ? firebase.database.ServerValue.TIMESTAMP : Date.now(),
+    lang:    navigator.language.split("-")[0] || "en",
+    country: navigator.language.split("-")[1] || null,
   };
 
   if (pacBtn)      { pacBtn.disabled = true;      pacBtn.innerHTML = '<span class="m-spinner"></span> Sharing…'; }
