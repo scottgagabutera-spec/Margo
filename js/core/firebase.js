@@ -155,6 +155,11 @@ function startFirebaseSync() {
   });
 }
 
+
+function trackView(postId) {
+  if (!isFirebaseEnabled || !analyticsRef || !postId) return;
+  analyticsRef.child(postId).child('views').transaction(v => (v || 0) + 1);
+}
 initFirebase();
 
 /* ── Featured lyric — loads from adminConfig/featuredLyric on landing ── */

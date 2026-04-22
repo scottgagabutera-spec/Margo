@@ -184,6 +184,26 @@ function _adminLoginError(el, msg) {
 ══════════════════════════════════════ */
 let _adminActiveTab = 'posts';
 
+
+function _populateAdminStats() {
+  const totalPosts = posts.filter(p => p.status === 'active').length;
+  const totalViews = Object.values(postAnalytics).reduce((sum, a) => sum + (a.views || 0), 0);
+  const totalResonates = Object.values(postAnalytics).reduce((sum, a) => {
+    return sum + Object.keys(a.resonates || {}).length;
+  }, 0);
+  const emotionCounts = {};
+  posts.forEach(p => { if (p.emotion) emotionCounts[p.emotion] = (emotionCounts[p.emotion] || 0) + 1; });
+  const topEmotion = Object.entries(emotionCounts).sort((a,b) => b[1]-a[1])[0]?.[0] || '—';
+  const topPost = posts.filter(p => p.status === 'active')
+    .sort((a,b) => (postAnalytics[b.id]?.views||0) - (postAnalytics[a.id]?.views||0))[0];
+  const el = (id) => document.getElementById(id);
+  if (el('statTotalPosts'))     el('statTotalPosts').textContent     = totalPosts;
+  if (el('statTotalViews'))     el('statTotalViews').textContent     = totalViews;
+  if (el('statTotalResonates')) el('statTotalResonates').textContent = totalResonates;
+  if (el('statTopEmotion'))     el('statTopEmotion').textContent     = topEmotion;
+  if (el('statTopLyric'))       el('statTopLyric').textContent       = topPost ? topPost.text.slice(0,40) + '...' : '—';
+}
+
 function openAdminPanel() {
   const existing = document.getElementById('adminModal');
   if (existing) existing.remove();
@@ -235,6 +255,36 @@ function openAdminPanel() {
       <button id="tabFeatured" style="${_adminTabStyle(false)}" data-tab="featured">Featured</button>
     </div>
 
+    
+    <div id='adminStatsBar' style='display:flex;gap:16px;padding:14px 20px;
+      border-bottom:1px solid var(--border);background:var(--surface);
+      flex-shrink:0;flex-wrap:wrap;'>
+      <div style='font-family:Lora,serif;font-size:0.6rem;color:var(--text-3);
+        text-transform:uppercase;letter-spacing:1px;display:flex;flex-direction:column;gap:4px;'>
+        <span style='font-size:1.1rem;font-weight:700;color:var(--gold);' id='statTotalPosts'>—</span>
+        <span>Posts Live</span>
+      </div>
+      <div style='font-family:Lora,serif;font-size:0.6rem;color:var(--text-3);
+        text-transform:uppercase;letter-spacing:1px;display:flex;flex-direction:column;gap:4px;'>
+        <span style='font-size:1.1rem;font-weight:700;color:var(--gold);' id='statTotalViews'>—</span>
+        <span>Total Views</span>
+      </div>
+      <div style='font-family:Lora,serif;font-size:0.6rem;color:var(--text-3);
+        text-transform:uppercase;letter-spacing:1px;display:flex;flex-direction:column;gap:4px;'>
+        <span style='font-size:1.1rem;font-weight:700;color:var(--gold);' id='statTotalResonates'>—</span>
+        <span>Resonates</span>
+      </div>
+      <div style='font-family:Lora,serif;font-size:0.6rem;color:var(--text-3);
+        text-transform:uppercase;letter-spacing:1px;display:flex;flex-direction:column;gap:4px;'>
+        <span style='font-size:1.1rem;font-weight:700;color:var(--gold);' id='statTopEmotion'>—</span>
+        <span>Top Emotion</span>
+      </div>
+      <div style='font-family:Lora,serif;font-size:0.6rem;color:var(--text-3);
+        text-transform:uppercase;letter-spacing:1px;display:flex;flex-direction:column;gap:4px;margin-left:auto;'>
+        <span style='font-size:0.75rem;font-weight:700;color:var(--text-2);' id='statTopLyric'>—</span>
+        <span>Most Viewed Lyric</span>
+      </div>
+    </div>
     <div id="adminPanelPosts" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
       <div style="display:flex;gap:8px;padding:14px 20px;border-bottom:1px solid var(--border);
         flex-shrink:0;flex-wrap:wrap;align-items:center;">
@@ -431,6 +481,7 @@ function openAdminPanel() {
   document.getElementById('featuredLyricSave').onclick = saveFeaturedLyric;
 
   _loadAdminPosts();
+  _populateAdminStats();
 }
 
 /* ══════════════════════════════════════
