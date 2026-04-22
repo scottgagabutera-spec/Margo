@@ -1,66 +1,76 @@
 # Margo
 
-Margo is a social music platform where people express how they feel through lyrics and songs.
+Margo is a social platform where people communicate through song lyrics. You post a lyric, pick the feeling behind it, and the platform automatically identifies the song and attaches streaming links. Others resonate, or reply with their own lyric — a Lyric Back.
 
-The platform begins as a space for short emotional expression, song tagging, and social sharing, and is designed to grow into a full social discovery and streaming ecosystem.
-
-Margo focuses on the connection between emotion, language, and music.
+Live at trymargo.com
 
 ---
 
-## Vision
+## How It Works
 
-Music is more than background sound.
-Lyrics are how people communicate emotions they cannot always say directly.
+- Post a lyric — search by lyric, song, or artist name
+- Platform identifies the song via Genius and iTunes
+- YouTube, Deezer, and Apple Music links attach automatically
+- Pick a feeling — Love, Heartbreak, Hope, Nostalgia, Healing, Joy, Rage, Loneliness, Send It, Let Out
+- Others resonate with one tap
+- Others reply with their own lyric — Lyric Back
+- Every post and Lyric Back can be saved as a visual card, copied as text, or shared via a deep link that opens Margo directly on that specific exchange
 
-Margo is built to make lyrics the language of social expression.
+---
+
+## Tech Stack
+
+- Frontend — vanilla JS, HTML, CSS
+- Database — Firebase Realtime Database
+- Auth — anonymous, username auto-generated
+- APIs — Genius, iTunes, YouTube, Deezer
+- Hosting — Vercel
+- Analytics — Vercel Analytics (cookieless)
+- Fonts — Lora (self-hosted), Syne 800
 
 ---
 
 ## Roadmap
 
-### Stage 1 — Social Expression (Current)
-- Lyric-inspired posts
-- Emotional short-form expression
-- Song and artist tagging
-- Sharing to external platforms
-- Redirection to major streaming services
+### Stage 1 — Social Expression (Live)
+- Lyric posts with emotion tagging
+- Automatic song identification via Genius and iTunes
+- Streaming links — YouTube, Deezer, Apple Music
+- Resonate and Lyric Back
+- Visual card export and deep link sharing
+- Anonymous usernames — no account required
 
 ### Stage 2 — Social Discovery (Planned)
 - Licensed lyrics
 - Emotion-based music matching
 - Intelligent discovery feeds
-- Viral lyric cards
-- Enhanced in-app engagement
+- Enhanced engagement features
 
 ### Stage 3 — Social Streaming (Long Term)
 - Full licensed streaming
 - In-app playback
 - Artist monetization
-- Deep social features
 - Community-driven trends
 
 ---
 
-## Current Status
+## Project Structure
 
-Margo is currently in early development.
-This repository contains the foundation for the first public version of the platform.
-
----
-
-## Goals
-
-- Build meaningful user habits
-- Encourage authentic emotional expression
-- Support artists and creators
-- Create sustainable growth through community
+```
+assets/         CSS, fonts, brand assets
+js/
+  core/         App state, Firebase, username
+  features/     Echoes, Lyric Back share
+  ui/           Composer, feed, resonate
+  media/        Share sheet, poster, GIF
+api/            Vercel serverless — Genius, YouTube
+public/         Legal pages
+```
 
 ---
 
 ## Contact
 
-For questions, feedback, or collaboration:
-
+trymargo.com
+contact@trymargo.com
 GitHub: https://github.com/scottgagabutera-spec
-
