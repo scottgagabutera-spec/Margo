@@ -186,7 +186,7 @@ let _adminActiveTab = 'posts';
 
 
 function _populateAdminStats() {
-  const totalPosts = posts.filter(p => p.status === 'active').length;
+  const totalPosts = posts.filter(p => p.status !== 'hidden').length;
   const totalViews = Object.values(postAnalytics).reduce((sum, a) => sum + (a.views || 0), 0);
   const totalResonates = Object.values(postAnalytics).reduce((sum, a) => {
     return sum + Object.keys(a.resonates || {}).length;
@@ -194,7 +194,7 @@ function _populateAdminStats() {
   const emotionCounts = {};
   posts.forEach(p => { if (p.emotion) emotionCounts[p.emotion] = (emotionCounts[p.emotion] || 0) + 1; });
   const topEmotion = Object.entries(emotionCounts).sort((a,b) => b[1]-a[1])[0]?.[0] || '—';
-  const topPost = posts.filter(p => p.status === 'active')
+  const topPost = posts.filter(p => p.status !== 'hidden')
     .sort((a,b) => (postAnalytics[b.id]?.views||0) - (postAnalytics[a.id]?.views||0))[0];
   const el = (id) => document.getElementById(id);
   if (el('statTotalPosts'))     el('statTotalPosts').textContent     = totalPosts;
