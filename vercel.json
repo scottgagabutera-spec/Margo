@@ -22,6 +22,10 @@
       "destination": "/public/contact.html"
     },
     {
+      "source": "/music",
+      "destination": "/public/music.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
