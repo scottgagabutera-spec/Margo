@@ -1181,327 +1181,623 @@ function _esc(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+/* ============================================================
+   MARGO — admin-music-tab.js
+   Music CMS tab for the admin panel.
+   ADD TO admin.js:
+     1. In openAdminPanel() HTML: add the "Music" tab button
+        alongside Posts / Pages / Featured
+     2. In openAdminPanel() HTML: add #adminPanelMusic div
+        alongside the other panels
+     3. In the tab onclick handler: add music case
+     4. Paste all functions below at the bottom of admin.js
+        (before the style helpers section)
+
+   Firebase node: /songs/{songId}
+   Song schema (MLRC — Margo Lyric Rich Content):
+   {
+     id:          string  (Firebase push key)
+     title:       string
+     artist:      string  (default "Margo")
+     status:      "live" | "coming" | "planned"
+     featured:    boolean (only one song should be true)
+     coverUrl:    string  (URL to cover art image)
+     youtubeId:   string  (YouTube video ID, e.g. "dQw4w9WgXcQ")
+     releaseDate: string  (e.g. "May 2025")
+     platforms: {
+       youtube:   string (full URL)
+       audiomack: string
+       boomplay:  string
+       soundcloud:string
+       spotify:   string
+       apple:     string
+     }
+     lyrics:      string  (raw SRT or LRC pasted by admin)
+     lyricsJson:  array   (parsed internally, stored for music page)
+     createdAt:   number
+     updatedAt:   number
+   }
+   ============================================================ */
+
+/* ── Firebase reference (set alongside postsRef in initFirebase) ── */
+// Add this line in initFirebase() after adminConfigRef is set:
+// songsRef = database.ref('songs');
+// Also declare at top of admin.js: let songsRef = null;
+
+let _musicSongs    = [];
+let _musicEditId   = null; // null = new song, string = editing existing
+
 /* ══════════════════════════════════════════════════════════════
-   MARGO — admin.js ADDITION: Music Tab
-   Paste this entire block at the END of admin.js (after the
-   _adminActionStyle function). Then apply the 3 HTML patches
-   described in the comments below.
-   ══════════════════════════════════════════════════════════════
+   PANEL HTML SNIPPET
+   Paste this div in openAdminPanel() modal.innerHTML,
+   right after adminPanelFeatured closing div:
+══════════════════════════════════════════════════════════════ */
+function _getMusicPanelHTML() {
+  return `
+    <div id="adminPanelMusic" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
 
-   HTML PATCH 1 — In openAdminPanel(), find the tabs row:
-   <button id="tabFeatured" ...>Featured</button>
-   Add after it:
+      <!-- Song list header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;gap:12px;">
+        <p style="font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);
+          text-transform:uppercase;letter-spacing:1px;margin:0;">
+          Manage songs — changes go live instantly on music.html
+        </p>
+        <button id="musicAddBtn" style="padding:10px 20px;background:var(--gold);
+          color:var(--bg);border:none;border-radius:10px;font-family:'Lora',serif;
+          font-weight:700;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;
+          cursor:pointer;min-height:44px;">
+          + Add Song
+        </button>
+      </div>
+
+      <!-- Song list -->
+      <div id="musicSongList" style="flex:1;overflow-y:auto;padding:16px 20px;"></div>
+
+      <!-- Song form (hidden until Add/Edit) -->
+      <div id="musicFormOverlay" style="display:none;position:absolute;inset:0;
+        background:var(--bg);z-index:100;overflow-y:auto;padding:24px 20px;">
+        <div style="max-width:600px;margin:0 auto;">
+
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px;">
+            <button id="musicFormBack" style="padding:8px 16px;background:transparent;
+              color:var(--text-2);border:1px solid var(--border);border-radius:8px;
+              font-family:'Lora',serif;font-size:0.6rem;cursor:pointer;min-height:44px;">
+              ← Back
+            </button>
+            <span id="musicFormTitle" style="font-family:'Lora',serif;font-size:0.95rem;
+              font-weight:700;color:var(--text);">Add Song</span>
+          </div>
+
+          <!-- Status + Featured row -->
+          <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;">
+              <label style="${_musicLabelStyle()}">Status</label>
+              <select id="mfStatus" style="${_musicInputStyle()}">
+                <option value="live">Live — full karaoke</option>
+                <option value="coming">Coming Soon</option>
+                <option value="planned">Planned</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end;padding-bottom:2px;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
+                font-family:'Lora',serif;font-size:0.6rem;color:var(--text-2);
+                text-transform:uppercase;letter-spacing:1px;min-height:44px;">
+                <input type="checkbox" id="mfFeatured" style="width:16px;height:16px;
+                  accent-color:var(--gold);cursor:pointer;"/>
+                Featured (hero song)
+              </label>
+            </div>
+          </div>
+
+          <!-- Title + Artist -->
+          <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+            <div style="flex:2;min-width:160px;">
+              <label style="${_musicLabelStyle()}">Song Title *</label>
+              <input id="mfTitle" type="text" placeholder="A Thousand Lives"
+                style="${_musicInputStyle()}"/>
+            </div>
+            <div style="flex:1;min-width:120px;">
+              <label style="${_musicLabelStyle()}">Artist</label>
+              <input id="mfArtist" type="text" placeholder="Margo"
+                style="${_musicInputStyle()}"/>
+            </div>
+          </div>
+
+          <!-- Release date + Cover URL -->
+          <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;">
+              <label style="${_musicLabelStyle()}">Release Date</label>
+              <input id="mfReleaseDate" type="text" placeholder="May 2025"
+                style="${_musicInputStyle()}"/>
+            </div>
+            <div style="flex:2;min-width:180px;">
+              <label style="${_musicLabelStyle()}">Cover Art URL</label>
+              <input id="mfCoverUrl" type="text" placeholder="https://… or /assets/music/cover.jpg"
+                style="${_musicInputStyle()}"/>
+            </div>
+          </div>
+
+          <!-- YouTube ID -->
+          <div style="margin-bottom:16px;">
+            <label style="${_musicLabelStyle()}">YouTube Video ID
+              <span style="color:var(--text-3);font-weight:400;"> — just the ID, e.g. dQw4w9WgXcQ</span>
+            </label>
+            <input id="mfYoutubeId" type="text" placeholder="dQw4w9WgXcQ"
+              style="${_musicInputStyle()}"/>
+          </div>
+
+          <!-- Platform links -->
+          <div style="background:var(--surface-2);border:1px solid var(--border);
+            border-radius:12px;padding:16px;margin-bottom:16px;">
+            <div style="font-family:'Lora',serif;font-size:0.6rem;font-weight:700;
+              text-transform:uppercase;letter-spacing:1px;color:var(--text-3);margin-bottom:14px;">
+              Platform Links — leave blank to hide that button
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div><label style="${_musicLabelStyle()}">YouTube (full URL)</label>
+                <input id="mfLinkYoutube" type="text" placeholder="https://youtube.com/watch?v=…"
+                  style="${_musicInputStyle()}"/></div>
+              <div><label style="${_musicLabelStyle()}">Audiomack</label>
+                <input id="mfLinkAudiomack" type="text" placeholder="https://audiomack.com/…"
+                  style="${_musicInputStyle()}"/></div>
+              <div><label style="${_musicLabelStyle()}">Boomplay</label>
+                <input id="mfLinkBoomplay" type="text" placeholder="https://boomplay.com/…"
+                  style="${_musicInputStyle()}"/></div>
+              <div><label style="${_musicLabelStyle()}">SoundCloud</label>
+                <input id="mfLinkSoundcloud" type="text" placeholder="https://soundcloud.com/…"
+                  style="${_musicInputStyle()}"/></div>
+              <div><label style="${_musicLabelStyle()}">Spotify <span style="color:var(--text-3);font-weight:400;">(when Distrokid done)</span></label>
+                <input id="mfLinkSpotify" type="text" placeholder="https://open.spotify.com/…"
+                  style="${_musicInputStyle()}"/></div>
+              <div><label style="${_musicLabelStyle()}">Apple Music</label>
+                <input id="mfLinkApple" type="text" placeholder="https://music.apple.com/…"
+                  style="${_musicInputStyle()}"/></div>
+            </div>
+          </div>
+
+          <!-- Lyrics / SRT -->
+          <div style="margin-bottom:16px;">
+            <label style="${_musicLabelStyle()}">Lyrics — paste SRT (from CapCut) or LRC format
+              <span style="color:var(--text-3);font-weight:400;"> — leave blank for Coming Soon songs</span>
+            </label>
+            <textarea id="mfLyrics" rows="12"
+              placeholder="Paste SRT from CapCut here:&#10;&#10;1&#10;00:00:27,055 --> 00:00:28,515&#10;You Say You're A President&#10;&#10;2&#10;00:00:28,515 --> 00:00:30,262&#10;I've Sat In That Chair&#10;&#10;— OR paste LRC:&#10;[00:27.05] You Say You're A President"
+              style="${_musicInputStyle()}min-height:220px;resize:vertical;font-size:0.78rem;
+              font-family:monospace;line-height:1.7;"></textarea>
+            <div id="mfLyricsPreview" style="margin-top:8px;font-family:'Lora',serif;
+              font-size:0.6rem;color:var(--text-3);"></div>
+          </div>
+
+          <!-- Save / Delete -->
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+            <button id="musicSaveBtn" style="padding:14px 28px;background:var(--gold);
+              color:var(--bg);border:none;border-radius:12px;font-family:'Lora',serif;
+              font-weight:700;font-size:0.95rem;cursor:pointer;min-height:44px;">
+              Save Song
+            </button>
+            <button id="musicDeleteBtn" style="display:none;padding:14px 20px;
+              background:transparent;color:#ff6464;border:1px solid #ff6464;
+              border-radius:12px;font-family:'Lora',serif;font-size:0.82rem;
+              cursor:pointer;min-height:44px;">
+              Delete Song
+            </button>
+            <span id="musicSaveStatus" style="font-family:'Lora',serif;font-size:0.6rem;
+              color:var(--success);display:none;text-transform:uppercase;letter-spacing:1px;">
+              ✓ Saved
+            </span>
+          </div>
+
+        </div>
+      </div><!-- end musicFormOverlay -->
+    </div><!-- end adminPanelMusic -->
+  `;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TAB BUTTON HTML SNIPPET
+   Paste this button in the tabs row in openAdminPanel(),
+   alongside tabPosts / tabPages / tabFeatured:
    <button id="tabMusic" style="${_adminTabStyle(false)}" data-tab="music">Music</button>
+══════════════════════════════════════════════════════════════ */
 
-   HTML PATCH 2 — In openAdminPanel(), find adminPanelFeatured div end </div>
-   and ADD after it:
+/* ══════════════════════════════════════════════════════════════
+   TAB SWITCH — add this case in the tab onclick handler:
+   if (_adminActiveTab === 'music') {
+     document.getElementById('adminPanelMusic').style.display = 'flex';
+     loadMusicSongs();
+   }
+   And hide it in the others:
+   document.getElementById('adminPanelMusic').style.display = 'none';
+══════════════════════════════════════════════════════════════ */
 
-   <div id="adminPanelMusic" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
-     <div style="padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
-       display:flex;justify-content:space-between;align-items:center;">
-       <p style="font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);
-         text-transform:uppercase;letter-spacing:1px;margin:0;">
-         Manage songs — add, edit, reorder. Live instantly on /music
-       </p>
-       <button id="addSongBtn" style="padding:10px 18px;background:var(--gold);color:var(--bg);
-         border:none;border-radius:10px;font-family:'Lora',serif;font-size:0.6rem;
-         font-weight:700;text-transform:uppercase;letter-spacing:0.8px;cursor:pointer;
-         min-height:44px;">+ Add Song</button>
-     </div>
-     <div id="adminSongList" style="flex:1;overflow-y:auto;padding:16px 20px;"></div>
-   </div>
-
-   HTML PATCH 3 — In the tab switch handler (modal.querySelectorAll('[data-tab]')):
-   Add this case to the display toggling:
-   document.getElementById('adminPanelMusic').style.display = _adminActiveTab === 'music' ? 'flex' : 'none';
-   if (_adminActiveTab === 'music') loadAdminSongs();
-
-   ══════════════════════════════════════════════════════════════ */
-
-/* ── Music tab state ── */
-let _adminSongs = [];
-
-/* ── Load all songs from Firebase /songs ── */
-function loadAdminSongs() {
-  const container = document.getElementById('adminSongList');
+/* ══════════════════════════════════════════════════════════════
+   LOAD + RENDER SONG LIST
+══════════════════════════════════════════════════════════════ */
+function loadMusicSongs() {
+  const container = document.getElementById('musicSongList');
   if (!container || !isFirebaseEnabled) return;
-  container.innerHTML = `<div style="text-align:center;padding:32px;font-family:'Lora',serif;
+  container.innerHTML = `<div style="text-align:center;padding:48px;font-family:'Lora',serif;
     font-size:0.6rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;">
-    Loading…</div>`;
+    Loading songs…</div>`;
 
-  firebase.database().ref('songs').orderByChild('order').on('value', snap => {
-    _adminSongs = [];
+  const songsRef = firebase.database().ref('songs');
+  songsRef.orderByChild('createdAt').on('value', snap => {
+    _musicSongs = [];
     snap.forEach(child => {
       const s = child.val();
       s.id = child.key;
-      _adminSongs.push(s);
+      _musicSongs.unshift(s);
     });
-    _renderAdminSongs();
+    _renderMusicSongList(container);
   });
 
-  document.getElementById('addSongBtn').onclick = () => openSongForm(null);
+  // Wire Add button
+  const addBtn = document.getElementById('musicAddBtn');
+  if (addBtn) addBtn.onclick = () => _openMusicForm(null);
 }
 
-/* ── Render song list in admin ── */
-function _renderAdminSongs() {
-  const container = document.getElementById('adminSongList');
-  if (!container) return;
-
-  if (!_adminSongs.length) {
-    container.innerHTML = `
-      <div style="text-align:center;padding:64px 20px;">
-        <div style="font-family:'Lora',serif;font-style:italic;font-size:1.1rem;
-          color:var(--text-2);margin-bottom:12px;">No songs yet</div>
-        <div style="font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);
-          text-transform:uppercase;letter-spacing:1px;">
-          Hit "+ Add Song" to publish your first track</div>
-      </div>`;
+function _renderMusicSongList(container) {
+  if (!_musicSongs.length) {
+    container.innerHTML = `<div style="text-align:center;padding:80px 20px;">
+      <div style="font-family:'Lora',serif;font-size:1.1rem;font-style:italic;
+        color:var(--text-3);margin-bottom:16px;">No songs yet</div>
+      <div style="font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);
+        text-transform:uppercase;letter-spacing:1px;">
+        Tap + Add Song to publish your first track</div>
+    </div>`;
     return;
   }
 
   container.innerHTML = '';
-  _adminSongs.forEach(song => {
+  _musicSongs.forEach(song => {
+    const statusColor = song.status === 'live'    ? 'var(--success)'
+                      : song.status === 'coming'  ? 'var(--gold)'
+                      : 'var(--text-3)';
+    const hasLyrics = song.lyricsJson && song.lyricsJson.length > 0;
+    const lyricsCount = hasLyrics ? song.lyricsJson.length : 0;
+
     const card = document.createElement('div');
-    card.id = 'asong-' + song.id;
     card.style.cssText = `
       background:var(--surface-2);border:1px solid var(--border);
       border-radius:14px;padding:16px;margin-bottom:10px;
-      ${song.status === 'coming_soon' ? 'opacity:0.65;' : ''}
+      display:flex;gap:14px;align-items:flex-start;cursor:pointer;
+      transition:border-color 0.18s;
     `;
+    if (song.featured) card.style.borderColor = 'var(--gold-border)';
+    card.onmouseenter = () => card.style.borderColor = 'var(--gold-border)';
+    card.onmouseleave = () => card.style.borderColor = song.featured ? 'var(--gold-border)' : 'var(--border)';
 
-    const statusColor = song.status === 'coming_soon' ? 'var(--text-3)' : 'var(--success)';
-    const statusLabel = song.status === 'coming_soon' ? 'Coming Soon' : 'Live';
+    // Cover art
+    const coverDiv = document.createElement('div');
+    coverDiv.style.cssText = `width:48px;height:48px;border-radius:8px;flex-shrink:0;
+      background:var(--surface-3);overflow:hidden;display:flex;align-items:center;
+      justify-content:center;font-family:'Syne',sans-serif;font-weight:800;
+      font-size:0.8rem;color:var(--gold);`;
+    if (song.coverUrl) {
+      const img = document.createElement('img');
+      img.src = song.coverUrl;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      img.onerror = () => { coverDiv.innerHTML = 'M'; };
+      coverDiv.appendChild(img);
+    } else {
+      coverDiv.textContent = 'M';
+    }
 
-    card.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;">
-        <div>
-          <div style="font-family:'Lora',serif;font-size:1rem;font-weight:600;
-            color:var(--text);margin-bottom:4px;">${_esc(song.title)}</div>
-          <div style="font-family:'Lora',serif;font-size:0.82rem;color:var(--text-2);">
-            ${_esc(song.artist || 'Margo')}</div>
-        </div>
+    // Info
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0;';
+    info.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+        <span style="font-family:'Lora',serif;font-size:0.95rem;font-weight:700;
+          color:var(--text);">${song.title || 'Untitled'}</span>
+        ${song.featured ? `<span style="font-family:'Lora',serif;font-size:0.55rem;
+          font-weight:700;text-transform:uppercase;letter-spacing:1px;
+          color:var(--gold);border:1px solid var(--gold-border);
+          border-radius:50px;padding:2px 8px;">Featured</span>` : ''}
+      </div>
+      <div style="font-family:'Lora',serif;font-size:0.7rem;color:var(--text-3);margin-bottom:8px;">
+        ${song.artist || 'Margo'}${song.releaseDate ? ' · ' + song.releaseDate : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
         <span style="font-family:'Lora',serif;font-size:0.6rem;font-weight:700;
-          padding:4px 10px;border-radius:20px;text-transform:uppercase;flex-shrink:0;
-          color:${statusColor};border:1px solid ${statusColor};">
-          ${statusLabel}</span>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-        <span style="font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);">
-          YT: ${song.youtubeId ? '✓ ' + _esc(song.youtubeId) : '— not set'}</span>
-        <span style="font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);">
-          Lyrics: ${song.srt ? 'SRT ✓' : (song.lrc ? 'LRC ✓' : (song.lyrics ? 'Plain ✓' : '—'))}</span>
-        <span style="font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);">
-          Order: ${song.order || '—'}</span>
-      </div>
-      <div style="display:flex;gap:7px;flex-wrap:wrap;">
-        <button onclick="openSongForm('${song.id}')" style="${_adminActionStyle('var(--gold)')}">Edit</button>
-        <button onclick="toggleSongStatus('${song.id}')" style="${_adminActionStyle('var(--text-2)')}">
-          ${song.status === 'coming_soon' ? 'Mark Live' : 'Mark Coming Soon'}</button>
-        <button onclick="deleteSong('${song.id}')" style="${_adminActionStyle('#ff6464')}">Delete</button>
+          text-transform:uppercase;letter-spacing:0.8px;padding:3px 10px;
+          border-radius:50px;color:${statusColor};border:1px solid ${statusColor};">
+          ${song.status || 'planned'}
+        </span>
+        ${hasLyrics ? `<span style="font-family:'Lora',serif;font-size:0.6rem;
+          color:var(--success);border:1px solid var(--success-border);
+          border-radius:50px;padding:3px 10px;">
+          ♪ ${lyricsCount} lines synced</span>` : `<span style="font-family:'Lora',serif;
+          font-size:0.6rem;color:var(--text-3);border:1px solid var(--border);
+          border-radius:50px;padding:3px 10px;">No lyrics yet</span>`}
+        ${song.youtubeId ? `<span style="font-family:'Lora',serif;font-size:0.6rem;
+          color:var(--text-3);">▶ YT</span>` : ''}
       </div>
     `;
+
+    card.appendChild(coverDiv);
+    card.appendChild(info);
+    card.onclick = () => _openMusicForm(song);
     container.appendChild(card);
   });
 }
 
-/* ══════════════════════════════════════
-   SONG FORM — Add / Edit
-══════════════════════════════════════ */
-function openSongForm(songId) {
-  const song = songId ? _adminSongs.find(s => s.id === songId) : null;
-  const isNew = !song;
+/* ══════════════════════════════════════════════════════════════
+   OPEN FORM (ADD or EDIT)
+══════════════════════════════════════════════════════════════ */
+function _openMusicForm(song) {
+  _musicEditId = song ? song.id : null;
+  const overlay  = document.getElementById('musicFormOverlay');
+  const formTitle = document.getElementById('musicFormTitle');
+  const deleteBtn = document.getElementById('musicDeleteBtn');
+  const saveStatus = document.getElementById('musicSaveStatus');
+  if (!overlay) return;
 
-  const overlay = document.createElement('div');
-  overlay.id = 'songFormOverlay';
-  overlay.style.cssText = `
-    position:fixed;inset:0;background:rgba(0,0,0,0.92);
-    display:flex;align-items:flex-start;justify-content:center;
-    z-index:9500;backdrop-filter:blur(12px);overflow-y:auto;padding:24px 16px;
-  `;
+  // Set form title
+  if (formTitle) formTitle.textContent = song ? 'Edit Song' : 'Add Song';
+  if (deleteBtn) deleteBtn.style.display = song ? 'inline-block' : 'none';
+  if (saveStatus) saveStatus.style.display = 'none';
 
-  overlay.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--gold-border);
-      border-radius:24px;padding:28px;width:100%;max-width:560px;
-      box-shadow:0 24px 60px rgba(0,0,0,0.7);">
+  // Populate fields
+  _mfSet('mfTitle',          song?.title        || '');
+  _mfSet('mfArtist',         song?.artist       || 'Margo');
+  _mfSet('mfStatus',         song?.status       || 'live');
+  _mfSet('mfReleaseDate',    song?.releaseDate  || '');
+  _mfSet('mfCoverUrl',       song?.coverUrl     || '');
+  _mfSet('mfYoutubeId',      song?.youtubeId    || '');
+  _mfSet('mfLinkYoutube',    song?.platforms?.youtube    || '');
+  _mfSet('mfLinkAudiomack',  song?.platforms?.audiomack  || '');
+  _mfSet('mfLinkBoomplay',   song?.platforms?.boomplay   || '');
+  _mfSet('mfLinkSoundcloud', song?.platforms?.soundcloud || '');
+  _mfSet('mfLinkSpotify',    song?.platforms?.spotify    || '');
+  _mfSet('mfLinkApple',      song?.platforms?.apple      || '');
+  _mfSet('mfLyrics',         song?.lyrics       || '');
 
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
-        <span style="font-family:'Lora',serif;font-size:0.6rem;font-weight:700;
-          text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);">
-          ${isNew ? 'Add Song' : 'Edit Song'}</span>
-        <button onclick="document.getElementById('songFormOverlay').remove()"
-          style="width:32px;height:32px;background:var(--surface-2);border:1px solid var(--border);
-          border-radius:50%;color:var(--text-2);font-size:1.1rem;cursor:pointer;
-          display:flex;align-items:center;justify-content:center;">×</button>
-      </div>
+  const featuredEl = document.getElementById('mfFeatured');
+  if (featuredEl) featuredEl.checked = !!song?.featured;
 
-      ${_songField('songFTitle',   'Song Title *',          song?.title       || '', 'text',     'e.g. A Thousand Lives')}
-      ${_songField('songFArtist',  'Artist',                song?.artist      || 'Margo', 'text','e.g. Margo')}
-      ${_songField('songFYTId',    'YouTube Video ID',      song?.youtubeId   || '', 'text',     'e.g. dQw4w9WgXcQ (from youtube.com/watch?v=...)')}
-      ${_songField('songFArtwork', 'Artwork URL',           song?.artwork     || '', 'url',      'https://... (square image preferred)')}
-      ${_songField('songFOrder',   'Display Order (1=top)', song?.order       || '1', 'number',  '1')}
-      ${_songField('songFTags',    'Tags (comma-separated)',  (song?.tags||[]).join(', '), 'text', 'New, Original, Remix')}
-      ${_songField('songFDesc',    'Short Description',     song?.description || '', 'text',     'e.g. Debut single')}
-
-      <div style="margin-bottom:14px;">
-        <label style="${_songLabelStyle()}">Status</label>
-        <select id="songFStatus" style="width:100%;padding:10px 14px;background:var(--bg);
-          border:1px solid var(--border);border-radius:12px;color:var(--text);
-          font-family:'Lora',serif;font-size:0.82rem;outline:none;box-sizing:border-box;">
-          <option value="active"      ${song?.status === 'active'      || isNew ? 'selected' : ''}>Live — visible on /music</option>
-          <option value="coming_soon" ${song?.status === 'coming_soon' ? 'selected' : ''}>Coming Soon</option>
-        </select>
-      </div>
-
-      ${_songField('songFCSLabel', 'Coming Soon Label',     song?.comingSoonLabel || '', 'text',  'e.g. Dropping June 2025')}
-
-      <div style="margin-bottom:14px;">
-        <label style="${_songLabelStyle()}">SRT Lyrics (from CapCut or similar)</label>
-        <textarea id="songFSRT" rows="6"
-          style="width:100%;padding:10px 14px;background:var(--bg);
-          border:1px solid var(--border);border-radius:12px;color:var(--text);
-          font-family:'Lora',serif;font-size:0.75rem;line-height:1.5;
-          box-sizing:border-box;outline:none;resize:vertical;"
-          placeholder="1&#10;00:00:01,000 --> 00:00:03,500&#10;Lyric line here&#10;&#10;2&#10;...">${_esc(song?.srt || '')}</textarea>
-        <div style="font-family:'Lora',serif;font-size:0.6rem;color:var(--text-3);margin-top:4px;">
-          Paste the .srt file content here. Use this for karaoke sync.</div>
-      </div>
-
-      <div style="margin-bottom:14px;">
-        <label style="${_songLabelStyle()}">Plain Lyrics (fallback if no SRT)</label>
-        <textarea id="songFLyrics" rows="4"
-          style="width:100%;padding:10px 14px;background:var(--bg);
-          border:1px solid var(--border);border-radius:12px;color:var(--text);
-          font-family:'Lora',serif;font-size:0.82rem;line-height:1.7;
-          box-sizing:border-box;outline:none;resize:vertical;"
-          placeholder="Verse 1&#10;Line one&#10;Line two...">${_esc(song?.lyrics || '')}</textarea>
-      </div>
-
-      <div style="border-top:1px solid var(--border);padding-top:16px;margin-bottom:16px;">
-        <div style="font-family:'Lora',serif;font-size:0.6rem;font-weight:700;
-          text-transform:uppercase;letter-spacing:1px;color:var(--text-3);margin-bottom:12px;">
-          Streaming Links (add when available)</div>
-        ${_songField('songFYTUrl',    'YouTube URL',    song?.youtubeUrl    || '', 'url', 'https://youtube.com/watch?v=...')}
-        ${_songField('songFAMUrl',    'Audiomack URL',  song?.audiomackUrl  || '', 'url', 'https://audiomack.com/...')}
-        ${_songField('songFBPUrl',    'Boomplay URL',   song?.boomplayUrl   || '', 'url', 'https://boomplay.com/...')}
-        ${_songField('songFSCUrl',    'SoundCloud URL', song?.soundcloudUrl || '', 'url', 'https://soundcloud.com/...')}
-        ${_songField('songFSPUrl',    'Spotify URL',    song?.spotifyUrl    || '', 'url', 'https://open.spotify.com/...')}
-        ${_songField('songFAPUrl',    'Apple Music URL',song?.appleMusicUrl || '', 'url', 'https://music.apple.com/...')}
-      </div>
-
-      <div id="songFormError" style="display:none;font-family:'Lora',serif;
-        font-size:0.6rem;color:#ff6464;margin-bottom:14px;"></div>
-
-      <div style="display:flex;gap:10px;">
-        <button id="songFormSaveBtn"
-          style="flex:1;padding:14px;background:var(--gold);color:var(--bg);
-          border:none;border-radius:12px;font-family:'Lora',serif;font-weight:700;
-          font-size:0.95rem;cursor:pointer;min-height:44px;">
-          ${isNew ? 'Publish Song' : 'Save Changes'}
-        </button>
-        <button onclick="document.getElementById('songFormOverlay').remove()"
-          style="padding:14px 18px;background:transparent;color:var(--text-2);
-          border:1px solid var(--border);border-radius:12px;font-family:'Lora',serif;
-          font-size:0.95rem;cursor:pointer;min-height:44px;">Cancel</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  document.getElementById('songFormSaveBtn').onclick = async () => {
-    const title = document.getElementById('songFTitle').value.trim();
-    const errEl = document.getElementById('songFormError');
-    if (!title) {
-      errEl.textContent = 'Song title is required.';
-      errEl.style.display = 'block';
-      return;
-    }
-
-    const tags = document.getElementById('songFTags').value.split(',').map(t => t.trim()).filter(Boolean);
-
-    const payload = {
-      title,
-      artist:         document.getElementById('songFArtist').value.trim()  || 'Margo',
-      youtubeId:      document.getElementById('songFYTId').value.trim()    || null,
-      artwork:        document.getElementById('songFArtwork').value.trim() || null,
-      order:          parseInt(document.getElementById('songFOrder').value) || 1,
-      tags,
-      description:    document.getElementById('songFDesc').value.trim()    || null,
-      status:         document.getElementById('songFStatus').value,
-      comingSoonLabel:document.getElementById('songFCSLabel').value.trim() || null,
-      srt:            document.getElementById('songFSRT').value.trim()     || null,
-      lyrics:         document.getElementById('songFLyrics').value.trim()  || null,
-      youtubeUrl:     document.getElementById('songFYTUrl').value.trim()   || null,
-      audiomackUrl:   document.getElementById('songFAMUrl').value.trim()   || null,
-      boomplayUrl:    document.getElementById('songFBPUrl').value.trim()   || null,
-      soundcloudUrl:  document.getElementById('songFSCUrl').value.trim()   || null,
-      spotifyUrl:     document.getElementById('songFSPUrl').value.trim()   || null,
-      appleMusicUrl:  document.getElementById('songFAPUrl').value.trim()   || null,
-      updatedAt:      Date.now(),
+  // Live lyrics line count preview
+  const lyricsEl  = document.getElementById('mfLyrics');
+  const previewEl = document.getElementById('mfLyricsPreview');
+  if (lyricsEl && previewEl) {
+    const update = () => {
+      const parsed = parseLyrics(lyricsEl.value.trim());
+      previewEl.textContent = parsed.length
+        ? `✓ ${parsed.length} lines detected — karaoke ready`
+        : lyricsEl.value.trim() ? 'Format not recognised — check SRT or LRC syntax' : '';
+      previewEl.style.color = parsed.length ? 'var(--success)' : 'var(--gold)';
     };
+    lyricsEl.oninput = update;
+    update();
+  }
 
-    const saveBtn = document.getElementById('songFormSaveBtn');
-    saveBtn.textContent = 'Saving…';
-    saveBtn.disabled    = true;
-    errEl.style.display = 'none';
-
-    try {
-      if (isNew) {
-        payload.createdAt = Date.now();
-        await firebase.database().ref('songs').push(payload);
-      } else {
-        await firebase.database().ref('songs/' + songId).update(payload);
-      }
-      overlay.remove();
-      showToast((isNew ? 'Song published' : 'Song updated') + ' ✓');
-    } catch(err) {
-      saveBtn.textContent = isNew ? 'Publish Song' : 'Save Changes';
-      saveBtn.disabled    = false;
-      errEl.textContent   = 'Error: ' + err.message;
-      errEl.style.display = 'block';
-    }
+  // Back button
+  const backBtn = document.getElementById('musicFormBack');
+  if (backBtn) backBtn.onclick = () => {
+    overlay.style.display = 'none';
+    if (saveStatus) saveStatus.style.display = 'none';
   };
+
+  // Save
+  const saveBtn = document.getElementById('musicSaveBtn');
+  if (saveBtn) saveBtn.onclick = _saveMusicSong;
+
+  // Delete
+  if (deleteBtn) deleteBtn.onclick = _deleteMusicSong;
+
+  overlay.style.display = 'block';
+  overlay.scrollTop = 0;
 }
 
-/* ── Toggle live/coming_soon ── */
-async function toggleSongStatus(songId) {
-  const song = _adminSongs.find(s => s.id === songId);
-  if (!song || !isFirebaseEnabled) return;
-  const newStatus = song.status === 'coming_soon' ? 'active' : 'coming_soon';
-  try {
-    await firebase.database().ref('songs/' + songId).update({ status: newStatus, updatedAt: Date.now() });
-    showToast('Song marked as ' + (newStatus === 'active' ? 'live' : 'coming soon'));
-  } catch(e) { showToast('Error: ' + e.message); }
+function _mfSet(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.tagName === 'SELECT') el.value = val;
+  else el.value = val;
+}
+function _mfGet(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
 }
 
-/* ── Delete song ── */
-async function deleteSong(songId) {
-  const song = _adminSongs.find(s => s.id === songId);
-  if (!song) return;
-  if (!window.confirm('Delete "' + (song.title || 'this song') + '"? This cannot be undone.')) return;
-  if (!isFirebaseEnabled) return;
+/* ══════════════════════════════════════════════════════════════
+   SAVE SONG
+══════════════════════════════════════════════════════════════ */
+async function _saveMusicSong() {
+  const title = _mfGet('mfTitle');
+  if (!title) { showToast('Song title is required'); return; }
+
+  const rawLyrics = _mfGet('mfLyrics');
+  const lyricsJson = rawLyrics ? parseLyrics(rawLyrics) : [];
+
+  const featured = document.getElementById('mfFeatured')?.checked || false;
+  const saveBtn   = document.getElementById('musicSaveBtn');
+  const saveStatus = document.getElementById('musicSaveStatus');
+
+  if (saveBtn) { saveBtn.textContent = 'Saving…'; saveBtn.disabled = true; }
+  if (saveStatus) saveStatus.style.display = 'none';
+
+  const payload = {
+    title,
+    artist:      _mfGet('mfArtist')         || 'Margo',
+    status:      _mfGet('mfStatus')          || 'live',
+    featured,
+    releaseDate: _mfGet('mfReleaseDate')     || '',
+    coverUrl:    _mfGet('mfCoverUrl')        || '',
+    youtubeId:   _mfGet('mfYoutubeId')       || '',
+    platforms: {
+      youtube:   _mfGet('mfLinkYoutube')    || '',
+      audiomack: _mfGet('mfLinkAudiomack')  || '',
+      boomplay:  _mfGet('mfLinkBoomplay')   || '',
+      soundcloud:_mfGet('mfLinkSoundcloud') || '',
+      spotify:   _mfGet('mfLinkSpotify')    || '',
+      apple:     _mfGet('mfLinkApple')      || '',
+    },
+    lyrics:     rawLyrics,
+    lyricsJson,
+    updatedAt:  Date.now(),
+  };
+
   try {
-    await firebase.database().ref('songs/' + songId).remove();
+    const songsRef = firebase.database().ref('songs');
+
+    // If this song is being set as featured, un-feature all others first
+    if (featured) {
+      const snap = await songsRef.once('value');
+      const updates = {};
+      snap.forEach(child => {
+        if (child.key !== _musicEditId && child.val().featured) {
+          updates[child.key + '/featured'] = false;
+        }
+      });
+      if (Object.keys(updates).length) await songsRef.update(updates);
+    }
+
+    if (_musicEditId) {
+      // Edit existing
+      await songsRef.child(_musicEditId).update(payload);
+    } else {
+      // New song
+      payload.createdAt = Date.now();
+      await songsRef.push(payload);
+    }
+
+    if (saveBtn) { saveBtn.textContent = 'Save Song'; saveBtn.disabled = false; }
+    if (saveStatus) {
+      saveStatus.style.display = 'inline';
+      setTimeout(() => { if (saveStatus) saveStatus.style.display = 'none'; }, 3000);
+    }
+    showToast((_musicEditId ? 'Song updated' : 'Song added') + ' ✓');
+
+    // Close form after short delay
+    setTimeout(() => {
+      const overlay = document.getElementById('musicFormOverlay');
+      if (overlay) overlay.style.display = 'none';
+    }, 1000);
+
+  } catch (err) {
+    if (saveBtn) { saveBtn.textContent = 'Save Song'; saveBtn.disabled = false; }
+    showToast('Error: ' + err.message);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DELETE SONG
+══════════════════════════════════════════════════════════════ */
+async function _deleteMusicSong() {
+  if (!_musicEditId) return;
+  if (!window.confirm('Permanently delete this song? This cannot be undone.')) return;
+  try {
+    await firebase.database().ref('songs').child(_musicEditId).remove();
     showToast('Song deleted');
-  } catch(e) { showToast('Error: ' + e.message); }
+    const overlay = document.getElementById('musicFormOverlay');
+    if (overlay) overlay.style.display = 'none';
+  } catch (err) {
+    showToast('Error: ' + err.message);
+  }
 }
 
-/* ── Form helpers ── */
-function _songField(id, label, value, type, placeholder) {
-  return `
-    <div style="margin-bottom:14px;">
-      <label for="${id}" style="${_songLabelStyle()}">${label}</label>
-      <input id="${id}" type="${type}" value="${_esc(value)}" placeholder="${_esc(placeholder)}"
-        style="width:100%;padding:10px 14px;background:var(--bg);
-        border:1px solid var(--border);border-radius:12px;color:var(--text);
-        font-family:'Lora',serif;font-size:0.82rem;box-sizing:border-box;outline:none;"/>
-    </div>`;
+/* ══════════════════════════════════════════════════════════════
+   LYRICS PARSER — accepts SRT or LRC, returns MLRC JSON array
+   This is the core of the system. Used by admin AND music.html.
+   Export/copy parseLyrics() to a shared location so music.html
+   can import it too (or inline it in music.html's <script>).
+══════════════════════════════════════════════════════════════ */
+function parseLyrics(raw) {
+  if (!raw || !raw.trim()) return [];
+
+  const text = raw.trim();
+
+  // ── Detect SRT (has "00:00:00,000 --> 00:00:00,000" pattern) ──
+  if (/\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}/.test(text)) {
+    return _parseSRT(text);
+  }
+
+  // ── Detect LRC (has "[mm:ss.xx]" pattern) ──
+  if (/\[\d{2}:\d{2}[.:]\d{2,3}\]/.test(text)) {
+    return _parseLRC(text);
+  }
+
+  return [];
 }
-function _songLabelStyle() {
-  return "font-family:'Lora',serif;font-size:0.6rem;color:var(--text-2);" +
-    "text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;";
+
+function _srtTimeToSec(ts) {
+  // "00:00:27,055" → 27.055
+  const [hms, ms] = ts.trim().split(',');
+  const [h, m, s] = hms.split(':').map(Number);
+  return h * 3600 + m * 60 + s + (parseInt(ms || '0', 10) / 1000);
 }
-function _esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function _parseSRT(text) {
+  const lines = [];
+  // Split on blank lines to get blocks
+  const blocks = text.split(/\n\s*\n/);
+  for (const block of blocks) {
+    const rows = block.trim().split('\n');
+    if (rows.length < 2) continue;
+    // Find the timestamp row (contains -->)
+    const tsRow = rows.find(r => r.includes('-->'));
+    if (!tsRow) continue;
+    const [startStr, endStr] = tsRow.split('-->');
+    const start = _srtTimeToSec(startStr);
+    const end   = _srtTimeToSec(endStr);
+    // Text is everything after the timestamp row (skip index number row too)
+    const tsIdx = rows.indexOf(tsRow);
+    const textRows = rows.slice(tsIdx + 1).filter(r => r.trim());
+    const lyricText = textRows.join(' ').trim();
+    if (lyricText && !isNaN(start)) {
+      lines.push({ start, end, text: lyricText });
+    }
+  }
+  return lines;
+}
+
+function _lrcTimeToSec(ts) {
+  // "[01:32.45]" → 92.45
+  const clean = ts.replace(/[\[\]]/g, '');
+  const [mStr, sStr] = clean.split(':');
+  const m = parseInt(mStr, 10);
+  const s = parseFloat(sStr);
+  return m * 60 + s;
+}
+
+function _parseLRC(text) {
+  const lines = [];
+  const rows  = text.split('\n');
+  const parsed = [];
+
+  for (const row of rows) {
+    const match = row.match(/^(\[\d{2}:\d{2}[.:]\d{2,3}\])\s*(.*)$/);
+    if (!match) continue;
+    const start   = _lrcTimeToSec(match[1]);
+    const lyricText = match[2].trim();
+    if (lyricText && !lyricText.startsWith('[')) {
+      parsed.push({ start, text: lyricText });
+    }
+  }
+
+  // Derive end time: each line ends when the next one starts
+  for (let i = 0; i < parsed.length; i++) {
+    lines.push({
+      start: parsed[i].start,
+      end:   parsed[i + 1] ? parsed[i + 1].start : parsed[i].start + 5,
+      text:  parsed[i].text,
+    });
+  }
+  return lines;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STYLE HELPERS
+══════════════════════════════════════════════════════════════ */
+function _musicLabelStyle() {
+  return 'font-family:\'Lora\',serif;font-size:0.6rem;font-weight:600;color:var(--text-2);' +
+    'text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;';
+}
+function _musicInputStyle() {
+  return 'width:100%;padding:11px 14px;background:var(--surface-2);' +
+    'border:1px solid var(--border);border-radius:10px;' +
+    'color:var(--text);font-family:\'Lora\',serif;font-size:0.82rem;' +
+    'box-sizing:border-box;outline:none;display:block;';
 }
