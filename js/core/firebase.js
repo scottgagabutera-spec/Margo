@@ -7,6 +7,7 @@ let isFirebaseEnabled = false;
 let postsRef          = null;
 let analyticsRef      = null;
 let adminConfigRef    = null;
+let songsRef          = null;
 let firebaseAuth      = null;
 
 async function initFirebase() {
@@ -19,6 +20,7 @@ async function initFirebase() {
     postsRef       = database.ref('posts');
     analyticsRef   = database.ref('analytics');
     adminConfigRef = database.ref('adminConfig');
+    songsRef       = database.ref('songs');
     firebaseAuth   = firebase.auth();
     isFirebaseEnabled = true;
     loadFeaturedLyric();

@@ -1,938 +1,848 @@
 <!DOCTYPE html>
-<html lang='en'>
+<html lang="en">
 <head>
-  <meta charset='UTF-8'/>
-  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Music — Margo</title>
-  <meta name='description' content='Original music by Margo. Listen, feel a lyric, share it.'/>
-  <meta property='og:type' content='website'/>
-  <meta property='og:site_name' content='MARGO'/>
-  <meta property='og:title' content='Music — Margo'/>
-  <meta property='og:url' content='https://trymargo.com/music'/>
-  <meta property='og:image' content='https://trymargo.com/og-image.png'/>
-  <link rel='canonical' href='https://trymargo.com/music'/>
-  <link rel='icon' href='/favicons/favicon.svg' type='image/svg+xml'>
-  <link rel='icon' href='/favicons/favicon.ico' sizes='32x32'>
-  <link rel='apple-touch-icon' href='/favicons/apple-touch-icon.png'>
-  <link rel='preconnect' href='https://fonts.googleapis.com'>
-  <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
-  <link href='https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap' rel='stylesheet'>
-  <link rel='stylesheet' href='/assets/css/base.css'>
+  <meta name="description" content="Original music by Margo. Listen, read every lyric, and share the lines that say what you couldn't."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="MARGO"/>
+  <meta property="og:title" content="Music — Margo"/>
+  <meta property="og:url" content="https://trymargo.com/music"/>
+  <meta property="og:image" content="https://trymargo.com/og-image.png"/>
+  <link rel="canonical" href="https://trymargo.com/music"/>
+  <link rel="icon" href="/favicons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicons/favicon.ico" sizes="32x32">
+  <link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/base.css">
 
   <style>
-    /* ── CSS variable fallbacks (for preview / base.css not loaded) ── */
-    :root {
-      --gold:        #E8C547;
-      --gold-warm:   #F5D46A;
-      --gold-faint:  rgba(232,197,71,0.08);
-      --gold-border: rgba(232,197,71,0.28);
-      --gold-glow:   rgba(232,197,71,0.12);
-      --bg:          #07060A;
-      --surface:     #0F0E13;
-      --surface-2:   #161420;
-      --surface-3:   #1E1B2A;
-      --border:      rgba(255,255,255,0.07);
-      --border-hi:   rgba(255,255,255,0.12);
-      --text:        #F4F1ED;
-      --text-2:      #9A98A4;
-      --text-3:      #555360;
-      --success:     #4ade80;
-      --font-display:'Lora', serif;
-      --font-ui:     'Lora', serif;
-      --radius:      14px;
-      --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
-    }
+    body { margin:0; -webkit-font-smoothing:antialiased; background:var(--bg); }
 
-    /* ── Layout ── */
-    body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Lora', serif; -webkit-font-smoothing: antialiased; padding-bottom: 120px; }
-    .ambient { position: fixed; pointer-events: none; z-index: 0; border-radius: 50%; filter: blur(80px); opacity: 0.06; }
-    .ambient-1 { width: 500px; height: 500px; background: var(--gold); top: -100px; right: -100px; }
-    .ambient-2 { width: 400px; height: 400px; background: #6B4EFF; bottom: -100px; left: -100px; }
+    /* ── Ambient ── */
+    .ambient { position:fixed; pointer-events:none; z-index:0; border-radius:50%; filter:blur(80px); opacity:0.06; }
+    .ambient-1 { width:500px; height:500px; background:var(--gold); top:-100px; right:-100px; }
+    .ambient-2 { width:400px; height:400px; background:#6B4EFF; bottom:-100px; left:-100px; }
 
     /* ── Nav ── */
-    nav {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 24px; border-bottom: 1px solid var(--gold-glow);
-      position: sticky; top: 0;
-      background: rgba(7,6,10,0.92); backdrop-filter: blur(16px); z-index: 100;
-    }
-    .nav-logo {
-      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.9rem;
-      letter-spacing: 3px; color: var(--gold); text-decoration: none; text-transform: uppercase;
-    }
-    .nav-back {
-      font-family: var(--font-ui); font-size: 0.7rem; color: var(--text-3);
-      text-decoration: none; letter-spacing: 1px; text-transform: uppercase; transition: color 0.18s;
-    }
-    .nav-back:hover { color: var(--gold); }
+    nav { display:flex; align-items:center; justify-content:space-between; padding:20px 24px;
+      border-bottom:1px solid var(--gold-glow); position:sticky; top:0;
+      background:rgba(7,6,10,0.92); backdrop-filter:blur(16px); z-index:100; }
+    .nav-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:0.9rem;
+      letter-spacing:3px; color:var(--gold); text-decoration:none; text-transform:uppercase; }
+    .nav-back { font-family:'Lora',serif; font-size:0.7rem; color:var(--text-3);
+      text-decoration:none; letter-spacing:1px; text-transform:uppercase; transition:color 0.18s; }
+    .nav-back:hover { color:var(--gold); }
+
+    /* ── Page wrap ── */
+    .page { max-width:500px; margin:0 auto; padding:0 0 120px; position:relative; z-index:1; }
 
     /* ── Page header ── */
-    .page-header { max-width: 680px; margin: 0 auto; padding: 32px 24px 24px; position: relative; z-index: 1; }
-    .eyebrow {
-      font-family: var(--font-ui); font-size: 0.6rem; font-weight: 600;
-      letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 12px;
-    }
-    .page-header h1 {
-      font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3rem);
-      font-weight: 700; color: var(--text); line-height: 1.15; margin-bottom: 12px;
-    }
-    .page-header p {
-      font-family: var(--font-ui); font-size: 0.95rem; color: var(--text-2); line-height: 1.7;
-    }
-    .divider { width: 48px; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); margin: 24px 0; border: none; }
+    .page-header { padding:40px 24px 24px; }
+    .page-eyebrow { font-family:'Lora',serif; font-size:0.6rem; font-weight:600;
+      letter-spacing:2px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; }
+    .page-title { font-family:'Lora',serif; font-size:1.5rem; font-weight:700;
+      color:var(--text); line-height:1.2; margin-bottom:8px; }
+    .page-sub { font-family:'Lora',serif; font-size:0.82rem; color:var(--text-3); line-height:1.6; }
 
-    /* ── Song grid ── */
-    .song-grid {
-      max-width: 680px; margin: 0 auto; padding: 0 24px;
-      display: flex; flex-direction: column; gap: 16px;
-      position: relative; z-index: 1;
-    }
+    /* ── Song card (list) ── */
+    .song-card { margin:0 16px 10px; background:var(--surface); border:1px solid var(--border);
+      border-radius:16px; overflow:hidden; transition:border-color 0.18s; cursor:pointer; }
+    .song-card:hover { border-color:var(--gold-border); }
+    .song-card.featured { border-color:var(--gold-border); }
+    .song-card-inner { display:flex; gap:14px; align-items:center; padding:16px; }
+    .song-cover { width:56px; height:56px; border-radius:10px; flex-shrink:0;
+      background:var(--surface-3); overflow:hidden; display:flex; align-items:center;
+      justify-content:center; font-family:'Syne',sans-serif; font-weight:800;
+      font-size:1rem; color:var(--gold); }
+    .song-cover img { width:100%; height:100%; object-fit:cover; }
+    .song-info { flex:1; min-width:0; }
+    .song-title { font-family:'Lora',serif; font-size:1rem; font-weight:700; color:var(--text);
+      margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .song-artist { font-family:'Lora',serif; font-size:0.7rem; color:var(--text-3); margin-bottom:8px; }
+    .song-tags { display:flex; gap:6px; flex-wrap:wrap; }
+    .song-tag { font-family:'Lora',serif; font-size:0.55rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.8px; padding:3px 10px;
+      border-radius:50px; border:1px solid; }
+    .tag-live { color:var(--success); border-color:var(--success-border); }
+    .tag-coming { color:var(--gold); border-color:var(--gold-border); }
+    .tag-planned { color:var(--text-3); border-color:var(--border); }
+    .tag-featured { color:var(--gold); border-color:var(--gold-border);
+      background:var(--gold-faint); }
 
-    /* ── Song card ── */
-    .song-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 20px; overflow: hidden;
-      transition: border-color 0.22s, transform 0.22s;
-      cursor: pointer;
-    }
-    .song-card:hover { border-color: var(--gold-border); }
-    .song-card.active { border-color: var(--gold-border); background: var(--surface-2); }
+    /* ── Section label ── */
+    .section-label { font-family:'Lora',serif; font-size:0.6rem; font-weight:600;
+      text-transform:uppercase; letter-spacing:2px; color:var(--text-3);
+      padding:0 24px; margin:32px 0 12px; }
 
-    .song-card-top {
-      display: flex; align-items: center; gap: 16px; padding: 20px;
-    }
-    .song-artwork {
-      width: 72px; height: 72px; border-radius: 12px; flex-shrink: 0;
-      background: var(--surface-2); overflow: hidden; position: relative;
-    }
-    .song-artwork img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .song-artwork-placeholder {
-      width: 100%; height: 100%;
-      display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, var(--surface-3), var(--surface-2));
-      border-radius: 12px;
-    }
-    .song-artwork-placeholder svg { opacity: 0.4; }
+    /* ── Player overlay ── */
+    #playerOverlay { display:none; position:fixed; inset:0; z-index:500;
+      background:var(--bg); flex-direction:column; overflow:hidden; }
+    #playerOverlay.open { display:flex; }
 
-    .song-info { flex: 1; min-width: 0; }
-    .song-title {
-      font-family: var(--font-display); font-size: 1.1rem; font-weight: 600;
-      color: var(--text); margin-bottom: 4px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .song-artist {
-      font-family: var(--font-ui); font-size: 0.82rem; color: var(--text-2); margin-bottom: 6px;
-    }
-    .song-meta {
-      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-    }
-    .song-tag {
-      font-family: var(--font-ui); font-size: 0.6rem; font-weight: 600;
-      letter-spacing: 1px; text-transform: uppercase; color: var(--text-3);
-      padding: 3px 8px; border: 1px solid var(--border); border-radius: 50px;
-    }
-    .song-tag.new { color: var(--gold); border-color: var(--gold-border); }
+    /* ── Player nav ── */
+    .player-nav { display:flex; align-items:center; justify-content:space-between;
+      padding:20px 24px; border-bottom:1px solid var(--gold-glow);
+      background:rgba(7,6,10,0.92); backdrop-filter:blur(16px); flex-shrink:0; }
+    .player-back { font-family:'Lora',serif; font-size:0.7rem; color:var(--text-3);
+      background:none; border:none; cursor:pointer; letter-spacing:1px;
+      text-transform:uppercase; transition:color 0.18s; min-height:44px; padding:0; }
+    .player-back:hover { color:var(--gold); }
+    .player-song-label { font-family:'Lora',serif; font-size:0.7rem; font-weight:600;
+      color:var(--text); text-align:right; max-width:180px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-    .song-play-btn {
-      width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
-      background: var(--gold); border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.18s; color: var(--bg);
-    }
-    .song-play-btn:hover { background: var(--gold-warm); transform: scale(1.06); }
-    .song-play-btn:active { transform: scale(0.96); }
-    .song-play-btn svg { margin-left: 2px; }
-    .song-play-btn.playing { background: var(--surface-3); border: 1px solid var(--gold-border); }
-    .song-play-btn.playing svg { margin-left: 0; }
+    /* ── Player body ── */
+    .player-body { flex:1; overflow-y:auto; padding:24px 24px 40px; }
 
-    /* ── Karaoke panel (expands below card top) ── */
-    .song-karaoke {
-      display: none; border-top: 1px solid var(--border);
-      padding: 0; overflow: hidden;
-    }
-    .song-card.active .song-karaoke { display: block; }
+    /* ── Cover + controls ── */
+    .player-header { display:flex; gap:16px; align-items:flex-start; margin-bottom:24px; }
+    .player-cover { width:80px; height:80px; border-radius:12px; flex-shrink:0;
+      background:var(--surface-3); overflow:hidden; display:flex; align-items:center;
+      justify-content:center; font-family:'Syne',sans-serif; font-weight:800;
+      font-size:1.4rem; color:var(--gold); }
+    .player-cover img { width:100%; height:100%; object-fit:cover; }
+    .player-meta { flex:1; padding-top:4px; }
+    .player-title { font-family:'Lora',serif; font-size:1.15rem; font-weight:700;
+      color:var(--text); margin-bottom:4px; }
+    .player-artist { font-family:'Lora',serif; font-size:0.82rem; color:var(--text-3);
+      margin-bottom:12px; }
 
-    /* Hidden YouTube iframe */
-    .yt-embed-wrap { display: none; }
+    /* ── Platform links ── */
+    .platform-links { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+    .platform-btn { font-family:'Lora',serif; font-size:0.55rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.8px; padding:7px 12px;
+      border-radius:50px; border:1px solid var(--border); color:var(--text-2);
+      text-decoration:none; transition:all 0.18s; min-height:32px;
+      display:inline-flex; align-items:center; }
+    .platform-btn:hover { border-color:var(--gold-border); color:var(--gold); }
 
     /* ── Progress bar ── */
-    .song-progress-wrap { padding: 16px 20px 0; }
-    .song-progress-bar {
-      width: 100%; height: 3px; background: var(--surface-3);
-      border-radius: 2px; overflow: hidden; cursor: pointer;
-    }
-    .song-progress-fill {
-      height: 100%; background: var(--gold); border-radius: 2px;
-      width: 0%; transition: width 0.3s linear;
-    }
-    .song-progress-times {
-      display: flex; justify-content: space-between;
-      font-family: var(--font-ui); font-size: 0.6rem; color: var(--text-3);
-      margin-top: 6px;
+    .progress-wrap { margin-bottom:20px; }
+    .progress-bar { width:100%; height:3px; background:var(--surface-3);
+      border-radius:50px; cursor:pointer; position:relative; margin-bottom:8px;
+      -webkit-appearance:none; appearance:none; }
+    .progress-bar::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px;
+      border-radius:50%; background:var(--gold); cursor:pointer; margin-top:-5.5px; }
+    .progress-bar::-webkit-slider-runnable-track { height:3px; border-radius:50px; }
+    .progress-times { display:flex; justify-content:space-between;
+      font-family:'Lora',serif; font-size:0.6rem; color:var(--text-3); }
+
+    /* ── Play/pause controls ── */
+    .player-controls { display:flex; align-items:center; gap:16px; margin-bottom:28px; }
+    .play-btn { width:52px; height:52px; border-radius:50%; background:var(--gold);
+      border:none; cursor:pointer; display:flex; align-items:center;
+      justify-content:center; font-size:1.2rem; transition:all 0.18s;
+      flex-shrink:0; }
+    .play-btn:hover { background:var(--gold-warm); transform:scale(1.04); }
+    .play-btn:active { transform:scale(0.96); }
+    .play-status { font-family:'Lora',serif; font-size:0.7rem; color:var(--text-3);
+      font-style:italic; }
+
+    /* ── Karaoke lyrics ── */
+    .lyrics-section { }
+    .lyrics-label { font-family:'Lora',serif; font-size:0.6rem; font-weight:600;
+      text-transform:uppercase; letter-spacing:2px; color:var(--text-3); margin-bottom:20px; }
+
+    /* Hero lyric stage — the active line */
+    .hero-stage { min-height:80px; display:flex; align-items:center;
+      justify-content:center; text-align:center; padding:20px 0;
+      margin-bottom:20px; position:relative; }
+    .hero-lyric { font-family:'Lora',serif; font-size:1.4rem; font-weight:400;
+      font-style:italic; color:var(--gold); line-height:1.4;
+      transition:opacity 0.3s cubic-bezier(0.16,1,0.3,1),
+                 transform 0.3s cubic-bezier(0.16,1,0.3,1);
+      text-align:center; }
+
+    /* Share a Lyric button — appears on active line */
+    .share-lyric-btn { display:none; margin:0 auto 24px; padding:14px 24px;
+      background:var(--gold); color:var(--bg); border:none; border-radius:12px;
+      font-family:'Lora',serif; font-weight:700; font-size:0.7rem;
+      text-transform:uppercase; letter-spacing:1px; cursor:pointer;
+      min-height:52px; width:100%; max-width:320px;
+      transition:all 0.18s; }
+    .share-lyric-btn:hover { background:var(--gold-warm); transform:scale(1.01); }
+    .share-lyric-btn:active { transform:scale(0.98); }
+    .share-lyric-btn.visible { display:block; }
+
+    /* Full lyrics list */
+    .lyrics-list { display:flex; flex-direction:column; gap:2px; }
+    .lyric-line { font-family:'Lora',serif; font-size:0.95rem; font-style:italic;
+      color:var(--text-3); line-height:1.6; padding:10px 12px; border-radius:8px;
+      cursor:pointer; transition:all 0.18s; border:1px solid transparent; }
+    .lyric-line:hover { color:var(--text-2); background:var(--surface-2); }
+    .lyric-line.active { color:var(--gold); background:var(--gold-faint);
+      border-color:var(--gold-border); font-weight:600; }
+    .lyric-line.past { opacity:0.45; }
+
+    /* Coming soon state */
+    .coming-state { text-align:center; padding:60px 24px; }
+    .coming-title { font-family:'Lora',serif; font-size:1.15rem; font-weight:700;
+      color:var(--text); margin-bottom:8px; }
+    .coming-sub { font-family:'Lora',serif; font-size:0.82rem; color:var(--text-3);
+      line-height:1.6; }
+    .coming-date { display:inline-block; margin-top:16px; font-family:'Lora',serif;
+      font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+      color:var(--gold); border:1px solid var(--gold-border); border-radius:50px;
+      padding:6px 16px; }
+
+    /* Empty state */
+    .empty-state { text-align:center; padding:80px 24px; }
+    .empty-state p { font-family:'Lora',serif; font-size:0.95rem; color:var(--text-3);
+      line-height:1.7; }
+
+    /* Hidden YouTube player */
+    #ytPlayer { position:absolute; left:-9999px; top:-9999px;
+      width:1px; height:1px; pointer-events:none; }
+
+    /* Loading skeleton */
+    .sk-card { margin:0 16px 10px; height:88px; background:var(--surface);
+      border-radius:16px; border:1px solid var(--border);
+      animation:sk-pulse 1.6s ease-in-out infinite; }
+    @keyframes sk-pulse {
+      0%,100% { opacity:1; } 50% { opacity:0.45; }
     }
 
-    /* ── Lyrics stage ── */
-    .lyrics-stage {
-      padding: 20px 20px 8px;
-      min-height: 180px;
-      display: flex; flex-direction: column; justify-content: center;
-    }
-    .lyrics-line {
-      font-family: var(--font-display); font-style: italic;
-      font-size: 1.1rem; line-height: 1.6;
-      color: var(--text-3);
-      padding: 6px 0;
-      transition: color 0.3s, transform 0.3s;
-      cursor: pointer;
-    }
-    .lyrics-line.active {
-      color: var(--gold);
-      font-size: 1.25rem;
-      transform: translateX(4px);
-    }
-    .lyrics-line.past { color: var(--text-3); opacity: 0.5; }
-    .lyrics-line:hover { color: var(--text-2); }
-    .lyrics-loading {
-      font-family: var(--font-ui); font-size: 0.82rem; color: var(--text-3);
-      text-align: center; padding: 32px 0;
-    }
-    .lyrics-no-sync {
-      font-family: var(--font-display); font-style: italic;
-      font-size: 0.95rem; color: var(--text-3); line-height: 1.8;
-      padding: 8px 0;
-    }
-
-    /* ── Share a lyric action ── */
-    .share-lyric-bar {
-      padding: 12px 20px 20px;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .share-lyric-selected {
-      flex: 1; font-family: var(--font-display); font-style: italic;
-      font-size: 0.82rem; color: var(--text-2); line-height: 1.5;
-      min-height: 20px;
-    }
-    .share-lyric-btn {
-      padding: 10px 18px; background: var(--gold); color: var(--bg);
-      border: none; border-radius: 10px; font-family: var(--font-ui);
-      font-size: 0.6rem; font-weight: 700; letter-spacing: 1px;
-      text-transform: uppercase; cursor: pointer;
-      transition: all 0.18s; white-space: nowrap; min-height: 44px;
-    }
-    .share-lyric-btn:hover { background: var(--gold-warm); transform: scale(1.02); }
-    .share-lyric-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
-
-    /* ── Stream links ── */
-    .stream-links {
-      padding: 0 20px 20px;
-      display: flex; gap: 8px; flex-wrap: wrap;
-    }
-    .stream-link {
-      display: flex; align-items: center; gap: 6px;
-      padding: 7px 12px; border: 1px solid var(--border);
-      border-radius: 50px; text-decoration: none;
-      font-family: var(--font-ui); font-size: 0.6rem; font-weight: 600;
-      letter-spacing: 0.5px; text-transform: uppercase;
-      color: var(--text-3); transition: all 0.18s;
-    }
-    .stream-link:hover { border-color: var(--gold-border); color: var(--gold); }
-
-    /* ── Coming soon card ── */
-    .song-card.coming-soon {
-      opacity: 0.6; cursor: default;
-      border-style: dashed;
-    }
-    .song-card.coming-soon:hover { border-color: var(--border); transform: none; }
-    .coming-soon-badge {
-      font-family: var(--font-ui); font-size: 0.6rem; font-weight: 600;
-      letter-spacing: 1px; text-transform: uppercase;
-      color: var(--text-3); padding: 3px 8px;
-      border: 1px solid var(--border); border-radius: 50px;
-      margin-left: auto;
-    }
-    .notify-btn {
-      padding: 8px 14px; background: transparent;
-      border: 1px solid var(--border); border-radius: 8px;
-      font-family: var(--font-ui); font-size: 0.6rem; font-weight: 700;
-      letter-spacing: 0.8px; text-transform: uppercase;
-      color: var(--text-3); cursor: pointer;
-      transition: all 0.18s; min-height: 44px;
-    }
-    .notify-btn:hover { border-color: var(--gold-border); color: var(--gold); }
-
-    /* ── Loading / Empty state ── */
-    .loading-state {
-      text-align: center; padding: 64px 24px;
-      font-family: var(--font-ui); font-size: 0.82rem; color: var(--text-3);
-    }
-
-    /* ── Mini-player (persistent bottom bar) ── */
-    #miniPlayer {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: rgba(15,14,19,0.96); backdrop-filter: blur(20px);
-      border-top: 1px solid var(--gold-glow);
-      padding: 12px 20px 20px;
-      z-index: 200;
-      transform: translateY(100%);
-      transition: transform 0.3s var(--ease-out);
-      display: flex; align-items: center; gap: 12px;
-    }
-    #miniPlayer.visible { transform: translateY(0); }
-
-    .mini-artwork {
-      width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;
-      background: var(--surface-2); overflow: hidden;
-    }
-    .mini-artwork img { width: 100%; height: 100%; object-fit: cover; }
-
-    .mini-info { flex: 1; min-width: 0; }
-    .mini-title {
-      font-family: var(--font-display); font-size: 0.82rem; font-weight: 600;
-      color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .mini-lyric {
-      font-family: var(--font-display); font-style: italic;
-      font-size: 0.7rem; color: var(--gold);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
-    }
-
-    .mini-controls { display: flex; align-items: center; gap: 8px; }
-    .mini-play-btn {
-      width: 36px; height: 36px; border-radius: 50%;
-      background: var(--gold); border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--bg); transition: all 0.18s; flex-shrink: 0;
-    }
-    .mini-play-btn:hover { background: var(--gold-warm); }
-    .mini-play-btn svg { margin-left: 2px; }
-    .mini-play-btn.playing svg { margin-left: 0; }
-    .mini-close-btn {
-      width: 32px; height: 32px; border-radius: 50%;
-      background: transparent; border: 1px solid var(--border);
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      color: var(--text-3); font-size: 1rem; transition: all 0.18s; flex-shrink: 0;
-    }
-    .mini-close-btn:hover { color: var(--text); border-color: var(--border-hi); }
-
-    .mini-progress {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      height: 2px; background: var(--surface-3);
-    }
-    .mini-progress-fill {
-      height: 100%; background: var(--gold);
-      width: 0%; transition: width 0.3s linear;
-    }
-
-    /* ── Footer links ── */
-    .footer-links {
-      display: flex; gap: 24px; flex-wrap: wrap;
-      max-width: 680px; margin: 48px auto 0; padding: 32px 24px;
-      border-top: 1px solid var(--border);
-      position: relative; z-index: 1;
-    }
-    .footer-links a {
-      font-family: var(--font-ui); font-size: 0.6rem; text-transform: uppercase;
-      letter-spacing: 1px; color: var(--text-3); text-decoration: none; transition: color 0.18s;
-    }
-    .footer-links a:hover { color: var(--gold); }
-
-    @media (max-width: 480px) {
-      .song-card-top { padding: 16px; gap: 12px; }
-      .song-artwork { width: 60px; height: 60px; }
-      .song-title { font-size: 1rem; }
-      .lyrics-stage { min-height: 140px; }
-      .lyrics-line { font-size: 1rem; }
-      .lyrics-line.active { font-size: 1.15rem; }
+    @media (prefers-reduced-motion:reduce) {
+      * { transition:none !important; animation:none !important; }
     }
   </style>
 </head>
-<body data-page="music">
-<div class='ambient ambient-1'></div>
-<div class='ambient ambient-2'></div>
 
+<body>
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<!-- ── Nav ── -->
 <nav>
-  <a href='/' class='nav-logo'>MARGO</a>
-  <a href='/' class='nav-back'>← Back</a>
+  <a href="/" class="nav-logo">MARGO</a>
+  <a href="/" class="nav-back">← Back</a>
 </nav>
 
-<div class='page-header'>
-  <div class='eyebrow'>Original Music</div>
-  <h1>Songs by Margo.</h1>
-  <hr class='divider'/>
-  <p>Listen. Feel a lyric. Share it — and it lives in the feed.</p>
+<!-- ── Song list page ── -->
+<div class="page" id="songListPage">
+  <div class="page-header">
+    <div class="page-eyebrow">Original Music</div>
+    <h1 class="page-title">When words fail,<br/>drop a lyric.</h1>
+    <p class="page-sub">Songs by Margo. Listen, feel a line, share it.</p>
+  </div>
+
+  <div id="songListWrap">
+    <!-- Loading skeletons -->
+    <div class="sk-card"></div>
+    <div class="sk-card" style="opacity:0.6;"></div>
+    <div class="sk-card" style="opacity:0.35;"></div>
+  </div>
 </div>
 
-<div class='song-grid' id='songGrid'>
-  <div class='loading-state'>Loading songs…</div>
-</div>
+<!-- ── Player overlay (full screen) ── -->
+<div id="playerOverlay">
+  <div class="player-nav">
+    <button class="player-back" id="playerBackBtn">← All Songs</button>
+    <div class="player-song-label" id="playerSongLabel"></div>
+  </div>
 
-<div class='footer-links'>
-  <a href='/about'>About</a>
-  <a href='/privacy'>Privacy</a>
-  <a href='/terms'>Terms</a>
-  <a href='/contact'>Contact</a>
-</div>
+  <div class="player-body" id="playerBody">
 
-<!-- Persistent Mini Player -->
-<div id='miniPlayer'>
-  <div class='mini-artwork' id='miniArtwork'>
-    <img id='miniArtworkImg' src='' alt='' style='display:none'/>
-  </div>
-  <div class='mini-info'>
-    <div class='mini-title' id='miniTitle'>—</div>
-    <div class='mini-lyric' id='miniLyric'>Now playing</div>
-  </div>
-  <div class='mini-controls'>
-    <button class='mini-play-btn' id='miniPlayBtn' aria-label='Play/Pause'>
-      <svg width='14' height='14' viewBox='0 0 24 24' fill='currentColor'>
-        <polygon points='5,3 19,12 5,21'/>
-      </svg>
-    </button>
-    <button class='mini-close-btn' id='miniCloseBtn' aria-label='Close player'>×</button>
-  </div>
-  <div class='mini-progress'><div class='mini-progress-fill' id='miniProgressFill'></div></div>
-</div>
+    <!-- Cover + meta -->
+    <div class="player-header">
+      <div class="player-cover" id="playerCover">M</div>
+      <div class="player-meta">
+        <div class="player-title" id="playerTitle"></div>
+        <div class="player-artist" id="playerArtist"></div>
+        <div class="platform-links" id="platformLinks"></div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap" style="display:none;">
+      <input type="range" class="progress-bar" id="progressBar"
+        min="0" max="100" value="0" step="0.1"/>
+      <div class="progress-times">
+        <span id="timeElapsed">0:00</span>
+        <span id="timeDuration">0:00</span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="player-controls">
+      <button class="play-btn" id="playBtn" aria-label="Play">▶</button>
+      <span class="play-status" id="playStatus">Tap to play</span>
+    </div>
+
+    <!-- Lyrics / karaoke -->
+    <div class="lyrics-section" id="lyricsSection"></div>
+
+  </div><!-- end player-body -->
+</div><!-- end playerOverlay -->
+
+<!-- Hidden YouTube iframe API target -->
+<div id="ytPlayer"></div>
 
 <!-- Firebase -->
-<script src='https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js'></script>
-<script src='https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js'></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-/* ══════════════════════════════════════════════════════════════
-   MARGO — music.html
-   Reads from Firebase /songs. Karaoke via SRT timestamps.
-   Mini-player persists while browsing.
-   ══════════════════════════════════════════════════════════════ */
+/* ============================================================
+   music.js — inline
+   Reads /songs from Firebase, renders song list,
+   opens player, syncs karaoke to YouTube currentTime.
+   ============================================================ */
 
-// ── State ──
-let currentSongId   = null;
-let ytPlayer        = null;
-let ytReady         = false;
-let karaokeTick     = null;
-let activeLine      = -1;
-let selectedLyric   = null;
-let songs           = [];
-let isPlaying       = false;
+let _songs        = [];
+let _activeSong   = null;
+let _ytPlayer     = null;
+let _ytReady      = false;
+let _syncInterval = null;
+let _lyricsJson   = [];
+let _activeLineIdx = -1;
+let _isPlaying    = false;
+let _duration     = 0;
 
-// ── Firebase init ──
-async function initFirebase() {
+/* ── Init Firebase ── */
+async function initMusicFirebase() {
   try {
     const res = await fetch('/api/config');
-    if (!res.ok) throw new Error('Config fetch failed');
+    if (!res.ok) throw new Error('Config failed');
     const cfg = await res.json();
     firebase.initializeApp(cfg);
     loadSongs();
-  } catch(e) {
+  } catch (e) {
     console.warn('[Music] Firebase init failed:', e.message);
-    renderFallback();
+    showEmptyState('Could not connect. Please refresh.');
   }
 }
 
-// ── Load songs from /songs ──
+/* ── Load songs from /songs ── */
 function loadSongs() {
-  firebase.database().ref('songs').orderByChild('order').on('value', snap => {
-    songs = [];
-    snap.forEach(child => {
-      const s = child.val();
-      s.id = child.key;
-      songs.push(s);
-    });
-    if (!songs.length) {
-      renderFallback();
-    } else {
-      renderSongs(songs);
+  firebase.database().ref('songs')
+    .orderByChild('createdAt')
+    .once('value')
+    .then(snap => {
+      _songs = [];
+      snap.forEach(child => {
+        const s = child.val();
+        s.id = child.key;
+        _songs.unshift(s);
+      });
+      renderSongList();
+    })
+    .catch(() => showEmptyState('Could not load songs.'));
+}
+
+/* ── Render song list ── */
+function renderSongList() {
+  const wrap = document.getElementById('songListWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  if (!_songs.length) {
+    showEmptyState('Music coming soon.');
+    return;
+  }
+
+  // Featured first
+  const featured = _songs.find(s => s.featured && s.status === 'live');
+  const rest      = _songs.filter(s => s !== featured);
+
+  if (featured) {
+    wrap.appendChild(_buildSongCard(featured, true));
+  }
+
+  const liveSongs    = rest.filter(s => s.status === 'live');
+  const comingSongs  = rest.filter(s => s.status === 'coming');
+  const plannedSongs = rest.filter(s => s.status === 'planned');
+
+  if (liveSongs.length) {
+    if (featured) {
+      const lbl = document.createElement('div');
+      lbl.className = 'section-label';
+      lbl.textContent = 'More Songs';
+      wrap.appendChild(lbl);
     }
-  });
+    liveSongs.forEach(s => wrap.appendChild(_buildSongCard(s, false)));
+  }
+
+  if (comingSongs.length) {
+    const lbl = document.createElement('div');
+    lbl.className = 'section-label';
+    lbl.textContent = 'Coming Soon';
+    wrap.appendChild(lbl);
+    comingSongs.forEach(s => wrap.appendChild(_buildSongCard(s, false)));
+  }
+
+  if (plannedSongs.length) {
+    const lbl = document.createElement('div');
+    lbl.className = 'section-label';
+    lbl.textContent = 'In the Works';
+    wrap.appendChild(lbl);
+    plannedSongs.forEach(s => wrap.appendChild(_buildSongCard(s, false)));
+  }
 }
 
-// ── Parse SRT into array of {start, end, text} in milliseconds ──
-function parseSRT(srt) {
-  if (!srt) return [];
-  const lines = [];
-  const blocks = srt.trim().split(/\n\s*\n/);
-  blocks.forEach(block => {
-    const rows = block.trim().split('\n');
-    if (rows.length < 3) return;
-    const timeRow = rows[1];
-    const match = timeRow.match(/(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})/);
-    if (!match) return;
-    const text = rows.slice(2).join(' ').trim();
-    if (!text) return;
-    lines.push({ start: srtTimeToMs(match[1]), end: srtTimeToMs(match[2]), text });
-  });
-  return lines;
-}
-
-function srtTimeToMs(t) {
-  const [hms, ms] = t.replace(',', '.').split('.');
-  const [h, m, s] = hms.split(':').map(Number);
-  return (h * 3600 + m * 60 + s) * 1000 + parseInt(ms || 0);
-}
-
-// ── Parse plain LRC as fallback ──
-function parseLRC(lrc) {
-  if (!lrc) return [];
-  const lines = [];
-  lrc.split('\n').forEach(row => {
-    const match = row.match(/\[(\d+):(\d+)\.(\d+)\](.*)/);
-    if (!match) return;
-    const ms = (parseInt(match[1]) * 60 + parseInt(match[2])) * 1000 + parseInt(match[3]);
-    const text = match[4].trim();
-    if (text) lines.push({ start: ms, end: ms + 4000, text });
-  });
-  return lines;
-}
-
-// ── Render all song cards ──
-function renderSongs(list) {
-  const grid = document.getElementById('songGrid');
-  grid.innerHTML = '';
-  list.forEach(song => {
-    grid.appendChild(buildSongCard(song));
-  });
-}
-
-function buildSongCard(song) {
-  const isComingSoon = song.status === 'coming_soon';
+function _buildSongCard(song, isFeatured) {
   const card = document.createElement('div');
-  card.className = 'song-card' + (isComingSoon ? ' coming-soon' : '');
-  card.id = 'song-card-' + song.id;
+  card.className = 'song-card' + (isFeatured ? ' featured' : '');
 
-  const artworkHTML = song.artwork
-    ? `<img src="${esc(song.artwork)}" alt="${esc(song.title)}" loading="lazy"/>`
-    : `<div class="song-artwork-placeholder">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5">
-          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
-          <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
-        </svg>
-      </div>`;
+  const statusTag = song.status === 'live'   ? '<span class="song-tag tag-live">Live</span>'
+                  : song.status === 'coming' ? '<span class="song-tag tag-coming">Coming Soon</span>'
+                  : '<span class="song-tag tag-planned">In the Works</span>';
 
-  const tags = (song.tags || []).map(t =>
-    `<span class="song-tag${t === 'New' ? ' new' : ''}">${esc(t)}</span>`
-  ).join('');
-
-  const rightAction = isComingSoon
-    ? `<span class="coming-soon-badge">${esc(song.comingSoonLabel || 'Coming soon')}</span>`
-    : `<button class="song-play-btn" id="play-${song.id}" onclick="togglePlay('${song.id}',event)" aria-label="Play ${esc(song.title)}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <polygon points="5,3 19,12 5,21"/>
-        </svg>
-      </button>`;
+  const featTag = isFeatured
+    ? '<span class="song-tag tag-featured">Featured</span>'
+    : '';
 
   card.innerHTML = `
-    <div class="song-card-top" onclick="${isComingSoon ? 'showNotify(\'' + song.id + '\')' : ''}">
-      <div class="song-artwork">${artworkHTML}</div>
+    <div class="song-card-inner">
+      <div class="song-cover" id="cover-${song.id}">
+        ${song.coverUrl
+          ? `<img src="${song.coverUrl}" alt="${song.title}" onerror="this.parentNode.textContent='M'"/>`
+          : 'M'}
+      </div>
       <div class="song-info">
-        <div class="song-title">${esc(song.title)}</div>
-        <div class="song-artist">${esc(song.artist || 'Margo')}</div>
-        <div class="song-meta">${tags}</div>
+        <div class="song-title">${song.title || 'Untitled'}</div>
+        <div class="song-artist">${song.artist || 'Margo'}${song.releaseDate ? ' · ' + song.releaseDate : ''}</div>
+        <div class="song-tags">${statusTag}${featTag}</div>
       </div>
-      ${rightAction}
     </div>
-    ${isComingSoon ? `
-      <div style="padding:0 20px 16px;display:flex;align-items:center;gap:10px;">
-        <span style="font-family:var(--font-ui);font-size:0.82rem;color:var(--text-3);">${esc(song.description || '')}</span>
-        <button class="notify-btn" onclick="showNotify('${song.id}')">Notify me</button>
-      </div>` : `
-    <div class="song-karaoke" id="karaoke-${song.id}">
-      <div class="yt-embed-wrap" id="yt-wrap-${song.id}">
-        <div id="yt-player-${song.id}"></div>
-      </div>
-      <div class="song-progress-wrap">
-        <div class="song-progress-bar" id="progress-bar-${song.id}" onclick="seekTo(event,'${song.id}')">
-          <div class="song-progress-fill" id="progress-fill-${song.id}"></div>
-        </div>
-        <div class="song-progress-times">
-          <span id="time-current-${song.id}">0:00</span>
-          <span id="time-total-${song.id}">—</span>
-        </div>
-      </div>
-      <div class="lyrics-stage" id="lyrics-stage-${song.id}">
-        <div class="lyrics-loading">Loading lyrics…</div>
-      </div>
-      <div class="share-lyric-bar">
-        <div class="share-lyric-selected" id="selected-lyric-${song.id}">Tap a lyric line to select it</div>
-        <button class="share-lyric-btn" id="share-btn-${song.id}" disabled onclick="shareLyric('${song.id}')">
-          + Share a Lyric
-        </button>
-      </div>
-      <div class="stream-links" id="stream-links-${song.id}"></div>
-    </div>`}
   `;
 
+  card.onclick = () => openPlayer(song);
   return card;
 }
 
-// ── Toggle play/pause ──
-function togglePlay(songId, e) {
-  if (e) e.stopPropagation();
+function showEmptyState(msg) {
+  const wrap = document.getElementById('songListWrap');
+  if (wrap) wrap.innerHTML = `<div class="empty-state"><p>${msg}</p></div>`;
+}
 
-  if (currentSongId === songId) {
-    // Same song — toggle
-    if (isPlaying) pauseSong(); else resumeSong();
-    return;
+/* ══════════════════════════════════════
+   PLAYER
+══════════════════════════════════════ */
+function openPlayer(song) {
+  _activeSong   = song;
+  _lyricsJson   = Array.isArray(song.lyricsJson) ? song.lyricsJson : [];
+  _activeLineIdx = -1;
+  _isPlaying    = false;
+
+  // Update nav label
+  const label = document.getElementById('playerSongLabel');
+  if (label) label.textContent = song.title || '';
+
+  // Cover
+  const coverEl = document.getElementById('playerCover');
+  if (coverEl) {
+    if (song.coverUrl) {
+      coverEl.innerHTML = `<img src="${song.coverUrl}" alt="${song.title}"
+        onerror="this.parentNode.textContent='M'" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"/>`;
+    } else {
+      coverEl.textContent = 'M';
+    }
   }
 
-  // New song — stop current first
-  if (currentSongId) stopCurrentSong();
+  // Title / artist
+  const titleEl  = document.getElementById('playerTitle');
+  const artistEl = document.getElementById('playerArtist');
+  if (titleEl)  titleEl.textContent  = song.title  || '';
+  if (artistEl) artistEl.textContent = (song.artist || 'Margo') + (song.releaseDate ? ' · ' + song.releaseDate : '');
 
-  currentSongId = songId;
-  openCard(songId);
-  loadYTPlayer(songId);
-}
+  // Platform links
+  _renderPlatformLinks(song);
 
-function openCard(songId) {
-  document.querySelectorAll('.song-card').forEach(c => c.classList.remove('active'));
-  const card = document.getElementById('song-card-' + songId);
-  if (card) {
-    card.classList.add('active');
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-  renderLyrics(songId);
-  renderStreamLinks(songId);
-}
+  // Lyrics section
+  _renderLyricsSection(song);
 
-function stopCurrentSong() {
-  if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
-  clearInterval(karaokeTick);
-  karaokeTick = null;
-  isPlaying = false;
-  const old = currentSongId;
-  if (old) {
-    const btn = document.getElementById('play-' + old);
-    if (btn) btn.innerHTML = playIcon();
-    if (btn) btn.classList.remove('playing');
-    document.getElementById('song-card-' + old)?.classList.remove('active');
-  }
-  ytPlayer = null;
-  ytReady  = false;
-}
+  // Progress bar — show only if YouTube ID exists
+  const progressWrap = document.getElementById('progressWrap');
+  if (progressWrap) progressWrap.style.display = song.youtubeId ? 'block' : 'none';
 
-function pauseSong() {
-  if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
-  isPlaying = false;
-  const btn = document.getElementById('play-' + currentSongId);
-  if (btn) { btn.innerHTML = playIcon(); btn.classList.remove('playing'); }
-  const mb = document.getElementById('miniPlayBtn');
-  if (mb) { mb.innerHTML = playIcon('14'); mb.classList.remove('playing'); }
-  clearInterval(karaokeTick);
-}
+  // Reset controls
+  _setPlayBtn(false);
+  const playStatus = document.getElementById('playStatus');
+  if (playStatus) playStatus.textContent = song.youtubeId ? 'Tap to play' : '';
 
-function resumeSong() {
-  if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo();
-  isPlaying = true;
-  const btn = document.getElementById('play-' + currentSongId);
-  if (btn) { btn.innerHTML = pauseIcon(); btn.classList.add('playing'); }
-  const mb = document.getElementById('miniPlayBtn');
-  if (mb) { mb.innerHTML = pauseIcon('14'); mb.classList.add('playing'); }
-  startKaraokeTick();
-}
+  // Show overlay
+  const overlay = document.getElementById('playerOverlay');
+  if (overlay) overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
 
-// ── Load YouTube IFrame ──
-function loadYTPlayer(songId) {
-  const song = songs.find(s => s.id === songId);
-  if (!song || !song.youtubeId) {
-    renderLyricsNoAudio(songId);
-    return;
+  // Init YouTube if needed
+  if (song.youtubeId) {
+    _initYT(song.youtubeId);
   }
 
-  // Inject YT API if needed
-  if (!window.YT) {
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-    window.onYouTubeIframeAPIReady = () => createYTPlayer(songId, song.youtubeId);
-  } else if (window.YT.Player) {
-    createYTPlayer(songId, song.youtubeId);
-  } else {
-    window.onYouTubeIframeAPIReady = () => createYTPlayer(songId, song.youtubeId);
+  // Back button
+  const backBtn = document.getElementById('playerBackBtn');
+  if (backBtn) backBtn.onclick = closePlayer;
+
+  // Play button
+  const playBtn = document.getElementById('playBtn');
+  if (playBtn) playBtn.onclick = togglePlay;
+
+  // Progress seek
+  const progressBar = document.getElementById('progressBar');
+  if (progressBar) {
+    progressBar.oninput = e => {
+      if (_ytPlayer && _ytReady && _duration) {
+        const t = (e.target.value / 100) * _duration;
+        _ytPlayer.seekTo(t, true);
+      }
+    };
   }
 }
 
-function createYTPlayer(songId, ytId) {
-  const wrap = document.getElementById('yt-player-' + songId);
+function closePlayer() {
+  const overlay = document.getElementById('playerOverlay');
+  if (overlay) overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  _stopSync();
+  if (_ytPlayer && _ytReady) {
+    try { _ytPlayer.stopVideo(); } catch(e) {}
+  }
+  _isPlaying = false;
+  _setPlayBtn(false);
+}
+
+/* ── Platform links ── */
+function _renderPlatformLinks(song) {
+  const wrap = document.getElementById('platformLinks');
   if (!wrap) return;
-  ytPlayer = new YT.Player(wrap, {
-    height: '1', width: '1',
-    videoId: ytId,
-    playerVars: { autoplay: 1, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1 },
-    events: {
-      onReady: (e) => {
-        ytReady = true;
-        e.target.playVideo();
-      },
-      onStateChange: (e) => {
-        if (e.data === YT.PlayerState.PLAYING) {
-          isPlaying = true;
-          const btn = document.getElementById('play-' + songId);
-          if (btn) { btn.innerHTML = pauseIcon(); btn.classList.add('playing'); }
-          const mb = document.getElementById('miniPlayBtn');
-          if (mb) { mb.innerHTML = pauseIcon('14'); mb.classList.add('playing'); }
-          showMiniPlayer(songId);
-          startKaraokeTick();
-        } else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
-          isPlaying = false;
-          clearInterval(karaokeTick);
-          const btn = document.getElementById('play-' + songId);
-          if (btn) { btn.innerHTML = playIcon(); btn.classList.remove('playing'); }
-          const mb = document.getElementById('miniPlayBtn');
-          if (mb) { mb.innerHTML = playIcon('14'); mb.classList.remove('playing'); }
-        }
-      }
-    }
+  wrap.innerHTML = '';
+  const p = song.platforms || {};
+  const defs = [
+    { key:'youtube',   label:'YouTube'   },
+    { key:'audiomack', label:'Audiomack' },
+    { key:'boomplay',  label:'Boomplay'  },
+    { key:'soundcloud',label:'SoundCloud'},
+    { key:'spotify',   label:'Spotify'   },
+    { key:'apple',     label:'Apple Music'},
+  ];
+  defs.forEach(({ key, label }) => {
+    const url = p[key];
+    if (!url) return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.className = 'platform-btn';
+    a.textContent = label;
+    wrap.appendChild(a);
   });
 }
 
-// ── Karaoke ticker ──
-function startKaraokeTick() {
-  clearInterval(karaokeTick);
-  karaokeTick = setInterval(() => {
-    if (!ytPlayer || !ytPlayer.getCurrentTime) return;
-    const ms = ytPlayer.getCurrentTime() * 1000;
-    const dur = ytPlayer.getDuration ? ytPlayer.getDuration() : 0;
+/* ── Lyrics section ── */
+function _renderLyricsSection(song) {
+  const section = document.getElementById('lyricsSection');
+  if (!section) return;
+  section.innerHTML = '';
 
-    // Progress bar
-    const fill = document.getElementById('progress-fill-' + currentSongId);
-    const mini = document.getElementById('miniProgressFill');
-    if (fill && dur) fill.style.width = ((ms / 1000 / dur) * 100) + '%';
-    if (mini && dur) mini.style.width  = ((ms / 1000 / dur) * 100) + '%';
-
-    // Time display
-    const cur = document.getElementById('time-current-' + currentSongId);
-    const tot = document.getElementById('time-total-'   + currentSongId);
-    if (cur) cur.textContent = fmtTime(ms / 1000);
-    if (tot && dur) tot.textContent = fmtTime(dur);
-
-    // Lyric sync
-    const song = songs.find(s => s.id === currentSongId);
-    const parsed = song?._parsed;
-    if (!parsed || !parsed.length) return;
-    let newActive = -1;
-    for (let i = 0; i < parsed.length; i++) {
-      if (ms >= parsed[i].start && ms <= parsed[i].end) { newActive = i; break; }
-      if (ms >= parsed[i].start && (i === parsed.length - 1 || ms < parsed[i + 1].start)) { newActive = i; break; }
-    }
-    if (newActive !== activeLine) {
-      activeLine = newActive;
-      highlightLine(currentSongId, newActive, parsed);
-      if (newActive >= 0) {
-        document.getElementById('miniLyric').textContent = parsed[newActive].text;
-      }
-    }
-  }, 250);
-}
-
-function highlightLine(songId, idx, parsed) {
-  const stage = document.getElementById('lyrics-stage-' + songId);
-  if (!stage) return;
-  const lines = stage.querySelectorAll('.lyrics-line');
-  lines.forEach((el, i) => {
-    el.classList.remove('active', 'past');
-    if (i < idx)  el.classList.add('past');
-    if (i === idx) {
-      el.classList.add('active');
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  });
-}
-
-// ── Render lyrics ──
-function renderLyrics(songId) {
-  const song = songs.find(s => s.id === songId);
-  if (!song) return;
-  const stage = document.getElementById('lyrics-stage-' + songId);
-  if (!stage) return;
-
-  let parsed = [];
-  if (song.srt)      parsed = parseSRT(song.srt);
-  else if (song.lrc) parsed = parseLRC(song.lrc);
-
-  song._parsed = parsed;
-
-  if (!parsed.length && !song.lyrics) {
-    stage.innerHTML = '<div class="lyrics-loading">Lyrics coming soon</div>';
+  if (song.status === 'coming' || song.status === 'planned') {
+    section.innerHTML = `
+      <div class="coming-state">
+        <div class="coming-title">${song.title}</div>
+        <div class="coming-sub">This song is on its way.<br/>Follow along on the feed when it drops.</div>
+        ${song.releaseDate ? `<span class="coming-date">Dropping ${song.releaseDate}</span>` : ''}
+      </div>`;
     return;
   }
 
-  if (parsed.length) {
-    stage.innerHTML = parsed.map((line, i) =>
-      `<div class="lyrics-line" data-idx="${i}" onclick="selectLyric('${songId}', ${i})">${esc(line.text)}</div>`
-    ).join('');
-  } else if (song.lyrics) {
-    // Plain lyrics fallback — no timing
-    stage.innerHTML = `<div class="lyrics-no-sync">${esc(song.lyrics).replace(/\n/g, '<br/>')}</div>`;
-  }
-}
-
-function renderLyricsNoAudio(songId) {
-  const song = songs.find(s => s.id === songId);
-  if (!song) return;
-  const stage = document.getElementById('lyrics-stage-' + songId);
-  if (!stage) return;
-  let parsed = [];
-  if (song.srt) parsed = parseSRT(song.srt);
-  else if (song.lrc) parsed = parseLRC(song.lrc);
-  song._parsed = parsed;
-  if (parsed.length) {
-    stage.innerHTML = parsed.map((line, i) =>
-      `<div class="lyrics-line" data-idx="${i}" onclick="selectLyric('${songId}', ${i})">${esc(line.text)}</div>`
-    ).join('');
-  } else {
-    stage.innerHTML = '<div class="lyrics-loading">Audio source not configured</div>';
-  }
-}
-
-// ── Select a lyric line ──
-function selectLyric(songId, idx) {
-  const song = songs.find(s => s.id === songId);
-  if (!song?._parsed?.[idx]) return;
-  selectedLyric = song._parsed[idx].text;
-
-  // Highlight selected
-  const stage = document.getElementById('lyrics-stage-' + songId);
-  if (stage) {
-    stage.querySelectorAll('.lyrics-line').forEach((el, i) => {
-      el.style.borderLeft = i === idx ? '2px solid var(--gold)' : 'none';
-      el.style.paddingLeft = i === idx ? '10px' : '0';
-    });
+  if (!_lyricsJson.length) {
+    section.innerHTML = `<div style="padding:40px 0;text-align:center;
+      font-family:'Lora',serif;font-size:0.82rem;color:var(--text-3);font-style:italic;">
+      Lyrics coming soon</div>`;
+    return;
   }
 
-  const sel = document.getElementById('selected-lyric-' + songId);
-  if (sel) sel.textContent = '"' + selectedLyric + '"';
+  // Hero stage
+  const heroStage = document.createElement('div');
+  heroStage.className = 'hero-stage';
+  heroStage.id = 'heroStage';
+  heroStage.innerHTML = `<div class="hero-lyric" id="heroLyric">&nbsp;</div>`;
+  section.appendChild(heroStage);
 
-  const btn = document.getElementById('share-btn-' + songId);
-  if (btn) btn.disabled = false;
-}
+  // Share a Lyric button
+  const shareBtn = document.createElement('button');
+  shareBtn.className = 'share-lyric-btn';
+  shareBtn.id = 'shareLyricBtn';
+  shareBtn.textContent = '+ Share a Lyric';
+  shareBtn.onclick = _shareActiveLyric;
+  section.appendChild(shareBtn);
 
-// ── Share a lyric — pre-fills Margo composer ──
-function shareLyric(songId) {
-  const song = songs.find(s => s.id === songId);
-  if (!selectedLyric || !song) return;
-  const params = new URLSearchParams({
-    lyric:  selectedLyric,
-    song:   song.title  || '',
-    artist: song.artist || 'Margo',
+  // Divider
+  const lbl = document.createElement('div');
+  lbl.className = 'lyrics-label';
+  lbl.textContent = 'Full Lyrics — tap any line to jump';
+  section.appendChild(lbl);
+
+  // Lines list
+  const list = document.createElement('div');
+  list.className = 'lyrics-list';
+  list.id = 'lyricsList';
+
+  _lyricsJson.forEach((line, i) => {
+    const el = document.createElement('div');
+    el.className = 'lyric-line';
+    el.dataset.idx = i;
+    el.textContent = line.text;
+    el.onclick = () => {
+      if (_ytPlayer && _ytReady) {
+        _ytPlayer.seekTo(line.start, true);
+        if (!_isPlaying) { _ytPlayer.playVideo(); }
+      }
+    };
+    list.appendChild(el);
   });
-  // Navigate home with composer params — composer picks these up
-  window.location.href = '/?share=' + encodeURIComponent(params.toString());
+
+  section.appendChild(list);
 }
 
-// ── Seek ──
-function seekTo(e, songId) {
-  if (!ytPlayer || !ytPlayer.getDuration) return;
-  const bar  = e.currentTarget;
-  const pct  = e.offsetX / bar.offsetWidth;
-  const secs = pct * ytPlayer.getDuration();
-  ytPlayer.seekTo(secs, true);
+/* ── Share active lyric → pre-fill composer ── */
+function _shareActiveLyric() {
+  if (_activeLineIdx < 0 || !_lyricsJson[_activeLineIdx]) return;
+  const line = _lyricsJson[_activeLineIdx];
+  const song = _activeSong;
+  const text = `"${line.text}" — ${song?.title || ''}, ${song?.artist || 'Margo'}`;
+  // Navigate to feed and open composer pre-filled
+  const encoded = encodeURIComponent(line.text);
+  const song_enc = encodeURIComponent(song?.title || '');
+  const artist_enc = encodeURIComponent(song?.artist || 'Margo');
+  window.location.href = `/?sharelyric=${encoded}&song=${song_enc}&artist=${artist_enc}`;
 }
 
-// ── Stream links ──
-function renderStreamLinks(songId) {
-  const song = songs.find(s => s.id === songId);
-  const wrap = document.getElementById('stream-links-' + songId);
-  if (!song || !wrap) return;
-  const platforms = [
-    { key: 'youtubeUrl',   label: 'YouTube',   icon: '▶' },
-    { key: 'audiomackUrl', label: 'Audiomack', icon: '♫' },
-    { key: 'boomplayUrl',  label: 'Boomplay',  icon: '◉' },
-    { key: 'soundcloudUrl',label: 'SoundCloud',icon: '☁' },
-    { key: 'spotifyUrl',   label: 'Spotify',   icon: '●' },
-    { key: 'appleMusicUrl',label: 'Apple Music',icon: '♪' },
-  ];
-  const links = platforms
-    .filter(p => song[p.key])
-    .map(p => `<a href="${esc(song[p.key])}" target="_blank" rel="noopener" class="stream-link">${p.icon} ${p.label}</a>`)
-    .join('');
-  wrap.innerHTML = links;
+/* ══════════════════════════════════════
+   YOUTUBE PLAYER
+══════════════════════════════════════ */
+function _initYT(videoId) {
+  _ytReady = false;
+  _stopSync();
+
+  if (window.YT && window.YT.Player) {
+    _createYTPlayer(videoId);
+    return;
+  }
+  // Load YouTube IFrame API
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+  window.onYouTubeIframeAPIReady = () => _createYTPlayer(videoId);
 }
 
-// ── Mini player ──
-function showMiniPlayer(songId) {
-  const song = songs.find(s => s.id === songId);
-  if (!song) return;
-  const mp = document.getElementById('miniPlayer');
-  const img = document.getElementById('miniArtworkImg');
-  if (song.artwork) { img.src = song.artwork; img.style.display = 'block'; }
-  else img.style.display = 'none';
-  document.getElementById('miniTitle').textContent = song.title + ' — Margo';
-  document.getElementById('miniLyric').textContent = 'Now playing';
-  mp.classList.add('visible');
+function _createYTPlayer(videoId) {
+  // Destroy old player
+  if (_ytPlayer) {
+    try { _ytPlayer.destroy(); } catch(e) {}
+    _ytPlayer = null;
+  }
+  const container = document.getElementById('ytPlayer');
+  if (container) container.innerHTML = '<div id="ytPlayerInner"></div>';
+
+  _ytPlayer = new YT.Player('ytPlayerInner', {
+    videoId,
+    playerVars: {
+      autoplay:       0,
+      controls:       0,
+      disablekb:      1,
+      fs:             0,
+      modestbranding: 1,
+      rel:            0,
+    },
+    events: {
+      onReady:       () => { _ytReady = true; _duration = _ytPlayer.getDuration() || 0; _updateDurationDisplay(); },
+      onStateChange: e  => _onYTStateChange(e),
+    }
+  });
 }
 
-document.getElementById('miniPlayBtn').onclick = () => {
-  if (!currentSongId) return;
-  if (isPlaying) pauseSong(); else resumeSong();
-};
-document.getElementById('miniCloseBtn').onclick = () => {
-  stopCurrentSong();
-  currentSongId = null;
-  document.getElementById('miniPlayer').classList.remove('visible');
-  document.querySelectorAll('.song-card').forEach(c => c.classList.remove('active'));
-};
-
-// ── Coming soon notify ──
-function showNotify(songId) {
-  const song = songs.find(s => s.id === songId);
-  if (!song) return;
-  // Simple toast — in future: collect email/push
-  showToast('We\'ll let you know when "' + (song.title || 'this song') + '" drops!');
+function _onYTStateChange(e) {
+  const YTS = YT.PlayerState;
+  if (e.data === YTS.PLAYING) {
+    _isPlaying = true;
+    _setPlayBtn(true);
+    _duration = _ytPlayer.getDuration() || 0;
+    _updateDurationDisplay();
+    _startSync();
+    const playStatus = document.getElementById('playStatus');
+    if (playStatus) playStatus.textContent = 'Now playing';
+  } else if (e.data === YTS.PAUSED || e.data === YTS.ENDED) {
+    _isPlaying = false;
+    _setPlayBtn(false);
+    _stopSync();
+    const playStatus = document.getElementById('playStatus');
+    if (playStatus) playStatus.textContent = e.data === YTS.ENDED ? 'Ended' : 'Paused';
+  }
 }
 
-function showToast(msg) {
-  const t = document.createElement('div');
-  t.textContent = msg;
-  t.style.cssText = `
-    position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(8px);
-    background:var(--surface-2);border:1px solid var(--gold-border);
-    border-radius:12px;padding:12px 20px;font-family:var(--font-ui);
-    font-size:0.82rem;color:var(--text);z-index:999;
-    opacity:0;transition:all 0.22s;white-space:nowrap;max-width:90vw;
-    text-align:center;
-  `;
-  document.body.appendChild(t);
-  requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)'; });
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+function togglePlay() {
+  if (!_ytPlayer || !_ytReady) {
+    // No YouTube ID — open YouTube link
+    const url = _activeSong?.platforms?.youtube || (_activeSong?.youtubeId ? `https://www.youtube.com/watch?v=${_activeSong.youtubeId}` : null);
+    if (url) window.open(url, '_blank');
+    return;
+  }
+  if (_isPlaying) { _ytPlayer.pauseVideo(); }
+  else            { _ytPlayer.playVideo();  }
 }
 
-// ── Fallback if no songs in Firebase ──
-function renderFallback() {
-  // Inject the seed song so the page is never empty
-  songs = [{
-    id: 'a-thousand-lives',
-    title: 'A Thousand Lives',
-    artist: 'Margo',
-    tags: ['New', 'Original'],
-    artwork: null,
-    youtubeId: null, // Set real YT ID in admin → Music
-    srt: null,
-    lyrics: 'Lyrics coming soon.\nCheck back when the song is uploaded.',
-    status: 'active',
-    order: 1,
-  }];
-  renderSongs(songs);
+function _setPlayBtn(playing) {
+  const btn = document.getElementById('playBtn');
+  if (btn) btn.textContent = playing ? '⏸' : '▶';
 }
 
-// ── Helpers ──
-function esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function fmtTime(secs) {
-  const m = Math.floor(secs / 60);
-  const s = Math.floor(secs % 60);
-  return m + ':' + (s < 10 ? '0' : '') + s;
-}
-function playIcon(size) {
-  const sz = size || '16';
-  return `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`;
-}
-function pauseIcon(size) {
-  const sz = size || '16';
-  return `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+/* ── Lyric sync loop ── */
+function _startSync() {
+  _stopSync();
+  _syncInterval = setInterval(_syncLyrics, 100);
 }
 
-// ── Boot ──
-initFirebase();
+function _stopSync() {
+  if (_syncInterval) { clearInterval(_syncInterval); _syncInterval = null; }
+}
+
+function _syncLyrics() {
+  if (!_ytPlayer || !_ytReady || !_lyricsJson.length) return;
+
+  let currentTime;
+  try { currentTime = _ytPlayer.getCurrentTime() || 0; } catch(e) { return; }
+
+  // Update progress bar
+  const bar = document.getElementById('progressBar');
+  if (bar && _duration) bar.value = (currentTime / _duration) * 100;
+  const elapsed = document.getElementById('timeElapsed');
+  if (elapsed) elapsed.textContent = _fmtTime(currentTime);
+
+  // Find active line
+  let newIdx = -1;
+  for (let i = 0; i < _lyricsJson.length; i++) {
+    const line = _lyricsJson[i];
+    if (currentTime >= line.start && currentTime < line.end) {
+      newIdx = i;
+      break;
+    }
+  }
+
+  // Check if a line's start time has just passed but end not reached
+  // (handles gaps between lines where no line is technically "active")
+  if (newIdx === -1) {
+    for (let i = _lyricsJson.length - 1; i >= 0; i--) {
+      if (currentTime >= _lyricsJson[i].start) { newIdx = i; break; }
+    }
+    // But respect end time — if past end, treat as gap
+    if (newIdx !== -1 && currentTime > _lyricsJson[newIdx].end + 0.1) {
+      newIdx = -1;
+    }
+  }
+
+  if (newIdx === _activeLineIdx) return;
+  _activeLineIdx = newIdx;
+  _updateLyricsUI(newIdx);
+}
+
+function _updateLyricsUI(idx) {
+  // Update hero stage
+  const heroLyric = document.getElementById('heroLyric');
+  const shareBtn  = document.getElementById('shareLyricBtn');
+
+  if (heroLyric) {
+    if (idx >= 0 && _lyricsJson[idx]) {
+      heroLyric.style.opacity = '0';
+      heroLyric.style.transform = 'translateY(8px)';
+      setTimeout(() => {
+        heroLyric.textContent = _lyricsJson[idx].text;
+        heroLyric.style.opacity = '1';
+        heroLyric.style.transform = 'translateY(0)';
+      }, 150);
+    } else {
+      heroLyric.textContent = '\u00a0'; // non-breaking space to hold height
+    }
+  }
+
+  // Show/hide share button
+  if (shareBtn) shareBtn.classList.toggle('visible', idx >= 0);
+
+  // Update list lines
+  const lines = document.querySelectorAll('.lyric-line');
+  lines.forEach(el => {
+    const i = parseInt(el.dataset.idx, 10);
+    el.classList.toggle('active', i === idx);
+    el.classList.toggle('past',   i < idx);
+  });
+
+  // Auto-scroll active line into view
+  if (idx >= 0) {
+    const activeLine = document.querySelector('.lyric-line.active');
+    if (activeLine) {
+      activeLine.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+  }
+}
+
+function _updateDurationDisplay() {
+  const dur = document.getElementById('timeDuration');
+  if (dur && _duration) dur.textContent = _fmtTime(_duration);
+}
+
+function _fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+
+/* ══════════════════════════════════════
+   LYRIC PARSER (same as admin, inlined)
+══════════════════════════════════════ */
+function parseLyrics(raw) {
+  if (!raw || !raw.trim()) return [];
+  const text = raw.trim();
+  if (/\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}/.test(text)) return _parseSRT(text);
+  if (/\[\d{2}:\d{2}[.:]\d{2,3}\]/.test(text)) return _parseLRC(text);
+  return [];
+}
+function _srtTimeToSec(ts) {
+  const [hms, ms] = ts.trim().split(',');
+  const [h, m, s] = hms.split(':').map(Number);
+  return h * 3600 + m * 60 + s + (parseInt(ms || '0', 10) / 1000);
+}
+function _parseSRT(text) {
+  const lines = [];
+  const blocks = text.split(/\n\s*\n/);
+  for (const block of blocks) {
+    const rows = block.trim().split('\n');
+    const tsRow = rows.find(r => r.includes('-->'));
+    if (!tsRow) continue;
+    const [startStr, endStr] = tsRow.split('-->');
+    const start = _srtTimeToSec(startStr);
+    const end   = _srtTimeToSec(endStr);
+    const tsIdx = rows.indexOf(tsRow);
+    const lyricText = rows.slice(tsIdx + 1).filter(r => r.trim()).join(' ').trim();
+    if (lyricText && !isNaN(start)) lines.push({ start, end, text: lyricText });
+  }
+  return lines;
+}
+function _parseLRC(text) {
+  const lines = []; const parsed = [];
+  for (const row of text.split('\n')) {
+    const match = row.match(/^(\[\d{2}:\d{2}[.:]\d{2,3}\])\s*(.*)$/);
+    if (!match) continue;
+    const clean = match[1].replace(/[\[\]]/g,'');
+    const [mStr, sStr] = clean.split(':');
+    const start = parseInt(mStr,10) * 60 + parseFloat(sStr);
+    const t = match[2].trim();
+    if (t && !t.startsWith('[')) parsed.push({ start, text: t });
+  }
+  for (let i = 0; i < parsed.length; i++) {
+    lines.push({ start: parsed[i].start,
+      end: parsed[i+1] ? parsed[i+1].start : parsed[i].start + 5,
+      text: parsed[i].text });
+  }
+  return lines;
+}
+
+/* ── Boot ── */
+initMusicFirebase();
 </script>
 </body>
 </html>
