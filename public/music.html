@@ -317,18 +317,32 @@ async function initMusicFirebase() {
   }
 }
 
+/* ── Normalise song — handles both old and new schema ── */
+function _normaliseSong(s) {
+  // status: old schema uses "active", new uses "live"
+  if (s.status === 'active') s.status = 'live';
+  // lyrics: old schema uses "srt", new uses "lyricsJson"
+  if (!s.lyricsJson && s.srt) {
+    s.lyricsJson = parseLyrics(s.srt);
+  }
+  // featured: old schema has no featured flag — treat order:1 as featured
+  if (s.featured === undefined && s.order === 1) s.featured = true;
+  return s;
+}
+
 /* ── Load songs from /songs ── */
 function loadSongs() {
   firebase.database().ref('songs')
-    .orderByChild('createdAt')
     .once('value')
     .then(snap => {
       _songs = [];
       snap.forEach(child => {
-        const s = child.val();
+        const s = _normaliseSong(child.val());
         s.id = child.key;
-        _songs.unshift(s);
+        _songs.push(s);
       });
+      // Sort by order field, fallback to createdAt
+      _songs.sort((a, b) => (a.order || 99) - (b.order || 99));
       renderSongList();
     })
     .catch(() => showEmptyState('Could not load songs.'));
@@ -345,8 +359,9 @@ function renderSongList() {
     return;
   }
 
-  // Featured first
-  const featured = _songs.find(s => s.featured && s.status === 'live');
+  // Featured first — first live song if none explicitly featured
+  const featured = _songs.find(s => s.featured && s.status === 'live')
+                || _songs.find(s => s.status === 'live');
   const rest      = _songs.filter(s => s !== featured);
 
   if (featured) {
