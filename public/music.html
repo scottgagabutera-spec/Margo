@@ -20,204 +20,405 @@
   <link rel="stylesheet" href="/assets/css/base.css">
 
   <style>
-    body { margin:0; -webkit-font-smoothing:antialiased; background:var(--bg); }
-
-    /* ── Ambient ── */
-    .ambient { position:fixed; pointer-events:none; z-index:0; border-radius:50%; filter:blur(80px); opacity:0.06; }
-    .ambient-1 { width:500px; height:500px; background:var(--gold); top:-100px; right:-100px; }
-    .ambient-2 { width:400px; height:400px; background:#6B4EFF; bottom:-100px; left:-100px; }
-
-    /* ── Nav ── */
-    nav { display:flex; align-items:center; justify-content:space-between; padding:20px 24px;
-      border-bottom:1px solid var(--gold-glow); position:sticky; top:0;
-      background:rgba(7,6,10,0.92); backdrop-filter:blur(16px); z-index:100; }
-    .nav-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:0.9rem;
-      letter-spacing:3px; color:var(--gold); text-decoration:none; text-transform:uppercase; }
-    .nav-back { font-family:'Lora',serif; font-size:0.7rem; color:var(--text-3);
-      text-decoration:none; letter-spacing:1px; text-transform:uppercase; transition:color 0.18s; }
-    .nav-back:hover { color:var(--gold); }
-
-    /* ── Page wrap ── */
-    .page { max-width:500px; margin:0 auto; padding:0 0 120px; position:relative; z-index:1; }
-
-    /* ── Page header ── */
-    .page-header { padding:40px 24px 24px; }
-    .page-eyebrow { font-family:'Lora',serif; font-size:0.6rem; font-weight:600;
-      letter-spacing:2px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; }
-    .page-title { font-family:'Lora',serif; font-size:1.5rem; font-weight:700;
-      color:var(--text); line-height:1.2; margin-bottom:8px; }
-    .page-sub { font-family:'Lora',serif; font-size:0.82rem; color:var(--text-3); line-height:1.6; }
-
-    /* ── Song card (list) ── */
-    .song-card { margin:0 16px 10px; background:var(--surface); border:1px solid var(--border);
-      border-radius:16px; overflow:hidden; transition:border-color 0.18s; cursor:pointer; }
-    .song-card:hover { border-color:var(--gold-border); }
-    .song-card.featured { border-color:var(--gold-border); }
-    .song-card-inner { display:flex; gap:14px; align-items:center; padding:16px; }
-    .song-cover { width:56px; height:56px; border-radius:10px; flex-shrink:0;
-      background:var(--surface-3); overflow:hidden; display:flex; align-items:center;
-      justify-content:center; font-family:'Syne',sans-serif; font-weight:800;
-      font-size:1rem; color:var(--gold); }
-    .song-cover img { width:100%; height:100%; object-fit:cover; }
-    .song-info { flex:1; min-width:0; }
-    .song-title { font-family:'Lora',serif; font-size:1rem; font-weight:700; color:var(--text);
-      margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .song-artist { font-family:'Lora',serif; font-size:0.7rem; color:var(--text-3); margin-bottom:8px; }
-    .song-tags { display:flex; gap:6px; flex-wrap:wrap; }
-    .song-tag { font-family:'Lora',serif; font-size:0.55rem; font-weight:700;
-      text-transform:uppercase; letter-spacing:0.8px; padding:3px 10px;
-      border-radius:50px; border:1px solid; }
-    .tag-live { color:var(--success); border-color:var(--success-border); }
-    .tag-coming { color:var(--gold); border-color:var(--gold-border); }
-    .tag-planned { color:var(--text-3); border-color:var(--border); }
-    .tag-featured { color:var(--gold); border-color:var(--gold-border);
-      background:var(--gold-faint); }
-
-    /* ── Section label ── */
-    .section-label { font-family:'Lora',serif; font-size:0.6rem; font-weight:600;
-      text-transform:uppercase; letter-spacing:2px; color:var(--text-3);
-      padding:0 24px; margin:32px 0 12px; }
-
-    /* ── Player overlay ── */
-    #playerOverlay { display:none; position:fixed; inset:0; z-index:500;
-      background:var(--bg); flex-direction:column; overflow:hidden; }
-    #playerOverlay.open { display:flex; }
-
-    /* ── Player nav ── */
-    .player-nav { display:flex; align-items:center; justify-content:space-between;
-      padding:16px 24px; border-bottom:1px solid var(--gold-glow);
-      background:rgba(7,6,10,0.95); backdrop-filter:blur(16px); flex-shrink:0; }
-    .player-back { font-family:'Lora',serif; font-size:0.7rem; color:var(--text-3);
-      background:none; border:none; cursor:pointer; letter-spacing:1px;
-      text-transform:uppercase; transition:color 0.18s; min-height:44px; padding:0; }
-    .player-back:hover { color:var(--gold); }
-    .player-song-label { font-family:'Lora',serif; font-size:0.7rem; font-weight:600;
-      color:var(--text); text-align:right; max-width:180px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-    /* ── Sticky player bar — always visible ── */
-    .sticky-player { flex-shrink:0; background:rgba(7,6,10,0.97);
-      backdrop-filter:blur(20px); border-bottom:1px solid var(--border);
-      padding:14px 24px 12px; }
-
-    /* ── Cover + meta ── */
-    .player-header { display:flex; gap:12px; align-items:center; margin-bottom:10px; }
-    .player-cover { width:52px; height:52px; border-radius:8px; flex-shrink:0;
-      background:var(--surface-3); overflow:hidden; display:flex; align-items:center;
-      justify-content:center; font-family:'Syne',sans-serif; font-weight:800;
-      font-size:1rem; color:var(--gold); }
-    .player-cover img { width:100%; height:100%; object-fit:cover; }
-    .player-meta { flex:1; min-width:0; }
-    .player-title { font-family:'Lora',serif; font-size:0.95rem; font-weight:700;
-      color:var(--text); margin-bottom:2px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .player-artist { font-family:'Lora',serif; font-size:0.7rem; color:var(--text-3);
-      margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-    /* ── Platform links ── */
-    .platform-links { display:flex; gap:5px; flex-wrap:wrap; }
-    .platform-btn { font-family:'Lora',serif; font-size:0.55rem; font-weight:700;
-      text-transform:uppercase; letter-spacing:0.8px; padding:4px 10px;
-      border-radius:50px; border:1px solid var(--border); color:var(--text-2);
-      text-decoration:none; transition:all 0.18s; min-height:26px;
-      display:inline-flex; align-items:center; }
-    .platform-btn:hover { border-color:var(--gold-border); color:var(--gold); }
-
-    /* ── Progress bar ── */
-    .progress-wrap { margin-bottom:8px; }
-    .progress-bar { width:100%; height:3px; background:var(--surface-3);
-      border-radius:50px; cursor:pointer; margin-bottom:4px;
-      -webkit-appearance:none; appearance:none; }
-    .progress-bar::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px;
-      border-radius:50%; background:var(--gold); cursor:pointer; margin-top:-5.5px; }
-    .progress-bar::-webkit-slider-runnable-track { height:3px; border-radius:50px; }
-    .progress-times { display:flex; justify-content:space-between;
-      font-family:'Lora',serif; font-size:0.6rem; color:var(--text-3); }
-
-    /* ── Play controls row ── */
-    .player-controls { display:flex; align-items:center; gap:12px; }
-    .play-btn { width:44px; height:44px; border-radius:50%; background:var(--gold);
-      border:none; cursor:pointer; display:flex; align-items:center;
-      justify-content:center; font-size:1rem; transition:all 0.18s; flex-shrink:0; }
-    .play-btn:hover { background:var(--gold-warm); transform:scale(1.04); }
-    .play-btn:active { transform:scale(0.96); }
-    .player-controls-right { flex:1; min-width:0; }
-    .play-status { font-family:'Lora',serif; font-size:0.6rem; color:var(--text-3);
-      font-style:italic; display:block; }
-    .current-line-preview { font-family:'Lora',serif; font-size:0.75rem; font-style:italic;
-      color:var(--gold); display:block; margin-top:1px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-      opacity:0; transition:opacity 0.3s; max-width:100%; }
-    .current-line-preview.visible { opacity:1; }
-
-    /* ── Scrollable lyrics body ── */
-    .player-body { flex:1; overflow-y:auto; padding:0 0 60px; }
-
-    /* ── Hero lyric stage ── */
-    .hero-stage { padding:28px 24px 8px; text-align:center;
-      border-bottom:1px solid var(--border); margin-bottom:8px; }
-    .hero-lyric { font-family:'Lora',serif; font-size:1.5rem; font-weight:400;
-      font-style:italic; color:var(--gold); line-height:1.4;
-      transition:opacity 0.25s cubic-bezier(0.16,1,0.3,1),
-                 transform 0.25s cubic-bezier(0.16,1,0.3,1);
-      margin-bottom:20px; }
-
-    /* ── Karaoke lyrics list ── */
-    .lyrics-section { padding:0 24px; }
-    .lyrics-label { font-family:'Lora',serif; font-size:0.6rem; font-weight:600;
-      text-transform:uppercase; letter-spacing:2px; color:var(--text-3);
-      margin:20px 0 12px; }
-
-    /* Share a Lyric button — only when line active */
-    .share-lyric-btn { display:none; margin:0 auto 20px; padding:14px 24px;
-      background:var(--gold); color:var(--bg); border:none; border-radius:12px;
-      font-family:'Lora',serif; font-weight:700; font-size:0.7rem;
-      text-transform:uppercase; letter-spacing:1px; cursor:pointer;
-      min-height:52px; width:100%; max-width:320px; transition:all 0.18s; }
-    .share-lyric-btn:hover { background:var(--gold-warm); transform:scale(1.01); }
-    .share-lyric-btn:active { transform:scale(0.98); }
-    .share-lyric-btn.visible { display:block; }
-
-    /* Full lyrics list */
-    .lyrics-list { display:flex; flex-direction:column; gap:2px; }
-    .lyric-line { font-family:'Lora',serif; font-size:0.95rem; font-style:italic;
-      color:var(--text-3); line-height:1.6; padding:10px 12px; border-radius:8px;
-      cursor:pointer; transition:all 0.18s; border:1px solid transparent; }
-    .lyric-line:hover { color:var(--text-2); background:var(--surface-2); }
-    .lyric-line.active { color:var(--gold); background:var(--gold-faint);
-      border-color:var(--gold-border); font-weight:600; }
-    .lyric-line.past { opacity:0.45; }
-
-    /* Coming soon state */
-    .coming-state { text-align:center; padding:60px 24px; }
-    .coming-title { font-family:'Lora',serif; font-size:1.15rem; font-weight:700;
-      color:var(--text); margin-bottom:8px; }
-    .coming-sub { font-family:'Lora',serif; font-size:0.82rem; color:var(--text-3);
-      line-height:1.6; }
-    .coming-date { display:inline-block; margin-top:16px; font-family:'Lora',serif;
-      font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:1px;
-      color:var(--gold); border:1px solid var(--gold-border); border-radius:50px;
-      padding:6px 16px; }
-
-    /* Empty state */
-    .empty-state { text-align:center; padding:80px 24px; }
-    .empty-state p { font-family:'Lora',serif; font-size:0.95rem; color:var(--text-3);
-      line-height:1.7; }
-
-    /* Hidden YouTube player — must be in viewport on mobile for playsinline to work */
-    #ytPlayer { position:fixed; bottom:0; left:0;
-      width:1px; height:1px; opacity:0; pointer-events:none; z-index:-1; }
-
-    /* Loading skeleton */
-    .sk-card { margin:0 16px 10px; height:88px; background:var(--surface);
-      border-radius:16px; border:1px solid var(--border);
-      animation:sk-pulse 1.6s ease-in-out infinite; }
-    @keyframes sk-pulse {
-      0%,100% { opacity:1; } 50% { opacity:0.45; }
+    /* ─────────────────────────────────────────
+       BASE
+    ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      -webkit-font-smoothing: antialiased;
+      background: var(--bg);
+      overflow-x: hidden;
     }
 
-    @media (prefers-reduced-motion:reduce) {
-      * { transition:none !important; animation:none !important; }
+    /* ─────────────────────────────────────────
+       AMBIENT GLOW
+    ───────────────────────────────────────── */
+    .ambient {
+      position: fixed; pointer-events: none; z-index: 0;
+      border-radius: 50%; filter: blur(80px); opacity: 0.06;
+    }
+    .ambient-1 { width: 500px; height: 500px; background: var(--gold); top: -100px; right: -100px; }
+    .ambient-2 { width: 400px; height: 400px; background: #6B4EFF; bottom: -100px; left: -100px; }
+
+    /* ─────────────────────────────────────────
+       NAV
+    ───────────────────────────────────────── */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px; border-bottom: 1px solid var(--gold-glow);
+      position: sticky; top: 0;
+      background: rgba(7,6,10,0.92); backdrop-filter: blur(16px);
+      z-index: 100;
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.9rem;
+      letter-spacing: 3px; color: var(--gold); text-decoration: none;
+      text-transform: uppercase;
+    }
+    .nav-back {
+      font-family: 'Lora', serif; font-size: 0.7rem; color: var(--text-3);
+      text-decoration: none; letter-spacing: 1px; text-transform: uppercase;
+      transition: color 0.18s;
+    }
+    .nav-back:hover { color: var(--gold); }
+
+    /* ─────────────────────────────────────────
+       SONG LIST PAGE
+    ───────────────────────────────────────── */
+    .page {
+      max-width: 500px; margin: 0 auto;
+      padding: 0 0 120px; position: relative; z-index: 1;
+    }
+    .page-header { padding: 40px 24px 24px; }
+    .page-eyebrow {
+      font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--gold);
+      margin-bottom: 10px;
+    }
+    .page-title {
+      font-family: 'Lora', serif; font-size: 1.5rem; font-weight: 700;
+      color: var(--text); line-height: 1.2; margin-bottom: 8px;
+    }
+    .page-sub {
+      font-family: 'Lora', serif; font-size: 0.82rem;
+      color: var(--text-3); line-height: 1.6;
+    }
+
+    /* ─────────────────────────────────────────
+       SONG CARDS (list)
+    ───────────────────────────────────────── */
+    .song-card {
+      margin: 0 16px 10px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 16px;
+      overflow: hidden; transition: border-color 0.18s; cursor: pointer;
+    }
+    .song-card:hover { border-color: var(--gold-border); }
+    .song-card.featured { border-color: var(--gold-border); }
+    .song-card-inner { display: flex; gap: 14px; align-items: center; padding: 16px; }
+    .song-cover {
+      width: 56px; height: 56px; border-radius: 10px; flex-shrink: 0;
+      background: var(--surface-3); overflow: hidden; display: flex;
+      align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 1rem; color: var(--gold);
+    }
+    .song-cover img { width: 100%; height: 100%; object-fit: cover; }
+    .song-info { flex: 1; min-width: 0; }
+    .song-title {
+      font-family: 'Lora', serif; font-size: 1rem; font-weight: 700;
+      color: var(--text); margin-bottom: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .song-artist {
+      font-family: 'Lora', serif; font-size: 0.7rem;
+      color: var(--text-3); margin-bottom: 8px;
+    }
+    .song-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .song-tag {
+      font-family: 'Lora', serif; font-size: 0.55rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      padding: 3px 10px; border-radius: 50px; border: 1px solid;
+    }
+    .tag-live    { color: var(--success);  border-color: var(--success-border); }
+    .tag-coming  { color: var(--gold);     border-color: var(--gold-border); }
+    .tag-planned { color: var(--text-3);   border-color: var(--border); }
+    .tag-featured { color: var(--gold); border-color: var(--gold-border); background: var(--gold-faint); }
+
+    .section-label {
+      font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 2px; color: var(--text-3);
+      padding: 0 24px; margin: 32px 0 12px;
+    }
+
+    /* Skeleton */
+    .sk-card {
+      margin: 0 16px 10px; height: 88px; background: var(--surface);
+      border-radius: 16px; border: 1px solid var(--border);
+      animation: sk-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes sk-pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 80px 24px; }
+    .empty-state p {
+      font-family: 'Lora', serif; font-size: 0.95rem;
+      color: var(--text-3); line-height: 1.7;
+    }
+
+    /* ─────────────────────────────────────────
+       PLAYER OVERLAY — full screen, fixed
+    ───────────────────────────────────────── */
+    #playerOverlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 500;
+      background: var(--bg);
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #playerOverlay.open { display: flex; }
+
+    /* ── Top nav bar ── */
+    .player-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: rgba(7,6,10,0.97); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--gold-glow);
+      flex-shrink: 0; z-index: 10; position: relative;
+    }
+    .player-back {
+      font-family: 'Lora', serif; font-size: 0.7rem; color: var(--text-3);
+      background: none; border: none; cursor: pointer; letter-spacing: 1px;
+      text-transform: uppercase; transition: color 0.18s;
+      min-height: 44px; padding: 0 8px 0 0;
+    }
+    .player-back:hover { color: var(--gold); }
+    .player-song-label {
+      font-family: 'Lora', serif; font-size: 0.7rem; font-weight: 600;
+      color: var(--text); text-align: right; max-width: 200px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ── Sticky control bar (below nav, above hero) ── */
+    .player-controls-bar {
+      flex-shrink: 0;
+      background: rgba(7,6,10,0.97);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px 10px;
+      z-index: 9; position: relative;
+    }
+
+    /* Cover + meta row */
+    .player-header { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+    .player-cover {
+      width: 48px; height: 48px; border-radius: 8px; flex-shrink: 0;
+      background: var(--surface-3); overflow: hidden; display: flex;
+      align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 0.9rem; color: var(--gold);
+    }
+    .player-cover img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+    .player-meta { flex: 1; min-width: 0; }
+    .player-title {
+      font-family: 'Lora', serif; font-size: 0.9rem; font-weight: 700;
+      color: var(--text); margin-bottom: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .player-artist {
+      font-family: 'Lora', serif; font-size: 0.65rem; color: var(--text-3);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* Platform links */
+    .platform-links { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+    .platform-btn {
+      font-family: 'Lora', serif; font-size: 0.5rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.8px; padding: 3px 9px;
+      border-radius: 50px; border: 1px solid var(--border); color: var(--text-2);
+      text-decoration: none; transition: all 0.18s;
+      min-height: 24px; display: inline-flex; align-items: center;
+    }
+    .platform-btn:hover { border-color: var(--gold-border); color: var(--gold); }
+
+    /* Progress */
+    .progress-wrap { margin-bottom: 8px; }
+    .progress-bar {
+      width: 100%; height: 3px; background: var(--surface-3);
+      border-radius: 50px; cursor: pointer; margin-bottom: 4px;
+      -webkit-appearance: none; appearance: none;
+    }
+    .progress-bar::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--gold); cursor: pointer; margin-top: -5.5px;
+    }
+    .progress-bar::-webkit-slider-runnable-track { height: 3px; border-radius: 50px; }
+    .progress-times {
+      display: flex; justify-content: space-between;
+      font-family: 'Lora', serif; font-size: 0.6rem; color: var(--text-3);
+    }
+
+    /* Play/pause row */
+    .play-row { display: flex; align-items: center; gap: 12px; }
+    .play-btn {
+      width: 44px; height: 44px; border-radius: 50%; background: var(--gold);
+      border: none; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; font-size: 1rem; transition: all 0.18s; flex-shrink: 0;
+    }
+    .play-btn:hover { background: var(--gold-warm); transform: scale(1.04); }
+    .play-btn:active { transform: scale(0.96); }
+    .play-status-wrap { flex: 1; min-width: 0; }
+    .play-status {
+      font-family: 'Lora', serif; font-size: 0.6rem; color: var(--text-3);
+      font-style: italic; display: block;
+    }
+
+    /* ─────────────────────────────────────────
+       SCROLLABLE BODY — hero + lyrics scroll together
+       but hero "freezes" via position:sticky
+    ───────────────────────────────────────── */
+    .player-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+
+    /*
+      HERO ZONE — sticky at top of scroll container.
+      When user scrolls, lyrics flow up and BEHIND the hero.
+      The hero text changes in place — it never moves.
+      This is exactly how Apple Music works.
+    */
+    .hero-zone {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--bg);
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid var(--border);
+
+      /* Subtle gradient so lyrics fade out gracefully behind it */
+      background: linear-gradient(
+        to bottom,
+        var(--bg) 0%,
+        var(--bg) 85%,
+        rgba(7,6,10,0) 100%
+      );
+    }
+
+    /* The large italic lyric text — the hero moment */
+    .hero-lyric-text {
+      font-family: 'Lora', serif;
+      font-size: 1.45rem;
+      font-style: italic;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1.35;
+      min-height: 2.2em; /* prevents layout shift when text changes */
+      transition: opacity 0.2s cubic-bezier(0.16,1,0.3,1),
+                  transform 0.2s cubic-bezier(0.16,1,0.3,1);
+      margin-bottom: 14px;
+    }
+    .hero-lyric-text.fading {
+      opacity: 0.35;
+      transform: translateY(-4px);
+    }
+
+    /* Share a Lyric — lives inside hero zone, only visible when line active */
+    .share-lyric-btn {
+      display: block;
+      width: 100%;
+      padding: 13px 20px;
+      background: var(--gold);
+      color: var(--bg);
+      border: none;
+      border-radius: 12px;
+      font-family: 'Lora', serif;
+      font-weight: 700;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      min-height: 48px;
+      transition: all 0.18s;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(6px);
+    }
+    .share-lyric-btn:hover { background: var(--gold-warm); }
+    .share-lyric-btn:active { transform: translateY(0) scale(0.98); }
+    .share-lyric-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    /* ─────────────────────────────────────────
+       LYRICS SCROLL AREA — flows up behind hero
+    ───────────────────────────────────────── */
+    .lyrics-scroll-pad {
+      /* Extra top padding so first lyric starts at a comfortable spot */
+      padding: 20px 24px 80px;
+    }
+    .lyrics-label {
+      font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 2px; color: var(--text-3);
+      margin-bottom: 16px; display: block;
+    }
+    .lyrics-list { display: flex; flex-direction: column; gap: 0; }
+
+    .lyric-line {
+      font-family: 'Lora', serif;
+      font-size: 0.95rem;
+      font-style: italic;
+      color: var(--text-3);
+      line-height: 1.7;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.18s;
+      border: 1px solid transparent;
+      position: relative;
+    }
+    .lyric-line:hover { color: var(--text-2); background: var(--surface-2); }
+
+    /* Active line: full gold, highlighted */
+    .lyric-line.active {
+      color: var(--gold);
+      background: var(--gold-faint);
+      border-color: var(--gold-border);
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    /* Past lines: dim out */
+    .lyric-line.past { opacity: 0.38; }
+
+    /* Active line gets a left accent bar */
+    .lyric-line.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 6px; bottom: 6px;
+      width: 3px;
+      background: var(--gold);
+      border-radius: 0 3px 3px 0;
+    }
+
+    /* ─────────────────────────────────────────
+       COMING SOON / PLANNED state
+    ───────────────────────────────────────── */
+    .coming-state { text-align: center; padding: 60px 24px; }
+    .coming-title {
+      font-family: 'Lora', serif; font-size: 1.15rem; font-weight: 700;
+      color: var(--text); margin-bottom: 8px;
+    }
+    .coming-sub {
+      font-family: 'Lora', serif; font-size: 0.82rem;
+      color: var(--text-3); line-height: 1.6;
+    }
+    .coming-date {
+      display: inline-block; margin-top: 16px;
+      font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--gold); border: 1px solid var(--gold-border);
+      border-radius: 50px; padding: 6px 16px;
+    }
+
+    /* ─────────────────────────────────────────
+       HIDDEN YOUTUBE — must be in viewport on mobile
+    ───────────────────────────────────────── */
+    #ytPlayer {
+      position: fixed; bottom: 0; left: 0;
+      width: 1px; height: 1px;
+      opacity: 0; pointer-events: none; z-index: -1;
+    }
+
+    /* ─────────────────────────────────────────
+       REDUCED MOTION
+    ───────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; animation: none !important; }
     }
   </style>
 </head>
@@ -226,41 +427,39 @@
 <div class="ambient ambient-1"></div>
 <div class="ambient ambient-2"></div>
 
-<!-- ── Nav ── -->
+<!-- ── Song list nav ── -->
 <nav>
   <a href="/" class="nav-logo">MARGO</a>
   <a href="/" class="nav-back">← Back</a>
 </nav>
 
-<!-- ── Song list page ── -->
+<!-- ── Song list ── -->
 <div class="page" id="songListPage">
   <div class="page-header">
     <div class="page-eyebrow">Original Music</div>
     <h1 class="page-title">When words fail,<br/>drop a lyric.</h1>
     <p class="page-sub">Songs by Margo. Listen, feel a line, share it.</p>
   </div>
-
   <div id="songListWrap">
-    <!-- Loading skeletons -->
     <div class="sk-card"></div>
     <div class="sk-card" style="opacity:0.6;"></div>
     <div class="sk-card" style="opacity:0.35;"></div>
   </div>
 </div>
 
-<!-- ── Player overlay (full screen) ── -->
+<!-- ══════════════════════════════════════════
+     PLAYER OVERLAY
+══════════════════════════════════════════ -->
 <div id="playerOverlay">
 
-  <!-- TOP NAV — always visible -->
+  <!-- Fixed top nav -->
   <div class="player-nav">
     <button class="player-back" id="playerBackBtn">← All Songs</button>
     <div class="player-song-label" id="playerSongLabel"></div>
   </div>
 
-  <!-- STICKY PLAYER BAR — sticks below nav while lyrics scroll -->
-  <div class="sticky-player" id="stickyPlayer">
-
-    <!-- Cover + meta row -->
+  <!-- Fixed controls bar (cover, progress, play) -->
+  <div class="player-controls-bar">
     <div class="player-header">
       <div class="player-cover" id="playerCover">M</div>
       <div class="player-meta">
@@ -270,7 +469,6 @@
       </div>
     </div>
 
-    <!-- Progress bar -->
     <div class="progress-wrap" id="progressWrap" style="display:none;">
       <input type="range" class="progress-bar" id="progressBar"
         min="0" max="100" value="0" step="0.1"/>
@@ -280,57 +478,66 @@
       </div>
     </div>
 
-    <!-- Play/pause + current lyric preview -->
-    <div class="player-controls">
+    <div class="play-row">
       <button class="play-btn" id="playBtn" aria-label="Play">▶</button>
-      <div class="player-controls-right">
+      <div class="play-status-wrap">
         <span class="play-status" id="playStatus">Tap to play</span>
-        <span class="current-line-preview" id="currentLinePreview"></span>
       </div>
     </div>
+  </div>
 
-  </div><!-- end sticky-player -->
-
-  <!-- SCROLLABLE LYRICS BODY -->
+  <!-- Scrollable body: hero is sticky inside here, lyrics flow below it -->
   <div class="player-body" id="playerBody">
 
-    <!-- Hero lyric stage — active line displayed large -->
-    <div class="hero-stage" id="heroStage" style="display:none;">
-      <div class="hero-lyric" id="heroLyric">&nbsp;</div>
+    <!--
+      HERO ZONE — sticky within the scroll container.
+      Lyrics scroll up and disappear behind it.
+      Hero text updates in place — it never moves.
+    -->
+    <div class="hero-zone" id="heroZone" style="display:none;">
+      <div class="hero-lyric-text" id="heroLyricText">&nbsp;</div>
       <button class="share-lyric-btn" id="shareLyricBtn">+ Share a Lyric</button>
     </div>
 
-    <!-- Lyrics / karaoke list -->
-    <div class="lyrics-section" id="lyricsSection"></div>
+    <!-- Lyrics list (scrolls up behind hero) -->
+    <div class="lyrics-scroll-pad" id="lyricsScrollPad">
+      <!-- filled by JS -->
+    </div>
 
-  </div><!-- end player-body -->
-</div><!-- end playerOverlay -->
+  </div>
+</div>
 
-<!-- Hidden YouTube iframe API target -->
+<!-- YouTube iframe anchor (must be in viewport on mobile) -->
 <div id="ytPlayer"></div>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
+<!--
+  share-sheet.js — loaded dynamically when player opens.
+  It lives at /js/media/share-sheet.js on the real site.
+  We load it lazily so the song list page doesn't pay the cost.
+-->
+
 <script>
 /* ============================================================
    music.js — inline
-   Reads /songs from Firebase, renders song list,
-   opens player, syncs karaoke to YouTube currentTime.
    ============================================================ */
 
-let _songs        = [];
-let _activeSong   = null;
-let _ytPlayer     = null;
-let _ytReady      = false;
-let _syncInterval = null;
-let _lyricsJson   = [];
+let _songs         = [];
+let _activeSong    = null;
+let _ytPlayer      = null;
+let _ytReady       = false;
+let _syncInterval  = null;
+let _lyricsJson    = [];
 let _activeLineIdx = -1;
-let _isPlaying    = false;
-let _duration     = 0;
+let _isPlaying     = false;
+let _duration      = 0;
+let _shareSheetLoaded = false;
+let _lastHeroText  = '';
 
-/* ── Init Firebase ── */
+/* ── Firebase boot ── */
 async function initMusicFirebase() {
   try {
     const res = await fetch('/api/config');
@@ -338,29 +545,23 @@ async function initMusicFirebase() {
     const cfg = await res.json();
     firebase.initializeApp(cfg);
     loadSongs();
-  } catch (e) {
+  } catch(e) {
     console.warn('[Music] Firebase init failed:', e.message);
     showEmptyState('Could not connect. Please refresh.');
   }
 }
 
-/* ── Normalise song — handles both old and new schema ── */
+/* ── Normalise — handles both old and new schema ── */
 function _normaliseSong(s) {
-  // status: old schema uses "active", new uses "live"
   if (s.status === 'active') s.status = 'live';
-  // lyrics: old schema uses "srt", new uses "lyricsJson"
-  if (!s.lyricsJson && s.srt) {
-    s.lyricsJson = parseLyrics(s.srt);
-  }
-  // featured: old schema has no featured flag — treat order:1 as featured
+  if (!s.lyricsJson && s.srt) s.lyricsJson = parseLyrics(s.srt);
   if (s.featured === undefined && s.order === 1) s.featured = true;
   return s;
 }
 
-/* ── Load songs from /songs ── */
+/* ── Load songs ── */
 function loadSongs() {
-  firebase.database().ref('songs')
-    .once('value')
+  firebase.database().ref('songs').once('value')
     .then(snap => {
       _songs = [];
       snap.forEach(child => {
@@ -368,61 +569,54 @@ function loadSongs() {
         s.id = child.key;
         _songs.push(s);
       });
-      // Sort by order field, fallback to createdAt
       _songs.sort((a, b) => (a.order || 99) - (b.order || 99));
       renderSongList();
     })
     .catch(() => showEmptyState('Could not load songs.'));
 }
 
-/* ── Render song list ── */
+/* ── Render list ── */
 function renderSongList() {
   const wrap = document.getElementById('songListWrap');
   if (!wrap) return;
   wrap.innerHTML = '';
 
-  if (!_songs.length) {
-    showEmptyState('Music coming soon.');
-    return;
-  }
+  if (!_songs.length) { showEmptyState('Music coming soon.'); return; }
 
-  // Featured first — first live song if none explicitly featured
   const featured = _songs.find(s => s.featured && s.status === 'live')
                 || _songs.find(s => s.status === 'live');
-  const rest      = _songs.filter(s => s !== featured);
+  const rest = _songs.filter(s => s !== featured);
 
-  if (featured) {
-    wrap.appendChild(_buildSongCard(featured, true));
-  }
+  if (featured) wrap.appendChild(_buildSongCard(featured, true));
 
-  const liveSongs    = rest.filter(s => s.status === 'live');
-  const comingSongs  = rest.filter(s => s.status === 'coming');
-  const plannedSongs = rest.filter(s => s.status === 'planned');
+  const live    = rest.filter(s => s.status === 'live');
+  const coming  = rest.filter(s => s.status === 'coming');
+  const planned = rest.filter(s => s.status === 'planned');
 
-  if (liveSongs.length) {
+  if (live.length) {
     if (featured) {
       const lbl = document.createElement('div');
       lbl.className = 'section-label';
       lbl.textContent = 'More Songs';
       wrap.appendChild(lbl);
     }
-    liveSongs.forEach(s => wrap.appendChild(_buildSongCard(s, false)));
+    live.forEach(s => wrap.appendChild(_buildSongCard(s, false)));
   }
 
-  if (comingSongs.length) {
+  if (coming.length) {
     const lbl = document.createElement('div');
     lbl.className = 'section-label';
     lbl.textContent = 'Coming Soon';
     wrap.appendChild(lbl);
-    comingSongs.forEach(s => wrap.appendChild(_buildSongCard(s, false)));
+    coming.forEach(s => wrap.appendChild(_buildSongCard(s, false)));
   }
 
-  if (plannedSongs.length) {
+  if (planned.length) {
     const lbl = document.createElement('div');
     lbl.className = 'section-label';
     lbl.textContent = 'In the Works';
     wrap.appendChild(lbl);
-    plannedSongs.forEach(s => wrap.appendChild(_buildSongCard(s, false)));
+    planned.forEach(s => wrap.appendChild(_buildSongCard(s, false)));
   }
 }
 
@@ -430,9 +624,11 @@ function _buildSongCard(song, isFeatured) {
   const card = document.createElement('div');
   card.className = 'song-card' + (isFeatured ? ' featured' : '');
 
-  const statusTag = song.status === 'live'   ? '<span class="song-tag tag-live">Live</span>'
-                  : song.status === 'coming' ? '<span class="song-tag tag-coming">Coming Soon</span>'
-                  : '<span class="song-tag tag-planned">In the Works</span>';
+  const statusTag = song.status === 'live'
+    ? '<span class="song-tag tag-live">Live</span>'
+    : song.status === 'coming'
+    ? '<span class="song-tag tag-coming">Coming Soon</span>'
+    : '<span class="song-tag tag-planned">In the Works</span>';
 
   const featTag = isFeatured
     ? '<span class="song-tag tag-featured">Featured</span>'
@@ -440,7 +636,7 @@ function _buildSongCard(song, isFeatured) {
 
   card.innerHTML = `
     <div class="song-card-inner">
-      <div class="song-cover" id="cover-${song.id}">
+      <div class="song-cover">
         ${song.coverUrl
           ? `<img src="${song.coverUrl}" alt="${song.title}" onerror="this.parentNode.textContent='M'"/>`
           : 'M'}
@@ -466,24 +662,25 @@ function showEmptyState(msg) {
    PLAYER
 ══════════════════════════════════════ */
 function openPlayer(song) {
-  _activeSong   = song;
-  _lyricsJson   = Array.isArray(song.lyricsJson) ? song.lyricsJson : [];
+  _activeSong    = song;
+  _lyricsJson    = Array.isArray(song.lyricsJson) ? song.lyricsJson : [];
   _activeLineIdx = -1;
-  _isPlaying    = false;
+  _isPlaying     = false;
+  _lastHeroText  = '';
 
-  // Update nav label
+  // Lazy-load share-sheet.js
+  _ensureShareSheet();
+
+  // Nav label
   const label = document.getElementById('playerSongLabel');
   if (label) label.textContent = song.title || '';
 
   // Cover
   const coverEl = document.getElementById('playerCover');
   if (coverEl) {
-    if (song.coverUrl) {
-      coverEl.innerHTML = `<img src="${song.coverUrl}" alt="${song.title}"
-        onerror="this.parentNode.textContent='M'" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"/>`;
-    } else {
-      coverEl.textContent = 'M';
-    }
+    coverEl.innerHTML = song.coverUrl
+      ? `<img src="${song.coverUrl}" alt="${song.title}" onerror="this.parentNode.textContent='M'"/>`
+      : 'M';
   }
 
   // Title / artist
@@ -495,46 +692,48 @@ function openPlayer(song) {
   // Platform links
   _renderPlatformLinks(song);
 
-  // Lyrics section
-  _renderLyricsSection(song);
-
-  // Progress bar — show only if YouTube ID exists
+  // Progress bar
   const progressWrap = document.getElementById('progressWrap');
   if (progressWrap) progressWrap.style.display = song.youtubeId ? 'block' : 'none';
 
   // Reset controls
   _setPlayBtn(false);
-  const playStatus = document.getElementById('playStatus');
-  if (playStatus) playStatus.textContent = song.youtubeId ? 'Tap to play' : '';
+  const ps = document.getElementById('playStatus');
+  if (ps) ps.textContent = song.youtubeId ? 'Tap to play' : '';
+
+  // Build lyrics UI
+  _renderPlayerBody(song);
 
   // Show overlay
   const overlay = document.getElementById('playerOverlay');
   if (overlay) overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  // Init YouTube if needed
-  if (song.youtubeId) {
-    _initYT(song.youtubeId);
-  }
+  // Scroll to top
+  const body = document.getElementById('playerBody');
+  if (body) body.scrollTop = 0;
 
-  // Back button
+  // Wire buttons
   const backBtn = document.getElementById('playerBackBtn');
   if (backBtn) backBtn.onclick = closePlayer;
 
-  // Play button
   const playBtn = document.getElementById('playBtn');
   if (playBtn) playBtn.onclick = togglePlay;
 
-  // Progress seek
   const progressBar = document.getElementById('progressBar');
   if (progressBar) {
     progressBar.oninput = e => {
       if (_ytPlayer && _ytReady && _duration) {
-        const t = (e.target.value / 100) * _duration;
-        _ytPlayer.seekTo(t, true);
+        _ytPlayer.seekTo((e.target.value / 100) * _duration, true);
       }
     };
   }
+
+  const shareBtn = document.getElementById('shareLyricBtn');
+  if (shareBtn) shareBtn.onclick = _shareActiveLyric;
+
+  // Init YouTube
+  if (song.youtubeId) _initYT(song.youtubeId);
 }
 
 function closePlayer() {
@@ -542,9 +741,7 @@ function closePlayer() {
   if (overlay) overlay.classList.remove('open');
   document.body.style.overflow = '';
   _stopSync();
-  if (_ytPlayer && _ytReady) {
-    try { _ytPlayer.stopVideo(); } catch(e) {}
-  }
+  if (_ytPlayer && _ytReady) { try { _ytPlayer.stopVideo(); } catch(e) {} }
   _isPlaying = false;
   _setPlayBtn(false);
 }
@@ -556,34 +753,35 @@ function _renderPlatformLinks(song) {
   wrap.innerHTML = '';
   const p = song.platforms || {};
   const defs = [
-    { key:'youtube',   label:'YouTube'   },
-    { key:'audiomack', label:'Audiomack' },
-    { key:'boomplay',  label:'Boomplay'  },
-    { key:'soundcloud',label:'SoundCloud'},
-    { key:'spotify',   label:'Spotify'   },
-    { key:'apple',     label:'Apple Music'},
+    { key:'youtube',    label:'YouTube'    },
+    { key:'audiomack',  label:'Audiomack'  },
+    { key:'boomplay',   label:'Boomplay'   },
+    { key:'soundcloud', label:'SoundCloud' },
+    { key:'spotify',    label:'Spotify'    },
+    { key:'apple',      label:'Apple Music'},
   ];
   defs.forEach(({ key, label }) => {
     const url = p[key];
     if (!url) return;
     const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
+    a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
     a.className = 'platform-btn';
     a.textContent = label;
     wrap.appendChild(a);
   });
 }
 
-/* ── Lyrics section ── */
-function _renderLyricsSection(song) {
-  const section = document.getElementById('lyricsSection');
-  if (!section) return;
-  section.innerHTML = '';
+/* ── Render player body ── */
+function _renderPlayerBody(song) {
+  const heroZone = document.getElementById('heroZone');
+  const pad      = document.getElementById('lyricsScrollPad');
+  if (!heroZone || !pad) return;
+
+  pad.innerHTML = '';
 
   if (song.status === 'coming' || song.status === 'planned') {
-    section.innerHTML = `
+    heroZone.style.display = 'none';
+    pad.innerHTML = `
       <div class="coming-state">
         <div class="coming-title">${song.title}</div>
         <div class="coming-sub">This song is on its way.<br/>Follow along on the feed when it drops.</div>
@@ -593,34 +791,28 @@ function _renderLyricsSection(song) {
   }
 
   if (!_lyricsJson.length) {
-    section.innerHTML = `<div style="padding:40px 0;text-align:center;
+    heroZone.style.display = 'none';
+    pad.innerHTML = `<div style="padding:40px 0;text-align:center;
       font-family:'Lora',serif;font-size:0.82rem;color:var(--text-3);font-style:italic;">
       Lyrics coming soon</div>`;
     return;
   }
 
-  // Hero stage
-  const heroStage = document.createElement('div');
-  heroStage.className = 'hero-stage';
-  heroStage.id = 'heroStage';
-  heroStage.innerHTML = `<div class="hero-lyric" id="heroLyric">&nbsp;</div>`;
-  section.appendChild(heroStage);
+  // Show hero zone
+  heroZone.style.display = 'block';
 
-  // Share a Lyric button
-  const shareBtn = document.createElement('button');
-  shareBtn.className = 'share-lyric-btn';
-  shareBtn.id = 'shareLyricBtn';
-  shareBtn.textContent = '+ Share a Lyric';
-  shareBtn.onclick = _shareActiveLyric;
-  section.appendChild(shareBtn);
+  // Reset hero
+  const heroText = document.getElementById('heroLyricText');
+  if (heroText) { heroText.textContent = '\u00a0'; heroText.classList.remove('fading'); }
+  const shareBtn = document.getElementById('shareLyricBtn');
+  if (shareBtn) shareBtn.classList.remove('visible');
 
-  // Divider
-  const lbl = document.createElement('div');
-  lbl.className = 'lyrics-label';
-  lbl.textContent = 'Full Lyrics — tap any line to jump';
-  section.appendChild(lbl);
+  // Build lyrics list
+  const label = document.createElement('span');
+  label.className = 'lyrics-label';
+  label.textContent = 'Full Lyrics — tap any line to jump';
+  pad.appendChild(label);
 
-  // Lines list
   const list = document.createElement('div');
   list.className = 'lyrics-list';
   list.id = 'lyricsList';
@@ -633,30 +825,54 @@ function _renderLyricsSection(song) {
     el.onclick = () => {
       if (_ytPlayer && _ytReady) {
         _ytPlayer.seekTo(line.start, true);
-        if (!_isPlaying) { _ytPlayer.playVideo(); }
+        if (!_isPlaying) _ytPlayer.playVideo();
       }
     };
     list.appendChild(el);
   });
 
-  section.appendChild(list);
+  pad.appendChild(list);
 }
 
-/* ── Share active lyric → pre-fill composer ── */
+/* ── Share active lyric → opens existing share-sheet ── */
 function _shareActiveLyric() {
   if (_activeLineIdx < 0 || !_lyricsJson[_activeLineIdx]) return;
   const line = _lyricsJson[_activeLineIdx];
   const song = _activeSong;
-  const text = `"${line.text}" — ${song?.title || ''}, ${song?.artist || 'Margo'}`;
-  // Navigate to feed and open composer pre-filled
-  const encoded = encodeURIComponent(line.text);
-  const song_enc = encodeURIComponent(song?.title || '');
-  const artist_enc = encodeURIComponent(song?.artist || 'Margo');
-  window.location.href = `/?sharelyric=${encoded}&song=${song_enc}&artist=${artist_enc}`;
+
+  // Build a post-shaped object that share-sheet.js understands
+  const fakePost = {
+    text: line.text,
+    knowledge: {
+      song:   song?.title  || '',
+      artist: song?.artist || 'Margo',
+    },
+    feeling: '',
+    timestamp: Date.now(),
+  };
+
+  if (typeof openShareSheet === 'function') {
+    openShareSheet(fakePost, { context: `From: ${song?.title || 'Margo'}` });
+  } else {
+    // share-sheet not loaded yet — fallback: navigate with URL params
+    const encoded    = encodeURIComponent(line.text);
+    const song_enc   = encodeURIComponent(song?.title  || '');
+    const artist_enc = encodeURIComponent(song?.artist || 'Margo');
+    window.location.href = `/?sharelyric=${encoded}&song=${song_enc}&artist=${artist_enc}`;
+  }
+}
+
+/* ── Lazy-load share-sheet.js ── */
+function _ensureShareSheet() {
+  if (_shareSheetLoaded) return;
+  _shareSheetLoaded = true;
+  const script = document.createElement('script');
+  script.src = '/js/media/share-sheet.js';
+  document.body.appendChild(script);
 }
 
 /* ══════════════════════════════════════
-   YOUTUBE PLAYER
+   YOUTUBE
 ══════════════════════════════════════ */
 function _initYT(videoId) {
   _ytReady = false;
@@ -666,7 +882,6 @@ function _initYT(videoId) {
     _createYTPlayer(videoId);
     return;
   }
-  // Load YouTube IFrame API
   const tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
   document.head.appendChild(tag);
@@ -674,27 +889,17 @@ function _initYT(videoId) {
 }
 
 function _createYTPlayer(videoId) {
-  // Destroy old player
-  if (_ytPlayer) {
-    try { _ytPlayer.destroy(); } catch(e) {}
-    _ytPlayer = null;
-  }
+  if (_ytPlayer) { try { _ytPlayer.destroy(); } catch(e) {} _ytPlayer = null; }
   const container = document.getElementById('ytPlayer');
   if (container) container.innerHTML = '<div id="ytPlayerInner"></div>';
 
   _ytPlayer = new YT.Player('ytPlayerInner', {
     videoId,
-    width:  '1',
-    height: '1',
+    width: '1', height: '1',
     playerVars: {
-      autoplay:       0,
-      controls:       0,
-      disablekb:      1,
-      fs:             0,
-      modestbranding: 1,
-      rel:            0,
-      playsinline:    1,  /* CRITICAL — prevents mobile redirect to YouTube app */
-      origin:         window.location.origin,
+      autoplay: 0, controls: 0, disablekb: 1, fs: 0,
+      modestbranding: 1, rel: 0, playsinline: 1,
+      origin: window.location.origin,
     },
     events: {
       onReady:       () => { _ytReady = true; _duration = _ytPlayer.getDuration() || 0; _updateDurationDisplay(); },
@@ -711,26 +916,26 @@ function _onYTStateChange(e) {
     _duration = _ytPlayer.getDuration() || 0;
     _updateDurationDisplay();
     _startSync();
-    const playStatus = document.getElementById('playStatus');
-    if (playStatus) playStatus.textContent = 'Now playing';
+    const ps = document.getElementById('playStatus');
+    if (ps) ps.textContent = 'Now playing';
   } else if (e.data === YTS.PAUSED || e.data === YTS.ENDED) {
     _isPlaying = false;
     _setPlayBtn(false);
     _stopSync();
-    const playStatus = document.getElementById('playStatus');
-    if (playStatus) playStatus.textContent = e.data === YTS.ENDED ? 'Ended' : 'Paused';
+    const ps = document.getElementById('playStatus');
+    if (ps) ps.textContent = e.data === YTS.ENDED ? 'Ended' : 'Paused';
   }
 }
 
 function togglePlay() {
   if (!_ytPlayer || !_ytReady) {
-    // No YouTube ID — open YouTube link
-    const url = _activeSong?.platforms?.youtube || (_activeSong?.youtubeId ? `https://www.youtube.com/watch?v=${_activeSong.youtubeId}` : null);
+    const url = _activeSong?.platforms?.youtube
+      || (_activeSong?.youtubeId ? `https://www.youtube.com/watch?v=${_activeSong.youtubeId}` : null);
     if (url) window.open(url, '_blank');
     return;
   }
-  if (_isPlaying) { _ytPlayer.pauseVideo(); }
-  else            { _ytPlayer.playVideo();  }
+  if (_isPlaying) _ytPlayer.pauseVideo();
+  else            _ytPlayer.playVideo();
 }
 
 function _setPlayBtn(playing) {
@@ -738,7 +943,7 @@ function _setPlayBtn(playing) {
   if (btn) btn.textContent = playing ? '⏸' : '▶';
 }
 
-/* ── Lyric sync loop ── */
+/* ── Sync loop ── */
 function _startSync() {
   _stopSync();
   _syncInterval = setInterval(_syncLyrics, 100);
@@ -750,35 +955,21 @@ function _stopSync() {
 
 function _syncLyrics() {
   if (!_ytPlayer || !_ytReady || !_lyricsJson.length) return;
+  let t;
+  try { t = _ytPlayer.getCurrentTime() || 0; } catch(e) { return; }
 
-  let currentTime;
-  try { currentTime = _ytPlayer.getCurrentTime() || 0; } catch(e) { return; }
-
-  // Update progress bar
+  // Progress bar
   const bar = document.getElementById('progressBar');
-  if (bar && _duration) bar.value = (currentTime / _duration) * 100;
-  const elapsed = document.getElementById('timeElapsed');
-  if (elapsed) elapsed.textContent = _fmtTime(currentTime);
+  if (bar && _duration) bar.value = (t / _duration) * 100;
+  const el = document.getElementById('timeElapsed');
+  if (el) el.textContent = _fmtTime(t);
 
-  // Find active line
+  // Find active line (strict: must be inside start → end)
   let newIdx = -1;
   for (let i = 0; i < _lyricsJson.length; i++) {
-    const line = _lyricsJson[i];
-    if (currentTime >= line.start && currentTime < line.end) {
+    if (t >= _lyricsJson[i].start && t < _lyricsJson[i].end) {
       newIdx = i;
       break;
-    }
-  }
-
-  // Check if a line's start time has just passed but end not reached
-  // (handles gaps between lines where no line is technically "active")
-  if (newIdx === -1) {
-    for (let i = _lyricsJson.length - 1; i >= 0; i--) {
-      if (currentTime >= _lyricsJson[i].start) { newIdx = i; break; }
-    }
-    // But respect end time — if past end, treat as gap
-    if (newIdx !== -1 && currentTime > _lyricsJson[newIdx].end + 0.1) {
-      newIdx = -1;
     }
   }
 
@@ -788,62 +979,47 @@ function _syncLyrics() {
 }
 
 function _updateLyricsUI(idx) {
-  // Update hero stage
-  const heroLyric = document.getElementById('heroLyric');
-  const shareBtn  = document.getElementById('shareLyricBtn');
+  const heroText = document.getElementById('heroLyricText');
+  const shareBtn = document.getElementById('shareLyricBtn');
 
-  // Update sticky bar current line preview
-  const linePreview = document.getElementById('currentLinePreview');
-  const playStatusEl = document.getElementById('playStatus');
-  if (linePreview) {
+  // ── Hero update ──
+  if (heroText) {
     if (idx >= 0 && _lyricsJson[idx]) {
-      linePreview.textContent = _lyricsJson[idx].text;
-      linePreview.classList.add('visible');
-      if (playStatusEl) playStatusEl.style.display = 'none';
+      const newText = _lyricsJson[idx].text;
+      if (newText !== _lastHeroText) {
+        _lastHeroText = newText;
+        // Fade out → change → fade in
+        heroText.classList.add('fading');
+        setTimeout(() => {
+          heroText.textContent = newText;
+          heroText.classList.remove('fading');
+        }, 200);
+      }
+    }
+    // idx === -1: gap between lines — keep last text, just dim it
+    if (idx === -1) {
+      heroText.style.opacity = '0.38';
     } else {
-      linePreview.classList.remove('visible');
-      if (playStatusEl) playStatusEl.style.display = 'block';
+      heroText.style.opacity = '';
     }
   }
 
-  // Show/hide hero stage
-  const heroStage = document.getElementById('heroStage');
-  if (heroStage) heroStage.style.display = _lyricsJson.length ? 'block' : 'none';
-
-  if (heroLyric) {
-    if (idx >= 0 && _lyricsJson[idx]) {
-      // New active line — animate in
-      heroLyric.style.opacity = '0';
-      heroLyric.style.transform = 'translateY(8px)';
-      setTimeout(() => {
-        heroLyric.textContent = _lyricsJson[idx].text;
-        heroLyric.style.opacity = '1';
-        heroLyric.style.transform = 'translateY(0)';
-      }, 150);
-    }
-    // When idx === -1 (gap between lines): keep last line showing, just dim it slightly
-    // This prevents the empty stage between lines
-    if (idx === -1 && heroLyric.textContent && heroLyric.textContent !== '\u00a0') {
-      heroLyric.style.opacity = '0.4';
-    }
-  }
-
-  // Show/hide share button — only when line is active
+  // ── Share button: visible only when a line is active ──
   if (shareBtn) shareBtn.classList.toggle('visible', idx >= 0);
 
-  // Update list lines
+  // ── Lyrics list: active / past classes ──
   const lines = document.querySelectorAll('.lyric-line');
   lines.forEach(el => {
     const i = parseInt(el.dataset.idx, 10);
     el.classList.toggle('active', i === idx);
-    el.classList.toggle('past',   i < idx);
+    el.classList.toggle('past',   i <  idx);
   });
 
-  // Auto-scroll active line into view
+  // ── Auto-scroll active line to a comfortable reading position ──
   if (idx >= 0) {
     const activeLine = document.querySelector('.lyric-line.active');
     if (activeLine) {
-      activeLine.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
 }
@@ -860,7 +1036,7 @@ function _fmtTime(s) {
 }
 
 /* ══════════════════════════════════════
-   LYRIC PARSER (same as admin, inlined)
+   LYRIC PARSERS
 ══════════════════════════════════════ */
 function parseLyrics(raw) {
   if (!raw || !raw.trim()) return [];
@@ -895,16 +1071,18 @@ function _parseLRC(text) {
   for (const row of text.split('\n')) {
     const match = row.match(/^(\[\d{2}:\d{2}[.:]\d{2,3}\])\s*(.*)$/);
     if (!match) continue;
-    const clean = match[1].replace(/[\[\]]/g,'');
+    const clean = match[1].replace(/[\[\]]/g, '');
     const [mStr, sStr] = clean.split(':');
-    const start = parseInt(mStr,10) * 60 + parseFloat(sStr);
+    const start = parseInt(mStr, 10) * 60 + parseFloat(sStr);
     const t = match[2].trim();
     if (t && !t.startsWith('[')) parsed.push({ start, text: t });
   }
   for (let i = 0; i < parsed.length; i++) {
-    lines.push({ start: parsed[i].start,
-      end: parsed[i+1] ? parsed[i+1].start : parsed[i].start + 5,
-      text: parsed[i].text });
+    lines.push({
+      start: parsed[i].start,
+      end:   parsed[i + 1] ? parsed[i + 1].start : parsed[i].start + 5,
+      text:  parsed[i].text,
+    });
   }
   return lines;
 }
