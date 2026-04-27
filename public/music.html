@@ -204,9 +204,9 @@
     .empty-state p { font-family:'Lora',serif; font-size:0.95rem; color:var(--text-3);
       line-height:1.7; }
 
-    /* Hidden YouTube player */
-    #ytPlayer { position:absolute; left:-9999px; top:-9999px;
-      width:1px; height:1px; pointer-events:none; }
+    /* Hidden YouTube player — must be in viewport on mobile for playsinline to work */
+    #ytPlayer { position:fixed; bottom:0; left:0;
+      width:1px; height:1px; opacity:0; pointer-events:none; z-index:-1; }
 
     /* Loading skeleton */
     .sk-card { margin:0 16px 10px; height:88px; background:var(--surface);
@@ -684,6 +684,8 @@ function _createYTPlayer(videoId) {
 
   _ytPlayer = new YT.Player('ytPlayerInner', {
     videoId,
+    width:  '1',
+    height: '1',
     playerVars: {
       autoplay:       0,
       controls:       0,
@@ -691,6 +693,8 @@ function _createYTPlayer(videoId) {
       fs:             0,
       modestbranding: 1,
       rel:            0,
+      playsinline:    1,  /* CRITICAL — prevents mobile redirect to YouTube app */
+      origin:         window.location.origin,
     },
     events: {
       onReady:       () => { _ytReady = true; _duration = _ytPlayer.getDuration() || 0; _updateDurationDisplay(); },
@@ -808,6 +812,7 @@ function _updateLyricsUI(idx) {
 
   if (heroLyric) {
     if (idx >= 0 && _lyricsJson[idx]) {
+      // New active line — animate in
       heroLyric.style.opacity = '0';
       heroLyric.style.transform = 'translateY(8px)';
       setTimeout(() => {
@@ -815,8 +820,11 @@ function _updateLyricsUI(idx) {
         heroLyric.style.opacity = '1';
         heroLyric.style.transform = 'translateY(0)';
       }, 150);
-    } else {
-      heroLyric.textContent = '\u00a0';
+    }
+    // When idx === -1 (gap between lines): keep last line showing, just dim it slightly
+    // This prevents the empty stage between lines
+    if (idx === -1 && heroLyric.textContent && heroLyric.textContent !== '\u00a0') {
+      heroLyric.style.opacity = '0.4';
     }
   }
 
