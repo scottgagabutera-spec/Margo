@@ -354,12 +354,13 @@
       font-style: italic;
       color: var(--text-3);
       line-height: 1.7;
-      padding: 8px 12px;
+      padding: 8px 16px;
       border-radius: 8px;
       cursor: pointer;
       transition: all 0.18s;
       border: 1px solid transparent;
       position: relative;
+      text-align: center;
     }
     .lyric-line:hover { color: var(--text-2); background: var(--surface-2); }
 
@@ -375,14 +376,14 @@
     /* Past lines: dim out */
     .lyric-line.past { opacity: 0.38; }
 
-    /* Active line gets a left accent bar */
-    .lyric-line.active::before {
+    /* Active line: centered bottom accent bar */
+    .lyric-line.active::after {
       content: '';
       position: absolute;
-      left: 0; top: 6px; bottom: 6px;
-      width: 3px;
+      bottom: 4px; left: 50%; transform: translateX(-50%);
+      width: 32px; height: 2px;
       background: var(--gold);
-      border-radius: 0 3px 3px 0;
+      border-radius: 2px;
     }
 
     /* ─────────────────────────────────────────
@@ -862,13 +863,26 @@ function _shareActiveLyric() {
   }
 }
 
-/* ── Lazy-load share-sheet.js ── */
+/* ── Lazy-load share-sheet + canvas dependencies ── */
 function _ensureShareSheet() {
   if (_shareSheetLoaded) return;
   _shareSheetLoaded = true;
-  const script = document.createElement('script');
-  script.src = '/js/media/share-sheet.js';
-  document.body.appendChild(script);
+
+  const css = document.createElement('link');
+  css.rel = 'stylesheet'; css.href = '/assets/gif-studio.css';
+  document.head.appendChild(css);
+
+  function _loadScript(src, next) {
+    const s = document.createElement('script');
+    s.src = src; s.onload = next || null;
+    document.body.appendChild(s);
+  }
+
+  _loadScript('/js/media/gif/gif-studio.js', () => {
+    _loadScript('/js/media/poster/studio.js', () => {
+      _loadScript('/js/media/share-sheet.js', null);
+    });
+  });
 }
 
 /* ══════════════════════════════════════
