@@ -877,26 +877,52 @@ function _shareActiveLyric() {
   }, 100);
 }
 
-/* ── Lazy-load share-sheet + canvas dependencies ── */
+/* ── Lazy-load full export chain (mirrors index.html load order) ── */
 function _ensureShareSheet() {
   if (_shareSheetLoaded) return;
   _shareSheetLoaded = true;
 
+  // CSS
   const css = document.createElement('link');
   css.rel = 'stylesheet'; css.href = '/assets/gif-studio.css';
   document.head.appendChild(css);
 
-  function _loadScript(src, next) {
-    const s = document.createElement('script');
-    s.src = src; s.onload = next || null;
-    document.body.appendChild(s);
+  // Minimal showToast so share-sheet doesn't silently crash
+  if (typeof window.showToast !== 'function') {
+    window.showToast = function(msg) {
+      const t = document.createElement('div');
+      t.textContent = msg;
+      t.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);' +
+        'background:#1a1a1a;color:#F4F1ED;font-family:Lora,serif;font-size:0.75rem;' +
+        'padding:10px 20px;border-radius:50px;border:1px solid rgba(255,255,255,0.1);' +
+        'z-index:9999;pointer-events:none;';
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2800);
+    };
   }
 
-  _loadScript('/js/media/gif/gif-studio.js', () => {
-    _loadScript('/js/media/poster/studio.js', () => {
-      _loadScript('/js/media/share-sheet.js', null);
-    });
-  });
+  // Load scripts in the exact order index.html uses
+  const chain = [
+    '/js/media/gif/renderer.js',
+    '/js/media/gif/exporter.js',
+    '/js/core/brand.js',
+    '/js/media/gif/gif-studio.js',
+    '/js/media/poster/renderer.js',
+    '/js/media/poster/exporter.js',
+    '/js/media/poster/studio.js',
+    '/js/media/share-sheet.js',
+    '/js/features/duet-mode.js',
+  ];
+
+  function _loadNext(i) {
+    if (i >= chain.length) return;
+    const s = document.createElement('script');
+    s.src = chain[i];
+    s.onload = () => _loadNext(i + 1);
+    s.onerror = () => _loadNext(i + 1); // skip broken, keep going
+    document.body.appendChild(s);
+  }
+  _loadNext(0);
 }
 
 /* ══════════════════════════════════════
