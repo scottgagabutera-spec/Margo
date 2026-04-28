@@ -274,10 +274,9 @@
       position: sticky;
       top: 0;
       z-index: 5;
-      background: var(--bg);
       padding: 24px 24px 16px;
       border-bottom: 1px solid var(--border);
-
+      text-align: center;
       /* Subtle gradient so lyrics fade out gracefully behind it */
       background: linear-gradient(
         to bottom,
@@ -299,6 +298,7 @@
       transition: opacity 0.2s cubic-bezier(0.16,1,0.3,1),
                   transform 0.2s cubic-bezier(0.16,1,0.3,1);
       margin-bottom: 14px;
+      text-align: center;
     }
     .hero-lyric-text.fading {
       opacity: 0.35;
@@ -841,26 +841,40 @@ function _shareActiveLyric() {
   const line = _lyricsJson[_activeLineIdx];
   const song = _activeSong;
 
-  // Build a post-shaped object that share-sheet.js understands
   const fakePost = {
     text: line.text,
     knowledge: {
       song:   song?.title  || '',
       artist: song?.artist || 'Margo',
     },
-    feeling: '',
+    emotion:   'Nostalgia',
+    feeling:   'Nostalgia',
     timestamp: Date.now(),
   };
 
-  if (typeof openShareSheet === 'function') {
-    openShareSheet(fakePost, { context: `From: ${song?.title || 'Margo'}` });
-  } else {
-    // share-sheet not loaded yet — fallback: navigate with URL params
-    const encoded    = encodeURIComponent(line.text);
-    const song_enc   = encodeURIComponent(song?.title  || '');
-    const artist_enc = encodeURIComponent(song?.artist || 'Margo');
-    window.location.href = `/?sharelyric=${encoded}&song=${song_enc}&artist=${artist_enc}`;
+  // If share sheet already loaded, open immediately
+  if (typeof window.openShareSheet === 'function') {
+    window.openShareSheet(fakePost, { context: `From: ${song?.title || 'Margo'}` });
+    return;
   }
+
+  // Not loaded yet — ensure load then poll until ready
+  _ensureShareSheet();
+  let tries = 0;
+  const poll = setInterval(() => {
+    tries++;
+    if (typeof window.openShareSheet === 'function') {
+      clearInterval(poll);
+      window.openShareSheet(fakePost, { context: `From: ${song?.title || 'Margo'}` });
+    } else if (tries > 60) {
+      clearInterval(poll);
+      // Hard fallback
+      const encoded    = encodeURIComponent(line.text);
+      const song_enc   = encodeURIComponent(song?.title  || '');
+      const artist_enc = encodeURIComponent(song?.artist || 'Margo');
+      window.location.href = `/?sharelyric=${encoded}&song=${song_enc}&artist=${artist_enc}`;
+    }
+  }, 100);
 }
 
 /* ── Lazy-load share-sheet + canvas dependencies ── */
