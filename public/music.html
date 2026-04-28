@@ -233,6 +233,8 @@
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     #playerOverlay.open { display: flex; }
+    /* Force body to not scroll when overlay is open */
+    body.player-open { overflow: hidden; position: fixed; width: 100%; }
     /* Atmospheric background — blurred cover art fills screen */
     .player-bg {
       position: absolute; inset: 0; z-index: 0;
@@ -868,7 +870,7 @@ function openPlayer(song) {
   // Show
   const overlay = document.getElementById('playerOverlay');
   if (overlay) overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  document.body.classList.add('player-open');
 
   const body = document.getElementById('playerBody');
   if (body) body.scrollTop = 0;
@@ -889,7 +891,7 @@ function openPlayer(song) {
 
 function closePlayer() {
   document.getElementById('playerOverlay').classList.remove('open');
-  document.body.style.overflow = '';
+  document.body.classList.remove('player-open');
   _stopSync();
   if (_ytPlayer && _ytReady) { try { _ytPlayer.stopVideo(); } catch(e) {} }
   _isPlaying = false;
