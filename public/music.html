@@ -254,15 +254,12 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: calc(env(safe-area-inset-top, 0px) + 14px) 20px 14px;
       flex-shrink: 0;
-      z-index: 10;
+      position: relative; z-index: 10;
+      width: 100%;
       border-bottom: 1px solid rgba(255,255,255,0.06);
       background: rgba(7,6,10,0.94); backdrop-filter: blur(24px);
     }
-    .player-nav-logo {
-      position: absolute; left: 50%; transform: translateX(-50%);
-      display: flex; align-items: center; gap: 8px;
-      text-decoration: none;
-    }
+    .player-nav-logo { display: none; }
     .player-back-btn {
       font-family: 'Lora', serif; font-size: 0.65rem;
       color: var(--text-2); background: none; border: none;
@@ -409,22 +406,26 @@
     /* Gap state — dims, doesn't disappear */
     .hero-lyric.gap { opacity: 0.3; transform: translateY(0); }
 
-    /* Share button */
+    /* Share button — always visible, dims between lyrics */
     .share-lyric-btn {
-      width: 100%; padding: 13px 20px;
-      background: var(--gold); color: var(--bg);
-      border: none; border-radius: 12px;
+      width: 100%; padding: 11px 20px;
+      background: transparent;
+      border: 1px solid rgba(232,197,71,0.25);
+      border-radius: 12px;
+      color: rgba(232,197,71,0.3);
       font-family: 'Lora', serif; font-weight: 700;
       font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px;
-      cursor: pointer; min-height: 48px;
-      transition: all 0.18s;
-      opacity: 0; pointer-events: none;
-      transform: translateY(8px);
+      cursor: default; min-height: 44px;
+      transition: all 0.3s ease;
+      pointer-events: none;
     }
-    .share-lyric-btn:hover { background: var(--gold-warm); }
+    .share-lyric-btn:hover { background: var(--gold-warm); color: var(--bg); }
     .share-lyric-btn:active { transform: scale(0.98); }
     .share-lyric-btn.visible {
-      opacity: 1; pointer-events: auto; transform: translateY(0);
+      background: var(--gold); color: var(--bg);
+      border-color: var(--gold);
+      pointer-events: auto; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(232,197,71,0.25);
     }
 
     /* ── Lyrics list ── */
@@ -610,7 +611,7 @@
   <div class="player-body" id="playerBody">
 
     <!-- Sticky hero zone -->
-    <div class="hero-zone" id="heroZone" style="display:none;">
+    <div class="hero-zone" id="heroZone">
       <span class="hero-counter" id="heroCounter"></span>
       <div class="hero-lyric in" id="heroLyric">&nbsp;</div>
       <button class="share-lyric-btn" id="shareLyricBtn">+ Share this lyric</button>
@@ -928,7 +929,7 @@ function _buildPlayerBody(song) {
   pad.innerHTML = '';
 
   if (song.status === 'coming' || song.status === 'planned') {
-    heroZone.style.display = 'none';
+    heroZone.style.visibility = 'hidden'; heroZone.style.pointerEvents = 'none';
     pad.innerHTML = `
       <div class="coming-state">
         <span class="coming-eyebrow">On its way</span>
@@ -940,12 +941,12 @@ function _buildPlayerBody(song) {
   }
 
   if (!_lyricsJson.length) {
-    heroZone.style.display = 'none';
+    heroZone.style.visibility = 'hidden'; heroZone.style.pointerEvents = 'none';
     pad.innerHTML = `<div style="padding:48px 0;text-align:center;font-family:'Lora',serif;font-size:0.82rem;color:var(--text-3);font-style:italic;">Lyrics coming soon — check back after the drop.</div>`;
     return;
   }
 
-  heroZone.style.display = 'block';
+  heroZone.style.visibility = 'visible'; heroZone.style.pointerEvents = '';
 
   // Reset hero
   const heroEl  = document.getElementById('heroLyric');
