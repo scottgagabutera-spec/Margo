@@ -251,17 +251,23 @@
       transition: background 1.2s ease;
     }
 
-    /* ── Player nav ── */
+    /* ── Player nav — FROZEN at top, never scrolls ── */
     .player-nav {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 20;
       display: flex; align-items: center; justify-content: space-between;
       padding: calc(env(safe-area-inset-top, 0px) + 14px) 20px 14px;
-      flex-shrink: 0;
-      position: relative; z-index: 10;
-      width: 100%;
       border-bottom: 1px solid rgba(255,255,255,0.06);
       background: rgba(7,6,10,0.94); backdrop-filter: blur(24px);
+      box-sizing: border-box;
     }
     .player-nav-logo { display: none; }
+    /* Push content below the frozen nav */
+    .player-nav-spacer {
+      height: calc(env(safe-area-inset-top, 0px) + 52px);
+      flex-shrink: 0;
+    }
     .player-back-btn {
       font-family: 'Lora', serif; font-size: 0.65rem;
       color: var(--text-2); background: none; border: none;
@@ -559,26 +565,13 @@
   <!-- Emotion color glow -->
   <div class="player-emotion-glow" id="emotionGlow"></div>
 
-  <!-- Nav -->
+  <!-- Nav — absolutely frozen at top -->
   <div class="player-nav">
     <button class="player-back-btn" id="playerBackBtn">← All Songs</button>
-    <a href="/" class="player-nav-logo" aria-label="Margo home">
-      <span class="margo-mark margo-mark--lg">
-        <span class="logo-ring"></span>
-        <span class="logo-ring"></span>
-        <span class="logo-ring"></span>
-        <span class="logo-circle">
-          <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <circle cx="40" cy="40" r="36" fill="#E8C547"/>
-            <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" fill="none" stroke="#0B0B0D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-            <rect x="35" y="60" width="10" height="3.5" rx="1.75" fill="#0B0B0D" opacity=".55"/>
-          </svg>
-        </span>
-      </span>
-      <span class="nav-logo-text">MARGO</span>
-    </a>
     <span class="player-now-playing" id="nowPlayingLabel"></span>
   </div>
+  <!-- Spacer that pushes flex content below the frozen nav -->
+  <div class="player-nav-spacer"></div>
 
   <!-- Controls strip -->
   <div class="player-strip">
