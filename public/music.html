@@ -31,15 +31,20 @@
     /* ── NAV ── */
     .site-nav {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 18px 24px;
+      padding: calc(env(safe-area-inset-top, 0px) + 14px) 24px 14px;
       border-bottom: 1px solid var(--gold-glow);
       position: sticky; top: 0; z-index: 100;
       background: rgba(7,6,10,0.94); backdrop-filter: blur(20px);
     }
     .nav-logo {
+      display: flex; align-items: center; gap: 8px;
+      text-decoration: none;
+    }
+    .nav-logo svg { width: 28px; height: 28px; display: block; }
+    .nav-logo-text {
       font-family: 'Syne', sans-serif; font-weight: 800;
       font-size: 0.88rem; letter-spacing: 4px;
-      color: var(--gold); text-decoration: none; text-transform: uppercase;
+      color: var(--gold); text-transform: uppercase;
     }
     .nav-link {
       font-family: 'Lora', serif; font-size: 0.65rem;
@@ -213,6 +218,7 @@
       display: none; position: fixed; inset: 0; z-index: 500;
       flex-direction: column; overflow: hidden;
       background: var(--bg);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     #playerOverlay.open { display: flex; }
 
@@ -235,7 +241,8 @@
     /* ── Player nav ── */
     .player-nav {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px; flex-shrink: 0;
+      padding: calc(env(safe-area-inset-top, 0px) + 14px) 20px 14px;
+      flex-shrink: 0;
       position: relative; z-index: 10;
       border-bottom: 1px solid rgba(255,255,255,0.06);
       background: rgba(7,6,10,0.7); backdrop-filter: blur(24px);
@@ -483,7 +490,17 @@
 
 <!-- ── NAV ── -->
 <nav class="site-nav">
-  <a href="/" class="nav-logo">MARGO</a>
+  <a href="/" class="nav-logo">
+    <svg viewBox="-4 -4 88 88" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="40" cy="40" r="36" fill="#E8C547"/>
+      <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57"
+            fill="none" stroke="#0B0B0D"
+            stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="35" y="60" width="10" height="3.5" rx="1.75"
+            fill="#0B0B0D" opacity=".55"/>
+    </svg>
+    <span class="nav-logo-text">MARGO</span>
+  </a>
   <a href="/" class="nav-link">← Back</a>
 </nav>
 
