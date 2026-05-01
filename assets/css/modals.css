@@ -706,3 +706,8 @@ body.modal-open { overflow: hidden !important; }
     justify-content: center;
   }
 }
+
+/* Hide FAB on desktop — header button covers it */
+@media (min-width: 768px) {
+  #dropLyricFAB { display: none !important; }
+}
