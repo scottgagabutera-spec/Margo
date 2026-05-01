@@ -751,8 +751,8 @@ function _buildFeaturedCard(song) {
   card.className = 'featured-card';
   card.style.marginTop = '24px';
 
-  const coverHtml = song.coverUrl
-    ? `<img src="${song.coverUrl}" alt="${_esc(song.title)}" onerror="this.parentNode.innerHTML='<div class=featured-cover-fallback><span>M</span></div>'"/>`
+  const coverHtml = song.coverUrl || song.artwork
+    ? `<img src="${song.coverUrl || song.artwork}" alt="${_esc(song.title)}" onerror="this.parentNode.innerHTML='<div class=featured-cover-fallback><span>M</span></div>'"/>`
     : `<div class="featured-cover-fallback"><span>M</span></div>`;
 
   card.innerHTML = `
@@ -778,8 +778,8 @@ function _buildGridCard(song, locked) {
   const tagClass = isLive ? 'tag-live' : (song.status === 'coming' ? 'tag-coming' : 'tag-planned');
   const tagText  = isLive ? 'Live' : (song.status === 'coming' ? 'Soon' : 'Coming');
 
-  const coverContent = song.coverUrl
-    ? `<img src="${_esc(song.coverUrl)}" alt="${_esc(song.title)}" onerror="this.style.display='none'"/>`
+  const coverContent = song.coverUrl || song.artwork
+    ? `<img src="${_esc(song.coverUrl || song.artwork)}" alt="${_esc(song.title)}" onerror="this.style.display='none'"/>`
     : `<span class="grid-cover-letter">M</span>`;
 
   const lockIcon = locked ? `<div class="grid-lock">🔒</div>` : '';
@@ -825,7 +825,7 @@ function openPlayer(song) {
 
   // Atmospheric background
   const bg = document.getElementById('playerBg');
-  if (bg && song.coverUrl) { bg.style.backgroundImage = `url(${song.coverUrl})`; bg.style.opacity = '0.12'; }
+  if (bg && song.coverUrl || song.artwork) { bg.style.backgroundImage = `url(${song.coverUrl || song.artwork})`; bg.style.opacity = '0.12'; }
   else if (bg) { bg.style.backgroundImage = ''; bg.style.opacity = '0'; }
 
   // Reset emotion glow
@@ -837,8 +837,8 @@ function openPlayer(song) {
 
   // Strip
   const cover = document.getElementById('stripCover');
-  if (cover) cover.innerHTML = song.coverUrl
-    ? `<img src="${song.coverUrl}" alt="${_esc(song.title)}" onerror="this.parentNode.textContent='M'"/>`
+  if (cover) cover.innerHTML = song.coverUrl || song.artwork
+    ? `<img src="${song.coverUrl || song.artwork}" alt="${_esc(song.title)}" onerror="this.parentNode.textContent='M'"/>`
     : 'M';
 
   const titleEl  = document.getElementById('stripTitle');
