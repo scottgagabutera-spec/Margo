@@ -1217,7 +1217,13 @@ function _updateUI(idx) {
   // Auto-scroll active line into view (centered in list area)
   if (idx >= 0) {
     const active = document.querySelector('.lyric-line.active');
-    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const body = document.getElementById('playerBody');
+    if (active && body) {
+      const lineTop = active.offsetTop;
+      const lineHeight = active.offsetHeight;
+      const bodyHeight = body.offsetHeight;
+      body.scrollTo({ top: lineTop - (bodyHeight / 2) + (lineHeight / 2), behavior: 'smooth' });
+    }
   }
 }
 
