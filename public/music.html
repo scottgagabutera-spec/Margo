@@ -368,14 +368,14 @@
 
     /* ── Scrollable player body ── */
     .player-body {
-      flex: 1; overflow-y: auto; padding-top: 196px;
+      flex: 1; overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       position: relative; z-index: 5;
     }
 
     /* ── Hero zone — sticky, lyric freezes here ── */
     .hero-zone {
-      position: relative; z-index: 6;
+      position: sticky; top: 196px; z-index: 6;
       padding: 28px 28px 20px;
       text-align: center;
       background: linear-gradient(to bottom, var(--bg) 0%, var(--bg) 80%, rgba(7,6,10,0) 100%);
@@ -437,7 +437,7 @@
     }
 
     /* ── Lyrics list ── */
-    .lyrics-pad { padding: 210px 20px 100px; }
+    .lyrics-pad { padding: 16px 20px 100px; }
 
     .lyrics-invite {
       font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 600;
