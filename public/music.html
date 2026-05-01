@@ -233,7 +233,8 @@
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     #playerOverlay.open { display: flex; }
-
+    /* Force body to not scroll when overlay is open */
+    body.player-open { overflow: hidden; position: fixed; width: 100%; }
     /* Atmospheric background — blurred cover art fills screen */
     .player-bg {
       position: absolute; inset: 0; z-index: 0;
@@ -250,14 +251,22 @@
       transition: background 1.2s ease;
     }
 
-    /* ── Player nav ── */
+    /* ── Player nav — FROZEN at top, never scrolls ── */
     .player-nav {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 20;
       display: flex; align-items: center; justify-content: space-between;
       padding: calc(env(safe-area-inset-top, 0px) + 14px) 20px 14px;
-      flex-shrink: 0;
-      position: relative; z-index: 10;
       border-bottom: 1px solid rgba(255,255,255,0.06);
-      background: rgba(7,6,10,0.7); backdrop-filter: blur(24px);
+      background: rgba(7,6,10,0.94); backdrop-filter: blur(24px);
+      box-sizing: border-box;
+    }
+    .player-nav-logo { display: none; }
+    /* Push content below the frozen nav */
+    .player-nav-spacer {
+      height: calc(env(safe-area-inset-top, 0px) + 52px);
+      flex-shrink: 0;
     }
     .player-back-btn {
       font-family: 'Lora', serif; font-size: 0.65rem;
@@ -405,22 +414,26 @@
     /* Gap state — dims, doesn't disappear */
     .hero-lyric.gap { opacity: 0.3; transform: translateY(0); }
 
-    /* Share button */
+    /* Share button — always visible, dims between lyrics */
     .share-lyric-btn {
-      width: 100%; padding: 13px 20px;
-      background: var(--gold); color: var(--bg);
-      border: none; border-radius: 12px;
+      width: 100%; padding: 11px 20px;
+      background: transparent;
+      border: 1px solid rgba(232,197,71,0.25);
+      border-radius: 12px;
+      color: rgba(232,197,71,0.3);
       font-family: 'Lora', serif; font-weight: 700;
       font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px;
-      cursor: pointer; min-height: 48px;
-      transition: all 0.18s;
-      opacity: 0; pointer-events: none;
-      transform: translateY(8px);
+      cursor: default; min-height: 44px;
+      transition: all 0.3s ease;
+      pointer-events: none;
     }
-    .share-lyric-btn:hover { background: var(--gold-warm); }
+    .share-lyric-btn:hover { background: var(--gold-warm); color: var(--bg); }
     .share-lyric-btn:active { transform: scale(0.98); }
     .share-lyric-btn.visible {
-      opacity: 1; pointer-events: auto; transform: translateY(0);
+      background: var(--gold); color: var(--bg);
+      border-color: var(--gold);
+      pointer-events: auto; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(232,197,71,0.25);
     }
 
     /* ── Lyrics list ── */
@@ -552,11 +565,13 @@
   <!-- Emotion color glow -->
   <div class="player-emotion-glow" id="emotionGlow"></div>
 
-  <!-- Nav -->
+  <!-- Nav — absolutely frozen at top -->
   <div class="player-nav">
     <button class="player-back-btn" id="playerBackBtn">← All Songs</button>
     <span class="player-now-playing" id="nowPlayingLabel"></span>
   </div>
+  <!-- Spacer that pushes flex content below the frozen nav -->
+  <div class="player-nav-spacer"></div>
 
   <!-- Controls strip -->
   <div class="player-strip">
@@ -591,7 +606,7 @@
   <div class="player-body" id="playerBody">
 
     <!-- Sticky hero zone -->
-    <div class="hero-zone" id="heroZone" style="display:none;">
+    <div class="hero-zone" id="heroZone">
       <span class="hero-counter" id="heroCounter"></span>
       <div class="hero-lyric in" id="heroLyric">&nbsp;</div>
       <button class="share-lyric-btn" id="shareLyricBtn">+ Share this lyric</button>
@@ -736,8 +751,8 @@ function _buildFeaturedCard(song) {
   card.className = 'featured-card';
   card.style.marginTop = '24px';
 
-  const coverHtml = song.coverUrl
-    ? `<img src="${song.coverUrl}" alt="${_esc(song.title)}" onerror="this.parentNode.innerHTML='<div class=featured-cover-fallback><span>M</span></div>'"/>`
+  const coverHtml = song.artwork
+    ? `<img src="${song.artwork}" alt="${_esc(song.title)}" onerror="this.parentNode.innerHTML='<div class=featured-cover-fallback><span>M</span></div>'"/>`
     : `<div class="featured-cover-fallback"><span>M</span></div>`;
 
   card.innerHTML = `
@@ -763,8 +778,8 @@ function _buildGridCard(song, locked) {
   const tagClass = isLive ? 'tag-live' : (song.status === 'coming' ? 'tag-coming' : 'tag-planned');
   const tagText  = isLive ? 'Live' : (song.status === 'coming' ? 'Soon' : 'Coming');
 
-  const coverContent = song.coverUrl
-    ? `<img src="${_esc(song.coverUrl)}" alt="${_esc(song.title)}" onerror="this.style.display='none'"/>`
+  const coverContent = song.artwork
+    ? `<img src="${_esc(song.artwork)}" alt="${_esc(song.title)}" onerror="this.style.display='none'"/>`
     : `<span class="grid-cover-letter">M</span>`;
 
   const lockIcon = locked ? `<div class="grid-lock">🔒</div>` : '';
@@ -810,7 +825,7 @@ function openPlayer(song) {
 
   // Atmospheric background
   const bg = document.getElementById('playerBg');
-  if (bg && song.coverUrl) { bg.style.backgroundImage = `url(${song.coverUrl})`; bg.style.opacity = '0.12'; }
+  if (bg && song.artwork) { bg.style.backgroundImage = `url(${song.artwork})`; bg.style.opacity = '0.12'; }
   else if (bg) { bg.style.backgroundImage = ''; bg.style.opacity = '0'; }
 
   // Reset emotion glow
@@ -822,8 +837,8 @@ function openPlayer(song) {
 
   // Strip
   const cover = document.getElementById('stripCover');
-  if (cover) cover.innerHTML = song.coverUrl
-    ? `<img src="${song.coverUrl}" alt="${_esc(song.title)}" onerror="this.parentNode.textContent='M'"/>`
+  if (cover) cover.innerHTML = song.artwork
+    ? `<img src="${song.artwork}" alt="${_esc(song.title)}" onerror="this.parentNode.textContent='M'"/>`
     : 'M';
 
   const titleEl  = document.getElementById('stripTitle');
@@ -848,7 +863,7 @@ function openPlayer(song) {
   // Show
   const overlay = document.getElementById('playerOverlay');
   if (overlay) overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  document.body.classList.add('player-open');
 
   const body = document.getElementById('playerBody');
   if (body) body.scrollTop = 0;
@@ -869,7 +884,7 @@ function openPlayer(song) {
 
 function closePlayer() {
   document.getElementById('playerOverlay').classList.remove('open');
-  document.body.style.overflow = '';
+  document.body.classList.remove('player-open');
   _stopSync();
   if (_ytPlayer && _ytReady) { try { _ytPlayer.stopVideo(); } catch(e) {} }
   _isPlaying = false;
@@ -909,7 +924,7 @@ function _buildPlayerBody(song) {
   pad.innerHTML = '';
 
   if (song.status === 'coming' || song.status === 'planned') {
-    heroZone.style.display = 'none';
+    heroZone.style.visibility = 'hidden'; heroZone.style.pointerEvents = 'none';
     pad.innerHTML = `
       <div class="coming-state">
         <span class="coming-eyebrow">On its way</span>
@@ -921,12 +936,12 @@ function _buildPlayerBody(song) {
   }
 
   if (!_lyricsJson.length) {
-    heroZone.style.display = 'none';
+    heroZone.style.visibility = 'hidden'; heroZone.style.pointerEvents = 'none';
     pad.innerHTML = `<div style="padding:48px 0;text-align:center;font-family:'Lora',serif;font-size:0.82rem;color:var(--text-3);font-style:italic;">Lyrics coming soon — check back after the drop.</div>`;
     return;
   }
 
-  heroZone.style.display = 'block';
+  heroZone.style.visibility = 'visible'; heroZone.style.pointerEvents = '';
 
   // Reset hero
   const heroEl  = document.getElementById('heroLyric');
