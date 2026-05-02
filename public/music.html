@@ -1011,7 +1011,8 @@ function _shareActive() {
   const song = _activeSong;
   const fakePost = {
     text:      line.text,
-    knowledge: { song: song?.title || '', artist: song?.artist || 'Margo' },
+    knowledge: { song: song?.title || '', artist: song?.artist || 'Margo', artwork: song?.artwork || null },
+    youtubeMeta: song?.artwork ? { thumbnail: song.artwork, thumbnailSm: song.artwork } : null,
     emotion:   'Nostalgia',
     feeling:   'Nostalgia',
     timestamp: Date.now(),
