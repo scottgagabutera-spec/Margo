@@ -347,10 +347,9 @@
     /* Play row */
     .strip-play-row { display: flex; align-items: center; gap: 14px; }
     /* Play/pause CSS icons */
-    .big-play-btn::before { content: ''; position: absolute; border-style: solid; border-width: 7px 0 7px 13px; border-color: transparent transparent transparent #07060a; margin-left: 2px; }
+    .big-play-btn::before { content: ''; position: absolute; border-style: solid; border-width: 7px 0 7px 12px; border-color: transparent transparent transparent #07060a; margin-left: 3px; }
     .big-play-btn::after { content: none; }
-    .big-play-btn.playing::before { border-style: none; border: none; width: 4px; height: 14px; background: #07060a; border-radius: 1px; left: 13px; margin-left: 0; }
-    .big-play-btn.playing::after { content: ''; position: absolute; width: 4px; height: 14px; background: #07060a; border-radius: 1px; right: 13px; }
+    .big-play-btn.playing::before { border-style: none; width: 3px; height: 14px; background: #07060a; border-radius: 2px; margin-left: 0; left: 50%; transform: translateX(-7px); box-shadow: 8px 0 0 0 #07060a; }
     .big-play-btn {
       width: 48px; height: 48px; border-radius: 50%;
       background: var(--gold); border: none; cursor: pointer;
