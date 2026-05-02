@@ -346,10 +346,11 @@
 
     /* Play row */
     .strip-play-row { display: flex; align-items: center; gap: 14px; }
-    /* Play/pause CSS icons */
-    .big-play-btn::before { content: ''; position: absolute; border-style: solid; border-width: 7px 0 7px 12px; border-color: transparent transparent transparent #07060a; margin-left: 3px; }
+    /* Play/pause CSS icons — v0 battle-tested */
+    .big-play-btn::before { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-35%, -50%); width: 0; height: 0; border-style: solid; border-width: 8px 0 8px 14px; border-color: transparent transparent transparent #07060a; }
     .big-play-btn::after { content: none; }
-    .big-play-btn.playing::before { border-style: none; width: 3px; height: 14px; background: #07060a; border-radius: 2px; margin-left: 0; left: 50%; transform: translateX(-7px); box-shadow: 8px 0 0 0 #07060a; }
+    .big-play-btn.playing::before { width: 5px; height: 16px; background: #07060a; border: none; transform: translate(-8px, -50%); }
+    .big-play-btn.playing::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(3px, -50%); width: 5px; height: 16px; background: #07060a; }
     .big-play-btn {
       width: 48px; height: 48px; border-radius: 50%;
       background: var(--gold); border: none; cursor: pointer;
