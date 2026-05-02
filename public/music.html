@@ -868,7 +868,7 @@ function openPlayer(song) {
   if (overlay) overlay.classList.add('open');
   document.body.classList.add('player-open');
 
-  const body = document.getElementById('playerBody');
+  const body = document.getElementById('lyricsPad');
   if (body) requestAnimationFrame(() => { requestAnimationFrame(() => { body.scrollTop = 0; }); });
   setTimeout(() => { _allowAutoScroll = true; }, 2000);
 
@@ -1224,7 +1224,7 @@ function _updateUI(idx) {
   // Auto-scroll active line into view (centered in list area)
   if (idx > 0 && _allowAutoScroll) {
     const active = document.querySelector('.lyric-line.active');
-    const body = document.getElementById('playerBody');
+    const body = document.getElementById('lyricsPad');
     if (active && body) {
       const lineTop = active.offsetTop;
       const lineHeight = active.offsetHeight;
