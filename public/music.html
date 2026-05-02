@@ -609,7 +609,7 @@
     </div>
 
     <div class="strip-play-row">
-      <button class="big-play-btn" id="playBtn" aria-label="Play">▶</button>
+      <button class="big-play-btn" id="playBtn" aria-label="Play"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="4,2 16,9 4,16" fill="rgba(7,6,10,1)"/></svg></button>
       <div class="play-state-wrap">
         <span class="play-state-text" id="playStateText">Tap to play</span>
         <span class="play-state-hint" id="playStateHint"></span>
@@ -1139,7 +1139,7 @@ function togglePlay() {
 
 function _setPlayBtn(playing) {
   const btn = document.getElementById('playBtn');
-  if (btn) btn.textContent = playing ? '⏸' : '▶';
+  if (btn) btn.innerHTML = playing ? '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="2" width="4" height="14" fill="rgba(7,6,10,1)"/><rect x="11" y="2" width="4" height="14" fill="rgba(7,6,10,1)"/></svg>' : '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="4,2 16,9 4,16" fill="rgba(7,6,10,1)"/></svg>';
 }
 
 /* ═══════════════════════════════
