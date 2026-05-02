@@ -285,47 +285,6 @@ body.modal-open { overflow: hidden !important; }
 .emotion-btn[data-emotion="Loneliness"]:hover { border-color:rgba(160,160,255,0.28); color:#a0a0ff; }
 .emotion-btn[data-emotion="SendIt"]:hover     { border-color:rgba(0,229,200,0.28);   color:#00e5c8; }
 .emotion-btn[data-emotion="LetOut"]:hover     { border-color:rgba(200,100,255,0.28); color:#c864ff; }
-
-/* ══════════════════════════════════════
-   RESULT / GUESS / LISTEN
-══════════════════════════════════════ */
-.result-msg {
-  padding: 13px; border-radius: 12px; font-weight: 600; font-size: 0.82rem;
-  line-height: 1.4; text-align: center;
-}
-.result-msg.hidden { display: none; }
-.result-success { background: var(--success-faint); border: 1px solid var(--success-border); color: var(--success); }
-.result-error   { background: rgba(255,100,100,0.08); border: 1px solid rgba(255,100,100,0.28); color: #ff6464; }
-.result-partial { background: var(--partial-faint); border: 1px solid var(--partial-border); color: var(--partial); }
-
-.listen-link {
-  display: block; padding: 12px 14px; background: var(--surface-2);
-  border: 1px solid var(--border-hi); border-radius: 10px;
-  color: var(--text); text-decoration: none; font-weight: 600;
-  font-size: 0.83rem; transition: all 0.2s; font-family: 'Lora', serif;
-}
-.listen-link:hover { border-color: var(--gold-border); color: var(--gold); transform: translateY(-1px); }
-.guess-links {
-  padding: 11px; background: var(--bg);
-  border: 1px solid var(--gold-border); border-radius: 10px;
-}
-.guess-links.hidden { display: none; }
-.guess-links-title {
-  font-family: 'Lora', serif; font-size: 0.6rem; color: var(--gold); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 7px;
-}
-.guess-link {
-  display: block; padding: 8px 11px; background: var(--surface);
-  border: 1px solid var(--border); border-radius: 7px; color: var(--gold);
-  text-decoration: none; font-weight: 600; font-size: 0.82rem;
-  text-align: center; margin-bottom: 5px; font-family: 'Lora', serif;
-}
-.guess-link:hover { border-color: var(--gold-border); }
-.guess-field {
-  width: 100%; padding: 11px 13px; background: var(--bg); border: 1px solid var(--border-hi);
-  border-radius: 9px; color: var(--text); font-family: 'Lora', serif;
-/* v6.8 — composer inputs explicit font to fix inconsistency */
-#songInput,
 #artistInput {
   font-family: 'Lora', serif;
   font-size: 0.82rem;

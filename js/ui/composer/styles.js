@@ -20,8 +20,6 @@ function injectComposerStyles() {
     }
     /* Show share inputs always, hide others */
     #shareInputs  { display: block !important; }
-    #guessInputs,
-    #discoverInputs { display: none !important; }
 
     #postAndCreateBtn {
       width:100%;display:flex;align-items:center;justify-content:center;gap:10px;

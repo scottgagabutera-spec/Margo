@@ -26,28 +26,6 @@ function initComposer() {
   initGeniusIdentify();
   initYoutubeAutofetch();
 
-  const submitGuessEl    = document.getElementById('submitGuess');
-  const submitDiscoverEl = document.getElementById('submitDiscover');
-  const closeGuessEl     = document.getElementById('closeGuess');
-  const closeDiscoverEl  = document.getElementById('closeDiscover');
-  const closeListenEl    = document.getElementById('closeListen');
-  const closeAnalyticsEl = document.getElementById('closeAnalytics');
-
-  if (submitGuessEl)    submitGuessEl.onclick    = submitGuess;
-  if (submitDiscoverEl) submitDiscoverEl.onclick = submitDiscover;
-  if (closeGuessEl)     closeGuessEl.onclick     = () => { closeModal(guessModal); currentGuessAttempts = 0; };
-  if (closeDiscoverEl)  closeDiscoverEl.onclick  = () => closeModal(discoverModal);
-  if (closeListenEl)    closeListenEl.onclick    = () => closeModal(listenModal);
-  if (analyticsBtn)     analyticsBtn.onclick     = openAnalytics;
-  if (closeAnalyticsEl) closeAnalyticsEl.onclick = () => closeModal(analyticsModal);
-
-  // null-guarded — postcard removed in concept-v2
-  if (typeof listenPostcard !== 'undefined' && listenPostcard) {
-    listenPostcard.onclick = () => {
-      const idx = posts.findIndex(p => p.id === currentPost?.id);
-      if (idx !== -1) window.openListen(idx);
-    };
-  }
   const closePostcardEl = document.getElementById('closePostcard');
   if (closePostcardEl) {
     closePostcardEl.onclick = () => {
@@ -234,58 +212,8 @@ function resetComposer() {
   document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
 
   if (typeof shareInputs     !== 'undefined' && shareInputs)    shareInputs.classList.add('show');
-  if (typeof guessInputs     !== 'undefined' && guessInputs)    guessInputs.classList.remove('show');
-  if (typeof discoverInputs  !== 'undefined' && discoverInputs) discoverInputs.classList.remove('show');
-  if (typeof streamingSection !== 'undefined' && streamingSection) streamingSection.style.display = 'block';
-  if (typeof guessSongCheck   !== 'undefined' && guessSongCheck)   guessSongCheck.checked   = true;
-  if (typeof guessArtistCheck !== 'undefined' && guessArtistCheck) guessArtistCheck.checked = true;
 
   const is = document.getElementById('inspireSuggestions');
   
   if (is) { is.innerHTML = ''; is.style.display = 'none'; }
 }
-
-/* ── Listen ── */
-window.openListen = function(index) {
-  currentPost = posts[index];
-  if (!currentPost?.links) { showToast('No streaming links'); return; }
-  const ll = document.getElementById('listenLinks');
-  ll.innerHTML = '';
-  let has = false;
-  [['Spotify','spotify'],['Apple Music','apple'],['YouTube','youtube'],['SoundCloud','soundcloud']]
-    .forEach(([name,key]) => {
-      if (currentPost.links[key]) {
-        has = true;
-        const a = document.createElement('a');
-        a.className='listen-link'; a.href=currentPost.links[key];
-        a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=name;
-        ll.appendChild(a);
-      }
-    });
-  if (!has) { showToast('No streaming links available'); return; }
-  openModal(listenModal);
-};
-
-/* ── Guess ── */
-window.openGuess = function(index) {
-  currentPost = posts[index];
-  if (!currentPost) return;
-  trackView(currentPost.id);
-  currentGuessAttempts = 0;
-  document.getElementById('guessLyric').textContent      = currentPost.text;
-  document.getElementById('guessSongInput').value        = '';
-  document.getElementById('guessArtistInput').value      = '';
-  document.getElementById('guessResult').className       = 'result-msg hidden';
-  document.getElementById('guessLinksSection').className = 'guess-links hidden';
-  document.getElementById('guessInputFields').style.display = '';
-  document.getElementById('submitGuess').style.display      = '';
-  document.getElementById('revealAnswer').style.display     = 'none';
-  const doSong=currentPost.guessConfig?.guessSong??true, doArtist=currentPost.guessConfig?.guessArtist??true;
-  document.getElementById('guessSongInput').style.display   = doSong   ? 'block':'none';
-  document.getElementById('guessArtistInput').style.display = doArtist ? 'block':'none';
-  const what=[]; if(doSong)what.push('song'); if(doArtist)what.push('artist');
-  document.getElementById('guessHint').textContent = `${MAX_GUESS_ATTEMPTS} attempts to name the ${what.join(' and ')}.`;
-  openModal(guessModal);
-};
-
-

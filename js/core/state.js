@@ -15,7 +15,6 @@
 // ── App constants ──
 const APP_BASE_URL = window.location.origin;
 const APP_DOMAIN   = 'trymargo.com';
-const MAX_GUESS_ATTEMPTS = 2;
 
 // ── User ID (persisted) ──
 let userId = localStorage.getItem('margoUserId');
@@ -28,7 +27,6 @@ if (!userId) {
 let currentMode          = 'share';
 let selectedEmotion      = null;
 let currentPost          = null;
-let currentGuessAttempts = 0;
 let posts                = [];
 let postAnalytics        = {};
 let postsLoaded          = false;
@@ -107,10 +105,6 @@ const landing           = document.getElementById('landing');
 const feed              = document.getElementById('feed');
 window.feed = feed;
 const composer          = document.getElementById('composer');
-const guessModal        = document.getElementById('guessModal');
-const discoverModal     = document.getElementById('discoverModal');
-const listenModal       = document.getElementById('listenModal');
-const analyticsModal    = document.getElementById('analyticsModal');
 
 // NOTE: postcardModal and studioChooser are removed in concept-v2.
 // Any code referencing them will safely get `null` from getElementById.
@@ -129,18 +123,10 @@ const newPostsIndicator = document.getElementById('newPostsIndicator');
 const scrollToTopBtn    = document.getElementById('scrollToTopBtn');
 
 const shareInputs       = document.getElementById('shareInputs');
-const guessInputs       = document.getElementById('guessInputs');
-const discoverInputs    = document.getElementById('discoverInputs');
 const streamingSection  = document.getElementById('streamingSection');
 
 const getSongInput    = () => document.getElementById('songInput');
 const getArtistInput  = () => document.getElementById('artistInput');
-const guessSongCheck      = document.getElementById('guessSongCheck');
-const guessArtistCheck    = document.getElementById('guessArtistCheck');
-const guessSongAnswer     = document.getElementById('guessSongAnswer');
-const guessArtistAnswer   = document.getElementById('guessArtistAnswer');
-const discoverSongInput   = document.getElementById('discoverSongInput');
-const discoverArtistInput = document.getElementById('discoverArtistInput');
 
 const spotifyLink    = document.getElementById('spotifyLink');
 const appleLink      = document.getElementById('appleLink');
@@ -149,8 +135,6 @@ const soundcloudLink = document.getElementById('soundcloudLink');
 
 // sharePosterBtn now routes to openShareSheet() via app.js init
 const sharePosterBtn = document.getElementById('sharePosterBtn');
-const listenPostcard = document.getElementById('listenPostcard');
-const analyticsBtn   = document.getElementById('analyticsBtn');
 
 // ── Studio elements ──
 const studioOverlay   = document.getElementById('studioOverlay');
