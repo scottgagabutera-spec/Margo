@@ -566,77 +566,21 @@
 <!-- app bootstrap — always last -->
 <script src="/js/core/app.js" defer></script>
 <script src="/js/ui/pull-to-refresh.js" defer></script>
-
-<button id="dropLyricFAB" aria-label="Drop a Lyric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Share a Lyric</button>
 <script>
 (function () {
-  var feed     = document.getElementById('feed');
-  var landing  = document.getElementById('landing');
-  var header   = document.getElementById('feedHeader');
-  var fab      = document.getElementById('dropLyricFAB');
-  var logoHome = document.getElementById('feedLogoHome');
-  var modal    = document.getElementById('composer');
-
-  if (!feed || !fab) return;
-
-  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
-
-  var composer = document.getElementById('openComposer');
-  fab.addEventListener('click', function () { if (composer) composer.click(); });
-
-  if (logoHome) {
-    logoHome.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
-  }
-
-  function feedIsActive() {
-    if (feed.style.display === 'none') return false;
-    if (feed.classList.contains('active')) return true;
-    if (feed.classList.contains('hidden')) return false;
-    return window.getComputedStyle(feed).display !== 'none';
-  }
-
-  var wasFeedActive = feedIsActive();
-
-  function onFeedVisibilityChange() {
-    var isActive = feedIsActive();
-    if (isActive && !wasFeedActive) { lastY = 0; pending = false; onScroll(); }
-    wasFeedActive = isActive;
-    if (isActive) { fab.classList.add("fab-visible"); fab.classList.remove("scroll-hidden"); }
-    else { fab.classList.remove("fab-visible"); fab.classList.remove("scroll-hidden"); fab.classList.remove("hidden-fab"); }
-  }
-
-  var obs = new MutationObserver(onFeedVisibilityChange);
-  obs.observe(feed, { attributes: true, attributeFilter: ['class', 'style'] });
-  if (landing) obs.observe(landing, { attributes: true, attributeFilter: ['class', 'style'] });
-  onFeedVisibilityChange();
-
-  if (modal) {
-    new MutationObserver(function () {
-      fab.classList.toggle('hidden-fab', !modal.classList.contains('hidden'));
-    }).observe(modal, { attributes: true, attributeFilter: ['class'] });
-  }
-
-  var lastY = 0, pending = false, FAB_MIN = 6;
-
+  var header = document.getElementById("feedHeader");
+  var lastY = 0, pending = false;
   function onScroll() {
     if (pending) return;
     pending = true;
     requestAnimationFrame(function () {
       var y = window.scrollY || document.documentElement.scrollTop || 0;
-      var down = y > lastY, d = Math.abs(y - lastY);
-      if (header) header.style.borderBottomColor = y > 8 ? 'rgba(232,197,71,0.22)' : 'rgba(232,197,71,0.12)';
-      if (feedIsActive() && !fab.classList.contains('hidden-fab')) {
-        if (down && d > FAB_MIN && y > 100) fab.classList.add('scroll-hidden');
-        else if (!down && d > FAB_MIN) fab.classList.remove('scroll-hidden');
-        if (y < 60) fab.classList.remove('scroll-hidden');
-      }
+      if (header) header.style.borderBottomColor = y > 8 ? "rgba(232,197,71,0.22)" : "rgba(232,197,71,0.12)";
       lastY = y; pending = false;
     });
   }
-
-  window.addEventListener('scroll', onScroll, { passive: true });
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 }());
 </script>

@@ -34,19 +34,10 @@
       }
 
       /* ═══════════════════════════════════════
-         LANDING PAGE: hide ALL floating buttons
+         LANDING PAGE: hide scroll-to-top button
       ═══════════════════════════════════════ */
-      body.on-landing #margoScrollTop,
-      body.on-landing #dropLyricFAB,
-      body.on-landing [style*="position: fixed"][style*="DROP"],
-      body.on-landing [style*="position:fixed"][style*="DROP"] {
+      body.on-landing #margoScrollTop {
         opacity: 0 !important;
-      body.on-feed #dropLyricFAB {
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        transform: none !important;
-        display: flex !important;
-      }
         pointer-events: none !important;
         transform: translateY(12px) !important;
       }

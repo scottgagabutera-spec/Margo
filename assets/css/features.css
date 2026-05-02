@@ -112,7 +112,6 @@
   .sc-card { padding: 18px 12px; }
   .sc-title { font-size: 1.3rem; }
   .color-scenes { grid-template-columns: repeat(4, 1fr); }
-  #dropLyricFAB   { bottom: 22px; padding: 10px 22px; font-size: 0.82rem; }
   #margoScrollTop { bottom: 72px; right: 12px; }
   .scroll-top-label { font-size: 0.6rem; }
   .emotion-grid { display: flex; overflow-x: auto; gap: 8px; }
@@ -130,7 +129,6 @@
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
-  #dropLyricFAB   { bottom: calc(22px + env(safe-area-inset-bottom)); }
   #margoScrollTop { bottom: calc(22px + env(safe-area-inset-bottom)); }
 }
 
