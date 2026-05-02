@@ -969,12 +969,6 @@ function _buildPlayerBody(song) {
   if (ctrEl)   { ctrEl.textContent = ''; ctrEl.classList.remove('visible'); }
   if (shareEl) shareEl.classList.remove('visible');
 
-  // Lyrics list
-  const inv = document.createElement('div');
-  inv.className = 'lyrics-invite';
-  inv.textContent = 'Tap any line to jump';
-  pad.appendChild(inv);
-
   const list = document.createElement('div');
   list.id = 'lyricsList';
 
