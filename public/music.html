@@ -437,7 +437,7 @@
     }
 
     /* ── Lyrics list ── */
-    .lyrics-pad { padding: 16px 20px 100px; }
+    .lyrics-pad { padding: 40px 20px 100px; }
 
     .lyrics-invite {
       font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 600;
@@ -866,7 +866,7 @@ function openPlayer(song) {
   document.body.classList.add('player-open');
 
   const body = document.getElementById('playerBody');
-  if (body) body.scrollTop = 0;
+  if (body) requestAnimationFrame(() => { requestAnimationFrame(() => { body.scrollTop = 0; }); });
 
   // Wire
   document.getElementById('playerBackBtn').onclick = closePlayer;
