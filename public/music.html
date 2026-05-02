@@ -115,7 +115,7 @@
     }
     .featured-cover-fallback {
       width: 100%; height: 100%;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; align-items: center; justify-content: center; position: relative;
       background: linear-gradient(135deg, var(--surface-3) 0%, #1a1628 100%);
     }
     .featured-cover-fallback span {
@@ -190,7 +190,7 @@
     }
     .grid-lock {
       position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; align-items: center; justify-content: center; position: relative;
       background: rgba(7,6,10,0.55);
       font-size: 1.2rem;
     }
@@ -293,7 +293,7 @@
     .strip-cover {
       width: 56px; height: 56px; border-radius: 10px; flex-shrink: 0;
       background: var(--surface-3); overflow: hidden;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; align-items: center; justify-content: center; position: relative;
       font-family: 'Syne', sans-serif; font-weight: 800;
       font-size: 1.1rem; color: var(--gold);
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
@@ -346,11 +346,16 @@
 
     /* Play row */
     .strip-play-row { display: flex; align-items: center; gap: 14px; }
+    /* Play/pause CSS icons */
+    .big-play-btn.playing::before { content: ''; position: absolute; width: 4px; height: 14px; background: #07060a; border-radius: 1px; left: 17px; }
+    .big-play-btn.playing::after { content: ''; position: absolute; width: 4px; height: 14px; background: #07060a; border-radius: 1px; right: 17px; }
+    .big-play-btn::before { content: ''; position: absolute; border-style: solid; border-width: 7px 0 7px 13px; border-color: transparent transparent transparent #07060a; margin-left: 2px; }
+    .big-play-btn::after { content: none; }
     .big-play-btn {
       width: 48px; height: 48px; border-radius: 50%;
       background: var(--gold); border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; position: relative;
+      flex-shrink: 0;
       transition: all 0.15s;
       box-shadow: 0 4px 16px rgba(232,197,71,0.35);
     }
@@ -609,7 +614,7 @@
     </div>
 
     <div class="strip-play-row">
-      <button class="big-play-btn" id="playBtn" aria-label="Play"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="4,2 16,9 4,16" fill="#ffffff"/></svg></button>
+      <button class="big-play-btn" id="playBtn" aria-label="Play"></button>
       <div class="play-state-wrap">
         <span class="play-state-text" id="playStateText">Tap to play</span>
         <span class="play-state-hint" id="playStateHint"></span>
@@ -1139,7 +1144,7 @@ function togglePlay() {
 
 function _setPlayBtn(playing) {
   const btn = document.getElementById('playBtn');
-  if (btn) btn.innerHTML = playing ? '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 2h4v14H3zM11 2h4v14h-4z" fill="#ffffff"/></svg>' : '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="4,2 16,9 4,16" fill="#ffffff"/></svg>';
+  if (btn) btn.classList.toggle('playing', playing);
 }
 
 /* ═══════════════════════════════
