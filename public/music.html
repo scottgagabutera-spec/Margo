@@ -366,6 +366,7 @@
       color: var(--text-3); opacity: 0.55; display: block; margin-top: 1px;
     }
 
+    .hero-spacer { height: 24px; flex-shrink: 0; pointer-events: none; }
     /* ── Scrollable player body ── */
     .player-body {
       flex: 1; overflow-y: auto;
@@ -636,6 +637,7 @@ let _ytPlayer      = null;
 let _ytReady       = false;
 let _syncInterval  = null;
 let _lyricsJson    = [];
+let _allowAutoScroll = false;
 let _activeIdx     = -1;
 let _isPlaying     = false;
 let _duration      = 0;
@@ -858,6 +860,7 @@ function openPlayer(song) {
   if (sh) sh.textContent = song.youtubeId ? 'Audio via YouTube' : '';
 
   // Build body
+  _allowAutoScroll = false;
   _buildPlayerBody(song);
 
   // Show
@@ -867,6 +870,7 @@ function openPlayer(song) {
 
   const body = document.getElementById('playerBody');
   if (body) requestAnimationFrame(() => { requestAnimationFrame(() => { body.scrollTop = 0; }); });
+  setTimeout(() => { _allowAutoScroll = true; }, 2000);
 
   // Wire
   document.getElementById('playerBackBtn').onclick = closePlayer;
@@ -922,6 +926,9 @@ function _buildPlayerBody(song) {
   const pad      = document.getElementById('lyricsPad');
   if (!heroZone || !pad) return;
   pad.innerHTML = '';
+  const spacer = document.createElement('div');
+  spacer.className = 'hero-spacer';
+  pad.appendChild(spacer);
 
   if (song.status === 'coming' || song.status === 'planned') {
     heroZone.style.visibility = 'hidden'; heroZone.style.pointerEvents = 'none';
@@ -1215,7 +1222,7 @@ function _updateUI(idx) {
   });
 
   // Auto-scroll active line into view (centered in list area)
-  if (idx > 0) {
+  if (idx > 0 && _allowAutoScroll) {
     const active = document.querySelector('.lyric-line.active');
     const body = document.getElementById('playerBody');
     if (active && body) {
