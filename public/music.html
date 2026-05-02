@@ -1215,7 +1215,7 @@ function _updateUI(idx) {
   });
 
   // Auto-scroll active line into view (centered in list area)
-  if (idx >= 0) {
+  if (idx > 0) {
     const active = document.querySelector('.lyric-line.active');
     const body = document.getElementById('playerBody');
     if (active && body) {
