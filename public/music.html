@@ -228,7 +228,7 @@
     /* ── PLAYER OVERLAY ── */
     #playerOverlay {
       display: none; position: fixed; inset: 0; z-index: 500;
-      flex-direction: column; overflow: hidden;
+      flex-direction: column; overflow: hidden; /* shell never scrolls */
       background: var(--bg);
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
@@ -369,14 +369,14 @@
     .hero-spacer { height: 24px; flex-shrink: 0; pointer-events: none; }
     /* ── Scrollable player body ── */
     .player-body {
-      flex: 1; overflow-y: hidden;
+      flex: 1; overflow: hidden; display: flex; flex-direction: column;
       -webkit-overflow-scrolling: touch;
       position: relative; z-index: 5;
     }
 
     /* ── Hero zone — sticky, lyric freezes here ── */
     .hero-zone {
-      position: sticky; top: 160px; z-index: 6;
+      flex-shrink: 0; z-index: 6;
       padding: 28px 28px 20px;
       text-align: center;
       background: linear-gradient(to bottom, var(--bg) 0%, var(--bg) 80%, rgba(7,6,10,0) 100%);
@@ -438,8 +438,17 @@
     }
 
     /* ── Lyrics list ── */
-    .lyrics-pad { padding: 0 20px 100px; overflow-y: auto; height: calc(100vh - 353px); }
+    .lyrics-pad { flex: 1; overflow-y: auto; min-height: 0; padding: 0 20px 100px; }
 
+    .lyrics-invite-fixed {
+      flex-shrink: 0;
+      font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 2px; color: var(--text-3);
+      padding: 16px 20px; display: flex; align-items: center; gap: 10px;
+    }
+    .lyrics-invite-fixed::before, .lyrics-invite-fixed::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
     .lyrics-invite {
       font-family: 'Lora', serif; font-size: 0.6rem; font-weight: 600;
       text-transform: uppercase; letter-spacing: 2px; color: var(--text-3);
@@ -613,6 +622,8 @@
       <button class="share-lyric-btn" id="shareLyricBtn">+ Share this lyric</button>
     </div>
 
+    <!-- TAP ANY LINE TO JUMP — frozen, never scrolls -->
+    <div class="lyrics-invite-fixed">TAP ANY LINE TO JUMP</div>
     <!-- Lyrics list -->
     <div class="lyrics-pad" id="lyricsPad"></div>
 
