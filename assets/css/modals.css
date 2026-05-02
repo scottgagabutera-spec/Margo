@@ -142,9 +142,6 @@ textarea#textInput:focus {
 .hint {
   font-family: 'Lora', serif;
   font-style: italic;
-  font-size: 0.95rem; color: rgba(255,255,255,0.3); line-height: 1.5;
-}
-
 /* ══════════════════════════════════════
    MODALS
 ══════════════════════════════════════ */
@@ -327,9 +324,6 @@ body.modal-open { overflow: hidden !important; }
 .guess-field {
   width: 100%; padding: 11px 13px; background: var(--bg); border: 1px solid var(--border-hi);
   border-radius: 9px; color: var(--text); font-family: 'Lora', serif;
-  font-size: 0.95rem; transition: all 0.18s; -webkit-appearance: none;
-}
-.guess-field:focus { outline: none; border-color: var(--gold-border); box-shadow: 0 0 0 3px rgba(232,197,71,0.07); }
 /* v6.8 — composer inputs explicit font to fix inconsistency */
 #songInput,
 #artistInput {
@@ -342,9 +336,6 @@ body.modal-open { overflow: hidden !important; }
   padding: 10px 14px;
   letter-spacing: -0.01em;
   color: rgba(255,255,255,0.9);
-}
-  font-size: 0.95rem;
-  font-weight: 400;
 }
 
 .lyric-display {
@@ -498,9 +489,6 @@ body.modal-open { overflow: hidden !important; }
   padding: 11px 14px;
 }
 #composer .song-pill-name {
-  font-size: 0.95rem;
-  font-family: 'Lora', serif;
-  font-weight: 700;
   color: #F4F1ED;
   letter-spacing: 0.01em;
 }
