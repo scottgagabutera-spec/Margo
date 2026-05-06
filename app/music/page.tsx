@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { Play, Disc3, Heart, Quote } from 'lucide-react'
 import { MargoNav } from '@/components/margo-nav'
 import { cn } from '@/lib/utils'
+import { useSongs } from '@/hooks/useSongs'
 
 // Featured song data
 const featuredSong = {
@@ -96,6 +97,9 @@ function formatNumber(num: number): string {
 
 export default function MusicPage() {
   const [hoveredLyric, setHoveredLyric] = useState<string | null>(null)
+  const { songs, loading } = useSongs()
+  const featuredSong = songs[0] || null
+  const moreSongs = songs.slice(1)
 
   return (
     <div className="min-h-screen">
@@ -106,8 +110,8 @@ export default function MusicPage() {
         {/* Background Artwork */}
         <div className="absolute inset-0">
           <Image
-            src={featuredSong.artwork}
-            alt={featuredSong.title}
+            src={featuredSong?.artwork || ""}
+            alt={featuredSong?.title}
             fill
             className="object-cover"
             priority
@@ -123,10 +127,10 @@ export default function MusicPage() {
           <div className="mb-8">
             <p className="text-white/50 text-sm uppercase tracking-widest mb-3">Featured</p>
             <h1 className="text-6xl md:text-8xl font-serif italic text-white mb-3 tracking-tight">
-              {featuredSong.title}
+              {featuredSong?.title}
             </h1>
             <p className="text-2xl text-white/70 font-light">
-              {featuredSong.artist}
+              {featuredSong?.artist}
             </p>
           </div>
 
@@ -135,7 +139,7 @@ export default function MusicPage() {
             <div className="flex items-center gap-3">
               <Play className="w-5 h-5 text-white/40" />
               <div>
-                <p className="text-2xl font-medium text-white">{formatNumber(featuredSong.plays)}</p>
+                <p className="text-2xl font-medium text-white">{formatNumber(featuredSong?.plays || 0)}</p>
                 <p className="text-xs uppercase tracking-widest text-white/40">Plays</p>
               </div>
             </div>
@@ -143,7 +147,7 @@ export default function MusicPage() {
             <div className="flex items-center gap-3">
               <Heart className="w-5 h-5 text-white/40" />
               <div>
-                <p className="text-2xl font-medium text-white">{formatNumber(featuredSong.resonates)}</p>
+                <p className="text-2xl font-medium text-white">{formatNumber(featuredSong?.resonates || 0)}</p>
                 <p className="text-xs uppercase tracking-widest text-white/40">Resonates</p>
               </div>
             </div>
@@ -152,7 +156,7 @@ export default function MusicPage() {
             <div className="flex items-center gap-3 pl-6 border-l border-amber-500/30">
               <Quote className="w-5 h-5 text-amber-400" />
               <div>
-                <p className="text-2xl font-medium text-amber-400">{formatNumber(featuredSong.lyricUses)}</p>
+                <p className="text-2xl font-medium text-amber-400">{formatNumber(featuredSong?.lyricUses || 0)}</p>
                 <p className="text-xs uppercase tracking-widest text-amber-400/70">Lyric Uses</p>
               </div>
             </div>
@@ -174,12 +178,12 @@ export default function MusicPage() {
         <div className="flex items-center gap-3 mb-8">
           <Quote className="w-5 h-5 text-amber-400" />
           <h2 className="text-sm uppercase tracking-widest text-white/40">
-            Most Shared Lines from {featuredSong.title}
+            Most Shared Lines from {featuredSong?.title}
           </h2>
         </div>
 
         <div className="space-y-4">
-          {featuredSong.sharedLyrics.map((lyric) => (
+          {(featuredSong?.sharedLyrics || []).map((lyric) => (
             <Link
               key={lyric.id}
               href="/compose"
@@ -214,7 +218,7 @@ export default function MusicPage() {
         </h2>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-          {songs.map((song) => (
+          {moreSongs.map((song) => (
             <Link
               key={song.id}
               href="/music/player"
@@ -244,16 +248,16 @@ export default function MusicPage() {
               <div className="flex items-center gap-4 text-xs">
                 <div className="flex items-center gap-1.5 text-white/40">
                   <Play className="w-3 h-3" />
-                  <span>{formatNumber(song.plays)}</span>
+                  <span>{formatNumber(song.plays || 0)}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-white/40">
                   <Heart className="w-3 h-3" />
-                  <span>{formatNumber(song.resonates)}</span>
+                  <span>{formatNumber(song.resonates || 0)}</span>
                 </div>
                 {/* Lyric Uses - Special */}
                 <div className="flex items-center gap-1.5 text-amber-400/80">
                   <Quote className="w-3 h-3" />
-                  <span className="font-medium">{formatNumber(song.lyricUses)}</span>
+                  <span className="font-medium">{formatNumber(song.lyricUses || 0)}</span>
                 </div>
               </div>
             </Link>
