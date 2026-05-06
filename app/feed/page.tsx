@@ -1,8 +1,9 @@
 'use client';
 import { CardExportModal } from '@/components/card-export-modal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Heart, MessageCircle, Download } from 'lucide-react';
-import { usePosts, Post } from '@/hooks/usePosts';
+import { usePosts } from '@/hooks/usePosts';
+import type { Post } from '@/hooks/usePosts';
 import { db } from '@/lib/firebase'
 import { ref, set, remove, onValue } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername';
@@ -11,8 +12,8 @@ export default function FeedPage() {
   const username = useUsername();
   const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
   const [selectedVibe, setSelectedVibe] = useState<string>('ALL');
-  const [feedLimit, setFeedLimit] = useState(50)
-  const { posts, loading } = usePosts(feedLimit)
+  const { posts, loading, loadingMore, hasMore, loadMore } = usePosts()
+  const sentinelRef = useRef<HTMLDivElement>(null)
   const [selectedSort, setSelectedSort] = useState<string>('NEW');
   const [showCard, setShowCard] = useState<boolean>(false);
 
@@ -42,6 +43,18 @@ export default function FeedPage() {
     })
     return () => unsub()
   }, [])
+
+  // Infinite scroll - observe sentinel div at bottom
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore() },
+      { threshold: 0.1 }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [loadMore])
 
   const toggleResonate = async (postId: string) => {
     const myId = typeof window !== 'undefined'
@@ -335,9 +348,18 @@ export default function FeedPage() {
 
         {/* Load More */}
         <div className="flex justify-center mt-12 md:mt-16">
-          <button onClick={() => setFeedLimit(prev => prev + 50)} className="px-8 py-4 border border-amber-500/30 text-amber-100/70 rounded-full font-medium text-sm uppercase tracking-wide hover:border-amber-500/60 hover:bg-amber-500/5 transition-all duration-300">
-            {loading ? 'Loading…' : 'Load more lyrics'}
-          </button>
+          <div ref={sentinelRef} className="w-full flex justify-center py-8">
+            {loadingMore && (
+              <div className="flex items-center gap-2 text-amber-400/50 text-sm font-serif italic">
+                <div className="w-1 h-1 rounded-full bg-amber-400/50 animate-bounce" style={{animationDelay:'0ms'}} />
+                <div className="w-1 h-1 rounded-full bg-amber-400/50 animate-bounce" style={{animationDelay:'150ms'}} />
+                <div className="w-1 h-1 rounded-full bg-amber-400/50 animate-bounce" style={{animationDelay:'300ms'}} />
+              </div>
+            )}
+            {!hasMore && !loading && (
+              <p className="text-white/20 text-xs uppercase tracking-widest">You've heard them all</p>
+            )}
+          </div>
         </div>
       </div>
 
