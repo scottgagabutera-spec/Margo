@@ -391,7 +391,7 @@ function LyricBackContent() {
                 >
                   <div className="flex items-start gap-4 mb-5">
                     <Avatar className="w-10 h-10 border border-amber-500/30">
-                      <AvatarImage src={lyricBack.avatar} alt={lyricBack.username} />
+                      <AvatarImage src={""} alt={lyricBack.username || ""} />
                       <AvatarFallback className="bg-amber-500/20 text-amber-400 text-xs">
                         {(lyricBack.username || "??").slice(0, 2).toUpperCase()}
                       </AvatarFallback>
@@ -409,7 +409,7 @@ function LyricBackContent() {
                     {/* Resonate - Left */}
                     <button className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
                       <Heart className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] uppercase tracking-wide">Resonate · {lyricBack.resonates || 0}</span>
+                      <span className="text-[10px] uppercase tracking-wide">Resonate · {Object.keys(lyricBack.resonates || {}).length}</span>
                     </button>
                     
                     {/* Lyric Back - Center */}
