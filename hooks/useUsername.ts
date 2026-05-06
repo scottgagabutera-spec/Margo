@@ -1,3 +1,4 @@
+'use client'
 import { useState, useEffect } from 'react'
 
 const INSTRUMENTS = [
@@ -13,7 +14,7 @@ function generateUsername() {
 }
 
 export function useUsername() {
-  const [username, setUsernameState] = useState<string>('')
+  const [username, setUsername] = useState<string>('')
 
   useEffect(() => {
     let name = localStorage.getItem('margoAnonName')
@@ -21,8 +22,8 @@ export function useUsername() {
       name = generateUsername()
       localStorage.setItem('margoAnonName', name)
     }
-    setUsernameState(name)
+    setUsername(name)
   }, [])
 
-  return username
+  return { username }
 }
