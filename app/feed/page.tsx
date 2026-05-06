@@ -156,7 +156,7 @@ export default function FeedPage() {
                     {/* User Avatar */}
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-semibold text-[#08070C] tracking-tight">
-                        {post.userInitials}
+                        {(post.username || "??").slice(0, 2).toUpperCase()}
                       </span>
                     </div>
 
@@ -167,7 +167,7 @@ export default function FeedPage() {
                           {post.username}
                         </div>
                         <div className="text-[10px] text-amber-100/40 font-light">
-                          {post.timestamp}
+                          {post.timestamp ? new Date(post.timestamp).toLocaleDateString() : ""}
                         </div>
                       </div>
                     </div>
@@ -186,6 +186,30 @@ export default function FeedPage() {
                   </div>
                 </div>
 
+                {/* YouTube thumbnail */}
+                {post.youtubeMeta?.thumbnail && (
+                  <a
+                    href={post.youtubeMeta.youtubeUrl || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block mb-6 rounded-xl overflow-hidden border border-amber-500/20 hover:border-amber-500/50 transition-all duration-300 group/yt"
+                  >
+                    <div className="relative">
+                      <img
+                        src={post.youtubeMeta.thumbnail}
+                        alt={post.youtubeMeta.title || ''}
+                        className="w-full object-cover max-h-48"
+                      />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/yt:opacity-100 transition-opacity">
+                        <div className="w-12 h-12 rounded-full bg-amber-400 flex items-center justify-center">
+                          <svg className="w-5 h-5 text-black ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                      </div>
+                      <div className="absolute bottom-2 left-3 text-xs text-white/70 font-medium">{post.youtubeMeta.channel}</div>
+                    </div>
+                  </a>
+                )}
+
                 {/* Divider */}
                 <div className="h-px bg-gradient-to-r from-amber-500/20 to-transparent mb-6 md:mb-8" />
 
@@ -201,7 +225,7 @@ export default function FeedPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <div className="text-lg font-semibold text-amber-400">
-                      {post.replies}
+                      {post.replies || 0}
                     </div>
                     <div className="text-[10px] text-amber-100/40 font-light tracking-wide uppercase">
                       Lyric Backs
@@ -237,8 +261,8 @@ export default function FeedPage() {
                   </button>
 
                   {/* Vibe Badge - Bottom right corner */}
-                  <div className={`px-2 py-1 rounded text-[9px] font-medium tracking-widest uppercase text-amber-100/50 ${getVibeColor(post.vibe)}`}>
-                    {post.vibe}
+                  <div className={`px-2 py-1 rounded text-[9px] font-medium tracking-widest uppercase text-amber-100/50 ${getVibeColor(post.emotion || "")}`}>
+                    {post.emotion || ""}
                   </div>
                 </div>
 
