@@ -8,10 +8,11 @@ import { ref, set, remove, onValue } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername';
 
 export default function FeedPage() {
-  const { posts, loading } = usePosts();
   const username = useUsername();
   const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
   const [selectedVibe, setSelectedVibe] = useState<string>('ALL');
+  const [feedLimit, setFeedLimit] = useState(50)
+  const { posts, loading } = usePosts(feedLimit)
   const [selectedSort, setSelectedSort] = useState<string>('NEW');
   const [showCard, setShowCard] = useState<boolean>(false);
 
@@ -334,8 +335,8 @@ export default function FeedPage() {
 
         {/* Load More */}
         <div className="flex justify-center mt-12 md:mt-16">
-          <button className="px-8 py-4 border border-amber-500/30 text-amber-100/70 rounded-full font-medium text-sm uppercase tracking-wide hover:border-amber-500/60 hover:bg-amber-500/5 transition-all duration-300">
-            Load more lyrics
+          <button onClick={() => setFeedLimit(prev => prev + 50)} className="px-8 py-4 border border-amber-500/30 text-amber-100/70 rounded-full font-medium text-sm uppercase tracking-wide hover:border-amber-500/60 hover:bg-amber-500/5 transition-all duration-300">
+            {loading ? 'Loading…' : 'Load more lyrics'}
           </button>
         </div>
       </div>

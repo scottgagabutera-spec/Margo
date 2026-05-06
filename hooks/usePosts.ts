@@ -16,12 +16,12 @@ export interface Post {
   replies?: number
 }
 
-export function usePosts() {
+export function usePosts(limit = 200) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   useEffect(() => {
     if (!db) { setLoading(false); return }
-    const postsRef = query(ref(db, 'posts'), orderByChild('timestamp'), limitToLast(50))
+    const postsRef = query(ref(db, 'posts'), orderByChild('timestamp'), limitToLast(limit))
     const unsubscribe = onValue(postsRef, (snapshot) => {
       const data: Post[] = []
       snapshot.forEach((child) => {
