@@ -9,82 +9,7 @@ import { cn } from '@/lib/utils'
 import { useSongs } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
 
-// Featured song data
-const featuredSong = {
-  id: '1',
-  title: 'Pink + White',
-  artist: 'Frank Ocean',
-  album: 'Blonde',
-  artwork: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&h=800&fit=crop',
-  plays: 847293,
-  resonates: 12847,
-  lyricUses: 3421,
-  sharedLyrics: [
-    { id: '1', line: "That's the way everyday goes, every time we've no control", uses: 847 },
-    { id: '2', line: "If the ground beneath you splits in two, I'd just float, I'd just float", uses: 634 },
-    { id: '3', line: "You showed me love, glory from above", uses: 512 },
-    { id: '4', line: "Keep on runnin', keep on runnin'", uses: 428 },
-    { id: '5', line: "Remember life, remember how it was", uses: 387 },
-  ]
-}
 
-// Songs grid data
-const songs = [
-  {
-    id: '2',
-    title: 'Self Control',
-    artist: 'Frank Ocean',
-    artwork: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop',
-    plays: 623847,
-    resonates: 9823,
-    lyricUses: 2847,
-  },
-  {
-    id: '3',
-    title: 'Ivy',
-    artist: 'Frank Ocean',
-    artwork: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=400&fit=crop',
-    plays: 521938,
-    resonates: 8234,
-    lyricUses: 2156,
-  },
-  {
-    id: '4',
-    title: 'Nights',
-    artist: 'Frank Ocean',
-    artwork: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop',
-    plays: 892147,
-    resonates: 14523,
-    lyricUses: 4892,
-  },
-  {
-    id: '5',
-    title: 'White Ferrari',
-    artist: 'Frank Ocean',
-    artwork: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=400&fit=crop',
-    plays: 445623,
-    resonates: 7892,
-    lyricUses: 1934,
-  },
-  {
-    id: '6',
-    title: 'Godspeed',
-    artist: 'Frank Ocean',
-    artwork: 'https://images.unsplash.com/photo-1446057032654-9d8885db76c6?w=400&h=400&fit=crop',
-    plays: 378234,
-    resonates: 6234,
-    lyricUses: 1623,
-  },
-  {
-    id: '7',
-    title: 'Solo',
-    artist: 'Frank Ocean',
-    artwork: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=400&h=400&fit=crop',
-    plays: 534892,
-    resonates: 8934,
-    lyricUses: 2345,
-  },
-]
 
 function formatNumber(num: number): string {
   if (num >= 1000000) {
@@ -102,6 +27,13 @@ export default function MusicPage() {
   const featuredSong = songs[0] || null
   const moreSongs = songs.slice(1)
   const { lines: sharedLines, loading: linesLoading } = useSharedLines(featuredSong?.title, featuredSong?.artist)
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#08070C] flex items-center justify-center">
+      <MargoNav />
+      <p className="text-amber-400 font-serif italic text-xl">Loading…</p>
+    </div>
+  )
 
   return (
     <div className="min-h-screen">
