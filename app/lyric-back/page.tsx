@@ -379,7 +379,7 @@ function LyricBackContent() {
                     <Avatar className="w-10 h-10 border border-amber-500/30">
                       <AvatarImage src={lyricBack.avatar} alt={lyricBack.username} />
                       <AvatarFallback className="bg-amber-500/20 text-amber-400 text-xs">
-                        {lyricBack.username.slice(0, 2).toUpperCase()}
+                        {(lyricBack.username || "??").slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     

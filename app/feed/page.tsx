@@ -1,10 +1,10 @@
 'use client';
 import { CardExportModal } from '@/components/card-export-modal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Download } from 'lucide-react';
 import { usePosts, Post } from '@/hooks/usePosts';
 import { db } from '@/lib/firebase'
-import { ref, runTransaction } from 'firebase/database'
+import { ref, set, remove, onValue } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername';
 
 export default function FeedPage() {
@@ -18,35 +18,67 @@ export default function FeedPage() {
   const vibes = ['ALL', 'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SEND IT', 'LET OUT'];
   const sorts = ['NEW', 'TRENDING', 'TOP'];
 
-  const [resonateOffsets, setResonateOffsets] = useState<Record<string, number>>({})
   const [resonated, setResonated] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
       const saved = localStorage.getItem('margoResonated')
       return saved ? new Set(JSON.parse(saved)) : new Set()
     } catch { return new Set() }
-  });
+  })
+  const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
+
+  // Load analytics (resonates map) from Firebase
+  useEffect(() => {
+    if (!db) return
+    const analyticsRef = ref(db, 'analytics')
+    const unsub = onValue(analyticsRef, (snap) => {
+      const data = snap.val() || {}
+      const counts: Record<string, number> = {}
+      Object.keys(data).forEach(postId => {
+        counts[postId] = Object.keys(data[postId]?.resonates || {}).length
+      })
+      setResonateCounts(counts)
+    })
+    return () => unsub()
+  }, [])
 
   const toggleResonate = async (postId: string) => {
+    const myId = typeof window !== 'undefined'
+      ? (localStorage.getItem('margoAnonName') || 'anon')
+      : 'anon'
     const alreadyResonated = resonated.has(postId)
+
+    // Optimistic UI
     setResonated(prev => {
       const next = new Set(prev)
       alreadyResonated ? next.delete(postId) : next.add(postId)
       try { localStorage.setItem('margoResonated', JSON.stringify([...next])) } catch {}
       return next
     })
-    setResonateOffsets(prev => ({
+    setResonateCounts(prev => ({
       ...prev,
-      [postId]: (prev[postId] || 0) + (alreadyResonated ? -1 : 1)
+      [postId]: Math.max(0, (prev[postId] || 0) + (alreadyResonated ? -1 : 1))
     }))
+
     if (!db) return
+    const resonateRef = ref(db, `analytics/${postId}/resonates/${myId}`)
     try {
-      await runTransaction(ref(db, `posts/${postId}/resonates`), (current) => {
-        const val = (current || 0) + (alreadyResonated ? -1 : 1)
-        return Math.max(0, val)
-      })
+      if (alreadyResonated) {
+        await remove(resonateRef)
+      } else {
+        await set(resonateRef, true)
+      }
     } catch (e) {
-      console.error('Resonate failed:', e)
+      // Rollback
+      setResonated(prev => {
+        const next = new Set(prev)
+        alreadyResonated ? next.add(postId) : next.delete(postId)
+        return next
+      })
+      setResonateCounts(prev => ({
+        ...prev,
+        [postId]: Math.max(0, (prev[postId] || 0) + (alreadyResonated ? 1 : -1))
+      }))
     }
   };
 
@@ -242,7 +274,7 @@ export default function FeedPage() {
                 <div className="flex items-center gap-6 md:gap-10 text-sm mb-6 md:mb-8">
                   <div className="flex flex-col gap-1">
                     <div className="text-lg font-semibold text-amber-400">
-                      {Math.max(0, (post.resonates || 0) + (resonateOffsets[post.id] || 0))}
+                      {resonateCounts[post.id] ?? post.resonates ?? 0}
                     </div>
                     <div className="text-[10px] text-amber-100/40 font-light tracking-wide uppercase">
                       Resonances
