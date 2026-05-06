@@ -6,6 +6,7 @@ import { MargoNav } from '@/components/margo-nav'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { db } from '@/lib/firebase'
+import { usePosts } from '@/hooks/usePosts'
 import { ref, push, serverTimestamp } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername'
 
@@ -85,6 +86,7 @@ const existingLyricBacks: LyricBack[] = [
 
 export default function LyricBackPage() {
   const { username } = useUsername()
+  const { posts, loading } = usePosts()
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
@@ -385,7 +387,10 @@ export default function LyricBackPage() {
             <h2 className="text-xl font-serif italic text-amber-400 mb-6 text-center">Lyric Backs</h2>
             
             <div className="space-y-4">
-              {existingLyricBacks.map((lyricBack) => (
+              {loading ? (
+                <p className="text-center text-white/40 text-sm">Loading…</p>
+              ) : null}
+              {posts.map((lyricBack) => (
                 <div
                   key={lyricBack.id}
                   className="bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl p-5"
@@ -400,8 +405,8 @@ export default function LyricBackPage() {
                     
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white/60 mb-2">{lyricBack.username}</p>
-                      <p className="text-lg font-serif italic text-amber-400 mb-2">&ldquo;{lyricBack.lyric}&rdquo;</p>
-                      <p className="text-white/40 text-xs">— {lyricBack.artist}, {lyricBack.song}</p>
+                      <p className="text-lg font-serif italic text-amber-400 mb-2">&ldquo;{lyricBack.text}&rdquo;</p>
+                      <p className="text-white/40 text-xs">— {lyricBack.knowledge?.artist}, {lyricBack.knowledge?.song}</p>
                     </div>
                   </div>
                   
@@ -410,7 +415,7 @@ export default function LyricBackPage() {
                     {/* Resonate - Left */}
                     <button className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
                       <Heart className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] uppercase tracking-wide">Resonate · {lyricBack.resonanceCount}</span>
+                      <span className="text-[10px] uppercase tracking-wide">Resonate · {lyricBack.resonates || 0}</span>
                     </button>
                     
                     {/* Lyric Back - Center */}
@@ -426,7 +431,7 @@ export default function LyricBackPage() {
                         <span className="text-[10px] uppercase tracking-wide">Card</span>
                       </button>
                       <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/20 rounded-full text-amber-400/70 text-[10px] font-normal">
-                        {lyricBack.vibe}
+                        {lyricBack.emotion}
                       </span>
                     </div>
                   </div>
