@@ -371,9 +371,9 @@ export default function FeedPage() {
         <p className="text-sm text-amber-100/50 font-light mb-6">
           Have a lyric that says what you couldn&apos;t?
         </p>
-        <button className="px-8 py-3 bg-gradient-to-r from-amber-400 to-amber-300 text-[#08070C] rounded-full font-medium text-sm uppercase tracking-wide hover:from-amber-300 hover:to-amber-200 transition-all duration-300 shadow-lg hover:shadow-amber-500/20">
+        <a href="/compose" className="px-8 py-3 bg-gradient-to-r from-amber-400 to-amber-300 text-[#08070C] rounded-full font-medium text-sm uppercase tracking-wide hover:from-amber-300 hover:to-amber-200 transition-all duration-300 shadow-lg hover:shadow-amber-500/20">
           Share Your Lyric
-        </button>
+        </a>
       </section>
       <CardExportModal open={showCard} onOpenChange={setShowCard} />
     </div>

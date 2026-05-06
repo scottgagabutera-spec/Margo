@@ -1,68 +1,46 @@
 'use client';
+import { usePosts } from '@/hooks/usePosts';
+import { db } from '@/lib/firebase';
+import { ref, onValue } from 'firebase/database';
 
 import { useEffect, useState } from 'react';
 
-interface LyricCard {
-  id: number;
-  text: string;
-  emotion: string;
-  artist: string;
-  initials: string;
-  timestamp: string;
-}
 
-const lyricCards: LyricCard[] = [
-  {
-    id: 1,
-    text: '"I swear, you got me everything"',
-    emotion: 'Heartbreak',
-    artist: 'Alex',
-    initials: 'AM',
-    timestamp: '2m ago',
-  },
-  {
-    id: 2,
-    text: '"Started from the bottom, now we here"',
-    emotion: 'Joy',
-    artist: 'Jordan',
-    initials: 'JP',
-    timestamp: '5m ago',
-  },
-  {
-    id: 3,
-    text: '"No aspirations to quit the game!"',
-    emotion: 'Nostalgia',
-    artist: 'Casey',
-    initials: 'CS',
-    timestamp: '8m ago',
-  },
-  {
-    id: 4,
-    text: '"I\'m every woman, it\'s all in me"',
-    emotion: 'Joy',
-    artist: 'Morgan',
-    initials: 'MK',
-    timestamp: '12m ago',
-  },
-];
 
-const stats = [
-  { number: '66', label: 'Lyrics', context: 'shared this week' },
-  { number: '61', label: 'Artists Featured', context: 'from top charts' },
-  { number: '65', label: 'Songs Featured', context: 'across genres' },
-  { value: 'Taylor Swift', label: 'Top Artist', context: 'most quoted' },
-  { value: 'Love', label: 'Trending Feeling', context: 'this season' },
-  { value: 'Early', label: 'Stage', context: 'community growing' },
-];
+// lyricCards replaced with real Firebase data
+
+// stats replaced with live Firebase counts
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
+  const { posts, loading } = usePosts();
+  const [totalSongs, setTotalSongs] = useState(0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!db) return;
+    const unsub = onValue(ref(db, 'songs'), (snap) => {
+      let count = 0;
+      snap.forEach((child) => {
+        if (child.val().status === 'active') count++;
+      });
+      setTotalSongs(count);
+    });
+    return () => unsub();
+  }, []);
+
   if (!mounted) return null;
+
+  const liveCards = posts.slice(0, 4);
+  const stats = [
+    { number: String(posts.length), label: 'Lyrics', context: 'shared so far' },
+    { number: String(totalSongs), label: 'Songs Featured', context: 'across genres' },
+    { value: 'Love', label: 'Trending Feeling', context: 'this season' },
+    { value: 'Early', label: 'Stage', context: 'community growing' },
+  ];
 
   return (
     <div className="relative w-full overflow-hidden bg-gradient-to-br from-[#08070C] via-[#0a0909] to-[#0f0e14]">
@@ -109,7 +87,7 @@ export default function Home() {
         {/* Eyebrow with pulse */}
         <div className="inline-flex items-center gap-2 mb-8 md:mb-12 px-4 py-2 bg-amber-500/8 border border-amber-500/25 rounded-full">
           <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-          <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">66 lyrics live right now</span>
+          <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">{posts.length} lyrics live right now</span>
         </div>
 
         {/* Headline - More dramatic and cinematic */}
@@ -241,6 +219,25 @@ export default function Home() {
           ))}
         </div>
       </section>
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-amber-500/10 px-6 md:px-10 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center">
+            <svg width="11" height="11" viewBox="0 0 80 80" fill="none">
+              <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" stroke="#08070C" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            </svg>
+          </div>
+          <span className="text-amber-400/60 text-xs tracking-widest uppercase">Margo</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <a href="/about" className="text-xs text-white/20 hover:text-white/50 transition-colors tracking-wide">About</a>
+          <a href="/privacy" className="text-xs text-white/20 hover:text-white/50 transition-colors tracking-wide">Privacy</a>
+          <a href="/terms" className="text-xs text-white/20 hover:text-white/50 transition-colors tracking-wide">Terms</a>
+          <a href="/contact" className="text-xs text-white/20 hover:text-white/50 transition-colors tracking-wide">Contact</a>
+          <a href="https://linkedin.com/company/trymargo" target="_blank" rel="noopener" className="text-xs text-white/20 hover:text-amber-400/60 transition-colors tracking-wide">LinkedIn</a>
+        </div>
+        <div className="text-xs text-white/10 tracking-wide">© {new Date().getFullYear()} Margo</div>
+      </footer>
     </div>
   );
 }
