@@ -36,13 +36,6 @@ interface LyricBack {
 const VIBES: Vibe[] = ['LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SEND IT', 'LET OUT']
 
 // Mock search results
-const mockResults: SearchResult[] = [
-  { id: '1', title: 'All Too Well', artist: 'Taylor Swift', artwork: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100&h=100&fit=crop', source: 'genius' },
-  { id: '2', title: 'Motion Sickness', artist: 'Phoebe Bridgers', artwork: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=100&h=100&fit=crop', source: 'genius' },
-  { id: '3', title: 'Ivy', artist: 'Frank Ocean', artwork: 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=100&h=100&fit=crop', source: 'apple' },
-  { id: '4', title: 'Liability', artist: 'Lorde', artwork: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=100&h=100&fit=crop', source: 'apple' },
-  { id: '5', title: 'The Night We Met', artist: 'Lord Huron', artwork: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=100&h=100&fit=crop', source: 'apple' },
-]
 
 // Mock original lyric
 const originalLyric = {
