@@ -6,7 +6,7 @@ import { MargoNav } from '@/components/margo-nav'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { db } from '@/lib/firebase'
-import { usePosts } from '@/hooks/usePosts'
+import { useEchoes } from '@/hooks/useEchoes'
 import { ref, push, serverTimestamp } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername'
 import { useSearchParams } from 'next/navigation'
@@ -47,7 +47,7 @@ function LyricBackContent() {
   const searchParams = useSearchParams()
   const postId = searchParams.get('postId')
   const { post: respondingToPost } = usePost(postId)
-  const { posts, loading } = usePosts()
+  const { echoes, loading: echoesLoading } = useEchoes(postId)
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
@@ -130,7 +130,20 @@ function LyricBackContent() {
       country: navigator.language.split('-')[1] || null,
     }
     try {
-      await push(ref(db, 'posts'), post)
+      const echoData = {
+        lyric: post.text,
+        song: post.knowledge?.song || songName,
+        artist: post.knowledge?.artist || artistName,
+        emotion: post.emotion,
+        username: post.username,
+        timestamp: post.timestamp,
+        resonates: {},
+      }
+      if (postId) {
+        await push(ref(db, `posts/${postId}/echoes`), echoData)
+      } else {
+        await push(ref(db, 'posts'), post)
+      }
     } catch (e) {
       console.error('Failed to post:', e)
     }
@@ -370,7 +383,8 @@ function LyricBackContent() {
               {loading ? (
                 <p className="text-center text-white/40 text-sm">Loading…</p>
               ) : null}
-              {posts.map((lyricBack) => (
+              {echoesLoading ? <p className="text-white/30 text-sm text-center py-4">Loading…</p> : null}
+              {echoes.map((lyricBack) => (
                 <div
                   key={lyricBack.id}
                   className="bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl p-5"
@@ -385,8 +399,8 @@ function LyricBackContent() {
                     
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white/60 mb-2">{lyricBack.username}</p>
-                      <p className="text-lg font-serif italic text-amber-400 mb-2">&ldquo;{lyricBack.text}&rdquo;</p>
-                      <p className="text-white/40 text-xs">— {lyricBack.knowledge?.artist}, {lyricBack.knowledge?.song}</p>
+                      <p className="text-lg font-serif italic text-amber-400 mb-2">&ldquo;{lyricBack.lyric}&rdquo;</p>
+                      <p className="text-white/40 text-xs">— {lyricBack.artist}, {lyricBack.song}</p>
                     </div>
                   </div>
                   
