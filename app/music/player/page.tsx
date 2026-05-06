@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { Play, Pause, Share2, ArrowLeft } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
 import { cn } from '@/lib/utils'
+import { useSearchParams } from 'next/navigation'
+import { useSong } from '@/hooks/useSong'
 
 // Song data with lyrics
 const currentSong = {
@@ -38,7 +40,12 @@ const currentSong = {
   ]
 }
 
-export default function PlayerPage() {
+function PlayerContent() {
+  const searchParams = useSearchParams()
+  const songId = searchParams.get('id')
+  const { song, lyrics: realLyrics, loading } = useSong(songId)
+  const activeSong = song || currentSong
+  const activeLyrics = realLyrics.length > 0 ? realLyrics : activeSong.lyrics
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [currentLyricIndex, setCurrentLyricIndex] = useState(4)
@@ -46,7 +53,7 @@ export default function PlayerPage() {
 
   // Find current lyric based on time
   useEffect(() => {
-    const lyric = currentSong.lyrics.find(
+    const lyric = activeSong.lyrics.find(
       (l) => currentTime >= l.start && currentTime < l.end
     )
     if (lyric) {
@@ -60,7 +67,7 @@ export default function PlayerPage() {
     if (isPlaying) {
       interval = setInterval(() => {
         setCurrentTime((prev) => {
-          if (prev >= currentSong.duration) {
+          if (prev >= activeSong.duration) {
             setIsPlaying(false)
             return 0
           }
@@ -72,7 +79,7 @@ export default function PlayerPage() {
   }, [isPlaying])
 
   const jumpToLyric = useCallback((lyricId: number) => {
-    const lyric = currentSong.lyrics.find((l) => l.id === lyricId)
+    const lyric = activeSong.lyrics.find((l) => l.id === lyricId)
     if (lyric) {
       setCurrentTime(lyric.start)
       setCurrentLyricIndex(lyricId)
@@ -80,7 +87,7 @@ export default function PlayerPage() {
     }
   }, [])
 
-  const progress = (currentTime / currentSong.duration) * 100
+  const progress = (currentTime / activeSong.duration) * 100
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
@@ -112,8 +119,8 @@ export default function PlayerPage() {
           </Link>
           
           <div className="text-center">
-            <p className="text-white/90 font-medium">{currentSong.title}</p>
-            <p className="text-sm text-white/40">{currentSong.artist}</p>
+            <p className="text-white/90 font-medium">{activeSong.title}</p>
+            <p className="text-sm text-white/40">{activeSong.artist}</p>
           </div>
           
           <div className="w-16" /> {/* Spacer for balance */}
@@ -129,9 +136,9 @@ export default function PlayerPage() {
 
         {/* Teleprompter Lyrics */}
         <div className="w-full max-w-3xl space-y-6">
-          {currentSong.lyrics.slice(
+          {activeSong.lyrics.slice(
             Math.max(0, currentLyricIndex - 3),
-            Math.min(currentSong.lyrics.length, currentLyricIndex + 4)
+            Math.min(activeSong.lyrics.length, currentLyricIndex + 4)
           ).map((lyric) => {
             const isCurrent = lyric.id === currentLyricIndex
             const isPast = lyric.id < currentLyricIndex
@@ -203,5 +210,13 @@ export default function PlayerPage() {
       {/* Card Export Modal */}
       <CardExportModal open={showModal} onOpenChange={setShowModal} />
     </div>
+  )
+}
+
+export default function PlayerPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><p className="text-amber-400 font-serif italic">Loading…</p></div>}>
+      <PlayerContent />
+    </Suspense>
   )
 }

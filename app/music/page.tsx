@@ -164,7 +164,7 @@ export default function MusicPage() {
 
           {/* Play Button */}
           <Link 
-            href="/music/player"
+            href={`/music/player?id=${featuredSong?.id || ""}`}
             className="inline-flex items-center gap-3 px-8 py-4 bg-amber-500 hover:bg-amber-400 text-black font-medium rounded-full transition-all duration-300 hover:scale-105 w-fit"
           >
             <Play className="w-5 h-5 fill-current" />
@@ -221,7 +221,7 @@ export default function MusicPage() {
           {moreSongs.map((song) => (
             <Link
               key={song.id}
-              href="/music/player"
+              href={`/music/player?id=${song.id}`}
               className="group"
             >
               <div className="relative aspect-square mb-4 rounded-xl overflow-hidden">
