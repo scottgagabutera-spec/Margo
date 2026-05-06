@@ -4,7 +4,7 @@ import { ref, query, orderByChild, limitToLast, onValue } from 'firebase/databas
 
 export interface Post {
   id: string
-  lyric: string
+  text?: string
   knowledge?: {
     song?: string
     artist?: string

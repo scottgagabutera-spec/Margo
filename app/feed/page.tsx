@@ -177,7 +177,7 @@ export default function FeedPage() {
                 {/* Main Lyric - The Hero */}
                 <div className="mb-8 md:mb-10">
                   <p className="font-serif italic text-3xl md:text-4xl lg:text-5xl leading-relaxed text-transparent bg-clip-text bg-gradient-to-b from-amber-50 to-amber-100 mb-6">
-                    {post.lyric}
+                    {post.text}
                   </p>
 
                   {/* Song Credit */}
