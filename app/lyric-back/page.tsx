@@ -5,6 +5,9 @@ import { Search, Music2, Disc3, Heart, MessageCircle, CreditCard } from 'lucide-
 import { MargoNav } from '@/components/margo-nav'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
+import { db } from '@/lib/firebase'
+import { ref, push, serverTimestamp } from 'firebase/database'
+import { useUsername } from '@/hooks/useUsername'
 
 type Source = 'genius' | 'apple'
 
@@ -81,6 +84,7 @@ const existingLyricBacks: LyricBack[] = [
 ]
 
 export default function LyricBackPage() {
+  const { username } = useUsername()
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
@@ -114,9 +118,40 @@ export default function LyricBackPage() {
     setStep(4)
   }, [])
 
-  const handlePost = useCallback((isPrivate: boolean) => {
-    console.log('Posting lyric back:', { artistName, songName, lyric, selectedVibe, isPrivate })
-    // Reset for demo
+  const handlePost = useCallback(async (isPrivate: boolean) => {
+    if (!db || !lyric || !songName || !artistName || !selectedVibe) return
+    const post = {
+      text: lyric,
+      emotion: selectedVibe,
+      mode: 'share',
+      community: selectedVibe,
+      status: isPrivate ? 'private' : 'active',
+      flagCount: 0,
+      knowledge: {
+        song: songName,
+        artist: artistName,
+        artwork: selectedSong?.artwork || null,
+        artworkFull: null,
+        geniusId: selectedSong?.id || null,
+        album: null,
+        releaseDate: null,
+        featuredArtists: [],
+        writers: [],
+        producers: [],
+      },
+      youtubeMeta: null,
+      links: { spotify: null, apple: null, youtube: null, soundcloud: null },
+      authorId: null,
+      username: username || null,
+      timestamp: serverTimestamp(),
+      lang: navigator.language.split('-')[0] || 'en',
+      country: navigator.language.split('-')[1] || null,
+    }
+    try {
+      await push(ref(db, 'posts'), post)
+    } catch (e) {
+      console.error('Failed to post:', e)
+    }
     setStep(1)
     setSearchQuery('')
     setSelectedSong(null)
@@ -124,7 +159,7 @@ export default function LyricBackPage() {
     setSongName('')
     setLyric('')
     setSelectedVibe(null)
-  }, [artistName, songName, lyric, selectedVibe])
+  }, [artistName, songName, lyric, selectedVibe, selectedSong, username])
 
   return (
     <main className="min-h-screen relative">
