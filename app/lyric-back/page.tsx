@@ -380,9 +380,7 @@ function LyricBackContent() {
             <h2 className="text-xl font-serif italic text-amber-400 mb-6 text-center">Lyric Backs</h2>
             
             <div className="space-y-4">
-              {loading ? (
-                <p className="text-center text-white/40 text-sm">Loading…</p>
-              ) : null}
+              
               {echoesLoading ? <p className="text-white/30 text-sm text-center py-4">Loading…</p> : null}
               {echoes.map((lyricBack) => (
                 <div
