@@ -3,6 +3,8 @@ import { CardExportModal } from '@/components/card-export-modal';
 import { useState } from 'react';
 import { Heart, MessageCircle, Download } from 'lucide-react';
 import { usePosts, Post } from '@/hooks/usePosts';
+import { db } from '@/lib/firebase'
+import { ref, runTransaction } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername';
 
 export default function FeedPage() {
@@ -16,13 +18,31 @@ export default function FeedPage() {
   const vibes = ['ALL', 'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SEND IT', 'LET OUT'];
   const sorts = ['NEW', 'TRENDING', 'TOP'];
 
-  const [resonated, setResonated] = useState<Set<string>>(new Set());
-  const toggleResonate = (postId: string) => {
+  const [resonated, setResonated] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const saved = localStorage.getItem('margoResonated')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch { return new Set() }
+  });
+
+  const toggleResonate = async (postId: string) => {
+    const alreadyResonated = resonated.has(postId)
     setResonated(prev => {
-      const next = new Set(prev);
-      next.has(postId) ? next.delete(postId) : next.add(postId);
-      return next;
-    });
+      const next = new Set(prev)
+      alreadyResonated ? next.delete(postId) : next.add(postId)
+      try { localStorage.setItem('margoResonated', JSON.stringify([...next])) } catch {}
+      return next
+    })
+    if (!db) return
+    try {
+      await runTransaction(ref(db, `posts/${postId}/resonates`), (current) => {
+        const val = (current || 0) + (alreadyResonated ? -1 : 1)
+        return Math.max(0, val)
+      })
+    } catch (e) {
+      console.error('Resonate failed:', e)
+    }
   };
 
   const getVibeColor = (vibe: string) => {
@@ -250,7 +270,7 @@ export default function FeedPage() {
                     <span className="text-[9px] font-medium tracking-widest uppercase">Resonate</span>
                   </button>
 
-                  <a href="/lyric-back" className="flex flex-col items-center justify-center gap-2 text-amber-100/50 hover:text-amber-400 transition-all duration-300">
+                  <a href={`/lyric-back?postId=${post.id}`} className="flex flex-col items-center justify-center gap-2 text-amber-100/50 hover:text-amber-400 transition-all duration-300">
                     <MessageCircle size={18} />
                     <span className="text-[9px] font-medium tracking-widest uppercase">Lyric Back</span>
                   </a>

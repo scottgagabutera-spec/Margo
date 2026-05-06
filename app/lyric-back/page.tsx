@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, Suspense } from 'react'
 import { Search, Music2, Disc3, Heart, MessageCircle, CreditCard } from 'lucide-react'
 import { MargoNav } from '@/components/margo-nav'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -9,6 +9,8 @@ import { db } from '@/lib/firebase'
 import { usePosts } from '@/hooks/usePosts'
 import { ref, push, serverTimestamp } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername'
+import { useSearchParams } from 'next/navigation'
+import { usePost } from '@/hooks/usePost'
 
 type Source = 'genius' | 'apple'
 
@@ -77,8 +79,11 @@ const existingLyricBacks: LyricBack[] = [
   },
 ]
 
-export default function LyricBackPage() {
+function LyricBackContent() {
   const { username } = useUsername()
+  const searchParams = useSearchParams()
+  const postId = searchParams.get('postId')
+  const { post: respondingToPost } = usePost(postId)
   const { posts, loading } = usePosts()
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
@@ -190,12 +195,12 @@ export default function LyricBackPage() {
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-24 bg-amber-500/10 blur-3xl pointer-events-none" />
             
             <p className="text-xs text-white/40 uppercase tracking-wider mb-4 relative z-10">Responding to</p>
-            <p className="text-2xl font-serif italic text-amber-400 mb-3 relative z-10">&ldquo;{originalLyric.lyric}&rdquo;</p>
-            <p className="text-white/50 text-sm mb-3 relative z-10">— {originalLyric.artist}, {originalLyric.song}</p>
+            <p className="text-2xl font-serif italic text-amber-400 mb-3 relative z-10">&ldquo;{respondingToPost?.text || '—'}&rdquo;</p>
+            <p className="text-white/50 text-sm mb-3 relative z-10">— {respondingToPost?.knowledge?.artist || ''}, {respondingToPost?.knowledge?.song || ''}</p>
             <div className="flex items-center justify-center gap-2 relative z-10">
-              <span className="text-xs text-white/40">by {originalLyric.username}</span>
+              <span className="text-xs text-white/40">by {respondingToPost?.username || '—'}</span>
               <span className="px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-xs font-medium">
-                {originalLyric.vibe}
+                {respondingToPost?.emotion || ''}
               </span>
             </div>
           </div>
@@ -454,5 +459,13 @@ export default function LyricBackPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function LyricBackPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#08070C] flex items-center justify-center"><p className="text-amber-400 font-serif italic">Loading…</p></div>}>
+      <LyricBackContent />
+    </Suspense>
   )
 }

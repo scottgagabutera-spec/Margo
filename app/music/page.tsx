@@ -7,6 +7,7 @@ import { Play, Disc3, Heart, Quote } from 'lucide-react'
 import { MargoNav } from '@/components/margo-nav'
 import { cn } from '@/lib/utils'
 import { useSongs } from '@/hooks/useSongs'
+import { useSharedLines } from '@/hooks/useSharedLines'
 
 // Featured song data
 const featuredSong = {
@@ -100,6 +101,7 @@ export default function MusicPage() {
   const { songs, loading } = useSongs()
   const featuredSong = songs[0] || null
   const moreSongs = songs.slice(1)
+  const { lines: sharedLines, loading: linesLoading } = useSharedLines(featuredSong?.title, featuredSong?.artist)
 
   return (
     <div className="min-h-screen">
@@ -183,7 +185,9 @@ export default function MusicPage() {
         </div>
 
         <div className="space-y-4">
-          {(featuredSong?.sharedLyrics || []).map((lyric) => (
+          {linesLoading && <p className="text-white/30 text-sm text-center py-8">Loading…</p>}
+          {!linesLoading && sharedLines.length === 0 && <p className="text-white/30 text-sm text-center py-8 font-serif italic">No lines shared yet — be the first.</p>}
+          {sharedLines.map((lyric) => (
             <Link
               key={lyric.id}
               href="/compose"
