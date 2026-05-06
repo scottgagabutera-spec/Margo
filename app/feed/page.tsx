@@ -18,6 +18,7 @@ export default function FeedPage() {
   const vibes = ['ALL', 'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SEND IT', 'LET OUT'];
   const sorts = ['NEW', 'TRENDING', 'TOP'];
 
+  const [resonateOffsets, setResonateOffsets] = useState<Record<string, number>>({})
   const [resonated, setResonated] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -34,6 +35,10 @@ export default function FeedPage() {
       try { localStorage.setItem('margoResonated', JSON.stringify([...next])) } catch {}
       return next
     })
+    setResonateOffsets(prev => ({
+      ...prev,
+      [postId]: (prev[postId] || 0) + (alreadyResonated ? -1 : 1)
+    }))
     if (!db) return
     try {
       await runTransaction(ref(db, `posts/${postId}/resonates`), (current) => {
@@ -237,7 +242,7 @@ export default function FeedPage() {
                 <div className="flex items-center gap-6 md:gap-10 text-sm mb-6 md:mb-8">
                   <div className="flex flex-col gap-1">
                     <div className="text-lg font-semibold text-amber-400">
-                      {post.resonates || 0}
+                      {Math.max(0, (post.resonates || 0) + (resonateOffsets[post.id] || 0))}
                     </div>
                     <div className="text-[10px] text-amber-100/40 font-light tracking-wide uppercase">
                       Resonances

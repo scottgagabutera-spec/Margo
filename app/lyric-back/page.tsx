@@ -40,44 +40,7 @@ const VIBES: Vibe[] = ['LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JO
 // Mock search results
 
 // Mock original lyric
-const originalLyric = {
-  lyric: "I remember it all too well",
-  artist: "Taylor Swift",
-  song: "All Too Well (10 Minute Version)",
-  username: "Melody#4521",
-  vibe: "NOSTALGIA" as Vibe
-}
 
-// Mock existing lyric backs
-const existingLyricBacks: LyricBack[] = [
-  {
-    id: '1',
-    username: 'Clarinet#2832',
-    lyric: "And I know it\'s long gone and that magic\'s not here no more",
-    artist: 'Taylor Swift',
-    song: 'All Too Well',
-    vibe: 'HEARTBREAK',
-    resonanceCount: 47
-  },
-  {
-    id: '2',
-    username: 'EchoVerse#1094',
-    lyric: "Maybe we got lost in translation",
-    artist: 'Taylor Swift',
-    song: 'All Too Well',
-    vibe: 'NOSTALGIA',
-    resonanceCount: 32
-  },
-  {
-    id: '3',
-    username: 'SunsetDreamer#7712',
-    lyric: "Time won\'t fly, it\'s like I\'m paralyzed by it",
-    artist: 'Taylor Swift',
-    song: 'All Too Well',
-    vibe: 'LONELINESS',
-    resonanceCount: 28
-  },
-]
 
 function LyricBackContent() {
   const { username } = useUsername()
