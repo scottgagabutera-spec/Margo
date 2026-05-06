@@ -36,15 +36,34 @@ export default function ComposePage() {
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
   const [selectedSong, setSelectedSong] = useState<SearchResult | null>(null)
   const [artistName, setArtistName] = useState('')
   const [songName, setSongName] = useState('')
   const [lyric, setLyric] = useState('')
   const [selectedVibe, setSelectedVibe] = useState<Vibe | null>(null)
 
-  const handleSearch = useCallback((value: string) => {
+  const handleSearch = useCallback(async (value: string) => {
     setSearchQuery(value)
-    setShowResults(value.length > 0)
+    if (value.length < 2) { setShowResults(false); setSearchResults([]); return }
+    setShowResults(true)
+    setSearchLoading(true)
+    try {
+      const res = await fetch(`/api/genius?song=${encodeURIComponent(value)}`)
+      const data = await res.json()
+      setSearchResults((data.results || []).map((r: any) => ({
+        id: String(r.id || r.song),
+        title: r.song,
+        artist: r.artist,
+        artwork: r.artwork || '',
+        source: r.source as 'genius' | 'apple',
+      })))
+    } catch {
+      setSearchResults([])
+    } finally {
+      setSearchLoading(false)
+    }
   }, [])
 
   const handleSelectSong = useCallback((result: SearchResult) => {
@@ -144,7 +163,7 @@ export default function ComposePage() {
               {/* Search Results */}
               {showResults && (
                 <div className="absolute top-full left-0 right-0 mt-4 bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl overflow-hidden backdrop-blur-sm">
-                  {mockResults.map((result) => (
+                  {searchLoading ? (<div className="text-center text-amber-400/60 text-sm py-4">Searching…</div>) : null}{searchResults.map((result) => (
                     <button
                       key={result.id}
                       onClick={() => handleSelectSong(result)}
