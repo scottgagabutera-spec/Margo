@@ -173,11 +173,12 @@ function LyricBackContent() {
         text: echo.lyric,
         knowledge: { song: echo.song, artist: echo.artist },
         emotion: echo.emotion,
+        mode: 'reply',
         username: echo.username,
         timestamp: echo.timestamp,
-        replyToId: postId || null,
+        replyToId: postId || 'root',
       })
-    } catch {}
+    } catch (e) { console.error('promote error', e) }
     router.push(`/lyric-back?postId=${echo.id}`)
   }
 
