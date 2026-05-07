@@ -162,8 +162,9 @@ function LyricBackContent() {
   }, [artistName, songName, lyric, selectedVibe, selectedSong, username])
 
   const toggleEchoResonate = async (echoId: string) => {
-    if (!db || !postId || !username) return
-    const resonateRef = ref(db, `posts/${postId}/echoes/${echoId}/resonates/${username}`)
+    if (!db || !postId) return
+    const uid = username || (typeof window !== 'undefined' ? (localStorage.getItem('margoGuestId') || (() => { const id = 'guest_' + Math.random().toString(36).slice(2); localStorage.setItem('margoGuestId', id); return id; })()) : 'guest')
+    const resonateRef = ref(db, `posts/${postId}/echoes/${echoId}/resonates/${uid}`)
     const alreadyResonated = echoResonated.has(echoId)
     setEchoResonated(prev => {
       const next = new Set(prev)
@@ -436,10 +437,10 @@ function LyricBackContent() {
                     </button>
                     
                     {/* Lyric Back - Center */}
-                    <a href={`/lyric-back?postId=${postId}`} className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
+                    <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
                       <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
                       <span className="text-[10px] uppercase tracking-wide">Lyric Back</span>
-                    </a>
+                    </button>
                     
                     {/* Card + Share - Right (with vibe tag) */}
                     <div className="flex items-end gap-3">
@@ -447,8 +448,7 @@ function LyricBackContent() {
                         <CreditCard className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         <span className="text-[10px] uppercase tracking-wide">Card</span>
                       </button>
-                      <ShareButton lyric={lyricBack.lyric || ''} postId={postId || undefined} small />
-                      <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/20 rounded-full text-amber-400/70 text-[10px] font-normal">
+<span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/20 rounded-full text-amber-400/70 text-[10px] font-normal">
                         {lyricBack.emotion}
                       </span>
                     </div>
