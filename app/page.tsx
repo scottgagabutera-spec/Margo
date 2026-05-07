@@ -15,6 +15,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const { posts, loading } = usePosts();
   const [totalSongs, setTotalSongs] = useState(0);
+  const [totalPosts, setTotalPosts] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -36,7 +37,7 @@ export default function Home() {
 
   const liveCards = posts.slice(0, 4);
   const stats = [
-    { number: String(posts.length), label: 'Lyrics', context: 'shared so far' },
+    { number: String(totalPosts), label: 'Lyrics', context: 'shared so far' },
     { number: String(totalSongs), label: 'Songs Featured', context: 'across genres' },
     { value: 'Love', label: 'Trending Feeling', context: 'this season' },
     { value: 'Early', label: 'Stage', context: 'community growing' },
@@ -87,7 +88,7 @@ export default function Home() {
         {/* Eyebrow with pulse */}
         <div className="inline-flex items-center gap-2 mb-8 md:mb-12 px-4 py-2 bg-amber-500/8 border border-amber-500/25 rounded-full">
           <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-          <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">{posts.length} lyrics live right now</span>
+          <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">{totalPosts} lyrics live right now</span>
         </div>
 
         {/* Headline - More dramatic and cinematic */}
@@ -162,7 +163,7 @@ export default function Home() {
                   </div>
                   <div className="flex flex-col">
                     <div className="text-xs font-medium text-amber-100">{post.username || "Anonymous"}</div>
-                    <div className="text-xs text-amber-100/40 font-light">{post.timestamp ? Math.floor((Date.now()-post.timestamp)/60000)+"m ago" : ""}</div>
+                    <div className="text-xs text-amber-100/40 font-light">{post.timestamp ? (() => { const diff = Date.now() - post.timestamp; const m = Math.floor(diff/60000); if (m < 60) return m+'m ago'; const h = Math.floor(m/60); if (h < 24) return h+'h ago'; return Math.floor(h/24)+'d ago'; })() : ''}</div>
                   </div>
                 </div>
               </div>
