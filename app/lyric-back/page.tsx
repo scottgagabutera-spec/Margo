@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, Suspense } from 'react'
+import { useRouter } from 'next/navigation'
 import { Search, Music2, Disc3, Heart, MessageCircle, CreditCard } from 'lucide-react'
 import { ShareButton } from '@/components/share-button'
 import { CardExportModal } from '@/components/card-export-modal'
@@ -46,6 +47,7 @@ const VIBES: Vibe[] = ['LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JO
 
 function LyricBackContent() {
   const { username } = useUsername()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const postId = searchParams.get('postId')
   const { post: respondingToPost } = usePost(postId)
@@ -61,6 +63,7 @@ function LyricBackContent() {
   const [lyric, setLyric] = useState('')
   const [selectedVibe, setSelectedVibe] = useState<Vibe | null>(null)
   const [echoResonated, setEchoResonated] = useState<Set<string>>(new Set())
+  const [echoResonateCounts, setEchoResonateCounts] = useState<Record<string, number>>({})
   const [showEchoCard, setShowEchoCard] = useState(false)
   const [echoCardData, setEchoCardData] = useState<{lyric:string,song:string,artist:string,id:string} | null>(null)
 
@@ -161,6 +164,23 @@ function LyricBackContent() {
     setSelectedVibe(null)
   }, [artistName, songName, lyric, selectedVibe, selectedSong, username])
 
+  const promoteAndReply = async (echo: typeof echoes[0]) => {
+    if (!db) return
+    try {
+      const { ref: dbRef, set: dbSet } = await import('firebase/database')
+      const promotedRef = dbRef(db, `posts/${echo.id}`)
+      await dbSet(promotedRef, {
+        text: echo.lyric,
+        knowledge: { song: echo.song, artist: echo.artist },
+        emotion: echo.emotion,
+        username: echo.username,
+        timestamp: echo.timestamp,
+        replyToId: postId || null,
+      })
+    } catch {}
+    router.push(`/lyric-back?postId=${echo.id}`)
+  }
+
   const toggleEchoResonate = async (echoId: string) => {
     if (!db) return
     const myId = typeof window !== 'undefined'
@@ -172,6 +192,10 @@ function LyricBackContent() {
       alreadyResonated ? next.delete(echoId) : next.add(echoId)
       return next
     })
+    setEchoResonateCounts(prev => ({
+      ...prev,
+      [echoId]: Math.max(0, (prev[echoId] || Object.keys(echoes.find(e => e.id === echoId)?.resonates || {}).length) + (alreadyResonated ? -1 : 1))
+    }))
     const resonateRef = ref(db, `analytics/${echoId}/resonates/${myId}`)
     try {
       alreadyResonated ? await remove(resonateRef) : await set(resonateRef, true)
@@ -181,6 +205,10 @@ function LyricBackContent() {
         alreadyResonated ? next.add(echoId) : next.delete(echoId)
         return next
       })
+      setEchoResonateCounts(prev => ({
+        ...prev,
+        [echoId]: Math.max(0, (prev[echoId] || 0) + (alreadyResonated ? 1 : -1))
+      }))
     }
   }
 
@@ -435,11 +463,11 @@ function LyricBackContent() {
                     {/* Resonate - Left */}
                     <button onClick={() => toggleEchoResonate(lyricBack.id)} className={`flex flex-col items-center gap-1 transition-colors group ${echoResonated.has(lyricBack.id) ? 'text-amber-400' : 'text-white/40 hover:text-amber-400'}`}>
                       <Heart className={`w-5 h-5 group-hover:scale-110 transition-transform ${echoResonated.has(lyricBack.id) ? 'fill-current' : ''}`} />
-                      <span className="text-[10px] uppercase tracking-wide">Resonate · {Object.keys(lyricBack.resonates || {}).length}</span>
+                      <span className="text-[10px] uppercase tracking-wide">Resonate · {echoResonateCounts[lyricBack.id] ?? Object.keys(lyricBack.resonates || {}).length}</span>
                     </button>
                     
                     {/* Lyric Back - Center */}
-                    <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
+                    <button onClick={() => promoteAndReply(lyricBack)} className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
                       <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
                       <span className="text-[10px] uppercase tracking-wide">Lyric Back</span>
                     </button>
