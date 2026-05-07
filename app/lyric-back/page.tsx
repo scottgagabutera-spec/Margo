@@ -165,20 +165,21 @@ function LyricBackContent() {
   }, [artistName, songName, lyric, selectedVibe, selectedSong, username])
 
   const promoteAndReply = async (echo: typeof echoes[0]) => {
-    if (!db) return
-    try {
-      const { ref: dbRef, set: dbSet } = await import('firebase/database')
-      const promotedRef = dbRef(db, `posts/${echo.id}`)
-      await dbSet(promotedRef, {
-        text: echo.lyric,
-        knowledge: { song: echo.song, artist: echo.artist },
-        emotion: echo.emotion,
-        mode: 'reply',
-        username: echo.username,
-        timestamp: echo.timestamp,
-        replyToId: postId || 'root',
-      })
-    } catch (e) { console.error('promote error', e) }
+    if (db) {
+      try {
+        const { ref: dbRef, set: dbSet } = await import('firebase/database')
+        const promotedRef = dbRef(db, `posts/${echo.id}`)
+        await dbSet(promotedRef, {
+          text: echo.lyric,
+          knowledge: { song: echo.song, artist: echo.artist },
+          emotion: echo.emotion,
+          mode: 'reply',
+          username: echo.username,
+          timestamp: echo.timestamp,
+          replyToId: postId || 'root',
+        })
+      } catch (e) { console.error('promote error', e) }
+    }
     router.push(`/lyric-back?postId=${echo.id}`)
   }
 
