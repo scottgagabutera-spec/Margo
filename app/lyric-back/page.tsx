@@ -184,9 +184,10 @@ function LyricBackContent() {
 
   const toggleEchoResonate = async (echoId: string) => {
     if (!db) return
-    const myId = typeof window !== 'undefined'
+    const rawId = typeof window !== 'undefined'
       ? (localStorage.getItem('margoAnonName') || 'anon')
       : 'anon'
+    const myId = rawId.replace(/[.#$[\]]/g, '_')
     const alreadyResonated = echoResonated.has(echoId)
     setEchoResonated(prev => {
       const next = new Set(prev)

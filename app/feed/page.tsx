@@ -79,9 +79,10 @@ export default function FeedPage() {
   }, [])
 
   const toggleResonate = async (postId: string) => {
-    const myId = typeof window !== 'undefined'
+    const rawId = typeof window !== 'undefined'
       ? (localStorage.getItem('margoAnonName') || 'anon')
       : 'anon'
+    const myId = rawId.replace(/[.#$[\]]/g, '_')
     const alreadyResonated = resonated.has(postId)
 
     // Optimistic UI
