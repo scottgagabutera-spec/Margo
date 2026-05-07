@@ -2,6 +2,7 @@
 import { CardExportModal } from '@/components/card-export-modal';
 import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Download, Search, X } from 'lucide-react';
+import { ShareButton } from '@/components/share-button';
 import { usePosts } from '@/hooks/usePosts';
 import type { Post } from '@/hooks/usePosts';
 import { db } from '@/lib/firebase'
@@ -415,6 +416,7 @@ export default function FeedPage() {
                     <Download size={18} />
                     <span className="text-[9px] font-medium tracking-widest uppercase">Card</span>
                   </button>
+                  <ShareButton lyric={post.text || ''} postId={post.id} />
 
                   {/* Vibe Badge - Bottom right corner */}
                   <div className={`px-2 py-1 rounded text-[9px] font-medium tracking-widest uppercase text-amber-100/50 ${getVibeColor(post.emotion || "")}`}>

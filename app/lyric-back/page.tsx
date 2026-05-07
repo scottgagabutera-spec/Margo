@@ -2,6 +2,7 @@
 
 import { useState, useCallback, Suspense } from 'react'
 import { Search, Music2, Disc3, Heart, MessageCircle, CreditCard } from 'lucide-react'
+import { ShareButton } from '@/components/share-button'
 import { MargoNav } from '@/components/margo-nav'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
@@ -416,12 +417,13 @@ function LyricBackContent() {
                       <span className="text-[10px] uppercase tracking-wide">Lyric Back</span>
                     </button>
                     
-                    {/* Card - Right (with vibe tag) */}
+                    {/* Card + Share - Right (with vibe tag) */}
                     <div className="flex items-end gap-3">
                       <button className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
                         <CreditCard className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         <span className="text-[10px] uppercase tracking-wide">Card</span>
                       </button>
+                      <ShareButton lyric={lyricBack.lyric || ''} postId={postId || undefined} small />
                       <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/20 rounded-full text-amber-400/70 text-[10px] font-normal">
                         {lyricBack.emotion}
                       </span>
