@@ -1,7 +1,7 @@
 'use client';
 import { CardExportModal } from '@/components/card-export-modal';
 import { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Download } from 'lucide-react';
+import { Heart, MessageCircle, Download, Search, X } from 'lucide-react';
 import { usePosts } from '@/hooks/usePosts';
 import type { Post } from '@/hooks/usePosts';
 import { db } from '@/lib/firebase'
@@ -15,6 +15,8 @@ export default function FeedPage() {
   const { posts, loading } = usePosts()
   const [selectedSort, setSelectedSort] = useState<string>('NEW');
   const [showCard, setShowCard] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchOpen, setSearchOpen] = useState<boolean>(false);
 
   const vibes = ['ALL', 'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SEND IT', 'LET OUT'];
   const sorts = ['NEW', 'TRENDING', 'TOP'];
@@ -160,7 +162,17 @@ export default function FeedPage() {
 
   // Filter by vibe then sort
   const filteredPosts = posts
-    .filter(p => selectedVibe === 'ALL' || normalizeEmotion(p.emotion || '') === selectedVibe)
+    .filter(p => {
+      const matchesVibe = selectedVibe === 'ALL' || normalizeEmotion(p.emotion || '') === selectedVibe
+      if (!searchQuery.trim()) return matchesVibe
+      const q = searchQuery.toLowerCase()
+      const matchesSearch = (p.text || '').toLowerCase().includes(q)
+        || (p.knowledge?.song || '').toLowerCase().includes(q)
+        || (p.knowledge?.artist || '').toLowerCase().includes(q)
+        || (p.emotion || '').toLowerCase().includes(q)
+        || (p.username || '').toLowerCase().includes(q)
+      return matchesVibe && matchesSearch
+    })
     .sort((a, b) => getScore(b) - getScore(a))
 
   return (
@@ -192,6 +204,32 @@ export default function FeedPage() {
           <span className="text-amber-400 text-sm font-medium tracking-widest uppercase">Margo</span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Expandable search */}
+          <div className="flex items-center gap-2">
+            {searchOpen ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/8 border border-amber-500/25 rounded-full transition-all duration-300">
+                <Search className="w-3.5 h-3.5 text-amber-400/60 flex-shrink-0" />
+                <input
+                  autoFocus
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search lyrics, songs, artists..."
+                  className="bg-transparent text-xs text-amber-100 placeholder:text-amber-100/30 focus:outline-none w-40 md:w-56"
+                />
+                <button onClick={() => { setSearchOpen(false); setSearchQuery(''); }}>
+                  <X className="w-3.5 h-3.5 text-amber-400/60 hover:text-amber-400 transition-colors" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="p-2 text-amber-200/70 border border-amber-500/30 rounded-full hover:border-amber-500/60 hover:bg-amber-500/5 transition-all duration-300"
+              >
+                <Search className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
           <a href="/" className="px-3 py-2 text-xs text-amber-200/70 border border-amber-500/30 rounded-full hover:border-amber-500/60 hover:bg-amber-500/5 transition-all duration-300 tracking-wide uppercase">
             Home
           </a>
@@ -412,10 +450,16 @@ export default function FeedPage() {
           )}
           {!loading && filteredPosts.length === 0 && (
             <div className="text-center">
-              <p className="font-serif italic text-amber-400/40 text-lg mb-4">No {selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet</p>
-              <a href="/compose" className="px-6 py-2 border border-amber-500/30 text-amber-400/70 rounded-full text-xs uppercase tracking-widest hover:border-amber-500/60 transition-all">
-                Be the first
-              </a>
+              {searchQuery ? (
+                <p className="font-serif italic text-amber-400/40 text-lg mb-4">No lyrics found for &ldquo;{searchQuery}&rdquo;</p>
+              ) : (
+                <p className="font-serif italic text-amber-400/40 text-lg mb-4">No {selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet</p>
+              )}
+              {!searchQuery && (
+                <a href="/compose" className="px-6 py-2 border border-amber-500/30 text-amber-400/70 rounded-full text-xs uppercase tracking-widest hover:border-amber-500/60 transition-all">
+                  Be the first
+                </a>
+              )}
             </div>
           )}
           {!loading && filteredPosts.length > 0 && (
