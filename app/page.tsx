@@ -13,7 +13,6 @@ import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
-  const { posts, loading } = usePosts();
   const [totalSongs, setTotalSongs] = useState(0);
   const [allPostCount, setAllPostCount] = useState(0);
 
@@ -43,12 +42,15 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  const liveCards = posts.slice(0, 4);
+  const liveCards = allPosts.slice(0, 4);
+  const { totalPosts, uniqueArtists, uniqueSongs, topArtist, topSong, topEmotion } = calcStats();
   const stats = [
-    { number: String(allPostCount || '…'), label: 'Lyrics', context: 'shared so far' },
-    { number: String(totalSongs), label: 'Songs Featured', context: 'across genres' },
-    { value: 'Love', label: 'Trending Feeling', context: 'this season' },
-    { value: 'Early', label: 'Stage', context: 'community growing' },
+    { number: String(totalPosts || '…'), label: 'Lyrics', context: 'shared so far' },
+    { number: String(uniqueArtists || '…'), label: 'Artists Featured', context: 'from top charts' },
+    { number: String(uniqueSongs || '…'), label: 'Songs Featured', context: 'across genres' },
+    { value: topArtist || '—', label: 'Top Artist', context: 'most quoted' },
+    { value: topSong || '—', label: 'Top Song', context: 'most used' },
+    { value: topEmotion || '—', label: 'Trending Feeling', context: 'this season' },
   ];
 
   return (
@@ -96,7 +98,7 @@ export default function Home() {
         {/* Eyebrow with pulse */}
         <div className="inline-flex items-center gap-2 mb-8 md:mb-12 px-4 py-2 bg-amber-500/8 border border-amber-500/25 rounded-full">
           <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-          <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">{allPostCount || '…'} lyrics live right now</span>
+          <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">{totalPosts || '…'} lyrics live right now</span>
         </div>
 
         {/* Headline - More dramatic and cinematic */}
