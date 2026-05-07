@@ -3,12 +3,13 @@
 import { useState, useCallback, Suspense } from 'react'
 import { Search, Music2, Disc3, Heart, MessageCircle, CreditCard } from 'lucide-react'
 import { ShareButton } from '@/components/share-button'
+import { CardExportModal } from '@/components/card-export-modal'
 import { MargoNav } from '@/components/margo-nav'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { db } from '@/lib/firebase'
 import { useEchoes } from '@/hooks/useEchoes'
-import { ref, push, serverTimestamp } from 'firebase/database'
+import { ref, push, set, remove, serverTimestamp } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername'
 import { useSearchParams } from 'next/navigation'
 import { usePost } from '@/hooks/usePost'
@@ -59,6 +60,9 @@ function LyricBackContent() {
   const [songName, setSongName] = useState('')
   const [lyric, setLyric] = useState('')
   const [selectedVibe, setSelectedVibe] = useState<Vibe | null>(null)
+  const [echoResonated, setEchoResonated] = useState<Set<string>>(new Set())
+  const [showEchoCard, setShowEchoCard] = useState(false)
+  const [echoCardData, setEchoCardData] = useState<{lyric:string,song:string,artist:string,id:string} | null>(null)
 
   const handleSearch = useCallback(async (value: string) => {
     setSearchQuery(value)
@@ -156,6 +160,26 @@ function LyricBackContent() {
     setLyric('')
     setSelectedVibe(null)
   }, [artistName, songName, lyric, selectedVibe, selectedSong, username])
+
+  const toggleEchoResonate = async (echoId: string) => {
+    if (!db || !postId || !username) return
+    const resonateRef = ref(db, `posts/${postId}/echoes/${echoId}/resonates/${username}`)
+    const alreadyResonated = echoResonated.has(echoId)
+    setEchoResonated(prev => {
+      const next = new Set(prev)
+      alreadyResonated ? next.delete(echoId) : next.add(echoId)
+      return next
+    })
+    try {
+      alreadyResonated ? await remove(resonateRef) : await set(resonateRef, true)
+    } catch {
+      setEchoResonated(prev => {
+        const next = new Set(prev)
+        alreadyResonated ? next.add(echoId) : next.delete(echoId)
+        return next
+      })
+    }
+  }
 
   return (
     <main className="min-h-screen relative">
@@ -406,20 +430,20 @@ function LyricBackContent() {
                   {/* Actions Row */}
                   <div className="flex items-end justify-between pt-3 border-t border-amber-500/10">
                     {/* Resonate - Left */}
-                    <button className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
-                      <Heart className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    <button onClick={() => toggleEchoResonate(lyricBack.id)} className={`flex flex-col items-center gap-1 transition-colors group ${echoResonated.has(lyricBack.id) ? 'text-amber-400' : 'text-white/40 hover:text-amber-400'}`}>
+                      <Heart className={`w-5 h-5 group-hover:scale-110 transition-transform ${echoResonated.has(lyricBack.id) ? 'fill-current' : ''}`} />
                       <span className="text-[10px] uppercase tracking-wide">Resonate · {Object.keys(lyricBack.resonates || {}).length}</span>
                     </button>
                     
                     {/* Lyric Back - Center */}
-                    <button className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
+                    <a href={`/lyric-back?postId=${postId}`} className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
                       <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
                       <span className="text-[10px] uppercase tracking-wide">Lyric Back</span>
-                    </button>
+                    </a>
                     
                     {/* Card + Share - Right (with vibe tag) */}
                     <div className="flex items-end gap-3">
-                      <button className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
+                      <button onClick={() => { setEchoCardData({ lyric: lyricBack.lyric, song: lyricBack.song, artist: lyricBack.artist, id: lyricBack.id }); setShowEchoCard(true); }} className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
                         <CreditCard className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         <span className="text-[10px] uppercase tracking-wide">Card</span>
                       </button>
@@ -435,6 +459,9 @@ function LyricBackContent() {
           </div>
         </div>
       </div>
+      {showEchoCard && (
+        <CardExportModal open={showEchoCard} onOpenChange={setShowEchoCard} lyric={echoCardData?.lyric || ''} song={echoCardData?.song || ''} artist={echoCardData?.artist || ''} postId={echoCardData?.id} />
+      )}
     </main>
   )
 }

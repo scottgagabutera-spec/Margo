@@ -2,7 +2,6 @@
 import { CardExportModal } from '@/components/card-export-modal';
 import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Download, Search, X } from 'lucide-react';
-import { ShareButton } from '@/components/share-button';
 import { usePosts } from '@/hooks/usePosts';
 import type { Post } from '@/hooks/usePosts';
 import { db } from '@/lib/firebase'
@@ -16,6 +15,7 @@ export default function FeedPage() {
   const { posts, loading } = usePosts()
   const [selectedSort, setSelectedSort] = useState<string>('NEW');
   const [showCard, setShowCard] = useState<boolean>(false);
+  const [cardPost, setCardPost] = useState<typeof posts[0] | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const vibes = ['ALL', 'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SEND IT', 'LET OUT'];
@@ -412,11 +412,10 @@ export default function FeedPage() {
                     <span className="text-[9px] font-medium tracking-widest uppercase">Lyric Back</span>
                   </a>
 
-                  <button onClick={() => setShowCard(true)} className="flex flex-col items-center justify-center gap-2 text-amber-100/50 hover:text-amber-400 transition-all duration-300">
+                  <button onClick={() => { setCardPost(post); setShowCard(true); }} className="flex flex-col items-center justify-center gap-2 text-amber-100/50 hover:text-amber-400 transition-all duration-300">
                     <Download size={18} />
                     <span className="text-[9px] font-medium tracking-widest uppercase">Card</span>
                   </button>
-                  <ShareButton lyric={post.text || ''} postId={post.id} />
 
                   {/* Vibe Badge - Bottom right corner */}
                   <div className={`px-2 py-1 rounded text-[9px] font-medium tracking-widest uppercase text-amber-100/50 ${getVibeColor(post.emotion || "")}`}>
@@ -477,7 +476,7 @@ export default function FeedPage() {
           Share Your Lyric
         </a>
       </section>
-      <CardExportModal open={showCard} onOpenChange={setShowCard} />
+      <CardExportModal open={showCard} onOpenChange={setShowCard} lyric={cardPost?.text || ''} song={cardPost?.knowledge?.song || ''} artist={cardPost?.knowledge?.artist || ''} postId={cardPost?.id} />
     </div>
   );
 }

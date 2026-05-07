@@ -16,6 +16,10 @@ import { cn } from '@/lib/utils'
 interface CardExportModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  lyric?: string
+  song?: string
+  artist?: string
+  postId?: string
 }
 
 const themePresets = [
@@ -63,9 +67,24 @@ const shapeOptions = [
   { id: 'wide', name: 'Wide', icon: RectangleHorizontal, ratio: '16:9' },
 ]
 
-export function CardExportModal({ open, onOpenChange }: CardExportModalProps) {
+export function CardExportModal({ open, onOpenChange, lyric = '', song = '', artist = '', postId }: CardExportModalProps) {
   const [selectedTheme, setSelectedTheme] = useState('dark-gold')
   const [selectedShape, setSelectedShape] = useState('square')
+
+  const url = postId ? `https://trymargo.com/lyric-back?postId=${postId}` : 'https://trymargo.com'
+  const shareText = lyric ? '"' + lyric.substring(0, 60) + '" — trymargo.com' : 'trymargo.com'
+  const copyText = lyric ? '"' + lyric + '" — ' + artist + ', ' + song : ''
+
+  const handleShare = async () => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ title: 'MARGO', text: shareText, url }); return } catch(e: any) { if (e.name === 'AbortError') return }
+    }
+    if (typeof navigator !== 'undefined') navigator.clipboard.writeText(url)
+  }
+
+  const handleCopyText = () => {
+    if (typeof navigator !== 'undefined') navigator.clipboard.writeText(copyText)
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -163,11 +182,11 @@ export function CardExportModal({ open, onOpenChange }: CardExportModalProps) {
               <Download className="w-4 h-4" />
               Save Card
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 font-medium text-sm rounded-xl transition-colors">
+            <button onClick={handleCopyText} className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 font-medium text-sm rounded-xl transition-colors">
               <Copy className="w-4 h-4" />
               Copy Text
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 font-medium text-sm rounded-xl transition-colors">
+            <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 font-medium text-sm rounded-xl transition-colors">
               <Share2 className="w-4 h-4" />
               Share
             </button>
