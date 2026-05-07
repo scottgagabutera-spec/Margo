@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { db } from '@/lib/firebase'
-import { ref, query, orderByChild, limitToLast, onValue, off } from 'firebase/database'
+import { ref, query, orderByChild, limitToLast, onValue } from 'firebase/database'
 
 export interface Post {
   id: string
@@ -24,16 +24,17 @@ export function usePosts() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const limitRef = useRef(PAGE_SIZE)
+  const unsubRef = useRef<(() => void) | null>(null)
 
   const fetchPosts = useCallback((limit: number, isLoadMore = false) => {
-    if (!db) { setLoading(false); return () => {} }
-
+    if (!db) { setLoading(false); return }
     if (isLoadMore) setLoadingMore(true)
     else setLoading(true)
 
-    const postsRef = query(ref(db, 'posts'), orderByChild('timestamp'), limitToLast(limit))
+    if (unsubRef.current) unsubRef.current()
 
-    const handler = onValue(postsRef, (snapshot) => {
+    const postsRef = query(ref(db, 'posts'), orderByChild('timestamp'), limitToLast(limit))
+    const unsub = onValue(postsRef, (snapshot) => {
       const data: Post[] = []
       snapshot.forEach((child) => {
         const p = child.val()
@@ -45,13 +46,12 @@ export function usePosts() {
       setLoading(false)
       setLoadingMore(false)
     })
-
-    return () => off(postsRef, 'value', handler)
+    unsubRef.current = unsub
   }, [])
 
   useEffect(() => {
-    const unsub = fetchPosts(PAGE_SIZE)
-    return unsub
+    fetchPosts(PAGE_SIZE)
+    return () => { if (unsubRef.current) unsubRef.current() }
   }, [fetchPosts])
 
   const loadMore = useCallback(() => {
