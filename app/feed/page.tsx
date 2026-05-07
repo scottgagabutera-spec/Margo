@@ -28,6 +28,7 @@ export default function FeedPage() {
     } catch { return new Set() }
   })
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
+  const [analytics, setAnalytics] = useState<Record<string, any>>({})
 
   // Load analytics (resonates map) from Firebase
   useEffect(() => {
@@ -40,8 +41,44 @@ export default function FeedPage() {
         counts[postId] = Object.keys(data[postId]?.resonates || {}).length
       })
       setResonateCounts(counts)
+      setAnalytics(data)
     })
-    return () => unsub()
+    // Normalize emotion to match filter — old stores SendIt/LetOut, new shows SEND IT/LET OUT
+  const normalizeEmotion = (e: string) => {
+    if (!e) return ''
+    return e.replace('SendIt', 'SEND IT').replace('LetOut', 'LET OUT').toUpperCase()
+  }
+
+  // Engagement score — resonates×4 + echoes×5 + views×1
+  const getEngagement = (post: typeof posts[0]) => {
+    const a = analytics[post.id] || {}
+    return (a.views || 0)
+      + (Object.keys(a.resonates || {}).length * 4)
+      + (Object.keys(a.echoes || {}).length * 5)
+  }
+
+  // Age in hours
+  const getAge = (post: typeof posts[0]) => {
+    if (!post.timestamp) return 999
+    return (Date.now() - post.timestamp) / 3600000
+  }
+
+  // Sort score per mode
+  const getScore = (post: typeof posts[0]) => {
+    const age = getAge(post)
+    const engage = getEngagement(post)
+    if (selectedSort === 'NEW') return Math.exp(-age / 18) * 1000 + engage * 0.05
+    if (selectedSort === 'TRENDING') return engage / Math.pow(age + 2, 1.4)
+    if (selectedSort === 'TOP') return engage
+    return 0
+  }
+
+  // Filter by vibe then sort
+  const filteredPosts = posts
+    .filter(p => selectedVibe === 'ALL' || normalizeEmotion(p.emotion || '') === selectedVibe)
+    .sort((a, b) => getScore(b) - getScore(a))
+
+  return () => unsub()
   }, [])
 
   // Infinite scroll - observe sentinel div at bottom
@@ -107,6 +144,41 @@ export default function FeedPage() {
     };
     return vibes[vibe] || vibes['Nostalgia'];
   };
+
+  // Normalize emotion
+  const normalizeEmotion = (e: string) => {
+    if (!e) return ''
+    return e.replace('SendIt', 'SEND IT').replace('LetOut', 'LET OUT').toUpperCase()
+  }
+
+  // Engagement score
+  const getEngagement = (post: typeof posts[0]) => {
+    const a = analytics[post.id] || {}
+    return (a.views || 0)
+      + (Object.keys(a.resonates || {}).length * 4)
+      + (Object.keys(a.echoes || {}).length * 5)
+  }
+
+  // Age in hours
+  const getAge = (post: typeof posts[0]) => {
+    if (!post.timestamp) return 999
+    return (Date.now() - post.timestamp) / 3600000
+  }
+
+  // Sort score
+  const getScore = (post: typeof posts[0]) => {
+    const age = getAge(post)
+    const engage = getEngagement(post)
+    if (selectedSort === 'NEW') return Math.exp(-age / 18) * 1000 + engage * 0.05
+    if (selectedSort === 'TRENDING') return engage / Math.pow(age + 2, 1.4)
+    if (selectedSort === 'TOP') return engage
+    return 0
+  }
+
+  // Filter by vibe then sort
+  const filteredPosts = posts
+    .filter(p => selectedVibe === 'ALL' || normalizeEmotion(p.emotion || '') === selectedVibe)
+    .sort((a, b) => getScore(b) - getScore(a))
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-gradient-to-br from-[#08070C] via-[#0a0909] to-[#0f0e14]">
@@ -209,7 +281,7 @@ export default function FeedPage() {
       {/* Main Feed Grid */}
       <div className="relative z-5 max-w-5xl mx-auto px-6 md:px-10 py-12 md:py-16">
         <div className="space-y-6 md:space-y-8">
-          {posts.map((post) => (
+          {filteredPosts.map((post) => (
             <div
               key={post.id}
               onMouseEnter={() => setHoveredPostId(post.id)}
