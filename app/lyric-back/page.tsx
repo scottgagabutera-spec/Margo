@@ -140,7 +140,7 @@ function LyricBackContent() {
         })
       } catch (e) { console.error('promote error', e) }
     }
-    router.push(`/lyric-back?postId=${echo.id}`)
+    window.location.href = `/lyric-back?postId=${echo.id}`
   }
 
   const toggleEchoResonate = async (echoId: string) => {
