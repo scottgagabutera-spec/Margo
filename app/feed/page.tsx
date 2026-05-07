@@ -16,7 +16,6 @@ export default function FeedPage() {
   const [selectedSort, setSelectedSort] = useState<string>('NEW');
   const [showCard, setShowCard] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [searchOpen, setSearchOpen] = useState<boolean>(false);
 
   const vibes = ['ALL', 'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SEND IT', 'LET OUT'];
   const sorts = ['NEW', 'TRENDING', 'TOP'];
@@ -204,32 +203,6 @@ export default function FeedPage() {
           <span className="text-amber-400 text-sm font-medium tracking-widest uppercase">Margo</span>
         </div>
         <div className="flex items-center gap-2">
-          {/* Expandable search */}
-          <div className="flex items-center gap-2">
-            {searchOpen ? (
-              <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/8 border border-amber-500/25 rounded-full transition-all duration-300">
-                <Search className="w-3.5 h-3.5 text-amber-400/60 flex-shrink-0" />
-                <input
-                  autoFocus
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search lyrics, songs, artists..."
-                  className="bg-transparent text-xs text-amber-100 placeholder:text-amber-100/30 focus:outline-none w-40 md:w-56"
-                />
-                <button onClick={() => { setSearchOpen(false); setSearchQuery(''); }}>
-                  <X className="w-3.5 h-3.5 text-amber-400/60 hover:text-amber-400 transition-colors" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="p-2 text-amber-200/70 border border-amber-500/30 rounded-full hover:border-amber-500/60 hover:bg-amber-500/5 transition-all duration-300"
-              >
-                <Search className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
           <a href="/" className="px-3 py-2 text-xs text-amber-200/70 border border-amber-500/30 rounded-full hover:border-amber-500/60 hover:bg-amber-500/5 transition-all duration-300 tracking-wide uppercase">
             Home
           </a>
@@ -277,8 +250,27 @@ export default function FeedPage() {
             </div>
           </div>
 
+          {/* Search Bar */}
+          <div className="relative my-4">
+            <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/5 border border-amber-500/15 rounded-xl hover:border-amber-500/30 focus-within:border-amber-500/40 focus-within:bg-amber-500/8 transition-all duration-300">
+              <Search className="w-3.5 h-3.5 text-amber-400/40 flex-shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search lyrics, songs, artists, feelings..."
+                className="flex-1 bg-transparent text-sm text-amber-100/80 placeholder:text-amber-100/25 focus:outline-none font-light"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="flex-shrink-0">
+                  <X className="w-3.5 h-3.5 text-amber-400/40 hover:text-amber-400/80 transition-colors" />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Sort Tabs */}
-          <div className="flex items-center gap-1 border-t border-amber-500/10 pt-6">
+          <div className="flex items-center gap-1 border-t border-amber-500/10 pt-4">
             {sorts.map((sort) => (
               <button
                 key={sort}
