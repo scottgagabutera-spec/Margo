@@ -15,7 +15,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const { posts, loading } = usePosts();
   const [totalSongs, setTotalSongs] = useState(0);
-  const [totalPosts, setTotalPosts] = useState(0);
+  const [allPostCount, setAllPostCount] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -23,21 +23,29 @@ export default function Home() {
 
   useEffect(() => {
     if (!db) return;
-    const unsub = onValue(ref(db, 'songs'), (snap) => {
+    const unsubSongs = onValue(ref(db, 'songs'), (snap) => {
       let count = 0;
       snap.forEach((child) => {
         if (child.val().status === 'active') count++;
       });
       setTotalSongs(count);
     });
-    return () => unsub();
+    const unsubPosts = onValue(ref(db, 'posts'), (snap) => {
+      let count = 0;
+      snap.forEach((child) => {
+        const s = child.val().status;
+        if (s !== 'hidden' && s !== 'private') count++;
+      });
+      setAllPostCount(count);
+    });
+    return () => { unsubSongs(); unsubPosts(); };
   }, []);
 
   if (!mounted) return null;
 
   const liveCards = posts.slice(0, 4);
   const stats = [
-    { number: String(totalPosts), label: 'Lyrics', context: 'shared so far' },
+    { number: String(allPostCount || '…'), label: 'Lyrics', context: 'shared so far' },
     { number: String(totalSongs), label: 'Songs Featured', context: 'across genres' },
     { value: 'Love', label: 'Trending Feeling', context: 'this season' },
     { value: 'Early', label: 'Stage', context: 'community growing' },
@@ -88,7 +96,7 @@ export default function Home() {
         {/* Eyebrow with pulse */}
         <div className="inline-flex items-center gap-2 mb-8 md:mb-12 px-4 py-2 bg-amber-500/8 border border-amber-500/25 rounded-full">
           <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-          <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">{totalPosts} lyrics live right now</span>
+          <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">{allPostCount || '…'} lyrics live right now</span>
         </div>
 
         {/* Headline - More dramatic and cinematic */}
