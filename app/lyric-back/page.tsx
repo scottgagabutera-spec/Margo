@@ -162,15 +162,17 @@ function LyricBackContent() {
   }, [artistName, songName, lyric, selectedVibe, selectedSong, username])
 
   const toggleEchoResonate = async (echoId: string) => {
-    if (!db || !postId) return
-    const uid = username || (typeof window !== 'undefined' ? (localStorage.getItem('margoGuestId') || (() => { const id = 'guest_' + Math.random().toString(36).slice(2); localStorage.setItem('margoGuestId', id); return id; })()) : 'guest')
-    const resonateRef = ref(db, `posts/${postId}/echoes/${echoId}/resonates/${uid}`)
+    if (!db) return
+    const myId = typeof window !== 'undefined'
+      ? (localStorage.getItem('margoAnonName') || 'anon')
+      : 'anon'
     const alreadyResonated = echoResonated.has(echoId)
     setEchoResonated(prev => {
       const next = new Set(prev)
       alreadyResonated ? next.delete(echoId) : next.add(echoId)
       return next
     })
+    const resonateRef = ref(db, `analytics/${echoId}/resonates/${myId}`)
     try {
       alreadyResonated ? await remove(resonateRef) : await set(resonateRef, true)
     } catch {
