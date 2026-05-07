@@ -16,6 +16,7 @@ interface Post {
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [featuredLyric, setFeaturedLyric] = useState<{text:string,artist:string,song:string} | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -29,6 +30,14 @@ export default function Home() {
         if (p.status !== 'hidden' && p.status !== 'private') data.unshift(p);
       });
       setAllPosts(data);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!db) return;
+    const unsub = onValue(ref(db, 'adminConfig/featuredLyric'), (snap) => {
+      if (snap.exists()) setFeaturedLyric(snap.val());
     });
     return () => unsub();
   }, []);
@@ -137,6 +146,18 @@ export default function Home() {
           </a>
         </div>
       </section>
+
+      {/* Featured Lyric */}
+      {featuredLyric && (
+        <section className="relative z-5 px-6 md:px-8 max-w-3xl mx-auto mb-16 md:mb-24">
+          <div className="text-xs text-amber-100/25 text-center font-medium tracking-widest uppercase mb-6">↓ Featured lyric</div>
+          <div className="relative bg-gradient-to-br from-amber-500/8 to-transparent border border-amber-500/25 rounded-2xl p-8 md:p-12 text-center overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-amber-500/10 blur-3xl pointer-events-none" />
+            <p className="font-serif italic text-2xl md:text-3xl text-amber-50/90 leading-relaxed mb-6 relative z-10">&ldquo;{featuredLyric.text}&rdquo;</p>
+            <p className="text-sm text-amber-400/60 tracking-wide relative z-10">— {featuredLyric.artist}{featuredLyric.song ? ` · ${featuredLyric.song}` : ''}</p>
+          </div>
+        </section>
+      )}
 
       {/* Live Cards */}
       <section className="relative z-5 px-6 md:px-8 max-w-7xl mx-auto mb-6">
