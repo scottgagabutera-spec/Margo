@@ -149,32 +149,32 @@ export default function Home() {
         <div className="text-xs text-amber-100/25 text-center font-medium tracking-widest uppercase mb-6 md:mb-8">↓ What people are saying right now</div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {lyricCards.map((card) => (
+          {liveCards.map((post) => (
             <div
-              key={card.id}
+              key={post.id}
               className="group relative bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-xl p-5 hover:border-amber-500/40 transition-all duration-300 hover:bg-amber-500/8 backdrop-blur-sm"
             >
               {/* Card header with avatar and timestamp */}
               <div className="flex items-center justify-between mb-4 pb-4 border-b border-amber-500/10">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-semibold text-[#08070C] tracking-tight">{card.initials}</span>
+                    <span className="text-xs font-semibold text-[#08070C] tracking-tight">{(post.username || "AN").slice(0,2).toUpperCase()}</span>
                   </div>
                   <div className="flex flex-col">
-                    <div className="text-xs font-medium text-amber-100">{card.artist}</div>
-                    <div className="text-xs text-amber-100/40 font-light">{card.timestamp}</div>
+                    <div className="text-xs font-medium text-amber-100">{post.username || "Anonymous"}</div>
+                    <div className="text-xs text-amber-100/40 font-light">{post.timestamp ? Math.floor((Date.now()-post.timestamp)/60000)+"m ago" : ""}</div>
                   </div>
                 </div>
               </div>
 
               {/* Emotion tag */}
               <div className="inline-block text-xs text-amber-400/70 font-medium tracking-widest uppercase mb-3">
-                {card.emotion}
+                {post.emotion || "Feeling"}
               </div>
 
               {/* Lyric text */}
               <p className="font-serif italic text-sm leading-relaxed text-amber-50/85 line-clamp-3">
-                {card.text}
+                {post.text}
               </p>
 
               {/* Hover indicator */}
