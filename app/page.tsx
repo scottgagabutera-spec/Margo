@@ -191,7 +191,7 @@ export default function Home() {
       <section style={{
         position:'relative', zIndex:5,
         display:'flex', flexDirection:'column', alignItems:'center',
-        padding:'48px 24px 32px',
+        padding:'32px 24px 16px',
         textAlign:'center',
         maxWidth:'56rem', margin:'0 auto',
       }}>
@@ -232,9 +232,9 @@ export default function Home() {
           The lyric you send. The one they send back. That&apos;s Margo.
         </p>
 
-        <div style={{display:'flex', flexWrap:'wrap', justifyContent:'center', gap:'12px', marginBottom:'48px'}}>
+        <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'10px', width:'100%', maxWidth:'290px', marginBottom:'32px'}}>
           <a href="/feed" style={{
-            padding:'14px 32px',
+            padding:'17px 28px',
             background:'var(--gold)',
             color:'var(--bg)',
             borderRadius:'50px',
@@ -244,34 +244,33 @@ export default function Home() {
             letterSpacing:'1px',
             textTransform:'uppercase',
             textDecoration:'none',
-            minHeight:'44px',
+            minHeight:'52px',
+            width:'100%',
             display:'flex',
             alignItems:'center',
+            justifyContent:'center',
+            boxShadow:'0 6px 28px rgba(232,197,71,0.28)',
             transition:'all 150ms ease',
           }}>See What&apos;s Live</a>
           <a href="/compose" style={{
-            padding:'14px 24px',
             background:'transparent',
-            color:'var(--text-2)',
-            border:'1px solid var(--gold-border)',
-            borderRadius:'50px',
+            border:'none',
+            color:'var(--text-3)',
             fontFamily:'var(--font-lora),serif',
-            fontWeight:600,
-            fontSize:'0.6rem',
-            letterSpacing:'1px',
-            textTransform:'uppercase',
+            fontSize:'0.82rem',
+            fontWeight:500,
+            cursor:'pointer',
+            padding:'6px 12px',
+            letterSpacing:'0.02em',
             textDecoration:'none',
-            minHeight:'44px',
-            display:'flex',
-            alignItems:'center',
-            transition:'all 150ms ease',
+            transition:'color 150ms ease',
           }}>↓ Share a Lyric</a>
         </div>
       </section>
 
       {/* Featured Lyric */}
       {featuredLyric && (
-        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'48rem', margin:'0 auto 48px'}}>
+        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'48rem', margin:'0 auto 32px'}}>
           <div style={{fontSize:'0.6rem', color:'var(--text-3)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'16px'}}>↓ Featured lyric</div>
           <div style={{
             background:'var(--surface)',
@@ -352,7 +351,7 @@ export default function Home() {
         padding:'24px 40px',
         display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:'16px',
       }}>
-        <MargoLogo tier="symbol" size={20} wordmark />
+        <MargoLogo tier="symbol" size={28} wordmark />
         <div style={{display:'flex', alignItems:'center', gap:'24px'}}>
           {['About','Privacy','Terms','Contact'].map(link => (
             <a key={link} href={`/${link.toLowerCase()}`} style={{
