@@ -14,6 +14,75 @@ interface Post {
   knowledge?: { artist?: string; song?: string };
 }
 
+// Emotion system
+const EMOTION_COLORS: Record<string,string> = {
+  love:'#FF6B9D', heartbreak:'#ff6060', hope:'#7B9FFF', nostalgia:'#E8C547',
+  healing:'#4ade80', joy:'#ffc847', rage:'#FF6440', loneliness:'#a0a0ff',
+  sendit:'#00e5c8', letout:'#c864ff',
+};
+const VIBE_LABELS: Record<string,string> = {
+  love:'Love', heartbreak:'Heartbreak', hope:'Hope', nostalgia:'Nostalgia',
+  healing:'Healing', joy:'Joy', rage:'Rage', loneliness:'Loneliness',
+  sendit:'SendIt', letout:'LetOut',
+};
+const STREAM_SAMPLES: Post[] = [
+  { id:'s1', text:'You can dance, you can jive, having the time of your life', emotion:'joy',       knowledge:{ artist:'ABBA', song:'Dancing Queen' } },
+  { id:'s2', text:'Who cares when more light goes out? Well I do.',            emotion:'hope',      knowledge:{ artist:'Linkin Park', song:'One More Light' } },
+  { id:'s3', text:'On and on, the dj playing my song',                        emotion:'letout',    knowledge:{ artist:'Erykah Badu', song:'On & On' } },
+  { id:'s4', text:"I found love where it wasn't supposed to be",              emotion:'love',      knowledge:{ artist:'Ed Sheeran', song:'Happier' } },
+  { id:'s5', text:'Every scar will build my throne',                          emotion:'healing',   knowledge:{ artist:'Florence', song:'Dog Days Are Over' } },
+  { id:'s6', text:'We are young, so let us set the world on fire',            emotion:'sendit',    knowledge:{ artist:'fun.', song:'We Are Young' } },
+];
+function getTickerPosts(posts: Post[]): Post[] {
+  if (posts.length < 6) return STREAM_SAMPLES;
+  const recent  = posts.slice(0, 4);
+  const rest    = posts.filter(p => !recent.includes(p));
+  const byViews = rest.slice(0, 4);
+  const random  = rest.slice(4).sort(() => Math.random() - 0.5).slice(0, 4);
+  return [...recent, ...byViews, ...random];
+}
+function TickerCard({ post }: { post: Post }) {
+  const emotion  = (post.emotion || 'nostalgia').toLowerCase();
+  const color    = EMOTION_COLORS[emotion] || 'var(--gold)';
+  const label    = VIBE_LABELS[emotion]    || post.emotion || 'Nostalgia';
+  const text     = post.text || '';
+  const display  = text.length > 44 ? text.substring(0, 44) + '…' : text;
+  const seed     = post.id ? post.id.charCodeAt(0) : 0;
+  const featured = seed % 3 === 0;
+  return (
+    <div style={{
+      display:'inline-flex', flexDirection:'column', gap:'8px',
+      padding:'14px 18px',
+      background: featured ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.03)',
+      border:`1px solid ${featured ? 'rgba(232,197,71,0.2)' : 'rgba(255,255,255,0.07)'}`,
+      borderRadius:'14px', flexShrink:0, width:'220px',
+      pointerEvents:'none', userSelect:'none',
+    }}>
+      <p style={{
+        fontFamily:'var(--font-lora),serif', fontStyle:'italic',
+        fontSize:'0.95rem', color:'rgba(255,255,255,0.82)',
+        lineHeight:1.5, margin:0, overflow:'hidden',
+        display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical',
+      }}>{display}</p>
+      <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+        <span style={{
+          fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', fontWeight:700,
+          textTransform:'uppercase', letterSpacing:'1.5px',
+          padding:'3px 8px', borderRadius:'50px',
+          background:'rgba(255,255,255,0.06)', color,
+        }}>{label}</span>
+        {post.knowledge?.artist && post.knowledge.artist !== 'Unknown Artist' && (
+          <span style={{
+            fontFamily:'var(--font-lora),serif', fontSize:'0.6rem',
+            color:'rgba(255,255,255,0.25)', overflow:'hidden',
+            whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth:'100px',
+          }}>{post.knowledge.artist}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
@@ -220,52 +289,35 @@ export default function Home() {
           </div>
         </section>
       )}
-
-      {/* Live Cards */}
-      <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'80rem', margin:'0 auto 48px'}}>
-        <div style={{fontSize:'0.6rem', color:'var(--text-3)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'24px'}}>↓ What people are saying right now</div>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:'16px'}}>
-          {liveCards.length === 0 && (
-            <div style={{gridColumn:'1/-1', textAlign:'center', color:'var(--text-3)', fontSize:'0.6rem', letterSpacing:'2px', textTransform:'uppercase', padding:'32px'}}>Loading lyrics…</div>
-          )}
-          {liveCards.map((post) => (
-            <a key={post.id} href={`/lyric-back?postId=${post.id}`} style={{
-              display:'block',
-              background:'var(--surface)',
-              border:'1px solid var(--border)',
-              borderRadius:'12px',
-              padding:'20px',
-              textDecoration:'none',
-              transition:'all 150ms ease',
-            }}>
-              <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px', paddingBottom:'16px', borderBottom:'1px solid var(--border)'}}>
-                <div style={{
-                  width:'36px', height:'36px', borderRadius:'50%',
-                  background:'var(--gold)',
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                  flexShrink:0,
-                }}>
-                  <span style={{fontSize:'0.6rem', fontWeight:700, color:'var(--bg)', fontFamily:'var(--font-lora),serif'}}>
-                    {(post.username || 'AN').slice(0,2).toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <div style={{fontSize:'0.7rem', color:'var(--text)', fontFamily:'var(--font-lora),serif', fontWeight:600}}>{post.username || 'Anonymous'}</div>
-                  <div style={{fontSize:'0.6rem', color:'var(--text-3)', fontFamily:'var(--font-lora),serif'}}>{timeAgo(post.timestamp)}</div>
-                </div>
-              </div>
-              <div style={{fontSize:'0.6rem', color:'var(--gold)', fontFamily:'var(--font-lora),serif', fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', marginBottom:'8px'}}>{post.emotion || 'Feeling'}</div>
-              <p style={{fontFamily:'var(--font-lora),serif', fontStyle:'italic', fontSize:'0.95rem', color:'var(--text)', lineHeight:1.6, display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical', overflow:'hidden'}}>
-                &quot;{post.text}&quot;
-              </p>
-              {post.knowledge?.artist && (
-                <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', color:'var(--text-3)', marginTop:'12px', letterSpacing:'0.5px'}}>
-                  {post.knowledge.artist}{post.knowledge.song ? ` · ${post.knowledge.song}` : ''}
-                </p>
-              )}
-            </a>
-          ))}
+      {/* Lyric Stream */}
+      <section style={{position:'relative', zIndex:5, width:'100%', margin:'0 auto 48px', overflow:'hidden'}}>
+        <div style={{fontSize:'0.6rem', color:'var(--text-3)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>↓ What people are saying right now</div>
+        <div style={{
+          position:'relative',
+          maskImage:'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+          WebkitMaskImage:'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+        }}>
+          <div style={{display:'flex', gap:'12px', marginBottom:'12px', width:'max-content', animation:'marqueLeft 45s linear infinite'}}>
+            {[...getTickerPosts(allPosts),...getTickerPosts(allPosts),...getTickerPosts(allPosts)].map((post,i)=>(
+              <TickerCard key={`t1-${post.id}-${i}`} post={post}/>
+            ))}
+          </div>
+          <div style={{display:'flex', gap:'12px', width:'max-content', animation:'marqueRight 60s linear infinite'}}>
+            {(()=>{
+              const src=getTickerPosts(allPosts);
+              const off=Math.floor(src.length/2);
+              const fill=[...src.slice(off),...src,...src,...src.slice(0,off)];
+              return [...fill,...fill,...fill].map((post,i)=>(
+                <TickerCard key={`t2-${post.id}-${i}`} post={post}/>
+              ));
+            })()}
+          </div>
         </div>
+        <style>{`
+          @keyframes marqueLeft  { from{transform:translateX(0)} to{transform:translateX(-33.333%)} }
+          @keyframes marqueRight { from{transform:translateX(-33.333%)} to{transform:translateX(0)} }
+          @media (prefers-reduced-motion:reduce){[style*="marqueLeft"],[style*="marqueRight"]{animation:none!important}}
+        `}</style>
       </section>
 
       {/* Divider */}
