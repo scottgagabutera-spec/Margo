@@ -1,4 +1,5 @@
-'use client';
+'use client'
+import MargoLogo from '@/components/MargoLogo';
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import { ref, onValue } from 'firebase/database';
@@ -94,19 +95,53 @@ export default function Home() {
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-10 flex items-center justify-between px-6 md:px-10 py-5 border-b border-amber-500/10 backdrop-blur-md">
+      <nav className="relative z-10 flex items-center justify-between px-6 md:px-10 py-4 border-b backdrop-blur-md" style={{borderColor:'rgba(232,197,71,0.10)'}}>
+        <a href="/" style={{textDecoration:'none'}}>
+          <MargoLogo tier="symbol" size={32} rings wordmark />
+        </a>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 80 80" fill="none">
-              <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" stroke="#08070C" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-              <rect x="35" y="60" width="10" height="4" rx="2" fill="#08070C" opacity=".5"/>
-            </svg>
-          </div>
-          <span className="text-amber-400 text-sm font-medium tracking-widest uppercase">Margo</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <a href="/music" className="px-4 py-2 text-xs text-amber-200/70 border border-amber-500/30 rounded-full hover:border-amber-500/60 hover:bg-amber-500/5 transition-all duration-300 tracking-wide uppercase">Music</a>
-          <a href="/compose" className="px-5 py-2 text-xs bg-amber-400 text-[#08070C] rounded-full font-medium hover:bg-amber-300 transition-all duration-300 tracking-wide uppercase">+ Share a Lyric</a>
+          <a href="/feed" style={{
+            padding:'8px 16px',
+            fontSize:'0.6rem',
+            fontFamily:'var(--font-lora),serif',
+            fontWeight:600,
+            letterSpacing:'1px',
+            textTransform:'uppercase',
+            color:'rgba(244,241,237,0.6)',
+            border:'1px solid rgba(232,197,71,0.20)',
+            borderRadius:'50px',
+            textDecoration:'none',
+            transition:'all 150ms ease',
+          }}>Feed</a>
+          <a href="/music" style={{
+            padding:'8px 16px',
+            fontSize:'0.6rem',
+            fontFamily:'var(--font-lora),serif',
+            fontWeight:600,
+            letterSpacing:'1px',
+            textTransform:'uppercase',
+            color:'rgba(244,241,237,0.6)',
+            border:'1px solid rgba(232,197,71,0.20)',
+            borderRadius:'50px',
+            textDecoration:'none',
+            transition:'all 150ms ease',
+          }}>Music</a>
+          <a href="/compose" style={{
+            padding:'10px 20px',
+            fontSize:'0.6rem',
+            fontFamily:'var(--font-lora),serif',
+            fontWeight:700,
+            letterSpacing:'1px',
+            textTransform:'uppercase',
+            color:'#07060A',
+            background:'#E8C547',
+            borderRadius:'50px',
+            textDecoration:'none',
+            transition:'all 150ms ease',
+            minHeight:'44px',
+            display:'flex',
+            alignItems:'center',
+          }}>+ Share a Lyric</a>
         </div>
       </nav>
 
