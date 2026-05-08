@@ -184,7 +184,7 @@ export default function Home() {
         <a href="/" style={{textDecoration:'none'}}>
           <MargoLogo tier="symbol" size={32} rings wordmark />
         </a>
-        <a href="/music" style={navLink}>Music</a>
+        <a href="/music" style={{...navLink, color:'var(--gold)'}}>Music</a>
       </nav>
 
       {/* Hero */}
@@ -349,9 +349,8 @@ export default function Home() {
         position:'relative', zIndex:10,
         borderTop:'1px solid var(--border)',
         padding:'24px 40px',
-        display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:'16px',
+        display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'center', gap:'24px',
       }}>
-        <MargoLogo tier="symbol" size={28} wordmark />
         <div style={{display:'flex', alignItems:'center', gap:'24px'}}>
           {['About','Privacy','Terms','Contact'].map(link => (
             <a key={link} href={`/${link.toLowerCase()}`} style={{

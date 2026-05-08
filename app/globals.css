@@ -1,3 +1,26 @@
+
+/* ── Margo Design Tokens ── */
+:root {
+  --bg: #07060A;
+  --surface: #0F0E13;
+  --surface-2: #161420;
+  --surface-3: #1E1B2A;
+  --border: rgba(255,255,255,0.07);
+  --border-hi: rgba(255,255,255,0.12);
+  --text: #F4F1ED;
+  --text-2: #9A98A4;
+  --text-3: #555360;
+  --gold: #E8C547;
+  --gold-warm: #F5D46A;
+  --gold-2: #D4A832;
+  --gold-faint: rgba(232,197,71,0.08);
+  --gold-border: rgba(232,197,71,0.28);
+  --gold-glow: rgba(232,197,71,0.12);
+  --resonate: #E8C547;
+  --resonate-faint: rgba(232,197,71,0.08);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
