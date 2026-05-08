@@ -148,33 +148,50 @@ export default function Home() {
           <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">{allPosts.length || '…'} lyrics live right now</span>
         </div>
 
-        <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl font-light leading-tight tracking-tight mb-6 md:mb-8 text-transparent bg-clip-text bg-gradient-to-b from-amber-50 to-amber-100">
-          Say it with<br className="hidden md:block" />
-          <span className="relative inline-block">
-            <span className="relative z-10">a song.</span>
-            <span className="absolute inset-x-0 bottom-2 h-1 bg-gradient-to-r from-amber-400/30 to-transparent rounded-full blur-md" />
-          </span>
-          <em className="not-italic"> says it.</em>
+        <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl font-light leading-tight tracking-tight mb-6 md:mb-8" style={{color:'#F4F1ED'}}>
+          Say it with a song.
         </h1>
 
         <p className="text-base md:text-lg text-amber-50/50 leading-relaxed max-w-lg mb-6 md:mb-8 font-light">
-          Post the lyric that says what you couldn&apos;t. Someone sends one back. That&apos;s a Lyric Back.
+          The lyric you send. The one they send back. That&apos;s Margo.
         </p>
 
-        <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-10 md:mb-14 text-xs text-amber-300/60 uppercase tracking-wider font-medium">
-          <span>Listen</span><span className="md:hidden">→</span>
-          <span>Feel a line</span><span className="md:hidden">→</span>
-          <span>Share it</span><span className="md:hidden">→</span>
-          <span>Get a Lyric Back</span>
-        </div>
+
 
         <div className="flex flex-col sm:flex-row items-center gap-3 mb-12 md:mb-20">
-          <a href="/feed" className="px-8 py-3 bg-gradient-to-r from-amber-400 to-amber-300 text-[#08070C] rounded-full font-medium text-sm uppercase tracking-wide hover:from-amber-300 hover:to-amber-200 transition-all duration-300 shadow-lg w-full sm:w-auto">
-            See What&apos;s Live
-          </a>
-          <a href="/compose" className="px-6 py-3 border border-amber-500/30 text-amber-100/70 rounded-full font-medium text-sm uppercase tracking-wide hover:border-amber-500/60 hover:bg-amber-500/5 transition-all duration-300 w-full sm:w-auto">
-            ↓ Share a Lyric
-          </a>
+          <a href="/feed" style={{
+            padding:'14px 32px',
+            background:'#E8C547',
+            color:'#07060A',
+            borderRadius:'50px',
+            fontFamily:'var(--font-lora),serif',
+            fontWeight:700,
+            fontSize:'0.6rem',
+            letterSpacing:'1px',
+            textTransform:'uppercase',
+            textDecoration:'none',
+            minHeight:'44px',
+            display:'flex',
+            alignItems:'center',
+            transition:'all 150ms ease',
+          }}>See What&apos;s Live</a>
+          <a href="/compose" style={{
+            padding:'14px 24px',
+            background:'transparent',
+            color:'rgba(244,241,237,0.6)',
+            border:'1px solid rgba(232,197,71,0.25)',
+            borderRadius:'50px',
+            fontFamily:'var(--font-lora),serif',
+            fontWeight:600,
+            fontSize:'0.6rem',
+            letterSpacing:'1px',
+            textTransform:'uppercase',
+            textDecoration:'none',
+            minHeight:'44px',
+            display:'flex',
+            alignItems:'center',
+            transition:'all 150ms ease',
+          }}>↓ Share a Lyric</a>
         </div>
       </section>
 
