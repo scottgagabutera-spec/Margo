@@ -61,19 +61,17 @@ export default function Home() {
   const ae = Object.entries(ac).sort((a,b) => b[1]-a[1]);
   const se = Object.entries(sc).sort((a,b) => b[1]-a[1]);
   const te = Object.entries(ec).sort((a,b) => b[1]-a[1])[0];
-  const uniqueArtists = Object.keys(ac).length;
-  const uniqueSongs = Object.keys(sc).length;
   const topArtist = ae[0]?.[1] >= 2 ? ae[0][0] : null;
   const topSong = se[0]?.[1] >= 2 ? se[0][0] : null;
   const topEmotion = te ? te[0] : null;
 
   const stats = [
-    { number: String(allPosts.length || '…'), label: 'Lyrics', context: 'shared so far' },
-    { number: String(uniqueArtists || '…'), label: 'Artists Featured', context: 'from top charts' },
-    { number: String(uniqueSongs || '…'), label: 'Songs Featured', context: 'across genres' },
+    { number: String(allPosts.length || '0'), label: 'Lyrics', context: 'communicated so far' },
+    { number: String(Object.keys(ac).length || '0'), label: 'Artists', context: 'quoted on Margo' },
+    { number: String(Object.keys(sc).length || '0'), label: 'Songs', context: 'used to speak' },
     { value: topArtist || '—', label: 'Top Artist', context: 'most quoted' },
     { value: topSong || '—', label: 'Top Song', context: 'most used' },
-    { value: topEmotion || '—', label: 'Trending Feeling', context: 'this season' },
+    { value: topEmotion || '—', label: 'Top Feeling', context: 'right now' },
   ];
 
   const timeAgo = (ts?: number) => {
@@ -86,83 +84,90 @@ export default function Home() {
     return Math.floor(h / 24) + 'd ago';
   };
 
+  const navLink: React.CSSProperties = {
+    padding: '8px 12px',
+    fontSize: '0.6rem',
+    fontFamily: 'var(--font-lora), serif',
+    fontWeight: 600,
+    letterSpacing: '1px',
+    textTransform: 'uppercase',
+    color: 'var(--text-2)',
+    textDecoration: 'none',
+    transition: 'all 150ms ease',
+  };
+
   return (
-    <div className="relative w-full overflow-hidden bg-gradient-to-br from-[#08070C] via-[#0a0909] to-[#0f0e14]">
-      {/* Ambient background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-amber-500/3 rounded-full blur-3xl animate-pulse" />
+    <div style={{position:'relative', width:'100%', overflow:'hidden', background:'var(--bg)'}}>
+      {/* Ambient */}
+      <div style={{position:'fixed', inset:0, overflow:'hidden', pointerEvents:'none', zIndex:0}}>
+        <div style={{position:'absolute', top:'-8rem', left:'-8rem', width:'24rem', height:'24rem', background:'var(--gold-glow)', borderRadius:'50%', filter:'blur(80px)'}} />
+        <div style={{position:'absolute', bottom:'-10rem', right:'-10rem', width:'24rem', height:'24rem', background:'rgba(232,197,71,0.04)', borderRadius:'50%', filter:'blur(80px)'}} />
       </div>
 
-      {/* Navigation */}
-      <nav className="relative z-10 flex items-center justify-between px-6 md:px-10 py-4 border-b backdrop-blur-md" style={{borderColor:'rgba(232,197,71,0.10)'}}>
+      {/* Nav */}
+      <nav style={{
+        position:'relative', zIndex:10,
+        display:'flex', alignItems:'center', justifyContent:'space-between',
+        padding:'16px 40px',
+        borderBottom:'1px solid var(--border)',
+        backdropFilter:'blur(12px)',
+      }}>
         <a href="/" style={{textDecoration:'none'}}>
           <MargoLogo tier="symbol" size={32} rings wordmark />
         </a>
-        <div className="flex items-center gap-3">
-          <a href="/feed" style={{
-            padding:'8px 12px',
-            fontSize:'0.6rem',
-            fontFamily:'var(--font-lora),serif',
-            fontWeight:600,
-            letterSpacing:'1px',
-            textTransform:'uppercase',
-            color:'rgba(244,241,237,0.5)',
-            textDecoration:'none',
-            transition:'all 150ms ease',
-          }}>Feed</a>
-          <a href="/music" style={{
-            padding:'8px 12px',
-            fontSize:'0.6rem',
-            fontFamily:'var(--font-lora),serif',
-            fontWeight:600,
-            letterSpacing:'1px',
-            textTransform:'uppercase',
-            color:'rgba(244,241,237,0.5)',
-            textDecoration:'none',
-            transition:'all 150ms ease',
-          }}>Music</a>
-          <a href="/compose" style={{
-            padding:'10px 20px',
-            fontSize:'0.6rem',
-            fontFamily:'var(--font-lora),serif',
-            fontWeight:700,
-            letterSpacing:'1px',
-            textTransform:'uppercase',
-            color:'#07060A',
-            background:'#E8C547',
-            borderRadius:'50px',
-            textDecoration:'none',
-            transition:'all 150ms ease',
-            minHeight:'44px',
-            display:'flex',
-            alignItems:'center',
-          }}>+ Share a Lyric</a>
-        </div>
+        <a href="/music" style={navLink}>Music</a>
       </nav>
 
       {/* Hero */}
-      <section className="relative z-5 flex flex-col items-center px-6 md:px-8 py-16 md:py-32 text-center max-w-4xl mx-auto">
-        <div className="inline-flex items-center gap-2 mb-8 md:mb-12 px-4 py-2 bg-amber-500/8 border border-amber-500/25 rounded-full">
-          <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-          <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">{allPosts.length || '…'} lyrics live right now</span>
+      <section style={{
+        position:'relative', zIndex:5,
+        display:'flex', flexDirection:'column', alignItems:'center',
+        padding:'48px 24px 32px',
+        textAlign:'center',
+        maxWidth:'56rem', margin:'0 auto',
+      }}>
+        <div style={{
+          display:'inline-flex', alignItems:'center', gap:'8px',
+          marginBottom:'24px', padding:'8px 16px',
+          background:'var(--gold-faint)',
+          border:'1px solid var(--gold-border)',
+          borderRadius:'50px',
+        }}>
+          <div style={{width:'6px', height:'6px', background:'var(--gold)', borderRadius:'50%'}} />
+          <span style={{fontSize:'0.6rem', color:'var(--gold)', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'1.5px', textTransform:'uppercase'}}>
+            {allPosts.length || '…'} lyrics live right now
+          </span>
         </div>
 
-        <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl font-light leading-tight tracking-tight mb-6 md:mb-8" style={{color:'#F4F1ED'}}>
+        <h1 style={{
+          fontFamily:'var(--font-lora), serif',
+          fontSize:'clamp(2.5rem, 8vw, 5rem)',
+          fontWeight:300,
+          lineHeight:1.1,
+          letterSpacing:'-0.02em',
+          color:'var(--text)',
+          marginBottom:'16px',
+        }}>
           Say it with a song.
         </h1>
 
-        <p className="text-base md:text-lg text-amber-50/50 leading-relaxed max-w-lg mb-6 md:mb-8 font-light">
+        <p style={{
+          fontFamily:'var(--font-lora), serif',
+          fontSize:'0.95rem',
+          color:'var(--text-2)',
+          lineHeight:1.7,
+          maxWidth:'32rem',
+          marginBottom:'32px',
+          fontStyle:'italic',
+        }}>
           The lyric you send. The one they send back. That&apos;s Margo.
         </p>
 
-
-
-        <div className="flex flex-col sm:flex-row items-center gap-3 mb-12 md:mb-20">
+        <div style={{display:'flex', flexWrap:'wrap', justifyContent:'center', gap:'12px', marginBottom:'48px'}}>
           <a href="/feed" style={{
             padding:'14px 32px',
-            background:'#E8C547',
-            color:'#07060A',
+            background:'var(--gold)',
+            color:'var(--bg)',
             borderRadius:'50px',
             fontFamily:'var(--font-lora),serif',
             fontWeight:700,
@@ -178,8 +183,8 @@ export default function Home() {
           <a href="/compose" style={{
             padding:'14px 24px',
             background:'transparent',
-            color:'rgba(244,241,237,0.6)',
-            border:'1px solid rgba(232,197,71,0.25)',
+            color:'var(--text-2)',
+            border:'1px solid var(--gold-border)',
             borderRadius:'50px',
             fontFamily:'var(--font-lora),serif',
             fontWeight:600,
@@ -197,86 +202,116 @@ export default function Home() {
 
       {/* Featured Lyric */}
       {featuredLyric && (
-        <section className="relative z-5 px-6 md:px-8 max-w-3xl mx-auto mb-16 md:mb-24">
-          <div className="text-xs text-amber-100/25 text-center font-medium tracking-widest uppercase mb-6">↓ Featured lyric</div>
-          <div className="relative bg-gradient-to-br from-amber-500/8 to-transparent border border-amber-500/25 rounded-2xl p-8 md:p-12 text-center overflow-hidden">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-amber-500/10 blur-3xl pointer-events-none" />
-            <p className="font-serif italic text-2xl md:text-3xl text-amber-50/90 leading-relaxed mb-6 relative z-10">&ldquo;{featuredLyric.text}&rdquo;</p>
-            <p className="text-sm text-amber-400/60 tracking-wide relative z-10">— {featuredLyric.artist}{featuredLyric.song ? ` · ${featuredLyric.song}` : ''}</p>
+        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'48rem', margin:'0 auto 48px'}}>
+          <div style={{fontSize:'0.6rem', color:'var(--text-3)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'16px'}}>↓ Featured lyric</div>
+          <div style={{
+            background:'var(--surface)',
+            border:'1px solid var(--gold-border)',
+            borderRadius:'16px',
+            padding:'40px 32px',
+            textAlign:'center',
+          }}>
+            <p style={{fontFamily:'var(--font-lora),serif', fontStyle:'italic', fontSize:'1.5rem', color:'var(--text)', lineHeight:1.6, marginBottom:'16px'}}>
+              &ldquo;{featuredLyric.text}&rdquo;
+            </p>
+            <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.82rem', color:'var(--gold)', letterSpacing:'0.5px'}}>
+              — {featuredLyric.artist}{featuredLyric.song ? ` · ${featuredLyric.song}` : ''}
+            </p>
           </div>
         </section>
       )}
 
       {/* Live Cards */}
-      <section className="relative z-5 px-6 md:px-8 max-w-7xl mx-auto mb-6">
-        <div className="text-xs text-amber-100/25 text-center font-medium tracking-widest uppercase mb-6 md:mb-8">↓ What people are saying right now</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'80rem', margin:'0 auto 48px'}}>
+        <div style={{fontSize:'0.6rem', color:'var(--text-3)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'24px'}}>↓ What people are saying right now</div>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:'16px'}}>
           {liveCards.length === 0 && (
-            <div className="col-span-4 text-center text-amber-400/30 text-xs uppercase tracking-widest py-8">Loading lyrics…</div>
+            <div style={{gridColumn:'1/-1', textAlign:'center', color:'var(--text-3)', fontSize:'0.6rem', letterSpacing:'2px', textTransform:'uppercase', padding:'32px'}}>Loading lyrics…</div>
           )}
           {liveCards.map((post) => (
-            <a key={post.id} href={`/lyric-back?postId=${post.id}`}
-              className="group relative bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-xl p-5 hover:border-amber-500/40 transition-all duration-300 hover:bg-amber-500/8 backdrop-blur-sm"
-            >
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-amber-500/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-semibold text-[#08070C] tracking-tight">{(post.username || 'AN').slice(0,2).toUpperCase()}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <div className="text-xs font-medium text-amber-100">{post.username || 'Anonymous'}</div>
-                    <div className="text-xs text-amber-100/40 font-light">{timeAgo(post.timestamp)}</div>
-                  </div>
+            <a key={post.id} href={`/lyric-back?postId=${post.id}`} style={{
+              display:'block',
+              background:'var(--surface)',
+              border:'1px solid var(--border)',
+              borderRadius:'12px',
+              padding:'20px',
+              textDecoration:'none',
+              transition:'all 150ms ease',
+            }}>
+              <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px', paddingBottom:'16px', borderBottom:'1px solid var(--border)'}}>
+                <div style={{
+                  width:'36px', height:'36px', borderRadius:'50%',
+                  background:'var(--gold)',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  flexShrink:0,
+                }}>
+                  <span style={{fontSize:'0.6rem', fontWeight:700, color:'var(--bg)', fontFamily:'var(--font-lora),serif'}}>
+                    {(post.username || 'AN').slice(0,2).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <div style={{fontSize:'0.7rem', color:'var(--text)', fontFamily:'var(--font-lora),serif', fontWeight:600}}>{post.username || 'Anonymous'}</div>
+                  <div style={{fontSize:'0.6rem', color:'var(--text-3)', fontFamily:'var(--font-lora),serif'}}>{timeAgo(post.timestamp)}</div>
                 </div>
               </div>
-              <div className="inline-block text-xs text-amber-400/70 font-medium tracking-widest uppercase mb-3">{post.emotion || 'Feeling'}</div>
-              <p className="font-serif italic text-sm leading-relaxed text-amber-50/85 line-clamp-3">&quot;{post.text}&quot;</p>
-              <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="text-amber-400/60 text-xs">→</div>
-              </div>
+              <div style={{fontSize:'0.6rem', color:'var(--gold)', fontFamily:'var(--font-lora),serif', fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', marginBottom:'8px'}}>{post.emotion || 'Feeling'}</div>
+              <p style={{fontFamily:'var(--font-lora),serif', fontStyle:'italic', fontSize:'0.95rem', color:'var(--text)', lineHeight:1.6, display:'-webkit-box', WebkitLineClamp:3, WebkitBoxOrient:'vertical', overflow:'hidden'}}>
+                &quot;{post.text}&quot;
+              </p>
+              {post.knowledge?.artist && (
+                <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', color:'var(--text-3)', marginTop:'12px', letterSpacing:'0.5px'}}>
+                  {post.knowledge.artist}{post.knowledge.song ? ` · ${post.knowledge.song}` : ''}
+                </p>
+              )}
             </a>
           ))}
         </div>
       </section>
 
       {/* Divider */}
-      <div className="relative z-5 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent my-16 md:my-24" />
+      <div style={{height:'1px', background:'linear-gradient(to right, transparent, var(--border), transparent)', margin:'32px 0'}} />
 
       {/* Stats */}
-      <section className="relative z-5 max-w-7xl mx-auto px-6 md:px-8 pb-20">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 md:gap-0">
+      <section style={{position:'relative', zIndex:5, maxWidth:'80rem', margin:'0 auto', padding:'0 24px 48px'}}>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'0'}}>
           {stats.map((stat, idx) => (
-            <div key={idx} className="flex flex-col items-center text-center py-6 md:py-8 border-r border-amber-500/10 last:border-r-0">
+            <div key={idx} style={{
+              display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center',
+              padding:'32px 16px',
+              borderRight: idx % 3 !== 2 ? '1px solid var(--border)' : 'none',
+              borderBottom: idx < 3 ? '1px solid var(--border)' : 'none',
+            }}>
               {stat.number ? (
-                <div className="font-serif text-3xl md:text-4xl font-semibold text-amber-400 mb-2 leading-none">{stat.number}</div>
+                <div style={{fontFamily:'var(--font-lora),serif', fontSize:'2rem', fontWeight:700, color:'var(--text)', lineHeight:1, marginBottom:'8px'}}>{stat.number}</div>
               ) : (
-                <div className="font-serif text-2xl md:text-3xl font-medium text-amber-400 mb-2">{stat.value}</div>
+                <div style={{fontFamily:'var(--font-lora),serif', fontSize:'1.1rem', fontWeight:700, color:'var(--gold)', lineHeight:1, marginBottom:'8px', textTransform:'uppercase', letterSpacing:'1px'}}>{stat.value}</div>
               )}
-              <div className="text-xs text-amber-100/50 font-medium tracking-widest uppercase mb-3">{stat.label}</div>
-              <div className="text-xs text-amber-100/30 font-light tracking-wide">{stat.context}</div>
+              <div style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', fontWeight:700, color:'var(--text-3)', letterSpacing:'2px', textTransform:'uppercase', marginBottom:'4px'}}>{stat.label}</div>
+              <div style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', color:'var(--text-3)', letterSpacing:'0.5px'}}>{stat.context}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-amber-500/10 px-6 md:px-10 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center">
-            <svg width="11" height="11" viewBox="0 0 80 80" fill="none">
-              <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" stroke="#08070C" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-            </svg>
-          </div>
-          <span className="text-amber-400/60 text-xs tracking-widest uppercase">Margo</span>
+      <footer style={{
+        position:'relative', zIndex:10,
+        borderTop:'1px solid var(--border)',
+        padding:'24px 40px',
+        display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'space-between', gap:'16px',
+      }}>
+        <MargoLogo tier="symbol" size={20} wordmark />
+        <div style={{display:'flex', alignItems:'center', gap:'24px'}}>
+          {['About','Privacy','Terms','Contact'].map(link => (
+            <a key={link} href={`/${link.toLowerCase()}`} style={{
+              fontSize:'0.6rem', color:'var(--text-3)',
+              fontFamily:'var(--font-lora),serif',
+              letterSpacing:'1px', textTransform:'uppercase',
+              textDecoration:'none', transition:'color 150ms ease',
+            }}>{link}</a>
+          ))}
         </div>
-        <div className="flex items-center gap-6">
-          <a href="/about" className="text-xs text-white/20 hover:text-white/50 transition-colors tracking-wide">About</a>
-          <a href="/privacy" className="text-xs text-white/20 hover:text-white/50 transition-colors tracking-wide">Privacy</a>
-          <a href="/terms" className="text-xs text-white/20 hover:text-white/50 transition-colors tracking-wide">Terms</a>
-          <a href="/contact" className="text-xs text-white/20 hover:text-white/50 transition-colors tracking-wide">Contact</a>
-          <a href="https://linkedin.com/company/trymargo" target="_blank" rel="noopener" className="text-xs text-white/20 hover:text-amber-400/60 transition-colors tracking-wide">LinkedIn</a>
-        </div>
-        <div className="text-xs text-white/10 tracking-wide">© {new Date().getFullYear()} Margo</div>
+        <div style={{fontSize:'0.6rem', color:'var(--text-3)', fontFamily:'var(--font-lora),serif', letterSpacing:'1px'}}>© {new Date().getFullYear()} Margo</div>
       </footer>
     </div>
   );
