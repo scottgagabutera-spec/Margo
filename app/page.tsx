@@ -101,28 +101,24 @@ export default function Home() {
         </a>
         <div className="flex items-center gap-3">
           <a href="/feed" style={{
-            padding:'8px 16px',
+            padding:'8px 12px',
             fontSize:'0.6rem',
             fontFamily:'var(--font-lora),serif',
             fontWeight:600,
             letterSpacing:'1px',
             textTransform:'uppercase',
-            color:'rgba(244,241,237,0.6)',
-            border:'1px solid rgba(232,197,71,0.20)',
-            borderRadius:'50px',
+            color:'rgba(244,241,237,0.5)',
             textDecoration:'none',
             transition:'all 150ms ease',
           }}>Feed</a>
           <a href="/music" style={{
-            padding:'8px 16px',
+            padding:'8px 12px',
             fontSize:'0.6rem',
             fontFamily:'var(--font-lora),serif',
             fontWeight:600,
             letterSpacing:'1px',
             textTransform:'uppercase',
-            color:'rgba(244,241,237,0.6)',
-            border:'1px solid rgba(232,197,71,0.20)',
-            borderRadius:'50px',
+            color:'rgba(244,241,237,0.5)',
             textDecoration:'none',
             transition:'all 150ms ease',
           }}>Music</a>
@@ -153,9 +149,9 @@ export default function Home() {
         </div>
 
         <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl font-light leading-tight tracking-tight mb-6 md:mb-8 text-transparent bg-clip-text bg-gradient-to-b from-amber-50 to-amber-100">
-          The place where a<br className="hidden md:block" />
+          Say it with<br className="hidden md:block" />
           <span className="relative inline-block">
-            <span className="relative z-10">song line</span>
+            <span className="relative z-10">a song.</span>
             <span className="absolute inset-x-0 bottom-2 h-1 bg-gradient-to-r from-amber-400/30 to-transparent rounded-full blur-md" />
           </span>
           <em className="not-italic"> says it.</em>

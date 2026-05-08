@@ -13,29 +13,27 @@ export default function MargoLogo({
   rings = false,
   wordmark = false,
 }: MargoLogoProps) {
-  const symbol = tier === 'mark' ? 'margo-mark' : 'margo-symbol'
-
   return (
     <>
       {rings && (
-        <style>{
-          `@keyframes margo-ring {
-            0% { transform: scale(1); opacity: 0.5; }
-            100% { transform: scale(2.2); opacity: 0; }
+        <style>{`
+          @keyframes margo-ring {
+            0% { transform: scale(1); opacity: 0.4; }
+            100% { transform: scale(1.7); opacity: 0; }
           }
           .margo-ring {
             position: absolute;
             inset: 0;
             border-radius: 50%;
-            border: 1.5px solid #E8C547;
+            border: 1px solid #E8C547;
             animation: margo-ring 2.4s ease-out infinite;
             pointer-events: none;
           }
           .margo-ring-2 { animation-delay: 0.8s; }
-          .margo-ring-3 { animation-delay: 1.6s; }`
-        }</style>
+          .margo-ring-3 { animation-delay: 1.6s; }
+        `}</style>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
           {rings && (
             <>
@@ -69,8 +67,8 @@ export default function MargoLogo({
           <span style={{
             fontFamily: 'var(--font-syne), sans-serif',
             fontWeight: 800,
-            fontSize: '0.85rem',
-            letterSpacing: '4px',
+            fontSize: '0.75rem',
+            letterSpacing: '3px',
             color: '#E8C547',
             textTransform: 'uppercase',
             lineHeight: 1,
