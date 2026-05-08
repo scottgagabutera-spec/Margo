@@ -1012,8 +1012,8 @@ function openSongForm(songId) {
 
       ${_songField('songFTitle',   'Song Title *',          song?.title       || '', 'text',     'e.g. A Thousand Lives')}
       ${_songField('songFArtist',  'Artist',                song?.artist      || 'Margo', 'text','e.g. Margo')}
-      ${_songField('songFYTId',    'YouTube Video ID',      song?.youtubeId   || '', 'text',     'e.g. dQw4w9WgXcQ (from youtube.com/watch?v=...)')}
-      ${_songField('songFArtwork', 'Artwork URL',           song?.artwork     || '', 'url',      'https://... (square image preferred)')}
+      ${_songField('songFAudioUrl', 'Audio URL (R2)',        song?.audioUrl    || '', 'url',      'https://audio.trymargo.com/Margo/audio/filename.wav')}
+      ${_songField('songFArtwork', 'Artwork URL (R2)',       song?.artwork     || '', 'url',      'https://audio.trymargo.com/Margo/artwork/filename.webp')}
       ${_songField('songFOrder',   'Display Order (1=top)', song?.order       || '1', 'number',  '1')}
       ${_songField('songFTags',    'Tags (comma-separated)',  (song?.tags||[]).join(', '), 'text', 'New, Original, Remix')}
       ${_songField('songFDesc',    'Short Description',     song?.description || '', 'text',     'e.g. Debut single')}
@@ -1061,7 +1061,9 @@ function openSongForm(songId) {
         ${_songField('songFBPUrl',    'Boomplay URL',   song?.boomplayUrl   || '', 'url', 'https://boomplay.com/...')}
         ${_songField('songFSCUrl',    'SoundCloud URL', song?.soundcloudUrl || '', 'url', 'https://soundcloud.com/...')}
         ${_songField('songFSPUrl',    'Spotify URL',    song?.spotifyUrl    || '', 'url', 'https://open.spotify.com/...')}
-        ${_songField('songFAPUrl',    'Apple Music URL',song?.appleMusicUrl || '', 'url', 'https://music.apple.com/...')}
+        ${_songField('songFAPUrl',    'Apple Music URL', song?.appleMusicUrl || '', 'url', 'https://music.apple.com/...')}
+        ${_songField('songFDZUrl',    'Deezer URL',      song?.deezerUrl     || '', 'url', 'https://deezer.com/...')}
+        ${_songField('songFTKUrl',    'TikTok URL',      song?.tiktokUrl     || '', 'url', 'https://tiktok.com/...')}
       </div>
 
       <div id="songFormError" style="display:none;font-family:'Lora',serif;
@@ -1084,6 +1086,38 @@ function openSongForm(songId) {
 
   document.body.appendChild(overlay);
 
+  // AI Sync Lyrics handler
+  document.getElementById('syncLyricsBtn').onclick = async () => {
+    const audioUrl = document.getElementById('songFAudioUrl').value.trim();
+    const lyrics   = document.getElementById('songFLyrics').value.trim();
+    if (!audioUrl) { alert('Please enter the Audio URL first.'); return; }
+    if (!lyrics)   { alert('Please paste the plain lyrics first.'); return; }
+    const btn = document.getElementById('syncLyricsBtn');
+    btn.textContent = '⏳ Syncing… this takes about 30 seconds';
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/sync-lyrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioUrl, lyrics })
+      });
+      const data = await res.json();
+      if (data.srt) {
+        document.getElementById('songFSRT').value = data.srt;
+        btn.textContent = '✓ Synced! Review below and save.';
+        btn.style.color = 'var(--success)';
+      } else {
+        btn.textContent = '✗ Sync failed — ' + (data.error || 'unknown error');
+        btn.style.color = '#ff6464';
+        btn.disabled = false;
+      }
+    } catch(e) {
+      btn.textContent = '✗ Error: ' + e.message;
+      btn.style.color = '#ff6464';
+      btn.disabled = false;
+    }
+  };
+
   document.getElementById('songFormSaveBtn').onclick = async () => {
     const title = document.getElementById('songFTitle').value.trim();
     const errEl = document.getElementById('songFormError');
@@ -1098,7 +1132,7 @@ function openSongForm(songId) {
     const payload = {
       title,
       artist:         document.getElementById('songFArtist').value.trim()  || 'Margo',
-      youtubeId:      document.getElementById('songFYTId').value.trim()    || null,
+      audioUrl:       document.getElementById('songFAudioUrl').value.trim() || null,
       artwork:        document.getElementById('songFArtwork').value.trim() || null,
       order:          parseInt(document.getElementById('songFOrder').value) || 1,
       tags,
@@ -1113,6 +1147,8 @@ function openSongForm(songId) {
       soundcloudUrl:  document.getElementById('songFSCUrl').value.trim()   || null,
       spotifyUrl:     document.getElementById('songFSPUrl').value.trim()   || null,
       appleMusicUrl:  document.getElementById('songFAPUrl').value.trim()   || null,
+      deezerUrl:      document.getElementById('songFDZUrl').value.trim()   || null,
+      tiktokUrl:      document.getElementById('songFTKUrl').value.trim()   || null,
       updatedAt:      Date.now(),
     };
 
