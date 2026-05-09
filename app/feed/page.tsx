@@ -40,46 +40,106 @@ function timeAgo(ts: number) {
   return Math.floor(diff / 86400) + 'd ago'
 }
 
-function MiniPlayer({ audioUrl }: { audioUrl: string }) {
+interface LyricLine { id: number; line: string; start: number; end: number }
+
+function parseSRT(srt: string): LyricLine[] {
+  const blocks = srt.trim().split(/\n\s*\n/)
+  const lines: LyricLine[] = []
+  blocks.forEach((block, i) => {
+    const parts = block.trim().split('\n')
+    if (parts.length < 3) return
+    const match = parts[1].match(/(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/)
+    if (!match) return
+    const toSec = (h: string, m: string, s: string, ms: string) =>
+      parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(s) + parseInt(ms) / 1000
+    lines.push({ id: i, line: parts.slice(2).join(' ').trim(), start: toSec(match[1],match[2],match[3],match[4]), end: toSec(match[5],match[6],match[7],match[8]) })
+  })
+  return lines
+}
+
+function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | null }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [lyrics, setLyrics] = useState<LyricLine[]>([])
+  const [lyricsLoaded, setLyricsLoaded] = useState(false)
 
   useEffect(() => {
     const audio = new Audio(audioUrl)
     audio.preload = 'metadata'
     audioRef.current = audio
-    const onTime = () => setProgress((audio.currentTime / (audio.duration || 1)) * 100)
-    const onEnded = () => { setPlaying(false); setProgress(0) }
+    const onTime = () => { setCurrentTime(audio.currentTime); setProgress((audio.currentTime / (audio.duration || 1)) * 100) }
+    const onMeta = () => setDuration(audio.duration || 0)
+    const onEnded = () => { setPlaying(false); setProgress(0); setCurrentTime(0) }
     audio.addEventListener('timeupdate', onTime)
+    audio.addEventListener('loadedmetadata', onMeta)
     audio.addEventListener('ended', onEnded)
-    return () => {
-      audio.pause()
-      audio.removeEventListener('timeupdate', onTime)
-      audio.removeEventListener('ended', onEnded)
-    }
+    return () => { audio.pause(); audio.removeEventListener('timeupdate', onTime); audio.removeEventListener('loadedmetadata', onMeta); audio.removeEventListener('ended', onEnded) }
   }, [audioUrl])
 
-  const toggle = () => {
+  const toggle = async () => {
     const audio = audioRef.current
     if (!audio) return
+    if (!lyricsLoaded && songId && db) {
+      try {
+        const { get, ref: dbRef } = await import('firebase/database')
+        const snap = await get(dbRef(db, `songs/${songId}`))
+        if (snap.exists()) {
+          const s = snap.val()
+          if (s.srt) setLyrics(parseSRT(s.srt))
+        }
+      } catch {}
+      setLyricsLoaded(true)
+    }
     if (playing) { audio.pause(); setPlaying(false) }
     else { audio.play().catch(() => {}); setPlaying(true) }
   }
 
+  const fmt = (s: number) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
+  const currentLine = lyrics.find(l => currentTime >= l.start && currentTime < l.end)
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-      <button onClick={toggle} style={{
-        width: '36px', height: '36px', borderRadius: '50%',
-        background: 'var(--gold)', border: 'none', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0, boxShadow: '0 4px 16px rgba(232,197,71,0.3)',
-      }}>
-        <span style={{ color: 'var(--bg)', fontSize: '0.7rem' }}>{playing ? '⏸' : '▶'}</span>
-      </button>
-      <div style={{ flex: 1, height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: progress + '%', background: 'var(--gold)', transition: 'width 200ms linear' }} />
+    <div style={{ marginBottom: '16px' }}>
+      {/* Player row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: currentLine ? '12px' : '0' }}>
+        <button onClick={toggle} style={{
+          width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+          background: 'var(--gold)', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 20px rgba(232,197,71,0.35)',
+        }}>
+          <span style={{ color: 'var(--bg)', fontSize: '0.75rem' }}>{playing ? '⏸' : '▶'}</span>
+        </button>
+        <div style={{ flex: 1 }}>
+          <div style={{ height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden', marginBottom: '4px' }}>
+            <div style={{ height: '100%', width: progress + '%', background: 'var(--gold)', transition: 'width 200ms linear' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)' }}>{fmt(currentTime)}</span>
+            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)' }}>{duration > 0 ? fmt(duration) : '--:--'}</span>
+          </div>
+        </div>
       </div>
+      {/* Inline karaoke line */}
+      {playing && (
+        <div style={{
+          minHeight: '32px', padding: '8px 12px',
+          background: 'rgba(232,197,71,0.06)', borderRadius: '8px',
+          borderLeft: '2px solid var(--gold)',
+          transition: 'all 200ms ease',
+        }}>
+          <p style={{
+            fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+            fontSize: '0.82rem', color: currentLine ? 'var(--gold)' : 'var(--text-3)',
+            lineHeight: 1.4, margin: 0,
+            transition: 'color 200ms ease',
+          }}>
+            {currentLine ? currentLine.line : '♪'}
+          </p>
+        </div>
+      )}
     </div>
   )
 }
@@ -147,8 +207,8 @@ function PostCard({
         )}
       </div>
 
-      {/* Mini player for Tier 1 */}
-      {isTier1 && audioUrl && <MiniPlayer audioUrl={audioUrl} />}
+      {/* Tier 1 player with inline karaoke */}
+      {isTier1 && audioUrl && <Tier1Player audioUrl={audioUrl} songId={post.songId || null} />}
 
       {/* Lyric */}
       <p style={{
@@ -172,8 +232,8 @@ function PostCard({
         </p>
       )}
 
-      {/* YouTube thumbnail */}
-      {post.youtubeMeta?.thumbnail && (
+      {/* YouTube thumbnail — hidden for Tier 1, they have the real player */}
+      {!isTier1 && post.youtubeMeta?.thumbnail && (
         <a href={post.youtubeMeta.youtubeUrl || '#'} target="_blank" rel="noopener noreferrer"
           style={{ display: 'block', marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none' }}>
           <div style={{ position: 'relative' }}>
@@ -233,14 +293,21 @@ function PostCard({
         )}
       </div>
 
-      {/* Tier 1 full player link */}
+      {/* Tier 1 footer — platform icons + full karaoke button */}
       {isTier1 && (
-        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--gold-border)', textAlign: 'center' }}>
-          <Link href={`/music/player?id=${(post as any).songId || ''}`} style={{
-            fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
-            color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase',
-            textDecoration: 'none',
-          }}>Open Full Player →</Link>
+        <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {(post as any).spotifyUrl && <a href={(post as any).spotifyUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)', textDecoration: 'none', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: '50px', transition: 'color 150ms' }}>Spotify</a>}
+            {(post as any).appleMusicUrl && <a href={(post as any).appleMusicUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)', textDecoration: 'none', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: '50px' }}>Apple</a>}
+            {(post as any).audiomackUrl && <a href={(post as any).audiomackUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)', textDecoration: 'none', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: '50px' }}>Audiomack</a>}
+          </div>
+          {post.songId && (
+            <Link href={`/music/player?id=${post.songId}`} style={{
+              fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+              color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase',
+              textDecoration: 'none', padding: '3px 8px', border: '1px solid var(--gold-border)', borderRadius: '50px',
+            }}>Full Karaoke →</Link>
+          )}
         </div>
       )}
     </div>

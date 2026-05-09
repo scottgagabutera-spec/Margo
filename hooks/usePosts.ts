@@ -15,6 +15,8 @@ export interface Post {
   resonates?: number
   replies?: number
   tier?: number
+  songId?: string | null
+  audioUrl?: string | null
 }
 
 export function usePosts() {
