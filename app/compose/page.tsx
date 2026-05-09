@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { Search, Music2, Disc3 } from 'lucide-react'
 import { MargoNav } from '@/components/margo-nav'
 import { db } from '@/lib/firebase'
-import { ref, push, serverTimestamp } from 'firebase/database'
+import { ref, push, serverTimestamp, get, query, orderByChild } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername'
 import { useLicensedArtists } from '@/hooks/useLicensedArtists'
 import { CardExportModal } from '@/components/card-export-modal'
@@ -49,6 +49,8 @@ export default function ComposePage() {
   const [showExport, setShowExport] = useState(false)
   const [postedId, setPostedId] = useState<string | null>(null)
   const [showSharePrompt, setShowSharePrompt] = useState(false)
+  const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
+  const [linkedAudioUrl, setLinkedAudioUrl] = useState<string | null>(null)
 
   const handleSearch = useCallback(async (value: string) => {
     setSearchQuery(value)
@@ -72,13 +74,32 @@ export default function ComposePage() {
     }
   }, [])
 
-  const handleSelectSong = useCallback((result: SearchResult) => {
+  const handleSelectSong = useCallback(async (result: SearchResult) => {
     setSelectedSong(result)
     setArtistName(result.artist)
     setSongName(result.title)
     setShowResults(false)
+    setLinkedSongId(null)
+    setLinkedAudioUrl(null)
+    // If licensed artist, look up matching song in Firebase/songs
+    if (isLicensed(result.artist) && db) {
+      try {
+        const snap = await get(query(ref(db, 'songs'), orderByChild('order')))
+        snap.forEach((child) => {
+          const s = child.val()
+          const titleMatch = s.title?.toLowerCase().trim() === result.title.toLowerCase().trim()
+          const artistMatch = isLicensed(s.artist || '')
+          if (titleMatch && artistMatch) {
+            setLinkedSongId(child.key)
+            setLinkedAudioUrl(s.audioUrl || null)
+          }
+        })
+      } catch (e) {
+        console.error('Song lookup failed:', e)
+      }
+    }
     setStep(2)
-  }, [])
+  }, [isLicensed])
 
   const handleLyricComplete = useCallback(async () => {
     if (lyric.trim().length === 0) return
@@ -124,6 +145,8 @@ export default function ComposePage() {
         geniusId: selectedSong?.id || null,
       },
       youtubeMeta: null,
+      songId: linkedSongId || null,
+      audioUrl: linkedAudioUrl || null,
       username: username || null,
       timestamp: serverTimestamp(),
       lang: navigator.language.split('-')[0] || 'en',
@@ -158,6 +181,8 @@ export default function ComposePage() {
     setPostedId(null)
     setShowSharePrompt(false)
     setShowExport(false)
+    setLinkedSongId(null)
+    setLinkedAudioUrl(null)
   }
 
   // Share prompt — shown after posting to feed
