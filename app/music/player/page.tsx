@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useSong } from '@/hooks/useSong'
@@ -31,14 +31,36 @@ function PlayerContent() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
+  // Wire real audio if audioUrl exists
   useEffect(() => {
-    if (!lyrics.length) return
-    const lyric = lyrics.find(l => currentTime >= l.start && currentTime < l.end)
-    if (lyric) setCurrentLyricIndex(lyric.id)
-  }, [currentTime, lyrics])
+    const audioUrl = (song as any)?.audioUrl
+    if (!audioUrl) return
+    const audio = new Audio(audioUrl)
+    audio.preload = 'metadata'
+    audioRef.current = audio
+    const onTime = () => setCurrentTime(audio.currentTime)
+    const onEnded = () => { setIsPlaying(false); setCurrentTime(0) }
+    audio.addEventListener('timeupdate', onTime)
+    audio.addEventListener('ended', onEnded)
+    return () => {
+      audio.pause()
+      audio.removeEventListener('timeupdate', onTime)
+      audio.removeEventListener('ended', onEnded)
+      audioRef.current = null
+    }
+  }, [song])
 
+  // Sync play/pause with real audio
   useEffect(() => {
+    const audio = audioRef.current
+    if (audio) {
+      if (isPlaying) audio.play().catch(() => setIsPlaying(false))
+      else audio.pause()
+      return
+    }
+    // Fallback simulation if no audioUrl
     let interval: NodeJS.Timeout
     if (isPlaying) {
       interval = setInterval(() => {
@@ -51,9 +73,19 @@ function PlayerContent() {
     return () => clearInterval(interval)
   }, [isPlaying, duration])
 
+  // Sync lyric index to current time
+  useEffect(() => {
+    if (!lyrics.length) return
+    const lyric = lyrics.find(l => currentTime >= l.start && currentTime < l.end)
+    if (lyric) setCurrentLyricIndex(lyric.id)
+  }, [currentTime, lyrics])
+
   const jumpToLyric = useCallback((id: number) => {
     const lyric = lyrics.find(l => l.id === id)
     if (lyric) {
+      if (audioRef.current) {
+        audioRef.current.currentTime = lyric.start
+      }
       setCurrentTime(lyric.start)
       setCurrentLyricIndex(id)
       setIsPlaying(true)

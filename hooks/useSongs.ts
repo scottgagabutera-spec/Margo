@@ -15,6 +15,7 @@ export interface Song {
   appleMusicUrl?: string | null
   soundcloudUrl?: string | null
   boomplayUrl?: string | null
+  audioUrl?: string | null
   lyrics?: string | null
   srt?: string | null
   description?: string | null
