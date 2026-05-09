@@ -14,6 +14,7 @@ export interface Post {
   timestamp?: number
   resonates?: number
   replies?: number
+  tier?: number
 }
 
 export function usePosts() {
