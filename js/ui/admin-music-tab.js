@@ -155,6 +155,7 @@ function openSongForm(songId) {
       ${_songField('songFArtist',  'Artist',                song?.artist      || 'Margo', 'text','e.g. Margo')}
       ${_songField('songFYTId',    'YouTube Video ID',      song?.youtubeId   || '', 'text',     'e.g. dQw4w9WgXcQ (from youtube.com/watch?v=...)')}
       ${_songField('songFArtwork', 'Artwork URL',           song?.artwork     || '', 'url',      'https://... (square image preferred)')}
+      ${_songField('songFAudioUrl', 'Audio URL (R2)',    song?.audioUrl    || '', 'url',      'https://audio.trymargo.com/Margo/audio/filename.wav')}
       ${_songField('songFOrder',   'Display Order (1=top)', song?.order       || '1', 'number',  '1')}
       ${_songField('songFTags',    'Tags (comma-separated)',  (song?.tags||[]).join(', '), 'text', 'New, Original, Remix')}
       ${_songField('songFDesc',    'Short Description',     song?.description || '', 'text',     'e.g. Debut single')}
@@ -254,6 +255,7 @@ function openSongForm(songId) {
       soundcloudUrl:  document.getElementById('songFSCUrl').value.trim()   || null,
       spotifyUrl:     document.getElementById('songFSPUrl').value.trim()   || null,
       appleMusicUrl:  document.getElementById('songFAPUrl').value.trim()   || null,
+      audioUrl:       document.getElementById('songFAudioUrl').value.trim() || null,
       updatedAt:      Date.now(),
     };
 
