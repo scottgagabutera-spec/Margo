@@ -428,7 +428,7 @@ export default function FeedPage() {
       </section>
 
       {/* Filters */}
-      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'rgba(7,6,10,0.92)', backdropFilter: 'blur(12px)', padding: '10px 20px 0' }}>
+      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'var(--bg)', padding: '10px 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           {/* Vibe pills */}
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
@@ -447,10 +447,10 @@ export default function FeedPage() {
           </div>
 
           {/* Sort tabs */}
-          <div style={{ display: 'flex', gap: '4px', paddingTop: '6px', paddingBottom: '2px' }}>
+          <div style={{ display: 'flex', gap: '0', paddingTop: '10px', paddingBottom: '4px', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             {SORTS.map(sort => (
               <button key={sort} onClick={() => setSelectedSort(sort)} style={{
-                padding: '6px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                padding: '6px 24px', background: 'none', border: 'none', cursor: 'pointer',
                 fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
                 letterSpacing: '2px', textTransform: 'uppercase',
                 color: selectedSort === sort ? 'var(--gold)' : 'var(--text-3)',
@@ -461,7 +461,7 @@ export default function FeedPage() {
           </div>
 
           {/* Search */}
-          <div style={{ position: 'relative', paddingBottom: '8px' }}>
+          <div style={{ position: 'relative', paddingBottom: '8px', paddingTop: '10px' }}>
             <input
               type="text"
               value={searchQuery}
