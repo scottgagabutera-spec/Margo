@@ -1,26 +1,261 @@
-'use client';
-import { CardExportModal } from '@/components/card-export-modal';
-import { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Download, Search, X } from 'lucide-react';
-import { usePosts } from '@/hooks/usePosts';
-import type { Post } from '@/hooks/usePosts';
+'use client'
+import { useState, useEffect, useRef } from 'react'
+import { usePosts } from '@/hooks/usePosts'
+import type { Post } from '@/hooks/usePosts'
+import { useUsername } from '@/hooks/useUsername'
+import { MargoNav } from '@/components/margo-nav'
+import { CardExportModal } from '@/components/card-export-modal'
 import { db } from '@/lib/firebase'
 import { ref, set, remove, onValue } from 'firebase/database'
-import { useUsername } from '@/hooks/useUsername';
+import Link from 'next/link'
+
+const EMOTION_COLORS: Record<string, string> = {
+  love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
+  nostalgia: '#E8C547', healing: '#4ade80', joy: '#ffc847',
+  rage: '#FF6440', loneliness: '#a0a0ff', sendit: '#00e5c8', letout: '#c864ff',
+}
+
+const VIBE_LABELS: Record<string, string> = {
+  love: 'Love', heartbreak: 'Heartbreak', hope: 'Hope', nostalgia: 'Nostalgia',
+  healing: 'Healing', joy: 'Joy', rage: 'Rage', loneliness: 'Loneliness',
+  sendit: 'Send It', letout: 'Let Out',
+}
+
+const VIBES = ['ALL', 'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SENDIT', 'LETOUT']
+const SORTS = ['NEW', 'TRENDING', 'TOP']
+
+function normalizeEmotion(e: string) {
+  if (!e) return ''
+  return e.replace(/send.?it/i, 'SENDIT').replace(/let.?out/i, 'LETOUT')
+    .replace('SendIt', 'SENDIT').replace('LetOut', 'LETOUT')
+    .replace('SEND IT', 'SENDIT').replace('LET OUT', 'LETOUT')
+    .toUpperCase()
+}
+
+function timeAgo(ts: number) {
+  const diff = (Date.now() - ts) / 1000
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago'
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago'
+  return Math.floor(diff / 86400) + 'd ago'
+}
+
+function MiniPlayer({ audioUrl }: { audioUrl: string }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)
+
+  useEffect(() => {
+    const audio = new Audio(audioUrl)
+    audio.preload = 'metadata'
+    audioRef.current = audio
+    const onTime = () => setProgress((audio.currentTime / (audio.duration || 1)) * 100)
+    const onEnded = () => { setPlaying(false); setProgress(0) }
+    audio.addEventListener('timeupdate', onTime)
+    audio.addEventListener('ended', onEnded)
+    return () => {
+      audio.pause()
+      audio.removeEventListener('timeupdate', onTime)
+      audio.removeEventListener('ended', onEnded)
+    }
+  }, [audioUrl])
+
+  const toggle = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    if (playing) { audio.pause(); setPlaying(false) }
+    else { audio.play().catch(() => {}); setPlaying(true) }
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+      <button onClick={toggle} style={{
+        width: '36px', height: '36px', borderRadius: '50%',
+        background: 'var(--gold)', border: 'none', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, boxShadow: '0 4px 16px rgba(232,197,71,0.3)',
+      }}>
+        <span style={{ color: 'var(--bg)', fontSize: '0.7rem' }}>{playing ? '⏸' : '▶'}</span>
+      </button>
+      <div style={{ flex: 1, height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: progress + '%', background: 'var(--gold)', transition: 'width 200ms linear' }} />
+      </div>
+    </div>
+  )
+}
+
+function PostCard({
+  post, resonated, resonateCount, onResonate, onExport
+}: {
+  post: Post
+  resonated: boolean
+  resonateCount: number
+  onResonate: (id: string) => void
+  onExport: (post: Post) => void
+}) {
+  const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
+  const color = EMOTION_COLORS[emotion] || 'var(--text-3)'
+  const label = VIBE_LABELS[emotion] || post.emotion || ''
+  const isTier1 = post.tier === 1
+  const audioUrl = (post as any).audioUrl || null
+
+  return (
+    <div style={{
+      background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
+      border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.25)' : 'var(--border)'}`,
+      borderRadius: '20px', padding: '28px',
+      position: 'relative', overflow: 'hidden',
+      transition: 'border-color 200ms ease',
+    }}>
+      {/* Top accent */}
+      <div style={{
+        position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '60%', height: '1px',
+        background: isTier1
+          ? 'linear-gradient(to right, transparent, rgba(232,197,71,0.5), transparent)'
+          : 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
+      }} />
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+            background: 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--bg)' }}>
+              {(post.username || '??').slice(0, 2).toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>
+              {post.username || 'Anonymous'}
+            </p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-3)' }}>
+              {post.timestamp ? timeAgo(post.timestamp) : ''}
+            </p>
+          </div>
+        </div>
+        {isTier1 && (
+          <span style={{
+            fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+            letterSpacing: '1.5px', textTransform: 'uppercase', padding: '4px 10px',
+            borderRadius: '50px', background: 'rgba(232,197,71,0.12)',
+            border: '1px solid var(--gold-border)', color: 'var(--gold)',
+          }}>Margo Original</span>
+        )}
+      </div>
+
+      {/* Mini player for Tier 1 */}
+      {isTier1 && audioUrl && <MiniPlayer audioUrl={audioUrl} />}
+
+      {/* Lyric */}
+      <p style={{
+        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+        fontSize: 'clamp(1.25rem, 3vw, 1.75rem)', color: 'var(--text)',
+        lineHeight: 1.5, marginBottom: '16px',
+      }}>
+        &ldquo;{post.text}&rdquo;
+      </p>
+
+      {/* Song credit */}
+      {(post.knowledge?.song || post.knowledge?.artist) && (
+        <p style={{
+          fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+          color: 'var(--text-3)', letterSpacing: '1px', textTransform: 'uppercase',
+          marginBottom: '20px',
+        }}>
+          {post.knowledge.song && post.knowledge.artist
+            ? `${post.knowledge.song} · ${post.knowledge.artist}`
+            : post.knowledge.song || post.knowledge.artist}
+        </p>
+      )}
+
+      {/* YouTube thumbnail */}
+      {post.youtubeMeta?.thumbnail && (
+        <a href={post.youtubeMeta.youtubeUrl || '#'} target="_blank" rel="noopener noreferrer"
+          style={{ display: 'block', marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none' }}>
+          <div style={{ position: 'relative' }}>
+            <img src={post.youtubeMeta.thumbnail} alt="" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover', display: 'block' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: 'var(--bg)', fontSize: '0.7rem' }}>▶</span>
+              </div>
+            </div>
+          </div>
+        </a>
+      )}
+
+      {/* Divider */}
+      <div style={{ height: '1px', background: 'var(--border)', marginBottom: '20px' }} />
+
+      {/* Actions */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Resonate */}
+        <button onClick={() => onResonate(post.id)} style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+          background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+          color: resonated ? 'var(--gold)' : 'var(--text-3)',
+          transition: 'color 150ms ease',
+        }}>
+          <span style={{ fontSize: '1rem' }}>{resonated ? '♥' : '♡'}</span>
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+            {resonateCount > 0 ? resonateCount : 'Resonate'}
+          </span>
+        </button>
+
+        {/* Lyric Back */}
+        <Link href={`/lyric-back?postId=${post.id}`} style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+          color: 'var(--text-3)', textDecoration: 'none', padding: '4px 8px',
+          transition: 'color 150ms ease',
+        }}>
+          <span style={{ fontSize: '1rem' }}>↩</span>
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Lyric Back</span>
+        </Link>
+
+        {/* Export */}
+        <button onClick={() => onExport(post)} style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+          background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+          color: 'var(--text-3)', transition: 'color 150ms ease',
+        }}>
+          <span style={{ fontSize: '1rem' }}>↗</span>
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Share</span>
+        </button>
+
+        {/* Emotion tag */}
+        {label && (
+          <span style={{
+            fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+            letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
+            borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
+            color,
+          }}>{label}</span>
+        )}
+      </div>
+
+      {/* Tier 1 full player link */}
+      {isTier1 && (
+        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--gold-border)', textAlign: 'center' }}>
+          <Link href={`/music/player?id=${(post as any).songId || ''}`} style={{
+            fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
+            color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase',
+            textDecoration: 'none',
+          }}>Open Full Player →</Link>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function FeedPage() {
-  const username = useUsername();
-  const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
-  const [selectedVibe, setSelectedVibe] = useState<string>('ALL');
+  const { username } = useUsername()
   const { posts, loading } = usePosts()
-  const [selectedSort, setSelectedSort] = useState<string>('NEW');
-  const [showCard, setShowCard] = useState<boolean>(false);
-  const [cardPost, setCardPost] = useState<typeof posts[0] | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-
-  const vibes = ['ALL', 'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SEND IT', 'LET OUT'];
-  const sorts = ['NEW', 'TRENDING', 'TOP'];
-
+  const [selectedVibe, setSelectedVibe] = useState('ALL')
+  const [selectedSort, setSelectedSort] = useState('NEW')
+  const [searchQuery, setSearchQuery] = useState('')
   const [resonated, setResonated] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -30,129 +265,33 @@ export default function FeedPage() {
   })
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
   const [analytics, setAnalytics] = useState<Record<string, any>>({})
+  const [exportPost, setExportPost] = useState<Post | null>(null)
 
-  // Load analytics (resonates map) from Firebase
   useEffect(() => {
     if (!db) return
-    const analyticsRef = ref(db, 'analytics')
-    const unsub = onValue(analyticsRef, (snap) => {
+    const unsub = onValue(ref(db, 'analytics'), (snap) => {
       const data = snap.val() || {}
       const counts: Record<string, number> = {}
-      Object.keys(data).forEach(postId => {
-        counts[postId] = Object.keys(data[postId]?.resonates || {}).length
+      Object.keys(data).forEach(id => {
+        counts[id] = Object.keys(data[id]?.resonates || {}).length
       })
       setResonateCounts(counts)
       setAnalytics(data)
     })
-    // Normalize emotion to match filter — old stores SendIt/LetOut, new shows SEND IT/LET OUT
-  const normalizeEmotion = (e: string) => {
-    if (!e) return ''
-    return e.replace('SendIt', 'SEND IT').replace('LetOut', 'LET OUT').toUpperCase()
-  }
-
-  // Engagement score — resonates×4 + echoes×5 + views×1
-  const getEngagement = (post: typeof posts[0]) => {
-    const a = analytics[post.id] || {}
-    return (a.views || 0)
-      + (Object.keys(a.resonates || {}).length * 4)
-      + (Object.keys(a.echoes || {}).length * 5)
-  }
-
-  // Age in hours
-  const getAge = (post: typeof posts[0]) => {
-    if (!post.timestamp) return 999
-    return (Date.now() - post.timestamp) / 3600000
-  }
-
-  // Sort score per mode
-  const getScore = (post: typeof posts[0]) => {
-    const age = getAge(post)
-    const engage = getEngagement(post)
-    if (selectedSort === 'NEW') return Math.exp(-age / 18) * 1000 + engage * 0.05
-    if (selectedSort === 'TRENDING') return engage / Math.pow(age + 2, 1.4)
-    if (selectedSort === 'TOP') return engage
-    return 0
-  }
-
-  // Filter by vibe then sort
-  return () => unsub()
+    return () => unsub()
   }, [])
 
-  const toggleResonate = async (postId: string) => {
-    const rawId = typeof window !== 'undefined'
-      ? (localStorage.getItem('margoAnonName') || 'anon')
-      : 'anon'
-    const myId = rawId.replace(/[.#$[\]]/g, '_')
-    const alreadyResonated = resonated.has(postId)
-
-    // Optimistic UI
-    setResonated(prev => {
-      const next = new Set(prev)
-      alreadyResonated ? next.delete(postId) : next.add(postId)
-      try { localStorage.setItem('margoResonated', JSON.stringify([...next])) } catch {}
-      return next
-    })
-    setResonateCounts(prev => ({
-      ...prev,
-      [postId]: Math.max(0, (prev[postId] || 0) + (alreadyResonated ? -1 : 1))
-    }))
-
-    if (!db) return
-    const resonateRef = ref(db, `analytics/${postId}/resonates/${myId}`)
-    try {
-      if (alreadyResonated) {
-        await remove(resonateRef)
-      } else {
-        await set(resonateRef, true)
-      }
-    } catch (e) {
-      // Rollback
-      setResonated(prev => {
-        const next = new Set(prev)
-        alreadyResonated ? next.add(postId) : next.delete(postId)
-        return next
-      })
-      setResonateCounts(prev => ({
-        ...prev,
-        [postId]: Math.max(0, (prev[postId] || 0) + (alreadyResonated ? 1 : -1))
-      }))
-    }
-  };
-
-  const getVibeColor = (vibe: string) => {
-    const vibes: { [key: string]: string } = {
-      'Nostalgia': 'from-amber-500/20 to-amber-500/5 border-amber-500/30 text-amber-300',
-      'Empowerment': 'from-rose-500/20 to-rose-500/5 border-rose-500/30 text-rose-300',
-      'Triumph': 'from-green-500/20 to-green-500/5 border-green-500/30 text-green-300',
-      'Love': 'from-red-500/20 to-red-500/5 border-red-500/30 text-red-300',
-      'Confidence': 'from-yellow-500/20 to-yellow-500/5 border-yellow-500/30 text-yellow-300',
-      'Resilience': 'from-purple-500/20 to-purple-500/5 border-purple-500/30 text-purple-300',
-    };
-    return vibes[vibe] || vibes['Nostalgia'];
-  };
-
-  // Normalize emotion
-  const normalizeEmotion = (e: string) => {
-    if (!e) return ''
-    return e.replace('SendIt', 'SEND IT').replace('LetOut', 'LET OUT').toUpperCase()
-  }
-
-  // Engagement score
-  const getEngagement = (post: typeof posts[0]) => {
+  const getEngagement = (post: Post) => {
     const a = analytics[post.id] || {}
-    return (a.views || 0)
-      + (Object.keys(a.resonates || {}).length * 4)
-      + (Object.keys(a.echoes || {}).length * 5)
+    return (a.views || 0) + (Object.keys(a.resonates || {}).length * 4) + (Object.keys(a.echoes || {}).length * 5)
   }
 
-  // Age in hours
-  const getAge = (post: typeof posts[0]) => {
+  const getAge = (post: Post) => {
     if (!post.timestamp) return 999
     return (Date.now() - post.timestamp) / 3600000
   }
 
-  // Sort score
-  const getScore = (post: typeof posts[0]) => {
+  const getScore = (post: Post) => {
     const age = getAge(post)
     const engage = getEngagement(post)
     if (selectedSort === 'NEW') return Math.exp(-age / 18) * 1000 + engage * 0.05
@@ -161,323 +300,183 @@ export default function FeedPage() {
     return 0
   }
 
-  // Filter by vibe then sort
   const filteredPosts = posts
     .filter(p => {
-      const matchesVibe = selectedVibe === 'ALL' || normalizeEmotion(p.emotion || '') === selectedVibe
+      const norm = normalizeEmotion(p.emotion || '')
+      const matchesVibe = selectedVibe === 'ALL' || norm === selectedVibe
       if (!searchQuery.trim()) return matchesVibe
       const q = searchQuery.toLowerCase()
-      const matchesSearch = (p.text || '').toLowerCase().includes(q)
-        || (p.knowledge?.song || '').toLowerCase().includes(q)
-        || (p.knowledge?.artist || '').toLowerCase().includes(q)
-        || (p.emotion || '').toLowerCase().includes(q)
-        || (p.username || '').toLowerCase().includes(q)
-      return matchesVibe && matchesSearch
+      return matchesVibe && (
+        (p.text || '').toLowerCase().includes(q) ||
+        (p.knowledge?.song || '').toLowerCase().includes(q) ||
+        (p.knowledge?.artist || '').toLowerCase().includes(q) ||
+        (p.emotion || '').toLowerCase().includes(q) ||
+        (p.username || '').toLowerCase().includes(q)
+      )
     })
     .sort((a, b) => getScore(b) - getScore(a))
 
+  const toggleResonate = async (postId: string) => {
+    const rawId = typeof window !== 'undefined'
+      ? (localStorage.getItem('margoAnonName') || 'anon') : 'anon'
+    const myId = rawId.replace(/[.#$[]]/g, '_')
+    const already = resonated.has(postId)
+    setResonated(prev => {
+      const next = new Set(prev)
+      already ? next.delete(postId) : next.add(postId)
+      try { localStorage.setItem('margoResonated', JSON.stringify([...next])) } catch {}
+      return next
+    })
+    setResonateCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + (already ? -1 : 1)) }))
+    if (!db) return
+    const rRef = ref(db, `analytics/${postId}/resonates/${myId}`)
+    try {
+      already ? await remove(rRef) : await set(rRef, true)
+    } catch {
+      setResonated(prev => {
+        const next = new Set(prev)
+        already ? next.add(postId) : next.delete(postId)
+        return next
+      })
+      setResonateCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + (already ? 1 : -1)) }))
+    }
+  }
+
   return (
-    <div className="relative w-full min-h-screen overflow-hidden bg-gradient-to-br from-[#08070C] via-[#0a0909] to-[#0f0e14]">
-      {/* Animated ambient background glow */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-amber-500/3 rounded-full blur-3xl animate-pulse animation-delay-2000" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-amber-500/5 to-transparent rounded-full blur-3xl animate-pulse animation-delay-1000" />
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
+      <MargoNav />
+
+      {/* Ambient glow */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        <div style={{ position: 'absolute', top: '-128px', left: '-128px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(80px)' }} />
+        <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      {/* Film grain texture */}
-      <div
-        className="fixed inset-0 opacity-[0.015] pointer-events-none mix-blend-overlay"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")`,
-        }}
-      />
-
-      {/* Navigation */}
-      <nav className="relative z-10 sticky top-0 flex items-center justify-between px-6 md:px-10 py-5 border-b border-amber-500/10 backdrop-blur-md bg-gradient-to-b from-[#08070C]/80 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 80 80" fill="none">
-              <path d="M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57" stroke="#08070C" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <rect x="35" y="60" width="10" height="4" rx="2" fill="#08070C" opacity=".5" />
-            </svg>
-          </div>
-          <span className="text-amber-400 text-sm font-medium tracking-widest uppercase">Margo</span>
+      {/* Feed header */}
+      <section style={{ position: 'relative', zIndex: 5, borderBottom: '1px solid var(--border)', padding: '80px 24px 48px', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '8px 16px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '50px' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', display: 'inline-block' }} />
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase' }}>Live from the community</span>
         </div>
-        <div className="flex items-center gap-2">
-          <a href="/" className="px-3 py-2 text-xs text-amber-200/70 border border-amber-500/30 rounded-full hover:border-amber-500/60 hover:bg-amber-500/5 transition-all duration-300 tracking-wide uppercase">
-            Home
-          </a>
-          <a href="/compose" className="px-5 py-2 text-xs bg-amber-400 text-[#08070C] rounded-full font-medium hover:bg-amber-300 transition-all duration-300 tracking-wide uppercase">
-            + Share a Lyric
-          </a>
-        </div>
-      </nav>
-
-      {/* Feed Header */}
-      <section className="relative z-5 border-b border-amber-500/10 py-10 md:py-14 px-6 md:px-10">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-amber-500/8 border border-amber-500/25 rounded-full">
-            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-            <span className="text-xs text-amber-300/80 font-medium tracking-widest uppercase">Live feed from the community</span>
-          </div>
-          <h1 className="font-serif text-4xl md:text-5xl font-light leading-tight tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-amber-50 to-amber-100 mb-4">
-            What people are saying right now
-          </h1>
-          <p className="text-sm md:text-base text-amber-50/50 leading-relaxed font-light">
-            Every lyric is a message, a conversation, a reply to the world. Resonate, reply, or save for later.
-          </p>
-        </div>
+        <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(1.75rem, 5vw, 3rem)', color: 'var(--text)', fontWeight: 400, marginBottom: '12px', lineHeight: 1.2 }}>
+          What people are saying right now
+        </h1>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text-3)', maxWidth: '480px', margin: '0 auto' }}>
+          Every lyric is a message. Resonate, reply, or share it forward.
+        </p>
       </section>
 
-      {/* Filter Bar */}
-      <div className="relative z-5 sticky top-20 border-b border-amber-500/10 bg-gradient-to-b from-[#08070C]/95 to-[#08070C]/80 backdrop-blur-md px-6 md:px-10 py-6">
-        <div className="max-w-5xl mx-auto">
-          {/* Vibe Filters - Scrollable on mobile */}
-          <div className="mb-6 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-            <div className="flex gap-2 md:flex-wrap md:gap-2 whitespace-nowrap md:whitespace-normal">
-              {vibes.map((vibe) => (
-                <button
-                  key={vibe}
-                  onClick={() => setSelectedVibe(vibe)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium tracking-wide uppercase transition-all duration-300 ${
-                    selectedVibe === vibe
-                      ? 'bg-amber-400 text-[#08070C] border border-amber-400'
-                      : 'bg-amber-500/10 text-amber-200/70 border border-amber-500/30 hover:border-amber-500/60 hover:bg-amber-500/20'
-                  }`}
-                >
-                  {vibe}
-                </button>
-              ))}
-            </div>
+      {/* Filters */}
+      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'rgba(7,6,10,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '16px 24px' }}>
+        <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+          {/* Vibe pills */}
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', scrollbarWidth: 'none' }}>
+            {VIBES.map(vibe => (
+              <button key={vibe} onClick={() => setSelectedVibe(vibe)} style={{
+                flexShrink: 0, padding: '6px 14px', borderRadius: '50px',
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
+                letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                border: '1px solid',
+                background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
+                color: selectedVibe === vibe ? 'var(--bg)' : 'var(--text-3)',
+                borderColor: selectedVibe === vibe ? 'var(--gold)' : 'var(--border)',
+                transition: 'all 150ms ease',
+              }}>{vibe === 'SENDIT' ? 'SEND IT' : vibe === 'LETOUT' ? 'LET OUT' : vibe}</button>
+            ))}
           </div>
 
-          {/* Search Bar */}
-          <div className="relative my-4">
-            <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/5 border border-amber-500/15 rounded-xl hover:border-amber-500/30 focus-within:border-amber-500/40 focus-within:bg-amber-500/8 transition-all duration-300">
-              <Search className="w-3.5 h-3.5 text-amber-400/40 flex-shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search lyrics, songs, artists, feelings..."
-                className="flex-1 bg-transparent text-sm text-amber-100/80 placeholder:text-amber-100/25 focus:outline-none font-light"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="flex-shrink-0">
-                  <X className="w-3.5 h-3.5 text-amber-400/40 hover:text-amber-400/80 transition-colors" />
-                </button>
-              )}
-            </div>
+          {/* Search */}
+          <div style={{ position: 'relative', marginBottom: '12px' }}>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search lyrics, songs, artists, feelings..."
+              style={{
+                width: '100%', height: '44px', padding: '0 40px 0 16px',
+                background: 'var(--gold-faint)', border: '1px solid var(--border)',
+                borderRadius: '12px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} style={{
+                position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '1rem',
+              }}>×</button>
+            )}
           </div>
 
-          {/* Sort Tabs */}
-          <div className="flex items-center gap-1 border-t border-amber-500/10 pt-4">
-            {sorts.map((sort) => (
-              <button
-                key={sort}
-                onClick={() => setSelectedSort(sort)}
-                className={`px-4 py-2 text-xs font-medium tracking-widest uppercase transition-all duration-300 relative ${
-                  selectedSort === sort
-                    ? 'text-amber-300'
-                    : 'text-amber-100/40 hover:text-amber-100/70'
-                }`}
-              >
-                {sort}
-                {selectedSort === sort && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 to-amber-500 rounded-full" />
-                )}
-              </button>
+          {/* Sort tabs */}
+          <div style={{ display: 'flex', gap: '4px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+            {SORTS.map(sort => (
+              <button key={sort} onClick={() => setSelectedSort(sort)} style={{
+                padding: '6px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
+                letterSpacing: '2px', textTransform: 'uppercase',
+                color: selectedSort === sort ? 'var(--gold)' : 'var(--text-3)',
+                borderBottom: selectedSort === sort ? '2px solid var(--gold)' : '2px solid transparent',
+                transition: 'all 150ms ease',
+              }}>{sort}</button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Main Feed Grid */}
-      <div className="relative z-5 max-w-5xl mx-auto px-6 md:px-10 py-12 md:py-16">
-        <div className="space-y-6 md:space-y-8">
-          {filteredPosts.map((post) => (
-            <div
+      {/* Posts */}
+      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px 80px' }}>
+        {loading && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
+            {[0,1,2].map(i => (
+              <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', opacity: 0.5 }} />
+            ))}
+          </div>
+        )}
+
+        {!loading && filteredPosts.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '64px 0' }}>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '1rem', marginBottom: '16px' }}>
+              {searchQuery ? `No lyrics found for "${searchQuery}"` : `No ${selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet`}
+            </p>
+            <Link href="/compose" style={{
+              padding: '10px 24px', border: '1px solid var(--border)',
+              borderRadius: '50px', color: 'var(--text-3)',
+              fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+              letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
+            }}>Be the first</Link>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {filteredPosts.map(post => (
+            <PostCard
               key={post.id}
-              onMouseEnter={() => setHoveredPostId(post.id)}
-              onMouseLeave={() => setHoveredPostId(null)}
-              className="group relative"
-            >
-              {/* Post container */}
-              <div className="relative bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl p-8 md:p-10 transition-all duration-300 hover:border-amber-500/40 hover:bg-amber-500/8 backdrop-blur-sm">
-                {/* Top accent line */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent rounded-full" />
-
-                {/* Post Header */}
-                <div className="flex items-start justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    {/* User Avatar */}
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-semibold text-[#08070C] tracking-tight">
-                        {(post.username || "??").slice(0, 2).toUpperCase()}
-                      </span>
-                    </div>
-
-                    {/* User Info */}
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs font-medium text-amber-100">
-                          {post.username}
-                        </div>
-                        <div className="text-[10px] text-amber-100/40 font-light">
-                          {post.timestamp ? new Date(post.timestamp).toLocaleDateString() : ""}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Main Lyric - The Hero */}
-                <div className="mb-8 md:mb-10">
-                  <p className="font-serif italic text-3xl md:text-4xl lg:text-5xl leading-relaxed text-transparent bg-clip-text bg-gradient-to-b from-amber-50 to-amber-100 mb-6">
-                    {post.text}
-                  </p>
-
-                  {/* Song Credit */}
-                  <div className="text-[10px] text-amber-100/50 font-medium tracking-widest uppercase">
-                    From {post.knowledge?.song || 'Unknown Song'} · {post.knowledge?.artist || 'Unknown Artist'}
-                  </div>
-                </div>
-
-                {/* YouTube thumbnail */}
-                {post.youtubeMeta?.thumbnail && (
-                  <a
-                    href={post.youtubeMeta.youtubeUrl || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block mb-6 rounded-xl overflow-hidden border border-amber-500/20 hover:border-amber-500/50 transition-all duration-300 group/yt"
-                  >
-                    <div className="relative">
-                      <img
-                        src={post.youtubeMeta.thumbnail}
-                        alt={post.youtubeMeta.title || ''}
-                        className="w-full object-cover max-h-48"
-                      />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/yt:opacity-100 transition-opacity">
-                        <div className="w-12 h-12 rounded-full bg-amber-400 flex items-center justify-center">
-                          <svg className="w-5 h-5 text-black ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        </div>
-                      </div>
-                      <div className="absolute bottom-2 left-3 text-xs text-white/70 font-medium">{post.youtubeMeta.channel}</div>
-                    </div>
-                  </a>
-                )}
-
-                {/* Divider */}
-                <div className="h-px bg-gradient-to-r from-amber-500/20 to-transparent mb-6 md:mb-8" />
-
-                {/* Interaction Stats */}
-                <div className="flex items-center gap-6 md:gap-10 text-sm mb-6 md:mb-8">
-                  <div className="flex flex-col gap-1">
-                    <div className="text-lg font-semibold text-amber-400">
-                      {resonateCounts[post.id] ?? post.resonates ?? 0}
-                    </div>
-                    <div className="text-[10px] text-amber-100/40 font-light tracking-wide uppercase">
-                      Resonances
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <div className="text-lg font-semibold text-amber-400">
-                      {post.replies || 0}
-                    </div>
-                    <div className="text-[10px] text-amber-100/40 font-light tracking-wide uppercase">
-                      Lyric Backs
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons - Full width spread */}
-                <div className="flex items-center justify-between pt-4 md:pt-5 border-t border-amber-500/10">
-                  <button
-                    onClick={() => toggleResonate(post.id)}
-                    className={`flex flex-col items-center justify-center gap-2 transition-all duration-300 ${
-                      resonated.has(post.id)
-                        ? 'text-amber-400'
-                        : 'text-amber-100/50 hover:text-amber-400'
-                    }`}
-                  >
-                    <Heart
-                      size={18}
-                      className={resonated.has(post.id) ? 'fill-current' : ''}
-                    />
-                    <span className="text-[9px] font-medium tracking-widest uppercase">Resonate</span>
-                  </button>
-
-                  <a href={`/lyric-back?postId=${post.id}`} className="flex flex-col items-center justify-center gap-2 text-amber-100/50 hover:text-amber-400 transition-all duration-300">
-                    <MessageCircle size={18} />
-                    <span className="text-[9px] font-medium tracking-widest uppercase">Lyric Back</span>
-                  </a>
-
-                  <button onClick={() => { setCardPost(post); setShowCard(true); }} className="flex flex-col items-center justify-center gap-2 text-amber-100/50 hover:text-amber-400 transition-all duration-300">
-                    <Download size={18} />
-                    <span className="text-[9px] font-medium tracking-widest uppercase">Card</span>
-                  </button>
-
-                  {/* Vibe Badge - Bottom right corner */}
-                  <div className={`px-2 py-1 rounded text-[9px] font-medium tracking-widest uppercase text-amber-100/50 ${getVibeColor(post.emotion || "")}`}>
-                    {post.emotion || ""}
-                  </div>
-                </div>
-
-                {/* Hover indicator */}
-                <div className={`absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${hoveredPostId === post.id ? 'opacity-100' : ''}`}>
-                  <div className="text-amber-400/60 text-sm">✧</div>
-                </div>
-              </div>
-            </div>
+              post={post}
+              resonated={resonated.has(post.id)}
+              resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+              onResonate={toggleResonate}
+              onExport={setExportPost}
+            />
           ))}
         </div>
 
-        {/* End state */}
-        <div className="flex justify-center mt-12 md:mt-16 py-8">
-          {loading && (
-            <div className="flex items-center gap-2 text-amber-400/50">
-              <div className="w-1 h-1 rounded-full bg-amber-400/50 animate-bounce" style={{animationDelay:'0ms'}} />
-              <div className="w-1 h-1 rounded-full bg-amber-400/50 animate-bounce" style={{animationDelay:'150ms'}} />
-              <div className="w-1 h-1 rounded-full bg-amber-400/50 animate-bounce" style={{animationDelay:'300ms'}} />
-            </div>
-          )}
-          {!loading && filteredPosts.length === 0 && (
-            <div className="text-center">
-              {searchQuery ? (
-                <p className="font-serif italic text-amber-400/40 text-lg mb-4">No lyrics found for &ldquo;{searchQuery}&rdquo;</p>
-              ) : (
-                <p className="font-serif italic text-amber-400/40 text-lg mb-4">No {selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet</p>
-              )}
-              {!searchQuery && (
-                <a href="/compose" className="px-6 py-2 border border-amber-500/30 text-amber-400/70 rounded-full text-xs uppercase tracking-widest hover:border-amber-500/60 transition-all">
-                  Be the first
-                </a>
-              )}
-            </div>
-          )}
-          {!loading && filteredPosts.length > 0 && (
-            <div className="text-center">
-              <div className="h-px w-24 bg-gradient-to-r from-transparent via-amber-500/30 to-transparent mx-auto mb-4" />
-              <p className="text-white/15 text-xs uppercase tracking-widest font-serif italic">you&apos;ve felt them all</p>
-            </div>
-          )}
-        </div>
-      </div>
+        {!loading && filteredPosts.length > 0 && (
+          <div style={{ textAlign: 'center', marginTop: '48px' }}>
+            <div style={{ height: '1px', width: '96px', background: 'linear-gradient(to right, transparent, var(--border), transparent)', margin: '0 auto 16px' }} />
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-3)' }}>you&apos;ve felt them all</p>
+          </div>
+        )}
+      </main>
 
-      {/* Footer divider */}
-      <div className="relative z-5 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent my-16" />
-
-      {/* Footer CTA */}
-      <section className="relative z-5 text-center py-12 md:py-16 px-6 md:px-10">
-        <p className="text-sm text-amber-100/50 font-light mb-6">
-          Have a lyric that says what you couldn&apos;t?
-        </p>
-        <a href="/compose" className="px-8 py-3 bg-gradient-to-r from-amber-400 to-amber-300 text-[#08070C] rounded-full font-medium text-sm uppercase tracking-wide hover:from-amber-300 hover:to-amber-200 transition-all duration-300 shadow-lg hover:shadow-amber-500/20">
-          Share Your Lyric
-        </a>
-      </section>
-      <CardExportModal open={showCard} onOpenChange={setShowCard} lyric={cardPost?.text || ''} song={cardPost?.knowledge?.song || ''} artist={cardPost?.knowledge?.artist || ''} postId={cardPost?.id} />
+      {/* Export modal */}
+      <CardExportModal
+        open={!!exportPost}
+        onOpenChange={(o) => { if (!o) setExportPost(null) }}
+        lyric={exportPost?.text || ''}
+        song={exportPost?.knowledge?.song || ''}
+        artist={exportPost?.knowledge?.artist || ''}
+        postId={exportPost?.id}
+      />
     </div>
-  );
+  )
 }
