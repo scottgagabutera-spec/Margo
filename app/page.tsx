@@ -251,7 +251,7 @@ export default function Home() {
             justifyContent:'center',
             boxShadow:'0 6px 28px rgba(232,197,71,0.28)',
             transition:'all 150ms ease',
-          fontWeight:700}}>See What&apos;s Live</a>
+          }}>See What&apos;s Live</a>
           <a href="/compose" style={{
             padding:'13px 28px',
             background:'transparent',
