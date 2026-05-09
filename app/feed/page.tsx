@@ -103,7 +103,7 @@ function PostCard({
     <div style={{
       background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
       border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.25)' : 'var(--border)'}`,
-      borderRadius: '20px', padding: '28px',
+      borderRadius: '20px', padding: '20px',
       position: 'relative', overflow: 'hidden',
       transition: 'border-color 200ms ease',
     }}>
@@ -177,7 +177,7 @@ function PostCard({
         <a href={post.youtubeMeta.youtubeUrl || '#'} target="_blank" rel="noopener noreferrer"
           style={{ display: 'block', marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none' }}>
           <div style={{ position: 'relative' }}>
-            <img src={post.youtubeMeta.thumbnail} alt="" style={{ width: '100%', maxHeight: '180px', objectFit: 'cover', display: 'block' }} />
+            <img src={post.youtubeMeta.thumbnail} alt="" style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', display: 'block' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ color: 'var(--bg)', fontSize: '0.7rem' }}>▶</span>
@@ -186,9 +186,6 @@ function PostCard({
           </div>
         </a>
       )}
-
-      {/* Divider */}
-      <div style={{ height: '1px', background: 'var(--border)', marginBottom: '20px' }} />
 
       {/* Actions */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -382,28 +379,6 @@ export default function FeedPage() {
             ))}
           </div>
 
-          {/* Search */}
-          <div style={{ position: 'relative', marginBottom: '6px' }}>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search lyrics, songs, artists, feelings..."
-              style={{
-                width: '100%', height: '44px', padding: '0 40px 0 16px',
-                background: 'var(--gold-faint)', border: '1px solid var(--border)',
-                borderRadius: '12px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box',
-              }}
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} style={{
-                position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '1rem',
-              }}>×</button>
-            )}
-          </div>
-
           {/* Sort tabs */}
           <div style={{ display: 'flex', gap: '4px', paddingTop: '8px', paddingBottom: '4px' }}>
             {SORTS.map(sort => (
@@ -416,6 +391,28 @@ export default function FeedPage() {
                 transition: 'all 150ms ease',
               }}>{sort}</button>
             ))}
+          </div>
+
+          {/* Search */}
+          <div style={{ position: 'relative', paddingBottom: '10px' }}>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search lyrics, songs, artists, feelings..."
+              style={{
+                width: '100%', height: '40px', padding: '0 40px 0 16px',
+                background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
+                borderRadius: '10px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} style={{
+                position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '1rem',
+              }}>×</button>
+            )}
           </div>
         </div>
       </div>

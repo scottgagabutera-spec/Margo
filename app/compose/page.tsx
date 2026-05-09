@@ -32,7 +32,7 @@ const VIBE_LABELS: Record<Vibe, string> = {
 
 export default function ComposePage() {
   const { username } = useUsername()
-  const { isLicensed } = useLicensedArtists()
+  const { isLicensed, loading: artistsLoading } = useLicensedArtists()
 
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
@@ -269,13 +269,7 @@ export default function ComposePage() {
                         <p style={{ fontFamily: 'var(--font-lora), serif', color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.title}</p>
                         <p style={{ fontFamily: 'var(--font-lora), serif', color: 'var(--text-3)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.artist}</p>
                       </div>
-                      <span style={{
-                        fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
-                        letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
-                        borderRadius: '50px', flexShrink: 0,
-                        background: result.source === 'genius' ? 'rgba(232,197,71,0.12)' : 'rgba(255,100,150,0.12)',
-                        color: result.source === 'genius' ? 'var(--gold)' : '#ff6496',
-                      }}>{result.source === 'genius' ? 'Genius' : 'Apple'}</span>
+
                     </button>
                   ))}
                 </div>
@@ -427,12 +421,14 @@ export default function ComposePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '320px', margin: '0 auto' }}>
               <button
                 onClick={() => handlePost(false)}
+              disabled={artistsLoading}
                 style={{
-                  padding: '15px 28px', background: 'var(--gold)', color: 'var(--bg)',
+                  padding: '15px 28px', background: artistsLoading ? 'var(--border)' : 'var(--gold)', color: 'var(--bg)',
                   borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
                   fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
-                  textTransform: 'uppercase', border: 'none', cursor: 'pointer',
-                  boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
+                  textTransform: 'uppercase', border: 'none', cursor: artistsLoading ? 'not-allowed' : 'pointer',
+                  boxShadow: artistsLoading ? 'none' : '0 6px 28px rgba(232,197,71,0.28)',
+                  opacity: artistsLoading ? 0.5 : 1,
                 }}
               >Post to Feed</button>
               <button
