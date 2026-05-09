@@ -59,10 +59,12 @@ function parseSRT(srt: string): LyricLine[] {
 
 function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | null }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const progressRef = useRef<HTMLDivElement | null>(null)
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [dragging, setDragging] = useState(false)
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [lyricsLoaded, setLyricsLoaded] = useState(false)
 
@@ -97,6 +99,37 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
     else { audio.play().catch(() => {}); setPlaying(true) }
   }
 
+  const seek = (clientX: number) => {
+    const bar = progressRef.current
+    const audio = audioRef.current
+    if (!bar || !audio || !duration) return
+    const rect = bar.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    const newTime = pct * duration
+    audio.currentTime = newTime
+    setCurrentTime(newTime)
+    setProgress(pct * 100)
+  }
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setDragging(true)
+    seek(e.clientX)
+    const onMove = (ev: MouseEvent) => seek(ev.clientX)
+    const onUp = () => { setDragging(false); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setDragging(true)
+    seek(e.touches[0].clientX)
+    const onMove = (ev: TouchEvent) => seek(ev.touches[0].clientX)
+    const onEnd = () => { setDragging(false); window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd) }
+    window.addEventListener('touchmove', onMove)
+    window.addEventListener('touchend', onEnd)
+  }
+
   const fmt = (s: number) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
   const currentLine = lyrics.find(l => currentTime >= l.start && currentTime < l.end)
 
@@ -104,19 +137,36 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
     <div>
       {/* Player row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: currentLine ? '12px' : '0' }}>
-        <button onClick={toggle} style={{
-          width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-          background: 'var(--gold)', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          WebkitAppearance: 'none', outline: 'none',
-          WebkitTapHighlightColor: 'transparent',
-          MozAppearance: 'none', touchAction: 'manipulation',
-        }}>
-          <span style={{ color: 'var(--bg)', fontSize: '0.7rem', lineHeight: 1, userSelect: 'none' }}>{playing ? '⏸' : '▶'}</span>
+        <button
+          onMouseDown={e => e.preventDefault()}
+          onClick={toggle}
+          style={{
+            width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+            background: 'var(--gold)', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            outline: 'none', WebkitTapHighlightColor: 'transparent',
+            touchAction: 'manipulation', userSelect: 'none',
+          }}>
+          <span style={{ color: 'var(--bg)', fontSize: '0.7rem', lineHeight: 1, pointerEvents: 'none' }}>{playing ? '⏸' : '▶'}</span>
         </button>
         <div style={{ flex: 1 }}>
-          <div style={{ height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden', marginBottom: '4px' }}>
-            <div style={{ height: '100%', width: progress + '%', background: 'var(--gold)', transition: 'width 200ms linear' }} />
+          <div
+            ref={progressRef}
+            onMouseDown={onMouseDown}
+            onTouchStart={onTouchStart}
+            style={{ height: '20px', display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '2px' }}
+          >
+            <div style={{ position: 'relative', width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
+              <div style={{ height: '100%', width: progress + '%', background: 'var(--gold)', borderRadius: '2px', transition: dragging ? 'none' : 'width 200ms linear' }} />
+              <div style={{
+                position: 'absolute', top: '50%', left: progress + '%',
+                transform: 'translate(-50%, -50%)',
+                width: '10px', height: '10px', borderRadius: '50%',
+                background: 'var(--gold)',
+                boxShadow: '0 0 4px rgba(232,197,71,0.6)',
+                transition: dragging ? 'none' : 'left 200ms linear',
+              }} />
+            </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)' }}>{fmt(currentTime)}</span>
