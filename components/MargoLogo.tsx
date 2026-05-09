@@ -18,7 +18,7 @@ export default function MargoLogo({
       {rings && (
         <style>{`
           @keyframes margo-ring {
-            0% { transform: scale(1); opacity: 0.4; }
+            0% { transform: scale(1); opacity: 0.2; }
             100% { transform: scale(1.7); opacity: 0; }
           }
           .margo-ring {
