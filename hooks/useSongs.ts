@@ -40,7 +40,7 @@ export function useSongs() {
       const list: Song[] = []
       snap.forEach((child) => {
         const s = child.val()
-        if (s.status === 'active') {
+        if (s.status !== 'hidden') {
           list.push({ ...s, id: child.key })
         }
       })
