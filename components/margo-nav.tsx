@@ -28,7 +28,6 @@ export function MargoNav() {
       WebkitBackdropFilter: 'blur(12px)',
     }}>
       <div style={{
-        maxWidth: '56rem', margin: '0 auto',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <Link href="/" style={{ textDecoration: 'none' }}>
