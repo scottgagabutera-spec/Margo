@@ -164,7 +164,7 @@ function PostCard({
   return (
     <div style={{
       background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
-      border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.25)' : 'var(--border)'}`,
+      border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
       borderRadius: '20px', padding: '20px',
       position: 'relative', overflow: 'hidden',
       transition: 'border-color 200ms ease',
@@ -256,7 +256,7 @@ function PostCard({
           transition: 'color 150ms ease',
         }}>
           <span style={{ fontSize: '1rem' }}>{resonated ? '♥' : '♡'}</span>
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
             {resonateCount > 0 ? resonateCount : 'Resonate'}
           </span>
         </button>
@@ -268,7 +268,7 @@ function PostCard({
           transition: 'color 150ms ease',
         }}>
           <span style={{ fontSize: '1rem' }}>↩</span>
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Lyric Back</span>
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Lyric Back</span>
         </Link>
 
         {/* Export */}
@@ -278,7 +278,7 @@ function PostCard({
           color: 'var(--text-2)', transition: 'color 150ms ease',
         }}>
           <span style={{ fontSize: '1rem' }}>↗</span>
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Share</span>
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Share</span>
         </button>
 
         {/* Emotion tag */}
@@ -417,7 +417,7 @@ export default function FeedPage() {
       </div>
 
       {/* Feed header */}
-      <section style={{ position: 'relative', zIndex: 5, borderBottom: '1px solid var(--border)', padding: '56px 24px 16px', textAlign: 'center' }}>
+      <section style={{ position: 'relative', zIndex: 5, padding: '100px 24px 24px', textAlign: 'center' }}>
 
         <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(1.1rem, 2.5vw, 1.6rem)', color: 'var(--text)', fontWeight: 400, marginBottom: '8px', lineHeight: 1.3 }}>
           What people are saying right now
@@ -428,7 +428,7 @@ export default function FeedPage() {
       </section>
 
       {/* Filters */}
-      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'rgba(7,6,10,0.92)', backdropFilter: 'blur(12px)', padding: '12px 24px 0' }}>
+      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'rgba(7,6,10,0.92)', backdropFilter: 'blur(12px)', padding: '10px 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           {/* Vibe pills */}
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
@@ -439,15 +439,15 @@ export default function FeedPage() {
                 letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
                 border: '1px solid',
                 background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
-                color: selectedVibe === vibe ? 'var(--bg)' : 'var(--text-3)',
-                borderColor: selectedVibe === vibe ? 'var(--gold)' : 'var(--border)',
+                color: selectedVibe === vibe ? 'var(--bg)' : 'rgba(255,255,255,0.45)',
+                borderColor: selectedVibe === vibe ? 'var(--gold)' : 'rgba(255,255,255,0.1)',
                 transition: 'all 150ms ease',
               }}>{vibe === 'SENDIT' ? 'SEND IT' : vibe === 'LETOUT' ? 'LET OUT' : vibe}</button>
             ))}
           </div>
 
           {/* Sort tabs */}
-          <div style={{ display: 'flex', gap: '4px', paddingTop: '8px', paddingBottom: '4px' }}>
+          <div style={{ display: 'flex', gap: '4px', paddingTop: '6px', paddingBottom: '2px' }}>
             {SORTS.map(sort => (
               <button key={sort} onClick={() => setSelectedSort(sort)} style={{
                 padding: '6px 16px', background: 'none', border: 'none', cursor: 'pointer',
@@ -461,7 +461,7 @@ export default function FeedPage() {
           </div>
 
           {/* Search */}
-          <div style={{ position: 'relative', paddingBottom: '10px' }}>
+          <div style={{ position: 'relative', paddingBottom: '8px' }}>
             <input
               type="text"
               value={searchQuery}
@@ -469,7 +469,7 @@ export default function FeedPage() {
               placeholder="Search lyrics, songs, artists, feelings..."
               style={{
                 width: '100%', height: '40px', padding: '0 40px 0 16px',
-                background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: '10px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
                 fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box',
               }}
