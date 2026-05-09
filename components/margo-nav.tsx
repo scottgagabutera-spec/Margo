@@ -1,74 +1,44 @@
 'use client'
-
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
+import MargoLogo from '@/components/MargoLogo'
 
 export function MargoNav() {
   const pathname = usePathname()
 
-  return (
-    <nav className="fixed top-0 left-0 right-0 z-40 px-6 py-4">
-      <div className="max-w-4xl mx-auto flex items-center justify-between">
-        {/* Logo */}
-        <Link 
-          href="/" 
-          className="text-2xl font-serif italic text-amber-400 tracking-tight hover:text-amber-300 transition-colors"
-        >
-          Margo
-        </Link>
+  const linkStyle = (active: boolean): React.CSSProperties => ({
+    fontSize: '0.82rem',
+    fontFamily: 'var(--font-lora), serif',
+    fontWeight: 700,
+    letterSpacing: '2px',
+    textTransform: 'uppercase',
+    textDecoration: 'none',
+    color: active ? 'var(--gold)' : 'var(--text-2)',
+    transition: 'color 150ms ease',
+    padding: '8px 12px',
+  })
 
-        {/* Nav Links */}
-        <div className="flex items-center gap-6">
-          <Link
-            href="/feed"
-            className={cn(
-              "text-sm font-medium transition-colors",
-              pathname === '/feed' 
-                ? "text-amber-400" 
-                : "text-white/60 hover:text-white"
-            )}
-          >
-            Feed
-          </Link>
-          <Link
-            href="/music"
-            className={cn(
-              "text-sm font-medium transition-colors",
-              pathname?.startsWith('/music') 
-                ? "text-amber-400" 
-                : "text-white/60 hover:text-white"
-            )}
-          >
-            Music
-          </Link>
-          <Link
-            href="/compose"
-            className={cn(
-              "text-sm font-medium transition-colors",
-              pathname === '/compose' 
-                ? "text-amber-400" 
-                : "text-white/60 hover:text-white"
-            )}
-          >
-            Compose
-          </Link>
-          <Link
-            href="/lyric-back"
-            className={cn(
-              "text-sm font-medium transition-colors",
-              pathname === '/lyric-back' 
-                ? "text-amber-400" 
-                : "text-white/60 hover:text-white"
-            )}
-          >
-            Lyric Backs
-          </Link>
+  return (
+    <nav style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40,
+      padding: '16px 24px',
+      borderBottom: '1px solid var(--border)',
+      background: 'rgba(7,6,10,0.85)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+    }}>
+      <div style={{
+        maxWidth: '72rem', margin: '0 auto',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <MargoLogo tier="symbol" size={28} wordmark rings />
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Link href="/feed" style={linkStyle(pathname === '/feed')}>Feed</Link>
+          <Link href="/music" style={linkStyle(pathname?.startsWith('/music') ?? false)}>Music</Link>
         </div>
       </div>
-
-      {/* Ambient glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-amber-500/10 blur-3xl pointer-events-none" />
     </nav>
   )
 }
