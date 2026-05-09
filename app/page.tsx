@@ -182,7 +182,7 @@ export default function Home() {
         backdropFilter:'blur(12px)',
       }}>
         <a href="/" style={{textDecoration:'none'}}>
-          <MargoLogo tier="symbol" size={28} wordmark />
+          <MargoLogo tier="symbol" size={32} rings wordmark />
         </a>
         <a href="/music" style={{...navLink, color:'var(--gold)', fontWeight:700}}>Music</a>
       </nav>

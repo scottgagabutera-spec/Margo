@@ -31,7 +31,7 @@ export function MargoNav() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <Link href="/" style={{ textDecoration: 'none' }}>
-          <MargoLogo tier="symbol" size={28} wordmark />
+          <MargoLogo tier="symbol" size={28} wordmark rings />
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Link href="/feed" style={linkStyle(pathname === '/feed')}>Feed</Link>
