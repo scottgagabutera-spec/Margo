@@ -101,16 +101,17 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
   const currentLine = lyrics.find(l => currentTime >= l.start && currentTime < l.end)
 
   return (
-    <div style={{ marginBottom: '16px' }}>
+    <div>
       {/* Player row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: currentLine ? '12px' : '0' }}>
         <button onClick={toggle} style={{
-          width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+          width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
           background: 'var(--gold)', border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(232,197,71,0.35)',
+          WebkitAppearance: 'none', outline: 'none',
+          WebkitTapHighlightColor: 'transparent',
         }}>
-          <span style={{ color: 'var(--bg)', fontSize: '0.75rem' }}>{playing ? '⏸' : '▶'}</span>
+          <span style={{ color: 'var(--bg)', fontSize: '0.7rem', lineHeight: 1, userSelect: 'none' }}>{playing ? '⏸' : '▶'}</span>
         </button>
         <div style={{ flex: 1 }}>
           <div style={{ height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden', marginBottom: '4px' }}>
@@ -207,9 +208,6 @@ function PostCard({
         )}
       </div>
 
-      {/* Tier 1 player with inline karaoke */}
-      {isTier1 && audioUrl && <Tier1Player audioUrl={audioUrl} songId={post.songId || null} />}
-
       {/* Lyric */}
       <p style={{
         fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
@@ -293,21 +291,22 @@ function PostCard({
         )}
       </div>
 
-      {/* Tier 1 footer — platform icons + full karaoke button */}
+      {/* Tier 1 footer — player left, Full Karaoke right */}
       {isTier1 && (
-        <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {(post as any).spotifyUrl && <a href={(post as any).spotifyUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)', textDecoration: 'none', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: '50px', transition: 'color 150ms' }}>Spotify</a>}
-            {(post as any).appleMusicUrl && <a href={(post as any).appleMusicUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)', textDecoration: 'none', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: '50px' }}>Apple</a>}
-            {(post as any).audiomackUrl && <a href={(post as any).audiomackUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)', textDecoration: 'none', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: '50px' }}>Audiomack</a>}
+        <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              {audioUrl && <Tier1Player audioUrl={audioUrl} songId={post.songId || null} />}
+            </div>
+            {post.songId && (
+              <Link href={`/music/player?id=${post.songId}`} style={{
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+                color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase',
+                textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--gold-border)',
+                borderRadius: '50px', flexShrink: 0, alignSelf: 'flex-start',
+              }}>Full Karaoke →</Link>
+            )}
           </div>
-          {post.songId && (
-            <Link href={`/music/player?id=${post.songId}`} style={{
-              fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
-              color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase',
-              textDecoration: 'none', padding: '3px 8px', border: '1px solid var(--gold-border)', borderRadius: '50px',
-            }}>Full Karaoke →</Link>
-          )}
         </div>
       )}
     </div>
