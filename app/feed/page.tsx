@@ -110,6 +110,7 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           WebkitAppearance: 'none', outline: 'none',
           WebkitTapHighlightColor: 'transparent',
+          MozAppearance: 'none', touchAction: 'manipulation',
         }}>
           <span style={{ color: 'var(--bg)', fontSize: '0.7rem', lineHeight: 1, userSelect: 'none' }}>{playing ? '⏸' : '▶'}</span>
         </button>
@@ -251,7 +252,7 @@ function PostCard({
         <button onClick={() => onResonate(post.id)} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
           background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
-          color: resonated ? 'var(--gold)' : 'var(--text-3)',
+          color: resonated ? 'var(--gold)' : 'var(--text-2)',
           transition: 'color 150ms ease',
         }}>
           <span style={{ fontSize: '1rem' }}>{resonated ? '♥' : '♡'}</span>
@@ -263,7 +264,7 @@ function PostCard({
         {/* Lyric Back */}
         <Link href={`/lyric-back?postId=${post.id}`} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          color: 'var(--text-3)', textDecoration: 'none', padding: '4px 8px',
+          color: 'var(--text-2)', textDecoration: 'none', padding: '4px 8px',
           transition: 'color 150ms ease',
         }}>
           <span style={{ fontSize: '1rem' }}>↩</span>
@@ -274,7 +275,7 @@ function PostCard({
         <button onClick={() => onExport(post)} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
           background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
-          color: 'var(--text-3)', transition: 'color 150ms ease',
+          color: 'var(--text-2)', transition: 'color 150ms ease',
         }}>
           <span style={{ fontSize: '1rem' }}>↗</span>
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Share</span>
@@ -416,12 +417,12 @@ export default function FeedPage() {
       </div>
 
       {/* Feed header */}
-      <section style={{ position: 'relative', zIndex: 5, borderBottom: '1px solid var(--border)', padding: '80px 24px 32px', textAlign: 'center' }}>
+      <section style={{ position: 'relative', zIndex: 5, borderBottom: '1px solid var(--border)', padding: '56px 24px 16px', textAlign: 'center' }}>
 
-        <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(1.75rem, 5vw, 3rem)', color: 'var(--text)', fontWeight: 400, marginBottom: '12px', lineHeight: 1.2 }}>
+        <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(1.1rem, 2.5vw, 1.6rem)', color: 'var(--text)', fontWeight: 400, marginBottom: '8px', lineHeight: 1.3 }}>
           What people are saying right now
         </h1>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text-3)', maxWidth: '480px', margin: '0 auto' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto' }}>
           Every lyric is a message.
         </p>
       </section>
@@ -433,8 +434,8 @@ export default function FeedPage() {
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {VIBES.map(vibe => (
               <button key={vibe} onClick={() => setSelectedVibe(vibe)} style={{
-                flexShrink: 0, padding: '6px 14px', borderRadius: '50px',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
+                flexShrink: 0, padding: '4px 10px', borderRadius: '50px',
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
                 letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
                 border: '1px solid',
                 background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
