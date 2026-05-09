@@ -353,24 +353,21 @@ export default function FeedPage() {
       </div>
 
       {/* Feed header */}
-      <section style={{ position: 'relative', zIndex: 5, borderBottom: '1px solid var(--border)', padding: '80px 24px 48px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '8px 16px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '50px' }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', display: 'inline-block' }} />
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase' }}>Live from the community</span>
-        </div>
+      <section style={{ position: 'relative', zIndex: 5, borderBottom: '1px solid var(--border)', padding: '80px 24px 32px', textAlign: 'center' }}>
+
         <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(1.75rem, 5vw, 3rem)', color: 'var(--text)', fontWeight: 400, marginBottom: '12px', lineHeight: 1.2 }}>
           What people are saying right now
         </h1>
         <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text-3)', maxWidth: '480px', margin: '0 auto' }}>
-          Every lyric is a message. Resonate, reply, or share it forward.
+          Every lyric is a message.
         </p>
       </section>
 
       {/* Filters */}
-      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'rgba(7,6,10,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '16px 24px' }}>
+      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'rgba(7,6,10,0.92)', backdropFilter: 'blur(12px)', padding: '12px 24px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           {/* Vibe pills */}
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', scrollbarWidth: 'none' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {VIBES.map(vibe => (
               <button key={vibe} onClick={() => setSelectedVibe(vibe)} style={{
                 flexShrink: 0, padding: '6px 14px', borderRadius: '50px',
@@ -386,7 +383,7 @@ export default function FeedPage() {
           </div>
 
           {/* Search */}
-          <div style={{ position: 'relative', marginBottom: '12px' }}>
+          <div style={{ position: 'relative', marginBottom: '6px' }}>
             <input
               type="text"
               value={searchQuery}
@@ -408,7 +405,7 @@ export default function FeedPage() {
           </div>
 
           {/* Sort tabs */}
-          <div style={{ display: 'flex', gap: '4px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+          <div style={{ display: 'flex', gap: '4px', paddingTop: '8px', paddingBottom: '4px' }}>
             {SORTS.map(sort => (
               <button key={sort} onClick={() => setSelectedSort(sort)} style={{
                 padding: '6px 16px', background: 'none', border: 'none', cursor: 'pointer',
