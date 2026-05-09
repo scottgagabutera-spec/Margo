@@ -155,7 +155,7 @@ export default function Home() {
 
   const navLink: React.CSSProperties = {
     padding: '8px 12px',
-    fontSize: '0.6rem',
+    fontSize: '0.82rem',
     fontFamily: 'var(--font-lora), serif',
     fontWeight: 600,
     letterSpacing: '1px',

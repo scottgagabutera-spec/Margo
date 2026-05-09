@@ -13,7 +13,7 @@ export function MargoNav() {
     letterSpacing: '2px',
     textTransform: 'uppercase',
     textDecoration: 'none',
-    color: active ? 'var(--gold)' : 'var(--text-2)',
+    color: 'var(--gold)',
     transition: 'color 150ms ease',
     padding: '8px 12px',
   })
