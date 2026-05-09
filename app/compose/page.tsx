@@ -82,15 +82,13 @@ export default function ComposePage() {
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
     // If licensed artist, look up matching song in Firebase/songs
-    console.log('MARGO DEBUG artist:', result.artist, '| isLicensed:', isLicensed(result.artist))
     if (isLicensed(result.artist) && db) {
       try {
-        const snap = await get(query(ref(db, 'songs'), orderByChild('order')))
+        const snap = await get(ref(db, 'songs'))
         snap.forEach((child) => {
           const s = child.val()
           const titleMatch = s.title?.toLowerCase().trim() === result.title.toLowerCase().trim()
           const artistMatch = isLicensed(s.artist || '')
-          console.log('MARGO DEBUG title in DB:', s.title, '| search title:', result.title, '| match:', titleMatch)
           if (titleMatch && artistMatch) {
             setLinkedSongId(child.key)
             setLinkedAudioUrl(s.audioUrl || null)
