@@ -18,7 +18,7 @@ export function useLicensedArtists() {
           setArtists(Object.values(data).map((a: any) => String(a).toLowerCase().trim()))
         }
       } else {
-        setArtists(['margo'])
+        setArtists(['margo', 'trymargo'])
       }
       setLoading(false)
     })
