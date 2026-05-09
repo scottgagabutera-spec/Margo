@@ -135,9 +135,9 @@ export default function Home() {
   const topEmotion = te ? te[0] : null;
 
   const stats = [
-    { number: String(allPosts.length || '0'), label: 'Lyrics', context: 'communicated so far' },
+    { number: String(allPosts.length || '0'), label: 'Lyrics', context: 'on Margo' },
     { number: String(Object.keys(ac).length || '0'), label: 'Artists', context: 'quoted on Margo' },
-    { number: String(Object.keys(sc).length || '0'), label: 'Songs', context: 'used to speak' },
+    { number: String(Object.keys(sc).length || '0'), label: 'Songs', context: 'on Margo' },
     { value: topArtist || '—', label: 'Top Artist', context: 'most quoted' },
     { value: topSong || '—', label: 'Top Song', context: 'most used' },
     { value: topEmotion || '—', label: 'Top Feeling', context: 'right now' },
@@ -184,7 +184,7 @@ export default function Home() {
         <a href="/" style={{textDecoration:'none'}}>
           <MargoLogo tier="symbol" size={32} rings wordmark />
         </a>
-        <a href="/music" style={{...navLink, color:'var(--gold)'}}>Music</a>
+        <a href="/music" style={{...navLink, color:'var(--gold)', fontWeight:700}}>Music</a>
       </nav>
 
       {/* Hero */}
@@ -251,19 +251,25 @@ export default function Home() {
             justifyContent:'center',
             boxShadow:'0 6px 28px rgba(232,197,71,0.28)',
             transition:'all 150ms ease',
-          }}>See What&apos;s Live</a>
+          fontWeight:700}}>See What&apos;s Live</a>
           <a href="/compose" style={{
+            padding:'13px 28px',
             background:'transparent',
-            border:'none',
-            color:'var(--text-3)',
+            color:'var(--text-2)',
+            border:'1px solid var(--border-hi)',
+            borderRadius:'50px',
             fontFamily:'var(--font-lora),serif',
-            fontSize:'0.82rem',
-            fontWeight:500,
-            cursor:'pointer',
-            padding:'6px 12px',
-            letterSpacing:'0.02em',
+            fontWeight:600,
+            fontSize:'0.6rem',
+            letterSpacing:'1px',
+            textTransform:'uppercase',
             textDecoration:'none',
-            transition:'color 150ms ease',
+            minHeight:'48px',
+            width:'100%',
+            display:'flex',
+            alignItems:'center',
+            justifyContent:'center',
+            transition:'all 150ms ease',
           }}>↓ Share a Lyric</a>
         </div>
       </section>
@@ -328,7 +334,7 @@ export default function Home() {
           {stats.map((stat, idx) => (
             <div key={idx} style={{
               display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center',
-              padding:'32px 16px',
+              padding:'20px 12px',
               borderRight: idx % 3 !== 2 ? '1px solid var(--border)' : 'none',
               borderBottom: idx < 3 ? '1px solid var(--border)' : 'none',
             }}>
@@ -338,7 +344,7 @@ export default function Home() {
                 <div style={{fontFamily:'var(--font-lora),serif', fontSize:'1.1rem', fontWeight:700, color:'var(--gold)', lineHeight:1, marginBottom:'8px', textTransform:'uppercase', letterSpacing:'1px'}}>{stat.value}</div>
               )}
               <div style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', fontWeight:700, color:'var(--text-3)', letterSpacing:'2px', textTransform:'uppercase', marginBottom:'4px'}}>{stat.label}</div>
-              <div style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', color:'var(--text-3)', letterSpacing:'0.5px'}}>{stat.context}</div>
+              <div style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', color:'var(--text-2)', letterSpacing:'0.5px'}}>{stat.context}</div>
             </div>
           ))}
         </div>
