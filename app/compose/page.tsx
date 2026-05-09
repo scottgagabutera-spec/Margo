@@ -32,7 +32,7 @@ const VIBE_LABELS: Record<Vibe, string> = {
 
 export default function ComposePage() {
   const { username } = useUsername()
-  const { isLicensed, loading: artistsLoading } = useLicensedArtists()
+  const { isLicensed } = useLicensedArtists()
 
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
@@ -421,14 +421,12 @@ export default function ComposePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '320px', margin: '0 auto' }}>
               <button
                 onClick={() => handlePost(false)}
-              disabled={artistsLoading}
                 style={{
-                  padding: '15px 28px', background: artistsLoading ? 'var(--border)' : 'var(--gold)', color: 'var(--bg)',
+                  padding: '15px 28px', background: 'var(--gold)', color: 'var(--bg)',
                   borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
                   fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
-                  textTransform: 'uppercase', border: 'none', cursor: artistsLoading ? 'not-allowed' : 'pointer',
-                  boxShadow: artistsLoading ? 'none' : '0 6px 28px rgba(232,197,71,0.28)',
-                  opacity: artistsLoading ? 0.5 : 1,
+                  textTransform: 'uppercase', border: 'none', cursor: 'pointer',
+                  boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
                 }}
               >Post to Feed</button>
               <button

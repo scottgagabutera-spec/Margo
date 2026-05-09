@@ -4,7 +4,7 @@ import { db } from '@/lib/firebase'
 import { ref, onValue } from 'firebase/database'
 
 export function useLicensedArtists() {
-  const [artists, setArtists] = useState<string[]>([])
+  const [artists, setArtists] = useState<string[]>(['margo', 'trymargo'])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
