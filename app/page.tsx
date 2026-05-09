@@ -270,14 +270,13 @@ export default function Home() {
             alignItems:'center',
             justifyContent:'center',
             transition:'all 150ms ease',
-          }}>↓ Share a Lyric</a>
+          }}>Share a Lyric</a>
         </div>
       </section>
 
       {/* Featured Lyric */}
       {featuredLyric && (
-        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'48rem', margin:'0 auto 32px'}}>
-          <div style={{fontSize:'0.6rem', color:'var(--text-3)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'16px'}}>↓ Featured lyric</div>
+        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'48rem', margin:'0 auto 24px'}}>
           <div style={{
             background:'var(--surface)',
             border:'1px solid var(--gold-border)',
@@ -295,7 +294,7 @@ export default function Home() {
         </section>
       )}
       {/* Lyric Stream */}
-      <section style={{position:'relative', zIndex:5, width:'100%', margin:'0 auto 48px', overflow:'hidden'}}>
+      <section style={{position:'relative', zIndex:5, width:'100%', margin:'0 auto 32px', overflow:'hidden'}}>
         <div style={{fontSize:'0.6rem', color:'var(--text-3)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>↓ What people are saying right now</div>
         <div style={{
           position:'relative',
@@ -334,7 +333,7 @@ export default function Home() {
           {stats.map((stat, idx) => (
             <div key={idx} style={{
               display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center',
-              padding:'20px 12px',
+              padding:'16px 8px',
               borderRight: idx % 3 !== 2 ? '1px solid var(--border)' : 'none',
               borderBottom: idx < 3 ? '1px solid var(--border)' : 'none',
             }}>
