@@ -28,7 +28,7 @@ export function MargoNav() {
       WebkitBackdropFilter: 'blur(12px)',
     }}>
       <div style={{
-        maxWidth: '72rem', margin: '0 auto',
+        maxWidth: '56rem', margin: '0 auto',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <Link href="/" style={{ textDecoration: 'none' }}>
@@ -36,7 +36,9 @@ export function MargoNav() {
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Link href="/feed" style={linkStyle(pathname === '/feed')}>Feed</Link>
-          <Link href="/music" style={linkStyle(pathname?.startsWith('/music') ?? false)}>Music</Link>
+          {!pathname?.startsWith('/music') && (
+            <Link href="/music" style={linkStyle(false)}>Music</Link>
+          )}
         </div>
       </div>
     </nav>
