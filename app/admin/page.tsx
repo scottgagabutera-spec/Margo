@@ -378,11 +378,12 @@ function MusicTab() {
 
   useEffect(() => {
     if (!db) return
-    return onValue(ref(db, 'songs'), snap => {
+    const unsub = onValue(ref(db, 'songs'), snap => {
       const list: Song[] = []
-      snap.forEach(child => list.push({ ...child.val(), id: child.key }))
+      snap.forEach(child => list.push({ ...child.val(), id: child.key as string }))
       setSongs(list.sort((a, b) => (a.order || 0) - (b.order || 0)))
     })
+    return () => unsub()
   }, [])
 
   const deleteSong = async (id: string) => {
