@@ -639,7 +639,7 @@ export default function AdminPage() {
         </div>
         {/* Content */}
         {tab === 'posts'    && <PostsTab />}
-        {tab === 'music'    && <MusicTab />}
+        <div style={{ display: tab === 'music' ? 'block' : 'none' }}><MusicTab /></div>
         {tab === 'licensed' && <LicensedTab />}
         {tab === 'featured' && <FeaturedTab />}
         {tab === 'pages'    && <PagesTab />}
