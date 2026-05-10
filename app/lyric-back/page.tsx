@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, Suspense } from 'react'
-import { Search, Music2, Disc3, Heart, MessageCircle, CreditCard } from 'lucide-react'
+import { Search, Heart, MessageCircle, CreditCard } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
 import { MargoNav } from '@/components/margo-nav'
 import { db } from '@/lib/firebase'
@@ -38,17 +38,17 @@ const VIBE_LABELS: Record<Vibe, string> = {
   'SEND IT': 'Send It', 'LET OUT': 'Let Out',
 }
 
-/* ─── shared style tokens ─────────────────────────────────── */
-const font = 'var(--font-lora), serif'
-const gold = 'var(--gold)'
-const goldFaint = 'var(--gold-faint)'
-const goldBorder = 'var(--gold-border)'
-const surface = 'var(--surface)'
-const border = 'var(--border)'
-const text = 'var(--text)'
-const text2 = 'var(--text-2)'
-const text3 = 'var(--text-3)'
-const bg = 'var(--bg)'
+/* ─── style tokens — one source of truth ─────────────────── */
+const font        = 'var(--font-lora), serif'
+const gold        = 'var(--gold)'
+const goldFaint   = 'var(--gold-faint)'
+const goldBorder  = 'var(--gold-border)'
+const surface     = 'var(--surface)'
+const border      = 'var(--border)'
+const text        = 'var(--text)'
+const text2       = 'var(--text-2)'
+const text3       = 'var(--text-3)'
+const bg          = 'var(--bg)'
 
 function LyricBackContent() {
   const { username } = useUsername()
@@ -70,7 +70,10 @@ function LyricBackContent() {
   const [resonated, setResonated] = useState<Set<string>>(new Set())
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
   const [showCard, setShowCard] = useState(false)
-  const [cardData, setCardData] = useState<{ lyric: string; song: string; artist: string; id: string } | null>(null)
+  const [cardData, setCardData] = useState<{
+    lyric: string; song: string; artist: string; id: string;
+    parentLyric?: string; parentSong?: string; parentArtist?: string;
+  } | null>(null)
 
   /* ─── search ─────────────────────────────────────────────── */
   const handleSearch = useCallback(async (value: string) => {
@@ -135,21 +138,22 @@ function LyricBackContent() {
     setArtistName(''); setSongName(''); setLyric(''); setSelectedVibe(null)
   }, [artistName, songName, lyric, selectedVibe, selectedSong, username, postId])
 
-  /* ─── promote + reply ────────────────────────────────────── */
-  const promoteAndReply = async (echo: typeof echoes[0]) => {
+  /* ─── promote + reply — navigate first, write in background ─ */
+  const promoteAndReply = (echo: typeof echoes[0]) => {
+    // Navigate immediately — don't block on Firebase write
+    window.location.href = `/lyric-back?postId=${echo.id}`
+    // Fire-and-forget write in background
     if (db) {
-      try {
-        const { ref: dbRef, set: dbSet } = await import('firebase/database')
-        await dbSet(dbRef(db, `posts/${echo.id}`), {
+      import('firebase/database').then(({ ref: dbRef, set: dbSet }) => {
+        dbSet(dbRef(db, `posts/${echo.id}`), {
           text: echo.lyric,
           knowledge: { song: echo.song, artist: echo.artist },
           emotion: echo.emotion, mode: 'reply',
           username: echo.username, timestamp: echo.timestamp,
           replyToId: postId || 'root',
-        })
-      } catch (e) { console.error('promote error', e) }
+        }).catch(e => console.error('promote error', e))
+      })
     }
-    window.location.href = `/lyric-back?postId=${echo.id}`
   }
 
   /* ─── resonate ───────────────────────────────────────────── */
@@ -191,7 +195,8 @@ function LyricBackContent() {
           <div style={{
             background: goldFaint, border: `1px solid ${goldBorder}`,
             borderRadius: '20px', padding: '28px 24px',
-            marginBottom: '40px', textAlign: 'center', position: 'relative', overflow: 'hidden',
+            marginBottom: '40px', textAlign: 'center',
+            position: 'relative', overflow: 'hidden',
           }}>
             <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '240px', height: '100px', background: 'rgba(232,197,71,0.08)', filter: 'blur(40px)', pointerEvents: 'none' }} />
             <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: text3, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px', position: 'relative', zIndex: 1 }}>
@@ -427,7 +432,10 @@ function LyricBackContent() {
 
           {/* ── Lyric Backs section ───────────────────────────── */}
           <div style={{ marginTop: '64px', paddingTop: '40px', borderTop: `1px solid rgba(232,197,71,0.1)` }}>
-            <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: text3, letterSpacing: '2px', textTransform: 'uppercase', textAlign: 'center', marginBottom: '28px' }}>
+            <p style={{
+              fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: text3,
+              letterSpacing: '2px', textTransform: 'uppercase', textAlign: 'center', marginBottom: '28px',
+            }}>
               Lyric Backs
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -446,13 +454,23 @@ function LyricBackContent() {
                   <div
                     key={lb.id}
                     style={{
-                      background: 'rgba(255,255,255,0.02)',
+                      /* Depth: subtle gradient bg + gold left-border accent */
+                      background: 'linear-gradient(135deg, rgba(232,197,71,0.04) 0%, rgba(255,255,255,0.015) 100%)',
                       border: `1px solid ${border}`,
+                      borderLeft: `3px solid rgba(232,197,71,0.35)`,
                       borderRadius: '18px', padding: '20px 22px',
-                      transition: 'border-color 200ms ease',
+                      transition: 'border-color 200ms ease, box-shadow 200ms ease',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.borderColor = goldBorder)}
-                    onMouseLeave={e => (e.currentTarget.style.borderColor = border)}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = goldBorder
+                      e.currentTarget.style.borderLeftColor = gold
+                      e.currentTarget.style.boxShadow = '0 4px 24px rgba(232,197,71,0.08)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = border
+                      e.currentTarget.style.borderLeftColor = 'rgba(232,197,71,0.35)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                   >
                     {/* Username + emotion */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
@@ -477,55 +495,73 @@ function LyricBackContent() {
                       — {lb.artist}, {lb.song}
                     </p>
 
-                    {/* Actions */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px', paddingTop: '14px', borderTop: `1px solid ${border}` }}>
-                      {/* Resonate */}
+                    {/* Actions — clear hierarchy: Resonate primary, Lyric Back secondary, Card tertiary */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0', paddingTop: '14px', borderTop: `1px solid ${border}` }}>
+
+                      {/* Resonate — primary, weighted */}
                       <button
                         onClick={() => toggleResonate(lb.id)}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                          color: hasResonated ? gold : 'var(--text-3)',
-                          transition: 'color 150ms ease',
+                          display: 'flex', alignItems: 'center', gap: '7px',
+                          background: hasResonated ? 'rgba(232,197,71,0.1)' : 'none',
+                          border: hasResonated ? `1px solid ${goldBorder}` : '1px solid transparent',
+                          borderRadius: '50px', cursor: 'pointer', padding: '7px 14px',
+                          color: hasResonated ? gold : text3,
+                          transition: 'all 150ms ease',
                           fontFamily: font,
+                          marginRight: '8px',
                         }}
+                        onMouseEnter={e => { if (!hasResonated) e.currentTarget.style.color = gold }}
+                        onMouseLeave={e => { if (!hasResonated) e.currentTarget.style.color = 'var(--text-3)' }}
                       >
-                        <Heart style={{ width: '15px', height: '15px', fill: hasResonated ? 'currentColor' : 'none', transition: 'fill 150ms ease' }} />
-                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                          {resonateCount > 0 ? resonateCount : ''} Resonate
+                        <Heart style={{ width: '16px', height: '16px', fill: hasResonated ? 'currentColor' : 'none', transition: 'fill 150ms ease', flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                          Resonate{resonateCount > 0 ? ` · ${resonateCount}` : ''}
                         </span>
                       </button>
 
-                      {/* Lyric Back */}
+                      {/* Lyric Back — secondary */}
                       <button
                         onClick={() => promoteAndReply(lb)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '6px',
-                          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                          color: text3, transition: 'color 150ms ease', fontFamily: font,
+                          background: 'none', border: '1px solid transparent',
+                          borderRadius: '50px', cursor: 'pointer', padding: '7px 14px',
+                          color: text3, transition: 'all 150ms ease', fontFamily: font,
                         }}
-                        onMouseEnter={e => (e.currentTarget.style.color = gold)}
-                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+                        onMouseEnter={e => { e.currentTarget.style.color = gold; e.currentTarget.style.borderColor = goldBorder }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.borderColor = 'transparent' }}
                       >
-                        <MessageCircle style={{ width: '15px', height: '15px' }} />
-                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                        <MessageCircle style={{ width: '15px', height: '15px', flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                           Lyric Back
                         </span>
                       </button>
 
-                      {/* Card */}
+                      {/* Card — tertiary, pushed to end */}
                       <button
-                        onClick={() => { setCardData({ lyric: lb.lyric, song: lb.song, artist: lb.artist, id: lb.id }); setShowCard(true) }}
+                        onClick={() => {
+                          setCardData({
+                            lyric: lb.lyric, song: lb.song, artist: lb.artist, id: lb.id,
+                            // Pass parent context for dual-card canvas
+                            parentLyric: respondingTo?.text,
+                            parentSong: respondingTo?.knowledge?.song,
+                            parentArtist: respondingTo?.knowledge?.artist,
+                          })
+                          setShowCard(true)
+                        }}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '6px',
-                          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                          color: text3, transition: 'color 150ms ease', fontFamily: font,
+                          background: 'none', border: '1px solid transparent',
+                          borderRadius: '50px', cursor: 'pointer', padding: '7px 12px',
+                          color: text3, transition: 'all 150ms ease', fontFamily: font,
+                          marginLeft: 'auto',
                         }}
-                        onMouseEnter={e => (e.currentTarget.style.color = gold)}
-                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+                        onMouseEnter={e => { e.currentTarget.style.color = gold; e.currentTarget.style.borderColor = goldBorder }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.borderColor = 'transparent' }}
                       >
-                        <CreditCard style={{ width: '15px', height: '15px' }} />
-                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                        <CreditCard style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.6rem', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                           Card
                         </span>
                       </button>
@@ -539,7 +575,7 @@ function LyricBackContent() {
         </div>
       </div>
 
-      {/* Card export modal */}
+      {/* Card export modal — passes parent context for dual-card canvas */}
       {showCard && (
         <CardExportModal
           open={showCard}
@@ -548,6 +584,9 @@ function LyricBackContent() {
           song={cardData?.song || ''}
           artist={cardData?.artist || ''}
           postId={cardData?.id}
+          parentLyric={cardData?.parentLyric}
+          parentSong={cardData?.parentSong}
+          parentArtist={cardData?.parentArtist}
         />
       )}
     </main>
