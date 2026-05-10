@@ -211,6 +211,10 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
   const empty: Partial<Song> = { title: '', artist: 'Trymargo', status: 'live', audioUrl: '', artwork: '', youtubeUrl: '', spotifyUrl: '', appleMusicUrl: '', audiomackUrl: '', soundcloudUrl: '', boomplayUrl: '', srt: '', lyrics: '', description: '', comingSoonLabel: '' }
   const [form, setForm] = useState<Partial<Song>>(song || empty)
   const [saving, setSaving] = useState(false)
+  const [showStreaming, setShowStreaming] = useState(false)
+  const [showLyrics, setShowLyrics] = useState(!!(song?.srt || song?.lyrics))
+  const [generatingSRT, setGeneratingSRT] = useState(false)
+  const [srtStatus, setSrtStatus] = useState('')
   const set_ = (k: keyof Song, v: string) => setForm(f => ({ ...f, [k]: v }))
 
   const save = async () => {
@@ -229,6 +233,36 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
     onSave()
   }
 
+  const generateSRT = async () => {
+    if (!form.audioUrl) { setSrtStatus('Add an Audio URL first'); return }
+    setGeneratingSRT(true)
+    setSrtStatus('Sending to Whisper AI…')
+    try {
+      const res = await fetch('/api/whisper', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioUrl: form.audioUrl, songId: song?.id }),
+      })
+      const data = await res.json()
+      if (data.srt) {
+        setForm(f => ({ ...f, srt: data.srt }))
+        setShowLyrics(true)
+        setSrtStatus('✓ Lyrics generated — review and save')
+        // Auto-save SRT to Firebase if editing existing song
+        if (song?.id && db) {
+          await update(ref(db, `songs/${song.id}`), { srt: data.srt })
+          setSrtStatus('✓ Lyrics generated and saved automatically')
+        }
+      } else {
+        setSrtStatus('Failed: ' + (data.error || 'Unknown error'))
+      }
+    } catch (e: any) {
+      setSrtStatus('Failed: ' + e.message)
+    } finally {
+      setGeneratingSRT(false)
+    }
+  }
+
   const field = (label: string, key: keyof Song, type = 'text', placeholder = '') => (
     <div style={{ marginBottom: '14px' }}>
       <label style={S.label}>{label}</label>
@@ -240,6 +274,8 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
   return (
     <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(232,197,71,0.2)', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
       <h3 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--gold)', marginBottom: '20px' }}>{song?.id ? 'Edit Song' : 'Add Song'}</h3>
+      
+      {/* Core fields — always visible */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
         {field('Title', 'title', 'text', 'Song title')}
         {field('Artist', 'artist', 'text', 'Artist name')}
@@ -253,34 +289,71 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
           <option value="hidden">Hidden</option>
         </select>
       </div>
-      {field('Audio URL (R2)', 'audioUrl', 'text', 'https://audio.trymargo.com/…')}
+      {field('Audio URL (R2)', 'audioUrl', 'text', 'https://audio.trymargo.com/Margo/audio/filename.wav')}
       {field('Artwork URL', 'artwork', 'text', 'https://…')}
-      {field('YouTube URL', 'youtubeUrl', 'text', 'https://youtube.com/…')}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        {field('Spotify URL', 'spotifyUrl')}
-        {field('Apple Music URL', 'appleMusicUrl')}
-        {field('Audiomack URL', 'audiomackUrl')}
-        {field('SoundCloud URL', 'soundcloudUrl')}
-        {field('Boomplay URL', 'boomplayUrl')}
-        {field('Coming Soon Label', 'comingSoonLabel', 'text', 'e.g. Drop Q3 2025')}
+
+      {/* Generate SRT button */}
+      <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.15)', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: srtStatus ? '10px' : '0' }}>
+          <div>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text)', marginBottom: '2px' }}>AI Lyrics Sync</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.5px' }}>Whisper AI reads the audio and generates synced karaoke lyrics automatically</p>
+          </div>
+          <button
+            onClick={generateSRT}
+            disabled={generatingSRT || !form.audioUrl}
+            style={{ ...S.btn, flexShrink: 0, marginLeft: '16px', opacity: (!form.audioUrl || generatingSRT) ? 0.5 : 1 }}
+          >{generatingSRT ? 'Generating…' : '✦ Generate'}</button>
+        </div>
+        {srtStatus && <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: srtStatus.startsWith('✓') ? '#4ade80' : '#ff6060', margin: 0 }}>{srtStatus}</p>}
       </div>
-      <div style={{ marginBottom: '14px' }}>
-        <label style={S.label}>Description</label>
-        <textarea value={form.description || ''} onChange={e => set_('description', e.target.value)}
-          rows={2} placeholder="Short description shown on music page"
-          style={{ ...S.input, resize: 'vertical', lineHeight: 1.5 }} />
-      </div>
-      <div style={{ marginBottom: '14px' }}>
-        <label style={S.label}>SRT Lyrics (synced karaoke)</label>
-        <textarea value={form.srt || ''} onChange={e => set_('srt', e.target.value)}
-          rows={6} placeholder="1&#10;00:00:01,000 --> 00:00:03,500&#10;Line of lyric here"
-          style={{ ...S.input, resize: 'vertical', fontFamily: 'monospace', fontSize: '0.75rem', lineHeight: 1.6 }} />
-      </div>
-      <div style={{ marginBottom: '20px' }}>
-        <label style={S.label}>Plain Lyrics</label>
-        <textarea value={form.lyrics || ''} onChange={e => set_('lyrics', e.target.value)}
-          rows={4} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} />
-      </div>
+
+      {/* Streaming links — collapsed */}
+      <button onClick={() => setShowStreaming(s => !s)} style={{ ...S.ghostBtn, width: '100%', textAlign: 'left', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
+        <span>Streaming Links</span>
+        <span>{showStreaming ? '▲' : '▼'}</span>
+      </button>
+      {showStreaming && (
+        <div style={{ marginBottom: '12px' }}>
+          {field('YouTube URL', 'youtubeUrl', 'text', 'https://youtube.com/…')}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            {field('Spotify URL', 'spotifyUrl')}
+            {field('Apple Music URL', 'appleMusicUrl')}
+            {field('Audiomack URL', 'audiomackUrl')}
+            {field('SoundCloud URL', 'soundcloudUrl')}
+            {field('Boomplay URL', 'boomplayUrl')}
+            {field('Coming Soon Label', 'comingSoonLabel', 'text', 'e.g. Drop Q3 2025')}
+          </div>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={S.label}>Description</label>
+            <textarea value={form.description || ''} onChange={e => set_('description', e.target.value)}
+              rows={2} placeholder="Short description shown on music page"
+              style={{ ...S.input, resize: 'vertical', lineHeight: 1.5 }} />
+          </div>
+        </div>
+      )}
+
+      {/* Lyrics — collapsed unless SRT exists */}
+      <button onClick={() => setShowLyrics(s => !s)} style={{ ...S.ghostBtn, width: '100%', textAlign: 'left', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
+        <span>Lyrics {form.srt ? '✓' : ''}</span>
+        <span>{showLyrics ? '▲' : '▼'}</span>
+      </button>
+      {showLyrics && (
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={S.label}>SRT Lyrics (synced karaoke) — auto-generated above</label>
+            <textarea value={form.srt || ''} onChange={e => set_('srt', e.target.value)}
+              rows={8} placeholder="Generated automatically by Whisper AI, or paste manually"
+              style={{ ...S.input, resize: 'vertical', fontFamily: 'monospace', fontSize: '0.7rem', lineHeight: 1.6 }} />
+          </div>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={S.label}>Plain Lyrics</label>
+            <textarea value={form.lyrics || ''} onChange={e => set_('lyrics', e.target.value)}
+              rows={4} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} />
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '10px' }}>
         <button onClick={save} disabled={saving} style={{ ...S.btn, opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save Song'}</button>
         <button onClick={onCancel} style={S.ghostBtn}>Cancel</button>
