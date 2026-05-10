@@ -95,7 +95,7 @@ function SongPreview({ song, onClose }: { song: Song; onClose: () => void }) {
         )}
 
         {/* CTA */}
-        {song.status === 'active' ? (
+        {song.status === 'live' || song.status === 'active' ? (
           <Link href={`/music/player?id=${song.id}`} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '15px 28px', background: 'var(--gold)', color: 'var(--bg)',
@@ -121,7 +121,7 @@ function SongPreview({ song, onClose }: { song: Song; onClose: () => void }) {
 }
 
 function SongCard({ song, onPreview }: { song: Song; onPreview: (song: Song) => void }) {
-  const isActive = song.status === 'active'
+  const isActive = song.status === 'live' || song.status === 'active'
 
   return (
     <div style={{ cursor: 'pointer' }} onClick={() => onPreview(song)}>
