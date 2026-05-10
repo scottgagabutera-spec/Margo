@@ -379,13 +379,22 @@ function MusicTab() {
   const [editingSong, setEditingSong] = useState<Partial<Song> | null | 'new'>(null)
 
   useEffect(() => {
-    if (!db) return
-    const unsub = onValue(ref(db, 'songs'), snap => {
-      const list: Song[] = []
-      snap.forEach(child => list.push({ ...child.val(), id: child.key as string }))
-      setSongs(list.sort((a, b) => (a.order || 0) - (b.order || 0)))
-    })
-    return () => unsub()
+    if (!app) return
+    try {
+      const database = getDatabase(app)
+      const unsub = onValue(
+        ref(database, 'songs'),
+        snap => {
+          const list: Song[] = []
+          snap.forEach(child => list.push({ ...child.val(), id: child.key as string }))
+          setSongs(list.sort((a, b) => (a.order || 0) - (b.order || 0)))
+        },
+        err => console.error('[MusicTab] Firebase error:', err)
+      )
+      return () => unsub()
+    } catch (err) {
+      console.error('[MusicTab] Init error:', err)
+    }
   }, [])
 
   const deleteSong = async (id: string) => {
