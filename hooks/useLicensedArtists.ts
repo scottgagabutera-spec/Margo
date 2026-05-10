@@ -13,12 +13,14 @@ export function useLicensedArtists() {
       if (snap.exists()) {
         const data = snap.val()
         if (Array.isArray(data)) {
-          setArtists(data.map((a: string) => a.toLowerCase().trim()))
-        } else if (typeof data === 'object') {
-          setArtists(Object.values(data).map((a: any) => String(a).toLowerCase().trim()))
+          setArtists(data.map((a: string) => a.toLowerCase().trim()).filter(Boolean))
+        } else if (typeof data === 'string') {
+          setArtists([data.toLowerCase().trim()])
+        } else if (typeof data === 'object' && data !== null) {
+          setArtists(Object.values(data).map((a: any) => String(a).toLowerCase().trim()).filter(Boolean))
         }
       } else {
-        setArtists(['margo', 'trymargo'])
+        setArtists(['trymargo'])
       }
       setLoading(false)
     })

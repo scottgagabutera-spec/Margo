@@ -235,29 +235,42 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
 
   const generateSRT = async () => {
     if (!form.audioUrl) { setSrtStatus('Add an Audio URL first'); return }
+    if (!form.title) { setSrtStatus('Add a Title first'); return }
     setGeneratingSRT(true)
-    setSrtStatus('Sending to Whisper AI…')
+    setSrtStatus('Connecting to Whisper AI…')
     try {
+      let targetId = song?.id || null
+      if (!targetId && db) {
+        setSrtStatus('Saving song…')
+        const payload = { ...form } as any
+        delete payload.id
+        const snap = await get(ref(db, 'songs'))
+        const count = snap.exists() ? Object.keys(snap.val()).length : 0
+        const newRef = await push(ref(db, 'songs'), { ...payload, order: count, createdAt: Date.now() })
+        targetId = newRef.key
+      }
+      setSrtStatus('Reading audio — takes ~30 seconds…')
       const res = await fetch('/api/whisper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audioUrl: form.audioUrl, songId: song?.id }),
+        body: JSON.stringify({ audioUrl: form.audioUrl, songId: targetId }),
       })
       const data = await res.json()
       if (data.srt) {
         setForm(f => ({ ...f, srt: data.srt }))
         setShowLyrics(true)
-        setSrtStatus('✓ Lyrics generated — review and save')
-        // Auto-save SRT to Firebase if editing existing song
-        if (song?.id && db) {
-          await update(ref(db, `songs/${song.id}`), { srt: data.srt })
-          setSrtStatus('✓ Lyrics generated and saved automatically')
+        if (targetId && db) {
+          await update(ref(db, `songs/${targetId}`), { srt: data.srt })
+          setSrtStatus('✓ Done — song saved with lyrics')
+          setTimeout(() => onSave(), 1500)
+        } else {
+          setSrtStatus('✓ Lyrics generated — click Save Song')
         }
       } else {
-        setSrtStatus('Failed: ' + (data.error || 'Unknown error'))
+        setSrtStatus('✗ ' + (data.error || 'Check audio URL is publicly accessible'))
       }
     } catch (e: any) {
-      setSrtStatus('Failed: ' + e.message)
+      setSrtStatus('✗ ' + e.message)
     } finally {
       setGeneratingSRT(false)
     }
@@ -427,9 +440,15 @@ function LicensedTab() {
     return onValue(ref(db, 'adminConfig/licensedArtists'), snap => {
       if (snap.exists()) {
         const data = snap.val()
-        setArtists(Array.isArray(data) ? data : Object.values(data).map(String))
+        if (Array.isArray(data)) {
+          setArtists(data.map(String).filter(Boolean))
+        } else if (typeof data === 'string') {
+          setArtists([data].filter(Boolean))
+        } else if (typeof data === 'object' && data !== null) {
+          setArtists(Object.values(data).map(String).filter(Boolean))
+        }
       } else {
-        setArtists(['margo', 'trymargo'])
+        setArtists(['trymargo'])
       }
     })
   }, [])

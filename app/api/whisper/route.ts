@@ -10,14 +10,16 @@ export async function POST(request: NextRequest) {
     const audioRes = await fetch(audioUrl)
     if (!audioRes.ok) return NextResponse.json({ error: 'Could not fetch audio file' }, { status: 400 })
     const audioBuffer = await audioRes.arrayBuffer()
-    const audioBlob = new Blob([audioBuffer], { type: 'audio/wav' })
+    const urlLower = audioUrl.toLowerCase()
+    const mimeType = urlLower.includes('.mp3') ? 'audio/mpeg' : urlLower.includes('.m4a') ? 'audio/mp4' : urlLower.includes('.ogg') ? 'audio/ogg' : 'audio/wav'
+    const ext = urlLower.includes('.mp3') ? 'audio.mp3' : urlLower.includes('.m4a') ? 'audio.m4a' : urlLower.includes('.ogg') ? 'audio.ogg' : 'audio.wav'
+    const audioBlob = new Blob([audioBuffer], { type: mimeType })
 
     // Send to Whisper
     const formData = new FormData()
-    formData.append('file', audioBlob, 'audio.wav')
+    formData.append('file', audioBlob, ext)
     formData.append('model', 'whisper-1')
     formData.append('response_format', 'srt')
-    formData.append('language', 'fr') // trymargo songs are French/mixed — detect automatically if removed
 
     const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
