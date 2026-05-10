@@ -385,7 +385,9 @@ export function CardExportModal({
   const activeShape = SHAPES.find(s => s.id === shape) || SHAPES[0]
 
   const url = postId ? `https://trymargo.com/lyric-back?postId=${postId}` : 'https://trymargo.com'
-  const copyText = lyric ? `"${lyric}" — ${artist}, ${song}` : ''
+  const copyText = isDualCard
+    ? `"${parentLyric}" ↩ "${lyric}" — trymargo.com`
+    : lyric ? `"${lyric}" — ${artist}, ${song}` : ''
 
   /* ─── Render canvas ─────────────────────────────────────── */
   const renderCanvas = useCallback(async () => {
@@ -422,9 +424,10 @@ export function CardExportModal({
     if (!canvas) return
     canvas.toBlob(blob => {
       if (!blob) return
-      const slug = (song || 'Lyric').trim().replace(/[^a-z0-9\s]/gi, '').split(/\s+/).slice(0, 4).join('-').toLowerCase()
-      const suffix = isDualCard ? 'LyricBack' : 'Card'
-      const filename = `MARGO_${slug}_${suffix}_${activeShape.label}.png`
+      const slugReply = (song || 'Lyric').trim().replace(/[^a-z0-9\s]/gi, '').split(/\s+/).slice(0, 3).join('-').toLowerCase()
+      const slugParent = isDualCard ? (parentSong || '').trim().replace(/[^a-z0-9\s]/gi, '').split(/\s+/).slice(0, 3).join('-').toLowerCase() : ''
+      const slug = isDualCard ? `${slugParent}_LyricBack_${slugReply}` : slugReply
+      const filename = `MARGO_${slug}_${activeShape.label}.png`
       const url2 = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url2; a.download = filename
@@ -488,8 +491,8 @@ export function CardExportModal({
           >×</button>
         </div>
 
-        {/* Canvas preview */}
-        <div style={{ margin: '14px 20px 0', borderRadius: '12px', overflow: 'hidden', background: '#07060A', position: 'relative' }}>
+        {/* Canvas preview — scrollable so full card is reachable */}
+        <div style={{ margin: '14px 20px 0', borderRadius: '12px', overflow: 'hidden', background: '#07060A', position: 'relative', maxHeight: '260px', overflowY: 'auto' }}>
           <canvas
             ref={canvasRef}
             style={{ width: '100%', aspectRatio: `${activeShape.w} / ${activeShape.h}`, display: 'block' }}
