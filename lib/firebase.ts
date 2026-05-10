@@ -19,4 +19,4 @@ const app = typeof window !== 'undefined'
 const db   = app ? getDatabase(app) : null
 const auth = app ? getAuth(app) : null
 
-export { db, auth }
+export { db, auth, app }
