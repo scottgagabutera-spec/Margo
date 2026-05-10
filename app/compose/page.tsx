@@ -88,7 +88,7 @@ export default function ComposePage() {
         snap.forEach((child) => {
           const s = child.val()
           const titleMatch = s.title?.toLowerCase().trim() === result.title.toLowerCase().trim()
-          const artistMatch = isLicensed(s.artist || '')
+          const artistMatch = s.artist?.toLowerCase().trim() === result.artist.toLowerCase().trim()
           if (titleMatch && artistMatch) {
             setLinkedSongId(child.key)
             setLinkedAudioUrl(s.audioUrl || null)
