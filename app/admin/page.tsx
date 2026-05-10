@@ -237,39 +237,33 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
     if (!form.audioUrl) { setSrtStatus('Add an Audio URL first'); return }
     if (!form.title) { setSrtStatus('Add a Title first'); return }
     setGeneratingSRT(true)
-    setSrtStatus('Connecting to Whisper AI…')
+    setSrtStatus('Reading audio with Whisper AI — ~30 seconds…')
     try {
-      let targetId = song?.id || null
-      const payload = { ...form } as any
-      delete payload.id
-      if (!targetId && db) {
-        setSrtStatus('Saving song…')
-        const snap = await get(ref(db, 'songs'))
-        const count = snap.exists() ? Object.keys(snap.val()).length : 0
-        const newRef = await push(ref(db, 'songs'), { ...payload, order: count, createdAt: Date.now() })
-        targetId = newRef.key
-        setSrtStatus('Song saved. Generating lyrics…')
-      }
-      setSrtStatus('Reading audio — takes ~30 seconds…')
+      // Whisper runs FIRST — nothing saved to Firebase until it succeeds
       const res = await fetch('/api/whisper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audioUrl: form.audioUrl, songId: targetId }),
+        body: JSON.stringify({ audioUrl: form.audioUrl }),
       })
       const data = await res.json()
-      if (data.srt) {
-        const updatedPayload = { ...payload, srt: data.srt }
-        setForm(f => ({ ...f, srt: data.srt }))
-        setShowLyrics(true)
-        if (targetId && db) {
-          await update(ref(db, `songs/${targetId}`), updatedPayload)
-          setSrtStatus('✓ Done — song saved with lyrics')
-          setTimeout(() => onSave(), 1500)
+      if (!data.srt) {
+        setSrtStatus('✗ ' + (data.error || 'Failed — audio must be MP3 under 25MB'))
+        return
+      }
+      // Only save to Firebase after Whisper succeeds
+      setSrtStatus('Lyrics ready — saving song…')
+      const payload = { ...form, srt: data.srt } as any
+      delete payload.id
+      if (db) {
+        if (song?.id) {
+          await update(ref(db, `songs/${song.id}`), payload)
         } else {
-          setSrtStatus('✓ Lyrics generated — click Save Song')
+          const snap = await get(ref(db, 'songs'))
+          const count = snap.exists() ? Object.keys(snap.val()).length : 0
+          await push(ref(db, 'songs'), { ...payload, order: count, createdAt: Date.now() })
         }
-      } else {
-        setSrtStatus('✗ ' + (data.error || 'Check audio URL is publicly accessible'))
+        setSrtStatus('✓ Done — song live with synced lyrics')
+        setTimeout(() => onSave(), 1000)
       }
     } catch (e: any) {
       setSrtStatus('✗ ' + e.message)
