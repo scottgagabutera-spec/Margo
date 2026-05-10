@@ -371,7 +371,9 @@ function LicensedTab() {
     setSaving(false)
   }
 
-  const remove_ = async (name: string) => {
+  const remove_ = async (name: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     if (!db) return
     const updated = artists.filter(a => a !== name)
     await set(ref(db, 'adminConfig/licensedArtists'), updated)
@@ -391,7 +393,7 @@ function LicensedTab() {
       {artists.map(name => (
         <div key={name} style={{ ...S.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', color: 'var(--text)' }}>{name}</p>
-          <button onClick={() => remove_(name)} style={S.dangerBtn}>Remove</button>
+          <button onClick={(e) => remove_(name, e)} onMouseDown={e => e.stopPropagation()} style={S.dangerBtn}>Remove</button>
         </div>
       ))}
     </div>
