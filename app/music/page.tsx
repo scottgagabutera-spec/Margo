@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MargoNav } from '@/components/margo-nav'
@@ -15,106 +15,146 @@ function formatNum(n: number): string {
 
 function SongPreview({ song, onClose }: { song: Song; onClose: () => void }) {
   const { lines } = useSharedLines(song.title, song.artist)
+  const isActive = song.status === 'live' || song.status === 'active'
+
   return (
     <div
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(7,6,10,0.85)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '24px',
+        background: 'rgba(7,6,10,0.92)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        padding: '0',
+        animation: 'fadeInOverlay 250ms ease forwards',
       }}
     >
+      <style>{`
+        @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes slideUp { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+        @keyframes fadeInScale { from { transform: scale(0.96); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+        @keyframes shimmer { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
+        @keyframes cardHover { from { transform: translateY(0) } to { transform: translateY(-6px) } }
+        .song-card-wrap:hover .song-card-overlay { opacity: 1 !important; }
+        .song-card-wrap:hover .song-card-img { transform: scale(1.06); }
+        .song-card-wrap { transition: transform 300ms cubic-bezier(0.34,1.56,0.64,1); }
+        .song-card-wrap:hover { transform: translateY(-6px); }
+        .shared-line-row:hover { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
+        .play-btn:hover { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
+        .close-btn:hover { background: rgba(255,255,255,0.1) !important; }
+        @media (min-width: 640px) {
+          .preview-sheet { border-radius: 20px 20px 0 0; max-height: 90vh; }
+        }
+        @media (min-width: 1024px) {
+          .preview-sheet { border-radius: 20px; max-width: 520px; margin: auto; max-height: 85vh; }
+          .preview-wrap { align-items: center; }
+        }
+      `}</style>
+
       <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border-hi)',
-          borderRadius: '20px',
-          padding: '32px',
-          maxWidth: '480px',
-          width: '100%',
-          position: 'relative',
-        }}
+        className="preview-wrap"
+        onClick={onClose}
+        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
       >
-        {/* Close */}
-        <button
-          onClick={onClose}
+        <div
+          className="preview-sheet"
+          onClick={e => e.stopPropagation()}
           style={{
-            position: 'absolute', top: '16px', right: '16px',
-            width: '32px', height: '32px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-3)', fontSize: '1.1rem',
-            cursor: 'pointer', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            transition: 'all 150ms ease',
-            fontFamily: 'var(--font-lora), serif',
+            background: 'linear-gradient(160deg, rgba(28,24,36,0.98) 0%, rgba(14,12,18,0.99) 100%)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            width: '100%',
+            overflowY: 'auto',
+            position: 'relative',
+            animation: 'slideUp 320ms cubic-bezier(0.34,1.56,0.64,1) forwards',
           }}
-        >×</button>
-
-        {/* Artwork */}
-        {song.artwork && (
-          <div style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
-            <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} />
+        >
+          {/* Drag handle (mobile) */}
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+            <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.15)' }} />
           </div>
-        )}
 
-        {/* Title + Artist */}
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>{song.title}</p>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-2)', marginBottom: '20px', letterSpacing: '0.5px' }}>{song.artist}</p>
+          <div style={{ padding: '20px 28px 40px' }}>
+            {/* Close */}
+            <button
+              className="close-btn"
+              onClick={onClose}
+              style={{
+                position: 'absolute', top: '20px', right: '20px',
+                width: '34px', height: '34px', borderRadius: '50%',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.5)', fontSize: '1rem',
+                cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                transition: 'all 150ms ease',
+                fontFamily: 'var(--font-lora), serif',
+              }}
+            >×</button>
 
-        {/* Metrics */}
-        <div style={{ display: 'flex', gap: '24px', marginBottom: '20px' }}>
-          <div>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>{formatNum(song.plays || 0)}</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase' }}>Plays</p>
-          </div>
-          <div>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>{formatNum(song.resonates || 0)}</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase' }}>Resonates</p>
-          </div>
-          <div style={{ paddingLeft: '24px', borderLeft: '1px solid var(--gold-border)' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.1rem', fontWeight: 700, color: 'var(--gold)' }}>{formatNum(song.lyricUses || 0)}</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', opacity: 0.7, letterSpacing: '2px', textTransform: 'uppercase' }}>Lyric Uses</p>
+            {/* Artwork + info side by side */}
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '24px' }}>
+              {song.artwork && (
+                <div style={{ position: 'relative', width: '100px', height: '100px', flexShrink: 0, borderRadius: '10px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+                  <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} />
+                </div>
+              )}
+              <div style={{ flex: 1, paddingTop: '4px' }}>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 600, color: 'var(--text)', marginBottom: '4px', lineHeight: 1.2 }}>{song.title}</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-2)', marginBottom: '16px', letterSpacing: '0.5px' }}>{song.artist}</p>
+                {/* Metrics inline */}
+                <div style={{ display: 'flex', gap: '20px' }}>
+                  <div>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>{formatNum(song.plays || 0)}</p>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Plays</p>
+                  </div>
+                  <div>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>{formatNum(song.resonates || 0)}</p>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Resonates</p>
+                  </div>
+                  <div style={{ paddingLeft: '20px', borderLeft: '1px solid var(--gold-border)' }}>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', fontWeight: 700, color: 'var(--gold)' }}>{formatNum(song.lyricUses || 0)}</p>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'var(--gold)', opacity: 0.7, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Lyric Uses</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Top shared line */}
+            {lines[0] && (
+              <div style={{ padding: '16px 20px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '12px', marginBottom: '20px' }}>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)', lineHeight: 1.65 }}>
+                  &ldquo;{lines[0].line}&rdquo;
+                </p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '10px' }}>
+                  Most shared line · {lines[0].uses} {lines[0].uses === 1 ? 'use' : 'uses'}
+                </p>
+              </div>
+            )}
+
+            {/* CTA */}
+            {isActive ? (
+              <Link href={`/music/player?id=${song.id}`} className="play-btn" style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)',
+                borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+                fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px',
+                textTransform: 'uppercase', textDecoration: 'none',
+                minHeight: '52px', transition: 'all 200ms ease',
+                boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
+              }}>▶ Play Now</Link>
+            ) : (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '16px 28px', background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px',
+                fontFamily: 'var(--font-lora), serif', fontWeight: 700,
+                fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase',
+                color: 'var(--text-3)', minHeight: '52px',
+              }}>{song.comingSoonLabel || 'Coming Soon'}</div>
+            )}
           </div>
         </div>
-
-        {/* Top shared line */}
-        {lines[0] && (
-          <div style={{ padding: '16px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '12px', marginBottom: '20px' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)', lineHeight: 1.6 }}>
-              &ldquo;{lines[0].line}&rdquo;
-            </p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '8px' }}>
-              Most shared line · {lines[0].uses} {lines[0].uses === 1 ? 'use' : 'uses'}
-            </p>
-          </div>
-        )}
-
-        {/* CTA */}
-        {song.status === 'live' || song.status === 'active' ? (
-          <Link href={`/music/player?id=${song.id}`} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '15px 28px', background: 'var(--gold)', color: 'var(--bg)',
-            borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
-            fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
-            textTransform: 'uppercase', textDecoration: 'none',
-            minHeight: '52px', transition: 'all 150ms ease',
-            boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
-          }}>Play Now</Link>
-        ) : (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '15px 28px', background: 'var(--surface-2)',
-            border: '1px solid var(--border)', borderRadius: '50px',
-            fontFamily: 'var(--font-lora), serif', fontWeight: 700,
-            fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
-            color: 'var(--text-3)', minHeight: '52px',
-          }}>{song.comingSoonLabel || 'Coming Soon'}</div>
-        )}
       </div>
     </div>
   )
@@ -122,56 +162,105 @@ function SongPreview({ song, onClose }: { song: Song; onClose: () => void }) {
 
 function SongCard({ song, onPreview }: { song: Song; onPreview: (song: Song) => void }) {
   const isActive = song.status === 'live' || song.status === 'active'
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleTouchStart = () => {
+    pressTimer.current = setTimeout(() => onPreview(song), 500)
+  }
+  const handleTouchEnd = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current)
+  }
 
   return (
-    <div style={{ cursor: 'pointer' }} onClick={() => onPreview(song)}>
+    <div
+      className="song-card-wrap"
+      style={{ cursor: 'pointer' }}
+      onClick={() => onPreview(song)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchEnd}
+    >
       {/* Artwork */}
       <div style={{
         position: 'relative', aspectRatio: '1',
         borderRadius: '12px', overflow: 'hidden',
-        marginBottom: '12px',
-        opacity: isActive ? 1 : 0.4,
-        filter: isActive ? 'none' : 'grayscale(60%)',
+        marginBottom: '14px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
       }}>
         {song.artwork ? (
-          <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} />
+          <Image
+            className="song-card-img"
+            src={song.artwork} alt={song.title} fill
+            style={{ objectFit: 'cover', transition: 'transform 400ms ease' }}
+          />
         ) : (
-          <div style={{ width: '100%', height: '100%', background: 'var(--surface-2)' }} />
+          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(232,197,71,0.08), rgba(255,255,255,0.03))' }} />
         )}
+
+        {/* Hover overlay */}
+        <div
+          className="song-card-overlay"
+          style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to top, rgba(7,6,10,0.92) 0%, rgba(7,6,10,0.4) 60%, transparent 100%)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'flex-end',
+            padding: '16px',
+            opacity: 0,
+            transition: 'opacity 250ms ease',
+          }}
+        >
+          {isActive ? (
+            <div style={{
+              width: '44px', height: '44px', borderRadius: '50%',
+              background: 'var(--gold)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              fontSize: '1rem', color: 'var(--bg)',
+              boxShadow: '0 4px 20px rgba(232,197,71,0.4)',
+              marginBottom: '8px',
+            }}>▶</div>
+          ) : (
+            <span style={{
+              fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem',
+              fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
+              color: 'var(--gold)', padding: '5px 12px',
+              border: '1px solid var(--gold-border)', borderRadius: '50px',
+              background: 'var(--gold-faint)', marginBottom: '8px',
+            }}>{song.comingSoonLabel || 'Coming Soon'}</span>
+          )}
+          <p style={{
+            fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+            color: 'rgba(255,255,255,0.6)', letterSpacing: '1px',
+            textTransform: 'uppercase',
+          }}>View Details</p>
+        </div>
+
+        {/* Inactive overlay always visible */}
         {!isActive && (
           <div style={{
             position: 'absolute', inset: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(7,6,10,0.6)',
-          }}>
-            <span style={{
-              fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
-              fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
-              color: 'var(--gold)', padding: '6px 14px',
-              border: '1px solid var(--gold-border)', borderRadius: '50px',
-              background: 'var(--gold-faint)',
-            }}>{song.comingSoonLabel || 'Coming Soon'}</span>
-          </div>
+            background: 'rgba(7,6,10,0.5)',
+            filter: 'grayscale(60%)',
+          }} />
         )}
       </div>
 
       {/* Info */}
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', marginBottom: '4px', lineHeight: 1.3 }}>{song.title}</p>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '10px' }}>{song.artist}</p>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', marginBottom: '3px', lineHeight: 1.3 }}>{song.title}</p>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: 'var(--text-3)', marginBottom: '8px' }}>{song.artist}</p>
 
-      {/* Metrics */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '0.5px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', color: 'var(--text-3)', letterSpacing: '0.5px' }}>
           {formatNum(song.plays || 0)} plays
         </span>
-        {isActive && (
+        {isActive && song.lyricUses ? (
           <span style={{
-            fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+            fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem',
             fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.5px',
           }}>
-            {formatNum(song.lyricUses || 0)} lyric uses
+            {formatNum(song.lyricUses)} lyric uses
           </span>
-        )}
+        ) : null}
       </div>
     </div>
   )
@@ -195,78 +284,89 @@ export default function MusicPage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <MargoNav />
 
-      {/* Preview overlay */}
       {preview && <SongPreview song={preview} onClose={() => setPreview(null)} />}
 
       {/* Hero — Featured Song */}
       {featuredSong && (
-        <section style={{ position: 'relative', height: '85vh', minHeight: '600px', overflow: 'hidden' }}>
-          {/* Background artwork */}
-          {featuredSong.artwork && (
+        <section style={{ position: 'relative', height: '88vh', minHeight: '560px', overflow: 'hidden' }}>
+          {featuredSong.artwork ? (
             <div style={{ position: 'absolute', inset: 0 }}>
-              <Image src={featuredSong.artwork} alt={featuredSong.title} fill style={{ objectFit: 'cover' }} priority />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #07060A 0%, rgba(7,6,10,0.75) 50%, rgba(7,6,10,0.35) 100%)' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(7,6,10,0.5) 0%, transparent 50%, rgba(7,6,10,0.5) 100%)' }} />
+              <Image
+                src={featuredSong.artwork} alt={featuredSong.title} fill
+                style={{ objectFit: 'cover', objectPosition: 'center top' }} priority
+              />
+              {/* Cinematic gradients */}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #07060A 0%, rgba(7,6,10,0.8) 40%, rgba(7,6,10,0.2) 100%)' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(7,6,10,0.7) 0%, transparent 60%)' }} />
             </div>
+          ) : (
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(232,197,71,0.08) 0%, rgba(7,6,10,1) 70%)' }} />
           )}
 
-          {/* Hero content */}
           <div style={{
             position: 'relative', height: '100%',
             display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-            padding: '0 24px 48px', maxWidth: '72rem', margin: '0 auto',
+            padding: '0 24px 56px', maxWidth: '72rem', margin: '0 auto',
           }}>
-            {/* Song info */}
-            <div style={{ marginBottom: '24px' }}>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '12px', opacity: 0.8 }}>Featured</p>
-              <h1 style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: 'clamp(3rem, 8vw, 6rem)', fontWeight: 400, color: 'var(--text)', lineHeight: 1.05, marginBottom: '8px', letterSpacing: '-0.02em' }}>
-                {featuredSong.title}
-              </h1>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', color: 'var(--text-2)', fontWeight: 400 }}>{featuredSong.artist}</p>
-            </div>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '14px', opacity: 0.85 }}>Featured</p>
+            <h1 style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: 'clamp(2.8rem, 9vw, 6.5rem)', fontWeight: 400, color: 'var(--text)', lineHeight: 1.02, marginBottom: '10px', letterSpacing: '-0.02em' }}>
+              {featuredSong.title}
+            </h1>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.1rem', color: 'rgba(255,255,255,0.65)', fontWeight: 400, marginBottom: '28px' }}>{featuredSong.artist}</p>
 
-            {/* Metrics */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '32px', marginBottom: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '28px', marginBottom: '36px' }}>
               <div>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>{formatNum(featuredSong.plays || 0)}</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>Plays</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>{formatNum(featuredSong.plays || 0)}</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>Plays</p>
               </div>
               <div>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>{formatNum(featuredSong.resonates || 0)}</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>Resonates</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>{formatNum(featuredSong.resonates || 0)}</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>Resonates</p>
               </div>
-              {/* Lyric Uses — the Margo metric */}
-              <div style={{ paddingLeft: '32px', borderLeft: '1px solid var(--gold-border)' }}>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold)', lineHeight: 1 }}>{formatNum(featuredSong.lyricUses || 0)}</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', opacity: 0.7, letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>Lyric Uses</p>
+              <div style={{ paddingLeft: '28px', borderLeft: '1px solid rgba(232,197,71,0.3)' }}>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 700, color: 'var(--gold)', lineHeight: 1 }}>{formatNum(featuredSong.lyricUses || 0)}</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'var(--gold)', opacity: 0.6, letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>Lyric Uses</p>
               </div>
             </div>
 
-            {/* Play CTA */}
-            <Link href={`/music/player?id=${featuredSong.id}`} style={{
-              display: 'inline-flex', alignItems: 'center', gap: '10px',
-              padding: '15px 32px', background: 'var(--gold)', color: 'var(--bg)',
-              borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
-              fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
-              textTransform: 'uppercase', textDecoration: 'none',
-              minHeight: '52px', width: 'fit-content',
-              boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
-              transition: 'all 150ms ease',
-            }}>
-              ▶ Play Now
-            </Link>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <Link href={`/music/player?id=${featuredSong.id}`} className="play-btn" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '10px',
+                padding: '16px 36px', background: 'var(--gold)', color: 'var(--bg)',
+                borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+                fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px',
+                textTransform: 'uppercase', textDecoration: 'none',
+                minHeight: '52px', width: 'fit-content',
+                boxShadow: '0 6px 28px rgba(232,197,71,0.3)',
+                transition: 'all 200ms ease',
+              }}>▶ Play Now</Link>
+
+              <button
+                onClick={() => setPreview(featuredSong)}
+                style={{
+                  padding: '16px 28px', background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.15)', borderRadius: '50px',
+                  fontFamily: 'var(--font-lora), serif', fontWeight: 700,
+                  fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.7)', minHeight: '52px', cursor: 'pointer',
+                  transition: 'all 200ms ease',
+                }}
+              >Details</button>
+            </div>
           </div>
         </section>
       )}
 
       {/* Most Shared Lines */}
       {featuredSong && (
-        <section style={{ padding: '48px 24px', maxWidth: '72rem', margin: '0 auto' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '24px' }}>
+        <section style={{ padding: '52px 24px', maxWidth: '72rem', margin: '0 auto' }}>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '20px' }}>
             Most shared lines — {featuredSong.title}
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {linesLoading && <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem', textAlign: 'center', padding: '32px' }}>Loading…</p>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {linesLoading && (
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem', textAlign: 'center', padding: '32px' }}>Loading…</p>
+            )}
             {!linesLoading && sharedLines.length === 0 && (
               <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem', textAlign: 'center', padding: '32px' }}>
                 No lines shared yet — be the first.
@@ -274,20 +374,20 @@ export default function MusicPage() {
             )}
             {sharedLines.map((lyric) => (
               <Link key={lyric.id} href="/compose" style={{ textDecoration: 'none' }}>
-                <div style={{
-                  padding: '20px 24px',
+                <div className="shared-line-row" style={{
+                  padding: '18px 22px',
                   background: 'rgba(255,255,255,0.02)',
-                  border: '1px solid var(--border)',
+                  border: '1px solid rgba(255,255,255,0.06)',
                   borderRadius: '14px',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
-                  transition: 'all 150ms ease',
+                  transition: 'all 200ms ease', cursor: 'pointer',
                 }}>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', lineHeight: 1.6 }}>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1.05rem', color: 'var(--text)', lineHeight: 1.6 }}>
                     &ldquo;{lyric.line}&rdquo;
                   </p>
                   <div style={{ flexShrink: 0, textAlign: 'right' }}>
                     <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.1rem', fontWeight: 700, color: 'var(--gold)' }}>{lyric.uses}</p>
-                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', opacity: 0.7, letterSpacing: '1px', textTransform: 'uppercase' }}>uses</p>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', opacity: 0.6, letterSpacing: '1px', textTransform: 'uppercase' }}>uses</p>
                   </div>
                 </div>
               </Link>
@@ -296,16 +396,19 @@ export default function MusicPage() {
         </section>
       )}
 
-      {/* Divider */}
-      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, var(--border), transparent)', margin: '0 24px' }} />
+      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)', margin: '0 24px' }} />
 
       {/* More Songs */}
       {moreSongs.length > 0 && (
-        <section style={{ padding: '48px 24px', maxWidth: '72rem', margin: '0 auto' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '24px' }}>
+        <section style={{ padding: '52px 24px', maxWidth: '72rem', margin: '0 auto' }}>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '28px' }}>
             More Songs
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '24px' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+            gap: '28px',
+          }}>
             {moreSongs.map(song => (
               <SongCard key={song.id} song={song} onPreview={setPreview} />
             ))}
