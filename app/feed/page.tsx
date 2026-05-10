@@ -328,7 +328,7 @@ function PostCard({
           color: 'var(--text-2)', transition: 'color 150ms ease',
         }}>
           <span style={{ fontSize: '1rem' }}>↗</span>
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Share</span>
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Card</span>
         </button>
 
         {/* Emotion tag */}

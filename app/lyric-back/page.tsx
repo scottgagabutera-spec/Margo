@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, Suspense } from 'react'
-import { Search, Heart, MessageCircle, CreditCard } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
 import { MargoNav } from '@/components/margo-nav'
 import { db } from '@/lib/firebase'
@@ -38,17 +38,29 @@ const VIBE_LABELS: Record<Vibe, string> = {
   'SEND IT': 'Send It', 'LET OUT': 'Let Out',
 }
 
+const EMOTION_COLORS: Record<string, string> = {
+  love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
+  nostalgia: '#E8C547', healing: '#4ade80', joy: '#ffc847',
+  rage: '#FF6440', loneliness: '#a0a0ff', sendit: '#00e5c8', letout: '#c864ff',
+}
+
 /* ─── style tokens — one source of truth ─────────────────── */
-const font        = 'var(--font-lora), serif'
-const gold        = 'var(--gold)'
-const goldFaint   = 'var(--gold-faint)'
-const goldBorder  = 'var(--gold-border)'
-const surface     = 'var(--surface)'
-const border      = 'var(--border)'
-const text        = 'var(--text)'
-const text2       = 'var(--text-2)'
-const text3       = 'var(--text-3)'
-const bg          = 'var(--bg)'
+const font       = 'var(--font-lora), serif'
+const gold       = 'var(--gold)'
+const surface    = 'var(--surface)'
+const border     = 'var(--border)'
+const text       = 'var(--text)'
+const text2      = 'var(--text-2)'
+const text3      = 'var(--text-3)'
+const bg         = 'var(--bg)'
+
+function normalizeEmotion(e: string) {
+  if (!e) return ''
+  return e.replace(/send.?it/i, 'SENDIT').replace(/let.?out/i, 'LETOUT')
+    .replace('SendIt', 'SENDIT').replace('LetOut', 'LETOUT')
+    .replace('SEND IT', 'SENDIT').replace('LET OUT', 'LETOUT')
+    .toUpperCase()
+}
 
 function LyricBackContent() {
   const { username } = useUsername()
@@ -140,9 +152,7 @@ function LyricBackContent() {
 
   /* ─── promote + reply — navigate first, write in background ─ */
   const promoteAndReply = (echo: typeof echoes[0]) => {
-    // Navigate immediately — don't block on Firebase write
     window.location.href = `/lyric-back?postId=${echo.id}`
-    // Fire-and-forget write in background
     if (db) {
       import('firebase/database').then(({ ref: dbRef, set: dbSet }) => {
         dbSet(dbRef(db, `posts/${echo.id}`), {
@@ -184,398 +194,372 @@ function LyricBackContent() {
     <main style={{ minHeight: '100vh', background: bg, position: 'relative' }}>
       <MargoNav />
 
-      {/* Ambient glows */}
-      <div style={{ position: 'fixed', top: '20%', left: '15%', width: '400px', height: '400px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(90px)', pointerEvents: 'none' }} />
-      <div style={{ position: 'fixed', bottom: '20%', right: '15%', width: '280px', height: '280px', background: 'rgba(232,197,71,0.06)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
+      {/* Ambient glow — identical to feed */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        <div style={{ position: 'absolute', top: '-128px', left: '-128px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(80px)' }} />
+        <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
+      </div>
 
-      <div style={{ paddingTop: '120px', paddingBottom: '80px', paddingLeft: '24px', paddingRight: '24px' }}>
-        <div style={{ maxWidth: '640px', margin: '0 auto' }}>
+      <div style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '100px 24px 80px' }}>
 
-          {/* ── Responding To ─────────────────────────────────── */}
+        {/* ── Responding To — tier-1 style, gold accent ─────── */}
+        <div style={{
+          background: 'rgba(232,197,71,0.04)',
+          border: '1px solid rgba(232,197,71,0.22)',
+          borderRadius: '20px', padding: '20px',
+          position: 'relative', overflow: 'hidden',
+          marginBottom: '20px',
+        }}>
           <div style={{
-            background: goldFaint, border: `1px solid ${goldBorder}`,
-            borderRadius: '20px', padding: '28px 24px',
-            marginBottom: '40px', textAlign: 'center',
-            position: 'relative', overflow: 'hidden',
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '240px', height: '100px', background: 'rgba(232,197,71,0.08)', filter: 'blur(40px)', pointerEvents: 'none' }} />
-            <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: text3, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px', position: 'relative', zIndex: 1 }}>
-              Responding to
+            position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+            width: '60%', height: '1px',
+            background: 'linear-gradient(to right, transparent, rgba(232,197,71,0.5), transparent)',
+          }} />
+          <p style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 700, color: text3, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>
+            Responding to
+          </p>
+          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '10px' }}>
+            &ldquo;{respondingTo?.text || '—'}&rdquo;
+          </p>
+          {(respondingTo?.knowledge?.song || respondingTo?.knowledge?.artist) && (
+            <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '12px' }}>
+              {respondingTo.knowledge.song && respondingTo.knowledge.artist
+                ? `${respondingTo.knowledge.song} · ${respondingTo.knowledge.artist}`
+                : respondingTo.knowledge.song || respondingTo.knowledge.artist}
             </p>
-            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.35rem', color: text, lineHeight: 1.5, marginBottom: '10px', position: 'relative', zIndex: 1 }}>
-              &ldquo;{respondingTo?.text || '—'}&rdquo;
-            </p>
-            <p style={{ fontFamily: font, fontSize: '0.82rem', color: text2, marginBottom: '12px', position: 'relative', zIndex: 1 }}>
-              — {respondingTo?.knowledge?.artist || ''}{respondingTo?.knowledge?.song ? `, ${respondingTo.knowledge.song}` : ''}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', position: 'relative', zIndex: 1 }}>
-              {respondingTo?.username && (
-                <span style={{ fontFamily: font, fontSize: '0.72rem', color: text3 }}>
-                  by {respondingTo.username}
-                </span>
-              )}
-              {respondingTo?.emotion && (
-                <span style={{
-                  fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                  color: gold, letterSpacing: '1px', textTransform: 'uppercase',
-                  padding: '4px 12px', background: 'rgba(232,197,71,0.12)',
-                  border: `1px solid ${goldBorder}`, borderRadius: '50px',
-                }}>
-                  {respondingTo.emotion}
-                </span>
-              )}
-            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {respondingTo?.username && (
+              <span style={{ fontFamily: font, fontSize: '0.6rem', color: text3 }}>by {respondingTo.username}</span>
+            )}
+            {respondingTo?.emotion && (
+              <span style={{
+                fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
+                borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
+                color: EMOTION_COLORS[normalizeEmotion(respondingTo.emotion).toLowerCase()] || text3,
+              }}>{respondingTo.emotion}</span>
+            )}
           </div>
+        </div>
 
-          {/* ── Step 1: Search ────────────────────────────────── */}
+        {/* ── Compose box — standard card style ─────────────── */}
+        <div style={{
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: '20px', padding: '20px',
+          position: 'relative', overflow: 'hidden',
+          marginBottom: '32px',
+        }}>
+          <div style={{
+            position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+            width: '60%', height: '1px',
+            background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
+          }} />
+
+          {/* Step 1 */}
           <div style={{ display: step === 1 ? 'block' : 'none' }}>
-            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: gold, marginBottom: '8px' }}>
-                Find your lyric back
-              </h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3 }}>
-                Search by lyric, song, or artist
-              </p>
-            </div>
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '16px' }}>
+              Find your lyric back
+            </p>
             <div style={{ position: 'relative' }}>
-              <div style={{ position: 'relative' }}>
-                <Search style={{ position: 'absolute', left: '22px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: 'var(--text-3)' }} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => handleSearch(e.target.value)}
-                  placeholder="Search by lyric, song or artist..."
-                  style={{
-                    width: '100%', height: '60px', paddingLeft: '52px', paddingRight: '24px',
-                    background: goldFaint, border: `1px solid ${goldBorder}`,
-                    borderRadius: '16px', color: text, fontSize: '1rem',
-                    fontFamily: font, outline: 'none', boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-              {showResults && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px',
-                  background: surface, border: `1px solid ${border}`,
-                  borderRadius: '16px', overflow: 'hidden', zIndex: 50,
-                }}>
-                  {searchLoading && (
-                    <div style={{ textAlign: 'center', padding: '16px', fontFamily: font, color: gold, fontSize: '0.82rem', fontStyle: 'italic' }}>
-                      Searching…
-                    </div>
-                  )}
-                  {searchResults.map(result => (
-                    <button
-                      key={result.id}
-                      onClick={() => handleSelectSong(result)}
-                      style={{
-                        width: '100%', display: 'flex', alignItems: 'center', gap: '14px',
-                        padding: '14px 16px', background: 'none', border: 'none',
-                        cursor: 'pointer', textAlign: 'left', transition: 'background 150ms ease',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = goldFaint)}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                    >
-                      {result.artwork && (
-                        <img src={result.artwork} alt={result.title} style={{ width: '44px', height: '44px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontFamily: font, color: text, fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.title}</p>
-                        <p style={{ fontFamily: font, color: text3, fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.artist}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <Search style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: 'var(--text-3)' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => handleSearch(e.target.value)}
+                placeholder="Search by lyric, song or artist..."
+                style={{
+                  width: '100%', height: '44px', paddingLeft: '40px', paddingRight: '14px',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '10px', color: text, fontSize: '0.82rem',
+                  fontFamily: font, outline: 'none', boxSizing: 'border-box',
+                }}
+              />
             </div>
+            {showResults && (
+              <div style={{ marginTop: '6px', background: surface, border: `1px solid ${border}`, borderRadius: '10px', overflow: 'hidden' }}>
+                {searchLoading && (
+                  <div style={{ padding: '12px 14px', fontFamily: font, color: gold, fontSize: '0.78rem', fontStyle: 'italic' }}>Searching…</div>
+                )}
+                {searchResults.map(result => (
+                  <button
+                    key={result.id}
+                    onClick={() => handleSelectSong(result)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
+                      padding: '10px 14px', background: 'none', border: 'none',
+                      cursor: 'pointer', textAlign: 'left', transition: 'background 150ms ease',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    {result.artwork && (
+                      <img src={result.artwork} alt={result.title} style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: font, color: text, fontSize: '0.88rem', fontWeight: 600, marginBottom: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.title}</p>
+                      <p style={{ fontFamily: font, color: text3, fontSize: '0.72rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.artist}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* ── Step 2: Lyric ─────────────────────────────────── */}
+          {/* Step 2 */}
           <div style={{ display: step === 2 ? 'block' : 'none' }}>
-            <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: gold, marginBottom: '8px' }}>
-                Your lyric back
-              </h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3 }}>
-                Enter the lyric that says it back
-              </p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
-              {(['Artist', 'Song'] as const).map((label) => (
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '16px' }}>
+              Your lyric back
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+              {(['Artist', 'Song'] as const).map(label => (
                 <div key={label}>
-                  <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: text3, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>{label}</label>
+                  <label style={{ display: 'block', fontFamily: font, fontSize: '0.5rem', color: text3, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '5px' }}>{label}</label>
                   <input
                     type="text"
                     value={label === 'Artist' ? artistName : songName}
                     onChange={e => label === 'Artist' ? setArtistName(e.target.value) : setSongName(e.target.value)}
-                    style={{ width: '100%', height: '46px', padding: '0 14px', background: goldFaint, border: `1px solid ${border}`, borderRadius: '12px', color: text, fontFamily: font, outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: '38px', padding: '0 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: text, fontFamily: font, fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               ))}
             </div>
-            <div style={{ background: goldFaint, border: `1px solid ${goldBorder}`, borderRadius: '20px', padding: '28px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '200px', height: '100px', background: 'rgba(232,197,71,0.08)', filter: 'blur(40px)', pointerEvents: 'none' }} />
-              <textarea
-                value={lyric}
-                onChange={e => setLyric(e.target.value.slice(0, 140))}
-                placeholder="Type your lyric here..."
-                rows={4}
+            <textarea
+              value={lyric}
+              onChange={e => setLyric(e.target.value.slice(0, 140))}
+              placeholder="Type your lyric here..."
+              rows={3}
+              style={{
+                width: '100%', background: 'rgba(232,197,71,0.04)',
+                border: '1px solid rgba(232,197,71,0.22)',
+                borderRadius: '10px', padding: '14px',
+                fontSize: '1.1rem', fontFamily: font, fontStyle: 'italic',
+                color: gold, lineHeight: 1.6, outline: 'none',
+                resize: 'none', boxSizing: 'border-box', marginBottom: '10px',
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: font, fontSize: '0.5rem', color: text3 }}>{lyric.length}/140</span>
+              <button
+                onClick={handleLyricComplete}
+                disabled={lyric.trim().length === 0}
                 style={{
-                  width: '100%', background: 'transparent', fontSize: '1.4rem',
-                  fontFamily: font, fontStyle: 'italic', color: gold,
-                  textAlign: 'center', lineHeight: 1.6, border: 'none', outline: 'none',
-                  resize: 'none', position: 'relative', zIndex: 10, boxSizing: 'border-box',
+                  padding: '7px 18px', background: gold, color: bg,
+                  borderRadius: '50px', fontFamily: font, fontWeight: 700,
+                  fontSize: '0.5rem', letterSpacing: '1.5px', textTransform: 'uppercase',
+                  border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1,
                 }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', position: 'relative', zIndex: 10 }}>
-                <span style={{ fontFamily: font, fontSize: '0.6rem', color: text3 }}>{lyric.length}/140</span>
-                <button
-                  onClick={handleLyricComplete}
-                  disabled={lyric.trim().length === 0}
-                  style={{
-                    padding: '10px 24px', background: gold, color: bg,
-                    borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                    fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
-                    border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1,
-                    transition: 'opacity 150ms ease',
-                  }}
-                >Continue</button>
-              </div>
+              >Continue</button>
             </div>
           </div>
 
-          {/* ── Step 3: Vibe ──────────────────────────────────── */}
+          {/* Step 3 */}
           <div style={{ display: step === 3 ? 'block' : 'none' }}>
-            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: gold, marginBottom: '8px' }}>
-                How does it feel?
-              </h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3 }}>
-                Pick the vibe, or skip
-              </p>
-            </div>
-            <div style={{ background: goldFaint, border: `1px solid ${goldBorder}`, borderRadius: '16px', padding: '22px', marginBottom: '24px', textAlign: 'center' }}>
-              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.15rem', color: text, marginBottom: '6px' }}>&ldquo;{lyric}&rdquo;</p>
-              <p style={{ fontFamily: font, fontSize: '0.78rem', color: text3 }}>— {artistName}, {songName}</p>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '14px' }}>
+              How does it feel?
+            </p>
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.88rem', color: text3, marginBottom: '14px' }}>
+              &ldquo;{lyric}&rdquo; — {artistName}, {songName}
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
               {VIBES.map(vibe => (
                 <button
                   key={vibe}
                   onClick={() => handleVibeSelect(vibe)}
                   style={{
-                    padding: '10px 20px', borderRadius: '50px', fontFamily: font,
-                    fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
-                    transition: 'all 150ms ease',
+                    padding: '4px 10px', borderRadius: '50px', fontFamily: font,
+                    fontWeight: 700, fontSize: '0.55rem', letterSpacing: '1px',
+                    textTransform: 'uppercase', cursor: 'pointer', transition: 'all 150ms ease',
                     background: selectedVibe === vibe ? gold : 'transparent',
-                    color: selectedVibe === vibe ? bg : gold,
-                    border: selectedVibe === vibe ? `1px solid ${gold}` : `1px solid ${goldBorder}`,
+                    color: selectedVibe === vibe ? bg : 'rgba(255,255,255,0.45)',
+                    border: `1px solid ${selectedVibe === vibe ? gold : 'rgba(255,255,255,0.1)'}`,
                   }}
                 >{VIBE_LABELS[vibe]}</button>
               ))}
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <button
-                onClick={() => setStep(4)}
-                style={{ background: 'transparent', border: 'none', fontFamily: font, fontSize: '0.82rem', color: text3, cursor: 'pointer', textDecoration: 'underline' }}
-              >Skip — no vibe</button>
-            </div>
+            <button
+              onClick={() => setStep(4)}
+              style={{ background: 'transparent', border: 'none', fontFamily: font, fontSize: '0.6rem', color: text3, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+            >Skip — no vibe</button>
           </div>
 
-          {/* ── Step 4: Confirm ───────────────────────────────── */}
+          {/* Step 4 */}
           <div style={{ display: step === 4 ? 'block' : 'none' }}>
-            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: gold, marginBottom: '8px' }}>
-                Ready to send it back?
-              </h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3 }}>
-                Your lyric back is set to go
-              </p>
-            </div>
-            <div style={{ background: goldFaint, border: `1px solid ${goldBorder}`, borderRadius: '20px', padding: '32px', marginBottom: '28px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '200px', height: '100px', background: 'rgba(232,197,71,0.08)', filter: 'blur(40px)', pointerEvents: 'none' }} />
-              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.4rem', color: gold, marginBottom: '12px', position: 'relative', zIndex: 1 }}>&ldquo;{lyric}&rdquo;</p>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3, marginBottom: '14px', position: 'relative', zIndex: 1 }}>— {artistName}, {songName}</p>
-              {selectedVibe && (
-                <span style={{
-                  display: 'inline-block', padding: '5px 14px',
-                  background: 'rgba(232,197,71,0.12)', border: `1px solid ${goldBorder}`,
-                  borderRadius: '50px', fontFamily: font, fontSize: '0.6rem',
-                  fontWeight: 700, color: gold, letterSpacing: '1px',
-                  textTransform: 'uppercase', position: 'relative', zIndex: 1,
-                }}>{VIBE_LABELS[selectedVibe]}</span>
-              )}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '320px', margin: '0 auto' }}>
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '14px' }}>
+              Ready to send it back?
+            </p>
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '8px' }}>&ldquo;{lyric}&rdquo;</p>
+            <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '16px' }}>
+              {songName} · {artistName}
+            </p>
+            {selectedVibe && (
+              <span style={{
+                display: 'inline-block', marginBottom: '20px',
+                fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
+                borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
+                color: EMOTION_COLORS[normalizeEmotion(selectedVibe).toLowerCase()] || text3,
+              }}>{VIBE_LABELS[selectedVibe]}</span>
+            )}
+            <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={() => handlePost(false)}
                 style={{
-                  padding: '15px 28px', background: gold, color: bg,
+                  flex: 1, padding: '11px', background: gold, color: bg,
                   borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+                  fontSize: '0.5rem', letterSpacing: '1.5px', textTransform: 'uppercase',
                   border: 'none', cursor: 'pointer',
-                  boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
+                  boxShadow: '0 4px 20px rgba(232,197,71,0.25)',
                 }}
               >Send It</button>
               <button
                 onClick={() => handlePost(true)}
                 style={{
-                  padding: '13px 28px', background: 'transparent',
-                  color: text2, border: `1px solid var(--border-hi)`,
+                  flex: 1, padding: '11px', background: 'transparent',
+                  color: text2, border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '50px', fontFamily: font, fontWeight: 600,
-                  fontSize: '0.6rem', letterSpacing: '1px',
+                  fontSize: '0.5rem', letterSpacing: '1.5px',
                   textTransform: 'uppercase', cursor: 'pointer',
                 }}
               >Keep Private</button>
             </div>
           </div>
-
-          {/* ── Lyric Backs section ───────────────────────────── */}
-          <div style={{ marginTop: '64px', paddingTop: '40px', borderTop: `1px solid rgba(232,197,71,0.1)` }}>
-            <p style={{
-              fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: text3,
-              letterSpacing: '2px', textTransform: 'uppercase', textAlign: 'center', marginBottom: '28px',
-            }}>
-              Lyric Backs
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {echoesLoading && (
-                <p style={{ fontFamily: font, fontStyle: 'italic', color: text3, fontSize: '0.9rem', textAlign: 'center', padding: '24px' }}>Loading…</p>
-              )}
-              {!echoesLoading && echoes.length === 0 && (
-                <p style={{ fontFamily: font, fontStyle: 'italic', color: text3, fontSize: '0.9rem', textAlign: 'center', padding: '24px' }}>
-                  No lyric backs yet — be the first.
-                </p>
-              )}
-              {echoes.map(lb => {
-                const resonateCount = resonateCounts[lb.id] ?? Object.keys(lb.resonates || {}).length
-                const hasResonated = resonated.has(lb.id)
-                return (
-                  <div
-                    key={lb.id}
-                    style={{
-                      /* Depth: subtle gradient bg + gold left-border accent */
-                      background: 'linear-gradient(135deg, rgba(232,197,71,0.04) 0%, rgba(255,255,255,0.015) 100%)',
-                      border: `1px solid ${border}`,
-                      borderLeft: `3px solid rgba(232,197,71,0.35)`,
-                      borderRadius: '18px', padding: '20px 22px',
-                      transition: 'border-color 200ms ease, box-shadow 200ms ease',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = goldBorder
-                      e.currentTarget.style.borderLeftColor = gold
-                      e.currentTarget.style.boxShadow = '0 4px 24px rgba(232,197,71,0.08)'
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = border
-                      e.currentTarget.style.borderLeftColor = 'rgba(232,197,71,0.35)'
-                      e.currentTarget.style.boxShadow = 'none'
-                    }}
-                  >
-                    {/* Username + emotion */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                      <span style={{ fontFamily: font, fontSize: '0.72rem', color: text3 }}>
-                        {lb.username || 'anonymous'}
-                      </span>
-                      {lb.emotion && (
-                        <span style={{
-                          fontFamily: font, fontSize: '0.58rem', fontWeight: 700,
-                          color: gold, letterSpacing: '1px', textTransform: 'uppercase',
-                          padding: '3px 10px', background: 'rgba(232,197,71,0.08)',
-                          border: `1px solid ${goldBorder}`, borderRadius: '50px',
-                        }}>{lb.emotion}</span>
-                      )}
-                    </div>
-
-                    {/* Lyric */}
-                    <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: text, lineHeight: 1.6, marginBottom: '8px' }}>
-                      &ldquo;{lb.lyric}&rdquo;
-                    </p>
-                    <p style={{ fontFamily: font, fontSize: '0.75rem', color: text3, marginBottom: '18px' }}>
-                      — {lb.artist}, {lb.song}
-                    </p>
-
-                    {/* Actions — clear hierarchy: Resonate primary, Lyric Back secondary, Card tertiary */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0', paddingTop: '14px', borderTop: `1px solid ${border}` }}>
-
-                      {/* Resonate — primary, weighted */}
-                      <button
-                        onClick={() => toggleResonate(lb.id)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '7px',
-                          background: hasResonated ? 'rgba(232,197,71,0.1)' : 'none',
-                          border: hasResonated ? `1px solid ${goldBorder}` : '1px solid transparent',
-                          borderRadius: '50px', cursor: 'pointer', padding: '7px 14px',
-                          color: hasResonated ? gold : text3,
-                          transition: 'all 150ms ease',
-                          fontFamily: font,
-                          marginRight: '8px',
-                        }}
-                        onMouseEnter={e => { if (!hasResonated) e.currentTarget.style.color = gold }}
-                        onMouseLeave={e => { if (!hasResonated) e.currentTarget.style.color = 'var(--text-3)' }}
-                      >
-                        <Heart style={{ width: '16px', height: '16px', fill: hasResonated ? 'currentColor' : 'none', transition: 'fill 150ms ease', flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                          Resonate{resonateCount > 0 ? ` · ${resonateCount}` : ''}
-                        </span>
-                      </button>
-
-                      {/* Lyric Back — secondary */}
-                      <button
-                        onClick={() => promoteAndReply(lb)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                          background: 'none', border: '1px solid transparent',
-                          borderRadius: '50px', cursor: 'pointer', padding: '7px 14px',
-                          color: text3, transition: 'all 150ms ease', fontFamily: font,
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.color = gold; e.currentTarget.style.borderColor = goldBorder }}
-                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.borderColor = 'transparent' }}
-                      >
-                        <MessageCircle style={{ width: '15px', height: '15px', flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                          Lyric Back
-                        </span>
-                      </button>
-
-                      {/* Card — tertiary, pushed to end */}
-                      <button
-                        onClick={() => {
-                          setCardData({
-                            lyric: lb.lyric, song: lb.song, artist: lb.artist, id: lb.id,
-                            // Pass parent context for dual-card canvas
-                            parentLyric: respondingTo?.text,
-                            parentSong: respondingTo?.knowledge?.song,
-                            parentArtist: respondingTo?.knowledge?.artist,
-                          })
-                          setShowCard(true)
-                        }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                          background: 'none', border: '1px solid transparent',
-                          borderRadius: '50px', cursor: 'pointer', padding: '7px 12px',
-                          color: text3, transition: 'all 150ms ease', fontFamily: font,
-                          marginLeft: 'auto',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.color = gold; e.currentTarget.style.borderColor = goldBorder }}
-                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.borderColor = 'transparent' }}
-                      >
-                        <CreditCard style={{ width: '14px', height: '14px', flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.6rem', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                          Card
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
         </div>
+
+        {/* ── Lyric Backs — same card system as feed ────────── */}
+        <div>
+          <p style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 700, color: text3, letterSpacing: '2px', textTransform: 'uppercase', textAlign: 'center', marginBottom: '20px' }}>
+            Lyric Backs
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {echoesLoading && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '40px 0' }}>
+                {[0,1,2].map(i => (
+                  <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: gold, opacity: 0.5 }} />
+                ))}
+              </div>
+            )}
+            {!echoesLoading && echoes.length === 0 && (
+              <p style={{ fontFamily: font, fontStyle: 'italic', color: text3, fontSize: '0.9rem', textAlign: 'center', padding: '32px 0' }}>
+                No lyric backs yet — be the first.
+              </p>
+            )}
+            {echoes.map(lb => {
+              const emotionKey = normalizeEmotion(lb.emotion || '').toLowerCase()
+              const emotionColor = EMOTION_COLORS[emotionKey] || text3
+              const resonateCount = resonateCounts[lb.id] ?? Object.keys(lb.resonates || {}).length
+              const hasResonated = resonated.has(lb.id)
+              return (
+                <div
+                  key={lb.id}
+                  style={{
+                    /* Identical to feed PostCard */
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '20px', padding: '20px',
+                    position: 'relative', overflow: 'hidden',
+                    transition: 'border-color 200ms ease',
+                  }}
+                >
+                  <div style={{
+                    position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+                    width: '60%', height: '1px',
+                    background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
+                  }} />
+
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                        background: 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <span style={{ fontFamily: font, fontSize: '0.55rem', fontWeight: 700, color: bg }}>
+                          {(lb.username || '??').slice(0, 2).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p style={{ fontFamily: font, fontSize: '0.82rem', fontWeight: 600, color: text, marginBottom: '1px' }}>
+                          {lb.username || 'Anonymous'}
+                        </p>
+                      </div>
+                    </div>
+                    {lb.emotion && (
+                      <span style={{
+                        fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                        letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
+                        borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
+                        color: emotionColor,
+                      }}>{lb.emotion}</span>
+                    )}
+                  </div>
+
+                  {/* Lyric */}
+                  <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '12px' }}>
+                    &ldquo;{lb.lyric}&rdquo;
+                  </p>
+
+                  {/* Song credit */}
+                  <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '20px' }}>
+                    {lb.song} · {lb.artist}
+                  </p>
+
+                  {/* Actions — exactly matches feed PostCard */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+
+                    <button onClick={() => toggleResonate(lb.id)} style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+                      color: hasResonated ? gold : text2,
+                      transition: 'color 150ms ease',
+                    }}>
+                      <span style={{ fontSize: '1rem' }}>{hasResonated ? '♥' : '♡'}</span>
+                      <span style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+                        {resonateCount > 0 ? resonateCount : 'Resonate'}
+                      </span>
+                    </button>
+
+                    <button onClick={() => promoteAndReply(lb)} style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+                      color: text2, transition: 'color 150ms ease',
+                    }}>
+                      <span style={{ fontSize: '1rem' }}>↩</span>
+                      <span style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Lyric Back</span>
+                    </button>
+
+                    {/* Card — was "Share" in old feed, now "Card" everywhere, same ↗ icon */}
+                    <button
+                      onClick={() => {
+                        setCardData({
+                          lyric: lb.lyric, song: lb.song, artist: lb.artist, id: lb.id,
+                          parentLyric: respondingTo?.text,
+                          parentSong: respondingTo?.knowledge?.song,
+                          parentArtist: respondingTo?.knowledge?.artist,
+                        })
+                        setShowCard(true)
+                      }}
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                        background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+                        color: text2, transition: 'color 150ms ease',
+                      }}
+                    >
+                      <span style={{ fontSize: '1rem' }}>↗</span>
+                      <span style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Card</span>
+                    </button>
+
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
       </div>
 
-      {/* Card export modal — passes parent context for dual-card canvas */}
       {showCard && (
         <CardExportModal
           open={showCard}
