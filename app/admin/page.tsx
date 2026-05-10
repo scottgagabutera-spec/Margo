@@ -385,8 +385,7 @@ function MusicTab() {
       const unsub = onValue(
         ref(database, 'songs'),
         snap => {
-          console.log('[debug] fired, numChildren:', snap.numChildren())
-          console.log('[debug] val:', snap.val())
+          console.log('[debug] fired')
           const list: Song[] = []
           let i = 0
           try {
