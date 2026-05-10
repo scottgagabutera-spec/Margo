@@ -183,7 +183,7 @@ async function drawSingleCard(
   ctx.fillText('trymargo.com', W / 2, H - Math.round(H * 0.068))
 }
 
-/* ─── Draw dual-card (Lyric Back conversation) ──────────────── */
+/* ─── Draw dual-card — chat bubble layout ───────────────────── */
 async function drawDualCard(
   ctx: CanvasRenderingContext2D,
   W: number, H: number,
@@ -192,130 +192,173 @@ async function drawDualCard(
   themeColor: string, themeBg: string
 ) {
   await waitForFonts()
-  const mid = W / 2
-  const pad = W > H ? 100 : 72
 
-  // Background gradient
-  const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.38, 0, W * 0.5, H * 0.38, W * 0.85)
-  bgGrad.addColorStop(0, themeBg === '#f5f1e8' ? '#f5f1e8' : '#16131F')
+  const isLight = themeBg === '#f5f1e8'
+
+  // Background
+  const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.4, W * 0.9)
+  bgGrad.addColorStop(0, isLight ? '#f5f1e8' : '#16131F')
   bgGrad.addColorStop(1, themeBg)
   ctx.fillStyle = bgGrad
   ctx.fillRect(0, 0, W, H)
 
-  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.85)
+  // Vignette
+  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.2, W / 2, H / 2, H * 0.9)
   vig.addColorStop(0, 'rgba(0,0,0,0)')
-  vig.addColorStop(1, 'rgba(0,0,0,0.36)')
+  vig.addColorStop(1, 'rgba(0,0,0,0.28)')
   ctx.fillStyle = vig
   ctx.fillRect(0, 0, W, H)
 
-  // Logo
+  // Ghost logo — top left
   const logoBase = Math.min(W, H)
-  const markSize = Math.round(logoBase * 0.032)
+  const markSize = Math.round(logoBase * 0.028)
   const logoPad  = Math.round(logoBase * 0.052)
-  ctx.globalAlpha = 0.32
+  ctx.globalAlpha = 0.28
   drawMargoLockup(ctx, logoPad, logoPad, markSize, themeColor)
   ctx.globalAlpha = 1
 
-  const topPad    = logoPad + markSize + Math.round(logoBase * 0.04)
+  // Layout
+  const topPad    = logoPad + markSize + Math.round(logoBase * 0.05)
   const bottomPad = Math.round(H * 0.09)
   const footerY   = H - bottomPad
-  const contentH  = footerY - 24 - topPad
-  const divH      = Math.round(H * 0.06)
-  const divY      = topPad + (contentH - divH) / 2
-  const sec1H     = divY - topPad
-  const sec2Start = divY + divH
-  const sec2H     = footerY - 24 - sec2Start
+  const hPad      = Math.round(W * 0.07)  // horizontal padding from edges
+  const bubbleW   = Math.round(W * 0.74)  // bubble max width
+  const lFS       = Math.round(logoBase * (H > W ? 0.048 : 0.038))
+  const metaFS    = Math.round(logoBase * 0.019)
+  const lineH     = lFS * 1.42
+  const bubblePadH = Math.round(lFS * 0.7)
+  const bubblePadV = Math.round(lFS * 0.6)
+  const radius     = Math.round(lFS * 0.55)
+  const tailSize   = Math.round(lFS * 0.35)
 
-  // Helper: draw one lyric section
-  function drawSection(lyric: string, song: string, artist: string, startY: number, secH: number) {
-    const lFS  = Math.round(logoBase * (H > W ? 0.054 : 0.044))
-    const sFS  = Math.round(logoBase * 0.022)
-    const aFS  = Math.round(logoBase * 0.018)
-    const maxW = W - pad * 2 - 16
-
+  // ── Helper: measure bubble height ──
+  function bubbleContentH(lyric: string, song: string, artist: string): number {
     ctx.font = `italic ${lFS}px Lora, serif`
-    const lines = wrapText(ctx, lyric, maxW)
-    const lineH = lFS * 1.38
-    const totalLyH = lines.length * lineH
-    const blockH = totalLyH + sFS + aFS + 44
-    const lyricStart = startY + (secH - blockH) / 2
-
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillStyle = themeBg === '#f5f1e8' ? '#1a1a1a' : '#F4F1ED'
-    ctx.font = `italic ${lFS}px Lora, serif`
-    lines.forEach((l, i) => ctx.fillText(l, mid, lyricStart + i * lineH))
-
-    const ruleY = lyricStart + totalLyH + 18
-    ctx.strokeStyle = `${themeColor}80`
-    ctx.lineWidth = 1.5
-    ctx.beginPath()
-    ctx.moveTo(mid - 50, ruleY)
-    ctx.lineTo(mid + 50, ruleY)
-    ctx.stroke()
-
-    const metaY = ruleY + 24
-    ctx.font = `600 ${sFS}px Lora, serif`
-    ctx.fillStyle = themeBg === '#f5f1e8' ? '#1a1a1a' : '#F4F1ED'
-    ctx.fillText(song || '', mid, metaY)
-
-    ctx.font = `400 ${aFS}px Lora, serif`
-    ctx.fillStyle = themeBg === '#f5f1e8' ? 'rgba(0,0,0,0.5)' : '#9A98A4'
-    ctx.fillText(artist || '', mid, metaY + sFS + 10)
+    const lines = wrapText(ctx, lyric, bubbleW - bubblePadH * 2)
+    const lyricH = lines.length * lineH
+    return bubblePadV * 2 + lyricH + metaFS * 2.2 + 16
   }
 
-  // Section 1 — parent (original lyric)
-  drawSection(parentLyric, parentSong, parentArtist, topPad, sec1H)
-
-  // Divider hairline
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(pad, divY)
-  ctx.lineTo(W - pad, divY)
-  ctx.stroke()
-
-  // "LYRIC BACK" pill
-  const lbFS = Math.round(logoBase * (H > W ? 0.02 : 0.016))
-  ctx.font = `700 ${lbFS}px Lora, serif`
-  const lbTxt = 'LYRIC BACK'
-  const lbW = ctx.measureText(lbTxt).width + 48
-  const lbPillH = divH * 0.75
-  const lbX = mid - lbW / 2
-  const lbY = divY + (divH - lbPillH) / 2
-
-  // Pill background — gold
-  ctx.fillStyle = themeColor
-  ctx.beginPath()
-  if (ctx.roundRect) {
-    ctx.roundRect(lbX, lbY, lbW, lbPillH, lbPillH / 2)
-  } else {
-    const r2 = lbPillH / 2
-    ctx.moveTo(lbX + r2, lbY)
-    ctx.arcTo(lbX + lbW, lbY, lbX + lbW, lbY + lbPillH, r2)
-    ctx.arcTo(lbX + lbW, lbY + lbPillH, lbX, lbY + lbPillH, r2)
-    ctx.arcTo(lbX, lbY + lbPillH, lbX, lbY, r2)
-    ctx.arcTo(lbX, lbY, lbX + lbW, lbY, r2)
+  // ── Helper: draw rounded rect ──
+  function roundRect(x: number, y: number, w: number, h: number, r: number) {
+    ctx.beginPath()
+    ctx.moveTo(x + r, y)
+    ctx.lineTo(x + w - r, y)
+    ctx.arcTo(x + w, y, x + w, y + r, r)
+    ctx.lineTo(x + w, y + h - r)
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
+    ctx.lineTo(x + r, y + h)
+    ctx.arcTo(x, y + h, x, y + h - r, r)
+    ctx.lineTo(x, y + r)
+    ctx.arcTo(x, y, x + r, y, r)
     ctx.closePath()
   }
-  ctx.fill()
 
-  // Pill text — dark on gold
-  ctx.font = `700 ${lbFS}px Lora, serif`
-  ctx.fillStyle = '#07060A'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(lbTxt, mid, lbY + lbPillH / 2)
+  // ── Helper: draw bubble ──
+  function drawBubble(
+    lyric: string, song: string, artist: string,
+    y: number, isLeft: boolean,
+    bgCol: string, lyricCol: string, metaCol: string, metaSubCol: string
+  ): number {
+    const x = isLeft ? hPad : W - hPad - bubbleW
+    ctx.font = `italic ${lFS}px Lora, serif`
+    const lines = wrapText(ctx, lyric, bubbleW - bubblePadH * 2)
+    const lyricBlockH = lines.length * lineH
+    const bH = bubblePadV * 2 + lyricBlockH + metaFS * 2.2 + 16
 
-  // Section 2 — reply (the lyric back)
-  drawSection(replyLyric, replySong, replyArtist, sec2Start, sec2H)
+    // Shadow
+    ctx.save()
+    ctx.shadowColor = 'rgba(0,0,0,0.25)'
+    ctx.shadowBlur  = 24
+    ctx.shadowOffsetY = 6
+
+    // Bubble background
+    ctx.fillStyle = bgCol
+    roundRect(x, y, bubbleW, bH, radius)
+    ctx.fill()
+    ctx.restore()
+
+    // Tail — small triangle at bottom of bubble
+    const tailX = isLeft ? x + Math.round(bubbleW * 0.12) : x + bubbleW - Math.round(bubbleW * 0.12)
+    ctx.fillStyle = bgCol
+    ctx.beginPath()
+    if (isLeft) {
+      ctx.moveTo(tailX - tailSize, y + bH)
+      ctx.lineTo(tailX + tailSize, y + bH)
+      ctx.lineTo(tailX, y + bH + tailSize)
+    } else {
+      ctx.moveTo(tailX - tailSize, y + bH)
+      ctx.lineTo(tailX + tailSize, y + bH)
+      ctx.lineTo(tailX, y + bH + tailSize)
+    }
+    ctx.closePath()
+    ctx.fill()
+
+    // Lyric text
+    ctx.fillStyle = lyricCol
+    ctx.font = `italic ${lFS}px Lora, serif`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    let ty = y + bubblePadV + lineH * 0.5
+    for (const l of lines) {
+      ctx.fillText(l, x + bubblePadH, ty)
+      ty += lineH
+    }
+
+    // Divider rule inside bubble
+    const ruleY = y + bubblePadV + lyricBlockH + 10
+    ctx.strokeStyle = isLeft ? 'rgba(0,0,0,0.15)' : `${themeColor}40`
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(x + bubblePadH, ruleY)
+    ctx.lineTo(x + bubbleW - bubblePadH, ruleY)
+    ctx.stroke()
+
+    // Song name
+    ctx.fillStyle = metaCol
+    ctx.font = `700 ${metaFS}px Lora, serif`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    ctx.fillText((song || '').toUpperCase(), x + bubblePadH, ruleY + 14 + metaFS * 0.5)
+
+    // Artist name
+    ctx.fillStyle = metaSubCol
+    ctx.font = `400 ${Math.round(metaFS * 0.85)}px Lora, serif`
+    ctx.fillText(artist || '', x + bubblePadH, ruleY + 14 + metaFS * 1.6)
+
+    return bH
+  }
+
+  // ── Measure total content height to centre vertically ──
+  const gap = Math.round(H * 0.06)
+  const b1H = bubbleContentH(parentLyric, parentSong, parentArtist)
+  const b2H = bubbleContentH(replyLyric, replySong, replyArtist)
+  const totalContent = b1H + tailSize + gap + b2H + tailSize
+  const startY = topPad + Math.max(0, (footerY - 24 - topPad - totalContent) / 2)
+
+  // Bubble 1 — parent lyric, LEFT aligned, gold bubble dark text
+  const goldBubbleBg   = themeColor
+  const goldLyricCol   = isLight ? '#1a1a1a' : '#07060A'
+  const goldMetaCol    = isLight ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.75)'
+  const goldMetaSubCol = isLight ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.5)'
+  drawBubble(parentLyric, parentSong, parentArtist, startY, true,
+    goldBubbleBg, goldLyricCol, goldMetaCol, goldMetaSubCol)
+
+  // Bubble 2 — reply lyric, RIGHT aligned, dark bubble light text
+  const darkBubbleBg   = isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)'
+  const darkLyricCol   = isLight ? '#1a1a1a' : '#F4F1ED'
+  const darkMetaCol    = isLight ? '#1a1a1a' : '#F4F1ED'
+  const darkMetaSubCol = isLight ? 'rgba(0,0,0,0.5)' : '#9A98A4'
+  const b2Y = startY + b1H + tailSize + gap
+  drawBubble(replyLyric, replySong, replyArtist, b2Y, false,
+    darkBubbleBg, darkLyricCol, darkMetaCol, darkMetaSubCol)
 
   // Footer
   ctx.strokeStyle = `${themeColor}18`
   ctx.lineWidth = 1
   ctx.beginPath()
-  ctx.moveTo(pad, footerY - 20)
-  ctx.lineTo(W - pad, footerY - 20)
+  ctx.moveTo(hPad, footerY - 20)
+  ctx.lineTo(W - hPad, footerY - 20)
   ctx.stroke()
 
   const wmFS = Math.round(logoBase * 0.019)
@@ -323,7 +366,7 @@ async function drawDualCard(
   ctx.fillStyle = `${themeColor}99`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('trymargo.com', mid, footerY)
+  ctx.fillText('trymargo.com', W / 2, footerY)
 }
 
 export function CardExportModal({
