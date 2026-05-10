@@ -240,14 +240,15 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
     setSrtStatus('Connecting to Whisper AI…')
     try {
       let targetId = song?.id || null
+      const payload = { ...form } as any
+      delete payload.id
       if (!targetId && db) {
         setSrtStatus('Saving song…')
-        const payload = { ...form } as any
-        delete payload.id
         const snap = await get(ref(db, 'songs'))
         const count = snap.exists() ? Object.keys(snap.val()).length : 0
         const newRef = await push(ref(db, 'songs'), { ...payload, order: count, createdAt: Date.now() })
         targetId = newRef.key
+        setSrtStatus('Song saved. Generating lyrics…')
       }
       setSrtStatus('Reading audio — takes ~30 seconds…')
       const res = await fetch('/api/whisper', {
@@ -257,10 +258,11 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
       })
       const data = await res.json()
       if (data.srt) {
+        const updatedPayload = { ...payload, srt: data.srt }
         setForm(f => ({ ...f, srt: data.srt }))
         setShowLyrics(true)
         if (targetId && db) {
-          await update(ref(db, `songs/${targetId}`), { srt: data.srt })
+          await update(ref(db, `songs/${targetId}`), updatedPayload)
           setSrtStatus('✓ Done — song saved with lyrics')
           setTimeout(() => onSave(), 1500)
         } else {
