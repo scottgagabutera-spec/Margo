@@ -1,12 +1,9 @@
 'use client'
 
 import { useState, useCallback, Suspense } from 'react'
-import { useRouter } from 'next/navigation'
 import { Search, Music2, Disc3, Heart, MessageCircle, CreditCard } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
 import { MargoNav } from '@/components/margo-nav'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { cn } from '@/lib/utils'
 import { db } from '@/lib/firebase'
 import { useEchoes } from '@/hooks/useEchoes'
 import { ref, push, set, remove, serverTimestamp } from 'firebase/database'
@@ -24,17 +21,42 @@ interface SearchResult {
   source: Source
 }
 
-type Vibe = 'LOVE' | 'HEARTBREAK' | 'HOPE' | 'NOSTALGIA' | 'HEALING' | 'JOY' | 'RAGE' | 'LONELINESS' | 'SEND IT' | 'LET OUT'
+type Vibe =
+  | 'LOVE' | 'HEARTBREAK' | 'HOPE' | 'NOSTALGIA'
+  | 'HEALING' | 'JOY' | 'RAGE' | 'LONELINESS'
+  | 'SEND IT' | 'LET OUT'
 
-const VIBES: Vibe[] = ['LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SEND IT', 'LET OUT']
+const VIBES: Vibe[] = [
+  'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA',
+  'HEALING', 'JOY', 'RAGE', 'LONELINESS',
+  'SEND IT', 'LET OUT',
+]
+
+const VIBE_LABELS: Record<Vibe, string> = {
+  LOVE: 'Love', HEARTBREAK: 'Heartbreak', HOPE: 'Hope', NOSTALGIA: 'Nostalgia',
+  HEALING: 'Healing', JOY: 'Joy', RAGE: 'Rage', LONELINESS: 'Loneliness',
+  'SEND IT': 'Send It', 'LET OUT': 'Let Out',
+}
+
+/* ─── shared style tokens ─────────────────────────────────── */
+const font = 'var(--font-lora), serif'
+const gold = 'var(--gold)'
+const goldFaint = 'var(--gold-faint)'
+const goldBorder = 'var(--gold-border)'
+const surface = 'var(--surface)'
+const border = 'var(--border)'
+const text = 'var(--text)'
+const text2 = 'var(--text-2)'
+const text3 = 'var(--text-3)'
+const bg = 'var(--bg)'
 
 function LyricBackContent() {
   const { username } = useUsername()
-  const router = useRouter()
   const searchParams = useSearchParams()
   const postId = searchParams.get('postId')
-  const { post: respondingToPost } = usePost(postId)
+  const { post: respondingTo } = usePost(postId)
   const { echoes, loading: echoesLoading } = useEchoes(postId)
+
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
@@ -45,11 +67,12 @@ function LyricBackContent() {
   const [songName, setSongName] = useState('')
   const [lyric, setLyric] = useState('')
   const [selectedVibe, setSelectedVibe] = useState<Vibe | null>(null)
-  const [echoResonated, setEchoResonated] = useState<Set<string>>(new Set())
-  const [echoResonateCounts, setEchoResonateCounts] = useState<Record<string, number>>({})
-  const [showEchoCard, setShowEchoCard] = useState(false)
-  const [echoCardData, setEchoCardData] = useState<{lyric:string,song:string,artist:string,id:string} | null>(null)
+  const [resonated, setResonated] = useState<Set<string>>(new Set())
+  const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
+  const [showCard, setShowCard] = useState(false)
+  const [cardData, setCardData] = useState<{ lyric: string; song: string; artist: string; id: string } | null>(null)
 
+  /* ─── search ─────────────────────────────────────────────── */
   const handleSearch = useCallback(async (value: string) => {
     setSearchQuery(value)
     if (value.length < 2) { setShowResults(false); setSearchResults([]); return }
@@ -63,7 +86,7 @@ function LyricBackContent() {
         title: r.song,
         artist: r.artist,
         artwork: r.artwork || '',
-        source: r.source as 'genius' | 'apple',
+        source: r.source as Source,
       })))
     } catch {
       setSearchResults([])
@@ -89,53 +112,39 @@ function LyricBackContent() {
     setStep(4)
   }, [])
 
+  /* ─── post ───────────────────────────────────────────────── */
   const handlePost = useCallback(async (isPrivate: boolean) => {
     if (!db || !lyric || !songName || !artistName || !selectedVibe) return
-    const echoData = {
-      lyric,
-      song: songName,
-      artist: artistName,
-      emotion: selectedVibe,
-      username: username || null,
-      timestamp: serverTimestamp(),
-      resonates: {},
-    }
     try {
       if (postId) {
-        await push(ref(db, `posts/${postId}/echoes`), echoData)
+        await push(ref(db, `posts/${postId}/echoes`), {
+          lyric, song: songName, artist: artistName,
+          emotion: selectedVibe, username: username || null,
+          timestamp: serverTimestamp(), resonates: {},
+        })
       } else {
         await push(ref(db, 'posts'), {
-          text: lyric,
-          emotion: selectedVibe,
-          mode: 'share',
+          text: lyric, emotion: selectedVibe, mode: 'share',
           status: isPrivate ? 'private' : 'active',
           knowledge: { song: songName, artist: artistName, artwork: selectedSong?.artwork || null },
-          username: username || null,
-          timestamp: serverTimestamp(),
+          username: username || null, timestamp: serverTimestamp(),
         })
       }
     } catch (e) { console.error('Failed to post:', e) }
-    setStep(1)
-    setSearchQuery('')
-    setSelectedSong(null)
-    setArtistName('')
-    setSongName('')
-    setLyric('')
-    setSelectedVibe(null)
+    setStep(1); setSearchQuery(''); setSelectedSong(null)
+    setArtistName(''); setSongName(''); setLyric(''); setSelectedVibe(null)
   }, [artistName, songName, lyric, selectedVibe, selectedSong, username, postId])
 
+  /* ─── promote + reply ────────────────────────────────────── */
   const promoteAndReply = async (echo: typeof echoes[0]) => {
     if (db) {
       try {
         const { ref: dbRef, set: dbSet } = await import('firebase/database')
-        const promotedRef = dbRef(db, `posts/${echo.id}`)
-        await dbSet(promotedRef, {
+        await dbSet(dbRef(db, `posts/${echo.id}`), {
           text: echo.lyric,
           knowledge: { song: echo.song, artist: echo.artist },
-          emotion: echo.emotion,
-          mode: 'reply',
-          username: echo.username,
-          timestamp: echo.timestamp,
+          emotion: echo.emotion, mode: 'reply',
+          username: echo.username, timestamp: echo.timestamp,
           replyToId: postId || 'root',
         })
       } catch (e) { console.error('promote error', e) }
@@ -143,235 +152,403 @@ function LyricBackContent() {
     window.location.href = `/lyric-back?postId=${echo.id}`
   }
 
-  const toggleEchoResonate = async (echoId: string) => {
+  /* ─── resonate ───────────────────────────────────────────── */
+  const toggleResonate = async (echoId: string) => {
     if (!db) return
     const rawId = typeof window !== 'undefined'
-      ? (localStorage.getItem('margoAnonName') || 'anon')
-      : 'anon'
+      ? (localStorage.getItem('margoAnonName') || 'anon') : 'anon'
     const myId = rawId.replace(/[.#$[\]]/g, '_')
-    const alreadyResonated = echoResonated.has(echoId)
-    setEchoResonated(prev => {
-      const next = new Set(prev)
-      alreadyResonated ? next.delete(echoId) : next.add(echoId)
-      return next
-    })
-    setEchoResonateCounts(prev => ({
+    const already = resonated.has(echoId)
+    setResonated(prev => { const n = new Set(prev); already ? n.delete(echoId) : n.add(echoId); return n })
+    setResonateCounts(prev => ({
       ...prev,
-      [echoId]: Math.max(0, (prev[echoId] ?? Object.keys(echoes.find(e => e.id === echoId)?.resonates || {}).length) + (alreadyResonated ? -1 : 1))
+      [echoId]: Math.max(0,
+        (prev[echoId] ?? Object.keys(echoes.find(e => e.id === echoId)?.resonates || {}).length)
+        + (already ? -1 : 1)
+      ),
     }))
-    const resonateRef = ref(db, `analytics/${echoId}/resonates/${myId}`)
+    const rRef = ref(db, `analytics/${echoId}/resonates/${myId}`)
     try {
-      alreadyResonated ? await remove(resonateRef) : await set(resonateRef, true)
+      already ? await remove(rRef) : await set(rRef, true)
     } catch {
-      setEchoResonated(prev => {
-        const next = new Set(prev)
-        alreadyResonated ? next.add(echoId) : next.delete(echoId)
-        return next
-      })
-      setEchoResonateCounts(prev => ({
-        ...prev,
-        [echoId]: Math.max(0, (prev[echoId] || 0) + (alreadyResonated ? 1 : -1))
-      }))
+      setResonated(prev => { const n = new Set(prev); already ? n.add(echoId) : n.delete(echoId); return n })
+      setResonateCounts(prev => ({ ...prev, [echoId]: Math.max(0, (prev[echoId] || 0) + (already ? 1 : -1)) }))
     }
   }
 
   return (
-    <main className="min-h-screen relative">
+    <main style={{ minHeight: '100vh', background: bg, position: 'relative' }}>
       <MargoNav />
-      <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="fixed bottom-1/4 right-1/4 w-64 h-64 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="pt-32 pb-20 px-6">
-        <div className="max-w-2xl mx-auto">
+      {/* Ambient glows */}
+      <div style={{ position: 'fixed', top: '20%', left: '15%', width: '400px', height: '400px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(90px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', bottom: '20%', right: '15%', width: '280px', height: '280px', background: 'rgba(232,197,71,0.06)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
-          {/* Responding To Card — always visible */}
-          <div className="bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl p-6 mb-10 text-center relative overflow-hidden">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-24 bg-amber-500/10 blur-3xl pointer-events-none" />
-            <p className="text-xs text-white/40 uppercase tracking-wider mb-4 relative z-10">Responding to</p>
-            <p className="text-2xl font-serif italic text-amber-400 mb-3 relative z-10">&ldquo;{respondingToPost?.text || '—'}&rdquo;</p>
-            <p className="text-white/50 text-sm mb-3 relative z-10">— {respondingToPost?.knowledge?.artist || ''}, {respondingToPost?.knowledge?.song || ''}</p>
-            <div className="flex items-center justify-center gap-2 relative z-10">
-              <span className="text-xs text-white/40">by {respondingToPost?.username || '—'}</span>
-              <span className="px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-xs font-medium">
-                {respondingToPost?.emotion || ''}
-              </span>
+      <div style={{ paddingTop: '120px', paddingBottom: '80px', paddingLeft: '24px', paddingRight: '24px' }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto' }}>
+
+          {/* ── Responding To ─────────────────────────────────── */}
+          <div style={{
+            background: goldFaint, border: `1px solid ${goldBorder}`,
+            borderRadius: '20px', padding: '28px 24px',
+            marginBottom: '40px', textAlign: 'center', position: 'relative', overflow: 'hidden',
+          }}>
+            <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '240px', height: '100px', background: 'rgba(232,197,71,0.08)', filter: 'blur(40px)', pointerEvents: 'none' }} />
+            <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: text3, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px', position: 'relative', zIndex: 1 }}>
+              Responding to
+            </p>
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.35rem', color: text, lineHeight: 1.5, marginBottom: '10px', position: 'relative', zIndex: 1 }}>
+              &ldquo;{respondingTo?.text || '—'}&rdquo;
+            </p>
+            <p style={{ fontFamily: font, fontSize: '0.82rem', color: text2, marginBottom: '12px', position: 'relative', zIndex: 1 }}>
+              — {respondingTo?.knowledge?.artist || ''}{respondingTo?.knowledge?.song ? `, ${respondingTo.knowledge.song}` : ''}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', position: 'relative', zIndex: 1 }}>
+              {respondingTo?.username && (
+                <span style={{ fontFamily: font, fontSize: '0.72rem', color: text3 }}>
+                  by {respondingTo.username}
+                </span>
+              )}
+              {respondingTo?.emotion && (
+                <span style={{
+                  fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
+                  color: gold, letterSpacing: '1px', textTransform: 'uppercase',
+                  padding: '4px 12px', background: 'rgba(232,197,71,0.12)',
+                  border: `1px solid ${goldBorder}`, borderRadius: '50px',
+                }}>
+                  {respondingTo.emotion}
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Compose Steps — only active step rendered */}
-          {step === 1 && (
-            <div>
-              <div className="text-center mb-10">
-                <h1 className="text-3xl font-serif italic text-amber-400 mb-2">Send a lyric back</h1>
-                <p className="text-white/50 text-sm">Find a lyric that resonates</p>
+          {/* ── Step 1: Search ────────────────────────────────── */}
+          <div style={{ display: step === 1 ? 'block' : 'none' }}>
+            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: gold, marginBottom: '8px' }}>
+                Find your lyric back
+              </h1>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3 }}>
+                Search by lyric, song, or artist
+              </p>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative' }}>
+                <Search style={{ position: 'absolute', left: '22px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: 'var(--text-3)' }} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => handleSearch(e.target.value)}
+                  placeholder="Search by lyric, song or artist..."
+                  style={{
+                    width: '100%', height: '60px', paddingLeft: '52px', paddingRight: '24px',
+                    background: goldFaint, border: `1px solid ${goldBorder}`,
+                    borderRadius: '16px', color: text, fontSize: '1rem',
+                    fontFamily: font, outline: 'none', boxSizing: 'border-box',
+                  }}
+                />
               </div>
-              <div className="relative">
-                <div className="relative">
-                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+              {showResults && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px',
+                  background: surface, border: `1px solid ${border}`,
+                  borderRadius: '16px', overflow: 'hidden', zIndex: 50,
+                }}>
+                  {searchLoading && (
+                    <div style={{ textAlign: 'center', padding: '16px', fontFamily: font, color: gold, fontSize: '0.82rem', fontStyle: 'italic' }}>
+                      Searching…
+                    </div>
+                  )}
+                  {searchResults.map(result => (
+                    <button
+                      key={result.id}
+                      onClick={() => handleSelectSong(result)}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: '14px',
+                        padding: '14px 16px', background: 'none', border: 'none',
+                        cursor: 'pointer', textAlign: 'left', transition: 'background 150ms ease',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = goldFaint)}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      {result.artwork && (
+                        <img src={result.artwork} alt={result.title} style={{ width: '44px', height: '44px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontFamily: font, color: text, fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.title}</p>
+                        <p style={{ fontFamily: font, color: text3, fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.artist}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Step 2: Lyric ─────────────────────────────────── */}
+          <div style={{ display: step === 2 ? 'block' : 'none' }}>
+            <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: gold, marginBottom: '8px' }}>
+                Your lyric back
+              </h1>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3 }}>
+                Enter the lyric that says it back
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+              {(['Artist', 'Song'] as const).map((label) => (
+                <div key={label}>
+                  <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: text3, textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>{label}</label>
                   <input
                     type="text"
-                    value={searchQuery}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    placeholder="Search by lyric, song or artist..."
-                    className="w-full h-14 pl-14 pr-6 bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500/30 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                    value={label === 'Artist' ? artistName : songName}
+                    onChange={e => label === 'Artist' ? setArtistName(e.target.value) : setSongName(e.target.value)}
+                    style={{ width: '100%', height: '46px', padding: '0 14px', background: goldFaint, border: `1px solid ${border}`, borderRadius: '12px', color: text, fontFamily: font, outline: 'none', boxSizing: 'border-box' }}
                   />
-                </div>
-                {showResults && (
-                  <div className="absolute top-full left-0 right-0 mt-4 bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl overflow-hidden backdrop-blur-sm z-20">
-                    {searchLoading ? <div className="text-center text-amber-400/60 text-sm py-4">Searching…</div> : null}
-                    {searchResults.map((result) => (
-                      <button
-                        key={result.id}
-                        onClick={() => handleSelectSong(result)}
-                        className="w-full flex items-center gap-4 p-4 hover:bg-amber-500/10 transition-colors text-left"
-                      >
-                        <img src={result.artwork} alt={result.title} className="w-12 h-12 rounded-lg object-cover" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-medium truncate">{result.title}</p>
-                          <p className="text-white/50 text-sm truncate">{result.artist}</p>
-                        </div>
-                        <span className={cn("px-2 py-1 rounded-md text-xs font-medium uppercase tracking-wide", result.source === 'genius' ? "bg-yellow-500/20 text-yellow-400" : "bg-pink-500/20 text-pink-400")}>
-                          {result.source === 'genius' ? (
-                            <span className="flex items-center gap-1"><Music2 className="w-3 h-3" />Genius</span>
-                          ) : (
-                            <span className="flex items-center gap-1"><Disc3 className="w-3 h-3" />Apple</span>
-                          )}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div>
-              <div className="text-center mb-8">
-                <h1 className="text-3xl font-serif italic text-amber-400 mb-2">Your reply</h1>
-                <p className="text-white/50 text-sm">Enter the lyric you want to send back</p>
-              </div>
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-white/40 uppercase tracking-wider mb-2">Artist</label>
-                    <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)} className="w-full h-12 px-4 bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-xl text-white focus:outline-none focus:border-amber-500/30 transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-white/40 uppercase tracking-wider mb-2">Song</label>
-                    <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)} className="w-full h-12 px-4 bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-xl text-white focus:outline-none focus:border-amber-500/30 transition-all" />
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl p-8 relative overflow-hidden">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-amber-500/10 blur-3xl pointer-events-none" />
-                  <textarea
-                    value={lyric}
-                    onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-                    placeholder="Type your reply lyric here..."
-                    rows={4}
-                    className="w-full bg-transparent text-2xl font-serif italic text-amber-400 placeholder:text-amber-400/30 focus:outline-none resize-none relative z-10 text-center leading-relaxed"
-                  />
-                  <div className="flex justify-between items-center mt-4 relative z-10">
-                    <span className="text-xs text-white/30">{lyric.length}/140</span>
-                    <button onClick={handleLyricComplete} disabled={lyric.trim().length === 0} className="px-6 py-2 bg-amber-400 text-black font-medium rounded-full hover:bg-amber-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                      Continue
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div>
-              <div className="text-center mb-8">
-                <h1 className="text-3xl font-serif italic text-amber-400 mb-2">Choose the vibe</h1>
-                <p className="text-white/50 text-sm">How does your reply feel?</p>
-              </div>
-              <div className="bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl p-6 mb-8 text-center">
-                <p className="text-xl font-serif italic text-amber-400 mb-3">&ldquo;{lyric}&rdquo;</p>
-                <p className="text-white/50 text-sm">— {artistName}, {songName}</p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-3">
-                {VIBES.map((vibe) => (
-                  <button
-                    key={vibe}
-                    onClick={() => handleVibeSelect(vibe)}
-                    className={cn("px-5 py-2.5 rounded-full border font-medium text-sm transition-all", selectedVibe === vibe ? "bg-amber-400 text-black border-amber-400" : "border-amber-500/30 text-amber-400/80 hover:bg-amber-500/10 hover:border-amber-500/50")}
-                  >
-                    {vibe}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div>
-              <div className="text-center mb-8">
-                <h1 className="text-3xl font-serif italic text-amber-400 mb-2">Ready to send?</h1>
-                <p className="text-white/50 text-sm">Your lyric back is set to go</p>
-              </div>
-              <div className="bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl p-8 mb-8 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-amber-500/10 blur-3xl pointer-events-none" />
-                <p className="text-xl font-serif italic text-amber-400 mb-4 relative z-10">&ldquo;{lyric}&rdquo;</p>
-                <p className="text-white/50 text-sm mb-4 relative z-10">— {artistName}, {songName}</p>
-                <span className="inline-block px-4 py-1.5 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-400 text-xs font-medium relative z-10">{selectedVibe}</span>
-              </div>
-              <div className="flex justify-center gap-4">
-                <button onClick={() => handlePost(false)} className="px-8 py-3 bg-amber-400 text-black font-semibold rounded-full hover:bg-amber-300 transition-colors">POST TO FEED</button>
-                <button onClick={() => handlePost(true)} className="px-8 py-3 border border-amber-500/30 text-amber-400 font-semibold rounded-full hover:bg-amber-500/10 transition-colors">KEEP PRIVATE</button>
-              </div>
-            </div>
-          )}
-
-          {/* Lyric Backs — fully independent, always rendered, never blocked */}
-          <div className="mt-16 pt-10 border-t border-amber-500/10">
-            <h2 className="text-xl font-serif italic text-amber-400 mb-6 text-center">Lyric Backs</h2>
-            <div className="space-y-4">
-              {echoesLoading && <p className="text-white/30 text-sm text-center py-4">Loading…</p>}
-              {echoes.map((lyricBack) => (
-                <div key={lyricBack.id} className="bg-gradient-to-br from-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl p-5">
-                  <div className="flex items-start gap-4 mb-5">
-                    <Avatar className="w-10 h-10 border border-amber-500/30">
-                      <AvatarImage src={""} alt={lyricBack.username || ""} />
-                      <AvatarFallback className="bg-amber-500/20 text-amber-400 text-xs">
-                        {(lyricBack.username || "??").slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white/60 mb-2">{lyricBack.username}</p>
-                      <p className="text-lg font-serif italic text-amber-400 mb-2">&ldquo;{lyricBack.lyric}&rdquo;</p>
-                      <p className="text-white/40 text-xs">— {lyricBack.artist}, {lyricBack.song}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-end justify-between pt-3 border-t border-amber-500/10">
-                    <button onClick={() => toggleEchoResonate(lyricBack.id)} className={`flex flex-col items-center gap-1 transition-colors group ${echoResonated.has(lyricBack.id) ? 'text-amber-400' : 'text-white/40 hover:text-amber-400'}`}>
-                      <Heart className={`w-5 h-5 group-hover:scale-110 transition-transform ${echoResonated.has(lyricBack.id) ? 'fill-current' : ''}`} />
-                      <span className="text-[10px] uppercase tracking-wide">Resonate · {echoResonateCounts[lyricBack.id] ?? Object.keys(lyricBack.resonates || {}).length}</span>
-                    </button>
-                    <button onClick={() => promoteAndReply(lyricBack)} className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
-                      <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] uppercase tracking-wide">Lyric Back</span>
-                    </button>
-                    <div className="flex items-end gap-3">
-                      <button onClick={() => { setEchoCardData({ lyric: lyricBack.lyric, song: lyricBack.song, artist: lyricBack.artist, id: lyricBack.id }); setShowEchoCard(true); }} className="flex flex-col items-center gap-1 text-white/40 hover:text-amber-400 transition-colors group">
-                        <CreditCard className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                        <span className="text-[10px] uppercase tracking-wide">Card</span>
-                      </button>
-                      <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/20 rounded-full text-amber-400/70 text-[10px] font-normal">{lyricBack.emotion}</span>
-                    </div>
-                  </div>
                 </div>
               ))}
+            </div>
+            <div style={{ background: goldFaint, border: `1px solid ${goldBorder}`, borderRadius: '20px', padding: '28px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '200px', height: '100px', background: 'rgba(232,197,71,0.08)', filter: 'blur(40px)', pointerEvents: 'none' }} />
+              <textarea
+                value={lyric}
+                onChange={e => setLyric(e.target.value.slice(0, 140))}
+                placeholder="Type your lyric here..."
+                rows={4}
+                style={{
+                  width: '100%', background: 'transparent', fontSize: '1.4rem',
+                  fontFamily: font, fontStyle: 'italic', color: gold,
+                  textAlign: 'center', lineHeight: 1.6, border: 'none', outline: 'none',
+                  resize: 'none', position: 'relative', zIndex: 10, boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', position: 'relative', zIndex: 10 }}>
+                <span style={{ fontFamily: font, fontSize: '0.6rem', color: text3 }}>{lyric.length}/140</span>
+                <button
+                  onClick={handleLyricComplete}
+                  disabled={lyric.trim().length === 0}
+                  style={{
+                    padding: '10px 24px', background: gold, color: bg,
+                    borderRadius: '50px', fontFamily: font, fontWeight: 700,
+                    fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+                    border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1,
+                    transition: 'opacity 150ms ease',
+                  }}
+                >Continue</button>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Step 3: Vibe ──────────────────────────────────── */}
+          <div style={{ display: step === 3 ? 'block' : 'none' }}>
+            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: gold, marginBottom: '8px' }}>
+                How does it feel?
+              </h1>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3 }}>
+                Pick the vibe, or skip
+              </p>
+            </div>
+            <div style={{ background: goldFaint, border: `1px solid ${goldBorder}`, borderRadius: '16px', padding: '22px', marginBottom: '24px', textAlign: 'center' }}>
+              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.15rem', color: text, marginBottom: '6px' }}>&ldquo;{lyric}&rdquo;</p>
+              <p style={{ fontFamily: font, fontSize: '0.78rem', color: text3 }}>— {artistName}, {songName}</p>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
+              {VIBES.map(vibe => (
+                <button
+                  key={vibe}
+                  onClick={() => handleVibeSelect(vibe)}
+                  style={{
+                    padding: '10px 20px', borderRadius: '50px', fontFamily: font,
+                    fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
+                    transition: 'all 150ms ease',
+                    background: selectedVibe === vibe ? gold : 'transparent',
+                    color: selectedVibe === vibe ? bg : gold,
+                    border: selectedVibe === vibe ? `1px solid ${gold}` : `1px solid ${goldBorder}`,
+                  }}
+                >{VIBE_LABELS[vibe]}</button>
+              ))}
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={() => setStep(4)}
+                style={{ background: 'transparent', border: 'none', fontFamily: font, fontSize: '0.82rem', color: text3, cursor: 'pointer', textDecoration: 'underline' }}
+              >Skip — no vibe</button>
+            </div>
+          </div>
+
+          {/* ── Step 4: Confirm ───────────────────────────────── */}
+          <div style={{ display: step === 4 ? 'block' : 'none' }}>
+            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: gold, marginBottom: '8px' }}>
+                Ready to send it back?
+              </h1>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3 }}>
+                Your lyric back is set to go
+              </p>
+            </div>
+            <div style={{ background: goldFaint, border: `1px solid ${goldBorder}`, borderRadius: '20px', padding: '32px', marginBottom: '28px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '200px', height: '100px', background: 'rgba(232,197,71,0.08)', filter: 'blur(40px)', pointerEvents: 'none' }} />
+              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.4rem', color: gold, marginBottom: '12px', position: 'relative', zIndex: 1 }}>&ldquo;{lyric}&rdquo;</p>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3, marginBottom: '14px', position: 'relative', zIndex: 1 }}>— {artistName}, {songName}</p>
+              {selectedVibe && (
+                <span style={{
+                  display: 'inline-block', padding: '5px 14px',
+                  background: 'rgba(232,197,71,0.12)', border: `1px solid ${goldBorder}`,
+                  borderRadius: '50px', fontFamily: font, fontSize: '0.6rem',
+                  fontWeight: 700, color: gold, letterSpacing: '1px',
+                  textTransform: 'uppercase', position: 'relative', zIndex: 1,
+                }}>{VIBE_LABELS[selectedVibe]}</span>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '320px', margin: '0 auto' }}>
+              <button
+                onClick={() => handlePost(false)}
+                style={{
+                  padding: '15px 28px', background: gold, color: bg,
+                  borderRadius: '50px', fontFamily: font, fontWeight: 700,
+                  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+                  border: 'none', cursor: 'pointer',
+                  boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
+                }}
+              >Send It</button>
+              <button
+                onClick={() => handlePost(true)}
+                style={{
+                  padding: '13px 28px', background: 'transparent',
+                  color: text2, border: `1px solid var(--border-hi)`,
+                  borderRadius: '50px', fontFamily: font, fontWeight: 600,
+                  fontSize: '0.6rem', letterSpacing: '1px',
+                  textTransform: 'uppercase', cursor: 'pointer',
+                }}
+              >Keep Private</button>
+            </div>
+          </div>
+
+          {/* ── Lyric Backs section ───────────────────────────── */}
+          <div style={{ marginTop: '64px', paddingTop: '40px', borderTop: `1px solid rgba(232,197,71,0.1)` }}>
+            <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: text3, letterSpacing: '2px', textTransform: 'uppercase', textAlign: 'center', marginBottom: '28px' }}>
+              Lyric Backs
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {echoesLoading && (
+                <p style={{ fontFamily: font, fontStyle: 'italic', color: text3, fontSize: '0.9rem', textAlign: 'center', padding: '24px' }}>Loading…</p>
+              )}
+              {!echoesLoading && echoes.length === 0 && (
+                <p style={{ fontFamily: font, fontStyle: 'italic', color: text3, fontSize: '0.9rem', textAlign: 'center', padding: '24px' }}>
+                  No lyric backs yet — be the first.
+                </p>
+              )}
+              {echoes.map(lb => {
+                const resonateCount = resonateCounts[lb.id] ?? Object.keys(lb.resonates || {}).length
+                const hasResonated = resonated.has(lb.id)
+                return (
+                  <div
+                    key={lb.id}
+                    style={{
+                      background: 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${border}`,
+                      borderRadius: '18px', padding: '20px 22px',
+                      transition: 'border-color 200ms ease',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = goldBorder)}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = border)}
+                  >
+                    {/* Username + emotion */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                      <span style={{ fontFamily: font, fontSize: '0.72rem', color: text3 }}>
+                        {lb.username || 'anonymous'}
+                      </span>
+                      {lb.emotion && (
+                        <span style={{
+                          fontFamily: font, fontSize: '0.58rem', fontWeight: 700,
+                          color: gold, letterSpacing: '1px', textTransform: 'uppercase',
+                          padding: '3px 10px', background: 'rgba(232,197,71,0.08)',
+                          border: `1px solid ${goldBorder}`, borderRadius: '50px',
+                        }}>{lb.emotion}</span>
+                      )}
+                    </div>
+
+                    {/* Lyric */}
+                    <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: text, lineHeight: 1.6, marginBottom: '8px' }}>
+                      &ldquo;{lb.lyric}&rdquo;
+                    </p>
+                    <p style={{ fontFamily: font, fontSize: '0.75rem', color: text3, marginBottom: '18px' }}>
+                      — {lb.artist}, {lb.song}
+                    </p>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px', paddingTop: '14px', borderTop: `1px solid ${border}` }}>
+                      {/* Resonate */}
+                      <button
+                        onClick={() => toggleResonate(lb.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                          color: hasResonated ? gold : 'var(--text-3)',
+                          transition: 'color 150ms ease',
+                          fontFamily: font,
+                        }}
+                      >
+                        <Heart style={{ width: '15px', height: '15px', fill: hasResonated ? 'currentColor' : 'none', transition: 'fill 150ms ease' }} />
+                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                          {resonateCount > 0 ? resonateCount : ''} Resonate
+                        </span>
+                      </button>
+
+                      {/* Lyric Back */}
+                      <button
+                        onClick={() => promoteAndReply(lb)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                          color: text3, transition: 'color 150ms ease', fontFamily: font,
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = gold)}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+                      >
+                        <MessageCircle style={{ width: '15px', height: '15px' }} />
+                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                          Lyric Back
+                        </span>
+                      </button>
+
+                      {/* Card */}
+                      <button
+                        onClick={() => { setCardData({ lyric: lb.lyric, song: lb.song, artist: lb.artist, id: lb.id }); setShowCard(true) }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                          color: text3, transition: 'color 150ms ease', fontFamily: font,
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = gold)}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+                      >
+                        <CreditCard style={{ width: '15px', height: '15px' }} />
+                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                          Card
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
         </div>
       </div>
 
-      {showEchoCard && (
-        <CardExportModal open={showEchoCard} onOpenChange={setShowEchoCard} lyric={echoCardData?.lyric || ''} song={echoCardData?.song || ''} artist={echoCardData?.artist || ''} postId={echoCardData?.id} />
+      {/* Card export modal */}
+      {showCard && (
+        <CardExportModal
+          open={showCard}
+          onOpenChange={setShowCard}
+          lyric={cardData?.lyric || ''}
+          song={cardData?.song || ''}
+          artist={cardData?.artist || ''}
+          postId={cardData?.id}
+        />
       )}
     </main>
   )
@@ -379,7 +556,11 @@ function LyricBackContent() {
 
 export default function LyricBackPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#08070C] flex items-center justify-center"><p className="text-amber-400 font-serif italic">Loading…</p></div>}>
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--gold)', fontSize: '1rem' }}>Loading…</p>
+      </div>
+    }>
       <LyricBackContent />
     </Suspense>
   )
