@@ -411,8 +411,8 @@ function MusicTab() {
         <button onClick={() => setEditingSong('new')} style={S.btn}>+ Add Song</button>
       </div>
       {editingSong === 'new' && <SongForm song={null} onSave={() => setEditingSong(null)} onCancel={() => setEditingSong(null)} />}
-      {songs.map(song => (
-        <div key={song.id}>
+      {songs.map((song, i) => (
+        <div key={song.id || i}>
           {editingSong && typeof editingSong === 'object' && editingSong.id === song.id
             ? <SongForm song={song} onSave={() => setEditingSong(null)} onCancel={() => setEditingSong(null)} />
             : (
