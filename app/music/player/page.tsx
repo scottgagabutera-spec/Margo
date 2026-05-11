@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useSong } from '@/hooks/useSong'
-import CardExportModal from '@/components/card-export-modal'
+import { CardExportModal } from '@/components/card-export-modal'
 
 interface LyricLine {
   id: number
