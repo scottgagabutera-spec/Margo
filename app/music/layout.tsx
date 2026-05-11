@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     description:
       'Original songs by Trymargo. Full karaoke experience with synced lyrics. Available on Spotify, Apple Music, Boomplay and everywhere music lives.',
     url: 'https://trymargo.com/music',
-    type: 'music.musician',
+    type: 'website',
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },
   twitter: {
