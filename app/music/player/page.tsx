@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useSong } from '@/hooks/useSong'
-import { CardExportModal } from '@/components/card-export-modal'
+import CardExportModal from '@/components/card-export-modal'
 
 interface LyricLine {
   id: number
@@ -228,8 +228,9 @@ function PlayerContent() {
         <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link href="/music" style={{
             fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
-            color: 'var(--text-3)', textDecoration: 'none',
+            color: 'var(--text)', textDecoration: 'none',
             transition: 'color 150ms ease', letterSpacing: '0.5px',
+            opacity: 0.75,
           }}>← Music</Link>
 
           <div style={{ textAlign: 'center' }}>
@@ -345,9 +346,9 @@ function PlayerContent() {
         zIndex: 21, pointerEvents: 'none',
       }}>
         <p style={{
-          fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem',
+          fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem',
           fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.18)', margin: 0,
+          color: 'rgba(232,197,71,0.55)', margin: 0,
         }}>Tap any line to jump</p>
       </div>
 
