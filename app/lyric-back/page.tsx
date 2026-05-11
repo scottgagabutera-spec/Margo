@@ -155,7 +155,7 @@ function LyricBackContent() {
     window.location.href = `/lyric-back?postId=${echo.id}`
     if (db) {
       import('firebase/database').then(({ ref: dbRef, set: dbSet }) => {
-        dbSet(dbRef(db, `posts/${echo.id}`), {
+        dbSet(dbRef(db as any, `posts/${echo.id}`), {
           text: echo.lyric,
           knowledge: { song: echo.song, artist: echo.artist },
           emotion: echo.emotion, mode: 'reply',

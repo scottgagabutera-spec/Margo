@@ -170,7 +170,7 @@ export default function ComposePage() {
           }).then(r => r.json()).then(mod => {
             if (mod.flagged && db) {
               import('firebase/database').then(({ ref: dbRef, update }) => {
-                update(dbRef(db, `posts/${result.key}`), { flagCount: 10 })
+                if (db) update(dbRef(db, `posts/${result.key}`), { flagCount: 10 })
               })
             }
           }).catch(() => {})

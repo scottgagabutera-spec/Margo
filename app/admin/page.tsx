@@ -22,7 +22,7 @@ interface Song {
 }
 interface Analytics { views?: number; resonates?: Record<string,boolean> }
 
-const S: Record<string, React.CSSProperties> = {
+const S: Record<string, any> = {
   input: {
     width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.04)',
     border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px',
@@ -56,7 +56,7 @@ const S: Record<string, React.CSSProperties> = {
     background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
     borderRadius: '14px', padding: '16px', marginBottom: '10px',
   },
-  tab: (active: boolean): React.CSSProperties => ({
+  tab: (active: boolean) => ({
     padding: '8px 20px', background: 'none', border: 'none', cursor: 'pointer',
     fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
     letterSpacing: '2px', textTransform: 'uppercase',
