@@ -7,20 +7,10 @@ export default function ContactPage() {
     <>
       <MargoNav />
       <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', overflow: 'hidden' }}>
-        <div style={{
-          position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%',
-          filter: 'blur(80px)', opacity: 0.06,
-          width: '500px', height: '500px',
-          background: 'var(--gold)', top: '-100px', right: '-100px',
-        }} />
-        <div style={{
-          position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%',
-          filter: 'blur(80px)', opacity: 0.06,
-          width: '400px', height: '400px',
-          background: '#6B4EFF', bottom: '-100px', left: '-100px',
-        }} />
+        <div style={{ position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%', filter: 'blur(80px)', opacity: 0.06, width: '500px', height: '500px', background: 'var(--gold)', top: '-100px', right: '-100px' }} />
+        <div style={{ position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%', filter: 'blur(80px)', opacity: 0.06, width: '400px', height: '400px', background: '#6B4EFF', bottom: '-100px', left: '-100px' }} />
 
-        <div style={{ maxWidth: '680px', margin: '0 auto', padding: '64px 24px 120px', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '680px', margin: '0 auto', padding: '88px 24px 120px', position: 'relative', zIndex: 1 }}>
           <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '16px' }}>Contact</div>
 
           <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(2rem,5vw,3.2rem)', fontWeight: 700, color: 'var(--text)', lineHeight: 1.15, marginBottom: '12px' }}>
@@ -34,23 +24,10 @@ export default function ContactPage() {
           </p>
 
           <div style={{ background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.12)', borderRadius: '12px', padding: '28px', marginBottom: '16px' }}>
-
             {[
-              {
-                label: 'General',
-                email: 'contact@trymargo.com',
-                note: 'Questions, feedback, partnerships, press.',
-              },
-              {
-                label: 'Copyright and Legal',
-                email: 'contact@trymargo.com',
-                note: 'Rights holder requests and content removal. We review all requests and act promptly.',
-              },
-              {
-                label: 'Investors and Partners',
-                email: 'contact@trymargo.com',
-                note: 'Margo is independently built and actively seeking partners and investors who see this early.',
-              },
+              { label: 'General', email: 'contact@trymargo.com', note: 'Questions, feedback, partnerships, press.' },
+              { label: 'Copyright and Legal', email: 'contact@trymargo.com', note: 'Rights holder requests and content removal. We review all requests and act promptly.' },
+              { label: 'Investors and Partners', email: 'contact@trymargo.com', note: 'Margo is independently built and actively seeking partners and investors who see this early.' },
             ].map((block, i, arr) => (
               <div key={block.label} style={{ marginBottom: i === arr.length - 1 ? 0 : '32px' }}>
                 <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>{block.label}</div>

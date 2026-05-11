@@ -7,20 +7,10 @@ export default function TermsPage() {
     <>
       <MargoNav />
       <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', overflow: 'hidden' }}>
-        <div style={{
-          position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%',
-          filter: 'blur(80px)', opacity: 0.06,
-          width: '500px', height: '500px',
-          background: 'var(--gold)', top: '-100px', right: '-100px',
-        }} />
-        <div style={{
-          position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%',
-          filter: 'blur(80px)', opacity: 0.06,
-          width: '400px', height: '400px',
-          background: '#6B4EFF', bottom: '-100px', left: '-100px',
-        }} />
+        <div style={{ position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%', filter: 'blur(80px)', opacity: 0.06, width: '500px', height: '500px', background: 'var(--gold)', top: '-100px', right: '-100px' }} />
+        <div style={{ position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%', filter: 'blur(80px)', opacity: 0.06, width: '400px', height: '400px', background: '#6B4EFF', bottom: '-100px', left: '-100px' }} />
 
-        <div style={{ maxWidth: '680px', margin: '0 auto', padding: '64px 24px 120px', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '680px', margin: '0 auto', padding: '88px 24px 120px', position: 'relative', zIndex: 1 }}>
           <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '16px' }}>Terms of Use</div>
 
           <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(2rem,5vw,3.2rem)', fontWeight: 700, color: 'var(--text)', lineHeight: 1.15, marginBottom: '12px' }}>
@@ -36,7 +26,7 @@ export default function TermsPage() {
 
             <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>What Margo is</h2>
             <p style={{ marginBottom: '1.4em' }}>Margo is a social platform where people communicate through song lyrics — sharing feelings, moments, and culture through the lines that say what words alone cannot.</p>
-            <p style={{ marginBottom: '1.4em' }}>Margo does not host full songs or store copyrighted music recordings. Song information comes from metadata provided by licensed third-party platforms. Streaming always happens on official licensed services.</p>
+            <p style={{ marginBottom: '1.4em' }}>Margo currently surfaces music through licensed third-party streaming platforms and publicly available metadata. As Margo grows, this may expand to include direct licensed streaming and additional integrations. We encourage you to check back here periodically as the platform evolves.</p>
 
             <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>YouTube Terms of Service</h2>
             <p style={{ marginBottom: '1.4em' }}>Margo uses the YouTube Data API v3 to retrieve publicly available song and video metadata. By using any feature on Margo that involves YouTube data — including song search, video previews, and metadata display — <strong style={{ color: 'var(--text)', fontWeight: 600 }}>you agree to be bound by the <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none' }}>YouTube Terms of Service</a></strong>.</p>
@@ -55,6 +45,9 @@ export default function TermsPage() {
 
             <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Anonymous usernames</h2>
             <p style={{ marginBottom: '1.4em' }}>Margo assigns you a randomly generated username when you post. This keeps the focus on the lyric and the feeling — not on identity or follower counts. You may edit your username once. Margo reserves the right to retire or reassign usernames at any time.</p>
+
+            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Changes to these terms</h2>
+            <p style={{ marginBottom: '1.4em' }}>Margo is evolving. These terms may be updated as the platform grows. We encourage you to check back here periodically — continued use of Margo constitutes acceptance of any updates.</p>
 
             <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Limitation of liability</h2>
             <p style={{ marginBottom: '1.4em' }}>Margo is provided as-is. To the fullest extent permitted by applicable law, Margo is not liable for user-generated content, third-party services, service interruptions, data loss, or any indirect damages arising from use of the platform.</p>
