@@ -233,19 +233,25 @@ function PostCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
             width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-            background: 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+            background: isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
+            border: isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden',
           }}>
-            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--bg)' }}>
-              {(post.username || '??').slice(0, 2).toUpperCase()}
-            </span>
+            {isTier1 ? (
+              <svg width='26' height='26' viewBox='-4 -4 88 88' xmlns='http://www.w3.org/2000/svg'>
+                <path d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57'
+                  fill='none' stroke='#0B0B0D' strokeWidth='7' strokeLinecap='round' strokeLinejoin='round' />
+              </svg>
+            ) : (
+              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', fontWeight: 700, color: 'var(--gold)' }}>
+                {post.username ? post.username.charAt(0).toUpperCase() : 'ML'}
+              </span>
+            )}
           </div>
           <div>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>
-              {post.username || 'Anonymous'}
-            </p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-3)' }}>
-              {post.timestamp ? timeAgo(post.timestamp) : ''}
+              {post.username || 'Margo Listener'}
             </p>
           </div>
         </div>

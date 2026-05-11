@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Search, Music2, Disc3 } from 'lucide-react'
 import { MargoNav } from '@/components/margo-nav'
 import { db } from '@/lib/firebase'
-import { ref, push, serverTimestamp, get, query, orderByChild } from 'firebase/database'
+import { ref, push, serverTimestamp, get } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername'
 import { useLicensedArtists } from '@/hooks/useLicensedArtists'
 import { CardExportModal } from '@/components/card-export-modal'
-import { cn } from '@/lib/utils'
 
 type Source = 'genius' | 'apple'
 
@@ -30,8 +30,19 @@ const VIBE_LABELS: Record<Vibe, string> = {
   SENDIT: 'Send It', LETOUT: 'Let Out',
 }
 
+/* ─── Shared styles ─────────────────────────────────────────── */
+const font = 'var(--font-lora), serif'
+const backBtnStyle: React.CSSProperties = {
+  background: 'none', border: 'none', cursor: 'pointer',
+  fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+  color: 'var(--text-3)', letterSpacing: '0.5px',
+  marginBottom: '32px', padding: 0, display: 'inline-block',
+  transition: 'color 150ms ease',
+}
+
 export default function ComposePage() {
-  const { username } = useUsername()
+  const router = useRouter()
+  const { username, hasConfirmed, hasEdited, confirmUsername, editUsername } = useUsername()
   const { isLicensed } = useLicensedArtists()
 
   const [step, setStep] = useState(1)
@@ -51,6 +62,11 @@ export default function ComposePage() {
   const [showSharePrompt, setShowSharePrompt] = useState(false)
   const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
   const [linkedAudioUrl, setLinkedAudioUrl] = useState<string | null>(null)
+  const [posting, setPosting] = useState(false)
+
+  // Username confirm/edit state (shown on step 4)
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState('')
 
   const handleSearch = useCallback(async (value: string) => {
     setSearchQuery(value)
@@ -81,7 +97,6 @@ export default function ComposePage() {
     setShowResults(false)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
-    // If licensed artist, look up matching song in Firebase/songs
     if (isLicensed(result.artist) && db) {
       try {
         const snap = await get(ref(db, 'songs'))
@@ -116,11 +131,8 @@ export default function ComposePage() {
         setSuggestedVibe(data.emotion as Vibe)
         setSelectedVibe(data.emotion as Vibe)
       }
-    } catch {
-      // silent fail — user picks manually
-    } finally {
-      setEmotionLoading(false)
-    }
+    } catch {}
+    finally { setEmotionLoading(false) }
   }, [lyric])
 
   const handleVibeSelect = useCallback((vibe: Vibe) => {
@@ -130,13 +142,16 @@ export default function ComposePage() {
 
   const handlePost = useCallback(async (isPrivate: boolean) => {
     if (!lyric || !songName || !artistName) return
+    if (isPrivate) { setShowExport(true); return }
+
+    setPosting(true)
     const tier = isLicensed(artistName) ? 1 : 2
     const post = {
       text: lyric,
       emotion: selectedVibe || null,
       tier,
       mode: 'share',
-      status: isPrivate ? 'private' : 'active',
+      status: 'active',
       flagCount: 0,
       knowledge: {
         song: songName,
@@ -152,16 +167,10 @@ export default function ComposePage() {
       lang: navigator.language.split('-')[0] || 'en',
     }
 
-    if (isPrivate) {
-      setShowExport(true)
-      return
-    }
-
     try {
       if (db) {
         const result = await push(ref(db, 'posts'), post)
         setPostedId(result.key)
-        // Auto-moderate silently in background
         if (result.key) {
           fetch('/api/moderate', {
             method: 'POST',
@@ -178,10 +187,13 @@ export default function ComposePage() {
       }
     } catch (e) {
       console.error('Failed to post:', e)
+      setPosting(false)
+      return
     }
 
+    setPosting(false)
     setShowSharePrompt(true)
-  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, isLicensed])
+  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, isLicensed, linkedSongId, linkedAudioUrl])
 
   const resetCompose = () => {
     setStep(1)
@@ -197,18 +209,19 @@ export default function ComposePage() {
     setShowExport(false)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
+    setPosting(false)
   }
 
-  // Share prompt — shown after posting to feed
+  // ── Share prompt after posting ──────────────────────────────
   if (showSharePrompt) {
     return (
       <main style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <MargoNav />
         <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', paddingTop: '80px' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--text)', marginBottom: '8px' }}>
+          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--text)', marginBottom: '8px' }}>
             Your lyric is live.
           </p>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '32px', letterSpacing: '0.5px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '32px', letterSpacing: '0.5px' }}>
             Want to share it beyond Margo?
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
@@ -216,27 +229,31 @@ export default function ComposePage() {
               onClick={() => { setShowExport(true); setShowSharePrompt(false) }}
               style={{
                 padding: '15px 28px', background: 'var(--gold)', color: 'var(--bg)',
-                borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+                borderRadius: '50px', fontFamily: font,
                 fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
                 textTransform: 'uppercase', border: 'none', cursor: 'pointer',
                 boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
               }}
-            >Share It</button>
+            >Share as Card</button>
+            {/* Go to feed — not reset */}
             <button
-              onClick={resetCompose}
+              onClick={() => router.push('/feed')}
               style={{
                 padding: '13px 28px', background: 'transparent',
                 color: 'var(--text-3)', border: '1px solid var(--border)',
-                borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+                borderRadius: '50px', fontFamily: font,
                 fontSize: '0.6rem', letterSpacing: '1px',
                 textTransform: 'uppercase', cursor: 'pointer',
               }}
-            >Done</button>
+            >See it on the Feed</button>
           </div>
         </div>
         <CardExportModal
           open={showExport}
-          onOpenChange={(o) => { setShowExport(o); if (!o) resetCompose() }}
+          onOpenChange={(o) => {
+            setShowExport(o)
+            if (!o) router.push('/feed') // after export → go to feed
+          }}
           lyric={lyric}
           song={songName}
           artist={artistName}
@@ -246,22 +263,24 @@ export default function ComposePage() {
     )
   }
 
+  // ── Username confirm banner (shown on step 4 if not confirmed) ──
+  const showNameBanner = step === 4 && !hasConfirmed
+
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <MargoNav />
 
-      {/* Ambient glows */}
       <div style={{ position: 'fixed', top: '25%', left: '25%', width: '384px', height: '384px', background: 'rgba(232,197,71,0.05)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
       <div style={{ position: 'fixed', bottom: '25%', right: '25%', width: '256px', height: '256px', background: 'rgba(232,197,71,0.08)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
       <div style={{ paddingTop: '120px', paddingBottom: '80px', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
-          {/* Step 1: Search */}
+          {/* ── Step 1: Search ─────────────────────────────────── */}
           <div style={{ display: step === 1 ? 'block' : 'none' }}>
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <h1 style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Find your lyric</h1>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-3)' }}>Search by lyric, song, or artist</p>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Find your lyric</h1>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Search by lyric, song, or artist</p>
             </div>
             <div style={{ position: 'relative' }}>
               <div style={{ position: 'relative' }}>
@@ -275,8 +294,7 @@ export default function ComposePage() {
                     width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px',
                     background: 'var(--gold-faint)', border: '1px solid var(--gold-border)',
                     borderRadius: '16px', color: 'var(--text)', fontSize: '1rem',
-                    fontFamily: 'var(--font-lora), serif', outline: 'none',
-                    boxSizing: 'border-box',
+                    fontFamily: font, outline: 'none', boxSizing: 'border-box',
                   }}
                 />
               </div>
@@ -287,7 +305,7 @@ export default function ComposePage() {
                   borderRadius: '16px', overflow: 'hidden', zIndex: 50,
                 }}>
                   {searchLoading && (
-                    <div style={{ textAlign: 'center', padding: '16px', fontFamily: 'var(--font-lora), serif', color: 'var(--gold)', fontSize: '0.82rem' }}>Searching…</div>
+                    <div style={{ textAlign: 'center', padding: '16px', fontFamily: font, color: 'var(--gold)', fontSize: '0.82rem' }}>Searching…</div>
                   )}
                   {searchResults.map((result) => (
                     <button
@@ -305,10 +323,9 @@ export default function ComposePage() {
                         <img src={result.artwork} alt={result.title} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontFamily: 'var(--font-lora), serif', color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.title}</p>
-                        <p style={{ fontFamily: 'var(--font-lora), serif', color: 'var(--text-3)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.artist}</p>
+                        <p style={{ fontFamily: font, color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.title}</p>
+                        <p style={{ fontFamily: font, color: 'var(--text-3)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.artist}</p>
                       </div>
-
                     </button>
                   ))}
                 </div>
@@ -316,22 +333,23 @@ export default function ComposePage() {
             </div>
           </div>
 
-          {/* Step 2: Lyric Input */}
+          {/* ── Step 2: Lyric Input ────────────────────────────── */}
           <div style={{ display: step === 2 ? 'block' : 'none' }}>
+            <button style={backBtnStyle} onClick={() => { setStep(1); setSelectedSong(null); setArtistName(''); setSongName('') }}>← Back</button>
             <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-              <h1 style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Set the stage</h1>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-3)' }}>Enter the lyric that moves you</p>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Set the stage</h1>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Enter the lyric that moves you</p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
               <div>
-                <label style={{ display: 'block', fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Artist</label>
+                <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Artist</label>
                 <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
-                  style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif', outline: 'none', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Song</label>
+                <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Song</label>
                 <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
-                  style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif', outline: 'none', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
               </div>
             </div>
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', position: 'relative', overflow: 'hidden' }}>
@@ -343,20 +361,20 @@ export default function ComposePage() {
                 rows={4}
                 style={{
                   width: '100%', background: 'transparent', fontSize: '1.5rem',
-                  fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+                  fontFamily: font, fontStyle: 'italic',
                   color: 'var(--gold)', textAlign: 'center', lineHeight: 1.6,
                   border: 'none', outline: 'none', resize: 'none',
                   position: 'relative', zIndex: 10, boxSizing: 'border-box',
                 }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', position: 'relative', zIndex: 10 }}>
-                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-3)' }}>{lyric.length}/140</span>
+                <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)' }}>{lyric.length}/140</span>
                 <button
                   onClick={handleLyricComplete}
                   disabled={lyric.trim().length === 0}
                   style={{
                     padding: '10px 24px', background: 'var(--gold)', color: 'var(--bg)',
-                    borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+                    borderRadius: '50px', fontFamily: font,
                     fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
                     textTransform: 'uppercase', border: 'none', cursor: 'pointer',
                     opacity: lyric.trim().length === 0 ? 0.4 : 1,
@@ -366,21 +384,23 @@ export default function ComposePage() {
             </div>
           </div>
 
-          {/* Step 3: Emotion */}
+          {/* ── Step 3: Emotion ────────────────────────────────── */}
           <div style={{ display: step === 3 ? 'block' : 'none' }}>
+            {!emotionLoading && (
+              <button style={backBtnStyle} onClick={() => setStep(2)}>← Back</button>
+            )}
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
                 {emotionLoading ? 'Reading the room…' : 'How does it feel?'}
               </h1>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-3)' }}>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>
                 {emotionLoading ? 'Finding the right vibe for your lyric' : suggestedVibe ? 'We sensed something — confirm or change it' : 'Pick the vibe, or skip'}
               </p>
             </div>
 
-            {/* Preview */}
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '24px', marginBottom: '24px', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1.25rem', color: 'var(--text)', marginBottom: '8px' }}>&ldquo;{lyric}&rdquo;</p>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-3)' }}>— {artistName}, {songName}</p>
+              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.25rem', color: 'var(--text)', marginBottom: '8px' }}>&ldquo;{lyric}&rdquo;</p>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>— {artistName}, {songName}</p>
             </div>
 
             {emotionLoading && (
@@ -391,7 +411,6 @@ export default function ComposePage() {
               </div>
             )}
 
-            {/* Vibes */}
             {!emotionLoading && (
               <>
                 <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px', marginBottom: '24px' }}>
@@ -401,7 +420,7 @@ export default function ComposePage() {
                       onClick={() => handleVibeSelect(vibe)}
                       style={{
                         padding: '10px 20px', borderRadius: '50px',
-                        fontFamily: 'var(--font-lora), serif', fontWeight: 600,
+                        fontFamily: font, fontWeight: 600,
                         fontSize: '0.82rem', cursor: 'pointer', transition: 'all 150ms ease',
                         background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
                         color: selectedVibe === vibe ? 'var(--bg)' : 'var(--gold)',
@@ -425,7 +444,7 @@ export default function ComposePage() {
                     onClick={() => setStep(4)}
                     style={{
                       background: 'transparent', border: 'none',
-                      fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                      fontFamily: font, fontSize: '0.82rem',
                       color: 'var(--text-3)', cursor: 'pointer', textDecoration: 'underline',
                     }}
                   >Skip — no vibe</button>
@@ -434,46 +453,138 @@ export default function ComposePage() {
             )}
           </div>
 
-          {/* Step 4: Preview + Post */}
+          {/* ── Step 4: Preview + Post ─────────────────────────── */}
           <div style={{ display: step === 4 ? 'block' : 'none' }}>
+            <button style={backBtnStyle} onClick={() => setStep(3)}>← Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Ready to share?</h1>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-3)' }}>Your lyric is set to go</p>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Ready to share?</h1>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Your lyric is set to go</p>
             </div>
 
             {/* Final preview */}
-            <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', marginBottom: '32px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', marginBottom: '24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '256px', height: '128px', background: 'rgba(232,197,71,0.1)', filter: 'blur(40px)', pointerEvents: 'none' }} />
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--gold)', marginBottom: '16px', position: 'relative', zIndex: 1 }}>&ldquo;{lyric}&rdquo;</p>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '16px', position: 'relative', zIndex: 1 }}>— {artistName}, {songName}</p>
+              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--gold)', marginBottom: '16px', position: 'relative', zIndex: 1 }}>&ldquo;{lyric}&rdquo;</p>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '16px', position: 'relative', zIndex: 1 }}>— {artistName}, {songName}</p>
               {selectedVibe && (
                 <span style={{
                   display: 'inline-block', padding: '6px 16px',
                   background: 'rgba(232,197,71,0.15)', border: '1px solid var(--gold-border)',
-                  borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+                  borderRadius: '50px', fontFamily: font,
                   fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)',
                   letterSpacing: '1px', textTransform: 'uppercase', position: 'relative', zIndex: 1,
                 }}>{VIBE_LABELS[selectedVibe]}</span>
               )}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '320px', margin: '0 auto' }}>
+            {/* ── Username confirm banner ── */}
+            {showNameBanner && (
+              <div style={{
+                background: 'rgba(232,197,71,0.06)',
+                border: '1px solid rgba(232,197,71,0.2)',
+                borderRadius: '16px', padding: '20px 24px',
+                marginBottom: '24px',
+              }}>
+                {!editingName ? (
+                  <>
+                    <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text)', marginBottom: '4px' }}>
+                      You'll post as <strong style={{ color: 'var(--gold)' }}>{username}</strong>
+                    </p>
+                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '16px', lineHeight: 1.5 }}>
+                      We gave you this name — it's yours on Margo. You can change it once, right now.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={confirmUsername}
+                        style={{
+                          padding: '9px 20px', background: 'var(--gold)', color: 'var(--bg)',
+                          borderRadius: '50px', fontFamily: font, fontWeight: 700,
+                          fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+                          border: 'none', cursor: 'pointer',
+                        }}
+                      >Keep It</button>
+                      {!hasEdited && (
+                        <button
+                          onClick={() => { setEditingName(true); setNameInput(username) }}
+                          style={{
+                            padding: '9px 20px', background: 'transparent',
+                            color: 'var(--gold)', border: '1px solid var(--gold-border)',
+                            borderRadius: '50px', fontFamily: font,
+                            fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+                            cursor: 'pointer',
+                          }}
+                        >Edit Once</button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '12px' }}>
+                      Choose your name — you can only do this once.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value.slice(0, 30))}
+                        maxLength={30}
+                        autoFocus
+                        style={{
+                          flex: 1, height: '44px', padding: '0 16px',
+                          background: 'var(--gold-faint)', border: '1px solid var(--gold-border)',
+                          borderRadius: '12px', color: 'var(--text)', fontFamily: font,
+                          fontSize: '0.9rem', outline: 'none',
+                        }}
+                      />
+                      <button
+                        onClick={() => { if (nameInput.trim()) { editUsername(nameInput); setEditingName(false) } }}
+                        disabled={!nameInput.trim()}
+                        style={{
+                          padding: '0 20px', height: '44px', background: 'var(--gold)',
+                          color: 'var(--bg)', borderRadius: '12px', fontFamily: font,
+                          fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
+                          textTransform: 'uppercase', border: 'none', cursor: 'pointer',
+                          opacity: nameInput.trim() ? 1 : 0.4,
+                        }}
+                      >Confirm</button>
+                      <button
+                        onClick={() => setEditingName(false)}
+                        style={{
+                          padding: '0 16px', height: '44px', background: 'transparent',
+                          color: 'var(--text-3)', border: '1px solid var(--border)',
+                          borderRadius: '12px', fontFamily: font,
+                          fontSize: '0.6rem', cursor: 'pointer',
+                        }}
+                      >Cancel</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Post buttons — disabled until name confirmed */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '320px', margin: '0 auto', opacity: (!hasConfirmed && showNameBanner) ? 0.4 : 1, pointerEvents: (!hasConfirmed && showNameBanner) ? 'none' : 'auto' }}>
               <button
                 onClick={() => handlePost(false)}
+                disabled={posting}
                 style={{
                   padding: '15px 28px', background: 'var(--gold)', color: 'var(--bg)',
-                  borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+                  borderRadius: '50px', fontFamily: font,
                   fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
-                  textTransform: 'uppercase', border: 'none', cursor: 'pointer',
+                  textTransform: 'uppercase', border: 'none',
+                  cursor: posting ? 'not-allowed' : 'pointer',
                   boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
+                  opacity: posting ? 0.7 : 1,
+                  transition: 'opacity 150ms ease',
                 }}
-              >Post to Feed</button>
+              >{posting ? 'Posting…' : 'Post to Feed'}</button>
               <button
                 onClick={() => handlePost(true)}
+                disabled={posting}
                 style={{
                   padding: '13px 28px', background: 'transparent',
                   color: 'var(--text-2)', border: '1px solid var(--border-hi)',
-                  borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+                  borderRadius: '50px', fontFamily: font,
                   fontWeight: 600, fontSize: '0.6rem', letterSpacing: '1px',
                   textTransform: 'uppercase', cursor: 'pointer',
                 }}
@@ -486,7 +597,7 @@ export default function ComposePage() {
 
       <CardExportModal
         open={showExport}
-        onOpenChange={(o) => { setShowExport(o); if (!o) resetCompose() }}
+        onOpenChange={(o) => { setShowExport(o); if (!o) router.push('/feed') }}
         lyric={lyric}
         song={songName}
         artist={artistName}
