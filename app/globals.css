@@ -188,3 +188,7 @@
     transform: translateY(0);
   }
 }
+
+/* Hide scrollbar globally — modern, clean */
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; -ms-overflow-style: none; }

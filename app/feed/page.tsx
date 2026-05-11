@@ -487,7 +487,7 @@ export default function FeedPage() {
       <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'var(--bg)', padding: '10px 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           {/* Vibe pills */}
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {VIBES.map(vibe => (
               <button key={vibe} onClick={() => setSelectedVibe(vibe)} style={{
                 flexShrink: 0, padding: '4px 10px', borderRadius: '50px',
