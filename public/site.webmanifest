@@ -1,0 +1,30 @@
+{
+  "name": "Margo",
+  "short_name": "Margo",
+  "description": "Communicate through song lyrics. Post a lyric, choose your emotion, get a Lyric Back.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08070C",
+  "theme_color": "#E8C547",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-dark-32x32.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-light-32x32.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["music", "social"],
+  "lang": "en"
+}
