@@ -278,7 +278,7 @@ function PostCard({
       {(post.knowledge?.song || post.knowledge?.artist) && (
         <p style={{
           fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
-          color: 'var(--text-3)', letterSpacing: '1px', textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.75)', letterSpacing: '1px', textTransform: 'uppercase',
           marginBottom: '20px',
         }}>
           {post.knowledge.song && post.knowledge.artist
