@@ -269,8 +269,8 @@ function SongCard({ song, onPreview }: { song: Song; onPreview: (song: Song) => 
 export default function MusicPage() {
   const { songs, loading } = useSongs()
   const [preview, setPreview] = useState<Song | null>(null)
-  const featuredSong = songs[0] || null
-  const moreSongs = songs.slice(1)
+  const featuredSong = songs.length ? songs.reduce((a, b) => ((b.lyricUses || 0) > (a.lyricUses || 0) ? b : a)) : null
+  const moreSongs = songs.filter(s => s.id !== featuredSong?.id)
   const { lines: sharedLines, loading: linesLoading } = useSharedLines(featuredSong?.title, featuredSong?.artist)
 
   if (loading) return (

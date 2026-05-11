@@ -171,6 +171,11 @@ export default function ComposePage() {
       if (db) {
         const result = await push(ref(db, 'posts'), post)
         setPostedId(result.key)
+        if (result.key && linkedSongId && db) {
+          import('firebase/database').then(({ ref: dbRef, runTransaction }) => {
+            if (db) runTransaction(dbRef(db, `songs/${linkedSongId}/lyricUses`), (cur) => (cur || 0) + 1)
+          }).catch(() => {})
+        }
         if (result.key) {
           fetch('/api/moderate', {
             method: 'POST',

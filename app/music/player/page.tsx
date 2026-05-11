@@ -36,6 +36,7 @@ function PlayerContent() {
   const [cardExportOpen, setCardExportOpen] = useState(false)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const hasCountedPlay = useRef(false)
   // One ref per lyric line — keyed by lyric.id
   const lyricRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -63,6 +64,15 @@ function PlayerContent() {
   useEffect(() => {
     const audio = audioRef.current
     if (audio) {
+      if (!hasCountedPlay.current && songId) {
+        hasCountedPlay.current = true
+        import('firebase/database').then(({ ref: dbRef, runTransaction, getDatabase }) => {
+          import('@/lib/firebase').then(({ app }) => {
+            const db2 = getDatabase(app ?? undefined)
+            runTransaction(dbRef(db2, `songs/${songId}/plays`), (cur) => (cur || 0) + 1)
+          })
+        }).catch(() => {})
+      }
       if (isPlaying) audio.play().catch(() => setIsPlaying(false))
       else audio.pause()
       return
