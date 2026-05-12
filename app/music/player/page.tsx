@@ -38,6 +38,7 @@ function PlayerContent() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const hasCountedPlay = useRef(false)
+  const pendingPlay = useRef(false)
   // One ref per lyric line — keyed by lyric.id
   const lyricRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -95,6 +96,9 @@ function PlayerContent() {
         audio.addEventListener("canplaythrough", onCanPlay)
       }
     }
+
+    // Fire queued play if user tapped before song loaded
+    if (pendingPlay.current) { pendingPlay.current = false; playAudio.current?.() }
 
     pauseAudio.current = () => {
       audio.pause()
@@ -407,7 +411,10 @@ function PlayerContent() {
         }}>
           {/* Play / Pause */}
           <button
-            onClick={() => setIsPlaying(p => !p)}
+            onClick={() => {
+              if (!playAudio.current && !isPlaying) { pendingPlay.current = true; setIsPlaying(true) }
+              else setIsPlaying(p => !p)
+            }}
             style={{
               width: '52px', height: '52px', borderRadius: '50%',
               border: '1px solid var(--border-hi)',
@@ -415,7 +422,7 @@ function PlayerContent() {
               color: 'var(--text)', fontSize: '1.1rem',
               cursor: 'pointer', display: 'flex',
               alignItems: 'center', justifyContent: 'center',
-              transition: 'all 150ms ease', flexShrink: 0,
+              transition: 'all 150ms ease', flexShrink: 0, outline: 'none', WebkitTapHighlightColor: 'transparent',
             }}
           >{isBuffering ? '◌' : isPlaying ? '⏸' : '▶'}</button>
 

@@ -1,3 +1,7 @@
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 
 /* ── Margo Design Tokens ── */
 :root {
