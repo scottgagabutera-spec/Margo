@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 
 export function MargoNav() {
@@ -11,7 +11,16 @@ export function MargoNav() {
   const isOnMusic = pathname?.startsWith('/music')
   const isOnCompose = pathname === '/compose'
 
-  const menuItems = [
+  // Lock body scroll when menu open
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [menuOpen])
+
+  // Close on route change
+  useEffect(() => { setMenuOpen(false) }, [pathname])
+
+  const overlayLinks = [
     { href: '/feed', label: 'Feed', active: isOnFeed },
     { href: '/music', label: 'Music', active: isOnMusic },
     { href: '/compose', label: 'Share a Lyric', active: isOnCompose },
@@ -22,29 +31,28 @@ export function MargoNav() {
   return (
     <>
       <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40,
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         padding: '14px 24px',
-        borderBottom: '1px solid var(--border)',
-        background: 'rgba(7,6,10,0.90)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: menuOpen ? 'none' : '1px solid var(--border)',
+        background: menuOpen ? 'transparent' : 'rgba(7,6,10,0.90)',
+        backdropFilter: menuOpen ? 'none' : 'blur(16px)',
+        WebkitBackdropFilter: menuOpen ? 'none' : 'blur(16px)',
+        transition: 'background 300ms ease, border 300ms ease',
       }}>
         <div style={{
           display: 'flex', alignItems: 'center',
           justifyContent: 'space-between',
-          maxWidth: '1200px', margin: '0 auto',
         }}>
-
-          {/* Left — Logo */}
-          <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
+          {/* Logo — far left */}
+          <Link href="/" onClick={() => setMenuOpen(false)} style={{ textDecoration: 'none', flexShrink: 0, zIndex: 51, position: 'relative' }}>
             <MargoLogo tier="symbol" size={28} wordmark rings />
           </Link>
 
-          {/* Right — desktop nav + hamburger */}
+          {/* Right side — all items flush right */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 
-            {/* Desktop only — Feed, Music, Share a Lyric */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} className="desktop-nav">
+            {/* Desktop only: Feed, Music, Share a Lyric */}
+            <div style={{ display: 'none' }} className="margo-desktop-nav">
               {[
                 { href: '/feed', label: 'Feed', active: isOnFeed },
                 { href: '/music', label: 'Music', active: isOnMusic },
@@ -55,7 +63,7 @@ export function MargoNav() {
                   textDecoration: 'none',
                   color: active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
                   padding: '8px 14px', position: 'relative',
-                  transition: 'color 150ms ease',
+                  transition: 'color 150ms ease', whiteSpace: 'nowrap',
                 }}>
                   {label}
                   {active && (
@@ -68,50 +76,61 @@ export function MargoNav() {
                   )}
                 </Link>
               ))}
-
-              {/* Share a Lyric — solid gold, desktop only */}
               <Link href="/compose" style={{
                 fontSize: '0.6rem', fontFamily: 'var(--font-lora), serif',
                 fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
-                textDecoration: 'none',
-                color: 'var(--bg)',
-                background: isOnCompose ? 'rgba(232,197,71,0.8)' : 'var(--gold)',
-                borderRadius: '50px',
+                textDecoration: 'none', color: 'var(--bg)',
+                background: 'var(--gold)', borderRadius: '50px',
                 padding: '9px 20px', marginLeft: '8px',
-                transition: 'all 150ms ease', flexShrink: 0,
-                whiteSpace: 'nowrap',
+                transition: 'all 150ms ease', flexShrink: 0, whiteSpace: 'nowrap',
+                opacity: isOnCompose ? 0.75 : 1,
               }}>Share a Lyric</Link>
             </div>
 
-            {/* Hamburger — always visible */}
+            {/* Mobile only: gold + circle for compose */}
+            <div className="margo-mobile-compose">
+              <Link href="/compose" style={{
+                width: '34px', height: '34px', borderRadius: '50%',
+                background: 'var(--gold)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                textDecoration: 'none', flexShrink: 0,
+                marginRight: '4px',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1v12M1 7h12" stroke="var(--bg)" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </Link>
+            </div>
+
+            {/* Hamburger — always visible, far right */}
             <button
               onClick={() => setMenuOpen(o => !o)}
               style={{
-                marginLeft: '16px', background: 'none', border: 'none',
+                background: 'none', border: 'none',
                 cursor: 'pointer', padding: '8px',
                 display: 'flex', flexDirection: 'column',
                 justifyContent: 'center', gap: '5px',
                 outline: 'none', WebkitTapHighlightColor: 'transparent',
-                flexShrink: 0,
+                flexShrink: 0, position: 'relative', zIndex: 51,
               }}
               aria-label="Menu"
             >
               <span style={{
                 display: 'block', width: '20px', height: '1.5px',
-                background: menuOpen ? 'var(--gold)' : 'rgba(255,255,255,0.6)',
-                transition: 'all 220ms ease',
+                background: menuOpen ? 'var(--gold)' : 'rgba(255,255,255,0.7)',
+                transition: 'all 250ms ease',
                 transform: menuOpen ? 'translateY(6.5px) rotate(45deg)' : 'none',
               }} />
               <span style={{
                 display: 'block', width: '20px', height: '1.5px',
-                background: menuOpen ? 'transparent' : 'rgba(255,255,255,0.6)',
-                transition: 'all 220ms ease',
+                background: 'rgba(255,255,255,0.7)',
+                transition: 'all 250ms ease',
                 opacity: menuOpen ? 0 : 1,
               }} />
               <span style={{
                 display: 'block', width: '20px', height: '1.5px',
-                background: menuOpen ? 'var(--gold)' : 'rgba(255,255,255,0.6)',
-                transition: 'all 220ms ease',
+                background: menuOpen ? 'var(--gold)' : 'rgba(255,255,255,0.7)',
+                transition: 'all 250ms ease',
                 transform: menuOpen ? 'translateY(-6.5px) rotate(-45deg)' : 'none',
               }} />
             </button>
@@ -119,49 +138,71 @@ export function MargoNav() {
         </div>
       </nav>
 
-      {/* Dropdown menu */}
+      {/* Full page overlay */}
       <div style={{
-        position: 'fixed', top: '57px', left: 0, right: 0, zIndex: 39,
+        position: 'fixed', inset: 0, zIndex: 49,
         background: 'rgba(7,6,10,0.97)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: menuOpen ? '1px solid var(--border)' : 'none',
-        maxHeight: menuOpen ? '400px' : '0px',
-        overflow: 'hidden',
-        transition: 'max-height 280ms ease, border-bottom 280ms ease',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        gap: '8px',
+        opacity: menuOpen ? 1 : 0,
+        pointerEvents: menuOpen ? 'all' : 'none',
+        transition: 'opacity 300ms ease',
       }}>
-        <div style={{ padding: menuOpen ? '8px 0 20px' : '0' }}>
-          {menuItems.map(({ href, label, active }) => (
-            <Link key={href} href={href} onClick={() => setMenuOpen(false)} style={{
-              display: 'block', padding: '14px 28px',
-              fontSize: '0.85rem', fontFamily: 'var(--font-lora), serif',
-              fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
+        {overlayLinks.map(({ href, label, active }, i) => (
+          <Link
+            key={href}
+            href={href}
+            onClick={() => setMenuOpen(false)}
+            style={{
+              fontSize: 'clamp(1.8rem, 6vw, 3.5rem)',
+              fontFamily: 'var(--font-lora), serif',
+              fontStyle: 'italic',
+              fontWeight: 700,
+              letterSpacing: '1px',
               textDecoration: 'none',
-              color: active ? 'var(--gold)' : 'rgba(255,255,255,0.55)',
-              borderLeft: active ? '2px solid var(--gold)' : '2px solid transparent',
-              transition: 'all 150ms ease',
-            }}>{label}</Link>
-          ))}
-        </div>
+              color: active ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
+              padding: '12px 32px',
+              transition: 'color 200ms ease',
+              opacity: menuOpen ? 1 : 0,
+              transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
+              transitionDelay: menuOpen ? (i * 60) + 'ms' : '0ms',
+            }}
+          >
+            {label}
+            {active && (
+              <span style={{
+                display: 'inline-block', width: '6px', height: '6px',
+                borderRadius: '50%', background: 'var(--gold)',
+                marginLeft: '12px', verticalAlign: 'middle',
+              }} />
+            )}
+          </Link>
+        ))}
       </div>
 
-      {/* Mobile CSS — hide desktop nav items */}
+      {/* Responsive CSS */}
       <style>{`
-        @media (max-width: 640px) {
-          .desktop-nav { display: none !important; }
+        .margo-desktop-nav {
+          display: none;
+        }
+        .margo-mobile-compose {
+          display: flex;
+          align-items: center;
+        }
+        @media (min-width: 640px) {
+          .margo-desktop-nav {
+            display: flex !important;
+            align-items: center;
+            gap: 4px;
+          }
+          .margo-mobile-compose {
+            display: none !important;
+          }
         }
       `}</style>
-
-      {/* Backdrop */}
-      {menuOpen && (
-        <div
-          onClick={() => setMenuOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 38,
-            background: 'rgba(0,0,0,0.4)',
-          }}
-        />
-      )}
     </>
   )
 }
