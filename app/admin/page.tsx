@@ -385,17 +385,14 @@ function MusicTab() {
       const unsub = onValue(
         ref(database, 'songs'),
         snap => {
-          console.log('[debug] fired')
           const list: Song[] = []
           let i = 0
           try {
             snap.forEach(child => {
-              i++
-              console.log('[debug] iteration', i, child.key, child.val())
+              i++)
               list.push({ ...child.val(), id: child.key as string })
             })
-          } catch(e) { console.error('[debug] forEach error:', e) }
-          console.log('[debug] list length:', list.length)
+          } catch(e) { console.error('[MusicTab] forEach error:', e) }
           setSongs(list.sort((a, b) => (a.order || 0) - (b.order || 0)))
         },
         err => console.error('[MusicTab] Firebase error:', err)
