@@ -389,7 +389,7 @@ function MusicTab() {
           let i = 0
           try {
             snap.forEach(child => {
-              i++)
+              i++
               list.push({ ...child.val(), id: child.key as string })
             })
           } catch(e) { console.error('[MusicTab] forEach error:', e) }
