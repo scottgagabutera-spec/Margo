@@ -282,7 +282,6 @@ export default function MusicPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <MargoNav />
 
       {preview && <SongPreview song={preview} onClose={() => setPreview(null)} />}
 

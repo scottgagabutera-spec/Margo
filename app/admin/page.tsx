@@ -5,7 +5,6 @@ import { getDatabase } from 'firebase/database'
 import { app } from '@/lib/firebase'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { ref, onValue, update, remove, push, set, get } from 'firebase/database'
-import { MargoNav } from '@/components/margo-nav'
 
 // ── Types ──
 interface Post {
@@ -638,7 +637,6 @@ export default function AdminPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <MargoNav />
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '100px 24px 80px' }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
