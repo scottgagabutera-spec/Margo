@@ -70,7 +70,7 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
 
   useEffect(() => {
     const audio = new Audio(audioUrl)
-    audio.preload = 'metadata'
+    audio.preload = 'auto'
     audioRef.current = audio
     const onTime = () => { setCurrentTime(audio.currentTime); setProgress((audio.currentTime / (audio.duration || 1)) * 100) }
     const onMeta = () => setDuration(audio.duration || 0)
@@ -96,7 +96,28 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
       setLyricsLoaded(true)
     }
     if (playing) { audio.pause(); setPlaying(false) }
-    else { audio.play().catch(() => {}); setPlaying(true) }
+    else {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: 'Margo Original',
+          artist: 'Trymargo',
+          artwork: [{ src: '/favicons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+        })
+        navigator.mediaSession.setActionHandler('play', () => setPlaying(true))
+        navigator.mediaSession.setActionHandler('pause', () => setPlaying(false))
+      }
+      if (audio.readyState >= 3) {
+        audio.play().catch(() => {})
+        setPlaying(true)
+      } else {
+        const onCanPlay = () => {
+          audio.play().catch(() => {})
+          setPlaying(true)
+          audio.removeEventListener('canplaythrough', onCanPlay)
+        }
+        audio.addEventListener('canplaythrough', onCanPlay)
+      }
+    }
   }
 
   const seek = (clientX: number) => {

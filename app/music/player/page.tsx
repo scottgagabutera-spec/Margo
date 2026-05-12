@@ -94,17 +94,18 @@ function PlayerContent() {
       }
       // Wait for enough data before playing — fixes silent first-tap on mobile
       if (audio.readyState >= 3) {
+        if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"
         audio.play().catch(() => setIsPlaying(false))
       } else {
         setIsBuffering(true)
         const onCanPlay = () => {
           setIsBuffering(false)
+          if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"
           audio.play().catch(() => setIsPlaying(false))
           audio.removeEventListener("canplaythrough", onCanPlay)
         }
         audio.addEventListener("canplaythrough", onCanPlay)
       }
-      if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"
     } else {
       audio.pause()
       if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"
