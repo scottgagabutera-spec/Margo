@@ -60,7 +60,8 @@ function PlayerContent() {
   useEffect(() => {
     const audioUrl = (song as any)?.audioUrl
     if (!audioUrl) return
-    const audio = new Audio(audioUrl)
+    // Reuse pre-buffered element if already created, otherwise create fresh
+    const audio = audioRef.current ?? new Audio(audioUrl)
     audio.preload = "auto"
     audioRef.current = audio
 
