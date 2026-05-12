@@ -134,7 +134,7 @@ function SongPreview({ song, onClose }: { song: Song; onClose: () => void }) {
 
             {/* CTA */}
             {isActive ? (
-              <Link href={`/music/player?id=${song.id}`} className="play-btn" style={{
+              <Link href={`/music/player?id=${song.id}${song.audioUrl ? "&au=" + encodeURIComponent(song.audioUrl) : ""}`} className="play-btn" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                 padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)',
                 borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
@@ -330,7 +330,7 @@ export default function MusicPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <Link href={`/music/player?id=${featuredSong.id}`} className="play-btn" style={{
+              <Link href={`/music/player?id=${featuredSong.id}${featuredSong.audioUrl ? "&au=" + encodeURIComponent(featuredSong.audioUrl) : ""}`} className="play-btn" style={{
                 display: 'inline-flex', alignItems: 'center', gap: '10px',
                 padding: '16px 36px', background: 'var(--gold)', color: 'var(--bg)',
                 borderRadius: '50px', fontFamily: 'var(--font-lora), serif',

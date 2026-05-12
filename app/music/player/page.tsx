@@ -22,6 +22,7 @@ function parseLyrics(raw: unknown): LyricLine[] {
 function PlayerContent() {
   const searchParams = useSearchParams()
   const songId = searchParams.get('id')
+  const earlyAudioUrl = searchParams.get('au')
   const { song, lyrics: realLyrics, loading } = useSong(songId)
 
   const lyrics: LyricLine[] = realLyrics.length > 0
@@ -43,6 +44,14 @@ function PlayerContent() {
   // One ref per lyric line — keyed by lyric.id
   const lyricRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   const viewportRef = useRef<HTMLDivElement | null>(null)
+
+  // ─── Pre-buffer audio from URL param before Firebase resolves ─────
+  useEffect(() => {
+    if (!earlyAudioUrl || audioRef.current) return
+    const audio = new Audio(earlyAudioUrl)
+    audio.preload = 'auto'
+    audioRef.current = audio
+  }, [earlyAudioUrl])
 
   // ─── Audio setup + play/pause — single effect, no race condition ───
   const playAudio = useRef<(() => void) | null>(null)
