@@ -309,12 +309,12 @@ function PostCard({
         </p>
       )}
 
-      {/* YouTube thumbnail — hidden for Tier 1, they have the real player */}
-      {!isTier1 && post.youtubeMeta?.thumbnail && (
-        <a href={post.youtubeMeta.youtubeUrl || '#'} target="_blank" rel="noopener noreferrer"
+      {/* Song artwork — YouTube if available, else album art from knowledge */}
+      {!isTier1 && (post.youtubeMeta?.thumbnail || post.knowledge?.artwork) && (
+        <a href={post.youtubeMeta?.youtubeUrl || `https://music.apple.com/search?term=${encodeURIComponent((post.knowledge?.song || '') + ' ' + (post.knowledge?.artist || ''))}`} target="_blank" rel="noopener noreferrer"
           style={{ display: 'block', marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none' }}>
           <div style={{ position: 'relative' }}>
-            <img src={post.youtubeMeta.thumbnail} alt="" style={{ width: '100%', minHeight: '70px', maxHeight: '180px', objectFit: 'cover', display: 'block' }} />
+            <img src={post.youtubeMeta?.thumbnail || post.knowledge?.artwork || ''} alt="" style={{ width: '100%', minHeight: '70px', maxHeight: '180px', objectFit: 'cover', display: 'block' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ color: 'var(--bg)', fontSize: '0.7rem' }}>▶</span>
