@@ -51,8 +51,10 @@ function PlayerContent() {
 
   useEffect(() => {
     const audioUrl = earlyAudioUrl || (song as any)?.audioUrl
+    console.log("[player] audioUrl:", audioUrl, "earlyAudioUrl:", earlyAudioUrl, "song:", !!(song as any)?.audioUrl)
     if (!audioUrl) return
     if (audioRef.current) return // already set up, dont recreate
+    console.log("[player] creating audio element")
     const audio = new Audio(audioUrl)
     audio.preload = "auto"
     audioRef.current = audio
@@ -71,6 +73,7 @@ function PlayerContent() {
         }).catch(() => {})
       }
       if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"
+      console.log("[player] play called, readyState:", audio.readyState)
       if (audio.readyState >= 3) {
         audio.play().catch(() => setIsPlaying(false))
       } else {
