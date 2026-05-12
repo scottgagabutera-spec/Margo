@@ -1,4 +1,5 @@
 'use client'
+import { PlayPauseIcon } from '@/components/play-pause-icon'
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
@@ -424,7 +425,7 @@ function PlayerContent() {
               alignItems: 'center', justifyContent: 'center',
               transition: 'all 150ms ease', flexShrink: 0, outline: 'none', WebkitTapHighlightColor: 'transparent',
             }}
-          >{isBuffering ? '◌' : isPlaying ? '⏸' : '▶'}</button>
+          ><PlayPauseIcon playing={isPlaying} buffering={isBuffering} size={20} color='var(--text)' /></button>
 
           {/* Share This Lyric */}
           <button

@@ -1,4 +1,5 @@
 'use client'
+import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
@@ -168,7 +169,7 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
             outline: 'none', WebkitTapHighlightColor: 'transparent',
             touchAction: 'manipulation', userSelect: 'none',
           }}>
-          <span style={{ color: 'var(--bg)', fontSize: '0.7rem', lineHeight: 1, pointerEvents: 'none' }}>{playing ? '⏸' : '▶'}</span>
+          <PlayPauseIcon playing={playing} size={14} color='var(--bg)' />
         </button>
         <div style={{ flex: 1 }}>
           <div
