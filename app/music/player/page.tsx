@@ -45,36 +45,21 @@ function PlayerContent() {
   const lyricRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   const viewportRef = useRef<HTMLDivElement | null>(null)
 
-  // ─── Audio setup + play/pause — single effect, no race condition ───
+  // ─── Audio setup — runs once on mount with earlyAudioUrl ──────────
   const playAudio = useRef<(() => void) | null>(null)
   const pauseAudio = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    const audioUrl = (song as any)?.audioUrl || earlyAudioUrl
+    const audioUrl = earlyAudioUrl || (song as any)?.audioUrl
     if (!audioUrl) return
+    if (audioRef.current) return // already set up, dont recreate
     const audio = new Audio(audioUrl)
     audio.preload = "auto"
     audioRef.current = audio
-
     const onTime = () => setCurrentTime(audio.currentTime)
     const onEnded = () => { setIsPlaying(false); setCurrentTime(0) }
     audio.addEventListener("timeupdate", onTime)
     audio.addEventListener("ended", onEnded)
-
-    // Media Session — set immediately so browser never shows generic UI
-    if ("mediaSession" in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: (song as any)?.title || "Margo",
-        artist: (song as any)?.artist || "Trymargo",
-        artwork: (song as any)?.artwork
-          ? [{ src: (song as any).artwork, sizes: "512x512", type: "image/jpeg" }]
-          : [{ src: "/favicons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-      })
-      navigator.mediaSession.setActionHandler("play", () => { playAudio.current?.() })
-      navigator.mediaSession.setActionHandler("pause", () => { pauseAudio.current?.() })
-    }
-
-    // Direct play/pause functions — bypass React state race
     playAudio.current = () => {
       if (!hasCountedPlay.current && songId) {
         hasCountedPlay.current = true
@@ -98,15 +83,11 @@ function PlayerContent() {
         audio.addEventListener("canplaythrough", onCanPlay)
       }
     }
-
-    // Fire queued play if user tapped before song loaded
-    if (pendingPlay.current) { pendingPlay.current = false; playAudio.current?.() }
-
     pauseAudio.current = () => {
       audio.pause()
       if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"
     }
-
+    if (pendingPlay.current) { pendingPlay.current = false; playAudio.current?.() }
     return () => {
       audio.pause()
       audio.removeEventListener("timeupdate", onTime)
@@ -114,13 +95,24 @@ function PlayerContent() {
       audioRef.current = null
       playAudio.current = null
       pauseAudio.current = null
-      if ("mediaSession" in navigator) {
-        navigator.mediaSession.metadata = null
-        navigator.mediaSession.setActionHandler("play", null)
-        navigator.mediaSession.setActionHandler("pause", null)
-      }
     }
-  }, [song, songId, earlyAudioUrl])
+  }, [earlyAudioUrl, song, songId])
+
+  // ─── Update Media Session metadata when song loads from Firebase ──
+  useEffect(() => {
+    if (!song) return
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: (song as any)?.title || "Margo",
+        artist: (song as any)?.artist || "Trymargo",
+        artwork: (song as any)?.artwork
+          ? [{ src: (song as any).artwork, sizes: "512x512", type: "image/jpeg" }]
+          : [{ src: "/favicons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+      })
+      navigator.mediaSession.setActionHandler("play", () => { playAudio.current?.() })
+      navigator.mediaSession.setActionHandler("pause", () => { pauseAudio.current?.() })
+    }
+  }, [song])
 
   // ─── React state → direct audio calls ────────────────────
   useEffect(() => {
