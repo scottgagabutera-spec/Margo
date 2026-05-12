@@ -45,23 +45,14 @@ function PlayerContent() {
   const lyricRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   const viewportRef = useRef<HTMLDivElement | null>(null)
 
-  // ─── Pre-buffer audio from URL param before Firebase resolves ─────
-  useEffect(() => {
-    if (!earlyAudioUrl || audioRef.current) return
-    const audio = new Audio(earlyAudioUrl)
-    audio.preload = 'auto'
-    audioRef.current = audio
-  }, [earlyAudioUrl])
-
   // ─── Audio setup + play/pause — single effect, no race condition ───
   const playAudio = useRef<(() => void) | null>(null)
   const pauseAudio = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    const audioUrl = (song as any)?.audioUrl
+    const audioUrl = (song as any)?.audioUrl || earlyAudioUrl
     if (!audioUrl) return
-    // Reuse pre-buffered element if already created, otherwise create fresh
-    const audio = audioRef.current ?? new Audio(audioUrl)
+    const audio = new Audio(audioUrl)
     audio.preload = "auto"
     audioRef.current = audio
 
@@ -129,7 +120,7 @@ function PlayerContent() {
         navigator.mediaSession.setActionHandler("pause", null)
       }
     }
-  }, [song, songId])
+  }, [song, songId, earlyAudioUrl])
 
   // ─── React state → direct audio calls ────────────────────
   useEffect(() => {
@@ -552,4 +543,4 @@ export default function PlayerPage() {
       <PlayerContent />
     </Suspense>
   )
-}
+}
