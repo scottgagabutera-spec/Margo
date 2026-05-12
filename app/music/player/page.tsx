@@ -34,6 +34,7 @@ function PlayerContent() {
   const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
   const [shareOpen, setShareOpen] = useState(false)
   const [cardExportOpen, setCardExportOpen] = useState(false)
+  const [isBuffering, setIsBuffering] = useState(false)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const hasCountedPlay = useRef(false)
@@ -95,7 +96,9 @@ function PlayerContent() {
       if (audio.readyState >= 3) {
         audio.play().catch(() => setIsPlaying(false))
       } else {
+        setIsBuffering(true)
         const onCanPlay = () => {
+          setIsBuffering(false)
           audio.play().catch(() => setIsPlaying(false))
           audio.removeEventListener("canplaythrough", onCanPlay)
         }
@@ -403,7 +406,7 @@ function PlayerContent() {
               alignItems: 'center', justifyContent: 'center',
               transition: 'all 150ms ease', flexShrink: 0,
             }}
-          >{isPlaying ? '⏸' : '▶'}</button>
+          >{isBuffering ? '◌' : isPlaying ? '⏸' : '▶'}</button>
 
           {/* Share This Lyric */}
           <button
