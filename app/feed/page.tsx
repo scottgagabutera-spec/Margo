@@ -22,7 +22,7 @@ const VIBE_LABELS: Record<string, string> = {
   sendit: 'Send It', letout: 'Let Out',
 }
 
-const VIBES = ['ALL', 'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA', 'HEALING', 'JOY', 'RAGE', 'LONELINESS', 'SENDIT', 'LETOUT']
+const VIBES = ['ALL', 'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL', 'NOSTALGIA', 'JOY', 'LOVE', 'HYPE', 'PROUD', 'HEARTBREAK', 'PAIN', 'LONELINESS', 'LOST', 'RAGE', 'SENDIT', 'LETOUT']
 const SORTS = ['NEW', 'TRENDING', 'TOP']
 
 function normalizeEmotion(e: string) {
@@ -520,7 +520,7 @@ export default function FeedPage() {
                 color: selectedVibe === vibe ? 'var(--bg)' : 'rgba(255,255,255,0.45)',
                 borderColor: selectedVibe === vibe ? 'var(--gold)' : 'rgba(255,255,255,0.1)',
                 transition: 'all 150ms ease',
-              }}>{vibe === 'SENDIT' ? 'SEND IT' : vibe === 'LETOUT' ? 'LET OUT' : vibe}</button>
+              }}>{vibe === 'SENDIT' ? 'SEND IT' : vibe === 'LETOUT' ? 'LET OUT' : vibe === 'GRATEFUL' ? 'GRATEFUL' : vibe === 'SPIRITUAL' ? 'SPIRITUAL' : vibe}</button>
             ))}
           </div>
 
