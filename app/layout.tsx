@@ -1,3 +1,4 @@
+import { AdminTrigger } from '@/components/admin-trigger'
 import type { Metadata } from 'next'
 import { Lora, Syne } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
@@ -168,6 +169,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <AdminTrigger />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
