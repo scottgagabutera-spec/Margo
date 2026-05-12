@@ -42,18 +42,23 @@ function PlayerContent() {
   const lyricRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   const viewportRef = useRef<HTMLDivElement | null>(null)
 
-  // ─── Wire real audio + Media Session ──────────────────
+  // ─── Audio setup + play/pause — single effect, no race condition ───
+  const playAudio = useRef<(() => void) | null>(null)
+  const pauseAudio = useRef<(() => void) | null>(null)
+
   useEffect(() => {
     const audioUrl = (song as any)?.audioUrl
     if (!audioUrl) return
     const audio = new Audio(audioUrl)
     audio.preload = "auto"
     audioRef.current = audio
+
     const onTime = () => setCurrentTime(audio.currentTime)
     const onEnded = () => { setIsPlaying(false); setCurrentTime(0) }
     audio.addEventListener("timeupdate", onTime)
     audio.addEventListener("ended", onEnded)
-    // Media Session API — kills Android orange overlay, sets Margo context
+
+    // Media Session — set immediately so browser never shows generic UI
     if ("mediaSession" in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: (song as any)?.title || "Margo",
@@ -62,55 +67,60 @@ function PlayerContent() {
           ? [{ src: (song as any).artwork, sizes: "512x512", type: "image/jpeg" }]
           : [{ src: "/favicons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
       })
-      navigator.mediaSession.setActionHandler("play", () => setIsPlaying(true))
-      navigator.mediaSession.setActionHandler("pause", () => setIsPlaying(false))
+      navigator.mediaSession.setActionHandler("play", () => { playAudio.current?.() })
+      navigator.mediaSession.setActionHandler("pause", () => { pauseAudio.current?.() })
     }
+
+    // Direct play/pause functions — bypass React state race
+    playAudio.current = () => {
+      if (!hasCountedPlay.current && songId) {
+        hasCountedPlay.current = true
+        import("firebase/database").then(({ ref: dbRef, runTransaction, getDatabase }) => {
+          import("@/lib/firebase").then(({ app }) => {
+            const db2 = getDatabase(app ?? undefined)
+            runTransaction(dbRef(db2, "songs/" + songId + "/plays"), (cur) => (cur || 0) + 1)
+          })
+        }).catch(() => {})
+      }
+      if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"
+      if (audio.readyState >= 3) {
+        audio.play().catch(() => setIsPlaying(false))
+      } else {
+        setIsBuffering(true)
+        const onCanPlay = () => {
+          setIsBuffering(false)
+          audio.play().catch(() => setIsPlaying(false))
+          audio.removeEventListener("canplaythrough", onCanPlay)
+        }
+        audio.addEventListener("canplaythrough", onCanPlay)
+      }
+    }
+
+    pauseAudio.current = () => {
+      audio.pause()
+      if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"
+    }
+
     return () => {
       audio.pause()
       audio.removeEventListener("timeupdate", onTime)
       audio.removeEventListener("ended", onEnded)
       audioRef.current = null
+      playAudio.current = null
+      pauseAudio.current = null
       if ("mediaSession" in navigator) {
         navigator.mediaSession.metadata = null
         navigator.mediaSession.setActionHandler("play", null)
         navigator.mediaSession.setActionHandler("pause", null)
       }
     }
-  }, [song])
+  }, [song, songId])
 
-  // ─── Play / pause ─────────────────────────────────────────
+  // ─── React state → direct audio calls ────────────────────
   useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    if (isPlaying) {
-      if (!hasCountedPlay.current && songId) {
-        hasCountedPlay.current = true
-        import("firebase/database").then(({ ref: dbRef, runTransaction, getDatabase }) => {
-          import("@/lib/firebase").then(({ app }) => {
-            const db2 = getDatabase(app ?? undefined)
-            runTransaction(dbRef(db2, `songs/${songId}/plays`), (cur) => (cur || 0) + 1)
-          })
-        }).catch(() => {})
-      }
-      // Wait for enough data before playing — fixes silent first-tap on mobile
-      if (audio.readyState >= 3) {
-        if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"
-        audio.play().catch(() => setIsPlaying(false))
-      } else {
-        setIsBuffering(true)
-        const onCanPlay = () => {
-          setIsBuffering(false)
-          if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"
-          audio.play().catch(() => setIsPlaying(false))
-          audio.removeEventListener("canplaythrough", onCanPlay)
-        }
-        audio.addEventListener("canplaythrough", onCanPlay)
-      }
-    } else {
-      audio.pause()
-      if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"
-    }
-  }, [isPlaying, songId])
+    if (isPlaying) playAudio.current?.()
+    else pauseAudio.current?.()
+  }, [isPlaying])
 
   // ─── Sync lyric index to time ─────────────────────────────
   useEffect(() => {
