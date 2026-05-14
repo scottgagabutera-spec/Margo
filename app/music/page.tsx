@@ -269,6 +269,24 @@ function SongCard({ song, onPreview }: { song: Song; onPreview: (song: Song) => 
 export default function MusicPage() {
   const { songs, loading } = useSongs()
   const [preview, setPreview] = useState<Song | null>(null)
+  const [resonatedSongs, setResonatedSongs] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('margoSongResonated') || '[]')) } catch { return new Set() }
+  })
+  const toggleSongResonate = (songId: string) => {
+    const already = resonatedSongs.has(songId)
+    setResonatedSongs(prev => {
+      const next = new Set(prev)
+      already ? next.delete(songId) : next.add(songId)
+      try { localStorage.setItem('margoSongResonated', JSON.stringify([...next])) } catch {}
+      return next
+    })
+    import('firebase/database').then(({ ref: dbRef, runTransaction, getDatabase }) => {
+      import('@/lib/firebase').then(({ app }) => {
+        const db2 = getDatabase(app ?? undefined)
+        runTransaction(dbRef(db2, 'songs/' + songId + '/resonates'), (cur) => Math.max(0, (cur || 0) + (already ? -1 : 1)))
+      })
+    }).catch(() => {})
+  }
   const featuredSong = songs.length ? songs.reduce((a, b) => ((b.lyricUses || 0) > (a.lyricUses || 0) ? b : a)) : null
   const moreSongs = songs.filter(s => s.id !== featuredSong?.id)
   const { lines: sharedLines, loading: linesLoading } = useSharedLines(featuredSong?.title, featuredSong?.artist)
@@ -316,16 +334,16 @@ export default function MusicPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '28px', marginBottom: '36px' }}>
               <div>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>{formatNum(featuredSong.plays || 0)}</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>Plays</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1, textAlign: 'center' }}>{formatNum(featuredSong.plays || 0)}</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px', textAlign: 'center' }}>Plays</p>
               </div>
               <div>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>{formatNum(featuredSong.resonates || 0)}</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>Resonates</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1, textAlign: 'center' }}>{formatNum(featuredSong.resonates || 0)}</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px', textAlign: 'center' }}>Resonates</p>
               </div>
               <div style={{ paddingLeft: '28px', borderLeft: '1px solid rgba(232,197,71,0.3)' }}>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 700, color: 'var(--gold)', lineHeight: 1 }}>{formatNum(featuredSong.lyricUses || 0)}</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'var(--gold)', opacity: 0.6, letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px' }}>Lyric Uses</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 700, color: 'var(--gold)', lineHeight: 1, textAlign: 'center' }}>{formatNum(featuredSong.lyricUses || 0)}</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'var(--gold)', opacity: 0.6, letterSpacing: '2px', textTransform: 'uppercase', marginTop: '4px', textAlign: 'center' }}>Lyric Uses</p>
               </div>
             </div>
 
@@ -341,6 +359,19 @@ export default function MusicPage() {
                 transition: 'all 200ms ease',
               }}>▶ Play Now</Link>
 
+              <button
+                onClick={() => featuredSong && toggleSongResonate(featuredSong.id)}
+                style={{
+                  padding: '16px 28px',
+                  background: featuredSong && resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.06)',
+                  border: '1px solid ' + (featuredSong && resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.15)'),
+                  borderRadius: '50px',
+                  fontFamily: 'var(--font-lora), serif', fontWeight: 700,
+                  fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase',
+                  color: featuredSong && resonatedSongs.has(featuredSong.id) ? 'var(--gold)' : 'rgba(255,255,255,0.7)',
+                  minHeight: '52px', cursor: 'pointer', transition: 'all 200ms ease',
+                }}
+              >{featuredSong && resonatedSongs.has(featuredSong.id) ? '\u2665' : '\u2661'} Resonate</button>
               <button
                 onClick={() => setPreview(featuredSong)}
                 style={{
