@@ -159,7 +159,7 @@ function PlayerContent() {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
   const currentLyric = lyrics.find(l => l.id === currentLyricIndex)
-  const composeUrl = `/compose?lyric=${encodeURIComponent(currentLyric?.line || '')}&song=${encodeURIComponent((song as any)?.title || '')}&artist=${encodeURIComponent((song as any)?.artist || '')}&artwork=${encodeURIComponent((song as any)?.artwork || '')}`
+  const composeUrl = `/compose?lyric=${encodeURIComponent(currentLyric?.line || '')}&song=${encodeURIComponent((song as any)?.title || '')}&artist=${encodeURIComponent((song as any)?.artist || '')}&artwork=${encodeURIComponent((song as any)?.artwork || '')}&songId=${encodeURIComponent(songId || '')}&audioUrl=${encodeURIComponent((song as any)?.audioUrl || '')}`
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
