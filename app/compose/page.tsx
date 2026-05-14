@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { MargoNav } from '@/components/margo-nav'
 import { db } from '@/lib/firebase'
