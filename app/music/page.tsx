@@ -50,9 +50,9 @@ function SmallStatBlock({ value, label, gold }: { value: number; label: string; 
 }
 
 function SongPreview({
-  song, onClose, resonated, onResonate
+  song, onClose, resonated, onResonate, resonateCount
 }: {
-  song: Song; onClose: () => void; resonated: boolean; onResonate: (id: string) => void
+  song: Song; onClose: () => void; resonated: boolean; onResonate: (id: string) => void; resonateCount: number
 }) {
   const { lines } = useSharedLines(song.title, song.artist)
   const isActive = song.status === 'live' || song.status === 'active'
@@ -132,7 +132,7 @@ function SongPreview({
                 {/* Stats centered as units */}
                 <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                   <SmallStatBlock value={song.plays || 0} label="Plays" />
-                  <SmallStatBlock value={songResonateCounts[song.id] || 0} label="Resonates" />
+                  <SmallStatBlock value={resonateCount} label="Resonates" />
                   <div style={{ paddingLeft: '20px', borderLeft: '1px solid rgba(232,197,71,0.3)' }}>
                     <SmallStatBlock value={song.lyricUses || 0} label="Lyric Uses" gold />
                   </div>
@@ -345,6 +345,7 @@ export default function MusicPage() {
           onClose={() => setPreview(null)}
           resonated={resonatedSongs.has(preview.id)}
           onResonate={toggleSongResonate}
+          resonateCount={songResonateCounts[preview.id] || 0}
         />
       )}
 
