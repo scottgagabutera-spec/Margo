@@ -73,6 +73,21 @@ function PlayerContent() {
     router.push(`/music/player?id=${s.id}${s.audioUrl ? '&au=' + encodeURIComponent(s.audioUrl) : ''}`)
   }, [router])
 
+  // ─── Reset on song change ───────────────────────────────────────────
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.src = ''
+      audioRef.current = null
+    }
+    setIsPlaying(false)
+    setCurrentTime(0)
+    setCurrentLyricIndex(0)
+    setSongEnded(false)
+    setTrayOpen(false)
+    setTrayDismissed(false)
+    hasCountedPlay.current = false
+  }, [songId])
   // ─── Audio setup ────────────────────────────────────────────────────
   useEffect(() => {
     const audioUrl = earlyAudioUrl || (song as any)?.audioUrl
