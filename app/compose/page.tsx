@@ -54,6 +54,18 @@ export default function ComposePage() {
   const router = useRouter()
   const { username, hasConfirmed, hasEdited, confirmUsername, editUsername } = useUsername()
   const { isLicensed } = useLicensedArtists()
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const lyricParam = searchParams.get('lyric')
+    const songParam = searchParams.get('song')
+    const artistParam = searchParams.get('artist')
+    if (lyricParam && songParam && artistParam) {
+      setLyric(lyricParam)
+      setSongName(songParam)
+      setArtistName(artistParam)
+      setStep(3)
+    }
+  }, [])
 
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
