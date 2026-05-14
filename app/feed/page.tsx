@@ -68,6 +68,7 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
   const [dragging, setDragging] = useState(false)
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [lyricsLoaded, setLyricsLoaded] = useState(false)
+  const hasCountedPlay = useRef(false)
 
   useEffect(() => {
     const audio = new Audio(audioUrl)
@@ -335,7 +336,7 @@ function PostCard({
         }}>
           <span style={{ fontSize: '1rem' }}>{resonated ? '♥' : '♡'}</span>
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            {resonateCount > 0 ? resonateCount : 'Resonate'}
+            {resonateCount > 0 ? resonateCount + ' ' : ''}Resonate
           </span>
         </button>
 
@@ -413,12 +414,19 @@ export default function FeedPage() {
     if (!db) return
     const unsub = onValue(ref(db, 'analytics'), (snap) => {
       const data = snap.val() || {}
+      const myId = typeof window !== 'undefined'
+        ? (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
+        : 'anon'
       const counts: Record<string, number> = {}
+      const myResonated = new Set<string>()
       Object.keys(data).forEach(id => {
         counts[id] = Object.keys(data[id]?.resonates || {}).length
+        if (data[id]?.resonates?.[myId]) myResonated.add(id)
       })
       setResonateCounts(counts)
       setAnalytics(data)
+      setResonated(myResonated)
+      try { localStorage.setItem('margoResonated', JSON.stringify([...myResonated])) } catch {}
     })
     return () => unsub()
   }, [])
@@ -459,10 +467,10 @@ export default function FeedPage() {
     .sort((a, b) => getScore(b) - getScore(a))
 
   const toggleResonate = async (postId: string) => {
-    const rawId = typeof window !== 'undefined'
-      ? (localStorage.getItem('margoAnonName') || 'anon') : 'anon'
-    const myId = rawId.replace(/[.#$[]]/g, '_')
     const already = resonated.has(postId)
+    const myId = typeof window !== 'undefined'
+      ? (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
+      : 'anon'
     setResonated(prev => {
       const next = new Set(prev)
       already ? next.delete(postId) : next.add(postId)
@@ -474,6 +482,17 @@ export default function FeedPage() {
     const rRef = ref(db, `analytics/${postId}/resonates/${myId}`)
     try {
       already ? await remove(rRef) : await set(rRef, true)
+      const dbSafe = db
+      if (dbSafe) {
+        import('firebase/database').then(async ({ ref: dbRef, get, set: dbSet, remove: dbRemove }) => {
+          const snap = await get(dbRef(dbSafe, `posts/${postId}/songId`))
+          const linkedSongId = snap.exists() ? snap.val() : null
+          if (linkedSongId) {
+            const songResonateRef = dbRef(dbSafe, `songResonates/${linkedSongId}/${myId}`)
+            already ? dbRemove(songResonateRef) : dbSet(songResonateRef, true)
+          }
+        }).catch(() => {})
+      }
     } catch {
       setResonated(prev => {
         const next = new Set(prev)
