@@ -87,6 +87,8 @@ function PlayerContent() {
     setTrayOpen(false)
     setTrayDismissed(false)
     hasCountedPlay.current = false
+    pendingPlay.current = true
+    setIsPlaying(true)
   }, [songId])
   // ─── Audio setup ────────────────────────────────────────────────────
   useEffect(() => {
@@ -146,7 +148,7 @@ function PlayerContent() {
       pauseAudio.current = null
       if (autoNavRef.current) clearTimeout(autoNavRef.current)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [earlyAudioUrl, songId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── 15-second early tray trigger ──────────────────────────────────
   useEffect(() => {
