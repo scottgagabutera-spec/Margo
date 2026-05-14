@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MargoNav } from '@/components/margo-nav'
@@ -272,18 +272,58 @@ export default function MusicPage() {
   const [resonatedSongs, setResonatedSongs] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('margoSongResonated') || '[]')) } catch { return new Set() }
   })
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const myId = (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
+    import('firebase/database').then(({ ref: dbRef, onValue: dbOnValue, getDatabase }) => {
+      import('@/lib/firebase').then(({ app }) => {
+        const db2 = getDatabase(app ?? undefined)
+        dbOnValue(dbRef(db2, 'songResonates'), (snap) => {
+          const data = snap.val() || {}
+          const myResonated = new Set<string>()
+          Object.keys(data).forEach(sid => {
+            if (data[sid]?.[myId]) myResonated.add(sid)
+          })
+          setResonatedSongs(myResonated)
+          try { localStorage.setItem('margoSongResonated', JSON.stringify([...myResonated])) } catch {}
+        })
+      })
+    }).catch(() => {})
+  }, [])
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const myId = (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
+    import('firebase/database').then(({ ref: dbRef, onValue: dbOnValue, getDatabase }) => {
+      import('@/lib/firebase').then(({ app }) => {
+        const db2 = getDatabase(app ?? undefined)
+        dbOnValue(dbRef(db2, 'songResonates'), (snap) => {
+          const data = snap.val() || {}
+          const myResonated = new Set<string>()
+          Object.keys(data).forEach(sid => {
+            if (data[sid]?.[myId]) myResonated.add(sid)
+          })
+          setResonatedSongs(myResonated)
+          try { localStorage.setItem('margoSongResonated', JSON.stringify([...myResonated])) } catch {}
+        })
+      })
+    }).catch(() => {})
+  }, [])
   const toggleSongResonate = (songId: string) => {
     const already = resonatedSongs.has(songId)
+    const myId = typeof window !== 'undefined'
+      ? (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
+      : 'anon'
     setResonatedSongs(prev => {
       const next = new Set(prev)
       already ? next.delete(songId) : next.add(songId)
       try { localStorage.setItem('margoSongResonated', JSON.stringify([...next])) } catch {}
       return next
     })
-    import('firebase/database').then(({ ref: dbRef, runTransaction, getDatabase }) => {
+    import('firebase/database').then(({ ref: dbRef, set: dbSet, remove: dbRemove, getDatabase }) => {
       import('@/lib/firebase').then(({ app }) => {
         const db2 = getDatabase(app ?? undefined)
-        runTransaction(dbRef(db2, 'songs/' + songId + '/resonates'), (cur) => Math.max(0, (cur || 0) + (already ? -1 : 1)))
+        const songResonateRef = dbRef(db2, 'songResonates/' + songId + '/' + myId)
+        already ? dbRemove(songResonateRef) : dbSet(songResonateRef, true)
       })
     }).catch(() => {})
   }
