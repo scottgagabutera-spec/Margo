@@ -132,7 +132,7 @@ function SongPreview({
                 {/* Stats centered as units */}
                 <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                   <SmallStatBlock value={song.plays || 0} label="Plays" />
-                  <SmallStatBlock value={song.resonates || 0} label="Resonates" />
+                  <SmallStatBlock value={songResonateCounts[song.id] || 0} label="Resonates" />
                   <div style={{ paddingLeft: '20px', borderLeft: '1px solid rgba(232,197,71,0.3)' }}>
                     <SmallStatBlock value={song.lyricUses || 0} label="Lyric Uses" gold />
                   </div>
@@ -251,6 +251,7 @@ export default function MusicPage() {
   const [search, setSearch] = useState('')
 
   // ─── Per-user song resonates — single source of truth from Firebase ──
+  const [songResonateCounts, setSongResonateCounts] = useState<Record<string, number>>({})
   const [resonatedSongs, setResonatedSongs] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try { return new Set(JSON.parse(localStorage.getItem('margoSongResonated') || '[]')) } catch { return new Set() }
@@ -270,6 +271,9 @@ export default function MusicPage() {
           Object.keys(data).forEach(sid => {
             if (data[sid]?.[myId]) myResonated.add(sid)
           })
+          const counts: Record<string, number> = {}
+          Object.keys(data).forEach(sid => { counts[sid] = Object.keys(data[sid] || {}).length })
+          setSongResonateCounts(counts)
           setResonatedSongs(myResonated)
           try { localStorage.setItem('margoSongResonated', JSON.stringify([...myResonated])) } catch {}
         })
@@ -367,7 +371,7 @@ export default function MusicPage() {
             {/* Stats — centered as units */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '28px', marginBottom: '36px' }}>
               <StatBlock value={featuredSong.plays || 0} label="Plays" />
-              <StatBlock value={featuredSong.resonates || 0} label="Resonates" />
+              <StatBlock value={songResonateCounts[featuredSong.id] || 0} label="Resonates" />
               <div style={{ paddingLeft: '28px', borderLeft: '1px solid rgba(232,197,71,0.3)' }}>
                 <StatBlock value={featuredSong.lyricUses || 0} label="Lyric Uses" gold />
               </div>

@@ -113,10 +113,17 @@ function PlayerContent() {
     playAudio.current = () => {
       if (!hasCountedPlay.current && songId) {
         hasCountedPlay.current = true
-        import('firebase/database').then(({ ref: dbRef, runTransaction, getDatabase }) => {
+        const myId = (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
+        import('firebase/database').then(({ ref: dbRef, get, set, runTransaction, getDatabase }) => {
           import('@/lib/firebase').then(({ app }) => {
             const db2 = getDatabase(app ?? undefined)
-            runTransaction(dbRef(db2, `songs/${songId}/plays`), (cur) => (cur || 0) + 1)
+            const playRef = dbRef(db2, `songPlays/${songId}/${myId}`)
+            get(playRef).then(snap => {
+              if (!snap.exists()) {
+                set(playRef, true)
+                runTransaction(dbRef(db2, `songs/${songId}/plays`), (cur) => (cur || 0) + 1)
+              }
+            })
           })
         }).catch(() => {})
       }
