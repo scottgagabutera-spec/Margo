@@ -374,13 +374,10 @@ function PlayerContent() {
           {/* Song cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {nextSongs.length > 0 ? nextSongs.map((s, i) => (
-              <div
+              <button
                 key={s.id}
                 className={`next-song-card${i === 0 ? ' primary' : ''}`}
                 onClick={() => navigateToSong(s)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') navigateToSong(s) }}
               >
                 {/* Artwork */}
                 <div style={{ position: 'relative', width: i === 0 ? '52px' : '44px', height: i === 0 ? '52px' : '44px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0, transition: 'all 200ms ease' }}>
@@ -422,7 +419,7 @@ function PlayerContent() {
                   flexShrink: 0,
                   transition: 'all 200ms ease',
                 }}>▶</div>
-              </div>
+              </button>
             )) : (
               <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.88rem', textAlign: 'center', padding: '16px 0' }}>No more songs available</p>
             )}
