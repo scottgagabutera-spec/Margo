@@ -1,4 +1,5 @@
 'use client'
+import { Suspense } from 'react'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -50,7 +51,7 @@ const backBtnStyle: React.CSSProperties = {
   transition: 'color 150ms ease',
 }
 
-export default function ComposePage() {
+function ComposeInner() {
   const router = useRouter()
   const { username, hasConfirmed, hasEdited, confirmUsername, editUsername } = useUsername()
   const { isLicensed } = useLicensedArtists()
@@ -521,4 +522,8 @@ export default function ComposePage() {
       />
     </main>
   )
+}
+
+export default function ComposePage() {
+  return <Suspense><ComposeInner /></Suspense>
 }
