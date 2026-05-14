@@ -68,6 +68,7 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
   const [dragging, setDragging] = useState(false)
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [lyricsLoaded, setLyricsLoaded] = useState(false)
+  const hasCountedPlay = useRef(false)
 
   useEffect(() => {
     const audio = new Audio(audioUrl)
@@ -335,7 +336,7 @@ function PostCard({
         }}>
           <span style={{ fontSize: '1rem' }}>{resonated ? '♥' : '♡'}</span>
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            {resonateCount > 0 ? resonateCount : 'Resonate'}
+            {resonateCount > 0 ? resonateCount + ' ' : ''}Resonate
           </span>
         </button>
 
@@ -474,6 +475,16 @@ export default function FeedPage() {
     const rRef = ref(db, `analytics/${postId}/resonates/${myId}`)
     try {
       already ? await remove(rRef) : await set(rRef, true)
+      const dbSafe = db
+      if (dbSafe) {
+        import('firebase/database').then(async ({ ref: dbRef, get, runTransaction }) => {
+          const snap = await get(dbRef(dbSafe, `posts/${postId}/songId`))
+          const linkedSongId = snap.exists() ? snap.val() : null
+          if (linkedSongId) {
+            runTransaction(dbRef(dbSafe, `songs/${linkedSongId}/resonates`), (cur) => Math.max(0, (cur || 0) + (already ? -1 : 1)))
+          }
+        }).catch(() => {})
+      }
     } catch {
       setResonated(prev => {
         const next = new Set(prev)
