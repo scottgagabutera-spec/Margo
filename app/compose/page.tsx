@@ -61,9 +61,11 @@ function ComposeInner() {
     const songParam = searchParams.get('song')
     const artistParam = searchParams.get('artist')
     if (lyricParam && songParam && artistParam) {
+      const artworkParam = searchParams.get('artwork')
       setLyric(lyricParam)
       setSongName(songParam)
       setArtistName(artistParam)
+      if (artworkParam) setSelectedSong({ id: 'player', title: songParam, artist: artistParam, artwork: artworkParam, source: 'apple' })
       setStep(3)
     }
   }, [])
