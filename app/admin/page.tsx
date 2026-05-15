@@ -218,6 +218,8 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
   const [whisperLang, setWhisperLang] = useState('auto')
   const [lyricsHint, setLyricsHint] = useState('')
   const [srtStatus, setSrtStatus] = useState('')
+  const [taggingVibes, setTaggingVibes] = useState(false)
+  const [vibeStatus, setVibeStatus] = useState('')
   const set_ = (k: keyof Song, v: string) => setForm(f => ({ ...f, [k]: v }))
 
   const save = async () => {
@@ -275,6 +277,53 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
     }
   }
 
+  const tagVibes = async () => {
+    if (!form.srt) { setVibeStatus('Generate SRT first'); return }
+    if (!form.title) { setVibeStatus('Add a title first'); return }
+    if (!song?.id) { setVibeStatus('Save the song first, then tag vibes'); return }
+    setTaggingVibes(true)
+    setVibeStatus('AI tagging each lyric line — ~15 seconds…')
+    try {
+      const res = await fetch('/api/tag-vibes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ srt: form.srt, songTitle: form.title, artist: form.artist || 'Trymargo' }),
+      })
+      const data = await res.json()
+      if (!data.lines) { setVibeStatus('✗ ' + (data.error || 'Tagging failed')); return }
+      const lineVibes: Record<string, string[]> = {}
+      const vibeIndex: Record<string, Record<string, boolean>> = {}
+      data.lines.forEach((l: any) => {
+        if (l.vibes && l.vibes.length > 0) {
+          lineVibes[String(l.id)] = l.vibes
+          l.vibes.forEach((v: string) => {
+            if (!vibeIndex[v]) vibeIndex[v] = {}
+            vibeIndex[v][l.id] = true
+          })
+        }
+      })
+      const { ref: dbRef, update: dbUpdate, getDatabase } = await import('firebase/database')
+      const { app: fbApp } = await import('@/lib/firebase')
+      const db2 = getDatabase(fbApp ?? undefined)
+      await dbUpdate(dbRef(db2, 'songs/' + song.id), { lineVibes })
+      const indexUpdates: Record<string, boolean> = {}
+      Object.entries(vibeIndex).forEach(([vibe, lineMap]) => {
+        Object.keys(lineMap).forEach(lineId => {
+          indexUpdates['vibeIndex/' + vibe + '/' + song.id + '_' + lineId] = true
+        })
+      })
+      if (Object.keys(indexUpdates).length > 0) {
+        await dbUpdate(dbRef(db2, '/'), indexUpdates)
+      }
+      const taggedCount = data.lines.filter((l: any) => l.vibes?.length > 0).length
+      setVibeStatus('✓ ' + taggedCount + ' lines tagged across ' + Object.keys(vibeIndex).length + ' vibes')
+    } catch (e) {
+      setVibeStatus('✗ ' + (e instanceof Error ? e.message : 'Unknown error'))
+    } finally {
+      setTaggingVibes(false)
+    }
+  }
+
   const field = (label: string, key: keyof Song, type = 'text', placeholder = '') => (
     <div style={{ marginBottom: '14px' }}>
       <label style={S.label}>{label}</label>
@@ -323,6 +372,22 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
         </div>
         {srtStatus && <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: srtStatus.startsWith('✓') ? '#4ade80' : '#ff6060', margin: 0 }}>{srtStatus}</p>}
       </div>
+
+      {/* Tag Vibes block */}
+      {(form.srt && song?.id) && (
+        <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(232,197,71,0.03)', border: '1px solid rgba(232,197,71,0.1)', borderRadius: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: vibeStatus ? '10px' : '0' }}>
+            <div>
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text)', marginBottom: '2px' }}>Vibe Tagging</p>
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.5px' }}>AI tags each lyric line with vibes — powers the discovery board</p>
+            </div>
+            <button onClick={tagVibes} disabled={taggingVibes} style={{ ...S.btn, flexShrink: 0, marginLeft: '16px', opacity: taggingVibes ? 0.5 : 1 }}>
+              {taggingVibes ? 'Tagging…' : '✦ Tag Vibes'}
+            </button>
+          </div>
+          {vibeStatus && <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: vibeStatus.startsWith('✓') ? '#4ade80' : '#ff6060', margin: 0 }}>{vibeStatus}</p>}
+        </div>
+      )}
 
       {/* Streaming links — collapsed */}
       <button onClick={() => setShowStreaming(s => !s)} style={{ ...S.ghostBtn, width: '100%', textAlign: 'left', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
