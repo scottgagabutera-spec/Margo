@@ -215,6 +215,8 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
   const [showStreaming, setShowStreaming] = useState(false)
   const [showLyrics, setShowLyrics] = useState(!!(song?.srt || song?.lyrics))
   const [generatingSRT, setGeneratingSRT] = useState(false)
+  const [whisperLang, setWhisperLang] = useState('auto')
+  const [lyricsHint, setLyricsHint] = useState('')
   const [srtStatus, setSrtStatus] = useState('')
   const set_ = (k: keyof Song, v: string) => setForm(f => ({ ...f, [k]: v }))
 
@@ -244,7 +246,7 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
       const res = await fetch('/api/whisper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audioUrl: form.audioUrl }),
+        body: JSON.stringify({ audioUrl: form.audioUrl, language: whisperLang === 'auto' ? undefined : whisperLang, prompt: lyricsHint.trim() || undefined }),
       })
       const data = await res.json()
       if (!data.srt) {
@@ -304,6 +306,10 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
 
       {/* Generate SRT button */}
       <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.15)', borderRadius: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px', marginBottom: '12px' }}>
+          <div><label style={S.label}>Language</label><select value={whisperLang} onChange={e => setWhisperLang(e.target.value)} style={{ ...S.input, cursor: 'pointer' }}><option value="auto">Auto-detect</option><option value="en">English</option><option value="pt">Portuguese</option><option value="tl">Filipino / Tagalog</option><option value="zu">Zulu</option><option value="es">Spanish</option><option value="fr">French</option><option value="sw">Swahili</option></select></div>
+          <div><label style={S.label}>Key lyrics hint (optional)</label><input type="text" value={lyricsHint} onChange={e => setLyricsHint(e.target.value)} placeholder="Paste hook or chorus — helps Whisper get words right" style={S.input} /></div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: srtStatus ? '10px' : '0' }}>
           <div>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text)', marginBottom: '2px' }}>AI Lyrics Sync</p>
