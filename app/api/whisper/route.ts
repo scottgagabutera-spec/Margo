@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { audioUrl, songId } = await request.json()
+    const { audioUrl, songId, language, prompt } = await request.json()
     if (!audioUrl) return NextResponse.json({ error: 'audioUrl required' }, { status: 400 })
     if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OpenAI not configured' }, { status: 503 })
 
@@ -20,6 +20,8 @@ export async function POST(request: NextRequest) {
     formData.append('file', audioBlob, ext)
     formData.append('model', 'whisper-1')
     formData.append('response_format', 'srt')
+    if (language) formData.append('language', language)
+    if (prompt) formData.append('prompt', prompt)
 
     const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
