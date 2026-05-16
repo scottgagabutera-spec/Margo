@@ -56,11 +56,13 @@ function SmallStatBlock({ value, label, gold }: { value: number; label: string; 
 function LyricCard({
   moment,
   visible,
+  isPlaying,
   onClick,
   onPlay,
 }: {
   moment: LyricMoment
   visible: boolean
+  isPlaying: boolean
   onClick: () => void
   onPlay: (e: React.MouseEvent) => void
 }) {
@@ -72,15 +74,15 @@ function LyricCard({
         opacity: visible ? 1 : 0,
         transform: visible ? 'scale(1)' : 'scale(0.97)',
         padding: '18px 18px',
-        background: 'rgba(255,255,255,0.025)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: isPlaying ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.025)',
+        border: `1px solid ${isPlaying ? 'rgba(232,197,71,0.25)' : 'rgba(255,255,255,0.08)'}`,
         borderRadius: '14px',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
         cursor: 'pointer',
         overflow: 'hidden',
-        transition: 'opacity 700ms cubic-bezier(0.4,0,0.2,1), transform 700ms cubic-bezier(0.4,0,0.2,1)',
+        transition: 'opacity 700ms cubic-bezier(0.4,0,0.2,1), transform 700ms cubic-bezier(0.4,0,0.2,1), border-color 200ms ease, background 200ms ease',
         willChange: 'opacity, transform',
       }}
     >
@@ -112,14 +114,14 @@ function LyricCard({
           onClick={onPlay}
           style={{
             width: '34px', height: '34px', borderRadius: '50%',
-            background: 'rgba(232,197,71,0.1)',
+            background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
             border: '1px solid rgba(232,197,71,0.25)',
             color: 'var(--gold)', fontSize: '0.65rem',
             cursor: 'pointer', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, transition: 'background 200ms ease',
           }}
-        >▶</button>
+        >{isPlaying ? '⏸' : '▶'}</button>
       </div>
     </div>
   )
@@ -135,6 +137,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
   const [slotVisible, setSlotVisible] = useState<boolean[]>(Array(SLOT_COUNT).fill(false))
   const [focusedMoment, setFocusedMoment] = useState<LyricMoment | null>(null)
   const [focusedIndex, setFocusedIndex] = useState(0)
+  const [playingKey, setPlayingKey] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const cycleRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const vibePoolRef = useRef<LyricMoment[]>([])
@@ -257,26 +260,46 @@ function LyricBoard({ songs }: { songs: Song[] }) {
 
   const playSnippet = useCallback((moment: LyricMoment) => {
     if (!moment.audioUrl) return
+    const key = `${moment.songId}_${moment.lineId}`
+
+    // If same card is playing — pause and reset
+    if (audioRef.current && playingKey === key) {
+      audioRef.current.pause()
+      audioRef.current.src = ''
+      audioRef.current = null
+      setPlayingKey(null)
+      return
+    }
+
+    // Stop any existing audio
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current.src = ''
     }
+
     const audio = new Audio(moment.audioUrl)
     audioRef.current = audio
     audio.preload = 'auto'
+
     const onLoaded = () => {
       audio.currentTime = moment.start
       audio.play().catch(() => {})
+      setPlayingKey(key)
     }
+
+    const onEnded = () => setPlayingKey(null)
     audio.addEventListener('canplay', onLoaded, { once: true })
+    audio.addEventListener('ended', onEnded, { once: true })
     audio.load()
+
     const snippetDuration = Math.min((moment.end - moment.start) * 1000 + 400, 9000)
     setTimeout(() => {
       if (audioRef.current === audio) {
         audio.pause()
+        setPlayingKey(null)
       }
-    }, snippetDuration + 1500) // extra buffer for load time
-  }, [])
+    }, snippetDuration + 1500)
+  }, [playingKey])
 
   const handleCardClick = (moment: LyricMoment) => {
     const filtered = getFiltered(activeVibe)
@@ -306,11 +329,13 @@ function LyricBoard({ songs }: { songs: Song[] }) {
   const handleClose = () => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
     setFocusedMoment(null)
+    setPlayingKey(null)
   }
 
   const handleVibe = (vibe: string) => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
     setFocusedMoment(null)
+    setPlayingKey(null)
     setActiveVibe(vibe)
   }
 
@@ -472,15 +497,16 @@ function LyricBoard({ songs }: { songs: Song[] }) {
                         onClick={() => playSnippet(focusedMoment)}
                         style={{
                           padding: '10px 20px',
-                          background: 'rgba(232,197,71,0.1)',
+                          background: playingKey === `${focusedMoment.songId}_${focusedMoment.lineId}` ? 'rgba(232,197,71,0.18)' : 'rgba(232,197,71,0.1)',
                           border: '1px solid rgba(232,197,71,0.3)',
                           borderRadius: '50px',
                           fontFamily: 'var(--font-lora), serif',
                           fontSize: '0.58rem', fontWeight: 700,
                           letterSpacing: '1px', textTransform: 'uppercase',
                           color: 'var(--gold)', cursor: 'pointer',
+                          transition: 'background 200ms ease',
                         }}
-                      >▶ Play Snippet</button>
+                      >{playingKey === `${focusedMoment.songId}_${focusedMoment.lineId}` ? '⏸ Pause' : '▶ Play Snippet'}</button>
                       <Link
                         href={`/music/player?id=${focusedMoment.songId}${focusedMoment.audioUrl ? '&au=' + encodeURIComponent(focusedMoment.audioUrl) : ''}&t=${Math.floor(focusedMoment.start)}`}
                         style={{
@@ -558,6 +584,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
                     key={`${moment.songId}_${moment.lineId}_${idx}`}
                     moment={moment}
                     visible={slotVisible[idx]}
+                    isPlaying={playingKey === `${moment.songId}_${moment.lineId}`}
                     onClick={() => handleCardClick(moment)}
                     onPlay={(e) => { e.stopPropagation(); playSnippet(moment) }}
                   />
