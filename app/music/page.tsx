@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { MargoNav } from '@/components/margo-nav'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
+import { PlayPauseIcon } from '@/components/play-pause-icon'
 
 function formatNum(n: number): string {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
@@ -116,12 +117,14 @@ function LyricCard({
             width: '34px', height: '34px', borderRadius: '50%',
             background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
             border: '1px solid rgba(232,197,71,0.25)',
-            color: 'var(--gold)', fontSize: '0.65rem',
             cursor: 'pointer', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, transition: 'background 200ms ease',
+            padding: 0,
           }}
-        >{isPlaying ? '⏸' : '▶'}</button>
+        >
+          <PlayPauseIcon playing={isPlaying} size={16} color="#E8C547" />
+        </button>
       </div>
     </div>
   )
@@ -505,8 +508,21 @@ function LyricBoard({ songs }: { songs: Song[] }) {
                           letterSpacing: '1px', textTransform: 'uppercase',
                           color: 'var(--gold)', cursor: 'pointer',
                           transition: 'background 200ms ease',
+                          display: 'inline-flex', alignItems: 'center', gap: '8px',
                         }}
-                      >{playingKey === `${focusedMoment.songId}_${focusedMoment.lineId}` ? '⏸ Pause' : '▶ Play Snippet'}</button>
+                      >
+                        {playingKey === `${focusedMoment.songId}_${focusedMoment.lineId}` ? (
+                          <>
+                            <PlayPauseIcon playing={true} size={14} color="#E8C547" />
+                            Pause
+                          </>
+                        ) : (
+                          <>
+                            <PlayPauseIcon playing={false} size={14} color="#E8C547" />
+                            Play Snippet
+                          </>
+                        )}
+                      </button>
                       <Link
                         href={`/music/player?id=${focusedMoment.songId}${focusedMoment.audioUrl ? '&au=' + encodeURIComponent(focusedMoment.audioUrl) : ''}&t=${Math.floor(focusedMoment.start)}`}
                         style={{
