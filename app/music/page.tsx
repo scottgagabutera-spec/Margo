@@ -116,12 +116,23 @@ function LyricCard({
             width: '34px', height: '34px', borderRadius: '50%',
             background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
             border: '1px solid rgba(232,197,71,0.25)',
-            color: 'var(--gold)', fontSize: '0.65rem',
             cursor: 'pointer', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, transition: 'background 200ms ease',
+            padding: 0,
           }}
-        >{isPlaying ? '⏸' : '▶'}</button>
+        >
+          {isPlaying ? (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1.5" y="1.5" width="3" height="9" rx="1" fill="#E8C547"/>
+              <rect x="7.5" y="1.5" width="3" height="9" rx="1" fill="#E8C547"/>
+            </svg>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 2.2l7 3.8-7 3.8V2.2z" fill="#E8C547"/>
+            </svg>
+          )}
+        </button>
       </div>
     </div>
   )
@@ -505,8 +516,26 @@ function LyricBoard({ songs }: { songs: Song[] }) {
                           letterSpacing: '1px', textTransform: 'uppercase',
                           color: 'var(--gold)', cursor: 'pointer',
                           transition: 'background 200ms ease',
+                          display: 'inline-flex', alignItems: 'center', gap: '8px',
                         }}
-                      >{playingKey === `${focusedMoment.songId}_${focusedMoment.lineId}` ? '⏸ Pause' : '▶ Play Snippet'}</button>
+                      >
+                        {playingKey === `${focusedMoment.songId}_${focusedMoment.lineId}` ? (
+                          <>
+                            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <rect x="1.5" y="1.5" width="3" height="9" rx="1" fill="#E8C547"/>
+                              <rect x="7.5" y="1.5" width="3" height="9" rx="1" fill="#E8C547"/>
+                            </svg>
+                            Pause
+                          </>
+                        ) : (
+                          <>
+                            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M3 2.2l7 3.8-7 3.8V2.2z" fill="#E8C547"/>
+                            </svg>
+                            Play Snippet
+                          </>
+                        )}
+                      </button>
                       <Link
                         href={`/music/player?id=${focusedMoment.songId}${focusedMoment.audioUrl ? '&au=' + encodeURIComponent(focusedMoment.audioUrl) : ''}&t=${Math.floor(focusedMoment.start)}`}
                         style={{
