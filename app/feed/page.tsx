@@ -66,49 +66,51 @@ function SnippetIconButton({ audioUrl, songId, postText }: { audioUrl: string; s
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [loaded, setLoaded] = useState(false)
 
-  const loadLyrics = async () => {
-    if (loaded || !songId || !db) return
-    try {
-      const { get, ref: dbRef } = await import('firebase/database')
-      const snap = await get(dbRef(db, `songs/${songId}`))
-      if (snap.exists() && snap.val().srt) setLyrics(parseSRT(snap.val().srt))
-    } catch {}
-    setLoaded(true)
-  }
+  // Preload audio and lyrics on mount so first tap is instant
+  useEffect(() => {
+    const audio = new Audio(audioUrl)
+    audio.preload = 'auto'
+    audio.load()
+    audioRef.current = audio
+    audio.addEventListener('ended', () => setPlaying(false))
 
-  const toggle = async () => {
+    // Load lyrics in background
+    if (songId && db) {
+      import('firebase/database').then(({ get, ref: dbRef }) => {
+        get(dbRef(db!, `songs/${songId}`)).then(snap => {
+          if (snap.exists() && snap.val().srt) setLyrics(parseSRT(snap.val().srt))
+          setLoaded(true)
+        }).catch(() => setLoaded(true))
+      }).catch(() => setLoaded(true))
+    } else {
+      setLoaded(true)
+    }
+
+    return () => { audio.pause(); audio.src = '' }
+  }, [audioUrl, songId])
+
+  const toggle = () => {
+    const audio = audioRef.current
+    if (!audio) return
+
     if (playing) {
-      audioRef.current?.pause()
+      audio.pause()
       setPlaying(false)
       if (timerRef.current) clearTimeout(timerRef.current)
       return
     }
 
-    await loadLyrics()
-
     const needle = (postText || '').toLowerCase().trim()
-    const allLyrics = lyrics.length ? lyrics : []
-    const match = allLyrics.find(l =>
+    const match = lyrics.find(l =>
       l.line.toLowerCase().includes(needle) || needle.includes(l.line.toLowerCase())
-    ) || allLyrics[0]
+    ) || lyrics[0]
 
-    if (!match && !audioRef.current) return
-
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
-    const audio = new Audio(audioUrl)
-    audioRef.current = audio
     const snippetDuration = match ? Math.min((match.end - match.start) * 1000 + 300, 8000) : 5000
 
-    const doPlay = () => {
-      if (match) audio.currentTime = match.start
-      audio.play().catch(() => {})
-      setPlaying(true)
-      timerRef.current = setTimeout(() => { audio.pause(); setPlaying(false) }, snippetDuration)
-    }
-
-    audio.addEventListener('ended', () => setPlaying(false), { once: true })
-    if (audio.readyState >= 3) { doPlay() }
-    else { audio.load(); audio.addEventListener('canplay', doPlay, { once: true }) }
+    if (match) audio.currentTime = match.start
+    audio.play().catch(() => {})
+    setPlaying(true)
+    timerRef.current = setTimeout(() => { audio.pause(); setPlaying(false) }, snippetDuration)
   }
 
   return (
