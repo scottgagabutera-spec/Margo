@@ -8,6 +8,16 @@ import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 
+// Global audio manager — one snippet plays at a time across all cards
+let _globalAudioStop: (() => void) | null = null
+function registerGlobalAudio(stop: () => void) {
+  if (_globalAudioStop) _globalAudioStop()
+  _globalAudioStop = stop
+}
+function clearGlobalAudio() {
+  _globalAudioStop = null
+}
+
 function formatNum(n: number): string {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
   if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
@@ -265,16 +275,17 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     if (!moment.audioUrl) return
     const key = `${moment.songId}_${moment.lineId}`
 
-    // If same card is playing — pause and reset
+    // Same card — pause and reset
     if (audioRef.current && playingKey === key) {
       audioRef.current.pause()
       audioRef.current.src = ''
       audioRef.current = null
       setPlayingKey(null)
+      clearGlobalAudio()
       return
     }
 
-    // Stop any existing audio
+    // Stop any existing audio globally
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current.src = ''
@@ -284,13 +295,19 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     audioRef.current = audio
     audio.preload = 'auto'
 
+    // Register with global manager so other players stop us
+    registerGlobalAudio(() => {
+      audio.pause()
+      setPlayingKey(null)
+    })
+
     const onLoaded = () => {
       audio.currentTime = moment.start
       audio.play().catch(() => {})
       setPlayingKey(key)
     }
 
-    const onEnded = () => setPlayingKey(null)
+    const onEnded = () => { setPlayingKey(null); clearGlobalAudio() }
     audio.addEventListener('canplay', onLoaded, { once: true })
     audio.addEventListener('ended', onEnded, { once: true })
     audio.load()
@@ -300,6 +317,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
       if (audioRef.current === audio) {
         audio.pause()
         setPlayingKey(null)
+        clearGlobalAudio()
       }
     }, snippetDuration + 1500)
   }, [playingKey])
