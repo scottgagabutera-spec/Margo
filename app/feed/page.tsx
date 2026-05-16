@@ -58,9 +58,10 @@ function parseSRT(srt: string): LyricLine[] {
   return lines
 }
 
-function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | null }) {
+function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId: string | null; postText?: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const progressRef = useRef<HTMLDivElement | null>(null)
+  const snippetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
@@ -68,7 +69,21 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
   const [dragging, setDragging] = useState(false)
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [lyricsLoaded, setLyricsLoaded] = useState(false)
+  const [snippetPlaying, setSnippetPlaying] = useState(false)
   const hasCountedPlay = useRef(false)
+
+  const loadLyrics = async () => {
+    if (lyricsLoaded || !songId || !db) return
+    try {
+      const { get, ref: dbRef } = await import('firebase/database')
+      const snap = await get(dbRef(db, `songs/${songId}`))
+      if (snap.exists()) {
+        const s = snap.val()
+        if (s.srt) setLyrics(parseSRT(s.srt))
+      }
+    } catch {}
+    setLyricsLoaded(true)
+  }
 
   useEffect(() => {
     const audio = new Audio(audioUrl)
@@ -76,7 +91,7 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
     audioRef.current = audio
     const onTime = () => { setCurrentTime(audio.currentTime); setProgress((audio.currentTime / (audio.duration || 1)) * 100) }
     const onMeta = () => setDuration(audio.duration || 0)
-    const onEnded = () => { setPlaying(false); setProgress(0); setCurrentTime(0) }
+    const onEnded = () => { setPlaying(false); setSnippetPlaying(false); setProgress(0); setCurrentTime(0) }
     audio.addEventListener('timeupdate', onTime)
     audio.addEventListener('loadedmetadata', onMeta)
     audio.addEventListener('ended', onEnded)
@@ -86,40 +101,62 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
   const toggle = async () => {
     const audio = audioRef.current
     if (!audio) return
-    if (!lyricsLoaded && songId && db) {
-      try {
-        const { get, ref: dbRef } = await import('firebase/database')
-        const snap = await get(dbRef(db, `songs/${songId}`))
-        if (snap.exists()) {
-          const s = snap.val()
-          if (s.srt) setLyrics(parseSRT(s.srt))
-        }
-      } catch {}
-      setLyricsLoaded(true)
-    }
+    await loadLyrics()
     if (playing) { audio.pause(); setPlaying(false) }
     else {
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
-          title: 'Margo Original',
-          artist: 'Trymargo',
+          title: 'Margo Original', artist: 'Trymargo',
           artwork: [{ src: '/favicons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
         })
         navigator.mediaSession.setActionHandler('play', () => setPlaying(true))
         navigator.mediaSession.setActionHandler('pause', () => setPlaying(false))
       }
-      if (audio.readyState >= 3) {
-        audio.play().catch(() => {})
-        setPlaying(true)
-      } else {
-        const onCanPlay = () => {
-          audio.play().catch(() => {})
-          setPlaying(true)
-          audio.removeEventListener('canplaythrough', onCanPlay)
-        }
+      if (audio.readyState >= 3) { audio.play().catch(() => {}); setPlaying(true) }
+      else {
+        const onCanPlay = () => { audio.play().catch(() => {}); setPlaying(true); audio.removeEventListener('canplaythrough', onCanPlay) }
         audio.addEventListener('canplaythrough', onCanPlay)
       }
     }
+  }
+
+  const playSnippet = async () => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (snippetPlaying) {
+      audio.pause()
+      setSnippetPlaying(false)
+      setPlaying(false)
+      if (snippetTimerRef.current) clearTimeout(snippetTimerRef.current)
+      return
+    }
+
+    await loadLyrics()
+
+    const needle = (postText || '').toLowerCase().trim()
+    const match = lyrics.find(l =>
+      l.line.toLowerCase().includes(needle) || needle.includes(l.line.toLowerCase())
+    ) || lyrics[0]
+
+    if (!match) return
+
+    if (playing) { audio.pause(); setPlaying(false) }
+
+    const snippetDuration = Math.min((match.end - match.start) * 1000 + 300, 8000)
+
+    const doPlay = () => {
+      audio.currentTime = match.start
+      audio.play().catch(() => {})
+      setSnippetPlaying(true)
+      snippetTimerRef.current = setTimeout(() => {
+        audio.pause()
+        setSnippetPlaying(false)
+      }, snippetDuration)
+    }
+
+    if (audio.readyState >= 3) { doPlay() }
+    else { audio.load(); audio.addEventListener('canplay', () => doPlay(), { once: true }) }
   }
 
   const seek = (clientX: number) => {
@@ -135,22 +172,17 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
   }
 
   const onMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setDragging(true)
-    seek(e.clientX)
+    e.preventDefault(); setDragging(true); seek(e.clientX)
     const onMove = (ev: MouseEvent) => seek(ev.clientX)
     const onUp = () => { setDragging(false); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
   }
 
   const onTouchStart = (e: React.TouchEvent) => {
-    setDragging(true)
-    seek(e.touches[0].clientX)
+    setDragging(true); seek(e.touches[0].clientX)
     const onMove = (ev: TouchEvent) => seek(ev.touches[0].clientX)
     const onEnd = () => { setDragging(false); window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd) }
-    window.addEventListener('touchmove', onMove)
-    window.addEventListener('touchend', onEnd)
+    window.addEventListener('touchmove', onMove); window.addEventListener('touchend', onEnd)
   }
 
   const fmt = (s: number) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
@@ -158,7 +190,28 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
 
   return (
     <div>
-      {/* Player row */}
+      {/* Snippet button */}
+      <div style={{ marginBottom: '12px' }}>
+        <button
+          onClick={playSnippet}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            padding: '8px 16px',
+            background: snippetPlaying ? 'rgba(232,197,71,0.15)' : 'rgba(232,197,71,0.08)',
+            border: '1px solid rgba(232,197,71,0.25)',
+            borderRadius: '50px',
+            fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem',
+            fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
+            color: 'var(--gold)', cursor: 'pointer',
+            transition: 'background 200ms ease',
+          }}
+        >
+          <PlayPauseIcon playing={snippetPlaying} size={13} color="#E8C547" />
+          {snippetPlaying ? 'Pause Snippet' : 'Play Snippet'}
+        </button>
+      </div>
+
+      {/* Full player row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: currentLine ? '12px' : '0' }}>
         <button
           onMouseDown={e => e.preventDefault()}
@@ -173,20 +226,15 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
           <PlayPauseIcon playing={playing} size={14} color='var(--bg)' />
         </button>
         <div style={{ flex: 1 }}>
-          <div
-            ref={progressRef}
-            onMouseDown={onMouseDown}
-            onTouchStart={onTouchStart}
-            style={{ height: '20px', display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '2px' }}
-          >
+          <div ref={progressRef} onMouseDown={onMouseDown} onTouchStart={onTouchStart}
+            style={{ height: '20px', display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '2px' }}>
             <div style={{ position: 'relative', width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
               <div style={{ height: '100%', width: progress + '%', background: 'var(--gold)', borderRadius: '2px', transition: dragging ? 'none' : 'width 200ms linear' }} />
               <div style={{
                 position: 'absolute', top: '50%', left: progress + '%',
                 transform: 'translate(-50%, -50%)',
                 width: '10px', height: '10px', borderRadius: '50%',
-                background: 'var(--gold)',
-                boxShadow: '0 0 4px rgba(232,197,71,0.6)',
+                background: 'var(--gold)', boxShadow: '0 0 4px rgba(232,197,71,0.6)',
                 transition: dragging ? 'none' : 'left 200ms linear',
               }} />
             </div>
@@ -197,20 +245,11 @@ function Tier1Player({ audioUrl, songId }: { audioUrl: string; songId: string | 
           </div>
         </div>
       </div>
+
       {/* Inline karaoke line */}
       {playing && (
-        <div style={{
-          minHeight: '32px', padding: '8px 12px',
-          background: 'rgba(232,197,71,0.06)', borderRadius: '8px',
-          borderLeft: '2px solid var(--gold)',
-          transition: 'all 200ms ease',
-        }}>
-          <p style={{
-            fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
-            fontSize: '0.82rem', color: currentLine ? 'var(--gold)' : 'var(--text-3)',
-            lineHeight: 1.4, margin: 0,
-            transition: 'color 200ms ease',
-          }}>
+        <div style={{ minHeight: '32px', padding: '8px 12px', background: 'rgba(232,197,71,0.06)', borderRadius: '8px', borderLeft: '2px solid var(--gold)', transition: 'all 200ms ease' }}>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: currentLine ? 'var(--gold)' : 'var(--text-3)', lineHeight: 1.4, margin: 0, transition: 'color 200ms ease' }}>
             {currentLine ? currentLine.line : '♪'}
           </p>
         </div>
@@ -242,7 +281,6 @@ function PostCard({
       position: 'relative', overflow: 'hidden',
       transition: 'border-color 200ms ease',
     }}>
-      {/* Top accent */}
       <div style={{
         position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
         width: '60%', height: '1px',
@@ -251,7 +289,6 @@ function PostCard({
           : 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
       }} />
 
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
@@ -288,7 +325,6 @@ function PostCard({
         )}
       </div>
 
-      {/* Lyric */}
       <p style={{
         fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
         fontSize: 'clamp(1.25rem, 3vw, 1.75rem)', color: 'var(--text)',
@@ -297,7 +333,6 @@ function PostCard({
         &ldquo;{post.text}&rdquo;
       </p>
 
-      {/* Song credit */}
       {(post.knowledge?.song || post.knowledge?.artist) && (
         <p style={{
           fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
@@ -310,7 +345,6 @@ function PostCard({
         </p>
       )}
 
-      {/* Song artwork — YouTube if available, else album art from knowledge */}
       {!isTier1 && (post.youtubeMeta?.thumbnail || post.knowledge?.artwork) && (
         <a href={post.youtubeMeta?.youtubeUrl || `https://music.apple.com/search?term=${encodeURIComponent((post.knowledge?.song || '') + ' ' + (post.knowledge?.artist || ''))}`} target="_blank" rel="noopener noreferrer"
           style={{ display: 'block', marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none' }}>
@@ -325,9 +359,7 @@ function PostCard({
         </a>
       )}
 
-      {/* Actions */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Resonate */}
         <button onClick={() => onResonate(post.id)} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
           background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
@@ -340,7 +372,6 @@ function PostCard({
           </span>
         </button>
 
-        {/* Lyric Back */}
         <Link href={`/lyric-back?postId=${post.id}`} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
           color: 'var(--text-2)', textDecoration: 'none', padding: '4px 8px',
@@ -350,7 +381,6 @@ function PostCard({
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Lyric Back</span>
         </Link>
 
-        {/* Export */}
         <button onClick={() => onExport(post)} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
           background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
@@ -360,7 +390,6 @@ function PostCard({
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Card</span>
         </button>
 
-        {/* Emotion tag */}
         {label && (
           <span style={{
             fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
@@ -371,12 +400,12 @@ function PostCard({
         )}
       </div>
 
-      {/* Tier 1 footer — player left, Full Karaoke right */}
+      {/* Tier 1 footer — snippet + full player + Full Karaoke */}
       {isTier1 && (
         <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ flex: 1 }}>
-              {audioUrl && <Tier1Player audioUrl={audioUrl} songId={post.songId || null} />}
+              {audioUrl && <Tier1Player audioUrl={audioUrl} songId={post.songId || null} postText={post.text} />}
             </div>
             {post.songId && (
               <Link href={`/music/player?id=${post.songId}`} style={{
@@ -507,15 +536,12 @@ export default function FeedPage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <MargoNav />
 
-      {/* Ambient glow */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         <div style={{ position: 'absolute', top: '-128px', left: '-128px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(80px)' }} />
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      {/* Feed header */}
       <section style={{ position: 'relative', zIndex: 5, padding: '100px 24px 24px', textAlign: 'center' }}>
-
         <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(1.1rem, 2.5vw, 1.6rem)', color: 'var(--text)', fontWeight: 400, marginBottom: '8px', lineHeight: 1.3 }}>
           What people are saying right now
         </h1>
@@ -524,10 +550,8 @@ export default function FeedPage() {
         </p>
       </section>
 
-      {/* Filters */}
       <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'var(--bg)', padding: '10px 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-          {/* Vibe pills */}
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {VIBES.map(vibe => (
               <button key={vibe} onClick={() => setSelectedVibe(vibe)} style={{
@@ -539,11 +563,10 @@ export default function FeedPage() {
                 color: selectedVibe === vibe ? 'var(--bg)' : 'rgba(255,255,255,0.45)',
                 borderColor: selectedVibe === vibe ? 'var(--gold)' : 'rgba(255,255,255,0.1)',
                 transition: 'all 150ms ease',
-              }}>{vibe === 'SENDIT' ? 'SEND IT' : vibe === 'LETOUT' ? 'LET OUT' : vibe === 'GRATEFUL' ? 'GRATEFUL' : vibe === 'SPIRITUAL' ? 'SPIRITUAL' : vibe}</button>
+              }}>{vibe === 'SENDIT' ? 'SEND IT' : vibe === 'LETOUT' ? 'LET OUT' : vibe}</button>
             ))}
           </div>
 
-          {/* Sort tabs */}
           <div style={{ display: 'flex', gap: '0', paddingTop: '10px', paddingBottom: '4px', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             {SORTS.map(sort => (
               <button key={sort} onClick={() => setSelectedSort(sort)} style={{
@@ -557,12 +580,9 @@ export default function FeedPage() {
             ))}
           </div>
 
-          {/* Search */}
           <div style={{ position: 'relative', paddingBottom: '8px', paddingTop: '10px' }}>
             <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search lyrics, songs, artists, feelings..."
               style={{
                 width: '100%', height: '40px', padding: '0 40px 0 16px',
@@ -581,7 +601,6 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* Posts */}
       <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px 80px' }}>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
@@ -626,7 +645,6 @@ export default function FeedPage() {
         )}
       </main>
 
-      {/* Export modal */}
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
