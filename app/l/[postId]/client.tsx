@@ -35,37 +35,25 @@ export function LyricShareClient({ postId }: { postId: string }) {
   const { songs } = useSongs()
   const [playing, setPlaying] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Wait for client hydration before rendering
-  useEffect(() => { setMounted(true) }, [])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      audioRef.current?.pause()
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [])
 
   // Find the matching song for audio + SRT
   const song = songs.find(s => s.id === post?.songId) || null
   const isTier1 = post?.tier === 1
 
-  // Snippet playback
+  // Snippet playback — finds the lyric line in SRT and plays that moment
   const playSnippet = () => {
-    if (!post || !song?.audioUrl || !song?.srt || !post.text) return
+    if (!song?.audioUrl || !song?.srt || !post?.text) return
 
     const lines = parseSRT(song.srt)
-    const postText = post.text.toLowerCase().trim()
-    const matchedLine = lines.find(l =>
+    const postText = (post.text || '').toLowerCase().trim()
+    const match = lines.find(l =>
       l.line.toLowerCase().includes(postText.slice(0, 30)) ||
       postText.includes(l.line.toLowerCase().slice(0, 20))
     ) || lines[0]
 
-    if (!matchedLine) return
+    if (!match) return
 
     if (playing) {
       audioRef.current?.pause()
@@ -76,16 +64,24 @@ export function LyricShareClient({ postId }: { postId: string }) {
 
     const audio = audioRef.current || new Audio(song.audioUrl)
     audioRef.current = audio
-    audio.currentTime = matchedLine.start
+    audio.currentTime = match.start
     audio.play().catch(() => {})
     setPlaying(true)
 
-    const duration = Math.min((matchedLine.end - matchedLine.start) * 1000 + 300, 8000)
+    const duration = Math.min((match.end - match.start) * 1000 + 300, 8000)
     timerRef.current = setTimeout(() => {
       audio.pause()
       setPlaying(false)
     }, duration)
   }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause()
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`https://trymargo.com/l/${postId}`)
@@ -103,8 +99,8 @@ export function LyricShareClient({ postId }: { postId: string }) {
     handleCopyLink()
   }
 
-  // ── Loading — wait for mount + Firebase ─────────────────────────
-  if (!mounted || loading) return (
+  // ── Loading ──────────────────────────────────────────────────────
+  if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <MargoNav />
       <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--gold)', fontSize: '1rem' }}>Loading…</p>
@@ -122,8 +118,8 @@ export function LyricShareClient({ postId }: { postId: string }) {
     </div>
   )
 
-  const lyric = post.text || ''
-  const songName = post.knowledge?.song || song?.title || ''
+  const lyric  = post.text || ''
+  const songName  = post.knowledge?.song || song?.title || ''
   const artistName = post.knowledge?.artist || song?.artist || ''
   const artwork = post.knowledge?.artwork || song?.artwork || null
   const canPlay = isTier1 && !!song?.audioUrl && !!song?.srt
@@ -161,6 +157,7 @@ export function LyricShareClient({ postId }: { postId: string }) {
             <div style={{ position: 'relative', width: '100%', aspectRatio: '16/7', overflow: 'hidden' }}>
               <Image src={artwork} alt={songName} fill style={{ objectFit: 'cover', objectPosition: 'center top' }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(14,12,18,0.1) 0%, rgba(14,12,18,0.85) 100%)' }} />
+              {/* Margo badge */}
               {isTier1 && (
                 <div style={{ position: 'absolute', top: '16px', right: '16px', padding: '4px 10px', background: 'rgba(232,197,71,0.15)', border: '1px solid rgba(232,197,71,0.4)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--gold)' }}>
                   Margo Original
@@ -173,7 +170,14 @@ export function LyricShareClient({ postId }: { postId: string }) {
           <div style={{ padding: artwork ? '28px 32px 32px' : '40px 32px 32px' }}>
 
             {/* Lyric */}
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', color: 'var(--text)', lineHeight: 1.5, marginBottom: '20px' }}>
+            <p style={{
+              fontFamily: 'var(--font-lora), serif',
+              fontStyle: 'italic',
+              fontSize: 'clamp(1.3rem, 4vw, 1.8rem)',
+              color: 'var(--text)',
+              lineHeight: 1.5,
+              marginBottom: '20px',
+            }}>
               &ldquo;{lyric}&rdquo;
             </p>
 
@@ -184,13 +188,19 @@ export function LyricShareClient({ postId }: { postId: string }) {
               </p>
             )}
 
-            {/* Play snippet — Tier 1 only */}
+            {/* Play snippet — only for Tier 1 */}
             {canPlay && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '28px', padding: '16px 20px', background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.12)', borderRadius: '14px' }}>
                 <button
                   className="play-ring"
                   onClick={playSnippet}
-                  style={{ width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0, background: 'var(--gold)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 200ms ease', boxShadow: '0 4px 20px rgba(232,197,71,0.3)' }}
+                  style={{
+                    width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
+                    background: 'var(--gold)', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 200ms ease',
+                    boxShadow: '0 4px 20px rgba(232,197,71,0.3)',
+                  }}
                 >
                   <PlayPauseIcon playing={playing} size={16} color="var(--bg)" />
                 </button>
@@ -207,34 +217,75 @@ export function LyricShareClient({ postId }: { postId: string }) {
 
             {/* CTAs */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Full Karaoke — only for Tier 1 */}
               {isTier1 && post.songId && (
                 <Link
                   href={`/music/player?id=${post.songId}${song?.audioUrl ? '&au=' + encodeURIComponent(song.audioUrl) : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px 28px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', transition: 'all 200ms ease' }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '15px 28px',
+                    background: 'var(--gold)', color: 'var(--bg)',
+                    borderRadius: '50px',
+                    fontFamily: 'var(--font-lora), serif', fontWeight: 700,
+                    fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase',
+                    textDecoration: 'none',
+                    boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
+                    transition: 'all 200ms ease',
+                  }}
                 >
                   ▶ Full Karaoke
                 </Link>
               )}
 
+              {/* Open in Margo feed */}
               <Link
                 href="/feed"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px 28px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', textDecoration: 'none', transition: 'all 200ms ease' }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '15px 28px',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '50px',
+                  fontFamily: 'var(--font-lora), serif', fontWeight: 700,
+                  fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.7)', textDecoration: 'none',
+                  transition: 'all 200ms ease',
+                }}
               >
                 Open Margo Feed
               </Link>
 
+              {/* Share row */}
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <button
                   className="action-btn"
                   onClick={handleCopyLink}
-                  style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 600, fontSize: '0.58rem', letterSpacing: '1px', textTransform: 'uppercase', color: copied ? 'var(--gold)' : 'rgba(255,255,255,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                  style={{
+                    flex: 1, padding: '12px',
+                    background: 'transparent',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '50px',
+                    fontFamily: 'var(--font-lora), serif', fontWeight: 600,
+                    fontSize: '0.58rem', letterSpacing: '1px', textTransform: 'uppercase',
+                    color: copied ? 'var(--gold)' : 'rgba(255,255,255,0.4)',
+                    cursor: 'pointer', transition: 'all 150ms ease',
+                  }}
                 >
                   {copied ? '✓ Copied' : '🔗 Copy Link'}
                 </button>
                 <button
                   className="action-btn"
                   onClick={handleShare}
-                  style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 600, fontSize: '0.58rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                  style={{
+                    flex: 1, padding: '12px',
+                    background: 'transparent',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '50px',
+                    fontFamily: 'var(--font-lora), serif', fontWeight: 600,
+                    fontSize: '0.58rem', letterSpacing: '1px', textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.4)',
+                    cursor: 'pointer', transition: 'all 150ms ease',
+                  }}
                 >
                   ↗ Share
                 </button>
@@ -243,7 +294,7 @@ export function LyricShareClient({ postId }: { postId: string }) {
           </div>
         </div>
 
-        {/* Margo branding */}
+        {/* Margo branding below card */}
         <div style={{ marginTop: '32px', textAlign: 'center' }}>
           <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px' }}>Shared on</p>
           <Link href="/" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.9rem', fontWeight: 700, color: 'var(--gold)', textDecoration: 'none', letterSpacing: '3px', textTransform: 'uppercase' }}>
