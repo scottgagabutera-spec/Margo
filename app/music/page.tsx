@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { MargoNav } from '@/components/margo-nav'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
+import { PlayPauseIcon } from '@/components/play-pause-icon'
 
 function formatNum(n: number): string {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
@@ -122,16 +123,7 @@ function LyricCard({
             padding: 0,
           }}
         >
-          {isPlaying ? (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="1.5" y="1.5" width="3" height="9" rx="1" fill="#E8C547"/>
-              <rect x="7.5" y="1.5" width="3" height="9" rx="1" fill="#E8C547"/>
-            </svg>
-          ) : (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 2.2l7 3.8-7 3.8V2.2z" fill="#E8C547"/>
-            </svg>
-          )}
+          <PlayPauseIcon playing={isPlaying} size={16} color="#E8C547" />
         </button>
       </div>
     </div>
@@ -521,17 +513,12 @@ function LyricBoard({ songs }: { songs: Song[] }) {
                       >
                         {playingKey === `${focusedMoment.songId}_${focusedMoment.lineId}` ? (
                           <>
-                            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <rect x="1.5" y="1.5" width="3" height="9" rx="1" fill="#E8C547"/>
-                              <rect x="7.5" y="1.5" width="3" height="9" rx="1" fill="#E8C547"/>
-                            </svg>
+                            <PlayPauseIcon playing={true} size={14} color="#E8C547" />
                             Pause
                           </>
                         ) : (
                           <>
-                            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M3 2.2l7 3.8-7 3.8V2.2z" fill="#E8C547"/>
-                            </svg>
+                            <PlayPauseIcon playing={false} size={14} color="#E8C547" />
                             Play Snippet
                           </>
                         )}
