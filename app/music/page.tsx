@@ -71,25 +71,25 @@ function LyricCard({
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? 'scale(1)' : 'scale(0.97)',
-        padding: '22px 24px',
+        padding: '18px 18px',
         background: 'rgba(255,255,255,0.025)',
         border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '16px',
+        borderRadius: '14px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '14px',
-        minHeight: '150px',
+        gap: '12px',
         cursor: 'pointer',
+        overflow: 'hidden',
         transition: 'opacity 700ms cubic-bezier(0.4,0,0.2,1), transform 700ms cubic-bezier(0.4,0,0.2,1)',
         willChange: 'opacity, transform',
       }}
     >
-      <p style={{
+      <p className="lyric-text" style={{
         fontFamily: 'var(--font-lora), serif',
         fontStyle: 'italic',
-        fontSize: '1.05rem',
+        fontSize: '0.95rem',
         color: 'var(--text)',
-        lineHeight: 1.6,
+        lineHeight: 1.55,
         flex: 1,
         margin: 0,
       }}>
@@ -339,30 +339,26 @@ function LyricBoard({ songs }: { songs: Song[] }) {
         }
         .vibe-pills-scroll::-webkit-scrollbar { display: none; }
 
-        /* Board grid */
+        /* Board grid — uniform row heights so cards never break frame */
         .board-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 14px;
+          grid-auto-rows: minmax(140px, auto);
+          gap: 12px;
+          overflow: hidden;
         }
         @media (max-width: 768px) {
           .board-grid {
             grid-template-columns: repeat(2, 1fr) !important;
-            gap: 10px !important;
+            gap: 8px !important;
           }
-          .board-grid .lyric-card {
-            min-height: 130px !important;
-            padding: 14px !important;
-          }
-          .board-grid .lyric-card p:first-child {
-            font-size: 0.88rem !important;
-          }
-          /* Board frame — force full bleed on mobile so frame is visible */
-          .board-stage {
-            border-radius: 16px !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-          }
+        }
+        /* Clamp long lyrics so they never overflow card */
+        .lyric-text {
+          display: -webkit-box;
+          -webkit-line-clamp: 4;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         @keyframes focusIn {
@@ -371,7 +367,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
         }
       `}</style>
 
-      <div style={{ padding: '100px 20px 32px', maxWidth: '72rem', margin: '0 auto' }}>
+      <div style={{ padding: '100px 16px 32px', width: '100%', maxWidth: '72rem', margin: '0 auto', boxSizing: 'border-box' }}>
 
         {/* Label */}
         <p style={{
@@ -775,13 +771,13 @@ export default function MusicPage() {
       <LyricBoard songs={songs} />
 
       {/* ── Divider ── */}
-      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.07), transparent)', margin: '40px 20px 0' }} />
+      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.07), transparent)', margin: '40px 16px 0' }} />
 
       {/* ── Hero — Featured Song ── */}
       {featuredSong && (
-        <section style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 20px' }}>
+        <section style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 16px' }}>
           {/* Artwork — clean, no overlay text */}
-          <div style={{ position: 'relative', width: '100%', aspectRatio: '16/7', minHeight: '220px', borderRadius: '20px', overflow: 'hidden', marginBottom: '0' }}>
+          <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', minHeight: '280px', borderRadius: '20px 20px 0 0', overflow: 'hidden', marginBottom: '0' }}>
             {featuredSong.artwork ? (
               <Image src={featuredSong.artwork} alt={featuredSong.title} fill style={{ objectFit: 'cover', objectPosition: 'center top' }} priority />
             ) : (
@@ -797,12 +793,11 @@ export default function MusicPage() {
 
           {/* Info block — below the artwork, clean */}
           <div style={{
-            background: 'linear-gradient(to bottom, rgba(20,17,28,0.95), rgba(14,12,18,0.98))',
+            background: 'linear-gradient(to bottom, rgba(20,17,28,0.97), rgba(14,12,18,0.99))',
             border: '1px solid rgba(255,255,255,0.07)',
             borderTop: 'none',
             borderRadius: '0 0 20px 20px',
             padding: '24px 28px 28px',
-            marginBottom: '0',
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '18px' }}>
               <div>
@@ -830,7 +825,7 @@ export default function MusicPage() {
 
       {/* ── Most Shared Lines ── */}
       {featuredSong && sharedLines.length > 0 && (
-        <section style={{ padding: '48px 24px', maxWidth: '72rem', margin: '0 auto' }}>
+        <section style={{ padding: '48px 16px', maxWidth: '72rem', margin: '0 auto' }}>
           <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '20px' }}>
             Most shared lines — {featuredSong.title}
           </p>
@@ -850,11 +845,11 @@ export default function MusicPage() {
         </section>
       )}
 
-      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)', margin: '0 24px' }} />
+      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)', margin: '0 16px' }} />
 
       {/* ── More Songs ── */}
       {songs.length > 1 && (
-        <section style={{ padding: '48px 20px', maxWidth: '72rem', margin: '0 auto' }}>
+        <section style={{ padding: '48px 16px', maxWidth: '72rem', margin: '0 auto' }}>
           <style>{`
             .more-songs-grid {
               display: grid;
