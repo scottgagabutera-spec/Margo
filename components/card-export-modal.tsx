@@ -384,11 +384,7 @@ export function CardExportModal({
   const activeTheme = THEMES.find(t => t.id === theme) || THEMES[0]
   const activeShape = SHAPES.find(s => s.id === shape) || SHAPES[0]
 
-  const url = postId
-    ? isDualCard
-      ? `https://trymargo.com/lyric-back?postId=${postId}`
-      : `https://trymargo.com/l/${postId}`
-    : 'https://trymargo.com'
+  const url = postId ? `https://trymargo.com/lyric-back?postId=${postId}` : 'https://trymargo.com'
   const copyText = isDualCard
     ? `"${parentLyric}" ↩ "${lyric}" — trymargo.com`
     : lyric ? `"${lyric}" — ${artist}, ${song}` : ''
