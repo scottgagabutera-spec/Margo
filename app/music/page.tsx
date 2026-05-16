@@ -347,15 +347,21 @@ function LyricBoard({ songs }: { songs: Song[] }) {
         }
         @media (max-width: 768px) {
           .board-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 10px !important;
           }
           .board-grid .lyric-card {
             min-height: 130px !important;
-            padding: 16px 16px !important;
+            padding: 14px !important;
           }
           .board-grid .lyric-card p:first-child {
-            font-size: 0.9rem !important;
+            font-size: 0.88rem !important;
+          }
+          /* Board frame — force full bleed on mobile so frame is visible */
+          .board-stage {
+            border-radius: 16px !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
           }
         }
 
@@ -365,7 +371,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
         }
       `}</style>
 
-      <div style={{ padding: '100px 24px 0', maxWidth: '72rem', margin: '0 auto' }}>
+      <div style={{ padding: '100px 20px 32px', maxWidth: '72rem', margin: '0 auto' }}>
 
         {/* Label */}
         <p style={{
@@ -399,9 +405,10 @@ function LyricBoard({ songs }: { songs: Song[] }) {
         </div>
 
         {/* Board container — the "stage" */}
-        <div style={{
-          background: 'rgba(255,255,255,0.012)',
-          border: '1px solid rgba(255,255,255,0.07)',
+        <div className="board-stage" style={{
+          background: 'rgba(232,197,71,0.025)',
+          border: '1px solid rgba(232,197,71,0.22)',
+          boxShadow: '0 0 0 1px rgba(232,197,71,0.08), inset 0 1px 0 rgba(232,197,71,0.08)',
           borderRadius: '20px',
           padding: '20px',
           marginBottom: '0',
@@ -768,37 +775,54 @@ export default function MusicPage() {
       <LyricBoard songs={songs} />
 
       {/* ── Divider ── */}
-      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.07), transparent)', margin: '40px 24px 0' }} />
+      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.07), transparent)', margin: '40px 20px 0' }} />
 
       {/* ── Hero — Featured Song ── */}
       {featuredSong && (
-        <section style={{ position: 'relative', height: '60vh', minHeight: '380px', overflow: 'hidden' }}>
-          {featuredSong.artwork ? (
-            <div style={{ position: 'absolute', inset: 0 }}>
+        <section style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 20px' }}>
+          {/* Artwork — clean, no overlay text */}
+          <div style={{ position: 'relative', width: '100%', aspectRatio: '16/7', minHeight: '220px', borderRadius: '20px', overflow: 'hidden', marginBottom: '0' }}>
+            {featuredSong.artwork ? (
               <Image src={featuredSong.artwork} alt={featuredSong.title} fill style={{ objectFit: 'cover', objectPosition: 'center top' }} priority />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #07060A 0%, rgba(7,6,10,0.8) 40%, rgba(7,6,10,0.2) 100%)' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(7,6,10,0.7) 0%, transparent 60%)' }} />
+            ) : (
+              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(232,197,71,0.08), rgba(255,255,255,0.02))' }} />
+            )}
+            {/* Subtle bottom fade only — no text on top */}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to top, rgba(7,6,10,0.6) 0%, transparent 100%)' }} />
+            {/* Featured badge top-left */}
+            <div style={{ position: 'absolute', top: '16px', left: '16px', padding: '5px 14px', background: 'rgba(7,6,10,0.7)', border: '1px solid rgba(232,197,71,0.35)', borderRadius: '50px', backdropFilter: 'blur(8px)' }}>
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.48rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '2.5px', textTransform: 'uppercase', margin: 0 }}>Featured</p>
             </div>
-          ) : (
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(232,197,71,0.05) 0%, transparent 60%)' }} />
-          )}
-          <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '40px 32px', maxWidth: '72rem', margin: '0 auto' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '10px', opacity: 0.8 }}>Featured</p>
-            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 400, color: 'var(--text)', lineHeight: 1.1, marginBottom: '6px' }}>{featuredSong.title}</h2>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'rgba(255,255,255,0.65)', fontWeight: 400, marginBottom: '20px' }}>{featuredSong.artist}</p>
-            <div style={{ display: 'flex', gap: '24px', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap' }}>
-              <StatBlock value={featuredSong.plays || 0} label="Plays" />
-              <StatBlock value={songResonateCounts[featuredSong.id] || 0} label="Resonates" />
-              {(featuredSong.lyricUses || 0) > 0 && (
-                <div style={{ paddingLeft: '24px', borderLeft: '1px solid rgba(232,197,71,0.3)' }}>
-                  <StatBlock value={featuredSong.lyricUses || 0} label="Lyric Uses" gold />
-                </div>
-              )}
+          </div>
+
+          {/* Info block — below the artwork, clean */}
+          <div style={{
+            background: 'linear-gradient(to bottom, rgba(20,17,28,0.95), rgba(14,12,18,0.98))',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderTop: 'none',
+            borderRadius: '0 0 20px 20px',
+            padding: '24px 28px 28px',
+            marginBottom: '0',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '18px' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(1.5rem, 4vw, 2.6rem)', fontWeight: 400, color: 'var(--text)', lineHeight: 1.1, marginBottom: '4px' }}>{featuredSong.title}</h2>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.88rem', color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>{featuredSong.artist}</p>
+              </div>
+              <div style={{ display: 'flex', gap: '20px', alignItems: 'center', paddingTop: '4px' }}>
+                <StatBlock value={featuredSong.plays || 0} label="Plays" />
+                <StatBlock value={songResonateCounts[featuredSong.id] || 0} label="Resonates" />
+                {(featuredSong.lyricUses || 0) > 0 && (
+                  <div style={{ paddingLeft: '20px', borderLeft: '1px solid rgba(232,197,71,0.25)' }}>
+                    <StatBlock value={featuredSong.lyricUses || 0} label="Lyric Uses" gold />
+                  </div>
+                )}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <Link href={`/music/player?id=${featuredSong.id}${featuredSong.audioUrl ? '&au=' + encodeURIComponent(featuredSong.audioUrl) : ''}`} className="play-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '14px 28px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', transition: 'all 200ms ease' }}>▶ Play Now</Link>
-              <button onClick={() => toggleSongResonate(featuredSong.id)} style={{ padding: '14px 24px', background: resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.06)', border: '1px solid ' + (resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.15)'), borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 200ms ease', color: resonatedSongs.has(featuredSong.id) ? 'var(--gold)' : 'rgba(255,255,255,0.7)' }}>{resonatedSongs.has(featuredSong.id) ? '♥' : '♡'} Resonate</button>
-              <button onClick={() => setPreview(featuredSong)} style={{ padding: '14px 24px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', transition: 'all 200ms ease' }}>Details</button>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <Link href={`/music/player?id=${featuredSong.id}${featuredSong.audioUrl ? '&au=' + encodeURIComponent(featuredSong.audioUrl) : ''}`} className="play-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', transition: 'all 200ms ease' }}>▶ Play Now</Link>
+              <button onClick={() => toggleSongResonate(featuredSong.id)} style={{ padding: '12px 20px', background: resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.06)', border: '1px solid ' + (resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.15)'), borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 200ms ease', color: resonatedSongs.has(featuredSong.id) ? 'var(--gold)' : 'rgba(255,255,255,0.7)' }}>{resonatedSongs.has(featuredSong.id) ? '♥' : '♡'} Resonate</button>
+              <button onClick={() => setPreview(featuredSong)} style={{ padding: '12px 20px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', transition: 'all 200ms ease' }}>Details</button>
             </div>
           </div>
         </section>
@@ -830,15 +854,28 @@ export default function MusicPage() {
 
       {/* ── More Songs ── */}
       {songs.length > 1 && (
-        <section style={{ padding: '48px 24px', maxWidth: '72rem', margin: '0 auto' }}>
+        <section style={{ padding: '48px 20px', maxWidth: '72rem', margin: '0 auto' }}>
+          <style>{`
+            .more-songs-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+              gap: 24px;
+            }
+            @media (max-width: 480px) {
+              .more-songs-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 16px !important;
+              }
+            }
+          `}</style>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', margin: 0 }}>More Songs</p>
-            <input className="music-search" type="text" placeholder="Search songs…" value={search} onChange={e => setSearch(e.target.value)} style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px', padding: '10px 20px', width: '220px', transition: 'border-color 200ms ease' }} />
+            <input className="music-search" type="text" placeholder="Search songs…" value={search} onChange={e => setSearch(e.target.value)} style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px', padding: '10px 20px', width: '200px', transition: 'border-color 200ms ease' }} />
           </div>
           {filteredSongs.length === 0 && search && (
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem', textAlign: 'center', padding: '48px' }}>No songs found for &ldquo;{search}&rdquo;</p>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '28px' }}>
+          <div className="more-songs-grid">
             {filteredSongs.map(song => (
               <SongCard key={song.id} song={song} onPreview={setPreview} />
             ))}
