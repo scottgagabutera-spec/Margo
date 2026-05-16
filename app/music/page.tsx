@@ -28,7 +28,12 @@ interface LyricMoment {
   vibes: string[]
 }
 
-// ─── Stat block ───────────────────────────────────────────────────────
+function formatTime(s: number) {
+  const m = Math.floor(s / 60)
+  const sec = Math.floor(s % 60)
+  return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
 function StatBlock({ value, label, gold }: { value: number; label: string; gold?: boolean }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '52px' }}>
@@ -47,19 +52,94 @@ function SmallStatBlock({ value, label, gold }: { value: number; label: string; 
   )
 }
 
+// ─── Single Lyric Card ────────────────────────────────────────────────
+function LyricCard({
+  moment,
+  visible,
+  onClick,
+  onPlay,
+}: {
+  moment: LyricMoment
+  visible: boolean
+  onClick: () => void
+  onPlay: (e: React.MouseEvent) => void
+}) {
+  return (
+    <div
+      className="lyric-card"
+      onClick={onClick}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'scale(1)' : 'scale(0.97)',
+        padding: '22px 24px',
+        background: 'rgba(255,255,255,0.025)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
+        minHeight: '150px',
+        cursor: 'pointer',
+        transition: 'opacity 700ms cubic-bezier(0.4,0,0.2,1), transform 700ms cubic-bezier(0.4,0,0.2,1)',
+        willChange: 'opacity, transform',
+      }}
+    >
+      <p style={{
+        fontFamily: 'var(--font-lora), serif',
+        fontStyle: 'italic',
+        fontSize: '1.05rem',
+        color: 'var(--text)',
+        lineHeight: 1.6,
+        flex: 1,
+        margin: 0,
+      }}>
+        &ldquo;{moment.line}&rdquo;
+      </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {moment.artwork && (
+            <div style={{ position: 'relative', width: '28px', height: '28px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
+              <Image src={moment.artwork} alt={moment.songTitle} fill style={{ objectFit: 'cover' }} />
+            </div>
+          )}
+          <div>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>{moment.songTitle}</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{formatTime(moment.start)}</p>
+          </div>
+        </div>
+        <button
+          className="snippet-btn"
+          onClick={onPlay}
+          style={{
+            width: '34px', height: '34px', borderRadius: '50%',
+            background: 'rgba(232,197,71,0.1)',
+            border: '1px solid rgba(232,197,71,0.25)',
+            color: 'var(--gold)', fontSize: '0.65rem',
+            cursor: 'pointer', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, transition: 'background 200ms ease',
+          }}
+        >▶</button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Lyric Discovery Board ────────────────────────────────────────────
 function LyricBoard({ songs }: { songs: Song[] }) {
   const [activeVibe, setActiveVibe] = useState('ALL')
   const [allMoments, setAllMoments] = useState<LyricMoment[]>([])
-  const [visibleMoments, setVisibleMoments] = useState<LyricMoment[]>([])
+  // 6 slots: desktop 3×2, mobile 2×3
+  const SLOT_COUNT = 6
+  const [slots, setSlots] = useState<(LyricMoment | null)[]>(Array(SLOT_COUNT).fill(null))
+  const [slotVisible, setSlotVisible] = useState<boolean[]>(Array(SLOT_COUNT).fill(false))
   const [focusedMoment, setFocusedMoment] = useState<LyricMoment | null>(null)
   const [focusedIndex, setFocusedIndex] = useState(0)
-  const [animating, setAnimating] = useState(false)
-  const [cardVisible, setCardVisible] = useState<boolean[]>([])
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const cycleRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const VISIBLE_COUNT = 4
-  const CYCLE_MS = 6000
+  const vibePoolRef = useRef<LyricMoment[]>([])
+  const slotQueueRef = useRef<number>(0) // next slot to replace
+  const CYCLE_MS = 5500
 
   // Build all moments from songs with lineVibes
   useEffect(() => {
@@ -67,7 +147,6 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     songs.forEach(song => {
       const lineVibes = (song as any).lineVibes as Record<string, string[]> | undefined
       if (!lineVibes || !song.srt) return
-      // Parse SRT inline
       const blocks = song.srt.trim().split(/\n\s*\n/)
       blocks.forEach((block, i) => {
         const parts = block.trim().split('\n')
@@ -77,6 +156,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
         const toSec = (h: string, m: string, s: string, ms: string) =>
           parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(s) + parseInt(ms) / 1000
         const line = parts.slice(2).join(' ').trim()
+        if (line.length < 5) return // skip very short filler
         const vibes = lineVibes[String(i)] || []
         if (vibes.length === 0) return
         moments.push({
@@ -96,81 +176,119 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     setAllMoments(moments)
   }, [songs])
 
-  // Filter by vibe
-  const filtered = activeVibe === 'ALL'
-    ? allMoments
-    : allMoments.filter(m => m.vibes.includes(activeVibe))
+  const getFiltered = useCallback((vibe: string) => {
+    return vibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(vibe))
+  }, [allMoments])
 
-  // Initialize visible moments
-  useEffect(() => {
-    if (filtered.length === 0) return
-    const initial = filtered.slice(0, VISIBLE_COUNT)
-    setVisibleMoments(initial)
-    setCardVisible(initial.map(() => true))
-  }, [filtered.length, activeVibe])
+  // Initialize slots when moments or vibe changes
+  const initSlots = useCallback((filtered: LyricMoment[]) => {
+    const initial = filtered.slice(0, SLOT_COUNT)
+    setSlots(initial.map((m, i) => i < initial.length ? m : null))
+    // Staggered fade in
+    setSlotVisible(Array(SLOT_COUNT).fill(false))
+    initial.forEach((_, i) => {
+      setTimeout(() => {
+        setSlotVisible(prev => {
+          const next = [...prev]
+          next[i] = true
+          return next
+        })
+      }, i * 120)
+    })
+    slotQueueRef.current = 0
+    vibePoolRef.current = [...filtered]
+  }, [])
 
-  // Cycling — fade one out, bring new one in
   useEffect(() => {
-    if (filtered.length <= VISIBLE_COUNT || focusedMoment) return
-    let pool = [...filtered]
-    let usedIndices = new Set(visibleMoments.map(m => m.lineId + m.songId))
+    if (allMoments.length === 0) return
+    const filtered = getFiltered(activeVibe)
+    initSlots(filtered)
+  }, [allMoments, activeVibe, initSlots, getFiltered])
+
+  // Start cycling
+  useEffect(() => {
+    if (cycleRef.current) clearInterval(cycleRef.current)
+    if (focusedMoment) return
 
     cycleRef.current = setInterval(() => {
-      const replaceIdx = Math.floor(Math.random() * VISIBLE_COUNT)
-      const available = pool.filter(m => !usedIndices.has(m.lineId + m.songId))
-      if (available.length === 0) {
-        usedIndices = new Set(visibleMoments.map(m => m.lineId + m.songId))
-        return
-      }
-      const next = available[Math.floor(Math.random() * available.length)]
-      // Fade out
-      setCardVisible(prev => prev.map((v, i) => i === replaceIdx ? false : v))
-      setTimeout(() => {
-        setVisibleMoments(prev => {
-          const updated = [...prev]
-          usedIndices.delete(updated[replaceIdx]?.lineId + updated[replaceIdx]?.songId)
-          updated[replaceIdx] = next
-          usedIndices.add(next.lineId + next.songId)
-          return updated
+      const pool = vibePoolRef.current
+      if (pool.length <= SLOT_COUNT) return
+
+      const slotIdx = slotQueueRef.current % SLOT_COUNT
+      slotQueueRef.current++
+
+      // Pick a moment not currently shown
+      setSlots(prev => {
+        const currentIds = new Set(prev.map(m => m ? `${m.songId}_${m.lineId}` : ''))
+        const candidates = pool.filter(m => !currentIds.has(`${m.songId}_${m.lineId}`))
+        if (candidates.length === 0) return prev
+
+        const next = candidates[Math.floor(Math.random() * candidates.length)]
+
+        // Fade out that slot
+        setSlotVisible(vis => {
+          const nv = [...vis]
+          nv[slotIdx] = false
+          return nv
         })
-        setCardVisible(prev => prev.map((v, i) => i === replaceIdx ? true : v))
-      }, 600)
+
+        // After fade out completes, swap and fade in
+        setTimeout(() => {
+          setSlots(s => {
+            const ns = [...s]
+            ns[slotIdx] = next
+            return ns
+          })
+          setTimeout(() => {
+            setSlotVisible(vis => {
+              const nv = [...vis]
+              nv[slotIdx] = true
+              return nv
+            })
+          }, 80)
+        }, 650)
+
+        return prev
+      })
     }, CYCLE_MS)
 
     return () => { if (cycleRef.current) clearInterval(cycleRef.current) }
-  }, [filtered.length, focusedMoment, activeVibe])
+  }, [allMoments, activeVibe, focusedMoment])
 
-  // Stop cycle when focused
-  useEffect(() => {
-    if (focusedMoment && cycleRef.current) {
-      clearInterval(cycleRef.current)
-      cycleRef.current = null
-    }
-  }, [focusedMoment])
-
-  // Snippet playback
   const playSnippet = useCallback((moment: LyricMoment) => {
     if (!moment.audioUrl) return
     if (audioRef.current) {
       audioRef.current.pause()
-      audioRef.current = null
+      audioRef.current.src = ''
     }
     const audio = new Audio(moment.audioUrl)
     audioRef.current = audio
-    audio.currentTime = moment.start
-    audio.play().catch(() => {})
-    const duration = (moment.end - moment.start) * 1000
-    setTimeout(() => { audio.pause() }, Math.min(duration + 300, 8000))
+    audio.preload = 'auto'
+    const onLoaded = () => {
+      audio.currentTime = moment.start
+      audio.play().catch(() => {})
+    }
+    audio.addEventListener('canplay', onLoaded, { once: true })
+    audio.load()
+    const snippetDuration = Math.min((moment.end - moment.start) * 1000 + 400, 9000)
+    setTimeout(() => {
+      if (audioRef.current === audio) {
+        audio.pause()
+      }
+    }, snippetDuration + 1500) // extra buffer for load time
   }, [])
 
-  const handleCardClick = (moment: LyricMoment, idx: number) => {
-    const focusIdx = filtered.findIndex(m => m.lineId === moment.lineId && m.songId === moment.songId)
-    setFocusedIndex(focusIdx >= 0 ? focusIdx : 0)
+  const handleCardClick = (moment: LyricMoment) => {
+    const filtered = getFiltered(activeVibe)
+    const idx = filtered.findIndex(m => m.lineId === moment.lineId && m.songId === moment.songId)
+    setFocusedIndex(idx >= 0 ? idx : 0)
     setFocusedMoment(moment)
+    if (cycleRef.current) { clearInterval(cycleRef.current); cycleRef.current = null }
     playSnippet(moment)
   }
 
   const handleNext = () => {
+    const filtered = getFiltered(activeVibe)
     const next = filtered[(focusedIndex + 1) % filtered.length]
     setFocusedIndex((focusedIndex + 1) % filtered.length)
     setFocusedMoment(next)
@@ -178,59 +296,95 @@ function LyricBoard({ songs }: { songs: Song[] }) {
   }
 
   const handleBack = () => {
+    const filtered = getFiltered(activeVibe)
     const prev = filtered[(focusedIndex - 1 + filtered.length) % filtered.length]
     setFocusedIndex((focusedIndex - 1 + filtered.length) % filtered.length)
     setFocusedMoment(prev)
     playSnippet(prev)
   }
 
-  const handleVibe = (vibe: string) => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
+  const handleClose = () => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
     setFocusedMoment(null)
-    setAnimating(true)
-    setCardVisible([false, false, false, false])
-    setTimeout(() => {
-      setActiveVibe(vibe)
-      setAnimating(false)
-    }, 400)
   }
 
-  const formatTime = (s: number) => {
-    const m = Math.floor(s / 60)
-    const sec = Math.floor(s % 60)
-    return `${m}:${sec.toString().padStart(2, '0')}`
+  const handleVibe = (vibe: string) => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
+    setFocusedMoment(null)
+    setActiveVibe(vibe)
   }
+
+  const filtered = getFiltered(activeVibe)
 
   return (
-    <section style={{ padding: '0 0 0', background: 'var(--bg)' }}>
+    <section>
       <style>{`
-        @keyframes fadeInCard {
-          from { opacity: 0; transform: translateY(12px); }
+        .lyric-card:hover {
+          border-color: rgba(232,197,71,0.2) !important;
+          background: rgba(255,255,255,0.04) !important;
+        }
+        .snippet-btn:hover { background: rgba(232,197,71,0.22) !important; }
+        .vibe-pill { transition: all 180ms ease; cursor: pointer; white-space: nowrap; }
+        .vibe-pill:hover { border-color: rgba(232,197,71,0.4) !important; color: rgba(255,255,255,0.8) !important; }
+        .focus-nav-btn:hover { border-color: rgba(255,255,255,0.2) !important; color: var(--text) !important; }
+
+        /* Pill scroll — mobile single row */
+        .vibe-pills-scroll {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+          padding-bottom: 4px;
+        }
+        .vibe-pills-scroll::-webkit-scrollbar { display: none; }
+
+        /* Board grid */
+        .board-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 14px;
+        }
+        @media (max-width: 768px) {
+          .board-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+          }
+          .board-grid .lyric-card {
+            min-height: 130px !important;
+            padding: 16px 16px !important;
+          }
+          .board-grid .lyric-card p:first-child {
+            font-size: 0.9rem !important;
+          }
+        }
+
+        @keyframes focusIn {
+          from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes focusIn {
-          from { opacity: 0; transform: scale(0.96); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        .lyric-card { transition: opacity 500ms ease, transform 500ms ease; cursor: pointer; }
-        .lyric-card:hover { transform: translateY(-3px) !important; }
-        .vibe-pill { transition: all 200ms ease; cursor: pointer; }
-        .vibe-pill:hover { border-color: rgba(232,197,71,0.5) !important; color: var(--text) !important; }
-        .snippet-btn:hover { background: rgba(232,197,71,0.2) !important; }
       `}</style>
 
-      {/* Vibe pills */}
-      <div style={{ padding: '100px 24px 24px', maxWidth: '72rem', margin: '0 auto' }}>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
-          Discover by vibe
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '32px' }}>
+      <div style={{ padding: '100px 24px 0', maxWidth: '72rem', margin: '0 auto' }}>
+
+        {/* Label */}
+        <p style={{
+          fontFamily: 'var(--font-lora), serif',
+          fontSize: '0.5rem', fontWeight: 700,
+          color: 'var(--text-3)',
+          letterSpacing: '3px', textTransform: 'uppercase',
+          marginBottom: '14px',
+        }}>Discover by vibe</p>
+
+        {/* Pills — horizontal scroll, no wrap */}
+        <div className="vibe-pills-scroll" style={{ marginBottom: '24px' }}>
           {VIBES.map(v => (
             <button
               key={v}
               className="vibe-pill"
               onClick={() => handleVibe(v)}
               style={{
+                flexShrink: 0,
                 padding: '7px 16px',
                 background: activeVibe === v ? 'var(--gold)' : 'rgba(255,255,255,0.04)',
                 border: `1px solid ${activeVibe === v ? 'var(--gold)' : 'rgba(255,255,255,0.1)'}`,
@@ -238,164 +392,179 @@ function LyricBoard({ songs }: { songs: Song[] }) {
                 fontFamily: 'var(--font-lora), serif',
                 fontSize: '0.55rem', fontWeight: 700,
                 letterSpacing: '1.5px', textTransform: 'uppercase',
-                color: activeVibe === v ? 'var(--bg)' : 'rgba(255,255,255,0.45)',
+                color: activeVibe === v ? 'var(--bg)' : 'rgba(255,255,255,0.4)',
               }}
             >{v}</button>
           ))}
         </div>
 
-        {/* Board */}
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem' }}>No lines tagged for {activeVibe} yet.</p>
-          </div>
-        ) : focusedMoment ? (
-          /* ── Focused mode ── */
-          <div style={{ animation: 'focusIn 350ms ease forwards' }}>
-            {/* Focused card */}
-            <div style={{
-              position: 'relative', padding: '40px 36px',
-              background: 'linear-gradient(135deg, rgba(232,197,71,0.06) 0%, rgba(255,255,255,0.02) 100%)',
-              border: '1px solid rgba(232,197,71,0.25)', borderRadius: '20px',
-              marginBottom: '20px',
-            }}>
-              {/* Close */}
-              <button onClick={() => setFocusedMoment(null)} style={{
-                position: 'absolute', top: '20px', right: '20px',
-                width: '32px', height: '32px', borderRadius: '50%',
-                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.5)', fontSize: '1rem', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--font-lora), serif',
-              }}>×</button>
+        {/* Board container — the "stage" */}
+        <div style={{
+          background: 'rgba(255,255,255,0.012)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          borderRadius: '20px',
+          padding: '20px',
+          marginBottom: '0',
+          minHeight: '340px',
+          position: 'relative',
+        }}>
 
-              <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                {focusedMoment.artwork && (
-                  <div style={{ position: 'relative', width: '64px', height: '64px', flexShrink: 0, borderRadius: '10px', overflow: 'hidden' }}>
-                    <Image src={focusedMoment.artwork} alt={focusedMoment.songTitle} fill style={{ objectFit: 'cover' }} />
-                  </div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1.6rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, marginBottom: '16px' }}>
-                    &ldquo;{focusedMoment.line}&rdquo;
-                  </p>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '20px' }}>
-                    {focusedMoment.songTitle} · {focusedMoment.artist} · {formatTime(focusedMoment.start)}
-                  </p>
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <button
-                      className="snippet-btn"
-                      onClick={() => playSnippet(focusedMoment)}
-                      style={{
-                        padding: '10px 20px', background: 'rgba(232,197,71,0.1)',
-                        border: '1px solid rgba(232,197,71,0.3)', borderRadius: '50px',
-                        fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
-                        fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
-                        color: 'var(--gold)', cursor: 'pointer',
-                      }}
-                    >▶ Play Snippet</button>
-                    <Link
-                      href={`/music/player?id=${focusedMoment.songId}${focusedMoment.audioUrl ? '&au=' + encodeURIComponent(focusedMoment.audioUrl) : ''}&t=${Math.floor(focusedMoment.start)}`}
-                      style={{
-                        padding: '10px 20px', background: 'var(--gold)',
-                        border: 'none', borderRadius: '50px',
-                        fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
-                        fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
-                        color: 'var(--bg)', textDecoration: 'none', display: 'inline-block',
-                      }}
-                    >Full Karaoke →</Link>
-                  </div>
-                </div>
-              </div>
-
-              {/* Vibe tags */}
-              <div style={{ display: 'flex', gap: '6px', marginTop: '24px', flexWrap: 'wrap' }}>
-                {focusedMoment.vibes.map(v => (
-                  <span key={v} style={{
-                    padding: '4px 10px', background: 'rgba(232,197,71,0.08)',
-                    border: '1px solid rgba(232,197,71,0.2)', borderRadius: '50px',
-                    fontFamily: 'var(--font-lora), serif', fontSize: '0.48rem',
-                    fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
-                    color: 'var(--gold)',
-                  }}>{v}</span>
-                ))}
-              </div>
+          {filtered.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem' }}>
+                No lines tagged for {activeVibe} yet.
+              </p>
             </div>
+          ) : focusedMoment ? (
+            /* ── Focused mode ── */
+            <div style={{ animation: 'focusIn 350ms ease forwards' }}>
+              <div style={{
+                padding: '32px 28px',
+                background: 'rgba(232,197,71,0.04)',
+                border: '1px solid rgba(232,197,71,0.18)',
+                borderRadius: '16px',
+                marginBottom: '16px',
+                position: 'relative',
+              }}>
+                <button
+                  onClick={handleClose}
+                  style={{
+                    position: 'absolute', top: '16px', right: '16px',
+                    width: '30px', height: '30px', borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.45)', fontSize: '1rem',
+                    cursor: 'pointer', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'var(--font-lora), serif',
+                  }}
+                >×</button>
 
-            {/* Back / Next */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button onClick={handleBack} style={{
-                padding: '10px 28px', background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
-                fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.5)', cursor: 'pointer',
-              }}>← Back</button>
-              <button onClick={handleNext} style={{
-                padding: '10px 28px', background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
-                fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.5)', cursor: 'pointer',
-              }}>Next →</button>
-            </div>
-          </div>
-        ) : (
-          /* ── Cycling board ── */
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
-            {visibleMoments.map((moment, idx) => (
-              <div
-                key={`${moment.songId}_${moment.lineId}_${idx}`}
-                className="lyric-card"
-                onClick={() => handleCardClick(moment, idx)}
-                style={{
-                  opacity: cardVisible[idx] ? 1 : 0,
-                  transform: cardVisible[idx] ? 'translateY(0)' : 'translateY(10px)',
-                  padding: '22px 24px',
-                  background: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: '16px',
-                  display: 'flex', flexDirection: 'column', gap: '14px',
-                  minHeight: '140px',
-                }}
-              >
-                <p style={{
-                  fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
-                  fontSize: '1.05rem', color: 'var(--text)', lineHeight: 1.55,
-                  flex: 1, margin: 0,
-                }}>
-                  &ldquo;{moment.line}&rdquo;
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {moment.artwork && (
-                      <div style={{ position: 'relative', width: '28px', height: '28px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
-                        <Image src={moment.artwork} alt={moment.songTitle} fill style={{ objectFit: 'cover' }} />
-                      </div>
-                    )}
-                    <div>
-                      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>{moment.songTitle}</p>
-                      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', color: 'rgba(255,255,255,0.3)', margin: 0 }}>{formatTime(moment.start)}</p>
+                <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
+                  {focusedMoment.artwork && (
+                    <div style={{ position: 'relative', width: '56px', height: '56px', flexShrink: 0, borderRadius: '10px', overflow: 'hidden' }}>
+                      <Image src={focusedMoment.artwork} alt={focusedMoment.songTitle} fill style={{ objectFit: 'cover' }} />
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <p style={{
+                      fontFamily: 'var(--font-lora), serif',
+                      fontStyle: 'italic',
+                      fontSize: 'clamp(1.1rem, 3vw, 1.55rem)',
+                      fontWeight: 600, color: 'var(--text)',
+                      lineHeight: 1.45, marginBottom: '12px',
+                    }}>
+                      &ldquo;{focusedMoment.line}&rdquo;
+                    </p>
+                    <p style={{
+                      fontFamily: 'var(--font-lora), serif',
+                      fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)',
+                      letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '18px',
+                    }}>
+                      {focusedMoment.songTitle} · {focusedMoment.artist} · {formatTime(focusedMoment.start)}
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        className="snippet-btn"
+                        onClick={() => playSnippet(focusedMoment)}
+                        style={{
+                          padding: '10px 20px',
+                          background: 'rgba(232,197,71,0.1)',
+                          border: '1px solid rgba(232,197,71,0.3)',
+                          borderRadius: '50px',
+                          fontFamily: 'var(--font-lora), serif',
+                          fontSize: '0.58rem', fontWeight: 700,
+                          letterSpacing: '1px', textTransform: 'uppercase',
+                          color: 'var(--gold)', cursor: 'pointer',
+                        }}
+                      >▶ Play Snippet</button>
+                      <Link
+                        href={`/music/player?id=${focusedMoment.songId}${focusedMoment.audioUrl ? '&au=' + encodeURIComponent(focusedMoment.audioUrl) : ''}&t=${Math.floor(focusedMoment.start)}`}
+                        style={{
+                          padding: '10px 20px',
+                          background: 'var(--gold)',
+                          borderRadius: '50px',
+                          fontFamily: 'var(--font-lora), serif',
+                          fontSize: '0.58rem', fontWeight: 700,
+                          letterSpacing: '1px', textTransform: 'uppercase',
+                          color: 'var(--bg)', textDecoration: 'none',
+                          display: 'inline-block',
+                        }}
+                      >Full Karaoke →</Link>
                     </div>
                   </div>
-                  <button
-                    className="snippet-btn"
-                    onClick={e => { e.stopPropagation(); playSnippet(moment) }}
-                    style={{
-                      width: '32px', height: '32px', borderRadius: '50%',
-                      background: 'rgba(232,197,71,0.08)',
-                      border: '1px solid rgba(232,197,71,0.2)',
-                      color: 'var(--gold)', fontSize: '0.7rem',
-                      cursor: 'pointer', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >▶</button>
+                </div>
+
+                {/* Vibe tags */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '20px', flexWrap: 'wrap' }}>
+                  {focusedMoment.vibes.map(v => (
+                    <span key={v} style={{
+                      padding: '3px 10px',
+                      background: 'rgba(232,197,71,0.07)',
+                      border: '1px solid rgba(232,197,71,0.18)',
+                      borderRadius: '50px',
+                      fontFamily: 'var(--font-lora), serif',
+                      fontSize: '0.46rem', fontWeight: 700,
+                      letterSpacing: '1.5px', textTransform: 'uppercase',
+                      color: 'var(--gold)',
+                    }}>{v}</span>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+
+              {/* Back / Next */}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <button
+                  className="focus-nav-btn"
+                  onClick={handleBack}
+                  style={{
+                    padding: '10px 28px',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '50px',
+                    fontFamily: 'var(--font-lora), serif',
+                    fontSize: '0.58rem', fontWeight: 700,
+                    letterSpacing: '1px', textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
+                    transition: 'all 180ms ease',
+                  }}
+                >← Back</button>
+                <button
+                  className="focus-nav-btn"
+                  onClick={handleNext}
+                  style={{
+                    padding: '10px 28px',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '50px',
+                    fontFamily: 'var(--font-lora), serif',
+                    fontSize: '0.58rem', fontWeight: 700,
+                    letterSpacing: '1px', textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
+                    transition: 'all 180ms ease',
+                  }}
+                >Next →</button>
+              </div>
+            </div>
+          ) : (
+            /* ── Cycling board ── */
+            <div className="board-grid">
+              {slots.map((moment, idx) =>
+                moment ? (
+                  <LyricCard
+                    key={`${moment.songId}_${moment.lineId}_${idx}`}
+                    moment={moment}
+                    visible={slotVisible[idx]}
+                    onClick={() => handleCardClick(moment)}
+                    onPlay={(e) => { e.stopPropagation(); playSnippet(moment) }}
+                  />
+                ) : (
+                  <div key={`empty_${idx}`} style={{ minHeight: '150px', borderRadius: '16px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)' }} />
+                )
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )
@@ -560,7 +729,7 @@ export default function MusicPage() {
       return s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q) || (s.tags || []).some(t => t.toLowerCase().includes(q))
     })
 
-  const { lines: sharedLines, loading: linesLoading } = useSharedLines(featuredSong?.title, featuredSong?.artist)
+  const { lines: sharedLines } = useSharedLines(featuredSong?.title, featuredSong?.artist)
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -598,11 +767,12 @@ export default function MusicPage() {
       {/* ── Lyric Discovery Board ── */}
       <LyricBoard songs={songs} />
 
-      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)', margin: '0 24px' }} />
+      {/* ── Divider ── */}
+      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.07), transparent)', margin: '40px 24px 0' }} />
 
-      {/* ── Hero — Featured Song (smaller) ── */}
+      {/* ── Hero — Featured Song ── */}
       {featuredSong && (
-        <section style={{ position: 'relative', height: '60vh', minHeight: '400px', overflow: 'hidden' }}>
+        <section style={{ position: 'relative', height: '60vh', minHeight: '380px', overflow: 'hidden' }}>
           {featuredSong.artwork ? (
             <div style={{ position: 'absolute', inset: 0 }}>
               <Image src={featuredSong.artwork} alt={featuredSong.title} fill style={{ objectFit: 'cover', objectPosition: 'center top' }} priority />
