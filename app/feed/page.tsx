@@ -210,8 +210,8 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
       }
       if (audio.readyState >= 3) { audio.play().catch(() => {}); setPlaying(true) }
       else {
-        const onCanPlay = () => { audio.play().catch(() => {}); setPlaying(true); audio.removeEventListener('canplaythrough', onCanPlay) }
-        audio.addEventListener('canplaythrough', onCanPlay)
+        const onCanPlay = () => { audio.play().catch(() => {}); setPlaying(true); audio.removeEventListener('canplay', onCanPlay) }
+        audio.addEventListener('canplay', onCanPlay)
       }
     }
   }
