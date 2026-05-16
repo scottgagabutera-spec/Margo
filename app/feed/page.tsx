@@ -58,10 +58,79 @@ function parseSRT(srt: string): LyricLine[] {
   return lines
 }
 
+// Small SVG-only snippet button — sits inline next to the lyric text
+function SnippetIconButton({ audioUrl, songId, postText }: { audioUrl: string; songId: string | null; postText?: string }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const [lyrics, setLyrics] = useState<LyricLine[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  const loadLyrics = async () => {
+    if (loaded || !songId || !db) return
+    try {
+      const { get, ref: dbRef } = await import('firebase/database')
+      const snap = await get(dbRef(db, `songs/${songId}`))
+      if (snap.exists() && snap.val().srt) setLyrics(parseSRT(snap.val().srt))
+    } catch {}
+    setLoaded(true)
+  }
+
+  const toggle = async () => {
+    if (playing) {
+      audioRef.current?.pause()
+      setPlaying(false)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      return
+    }
+
+    await loadLyrics()
+
+    const needle = (postText || '').toLowerCase().trim()
+    const allLyrics = lyrics.length ? lyrics : []
+    const match = allLyrics.find(l =>
+      l.line.toLowerCase().includes(needle) || needle.includes(l.line.toLowerCase())
+    ) || allLyrics[0]
+
+    if (!match && !audioRef.current) return
+
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
+    const audio = new Audio(audioUrl)
+    audioRef.current = audio
+    const snippetDuration = match ? Math.min((match.end - match.start) * 1000 + 300, 8000) : 5000
+
+    const doPlay = () => {
+      if (match) audio.currentTime = match.start
+      audio.play().catch(() => {})
+      setPlaying(true)
+      timerRef.current = setTimeout(() => { audio.pause(); setPlaying(false) }, snippetDuration)
+    }
+
+    audio.addEventListener('ended', () => setPlaying(false), { once: true })
+    if (audio.readyState >= 3) { doPlay() }
+    else { audio.load(); audio.addEventListener('canplay', doPlay, { once: true }) }
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      style={{
+        width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+        background: playing ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
+        border: '1px solid rgba(232,197,71,0.25)',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'background 200ms ease', marginTop: '4px',
+        padding: 0,
+      }}
+    >
+      <PlayPauseIcon playing={playing} size={16} color="#E8C547" />
+    </button>
+  )
+}
+
 function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId: string | null; postText?: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const progressRef = useRef<HTMLDivElement | null>(null)
-  const snippetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
@@ -69,7 +138,6 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
   const [dragging, setDragging] = useState(false)
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [lyricsLoaded, setLyricsLoaded] = useState(false)
-  const [snippetPlaying, setSnippetPlaying] = useState(false)
   const hasCountedPlay = useRef(false)
 
   const loadLyrics = async () => {
@@ -77,10 +145,7 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
     try {
       const { get, ref: dbRef } = await import('firebase/database')
       const snap = await get(dbRef(db, `songs/${songId}`))
-      if (snap.exists()) {
-        const s = snap.val()
-        if (s.srt) setLyrics(parseSRT(s.srt))
-      }
+      if (snap.exists()) { const s = snap.val(); if (s.srt) setLyrics(parseSRT(s.srt)) }
     } catch {}
     setLyricsLoaded(true)
   }
@@ -91,7 +156,7 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
     audioRef.current = audio
     const onTime = () => { setCurrentTime(audio.currentTime); setProgress((audio.currentTime / (audio.duration || 1)) * 100) }
     const onMeta = () => setDuration(audio.duration || 0)
-    const onEnded = () => { setPlaying(false); setSnippetPlaying(false); setProgress(0); setCurrentTime(0) }
+    const onEnded = () => { setPlaying(false); setProgress(0); setCurrentTime(0) }
     audio.addEventListener('timeupdate', onTime)
     audio.addEventListener('loadedmetadata', onMeta)
     audio.addEventListener('ended', onEnded)
@@ -118,45 +183,6 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
         audio.addEventListener('canplaythrough', onCanPlay)
       }
     }
-  }
-
-  const playSnippet = async () => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    if (snippetPlaying) {
-      audio.pause()
-      setSnippetPlaying(false)
-      setPlaying(false)
-      if (snippetTimerRef.current) clearTimeout(snippetTimerRef.current)
-      return
-    }
-
-    await loadLyrics()
-
-    const needle = (postText || '').toLowerCase().trim()
-    const match = lyrics.find(l =>
-      l.line.toLowerCase().includes(needle) || needle.includes(l.line.toLowerCase())
-    ) || lyrics[0]
-
-    if (!match) return
-
-    if (playing) { audio.pause(); setPlaying(false) }
-
-    const snippetDuration = Math.min((match.end - match.start) * 1000 + 300, 8000)
-
-    const doPlay = () => {
-      audio.currentTime = match.start
-      audio.play().catch(() => {})
-      setSnippetPlaying(true)
-      snippetTimerRef.current = setTimeout(() => {
-        audio.pause()
-        setSnippetPlaying(false)
-      }, snippetDuration)
-    }
-
-    if (audio.readyState >= 3) { doPlay() }
-    else { audio.load(); audio.addEventListener('canplay', () => doPlay(), { once: true }) }
   }
 
   const seek = (clientX: number) => {
@@ -190,27 +216,6 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
 
   return (
     <div>
-      {/* Snippet button */}
-      <div style={{ marginBottom: '12px' }}>
-        <button
-          onClick={playSnippet}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '8px',
-            padding: '8px 16px',
-            background: snippetPlaying ? 'rgba(232,197,71,0.15)' : 'rgba(232,197,71,0.08)',
-            border: '1px solid rgba(232,197,71,0.25)',
-            borderRadius: '50px',
-            fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem',
-            fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
-            color: 'var(--gold)', cursor: 'pointer',
-            transition: 'background 200ms ease',
-          }}
-        >
-          <PlayPauseIcon playing={snippetPlaying} size={13} color="#E8C547" />
-          {snippetPlaying ? 'Pause Snippet' : 'Play Snippet'}
-        </button>
-      </div>
-
       {/* Full player row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: currentLine ? '12px' : '0' }}>
         <button
@@ -325,13 +330,18 @@ function PostCard({
         )}
       </div>
 
-      <p style={{
-        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
-        fontSize: 'clamp(1.25rem, 3vw, 1.75rem)', color: 'var(--text)',
-        lineHeight: 1.5, marginBottom: '16px',
-      }}>
-        &ldquo;{post.text}&rdquo;
-      </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }}>
+        <p style={{
+          fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+          fontSize: 'clamp(1.25rem, 3vw, 1.75rem)', color: 'var(--text)',
+          lineHeight: 1.5, flex: 1, margin: 0,
+        }}>
+          &ldquo;{post.text}&rdquo;
+        </p>
+        {isTier1 && audioUrl && (
+          <SnippetIconButton audioUrl={audioUrl} songId={post.songId || null} postText={post.text} />
+        )}
+      </div>
 
       {(post.knowledge?.song || post.knowledge?.artist) && (
         <p style={{
