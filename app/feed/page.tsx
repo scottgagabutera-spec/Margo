@@ -1,6 +1,6 @@
 'use client'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { stopPlayer, playTrack, subscribePlayer } from '@/lib/player-store'
+import { stopPlayer } from '@/lib/player-store'
 import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
@@ -187,17 +187,6 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
     return () => { audio.pause(); audio.removeEventListener('timeupdate', onTime); audio.removeEventListener('loadedmetadata', onMeta); audio.removeEventListener('ended', onEnded) }
   }, [audioUrl])
 
-  // Sync local playing state with global store — stops this player when another takes over
-  useEffect(() => {
-    return subscribePlayer(s => {
-      // If store says not playing and we think we're playing, stop local audio
-      if (!s.playing && playing) {
-        audioRef.current?.pause()
-        setPlaying(false)
-      }
-    })
-  }, [playing])
-
   const toggle = async () => {
     const audio = audioRef.current
     if (!audio) return
@@ -215,23 +204,9 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
         navigator.mediaSession.setActionHandler('play', () => setPlaying(true))
         navigator.mediaSession.setActionHandler('pause', () => setPlaying(false))
       }
-      const notifyStore = () => {
-        // Find current lyric line by timestamp
-        const cur = audio.currentTime
-        const line = lyrics.find(l => cur >= l.start && cur < l.end) || lyrics[0]
-        playTrack({
-          audioUrl,
-          songId,
-          songTitle: '',   // enriched by call site below via postText
-          artist: 'Trymargo',
-          artwork: '/favicons/apple-touch-icon.png',
-          currentLine: line?.line || null,
-          isSnippet: false,
-        })
-      }
-      if (audio.readyState >= 3) { audio.play().catch(() => {}); setPlaying(true); notifyStore() }
+      if (audio.readyState >= 3) { audio.play().catch(() => {}); setPlaying(true) }
       else {
-        const onCanPlay = () => { audio.play().catch(() => {}); setPlaying(true); notifyStore(); audio.removeEventListener('canplay', onCanPlay) }
+        const onCanPlay = () => { audio.play().catch(() => {}); setPlaying(true); audio.removeEventListener('canplay', onCanPlay) }
         audio.addEventListener('canplay', onCanPlay)
       }
     }
