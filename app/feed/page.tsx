@@ -1,5 +1,6 @@
 'use client'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
+import { stopPlayer } from '@/lib/player-store'
 import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
@@ -10,15 +11,6 @@ import { db } from '@/lib/firebase'
 import { ref, set, remove, onValue } from 'firebase/database'
 import Link from 'next/link'
 
-// Global audio manager — only one snippet plays at a time across all cards
-let _globalAudioStop: (() => void) | null = null
-function registerGlobalAudio(stop: () => void) {
-  if (_globalAudioStop) _globalAudioStop()
-  _globalAudioStop = stop
-}
-function clearGlobalAudio() {
-  _globalAudioStop = null
-}
 
 const EMOTION_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -106,7 +98,7 @@ function SnippetIconButton({ audioUrl, songId, postText }: { audioUrl: string; s
     if (playing) {
       audio.pause()
       setPlaying(false)
-      clearGlobalAudio()
+      stopPlayer()
       if (timerRef.current) clearTimeout(timerRef.current)
       return
     }
@@ -118,12 +110,6 @@ function SnippetIconButton({ audioUrl, songId, postText }: { audioUrl: string; s
 
     const snippetDuration = match ? Math.min((match.end - match.start) * 1000 + 300, 8000) : 5000
 
-    // Stop any other playing audio globally
-    registerGlobalAudio(() => {
-      audio.pause()
-      setPlaying(false)
-      if (timerRef.current) clearTimeout(timerRef.current)
-    })
 
     if (match) audio.currentTime = match.start
     audio.play().catch(() => {})
@@ -131,7 +117,7 @@ function SnippetIconButton({ audioUrl, songId, postText }: { audioUrl: string; s
     timerRef.current = setTimeout(() => {
       audio.pause()
       setPlaying(false)
-      clearGlobalAudio()
+      stopPlayer()
     }, snippetDuration)
   }
 
@@ -180,7 +166,7 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
     audioRef.current = audio
     const onTime = () => { setCurrentTime(audio.currentTime); setProgress((audio.currentTime / (audio.duration || 1)) * 100) }
     const onMeta = () => setDuration(audio.duration || 0)
-    const onEnded = () => { setPlaying(false); setProgress(0); setCurrentTime(0); clearGlobalAudio() }
+    const onEnded = () => { setPlaying(false); setProgress(0); setCurrentTime(0); stopPlayer() }
     audio.addEventListener('timeupdate', onTime)
     audio.addEventListener('loadedmetadata', onMeta)
     audio.addEventListener('ended', onEnded)
@@ -194,12 +180,8 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
     if (playing) {
       audio.pause()
       setPlaying(false)
-      clearGlobalAudio()
+      stopPlayer()
     } else {
-      registerGlobalAudio(() => {
-        audio.pause()
-        setPlaying(false)
-      })
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: 'Margo Original', artist: 'Trymargo',

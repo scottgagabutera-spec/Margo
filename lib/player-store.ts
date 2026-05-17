@@ -1,0 +1,190 @@
+// ── Margo Global Player Store ─────────────────────────────────────
+// Single source of truth for all audio playback across feed, music
+// board, and the mini player. Module-level singleton — persists across
+// page navigations within the same session.
+
+export interface PlayerTrack {
+  audioUrl: string
+  songId: string | null
+  songTitle: string
+  artist: string
+  artwork?: string | null
+  currentLine?: string | null   // lyric line currently playing
+  startTime?: number            // snippet start in seconds
+  endTime?: number              // snippet end in seconds
+  isSnippet: boolean            // true = snippet, false = full song
+}
+
+type PlayerListener = (state: PlayerState) => void
+
+export interface PlayerState {
+  track: PlayerTrack | null
+  playing: boolean
+  muted: boolean
+  volume: number                // 0–1
+  progress: number              // 0–100
+  currentTime: number
+  duration: number
+}
+
+// ── Internal state ────────────────────────────────────────────────
+let _state: PlayerState = {
+  track: null,
+  playing: false,
+  muted: false,
+  volume: 1,
+  progress: 0,
+  currentTime: 0,
+  duration: 0,
+}
+
+let _audio: HTMLAudioElement | null = null
+let _stopTimer: ReturnType<typeof setTimeout> | null = null
+let _listeners: Set<PlayerListener> = new Set()
+let _wakeLock: any = null
+
+// ── Notify all listeners ──────────────────────────────────────────
+function notify() {
+  _listeners.forEach(fn => fn({ ..._state }))
+}
+
+// ── Subscribe / unsubscribe ───────────────────────────────────────
+export function subscribePlayer(fn: PlayerListener): () => void {
+  _listeners.add(fn)
+  fn({ ..._state }) // immediate snapshot
+  return () => _listeners.delete(fn)
+}
+
+export function getPlayerState(): PlayerState {
+  return { ..._state }
+}
+
+// ── Wake lock ─────────────────────────────────────────────────────
+async function requestWakeLock() {
+  if (typeof navigator === 'undefined') return
+  try {
+    if ('wakeLock' in navigator) {
+      _wakeLock = await (navigator as any).wakeLock.request('screen')
+    }
+  } catch {}
+}
+
+function releaseWakeLock() {
+  if (_wakeLock) {
+    _wakeLock.release().catch(() => {})
+    _wakeLock = null
+  }
+}
+
+// ── Stop current audio ────────────────────────────────────────────
+export function stopPlayer() {
+  if (_stopTimer) { clearTimeout(_stopTimer); _stopTimer = null }
+  if (_audio) {
+    _audio.pause()
+    _audio.ontimeupdate = null
+    _audio.onended = null
+    _audio.onloadedmetadata = null
+  }
+  _state = { ..._state, playing: false, progress: 0, currentTime: 0 }
+  releaseWakeLock()
+  notify()
+}
+
+// ── Play a track ──────────────────────────────────────────────────
+export function playTrack(track: PlayerTrack) {
+  stopPlayer()
+
+  _state = { ..._state, track, playing: false, progress: 0, currentTime: 0, duration: 0 }
+  notify()
+
+  const audio = new Audio(track.audioUrl)
+  audio.volume = _state.muted ? 0 : _state.volume
+  audio.preload = 'auto'
+  _audio = audio
+
+  audio.onloadedmetadata = () => {
+    _state = { ..._state, duration: audio.duration || 0 }
+    notify()
+  }
+
+  audio.ontimeupdate = () => {
+    const cur = audio.currentTime
+    const dur = audio.duration || 1
+    _state = {
+      ..._state,
+      currentTime: cur,
+      progress: (cur / dur) * 100,
+    }
+    notify()
+  }
+
+  audio.onended = () => {
+    _state = { ..._state, playing: false, progress: 0, currentTime: 0 }
+    releaseWakeLock()
+    notify()
+  }
+
+  const doPlay = () => {
+    if (track.startTime !== undefined) audio.currentTime = track.startTime
+    audio.play().catch(() => {})
+    _state = { ..._state, playing: true }
+    requestWakeLock()
+    notify()
+
+    // Auto-stop for snippets
+    if (track.isSnippet && track.startTime !== undefined && track.endTime !== undefined) {
+      const duration = Math.min((track.endTime - track.startTime) * 1000 + 300, 8000)
+      _stopTimer = setTimeout(() => {
+        audio.pause()
+        _state = { ..._state, playing: false }
+        releaseWakeLock()
+        notify()
+      }, duration)
+    }
+  }
+
+  if (audio.readyState >= 3) {
+    doPlay()
+  } else {
+    audio.load()
+    audio.addEventListener('canplay', doPlay, { once: true })
+  }
+}
+
+// ── Toggle play/pause ─────────────────────────────────────────────
+export function togglePlayer() {
+  if (!_audio || !_state.track) return
+  if (_state.playing) {
+    _audio.pause()
+    _state = { ..._state, playing: false }
+    releaseWakeLock()
+  } else {
+    _audio.play().catch(() => {})
+    _state = { ..._state, playing: true }
+    requestWakeLock()
+  }
+  notify()
+}
+
+// ── Seek ──────────────────────────────────────────────────────────
+export function seekPlayer(pct: number) {
+  if (!_audio || !_state.duration) return
+  const time = (pct / 100) * _state.duration
+  _audio.currentTime = time
+  _state = { ..._state, currentTime: time, progress: pct }
+  notify()
+}
+
+// ── Volume / mute ─────────────────────────────────────────────────
+export function setPlayerVolume(vol: number) {
+  _state = { ..._state, volume: vol, muted: vol === 0 }
+  if (_audio) _audio.volume = vol
+  notify()
+}
+
+export function toggleMute() {
+  const muted = !_state.muted
+  _state = { ..._state, muted }
+  if (_audio) _audio.volume = muted ? 0 : _state.volume
+  notify()
+}
