@@ -13,6 +13,7 @@ export interface PlayerTrack {
   startTime?: number            // snippet start in seconds
   endTime?: number              // snippet end in seconds
   isSnippet: boolean            // true = snippet, false = full song
+  vibe?: string | null          // emotion tag for color theming
   audioElement?: HTMLAudioElement | null  // pass existing audio — avoids double instance
 }
 
