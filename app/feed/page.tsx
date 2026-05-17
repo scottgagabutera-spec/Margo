@@ -127,6 +127,7 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
         startTime: match?.start,
         endTime: match?.end,
         isSnippet: true,
+        audioElement: audioRef.current,
       })
     }).catch(() => {})
     timerRef.current = setTimeout(() => {

@@ -13,6 +13,7 @@ export interface PlayerTrack {
   startTime?: number            // snippet start in seconds
   endTime?: number              // snippet end in seconds
   isSnippet: boolean            // true = snippet, false = full song
+  audioElement?: HTMLAudioElement | null  // pass existing audio — avoids double instance
 }
 
 type PlayerListener = (state: PlayerState) => void
@@ -107,9 +108,10 @@ export function playTrack(track: PlayerTrack) {
   _state = { ..._state, track, playing: false, progress: 0, currentTime: 0, duration: 0 }
   notify()
 
-  const audio = new Audio(track.audioUrl)
+  // Use existing audio element if provided (avoids double audio instance)
+  const audio = track.audioElement || new Audio(track.audioUrl)
   audio.volume = _state.muted ? 0 : _state.volume
-  audio.preload = 'auto'
+  if (!track.audioElement) { audio.preload = 'auto' }
   _audio = audio
 
   audio.onloadedmetadata = () => {
@@ -135,6 +137,13 @@ export function playTrack(track: PlayerTrack) {
   }
 
   const doPlay = () => {
+    // If audio element was passed in, it's already playing — just update state
+    if (track.audioElement) {
+      _state = { ..._state, playing: true }
+      requestWakeLock()
+      notify()
+      return
+    }
     if (track.startTime !== undefined) audio.currentTime = track.startTime
     audio.play().catch(() => {})
     _state = { ..._state, playing: true }

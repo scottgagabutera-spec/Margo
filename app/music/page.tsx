@@ -306,6 +306,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
           startTime: moment.start,
           endTime: moment.end,
           isSnippet: true,
+          audioElement: audioRef.current,
         })
       }).catch(() => {})
     }
