@@ -43,6 +43,16 @@ let _stopTimer: ReturnType<typeof setTimeout> | null = null
 let _listeners: Set<PlayerListener> = new Set()
 let _wakeLock: any = null
 
+// One-at-a-time enforcement
+let _globalStop: (() => void) | null = null
+export function registerGlobalAudio(stop: () => void) {
+  if (_globalStop) _globalStop()
+  _globalStop = stop
+}
+export function clearGlobalAudio() {
+  _globalStop = null
+}
+
 // ── Notify all listeners ──────────────────────────────────────────
 function notify() {
   _listeners.forEach(fn => fn({ ..._state }))

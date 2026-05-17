@@ -1,6 +1,6 @@
 'use client'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { stopPlayer } from '@/lib/player-store'
+import { stopPlayer, registerGlobalAudio, clearGlobalAudio } from '@/lib/player-store'
 import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
@@ -111,6 +111,7 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     const snippetDuration = match ? Math.min((match.end - match.start) * 1000 + 300, 8000) : 5000
 
 
+    registerGlobalAudio(() => { audio.pause(); setPlaying(false) })
     if (match) audio.currentTime = match.start
     audio.play().catch(() => {})
     setPlaying(true)
@@ -205,6 +206,7 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
         navigator.mediaSession.setActionHandler('play', () => setPlaying(true))
         navigator.mediaSession.setActionHandler('pause', () => setPlaying(false))
       }
+      registerGlobalAudio(() => { audio.pause(); setPlaying(false) })
       if (audio.readyState >= 3) { audio.play().catch(() => {}); setPlaying(true) }
       else {
         const onCanPlay = () => { audio.play().catch(() => {}); setPlaying(true); audio.removeEventListener('canplay', onCanPlay) }
