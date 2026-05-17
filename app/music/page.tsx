@@ -293,6 +293,20 @@ function LyricBoard({ songs }: { songs: Song[] }) {
       audio.currentTime = moment.start
       audio.play().catch(() => {})
       setPlayingKey(key)
+      // Notify global mini player
+      import('@/lib/player-store').then(({ playTrack }) => {
+        playTrack({
+          audioUrl: moment.audioUrl!,
+          songId: moment.songId,
+          songTitle: moment.songTitle,
+          artist: moment.artist,
+          artwork: moment.artwork || null,
+          currentLine: moment.line,
+          startTime: moment.start,
+          endTime: moment.end,
+          isSnippet: true,
+        })
+      }).catch(() => {})
     }
 
     const onEnded = () => { setPlayingKey(null); stopPlayer() }

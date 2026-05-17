@@ -61,7 +61,7 @@ function parseSRT(srt: string): LyricLine[] {
 }
 
 // Small SVG-only snippet button — sits inline next to the lyric text
-function SnippetIconButton({ audioUrl, songId, postText }: { audioUrl: string; songId: string | null; postText?: string }) {
+function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork }: { audioUrl: string; songId: string | null; postText?: string; songTitle?: string; artist?: string; artwork?: string | null }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [playing, setPlaying] = useState(false)
@@ -114,6 +114,20 @@ function SnippetIconButton({ audioUrl, songId, postText }: { audioUrl: string; s
     if (match) audio.currentTime = match.start
     audio.play().catch(() => {})
     setPlaying(true)
+    // Notify global mini player
+    import('@/lib/player-store').then(({ playTrack }) => {
+      playTrack({
+        audioUrl,
+        songId,
+        songTitle: songTitle || '',
+        artist: artist || '',
+        artwork: artwork || null,
+        currentLine: match?.line || null,
+        startTime: match?.start,
+        endTime: match?.end,
+        isSnippet: true,
+      })
+    }).catch(() => {})
     timerRef.current = setTimeout(() => {
       audio.pause()
       setPlaying(false)
@@ -352,7 +366,7 @@ function PostCard({
           &ldquo;{post.text}&rdquo;
         </p>
         {isTier1 && audioUrl && (
-          <SnippetIconButton audioUrl={audioUrl} songId={post.songId || null} postText={post.text} />
+          <SnippetIconButton audioUrl={audioUrl} songId={post.songId || null} postText={post.text} songTitle={post.knowledge?.song || ''} artist={post.knowledge?.artist || ''} artwork={post.knowledge?.artwork || null} />
         )}
       </div>
 
