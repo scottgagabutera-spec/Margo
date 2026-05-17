@@ -177,6 +177,7 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
   useEffect(() => {
     const audio = new Audio(audioUrl)
     audio.preload = 'auto'
+    audio.load()
     audioRef.current = audio
     const onTime = () => { setCurrentTime(audio.currentTime); setProgress((audio.currentTime / (audio.duration || 1)) * 100) }
     const onMeta = () => setDuration(audio.duration || 0)
@@ -190,7 +191,7 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
   const toggle = async () => {
     const audio = audioRef.current
     if (!audio) return
-    await loadLyrics()
+    loadLyrics() // fire in background, dont block audio
     if (playing) {
       audio.pause()
       setPlaying(false)
