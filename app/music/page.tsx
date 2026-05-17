@@ -7,16 +7,8 @@ import { MargoNav } from '@/components/margo-nav'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
+import { stopPlayer } from '@/lib/player-store'
 
-// Global audio manager — one snippet plays at a time across all cards
-let _globalAudioStop: (() => void) | null = null
-function registerGlobalAudio(stop: () => void) {
-  if (_globalAudioStop) _globalAudioStop()
-  _globalAudioStop = stop
-}
-function clearGlobalAudio() {
-  _globalAudioStop = null
-}
 
 function formatNum(n: number): string {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
@@ -281,7 +273,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
       audioRef.current.src = ''
       audioRef.current = null
       setPlayingKey(null)
-      clearGlobalAudio()
+      stopPlayer()
       return
     }
 
@@ -296,18 +288,28 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     audio.preload = 'auto'
 
     // Register with global manager so other players stop us
-    registerGlobalAudio(() => {
-      audio.pause()
-      setPlayingKey(null)
-    })
 
     const onLoaded = () => {
       audio.currentTime = moment.start
       audio.play().catch(() => {})
       setPlayingKey(key)
+      // Notify global mini player
+      import('@/lib/player-store').then(({ playTrack }) => {
+        playTrack({
+          audioUrl: moment.audioUrl!,
+          songId: moment.songId,
+          songTitle: moment.songTitle,
+          artist: moment.artist,
+          artwork: moment.artwork || null,
+          currentLine: moment.line,
+          startTime: moment.start,
+          endTime: moment.end,
+          isSnippet: true,
+        })
+      }).catch(() => {})
     }
 
-    const onEnded = () => { setPlayingKey(null); clearGlobalAudio() }
+    const onEnded = () => { setPlayingKey(null); stopPlayer() }
     audio.addEventListener('canplay', onLoaded, { once: true })
     audio.addEventListener('ended', onEnded, { once: true })
     audio.load()
@@ -317,7 +319,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
       if (audioRef.current === audio) {
         audio.pause()
         setPlayingKey(null)
-        clearGlobalAudio()
+        stopPlayer()
       }
     }, snippetDuration + 1500)
   }, [playingKey])
