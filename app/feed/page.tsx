@@ -434,7 +434,7 @@ function PostCard({
               {audioUrl && <Tier1Player audioUrl={audioUrl} songId={post.songId || null} postText={post.text} />}
             </div>
             {post.songId && (
-              <Link href={`/music/player?id=${post.songId}`} style={{
+              <Link href={`/music/player?id=${post.songId}${audioUrl ? '&au=' + encodeURIComponent(audioUrl) : ''}`} style={{
                 fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
                 color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase',
                 textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--gold-border)',
