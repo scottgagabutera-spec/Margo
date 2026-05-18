@@ -1,6 +1,6 @@
 'use client'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { stopPlayer, pausePlayer, registerGlobalAudio, clearGlobalAudio } from '@/lib/player-store'
+import { stopPlayer, registerGlobalAudio } from '@/lib/player-store'
 import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
@@ -98,7 +98,6 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     if (playing) {
       audio.pause()
       setPlaying(false)
-      pausePlayer()
       if (timerRef.current) clearTimeout(timerRef.current)
       return
     }
@@ -111,32 +110,15 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     const snippetDuration = match ? Math.min((match.end - match.start) * 1000 + 300, 8000) : 5000
 
 
-    registerGlobalAudio(() => { audio.pause(); setPlaying(false); pausePlayer() })
+    registerGlobalAudio(() => { audio.pause(); setPlaying(false) })
     if (match) audio.currentTime = match.start
     audio.play().catch(() => {})
     setPlaying(true)
     // Notify global mini player
-    import('@/lib/player-store').then(({ playTrack, pushToLyricQueue }) => {
-      const moment = {
-        audioUrl,
-        songId,
-        songTitle: songTitle || '',
-        artist: artist || '',
-        artwork: artwork || null,
-        currentLine: match?.line || null,
-        startTime: match?.start,
-        endTime: match?.end,
-        vibe: null,
-        isSnippet: true,
-        audioElement: audioRef.current,
-      }
-      pushToLyricQueue(moment)
-      playTrack(moment)
-    }).catch(() => {})
     timerRef.current = setTimeout(() => {
       audio.pause()
       setPlaying(false)
-      pausePlayer()
+      stopPlayer()
     }, snippetDuration)
   }
 

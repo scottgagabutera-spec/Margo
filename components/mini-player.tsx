@@ -108,6 +108,7 @@ export function MiniPlayer() {
 
   if (!state?.track) return null
   if (pathname?.startsWith('/music/player')) return null
+  if (pathname?.startsWith('/feed')) return null
 
   const { track, playing, muted, volume, progress, currentTime, duration } = state
   const vibeColor = track.vibe ? (VIBE_COLORS[track.vibe.toLowerCase()] || '#E8C547') : '#E8C547'
