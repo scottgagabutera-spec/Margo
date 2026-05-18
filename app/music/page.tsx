@@ -144,6 +144,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
   const [focusedIndex, setFocusedIndex] = useState(0)
   const [playingKey, setPlayingKey] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioPoolRef = useRef<Map<string, HTMLAudioElement>>(new Map())
   const cycleRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const vibePoolRef = useRef<LyricMoment[]>([])
   const slotQueueRef = useRef<number>(0) // next slot to replace
@@ -187,6 +188,23 @@ function LyricBoard({ songs }: { songs: Song[] }) {
       setLyricQueue(moments)
     }).catch(() => {})
   }, [songs])
+
+  // Preload one audio element per unique song for instant playback
+  useEffect(() => {
+    if (allMoments.length === 0) return
+    const pool = audioPoolRef.current
+    const seen = new Set<string>()
+    allMoments.forEach(m => {
+      if (!m.audioUrl || !m.songId || seen.has(m.songId)) return
+      seen.add(m.songId)
+      if (!pool.has(m.songId)) {
+        const audio = new Audio(m.audioUrl)
+        audio.preload = 'auto'
+        audio.load()
+        pool.set(m.songId, audio)
+      }
+    })
+  }, [allMoments])
 
   const getFiltered = useCallback((vibe: string) => {
     return vibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(vibe))
@@ -287,9 +305,11 @@ function LyricBoard({ songs }: { songs: Song[] }) {
       audioRef.current.src = ''
     }
 
-    const audio = new Audio(moment.audioUrl)
+    // Use preloaded audio from pool for instant playback
+    const poolAudio = moment.songId ? audioPoolRef.current.get(moment.songId) : null
+    const audio = poolAudio || new Audio(moment.audioUrl)
+    if (!poolAudio) { audio.preload = 'auto'; audio.load() }
     audioRef.current = audio
-    audio.preload = 'auto'
 
     // Register with global manager so other players stop us
 

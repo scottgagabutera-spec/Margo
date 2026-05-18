@@ -186,10 +186,9 @@ export function playTrack(track: PlayerTrack) {
   _state = { ..._state, track, playing: false, progress: 0, currentTime: 0, duration: 0 }
   notify()
 
-  // Use existing audio element if provided (avoids double audio instance)
-  const audio = track.audioElement || new Audio(track.audioUrl)
+  const audio = new Audio(track.audioUrl)
   audio.volume = _state.muted ? 0 : _state.volume
-  if (!track.audioElement) { audio.preload = 'auto' }
+  audio.preload = 'auto'
   _audio = audio
 
   audio.onloadedmetadata = () => {
