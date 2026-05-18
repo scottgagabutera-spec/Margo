@@ -29,6 +29,56 @@ export interface PlayerState {
   duration: number
 }
 
+
+// ── Lyric queue — for mini player next/prev navigation ───────────
+export interface LyricMoment {
+  audioUrl: string
+  songId: string | null
+  songTitle: string
+  artist: string
+  artwork?: string | null
+  currentLine: string | null
+  startTime?: number
+  endTime?: number
+  vibe?: string | null
+  isSnippet: boolean
+  audioElement?: HTMLAudioElement | null
+}
+
+let _lyricQueue: LyricMoment[] = []
+let _queueIndex = 0
+export let _onNavigate: ((moment: LyricMoment) => void) | null = null
+
+export function registerLyricQueue(queue: LyricMoment[], index: number, onNavigate: (moment: LyricMoment) => void) {
+  _lyricQueue = queue
+  _queueIndex = index
+  _onNavigate = onNavigate
+}
+
+export function pushToLyricQueue(moment: LyricMoment) {
+  const exists = _lyricQueue.findIndex(m => m.currentLine === moment.currentLine && m.songId === moment.songId)
+  if (exists === -1) {
+    _lyricQueue.push(moment)
+    _queueIndex = _lyricQueue.length - 1
+  } else {
+    _queueIndex = exists
+  }
+}
+
+export function navigatePrev(): LyricMoment | null {
+  if (_queueIndex > 0) { _queueIndex--; return _lyricQueue[_queueIndex] }
+  return null
+}
+
+export function navigateNext(): LyricMoment | null {
+  if (_queueIndex < _lyricQueue.length - 1) { _queueIndex++; return _lyricQueue[_queueIndex] }
+  return null
+}
+
+export function getQueueState() {
+  return { canPrev: _queueIndex > 0, canNext: _queueIndex < _lyricQueue.length - 1 }
+}
+
 // ── Internal state ────────────────────────────────────────────────
 let _state: PlayerState = {
   track: null,
