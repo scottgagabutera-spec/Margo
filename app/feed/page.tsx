@@ -1,6 +1,6 @@
 'use client'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { stopPlayer, registerGlobalAudio, clearGlobalAudio } from '@/lib/player-store'
+import { stopPlayer, pausePlayer, registerGlobalAudio, clearGlobalAudio } from '@/lib/player-store'
 import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
@@ -98,7 +98,7 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     if (playing) {
       audio.pause()
       setPlaying(false)
-      stopPlayer()
+      pausePlayer()
       if (timerRef.current) clearTimeout(timerRef.current)
       return
     }

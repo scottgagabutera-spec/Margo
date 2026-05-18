@@ -161,6 +161,15 @@ function releaseWakeLock() {
 }
 
 // ── Stop current audio ────────────────────────────────────────────
+// ── Pause without clearing track ────────────────────────────────
+export function pausePlayer() {
+  if (_audio && !_audio.paused) { _audio.pause() }
+  if (_stopTimer) { clearTimeout(_stopTimer); _stopTimer = null }
+  _state = { ..._state, playing: false }
+  releaseWakeLock()
+  notify()
+}
+
 export function stopPlayer() {
   if (_stopTimer) { clearTimeout(_stopTimer); _stopTimer = null }
   if (_audio) {
@@ -176,70 +185,57 @@ export function stopPlayer() {
 
 // ── Play a track ──────────────────────────────────────────────────
 export function playTrack(track: PlayerTrack) {
-  if (track.audioElement) {
-    _state = { ..._state, track, playing: true, progress: 0, currentTime: 0, duration: 0 }
-    notify()
-    return
+  // Stop current audio cleanly
+  if (_audio && !_audio.paused) {
+    _audio.pause()
+    _audio.ontimeupdate = null
+    _audio.onended = null
+    _audio.onloadedmetadata = null
   }
-  stopPlayer()
+  if (_stopTimer) { clearTimeout(_stopTimer); _stopTimer = null }
 
-  _state = { ..._state, track, playing: false, progress: 0, currentTime: 0, duration: 0 }
+  // Use passed audio element or create new one
+  const audio = track.audioElement || new Audio(track.audioUrl)
+  _audio = audio
+  audio.volume = _state.muted ? 0 : _state.volume
+  if (!track.audioElement) { audio.preload = 'auto' }
+
+  _state = { ..._state, track, playing: true, progress: 0, currentTime: 0, duration: 0 }
   notify()
 
-  const audio = new Audio(track.audioUrl)
-  audio.volume = _state.muted ? 0 : _state.volume
-  audio.preload = 'auto'
-  _audio = audio
-
-  audio.onloadedmetadata = () => {
-    _state = { ..._state, duration: audio.duration || 0 }
-    notify()
-  }
-
+  audio.onloadedmetadata = () => { _state = { ..._state, duration: audio.duration || 0 }; notify() }
   audio.ontimeupdate = () => {
-    const cur = audio.currentTime
     const dur = audio.duration || 1
-    _state = {
-      ..._state,
-      currentTime: cur,
-      progress: (cur / dur) * 100,
-    }
+    _state = { ..._state, currentTime: audio.currentTime, progress: (audio.currentTime / dur) * 100 }
     notify()
   }
-
   audio.onended = () => {
     _state = { ..._state, playing: false, progress: 0, currentTime: 0 }
+    _globalStop = null
     releaseWakeLock()
     notify()
   }
 
   const doPlay = () => {
-    // If audio element was passed in, it's already playing — just update state
-    if (track.audioElement) {
-      _state = { ..._state, playing: true }
-      requestWakeLock()
-      notify()
-      return
-    }
-    if (track.startTime !== undefined) audio.currentTime = track.startTime
-    audio.play().catch(() => {})
+    if (track.startTime !== undefined && !track.audioElement) audio.currentTime = track.startTime
+    if (!track.audioElement) { audio.play().catch(() => {}) }
     _state = { ..._state, playing: true }
     requestWakeLock()
     notify()
-
-    // Auto-stop for snippets
     if (track.isSnippet && track.startTime !== undefined && track.endTime !== undefined) {
-      const duration = Math.min((track.endTime - track.startTime) * 1000 + 300, 8000)
+      const dur = Math.min((track.endTime - track.startTime) * 1000 + 300, 8000)
       _stopTimer = setTimeout(() => {
         audio.pause()
         _state = { ..._state, playing: false }
         releaseWakeLock()
         notify()
-      }, duration)
+      }, dur)
     }
   }
 
-  if (audio.readyState >= 3) {
+  if (track.audioElement) {
+    doPlay()
+  } else if (audio.readyState >= 3) {
     doPlay()
   } else {
     audio.load()
@@ -249,53 +245,23 @@ export function playTrack(track: PlayerTrack) {
 
 // ── Toggle play/pause ─────────────────────────────────────────────
 export function togglePlayer() {
-  if (!_state.track) return
-  if (_state.playing && _audio) {
-    // Pause normally
+  if (!_state.track || !_audio) return
+  if (_state.playing) {
     _audio.pause()
     _state = { ..._state, playing: false }
     releaseWakeLock()
     notify()
     return
   }
-  // Audio ended or no audio — replay from startTime using same URL
-  if (!_audio || _audio.ended) {
-    const track = _state.track
-    const audio = new Audio(track.audioUrl)
-    audio.volume = _state.muted ? 0 : _state.volume
-    audio.preload = 'auto'
-    _audio = audio
-    // Register so footer/other players stop when mini player replays
-    if (typeof window !== 'undefined') {
-      const { registerGlobalAudio } = require('./player-store')
-      // self-register via the module-level var directly
-    }
-    _globalStop?.()
-    _globalStop = () => { audio.pause(); _state = { ..._state, playing: false }; notify() }
-    const doPlay = () => {
-      if (track.startTime !== undefined) audio.currentTime = track.startTime
-      audio.play().catch(() => {})
-      _state = { ..._state, playing: true }
-      requestWakeLock()
-      notify()
-    }
-    audio.onloadedmetadata = () => { _state = { ..._state, duration: audio.duration }; notify() }
-    audio.ontimeupdate = () => {
-      const dur = audio.duration || 1
-      _state = { ..._state, currentTime: audio.currentTime, progress: (audio.currentTime / dur) * 100 }
-      notify()
-    }
-    audio.onended = () => {
-      _state = { ..._state, playing: false, progress: 0, currentTime: 0 }
-      _globalStop = null
-      releaseWakeLock()
-      notify()
-    }
-    if (audio.readyState >= 3) { doPlay() }
-    else { audio.addEventListener('canplay', doPlay, { once: true }) }
-    return
+  // Replay from startTime if ended
+  if (_audio.ended) {
+    const t = _state.track
+    if (t.startTime !== undefined) _audio.currentTime = t.startTime
+    else _audio.currentTime = 0
   }
-  // Audio paused but not ended — just resume
+  const audio = _audio
+  _globalStop?.()
+  _globalStop = () => { audio.pause(); _state = { ..._state, playing: false }; notify() }
   _audio.play().catch(() => {})
   _state = { ..._state, playing: true }
   requestWakeLock()
