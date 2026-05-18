@@ -13,6 +13,8 @@ export interface PlayerTrack {
   startTime?: number            // snippet start in seconds
   endTime?: number              // snippet end in seconds
   isSnippet: boolean            // true = snippet, false = full song
+  vibe?: string | null          // emotion tag for color theming
+  audioElement?: HTMLAudioElement | null  // pass existing audio — avoids double instance
 }
 
 type PlayerListener = (state: PlayerState) => void
@@ -42,6 +44,16 @@ let _audio: HTMLAudioElement | null = null
 let _stopTimer: ReturnType<typeof setTimeout> | null = null
 let _listeners: Set<PlayerListener> = new Set()
 let _wakeLock: any = null
+
+// One-at-a-time enforcement
+let _globalStop: (() => void) | null = null
+export function registerGlobalAudio(stop: () => void) {
+  if (_globalStop) _globalStop()
+  _globalStop = stop
+}
+export function clearGlobalAudio() {
+  _globalStop = null
+}
 
 // ── Notify all listeners ──────────────────────────────────────────
 function notify() {
@@ -92,14 +104,20 @@ export function stopPlayer() {
 
 // ── Play a track ──────────────────────────────────────────────────
 export function playTrack(track: PlayerTrack) {
+  if (track.audioElement) {
+    _state = { ..._state, track, playing: true, progress: 0, currentTime: 0, duration: 0 }
+    notify()
+    return
+  }
   stopPlayer()
 
   _state = { ..._state, track, playing: false, progress: 0, currentTime: 0, duration: 0 }
   notify()
 
-  const audio = new Audio(track.audioUrl)
+  // Use existing audio element if provided (avoids double audio instance)
+  const audio = track.audioElement || new Audio(track.audioUrl)
   audio.volume = _state.muted ? 0 : _state.volume
-  audio.preload = 'auto'
+  if (!track.audioElement) { audio.preload = 'auto' }
   _audio = audio
 
   audio.onloadedmetadata = () => {
@@ -125,6 +143,13 @@ export function playTrack(track: PlayerTrack) {
   }
 
   const doPlay = () => {
+    // If audio element was passed in, it's already playing — just update state
+    if (track.audioElement) {
+      _state = { ..._state, playing: true }
+      requestWakeLock()
+      notify()
+      return
+    }
     if (track.startTime !== undefined) audio.currentTime = track.startTime
     audio.play().catch(() => {})
     _state = { ..._state, playing: true }

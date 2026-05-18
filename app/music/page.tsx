@@ -7,7 +7,7 @@ import { MargoNav } from '@/components/margo-nav'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { stopPlayer } from '@/lib/player-store'
+import { stopPlayer, registerGlobalAudio, clearGlobalAudio } from '@/lib/player-store'
 
 
 function formatNum(n: number): string {
@@ -290,6 +290,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     // Register with global manager so other players stop us
 
     const onLoaded = () => {
+      registerGlobalAudio(() => { audio.pause(); setPlayingKey(null) })
       audio.currentTime = moment.start
       audio.play().catch(() => {})
       setPlayingKey(key)
@@ -305,6 +306,7 @@ function LyricBoard({ songs }: { songs: Song[] }) {
           startTime: moment.start,
           endTime: moment.end,
           isSnippet: true,
+          audioElement: audioRef.current,
         })
       }).catch(() => {})
     }
