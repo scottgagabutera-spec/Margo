@@ -392,7 +392,12 @@ function PostCard({
           color: resonated ? 'var(--gold)' : 'var(--text-2)',
           transition: 'color 150ms ease',
         }}>
-          <span style={{ fontSize: '1rem' }}>{resonated ? '♥' : '♡'}</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {resonated
+              ? <path d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z" fill="currentColor" />
+              : <path d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+            }
+          </svg>
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
             {resonateCount > 0 ? resonateCount + ' ' : ''}Resonate
           </span>
@@ -403,7 +408,10 @@ function PostCard({
           color: 'var(--text-2)', textDecoration: 'none', padding: '4px 8px',
           transition: 'color 150ms ease',
         }}>
-          <span style={{ fontSize: '1rem' }}>↩</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 14L4 9L9 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M4 9H15C17.76 9 20 11.24 20 14V15C20 17.76 17.76 20 15 20H12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Lyric Back</span>
         </Link>
 
@@ -412,7 +420,11 @@ function PostCard({
           background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
           color: 'var(--text-2)', transition: 'color 150ms ease',
         }}>
-          <span style={{ fontSize: '1rem' }}>↗</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M9 3H19C20.1 3 21 3.9 21 5V19C21 20.1 20.1 21 19 21H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M7 8H13M7 11H13M7 14H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Card</span>
         </button>
 
