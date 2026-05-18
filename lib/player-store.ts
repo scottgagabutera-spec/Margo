@@ -55,6 +55,22 @@ export function registerLyricQueue(queue: LyricMoment[], index: number, onNaviga
   _onNavigate = onNavigate
 }
 
+export function setLyricQueue(moments: any[]) {
+  _lyricQueue = moments.map(m => ({
+    audioUrl: m.audioUrl,
+    songId: m.songId,
+    songTitle: m.songTitle,
+    artist: m.artist,
+    artwork: m.artwork || null,
+    currentLine: (m as any).currentLine || (m as any).line || null,
+    startTime: (m as any).startTime ?? (m as any).start,
+    endTime: (m as any).endTime ?? (m as any).end,
+    vibe: (m as any).vibe || ((m as any).vibes && (m as any).vibes[0]) || null,
+    isSnippet: true,
+  }))
+  _queueIndex = 0
+}
+
 export function pushToLyricQueue(moment: LyricMoment) {
   const exists = _lyricQueue.findIndex(m => m.currentLine === moment.currentLine && m.songId === moment.songId)
   if (exists === -1) {
@@ -228,16 +244,56 @@ export function playTrack(track: PlayerTrack) {
 
 // ── Toggle play/pause ─────────────────────────────────────────────
 export function togglePlayer() {
-  if (!_audio || !_state.track) return
-  if (_state.playing) {
+  if (!_state.track) return
+  if (_state.playing && _audio) {
+    // Pause normally
     _audio.pause()
     _state = { ..._state, playing: false }
     releaseWakeLock()
-  } else {
-    _audio.play().catch(() => {})
-    _state = { ..._state, playing: true }
-    requestWakeLock()
+    notify()
+    return
   }
+  // Audio ended or no audio — replay from startTime using same URL
+  if (!_audio || _audio.ended) {
+    const track = _state.track
+    const audio = new Audio(track.audioUrl)
+    audio.volume = _state.muted ? 0 : _state.volume
+    audio.preload = 'auto'
+    _audio = audio
+    // Register so footer/other players stop when mini player replays
+    if (typeof window !== 'undefined') {
+      const { registerGlobalAudio } = require('./player-store')
+      // self-register via the module-level var directly
+    }
+    _globalStop?.()
+    _globalStop = () => { audio.pause(); _state = { ..._state, playing: false }; notify() }
+    const doPlay = () => {
+      if (track.startTime !== undefined) audio.currentTime = track.startTime
+      audio.play().catch(() => {})
+      _state = { ..._state, playing: true }
+      requestWakeLock()
+      notify()
+    }
+    audio.onloadedmetadata = () => { _state = { ..._state, duration: audio.duration }; notify() }
+    audio.ontimeupdate = () => {
+      const dur = audio.duration || 1
+      _state = { ..._state, currentTime: audio.currentTime, progress: (audio.currentTime / dur) * 100 }
+      notify()
+    }
+    audio.onended = () => {
+      _state = { ..._state, playing: false, progress: 0, currentTime: 0 }
+      _globalStop = null
+      releaseWakeLock()
+      notify()
+    }
+    if (audio.readyState >= 3) { doPlay() }
+    else { audio.addEventListener('canplay', doPlay, { once: true }) }
+    return
+  }
+  // Audio paused but not ended — just resume
+  _audio.play().catch(() => {})
+  _state = { ..._state, playing: true }
+  requestWakeLock()
   notify()
 }
 
