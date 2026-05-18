@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
   subscribePlayer,
@@ -27,6 +28,7 @@ const VIBE_COLORS: Record<string, string> = {
 }
 
 export function MiniPlayer() {
+  const pathname = usePathname()
   const [state, setState] = useState<PlayerState | null>(null)
   const [expanded, setExpanded] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -105,6 +107,7 @@ export function MiniPlayer() {
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
   if (!state?.track) return null
+  if (pathname?.startsWith('/music/player')) return null
 
   const { track, playing, muted, volume, progress, currentTime, duration } = state
   const vibeColor = track.vibe ? (VIBE_COLORS[track.vibe.toLowerCase()] || '#E8C547') : '#E8C547'
