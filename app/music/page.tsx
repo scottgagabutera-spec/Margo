@@ -295,8 +295,8 @@ function LyricBoard({ songs }: { songs: Song[] }) {
       audio.play().catch(() => {})
       setPlayingKey(key)
       // Notify global mini player
-      import('@/lib/player-store').then(({ playTrack }) => {
-        playTrack({
+      import('@/lib/player-store').then(({ playTrack, pushToLyricQueue }) => {
+        const track = {
           audioUrl: moment.audioUrl!,
           songId: moment.songId,
           songTitle: moment.songTitle,
@@ -305,9 +305,12 @@ function LyricBoard({ songs }: { songs: Song[] }) {
           currentLine: moment.line,
           startTime: moment.start,
           endTime: moment.end,
+          vibe: (moment.vibes && moment.vibes[0]) || null,
           isSnippet: true,
           audioElement: audioRef.current,
-        })
+        }
+        pushToLyricQueue(track)
+        playTrack(track)
       }).catch(() => {})
     }
 

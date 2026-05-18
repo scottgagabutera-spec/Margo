@@ -8,42 +8,14 @@ import {
   seekPlayer,
   toggleMute,
   setPlayerVolume,
+  navigatePrev,
+  navigateNext,
+  getQueueState,
+  pushToLyricQueue,
   PlayerState,
 } from '@/lib/player-store'
 
-// ── Lyric queue — navigates between snippet moments ───────────────
-// Populated by feed/music board when snippets play
-export interface LyricMoment {
-  audioUrl: string
-  songId: string | null
-  songTitle: string
-  artist: string
-  artwork?: string | null
-  currentLine: string | null
-  startTime?: number
-  endTime?: number
-  vibe?: string | null
-}
-
-let _lyricQueue: LyricMoment[] = []
-let _queueIndex = 0
-let _onNavigate: ((moment: LyricMoment) => void) | null = null
-
-export function registerLyricQueue(queue: LyricMoment[], index: number, onNavigate: (moment: LyricMoment) => void) {
-  _lyricQueue = queue
-  _queueIndex = index
-  _onNavigate = onNavigate
-}
-
-export function pushToLyricQueue(moment: LyricMoment) {
-  const exists = _lyricQueue.findIndex(m => m.currentLine === moment.currentLine && m.songId === moment.songId)
-  if (exists === -1) {
-    _lyricQueue.push(moment)
-    _queueIndex = _lyricQueue.length - 1
-  } else {
-    _queueIndex = exists
-  }
-}
+// Queue functions live in player-store.ts — imported above
 
 // ── Emotion color map ─────────────────────────────────────────────
 const VIBE_COLORS: Record<string, string> = {
@@ -67,26 +39,29 @@ export function MiniPlayer() {
   useEffect(() => {
     return subscribePlayer(s => {
       setState(s)
-      setCanPrev(_queueIndex > 0)
-      setCanNext(_queueIndex < _lyricQueue.length - 1)
+      const { canPrev, canNext } = getQueueState()
+      setCanPrev(canPrev)
+      setCanNext(canNext)
     })
   }, [])
 
   const handlePrev = useCallback(() => {
-    if (_queueIndex > 0 && _onNavigate) {
-      _queueIndex--
-      _onNavigate(_lyricQueue[_queueIndex])
-      setCanPrev(_queueIndex > 0)
-      setCanNext(_queueIndex < _lyricQueue.length - 1)
+    const moment = navigatePrev()
+    if (moment) {
+      const { canPrev, canNext } = getQueueState()
+      setCanPrev(canPrev)
+      setCanNext(canNext)
+      import('@/lib/player-store').then(({ playTrack }) => playTrack(moment)).catch(() => {})
     }
   }, [])
 
   const handleNext = useCallback(() => {
-    if (_queueIndex < _lyricQueue.length - 1 && _onNavigate) {
-      _queueIndex++
-      _onNavigate(_lyricQueue[_queueIndex])
-      setCanPrev(_queueIndex > 0)
-      setCanNext(_queueIndex < _lyricQueue.length - 1)
+    const moment = navigateNext()
+    if (moment) {
+      const { canPrev, canNext } = getQueueState()
+      setCanPrev(canPrev)
+      setCanNext(canNext)
+      import('@/lib/player-store').then(({ playTrack }) => playTrack(moment)).catch(() => {})
     }
   }, [])
 

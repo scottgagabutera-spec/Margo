@@ -116,8 +116,8 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     audio.play().catch(() => {})
     setPlaying(true)
     // Notify global mini player
-    import('@/lib/player-store').then(({ playTrack }) => {
-      playTrack({
+    import('@/lib/player-store').then(({ playTrack, pushToLyricQueue }) => {
+      const moment = {
         audioUrl,
         songId,
         songTitle: songTitle || '',
@@ -126,9 +126,12 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
         currentLine: match?.line || null,
         startTime: match?.start,
         endTime: match?.end,
+        vibe: null,
         isSnippet: true,
         audioElement: audioRef.current,
-      })
+      }
+      pushToLyricQueue(moment)
+      playTrack(moment)
     }).catch(() => {})
     timerRef.current = setTimeout(() => {
       audio.pause()
