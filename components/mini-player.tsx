@@ -531,7 +531,7 @@ export function MiniPlayer() {
               {/* Full Karaoke CTA */}
               {track.songId && (
                 <Link
-                  href={`/music/player?id=${track.songId}`}
+                  href={`/music/player?id=${track.songId}&autoplay=1`}
                   onClick={() => setExpanded(false)}
                   className="mp-karaoke-btn"
                   style={{

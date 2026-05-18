@@ -41,6 +41,9 @@ function PlayerContent() {
   const [isBuffering, setIsBuffering] = useState(false)
   const [trayOpen, setTrayOpen] = useState(false)
   const [trayDismissed, setTrayDismissed] = useState(false)
+  const autoplayParam = searchParams.get('autoplay')
+  const [showTapOverlay, setShowTapOverlay] = useState(autoplayParam === '1')
+
   const [songEnded, setSongEnded] = useState(false)
   const [endedTitle, setEndedTitle] = useState('')
 
@@ -257,6 +260,14 @@ function PlayerContent() {
 
   return (
     <div style={{ minHeight: '100vh', height: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+      {showTapOverlay && (
+        <div onClick={() => { setShowTapOverlay(false); playAudio.current?.(); setIsPlaying(true) }} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(7,6,10,0.88)', backdropFilter: 'blur(8px)', cursor: 'pointer' }}>
+          <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#E8C547', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px rgba(232,197,71,0.4)', marginBottom: '20px' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M5 3.5L19 12L5 20.5V3.5Z" fill="#07060A" /></svg>
+          </div>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.85rem', color: 'rgba(244,241,237,0.7)', letterSpacing: '2px', textTransform: 'uppercase' }}>Tap to play</p>
+        </div>
+      )}
       <style>{`
         .lyric-viewport::-webkit-scrollbar { display: none; }
         .lyric-viewport { -ms-overflow-style: none; scrollbar-width: none; }
