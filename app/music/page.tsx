@@ -7,7 +7,7 @@ import { MargoNav } from '@/components/margo-nav'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { stopPlayer, registerGlobalAudio, clearGlobalAudio } from '@/lib/player-store'
+import { stopPlayer, registerGlobalAudio, clearGlobalAudio, setLyricQueue } from '@/lib/player-store'
 
 
 function formatNum(n: number): string {
@@ -182,6 +182,10 @@ function LyricBoard({ songs }: { songs: Song[] }) {
       [moments[i], moments[j]] = [moments[j], moments[i]]
     }
     setAllMoments(moments)
+    // Pre-load full queue so mini player next/prev works immediately
+    import('@/lib/player-store').then(({ setLyricQueue }) => {
+      setLyricQueue(moments)
+    }).catch(() => {})
   }, [songs])
 
   const getFiltered = useCallback((vibe: string) => {
