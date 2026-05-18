@@ -115,6 +115,12 @@ let _wakeLock: any = null
 let _globalStop: (() => void) | null = null
 export function registerGlobalAudio(stop: () => void) {
   if (_globalStop) _globalStop()
+  // Also stop any mini player audio that was created by togglePlayer/next/prev
+  if (_audio && !_audio.paused) {
+    _audio.pause()
+    _state = { ..._state, playing: false }
+    notify()
+  }
   _globalStop = stop
 }
 export function clearGlobalAudio() {
