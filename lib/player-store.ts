@@ -180,15 +180,15 @@ export function stopPlayer() {
 
 // ── Play a track ──────────────────────────────────────────────────
 export function playTrack(track: PlayerTrack) {
-  // Stop current audio cleanly
-  if (_audio && !_audio.paused) {
+  // Stop current audio cleanly — but only if it is a DIFFERENT audio element
+  // If same audioElement is passed (snippet already playing), skip stop to avoid cutting it off
+  if (_audio && !_audio.paused && _audio !== track.audioElement) {
     _audio.pause()
     _audio.ontimeupdate = null
     _audio.onended = null
     _audio.onloadedmetadata = null
   }
   if (_stopTimer) { clearTimeout(_stopTimer); _stopTimer = null }
-
   // Use passed audio element or create new one
   const audio = track.audioElement || new Audio(track.audioUrl)
   _audio = audio
