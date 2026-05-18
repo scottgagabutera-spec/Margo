@@ -111,7 +111,7 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     const snippetDuration = match ? Math.min((match.end - match.start) * 1000 + 300, 8000) : 5000
 
 
-    registerGlobalAudio(() => { audio.pause(); setPlaying(false) })
+    registerGlobalAudio(() => { audio.pause(); setPlaying(false); pausePlayer() })
     if (match) audio.currentTime = match.start
     audio.play().catch(() => {})
     setPlaying(true)
@@ -136,7 +136,7 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     timerRef.current = setTimeout(() => {
       audio.pause()
       setPlaying(false)
-      stopPlayer()
+      pausePlayer()
     }, snippetDuration)
   }
 

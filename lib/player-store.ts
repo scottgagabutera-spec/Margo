@@ -114,13 +114,8 @@ let _wakeLock: any = null
 // One-at-a-time enforcement
 let _globalStop: (() => void) | null = null
 export function registerGlobalAudio(stop: () => void) {
+  // Stop previous player via its own stop function
   if (_globalStop) _globalStop()
-  // Also stop any mini player audio that was created by togglePlayer/next/prev
-  if (_audio && !_audio.paused) {
-    _audio.pause()
-    _state = { ..._state, playing: false }
-    notify()
-  }
   _globalStop = stop
 }
 export function clearGlobalAudio() {
@@ -246,26 +241,49 @@ export function playTrack(track: PlayerTrack) {
 // ── Toggle play/pause ─────────────────────────────────────────────
 export function togglePlayer() {
   if (!_state.track || !_audio) return
+  const track = _state.track
+
   if (_state.playing) {
+    // Pause — keep audio element alive, just pause it
     _audio.pause()
+    if (_stopTimer) { clearTimeout(_stopTimer); _stopTimer = null }
     _state = { ..._state, playing: false }
     releaseWakeLock()
     notify()
     return
   }
-  // Replay from startTime if ended
-  if (_audio.ended) {
-    const t = _state.track
-    if (t.startTime !== undefined) _audio.currentTime = t.startTime
-    else _audio.currentTime = 0
+
+  // Resume or replay
+  if (_audio.ended || _audio.paused) {
+    // Seek to snippet start if needed
+    if (track.startTime !== undefined) {
+      _audio.currentTime = track.startTime
+    }
+    // Register self with global stop so other players stop us
+    const audio = _audio
+    _globalStop?.();
+    _globalStop = () => {
+      audio.pause()
+      if (_stopTimer) { clearTimeout(_stopTimer); _stopTimer = null }
+      _state = { ..._state, playing: false }
+      notify()
+    }
+    _audio.play().catch(() => {})
+    _state = { ..._state, playing: true }
+    requestWakeLock()
+    // Re-arm auto-stop timer for snippets
+    if (track.isSnippet && track.startTime !== undefined && track.endTime !== undefined) {
+      const dur = Math.min((track.endTime - track.startTime) * 1000 + 300, 8000)
+      _stopTimer = setTimeout(() => {
+        audio.pause()
+        _state = { ..._state, playing: false }
+        _globalStop = null
+        releaseWakeLock()
+        notify()
+      }, dur)
+    }
+    notify()
   }
-  const audio = _audio
-  _globalStop?.()
-  _globalStop = () => { audio.pause(); _state = { ..._state, playing: false }; notify() }
-  _audio.play().catch(() => {})
-  _state = { ..._state, playing: true }
-  requestWakeLock()
-  notify()
 }
 
 // ── Seek ──────────────────────────────────────────────────────────
