@@ -104,6 +104,11 @@ export function stopPlayer() {
 
 // ── Play a track ──────────────────────────────────────────────────
 export function playTrack(track: PlayerTrack) {
+  if (track.audioElement) {
+    _state = { ..._state, track, playing: true, progress: 0, currentTime: 0, duration: 0 }
+    notify()
+    return
+  }
   stopPlayer()
 
   _state = { ..._state, track, playing: false, progress: 0, currentTime: 0, duration: 0 }
