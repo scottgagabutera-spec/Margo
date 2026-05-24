@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, Suspense } from 'react'
+import { useState, useCallback, useRef, Suspense } from 'react'
 import { Search } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
 import { MargoNav } from '@/components/margo-nav'
@@ -22,26 +22,31 @@ interface SearchResult {
 }
 
 type Vibe =
-  | 'LOVE' | 'HEARTBREAK' | 'HOPE' | 'NOSTALGIA'
-  | 'HEALING' | 'JOY' | 'RAGE' | 'LONELINESS'
-  | 'SEND IT' | 'LET OUT'
+  | 'CHILL' | 'HOPE' | 'HEALING' | 'GRATEFUL' | 'SPIRITUAL'
+  | 'NOSTALGIA' | 'JOY' | 'LOVE' | 'HYPE' | 'PROUD'
+  | 'HEARTBREAK' | 'PAIN' | 'LONELINESS' | 'LOST'
+  | 'RAGE' | 'SENDIT' | 'LETOUT'
 
 const VIBES: Vibe[] = [
-  'LOVE', 'HEARTBREAK', 'HOPE', 'NOSTALGIA',
-  'HEALING', 'JOY', 'RAGE', 'LONELINESS',
-  'SEND IT', 'LET OUT',
+  'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL',
+  'NOSTALGIA', 'JOY', 'LOVE', 'HYPE', 'PROUD',
+  'HEARTBREAK', 'PAIN', 'LONELINESS', 'LOST',
+  'RAGE', 'SENDIT', 'LETOUT',
 ]
 
 const VIBE_LABELS: Record<Vibe, string> = {
-  LOVE: 'Love', HEARTBREAK: 'Heartbreak', HOPE: 'Hope', NOSTALGIA: 'Nostalgia',
-  HEALING: 'Healing', JOY: 'Joy', RAGE: 'Rage', LONELINESS: 'Loneliness',
-  'SEND IT': 'Send It', 'LET OUT': 'Let Out',
+  CHILL: 'Chill', HOPE: 'Hope', HEALING: 'Healing',
+  GRATEFUL: 'Grateful', SPIRITUAL: 'Spiritual', NOSTALGIA: 'Nostalgia',
+  JOY: 'Joy', LOVE: 'Love', HYPE: 'Hype', PROUD: 'Proud',
+  HEARTBREAK: 'Heartbreak', PAIN: 'Pain', LONELINESS: 'Loneliness',
+  LOST: 'Lost', RAGE: 'Rage', SENDIT: 'Send It', LETOUT: 'Let Out',
 }
 
 const EMOTION_COLORS: Record<string, string> = {
-  love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
-  nostalgia: '#E8C547', healing: '#4ade80', joy: '#ffc847',
-  rage: '#FF6440', loneliness: '#a0a0ff', sendit: '#00e5c8', letout: '#c864ff',
+  chill: '#60b8ff', hope: '#7B9FFF', healing: '#4ade80', grateful: '#a0e080',
+  spiritual: '#c8a0ff', nostalgia: '#E8C547', joy: '#ffc847', love: '#FF6B9D',
+  hype: '#ffc847', proud: '#FFB347', heartbreak: '#ff6060', pain: '#ff6060',
+  loneliness: '#a0a0ff', lost: '#9A98A4', rage: '#FF6440', sendit: '#00e5c8', letout: '#c864ff',
 }
 
 /* ─── style tokens — one source of truth ─────────────────── */
@@ -54,12 +59,33 @@ const text2      = 'var(--text-2)'
 const text3      = 'var(--text-3)'
 const bg         = 'var(--bg)'
 
+const vibeBtnStyle: React.CSSProperties = {
+  padding: '12px 16px',
+  minHeight: '44px',
+  boxSizing: 'border-box',
+  borderRadius: '50px',
+  fontFamily: font,
+  fontWeight: 700,
+  fontSize: '0.6rem',
+  letterSpacing: '1px',
+  textTransform: 'uppercase',
+  cursor: 'pointer',
+  transition: 'all 150ms ease',
+  position: 'relative',
+}
+
 function normalizeEmotion(e: string) {
   if (!e) return ''
   return e.replace(/send.?it/i, 'SENDIT').replace(/let.?out/i, 'LETOUT')
     .replace('SendIt', 'SENDIT').replace('LetOut', 'LETOUT')
     .replace('SEND IT', 'SENDIT').replace('LET OUT', 'LETOUT')
     .toUpperCase()
+}
+
+function parseVibeFromString(raw: string | undefined | null): Vibe | null {
+  if (!raw) return null
+  const key = normalizeEmotion(raw)
+  return VIBES.includes(key as Vibe) ? (key as Vibe) : null
 }
 
 function LyricBackContent() {
@@ -79,6 +105,11 @@ function LyricBackContent() {
   const [songName, setSongName] = useState('')
   const [lyric, setLyric] = useState('')
   const [selectedVibe, setSelectedVibe] = useState<Vibe | null>(null)
+  const [suggestedVibe, setSuggestedVibe] = useState<Vibe | null>(null)
+  const [emotionLoading, setEmotionLoading] = useState(false)
+  const [emotionError, setEmotionError] = useState<string | null>(null)
+  const [posting, setPosting] = useState(false)
+  const [postError, setPostError] = useState<string | null>(null)
   const [resonated, setResonated] = useState<Set<string>>(new Set())
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
   const [showCard, setShowCard] = useState(false)
@@ -86,6 +117,7 @@ function LyricBackContent() {
     lyric: string; song: string; artist: string; id: string;
     parentLyric?: string; parentSong?: string; parentArtist?: string;
   } | null>(null)
+  const emotionAbortRef = useRef<AbortController | null>(null)
 
   /* ─── search ─────────────────────────────────────────────── */
   const handleSearch = useCallback(async (value: string) => {
@@ -118,18 +150,87 @@ function LyricBackContent() {
     setStep(2)
   }, [])
 
-  const handleLyricComplete = useCallback(() => {
-    if (lyric.trim().length > 0) setStep(3)
-  }, [lyric])
+  const handleLyricComplete = useCallback(async () => {
+    if (lyric.trim().length === 0) return
+    if (emotionAbortRef.current) emotionAbortRef.current.abort()
+    const controller = new AbortController()
+    emotionAbortRef.current = controller
+    setEmotionLoading(true)
+    setEmotionError(null)
+    setSelectedVibe(null)
+    setSuggestedVibe(null)
+    setStep(3)
+
+    const parentVibe = parseVibeFromString(respondingTo?.emotion)
+    if (parentVibe) {
+      setSuggestedVibe(parentVibe)
+      setSelectedVibe(parentVibe)
+    }
+
+    try {
+      const res = await fetch('/api/emotion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lyric }),
+        signal: controller.signal,
+      })
+      const data = await res.json()
+      if (data.emotion) {
+        const detected = parseVibeFromString(data.emotion)
+        if (detected) {
+          setSuggestedVibe(detected)
+          setSelectedVibe(detected)
+        } else if (!parentVibe) {
+          setEmotionError('Pick the vibe that fits your lyric.')
+        }
+      } else if (!parentVibe) {
+        setEmotionError('Pick the vibe that fits your lyric.')
+      }
+    } catch (e: unknown) {
+      if ((e as { name?: string })?.name !== 'AbortError' && !parentVibe) {
+        setEmotionError('Could not suggest a vibe — pick one below.')
+      }
+    } finally {
+      setEmotionLoading(false)
+    }
+  }, [lyric, respondingTo?.emotion])
 
   const handleVibeSelect = useCallback((vibe: Vibe) => {
     setSelectedVibe(vibe)
+    setEmotionError(null)
+  }, [])
+
+  const handleConfirmVibe = useCallback(() => {
+    if (!selectedVibe) return
     setStep(4)
+  }, [selectedVibe])
+
+  const resetComposeForm = useCallback(() => {
+    setStep(1)
+    setSearchQuery('')
+    setSelectedSong(null)
+    setArtistName('')
+    setSongName('')
+    setLyric('')
+    setSelectedVibe(null)
+    setSuggestedVibe(null)
+    setEmotionError(null)
+    setPostError(null)
   }, [])
 
   /* ─── post ───────────────────────────────────────────────── */
   const handlePost = useCallback(async (isPrivate: boolean) => {
-    if (!db || !lyric || !songName || !artistName || !selectedVibe) return
+    if (!lyric || !songName || !artistName) return
+    if (!selectedVibe) {
+      setPostError('Choose a vibe before sending.')
+      return
+    }
+    if (!db) {
+      setPostError('Could not connect. Please try again.')
+      return
+    }
+    setPosting(true)
+    setPostError(null)
     try {
       if (postId) {
         await push(ref(db, `posts/${postId}/echoes`), {
@@ -145,10 +246,14 @@ function LyricBackContent() {
           username: username || null, timestamp: serverTimestamp(),
         })
       }
-    } catch (e) { console.error('Failed to post:', e) }
-    setStep(1); setSearchQuery(''); setSelectedSong(null)
-    setArtistName(''); setSongName(''); setLyric(''); setSelectedVibe(null)
-  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, postId])
+      resetComposeForm()
+    } catch (e) {
+      console.error('Failed to post:', e)
+      setPostError('Could not send your lyric back. Please try again.')
+    } finally {
+      setPosting(false)
+    }
+  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, postId, resetComposeForm])
 
   /* ─── promote + reply — navigate first, write in background ─ */
   const promoteAndReply = (echo: typeof echoes[0]) => {
@@ -189,6 +294,12 @@ function LyricBackContent() {
       setResonateCounts(prev => ({ ...prev, [echoId]: Math.max(0, (prev[echoId] || 0) + (already ? 1 : -1)) }))
     }
   }
+
+  const parentVibeLabel = respondingTo?.emotion
+    ? (parseVibeFromString(respondingTo.emotion)
+      ? VIBE_LABELS[parseVibeFromString(respondingTo.emotion)!]
+      : respondingTo.emotion)
+    : null
 
   return (
     <main style={{ minHeight: '100vh', background: bg, position: 'relative' }}>
@@ -232,13 +343,13 @@ function LyricBackContent() {
             {respondingTo?.username && (
               <span style={{ fontFamily: font, fontSize: '0.6rem', color: text3 }}>by {respondingTo.username}</span>
             )}
-            {respondingTo?.emotion && (
+            {parentVibeLabel && (
               <span style={{
                 fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
                 letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
                 borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
-                color: EMOTION_COLORS[normalizeEmotion(respondingTo.emotion).toLowerCase()] || text3,
-              }}>{respondingTo.emotion}</span>
+                color: EMOTION_COLORS[normalizeEmotion(respondingTo!.emotion!).toLowerCase()] || text3,
+              }}>{parentVibeLabel}</span>
             )}
           </div>
         </div>
@@ -342,6 +453,7 @@ function LyricBackContent() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontFamily: font, fontSize: '0.5rem', color: text3 }}>{lyric.length}/140</span>
               <button
+                type="button"
                 onClick={handleLyricComplete}
                 disabled={lyric.trim().length === 0}
                 style={{
@@ -356,32 +468,106 @@ function LyricBackContent() {
 
           {/* Step 3 */}
           <div style={{ display: step === 3 ? 'block' : 'none' }}>
-            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '14px' }}>
-              How does it feel?
+            {!emotionLoading && (
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontFamily: font, fontSize: '0.82rem', color: text3,
+                  letterSpacing: '0.5px', marginBottom: '16px', padding: 0,
+                }}
+              >← Back</button>
+            )}
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: emotionLoading ? gold : text, marginBottom: '8px' }}>
+              {emotionLoading ? 'Reading the room…' : 'How does it feel?'}
             </p>
-            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.88rem', color: text3, marginBottom: '14px' }}>
+            <p style={{ fontFamily: font, fontSize: '0.82rem', color: text3, marginBottom: '14px' }}>
+              {emotionLoading
+                ? 'Finding the right vibe for your lyric'
+                : suggestedVibe
+                  ? 'We sensed something — confirm or change it'
+                  : 'Pick the vibe that fits'}
+            </p>
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.88rem', color: text2, marginBottom: '14px' }}>
               &ldquo;{lyric}&rdquo; — {artistName}, {songName}
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
-              {VIBES.map(vibe => (
+
+            {emotionLoading && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '16px' }}>
+                {[0, 1, 2].map(i => (
+                  <div
+                    key={i}
+                    style={{
+                      width: '6px', height: '6px', borderRadius: '50%',
+                      background: gold, opacity: 0.5,
+                      animation: 'lb-emotion-pulse 1s ease-in-out infinite',
+                      animationDelay: `${i * 150}ms`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {!emotionLoading && (
+              <>
+                {emotionError && (
+                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: text2, marginBottom: '12px', textAlign: 'center' }}>
+                    {emotionError}
+                  </p>
+                )}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                  {VIBES.map(vibe => (
+                    <button
+                      key={vibe}
+                      type="button"
+                      onClick={() => handleVibeSelect(vibe)}
+                      style={{
+                        ...vibeBtnStyle,
+                        background: selectedVibe === vibe ? gold : 'transparent',
+                        color: selectedVibe === vibe ? bg : 'rgba(255,255,255,0.45)',
+                        border: `1px solid ${selectedVibe === vibe ? gold : 'rgba(255,255,255,0.1)'}`,
+                      }}
+                    >
+                      {VIBE_LABELS[vibe]}
+                      {suggestedVibe === vibe && selectedVibe !== vibe && (
+                        <span style={{
+                          position: 'absolute', top: '-4px', right: '-4px',
+                          width: '10px', height: '10px', borderRadius: '50%',
+                          background: gold, border: `2px solid ${bg}`,
+                        }} />
+                      )}
+                    </button>
+                  ))}
+                </div>
                 <button
-                  key={vibe}
-                  onClick={() => handleVibeSelect(vibe)}
+                  type="button"
+                  onClick={handleConfirmVibe}
+                  disabled={!selectedVibe}
                   style={{
-                    padding: '4px 10px', borderRadius: '50px', fontFamily: font,
-                    fontWeight: 700, fontSize: '0.55rem', letterSpacing: '1px',
-                    textTransform: 'uppercase', cursor: 'pointer', transition: 'all 150ms ease',
-                    background: selectedVibe === vibe ? gold : 'transparent',
-                    color: selectedVibe === vibe ? bg : 'rgba(255,255,255,0.45)',
-                    border: `1px solid ${selectedVibe === vibe ? gold : 'rgba(255,255,255,0.1)'}`,
+                    width: '100%', padding: '11px', minHeight: '44px', boxSizing: 'border-box',
+                    borderRadius: '50px',
+                    fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
+                    letterSpacing: '1.5px', textTransform: 'uppercase',
+                    border: 'none', cursor: selectedVibe ? 'pointer' : 'not-allowed',
+                    background: selectedVibe ? gold : 'rgba(255,255,255,0.04)',
+                    color: selectedVibe ? bg : text3,
+                    opacity: selectedVibe ? 1 : 0.5,
+                    boxShadow: selectedVibe ? '0 4px 20px rgba(232,197,71,0.25)' : 'none',
                   }}
-                >{VIBE_LABELS[vibe]}</button>
-              ))}
-            </div>
-            <button
-              onClick={() => setStep(4)}
-              style={{ background: 'transparent', border: 'none', fontFamily: font, fontSize: '0.6rem', color: text3, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-            >Skip — no vibe</button>
+                >
+                  {selectedVibe
+                    ? `Continue with ${VIBE_LABELS[selectedVibe]}`
+                    : 'Select a vibe to continue'}
+                </button>
+              </>
+            )}
+            <style>{`
+              @keyframes lb-emotion-pulse {
+                0%, 100% { opacity: 0.35; transform: translateY(0); }
+                50% { opacity: 1; transform: translateY(-3px); }
+              }
+            `}</style>
           </div>
 
           {/* Step 4 */}
@@ -402,25 +588,39 @@ function LyricBackContent() {
                 color: EMOTION_COLORS[normalizeEmotion(selectedVibe).toLowerCase()] || text3,
               }}>{VIBE_LABELS[selectedVibe]}</span>
             )}
+            {postError && (
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: '#ff6b6b', textAlign: 'center', marginBottom: '12px' }}>
+                {postError}
+              </p>
+            )}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
+                type="button"
                 onClick={() => handlePost(false)}
+                disabled={posting || !selectedVibe}
                 style={{
-                  flex: 1, padding: '11px', background: gold, color: bg,
+                  flex: 1, padding: '11px', minHeight: '44px', boxSizing: 'border-box',
+                  background: gold, color: bg,
                   borderRadius: '50px', fontFamily: font, fontWeight: 700,
                   fontSize: '0.5rem', letterSpacing: '1.5px', textTransform: 'uppercase',
-                  border: 'none', cursor: 'pointer',
+                  border: 'none', cursor: posting ? 'not-allowed' : 'pointer',
+                  opacity: posting ? 0.6 : 1,
                   boxShadow: '0 4px 20px rgba(232,197,71,0.25)',
                 }}
-              >Send It</button>
+              >{posting ? 'Sending…' : 'Send It'}</button>
               <button
+                type="button"
                 onClick={() => handlePost(true)}
+                disabled={posting || !selectedVibe}
                 style={{
-                  flex: 1, padding: '11px', background: 'transparent',
+                  flex: 1, padding: '11px', minHeight: '44px', boxSizing: 'border-box',
+                  background: 'transparent',
                   color: text2, border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '50px', fontFamily: font, fontWeight: 600,
                   fontSize: '0.5rem', letterSpacing: '1.5px',
-                  textTransform: 'uppercase', cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  cursor: posting ? 'not-allowed' : 'pointer',
+                  opacity: posting ? 0.6 : 1,
                 }}
               >Keep Private</button>
             </div>
@@ -446,6 +646,8 @@ function LyricBackContent() {
               </p>
             )}
             {echoes.map(lb => {
+              const echoVibe = parseVibeFromString(lb.emotion)
+              const echoVibeLabel = echoVibe ? VIBE_LABELS[echoVibe] : lb.emotion
               const emotionKey = normalizeEmotion(lb.emotion || '').toLowerCase()
               const emotionColor = EMOTION_COLORS[emotionKey] || text3
               const resonateCount = resonateCounts[lb.id] ?? Object.keys(lb.resonates || {}).length
@@ -492,7 +694,7 @@ function LyricBackContent() {
                         letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
                         borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
                         color: emotionColor,
-                      }}>{lb.emotion}</span>
+                      }}>{echoVibeLabel}</span>
                     )}
                   </div>
 
