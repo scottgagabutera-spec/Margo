@@ -336,3 +336,7 @@
     -webkit-backdrop-filter: none !important;
   }
 }
+
+/* Pattern 4 — touch states first; hover is progressive enhancement only */
+/* Use :active / :focus-visible for press feedback; wrap :hover in this query */
+/* @media (hover: hover) and (pointer: fine) { ... } */

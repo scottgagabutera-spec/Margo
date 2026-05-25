@@ -132,17 +132,35 @@ export function MiniPlayer() {
         .mp-sheet { animation: sheetIn 420ms cubic-bezier(0.32,0.72,0,1) forwards; }
         .mp-lyric-pulse { animation: linePulse 3s ease-in-out infinite; }
         .mp-btn { transition: opacity 150ms ease, transform 150ms ease; }
-        .mp-btn:hover { opacity: 0.65 !important; }
-        .mp-btn:active { transform: scale(0.92); }
+        .mp-btn:active { opacity: 0.65 !important; transform: scale(0.92); }
+        @media (hover: hover) and (pointer: fine) {
+          .mp-btn:hover { opacity: 0.65 !important; }
+        }
         .mp-nav-btn { transition: opacity 200ms ease, transform 200ms ease; }
-        .mp-nav-btn:hover:not(:disabled) { opacity: 1 !important; transform: scale(1.1); }
-        .mp-nav-btn:active:not(:disabled) { transform: scale(0.9); }
+        .mp-nav-btn:active:not(:disabled) { opacity: 1 !important; transform: scale(1.1); }
+        @media (hover: hover) and (pointer: fine) {
+          .mp-nav-btn:hover:not(:disabled) { opacity: 1 !important; transform: scale(1.1); }
+        }
         .mp-play-btn { transition: transform 200ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 200ms ease; }
         .mp-play-btn:hover { transform: scale(1.08); box-shadow: 0 8px 32px rgba(232,197,71,0.5) !important; }
         .mp-play-btn:active { transform: scale(0.95); }
-        .mp-progress-track:hover .mp-progress-thumb { opacity: 1 !important; transform: translate(-50%,-50%) scale(1.3) !important; }
+        .mp-progress-track:active .mp-progress-thumb { opacity: 1 !important; transform: translate(-50%,-50%) scale(1.3) !important; }
+        @media (hover: hover) and (pointer: fine) {
+          .mp-progress-track:hover .mp-progress-thumb { opacity: 1 !important; transform: translate(-50%,-50%) scale(1.3) !important; }
+        }
         .mp-karaoke-btn { transition: all 200ms ease; }
-        .mp-karaoke-btn:hover { background: rgba(232,197,71,0.14) !important; border-color: rgba(232,197,71,0.5) !important; letter-spacing: 2.5px !important; }
+        .mp-karaoke-btn:active {
+          background: rgba(232,197,71,0.14) !important;
+          border-color: rgba(232,197,71,0.5) !important;
+          letter-spacing: 2.5px !important;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .mp-karaoke-btn:hover {
+            background: rgba(232,197,71,0.14) !important;
+            border-color: rgba(232,197,71,0.5) !important;
+            letter-spacing: 2.5px !important;
+          }
+        }
       `}</style>
 
       {/* ── Collapsed bar ─────────────────────────────────────────── */}

@@ -396,14 +396,37 @@ function LyricBoard({ songs }: { songs: Song[] }) {
   return (
     <section>
       <style>{`
-        .lyric-card:hover {
+        .lyric-card:active,
+        .lyric-card:focus-visible {
           border-color: rgba(232,197,71,0.2) !important;
           background: rgba(255,255,255,0.04) !important;
         }
-        .snippet-btn:hover { background: rgba(232,197,71,0.22) !important; }
+        @media (hover: hover) and (pointer: fine) {
+          .lyric-card:hover {
+            border-color: rgba(232,197,71,0.2) !important;
+            background: rgba(255,255,255,0.04) !important;
+          }
+        }
+        .snippet-btn:active { background: rgba(232,197,71,0.22) !important; }
+        @media (hover: hover) and (pointer: fine) {
+          .snippet-btn:hover { background: rgba(232,197,71,0.22) !important; }
+        }
         .vibe-pill { transition: all 180ms ease; cursor: pointer; white-space: nowrap; }
-        .vibe-pill:hover { border-color: rgba(232,197,71,0.4) !important; color: rgba(255,255,255,0.8) !important; }
-        .focus-nav-btn:hover { border-color: rgba(255,255,255,0.2) !important; color: var(--text) !important; }
+        .vibe-pill:active {
+          border-color: rgba(232,197,71,0.4) !important;
+          color: rgba(255,255,255,0.8) !important;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .vibe-pill:hover { border-color: rgba(232,197,71,0.4) !important; color: rgba(255,255,255,0.8) !important; }
+        }
+        .focus-nav-btn:active,
+        .focus-nav-btn:focus-visible {
+          border-color: rgba(255,255,255,0.2) !important;
+          color: var(--text) !important;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .focus-nav-btn:hover { border-color: rgba(255,255,255,0.2) !important; color: var(--text) !important; }
+        }
 
         /* Pill scroll — mobile single row */
         .vibe-pills-scroll {
@@ -679,9 +702,14 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
       <style>{`
         @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
         @keyframes slideUp { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-        .play-btn:hover { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
-        .close-btn:hover { background: rgba(255,255,255,0.1) !important; }
-        .shared-line-row:hover { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
+        .play-btn:active { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
+        .close-btn:active { background: rgba(255,255,255,0.1) !important; }
+        .shared-line-row:active { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
+        @media (hover: hover) and (pointer: fine) {
+          .play-btn:hover { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
+          .close-btn:hover { background: rgba(255,255,255,0.1) !important; }
+          .shared-line-row:hover { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
+        }
         @media (min-width: 1024px) { .preview-sheet { border-radius: 20px; max-width: 520px; margin: auto; max-height: 85vh; } .preview-wrap { align-items: center; } }
       `}</style>
       <div className="preview-wrap" onClick={onClose} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
@@ -740,7 +768,7 @@ function SongCard({ song, onPreview }: { song: Song; onPreview: (song: Song) => 
         ) : (
           <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(232,197,71,0.08), rgba(255,255,255,0.03))' }} />
         )}
-        <div className="song-card-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,6,10,0.92) 0%, rgba(7,6,10,0.4) 60%, transparent 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: '16px', opacity: 0, transition: 'opacity 250ms ease' }}>
+        <div className="song-card-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,6,10,0.92) 0%, rgba(7,6,10,0.4) 60%, transparent 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: '16px' }}>
           {isActive ? (
             <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: 'var(--bg)', boxShadow: '0 4px 20px rgba(232,197,71,0.4)', marginBottom: '8px' }}>▶</div>
           ) : (
@@ -842,11 +870,19 @@ export default function MusicPage() {
         @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
         @keyframes slideUp { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
         .song-card-wrap { transition: transform 300ms cubic-bezier(0.34,1.56,0.64,1); }
-        .song-card-wrap:hover { transform: translateY(-6px); }
-        .song-card-wrap:hover .song-card-overlay { opacity: 1 !important; }
-        .song-card-wrap:hover .song-card-img { transform: scale(1.06); }
-        .play-btn:hover { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
-        .shared-line-row:hover { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
+        .song-card-overlay { opacity: 0.85; transition: opacity 250ms ease; }
+        .song-card-wrap:active .song-card-overlay { opacity: 1 !important; }
+        @media (hover: hover) and (pointer: fine) {
+          .song-card-wrap:hover { transform: translateY(-6px); }
+          .song-card-wrap:hover .song-card-overlay { opacity: 1 !important; }
+          .song-card-wrap:hover .song-card-img { transform: scale(1.06); }
+        }
+        .play-btn:active { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
+        .shared-line-row:active { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
+        @media (hover: hover) and (pointer: fine) {
+          .play-btn:hover { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
+          .shared-line-row:hover { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
+        }
         .music-search:focus { border-color: rgba(232,197,71,0.4) !important; outline: none; }
       `}</style>
 

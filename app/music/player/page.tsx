@@ -288,9 +288,15 @@ function PlayerContent() {
         .next-song-card { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; transition: all 200ms ease; text-align: left; font-family: inherit; }
         .next-song-card:hover, .next-song-card:active { background: rgba(232,197,71,0.07); border-color: rgba(232,197,71,0.3); }
         .next-song-card.primary { background: rgba(232,197,71,0.06); border-color: rgba(232,197,71,0.28); }
-        .next-song-card.primary:hover { background: rgba(232,197,71,0.1); border-color: rgba(232,197,71,0.5); }
+        .next-song-card.primary:active { background: rgba(232,197,71,0.1); border-color: rgba(232,197,71,0.5); }
+        @media (hover: hover) and (pointer: fine) {
+          .next-song-card.primary:hover { background: rgba(232,197,71,0.1); border-color: rgba(232,197,71,0.5); }
+        }
         .tray-action-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 32px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); cursor: pointer; transition: all 150ms ease; color: rgba(255,255,255,0.7); font-size: 1.1rem; font-family: inherit; }
-        .tray-action-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .tray-action-btn:active { background: rgba(255,255,255,0.1); color: var(--text); border-color: rgba(255,255,255,0.25); }
+        @media (hover: hover) and (pointer: fine) {
+          .tray-action-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); border-color: rgba(255,255,255,0.25); }
+        }
         .tray-action-btn span { font-family: var(--font-lora), serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.35); }
       `}</style>
 
