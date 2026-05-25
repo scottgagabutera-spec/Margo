@@ -275,7 +275,7 @@ function PlayerContent() {
         .lyric-line-wrap:focus { outline: none; }
         .lyric-text { font-family: var(--font-lora), serif; font-style: italic; text-align: center; margin: 0; line-height: 1.4; transition: color 500ms cubic-bezier(0.4,0,0.2,1), opacity 500ms cubic-bezier(0.4,0,0.2,1), transform 500ms cubic-bezier(0.4,0,0.2,1), font-size 500ms cubic-bezier(0.4,0,0.2,1); will-change: transform, opacity; }
         .share-sheet-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.65); backdrop-filter: blur(10px); animation: ss-fade 200ms ease forwards; }
-        .share-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 101; background: #0f0e14; border-top: 1px solid rgba(232,197,71,0.15); border-radius: 24px 24px 0 0; padding: 28px 20px 48px; animation: ss-up 300ms cubic-bezier(0.32,0.72,0,1) forwards; }
+        .share-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 101; background: #0f0e14; border-top: 1px solid rgba(232,197,71,0.15); border-radius: 24px 24px 0 0; padding: 28px 20px var(--margo-player-share-sheet-padding-bottom); animation: ss-up 300ms cubic-bezier(0.32,0.72,0,1) forwards; }
         @keyframes ss-fade { from { opacity: 0 } to { opacity: 1 } }
         @keyframes ss-up { from { transform: translateY(100%) } to { transform: translateY(0) } }
         @keyframes tray-rise { from { transform: translateY(100%); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
@@ -321,7 +321,7 @@ function PlayerContent() {
         ref={viewportRef}
         className="lyric-viewport"
         style={{
-          position: 'fixed', top: '72px', bottom: '120px', left: 0, right: 0,
+          position: 'fixed', top: '72px', bottom: 'var(--margo-player-viewport-bottom)', left: 0, right: 0,
           overflowY: 'scroll', zIndex: 10,
           paddingTop: '45vh', paddingBottom: '45vh',
           opacity: trayOpen ? 0.12 : 1,
@@ -361,11 +361,11 @@ function PlayerContent() {
       </div>
 
       {/* Bottom fade */}
-      <div style={{ position: 'fixed', bottom: '112px', left: 0, right: 0, height: '100px', background: 'linear-gradient(to top, var(--bg) 20%, transparent)', pointerEvents: 'none', zIndex: 20 }} />
+      <div style={{ position: 'fixed', bottom: 'var(--margo-player-fade-bottom)', left: 0, right: 0, height: '100px', background: 'linear-gradient(to top, var(--bg) 20%, transparent)', pointerEvents: 'none', zIndex: 20 }} />
 
       {/* Tap hint */}
       {!trayOpen && (
-        <div style={{ position: 'fixed', bottom: '128px', left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 21, pointerEvents: 'none' }}>
+        <div style={{ position: 'fixed', bottom: 'var(--margo-player-hint-bottom)', left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 21, pointerEvents: 'none' }}>
           <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: 'rgba(232,197,71,0.55)', margin: 0 }}>Tap any line to jump</p>
         </div>
       )}
@@ -378,7 +378,7 @@ function PlayerContent() {
           backdropFilter: 'blur(28px)',
           borderTop: '1px solid rgba(232,197,71,0.1)',
           borderRadius: '24px 24px 0 0',
-          padding: '24px 20px 44px',
+          padding: '24px 20px var(--margo-player-tray-padding-bottom)',
           animation: 'tray-rise 380ms cubic-bezier(0.32,0.72,0,1) forwards',
         }}>
 
@@ -438,7 +438,7 @@ function PlayerContent() {
 
       {/* Bottom controls — hidden when tray open */}
       {!trayOpen && (
-        <footer style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40, background: 'linear-gradient(to top, var(--bg) 75%, transparent)', padding: '20px 24px 36px' }}>
+        <footer style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40, background: 'linear-gradient(to top, var(--bg) 75%, transparent)', padding: '20px 24px var(--margo-player-footer-padding-bottom)' }}>
           <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
             <button
               onClick={() => {

@@ -24,6 +24,16 @@
   --resonate-faint: rgba(232,197,71,0.08);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --margo-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --margo-page-bottom: 80px;
+  --margo-page-padding-bottom: calc(var(--margo-page-bottom) + var(--margo-safe-bottom));
+  --margo-toast-offset: calc(88px + var(--margo-safe-bottom));
+  --margo-player-viewport-bottom: calc(120px + var(--margo-safe-bottom));
+  --margo-player-fade-bottom: calc(112px + var(--margo-safe-bottom));
+  --margo-player-hint-bottom: calc(128px + var(--margo-safe-bottom));
+  --margo-player-tray-padding-bottom: calc(44px + var(--margo-safe-bottom));
+  --margo-player-footer-padding-bottom: calc(36px + var(--margo-safe-bottom));
+  --margo-player-share-sheet-padding-bottom: calc(48px + var(--margo-safe-bottom));
 }
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -196,3 +206,8 @@
 /* Hide scrollbar globally — modern, clean */
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* Sonner — mini-player clearance + home indicator (Pattern 1) */
+[data-sonner-toaster][data-y-position='bottom'] {
+  bottom: var(--margo-toast-offset) !important;
+}

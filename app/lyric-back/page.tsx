@@ -312,7 +312,7 @@ function LyricBackContent() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      <div style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '100px 24px 80px' }}>
+      <div style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom)' }}>
 
         {/* ── Responding To — tier-1 style, gold accent ─────── */}
         <div style={{

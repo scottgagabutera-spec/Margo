@@ -174,7 +174,7 @@ export default function RootLayout({
         <Toaster
           theme="dark"
           position="bottom-center"
-          offset={88}
+          offset={0}
           toastOptions={{
             style: {
               fontFamily: 'var(--font-lora), serif',
