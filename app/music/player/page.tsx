@@ -9,6 +9,8 @@ import { useSong } from '@/hooks/useSong'
 import { useSongs } from '@/hooks/useSongs'
 import { Song } from '@/hooks/useSongs'
 import { CardExportModal } from '@/components/card-export-modal'
+import { useAudioEngine, useAudioCurrentTime } from '@/hooks/useAudioEngine'
+import { playFull, togglePlayPause, stop, playFullSeek } from '@/lib/audio-engine'
 
 interface LyricLine {
   id: number
@@ -30,31 +32,30 @@ function PlayerContent() {
   const { song, lyrics: realLyrics, loading } = useSong(songId)
   const { songs } = useSongs()
 
+  // ── Engine state ─────────────────────────────────────────────────
+  const engineState = useAudioEngine()
+  const currentTime = useAudioCurrentTime()
+  const isPlaying = engineState.playing && engineState.songId === songId
+  const isBuffering = engineState.buffering && engineState.songId === songId
+
   const lyrics: LyricLine[] = realLyrics.length > 0 ? realLyrics : parseLyrics(song?.lyrics)
   const duration = (song as any)?.duration || 180
 
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
   const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
   const [shareOpen, setShareOpen] = useState(false)
   const [cardExportOpen, setCardExportOpen] = useState(false)
-  const [isBuffering, setIsBuffering] = useState(false)
   const [trayOpen, setTrayOpen] = useState(false)
   const [trayDismissed, setTrayDismissed] = useState(false)
   const autoplayParam = searchParams.get('autoplay')
   const [showTapOverlay, setShowTapOverlay] = useState(autoplayParam === '1')
-
   const [songEnded, setSongEnded] = useState(false)
   const [endedTitle, setEndedTitle] = useState('')
 
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const hasCountedPlay = useRef(false)
-  const pendingPlay = useRef(false)
   const lyricRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   const viewportRef = useRef<HTMLDivElement | null>(null)
-  const playAudio = useRef<(() => void) | null>(null)
-  const pauseAudio = useRef<(() => void) | null>(null)
   const autoNavRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Track which songId we've already issued playFull for — prevents double-fire
+  const playedSongIdRef = useRef<string | null>(null)
 
   // ─── Next 3 songs — stable, memoized, no flash ─────────────────────
   const nextSongs: Song[] = useMemo(() => {
@@ -78,87 +79,57 @@ function PlayerContent() {
 
   // ─── Reset on song change ───────────────────────────────────────────
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.src = ''
-      audioRef.current = null
-    }
-    setIsPlaying(false)
-    setCurrentTime(0)
+    // Stop any previous song in the engine
+    stop()
+    playedSongIdRef.current = null
     setCurrentLyricIndex(0)
     setSongEnded(false)
     setTrayOpen(false)
     setTrayDismissed(false)
-    hasCountedPlay.current = false
-    pendingPlay.current = true
-    setIsPlaying(true)
   }, [songId])
-  // ─── Audio setup ────────────────────────────────────────────────────
+
+  // ─── Load audio into engine when URL is available ───────────────────
+  // Uses earlyAudioUrl (?au= param) for zero-wait warm path,
+  // falls back to song.audioUrl once Firebase resolves.
   useEffect(() => {
     const audioUrl = earlyAudioUrl || (song as any)?.audioUrl
-    if (!audioUrl) return
-    if (audioRef.current) return
-    const audio = new Audio(audioUrl)
-    audio.preload = 'auto'
-    audioRef.current = audio
+    if (!audioUrl || !songId) return
+    // Don't re-issue if we already started this song
+    if (playedSongIdRef.current === songId) return
 
-    const onTime = () => setCurrentTime(audio.currentTime)
-    const onEnded = () => {
-      setIsPlaying(false)
-      setCurrentTime(0)
+    playedSongIdRef.current = songId
+
+    void playFull({
+      songId,
+      audioUrl,
+      title: (song as any)?.title || '',
+      artist: (song as any)?.artist || '',
+      artwork: (song as any)?.artwork ?? null,
+      startSec: 0,
+      // autoplay false = engine loads + buffers, waits for user tap or togglePlayPause
+      // autoplay true = plays immediately (set when tap overlay is dismissed)
+      autoplay: !showTapOverlay,
+      source: 'karaoke',
+    })
+  // earlyAudioUrl is from URL params (stable); song.audioUrl fills in later — we
+  // re-run when song resolves but guard with playedSongIdRef to avoid double-play.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [earlyAudioUrl, songId, (song as any)?.audioUrl])
+
+  // ─── Detect song end from engine state ─────────────────────────────
+  useEffect(() => {
+    // Engine mode goes idle and songId matches = song finished naturally
+    if (
+      engineState.mode === 'idle' &&
+      engineState.songId === null &&
+      playedSongIdRef.current === songId &&
+      !songEnded
+    ) {
       setSongEnded(true)
       setEndedTitle((song as any)?.title || '')
       setTrayOpen(true)
     }
-    audio.addEventListener('timeupdate', onTime)
-    audio.addEventListener('ended', onEnded)
-
-    playAudio.current = () => {
-      if (!hasCountedPlay.current && songId) {
-        hasCountedPlay.current = true
-        const myId = (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
-        import('firebase/database').then(({ ref: dbRef, get, set, runTransaction, getDatabase }) => {
-          import('@/lib/firebase').then(({ app }) => {
-            const db2 = getDatabase(app ?? undefined)
-            const playRef = dbRef(db2, `songPlays/${songId}/${myId}`)
-            get(playRef).then(snap => {
-              if (!snap.exists()) {
-                set(playRef, true)
-                runTransaction(dbRef(db2, `songs/${songId}/plays`), (cur) => (cur || 0) + 1)
-              }
-            })
-          })
-        }).catch(() => {})
-      }
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'
-      if (audio.readyState >= 3) {
-        audio.play().catch(() => setIsPlaying(false))
-      } else {
-        setIsBuffering(true)
-        const onCanPlay = () => {
-          setIsBuffering(false)
-          audio.play().catch(() => setIsPlaying(false))
-          audio.removeEventListener('canplaythrough', onCanPlay)
-        }
-        audio.addEventListener('canplaythrough', onCanPlay)
-      }
-    }
-    pauseAudio.current = () => {
-      audio.pause()
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'
-    }
-    if (pendingPlay.current) { pendingPlay.current = false; playAudio.current?.() }
-
-    return () => {
-      audio.pause()
-      audio.removeEventListener('timeupdate', onTime)
-      audio.removeEventListener('ended', onEnded)
-      audioRef.current = null
-      playAudio.current = null
-      pauseAudio.current = null
-      if (autoNavRef.current) clearTimeout(autoNavRef.current)
-    }
-  }, [earlyAudioUrl, songId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [engineState.mode, engineState.songId, songId, songEnded, song])
 
   // ─── 15-second early tray trigger ──────────────────────────────────
   useEffect(() => {
@@ -177,27 +148,6 @@ function PlayerContent() {
     }, 4000)
     return () => { if (autoNavRef.current) clearTimeout(autoNavRef.current) }
   }, [songEnded]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── Media session ──────────────────────────────────────────────────
-  useEffect(() => {
-    if (!song) return
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: (song as any)?.title || 'Margo',
-        artist: (song as any)?.artist || 'Trymargo',
-        artwork: (song as any)?.artwork
-          ? [{ src: (song as any).artwork, sizes: '512x512', type: 'image/jpeg' }]
-          : [{ src: '/favicons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
-      })
-      navigator.mediaSession.setActionHandler('play', () => { playAudio.current?.() })
-      navigator.mediaSession.setActionHandler('pause', () => { pauseAudio.current?.() })
-    }
-  }, [song])
-
-  useEffect(() => {
-    if (isPlaying) playAudio.current?.()
-    else pauseAudio.current?.()
-  }, [isPlaying])
 
   // ─── Sync lyric index ───────────────────────────────────────────────
   useEffect(() => {
@@ -220,22 +170,19 @@ function PlayerContent() {
   const jumpToLyric = useCallback((id: number) => {
     const lyric = lyrics.find(l => l.id === id)
     if (lyric) {
-      if (audioRef.current) audioRef.current.currentTime = lyric.start
-      setCurrentTime(lyric.start)
+      // Seek via engine — no direct audioRef access
+      playFullSeek(lyric.start)
       setCurrentLyricIndex(id)
-      setIsPlaying(true)
       setTrayOpen(false)
       setTrayDismissed(true)
       setSongEnded(false)
       if (autoNavRef.current) clearTimeout(autoNavRef.current)
     }
-  }, [lyrics])
+  }, [lyrics, duration])
 
   const handleLoop = useCallback(() => {
-    if (audioRef.current) audioRef.current.currentTime = 0
-    setCurrentTime(0)
+    playFullSeek(0)
     setCurrentLyricIndex(0)
-    setIsPlaying(true)
     setTrayOpen(false)
     setTrayDismissed(true)
     setSongEnded(false)
@@ -261,7 +208,15 @@ function PlayerContent() {
   return (
     <div style={{ minHeight: '100vh', height: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
       {showTapOverlay && (
-        <div onClick={() => { setShowTapOverlay(false); playAudio.current?.(); setIsPlaying(true) }} className="margo-tap-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+        <div
+          onClick={() => {
+            setShowTapOverlay(false)
+            // togglePlayPause starts playback after user gesture (iOS safe)
+            void togglePlayPause()
+          }}
+          className="margo-tap-overlay"
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+        >
           <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#E8C547', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px rgba(232,197,71,0.4)', marginBottom: '20px' }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M5 3.5L19 12L5 20.5V3.5Z" fill="#07060A" /></svg>
           </div>
@@ -448,10 +403,7 @@ function PlayerContent() {
         <footer style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40, background: 'linear-gradient(to top, var(--bg) 75%, transparent)', padding: '20px 24px var(--margo-player-footer-padding-bottom)' }}>
           <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
             <button
-              onClick={() => {
-                if (!playAudio.current && !isPlaying) { pendingPlay.current = true; setIsPlaying(true) }
-                else setIsPlaying(p => !p)
-              }}
+              onClick={() => void togglePlayPause()}
               style={{ width: '52px', height: '52px', borderRadius: '50%', border: '1px solid var(--border-hi)', background: 'rgba(255,255,255,0.05)', color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease', flexShrink: 0, outline: 'none', WebkitTapHighlightColor: 'transparent' }}
             ><PlayPauseIcon playing={isPlaying} buffering={isBuffering} size={20} color="var(--text)" /></button>
             <button
