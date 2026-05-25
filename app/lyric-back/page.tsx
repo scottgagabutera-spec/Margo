@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, Suspense } from 'react'
+import { toast } from 'sonner'
 import { Search } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
 import { MargoNav } from '@/components/margo-nav'
@@ -219,7 +220,8 @@ function LyricBackContent() {
   }, [])
 
   /* ─── post ───────────────────────────────────────────────── */
-  const handlePost = useCallback(async (isPrivate: boolean) => {
+  const handlePost = useCallback((isPrivate: boolean) => {
+    if (posting) return
     if (!lyric || !songName || !artistName) return
     if (!selectedVibe) {
       setPostError('Choose a vibe before sending.')
@@ -231,29 +233,28 @@ function LyricBackContent() {
     }
     setPosting(true)
     setPostError(null)
-    try {
-      if (postId) {
-        await push(ref(db, `posts/${postId}/echoes`), {
+
+    const writePromise = postId
+      ? push(ref(db, `posts/${postId}/echoes`), {
           lyric, song: songName, artist: artistName,
           emotion: selectedVibe, username: username || null,
           timestamp: serverTimestamp(), resonates: {},
         })
-      } else {
-        await push(ref(db, 'posts'), {
+      : push(ref(db, 'posts'), {
           text: lyric, emotion: selectedVibe, mode: 'share',
           status: isPrivate ? 'private' : 'active',
           knowledge: { song: songName, artist: artistName, artwork: selectedSong?.artwork || null },
           username: username || null, timestamp: serverTimestamp(),
         })
-      }
-      resetComposeForm()
-    } catch (e) {
+
+    resetComposeForm()
+    setPosting(false)
+
+    writePromise.catch((e) => {
       console.error('Failed to post:', e)
-      setPostError('Could not send your lyric back. Please try again.')
-    } finally {
-      setPosting(false)
-    }
-  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, postId, resetComposeForm])
+      toast.error('Could not send your lyric back. Please try again.')
+    })
+  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, postId, posting, resetComposeForm])
 
   /* ─── promote + reply — navigate first, write in background ─ */
   const promoteAndReply = (echo: typeof echoes[0]) => {
@@ -367,6 +368,18 @@ function LyricBackContent() {
             width: '60%', height: '1px',
             background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
           }} />
+
+          {postError && (
+            <p style={{
+              fontFamily: font, fontSize: '0.82rem', color: '#ff6b6b',
+              textAlign: 'center', marginBottom: '16px',
+              padding: '10px 14px', borderRadius: '10px',
+              background: 'rgba(255,107,107,0.06)',
+              border: '1px solid rgba(255,107,107,0.2)',
+            }}>
+              {postError}
+            </p>
+          )}
 
           {/* Step 1 */}
           <div style={{ display: step === 1 ? 'block' : 'none' }}>
@@ -587,11 +600,6 @@ function LyricBackContent() {
                 borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
                 color: EMOTION_COLORS[normalizeEmotion(selectedVibe).toLowerCase()] || text3,
               }}>{VIBE_LABELS[selectedVibe]}</span>
-            )}
-            {postError && (
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: '#ff6b6b', textAlign: 'center', marginBottom: '12px' }}>
-                {postError}
-              </p>
             )}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button

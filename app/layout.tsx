@@ -1,5 +1,6 @@
 import { AdminTrigger } from '@/components/admin-trigger'
 import { MiniPlayer } from '@/components/mini-player'
+import { Toaster } from '@/components/ui/sonner'
 import type { Metadata } from 'next'
 import { Lora, Syne } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
@@ -170,6 +171,24 @@ export default function RootLayout({
           }}
         />
         {children}
+        <Toaster
+          theme="dark"
+          position="bottom-center"
+          offset={88}
+          toastOptions={{
+            style: {
+              fontFamily: 'var(--font-lora), serif',
+              background: 'var(--surface)',
+              color: 'var(--text)',
+              border: '1px solid var(--gold-border)',
+              borderRadius: '12px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+            },
+            classNames: {
+              error: 'margo-toast-error',
+            },
+          }}
+        />
         <AdminTrigger />
         <MiniPlayer />
         {process.env.NODE_ENV === 'production' && <Analytics />}
