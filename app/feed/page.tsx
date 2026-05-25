@@ -1,5 +1,15 @@
 'use client'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
+import {
+  CardIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  HeartFilledIcon,
+  HeartIcon,
+  LyricBackIcon,
+  MusicNoteIcon,
+  ShareIcon,
+} from '@/components/icons'
 import { stopPlayer, registerGlobalAudio } from '@/lib/player-store'
 import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
@@ -134,7 +144,7 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
         padding: 0,
       }}
     >
-      <PlayPauseIcon playing={playing} size={16} color="#E8C547" />
+      <PlayPauseIcon playing={playing} size={16} color="var(--gold)" />
     </button>
   )
 }
@@ -270,8 +280,8 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
       {/* Inline karaoke line */}
       {playing && (
         <div style={{ minHeight: '32px', padding: '8px 12px', background: 'rgba(232,197,71,0.06)', borderRadius: '8px', borderLeft: '2px solid var(--gold)', transition: 'all 200ms ease' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: currentLine ? 'var(--gold)' : 'var(--text-3)', lineHeight: 1.4, margin: 0, transition: 'color 200ms ease' }}>
-            {currentLine ? currentLine.line : '♪'}
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: currentLine ? 'var(--gold)' : 'var(--text-3)', lineHeight: 1.4, margin: 0, transition: 'color 200ms ease', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {currentLine ? currentLine.line : <MusicNoteIcon size={14} color="var(--text-3)" />}
           </p>
         </div>
       )}
@@ -372,13 +382,18 @@ function PostCard({
       )}
 
       {!isTier1 && (post.youtubeMeta?.thumbnail || post.knowledge?.artwork) && (
-        <a href={post.youtubeMeta?.youtubeUrl || `https://music.apple.com/search?term=${encodeURIComponent((post.knowledge?.song || '') + ' ' + (post.knowledge?.artist || ''))}`} target="_blank" rel="noopener noreferrer"
-          style={{ display: 'block', marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none' }}>
+        <a
+          href={post.youtubeMeta?.youtubeUrl || `https://music.apple.com/search?term=${encodeURIComponent((post.knowledge?.song || '') + ' ' + (post.knowledge?.artist || ''))}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={post.youtubeMeta?.youtubeUrl ? 'Watch on YouTube' : 'Open in Apple Music'}
+          style={{ display: 'block', marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none' }}
+        >
           <div style={{ position: 'relative' }}>
             <img src={post.youtubeMeta?.thumbnail || post.knowledge?.artwork || ''} alt="" style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ color: 'var(--bg)', fontSize: '0.7rem' }}>▶</span>
+                <ShareIcon size={16} color="var(--bg)" />
               </div>
             </div>
           </div>
@@ -386,45 +401,50 @@ function PostCard({
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={() => onResonate(post.id)} style={{
+        <button
+          type="button"
+          aria-label={resonated ? 'Remove resonate' : 'Resonate'}
+          onClick={() => onResonate(post.id)}
+          style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+          background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
+          minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
           color: resonated ? 'var(--gold)' : 'var(--text-2)',
           transition: 'color 150ms ease',
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {resonated
-              ? <path d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z" fill="currentColor" />
-              : <path d="M12 21C12 21 3 14.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14.5 12 21 12 21Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-            }
-          </svg>
+          {resonated
+            ? <HeartFilledIcon size={18} color="var(--gold)" />
+            : <HeartIcon size={18} color="var(--text-2)" />
+          }
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
             {resonateCount > 0 ? resonateCount + ' ' : ''}Resonate
           </span>
         </button>
 
-        <Link href={`/lyric-back?postId=${post.id}`} style={{
+        <Link
+          href={`/lyric-back?postId=${post.id}`}
+          aria-label="Lyric Back"
+          style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          color: 'var(--text-2)', textDecoration: 'none', padding: '4px 8px',
+          color: 'var(--text-2)', textDecoration: 'none', padding: '8px 12px',
+          minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
           transition: 'color 150ms ease',
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 14L4 9L9 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M4 9H15C17.76 9 20 11.24 20 14V15C20 17.76 17.76 20 15 20H12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <LyricBackIcon size={18} color="var(--text-2)" />
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Lyric Back</span>
         </Link>
 
-        <button onClick={() => onExport(post)} style={{
+        <button
+          type="button"
+          aria-label="Export lyric card"
+          onClick={() => onExport(post)}
+          style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+          background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
+          minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
           color: 'var(--text-2)', transition: 'color 150ms ease',
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="3" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M9 3H19C20.1 3 21 3.9 21 5V19C21 20.1 20.1 21 19 21H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            <path d="M7 8H13M7 11H13M7 14H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
+          <CardIcon size={18} color="var(--text-2)" />
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Card</span>
         </button>
 
@@ -446,12 +466,19 @@ function PostCard({
               {audioUrl && <Tier1Player audioUrl={audioUrl} songId={post.songId || null} postText={post.text} />}
             </div>
             {post.songId && (
-              <Link href={`/music/player?id=${post.songId}${audioUrl ? '&au=' + encodeURIComponent(audioUrl) : ''}`} style={{
+              <Link
+                href={`/music/player?id=${post.songId}${audioUrl ? '&au=' + encodeURIComponent(audioUrl) : ''}`}
+                aria-label="Full Karaoke"
+                style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
                 fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
                 color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase',
                 textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--gold-border)',
                 borderRadius: '50px', flexShrink: 0, alignSelf: 'flex-start',
-              }}>Full Karaoke →</Link>
+              }}>
+                Full Karaoke
+                <ChevronRightIcon size={12} color="var(--gold)" />
+              </Link>
             )}
           </div>
         </div>
@@ -626,14 +653,22 @@ export default function FeedPage() {
                 width: '100%', height: '40px', padding: '0 40px 0 16px',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: '10px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box',
+                fontSize: '1rem', outline: 'none', boxSizing: 'border-box',
               }}
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} style={{
-                position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '1rem',
-              }}>×</button>
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setSearchQuery('')}
+                style={{
+                position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '44px', height: '44px', padding: 0,
+              }}>
+                <CloseIcon size={16} color="var(--text-3)" />
+              </button>
             )}
           </div>
         </div>
