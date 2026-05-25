@@ -653,7 +653,7 @@ export default function FeedPage() {
                 width: '100%', height: '40px', padding: '0 40px 0 16px',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: '10px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
-                fontSize: '1rem', outline: 'none', boxSizing: 'border-box',
+                fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box',
               }}
             />
             {searchQuery && (
