@@ -584,4 +584,219 @@ onMouseLeave={() => setHover(null)}
 
 ---
 
-*Last updated: May 2026 — Version 4.1 (Section 14 enforcement rules from standards audit)*
+## 15. Mobile Responsiveness Rules
+
+*Added May 2026 — Patterns 1–4 from the responsive foundation sprint. These are permanent implementation rules in `app/globals.css` and production pages. Section 12 summarizes mobile performance; this section is the authoritative pattern reference with wrong/right examples.*
+
+**Ten standards enforced by this section:** MOBILE FIRST · USER EXPERIENCE · PREMIUM · APP READY · CONSISTENCY · VERY LOGICAL · GIANTS WAY
+
+**Cross-reference:** Section 14 Rule 8 (hover-only) and Rule 9 (backdrop-filter) are enforced here with concrete tokens and CSS patterns.
+
+---
+
+### Permanent design rule — Small text is intentional
+
+Small type on **decorative** UI (vibe pills, action labels, badges, metadata, uppercase micro-labels) is an intentional Margo aesthetic — not a responsiveness bug. **Do not increase font sizes** on these elements to "fix" mobile.
+
+- **Emphasis on CTAs and primary actions** comes from color, contrast, weight, and gold — not from larger type.
+- **Touch targets** on interactive controls must still be ≥ 44×44px via container `minWidth` / `minHeight` / padding (`var(--margo-touch-min)`), with **text size unchanged**.
+- **Interactive** = receives tap/click (buttons, links, pills, scrubbers, nav icons). **Decorative** = label inside a tappable row, timestamp, count, badge copy, artist metadata — keep scale from Section 3; only fix unreadable contrast, not size.
+
+This rule **refines** Section 14 Rule 3 for Margo: Rule 3 targets illegible interactive captions; decorative `0.6rem`–`0.7rem` labels inside 44px containers remain valid.
+
+---
+
+### Pattern 1 — Safe area insets
+
+**Rule:** Any fixed or sticky UI at the bottom of the viewport (page scroll padding, toasts, player chrome, share sheets, trays) must account for the iOS home indicator via tokens — never a lone hardcoded `80px`.
+
+**Tokens** (`app/globals.css` `:root`):
+
+| Token | Purpose |
+|-------|---------|
+| `--margo-safe-bottom` | `env(safe-area-inset-bottom, 0px)` |
+| `--margo-page-bottom` | Base content clearance above mini-player (`80px`) |
+| `--margo-page-padding-bottom` | Page scroll padding: `calc(var(--margo-page-bottom) + var(--margo-safe-bottom))` |
+| `--margo-toast-offset` | Sonner bottom toaster clearance |
+| `--margo-player-*` | Player viewport, fade, hint, tray, footer, share-sheet bottoms |
+
+**Correct pattern:** Compose base spacing + safe area in one token; use the token on the element that needs bottom clearance.
+
+**Standards:** MOBILE FIRST · APP READY · USER EXPERIENCE · PREMIUM
+
+**Wrong:**
+```tsx
+<div style={{ padding: '100px 24px 80px' }}>
+```
+```tsx
+bottom: 88px; /* ignores home indicator on iPhone */
+```
+
+**Right:**
+```tsx
+<div style={{ padding: '100px 24px var(--margo-page-padding-bottom)' }}>
+```
+```css
+[data-sonner-toaster][data-y-position='bottom'] {
+  bottom: var(--margo-toast-offset) !important;
+}
+```
+```tsx
+/* Player fixed chrome — use the matching --margo-player-* token, not a magic number */
+bottom: 'var(--margo-player-viewport-bottom)';
+```
+
+**Implemented in:** `app/feed/page.tsx`, `app/compose/page.tsx`, `app/lyric-back/page.tsx`, `app/music/player/page.tsx`, `app/layout.tsx` (Sonner `offset={0}` + CSS offset).
+
+---
+
+### Pattern 2 — Touch targets
+
+**Rule:** Every **interactive** element must present a ≥ **44×44px** hit area. Use `--margo-touch-min: 44px` from `app/globals.css` — never shrink the control to match small label text.
+
+**Standards:** MOBILE FIRST · USER EXPERIENCE · GIANTS WAY · CONSISTENCY
+
+**Wrong:**
+```tsx
+<button style={{ width: 32, height: 32, fontSize: '0.6rem' }}>Resonate</button>
+```
+```tsx
+<button style={{ padding: '4px 8px', fontSize: '0.6rem' }}>Play</button>
+/* visual box < 44px, no min dimensions */
+```
+
+**Right:**
+```tsx
+<button style={{
+  minWidth: 'var(--margo-touch-min)',
+  minHeight: 'var(--margo-touch-min)',
+  padding: '0 14px',
+  fontSize: '0.6rem', /* aesthetic unchanged */
+  boxSizing: 'border-box',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}}>
+  Resonate
+</button>
+```
+```tsx
+/* Icon-only control: square touch box, icon size unchanged */
+width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
+```
+
+**Do not change:** Decorative label font sizes on vibe pills, feed action captions, badges, or metadata when applying this pattern — only the **container** dimensions.
+
+**Implemented in:** `components/margo-nav.tsx`, `app/feed/page.tsx`, `app/compose/page.tsx`, `app/lyric-back/page.tsx`, `app/music/page.tsx`, `app/music/player/page.tsx`, `components/mini-player.tsx`.
+
+---
+
+### Pattern 3 — Backdrop filter
+
+**Rule:** **Opaque background first**; `backdrop-filter` is progressive enhancement for desktop only. On viewports **< 640px**, `backdrop-filter` and `-webkit-backdrop-filter` must be **`none`** always, with a solid or near-opaque fallback.
+
+**Tokens:**
+
+| Token | Value / use |
+|-------|-------------|
+| `--margo-scrim` | `rgba(7, 6, 10, 0.97)` — overlays, nav, scrims, mobile fallback |
+| `--margo-bar` | `rgba(10, 9, 13, 0.98)` — mini-player bar (opaque enough without blur on mobile) |
+
+**Utility classes** (`app/globals.css`): Prefer shared classes over one-off blur in TSX.
+
+- `.margo-nav-bar`, `.margo-nav-overlay`, `.margo-landing-nav`
+- `.margo-preview-scrim`, `.margo-featured-badge`, `.margo-tap-overlay`
+- `.margo-upnext-tray`, `.margo-mp-bar`, `.margo-mp-scrim`
+- `.margo-no-blur-mobile` — opt-in helper to strip blur below 640px on ad-hoc surfaces
+
+**Standards:** MOBILE FIRST · PREMIUM · APP READY · CONSISTENCY
+
+**Wrong:**
+```tsx
+<div style={{
+  background: 'rgba(7,6,10,0.4)',
+  backdropFilter: 'blur(16px)',
+  WebkitBackdropFilter: 'blur(16px)',
+}} />
+/* mobile: muddy, expensive, fails on iOS without opaque layer */
+```
+
+**Right:**
+```tsx
+<header className="margo-nav-bar" />
+```
+```css
+/* globals.css pattern */
+.margo-nav-bar {
+  background: rgba(7, 6, 10, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+@media (max-width: 639px) {
+  .margo-nav-bar {
+    background: var(--margo-scrim) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+```
+
+**Implemented in:** `app/globals.css`, `components/margo-nav.tsx`, `app/page.tsx`, `app/music/page.tsx`, `app/music/player/page.tsx`, `components/mini-player.tsx`.
+
+---
+
+### Pattern 4 — Touch states (not hover-only)
+
+**Rule:** Touch users must never depend on `:hover` alone for feedback or discovery.
+
+1. **Every `:hover` style** on a control must have a matching **`:active`** (same visual rules). Add **`:focus-visible`** where keyboard access matters (cards, nav chips).
+2. **Desktop-only hover** (lift, zoom, extra opacity) lives inside **`@media (hover: hover) and (pointer: fine)`** — see comment block in `app/globals.css`.
+3. **Always-visible affordances on mobile** — e.g. song card play overlay at **`opacity: 0.85`** by default, **`opacity: 1`** on `:active`; full hover overlay only inside the hover media query.
+
+**Standards:** MOBILE FIRST · USER EXPERIENCE · VERY LOGICAL · CONSISTENCY
+
+**Wrong:**
+```css
+.song-card-overlay { opacity: 0; }
+.song-card-wrap:hover .song-card-overlay { opacity: 1; }
+/* touch: overlay invisible until accidental sticky hover */
+```
+```css
+.mp-btn:hover { opacity: 0.65; }
+/* no :active — tap gives no feedback on phone */
+```
+
+**Right:**
+```css
+.song-card-overlay { opacity: 0.85; transition: opacity 250ms ease; }
+.song-card-wrap:active .song-card-overlay { opacity: 1 !important; }
+@media (hover: hover) and (pointer: fine) {
+  .song-card-wrap:hover { transform: translateY(-6px); }
+  .song-card-wrap:hover .song-card-overlay { opacity: 1 !important; }
+  .song-card-wrap:hover .song-card-img { transform: scale(1.06); }
+}
+```
+```css
+.mp-btn:active { opacity: 0.65 !important; transform: scale(0.92); }
+@media (hover: hover) and (pointer: fine) {
+  .mp-btn:hover { opacity: 0.65 !important; }
+}
+```
+
+**State-only changes:** Pattern 4 adjusts **opacity, transform, background, border-color** on interaction — no font, layout, or size changes.
+
+**Implemented in:** `app/music/page.tsx`, `components/mini-player.tsx`, `app/music/player/page.tsx` (board, preview, song grid, mini-player, up-next tray).
+
+---
+
+### Pattern 1–4 pre-merge checklist
+
+- [ ] Bottom padding / fixed `bottom` uses `--margo-page-padding-bottom` or the correct `--margo-player-*` / `--margo-toast-offset` token
+- [ ] New interactive controls use `minWidth` / `minHeight` ≥ `var(--margo-touch-min)` without enlarging decorative label fonts
+- [ ] New blurred surfaces use a globals.css `.margo-*` class or duplicate the opaque-first + `@media (max-width: 639px)` blur-off pattern
+- [ ] New `:hover` rules have matching `:active`; desktop-only hover wrapped in `@media (hover: hover) and (pointer: fine)`
+- [ ] `npx tsc --noEmit` passes
+
+---
+
+*Last updated: May 2026 — Version 4.2 (Section 15 Mobile Responsiveness Rules — Patterns 1–4 sprint)*
