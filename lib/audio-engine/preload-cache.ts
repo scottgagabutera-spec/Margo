@@ -1,28 +1,60 @@
 /**
- * Margo AudioEngine — URL preload cache
+ * Margo AudioEngine — Real audio preload pool
  * @see docs/TARGET_ARCHITECTURE_AUDIO_ENGAGEMENT.md Section 2.2
  *
- * Tracks known audioUrl per songId so the engine can skip
- * redundant src assignments. Does NOT create HTMLAudioElement
- * instances — the engine owns the single DOM <audio>.
+ * Maintains a pool of hidden <audio> elements that actively buffer
+ * audio data in the background. When the engine needs to play a URL
+ * that is already buffered, prepareSource() can skip the load wait
+ * entirely — instant play.
  *
- * warmPreloadUrl() fires a lightweight link rel=prefetch hint
- * so the browser warms the CDN connection before play() is called.
+ * Pool size: 3 slots (LRU eviction). Covers feed scroll-ahead,
+ * karaoke warm path, and music board hover preload.
  */
 
-// ── Internal cache ────────────────────────────────────────────────
-/** songId → audioUrl (metadata only — no Audio elements) */
+// ── Types ─────────────────────────────────────────────────────────
+
+interface PoolSlot {
+  audio: HTMLAudioElement
+  url: string
+  lastUsed: number
+}
+
+// ── Module state ──────────────────────────────────────────────────
+
+const POOL_SIZE = 3
+const _pool: PoolSlot[] = []
+
+/** songId → audioUrl (metadata only) */
 const _urlCache = new Map<string, string>()
 
-/** audioUrls already hinted to the browser */
-const _warmed = new Set<string>()
+// ── Pool helpers ──────────────────────────────────────────────────
+
+function createPoolAudio(): HTMLAudioElement {
+  const el = document.createElement('audio')
+  el.preload = 'auto'
+  el.setAttribute('playsinline', '')
+  el.muted = true       // must be muted to preload without user gesture
+  el.volume = 0
+  el.style.display = 'none'
+  document.body.appendChild(el)
+  return el
+}
+
+function findSlot(url: string): PoolSlot | undefined {
+  return _pool.find(s => s.url === url)
+}
+
+function evictLRU(): PoolSlot {
+  // Sort ascending by lastUsed — evict oldest
+  _pool.sort((a, b) => a.lastUsed - b.lastUsed)
+  return _pool[0]
+}
 
 // ── Public API ────────────────────────────────────────────────────
 
 /**
  * Register a known audioUrl for a songId.
- * Called by engine.playSnippet / engine.playFull before prepareSource.
- * Safe to call repeatedly with the same args.
+ * Safe to call repeatedly.
  */
 export function registerPreloadSong(songId: string, audioUrl: string): void {
   if (!songId || !audioUrl) return
@@ -30,37 +62,41 @@ export function registerPreloadSong(songId: string, audioUrl: string): void {
 }
 
 /**
- * Retrieve the cached audioUrl for a songId, if known.
- * Returns undefined when not yet registered.
+ * Retrieve the cached audioUrl for a songId.
  */
 export function getCachedAudioUrl(songId: string): string | undefined {
   return _urlCache.get(songId)
 }
 
 /**
- * Fire a browser prefetch hint for an audioUrl.
- * Uses <link rel="prefetch"> in supported environments —
- * warms the CDN connection so the engine's src assignment
- * reaches canplaythrough faster on first tap.
- *
- * No-op in SSR or when already warmed.
+ * Actively buffer an audio URL in the preload pool.
+ * Creates or reuses a hidden <audio> element and sets src + load().
+ * No-op in SSR or if already in pool.
  */
 export function warmPreloadUrl(audioUrl: string): void {
   if (typeof document === 'undefined') return
   if (!audioUrl) return
-  if (_warmed.has(audioUrl)) return
-  _warmed.add(audioUrl)
+  if (findSlot(audioUrl)) return   // already warming or warmed
 
-  try {
-    const link = document.createElement('link')
-    link.rel = 'prefetch'
-    link.as = 'audio'
-    link.href = audioUrl
-    link.crossOrigin = 'anonymous'
-    document.head.appendChild(link)
-  } catch {
-    /* ignore — prefetch is a best-effort optimisation */
+  let slot: PoolSlot
+
+  if (_pool.length < POOL_SIZE) {
+    // Pool has room — add a new slot
+    const audio = createPoolAudio()
+    slot = { audio, url: audioUrl, lastUsed: Date.now() }
+    _pool.push(slot)
+  } else {
+    // Evict LRU slot and reuse its audio element
+    slot = evictLRU()
+    slot.audio.pause()
+    slot.audio.removeAttribute('src')
+    slot.audio.load()
+    slot.url = audioUrl
+    slot.lastUsed = Date.now()
   }
+
+  slot.audio.src = audioUrl
+  slot.audio.load()
 }
 
 /**
@@ -73,10 +109,50 @@ export function warmSong(songId: string): void {
 }
 
 /**
+ * Check if a URL is buffered enough to play instantly.
+ * Returns the pool slot's readyState — caller uses >= 2 (HAVE_CURRENT_DATA).
+ */
+export function getPreloadReadyState(audioUrl: string): number {
+  const slot = findSlot(audioUrl)
+  return slot ? slot.audio.readyState : 0
+}
+
+/**
+ * Get the buffered pool audio element for a URL, if available.
+ * Engine uses this to copy buffered data to the main audio element
+ * via src transfer — avoids re-fetching already-buffered data.
+ */
+export function getPoolAudio(audioUrl: string): HTMLAudioElement | null {
+  const slot = findSlot(audioUrl)
+  if (!slot) return null
+  slot.lastUsed = Date.now()
+  return slot.audio
+}
+
+/**
+ * Remove a URL from the pool (e.g. after src transfer to main audio).
+ * Frees the slot for the next warmPreloadUrl call.
+ */
+export function releaseFromPool(audioUrl: string): void {
+  const idx = _pool.findIndex(s => s.url === audioUrl)
+  if (idx === -1) return
+  const slot = _pool[idx]
+  slot.audio.pause()
+  slot.audio.removeAttribute('src')
+  slot.url = ''
+  slot.lastUsed = 0
+  // Keep the audio element in the pool for reuse — don't remove from DOM
+}
+
+/**
  * Clear the cache — used in tests or hard reset.
- * Not called in production flow.
  */
 export function clearPreloadCache(): void {
   _urlCache.clear()
-  _warmed.clear()
+  for (const slot of _pool) {
+    slot.audio.pause()
+    slot.audio.removeAttribute('src')
+    slot.url = ''
+    slot.lastUsed = 0
+  }
 }
