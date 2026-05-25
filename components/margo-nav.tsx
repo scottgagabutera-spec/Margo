@@ -30,13 +30,13 @@ export function MargoNav() {
 
   return (
     <>
-      <nav style={{
+      <nav
+        className={menuOpen ? undefined : 'margo-nav-bar'}
+        style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         padding: '14px 24px',
         borderBottom: menuOpen ? 'none' : '1px solid var(--border)',
-        background: menuOpen ? 'transparent' : 'rgba(7,6,10,0.90)',
-        backdropFilter: menuOpen ? 'none' : 'blur(16px)',
-        WebkitBackdropFilter: menuOpen ? 'none' : 'blur(16px)',
+        ...(menuOpen ? { background: 'transparent', backdropFilter: 'none', WebkitBackdropFilter: 'none' } : {}),
         transition: 'background 300ms ease, border 300ms ease',
       }}>
         <div style={{
@@ -141,11 +141,8 @@ export function MargoNav() {
       </nav>
 
       {/* Full page overlay */}
-      <div style={{
+      <div className="margo-nav-overlay" style={{
         position: 'fixed', inset: 0, zIndex: 49,
-        background: 'rgba(7,6,10,0.97)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         gap: '8px',

@@ -147,12 +147,9 @@ export function MiniPlayer() {
 
       {/* ── Collapsed bar ─────────────────────────────────────────── */}
       {!expanded && (
-        <div className="mp-bar" style={{
+        <div className="mp-bar margo-mp-bar" style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 90,
-          background: 'rgba(10,9,13,0.98)',
           borderTop: '1px solid rgba(232,197,71,0.12)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}>
 
@@ -301,11 +298,9 @@ export function MiniPlayer() {
       {/* ── Expanded sheet ─────────────────────────────────────────── */}
       {expanded && (
         <div
+          className="margo-mp-scrim"
           style={{
             position: 'fixed', inset: 0, zIndex: 95,
-            background: 'rgba(5,4,8,0.88)',
-            backdropFilter: 'blur(28px)',
-            WebkitBackdropFilter: 'blur(28px)',
             display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
           }}
           onClick={() => setExpanded(false)}

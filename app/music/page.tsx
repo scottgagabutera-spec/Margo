@@ -675,7 +675,7 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
   const { lines } = useSharedLines(song.title, song.artist)
   const isActive = song.status === 'live' || song.status === 'active'
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(7,6,10,0.92)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeInOverlay 250ms ease forwards' }}>
+    <div onClick={onClose} className="margo-preview-scrim" style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeInOverlay 250ms ease forwards' }}>
       <style>{`
         @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
         @keyframes slideUp { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
@@ -881,7 +881,7 @@ export default function MusicPage() {
             {/* Subtle bottom fade only — no text on top */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to top, rgba(7,6,10,0.6) 0%, transparent 100%)' }} />
             {/* Featured badge top-left */}
-            <div style={{ position: 'absolute', top: '16px', left: '16px', padding: '5px 14px', background: 'rgba(7,6,10,0.7)', border: '1px solid rgba(232,197,71,0.35)', borderRadius: '50px', backdropFilter: 'blur(8px)' }}>
+            <div className="margo-featured-badge" style={{ position: 'absolute', top: '16px', left: '16px', padding: '5px 14px', border: '1px solid rgba(232,197,71,0.35)', borderRadius: '50px' }}>
               <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.48rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '2.5px', textTransform: 'uppercase', margin: 0 }}>Featured</p>
             </div>
           </div>

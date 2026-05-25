@@ -261,7 +261,7 @@ function PlayerContent() {
   return (
     <div style={{ minHeight: '100vh', height: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
       {showTapOverlay && (
-        <div onClick={() => { setShowTapOverlay(false); playAudio.current?.(); setIsPlaying(true) }} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(7,6,10,0.88)', backdropFilter: 'blur(8px)', cursor: 'pointer' }}>
+        <div onClick={() => { setShowTapOverlay(false); playAudio.current?.(); setIsPlaying(true) }} className="margo-tap-overlay" style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
           <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#E8C547', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px rgba(232,197,71,0.4)', marginBottom: '20px' }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M5 3.5L19 12L5 20.5V3.5Z" fill="#07060A" /></svg>
           </div>
@@ -274,7 +274,10 @@ function PlayerContent() {
         .lyric-line-wrap { width: 100%; min-height: var(--margo-touch-min); display: flex; align-items: center; justify-content: center; padding: 10px 0; cursor: pointer; border: none; background: none; box-sizing: border-box; }
         .lyric-line-wrap:focus { outline: none; }
         .lyric-text { font-family: var(--font-lora), serif; font-style: italic; text-align: center; margin: 0; line-height: 1.4; transition: color 500ms cubic-bezier(0.4,0,0.2,1), opacity 500ms cubic-bezier(0.4,0,0.2,1), transform 500ms cubic-bezier(0.4,0,0.2,1), font-size 500ms cubic-bezier(0.4,0,0.2,1); will-change: transform, opacity; }
-        .share-sheet-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.65); backdrop-filter: blur(10px); animation: ss-fade 200ms ease forwards; }
+        .share-sheet-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(7,6,10,0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: ss-fade 200ms ease forwards; }
+        @media (max-width: 639px) {
+          .share-sheet-overlay { background: var(--margo-scrim) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+        }
         .share-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 101; background: #0f0e14; border-top: 1px solid rgba(232,197,71,0.15); border-radius: 24px 24px 0 0; padding: 28px 20px var(--margo-player-share-sheet-padding-bottom); animation: ss-up 300ms cubic-bezier(0.32,0.72,0,1) forwards; }
         @keyframes ss-fade { from { opacity: 0 } to { opacity: 1 } }
         @keyframes ss-up { from { transform: translateY(100%) } to { transform: translateY(0) } }
@@ -372,10 +375,8 @@ function PlayerContent() {
 
       {/* ── Up Next Tray ── */}
       {trayOpen && (
-        <div style={{
+        <div className="margo-upnext-tray" style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 60,
-          background: 'linear-gradient(to top, rgba(7,6,10,0.99) 0%, rgba(7,6,10,0.97) 70%, rgba(7,6,10,0.88) 100%)',
-          backdropFilter: 'blur(28px)',
           borderTop: '1px solid rgba(232,197,71,0.1)',
           borderRadius: '24px 24px 0 0',
           padding: '24px 20px var(--margo-player-tray-padding-bottom)',

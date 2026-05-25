@@ -174,12 +174,11 @@ export default function Home() {
       </div>
 
       {/* Nav */}
-      <nav style={{
+      <nav className="margo-landing-nav" style={{
         position:'relative', zIndex:10,
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'16px 40px',
         borderBottom:'1px solid var(--border)',
-        backdropFilter:'blur(12px)',
       }}>
         <a href="/" style={{textDecoration:'none'}}>
           <MargoLogo tier="symbol" size={32} rings wordmark />
