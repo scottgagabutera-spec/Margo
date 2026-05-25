@@ -116,13 +116,13 @@ function LyricCard({
           className="snippet-btn"
           onClick={onPlay}
           style={{
-            width: '34px', height: '34px', borderRadius: '50%',
+            width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
             background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
             border: '1px solid rgba(232,197,71,0.25)',
             cursor: 'pointer', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, transition: 'background 200ms ease',
-            padding: 0,
+            padding: 0, boxSizing: 'border-box',
           }}
         >
           <PlayPauseIcon playing={isPlaying} size={16} color="#E8C547" />
@@ -464,7 +464,8 @@ function LyricBoard({ songs }: { songs: Song[] }) {
               onClick={() => handleVibe(v)}
               style={{
                 flexShrink: 0,
-                padding: '7px 16px',
+                minHeight: 'var(--margo-touch-min)', padding: '0 16px',
+                display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                 background: activeVibe === v ? 'var(--gold)' : 'rgba(255,255,255,0.04)',
                 border: `1px solid ${activeVibe === v ? 'var(--gold)' : 'rgba(255,255,255,0.1)'}`,
                 borderRadius: '50px',
@@ -510,13 +511,13 @@ function LyricBoard({ songs }: { songs: Song[] }) {
                   onClick={handleClose}
                   style={{
                     position: 'absolute', top: '16px', right: '16px',
-                    width: '30px', height: '30px', borderRadius: '50%',
+                    width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
                     background: 'rgba(255,255,255,0.06)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     color: 'rgba(255,255,255,0.45)', fontSize: '1rem',
                     cursor: 'pointer', display: 'flex',
                     alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--font-lora), serif',
+                    fontFamily: 'var(--font-lora), serif', boxSizing: 'border-box',
                   }}
                 >×</button>
 
@@ -612,7 +613,8 @@ function LyricBoard({ songs }: { songs: Song[] }) {
                   className="focus-nav-btn"
                   onClick={handleBack}
                   style={{
-                    padding: '10px 28px',
+                    minHeight: 'var(--margo-touch-min)', padding: '0 28px',
+                    display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                     background: 'rgba(255,255,255,0.03)',
                     border: '1px solid rgba(255,255,255,0.08)',
                     borderRadius: '50px',
@@ -627,7 +629,8 @@ function LyricBoard({ songs }: { songs: Song[] }) {
                   className="focus-nav-btn"
                   onClick={handleNext}
                   style={{
-                    padding: '10px 28px',
+                    minHeight: 'var(--margo-touch-min)', padding: '0 28px',
+                    display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                     background: 'rgba(255,255,255,0.03)',
                     border: '1px solid rgba(255,255,255,0.08)',
                     borderRadius: '50px',
@@ -687,7 +690,7 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
             <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.15)' }} />
           </div>
           <div style={{ padding: '20px 28px 40px' }}>
-            <button className="close-btn" onClick={onClose} style={{ position: 'absolute', top: '20px', right: '20px', width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease', fontFamily: 'var(--font-lora), serif' }}>×</button>
+            <button className="close-btn" onClick={onClose} style={{ position: 'absolute', top: '20px', right: '20px', width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease', fontFamily: 'var(--font-lora), serif', boxSizing: 'border-box' }}>×</button>
             <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '24px' }}>
               {song.artwork && (
                 <div style={{ position: 'relative', width: '100px', height: '100px', flexShrink: 0, borderRadius: '10px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>

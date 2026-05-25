@@ -90,11 +90,11 @@ export function MargoNav() {
             {/* Mobile only: gold + circle for compose */}
             <div className="margo-mobile-compose">
               <Link href="/compose" style={{
-                width: '34px', height: '34px', borderRadius: '50%',
+                width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
                 background: 'var(--gold)', display: 'flex',
                 alignItems: 'center', justifyContent: 'center',
                 textDecoration: 'none', flexShrink: 0,
-                marginRight: '4px',
+                marginRight: '4px', boxSizing: 'border-box',
               }}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M7 1v12M1 7h12" stroke="var(--bg)" strokeWidth="2" strokeLinecap="round"/>
@@ -107,7 +107,9 @@ export function MargoNav() {
               onClick={() => setMenuOpen(o => !o)}
               style={{
                 background: 'none', border: 'none',
-                cursor: 'pointer', padding: '8px',
+                cursor: 'pointer', padding: '12px',
+                minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
+                boxSizing: 'border-box',
                 display: 'flex', flexDirection: 'column',
                 justifyContent: 'center', gap: '5px',
                 outline: 'none', WebkitTapHighlightColor: 'transparent',

@@ -47,7 +47,8 @@ const backBtnStyle: React.CSSProperties = {
   background: 'none', border: 'none', cursor: 'pointer',
   fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
   color: 'var(--text-3)', letterSpacing: '0.5px',
-  marginBottom: '32px', padding: 0, display: 'inline-block',
+  marginBottom: '32px', padding: '0 12px', minHeight: 'var(--margo-touch-min)',
+  display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
   transition: 'color 150ms ease',
 }
 
@@ -375,7 +376,7 @@ function ComposeInner() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', position: 'relative', zIndex: 10 }}>
                 <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)' }}>{lyric.length}/140</span>
                 <button onClick={handleLyricComplete} disabled={lyric.trim().length === 0}
-                  style={{ padding: '10px 24px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1 }}>Continue</button>
+                  style={{ minHeight: 'var(--margo-touch-min)', padding: '0 24px', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1 }}>Continue</button>
               </div>
             </div>
           </div>
@@ -413,7 +414,9 @@ function ComposeInner() {
                   {VIBES.map((vibe) => (
                     <button key={vibe} onClick={() => handleVibeSelect(vibe)}
                       style={{
-                        padding: '10px 20px', borderRadius: '50px', fontFamily: font, fontWeight: 600,
+                        minHeight: 'var(--margo-touch-min)', padding: '0 20px', borderRadius: '50px',
+                        display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                        fontFamily: font, fontWeight: 600,
                         fontSize: '0.82rem', cursor: 'pointer', transition: 'all 150ms ease',
                         background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
                         color: selectedVibe === vibe ? 'var(--bg)' : 'var(--gold)',
@@ -433,7 +436,9 @@ function ComposeInner() {
                     onClick={handleConfirmVibe}
                     disabled={!selectedVibe}
                     style={{
-                      padding: '14px 36px', background: selectedVibe ? 'var(--gold)' : 'transparent',
+                      minHeight: 'var(--margo-touch-min)', padding: '0 36px',
+                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                      background: selectedVibe ? 'var(--gold)' : 'transparent',
                       color: selectedVibe ? 'var(--bg)' : 'var(--text-3)',
                       border: selectedVibe ? 'none' : '1px solid var(--border)',
                       borderRadius: '50px', fontFamily: font, fontWeight: 700,

@@ -136,12 +136,12 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     <button
       onClick={toggle}
       style={{
-        width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+        width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
         background: playing ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
         border: '1px solid rgba(232,197,71,0.25)',
         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'background 200ms ease', marginTop: '4px',
-        padding: 0,
+        padding: 0, boxSizing: 'border-box',
       }}
     >
       <PlayPauseIcon playing={playing} size={16} color="var(--gold)" />
@@ -248,17 +248,17 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
           onMouseDown={e => e.preventDefault()}
           onClick={toggle}
           style={{
-            width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+            width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
             background: 'var(--gold)', border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             outline: 'none', WebkitTapHighlightColor: 'transparent',
-            touchAction: 'manipulation', userSelect: 'none',
+            touchAction: 'manipulation', userSelect: 'none', boxSizing: 'border-box',
           }}>
           <PlayPauseIcon playing={playing} size={14} color='var(--bg)' />
         </button>
         <div style={{ flex: 1 }}>
           <div ref={progressRef} onMouseDown={onMouseDown} onTouchStart={onTouchStart}
-            style={{ height: '20px', display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '2px' }}>
+            style={{ minHeight: 'var(--margo-touch-min)', height: '20px', display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '2px', boxSizing: 'border-box' }}>
             <div style={{ position: 'relative', width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
               <div style={{ height: '100%', width: progress + '%', background: 'var(--gold)', borderRadius: '2px', transition: dragging ? 'none' : 'width 200ms linear' }} />
               <div style={{
@@ -471,9 +471,10 @@ function PostCard({
                 aria-label="Full Karaoke"
                 style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
+                minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
                 fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
                 color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase',
-                textDecoration: 'none', padding: '4px 10px', border: '1px solid var(--gold-border)',
+                textDecoration: 'none', padding: '0 14px', border: '1px solid var(--gold-border)',
                 borderRadius: '50px', flexShrink: 0, alignSelf: 'flex-start',
               }}>
                 Full Karaoke
@@ -620,7 +621,8 @@ export default function FeedPage() {
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {VIBES.map(vibe => (
               <button key={vibe} onClick={() => setSelectedVibe(vibe)} style={{
-                flexShrink: 0, padding: '4px 10px', borderRadius: '50px',
+                flexShrink: 0, minHeight: 'var(--margo-touch-min)', padding: '0 14px', borderRadius: '50px',
+                display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                 fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
                 letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
                 border: '1px solid',
@@ -635,7 +637,8 @@ export default function FeedPage() {
           <div style={{ display: 'flex', gap: '0', paddingTop: '10px', paddingBottom: '4px', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             {SORTS.map(sort => (
               <button key={sort} onClick={() => setSelectedSort(sort)} style={{
-                padding: '6px 24px', background: 'none', border: 'none', cursor: 'pointer',
+                minHeight: 'var(--margo-touch-min)', padding: '0 24px', background: 'none', border: 'none', cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                 fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
                 letterSpacing: '2px', textTransform: 'uppercase',
                 color: selectedSort === sort ? 'var(--gold)' : 'var(--text-3)',
@@ -650,7 +653,7 @@ export default function FeedPage() {
               type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search lyrics, songs, artists, feelings..."
               style={{
-                width: '100%', height: '40px', padding: '0 40px 0 16px',
+                width: '100%', height: 'var(--margo-touch-min)', padding: '0 40px 0 16px',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: '10px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
                 fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box',

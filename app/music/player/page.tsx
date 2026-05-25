@@ -271,7 +271,7 @@ function PlayerContent() {
       <style>{`
         .lyric-viewport::-webkit-scrollbar { display: none; }
         .lyric-viewport { -ms-overflow-style: none; scrollbar-width: none; }
-        .lyric-line-wrap { width: 100%; display: flex; justify-content: center; padding: 10px 0; cursor: pointer; border: none; background: none; }
+        .lyric-line-wrap { width: 100%; min-height: var(--margo-touch-min); display: flex; align-items: center; justify-content: center; padding: 10px 0; cursor: pointer; border: none; background: none; box-sizing: border-box; }
         .lyric-line-wrap:focus { outline: none; }
         .lyric-text { font-family: var(--font-lora), serif; font-style: italic; text-align: center; margin: 0; line-height: 1.4; transition: color 500ms cubic-bezier(0.4,0,0.2,1), opacity 500ms cubic-bezier(0.4,0,0.2,1), transform 500ms cubic-bezier(0.4,0,0.2,1), font-size 500ms cubic-bezier(0.4,0,0.2,1); will-change: transform, opacity; }
         .share-sheet-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.65); backdrop-filter: blur(10px); animation: ss-fade 200ms ease forwards; }

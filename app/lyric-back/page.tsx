@@ -411,8 +411,8 @@ function LyricBackContent() {
                     key={result.id}
                     onClick={() => handleSelectSong(result)}
                     style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
-                      padding: '10px 14px', background: 'none', border: 'none',
+                      width: '100%', minHeight: 'var(--margo-touch-min)', display: 'flex', alignItems: 'center', gap: '12px',
+                      padding: '0 14px', background: 'none', border: 'none', boxSizing: 'border-box',
                       cursor: 'pointer', textAlign: 'left', transition: 'background 150ms ease',
                     }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
@@ -444,7 +444,7 @@ function LyricBackContent() {
                     type="text"
                     value={label === 'Artist' ? artistName : songName}
                     onChange={e => label === 'Artist' ? setArtistName(e.target.value) : setSongName(e.target.value)}
-                    style={{ width: '100%', height: '38px', padding: '0 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: text, fontFamily: font, fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', height: 'var(--margo-touch-min)', padding: '0 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: text, fontFamily: font, fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               ))}
@@ -470,7 +470,9 @@ function LyricBackContent() {
                 onClick={handleLyricComplete}
                 disabled={lyric.trim().length === 0}
                 style={{
-                  padding: '7px 18px', background: gold, color: bg,
+                  minHeight: 'var(--margo-touch-min)', padding: '0 20px',
+                  display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                  background: gold, color: bg,
                   borderRadius: '50px', fontFamily: font, fontWeight: 700,
                   fontSize: '0.5rem', letterSpacing: '1.5px', textTransform: 'uppercase',
                   border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1,
@@ -488,7 +490,8 @@ function LyricBackContent() {
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   fontFamily: font, fontSize: '0.82rem', color: text3,
-                  letterSpacing: '0.5px', marginBottom: '16px', padding: 0,
+                  letterSpacing: '0.5px', marginBottom: '16px', padding: '0 12px',
+                  minHeight: 'var(--margo-touch-min)', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                 }}
               >← Back</button>
             )}
@@ -721,7 +724,8 @@ function LyricBackContent() {
 
                     <button onClick={() => toggleResonate(lb.id)} style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                      background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
+                      minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
                       color: hasResonated ? gold : text2,
                       transition: 'color 150ms ease',
                     }}>
@@ -733,7 +737,8 @@ function LyricBackContent() {
 
                     <button onClick={() => promoteAndReply(lb)} style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                      background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
+                      minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
                       color: text2, transition: 'color 150ms ease',
                     }}>
                       <span style={{ fontSize: '1rem' }}>↩</span>
@@ -753,7 +758,8 @@ function LyricBackContent() {
                       }}
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                        background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+                        background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
+                        minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
                         color: text2, transition: 'color 150ms ease',
                       }}
                     >

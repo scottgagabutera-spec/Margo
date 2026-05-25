@@ -157,7 +157,7 @@ export function MiniPlayer() {
         }}>
 
           {/* Gold progress line — top edge */}
-          <div style={{ position: 'relative', height: '2px', background: 'rgba(232,197,71,0.08)', cursor: 'pointer' }}
+          <div style={{ position: 'relative', minHeight: 'var(--margo-touch-min)', height: '2px', display: 'flex', alignItems: 'center', background: 'rgba(232,197,71,0.08)', cursor: 'pointer', boxSizing: 'border-box' }}
             onClick={(e) => {
               const rect = e.currentTarget.getBoundingClientRect()
               seekPlayer(((e.clientX - rect.left) / rect.width) * 100)
@@ -228,7 +228,9 @@ export function MiniPlayer() {
             {/* Prev */}
             <button className="mp-nav-btn mp-btn" onClick={handlePrev} disabled={!canPrev} style={{
               background: 'none', border: 'none', cursor: canPrev ? 'pointer' : 'default',
+              minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
               padding: '6px', opacity: canPrev ? 0.55 : 0.18, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box',
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M19 5L9 12L19 19V5Z" fill="currentColor" />
@@ -238,10 +240,10 @@ export function MiniPlayer() {
 
             {/* Play/Pause */}
             <button className="mp-play-btn" onClick={togglePlayer} style={{
-              width: '36px', height: '36px', borderRadius: '50%',
+              width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
               background: '#E8C547', border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 16px rgba(232,197,71,0.3)', flexShrink: 0,
+              boxShadow: '0 4px 16px rgba(232,197,71,0.3)', flexShrink: 0, boxSizing: 'border-box',
             }}>
               {playing ? (
                 <svg width="12" height="12" viewBox="0 0 20 20" fill="none">
@@ -258,7 +260,9 @@ export function MiniPlayer() {
             {/* Next */}
             <button className="mp-nav-btn mp-btn" onClick={handleNext} disabled={!canNext} style={{
               background: 'none', border: 'none', cursor: canNext ? 'pointer' : 'default',
+              minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
               padding: '6px', opacity: canNext ? 0.55 : 0.18, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box',
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M5 5L15 12L5 19V5Z" fill="currentColor" />
@@ -270,7 +274,9 @@ export function MiniPlayer() {
             <button className="mp-btn" onClick={toggleMute} style={{
               background: 'none', border: 'none', cursor: 'pointer',
               color: muted ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.4)',
+              minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
               padding: '6px', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box',
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 {muted ? (
@@ -416,7 +422,7 @@ export function MiniPlayer() {
                   className="mp-progress-track"
                   onMouseDown={onProgressMouseDown}
                   onTouchStart={onProgressTouchStart}
-                  style={{ height: '20px', display: 'flex', alignItems: 'center', cursor: track.isSnippet ? 'default' : 'pointer' }}
+                  style={{ minHeight: 'var(--margo-touch-min)', height: '20px', display: 'flex', alignItems: 'center', cursor: track.isSnippet ? 'default' : 'pointer', boxSizing: 'border-box' }}
                 >
                   <div style={{ position: 'relative', width: '100%', height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }}>
                     <div style={{
