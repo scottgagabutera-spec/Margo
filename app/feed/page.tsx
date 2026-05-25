@@ -10,7 +10,6 @@ import {
   MusicNoteIcon,
   ShareIcon,
 } from '@/components/icons'
-import { stopPlayer, registerGlobalAudio } from '@/lib/player-store'
 import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
@@ -20,7 +19,16 @@ import { CardExportModal } from '@/components/card-export-modal'
 import { db } from '@/lib/firebase'
 import { ref, set, remove, onValue } from 'firebase/database'
 import Link from 'next/link'
-
+import {
+  playSnippet,
+  stop,
+  playFull,
+  togglePlayPause,
+  setQueue,
+  warmUrl,
+  subscribeAudioEngine,
+} from '@/lib/audio-engine'
+import { useAudioEngine } from '@/hooks/useAudioEngine'
 
 const EMOTION_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -70,45 +78,36 @@ function parseSRT(srt: string): LyricLine[] {
   return lines
 }
 
-// Small SVG-only snippet button — sits inline next to the lyric text
-function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork }: { audioUrl: string; songId: string | null; postText?: string; songTitle?: string; artist?: string; artwork?: string | null }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [playing, setPlaying] = useState(false)
+// ── Feed snippet button — uses AudioEngine ───────────────────────
+function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork }: {
+  audioUrl: string; songId: string | null; postText?: string
+  songTitle?: string; artist?: string; artwork?: string | null
+}) {
+  const engineState = useAudioEngine()
+  // Derive playing state from engine — this snippet is playing if engine
+  // has this songId active in snippet mode
+  const isThisPlaying = engineState.playing &&
+    engineState.mode === 'snippet' &&
+    engineState.songId === songId &&
+    engineState.snippet?.lineText === (postText || '')
+
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
-  const [loaded, setLoaded] = useState(false)
 
-  // Preload audio and lyrics on mount so first tap is instant
+  // Preload audio URL on mount for instant tap response
   useEffect(() => {
-    const audio = new Audio(audioUrl)
-    audio.preload = 'auto'
-    audio.load()
-    audioRef.current = audio
-    audio.addEventListener('ended', () => setPlaying(false))
-
-    // Load lyrics in background
+    warmUrl(audioUrl)
     if (songId && db) {
       import('firebase/database').then(({ get, ref: dbRef }) => {
         get(dbRef(db!, `songs/${songId}`)).then(snap => {
           if (snap.exists() && snap.val().srt) setLyrics(parseSRT(snap.val().srt))
-          setLoaded(true)
-        }).catch(() => setLoaded(true))
-      }).catch(() => setLoaded(true))
-    } else {
-      setLoaded(true)
+        }).catch(() => {})
+      }).catch(() => {})
     }
-
-    return () => { audio.pause(); audio.src = '' }
   }, [audioUrl, songId])
 
   const toggle = () => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    if (playing) {
-      audio.pause()
-      setPlaying(false)
-      if (timerRef.current) clearTimeout(timerRef.current)
+    if (isThisPlaying) {
+      stop()
       return
     }
 
@@ -117,19 +116,18 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
       l.line.toLowerCase().includes(needle) || needle.includes(l.line.toLowerCase())
     ) || lyrics[0]
 
-    const snippetDuration = match ? Math.min((match.end - match.start) * 1000 + 300, 8000) : 5000
-
-
-    registerGlobalAudio(() => { audio.pause(); setPlaying(false) })
-    if (match) audio.currentTime = match.start
-    audio.play().catch(() => {})
-    setPlaying(true)
-    // Notify global mini player
-    timerRef.current = setTimeout(() => {
-      audio.pause()
-      setPlaying(false)
-      stopPlayer()
-    }, snippetDuration)
+    void playSnippet({
+      songId: songId || audioUrl,
+      audioUrl,
+      title: songTitle || '',
+      artist: artist || '',
+      artwork: artwork ?? null,
+      lineIndex: match?.id ?? 0,
+      lineText: postText || match?.line || '',
+      startSec: match?.start ?? 0,
+      endSec: match?.end ?? 5,
+      source: 'feed',
+    })
   }
 
   return (
@@ -137,29 +135,35 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
       onClick={toggle}
       style={{
         width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
-        background: playing ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
+        background: isThisPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
         border: '1px solid rgba(232,197,71,0.25)',
         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'background 200ms ease', marginTop: '4px',
         padding: 0, boxSizing: 'border-box',
       }}
     >
-      <PlayPauseIcon playing={playing} size={16} color="var(--gold)" />
+      <PlayPauseIcon playing={isThisPlaying} size={16} color="var(--gold)" />
     </button>
   )
 }
 
-function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId: string | null; postText?: string }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const progressRef = useRef<HTMLDivElement | null>(null)
-  const [playing, setPlaying] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [dragging, setDragging] = useState(false)
+// ── Tier 1 full player — uses AudioEngine ────────────────────────
+function Tier1Player({ audioUrl, songId, postText }: {
+  audioUrl: string; songId: string | null; postText?: string
+}) {
+  const engineState = useAudioEngine()
+  const isThisSong = engineState.songId === (songId || audioUrl)
+  const playing = engineState.playing && isThisSong && engineState.mode === 'full'
+  const isBuffering = engineState.buffering && isThisSong
+  const progress = isThisSong ? engineState.progress : 0
+  const currentTime = isThisSong ? engineState.currentTime : 0
+  const duration = isThisSong ? engineState.duration : 0
+
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [lyricsLoaded, setLyricsLoaded] = useState(false)
-  const hasCountedPlay = useRef(false)
+  const progressRef = useRef<HTMLDivElement | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const playedRef = useRef(false)
 
   const loadLyrics = async () => {
     if (lyricsLoaded || !songId || !db) return
@@ -171,68 +175,48 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
     setLyricsLoaded(true)
   }
 
-  useEffect(() => {
-    const audio = new Audio(audioUrl)
-    audio.preload = 'auto'
-    audio.load()
-    audioRef.current = audio
-    const onTime = () => { setCurrentTime(audio.currentTime); setProgress((audio.currentTime / (audio.duration || 1)) * 100) }
-    const onMeta = () => setDuration(audio.duration || 0)
-    const onEnded = () => { setPlaying(false); setProgress(0); setCurrentTime(0); stopPlayer() }
-    audio.addEventListener('timeupdate', onTime)
-    audio.addEventListener('loadedmetadata', onMeta)
-    audio.addEventListener('ended', onEnded)
-    return () => { audio.pause(); audio.removeEventListener('timeupdate', onTime); audio.removeEventListener('loadedmetadata', onMeta); audio.removeEventListener('ended', onEnded) }
-  }, [audioUrl])
+  // Warm the URL on mount
+  useEffect(() => { warmUrl(audioUrl) }, [audioUrl])
 
   const toggle = async () => {
-    const audio = audioRef.current
-    if (!audio) return
-    loadLyrics() // fire in background, dont block audio
-    if (playing) {
-      audio.pause()
-      setPlaying(false)
-      stopPlayer()
-    } else {
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: 'Margo Original', artist: 'Trymargo',
-          artwork: [{ src: '/favicons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
-        })
-        navigator.mediaSession.setActionHandler('play', () => setPlaying(true))
-        navigator.mediaSession.setActionHandler('pause', () => setPlaying(false))
-      }
-      registerGlobalAudio(() => { audio.pause(); setPlaying(false) })
-      if (audio.readyState >= 3) { audio.play().catch(() => {}); setPlaying(true) }
-      else {
-        const onCanPlay = () => { audio.play().catch(() => {}); setPlaying(true); audio.removeEventListener('canplay', onCanPlay) }
-        audio.addEventListener('canplay', onCanPlay)
-      }
+    loadLyrics()
+    if (isThisSong && engineState.mode === 'full') {
+      void togglePlayPause()
+      return
     }
+    // First play — stop any snippet, start full mode
+    stop()
+    playedRef.current = true
+    void playFull({
+      songId: songId || audioUrl,
+      audioUrl,
+      title: '',
+      artist: '',
+      artwork: null,
+      startSec: 0,
+      autoplay: true,
+      source: 'feed-tier1',
+    })
   }
 
-  const seek = (clientX: number) => {
+  const seekFromX = (clientX: number) => {
     const bar = progressRef.current
-    const audio = audioRef.current
-    if (!bar || !audio || !duration) return
+    if (!bar || !duration || !isThisSong) return
     const rect = bar.getBoundingClientRect()
     const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-    const newTime = pct * duration
-    audio.currentTime = newTime
-    setCurrentTime(newTime)
-    setProgress(pct * 100)
+    import('@/lib/audio-engine').then(({ playFullSeek }) => playFullSeek(pct * duration))
   }
 
   const onMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault(); setDragging(true); seek(e.clientX)
-    const onMove = (ev: MouseEvent) => seek(ev.clientX)
+    e.preventDefault(); setDragging(true); seekFromX(e.clientX)
+    const onMove = (ev: MouseEvent) => seekFromX(ev.clientX)
     const onUp = () => { setDragging(false); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
   }
 
   const onTouchStart = (e: React.TouchEvent) => {
-    setDragging(true); seek(e.touches[0].clientX)
-    const onMove = (ev: TouchEvent) => seek(ev.touches[0].clientX)
+    setDragging(true); seekFromX(e.touches[0].clientX)
+    const onMove = (ev: TouchEvent) => seekFromX(ev.touches[0].clientX)
     const onEnd = () => { setDragging(false); window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd) }
     window.addEventListener('touchmove', onMove); window.addEventListener('touchend', onEnd)
   }
@@ -242,7 +226,6 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
 
   return (
     <div>
-      {/* Full player row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: currentLine ? '12px' : '0' }}>
         <button
           onMouseDown={e => e.preventDefault()}
@@ -254,7 +237,7 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
             outline: 'none', WebkitTapHighlightColor: 'transparent',
             touchAction: 'manipulation', userSelect: 'none', boxSizing: 'border-box',
           }}>
-          <PlayPauseIcon playing={playing} size={14} color='var(--bg)' />
+          <PlayPauseIcon playing={playing} buffering={isBuffering} size={14} color='var(--bg)' />
         </button>
         <div style={{ flex: 1 }}>
           <div ref={progressRef} onMouseDown={onMouseDown} onTouchStart={onTouchStart}
@@ -277,7 +260,6 @@ function Tier1Player({ audioUrl, songId, postText }: { audioUrl: string; songId:
         </div>
       </div>
 
-      {/* Inline karaoke line */}
       {playing && (
         <div style={{ minHeight: '32px', padding: '8px 12px', background: 'rgba(232,197,71,0.06)', borderRadius: '8px', borderLeft: '2px solid var(--gold)', transition: 'all 200ms ease' }}>
           <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: currentLine ? 'var(--gold)' : 'var(--text-3)', lineHeight: 1.4, margin: 0, transition: 'color 200ms ease', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -458,7 +440,7 @@ function PostCard({
         )}
       </div>
 
-      {/* Tier 1 footer — snippet + full player + Full Karaoke */}
+      {/* Tier 1 footer — full player + Full Karaoke */}
       {isTier1 && (
         <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

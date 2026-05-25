@@ -1,24 +1,19 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
-  subscribePlayer,
-  togglePlayer,
-  seekPlayer,
+  togglePlayPause,
+  seekSnippetProgress,
+  playFullSeek,
   toggleMute,
-  setPlayerVolume,
-  navigatePrev,
-  navigateNext,
-  getQueueState,
-  pushToLyricQueue,
-  PlayerState,
-} from '@/lib/player-store'
+  setVolume,
+  queuePrev,
+  queueNext,
+} from '@/lib/audio-engine'
+import { useAudioEngine, useQueueNavigation, usePlaybackProgress } from '@/hooks/useAudioEngine'
 
-// Queue functions live in player-store.ts — imported above
-
-// ── Emotion color map ─────────────────────────────────────────────
 const VIBE_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
   nostalgia: '#E8C547', healing: '#4ade80', joy: '#ffc847',
@@ -29,57 +24,35 @@ const VIBE_COLORS: Record<string, string> = {
 
 export function MiniPlayer() {
   const pathname = usePathname()
-  const [state, setState] = useState<PlayerState | null>(null)
+  const engineState = useAudioEngine()
+  const { canPrev, canNext } = useQueueNavigation()
+  const progress = usePlaybackProgress()
   const [expanded, setExpanded] = useState(false)
   const [dragging, setDragging] = useState(false)
-  const [canPrev, setCanPrev] = useState(false)
-  const [canNext, setCanNext] = useState(false)
   const progressRef = useRef<HTMLDivElement | null>(null)
   const sheetRef = useRef<HTMLDivElement | null>(null)
   const touchStartY = useRef(0)
 
-  useEffect(() => {
-    return subscribePlayer(s => {
-      setState(s)
-      const { canPrev, canNext } = getQueueState()
-      setCanPrev(canPrev)
-      setCanNext(canNext)
-    })
-  }, [])
+  const { playing, muted, volume, currentTime, duration, mode, songId, title, artist, artwork, vibe, snippet } = engineState
 
-  const handlePrev = useCallback(() => {
-    const moment = navigatePrev()
-    if (moment) {
-      const { canPrev, canNext } = getQueueState()
-      setCanPrev(canPrev)
-      setCanNext(canNext)
-      import('@/lib/player-store').then(({ playTrack }) => playTrack(moment)).catch(() => {})
-    }
-  }, [])
-
-  const handleNext = useCallback(() => {
-    const moment = navigateNext()
-    if (moment) {
-      const { canPrev, canNext } = getQueueState()
-      setCanPrev(canPrev)
-      setCanNext(canNext)
-      import('@/lib/player-store').then(({ playTrack }) => playTrack(moment)).catch(() => {})
-    }
-  }, [])
-
-  const seekFromEvent = (clientX: number) => {
+  const seekFromX = useCallback((clientX: number) => {
     const bar = progressRef.current
     if (!bar) return
     const rect = bar.getBoundingClientRect()
     const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100))
-    seekPlayer(pct)
-  }
+    if (mode === 'snippet') {
+      seekSnippetProgress(pct)
+    } else {
+      // full mode — convert pct to seconds
+      if (duration > 0) playFullSeek((pct / 100) * duration)
+    }
+  }, [mode, duration])
 
   const onProgressMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
     setDragging(true)
-    seekFromEvent(e.clientX)
-    const onMove = (ev: MouseEvent) => seekFromEvent(ev.clientX)
+    seekFromX(e.clientX)
+    const onMove = (ev: MouseEvent) => seekFromX(ev.clientX)
     const onUp = () => { setDragging(false); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
@@ -87,14 +60,13 @@ export function MiniPlayer() {
 
   const onProgressTouchStart = (e: React.TouchEvent) => {
     setDragging(true)
-    seekFromEvent(e.touches[0].clientX)
-    const onMove = (ev: TouchEvent) => seekFromEvent(ev.touches[0].clientX)
+    seekFromX(e.touches[0].clientX)
+    const onMove = (ev: TouchEvent) => seekFromX(ev.touches[0].clientX)
     const onEnd = () => { setDragging(false); window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd) }
     window.addEventListener('touchmove', onMove)
     window.addEventListener('touchend', onEnd)
   }
 
-  // Swipe down to collapse
   const onSheetTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
   }
@@ -106,12 +78,14 @@ export function MiniPlayer() {
   const fmt = (s: number) =>
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
-  if (!state?.track) return null
+  // Hide when idle, on karaoke page, or on feed page
+  if (engineState.mode === 'idle') return null
   if (pathname?.startsWith('/music/player')) return null
   if (pathname?.startsWith('/feed')) return null
 
-  const { track, playing, muted, volume, progress, currentTime, duration } = state
-  const vibeColor = track.vibe ? (VIBE_COLORS[track.vibe.toLowerCase()] || '#E8C547') : '#E8C547'
+  const isSnippet = mode === 'snippet'
+  const vibeColor = vibe ? (VIBE_COLORS[vibe.toLowerCase()] || '#E8C547') : '#E8C547'
+  const currentLine = snippet?.lineText || null
 
   return (
     <>
@@ -175,7 +149,9 @@ export function MiniPlayer() {
           <div style={{ position: 'relative', minHeight: 'var(--margo-touch-min)', height: '2px', display: 'flex', alignItems: 'center', background: 'rgba(232,197,71,0.08)', cursor: 'pointer', boxSizing: 'border-box' }}
             onClick={(e) => {
               const rect = e.currentTarget.getBoundingClientRect()
-              seekPlayer(((e.clientX - rect.left) / rect.width) * 100)
+              const pct = ((e.clientX - rect.left) / rect.width) * 100
+              if (isSnippet) seekSnippetProgress(pct)
+              else if (duration > 0) playFullSeek((pct / 100) * duration)
             }}
           >
             <div style={{
@@ -190,13 +166,10 @@ export function MiniPlayer() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px' }}>
 
             {/* Artwork */}
-            <div
-              onClick={() => setExpanded(true)}
-              style={{ cursor: 'pointer', flexShrink: 0 }}
-            >
-              {track.artwork ? (
+            <div onClick={() => setExpanded(true)} style={{ cursor: 'pointer', flexShrink: 0 }}>
+              {artwork ? (
                 <div style={{ width: '38px', height: '38px', borderRadius: '8px', overflow: 'hidden', boxShadow: `0 4px 16px rgba(0,0,0,0.6), 0 0 0 1px rgba(232,197,71,0.15)` }}>
-                  <img src={track.artwork} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={artwork} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               ) : (
                 <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(232,197,71,0.08)', border: '1px solid rgba(232,197,71,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>♪</div>
@@ -205,30 +178,30 @@ export function MiniPlayer() {
 
             {/* Track info */}
             <div onClick={() => setExpanded(true)} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
-              {track.currentLine && (
+              {currentLine && (
                 <p className="mp-lyric-pulse" style={{
                   fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
                   fontSize: '0.78rem', color: '#E8C547',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   margin: 0, lineHeight: 1.3,
                 }}>
-                  &ldquo;{track.currentLine}&rdquo;
+                  &ldquo;{currentLine}&rdquo;
                 </p>
               )}
               <p style={{
                 fontFamily: 'var(--font-lora), serif',
-                fontSize: track.currentLine ? '0.56rem' : '0.78rem',
+                fontSize: currentLine ? '0.56rem' : '0.78rem',
                 color: 'rgba(255,255,255,0.38)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                margin: 0, marginTop: track.currentLine ? '1px' : '0',
+                margin: 0, marginTop: currentLine ? '1px' : '0',
                 letterSpacing: '0.6px', textTransform: 'uppercase',
               }}>
-                {track.songTitle}{track.artist ? ` · ${track.artist}` : ''}
+                {title}{artist ? ` · ${artist}` : ''}
               </p>
             </div>
 
             {/* Vibe tag */}
-            {track.vibe && (
+            {vibe && (
               <span style={{
                 flexShrink: 0,
                 padding: '2px 7px', borderRadius: '50px',
@@ -237,11 +210,11 @@ export function MiniPlayer() {
                 color: vibeColor,
                 background: `${vibeColor}14`,
                 border: `1px solid ${vibeColor}30`,
-              }}>{track.vibe}</span>
+              }}>{vibe}</span>
             )}
 
             {/* Prev */}
-            <button className="mp-nav-btn mp-btn" onClick={handlePrev} disabled={!canPrev} style={{
+            <button className="mp-nav-btn mp-btn" onClick={() => void queuePrev()} disabled={!canPrev} style={{
               background: 'none', border: 'none', cursor: canPrev ? 'pointer' : 'default',
               minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
               padding: '6px', opacity: canPrev ? 0.55 : 0.18, flexShrink: 0,
@@ -254,7 +227,7 @@ export function MiniPlayer() {
             </button>
 
             {/* Play/Pause */}
-            <button className="mp-play-btn" onClick={togglePlayer} style={{
+            <button className="mp-play-btn" onClick={() => void togglePlayPause()} style={{
               width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
               background: '#E8C547', border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -273,7 +246,7 @@ export function MiniPlayer() {
             </button>
 
             {/* Next */}
-            <button className="mp-nav-btn mp-btn" onClick={handleNext} disabled={!canNext} style={{
+            <button className="mp-nav-btn mp-btn" onClick={() => void queueNext()} disabled={!canNext} style={{
               background: 'none', border: 'none', cursor: canNext ? 'pointer' : 'default',
               minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
               padding: '6px', opacity: canNext ? 0.55 : 0.18, flexShrink: 0,
@@ -347,7 +320,7 @@ export function MiniPlayer() {
 
               {/* Top row — vibe tag + close */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-                {track.vibe ? (
+                {vibe ? (
                   <span style={{
                     padding: '4px 12px', borderRadius: '50px',
                     fontSize: '0.48rem', fontFamily: 'var(--font-lora), serif',
@@ -355,7 +328,7 @@ export function MiniPlayer() {
                     color: vibeColor, background: `${vibeColor}18`,
                     border: `1px solid ${vibeColor}35`,
                     boxShadow: `0 0 12px ${vibeColor}22`,
-                  }}>{track.vibe}</span>
+                  }}>{vibe}</span>
                 ) : <div />}
                 <button className="mp-btn" onClick={() => setExpanded(false)} style={{
                   background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
@@ -366,14 +339,14 @@ export function MiniPlayer() {
                 }}>×</button>
               </div>
 
-              {/* Artwork — centered, large */}
+              {/* Artwork */}
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
-                {track.artwork ? (
+                {artwork ? (
                   <div style={{
                     width: '120px', height: '120px', borderRadius: '18px', overflow: 'hidden',
                     boxShadow: `0 16px 56px rgba(0,0,0,0.7), 0 0 0 1px rgba(232,197,71,0.12), 0 0 60px ${vibeColor}18`,
                   }}>
-                    <img src={track.artwork} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={artwork} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ) : (
                   <div style={{
@@ -392,16 +365,16 @@ export function MiniPlayer() {
                 <p style={{
                   fontFamily: 'var(--font-lora), serif', fontWeight: 600,
                   fontSize: '1rem', color: '#F4F1ED', margin: '0 0 4px',
-                }}>{track.songTitle}</p>
+                }}>{title}</p>
                 <p style={{
                   fontFamily: 'var(--font-lora), serif',
                   fontSize: '0.65rem', color: 'rgba(255,255,255,0.38)',
                   letterSpacing: '1px', textTransform: 'uppercase', margin: 0,
-                }}>{track.artist}</p>
+                }}>{artist}</p>
               </div>
 
-              {/* Lyric line — the Margo hero element */}
-              {track.currentLine && (
+              {/* Lyric line */}
+              {currentLine && (
                 <div style={{
                   padding: '20px 24px',
                   background: `linear-gradient(135deg, ${vibeColor}08, rgba(232,197,71,0.03))`,
@@ -411,7 +384,6 @@ export function MiniPlayer() {
                   position: 'relative',
                   overflow: 'hidden',
                 }}>
-                  {/* Subtle glow behind lyric */}
                   <div style={{
                     position: 'absolute', inset: 0,
                     background: `radial-gradient(ellipse at 50% 100%, ${vibeColor}10, transparent 70%)`,
@@ -423,19 +395,19 @@ export function MiniPlayer() {
                     lineHeight: 1.6, margin: 0, textAlign: 'center',
                     position: 'relative',
                   }}>
-                    &ldquo;{track.currentLine}&rdquo;
+                    &ldquo;{currentLine}&rdquo;
                   </p>
                 </div>
               )}
 
-              {/* Progress bar — snippets show thin bar, full songs show seek */}
+              {/* Progress bar */}
               <div style={{ marginBottom: '28px' }}>
                 <div
                   ref={progressRef}
                   className="mp-progress-track"
                   onMouseDown={onProgressMouseDown}
                   onTouchStart={onProgressTouchStart}
-                  style={{ minHeight: 'var(--margo-touch-min)', height: '20px', display: 'flex', alignItems: 'center', cursor: track.isSnippet ? 'default' : 'pointer', boxSizing: 'border-box' }}
+                  style={{ minHeight: 'var(--margo-touch-min)', height: '20px', display: 'flex', alignItems: 'center', cursor: isSnippet ? 'default' : 'pointer', boxSizing: 'border-box' }}
                 >
                   <div style={{ position: 'relative', width: '100%', height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px' }}>
                     <div style={{
@@ -445,7 +417,7 @@ export function MiniPlayer() {
                       transition: dragging ? 'none' : 'width 200ms linear',
                       boxShadow: `0 0 8px ${vibeColor}55`,
                     }} />
-                    {!track.isSnippet && (
+                    {!isSnippet && (
                       <div className="mp-progress-thumb" style={{
                         position: 'absolute', top: '50%', left: `${progress}%`,
                         transform: 'translate(-50%,-50%)',
@@ -457,7 +429,7 @@ export function MiniPlayer() {
                     )}
                   </div>
                 </div>
-                {!track.isSnippet && duration > 0 && (
+                {!isSnippet && duration > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                     <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.28)' }}>{fmt(currentTime)}</span>
                     <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.28)' }}>{fmt(duration)}</span>
@@ -465,11 +437,9 @@ export function MiniPlayer() {
                 )}
               </div>
 
-              {/* Controls — prev · play/pause · next */}
+              {/* Controls */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '28px', marginBottom: '28px' }}>
-
-                {/* Prev */}
-                <button className="mp-nav-btn mp-btn" onClick={handlePrev} disabled={!canPrev} style={{
+                <button className="mp-nav-btn mp-btn" onClick={() => void queuePrev()} disabled={!canPrev} style={{
                   background: 'none', border: 'none', cursor: canPrev ? 'pointer' : 'default',
                   color: '#F4F1ED', padding: '10px', opacity: canPrev ? 0.6 : 0.18,
                 }}>
@@ -479,8 +449,7 @@ export function MiniPlayer() {
                   </svg>
                 </button>
 
-                {/* Play/Pause — hero button */}
-                <button className="mp-play-btn" onClick={togglePlayer} style={{
+                <button className="mp-play-btn" onClick={() => void togglePlayPause()} style={{
                   width: '64px', height: '64px', borderRadius: '50%',
                   background: '#E8C547', border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -498,8 +467,7 @@ export function MiniPlayer() {
                   )}
                 </button>
 
-                {/* Next */}
-                <button className="mp-nav-btn mp-btn" onClick={handleNext} disabled={!canNext} style={{
+                <button className="mp-nav-btn mp-btn" onClick={() => void queueNext()} disabled={!canNext} style={{
                   background: 'none', border: 'none', cursor: canNext ? 'pointer' : 'default',
                   color: '#F4F1ED', padding: '10px', opacity: canNext ? 0.6 : 0.18,
                 }}>
@@ -508,7 +476,6 @@ export function MiniPlayer() {
                     <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
                   </svg>
                 </button>
-
               </div>
 
               {/* Volume row */}
@@ -537,7 +504,7 @@ export function MiniPlayer() {
                 <input
                   type="range" min="0" max="1" step="0.05"
                   value={muted ? 0 : volume}
-                  onChange={e => setPlayerVolume(parseFloat(e.target.value))}
+                  onChange={e => setVolume(parseFloat(e.target.value))}
                   style={{ flex: 1, accentColor: '#E8C547', cursor: 'pointer', height: '3px' }}
                 />
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>
@@ -548,9 +515,9 @@ export function MiniPlayer() {
               </div>
 
               {/* Full Karaoke CTA */}
-              {track.songId && (
+              {songId && !isSnippet && (
                 <Link
-                  href={`/music/player?id=${track.songId}&autoplay=1`}
+                  href={`/music/player?id=${songId}&autoplay=1`}
                   onClick={() => setExpanded(false)}
                   className="mp-karaoke-btn"
                   style={{
