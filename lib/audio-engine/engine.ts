@@ -144,7 +144,14 @@ function pauseSnippetAtEnd(): void {
   syncMediaSessionFromState(_state)
 }
 
-// ── Load / ready (MARGO: readyState >= 3, canplaythrough fallback) ──
+// ── Load / ready ──────────────────────────────────────────────────
+// FIX: Use 'canplay' (fires as soon as the browser can start playing — a few
+// frames of data) instead of 'canplaythrough' (fires only after the browser
+// estimates it can play to the end without buffering, which on mobile networks
+// is very late or never).
+// FIX: Do NOT call audio.load() if the element already has the correct src and
+// has already started loading (readyState > 0) — load() resets all buffering
+// progress, causing the very buffering delay we're trying to avoid.
 
 function waitUntilCanPlay(audio: HTMLAudioElement, generation: number): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -159,24 +166,30 @@ function waitUntilCanPlay(audio: HTMLAudioElement, generation: number): Promise<
       }
       resolve()
     }
-    if (audio.readyState >= 3) {
+    // readyState >= 2 (HAVE_CURRENT_DATA) is enough to seek and start playing
+    if (audio.readyState >= 2) {
       ready()
       return
     }
     patch({ buffering: true })
-    const onCanPlayThrough = () => {
-      audio.removeEventListener('canplaythrough', onCanPlayThrough)
+    const onCanPlay = () => {
+      audio.removeEventListener('canplay', onCanPlay)
       audio.removeEventListener('error', onErr)
       ready()
     }
     const onErr = () => {
-      audio.removeEventListener('canplaythrough', onCanPlayThrough)
+      audio.removeEventListener('canplay', onCanPlay)
       audio.removeEventListener('error', onErr)
       reject(new Error('load failed'))
     }
-    audio.addEventListener('canplaythrough', onCanPlayThrough, { once: true })
+    audio.addEventListener('canplay', onCanPlay, { once: true })
     audio.addEventListener('error', onErr, { once: true })
-    audio.load()
+    // Only call load() if the browser hasn't started loading yet (readyState 0 = HAVE_NOTHING
+    // with no src set, or after an explicit src change in prepareSource).
+    // If readyState is already 1 (HAVE_METADATA) the browser is already fetching — don't reset it.
+    if (audio.readyState === 0) {
+      audio.load()
+    }
   })
 }
 
@@ -187,6 +200,8 @@ async function prepareSource(audioUrl: string, generation: number): Promise<void
   if (!sameSrc) {
     audio.pause()
     audio.src = audioUrl
+    // After setting a new src, readyState resets to 0 — load() is needed
+    audio.load()
   }
   await waitUntilCanPlay(audio, generation)
 }
@@ -375,10 +390,10 @@ export function togglePlayPause(): void {
     return
   }
 
-  /* full mode */
+  /* full mode — FIX: use 'canplay' instead of 'canplaythrough' */
   bindMediaSessionHandlers()
   syncMediaSessionFromState(_state)
-  if (audio.readyState >= 3) {
+  if (audio.readyState >= 2) {
     audio.play().catch(() => patch({ error: 'Play blocked — tap to start' }))
     patch({ playing: true, error: null })
     requestWakeLock()
@@ -386,14 +401,14 @@ export function togglePlayPause(): void {
   } else {
     patch({ buffering: true })
     const onReady = () => {
-      audio.removeEventListener('canplaythrough', onReady)
+      audio.removeEventListener('canplay', onReady)
       if (generation !== _handlerGeneration) return
       audio.play().catch(() => patch({ error: 'Play blocked — tap to start' }))
       patch({ playing: true, buffering: false })
       requestWakeLock()
       syncMediaSessionFromState(_state)
     }
-    audio.addEventListener('canplaythrough', onReady, { once: true })
+    audio.addEventListener('canplay', onReady, { once: true })
   }
 }
 
