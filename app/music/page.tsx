@@ -7,7 +7,7 @@ import { MargoNav } from '@/components/margo-nav'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-import { stopPlayer, registerGlobalAudio, clearGlobalAudio, setLyricQueue } from '@/lib/player-store'
+import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, subscribeAudioEngine } from '@/lib/audio-engine'
 
 
 function formatNum(n: number): string {
@@ -143,8 +143,6 @@ function LyricBoard({ songs }: { songs: Song[] }) {
   const [focusedMoment, setFocusedMoment] = useState<LyricMoment | null>(null)
   const [focusedIndex, setFocusedIndex] = useState(0)
   const [playingKey, setPlayingKey] = useState<string | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const audioPoolRef = useRef<Map<string, HTMLAudioElement>>(new Map())
   const cycleRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const vibePoolRef = useRef<LyricMoment[]>([])
   const slotQueueRef = useRef<number>(0) // next slot to replace
@@ -183,26 +181,16 @@ function LyricBoard({ songs }: { songs: Song[] }) {
       [moments[i], moments[j]] = [moments[j], moments[i]]
     }
     setAllMoments(moments)
-    // Pre-load full queue so mini player next/prev works immediately
-    import('@/lib/player-store').then(({ setLyricQueue }) => {
-      setLyricQueue(moments)
-    }).catch(() => {})
   }, [songs])
 
-  // Preload one audio element per unique song for instant playback
+  // Warm audio URLs for instant playback — no Audio instances, just prefetch hints
   useEffect(() => {
     if (allMoments.length === 0) return
-    const pool = audioPoolRef.current
     const seen = new Set<string>()
     allMoments.forEach(m => {
       if (!m.audioUrl || !m.songId || seen.has(m.songId)) return
       seen.add(m.songId)
-      if (!pool.has(m.songId)) {
-        const audio = new Audio(m.audioUrl)
-        audio.preload = 'auto'
-        audio.load()
-        pool.set(m.songId, audio)
-      }
+      warmUrl(m.audioUrl)
     })
   }, [allMoments])
 
@@ -285,72 +273,62 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     return () => { if (cycleRef.current) clearInterval(cycleRef.current) }
   }, [allMoments, activeVibe, focusedMoment])
 
+  // Sync playingKey with engine state
+  useEffect(() => {
+    return subscribeAudioEngine(state => {
+      if (!state.playing || state.mode === 'idle') {
+        setPlayingKey(null)
+      } else if (state.snippet) {
+        setPlayingKey(`${state.songId}_${state.snippet.lineIndex}`)
+      }
+    })
+  }, [])
+
   const playSnippet = useCallback((moment: LyricMoment) => {
     if (!moment.audioUrl) return
     const key = `${moment.songId}_${moment.lineId}`
 
-    // Same card — pause and reset
-    if (audioRef.current && playingKey === key) {
-      audioRef.current.pause()
-      audioRef.current.src = ''
-      audioRef.current = null
+    // Same card while playing — stop
+    if (playingKey === key) {
+      engineStop()
       setPlayingKey(null)
-      stopPlayer()
       return
     }
 
-    // Stop any existing audio globally
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.src = ''
-    }
+    // Wire queue for mini player prev/next
+    const queueItems = vibePoolRef.current
+      .filter(m => m.audioUrl)
+      .map(m => ({
+        songId: m.songId,
+        audioUrl: m.audioUrl!,
+        title: m.songTitle,
+        artist: m.artist,
+        artwork: m.artwork ?? null,
+        lineIndex: m.lineId,
+        lineText: m.line,
+        startSec: m.start,
+        endSec: m.end,
+        vibe: (m.vibes && m.vibes[0]) || null,
+      }))
+    const currentIdx = queueItems.findIndex(
+      q => q.songId === moment.songId && q.lineIndex === moment.lineId
+    )
+    setQueue(queueItems, currentIdx >= 0 ? currentIdx : 0)
 
-    // Use preloaded audio from pool for instant playback
-    const poolAudio = moment.songId ? audioPoolRef.current.get(moment.songId) : null
-    const audio = poolAudio || new Audio(moment.audioUrl)
-    if (!poolAudio) { audio.preload = 'auto'; audio.load() }
-    audioRef.current = audio
-
-    // Register with global manager so other players stop us
-
-    const onLoaded = () => {
-      registerGlobalAudio(() => { audio.pause(); setPlayingKey(null) })
-      audio.currentTime = moment.start
-      audio.play().catch(() => {})
-      setPlayingKey(key)
-      // Notify global mini player
-      import('@/lib/player-store').then(({ playTrack, pushToLyricQueue }) => {
-        const track = {
-          audioUrl: moment.audioUrl!,
-          songId: moment.songId,
-          songTitle: moment.songTitle,
-          artist: moment.artist,
-          artwork: moment.artwork || null,
-          currentLine: moment.line,
-          startTime: moment.start,
-          endTime: moment.end,
-          vibe: (moment.vibes && moment.vibes[0]) || null,
-          isSnippet: true,
-          audioElement: audioRef.current,
-        }
-        pushToLyricQueue(track)
-        playTrack(track)
-      }).catch(() => {})
-    }
-
-    const onEnded = () => { setPlayingKey(null); stopPlayer() }
-    audio.addEventListener('canplay', onLoaded, { once: true })
-    audio.addEventListener('ended', onEnded, { once: true })
-    audio.load()
-
-    const snippetDuration = Math.min((moment.end - moment.start) * 1000 + 400, 9000)
-    setTimeout(() => {
-      if (audioRef.current === audio) {
-        audio.pause()
-        setPlayingKey(null)
-        stopPlayer()
-      }
-    }, snippetDuration + 1500)
+    // Play via engine — instant if URL already browser-cached
+    void enginePlaySnippet({
+      songId: moment.songId,
+      audioUrl: moment.audioUrl,
+      title: moment.songTitle,
+      artist: moment.artist,
+      artwork: moment.artwork ?? null,
+      lineIndex: moment.lineId,
+      lineText: moment.line,
+      startSec: moment.start,
+      endSec: moment.end,
+      vibe: (moment.vibes && moment.vibes[0]) || null,
+      source: 'music-board',
+    })
   }, [playingKey])
 
   const handleCardClick = (moment: LyricMoment) => {
@@ -379,13 +357,13 @@ function LyricBoard({ songs }: { songs: Song[] }) {
   }
 
   const handleClose = () => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
+    engineStop()
     setFocusedMoment(null)
     setPlayingKey(null)
   }
 
   const handleVibe = (vibe: string) => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
+    engineStop()
     setFocusedMoment(null)
     setPlayingKey(null)
     setActiveVibe(vibe)
