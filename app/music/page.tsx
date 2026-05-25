@@ -69,8 +69,30 @@ function LyricCard({
   onClick: () => void
   onPlay: (e: React.MouseEvent) => void
 }) {
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  // Warm audio only when this card enters the viewport — prevents all cards
+  // warming at once and overflowing the 3-slot preload pool
+  useEffect(() => {
+    if (!moment.audioUrl) return
+    const el = cardRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          if (moment.audioUrl) warmUrl(moment.audioUrl)
+          obs.disconnect()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [moment.audioUrl])
+
   return (
     <div
+      ref={cardRef}
       className="lyric-card"
       onClick={onClick}
       style={{
@@ -183,16 +205,8 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     setAllMoments(moments)
   }, [songs])
 
-  // Warm audio URLs for instant playback — no Audio instances, just prefetch hints
-  useEffect(() => {
-    if (allMoments.length === 0) return
-    const seen = new Set<string>()
-    allMoments.forEach(m => {
-      if (!m.audioUrl || !m.songId || seen.has(m.songId)) return
-      seen.add(m.songId)
-      warmUrl(m.audioUrl)
-    })
-  }, [allMoments])
+  // Audio warming is done per-card via IntersectionObserver in LyricCard
+  // (warming all moments at once overflows the 3-slot preload pool)
 
   const getFiltered = useCallback((vibe: string) => {
     return vibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(vibe))

@@ -93,9 +93,9 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
 
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
 
-  // Preload audio URL on mount for instant tap response
+  // Load lyrics on mount — warmUrl is handled by PostCard IntersectionObserver
+  // (warming here floods the 3-slot pool since all buttons mount simultaneously)
   useEffect(() => {
-    warmUrl(audioUrl)
     if (songId && db) {
       import('firebase/database').then(({ get, ref: dbRef }) => {
         get(dbRef(db!, `songs/${songId}`)).then(snap => {
@@ -175,8 +175,7 @@ function Tier1Player({ audioUrl, songId, postText }: {
     setLyricsLoaded(true)
   }
 
-  // Warm the URL on mount
-  useEffect(() => { warmUrl(audioUrl) }, [audioUrl])
+  // warmUrl handled by PostCard IntersectionObserver — not here (floods pool)
 
   const toggle = async () => {
     loadLyrics()
@@ -285,9 +284,29 @@ function PostCard({
   const label = VIBE_LABELS[emotion] || post.emotion || ''
   const isTier1 = post.tier === 1
   const audioUrl = (post as any).audioUrl || null
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  // Warm audio URL only when this card enters the viewport — prevents all posts
+  // warming simultaneously and overflowing the 3-slot preload pool
+  useEffect(() => {
+    if (!audioUrl || !isTier1) return
+    const el = cardRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          warmUrl(audioUrl)
+          obs.disconnect()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [audioUrl, isTier1])
 
   return (
-    <div style={{
+    <div ref={cardRef} style={{
       background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
       border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
       borderRadius: '20px', padding: '20px',
