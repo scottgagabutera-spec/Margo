@@ -8,6 +8,7 @@ import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, subscribeAudioEngine } from '@/lib/audio-engine'
+import { getMargoActorId } from '@/lib/engagement/session'
 
 
 function formatNum(n: number): string {
@@ -852,7 +853,7 @@ export default function MusicPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const myId = (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
+    const myId = getMargoActorId()
     let unsub: (() => void) | null = null
     import('firebase/database').then(({ ref: dbRef, onValue: dbOnValue, getDatabase }) => {
       import('@/lib/firebase').then(({ app }) => {
@@ -874,7 +875,7 @@ export default function MusicPage() {
 
   const toggleSongResonate = useCallback((songId: string) => {
     if (typeof window === 'undefined') return
-    const myId = (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
+    const myId = getMargoActorId()
     const already = resonatedSongs.has(songId)
     setResonatedSongs(prev => {
       const next = new Set(prev)
