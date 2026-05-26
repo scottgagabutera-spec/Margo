@@ -136,6 +136,11 @@ function PostsTab() {
   const [echoes, setEchoes] = useState<Record<string, Echo[]>>({})
   const [backfillStatus, setBackfillStatus] = useState<string | null>(null)
   const [backfillRunning, setBackfillRunning] = useState(false)
+  const [resonateBackfillStatus, setResonateBackfillStatus] = useState<string | null>(null)
+  const [resonateBackfillRunning, setResonateBackfillRunning] = useState(false)
+  const [viewsBackfillStatus, setViewsBackfillStatus] = useState<string | null>(null)
+  const [viewsBackfillRunning, setViewsBackfillRunning] = useState(false)
+  const [postFilter, setPostFilter] = useState<'all' | 'active' | 'hidden'>('active')
 
   const loadEchoes = async (postId: string) => {
     if (!db) return
@@ -203,6 +208,50 @@ function PostsTab() {
     return () => { unsub(); unsub2() }
   }, [])
 
+  const runResonateBackfill = async () => {
+    if (!db || resonateBackfillRunning) return
+    setResonateBackfillRunning(true)
+    setResonateBackfillStatus('Reading analytics…')
+    try {
+      const snap = await get(ref(db, 'analytics'))
+      if (!snap.exists()) { setResonateBackfillStatus('No analytics found.'); return }
+      const data = snap.val() as Record<string, any>
+      const multiPath: Record<string, number> = {}
+      for (const [postId, a] of Object.entries(data)) {
+        const count = Object.keys((a as any).resonates || {}).length
+        if (count > 0) multiPath[`postStats/${postId}/resonateCount`] = count
+      }
+      if (Object.keys(multiPath).length > 0) await update(ref(db), multiPath)
+      setResonateBackfillStatus(`Done — updated ${Object.keys(multiPath).length} posts.`)
+    } catch (e: any) {
+      setResonateBackfillStatus(`Error: ${e.message}`)
+    } finally {
+      setResonateBackfillRunning(false)
+    }
+  }
+
+  const runViewsBackfill = async () => {
+    if (!db || viewsBackfillRunning) return
+    setViewsBackfillRunning(true)
+    setViewsBackfillStatus('Reading analytics…')
+    try {
+      const snap = await get(ref(db, 'analytics'))
+      if (!snap.exists()) { setViewsBackfillStatus('No analytics found.'); return }
+      const data = snap.val() as Record<string, any>
+      const multiPath: Record<string, number> = {}
+      for (const [postId, a] of Object.entries(data)) {
+        const views = (a as any).views || 0
+        if (views > 0) multiPath[`postStats/${postId}/views`] = views
+      }
+      if (Object.keys(multiPath).length > 0) await update(ref(db), multiPath)
+      setViewsBackfillStatus(`Done — updated ${Object.keys(multiPath).length} posts.`)
+    } catch (e: any) {
+      setViewsBackfillStatus(`Error: ${e.message}`)
+    } finally {
+      setViewsBackfillRunning(false)
+    }
+  }
+
   const toggleHide = async (post: Post) => {
     if (!db) return
     const newStatus = post.status === 'hidden' ? 'active' : 'hidden'
@@ -210,6 +259,8 @@ function PostsTab() {
   }
 
   const filtered = posts.filter(p => {
+    if (postFilter === 'active' && p.status === 'hidden') return false
+    if (postFilter === 'hidden' && p.status !== 'hidden') return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (p.text || '').toLowerCase().includes(q) ||
@@ -238,18 +289,39 @@ function PostsTab() {
       <input type="text" value={search} onChange={e => setSearch(e.target.value)}
         placeholder="Search posts, songs, artists, users…"
         style={{ ...S.input, marginBottom: '16px' }} />
-      {/* Backfill tool */}
-      <div style={{ ...S.card, marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-        <div>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text)', marginBottom: '4px' }}>Backfill Echo Counts</p>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)' }}>
-            {backfillStatus || 'Counts existing lyric backs and writes postStats.echoCount for all posts.'}
-          </p>
-        </div>
-        <button onClick={runBackfill} disabled={backfillRunning} style={{ ...S.btn, opacity: backfillRunning ? 0.6 : 1, whiteSpace: 'nowrap' }}>
-          {backfillRunning ? 'Running…' : 'Run Backfill'}
-        </button>
+      {/* Post filter tabs */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+        {(['active', 'hidden', 'all'] as const).map(f => (
+          <button key={f} onClick={() => setPostFilter(f)} style={{
+            ...S.ghostBtn,
+            fontFamily: 'var(--font-lora), serif',
+            fontSize: '0.6rem',
+            textTransform: 'uppercase',
+            letterSpacing: '1.5px',
+            borderBottom: postFilter === f ? '1px solid var(--gold)' : '1px solid transparent',
+            color: postFilter === f ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
+            borderRadius: 0,
+            padding: '4px 12px',
+          }}>{f}</button>
+        ))}
       </div>
+
+      {/* Backfill tools */}
+      {[
+        { label: 'Backfill Echo Counts', desc: 'Counts existing lyric backs → postStats.echoCount', status: backfillStatus, running: backfillRunning, fn: runBackfill },
+        { label: 'Backfill Resonate Counts', desc: 'Reads analytics.resonates → postStats.resonateCount', status: resonateBackfillStatus, running: resonateBackfillRunning, fn: runResonateBackfill },
+        { label: 'Backfill Views', desc: 'Copies analytics.views → postStats.views', status: viewsBackfillStatus, running: viewsBackfillRunning, fn: runViewsBackfill },
+      ].map(({ label, desc, status, running, fn }) => (
+        <div key={label} style={{ ...S.card, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+          <div>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text)', marginBottom: '4px' }}>{label}</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)' }}>{status || desc}</p>
+          </div>
+          <button onClick={fn} disabled={running} style={{ ...S.btn, opacity: running ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+            {running ? 'Running…' : 'Run'}
+          </button>
+        </div>
+      ))}
 
       {/* Posts */}
       {loading ? <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '32px' }}>Loading…</p> : filtered.map(post => {
@@ -281,28 +353,57 @@ function PostsTab() {
                 </button>
               </div>
             </div>
-            {/* Echo list */}
+            {/* Echo dropdown */}
             {isExpanded && (
-              <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {postEchoes.length === 0 && (
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>No lyric backs yet.</p>
-                )}
-                {postEchoes.map(echo => {
-                  const isEchoHidden = echo.status === 'hidden'
-                  return (
-                    <div key={echo.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', opacity: isEchoHidden ? 0.45 : 1 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-2)', lineHeight: 1.4 }}>"{echo.lyric?.slice(0, 100)}{(echo.lyric?.length || 0) > 100 ? '…' : ''}"</p>
-                        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
-                          {echo.song} · {echo.artist} · {echo.username || 'anon'} · {echo.emotion || 'no vibe'}
-                        </p>
-                      </div>
-                      <button onClick={() => toggleHideEcho(post.id, echo)} style={isEchoHidden ? S.btn : S.dangerBtn}>
-                        {isEchoHidden ? 'Show' : 'Hide'}
-                      </button>
+              <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
+                {postEchoes.length === 0 ? (
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>No lyric backs yet.</p>
+                ) : (
+                  <>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
+                      {postEchoes.filter(e => e.status !== 'hidden').length} active · {postEchoes.filter(e => e.status === 'hidden').length} hidden
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {postEchoes.map(echo => {
+                        const isEchoHidden = echo.status === 'hidden'
+                        return (
+                          <div key={echo.id} style={{
+                            background: isEchoHidden ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
+                            borderRadius: '12px', padding: '12px 14px',
+                            border: `1px solid ${isEchoHidden ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)'}`,
+                            opacity: isEchoHidden ? 0.5 : 1,
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px'
+                          }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '6px' }}>
+                                "{echo.lyric}"
+                              </p>
+                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                  {echo.song} · {echo.artist}
+                                </span>
+                                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>·</span>
+                                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                  {echo.username || 'anon'}
+                                </span>
+                                {echo.emotion && (
+                                  <>
+                                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>·</span>
+                                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>{echo.emotion}</span>
+                                  </>
+                                )}
+                                {isEchoHidden && <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: '#ff6060', textTransform: 'uppercase', letterSpacing: '1px' }}>hidden</span>}
+                              </div>
+                            </div>
+                            <button onClick={() => toggleHideEcho(post.id, echo)} style={{ ...isEchoHidden ? S.btn : S.dangerBtn, flexShrink: 0 }}>
+                              {isEchoHidden ? 'Show' : 'Hide'}
+                            </button>
+                          </div>
+                        )
+                      })}
                     </div>
-                  )
-                })}
+                  </>
+                )}
               </div>
             )}
           </div>
