@@ -155,7 +155,7 @@ function LyricCard({
 }
 
 // ─── Lyric Discovery Board ────────────────────────────────────────────
-function LyricBoard({ songs }: { songs: Song[] }) {
+function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
   const [activeVibe, setActiveVibe] = useState('ALL')
   const [allMoments, setAllMoments] = useState<LyricMoment[]>([])
   // 6 slots: desktop 3×2, mobile 2×3
@@ -547,11 +547,26 @@ function LyricBoard({ songs }: { songs: Song[] }) {
         }}>
 
           {filtered.length === 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem' }}>
-                No lines tagged for {activeVibe} yet.
-              </p>
-            </div>
+            loading ? (
+              // Skeleton cards while Firebase loads — never show empty board
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', padding: '8px 0' }}>
+                {Array(6).fill(null).map((_, i) => (
+                  <div key={i} style={{
+                    minHeight: '150px', borderRadius: '14px',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    animation: `pulse 1.4s ease-in-out ${i * 0.12}s infinite`,
+                  }} />
+                ))}
+                <style>{`@keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:0.7} }`}</style>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem' }}>
+                  No lines tagged for {activeVibe} yet.
+                </p>
+              </div>
+            )
           ) : focusedMoment ? (
             /* ── Focused mode ── */
             <div style={{ animation: 'focusIn 350ms ease forwards' }}>
@@ -927,7 +942,7 @@ export default function MusicPage() {
       )}
 
       {/* ── Lyric Discovery Board ── */}
-      <LyricBoard songs={songs} />
+      <LyricBoard songs={songs} loading={loading} />
 
       {/* ── Divider ── */}
       <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.07), transparent)', margin: '40px 16px 0' }} />
