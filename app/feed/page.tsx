@@ -17,7 +17,7 @@ import { useUsername } from '@/hooks/useUsername'
 import { MargoNav } from '@/components/margo-nav'
 import { CardExportModal } from '@/components/card-export-modal'
 import { db } from '@/lib/firebase'
-import { ref, set, remove, onValue } from 'firebase/database'
+import { ref, set, remove, onValue, runTransaction } from 'firebase/database'
 import Link from 'next/link'
 import {
   playSnippet,
@@ -272,11 +272,12 @@ function Tier1Player({ audioUrl, songId, postText }: {
 }
 
 function PostCard({
-  post, resonated, resonateCount, onResonate, onExport
+  post, resonated, resonateCount, echoCount, onResonate, onExport
 }: {
   post: Post
   resonated: boolean
   resonateCount: number
+  echoCount: number
   onResonate: (id: string) => void
   onExport: (post: Post) => void
 }) {
@@ -433,7 +434,7 @@ function PostCard({
           transition: 'color 150ms ease',
         }}>
           <LyricBackIcon size={18} color="var(--text-2)" />
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Lyric Back</span>
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>{echoCount > 0 ? echoCount + ' ' : ''}Lyric Back</span>
         </Link>
 
         <button
@@ -504,22 +505,31 @@ export default function FeedPage() {
     } catch { return new Set() }
   })
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
-  const [analytics, setAnalytics] = useState<Record<string, any>>({})
+  const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number }>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
 
+  // Scoped postStats listener — reads denormalized counts, no full tree download
   useEffect(() => {
     if (!db) return
+    const unsub = onValue(ref(db, 'postStats'), (snap) => {
+      setPostStats(snap.val() || {})
+    })
+    return () => unsub()
+  }, [])
+
+  // Resonate ownership — reads only per-user keys from analytics
+  useEffect(() => {
+    if (!db) return
+    const myId = getMargoActorId()
     const unsub = onValue(ref(db, 'analytics'), (snap) => {
       const data = snap.val() || {}
-      const myId = getMargoActorId()
-      const counts: Record<string, number> = {}
       const myResonated = new Set<string>()
+      const counts: Record<string, number> = {}
       Object.keys(data).forEach(id => {
         counts[id] = Object.keys(data[id]?.resonates || {}).length
         if (data[id]?.resonates?.[myId]) myResonated.add(id)
       })
       setResonateCounts(counts)
-      setAnalytics(data)
       setResonated(myResonated)
       try { localStorage.setItem('margoResonated', JSON.stringify([...myResonated])) } catch {}
     })
@@ -527,8 +537,8 @@ export default function FeedPage() {
   }, [])
 
   const getEngagement = (post: Post) => {
-    const a = analytics[post.id] || {}
-    return (a.views || 0) + (Object.keys(a.resonates || {}).length * 4) + (Object.keys(a.echoes || {}).length * 5)
+    const s = postStats[post.id] || {}
+    return (s.views || 0) + ((s.resonateCount || 0) * 4) + ((s.echoCount || 0) * 5)
   }
 
   const getAge = (post: Post) => {
@@ -575,6 +585,8 @@ export default function FeedPage() {
     const rRef = ref(db, `analytics/${postId}/resonates/${myId}`)
     try {
       already ? await remove(rRef) : await set(rRef, true)
+      // Keep postStats.resonateCount in sync for trending formula
+      runTransaction(ref(db, `postStats/${postId}/resonateCount`), (current) => Math.max(0, (current || 0) + (already ? -1 : 1)))
       const dbSafe = db
       if (dbSafe) {
         import('firebase/database').then(async ({ ref: dbRef, get, set: dbSet, remove: dbRemove }) => {
@@ -705,6 +717,7 @@ export default function FeedPage() {
               post={post}
               resonated={resonated.has(post.id)}
               resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+              echoCount={postStats[post.id]?.echoCount ?? 0}
               onResonate={toggleResonate}
               onExport={setExportPost}
             />

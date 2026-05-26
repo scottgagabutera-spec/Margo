@@ -643,7 +643,7 @@ function LyricBackContent() {
         {/* ── Lyric Backs — same card system as feed ────────── */}
         <div>
           <p style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 700, color: text3, letterSpacing: '2px', textTransform: 'uppercase', textAlign: 'center', marginBottom: '20px' }}>
-            Lyric Backs
+            {echoes.length > 0 ? `${echoes.length} Lyric Back${echoes.length === 1 ? '' : 's'}` : 'Lyric Backs'}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {echoesLoading && (
