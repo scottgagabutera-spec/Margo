@@ -12,6 +12,7 @@ export interface Echo {
   username: string
   timestamp: number
   resonates?: Record<string, boolean>
+  status?: string
 }
 
 export function useEchoes(postId: string | null) {
@@ -24,7 +25,8 @@ export function useEchoes(postId: string | null) {
     const unsub = onValue(echoesRef, (snap) => {
       const list: Echo[] = []
       snap.forEach((child) => {
-        list.push({ ...child.val(), id: child.key })
+        const val = { ...child.val(), id: child.key }
+        if (val.status !== 'hidden') list.push(val)
       })
       setEchoes(list.reverse())
       setLoading(false)

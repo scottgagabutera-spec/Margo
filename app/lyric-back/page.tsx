@@ -271,18 +271,8 @@ function LyricBackContent() {
 
   /* ─── promote + reply — navigate first, write in background ─ */
   const promoteAndReply = (echo: typeof echoes[0]) => {
-    window.location.href = `/lyric-back?postId=${echo.id}`
-    if (db) {
-      import('firebase/database').then(({ ref: dbRef, set: dbSet }) => {
-        dbSet(dbRef(db as any, `posts/${echo.id}`), {
-          text: echo.lyric,
-          knowledge: { song: echo.song, artist: echo.artist },
-          emotion: echo.emotion, mode: 'reply',
-          username: echo.username, timestamp: echo.timestamp,
-          replyToId: postId || 'root',
-        }).catch(e => console.error('promote error', e))
-      })
-    }
+    // Navigate to this echo's lyric-back page — no feed post created
+    window.location.href = `/lyric-back?postId=${encodeURIComponent(postId || '')}&echoId=${encodeURIComponent(echo.id)}`
   }
 
   /* ─── resonate ───────────────────────────────────────────── */
