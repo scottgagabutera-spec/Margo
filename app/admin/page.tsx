@@ -4,7 +4,7 @@ import { auth, db } from '@/lib/firebase'
 import { getDatabase } from 'firebase/database'
 import { app } from '@/lib/firebase'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
-import { ref, onValue, update, remove, push, set, get } from 'firebase/database'
+import { ref, onValue, update, remove, push, set, get, runTransaction } from 'firebase/database'
 
 // ── Types ──
 interface Post {
@@ -163,7 +163,10 @@ function PostsTab() {
   const toggleHideEcho = async (postId: string, echo: Echo) => {
     if (!db) return
     const newStatus = echo.status === 'hidden' ? 'active' : 'hidden'
+    const delta = newStatus === 'hidden' ? -1 : 1
     await update(ref(db, `posts/${postId}/echoes/${echo.id}`), { status: newStatus })
+    // Keep postStats.echoCount accurate — only count active echoes
+    runTransaction(ref(db, `postStats/${postId}/echoCount`), (cur) => Math.max(0, (cur || 0) + delta))
     setEchoes(prev => ({
       ...prev,
       [postId]: (prev[postId] || []).map(e => e.id === echo.id ? { ...e, status: newStatus } : e)
@@ -180,8 +183,10 @@ function PostsTab() {
       const posts = snap.val() as Record<string, any>
       const multiPath: Record<string, number> = {}
       for (const [postId, post] of Object.entries(posts)) {
-        const echoCount = post.echoes ? Object.keys(post.echoes).length : 0
+        const echoes = post.echoes ? Object.values(post.echoes as Record<string, any>) : []
+        const echoCount = echoes.filter((e: any) => e.status !== 'hidden').length
         if (echoCount > 0) multiPath[`postStats/${postId}/echoCount`] = echoCount
+        else if (post.echoes) multiPath[`postStats/${postId}/echoCount`] = 0
       }
       if (Object.keys(multiPath).length > 0) {
         await update(ref(db), multiPath)
