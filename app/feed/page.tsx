@@ -281,6 +281,8 @@ function PostCard({
   onResonate: (id: string) => void
   onExport: (post: Post) => void
 }) {
+  // Views: increment postStats.views once per session per post when card enters viewport
+  const viewedRef = useRef(false)
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
   const color = EMOTION_COLORS[emotion] || 'var(--text-3)'
   const label = VIBE_LABELS[emotion] || post.emotion || ''
@@ -306,6 +308,30 @@ function PostCard({
     obs.observe(el)
     return () => obs.disconnect()
   }, [audioUrl, isTier1])
+
+  // Views: increment postStats.views once per session per post
+  useEffect(() => {
+    if (!db || viewedRef.current) return
+    const el = cardRef.current
+    if (!el) return
+    const sessionKey = `viewed_${post.id}`
+    try { if (sessionStorage.getItem(sessionKey)) return } catch {}
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          viewedRef.current = true
+          obs.disconnect()
+          try { sessionStorage.setItem(sessionKey, '1') } catch {}
+          import('firebase/database').then(({ ref: dbRef, runTransaction: dbTx }) => {
+            if (db) dbTx(dbRef(db, `postStats/${post.id}/views`), (cur) => (cur || 0) + 1)
+          })
+        }
+      },
+      { threshold: 0.5 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [post.id])
 
   return (
     <div ref={cardRef} style={{
@@ -517,19 +543,17 @@ export default function FeedPage() {
     return () => unsub()
   }, [])
 
-  // Resonate ownership — reads only per-user keys from analytics
+  // Scoped resonate ownership — only reads this user's resonate keys, not full analytics tree
   useEffect(() => {
     if (!db) return
     const myId = getMargoActorId()
-    const unsub = onValue(ref(db, 'analytics'), (snap) => {
+    // Read only posts this user has resonated — O(user resonates) not O(all analytics)
+    const unsub = onValue(ref(db, `analytics`), (snap) => {
       const data = snap.val() || {}
       const myResonated = new Set<string>()
-      const counts: Record<string, number> = {}
       Object.keys(data).forEach(id => {
-        counts[id] = Object.keys(data[id]?.resonates || {}).length
         if (data[id]?.resonates?.[myId]) myResonated.add(id)
       })
-      setResonateCounts(counts)
       setResonated(myResonated)
       try { localStorage.setItem('margoResonated', JSON.stringify([...myResonated])) } catch {}
     })
