@@ -740,7 +740,7 @@ export default function FeedPage() {
               key={post.id}
               post={post}
               resonated={resonated.has(post.id)}
-              resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+              resonateCount={postStats[post.id]?.resonateCount ?? resonateCounts[post.id] ?? post.resonates ?? 0}
               echoCount={postStats[post.id]?.echoCount ?? 0}
               onResonate={toggleResonate}
               onExport={setExportPost}
