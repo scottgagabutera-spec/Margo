@@ -211,8 +211,21 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     setAllMoments(moments)
   }, [songs])
 
-  // Audio warming is done per-card via IntersectionObserver in LyricCard
-  // (warming all moments at once overflows the 3-slot preload pool)
+  // Pre-warm first 3 unique audioUrls as soon as songs arrive — fills the pool
+  // before any card is visible so first tap is instant even in incognito
+  useEffect(() => {
+    if (songs.length === 0) return
+    const seen = new Set<string>()
+    for (const song of songs) {
+      if (!song.audioUrl) continue
+      if (seen.has(song.audioUrl)) continue
+      seen.add(song.audioUrl)
+      warmUrl(song.audioUrl)
+      if (seen.size >= 3) break  // pool size — stop here, rest handled by IntersectionObserver
+    }
+  }, [songs])
+
+  // Audio warming for remaining cards done per-card via IntersectionObserver in LyricCard
 
   const getFiltered = useCallback((vibe: string) => {
     return vibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(vibe))
@@ -877,12 +890,7 @@ export default function MusicPage() {
 
   const { lines: sharedLines } = useSharedLines(featuredSong?.title, featuredSong?.artist)
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <MargoNav />
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--gold)', fontSize: '1rem' }}>Loading…</p>
-    </div>
-  )
+  // No blocking loading gate — page renders immediately, board populates as data arrives
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -924,8 +932,13 @@ export default function MusicPage() {
       {/* ── Divider ── */}
       <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.07), transparent)', margin: '40px 16px 0' }} />
 
-      {/* ── Hero — Featured Song ── */}
-      {featuredSong && (
+      {/* ── Hero — Featured Song — shows skeleton while loading ── */}
+      {loading ? (
+        <section style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ width: '100%', aspectRatio: '4/3', minHeight: '280px', borderRadius: '20px', background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <style>{`@keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }`}</style>
+        </section>
+      ) : featuredSong && (
         <section style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 16px' }}>
           {/* Artwork — clean, no overlay text */}
           <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', minHeight: '280px', borderRadius: '20px 20px 0 0', overflow: 'hidden', marginBottom: '0' }}>
