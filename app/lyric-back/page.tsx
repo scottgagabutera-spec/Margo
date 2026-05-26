@@ -7,8 +7,9 @@ import { CardExportModal } from '@/components/card-export-modal'
 import { MargoNav } from '@/components/margo-nav'
 import { db } from '@/lib/firebase'
 import { useEchoes } from '@/hooks/useEchoes'
-import { ref, push, set, remove, serverTimestamp } from 'firebase/database'
+import { ref, push, set, remove, serverTimestamp, runTransaction } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername'
+import { getMargoActorId } from '@/lib/engagement/session'
 import { useSearchParams } from 'next/navigation'
 import { usePost } from '@/hooks/usePost'
 
@@ -239,6 +240,9 @@ function LyricBackContent() {
           lyric, song: songName, artist: artistName,
           emotion: selectedVibe, username: username || null,
           timestamp: serverTimestamp(), resonates: {},
+        }).then(() => {
+          // increment postStats.echoCount atomically
+          return runTransaction(ref(db!, `postStats/${postId}/echoCount`), (current) => (current || 0) + 1)
         })
       : push(ref(db, 'posts'), {
           text: lyric, emotion: selectedVibe, mode: 'share',
@@ -275,9 +279,7 @@ function LyricBackContent() {
   /* ─── resonate ───────────────────────────────────────────── */
   const toggleResonate = async (echoId: string) => {
     if (!db) return
-    const rawId = typeof window !== 'undefined'
-      ? (localStorage.getItem('margoAnonName') || 'anon') : 'anon'
-    const myId = rawId.replace(/[.#$[\]]/g, '_')
+    const myId = getMargoActorId()
     const already = resonated.has(echoId)
     setResonated(prev => { const n = new Set(prev); already ? n.delete(echoId) : n.add(echoId); return n })
     setResonateCounts(prev => ({
