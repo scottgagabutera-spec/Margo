@@ -12,6 +12,11 @@ interface Post {
   knowledge?: { song?: string; artist?: string }
   username?: string; timestamp?: number; tier?: number; flagCount?: number
 }
+interface Echo {
+  id: string; lyric?: string; song?: string; artist?: string
+  username?: string; emotion?: string; timestamp?: number; status?: string
+}
+
 interface Song {
   id: string; title: string; artist: string; order?: number; status?: string
   audioUrl?: string; artwork?: string; youtubeUrl?: string; spotifyUrl?: string
@@ -127,6 +132,62 @@ function PostsTab() {
   const [analytics, setAnalytics] = useState<Record<string, Analytics>>({})
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [expandedPost, setExpandedPost] = useState<string | null>(null)
+  const [echoes, setEchoes] = useState<Record<string, Echo[]>>({})
+  const [backfillStatus, setBackfillStatus] = useState<string | null>(null)
+  const [backfillRunning, setBackfillRunning] = useState(false)
+
+  const loadEchoes = async (postId: string) => {
+    if (!db) return
+    const snap = await get(ref(db, `posts/${postId}/echoes`))
+    if (!snap.exists()) return
+    const list: Echo[] = []
+    snap.forEach(child => { list.push({ ...child.val(), id: child.key }) })
+    setEchoes(prev => ({ ...prev, [postId]: list }))
+  }
+
+  const toggleExpandPost = (postId: string) => {
+    if (expandedPost === postId) {
+      setExpandedPost(null)
+    } else {
+      setExpandedPost(postId)
+      loadEchoes(postId)
+    }
+  }
+
+  const toggleHideEcho = async (postId: string, echo: Echo) => {
+    if (!db) return
+    const newStatus = echo.status === 'hidden' ? 'active' : 'hidden'
+    await update(ref(db, `posts/${postId}/echoes/${echo.id}`), { status: newStatus })
+    setEchoes(prev => ({
+      ...prev,
+      [postId]: (prev[postId] || []).map(e => e.id === echo.id ? { ...e, status: newStatus } : e)
+    }))
+  }
+
+  const runBackfill = async () => {
+    if (!db || backfillRunning) return
+    setBackfillRunning(true)
+    setBackfillStatus('Reading posts…')
+    try {
+      const snap = await get(ref(db, 'posts'))
+      if (!snap.exists()) { setBackfillStatus('No posts found.'); return }
+      const posts = snap.val() as Record<string, any>
+      const multiPath: Record<string, number> = {}
+      for (const [postId, post] of Object.entries(posts)) {
+        const echoCount = post.echoes ? Object.keys(post.echoes).length : 0
+        if (echoCount > 0) multiPath[`postStats/${postId}/echoCount`] = echoCount
+      }
+      if (Object.keys(multiPath).length > 0) {
+        await update(ref(db), multiPath)
+      }
+      setBackfillStatus(`Done — updated ${Object.keys(multiPath).length} posts.`)
+    } catch (e: any) {
+      setBackfillStatus(`Error: ${e.message}`)
+    } finally {
+      setBackfillRunning(false)
+    }
+  }
 
   useEffect(() => {
     if (!db) return
@@ -177,14 +238,29 @@ function PostsTab() {
       <input type="text" value={search} onChange={e => setSearch(e.target.value)}
         placeholder="Search posts, songs, artists, users…"
         style={{ ...S.input, marginBottom: '16px' }} />
+      {/* Backfill tool */}
+      <div style={{ ...S.card, marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+        <div>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text)', marginBottom: '4px' }}>Backfill Echo Counts</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)' }}>
+            {backfillStatus || 'Counts existing lyric backs and writes postStats.echoCount for all posts.'}
+          </p>
+        </div>
+        <button onClick={runBackfill} disabled={backfillRunning} style={{ ...S.btn, opacity: backfillRunning ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+          {backfillRunning ? 'Running…' : 'Run Backfill'}
+        </button>
+      </div>
+
       {/* Posts */}
       {loading ? <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '32px' }}>Loading…</p> : filtered.map(post => {
         const a = analytics[post.id] || {}
         const resonateCount = Object.keys(a.resonates || {}).length
         const isHidden = post.status === 'hidden'
         const isFlagged = (post.flagCount || 0) > 0
+        const postEchoes = echoes[post.id] || []
+        const isExpanded = expandedPost === post.id
         return (
-          <div key={post.id} style={{ ...S.card, opacity: isHidden ? 0.45 : 1, borderColor: isFlagged ? 'rgba(255,96,96,0.3)' : 'rgba(255,255,255,0.06)' }}>
+          <div key={post.id} style={{ ...S.card, opacity: isHidden ? 0.45 : 1, borderColor: isFlagged ? 'rgba(255,96,96,0.3)' : 'rgba(255,255,255,0.06)', marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)', marginBottom: '6px', lineHeight: 1.4 }}>"{post.text?.slice(0, 120)}{(post.text?.length || 0) > 120 ? '…' : ''}"</p>
@@ -196,10 +272,39 @@ function PostsTab() {
                   {a.views || 0} views · {resonateCount} resonates · {post.emotion || 'no vibe'}
                 </p>
               </div>
-              <button onClick={() => toggleHide(post)} style={isHidden ? S.btn : S.dangerBtn}>
-                {isHidden ? 'Show' : 'Hide'}
-              </button>
+              <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                <button onClick={() => toggleExpandPost(post.id)} style={{ ...S.ghostBtn, fontSize: '0.55rem' }}>
+                  {isExpanded ? 'Hide Backs' : 'Lyric Backs'}
+                </button>
+                <button onClick={() => toggleHide(post)} style={isHidden ? S.btn : S.dangerBtn}>
+                  {isHidden ? 'Show' : 'Hide'}
+                </button>
+              </div>
             </div>
+            {/* Echo list */}
+            {isExpanded && (
+              <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {postEchoes.length === 0 && (
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>No lyric backs yet.</p>
+                )}
+                {postEchoes.map(echo => {
+                  const isEchoHidden = echo.status === 'hidden'
+                  return (
+                    <div key={echo.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', opacity: isEchoHidden ? 0.45 : 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-2)', lineHeight: 1.4 }}>"{echo.lyric?.slice(0, 100)}{(echo.lyric?.length || 0) > 100 ? '…' : ''}"</p>
+                        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
+                          {echo.song} · {echo.artist} · {echo.username || 'anon'} · {echo.emotion || 'no vibe'}
+                        </p>
+                      </div>
+                      <button onClick={() => toggleHideEcho(post.id, echo)} style={isEchoHidden ? S.btn : S.dangerBtn}>
+                        {isEchoHidden ? 'Show' : 'Hide'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )
       })}
