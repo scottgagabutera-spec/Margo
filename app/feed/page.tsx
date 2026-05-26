@@ -29,6 +29,7 @@ import {
   subscribeAudioEngine,
 } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
+import { getMargoActorId } from '@/lib/engagement/session'
 
 const EMOTION_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -510,9 +511,7 @@ export default function FeedPage() {
     if (!db) return
     const unsub = onValue(ref(db, 'analytics'), (snap) => {
       const data = snap.val() || {}
-      const myId = typeof window !== 'undefined'
-        ? (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
-        : 'anon'
+      const myId = getMargoActorId()
       const counts: Record<string, number> = {}
       const myResonated = new Set<string>()
       Object.keys(data).forEach(id => {
@@ -564,9 +563,7 @@ export default function FeedPage() {
 
   const toggleResonate = async (postId: string) => {
     const already = resonated.has(postId)
-    const myId = typeof window !== 'undefined'
-      ? (localStorage.getItem('margoAnonName') || 'anon').replace(/[.#$[\]]/g, '_')
-      : 'anon'
+    const myId = getMargoActorId()
     setResonated(prev => {
       const next = new Set(prev)
       already ? next.delete(postId) : next.add(postId)
