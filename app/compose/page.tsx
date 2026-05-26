@@ -220,7 +220,10 @@ function ComposeInner() {
 
       if (result.key && linkedSongId && db) {
         import('firebase/database').then(({ ref: dbRef, runTransaction }) => {
-          if (db) runTransaction(dbRef(db, `songs/${linkedSongId}/lyricUses`), (cur) => (cur || 0) + 1)
+          if (db) {
+            runTransaction(dbRef(db, `songs/${linkedSongId}/lyricUses`), (cur) => (cur || 0) + 1)
+            runTransaction(dbRef(db, `songStats/${linkedSongId}/lyricUses`), (cur) => (cur || 0) + 1)
+          }
         }).catch(() => {})
       }
 

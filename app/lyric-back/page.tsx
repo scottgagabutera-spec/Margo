@@ -242,7 +242,16 @@ function LyricBackContent() {
           timestamp: serverTimestamp(), resonates: {},
         }).then(() => {
           // increment postStats.echoCount atomically
-          return runTransaction(ref(db!, `postStats/${postId}/echoCount`), (current) => (current || 0) + 1)
+          runTransaction(ref(db!, `postStats/${postId}/echoCount`), (current) => (current || 0) + 1)
+          // also increment songStats if this post is linked to a song
+          return import('firebase/database').then(({ ref: dbRef, get: dbGet, runTransaction: dbTx }) => {
+            if (!db) return
+            return dbGet(dbRef(db, `posts/${postId}/songId`)).then(snap => {
+              if (snap.exists() && snap.val()) {
+                dbTx(dbRef(db!, `songStats/${snap.val()}/echoCount`), (cur) => (cur || 0) + 1)
+              }
+            })
+          })
         })
       : push(ref(db, 'posts'), {
           text: lyric, emotion: selectedVibe, mode: 'share',
@@ -643,7 +652,7 @@ function LyricBackContent() {
         {/* ── Lyric Backs — same card system as feed ────────── */}
         <div>
           <p style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 700, color: text3, letterSpacing: '2px', textTransform: 'uppercase', textAlign: 'center', marginBottom: '20px' }}>
-            {echoes.length > 0 ? `${echoes.length} Lyric Back${echoes.length === 1 ? '' : 's'}` : 'Lyric Backs'}
+            Lyric Backs
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {echoesLoading && (
