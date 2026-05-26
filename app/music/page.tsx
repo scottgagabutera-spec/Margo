@@ -84,7 +84,7 @@ function LyricCard({
           obs.disconnect()
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0, rootMargin: '200px' }  // fire 200px before card enters view
     )
     obs.observe(el)
     return () => obs.disconnect()
@@ -162,12 +162,18 @@ function LyricBoard({ songs }: { songs: Song[] }) {
   const SLOT_COUNT = 6
   const [slots, setSlots] = useState<(LyricMoment | null)[]>(Array(SLOT_COUNT).fill(null))
   const [slotVisible, setSlotVisible] = useState<boolean[]>(Array(SLOT_COUNT).fill(false))
+  // Keep slotsRef in sync
+  useEffect(() => { slotsRef.current = slots }, [slots])
+
   const [focusedMoment, setFocusedMoment] = useState<LyricMoment | null>(null)
   const [focusedIndex, setFocusedIndex] = useState(0)
   const [playingKey, setPlayingKey] = useState<string | null>(null)
   const cycleRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const vibePoolRef = useRef<LyricMoment[]>([])
   const slotQueueRef = useRef<number>(0) // next slot to replace
+  const playingKeyRef = useRef<string | null>(null)  // mirror of playingKey for cycle timer
+  const slotsRef = useRef<(LyricMoment | null)[]>(Array(SLOT_COUNT).fill(null)) // mirror of slots for cycle timer
+  const playingRef = useRef(false) // rapid-tap guard
   const CYCLE_MS = 5500
 
   // Build all moments from songs with lineVibes
@@ -246,7 +252,20 @@ function LyricBoard({ songs }: { songs: Song[] }) {
       const pool = vibePoolRef.current
       if (pool.length <= SLOT_COUNT) return
 
-      const slotIdx = slotQueueRef.current % SLOT_COUNT
+      // Skip playing slot — never fade out a card that's currently playing
+      let slotIdx = slotQueueRef.current % SLOT_COUNT
+      const playingKeyNow = playingKeyRef.current
+      if (playingKeyNow) {
+        let tries = 0
+        while (tries < SLOT_COUNT) {
+          const candidate = slotQueueRef.current % SLOT_COUNT
+          const slotMoment = slotsRef.current[candidate]
+          const slotKey = slotMoment ? `${slotMoment.songId}_${slotMoment.lineId}` : ''
+          if (slotKey !== playingKeyNow) { slotIdx = candidate; break }
+          slotQueueRef.current++
+          tries++
+        }
+      }
       slotQueueRef.current++
 
       // Pick a moment not currently shown
@@ -287,10 +306,13 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     return () => { if (cycleRef.current) clearInterval(cycleRef.current) }
   }, [allMoments, activeVibe, focusedMoment])
 
+  // Keep refs in sync with state for use inside setInterval/setTimeout closures
+  useEffect(() => { playingKeyRef.current = playingKey }, [playingKey])
+
   // Sync playingKey with engine state
   useEffect(() => {
     return subscribeAudioEngine(state => {
-      if (!state.playing || state.mode === 'idle') {
+      if (!state.playing || state.mode === 'idle' || state.mode === 'full') {
         setPlayingKey(null)
       } else if (state.snippet) {
         setPlayingKey(`${state.songId}_${state.snippet.lineIndex}`)
@@ -303,11 +325,17 @@ function LyricBoard({ songs }: { songs: Song[] }) {
     const key = `${moment.songId}_${moment.lineId}`
 
     // Same card while playing — stop
-    if (playingKey === key) {
+    if (playingKeyRef.current === key) {
       engineStop()
       setPlayingKey(null)
+      playingKeyRef.current = null
       return
     }
+
+    // Rapid-tap guard — debounce 80ms to prevent double-fire
+    if (playingRef.current) return
+    playingRef.current = true
+    setTimeout(() => { playingRef.current = false }, 80)
 
     // Wire queue for mini player prev/next
     const queueItems = vibePoolRef.current
