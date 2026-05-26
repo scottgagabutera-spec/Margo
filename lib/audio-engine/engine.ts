@@ -310,17 +310,57 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
   applyTrackMetadata(request, 'snippet', snippet)
   registerPreloadSong(request.songId, request.audioUrl)
 
-  try {
-    await prepareSource(request.audioUrl, generation)
-  } catch {
-    if (generation !== _handlerGeneration) return
-    patch({ playing: false, buffering: false, error: 'Could not load audio' })
-    return
+  const audio = requireAudio()
+
+  // ── Mobile-first gesture fix ──────────────────────────────────────
+  // ALL mobile browsers (iOS Safari, Android Chrome, Android Firefox) block
+  // audio.play() if it is not called synchronously within the user gesture.
+  // Any `await` before play() breaks the gesture chain.
+  //
+  // Strategy: set src + seek synchronously, then call play() immediately
+  // within the same tick. The browser suspends the play promise while
+  // buffering and resumes it automatically — this works on all platforms.
+  // We do NOT await prepareSource before play(). Instead we let play()
+  // start buffering, then monitor readyState in the background.
+
+  const sameSrc =
+    audio.src === request.audioUrl ||
+    audio.src === new URL(request.audioUrl, window.location.href).href
+
+  if (!sameSrc) {
+    audio.pause()
+    audio.src = request.audioUrl
+    audio.load()
   }
 
-  if (generation !== _handlerGeneration) return
+  // Seek to snippet start synchronously
+  try { audio.currentTime = request.startSec } catch { /* ignore if not ready yet */ }
+
   bindAudioHandlers(generation)
-  await startPlayingAt(generation, request.startSec, { armSnippet: true })
+  bindMediaSessionHandlers()
+  syncMediaSessionFromState(_state)
+  patch({ buffering: audio.readyState < 2 })
+
+  // Call play() NOW — still within the user gesture call stack
+  const playPromise = audio.play()
+
+  patch({ playing: true, error: null })
+  requestWakeLock()
+  syncMediaSessionFromState(_state)
+  armSnippetTimer(generation)
+
+  // Handle play promise result in background — does not block gesture
+  playPromise.then(() => {
+    if (generation !== _handlerGeneration) return
+    patch({ buffering: false, error: null })
+    // Re-seek if currentTime drifted during buffer
+    if (Math.abs(audio.currentTime - request.startSec) > 1) {
+      audio.currentTime = request.startSec
+    }
+  }).catch(() => {
+    if (generation !== _handlerGeneration) return
+    patch({ playing: false, buffering: false, error: 'Play blocked — tap to start' })
+  })
 }
 
 export async function playFull(request: PlayFullRequest): Promise<void> {
@@ -332,24 +372,58 @@ export async function playFull(request: PlayFullRequest): Promise<void> {
   applyTrackMetadata(request, 'full', null)
   registerPreloadSong(request.songId, request.audioUrl)
 
-  try {
-    await prepareSource(request.audioUrl, generation)
-  } catch {
-    if (generation !== _handlerGeneration) return
-    patch({ playing: false, buffering: false, error: 'Could not load audio' })
-    return
+  const audio = requireAudio()
+
+  const sameSrc =
+    audio.src === request.audioUrl ||
+    audio.src === new URL(request.audioUrl, window.location.href).href
+
+  if (!sameSrc) {
+    audio.pause()
+    audio.src = request.audioUrl
+    audio.load()
   }
 
-  if (generation !== _handlerGeneration) return
   bindAudioHandlers(generation)
 
   if (request.autoplay) {
-    await startPlayingAt(generation, startSec, { armSnippet: false })
+    // ── Mobile-first gesture fix ────────────────────────────────────
+    // Call play() synchronously within the user gesture — no await before it.
+    // Works on iOS Safari, Android Chrome, Android Firefox, and desktop.
+    try { audio.currentTime = startSec } catch { /* ignore */ }
+
+    bindMediaSessionHandlers()
+    syncMediaSessionFromState(_state)
+    patch({ buffering: audio.readyState < 2 })
+
+    const playPromise = audio.play()
+
+    patch({ playing: true, error: null })
+    requestWakeLock()
+    syncMediaSessionFromState(_state)
+
+    playPromise.then(() => {
+      if (generation !== _handlerGeneration) return
+      patch({ buffering: false, error: null })
+    }).catch(() => {
+      if (generation !== _handlerGeneration) return
+      patch({ playing: false, buffering: false, error: 'Play blocked — tap to start' })
+    })
   } else {
-    const audio = requireAudio()
-    audio.currentTime = startSec
+    // No autoplay — just buffer and wait for user tap
+    try { audio.currentTime = startSec } catch { /* ignore */ }
     patch({ playing: false, buffering: false, currentTime: startSec })
     syncMediaSessionFromState(_state)
+    // Start buffering in background so first tap is instant
+    if (audio.readyState < 2) {
+      patch({ buffering: true })
+      const onReady = () => {
+        audio.removeEventListener('canplay', onReady)
+        if (generation !== _handlerGeneration) return
+        patch({ buffering: false })
+      }
+      audio.addEventListener('canplay', onReady, { once: true })
+    }
   }
 }
 
