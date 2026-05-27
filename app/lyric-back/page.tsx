@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Search } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
 import { MargoNav } from '@/components/margo-nav'
+import { HeartIcon } from '@/components/heart-icon'
 import { db } from '@/lib/firebase'
 import { useEchoes } from '@/hooks/useEchoes'
 import { ref, push, set, remove, serverTimestamp, runTransaction } from 'firebase/database'
@@ -730,7 +731,7 @@ function LyricBackContent() {
                       color: hasResonated ? gold : text2,
                       transition: 'color 150ms ease',
                     }}>
-                      <span style={{ fontSize: '1rem' }}>{hasResonated ? '♥' : '♡'}</span>
+                      <span style={{ fontSize: '1rem' }}><HeartIcon filled={hasResonated} size={18} color="currentColor" /></span>
                       <span style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
                         {resonateCount > 0 ? resonateCount : 'Resonate'}
                       </span>

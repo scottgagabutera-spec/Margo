@@ -6,7 +6,9 @@ import Image from 'next/image'
 import { MargoNav } from '@/components/margo-nav'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
+import { useIsPlaying } from '@/hooks/useAudioEngine'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
+import { HeartIcon } from '@/components/heart-icon'
 import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, subscribeAudioEngine } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
 
@@ -148,7 +150,7 @@ function LyricCard({
             padding: 0, boxSizing: 'border-box',
           }}
         >
-          <PlayPauseIcon playing={isPlaying} size={16} color="#E8C547" />
+          <PlayPauseIcon playing={isPlaying} size={16} color="var(--gold)" />
         </button>
       </div>
     </div>
@@ -635,12 +637,12 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
                       >
                         {playingKey === `${focusedMoment.songId}_${focusedMoment.lineId}` ? (
                           <>
-                            <PlayPauseIcon playing={true} size={14} color="#E8C547" />
+                            <PlayPauseIcon playing={true} size={14} color="var(--gold)" />
                             Pause
                           </>
                         ) : (
                           <>
-                            <PlayPauseIcon playing={false} size={14} color="#E8C547" />
+                            <PlayPauseIcon playing={false} size={14} color="var(--gold)" />
                             Play Snippet
                           </>
                         )}
@@ -792,9 +794,11 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '10px' }}>Most shared line · {lines[0].uses} {lines[0].uses === 1 ? 'use' : 'uses'}</p>
               </div>
             )}
-            <button onClick={() => onResonate(song.id)} style={{ width: '100%', padding: '14px', background: resonated ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (resonated ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.1)'), borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 200ms ease', color: resonated ? 'var(--gold)' : 'rgba(255,255,255,0.6)', marginBottom: '12px' }}>{resonated ? '♥' : '♡'} Resonate</button>
+            <button onClick={() => onResonate(song.id)} style={{ width: '100%', padding: '14px', background: resonated ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (resonated ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.1)'), borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 200ms ease', color: resonated ? 'var(--gold)' : 'rgba(255,255,255,0.6)', marginBottom: '12px' }}>
+              {resonated ? <><HeartIcon filled size={14} color="currentColor" /> Resonate</> : <><HeartIcon filled={false} size={14} color="currentColor" /> Resonate</>}
+            </button>
             {isActive ? (
-              <Link href={`/music/player?id=${song.id}${song.audioUrl ? '&au=' + encodeURIComponent(song.audioUrl) : ''}`} className="play-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', minHeight: '52px', transition: 'all 200ms ease', boxShadow: '0 6px 28px rgba(232,197,71,0.28)' }}>▶ Play Now</Link>
+              <Link href={`/music/player?id=${song.id}${song.audioUrl ? '&au=' + encodeURIComponent(song.audioUrl) : ''}`} className="play-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', minHeight: '52px', transition: 'all 200ms ease', boxShadow: '0 6px 28px rgba(232,197,71,0.28)' }}><PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now</Link>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 28px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-3)', minHeight: '52px' }}>{song.comingSoonLabel || 'Coming Soon'}</div>
             )}
@@ -808,6 +812,7 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
 // ─── Song Card ────────────────────────────────────────────────────────
 function SongCard({ song, onPreview }: { song: Song; onPreview: (song: Song) => void }) {
   const isActive = song.status === 'live' || song.status === 'active'
+  const isPlayingThisSong = useIsPlaying(song.id)
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   return (
     <div style={{ cursor: 'pointer' }} className="song-card-wrap" onClick={() => onPreview(song)} onTouchStart={() => { pressTimer.current = setTimeout(() => onPreview(song), 500) }} onTouchEnd={() => { if (pressTimer.current) clearTimeout(pressTimer.current) }} onTouchMove={() => { if (pressTimer.current) clearTimeout(pressTimer.current) }}>
@@ -819,7 +824,7 @@ function SongCard({ song, onPreview }: { song: Song; onPreview: (song: Song) => 
         )}
         <div className="song-card-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,6,10,0.92) 0%, rgba(7,6,10,0.4) 60%, transparent 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: '16px' }}>
           {isActive ? (
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: 'var(--bg)', boxShadow: '0 4px 20px rgba(232,197,71,0.4)', marginBottom: '8px' }}>▶</div>
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(232,197,71,0.4)', marginBottom: '8px' }}><PlayPauseIcon playing={isPlayingThisSong} size={20} color="var(--bg)" /></div>
           ) : (
             <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--gold)', padding: '5px 12px', border: '1px solid rgba(232,197,71,0.3)', borderRadius: '50px', background: 'rgba(232,197,71,0.08)', marginBottom: '8px' }}>{song.comingSoonLabel || 'Coming Soon'}</span>
           )}
@@ -995,8 +1000,10 @@ export default function MusicPage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <Link href={`/music/player?id=${featuredSong.id}${featuredSong.audioUrl ? '&au=' + encodeURIComponent(featuredSong.audioUrl) : ''}`} className="play-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', transition: 'all 200ms ease' }}>▶ Play Now</Link>
-              <button onClick={() => toggleSongResonate(featuredSong.id)} style={{ padding: '12px 20px', background: resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.06)', border: '1px solid ' + (resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.15)'), borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 200ms ease', color: resonatedSongs.has(featuredSong.id) ? 'var(--gold)' : 'rgba(255,255,255,0.7)' }}>{resonatedSongs.has(featuredSong.id) ? '♥' : '♡'} Resonate</button>
+              <Link href={`/music/player?id=${featuredSong.id}${featuredSong.audioUrl ? '&au=' + encodeURIComponent(featuredSong.audioUrl) : ''}`} className="play-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', transition: 'all 200ms ease' }}><PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now</Link>
+              <button onClick={() => toggleSongResonate(featuredSong.id)} style={{ padding: '12px 20px', background: resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.06)', border: '1px solid ' + (resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.15)'), borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 200ms ease', color: resonatedSongs.has(featuredSong.id) ? 'var(--gold)' : 'rgba(255,255,255,0.7)' }}>
+                {resonatedSongs.has(featuredSong.id) ? <><HeartIcon filled size={14} color="currentColor" /> Resonate</> : <><HeartIcon filled={false} size={14} color="currentColor" /> Resonate</>}
+              </button>
               <button onClick={() => setPreview(featuredSong)} style={{ padding: '12px 20px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', transition: 'all 200ms ease' }}>Details</button>
             </div>
           </div>
