@@ -361,7 +361,7 @@ function PostCard({
             {isTier1 ? (
               <svg width='26' height='26' viewBox='-4 -4 88 88' xmlns='http://www.w3.org/2000/svg'>
                 <path d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57'
-                  fill='none' stroke='#0B0B0D' strokeWidth='7' strokeLinecap='round' strokeLinejoin='round' />
+                  fill='none' stroke='var(--bg)' strokeWidth='7' strokeLinecap='round' strokeLinejoin='round' />
               </svg>
             ) : (
               <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', fontWeight: 700, color: 'var(--gold)' }}>
