@@ -57,6 +57,7 @@ export {
   registerPreloadSong,
   getCachedAudioUrl,
   warmPreloadUrl,
+  warmUrls,
   warmSong,
 } from './preload-cache'
 

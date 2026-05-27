@@ -9,7 +9,7 @@ import { useSharedLines } from '@/hooks/useSharedLines'
 import { useIsPlaying } from '@/hooks/useAudioEngine'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { HeartIcon } from '@/components/heart-icon'
-import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, subscribeAudioEngine } from '@/lib/audio-engine'
+import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
 
 
@@ -65,37 +65,23 @@ function LyricCard({
   isPlaying,
   onClick,
   onPlay,
+  cardRefProp,
+  index,
 }: {
   moment: LyricMoment
   visible: boolean
   isPlaying: boolean
   onClick: () => void
   onPlay: (e: React.MouseEvent) => void
+  cardRefProp?: (el: HTMLDivElement | null) => void
+  index?: number
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
 
-  // Warm audio only when this card enters the viewport — prevents all cards
-  // warming at once and overflowing the 3-slot preload pool
-  useEffect(() => {
-    if (!moment.audioUrl) return
-    const el = cardRef.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          if (moment.audioUrl) warmUrl(moment.audioUrl)
-          obs.disconnect()
-        }
-      },
-      { threshold: 0, rootMargin: '200px' }  // fire 200px before card enters view
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [moment.audioUrl])
-
   return (
     <div
-      ref={cardRef}
+      ref={cardRefProp ?? cardRef}
+      data-lyric-idx={index}
       className="lyric-card"
       onClick={onClick}
       style={{
@@ -229,7 +215,79 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
   }, [songs])
 
   // Audio warming for remaining cards done per-card via IntersectionObserver in LyricCard
+  // Centralized viewport-driven warming (visible cards + lookahead)
+  const cardElementsRef = useRef<(HTMLDivElement | null)[]>([])
+  const [visibleIndices, setVisibleIndices] = useState<number[]>([])
+  const visibleIndicesRef = useRef<Set<number>>(new Set())
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const debounceTimerRef = useRef<number | null>(null)
 
+  // Create a single IntersectionObserver for the board
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver((entries) => {
+      let changed = false
+      const next = new Set(visibleIndicesRef.current)
+      for (const entry of entries) {
+        const attr = entry.target.getAttribute && entry.target.getAttribute('data-lyric-idx')
+        if (attr == null) continue
+        const idx = Number(attr)
+        if (entry.isIntersecting) {
+          if (!next.has(idx)) { next.add(idx); changed = true }
+        } else {
+          if (next.has(idx)) { next.delete(idx); changed = true }
+        }
+      }
+      if (changed) {
+        visibleIndicesRef.current = new Set(next)
+        setVisibleIndices(Array.from(next))
+      }
+    }, { root: null, rootMargin: '300px', threshold: 0.01 })
+
+    return () => { observerRef.current?.disconnect(); observerRef.current = null }
+  }, [])
+
+  // Keep the ref in sync if visibleIndices is changed elsewhere
+  useEffect(() => {
+    visibleIndicesRef.current = new Set(visibleIndices)
+  }, [visibleIndices])
+
+  // Observe current card elements whenever slots change
+  useEffect(() => {
+    const obs = observerRef.current
+    if (!obs) return
+    obs.disconnect()
+    // Ensure refs array length matches slots
+    cardElementsRef.current = cardElementsRef.current.slice(0, slots.length)
+    for (let i = 0; i < slots.length; i++) {
+      const el = cardElementsRef.current[i]
+      if (el) obs.observe(el)
+    }
+    return () => obs.disconnect()
+  }, [slots])
+
+  // Debounced warmUrls call when visibleIndices update
+  useEffect(() => {
+    if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = window.setTimeout(() => {
+      const filteredList = activeVibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(activeVibe))
+      const urls: string[] = []
+      const seen = new Set<string>()
+
+      visibleIndices.forEach(idx => {
+        const m = slots[idx]
+        if (!m) return
+        if (m.audioUrl && !seen.has(m.audioUrl)) { urls.push(m.audioUrl); seen.add(m.audioUrl) }
+        const pos = filteredList.findIndex(mm => mm.songId === m.songId && mm.lineId === m.lineId)
+        for (let k = 1; k <= 3; k++) {
+          const next = filteredList[pos + k]
+          if (next && next.audioUrl && !seen.has(next.audioUrl)) { urls.push(next.audioUrl); seen.add(next.audioUrl) }
+        }
+      })
+
+      if (urls.length > 0) warmUrls(urls)
+    }, 150)
+    return () => { if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current) }
+  }, [visibleIndices, slots, activeVibe, allMoments])
   const getFiltered = useCallback((vibe: string) => {
     return vibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(vibe))
   }, [allMoments])
@@ -729,6 +787,8 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
                     isPlaying={playingKey === `${moment.songId}_${moment.lineId}`}
                     onClick={() => handleCardClick(moment)}
                     onPlay={(e) => { e.stopPropagation(); playSnippet(moment) }}
+                    cardRefProp={(el) => { cardElementsRef.current[idx] = el }}
+                    index={idx}
                   />
                 ) : (
                   <div key={`empty_${idx}`} style={{ minHeight: '150px', borderRadius: '16px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)' }} />

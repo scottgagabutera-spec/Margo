@@ -21,7 +21,7 @@ interface PoolSlot {
 
 // ── Module state ──────────────────────────────────────────────────
 
-const POOL_SIZE = 3
+const POOL_SIZE = 6
 const _pool: PoolSlot[] = []
 
 /** songId → audioUrl (metadata only) */
@@ -106,6 +106,35 @@ export function warmPreloadUrl(audioUrl: string): void {
 export function warmSong(songId: string): void {
   const url = getCachedAudioUrl(songId)
   if (url) warmPreloadUrl(url)
+}
+
+/**
+ * Warm a prioritized list of URLs while respecting the pool size.
+ * Deduplicates the input list and warms up to at most POOL_SIZE slots
+ * (does not evict existing warmed slots).
+ */
+export function warmUrls(urls: string[]): void {
+  if (typeof document === 'undefined') return
+  if (!Array.isArray(urls) || urls.length === 0) return
+
+  const deduped: string[] = []
+  const seen = new Set<string>()
+  for (const u of urls) {
+    if (!u) continue
+    if (seen.has(u)) continue
+    seen.add(u)
+    deduped.push(u)
+  }
+
+  // Count currently occupied pool slots with a URL
+  let occupied = _pool.filter(s => !!s.url).length
+
+  for (const u of deduped) {
+    if (findSlot(u)) continue // already warmed
+    if (occupied >= POOL_SIZE) break // respect pool capacity — do not evict
+    warmPreloadUrl(u)
+    occupied++
+  }
 }
 
 /**
