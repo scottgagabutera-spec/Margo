@@ -464,26 +464,13 @@ export function togglePlayPause(): void {
     return
   }
 
-  /* full mode — FIX: use 'canplay' instead of 'canplaythrough' */
+  /* full mode — call play() immediately on gesture stack, let browser buffer while playing */
   bindMediaSessionHandlers()
   syncMediaSessionFromState(_state)
-  if (audio.readyState >= 2) {
-    audio.play().catch(() => patch({ error: 'Play blocked — tap to start' }))
-    patch({ playing: true, error: null })
-    requestWakeLock()
-    syncMediaSessionFromState(_state)
-  } else {
-    patch({ buffering: true })
-    const onReady = () => {
-      audio.removeEventListener('canplay', onReady)
-      if (generation !== _handlerGeneration) return
-      audio.play().catch(() => patch({ error: 'Play blocked — tap to start' }))
-      patch({ playing: true, buffering: false })
-      requestWakeLock()
-      syncMediaSessionFromState(_state)
-    }
-    audio.addEventListener('canplay', onReady, { once: true })
-  }
+  audio.play().catch(() => patch({ error: 'Play blocked — tap to start' }))
+  patch({ playing: true, error: null })
+  requestWakeLock()
+  syncMediaSessionFromState(_state)
 }
 
 export function stop(options?: StopOptions): void {

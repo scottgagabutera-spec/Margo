@@ -47,15 +47,18 @@ function PlayerContent() {
   const [cardExportOpen, setCardExportOpen] = useState(false)
   const [trayOpen, setTrayOpen] = useState(false)
   const [trayDismissed, setTrayDismissed] = useState(false)
-  const autoplayParam = searchParams.get('autoplay')
-  const [showTapOverlay, setShowTapOverlay] = useState(autoplayParam === '1')
+  const [showTapOverlay, setShowTapOverlay] = useState(true)
   const [songEnded, setSongEnded] = useState(false)
   const [endedTitle, setEndedTitle] = useState('')
+  const audioUrl = earlyAudioUrl || (song as any)?.audioUrl
+  const songTitle = (song as any)?.title || ''
+  const songArtist = (song as any)?.artist || ''
+  const songArtwork = (song as any)?.artwork ?? null
 
   const lyricRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const autoNavRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Track which songId we've already issued playFull for — prevents double-fire
+  // Track which songId we've already issued playFull for — prevents end-state boolean logic
   const playedSongIdRef = useRef<string | null>(null)
 
   // ─── Next 3 songs — stable, memoized, no flash ─────────────────────
@@ -87,35 +90,24 @@ function PlayerContent() {
     setSongEnded(false)
     setTrayOpen(false)
     setTrayDismissed(false)
+    setShowTapOverlay(true)
   }, [songId])
 
-  // ─── Load audio into engine when URL is available ───────────────────
-  // Uses earlyAudioUrl (?au= param) for zero-wait warm path,
-  // falls back to song.audioUrl once Firebase resolves.
-  useEffect(() => {
-    const audioUrl = earlyAudioUrl || (song as any)?.audioUrl
-    if (!audioUrl || !songId) return
-    // Don't re-issue if we already started this song
-    if (playedSongIdRef.current === songId) return
-
+  const startPlayback = useCallback(() => {
+    if (!songId || !audioUrl) return
+    setShowTapOverlay(false)
     playedSongIdRef.current = songId
-
     void playFull({
       songId,
       audioUrl,
-      title: (song as any)?.title || '',
-      artist: (song as any)?.artist || '',
-      artwork: (song as any)?.artwork ?? null,
+      title: songTitle,
+      artist: songArtist,
+      artwork: songArtwork,
       startSec: 0,
-      // autoplay false = engine loads + buffers, waits for user tap or togglePlayPause
-      // autoplay true = plays immediately (set when tap overlay is dismissed)
-      autoplay: !showTapOverlay,
+      autoplay: true,
       source: 'karaoke',
     })
-  // earlyAudioUrl is from URL params (stable); song.audioUrl fills in later — we
-  // re-run when song resolves but guard with playedSongIdRef to avoid double-play.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [earlyAudioUrl, songId, (song as any)?.audioUrl])
+  }, [audioUrl, songId, songArtist, songArtwork, songTitle])
 
   // ─── Detect song end from engine state ─────────────────────────────
   useEffect(() => {
@@ -227,11 +219,7 @@ function PlayerContent() {
     <div style={{ minHeight: '100vh', height: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
       {showTapOverlay && (
         <div
-          onClick={() => {
-            setShowTapOverlay(false)
-            // togglePlayPause starts playback after user gesture (iOS safe)
-            void togglePlayPause()
-          }}
+          onClick={() => void startPlayback()}
           className="margo-tap-overlay"
           style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
         >
@@ -421,7 +409,13 @@ function PlayerContent() {
         <footer style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40, background: 'linear-gradient(to top, var(--bg) 75%, transparent)', padding: '20px 24px var(--margo-player-footer-padding-bottom)' }}>
           <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
             <button
-              onClick={() => void togglePlayPause()}
+              onClick={() => {
+                if (engineState.mode === 'idle' || engineState.songId !== songId) {
+                  void startPlayback()
+                } else {
+                  void togglePlayPause()
+                }
+              }}
               style={{ width: '52px', height: '52px', borderRadius: '50%', border: '1px solid var(--border-hi)', background: 'rgba(255,255,255,0.05)', color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease', flexShrink: 0, outline: 'none', WebkitTapHighlightColor: 'transparent' }}
             ><PlayPauseIcon playing={isPlaying} buffering={isBuffering} size={20} color="var(--text)" /></button>
             <button
