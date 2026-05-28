@@ -100,6 +100,7 @@ Gold — The Margo Signature:
 - --gold-faint: rgba(232,197,71,0.08)
 - --gold-border: rgba(232,197,71,0.28)
 - --gold-glow: rgba(232,197,71,0.12)
+- Use `var(--gold)` as the only gold reference in component code; never hardcode `#E8C547` or any other gold hex.
 
 Emotion colors (Margo unique identity — never remove):
 - Love: #FF6B9D
@@ -242,6 +243,8 @@ DO:
 - Update this document before merging any design changes
 - Use components/MargoLogo.tsx for all logo instances
 - Use components/play-pause-icon.tsx for all play/pause buttons
+- Use components/heart-icon.tsx for all heart/resonate icons
+- Never use unicode, emoji, or text glyphs as visual elements anywhere in the app
 
 DON'T:
 - Hardcode any color

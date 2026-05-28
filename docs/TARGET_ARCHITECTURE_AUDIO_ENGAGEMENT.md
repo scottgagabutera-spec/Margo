@@ -36,7 +36,7 @@ This document is the implementation blueprint derived from the full codebase aud
 | Dimension | **Current** | **Target** |
 |-----------|-------------|------------|
 | Component | `LyricBoard.playSnippet` in `app/music/page.tsx` | `LyricCard` → `engine.playSnippet()` |
-| Pool | `Map<songId, Audio>` preloaded; `src=''` on pause breaks pool | Engine preloads **URLs** in a `Map<songId, string>` (metadata only), one element plays |
+| Pool | `Map<songId, Audio>` preloaded; `src=''` on pause breaks pool | Engine preloads **URLs** in a `Map<songId, string>` (metadata only), one element plays; viewport-driven `warmUrls()` with centralized IntersectionObserver warming and a lookahead of 3 cards |
 | Store sync | `playTrack({ audioElement })` + duplicate timers | `engine.playSnippet()` only — no `audioElement` passthrough |
 | Queue | `setLyricQueue` resets index; `registerLyricQueue` unused | `engine.setQueue(moments, currentIndex)` with stable index |
 | lineVibes | Parsed from `songs/{id}.srt` + `lineVibes` at runtime | Unchanged data source; playback via engine |
@@ -126,14 +126,19 @@ lib/audio-engine/
   engine.ts             — Core singleton logic (testable, no React)
   media-session.ts      — Media Session API wiring
   snippet-resolver.ts   — SRT line index → start/end seconds
-  preload-cache.ts      — URL prefetch hints (not Audio instances)
+  preload-cache.ts      — URL prefetch hints, fixed POOL_SIZE = 6, LRU warm pool, warmUrls() batch helper
 
 components/
   audio-engine-provider.tsx   — Mounts <audio>, provides React context
   mini-player.tsx             — Refactored consumer (Section 1.4)
 
 hooks/
-  useAudioEngine.ts     — Re-export context hook
+  useAudioEngine.ts        — Re-export context hook
+  useIsPlaying.ts          — current play state
+  useIsActiveTrack.ts      — active track selector
+  usePlaybackProgress.ts   — mode-aware progress
+  useQueueNavigation.ts    — queue navigation helpers
+  useAudioCurrentTime.ts   — current playback time
 ```
 
 **Deprecation:** `lib/player-store.ts` → thin re-export shim during migration, then delete.
@@ -208,7 +213,11 @@ function queuePrev(): void
 
 // Preload (instant tap — Margo ?au= pattern)
 function preloadSong(songId: string, audioUrl: string): void
-function warmUrl(audioUrl: string): void     // link rel=preload or engine.load()
+function warmUrl(audioUrl: string): void     // link rel=preload or engine.load(); batch via warmUrls()
+
+// Preload pool
+// POOL_SIZE = 6 with LRU eviction; warmUrls() batch-warms multiple audioUrls at once.
+// LyricBoard uses centralized IntersectionObserver warming, debounced scroll updates, and a lookahead of 3 upcoming cards.
 
 // Volume
 function setVolume(v: number): void
@@ -335,6 +344,7 @@ async function recordQualifiedPlay(songId: string): Promise<void>
 // 1. Check engagement/plays/{songId}/{sessionId}
 // 2. If absent: set flag + runTransaction songStats/{songId}/plays
 // 3. Never increment songs/{id}/plays directly (legacy field frozen)
+// NOTE: `recordQualifiedPlay()` exists in lib/engagement/plays.ts but is not yet wired into AudioEngine; this integration is pending.
 ```
 
 **Inflation guards:** No increment on `< 30s`; no second increment same session; no increment on snippet; remounting karaoke does not reset `sessionId`.

@@ -81,11 +81,15 @@ Backticks inside node -e are interpreted by bash as command substitution. Use `"
 
 ### 5. Audio player rules
 - Always use `preload="auto"` not `preload="metadata"`
-- Always check `audio.readyState >= 3` before calling `audio.play()`
-- Use `canplaythrough` event as fallback when readyState < 3
+- Always check `audio.readyState < 2` before calling `audio.play()`; use `canplay` as the buffering fallback
+- Use synchronous `audio.play()` only on the user gesture stack when starting playback
 - Always wire Media Session API before audio.play() to prevent browser orange overlay
 - Audio effect must run ONCE on mount — dependency array `[]` with earlyAudioUrl from URL params
 - earlyAudioUrl passed as `?au=` param from music page links for instant buffering
+
+- Never use unicode characters or emoji as visual icons — use SVG components only (`PlayPauseIcon`, `HeartIcon`)
+- HeartIcon from `components/heart-icon.tsx` is the only allowed heart/resonate icon
+- All colors must use CSS variables — no hardcoded hex values anywhere in component code. Exception: `EMOTION_COLORS` map in feed is intentional per-vibe data, not a UI color violation
 
 ### 6. MargoNav rules
 - MargoNav is used on: feed, music, compose, lyric-back, about, contact, privacy, terms

@@ -36,7 +36,8 @@ Live at [trymargo.com](https://trymargo.com)
 | Framework | Next.js 16 (App Router), React 19, TypeScript 5.7 |
 | Database | Firebase Realtime Database |
 | Auth | Anonymous — auto-generated usernames, no accounts |
-| Audio | Cloudflare R2 (self-hosted MP3s) |
+| Icons | PlayPauseIcon, HeartIcon — custom SVG components only |
+| Audio | Cloudflare R2 (self-hosted MP3s) via audio.trymargo.com (edge caching enabled) |
 | APIs | Genius, YouTube Data API v3, OpenAI |
 | Hosting | Vercel |
 | Analytics | Vercel Analytics (cookieless) |
@@ -70,6 +71,7 @@ components/             Shared React components
   margo-nav.tsx         Global nav (desktop + mobile + full page overlay)
   MargoLogo.tsx         Logo (3 tiers: mark, symbol, lockup)
   play-pause-icon.tsx   Custom SVG play/pause icon
+  heart-icon.tsx        Custom SVG heart/resonate icon
   card-export-modal.tsx Lyric card export
   admin-trigger.tsx     Hidden admin entry trigger
 hooks/                  Firebase data hooks
