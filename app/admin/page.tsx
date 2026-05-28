@@ -140,6 +140,8 @@ function PostsTab() {
   const [resonateBackfillRunning, setResonateBackfillRunning] = useState(false)
   const [viewsBackfillStatus, setViewsBackfillStatus] = useState<string | null>(null)
   const [viewsBackfillRunning, setViewsBackfillRunning] = useState(false)
+  const [playBackfillStatus, setPlayBackfillStatus] = useState<string | null>(null)
+  const [playBackfillRunning, setPlayBackfillRunning] = useState(false)
   const [postFilter, setPostFilter] = useState<'all' | 'active' | 'hidden'>('active')
 
   const loadEchoes = async (postId: string) => {
@@ -196,6 +198,30 @@ function PostsTab() {
       setBackfillStatus(`Error: ${e.message}`)
     } finally {
       setBackfillRunning(false)
+    }
+  }
+
+  const runPlayBackfill = async () => {
+    if (!db || playBackfillRunning) return
+    setPlayBackfillRunning(true)
+    setPlayBackfillStatus('Reading engagement plays…')
+    try {
+      const snap = await get(ref(db, 'engagement/plays'))
+      if (!snap.exists()) { setPlayBackfillStatus('No engagement plays found.'); return }
+      const plays = snap.val() as Record<string, any>
+      const multiPath: Record<string, number> = {}
+      for (const [songId, sessions] of Object.entries(plays)) {
+        const count = sessions ? Object.keys(sessions as Record<string, any>).length : 0
+        if (count > 0) multiPath[`songStats/${songId}/plays`] = count
+      }
+      if (Object.keys(multiPath).length > 0) {
+        await update(ref(db), multiPath)
+      }
+      setPlayBackfillStatus(`Done — updated ${Object.keys(multiPath).length} songs.`)
+    } catch (e: any) {
+      setPlayBackfillStatus(`Error: ${e.message}`)
+    } finally {
+      setPlayBackfillRunning(false)
     }
   }
 
@@ -316,6 +342,7 @@ function PostsTab() {
         { label: 'Backfill Echo Counts', desc: 'Counts existing lyric backs → postStats.echoCount', status: backfillStatus, running: backfillRunning, fn: runBackfill },
         { label: 'Backfill Resonate Counts', desc: 'Reads analytics.resonates → postStats.resonateCount', status: resonateBackfillStatus, running: resonateBackfillRunning, fn: runResonateBackfill },
         { label: 'Backfill Views', desc: 'Copies analytics.views → postStats.views', status: viewsBackfillStatus, running: viewsBackfillRunning, fn: runViewsBackfill },
+        { label: 'Backfill Play Counts', desc: 'Counts engagement plays → songStats.plays', status: playBackfillStatus, running: playBackfillRunning, fn: runPlayBackfill },
       ].map(({ label, desc, status, running, fn }) => (
         <div key={label} style={{ ...S.card, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
           <div>

@@ -42,25 +42,46 @@ export async function recordQualifiedPlay(songId: string): Promise<void> {
   if (sessionId === 'ssr-session' || sessionId === 'blocked-session') return
 
   try {
-    const { getDatabase } = await import('firebase/database')
+    const { getDatabase, ref, runTransaction } = await import('firebase/database')
     const { app } = await import('@/lib/firebase')
     if (!app) return
     const db = getDatabase(app)
 
-    const { ref, get, set, runTransaction } = await import('firebase/database')
+    const dedupRef = ref(db, `engagement/plays/${songId}/${sessionId}`)
+    const dedupResult = await runTransaction(dedupRef, (current) => {
+      if (current) return
+      return { qualifiedAt: Date.now() }
+    })
+    if (!dedupResult.committed) return
 
-    const dedupPath = `engagement/plays/${songId}/${sessionId}`
-    const dedupRef = ref(db, dedupPath)
-
-    // Check dedup — already recorded this session
-    const existing = await get(dedupRef)
-    if (existing.exists()) return
-
-    // Write dedup flag
-    await set(dedupRef, { qualifiedAt: Date.now() })
-
-    // Increment songStats atomically
     const statsRef = ref(db, `songStats/${songId}/plays`)
+    await runTransaction(statsRef, (current) => {
+      return (current || 0) + 1
+    })
+  } catch {
+    // Non-critical — never throw, never block playback
+  }
+}
+
+export async function recordSnippetPlay(songId: string): Promise<void> {
+  if (!songId) return
+  const sessionId = getMargoSessionId()
+  if (sessionId === 'ssr-session' || sessionId === 'blocked-session') return
+
+  try {
+    const { getDatabase, ref, runTransaction } = await import('firebase/database')
+    const { app } = await import('@/lib/firebase')
+    if (!app) return
+    const db = getDatabase(app)
+
+    const dedupRef = ref(db, `engagement/snippets/${songId}/${sessionId}`)
+    const dedupResult = await runTransaction(dedupRef, (current) => {
+      if (current) return
+      return { qualifiedAt: Date.now() }
+    })
+    if (!dedupResult.committed) return
+
+    const statsRef = ref(db, `songStats/${songId}/snippetPlays`)
     await runTransaction(statsRef, (current) => {
       return (current || 0) + 1
     })

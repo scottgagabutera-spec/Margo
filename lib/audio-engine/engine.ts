@@ -18,6 +18,7 @@ import {
 } from './types'
 import { syncMediaSessionFromState, bindMediaSessionHandlers, clearMediaSessionHandlers } from './media-session'
 import { registerPreloadSong, warmPreloadUrl } from './preload-cache'
+import { recordQualifiedPlay, getPlayThresholdSec } from '@/lib/engagement/plays'
 
 // ── Module state ──────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ let _listeners = new Set<AudioEngineListener>()
 let _snippetTimer: ReturnType<typeof setTimeout> | null = null
 let _handlerGeneration = 0
 let _wakeLock: WakeLockSentinel | null = null
-
+let _qualifiedPlayFired = false
 // ── Notify / patch ────────────────────────────────────────────────
 
 function notify(): void {
@@ -109,6 +110,15 @@ function bindAudioHandlers(generation: number): void {
       currentTime: audio.currentTime,
       duration: audio.duration || _state.duration,
     })
+    if (
+      _state.mode === 'full' &&
+      _state.songId &&
+      !_qualifiedPlayFired &&
+      audio.currentTime >= getPlayThresholdSec(audio.duration)
+    ) {
+      _qualifiedPlayFired = true
+      void recordQualifiedPlay(_state.songId)
+    }
     /* Snippet: clamp stop at endSec (timer is primary; this guards drift) */
     if (_state.mode === 'snippet' && _state.snippet && _state.playing) {
       if (audio.currentTime >= _state.snippet.endSec + 0.05) {
@@ -365,6 +375,7 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
 
 export async function playFull(request: PlayFullRequest): Promise<void> {
   const generation = bumpSession()
+  _qualifiedPlayFired = false
   clearSnippetTimer()
   releaseWakeLock()
 

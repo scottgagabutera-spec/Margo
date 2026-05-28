@@ -10,7 +10,6 @@ import { useSongs } from '@/hooks/useSongs'
 import { Song } from '@/hooks/useSongs'
 import { CardExportModal } from '@/components/card-export-modal'
 import { useAudioEngine, useAudioCurrentTime } from '@/hooks/useAudioEngine'
-import { recordQualifiedPlay, getPlayThresholdSec } from '@/lib/engagement/plays'
 import { playFull, togglePlayPause, stop, playFullSeek } from '@/lib/audio-engine'
 
 interface LyricLine {
@@ -187,23 +186,6 @@ function PlayerContent() {
     setTrayDismissed(true)
     if (autoNavRef.current) clearTimeout(autoNavRef.current)
   }, [])
-
-  // ── Play qualification (30s threshold) ──────────────────────────
-  const qualifiedRef = useRef(false)
-  useEffect(() => {
-    // Reset qualification when song changes
-    qualifiedRef.current = false
-  }, [songId])
-
-  useEffect(() => {
-    if (!isPlaying || !songId) return
-    if (qualifiedRef.current) return
-    const threshold = getPlayThresholdSec(duration)
-    if (currentTime >= threshold) {
-      qualifiedRef.current = true
-      void recordQualifiedPlay(songId)
-    }
-  }, [currentTime, isPlaying, songId, duration])
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
   const currentLyric = lyrics.find(l => l.id === currentLyricIndex)
