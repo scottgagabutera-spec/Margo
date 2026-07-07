@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase'
 import { useEchoes } from '@/hooks/useEchoes'
 import { ref, push, set, remove, serverTimestamp, runTransaction } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername'
+import { useClaimIdentity } from '@/hooks/useClaimIdentity'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useSearchParams } from 'next/navigation'
 import { usePost } from '@/hooks/usePost'
@@ -93,6 +94,7 @@ function parseVibeFromString(raw: string | undefined | null): Vibe | null {
 
 function LyricBackContent() {
   const { username } = useUsername()
+  const { user: claimedUser } = useClaimIdentity()
   const searchParams = useSearchParams()
   const postId = searchParams.get('postId')
   const { post: respondingTo } = usePost(postId)
@@ -240,6 +242,7 @@ function LyricBackContent() {
       ? push(ref(db, `posts/${postId}/echoes`), {
           lyric, song: songName, artist: artistName,
           emotion: selectedVibe, username: username || null,
+          authorUid: claimedUser?.uid || null,
           timestamp: serverTimestamp(), resonates: {},
         }).then(() => {
           // increment postStats.echoCount atomically
@@ -258,7 +261,9 @@ function LyricBackContent() {
           text: lyric, emotion: selectedVibe, mode: 'share',
           status: isPrivate ? 'private' : 'active',
           knowledge: { song: songName, artist: artistName, artwork: selectedSong?.artwork || null },
-          username: username || null, timestamp: serverTimestamp(),
+          username: username || null,
+          authorUid: claimedUser?.uid || null,
+          timestamp: serverTimestamp(),
         })
 
     resetComposeForm()
@@ -268,7 +273,7 @@ function LyricBackContent() {
       console.error('Failed to post:', e)
       toast.error('Could not send your lyric back. Please try again.')
     })
-  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, postId, posting, resetComposeForm])
+  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, claimedUser, postId, posting, resetComposeForm])
 
   /* ─── promote + reply — navigate first, write in background ─ */
   const promoteAndReply = (echo: typeof echoes[0]) => {
@@ -476,7 +481,7 @@ function LyricBackContent() {
                   display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                   background: gold, color: bg,
                   borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                  fontSize: '0.5rem', letterSpacing: '1.5px', textTransform: 'uppercase',
+                  fontSize: '0.5rem', letterSpacing: '1px', textTransform: 'uppercase',
                   border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1,
                 }}
               >Continue</button>

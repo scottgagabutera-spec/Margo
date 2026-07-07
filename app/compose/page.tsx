@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase'
 import { ref, push, serverTimestamp, get } from 'firebase/database'
 import { useUsername } from '@/hooks/useUsername'
 import { useLicensedArtists } from '@/hooks/useLicensedArtists'
+import { useClaimIdentity } from '@/hooks/useClaimIdentity'
 import { CardExportModal } from '@/components/card-export-modal'
 
 type Source = 'genius' | 'apple'
@@ -56,6 +57,7 @@ function ComposeInner() {
   const router = useRouter()
   const { username, hasConfirmed, hasEdited, confirmUsername, editUsername } = useUsername()
   const { isLicensed } = useLicensedArtists()
+  const { user: claimedUser } = useClaimIdentity()
   const searchParams = useSearchParams()
   useEffect(() => {
     const lyricParam = searchParams.get('lyric')
@@ -209,6 +211,7 @@ function ComposeInner() {
       songId: linkedSongId || null,
       audioUrl: linkedAudioUrl || null,
       username: username || null,
+      authorUid: claimedUser?.uid || null,
       timestamp: serverTimestamp(),
       lang: navigator.language.split('-')[0] || 'en',
     }
@@ -248,7 +251,7 @@ function ComposeInner() {
       setPostError('Something went wrong. Please try again.')
       setPosting(false)
     }
-  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, isLicensed, linkedSongId, linkedAudioUrl])
+  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, claimedUser, isLicensed, linkedSongId, linkedAudioUrl])
 
   const resetCompose = () => {
     setStep(1)
