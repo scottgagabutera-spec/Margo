@@ -16,6 +16,7 @@ import type { Post } from '@/hooks/usePosts'
 import { useUsername } from '@/hooks/useUsername'
 import { MargoNav } from '@/components/margo-nav'
 import { CardExportModal } from '@/components/card-export-modal'
+import { ClaimIdentityBanner } from '@/components/claim-identity-banner'
 import { db } from '@/lib/firebase'
 import { ref, set, remove, onValue, runTransaction } from 'firebase/database'
 import Link from 'next/link'
@@ -712,6 +713,8 @@ export default function FeedPage() {
       </div>
 
       <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px var(--margo-page-padding-bottom)' }}>
+        <ClaimIdentityBanner />
+
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
             {[0,1,2].map(i => (
