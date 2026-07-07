@@ -5,6 +5,7 @@ import { getDatabase } from 'firebase/database'
 import { app } from '@/lib/firebase'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { ref, onValue, update, remove, push, set, get, runTransaction } from 'firebase/database'
+import { ArtistsTab } from '@/components/artists-tab'
 
 // ── Types ──
 interface Post {
@@ -912,7 +913,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tab, setTab] = useState<'posts'|'music'|'licensed'|'featured'|'pages'>('posts')
+  const [tab, setTab] = useState<'posts'|'music'|'licensed'|'featured'|'pages'|'artists'>('posts')
 
   useEffect(() => {
     if (!auth) { setAuthChecked(true); return }
@@ -942,6 +943,7 @@ export default function AdminPage() {
     { key: 'licensed', label: 'Licensed Artists' },
     { key: 'featured', label: 'Featured' },
     { key: 'pages', label: 'Pages' },
+    { key: 'artists', label: 'Artists' },
   ]
 
   return (
@@ -967,6 +969,7 @@ export default function AdminPage() {
         {tab === 'licensed' && <LicensedTab />}
         {tab === 'featured' && <FeaturedTab />}
         {tab === 'pages'    && <PagesTab />}
+        {tab === 'artists'  && <ArtistsTab />}
       </div>
     </div>
   )
