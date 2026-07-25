@@ -7,9 +7,8 @@ import { Search } from 'lucide-react'
 import { MargoNav } from '@/components/margo-nav'
 import { db } from '@/lib/firebase'
 import { ref, push, serverTimestamp, get } from 'firebase/database'
-import { useUsername } from '@/hooks/useUsername'
+import { useIdentity } from '@/hooks/useIdentity'
 import { useLicensedArtists } from '@/hooks/useLicensedArtists'
-import { useClaimIdentity } from '@/hooks/useClaimIdentity'
 import { CardExportModal } from '@/components/card-export-modal'
 
 type Source = 'genius' | 'apple'
@@ -55,9 +54,8 @@ const backBtnStyle: React.CSSProperties = {
 
 function ComposeInner() {
   const router = useRouter()
-  const { username, hasConfirmed, hasEdited, confirmUsername, editUsername } = useUsername()
+  const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
   const { isLicensed } = useLicensedArtists()
-  const { user: claimedUser } = useClaimIdentity()
   const searchParams = useSearchParams()
   useEffect(() => {
     const lyricParam = searchParams.get('lyric')
@@ -100,6 +98,7 @@ function ComposeInner() {
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
+  const [bannerDismissed, setBannerDismissed] = useState(false)
 
   const handleSearch = useCallback(async (value: string) => {
     setSearchQuery(value)
@@ -189,6 +188,7 @@ function ComposeInner() {
   const handlePost = useCallback(async (isPrivate: boolean) => {
     if (!lyric || !songName || !artistName) return
     if (isPrivate) { setShowExport(true); return }
+    if (!identity || !user) { setPostError('Still setting things up — try again in a moment.'); return }
 
     setPosting(true)
     setPostError(null)
@@ -210,8 +210,8 @@ function ComposeInner() {
       youtubeMeta: null,
       songId: linkedSongId || null,
       audioUrl: linkedAudioUrl || null,
-      username: username || null,
-      authorUid: claimedUser?.uid || null,
+      username: identity.displayName || null,
+      authorUid: user.uid,
       timestamp: serverTimestamp(),
       lang: navigator.language.split('-')[0] || 'en',
     }
@@ -230,17 +230,14 @@ function ComposeInner() {
         }).catch(() => {})
       }
 
+      // Moderation now runs and writes flagCount entirely server-side via
+      // the admin SDK in /api/moderate — the client just fires the request
+      // with postId included and doesn't need the response back.
       if (result.key) {
         fetch('/api/moderate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: lyric }),
-        }).then(r => r.json()).then(mod => {
-          if (mod.flagged && db) {
-            import('firebase/database').then(({ ref: dbRef, update }) => {
-              if (db) update(dbRef(db, `posts/${result.key}`), { flagCount: 10 })
-            })
-          }
+          body: JSON.stringify({ text: lyric, postId: result.key }),
         }).catch(() => {})
       }
 
@@ -251,7 +248,7 @@ function ComposeInner() {
       setPostError('Something went wrong. Please try again.')
       setPosting(false)
     }
-  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, claimedUser, isLicensed, linkedSongId, linkedAudioUrl])
+  }, [artistName, songName, lyric, selectedVibe, selectedSong, identity, user, isLicensed, linkedSongId, linkedAudioUrl])
 
   const resetCompose = () => {
     setStep(1)
@@ -269,6 +266,7 @@ function ComposeInner() {
     setLinkedAudioUrl(null)
     setPosting(false)
     setPostError(null)
+    setBannerDismissed(false)
   }
 
   if (showSharePrompt) {
@@ -310,7 +308,9 @@ function ComposeInner() {
     )
   }
 
-  const showNameBanner = step === 4 && !hasConfirmed
+  // Show the name banner on step 4 until the person has customized their
+  // displayName at least once, or dismissed it for this compose session.
+  const showNameBanner = step === 4 && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
 
   return (
@@ -477,33 +477,31 @@ function ComposeInner() {
               )}
             </div>
 
-            {/* Username confirm banner */}
-            {showNameBanner && (
+            {/* Display name banner — shown until customized once, or dismissed */}
+            {showNameBanner && identity && (
               <div style={{ background: 'rgba(232,197,71,0.06)', border: '1px solid rgba(232,197,71,0.2)', borderRadius: '16px', padding: '20px 24px', marginBottom: '24px' }}>
                 {!editingName ? (
                   <>
                     <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text)', marginBottom: '4px' }}>
-                      You'll post as <strong style={{ color: 'var(--gold)' }}>{username}</strong>
+                      You'll post as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
                     </p>
                     <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '16px', lineHeight: 1.5 }}>
-                      We gave you this name — it's yours on Margo. You can change it once, right now.
+                      We gave you this name — it's yours on Margo. You can change how it's shown anytime.
                     </p>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <button onClick={confirmUsername}
+                      <button onClick={() => setBannerDismissed(true)}
                         style={{ padding: '9px 20px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Keep It</button>
-                      {!hasEdited && (
-                        <button onClick={() => { setEditingName(true); setNameInput(username) }}
-                          style={{ padding: '9px 20px', background: 'transparent', color: 'var(--gold)', border: '1px solid var(--gold-border)', borderRadius: '50px', fontFamily: font, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>Edit Once</button>
-                      )}
+                      <button onClick={() => { setEditingName(true); setNameInput(identity.displayName) }}
+                        style={{ padding: '9px 20px', background: 'transparent', color: 'var(--gold)', border: '1px solid var(--gold-border)', borderRadius: '50px', fontFamily: font, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>Edit</button>
                     </div>
                   </>
                 ) : (
                   <>
-                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '12px' }}>Choose your name — you can only do this once.</p>
+                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '12px' }}>Choose how your name appears on posts.</p>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value.slice(0, 30))} maxLength={30} autoFocus
                         style={{ flex: 1, height: '44px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, fontSize: '0.9rem', outline: 'none' }} />
-                      <button onClick={() => { if (nameInput.trim()) { editUsername(nameInput); setEditingName(false); confirmUsername() } }} disabled={!nameInput.trim()}
+                      <button onClick={async () => { if (nameInput.trim()) { await updateDisplayName(nameInput); setEditingName(false); setBannerDismissed(true) } }} disabled={!nameInput.trim()}
                         style={{ padding: '0 20px', height: '44px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '12px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', opacity: nameInput.trim() ? 1 : 0.4 }}>Confirm</button>
                       <button onClick={() => setEditingName(false)}
                         style={{ padding: '0 16px', height: '44px', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: '12px', fontFamily: font, fontSize: '0.6rem', cursor: 'pointer' }}>Cancel</button>
@@ -518,7 +516,7 @@ function ComposeInner() {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '320px', margin: '0 auto', opacity: buttonsBlocked ? 0.4 : 1, pointerEvents: buttonsBlocked ? 'none' : 'auto' }}>
-              <button onClick={() => handlePost(false)} disabled={posting}
+              <button onClick={() => handlePost(false)} disabled={posting || identityLoading}
                 style={{ padding: '15px 28px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: posting ? 'not-allowed' : 'pointer', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', opacity: posting ? 0.7 : 1, transition: 'opacity 150ms ease' }}>
                 {posting ? 'Posting…' : 'Post to Feed'}
               </button>
