@@ -1,6 +1,8 @@
 'use client'
 import { Suspense } from 'react'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
