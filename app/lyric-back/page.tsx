@@ -9,8 +9,7 @@ import { HeartIcon } from '@/components/heart-icon'
 import { db } from '@/lib/firebase'
 import { useEchoes } from '@/hooks/useEchoes'
 import { ref, push, set, remove, serverTimestamp, runTransaction } from 'firebase/database'
-import { useUsername } from '@/hooks/useUsername'
-import { useClaimIdentity } from '@/hooks/useClaimIdentity'
+import { useIdentity } from '@/hooks/useIdentity'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useSearchParams } from 'next/navigation'
 import { usePost } from '@/hooks/usePost'
@@ -94,8 +93,7 @@ function parseVibeFromString(raw: string | undefined | null): Vibe | null {
 }
 
 function LyricBackContent() {
-  const { username } = useUsername()
-  const { user: claimedUser } = useClaimIdentity()
+  const { user, identity } = useIdentity()
   const { requireAuth } = useAuthGate()
   const searchParams = useSearchParams()
   const postId = searchParams.get('postId')
@@ -244,8 +242,8 @@ function LyricBackContent() {
     const writePromise = postId
       ? push(ref(db, `posts/${postId}/echoes`), {
           lyric, song: songName, artist: artistName,
-          emotion: selectedVibe, username: username || null,
-          authorUid: claimedUser?.uid || null,
+          emotion: selectedVibe, username: identity?.displayName || null,
+          authorUid: user?.uid || null,
           timestamp: serverTimestamp(), resonates: {},
         }).then(() => {
           // increment postStats.echoCount atomically
@@ -264,8 +262,8 @@ function LyricBackContent() {
           text: lyric, emotion: selectedVibe, mode: 'share',
           status: isPrivate ? 'private' : 'active',
           knowledge: { song: songName, artist: artistName, artwork: selectedSong?.artwork || null },
-          username: username || null,
-          authorUid: claimedUser?.uid || null,
+          username: identity?.displayName || null,
+          authorUid: user?.uid || null,
           timestamp: serverTimestamp(),
         })
 
@@ -276,7 +274,7 @@ function LyricBackContent() {
       console.error('Failed to post:', e)
       toast.error('Could not send your lyric back. Please try again.')
     })
-  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, username, claimedUser, postId, posting, resetComposeForm])
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, postId, posting, resetComposeForm])
 
   /* ─── promote + reply — navigate first, write in background ─ */
   const promoteAndReply = (echo: typeof echoes[0]) => {
