@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
+import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { ArtistApplicationForm } from '@/components/artist-application-form'
 
 const font = 'var(--font-lora), serif'
@@ -9,6 +10,7 @@ const font = 'var(--font-lora), serif'
 export default function ApplyArtistPage() {
   const router = useRouter()
   const { user, identity, loading } = useIdentity()
+  const { application } = useArtistApplication()
 
   // Applying requires a real account — anonymous visitors get sent to sign in first.
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function ApplyArtistPage() {
     )
   }
 
-  const status = identity.artistApplication?.status ?? 'none'
+  const status = application?.status ?? 'none'
 
   if (identity.isArtist) {
     return (

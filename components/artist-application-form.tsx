@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { useIdentity, type ArtistApplicationLinks } from '@/hooks/useIdentity'
+import { useIdentity } from '@/hooks/useIdentity'
+import { useArtistApplication, type ArtistApplicationLinks } from '@/hooks/useArtistApplication'
 
 const font = 'var(--font-lora), serif'
 
@@ -31,7 +32,7 @@ interface ArtistApplicationFormProps {
 }
 
 export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProps) {
-  const { submitArtistApplication } = useIdentity()
+  const { submitArtistApplication } = useArtistApplication()
   const [displayArtistName, setDisplayArtistName] = useState('')
   const [links, setLinks] = useState<ArtistApplicationLinks>({})
   const [note, setNote] = useState('')

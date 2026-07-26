@@ -4,11 +4,13 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 import { useIdentity } from '@/hooks/useIdentity'
+import { useArtistApplication } from '@/hooks/useArtistApplication'
 
 export function MargoNav() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const { user, identity } = useIdentity()
+  const { application } = useArtistApplication()
 
   const isOnFeed = pathname === '/feed'
   const isOnMusic = pathname?.startsWith('/music')
@@ -17,7 +19,7 @@ export function MargoNav() {
   const isOnApplyArtist = pathname === '/apply-artist'
 
   const isSignedIn = !!user && !user.isAnonymous
-  const applicationStatus = identity?.artistApplication?.status ?? 'none'
+  const applicationStatus = application?.status ?? 'none'
   const showApplyCTA = isSignedIn && !identity?.isArtist
   const applyLabel =
     applicationStatus === 'pending' ? 'Application Pending' :
