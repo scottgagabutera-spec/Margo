@@ -3,14 +3,26 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import MargoLogo from '@/components/MargoLogo'
+import { useIdentity } from '@/hooks/useIdentity'
 
 export function MargoNav() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const { user, identity } = useIdentity()
+
   const isOnFeed = pathname === '/feed'
   const isOnMusic = pathname?.startsWith('/music')
   const isOnCompose = pathname === '/compose'
-  const isOnArtistAuth = pathname?.startsWith('/artist')
+  const isOnSignin = pathname === '/signin'
+  const isOnApplyArtist = pathname === '/apply-artist'
+
+  const isSignedIn = !!user && !user.isAnonymous
+  const applicationStatus = identity?.artistApplication?.status ?? 'none'
+  const showApplyCTA = isSignedIn && !identity?.isArtist
+  const applyLabel =
+    applicationStatus === 'pending' ? 'Application Pending' :
+    applicationStatus === 'rejected' ? 'Reapply as Artist' :
+    'Apply as an Artist'
 
   // Lock body scroll when menu open
   useEffect(() => {
@@ -52,7 +64,7 @@ export function MargoNav() {
           {/* Right side — all items flush right */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 
-            {/* Desktop only: Feed, Music, Artist Sign In, Share a Lyric */}
+            {/* Desktop only: Feed, Music, Sign In / Apply, Share a Lyric */}
             <div style={{ display: 'none' }} className="margo-desktop-nav">
               {[
                 { href: '/feed', label: 'Feed', active: isOnFeed },
@@ -77,14 +89,27 @@ export function MargoNav() {
                   )}
                 </Link>
               ))}
-              <Link href="/artist/signin" style={{
-                fontSize: '0.65rem', fontFamily: 'var(--font-lora), serif',
-                fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase',
-                textDecoration: 'none',
-                color: isOnArtistAuth ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
-                padding: '8px 14px', marginLeft: '4px',
-                transition: 'color 150ms ease', whiteSpace: 'nowrap',
-              }}>Artist Sign In</Link>
+
+              {!isSignedIn ? (
+                <Link href="/signin" style={{
+                  fontSize: '0.65rem', fontFamily: 'var(--font-lora), serif',
+                  fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase',
+                  textDecoration: 'none',
+                  color: isOnSignin ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
+                  padding: '8px 14px', marginLeft: '4px',
+                  transition: 'color 150ms ease', whiteSpace: 'nowrap',
+                }}>Sign In</Link>
+              ) : showApplyCTA ? (
+                <Link href="/apply-artist" style={{
+                  fontSize: '0.65rem', fontFamily: 'var(--font-lora), serif',
+                  fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase',
+                  textDecoration: 'none',
+                  color: isOnApplyArtist ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
+                  padding: '8px 14px', marginLeft: '4px',
+                  transition: 'color 150ms ease', whiteSpace: 'nowrap',
+                }}>{applyLabel}</Link>
+              ) : null}
+
               <Link href="/compose" style={{
                 fontSize: '0.6rem', fontFamily: 'var(--font-lora), serif',
                 fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
@@ -190,28 +215,52 @@ export function MargoNav() {
           </Link>
         ))}
 
-        {/* Quiet, separated Artist Sign In — deliberately smaller, below the main links */}
-        <Link
-          href="/artist/signin"
-          onClick={() => setMenuOpen(false)}
-          style={{
-            marginTop: '24px',
-            fontSize: '0.7rem',
-            fontFamily: 'var(--font-lora), serif',
-            fontWeight: 600,
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            textDecoration: 'none',
-            color: isOnArtistAuth ? 'var(--gold)' : 'rgba(255,255,255,0.3)',
-            padding: '12px 32px',
-            transition: 'color 200ms ease',
-            opacity: menuOpen ? 1 : 0,
-            transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
-            transitionDelay: menuOpen ? (overlayLinks.length * 60) + 'ms' : '0ms',
-          }}
-        >
-          Artist Sign In
-        </Link>
+        {/* Quiet, separated Sign In / Apply CTA — deliberately smaller, below the main links */}
+        {!isSignedIn ? (
+          <Link
+            href="/signin"
+            onClick={() => setMenuOpen(false)}
+            style={{
+              marginTop: '24px',
+              fontSize: '0.7rem',
+              fontFamily: 'var(--font-lora), serif',
+              fontWeight: 600,
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              color: isOnSignin ? 'var(--gold)' : 'rgba(255,255,255,0.3)',
+              padding: '12px 32px',
+              transition: 'color 200ms ease',
+              opacity: menuOpen ? 1 : 0,
+              transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
+              transitionDelay: menuOpen ? (overlayLinks.length * 60) + 'ms' : '0ms',
+            }}
+          >
+            Sign In
+          </Link>
+        ) : showApplyCTA ? (
+          <Link
+            href="/apply-artist"
+            onClick={() => setMenuOpen(false)}
+            style={{
+              marginTop: '24px',
+              fontSize: '0.7rem',
+              fontFamily: 'var(--font-lora), serif',
+              fontWeight: 600,
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              color: isOnApplyArtist ? 'var(--gold)' : 'rgba(255,255,255,0.3)',
+              padding: '12px 32px',
+              transition: 'color 200ms ease',
+              opacity: menuOpen ? 1 : 0,
+              transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
+              transitionDelay: menuOpen ? (overlayLinks.length * 60) + 'ms' : '0ms',
+            }}
+          >
+            {applyLabel}
+          </Link>
+        ) : null}
       </div>
 
       {/* Responsive CSS */}

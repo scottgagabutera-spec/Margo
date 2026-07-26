@@ -10,6 +10,7 @@ import { ref, push, serverTimestamp, get } from 'firebase/database'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useLicensedArtists } from '@/hooks/useLicensedArtists'
 import { CardExportModal } from '@/components/card-export-modal'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 type Source = 'genius' | 'apple'
 
@@ -55,6 +56,7 @@ const backBtnStyle: React.CSSProperties = {
 function ComposeInner() {
   const router = useRouter()
   const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
+  const { requireAuth } = useAuthGate()
   const { isLicensed } = useLicensedArtists()
   const searchParams = useSearchParams()
   useEffect(() => {
@@ -186,6 +188,7 @@ function ComposeInner() {
   }, [selectedVibe])
 
   const handlePost = useCallback(async (isPrivate: boolean) => {
+    if (!requireAuth()) return
     if (!lyric || !songName || !artistName) return
     if (isPrivate) { setShowExport(true); return }
     if (!identity || !user) { setPostError('Still setting things up — try again in a moment.'); return }
@@ -248,7 +251,7 @@ function ComposeInner() {
       setPostError('Something went wrong. Please try again.')
       setPosting(false)
     }
-  }, [artistName, songName, lyric, selectedVibe, selectedSong, identity, user, isLicensed, linkedSongId, linkedAudioUrl])
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, isLicensed, linkedSongId, linkedAudioUrl])
 
   const resetCompose = () => {
     setStep(1)

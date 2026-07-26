@@ -14,6 +14,7 @@ import { useClaimIdentity } from '@/hooks/useClaimIdentity'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useSearchParams } from 'next/navigation'
 import { usePost } from '@/hooks/usePost'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 type Source = 'genius' | 'apple'
 
@@ -95,6 +96,7 @@ function parseVibeFromString(raw: string | undefined | null): Vibe | null {
 function LyricBackContent() {
   const { username } = useUsername()
   const { user: claimedUser } = useClaimIdentity()
+  const { requireAuth } = useAuthGate()
   const searchParams = useSearchParams()
   const postId = searchParams.get('postId')
   const { post: respondingTo } = usePost(postId)
@@ -225,6 +227,7 @@ function LyricBackContent() {
 
   /* ─── post ───────────────────────────────────────────────── */
   const handlePost = useCallback((isPrivate: boolean) => {
+    if (!requireAuth()) return
     if (posting) return
     if (!lyric || !songName || !artistName) return
     if (!selectedVibe) {
@@ -273,7 +276,7 @@ function LyricBackContent() {
       console.error('Failed to post:', e)
       toast.error('Could not send your lyric back. Please try again.')
     })
-  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, claimedUser, postId, posting, resetComposeForm])
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, username, claimedUser, postId, posting, resetComposeForm])
 
   /* ─── promote + reply — navigate first, write in background ─ */
   const promoteAndReply = (echo: typeof echoes[0]) => {
@@ -283,6 +286,7 @@ function LyricBackContent() {
 
   /* ─── resonate ───────────────────────────────────────────── */
   const toggleResonate = async (echoId: string) => {
+    if (!requireAuth()) return
     if (!db) return
     const myId = getMargoActorId()
     const already = resonated.has(echoId)
@@ -755,6 +759,7 @@ function LyricBackContent() {
                     {/* Card — was "Share" in old feed, now "Card" everywhere, same ↗ icon */}
                     <button
                       onClick={() => {
+                        if (!requireAuth()) return
                         setCardData({
                           lyric: lb.lyric, song: lb.song, artist: lb.artist, id: lb.id,
                           parentLyric: respondingTo?.text,

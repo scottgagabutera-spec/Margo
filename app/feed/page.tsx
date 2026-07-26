@@ -13,10 +13,8 @@ import {
 import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
-import { useUsername } from '@/hooks/useUsername'
 import { MargoNav } from '@/components/margo-nav'
 import { CardExportModal } from '@/components/card-export-modal'
-import { ClaimIdentityBanner } from '@/components/claim-identity-banner'
 import { db } from '@/lib/firebase'
 import { ref, set, remove, onValue, runTransaction } from 'firebase/database'
 import Link from 'next/link'
@@ -31,6 +29,7 @@ import {
 } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { getMargoActorId } from '@/lib/engagement/session'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const EMOTION_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -81,6 +80,7 @@ function parseSRT(srt: string): LyricLine[] {
 }
 
 // ── Feed snippet button — uses AudioEngine ───────────────────────
+// NOTE: Snippet playback is intentionally NOT gated — free preview.
 function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork }: {
   audioUrl: string; songId: string | null; postText?: string
   songTitle?: string; artist?: string; artwork?: string | null
@@ -150,10 +150,12 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
 }
 
 // ── Tier 1 full player — uses AudioEngine ────────────────────────
+// Full-song playback is gated — first play requires auth.
 function Tier1Player({ audioUrl, songId, postText }: {
   audioUrl: string; songId: string | null; postText?: string
 }) {
   const engineState = useAudioEngine()
+  const { requireAuth } = useAuthGate()
   const isThisSong = engineState.songId === (songId || audioUrl)
   const playing = engineState.playing && isThisSong && engineState.mode === 'full'
   const isBuffering = engineState.buffering && isThisSong
@@ -180,6 +182,7 @@ function Tier1Player({ audioUrl, songId, postText }: {
   // warmUrl handled by PostCard IntersectionObserver — not here (floods pool)
 
   const toggle = async () => {
+    if (!requireAuth()) return
     loadLyrics()
     if (isThisSong && engineState.mode === 'full') {
       void togglePlayPause()
@@ -282,6 +285,7 @@ function PostCard({
   onResonate: (id: string) => void
   onExport: (post: Post) => void
 }) {
+  const { requireAuth } = useAuthGate()
   // Views: increment postStats.views once per session per post when card enters viewport
   const viewedRef = useRef(false)
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
@@ -412,6 +416,7 @@ function PostCard({
       )}
 
       {!isTier1 && (post.youtubeMeta?.thumbnail || post.knowledge?.artwork) && (
+        
         <a
           href={post.youtubeMeta?.youtubeUrl || `https://music.apple.com/search?term=${encodeURIComponent((post.knowledge?.song || '') + ' ' + (post.knowledge?.artist || ''))}`}
           target="_blank"
@@ -499,6 +504,7 @@ function PostCard({
               <Link
                 href={`/music/player?id=${post.songId}${audioUrl ? '&au=' + encodeURIComponent(audioUrl) : ''}`}
                 aria-label="Full Karaoke"
+                onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
                 style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
@@ -519,8 +525,8 @@ function PostCard({
 }
 
 export default function FeedPage() {
-  const { username } = useUsername()
   const { posts, loading } = usePosts()
+  const { requireAuth } = useAuthGate()
   const [selectedVibe, setSelectedVibe] = useState('ALL')
   const [selectedSort, setSelectedSort] = useState('NEW')
   const [searchQuery, setSearchQuery] = useState('')
@@ -597,6 +603,7 @@ export default function FeedPage() {
     .sort((a, b) => getScore(b) - getScore(a))
 
   const toggleResonate = async (postId: string) => {
+    if (!requireAuth()) return
     const already = resonated.has(postId)
     const myId = getMargoActorId()
     setResonated(prev => {
@@ -631,6 +638,11 @@ export default function FeedPage() {
       })
       setResonateCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + (already ? 1 : -1)) }))
     }
+  }
+
+  const handleExport = (post: Post) => {
+    if (!requireAuth()) return
+    setExportPost(post)
   }
 
   return (
@@ -713,8 +725,6 @@ export default function FeedPage() {
       </div>
 
       <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px var(--margo-page-padding-bottom)' }}>
-        <ClaimIdentityBanner />
-
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
             {[0,1,2].map(i => (
@@ -746,7 +756,7 @@ export default function FeedPage() {
               resonateCount={postStats[post.id]?.resonateCount ?? resonateCounts[post.id] ?? post.resonates ?? 0}
               echoCount={postStats[post.id]?.echoCount ?? 0}
               onResonate={toggleResonate}
-              onExport={setExportPost}
+              onExport={handleExport}
             />
           ))}
         </div>
