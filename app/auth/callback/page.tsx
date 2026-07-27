@@ -10,10 +10,12 @@ const font = 'var(--font-lora), serif'
 
 /**
  * Lands here after completing a Google or Discord OAuth redirect
- * (see components/auth-form.tsx handleOAuthSubmit). supabase-js
- * automatically picks up the session from the URL on load — this page
- * just waits for that to resolve, then sends the person on to the
- * feed. No password handling needed here anymore: email/password
+ * (see components/auth-form.tsx handleOAuthSubmit). Explicitly
+ * exchanges the ?code= param from the URL for a real session —
+ * relying on supabase-js's automatic detection caused a race
+ * condition where getSession() could resolve before the exchange
+ * finished, showing "Something went wrong" even on a successful
+ * sign-in. No password handling needed here anymore: email/password
  * signup now sets the password directly via supabase.auth.signUp()
  * in auth-form.tsx, with no separate verification step to complete.
  */
@@ -23,6 +25,21 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const finish = async () => {
+      const code = new URLSearchParams(window.location.search).get('code')
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) {
+          console.error('exchangeCodeForSession failed:', error)
+          setStatus('error')
+          return
+        }
+        router.push('/feed')
+        return
+      }
+
+      // No code param — fall back to checking for an existing session
+      // (e.g. implicit-flow hash tokens supabase-js already picked up).
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         setStatus('error')
