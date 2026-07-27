@@ -5,6 +5,9 @@ import { useState, useEffect } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
+import { supabase } from '@/lib/supabase'
+
+const font = 'var(--font-lora), serif'
 
 export function MargoNav() {
   const pathname = usePathname()
@@ -25,6 +28,14 @@ export function MargoNav() {
     applicationStatus === 'pending' ? 'Application Pending' :
     applicationStatus === 'rejected' ? 'Reapply as Artist' :
     'Apply as an Artist'
+
+  const ownProfileHref = identity ? `/profile/${identity.username}` : null
+  const isOnOwnProfile = ownProfileHref ? pathname === ownProfileHref : false
+
+  const handleSignOut = async () => {
+    setMenuOpen(false)
+    await supabase.auth.signOut()
+  }
 
   // Lock body scroll when menu open
   useEffect(() => {
@@ -66,14 +77,14 @@ export function MargoNav() {
           {/* Right side — all items flush right */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 
-            {/* Desktop only: Feed, Music, Sign In / Apply, Share a Lyric */}
+            {/* Desktop only: Feed, Music, Sign In / Apply, avatar, Share a Lyric */}
             <div style={{ display: 'none' }} className="margo-desktop-nav">
               {[
                 { href: '/feed', label: 'Feed', active: isOnFeed },
                 { href: '/music', label: 'Music', active: isOnMusic },
               ].map(({ href, label, active }) => (
                 <Link key={href} href={href} style={{
-                  fontSize: '0.75rem', fontFamily: 'var(--font-lora), serif',
+                  fontSize: '0.75rem', fontFamily: font,
                   fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
                   textDecoration: 'none',
                   color: active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
@@ -94,7 +105,7 @@ export function MargoNav() {
 
               {!isSignedIn ? (
                 <Link href="/signin" style={{
-                  fontSize: '0.65rem', fontFamily: 'var(--font-lora), serif',
+                  fontSize: '0.65rem', fontFamily: font,
                   fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase',
                   textDecoration: 'none',
                   color: isOnSignin ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
@@ -103,7 +114,7 @@ export function MargoNav() {
                 }}>Sign In</Link>
               ) : showApplyCTA ? (
                 <Link href="/apply-artist" style={{
-                  fontSize: '0.65rem', fontFamily: 'var(--font-lora), serif',
+                  fontSize: '0.65rem', fontFamily: font,
                   fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase',
                   textDecoration: 'none',
                   color: isOnApplyArtist ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
@@ -112,8 +123,32 @@ export function MargoNav() {
                 }}>{applyLabel}</Link>
               ) : null}
 
+              {/* Signed-in identity — avatar linking to own profile */}
+              {isSignedIn && identity && ownProfileHref && (
+                <Link
+                  href={ownProfileHref}
+                  aria-label={`${identity.displayName}'s profile`}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: '32px', height: '32px', borderRadius: '50%',
+                    marginLeft: '8px', flexShrink: 0, overflow: 'hidden',
+                    background: identity.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+                    border: isOnOwnProfile ? '2px solid var(--gold)' : '1px solid rgba(232,197,71,0.2)',
+                    boxSizing: 'border-box', transition: 'border-color 150ms ease',
+                  }}
+                >
+                  {identity.avatarUrl ? (
+                    <img src={identity.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ fontFamily: font, fontSize: '0.65rem', fontWeight: 700, color: 'var(--bg)' }}>
+                      {(identity.displayName || '??').slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </Link>
+              )}
+
               <Link href="/compose" style={{
-                fontSize: '0.6rem', fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.6rem', fontFamily: font,
                 fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
                 textDecoration: 'none', color: 'var(--bg)',
                 background: 'var(--gold)', borderRadius: '50px',
@@ -186,6 +221,39 @@ export function MargoNav() {
         pointerEvents: menuOpen ? 'all' : 'none',
         transition: 'opacity 300ms ease',
       }}>
+        {/* Signed-in identity row — avatar + name, shown above the main links */}
+        {isSignedIn && identity && ownProfileHref && (
+          <Link
+            href={ownProfileHref}
+            onClick={() => setMenuOpen(false)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              textDecoration: 'none', marginBottom: '20px',
+              opacity: menuOpen ? 1 : 0,
+              transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
+              transition: 'opacity 300ms ease, transform 300ms ease',
+            }}
+          >
+            <span style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden',
+              background: identity.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+              border: '1px solid rgba(232,197,71,0.2)', flexShrink: 0,
+            }}>
+              {identity.avatarUrl ? (
+                <img src={identity.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontFamily: font, fontSize: '0.75rem', fontWeight: 700, color: 'var(--bg)' }}>
+                  {(identity.displayName || '??').slice(0, 2).toUpperCase()}
+                </span>
+              )}
+            </span>
+            <span style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)' }}>
+              {identity.displayName}
+            </span>
+          </Link>
+        )}
+
         {overlayLinks.map(({ href, label, active }, i) => (
           <Link
             key={href}
@@ -193,7 +261,7 @@ export function MargoNav() {
             onClick={() => setMenuOpen(false)}
             style={{
               fontSize: 'clamp(1.8rem, 6vw, 3.5rem)',
-              fontFamily: 'var(--font-lora), serif',
+              fontFamily: font,
               fontStyle: 'italic',
               fontWeight: 700,
               letterSpacing: '1px',
@@ -225,7 +293,7 @@ export function MargoNav() {
             style={{
               marginTop: '24px',
               fontSize: '0.7rem',
-              fontFamily: 'var(--font-lora), serif',
+              fontFamily: font,
               fontWeight: 600,
               letterSpacing: '2px',
               textTransform: 'uppercase',
@@ -240,29 +308,55 @@ export function MargoNav() {
           >
             Sign In
           </Link>
-        ) : showApplyCTA ? (
-          <Link
-            href="/apply-artist"
-            onClick={() => setMenuOpen(false)}
-            style={{
-              marginTop: '24px',
-              fontSize: '0.7rem',
-              fontFamily: 'var(--font-lora), serif',
-              fontWeight: 600,
-              letterSpacing: '2px',
-              textTransform: 'uppercase',
-              textDecoration: 'none',
-              color: isOnApplyArtist ? 'var(--gold)' : 'rgba(255,255,255,0.3)',
-              padding: '12px 32px',
-              transition: 'color 200ms ease',
-              opacity: menuOpen ? 1 : 0,
-              transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
-              transitionDelay: menuOpen ? (overlayLinks.length * 60) + 'ms' : '0ms',
-            }}
-          >
-            {applyLabel}
-          </Link>
-        ) : null}
+        ) : (
+          <>
+            {showApplyCTA && (
+              <Link
+                href="/apply-artist"
+                onClick={() => setMenuOpen(false)}
+                style={{
+                  marginTop: '24px',
+                  fontSize: '0.7rem',
+                  fontFamily: font,
+                  fontWeight: 600,
+                  letterSpacing: '2px',
+                  textTransform: 'uppercase',
+                  textDecoration: 'none',
+                  color: isOnApplyArtist ? 'var(--gold)' : 'rgba(255,255,255,0.3)',
+                  padding: '12px 32px',
+                  transition: 'color 200ms ease',
+                  opacity: menuOpen ? 1 : 0,
+                  transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
+                  transitionDelay: menuOpen ? (overlayLinks.length * 60) + 'ms' : '0ms',
+                }}
+              >
+                {applyLabel}
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={handleSignOut}
+              style={{
+                marginTop: showApplyCTA ? '4px' : '24px',
+                fontSize: '0.7rem',
+                fontFamily: font,
+                fontWeight: 600,
+                letterSpacing: '2px',
+                textTransform: 'uppercase',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(255,255,255,0.3)',
+                padding: '12px 32px',
+                minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
+                transition: 'color 200ms ease',
+                opacity: menuOpen ? 1 : 0,
+                transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
+                transitionDelay: menuOpen ? ((overlayLinks.length + 1) * 60) + 'ms' : '0ms',
+              }}
+            >
+              Sign Out
+            </button>
+          </>
+        )}
       </div>
 
       {/* Responsive CSS */}
