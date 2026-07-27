@@ -15,15 +15,6 @@ function generateUsername() {
   return `${instrument}${number}`
 }
 
-export interface ArtistApplicationLinks {
-  spotify?: string
-  youtube?: string
-  soundcloud?: string
-  instagram?: string
-  tiktok?: string
-  other?: string
-}
-
 export interface Identity {
   username: string
   displayName: string
@@ -78,10 +69,13 @@ function mapRow(row: any): Identity {
  * @username only, and is used as a display_name fallback solely for
  * email/password signups where no real name exists yet.
  *
- * Merged 2026-07-27: folded in bio/signature-lyric/privacy/artist-
- * application actions that previously lived in the parallel (and now
- * retired) hooks/useSupabaseIdentity.ts, since this hook is the one
- * actually wired into every component — no call sites need to change.
+ * Merged 2026-07-27: folded in bio/signature-lyric/privacy actions
+ * that previously lived in the parallel (now retired)
+ * hooks/useSupabaseIdentity.ts, since this hook is the one actually
+ * wired into every component — no call sites need to change. Artist
+ * applications deliberately stay out of this hook — that's
+ * hooks/useArtistApplication.ts, which also tracks application status
+ * (pending/approved/rejected), not just submission.
  */
 export function useIdentity() {
   const [user, setUser] = useState<IdentityUser | null>(null)
@@ -226,39 +220,6 @@ export function useIdentity() {
     return { success: true }
   }, [user])
 
-  const submitArtistApplication = useCallback(async (
-    data: { displayArtistName: string; links: ArtistApplicationLinks; note?: string; rightsAgreed: boolean }
-  ): Promise<ActionResult> => {
-    if (!user) return { success: false, error: 'Not signed in.' }
-
-    const name = data.displayArtistName.trim()
-    if (!name) return { success: false, error: 'Artist name is required.' }
-
-    const hasLink = Object.values(data.links).some(v => v && v.trim().length > 0)
-    if (!hasLink) return { success: false, error: 'Add at least one link so we can verify you.' }
-
-    if (!data.rightsAgreed) {
-      return { success: false, error: 'You must agree to the rights warranty to continue.' }
-    }
-
-    const cleanedLinks: ArtistApplicationLinks = {}
-    for (const [key, value] of Object.entries(data.links)) {
-      if (value && value.trim()) cleanedLinks[key as keyof ArtistApplicationLinks] = value.trim()
-    }
-
-    const { error } = await supabase.from('artist_applications').insert({
-      profile_id: user.id,
-      status: 'pending',
-      display_artist_name: name,
-      links: cleanedLinks,
-      note: data.note?.trim() || null,
-      rights_agreed: true,
-    })
-
-    if (error) return { success: false, error: 'Could not submit application. Please try again.' }
-    return { success: true }
-  }, [user])
-
   return {
     user,
     identity,
@@ -268,6 +229,5 @@ export function useIdentity() {
     updateSignatureLyric,
     updateBio,
     setPrivate,
-    submitArtistApplication,
   }
 }
