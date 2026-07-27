@@ -15,6 +15,15 @@ function generateUsername() {
   return `${instrument}${number}`
 }
 
+export interface ArtistApplicationLinks {
+  spotify?: string
+  youtube?: string
+  soundcloud?: string
+  instagram?: string
+  tiktok?: string
+  other?: string
+}
+
 export interface Identity {
   username: string
   displayName: string
@@ -62,9 +71,17 @@ function mapRow(row: any): Identity {
  *
  * Relies on SupabaseAuthProvider already having a session (anonymous
  * or real) by the time this runs. The first time a given auth UID is
- * seen here, a profiles row is auto-created with a generated default
- * username — mirrors the old auto-create behavior, but at the DB
- * level via Supabase instead of Firebase.
+ * seen here, a profiles row is auto-created. If the OAuth provider
+ * (Google/Discord) handed back a real name and/or avatar in
+ * user_metadata, those are used for display_name/avatar_url — the
+ * generated instrument+number handle is reserved for the unique
+ * @username only, and is used as a display_name fallback solely for
+ * email/password signups where no real name exists yet.
+ *
+ * Merged 2026-07-27: folded in bio/signature-lyric/privacy/artist-
+ * application actions that previously lived in the parallel (and now
+ * retired) hooks/useSupabaseIdentity.ts, since this hook is the one
+ * actually wired into every component — no call sites need to change.
  */
 export function useIdentity() {
   const [user, setUser] = useState<IdentityUser | null>(null)
@@ -83,11 +100,24 @@ export function useIdentity() {
       return
     }
 
+    // Pull whatever real identity data the OAuth provider returned.
+    // Google/Discord expose full_name or name, and avatar_url or
+    // picture, in user_metadata — email/password signups won't have
+    // either, so both fall back sensibly below.
+    const meta = su.user_metadata || {}
+    const realName: string | null = meta.full_name || meta.name || null
+    const avatarUrl: string | null = meta.avatar_url || meta.picture || null
+
     let username = generateUsername()
     for (let attempts = 0; attempts < 5; attempts++) {
       const { data, error } = await supabase
         .from('profiles')
-        .insert({ id: su.id, username, display_name: username })
+        .insert({
+          id: su.id,
+          username,
+          display_name: realName || username,
+          avatar_url: avatarUrl,
+        })
         .select()
         .single()
 
@@ -158,5 +188,86 @@ export function useIdentity() {
     return { success: true }
   }, [user])
 
-  return { user, identity, loading, updateDisplayName, changeUsername }
+  // The signature lyric — the Margo-specific profile field, a pinned
+  // lyric-and-source pair shown like a bio would be.
+  const updateSignatureLyric = useCallback(async (
+    data: { lyric: string; song: string; artist: string }
+  ): Promise<ActionResult> => {
+    if (!user) return { success: false, error: 'Not signed in.' }
+    const { error } = await supabase.from('profiles').update({
+      signature_lyric: data.lyric.trim() || null,
+      signature_song: data.song.trim() || null,
+      signature_artist: data.artist.trim() || null,
+    }).eq('id', user.id)
+    if (error) return { success: false, error: 'Could not save your signature lyric.' }
+    setIdentityState(prev => (prev ? {
+      ...prev,
+      signatureLyric: data.lyric.trim() || null,
+      signatureSong: data.song.trim() || null,
+      signatureArtist: data.artist.trim() || null,
+    } : prev))
+    return { success: true }
+  }, [user])
+
+  const updateBio = useCallback(async (newBio: string): Promise<ActionResult> => {
+    if (!user) return { success: false, error: 'Not signed in.' }
+    const trimmed = newBio.trim().slice(0, 160)
+    const { error } = await supabase.from('profiles').update({ bio: trimmed || null }).eq('id', user.id)
+    if (error) return { success: false, error: 'Could not update bio.' }
+    setIdentityState(prev => (prev ? { ...prev, bio: trimmed || null } : prev))
+    return { success: true }
+  }, [user])
+
+  const setPrivate = useCallback(async (isPrivate: boolean): Promise<ActionResult> => {
+    if (!user) return { success: false, error: 'Not signed in.' }
+    const { error } = await supabase.from('profiles').update({ is_private: isPrivate }).eq('id', user.id)
+    if (error) return { success: false, error: 'Could not update privacy setting.' }
+    setIdentityState(prev => (prev ? { ...prev, isPrivate } : prev))
+    return { success: true }
+  }, [user])
+
+  const submitArtistApplication = useCallback(async (
+    data: { displayArtistName: string; links: ArtistApplicationLinks; note?: string; rightsAgreed: boolean }
+  ): Promise<ActionResult> => {
+    if (!user) return { success: false, error: 'Not signed in.' }
+
+    const name = data.displayArtistName.trim()
+    if (!name) return { success: false, error: 'Artist name is required.' }
+
+    const hasLink = Object.values(data.links).some(v => v && v.trim().length > 0)
+    if (!hasLink) return { success: false, error: 'Add at least one link so we can verify you.' }
+
+    if (!data.rightsAgreed) {
+      return { success: false, error: 'You must agree to the rights warranty to continue.' }
+    }
+
+    const cleanedLinks: ArtistApplicationLinks = {}
+    for (const [key, value] of Object.entries(data.links)) {
+      if (value && value.trim()) cleanedLinks[key as keyof ArtistApplicationLinks] = value.trim()
+    }
+
+    const { error } = await supabase.from('artist_applications').insert({
+      profile_id: user.id,
+      status: 'pending',
+      display_artist_name: name,
+      links: cleanedLinks,
+      note: data.note?.trim() || null,
+      rights_agreed: true,
+    })
+
+    if (error) return { success: false, error: 'Could not submit application. Please try again.' }
+    return { success: true }
+  }, [user])
+
+  return {
+    user,
+    identity,
+    loading,
+    updateDisplayName,
+    changeUsername,
+    updateSignatureLyric,
+    updateBio,
+    setPrivate,
+    submitArtistApplication,
+  }
 }
