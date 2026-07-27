@@ -30,6 +30,7 @@ import {
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { UsernameTag } from '@/components/username-tag'
 
 const EMOTION_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -375,9 +376,7 @@ function PostCard({
             )}
           </div>
           <div>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>
-              {post.username || 'Margo Listener'}
-            </p>
+            <UsernameTag authorUid={post.authorUid || null} fallbackName={post.username} />
           </div>
         </div>
         {isTier1 && (

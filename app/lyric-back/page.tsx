@@ -243,7 +243,7 @@ function LyricBackContent() {
       ? push(ref(db, `posts/${postId}/echoes`), {
           lyric, song: songName, artist: artistName,
           emotion: selectedVibe, username: identity?.displayName || null,
-          authorUid: user?.uid || null,
+          authorUid: user?.id || null,
           timestamp: serverTimestamp(), resonates: {},
         }).then(() => {
           // increment postStats.echoCount atomically
@@ -263,7 +263,7 @@ function LyricBackContent() {
           status: isPrivate ? 'private' : 'active',
           knowledge: { song: songName, artist: artistName, artwork: selectedSong?.artwork || null },
           username: identity?.displayName || null,
-          authorUid: user?.uid || null,
+          authorUid: user?.id || null,
           timestamp: serverTimestamp(),
         })
 
@@ -676,7 +676,6 @@ function LyricBackContent() {
                 <div
                   key={lb.id}
                   style={{
-                    /* Identical to feed PostCard */
                     background: 'rgba(255,255,255,0.02)',
                     border: '1px solid rgba(255,255,255,0.06)',
                     borderRadius: '20px', padding: '20px',
@@ -690,7 +689,6 @@ function LyricBackContent() {
                     background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
                   }} />
 
-                  {/* Header */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{
@@ -718,17 +716,14 @@ function LyricBackContent() {
                     )}
                   </div>
 
-                  {/* Lyric */}
                   <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '12px' }}>
                     &ldquo;{lb.lyric}&rdquo;
                   </p>
 
-                  {/* Song credit */}
                   <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '20px' }}>
                     {lb.song} · {lb.artist}
                   </p>
 
-                  {/* Actions — exactly matches feed PostCard */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
                     <button onClick={() => toggleResonate(lb.id)} style={{
@@ -754,7 +749,6 @@ function LyricBackContent() {
                       <span style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Lyric Back</span>
                     </button>
 
-                    {/* Card — was "Share" in old feed, now "Card" everywhere, same ↗ icon */}
                     <button
                       onClick={() => {
                         if (!requireAuth()) return
