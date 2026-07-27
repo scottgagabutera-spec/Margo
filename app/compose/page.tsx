@@ -7,7 +7,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { MargoNav } from '@/components/margo-nav'
-import { db } from '@/lib/firebase'
+import { db, auth } from '@/lib/firebase'
 import { ref, push, serverTimestamp, get } from 'firebase/database'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useLicensedArtists } from '@/hooks/useLicensedArtists'
@@ -194,6 +194,8 @@ function ComposeInner() {
     if (!lyric || !songName || !artistName) return
     if (isPrivate) { setShowExport(true); return }
     if (!identity || !user) { setPostError('Still setting things up — try again in a moment.'); return }
+
+    console.log('Firebase auth state:', auth?.currentUser)
 
     setPosting(true)
     setPostError(null)
