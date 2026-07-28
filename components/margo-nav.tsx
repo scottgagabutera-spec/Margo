@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
@@ -12,6 +12,8 @@ const font = 'var(--font-lora), serif'
 export function MargoNav() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
+  const avatarMenuRef = useRef<HTMLDivElement>(null)
   const { user, identity } = useIdentity()
   const { application } = useArtistApplication()
 
@@ -20,6 +22,7 @@ export function MargoNav() {
   const isOnCompose = pathname === '/compose'
   const isOnSignin = pathname === '/signin'
   const isOnApplyArtist = pathname === '/apply-artist'
+  const isOnSettings = pathname === '/settings'
 
   const isSignedIn = !!user && !user.isAnonymous
   const applicationStatus = application?.status ?? 'none'
@@ -34,6 +37,7 @@ export function MargoNav() {
 
   const handleSignOut = async () => {
     setMenuOpen(false)
+    setAvatarMenuOpen(false)
     await supabase.auth.signOut()
   }
 
@@ -44,7 +48,19 @@ export function MargoNav() {
   }, [menuOpen])
 
   // Close on route change
-  useEffect(() => { setMenuOpen(false) }, [pathname])
+  useEffect(() => { setMenuOpen(false); setAvatarMenuOpen(false) }, [pathname])
+
+  // Close avatar dropdown on outside click
+  useEffect(() => {
+    if (!avatarMenuOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target as Node)) {
+        setAvatarMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [avatarMenuOpen])
 
   const overlayLinks = [
     { href: '/feed', label: 'Feed', active: isOnFeed },
@@ -53,6 +69,14 @@ export function MargoNav() {
     { href: '/about', label: 'About' },
     { href: '/contact', label: 'Contact' },
   ]
+
+  const avatarDropdownItems = ownProfileHref ? [
+    { href: ownProfileHref, label: 'Profile' },
+    { href: '/settings', label: 'Account Settings' },
+    ...(showApplyCTA ? [{ href: '/apply-artist', label: applyLabel }] : []),
+    { href: '/about', label: 'About' },
+    { href: '/contact', label: 'Contact' },
+  ] : []
 
   return (
     <>
@@ -112,39 +136,76 @@ export function MargoNav() {
                   padding: '8px 14px', marginLeft: '4px',
                   transition: 'color 150ms ease', whiteSpace: 'nowrap',
                 }}>Sign In</Link>
-              ) : showApplyCTA ? (
-                <Link href="/apply-artist" style={{
-                  fontSize: '0.65rem', fontFamily: font,
-                  fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase',
-                  textDecoration: 'none',
-                  color: isOnApplyArtist ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
-                  padding: '8px 14px', marginLeft: '4px',
-                  transition: 'color 150ms ease', whiteSpace: 'nowrap',
-                }}>{applyLabel}</Link>
               ) : null}
 
-              {/* Signed-in identity — avatar linking to own profile */}
+              {/* Signed-in identity — avatar opens dropdown menu */}
               {isSignedIn && identity && ownProfileHref && (
-                <Link
-                  href={ownProfileHref}
-                  aria-label={`${identity.displayName}'s profile`}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: '32px', height: '32px', borderRadius: '50%',
-                    marginLeft: '8px', flexShrink: 0, overflow: 'hidden',
-                    background: identity.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-                    border: isOnOwnProfile ? '2px solid var(--gold)' : '1px solid rgba(232,197,71,0.2)',
-                    boxSizing: 'border-box', transition: 'border-color 150ms ease',
-                  }}
-                >
-                  {identity.avatarUrl ? (
-                    <img src={identity.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <span style={{ fontFamily: font, fontSize: '0.65rem', fontWeight: 700, color: 'var(--bg)' }}>
-                      {(identity.displayName || '??').slice(0, 2).toUpperCase()}
-                    </span>
+                <div ref={avatarMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarMenuOpen(o => !o)}
+                    aria-label={`${identity.displayName}'s account menu`}
+                    aria-expanded={avatarMenuOpen}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '32px', height: '32px', borderRadius: '50%',
+                      flexShrink: 0, overflow: 'hidden',
+                      background: identity.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+                      border: (isOnOwnProfile || isOnSettings || avatarMenuOpen) ? '2px solid var(--gold)' : '1px solid rgba(232,197,71,0.2)',
+                      boxSizing: 'border-box', transition: 'border-color 150ms ease',
+                      cursor: 'pointer', padding: 0,
+                    }}
+                  >
+                    {identity.avatarUrl ? (
+                      <img src={identity.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontFamily: font, fontSize: '0.65rem', fontWeight: 700, color: 'var(--bg)' }}>
+                        {(identity.displayName || '??').slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                  </button>
+
+                  {avatarMenuOpen && (
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 10px)', right: 0,
+                      minWidth: '200px', background: 'var(--bg)',
+                      border: '1px solid var(--border)', borderRadius: '10px',
+                      boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
+                      padding: '6px', zIndex: 60,
+                    }}>
+                      {avatarDropdownItems.map(({ href, label }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          onClick={() => setAvatarMenuOpen(false)}
+                          style={{
+                            display: 'block', fontFamily: font, fontSize: '0.8rem',
+                            textDecoration: 'none',
+                            color: pathname === href ? 'var(--gold)' : 'rgba(255,255,255,0.75)',
+                            padding: '9px 12px', borderRadius: '6px',
+                            transition: 'background 120ms ease, color 120ms ease',
+                          }}
+                        >
+                          {label}
+                        </Link>
+                      ))}
+                      <div style={{ height: '1px', background: 'var(--border)', margin: '6px 4px' }} />
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left',
+                          fontFamily: font, fontSize: '0.8rem',
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: 'rgba(255,255,255,0.5)',
+                          padding: '9px 12px', borderRadius: '6px',
+                        }}
+                      >
+                        Sign Out
+                      </button>
+                    </div>
                   )}
-                </Link>
+                </div>
               )}
 
               <Link href="/compose" style={{
@@ -285,7 +346,7 @@ export function MargoNav() {
           </Link>
         ))}
 
-        {/* Quiet, separated Sign In / Apply CTA — deliberately smaller, below the main links */}
+        {/* Quiet, separated Sign In / Apply / Account Settings / Sign Out — deliberately smaller, below the main links */}
         {!isSignedIn ? (
           <Link
             href="/signin"
@@ -310,12 +371,33 @@ export function MargoNav() {
           </Link>
         ) : (
           <>
+            <Link
+              href="/settings"
+              onClick={() => setMenuOpen(false)}
+              style={{
+                marginTop: '24px',
+                fontSize: '0.7rem',
+                fontFamily: font,
+                fontWeight: 600,
+                letterSpacing: '2px',
+                textTransform: 'uppercase',
+                textDecoration: 'none',
+                color: isOnSettings ? 'var(--gold)' : 'rgba(255,255,255,0.3)',
+                padding: '12px 32px',
+                transition: 'color 200ms ease',
+                opacity: menuOpen ? 1 : 0,
+                transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
+                transitionDelay: menuOpen ? (overlayLinks.length * 60) + 'ms' : '0ms',
+              }}
+            >
+              Account Settings
+            </Link>
             {showApplyCTA && (
               <Link
                 href="/apply-artist"
                 onClick={() => setMenuOpen(false)}
                 style={{
-                  marginTop: '24px',
+                  marginTop: '4px',
                   fontSize: '0.7rem',
                   fontFamily: font,
                   fontWeight: 600,
@@ -327,7 +409,7 @@ export function MargoNav() {
                   transition: 'color 200ms ease',
                   opacity: menuOpen ? 1 : 0,
                   transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
-                  transitionDelay: menuOpen ? (overlayLinks.length * 60) + 'ms' : '0ms',
+                  transitionDelay: menuOpen ? ((overlayLinks.length + 1) * 60) + 'ms' : '0ms',
                 }}
               >
                 {applyLabel}
@@ -337,7 +419,7 @@ export function MargoNav() {
               type="button"
               onClick={handleSignOut}
               style={{
-                marginTop: showApplyCTA ? '4px' : '24px',
+                marginTop: '4px',
                 fontSize: '0.7rem',
                 fontFamily: font,
                 fontWeight: 600,
@@ -350,7 +432,7 @@ export function MargoNav() {
                 transition: 'color 200ms ease',
                 opacity: menuOpen ? 1 : 0,
                 transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
-                transitionDelay: menuOpen ? ((overlayLinks.length + 1) * 60) + 'ms' : '0ms',
+                transitionDelay: menuOpen ? ((overlayLinks.length + 2) * 60) + 'ms' : '0ms',
               }}
             >
               Sign Out
