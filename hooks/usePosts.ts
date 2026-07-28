@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { db } from '@/lib/firebase'
 import { ref, query, orderByChild, limitToLast, onValue } from 'firebase/database'
-
 export interface Post {
   id: string
   text?: string
@@ -15,15 +14,12 @@ export interface Post {
   timestamp?: number
   resonates?: number
   replies?: number
-  tier?: number
   songId?: string | null
   audioUrl?: string | null
 }
-
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
-
   useEffect(() => {
     if (!db) { setLoading(false); return }
     const postsRef = query(ref(db, 'posts'), orderByChild('timestamp'), limitToLast(200))
@@ -39,6 +35,5 @@ export function usePosts() {
     })
     return () => unsub()
   }, [])
-
   return { posts, loading }
 }

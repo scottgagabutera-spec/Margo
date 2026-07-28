@@ -292,8 +292,8 @@ function PostCard({
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
   const color = EMOTION_COLORS[emotion] || 'var(--text-3)'
   const label = VIBE_LABELS[emotion] || post.emotion || ''
-  const isTier1 = post.tier === 1
-  const audioUrl = (post as any).audioUrl || null
+  const isTier1 = !!post.audioUrl
+  const audioUrl = post.audioUrl || null
   const cardRef = useRef<HTMLDivElement>(null)
 
   // Warm audio URL only when this card enters the viewport — prevents all posts
@@ -415,7 +415,6 @@ function PostCard({
       )}
 
       {!isTier1 && (post.youtubeMeta?.thumbnail || post.knowledge?.artwork) && (
-        
         <a
           href={post.youtubeMeta?.youtubeUrl || `https://music.apple.com/search?term=${encodeURIComponent((post.knowledge?.song || '') + ' ' + (post.knowledge?.artist || ''))}`}
           target="_blank"
@@ -492,7 +491,7 @@ function PostCard({
         )}
       </div>
 
-      {/* Tier 1 footer — full player + Full Karaoke */}
+      {/* Full player + Full Karaoke — shown when the post is linked to real Margo audio */}
       {isTier1 && (
         <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

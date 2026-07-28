@@ -10,7 +10,7 @@ import { MargoNav } from '@/components/margo-nav'
 import { db, auth } from '@/lib/firebase'
 import { ref, push, serverTimestamp, get } from 'firebase/database'
 import { useIdentity } from '@/hooks/useIdentity'
-import { useLicensedArtists } from '@/hooks/useLicensedArtists'
+import { useApprovedArtists } from '@/hooks/useApprovedArtists'
 import { CardExportModal } from '@/components/card-export-modal'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 
@@ -59,7 +59,7 @@ function ComposeInner() {
   const router = useRouter()
   const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
   const { requireAuth } = useAuthGate()
-  const { isLicensed } = useLicensedArtists()
+  const { isLicensed } = useApprovedArtists()
   const searchParams = useSearchParams()
   useEffect(() => {
     const lyricParam = searchParams.get('lyric')
@@ -200,11 +200,9 @@ function ComposeInner() {
     setPosting(true)
     setPostError(null)
 
-    const tier = isLicensed(artistName) ? 1 : 2
     const post = {
       text: lyric,
       emotion: selectedVibe || null,
-      tier,
       mode: 'share',
       status: 'active',
       flagCount: 0,
