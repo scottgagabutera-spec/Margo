@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { BackButton } from '@/components/back-button'
 
 const font = 'var(--font-lora), serif'
 
@@ -362,9 +363,13 @@ export default function AccountSettingsPage() {
       style={{
         maxWidth: 640,
         margin: '0 auto',
-        padding: '100px 24px var(--margo-page-padding-bottom)',
+        padding: '32px 24px var(--margo-page-padding-bottom)',
       }}
     >
+      <div style={{ marginBottom: '24px' }}>
+        <BackButton fallbackHref={`/profile/${profile.username}`} label="Back" />
+      </div>
+
       <h1
         style={{
           fontFamily: font,
