@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { ArtistApplicationForm } from '@/components/artist-application-form'
+import { BackButton } from '@/components/back-button'
 
 const font = 'var(--font-lora), serif'
 
@@ -29,10 +30,14 @@ export default function ApplyArtistPage() {
   }
 
   const status = application?.status ?? 'none'
+  const ownProfileHref = `/profile/${identity.username}`
 
   if (identity.isArtist) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ position: 'fixed', top: '16px', left: '16px', zIndex: 60 }}>
+          <BackButton fallbackHref={ownProfileHref} />
+        </div>
         <div style={{ width: '100%', maxWidth: '420px', textAlign: 'center' }}>
           <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>
             Margo
@@ -62,6 +67,9 @@ export default function ApplyArtistPage() {
   if (status === 'pending') {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ position: 'fixed', top: '16px', left: '16px', zIndex: 60 }}>
+          <BackButton fallbackHref={ownProfileHref} />
+        </div>
         <div style={{ width: '100%', maxWidth: '420px', textAlign: 'center' }}>
           <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>
             Margo
@@ -79,6 +87,9 @@ export default function ApplyArtistPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <div style={{ position: 'fixed', top: '16px', left: '16px', zIndex: 60 }}>
+        <BackButton fallbackHref={ownProfileHref} />
+      </div>
       <div style={{ width: '100%' }}>
         {status === 'rejected' && (
           <p style={{
