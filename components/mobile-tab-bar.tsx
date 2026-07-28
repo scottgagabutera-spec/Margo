@@ -15,6 +15,17 @@ const font = 'var(--font-lora), serif'
  * behind a settings icon, so the Profile tab lands on the user's own
  * activity first rather than opening straight into an account menu.
  *
+ * Layout: CSS grid with 4 fixed equal-width columns — NOT flex +
+ * space-around. Space-around distributes gaps based on each child's
+ * own width, and the compose button is intentionally larger (48px)
+ * and raised (-20px) above its siblings (44px, static). Content-based
+ * spacing with a mismatched child produces uneven, screen-size-
+ * dependent gaps. A grid gives every icon an identical-width lane
+ * regardless of its own size, so the raised FAB is isolated to its
+ * own column and can never crowd a neighbor. This mirrors Android's
+ * own BottomAppBar + FAB "cradle" pattern, which anchors the FAB to a
+ * dedicated slot rather than spacing it in with the rest.
+ *
  * Render this once, alongside MargoNav, in the root layout.
  */
 export function MobileTabBar() {
@@ -32,7 +43,10 @@ export function MobileTabBar() {
   const tabStyle = (active: boolean): React.CSSProperties => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: '2px', textDecoration: 'none',
-    width: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
+    // No fixed width here anymore — the grid column supplies equal
+    // width for every tab, this just centers content inside it.
+    minHeight: 'var(--margo-touch-min)',
+    justifySelf: 'center',
     color: active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
   })
 
@@ -45,10 +59,17 @@ export function MobileTabBar() {
     <nav className="margo-mobile-tabbar" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
       display: 'none',
-      alignItems: 'center', justifyContent: 'space-around',
+      // Grid, not flex — 4 equal-width columns, each item centered
+      // in its own lane. This is what guarantees consistent spacing
+      // regardless of viewport width or the FAB's larger footprint.
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      alignItems: 'center',
       padding: '8px 12px calc(8px + env(safe-area-inset-bottom))',
       background: 'var(--bg)',
       borderTop: '1px solid var(--border)',
+      // Let the raised FAB visually escape the bar's top edge without
+      // being clipped by this container.
+      overflow: 'visible',
     }}>
       <Link href="/feed" style={tabStyle(isOnFeed)}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -64,13 +85,22 @@ export function MobileTabBar() {
         <span style={labelStyle}>Music</span>
       </Link>
 
-      <Link href="/compose" style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        width: '48px', height: '48px', borderRadius: '50%',
-        background: 'var(--gold)', textDecoration: 'none',
-        marginTop: '-20px', boxShadow: '0 4px 14px rgba(232,197,71,0.35)',
-        opacity: isOnCompose ? 0.75 : 1,
-      }}>
+      {/* Own grid column — the raise (marginTop: -20px) and larger
+          size (48px vs 44px siblings) are now fully contained inside
+          this single 1fr lane, so they can never eat into Music's or
+          Profile's space. */}
+      <Link
+        href="/compose"
+        aria-label="Share a lyric"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: '48px', height: '48px', borderRadius: '50%',
+          background: 'var(--gold)', textDecoration: 'none',
+          marginTop: '-20px', boxShadow: '0 4px 14px var(--gold-glow)',
+          opacity: isOnCompose ? 0.75 : 1,
+          justifySelf: 'center',
+        }}
+      >
         <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
           <path d="M7 1v12M1 7h12" stroke="var(--bg)" strokeWidth="2" strokeLinecap="round"/>
         </svg>
@@ -95,7 +125,7 @@ export function MobileTabBar() {
 
       <style>{`
         @media (max-width: 639px) {
-          .margo-mobile-tabbar { display: flex !important; }
+          .margo-mobile-tabbar { display: grid !important; }
         }
       `}</style>
     </nav>
