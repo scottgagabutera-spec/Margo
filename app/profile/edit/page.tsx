@@ -25,6 +25,7 @@ export default function EditProfilePage() {
   const {
     user, identity, loading,
     updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate,
+    syncAvatarUrl,
   } = useIdentity()
   const { requireAuth } = useAuthGate()
 
@@ -77,10 +78,16 @@ export default function EditProfilePage() {
     // (see AvatarUpload's onUploaded), not on this button.
     const tasks: Promise<{ success: boolean; error?: string }>[] = []
 
+    // Capture the username this save will land on — either the newly
+    // typed one (if changed) or the current one — so the post-save
+    // redirect goes to the right profile even if the handle just changed.
+    const usernameChanged = username.trim() && username.trim().toLowerCase() !== identity.username
+    const destinationUsername = usernameChanged ? username.trim().toLowerCase() : identity.username
+
     if (displayName.trim() && displayName.trim() !== identity.displayName) {
       tasks.push(updateDisplayName(displayName))
     }
-    if (username.trim() && username.trim().toLowerCase() !== identity.username) {
+    if (usernameChanged) {
       tasks.push(changeUsername(username))
     }
     if (bio !== (identity.bio || '')) {
@@ -100,6 +107,7 @@ export default function EditProfilePage() {
     if (tasks.length === 0) {
       setSaving(false)
       setSaved(true)
+      router.push(`/profile/${destinationUsername}`)
       return
     }
 
@@ -110,8 +118,14 @@ export default function EditProfilePage() {
       setError(failed.error || 'Something went wrong saving your profile.')
     } else {
       setSaved(true)
+      // Brief pause so "Profile saved." is actually visible before
+      // navigating away — instant redirect would make the confirmation
+      // flash by unnoticed.
+      setTimeout(() => {
+        router.push(`/profile/${destinationUsername}`)
+      }, 900)
     }
-  }, [identity, displayName, username, bio, lyric, song, artist, isPrivate, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate])
+  }, [identity, displayName, username, bio, lyric, song, artist, isPrivate, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, router])
 
   if (loading || !identity) {
     return (
@@ -143,7 +157,10 @@ export default function EditProfilePage() {
               <AvatarUpload
                 currentAvatarUrl={avatarUrl}
                 displayName={displayName || identity.displayName || ''}
-                onUploaded={(url) => setAvatarUrl(url)}
+                onUploaded={(url) => {
+                  setAvatarUrl(url)
+                  syncAvatarUrl(url)
+                }}
               />
             </div>
 

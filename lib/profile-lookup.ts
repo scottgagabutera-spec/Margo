@@ -6,6 +6,7 @@ export interface AuthorProfile {
   username: string
   displayName: string
   isArtist: boolean
+  avatarUrl: string | null
 }
 
 type Listener = (profile: AuthorProfile | null) => void
@@ -28,7 +29,7 @@ async function flush() {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, is_artist')
+    .select('id, username, display_name, is_artist, avatar_url')
     .in('id', ids)
 
   if (error) {
@@ -45,6 +46,7 @@ async function flush() {
       username: row.username,
       displayName: row.display_name,
       isArtist: row.is_artist,
+      avatarUrl: row.avatar_url,
     })
   })
   ids.forEach(id => { if (!found.has(id)) notify(id, null) })

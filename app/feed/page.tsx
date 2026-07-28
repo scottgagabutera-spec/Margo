@@ -31,6 +31,7 @@ import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UsernameTag } from '@/components/username-tag'
+import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 
 const EMOTION_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -287,6 +288,10 @@ function PostCard({
   onExport: (post: Post) => void
 }) {
   const { requireAuth } = useAuthGate()
+  // Live author avatar — same batched/cached lookup UsernameTag uses for
+  // display name/username, extended to include avatar_url. Cache means
+  // this second subscription for the same authorUid costs nothing extra.
+  const authorProfile = useAuthorProfile(post.authorUid || null)
   // Views: increment postStats.views once per session per post when card enters viewport
   const viewedRef = useRef(false)
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
@@ -339,6 +344,8 @@ function PostCard({
     return () => obs.disconnect()
   }, [post.id])
 
+  const avatarUrl = authorProfile?.avatarUrl || null
+
   return (
     <div ref={cardRef} style={{
       background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
@@ -359,12 +366,18 @@ function PostCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
             width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-            background: isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
-            border: isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
+            background: avatarUrl
+              ? 'none'
+              : isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
+            border: avatarUrl
+              ? '1px solid rgba(255,255,255,0.08)'
+              : isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             overflow: 'hidden',
           }}>
-            {isTier1 ? (
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={post.username || 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : isTier1 ? (
               <svg width='26' height='26' viewBox='-4 -4 88 88' xmlns='http://www.w3.org/2000/svg'>
                 <path d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57'
                   fill='none' stroke='var(--bg)' strokeWidth='7' strokeLinecap='round' strokeLinejoin='round' />

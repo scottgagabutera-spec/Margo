@@ -8,6 +8,11 @@ import { useIdentity } from '@/hooks/useIdentity'
 
 const font = 'var(--font-lora), serif'
 
+const sectionLabelStyle: React.CSSProperties = {
+  fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)',
+  textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px',
+}
+
 interface ProfileData {
   id: string
   username: string
@@ -134,9 +139,12 @@ export default function ProfilePage() {
             )}
 
             {profile.bio && (
-              <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: '24px' }}>
-                {profile.bio}
-              </p>
+              <div style={{ marginBottom: '24px' }}>
+                <p style={sectionLabelStyle}>Bio</p>
+                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
+                  {profile.bio}
+                </p>
+              </div>
             )}
 
             {profile.signatureLyric && (
@@ -144,6 +152,7 @@ export default function ProfilePage() {
                 background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.22)',
                 borderRadius: '20px', padding: '24px', textAlign: 'center',
               }}>
+                <p style={sectionLabelStyle}>Signature Lyric</p>
                 <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.15rem', color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
                   &ldquo;{profile.signatureLyric}&rdquo;
                 </p>
