@@ -220,6 +220,15 @@ export function useIdentity() {
     return { success: true }
   }, [user])
 
+  // Patches avatarUrl into the cached identity after AvatarUpload has
+  // already written avatar_url to Supabase directly. No network call
+  // here — this only exists so every component reading identity (nav,
+  // profile header, etc.) sees the new avatar immediately instead of
+  // waiting for the next auth-state refresh to refetch the row.
+  const syncAvatarUrl = useCallback((url: string) => {
+    setIdentityState(prev => (prev ? { ...prev, avatarUrl: url } : prev))
+  }, [])
+
   return {
     user,
     identity,
@@ -229,5 +238,6 @@ export function useIdentity() {
     updateSignatureLyric,
     updateBio,
     setPrivate,
+    syncAvatarUrl,
   }
 }
