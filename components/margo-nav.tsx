@@ -74,8 +74,6 @@ export function MargoNav() {
     { href: ownProfileHref, label: 'Profile' },
     { href: '/settings', label: 'Account Settings' },
     ...(showApplyCTA ? [{ href: '/apply-artist', label: applyLabel }] : []),
-    { href: '/about', label: 'About' },
-    { href: '/contact', label: 'Contact' },
   ] : []
 
   return (
@@ -112,7 +110,10 @@ export function MargoNav() {
                   fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
                   textDecoration: 'none',
                   color: active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
-                  padding: '8px 14px', position: 'relative',
+                  padding: '0 14px', position: 'relative',
+                  minHeight: 'var(--margo-touch-min)',
+                  display: 'inline-flex', alignItems: 'center',
+                  boxSizing: 'border-box',
                   transition: 'color 150ms ease', whiteSpace: 'nowrap',
                 }}>
                   {label}
@@ -133,7 +134,10 @@ export function MargoNav() {
                   fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase',
                   textDecoration: 'none',
                   color: isOnSignin ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
-                  padding: '8px 14px', marginLeft: '4px',
+                  padding: '0 14px', marginLeft: '4px',
+                  minHeight: 'var(--margo-touch-min)',
+                  display: 'inline-flex', alignItems: 'center',
+                  boxSizing: 'border-box',
                   transition: 'color 150ms ease', whiteSpace: 'nowrap',
                 }}>Sign In</Link>
               ) : null}
@@ -148,21 +152,29 @@ export function MargoNav() {
                     aria-expanded={avatarMenuOpen}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: '32px', height: '32px', borderRadius: '50%',
-                      flexShrink: 0, overflow: 'hidden',
-                      background: identity.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-                      border: (isOnOwnProfile || isOnSettings || avatarMenuOpen) ? '2px solid var(--gold)' : '1px solid rgba(232,197,71,0.2)',
-                      boxSizing: 'border-box', transition: 'border-color 150ms ease',
+                      width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
+                      flexShrink: 0,
+                      background: 'none', border: 'none',
+                      boxSizing: 'border-box',
                       cursor: 'pointer', padding: 0,
                     }}
                   >
-                    {identity.avatarUrl ? (
-                      <img src={identity.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <span style={{ fontFamily: font, fontSize: '0.65rem', fontWeight: 700, color: 'var(--bg)' }}>
-                        {(identity.displayName || '??').slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
+                    <span style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '32px', height: '32px', borderRadius: '50%',
+                      overflow: 'hidden',
+                      background: identity.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+                      border: (isOnOwnProfile || isOnSettings || avatarMenuOpen) ? '2px solid var(--gold)' : '1px solid rgba(232,197,71,0.2)',
+                      boxSizing: 'border-box', transition: 'border-color 150ms ease',
+                    }}>
+                      {identity.avatarUrl ? (
+                        <img src={identity.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ fontFamily: font, fontSize: '0.65rem', fontWeight: 700, color: 'var(--bg)' }}>
+                          {(identity.displayName || '??').slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                    </span>
                   </button>
 
                   {avatarMenuOpen && (
@@ -179,10 +191,13 @@ export function MargoNav() {
                           href={href}
                           onClick={() => setAvatarMenuOpen(false)}
                           style={{
-                            display: 'block', fontFamily: font, fontSize: '0.8rem',
+                            display: 'flex', alignItems: 'center',
+                            minHeight: 'var(--margo-touch-min)',
+                            fontFamily: font, fontSize: '0.8rem',
                             textDecoration: 'none',
                             color: pathname === href ? 'var(--gold)' : 'rgba(255,255,255,0.75)',
-                            padding: '9px 12px', borderRadius: '6px',
+                            padding: '0 12px', borderRadius: '6px',
+                            boxSizing: 'border-box',
                             transition: 'background 120ms ease, color 120ms ease',
                           }}
                         >
@@ -194,11 +209,13 @@ export function MargoNav() {
                         type="button"
                         onClick={handleSignOut}
                         style={{
-                          display: 'block', width: '100%', textAlign: 'left',
+                          display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left',
+                          minHeight: 'var(--margo-touch-min)',
                           fontFamily: font, fontSize: '0.8rem',
                           background: 'none', border: 'none', cursor: 'pointer',
                           color: 'rgba(255,255,255,0.5)',
-                          padding: '9px 12px', borderRadius: '6px',
+                          padding: '0 12px', borderRadius: '6px',
+                          boxSizing: 'border-box',
                         }}
                       >
                         Sign Out
@@ -213,7 +230,10 @@ export function MargoNav() {
                 fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
                 textDecoration: 'none', color: 'var(--bg)',
                 background: 'var(--gold)', borderRadius: '50px',
-                padding: '9px 20px', marginLeft: '8px',
+                padding: '0 20px', marginLeft: '8px',
+                minHeight: 'var(--margo-touch-min)',
+                display: 'inline-flex', alignItems: 'center',
+                boxSizing: 'border-box',
                 transition: 'all 150ms ease', flexShrink: 0, whiteSpace: 'nowrap',
                 opacity: isOnCompose ? 0.75 : 1,
               }}>Share a Lyric</Link>
@@ -328,7 +348,7 @@ export function MargoNav() {
               letterSpacing: '1px',
               textDecoration: 'none',
               color: active ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
-              padding: '12px 32px',
+              padding: '12px 32px', minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
               transition: 'color 200ms ease',
               opacity: menuOpen ? 1 : 0,
               transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
@@ -360,7 +380,7 @@ export function MargoNav() {
               textTransform: 'uppercase',
               textDecoration: 'none',
               color: isOnSignin ? 'var(--gold)' : 'rgba(255,255,255,0.3)',
-              padding: '12px 32px',
+              padding: '12px 32px', minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
               transition: 'color 200ms ease',
               opacity: menuOpen ? 1 : 0,
               transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
@@ -383,7 +403,7 @@ export function MargoNav() {
                 textTransform: 'uppercase',
                 textDecoration: 'none',
                 color: isOnSettings ? 'var(--gold)' : 'rgba(255,255,255,0.3)',
-                padding: '12px 32px',
+                padding: '12px 32px', minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
                 transition: 'color 200ms ease',
                 opacity: menuOpen ? 1 : 0,
                 transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
@@ -405,7 +425,7 @@ export function MargoNav() {
                   textTransform: 'uppercase',
                   textDecoration: 'none',
                   color: isOnApplyArtist ? 'var(--gold)' : 'rgba(255,255,255,0.3)',
-                  padding: '12px 32px',
+                  padding: '12px 32px', minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
                   transition: 'color 200ms ease',
                   opacity: menuOpen ? 1 : 0,
                   transform: menuOpen ? 'translateY(0)' : 'translateY(16px)',
