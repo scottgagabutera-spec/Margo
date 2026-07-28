@@ -12,12 +12,12 @@ const font = 'var(--font-lora), serif'
 /**
  * Top nav — desktop only past 640px (see .margo-desktop-nav below).
  * On mobile, this renders logo-only; primary navigation, compose, and
- * profile access live in MobileTabBar (bottom tab bar) instead. There
- * is deliberately no hamburger here anymore — every item that used to
- * live behind it (Feed, Music, Compose, Settings, Apply as an Artist,
- * Sign Out) now has a permanent one-tap home in either this row or
- * the avatar dropdown, so a second menu duplicating them was pure
- * redundancy. See MobileTabBar.tsx for the mobile equivalent.
+ * profile access live in MobileTabBar (bottom tab bar) instead.
+ *
+ * Render order is deliberate: Feed, Music -> Share a Lyric (CTA) ->
+ * avatar/Sign In last. The avatar is the "exit point" of the row in
+ * every giants nav (YouTube, LinkedIn, Instagram web) — it always
+ * comes last, with the primary action immediately before it.
  */
 export function MargoNav() {
   const pathname = usePathname()
@@ -46,10 +46,8 @@ export function MargoNav() {
     await supabase.auth.signOut()
   }
 
-  // Close avatar dropdown on route change
   useEffect(() => { setAvatarMenuOpen(false) }, [pathname])
 
-  // Close avatar dropdown on outside click
   useEffect(() => {
     if (!avatarMenuOpen) return
     const handleClick = (e: MouseEvent) => {
@@ -77,12 +75,10 @@ export function MargoNav() {
         display: 'flex', alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        {/* Logo — always visible, both breakpoints */}
         <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
           <MargoLogo tier="symbol" size={28} wordmark rings />
         </Link>
 
-        {/* Desktop only: Feed, Music, Sign In / avatar, Share a Lyric */}
         <div style={{ display: 'none' }} className="margo-desktop-nav">
           {[
             { href: '/feed', label: 'Feed', active: isOnFeed },
@@ -111,6 +107,21 @@ export function MargoNav() {
             </Link>
           ))}
 
+          {/* CTA now comes first — immediately after primary nav links,
+              before the avatar/Sign In. This is the swap. */}
+          <Link href="/compose" style={{
+            fontSize: '0.6rem', fontFamily: font,
+            fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
+            textDecoration: 'none', color: 'var(--bg)',
+            background: 'var(--gold)', borderRadius: '50px',
+            padding: '0 20px', marginLeft: '8px',
+            minHeight: 'var(--margo-touch-min)',
+            display: 'inline-flex', alignItems: 'center',
+            boxSizing: 'border-box',
+            transition: 'all 150ms ease', flexShrink: 0, whiteSpace: 'nowrap',
+            opacity: isOnCompose ? 0.75 : 1,
+          }}>Share a Lyric</Link>
+
           {!isSignedIn ? (
             <Link href="/signin" style={{
               fontSize: '0.65rem', fontFamily: font,
@@ -125,7 +136,6 @@ export function MargoNav() {
             }}>Sign In</Link>
           ) : null}
 
-          {/* Signed-in identity — avatar opens dropdown menu */}
           {isSignedIn && identity && ownProfileHref && (
             <div ref={avatarMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
               <button
@@ -207,19 +217,6 @@ export function MargoNav() {
               )}
             </div>
           )}
-
-          <Link href="/compose" style={{
-            fontSize: '0.6rem', fontFamily: font,
-            fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
-            textDecoration: 'none', color: 'var(--bg)',
-            background: 'var(--gold)', borderRadius: '50px',
-            padding: '0 20px', marginLeft: '8px',
-            minHeight: 'var(--margo-touch-min)',
-            display: 'inline-flex', alignItems: 'center',
-            boxSizing: 'border-box',
-            transition: 'all 150ms ease', flexShrink: 0, whiteSpace: 'nowrap',
-            opacity: isOnCompose ? 0.75 : 1,
-          }}>Share a Lyric</Link>
         </div>
       </div>
 

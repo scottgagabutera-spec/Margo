@@ -6,27 +6,14 @@ import { useIdentity } from '@/hooks/useIdentity'
 const font = 'var(--font-lora), serif'
 
 /**
- * Bottom tab bar — mobile only, hidden at 640px+ (see .margo-mobile-tabbar
- * below, mirrors the breakpoint in MargoNav's .margo-desktop-nav).
+ * Bottom tab bar — mobile only, hidden at 640px+.
  *
- * This replaces the old hamburger + full-page overlay as mobile's
- * primary navigation. Settings, Apply as an Artist, and Sign Out are
- * intentionally NOT here — they live on the profile page itself,
- * behind a settings icon, so the Profile tab lands on the user's own
- * activity first rather than opening straight into an account menu.
- *
- * Layout: CSS grid with 4 fixed equal-width columns — NOT flex +
- * space-around. Space-around distributes gaps based on each child's
- * own width, and the compose button is intentionally larger (48px)
- * and raised (-20px) above its siblings (44px, static). Content-based
- * spacing with a mismatched child produces uneven, screen-size-
- * dependent gaps. A grid gives every icon an identical-width lane
- * regardless of its own size, so the raised FAB is isolated to its
- * own column and can never crowd a neighbor. This mirrors Android's
- * own BottomAppBar + FAB "cradle" pattern, which anchors the FAB to a
- * dedicated slot rather than spacing it in with the rest.
- *
- * Render this once, alongside MargoNav, in the root layout.
+ * Layout: CSS grid, 4 equal-width columns. The compose button sits
+ * flush inside the bar — no marginTop raise, no cradle cutout. It
+ * carries "primary action" weight purely through size (46px vs 44px
+ * siblings), fill color, and a stronger glow + thin outline ring.
+ * This avoids the FAB visually crossing the bar's top border, which
+ * read as a rendering bug rather than a deliberate flourish.
  */
 export function MobileTabBar() {
   const pathname = usePathname()
@@ -43,8 +30,6 @@ export function MobileTabBar() {
   const tabStyle = (active: boolean): React.CSSProperties => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: '2px', textDecoration: 'none',
-    // No fixed width here anymore — the grid column supplies equal
-    // width for every tab, this just centers content inside it.
     minHeight: 'var(--margo-touch-min)',
     justifySelf: 'center',
     color: active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
@@ -59,17 +44,11 @@ export function MobileTabBar() {
     <nav className="margo-mobile-tabbar" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
       display: 'none',
-      // Grid, not flex — 4 equal-width columns, each item centered
-      // in its own lane. This is what guarantees consistent spacing
-      // regardless of viewport width or the FAB's larger footprint.
       gridTemplateColumns: 'repeat(4, 1fr)',
       alignItems: 'center',
       padding: '8px 12px calc(8px + env(safe-area-inset-bottom))',
       background: 'var(--bg)',
       borderTop: '1px solid var(--border)',
-      // Let the raised FAB visually escape the bar's top edge without
-      // being clipped by this container.
-      overflow: 'visible',
     }}>
       <Link href="/feed" style={tabStyle(isOnFeed)}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -85,18 +64,16 @@ export function MobileTabBar() {
         <span style={labelStyle}>Music</span>
       </Link>
 
-      {/* Own grid column — the raise (marginTop: -20px) and larger
-          size (48px vs 44px siblings) are now fully contained inside
-          this single 1fr lane, so they can never eat into Music's or
-          Profile's space. */}
+      {/* No marginTop, no raise. Sits flush, same vertical center as
+          its siblings. Emphasis comes from size + glow, not position. */}
       <Link
         href="/compose"
         aria-label="Share a lyric"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: '48px', height: '48px', borderRadius: '50%',
+          width: '46px', height: '46px', borderRadius: '50%',
           background: 'var(--gold)', textDecoration: 'none',
-          marginTop: '-20px', boxShadow: '0 4px 14px var(--gold-glow)',
+          boxShadow: '0 6px 16px var(--gold-glow), 0 0 0 1px rgba(255,255,255,0.06)',
           opacity: isOnCompose ? 0.75 : 1,
           justifySelf: 'center',
         }}
