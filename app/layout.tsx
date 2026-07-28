@@ -3,6 +3,8 @@ import { AudioEngineProvider } from '@/components/audio-engine-provider'
 import { AuthProvider } from '@/components/auth-provider'
 import { SupabaseAuthProvider } from '@/components/supabase-auth-provider'
 import { MiniPlayer } from '@/components/mini-player'
+import { MargoNav } from '@/components/margo-nav'
+import { MobileTabBar } from '@/components/mobile-tab-bar'
 import { Toaster } from '@/components/ui/sonner'
 import type { Metadata } from 'next'
 import { Lora, Syne } from 'next/font/google'
@@ -176,7 +178,9 @@ export default function RootLayout({
         <AuthProvider>
           <SupabaseAuthProvider>
             <AudioEngineProvider>
+              <MargoNav />
               {children}
+              <MobileTabBar />
             </AudioEngineProvider>
           </SupabaseAuthProvider>
           <Toaster

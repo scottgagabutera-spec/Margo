@@ -13,7 +13,6 @@ import {
 import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
-import { MargoNav } from '@/components/margo-nav'
 import { CardExportModal } from '@/components/card-export-modal'
 import { db } from '@/lib/firebase'
 import { ref, set, remove, onValue, runTransaction } from 'firebase/database'
@@ -658,8 +657,6 @@ export default function FeedPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
-      <MargoNav />
-
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         <div style={{ position: 'absolute', top: '-128px', left: '-128px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(80px)' }} />
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
