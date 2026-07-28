@@ -1,8 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { MargoNav } from '@/components/margo-nav'
+import { useIdentity } from '@/hooks/useIdentity'
 
 const font = 'var(--font-lora), serif'
 
@@ -20,6 +22,7 @@ interface ProfileData {
 
 export default function ProfilePage() {
   const params = useParams<{ username: string }>()
+  const { identity } = useIdentity()
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -54,6 +57,13 @@ export default function ProfilePage() {
       })
     return () => { active = false }
   }, [params.username])
+
+  // Own-profile check compares usernames rather than IDs — params.username
+  // is already the value we're querying by, and identity.username is the
+  // signed-in user's own handle from useIdentity. Simpler than threading
+  // profile.id through a second comparison, and just as correct since
+  // usernames are unique.
+  const isOwnProfile = !!identity && !!profile && identity.username === profile.username
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
@@ -105,6 +115,22 @@ export default function ProfilePage() {
                 borderRadius: '50px', background: 'rgba(232,197,71,0.12)',
                 border: '1px solid var(--gold-border)', color: 'var(--gold)',
               }}>Margo Artist</span>
+            )}
+
+            {isOwnProfile && (
+              <div style={{ marginBottom: '24px' }}>
+                <Link
+                  href="/profile/edit"
+                  style={{
+                    minHeight: 'var(--margo-touch-min)', padding: '0 24px',
+                    display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                    background: 'var(--surface-2)', color: 'var(--text-2)',
+                    border: '1px solid var(--border)', borderRadius: '50px',
+                    fontFamily: font, fontWeight: 600, fontSize: '0.95rem',
+                    textDecoration: 'none', cursor: 'pointer',
+                  }}
+                >Edit Profile</Link>
+              </div>
             )}
 
             {profile.bio && (
