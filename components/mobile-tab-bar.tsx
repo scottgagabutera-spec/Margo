@@ -7,13 +7,9 @@ const font = 'var(--font-lora), serif'
 
 /**
  * Bottom tab bar — mobile only, hidden at 640px+.
- *
- * Layout: CSS grid, 4 equal-width columns. The compose button sits
- * flush inside the bar — no marginTop raise, no cradle cutout. It
- * carries "primary action" weight purely through size (46px vs 44px
- * siblings), fill color, and a stronger glow + thin outline ring.
- * This avoids the FAB visually crossing the bar's top border, which
- * read as a rendering bug rather than a deliberate flourish.
+ * background is explicit var(--bg), not dependent on an external class —
+ * fixes the transparent-nav bug where scrolling content showed through.
+ * Separation from content is a soft upward shadow, not a border line.
  */
 export function MobileTabBar() {
   const pathname = usePathname()
@@ -48,7 +44,7 @@ export function MobileTabBar() {
       alignItems: 'center',
       padding: '8px 12px calc(8px + env(safe-area-inset-bottom))',
       background: 'var(--bg)',
-      borderTop: '1px solid var(--border)',
+      boxShadow: '0 -1px 24px rgba(0,0,0,0.35)',
     }}>
       <Link href="/feed" style={tabStyle(isOnFeed)}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -64,8 +60,6 @@ export function MobileTabBar() {
         <span style={labelStyle}>Music</span>
       </Link>
 
-      {/* No marginTop, no raise. Sits flush, same vertical center as
-          its siblings. Emphasis comes from size + glow, not position. */}
       <Link
         href="/compose"
         aria-label="Share a lyric"

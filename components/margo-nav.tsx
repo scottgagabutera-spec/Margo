@@ -10,14 +10,14 @@ import { supabase } from '@/lib/supabase'
 const font = 'var(--font-lora), serif'
 
 /**
- * Top nav — desktop only past 640px (see .margo-desktop-nav below).
- * On mobile, this renders logo-only; primary navigation, compose, and
- * profile access live in MobileTabBar (bottom tab bar) instead.
+ * Top nav — desktop only past 640px. Mobile renders logo-only; primary
+ * navigation, compose, and profile access live in MobileTabBar instead.
  *
- * Render order is deliberate: Feed, Music -> Share a Lyric (CTA) ->
- * avatar/Sign In last. The avatar is the "exit point" of the row in
- * every giants nav (YouTube, LinkedIn, Instagram web) — it always
- * comes last, with the primary action immediately before it.
+ * Separation from content is now shadow-based, not a drawn border line.
+ * background is set explicitly inline (var(--bg), fully opaque) rather
+ * than depending on an external CSS class loading correctly — this was
+ * the root cause of the nav appearing transparent with content visible
+ * scrolling behind it.
  */
 export function MargoNav() {
   const pathname = usePathname()
@@ -69,7 +69,8 @@ export function MargoNav() {
     <nav className="margo-nav-bar" style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
       padding: '14px 24px',
-      borderBottom: '1px solid var(--border)',
+      background: 'var(--bg)',
+      boxShadow: '0 1px 24px rgba(0,0,0,0.35)',
     }}>
       <div style={{
         display: 'flex', alignItems: 'center',
@@ -107,8 +108,6 @@ export function MargoNav() {
             </Link>
           ))}
 
-          {/* CTA now comes first — immediately after primary nav links,
-              before the avatar/Sign In. This is the swap. */}
           <Link href="/compose" style={{
             fontSize: '0.6rem', fontFamily: font,
             fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',

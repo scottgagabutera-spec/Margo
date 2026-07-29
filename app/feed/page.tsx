@@ -80,15 +80,11 @@ function parseSRT(srt: string): LyricLine[] {
   return lines
 }
 
-// ── Feed snippet button — uses AudioEngine ───────────────────────
-// NOTE: Snippet playback is intentionally NOT gated — free preview.
 function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork }: {
   audioUrl: string; songId: string | null; postText?: string
   songTitle?: string; artist?: string; artwork?: string | null
 }) {
   const engineState = useAudioEngine()
-  // Derive playing state from engine — this snippet is playing if engine
-  // has this songId active in snippet mode
   const isThisPlaying = engineState.playing &&
     engineState.mode === 'snippet' &&
     engineState.songId === songId &&
@@ -96,8 +92,6 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
 
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
 
-  // Load lyrics on mount — warmUrl is handled by PostCard IntersectionObserver
-  // (warming here floods the 3-slot pool since all buttons mount simultaneously)
   useEffect(() => {
     if (songId && db) {
       import('firebase/database').then(({ get, ref: dbRef }) => {
@@ -150,8 +144,6 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
   )
 }
 
-// ── Tier 1 full player — uses AudioEngine ────────────────────────
-// Full-song playback is gated — first play requires auth.
 function Tier1Player({ audioUrl, songId, postText }: {
   audioUrl: string; songId: string | null; postText?: string
 }) {
@@ -180,8 +172,6 @@ function Tier1Player({ audioUrl, songId, postText }: {
     setLyricsLoaded(true)
   }
 
-  // warmUrl handled by PostCard IntersectionObserver — not here (floods pool)
-
   const toggle = async () => {
     if (!requireAuth()) return
     loadLyrics()
@@ -189,7 +179,6 @@ function Tier1Player({ audioUrl, songId, postText }: {
       void togglePlayPause()
       return
     }
-    // First play — stop any snippet, start full mode
     stop()
     playedRef.current = true
     void playFull({
@@ -287,11 +276,7 @@ function PostCard({
   onExport: (post: Post) => void
 }) {
   const { requireAuth } = useAuthGate()
-  // Live author avatar — same batched/cached lookup UsernameTag uses for
-  // display name/username, extended to include avatar_url. Cache means
-  // this second subscription for the same authorUid costs nothing extra.
   const authorProfile = useAuthorProfile(post.authorUid || null)
-  // Views: increment postStats.views once per session per post when card enters viewport
   const viewedRef = useRef(false)
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
   const color = EMOTION_COLORS[emotion] || 'var(--text-3)'
@@ -300,8 +285,6 @@ function PostCard({
   const audioUrl = post.audioUrl || null
   const cardRef = useRef<HTMLDivElement>(null)
 
-  // Warm audio URL only when this card enters the viewport — prevents all posts
-  // warming simultaneously and overflowing the 3-slot preload pool
   useEffect(() => {
     if (!audioUrl || !isTier1) return
     const el = cardRef.current
@@ -319,7 +302,6 @@ function PostCard({
     return () => obs.disconnect()
   }, [audioUrl, isTier1])
 
-  // Views: increment postStats.views once per session per post
   useEffect(() => {
     if (!db || viewedRef.current) return
     const el = cardRef.current
@@ -427,7 +409,7 @@ function PostCard({
       )}
 
       {!isTier1 && (post.youtubeMeta?.thumbnail || post.knowledge?.artwork) && (
-        <a
+        <Link
           href={post.youtubeMeta?.youtubeUrl || `https://music.apple.com/search?term=${encodeURIComponent((post.knowledge?.song || '') + ' ' + (post.knowledge?.artist || ''))}`}
           target="_blank"
           rel="noopener noreferrer"
@@ -442,7 +424,7 @@ function PostCard({
               </div>
             </div>
           </div>
-        </a>
+        </Link>
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -503,7 +485,6 @@ function PostCard({
         )}
       </div>
 
-      {/* Full player + Full Karaoke — shown when the post is linked to real Margo audio */}
       {isTier1 && (
         <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -551,7 +532,6 @@ export default function FeedPage() {
   const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number }>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
 
-  // Scoped postStats listener — reads denormalized counts, no full tree download
   useEffect(() => {
     if (!db) return
     const unsub = onValue(ref(db, 'postStats'), (snap) => {
@@ -560,11 +540,9 @@ export default function FeedPage() {
     return () => unsub()
   }, [])
 
-  // Scoped resonate ownership — only reads this user's resonate keys, not full analytics tree
   useEffect(() => {
     if (!db) return
     const myId = getMargoActorId()
-    // Read only posts this user has resonated — O(user resonates) not O(all analytics)
     const unsub = onValue(ref(db, `analytics`), (snap) => {
       const data = snap.val() || {}
       const myResonated = new Set<string>()
@@ -627,7 +605,6 @@ export default function FeedPage() {
     const rRef = ref(db, `analytics/${postId}/resonates/${myId}`)
     try {
       already ? await remove(rRef) : await set(rRef, true)
-      // Keep postStats.resonateCount in sync for trending formula
       runTransaction(ref(db, `postStats/${postId}/resonateCount`), (current) => Math.max(0, (current || 0) + (already ? -1 : 1)))
       const dbSafe = db
       if (dbSafe) {
@@ -662,24 +639,15 @@ export default function FeedPage() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      <section style={{ position: 'relative', zIndex: 5, padding: '100px 24px 24px', textAlign: 'center' }}>
-        <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(1.1rem, 2.5vw, 1.6rem)', color: 'var(--text)', fontWeight: 400, marginBottom: '8px', lineHeight: 1.3 }}>
-          What people are saying right now
-        </h1>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-2)', maxWidth: '480px', margin: '0 auto' }}>
-          Every lyric is a message.
-        </p>
-      </section>
-
-      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'var(--bg)', padding: '10px 20px 0' }}>
+      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'var(--bg)', padding: '88px 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {VIBES.map(vibe => (
               <button key={vibe} onClick={() => setSelectedVibe(vibe)} style={{
-                flexShrink: 0, minHeight: 'var(--margo-touch-min)', padding: '0 14px', borderRadius: '50px',
+                flexShrink: 0, minHeight: 'var(--margo-touch-min)', padding: '0 11px', borderRadius: '50px',
                 display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
-                letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
+                letterSpacing: '0.5px', textTransform: 'uppercase', cursor: 'pointer',
                 border: '1px solid',
                 background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
                 color: selectedVibe === vibe ? 'var(--bg)' : 'rgba(255,255,255,0.45)',
@@ -689,13 +657,13 @@ export default function FeedPage() {
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: '0', paddingTop: '10px', paddingBottom: '4px', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', gap: '0', paddingTop: '8px', paddingBottom: '4px', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             {SORTS.map(sort => (
               <button key={sort} onClick={() => setSelectedSort(sort)} style={{
-                minHeight: 'var(--margo-touch-min)', padding: '0 24px', background: 'none', border: 'none', cursor: 'pointer',
+                minHeight: 'var(--margo-touch-min)', padding: '0 16px', background: 'none', border: 'none', cursor: 'pointer',
                 display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
-                letterSpacing: '2px', textTransform: 'uppercase',
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
+                letterSpacing: '1.25px', textTransform: 'uppercase',
                 color: selectedSort === sort ? 'var(--gold)' : 'var(--text-3)',
                 borderBottom: selectedSort === sort ? '2px solid var(--gold)' : '2px solid transparent',
                 transition: 'all 150ms ease',
@@ -703,15 +671,15 @@ export default function FeedPage() {
             ))}
           </div>
 
-          <div style={{ position: 'relative', paddingBottom: '8px', paddingTop: '10px' }}>
+          <div style={{ position: 'relative', paddingBottom: '6px', paddingTop: '8px' }}>
             <input
               type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search lyrics, songs, artists, feelings..."
               style={{
-                width: '100%', height: 'var(--margo-touch-min)', padding: '0 40px 0 16px',
+                width: '100%', height: '38px', padding: '0 38px 0 14px',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: '10px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box',
+                fontSize: '0.72rem', outline: 'none', boxSizing: 'border-box',
               }}
             />
             {searchQuery && (
