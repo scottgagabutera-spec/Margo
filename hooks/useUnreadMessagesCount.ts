@@ -3,16 +3,29 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 
+/**
+ * Depends on `user?.id` (a stable primitive) rather than the `user`
+ * object itself. useIdentity() can return a new object reference on
+ * every render, and this hook is used inside MessagesIcon → MargoNav,
+ * which re-renders on every route change (usePathname()). With
+ * `[user]` as the dependency, that meant this effect tore down and
+ * rebuilt the Realtime channel on every navigation — and since
+ * supabase.removeChannel() unsubscribes asynchronously, a fast second
+ * navigation could call .subscribe() again before the previous
+ * unsubscribe finished, colliding on the same channel name and
+ * throwing "cannot add postgres_changes callbacks after subscribe()".
+ */
 export function useUnreadMessagesCount() {
   const { user } = useIdentity()
+  const userId = user?.id
   const [count, setCount] = useState(0)
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setCount(0)
       return
     }
-    const userId = user.id
+
     let active = true
 
     async function load() {
@@ -34,7 +47,7 @@ export function useUnreadMessagesCount() {
       active = false
       supabase.removeChannel(channel)
     }
-  }, [user])
+  }, [userId])
 
   return count
 }
