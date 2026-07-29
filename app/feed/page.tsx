@@ -671,7 +671,7 @@ export default function FeedPage() {
             ))}
           </div>
 
-          <div style={{ position: 'relative', paddingBottom: '10px', paddingTop: '6px' }}>
+          <div style={{ position: 'relative', paddingBottom: '16px', paddingTop: '6px' }}>
             <input
               type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search lyrics, songs, artists, feelings..."
@@ -700,7 +700,7 @@ export default function FeedPage() {
         </div>
       </div>
 
-      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '16px 24px var(--margo-page-padding-bottom)' }}>
+      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '24px 24px var(--margo-page-padding-bottom)' }}>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
             {[0,1,2].map(i => (
