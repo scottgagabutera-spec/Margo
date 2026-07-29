@@ -11,6 +11,7 @@ export interface Post {
   youtubeMeta?: { videoId?: string | null; title?: string | null; thumbnail?: string | null; thumbnailSm?: string | null; channel?: string | null; youtubeUrl?: string | null; embedUrl?: string | null } | null
   username?: string | null
   authorUid?: string | null
+  authorAvatarUrl?: string | null
   timestamp?: number
   resonates?: number
   replies?: number

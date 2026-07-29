@@ -217,6 +217,7 @@ function ComposeInner() {
       audioUrl: linkedAudioUrl || null,
       username: identity.displayName || null,
       authorUid: user.uid,
+      authorAvatarUrl: identity.avatarUrl || null,
       timestamp: serverTimestamp(),
       lang: navigator.language.split('-')[0] || 'en',
     }

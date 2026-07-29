@@ -325,7 +325,12 @@ function PostCard({
     return () => obs.disconnect()
   }, [post.id])
 
-  const avatarUrl = authorProfile?.avatarUrl || null
+  // Prefer the avatar stored on the post itself (denormalized at
+  // creation time) so new posts render instantly without waiting on
+  // the Supabase profile lookup. Falls back to the live subscription
+  // for older posts created before this change, or if the author has
+  // since updated their avatar.
+  const avatarUrl = post.authorAvatarUrl || authorProfile?.avatarUrl || null
 
   return (
     <div ref={cardRef} style={{
@@ -639,7 +644,7 @@ export default function FeedPage() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      <div style={{ position: 'sticky', top: '56px', zIndex: 30, background: 'var(--bg)', padding: '56px 20px 0' }}>
+      <div style={{ position: 'sticky', top: '56px', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 56px) 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {VIBES.map(vibe => (
