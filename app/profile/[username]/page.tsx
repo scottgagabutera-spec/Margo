@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { MobileAccountMenu } from '@/components/mobile-account-menu'
 import { useIdentity } from '@/hooks/useIdentity'
 
 const font = 'var(--font-lora), serif'
@@ -31,6 +30,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [followerCount, setFollowerCount] = useState<number | null>(null)
+  const [followingCount, setFollowingCount] = useState<number | null>(null)
 
   useEffect(() => {
     let active = true
@@ -45,20 +46,34 @@ export default function ProfilePage() {
         if (!active) return
         if (error || !data) {
           setNotFound(true)
-        } else {
-          setProfile({
-            id: data.id,
-            username: data.username,
-            displayName: data.display_name,
-            isArtist: data.is_artist,
-            bio: data.bio,
-            avatarUrl: data.avatar_url,
-            signatureLyric: data.signature_lyric,
-            signatureSong: data.signature_song,
-            signatureArtist: data.signature_artist,
-          })
+          setLoading(false)
+          return
         }
+        setProfile({
+          id: data.id,
+          username: data.username,
+          displayName: data.display_name,
+          isArtist: data.is_artist,
+          bio: data.bio,
+          avatarUrl: data.avatar_url,
+          signatureLyric: data.signature_lyric,
+          signatureSong: data.signature_song,
+          signatureArtist: data.signature_artist,
+        })
         setLoading(false)
+
+        // Followers/following counts, scoped to accepted follows only —
+        // pending requests shouldn't inflate either number.
+        Promise.all([
+          supabase.from('follows').select('*', { count: 'exact', head: true })
+            .eq('followee_id', data.id).eq('status', 'accepted'),
+          supabase.from('follows').select('*', { count: 'exact', head: true })
+            .eq('follower_id', data.id).eq('status', 'accepted'),
+        ]).then(([followers, following]) => {
+          if (!active) return
+          setFollowerCount(followers.count ?? 0)
+          setFollowingCount(following.count ?? 0)
+        })
       })
     return () => { active = false }
   }, [params.username])
@@ -67,19 +82,6 @@ export default function ProfilePage() {
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
-
-      {/* Mobile-only Account Settings entry point — self-hides at 640px+,
-          desktop users get the avatar dropdown in MargoNav instead.
-          Only rendered on the signed-in user's own profile, same gate
-          as the Edit Profile button below. */}
-      {isOwnProfile && (
-        <div style={{
-          position: 'fixed', top: '14px', right: '20px', zIndex: 55,
-        }}>
-          <MobileAccountMenu />
-        </div>
-      )}
-
       <div style={{ position: 'relative', zIndex: 5, maxWidth: '560px', margin: '0 auto', padding: '120px 24px var(--margo-page-padding-bottom)' }}>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
@@ -96,80 +98,122 @@ export default function ProfilePage() {
         )}
 
         {!loading && profile && (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{
-              width: '96px', height: '96px', borderRadius: '50%', margin: '0 auto 20px',
-              background: profile.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}>
-              {profile.avatarUrl ? (
-                <img src={profile.avatarUrl} alt={profile.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{ fontFamily: font, fontSize: '1.8rem', fontWeight: 700, color: 'var(--bg)' }}>
-                  {(profile.displayName || '??').slice(0, 2).toUpperCase()}
+          <div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '96px', height: '96px', borderRadius: '50%', margin: '0 auto 20px',
+                background: profile.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}>
+                {profile.avatarUrl ? (
+                  <img src={profile.avatarUrl} alt={profile.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontFamily: font, fontSize: '1.8rem', fontWeight: 700, color: 'var(--bg)' }}>
+                    {(profile.displayName || '??').slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+              </div>
+
+              <h1 style={{ fontFamily: font, fontSize: '1.4rem', color: 'var(--text)', marginBottom: '4px' }}>
+                {profile.displayName}
+              </h1>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '12px' }}>
+                @{profile.username}
+              </p>
+
+              {profile.isArtist && (
+                <span style={{
+                  display: 'inline-block', marginBottom: '16px',
+                  fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                  letterSpacing: '1.5px', textTransform: 'uppercase', padding: '4px 10px',
+                  borderRadius: '50px', background: 'rgba(232,197,71,0.12)',
+                  border: '1px solid var(--gold-border)', color: 'var(--gold)',
+                }}>Margo Artist</span>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginBottom: '20px' }}>
+                <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
+                  <strong style={{ color: 'var(--text)' }}>{followerCount ?? '—'}</strong> followers
                 </span>
+                <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
+                  <strong style={{ color: 'var(--text)' }}>{followingCount ?? '—'}</strong> following
+                </span>
+              </div>
+
+              {isOwnProfile ? (
+                <div style={{ marginBottom: '28px' }}>
+                  <Link
+                    href="/profile/edit"
+                    style={{
+                      minHeight: 'var(--margo-touch-min)', padding: '0 24px',
+                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                      background: 'var(--surface-2)', color: 'var(--text-2)',
+                      border: '1px solid var(--border)', borderRadius: '50px',
+                      fontFamily: font, fontWeight: 600, fontSize: '0.95rem',
+                      textDecoration: 'none', cursor: 'pointer',
+                    }}
+                  >Edit Profile</Link>
+                </div>
+              ) : (
+                <div style={{ marginBottom: '28px' }}>
+                  <button
+                    type="button"
+                    style={{
+                      minHeight: 'var(--margo-touch-min)', padding: '0 28px',
+                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                      background: 'var(--gold)', color: 'var(--bg)', border: 'none',
+                      borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.95rem',
+                      cursor: 'pointer',
+                    }}
+                  >Follow</button>
+                </div>
               )}
             </div>
 
-            <h1 style={{ fontFamily: font, fontSize: '1.4rem', color: 'var(--text)', marginBottom: '4px' }}>
-              {profile.displayName}
-            </h1>
-            <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '16px' }}>
-              @{profile.username}
-            </p>
-
-            {profile.isArtist && (
-              <span style={{
-                display: 'inline-block', marginBottom: '16px',
-                fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
-                letterSpacing: '1.5px', textTransform: 'uppercase', padding: '4px 10px',
-                borderRadius: '50px', background: 'rgba(232,197,71,0.12)',
-                border: '1px solid var(--gold-border)', color: 'var(--gold)',
-              }}>Margo Artist</span>
-            )}
-
-            {isOwnProfile && (
-              <div style={{ marginBottom: '24px' }}>
-                <Link
-                  href="/profile/edit"
-                  style={{
-                    minHeight: 'var(--margo-touch-min)', padding: '0 24px',
-                    display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                    background: 'var(--surface-2)', color: 'var(--text-2)',
-                    border: '1px solid var(--border)', borderRadius: '50px',
-                    fontFamily: font, fontWeight: 600, fontSize: '0.95rem',
-                    textDecoration: 'none', cursor: 'pointer',
-                  }}
-                >Edit Profile</Link>
-              </div>
-            )}
-
-            {profile.bio && (
-              <div style={{ marginBottom: '24px' }}>
-                <p style={sectionLabelStyle}>Bio</p>
+            <div style={{ textAlign: 'left', marginBottom: '24px' }}>
+              <p style={sectionLabelStyle}>Bio</p>
+              {profile.bio ? (
                 <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)', lineHeight: 1.6 }}>
                   {profile.bio}
                 </p>
-              </div>
-            )}
-
-            {profile.signatureLyric && (
-              <div style={{
-                background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.22)',
-                borderRadius: '20px', padding: '24px', textAlign: 'center',
-              }}>
-                <p style={sectionLabelStyle}>Signature Lyric</p>
-                <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.15rem', color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
-                  &ldquo;{profile.signatureLyric}&rdquo;
+              ) : isOwnProfile ? (
+                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic', textDecoration: 'none' }}>
+                  Add a bio →
+                </Link>
+              ) : (
+                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                  No bio yet.
                 </p>
-                {(profile.signatureSong || profile.signatureArtist) && (
-                  <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                    {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
+              )}
+            </div>
+
+            <div style={{
+              background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.22)',
+              borderRadius: '20px', padding: '24px', textAlign: 'center',
+            }}>
+              <p style={sectionLabelStyle}>Signature Lyric</p>
+              {profile.signatureLyric ? (
+                <>
+                  <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.15rem', color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
+                    &ldquo;{profile.signatureLyric}&rdquo;
                   </p>
-                )}
-              </div>
-            )}
+                  {(profile.signatureSong || profile.signatureArtist) && (
+                    <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                      {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
+                    </p>
+                  )}
+                </>
+              ) : isOwnProfile ? (
+                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic', textDecoration: 'none' }}>
+                  Add the lyric that says it best →
+                </Link>
+              ) : (
+                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                  Hasn&rsquo;t picked one yet.
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>

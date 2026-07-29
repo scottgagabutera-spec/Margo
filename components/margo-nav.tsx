@@ -8,6 +8,7 @@ import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { supabase } from '@/lib/supabase'
 import { NotificationBell } from '@/components/notification-bell'
 import { MessagesIcon } from '@/components/messages-icon'
+import { MobileAccountMenu } from '@/components/mobile-account-menu'
 
 const font = 'var(--font-lora), serif'
 
@@ -17,6 +18,17 @@ const font = 'var(--font-lora), serif'
  * bar, since the bottom bar is already full at 5 slots. Text nav
  * (Feed/Music, Share a Lyric, notification bell, avatar menu) stays
  * desktop-only; mobile gets those via MobileTabBar instead.
+ *
+ * MobileAccountMenu lives HERE, in-flow in the right-side flex row —
+ * not rendered independently by individual pages with its own
+ * position:fixed. It used to be duplicated that way (profile page
+ * had its own fixed copy at top:14/right:20), which collided with
+ * MessagesIcon since both fixed elements landed in the same top-right
+ * corner. Same root-cause shape as the earlier MargoNav double-mount
+ * bug: a page bolting on its own copy of something the shared layout
+ * already owns. Now there's exactly one instance, positioned by this
+ * flex row like everything else in it, so it can't collide with
+ * anything on any page.
  *
  * background is set explicitly inline (var(--bg), fully opaque) rather
  * than depending on an external CSS class loading correctly — this was
@@ -86,6 +98,7 @@ export function MargoNav() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {isSignedIn && <MessagesIcon />}
+          {isSignedIn && <MobileAccountMenu />}
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[
