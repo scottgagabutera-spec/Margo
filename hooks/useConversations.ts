@@ -33,17 +33,26 @@ interface RawMessage {
  * Builds the conversation list (Inbox + Requests) from the flat
  * `messages` table — there's no conversation_id, so a "conversation"
  * is just the unordered pair of two user ids, grouped client-side.
+ *
+ * The realtime effect depends on `userId` (a stable primitive), not
+ * the `user` object itself — useIdentity() can return a new object
+ * reference on every render, and depending on the object directly
+ * caused a Realtime channel teardown/rebuild race on fast re-renders
+ * (see useUnreadMessagesCount.ts for the full explanation of this
+ * failure mode — it produced "cannot add postgres_changes callbacks
+ * after subscribe()" crashes elsewhere in the app).
  */
 export function useConversations() {
   const { user } = useIdentity()
+  const userId = user?.id
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
 
-  const load = useCallback(async (userId: string) => {
+  const load = useCallback(async (uid: string) => {
     const { data: msgs, error } = await supabase
       .from('messages')
       .select('id, sender_id, recipient_id, body, read_at, created_at')
-      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+      .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
       .order('created_at', { ascending: false })
 
     if (error || !msgs) {
@@ -54,7 +63,7 @@ export function useConversations() {
 
     const byOther = new Map<string, RawMessage[]>()
     for (const m of msgs as RawMessage[]) {
-      const otherId = m.sender_id === userId ? m.recipient_id : m.sender_id
+      const otherId = m.sender_id === uid ? m.recipient_id : m.sender_id
       const list = byOther.get(otherId) || []
       list.push(m)
       byOther.set(otherId, list)
@@ -69,8 +78,8 @@ export function useConversations() {
 
     const [{ data: profiles }, { data: followsOut }, { data: followsIn }] = await Promise.all([
       supabase.from('profiles').select('id, username, display_name, avatar_url').in('id', otherIds),
-      supabase.from('follows').select('followee_id, status').eq('follower_id', userId).in('followee_id', otherIds),
-      supabase.from('follows').select('follower_id, status').eq('followee_id', userId).in('follower_id', otherIds),
+      supabase.from('follows').select('followee_id, status').eq('follower_id', uid).in('followee_id', otherIds),
+      supabase.from('follows').select('follower_id, status').eq('followee_id', uid).in('follower_id', otherIds),
     ])
 
     const profileMap = new Map((profiles || []).map(p => [p.id, p]))
@@ -80,8 +89,8 @@ export function useConversations() {
     const list: Conversation[] = otherIds.map(otherId => {
       const thread = byOther.get(otherId)!
       const last = thread[0]
-      const unreadCount = thread.filter(m => m.recipient_id === userId && !m.read_at).length
-      const iHaveReplied = thread.some(m => m.sender_id === userId)
+      const unreadCount = thread.filter(m => m.recipient_id === uid && !m.read_at).length
+      const iHaveReplied = thread.some(m => m.sender_id === uid)
       const mutual = iFollow.has(otherId) && followsMe.has(otherId)
       const profile = profileMap.get(otherId)
       return {
@@ -102,12 +111,11 @@ export function useConversations() {
   }, [])
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setConversations([])
       setLoading(false)
       return
     }
-    const userId = user.id
     let active = true
     load(userId)
 
@@ -121,7 +129,7 @@ export function useConversations() {
       active = false
       supabase.removeChannel(channel)
     }
-  }, [user, load])
+  }, [userId, load])
 
   const inbox = conversations.filter(c => c.accepted)
   const requests = conversations.filter(c => !c.accepted)

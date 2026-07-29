@@ -23,20 +23,26 @@ export interface ThreadPartner {
  * Loads and live-syncs the message history between the signed-in user
  * and `otherUsername`, and determines send permission from the other
  * person's `who_can_message` setting (everyone / followers / no_one).
+ *
+ * The realtime effect depends on `userId` (a stable primitive), not
+ * the `user` object itself — see useUnreadMessagesCount.ts for the
+ * full explanation of why depending on the object reference caused
+ * Realtime channel teardown/rebuild races elsewhere in the app.
  */
 export function useThread(otherUsername: string) {
   const { user } = useIdentity()
+  const userId = user?.id
   const [partner, setPartner] = useState<ThreadPartner | null>(null)
   const [messages, setMessages] = useState<ThreadMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [canSend, setCanSend] = useState(true)
   const [sending, setSending] = useState(false)
 
-  const loadThread = useCallback(async (userId: string, other: ThreadPartner) => {
+  const loadThread = useCallback(async (uid: string, other: ThreadPartner) => {
     const { data, error } = await supabase
       .from('messages')
       .select('id, sender_id, body, read_at, created_at')
-      .or(`and(sender_id.eq.${userId},recipient_id.eq.${other.id}),and(sender_id.eq.${other.id},recipient_id.eq.${userId})`)
+      .or(`and(sender_id.eq.${uid},recipient_id.eq.${other.id}),and(sender_id.eq.${other.id},recipient_id.eq.${uid})`)
       .order('created_at', { ascending: true })
 
     if (error) {
@@ -54,11 +60,18 @@ export function useThread(otherUsername: string) {
   }, [])
 
   useEffect(() => {
-    if (!user || !otherUsername) {
+    if (!userId || !otherUsername) {
       setLoading(false)
       return
     }
-    const userId = user.id
+
+    // Captured as its own const right after the null check — TS narrows
+    // `userId` inside this effect body, but that narrowing doesn't
+    // survive into the nested `run` function below, since it's a
+    // separate function scope. `uid` is a plain string, so no
+    // narrowing issue there.
+    const uid = userId
+
     let active = true
     let channel: ReturnType<typeof supabase.channel> | null = null
 
@@ -92,23 +105,23 @@ export function useThread(otherUsername: string) {
           .from('follows')
           .select('status')
           .eq('follower_id', other.id)
-          .eq('followee_id', userId)
+          .eq('followee_id', uid)
           .maybeSingle()
         if (active) setCanSend(f?.status === 'accepted')
       } else {
         setCanSend(true)
       }
 
-      await loadThread(userId, other)
+      await loadThread(uid, other)
       if (!active) return
 
       channel = supabase
-        .channel(`thread:${userId}:${other.id}`)
+        .channel(`thread:${uid}:${other.id}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
           const m: any = payload.new
           const belongsHere =
-            (m.sender_id === userId && m.recipient_id === other.id) ||
-            (m.sender_id === other.id && m.recipient_id === userId)
+            (m.sender_id === uid && m.recipient_id === other.id) ||
+            (m.sender_id === other.id && m.recipient_id === uid)
           if (!belongsHere) return
           setMessages(prev => [...prev, { id: m.id, senderId: m.sender_id, body: m.body, createdAt: m.created_at, readAt: m.read_at }])
           if (m.sender_id === other.id) {
@@ -124,19 +137,19 @@ export function useThread(otherUsername: string) {
       active = false
       if (channel) supabase.removeChannel(channel)
     }
-  }, [user, otherUsername, loadThread])
+  }, [userId, otherUsername, loadThread])
 
   const sendMessage = useCallback(async (body: string) => {
-    if (!user || !partner || !body.trim()) return
+    if (!userId || !partner || !body.trim()) return
     setSending(true)
     const { error } = await supabase.from('messages').insert({
-      sender_id: user.id,
+      sender_id: userId,
       recipient_id: partner.id,
       body: body.trim(),
     })
     setSending(false)
     if (error) console.error('Failed to send message:', error)
-  }, [user, partner])
+  }, [userId, partner])
 
   return { partner, messages, loading, canSend, sending, sendMessage }
 }
