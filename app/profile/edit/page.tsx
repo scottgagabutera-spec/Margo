@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { MargoNav } from '@/components/margo-nav'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AvatarUpload } from '@/components/avatar-upload'
@@ -130,7 +129,6 @@ export default function EditProfilePage() {
   if (loading || !identity) {
     return (
       <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-        <MargoNav />
         <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '160px 0' }}>
           {[0, 1, 2].map(i => (
             <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', opacity: 0.5 }} />
@@ -142,7 +140,6 @@ export default function EditProfilePage() {
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
-      <MargoNav />
       <div style={{ position: 'fixed', top: '20%', left: '20%', width: '320px', height: '320px', background: 'rgba(232,197,71,0.05)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
       <div style={{ paddingTop: '120px', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '24px', paddingRight: '24px' }}>

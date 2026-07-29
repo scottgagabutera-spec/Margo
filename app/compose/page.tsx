@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
-import { MargoNav } from '@/components/margo-nav'
 import { db, auth } from '@/lib/firebase'
 import { ref, push, serverTimestamp, get } from 'firebase/database'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -321,7 +320,6 @@ function ComposeInner() {
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
-      <MargoNav />
       <div style={{ position: 'fixed', top: '25%', left: '25%', width: '384px', height: '384px', background: 'rgba(232,197,71,0.05)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
       <div style={{ position: 'fixed', bottom: '25%', right: '25%', width: '256px', height: '256px', background: 'rgba(232,197,71,0.08)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 

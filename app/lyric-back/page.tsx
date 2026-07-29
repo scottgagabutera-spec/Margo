@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, Suspense } from 'react'
 import { toast } from 'sonner'
 import { Search } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
-import { MargoNav } from '@/components/margo-nav'
 import { HeartIcon } from '@/components/heart-icon'
 import { db } from '@/lib/firebase'
 import { useEchoes } from '@/hooks/useEchoes'
@@ -313,7 +312,6 @@ function LyricBackContent() {
 
   return (
     <main style={{ minHeight: '100vh', background: bg, position: 'relative' }}>
-      <MargoNav />
 
       {/* Ambient glow — identical to feed */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>

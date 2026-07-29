@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { MargoNav } from '@/components/margo-nav'
 import { MobileAccountMenu } from '@/components/mobile-account-menu'
 import { useIdentity } from '@/hooks/useIdentity'
 
@@ -68,7 +67,6 @@ export default function ProfilePage() {
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
-      <MargoNav />
 
       {/* Mobile-only Account Settings entry point — self-hides at 640px+,
           desktop users get the avatar dropdown in MargoNav instead.

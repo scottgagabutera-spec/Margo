@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MargoNav } from '@/components/margo-nav'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import { useIsPlaying } from '@/hooks/useAudioEngine'
@@ -1006,7 +1005,6 @@ export default function MusicPage() {
         .music-search:focus { border-color: rgba(232,197,71,0.4) !important; outline: none; }
       `}</style>
 
-      <MargoNav />
 
       {preview && (
         <SongPreview
