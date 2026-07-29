@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { MargoNav } from '@/components/margo-nav'
+import { MobileAccountMenu } from '@/components/mobile-account-menu'
 import { useIdentity } from '@/hooks/useIdentity'
 
 const font = 'var(--font-lora), serif'
@@ -63,16 +64,24 @@ export default function ProfilePage() {
     return () => { active = false }
   }, [params.username])
 
-  // Own-profile check compares usernames rather than IDs — params.username
-  // is already the value we're querying by, and identity.username is the
-  // signed-in user's own handle from useIdentity. Simpler than threading
-  // profile.id through a second comparison, and just as correct since
-  // usernames are unique.
   const isOwnProfile = !!identity && !!profile && identity.username === profile.username
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <MargoNav />
+
+      {/* Mobile-only Account Settings entry point — self-hides at 640px+,
+          desktop users get the avatar dropdown in MargoNav instead.
+          Only rendered on the signed-in user's own profile, same gate
+          as the Edit Profile button below. */}
+      {isOwnProfile && (
+        <div style={{
+          position: 'fixed', top: '14px', right: '20px', zIndex: 55,
+        }}>
+          <MobileAccountMenu />
+        </div>
+      )}
+
       <div style={{ position: 'relative', zIndex: 5, maxWidth: '560px', margin: '0 auto', padding: '120px 24px var(--margo-page-padding-bottom)' }}>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
