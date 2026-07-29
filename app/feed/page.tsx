@@ -331,7 +331,7 @@ function PostCard({
     <div ref={cardRef} style={{
       background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
       border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
-      borderRadius: '20px', padding: '20px',
+      borderRadius: '18px', padding: '16px',
       position: 'relative', overflow: 'hidden',
       transition: 'border-color 200ms ease',
     }}>
@@ -343,7 +343,7 @@ function PostCard({
           : 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
       }} />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
             width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
@@ -386,8 +386,8 @@ function PostCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }}>
         <p style={{
           fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
-          fontSize: 'clamp(1.25rem, 3vw, 1.75rem)', color: 'var(--text)',
-          lineHeight: 1.5, flex: 1, margin: 0,
+          fontSize: 'clamp(1.1rem, 2.4vw, 1.5rem)', color: 'var(--text)',
+          lineHeight: 1.45, flex: 1, margin: 0,
         }}>
           &ldquo;{post.text}&rdquo;
         </p>
@@ -639,7 +639,7 @@ export default function FeedPage() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'var(--bg)', padding: '88px 20px 0' }}>
+      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'var(--bg)', padding: '18px 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {VIBES.map(vibe => (
@@ -671,7 +671,7 @@ export default function FeedPage() {
             ))}
           </div>
 
-          <div style={{ position: 'relative', paddingBottom: '6px', paddingTop: '8px' }}>
+          <div style={{ position: 'relative', paddingBottom: '12px', paddingTop: '8px' }}>
             <input
               type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search lyrics, songs, artists, feelings..."
@@ -700,7 +700,7 @@ export default function FeedPage() {
         </div>
       </div>
 
-      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px var(--margo-page-padding-bottom)' }}>
+      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '20px 24px var(--margo-page-padding-bottom)' }}>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
             {[0,1,2].map(i => (
@@ -723,7 +723,7 @@ export default function FeedPage() {
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {filteredPosts.map(post => (
             <PostCard
               key={post.id}
