@@ -2,6 +2,7 @@ import { AdminTrigger } from '@/components/admin-trigger'
 import { AudioEngineProvider } from '@/components/audio-engine-provider'
 import { AuthProvider } from '@/components/auth-provider'
 import { SupabaseAuthProvider } from '@/components/supabase-auth-provider'
+import { NotificationsProvider } from '@/hooks/useNotifications'
 import { MiniPlayer } from '@/components/mini-player'
 import { MargoNav } from '@/components/margo-nav'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
@@ -178,9 +179,11 @@ export default function RootLayout({
         <AuthProvider>
           <SupabaseAuthProvider>
             <AudioEngineProvider>
-              <MargoNav />
-              {children}
-              <MobileTabBar />
+              <NotificationsProvider>
+                <MargoNav />
+                {children}
+                <MobileTabBar />
+              </NotificationsProvider>
             </AudioEngineProvider>
           </SupabaseAuthProvider>
           <Toaster

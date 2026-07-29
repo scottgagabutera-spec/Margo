@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 
@@ -50,14 +50,27 @@ const SELECT_WITH_ACTOR = `
   actor:profiles!notifications_actor_id_fkey ( id, username, display_name, avatar_url )
 `
 
+interface NotificationsContextValue {
+  notifications: Notification[]
+  unreadCount: number
+  loading: boolean
+  markAllRead: () => Promise<void>
+}
+
+const NotificationsContext = createContext<NotificationsContextValue | null>(null)
+
 /**
- * Fetches a person's notifications (messages, resonates, follows) and
- * keeps them live via a Supabase Realtime subscription — new rows
- * (written by the DB triggers in add_notifications.sql, or inserted
- * directly from the client for resonates) appear immediately without
- * a page refresh.
+ * Owns the single Realtime subscription for a signed-in user's
+ * notifications. This must be mounted exactly once (in the root
+ * layout) — both NotificationBell (desktop) and MobileTabBar (mobile)
+ * read from it via useNotifications() below instead of each opening
+ * their own subscription. Two components independently subscribing to
+ * the same `notifications:${userId}` channel topic is what caused the
+ * "cannot add postgres_changes callbacks after subscribe()" crash,
+ * since desktop nav and mobile tab bar are both mounted at once
+ * (hidden with CSS per breakpoint, not actually unmounted).
  */
-export function useNotifications() {
+export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { user } = useIdentity()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,13 +84,7 @@ export function useNotifications() {
       return
     }
 
-    // Captured as its own const right after the null check — TS narrows
-    // `user` inside this effect body, but that narrowing doesn't survive
-    // into the nested `loadInitial` function or the realtime callback
-    // below, since they're separate function scopes. `userId` is a plain
-    // string, so no narrowing issue there.
     const userId = user.id
-
     let active = true
 
     async function loadInitial() {
@@ -100,10 +107,6 @@ export function useNotifications() {
 
     loadInitial()
 
-    // Realtime subscription — fires whenever a new notification row is
-    // inserted for this user. Runs a small follow-up fetch for just
-    // that one row (rather than trusting the raw realtime payload
-    // directly) so the actor's profile data is joined in consistently.
     const channel = supabase
       .channel(`notifications:${userId}`)
       .on(
@@ -138,7 +141,6 @@ export function useNotifications() {
     const unreadIds = notifications.filter(n => !n.readAt).map(n => n.id)
     if (unreadIds.length === 0) return
 
-    // Optimistic — update locally first so the badge clears instantly.
     const now = new Date().toISOString()
     setNotifications(prev =>
       prev.map(n => (n.readAt ? n : { ...n, readAt: now }))
@@ -152,5 +154,22 @@ export function useNotifications() {
     if (error) console.error('Failed to mark notifications read:', error)
   }, [user, notifications])
 
-  return { notifications, unreadCount, loading, markAllRead }
+  return (
+    <NotificationsContext.Provider value={{ notifications, unreadCount, loading, markAllRead }}>
+      {children}
+    </NotificationsContext.Provider>
+  )
+}
+
+/**
+ * Reads from the shared NotificationsProvider. Throws if used outside
+ * it — that's intentional, since a silent fallback would let a future
+ * component accidentally open its own duplicate subscription again.
+ */
+export function useNotifications() {
+  const ctx = useContext(NotificationsContext)
+  if (!ctx) {
+    throw new Error('useNotifications must be used within NotificationsProvider')
+  }
+  return ctx
 }
