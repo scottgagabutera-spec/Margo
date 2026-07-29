@@ -31,6 +31,8 @@ import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UsernameTag } from '@/components/username-tag'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
+import { supabase } from '@/lib/supabase'
+import { useIdentity } from '@/hooks/useIdentity'
 
 const EMOTION_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -325,11 +327,6 @@ function PostCard({
     return () => obs.disconnect()
   }, [post.id])
 
-  // Prefer the avatar stored on the post itself (denormalized at
-  // creation time) so new posts render instantly without waiting on
-  // the Supabase profile lookup. Falls back to the live subscription
-  // for older posts created before this change, or if the author has
-  // since updated their avatar.
   const avatarUrl = post.authorAvatarUrl || authorProfile?.avatarUrl || null
 
   return (
@@ -523,6 +520,7 @@ function PostCard({
 export default function FeedPage() {
   const { posts, loading } = usePosts()
   const { requireAuth } = useAuthGate()
+  const { user } = useIdentity()
   const [selectedVibe, setSelectedVibe] = useState('ALL')
   const [selectedSort, setSelectedSort] = useState('NEW')
   const [searchQuery, setSearchQuery] = useState('')
@@ -595,6 +593,26 @@ export default function FeedPage() {
     })
     .sort((a, b) => getScore(b) - getScore(a))
 
+  // Fires a 'resonate' notification row directly to Supabase, since
+  // resonates happen in Firebase and can't be picked up by a DB
+  // trigger the way messages/follows are. Only fires when someone
+  // resonates with (not un-resonates) a post that isn't their own.
+  const notifyResonate = async (post: Post) => {
+    if (!user?.id) return
+    if (!post.authorUid || post.authorUid === user.id) return
+    try {
+      const { error } = await supabase.from('notifications').insert({
+        recipient_id: post.authorUid,
+        actor_id: user.id,
+        type: 'resonate',
+        post_id: post.id,
+      })
+      if (error) console.error('Failed to insert resonate notification:', error)
+    } catch (err) {
+      console.error('Failed to insert resonate notification:', err)
+    }
+  }
+
   const toggleResonate = async (postId: string) => {
     if (!requireAuth()) return
     const already = resonated.has(postId)
@@ -621,6 +639,10 @@ export default function FeedPage() {
             already ? dbRemove(songResonateRef) : dbSet(songResonateRef, true)
           }
         }).catch(() => {})
+      }
+      if (!already) {
+        const post = posts.find(p => p.id === postId)
+        if (post) void notifyResonate(post)
       }
     } catch {
       setResonated(prev => {

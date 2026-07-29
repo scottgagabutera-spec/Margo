@@ -2,22 +2,19 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
+import { useNotifications } from '@/hooks/useNotifications'
 
 const font = 'var(--font-lora), serif'
 
-/**
- * Bottom tab bar — mobile only, hidden at 640px+.
- * background is explicit var(--bg), not dependent on an external class —
- * fixes the transparent-nav bug where scrolling content showed through.
- * Separation from content is a soft upward shadow, not a border line.
- */
 export function MobileTabBar() {
   const pathname = usePathname()
   const { user, identity } = useIdentity()
+  const { unreadCount } = useNotifications()
 
   const isOnFeed = pathname === '/feed'
   const isOnMusic = pathname?.startsWith('/music')
   const isOnCompose = pathname === '/compose'
+  const isOnNotifications = pathname === '/notifications'
 
   const isSignedIn = !!user && !user.isAnonymous
   const ownProfileHref = identity ? `/profile/${identity.username}` : '/signin'
@@ -28,6 +25,7 @@ export function MobileTabBar() {
     gap: '2px', textDecoration: 'none',
     minHeight: 'var(--margo-touch-min)',
     justifySelf: 'center',
+    position: 'relative',
     color: active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
   })
 
@@ -40,7 +38,7 @@ export function MobileTabBar() {
     <nav className="margo-mobile-tabbar" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
       display: 'none',
-      gridTemplateColumns: 'repeat(4, 1fr)',
+      gridTemplateColumns: 'repeat(5, 1fr)',
       alignItems: 'center',
       padding: '8px 12px calc(8px + env(safe-area-inset-bottom))',
       background: 'var(--bg)',
@@ -75,6 +73,26 @@ export function MobileTabBar() {
         <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
           <path d="M7 1v12M1 7h12" stroke="var(--bg)" strokeWidth="2" strokeLinecap="round"/>
         </svg>
+      </Link>
+
+      <Link href="/notifications" style={tabStyle(isOnNotifications)}>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M5 8a5 5 0 0 1 10 0c0 3 1 4.5 1.5 5.2.3.4 0 .8-.5.8H4c-.5 0-.8-.4-.5-.8C4 12.5 5 11 5 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+          <path d="M8 16a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <span style={labelStyle}>Alerts</span>
+        {isSignedIn && unreadCount > 0 && (
+          <span style={{
+            position: 'absolute', top: '-2px', right: 'calc(50% - 16px)',
+            minWidth: '14px', height: '14px', borderRadius: '50%',
+            background: 'var(--gold)', color: 'var(--bg)',
+            fontFamily: font, fontSize: '0.45rem', fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '0 3px', boxSizing: 'border-box',
+          }}>
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
       </Link>
 
       <Link href={ownProfileHref} style={tabStyle(isOnProfile)}>
