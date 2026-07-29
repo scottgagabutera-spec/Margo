@@ -639,15 +639,15 @@ export default function FeedPage() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'var(--bg)', padding: '64px 20px 0' }}>
+      <div style={{ position: 'sticky', top: '56px', zIndex: 30, background: 'var(--bg)', padding: '56px 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {VIBES.map(vibe => (
               <button key={vibe} onClick={() => setSelectedVibe(vibe)} style={{
-                flexShrink: 0, minHeight: 'var(--margo-touch-min)', padding: '0 11px', borderRadius: '50px',
+                flexShrink: 0, minHeight: '30px', padding: '0 10px', borderRadius: '50px',
                 display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
-                letterSpacing: '0.5px', textTransform: 'uppercase', cursor: 'pointer',
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700,
+                letterSpacing: '0.4px', textTransform: 'uppercase', cursor: 'pointer',
                 border: '1px solid',
                 background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
                 color: selectedVibe === vibe ? 'var(--bg)' : 'rgba(255,255,255,0.45)',
@@ -657,13 +657,13 @@ export default function FeedPage() {
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: '0', paddingTop: '8px', paddingBottom: '4px', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', gap: '0', paddingTop: '6px', paddingBottom: '3px', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             {SORTS.map(sort => (
               <button key={sort} onClick={() => setSelectedSort(sort)} style={{
-                minHeight: 'var(--margo-touch-min)', padding: '0 16px', background: 'none', border: 'none', cursor: 'pointer',
+                minHeight: '32px', padding: '0 12px', background: 'none', border: 'none', cursor: 'pointer',
                 display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
-                letterSpacing: '1.25px', textTransform: 'uppercase',
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.54rem', fontWeight: 700,
+                letterSpacing: '1.1px', textTransform: 'uppercase',
                 color: selectedSort === sort ? 'var(--gold)' : 'var(--text-3)',
                 borderBottom: selectedSort === sort ? '2px solid var(--gold)' : '2px solid transparent',
                 transition: 'all 150ms ease',
@@ -671,15 +671,15 @@ export default function FeedPage() {
             ))}
           </div>
 
-          <div style={{ position: 'relative', paddingBottom: '12px', paddingTop: '8px' }}>
+          <div style={{ position: 'relative', paddingBottom: '10px', paddingTop: '6px' }}>
             <input
               type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search lyrics, songs, artists, feelings..."
               style={{
-                width: '100%', height: '38px', padding: '0 38px 0 14px',
+                width: '100%', height: '32px', padding: '0 34px 0 12px',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '10px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.72rem', outline: 'none', boxSizing: 'border-box',
+                borderRadius: '9px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.66rem', outline: 'none', boxSizing: 'border-box',
               }}
             />
             {searchQuery && (
@@ -691,16 +691,16 @@ export default function FeedPage() {
                 position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
                 background: 'none', border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: '44px', height: '44px', padding: 0,
+                width: '38px', height: '38px', padding: 0,
               }}>
-                <CloseIcon size={16} color="var(--text-3)" />
+                <CloseIcon size={14} color="var(--text-3)" />
               </button>
             )}
           </div>
         </div>
       </div>
 
-      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '20px 24px var(--margo-page-padding-bottom)' }}>
+      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '16px 24px var(--margo-page-padding-bottom)' }}>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
             {[0,1,2].map(i => (
