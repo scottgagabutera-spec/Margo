@@ -363,7 +363,7 @@ export default function AccountSettingsPage() {
       style={{
         maxWidth: 640,
         margin: '0 auto',
-        padding: '32px 24px var(--margo-page-padding-bottom)',
+        padding: '120px 24px var(--margo-page-padding-bottom)',
       }}
     >
       <div style={{ marginBottom: '24px' }}>
@@ -373,7 +373,7 @@ export default function AccountSettingsPage() {
       <h1
         style={{
           fontFamily: font,
-          fontSize: 'clamp(2rem,5vw,3.2rem)',
+          fontSize: 'clamp(1.6rem,4vw,2.4rem)',
           fontWeight: 700,
           color: 'var(--text)',
           marginBottom: '32px',
@@ -385,7 +385,7 @@ export default function AccountSettingsPage() {
       {/* Profile */}
       <Card>
         <SectionLabel>Profile</SectionLabel>
-        <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-2)', marginBottom: '16px' }}>
+        <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)', marginBottom: '16px' }}>
           Bio, signature lyric, and photo live on your profile edit page.
         </p>
         <Link href="/profile/edit">
@@ -406,7 +406,7 @@ export default function AccountSettingsPage() {
               style={{
                 width: '100%',
                 fontFamily: font,
-                fontSize: '1rem',
+                fontSize: '0.95rem',
                 padding: '12px 16px',
                 borderRadius: 12,
                 border: '1px solid var(--border)',
@@ -421,14 +421,14 @@ export default function AccountSettingsPage() {
                 Update Password
               </TierOneButton>
               {passwordStatus && (
-                <span style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-2)' }}>
+                <span style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-2)' }}>
                   {passwordStatus}
                 </span>
               )}
             </div>
           </>
         ) : (
-          <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-2)' }}>
+          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)' }}>
             You signed in with Google or Discord, so there is no Margo password to change. Manage
             your password with that provider instead.
           </p>
@@ -455,7 +455,7 @@ export default function AccountSettingsPage() {
               borderBottom: '1px solid var(--border)',
             }}
           >
-            <span style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text)' }}>
+            <span style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)' }}>
               {row.label}
             </span>
             <Toggle
@@ -480,10 +480,10 @@ export default function AccountSettingsPage() {
           }}
         >
           <div>
-            <div style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text)' }}>
+            <div style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)' }}>
               Private account
             </div>
-            <div style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>
+            <div style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)' }}>
               Only accepted followers see your full profile
             </div>
           </div>
@@ -495,7 +495,7 @@ export default function AccountSettingsPage() {
         </div>
 
         <div style={{ padding: '16px 0 4px' }}>
-          <div style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text)', marginBottom: 10 }}>
+          <div style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)', marginBottom: 10 }}>
             Who can message you
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -529,17 +529,17 @@ export default function AccountSettingsPage() {
       <Card>
         <SectionLabel>Artist Status</SectionLabel>
         {profile.is_artist ? (
-          <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--gold)' }}>
+          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--gold)' }}>
             You are a verified Margo artist.
           </p>
         ) : application ? (
-          <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-2)' }}>
+          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)' }}>
             Your artist application is{' '}
             <span style={{ color: 'var(--text)', fontWeight: 600 }}>{application.status}</span>.
           </p>
         ) : (
           <>
-            <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-2)', marginBottom: 16 }}>
+            <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)', marginBottom: 16 }}>
               You have not applied as an artist yet.
             </p>
             <Link href="/apply">
@@ -554,10 +554,10 @@ export default function AccountSettingsPage() {
         <SectionLabel>Account</SectionLabel>
 
         <div style={{ marginBottom: 24 }}>
-          <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text)', marginBottom: 4 }}>
+          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)', marginBottom: 4 }}>
             {profile.deactivated_at ? 'Your account is hidden' : 'Hide your account'}
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: 16 }}>
+          <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: 16 }}>
             {profile.deactivated_at
               ? 'Your profile is not visible to others. Bring it back anytime.'
               : 'Your profile becomes invisible to everyone but you. Reversible anytime.'}
@@ -568,10 +568,10 @@ export default function AccountSettingsPage() {
         </div>
 
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24 }}>
-          <p style={{ fontFamily: font, fontSize: '0.95rem', color: '#ff6060', marginBottom: 4 }}>
+          <p style={{ fontFamily: font, fontSize: '0.9rem', color: '#ff6060', marginBottom: 4 }}>
             Delete your account
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: 16 }}>
+          <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: 16 }}>
             This permanently removes your profile, messages, and follows. It cannot be undone.
           </p>
           <input
@@ -581,7 +581,7 @@ export default function AccountSettingsPage() {
             style={{
               width: '100%',
               fontFamily: font,
-              fontSize: '1rem',
+              fontSize: '0.95rem',
               padding: '12px 16px',
               borderRadius: 12,
               border: '1px solid var(--border)',
@@ -595,7 +595,7 @@ export default function AccountSettingsPage() {
             {deleting ? 'Deleting.' : 'Delete My Account'}
           </TierOneButton>
           {deleteError && (
-            <p style={{ fontFamily: font, fontSize: '0.82rem', color: '#ff6060', marginTop: 12 }}>
+            <p style={{ fontFamily: font, fontSize: '0.8rem', color: '#ff6060', marginTop: 12 }}>
               {deleteError}
             </p>
           )}

@@ -639,7 +639,7 @@ export default function FeedPage() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
-      <div style={{ position: 'sticky', top: '64px', zIndex: 30, background: 'var(--bg)', padding: '18px 20px 0' }}>
+      <div style={{ position: 'sticky', top: '72px', zIndex: 30, background: 'var(--bg)', padding: '84px 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
             {VIBES.map(vibe => (
