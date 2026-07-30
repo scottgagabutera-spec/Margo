@@ -1,10 +1,11 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
+import { usePosts } from '@/hooks/usePosts'
 
 const font = 'var(--font-lora), serif'
 
@@ -25,15 +26,20 @@ interface ProfileData {
   signatureArtist: string | null
 }
 
+type FollowStatus = null | 'pending' | 'accepted'
+
 export default function ProfilePage() {
   const params = useParams<{ username: string }>()
-  const { identity } = useIdentity()
+  const { user, identity } = useIdentity()
   const { application } = useArtistApplication()
+  const { posts } = usePosts()
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [followerCount, setFollowerCount] = useState<number | null>(null)
   const [followingCount, setFollowingCount] = useState<number | null>(null)
+  const [followStatus, setFollowStatus] = useState<FollowStatus>(null)
+  const [followBusy, setFollowBusy] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -80,6 +86,30 @@ export default function ProfilePage() {
 
   const isOwnProfile = !!identity && !!profile && identity.username === profile.username
 
+  // Look up the viewer's own relationship to this profile — separate
+  // from the aggregate counts above, since this is specific to the
+  // signed-in viewer, not the profile being viewed.
+  useEffect(() => {
+    if (!user || !profile || isOwnProfile) { setFollowStatus(null); return }
+    let active = true
+    supabase
+      .from('follows')
+      .select('status')
+      .eq('follower_id', user.id)
+      .eq('followee_id', profile.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active) return
+        setFollowStatus(data ? (data.status as FollowStatus) : null)
+      })
+    return () => { active = false }
+  }, [user, profile, isOwnProfile])
+
+  const ownPosts = useMemo(
+    () => profile ? posts.filter(p => p.authorUid === profile.id) : [],
+    [posts, profile]
+  )
+
   const applicationStatus = application?.status ?? 'none'
   const showApplyCTA = isOwnProfile && !identity?.isArtist
   const applyLabel =
@@ -90,6 +120,43 @@ export default function ProfilePage() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
   }
+
+  // Mutual-accept follow model: a first click sends a pending request;
+  // clicking again while pending cancels it; clicking while already
+  // accepted unfollows. There's no accept/decline inbox for incoming
+  // requests yet — that's a separate piece of UI still to build.
+  const handleFollowClick = async () => {
+    if (!user || !profile || followBusy) return
+    setFollowBusy(true)
+    try {
+      if (followStatus === null) {
+        const { error } = await supabase.from('follows').insert({
+          follower_id: user.id,
+          followee_id: profile.id,
+          status: 'pending',
+        })
+        if (!error) setFollowStatus('pending')
+      } else {
+        const { error } = await supabase.from('follows')
+          .delete()
+          .eq('follower_id', user.id)
+          .eq('followee_id', profile.id)
+        if (!error) {
+          if (followStatus === 'accepted') {
+            setFollowerCount(c => (c !== null ? Math.max(0, c - 1) : c))
+          }
+          setFollowStatus(null)
+        }
+      }
+    } finally {
+      setFollowBusy(false)
+    }
+  }
+
+  const followLabel =
+    followStatus === 'accepted' ? 'Following' :
+    followStatus === 'pending' ? 'Requested' :
+    'Follow'
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
@@ -109,20 +176,12 @@ export default function ProfilePage() {
 
       {!loading && profile && (
         <div>
-          {/* Banner strip. Solid gold-tinted gradient rather than a
-              photo upload for now — gives the page an anchor and a
-              premium feel without adding a whole cover-photo feature.
-              Sits behind the fixed top nav, which is why it starts
-              at 0 not 120px. */}
           <div style={{
             height: '160px', width: '100%',
             background: 'linear-gradient(135deg, rgba(232,197,71,0.14), rgba(122,127,214,0.08) 60%, var(--bg))',
           }} />
 
           <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px var(--margo-page-padding-bottom)' }}>
-            {/* Avatar overlaps the banner, sits left — not centered.
-                Edit Profile / action row sits beside the name on the
-                same row on wider screens, wraps below on narrow ones. */}
             <div style={{ marginTop: '-44px', marginBottom: '20px' }}>
               <div style={{
                 width: '88px', height: '88px', borderRadius: '50%',
@@ -164,17 +223,22 @@ export default function ProfilePage() {
                 >Edit Profile</Link>
               )}
 
-              {!isOwnProfile && (
+              {!isOwnProfile && user && (
                 <button
                   type="button"
+                  onClick={handleFollowClick}
+                  disabled={followBusy}
                   style={{
                     minHeight: 'var(--margo-touch-min)', padding: '0 26px',
                     display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                    background: 'var(--gold)', color: 'var(--bg)', border: 'none',
+                    background: followStatus ? 'transparent' : 'var(--gold)',
+                    color: followStatus ? 'var(--text-2)' : 'var(--bg)',
+                    border: followStatus ? '1px solid var(--border)' : 'none',
                     borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.9rem',
-                    cursor: 'pointer', flexShrink: 0,
+                    cursor: followBusy ? 'not-allowed' : 'pointer', flexShrink: 0,
+                    opacity: followBusy ? 0.7 : 1,
                   }}
-                >Follow</button>
+                >{followLabel}</button>
               )}
             </div>
 
@@ -241,12 +305,38 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Account-level actions, own profile only. Replaces the
-                floating top-nav "Account settings" pill and its bottom
-                sheet, which duplicated the bottom tab bar's "You" tab —
-                both led here. Living beside Edit Profile means there's
-                exactly one place to manage your account, reached
-                exactly one way. */}
+            <div style={{ marginBottom: '28px' }}>
+              <p style={sectionLabelStyle}>{isOwnProfile ? 'Your Lyrics' : 'Lyrics'}</p>
+              {ownPosts.length === 0 ? (
+                isOwnProfile ? (
+                  <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic', textDecoration: 'none' }}>
+                    Share your first lyric →
+                  </Link>
+                ) : (
+                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                    Hasn&rsquo;t shared a lyric yet.
+                  </p>
+                )
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {ownPosts.map(post => (
+                    <div key={post.id} style={{
+                      border: '1px solid var(--border)', borderRadius: '16px', padding: '18px',
+                    }}>
+                      <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '8px' }}>
+                        &ldquo;{post.text}&rdquo;
+                      </p>
+                      {(post.knowledge?.song || post.knowledge?.artist) && (
+                        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                          {post.knowledge?.song}{post.knowledge?.song && post.knowledge?.artist ? ' · ' : ''}{post.knowledge?.artist}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {isOwnProfile && (
               <div style={{
                 display: 'flex', flexWrap: 'wrap', gap: '8px 20px',
