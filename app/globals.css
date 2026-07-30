@@ -337,6 +337,13 @@
   }
 }
 
+/* Expanded mini-player sheet — without this, iOS Safari can interpret a
+   downward swipe on the sheet as page scroll/rubber-band before the
+   sheet's own onTouchStart/onTouchEnd dismiss logic ever sees it. */
+.mp-sheet {
+  touch-action: pan-x;
+}
+
 /* Pattern 4 — touch states first; hover is progressive enhancement only */
 /* Use :active / :focus-visible for press feedback; wrap :hover in this query */
 /* @media (hover: hover) and (pointer: fine) { ... } */

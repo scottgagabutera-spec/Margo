@@ -8,7 +8,7 @@ import { MiniPlayer } from '@/components/mini-player'
 import { MargoNav } from '@/components/margo-nav'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
 import { Toaster } from '@/components/ui/sonner'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Lora, Syne } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
@@ -26,6 +26,16 @@ const syne = Syne({
 })
 
 const BASE_URL = 'https://trymargo.com'
+
+// viewport-fit=cover is required for env(safe-area-inset-*) to resolve to
+// real values on iOS Safari. Without it, every safe-area-based padding
+// in globals.css (--margo-safe-bottom and everything derived from it)
+// silently evaluates to 0px on iPhone, even though it works fine on Android.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
