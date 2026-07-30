@@ -1,6 +1,8 @@
 'use client'
 import Link from 'next/link'
+import { useState } from 'react'
 import type { Notification } from '@/hooks/useNotifications'
+import { useNotifications } from '@/hooks/useNotifications'
 
 const font = 'var(--font-lora), serif'
 
@@ -19,6 +21,7 @@ function messageFor(n: Notification) {
     case 'message': return `${name} sent you a message`
     case 'resonate': return `${name} resonated with your lyric`
     case 'follow': return `${name} started following you`
+    case 'follow_request': return `${name} wants to follow you`
     default: return `${name} did something`
   }
 }
@@ -28,6 +31,7 @@ function hrefFor(n: Notification) {
     case 'message': return n.actor ? `/messages/${n.actor.username}` : '/messages'
     case 'resonate': return n.postId ? `/feed?post=${n.postId}` : '/feed'
     case 'follow': return n.actor ? `/profile/${n.actor.username}` : '/feed'
+    case 'follow_request': return n.actor ? `/profile/${n.actor.username}` : '/feed'
     default: return '/feed'
   }
 }
@@ -59,6 +63,88 @@ export function NotificationItem({
   notification, onNavigate,
 }: { notification: Notification; onNavigate?: () => void }) {
   const unread = !notification.readAt
+  const { acceptFollowRequest, declineFollowRequest } = useNotifications()
+  const [busy, setBusy] = useState(false)
+
+  const avatar = (
+    <div style={{
+      width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+      background: notification.actor?.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+      border: '1px solid rgba(232,197,71,0.2)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {notification.actor?.avatarUrl ? (
+        <img src={notification.actor.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <span style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--bg)' }}>
+          {(notification.actor?.displayName || '??').slice(0, 2).toUpperCase()}
+        </span>
+      )}
+    </div>
+  )
+
+  if (notification.type === 'follow_request') {
+    const handleAccept = async () => {
+      setBusy(true)
+      await acceptFollowRequest(notification)
+      setBusy(false)
+    }
+    const handleDecline = async () => {
+      setBusy(true)
+      await declineFollowRequest(notification)
+      setBusy(false)
+    }
+
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: '10px',
+        padding: '10px 12px',
+        background: unread ? 'rgba(232,197,71,0.06)' : 'transparent',
+        borderRadius: '8px',
+      }}>
+        <Link href={hrefFor(notification)} style={{ flexShrink: 0 }}>{avatar}</Link>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Link href={hrefFor(notification)} style={{ textDecoration: 'none' }}>
+            <p style={{ fontFamily: font, fontSize: '0.78rem', color: 'var(--text)', margin: 0, lineHeight: 1.4 }}>
+              {messageFor(notification)}
+            </p>
+          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '4px 0 10px' }}>
+            <TypeIcon type={notification.type} />
+            <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)' }}>
+              {timeAgo(notification.createdAt)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={handleAccept}
+              disabled={busy}
+              style={{
+                minHeight: '32px', padding: '0 16px', display: 'inline-flex', alignItems: 'center',
+                boxSizing: 'border-box', background: 'var(--gold)', color: 'var(--bg)', border: 'none',
+                borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.72rem',
+                cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1,
+              }}
+            >Accept</button>
+            <button
+              type="button"
+              onClick={handleDecline}
+              disabled={busy}
+              style={{
+                minHeight: '32px', padding: '0 16px', display: 'inline-flex', alignItems: 'center',
+                boxSizing: 'border-box', background: 'transparent', color: 'var(--text-2)',
+                border: '1px solid var(--border)', borderRadius: '50px', fontFamily: font,
+                fontWeight: 600, fontSize: '0.72rem', cursor: busy ? 'not-allowed' : 'pointer',
+                opacity: busy ? 0.7 : 1,
+              }}
+            >Decline</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <Link
       href={hrefFor(notification)}
@@ -70,20 +156,7 @@ export function NotificationItem({
         borderRadius: '8px', transition: 'background 120ms ease',
       }}
     >
-      <div style={{
-        width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-        background: notification.actor?.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-        border: '1px solid rgba(232,197,71,0.2)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {notification.actor?.avatarUrl ? (
-          <img src={notification.actor.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <span style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--bg)' }}>
-            {(notification.actor?.displayName || '??').slice(0, 2).toUpperCase()}
-          </span>
-        )}
-      </div>
+      {avatar}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontFamily: font, fontSize: '0.78rem', color: 'var(--text)', margin: 0, lineHeight: 1.4 }}>
           {messageFor(notification)}

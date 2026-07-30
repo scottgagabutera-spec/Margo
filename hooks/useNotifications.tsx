@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 
-export type NotificationType = 'message' | 'resonate' | 'follow'
+export type NotificationType = 'message' | 'resonate' | 'follow' | 'follow_request'
 
 export interface Notification {
   id: string
@@ -14,8 +14,6 @@ export interface Notification {
   messageId: string | null
   createdAt: string
   readAt: string | null
-  // Joined from profiles at read time — who did the thing that triggered
-  // this notification. Null only if the actor's account was deleted.
   actor: {
     id: string
     username: string
@@ -55,6 +53,8 @@ interface NotificationsContextValue {
   unreadCount: number
   loading: boolean
   markAllRead: () => Promise<void>
+  acceptFollowRequest: (notification: Notification) => Promise<void>
+  declineFollowRequest: (notification: Notification) => Promise<void>
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(null)
@@ -154,8 +154,49 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     if (error) console.error('Failed to mark notifications read:', error)
   }, [user, notifications])
 
+  // Accepting flips the pending follows row to accepted — this also
+  // fires the existing notify_on_follow trigger, which inserts a
+  // separate 'follow' notification for the same recipient ("X started
+  // following you"), arriving via the realtime INSERT listener above.
+  // The follow_request notification itself is deleted since it's now
+  // resolved, not left around as a stale action item.
+  const acceptFollowRequest = useCallback(async (n: Notification) => {
+    if (!user || !n.actorId) return
+    const { error: followErr } = await supabase
+      .from('follows')
+      .update({ status: 'accepted' })
+      .eq('follower_id', n.actorId)
+      .eq('followee_id', user.id)
+      .eq('status', 'pending')
+    if (followErr) {
+      console.error('Failed to accept follow request:', followErr)
+      return
+    }
+    await supabase.from('notifications').delete().eq('id', n.id)
+    setNotifications(prev => prev.filter(x => x.id !== n.id))
+  }, [user])
+
+  const declineFollowRequest = useCallback(async (n: Notification) => {
+    if (!user || !n.actorId) return
+    const { error: followErr } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', n.actorId)
+      .eq('followee_id', user.id)
+      .eq('status', 'pending')
+    if (followErr) {
+      console.error('Failed to decline follow request:', followErr)
+      return
+    }
+    await supabase.from('notifications').delete().eq('id', n.id)
+    setNotifications(prev => prev.filter(x => x.id !== n.id))
+  }, [user])
+
   return (
-    <NotificationsContext.Provider value={{ notifications, unreadCount, loading, markAllRead }}>
+    <NotificationsContext.Provider value={{
+      notifications, unreadCount, loading, markAllRead,
+      acceptFollowRequest, declineFollowRequest,
+    }}>
       {children}
     </NotificationsContext.Provider>
   )
