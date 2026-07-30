@@ -4,15 +4,15 @@ import { useState, useCallback, useRef, Suspense } from 'react'
 import { toast } from 'sonner'
 import { Search } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
-import { MargoNav } from '@/components/margo-nav'
 import { HeartIcon } from '@/components/heart-icon'
 import { db } from '@/lib/firebase'
 import { useEchoes } from '@/hooks/useEchoes'
 import { ref, push, set, remove, serverTimestamp, runTransaction } from 'firebase/database'
-import { useUsername } from '@/hooks/useUsername'
+import { useIdentity } from '@/hooks/useIdentity'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useSearchParams } from 'next/navigation'
 import { usePost } from '@/hooks/usePost'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 type Source = 'genius' | 'apple'
 
@@ -92,7 +92,8 @@ function parseVibeFromString(raw: string | undefined | null): Vibe | null {
 }
 
 function LyricBackContent() {
-  const { username } = useUsername()
+  const { user, identity } = useIdentity()
+  const { requireAuth } = useAuthGate()
   const searchParams = useSearchParams()
   const postId = searchParams.get('postId')
   const { post: respondingTo } = usePost(postId)
@@ -223,6 +224,7 @@ function LyricBackContent() {
 
   /* ─── post ───────────────────────────────────────────────── */
   const handlePost = useCallback((isPrivate: boolean) => {
+    if (!requireAuth()) return
     if (posting) return
     if (!lyric || !songName || !artistName) return
     if (!selectedVibe) {
@@ -239,7 +241,8 @@ function LyricBackContent() {
     const writePromise = postId
       ? push(ref(db, `posts/${postId}/echoes`), {
           lyric, song: songName, artist: artistName,
-          emotion: selectedVibe, username: username || null,
+          emotion: selectedVibe, username: identity?.displayName || null,
+          authorUid: user?.id || null,
           timestamp: serverTimestamp(), resonates: {},
         }).then(() => {
           // increment postStats.echoCount atomically
@@ -258,7 +261,9 @@ function LyricBackContent() {
           text: lyric, emotion: selectedVibe, mode: 'share',
           status: isPrivate ? 'private' : 'active',
           knowledge: { song: songName, artist: artistName, artwork: selectedSong?.artwork || null },
-          username: username || null, timestamp: serverTimestamp(),
+          username: identity?.displayName || null,
+          authorUid: user?.id || null,
+          timestamp: serverTimestamp(),
         })
 
     resetComposeForm()
@@ -268,7 +273,7 @@ function LyricBackContent() {
       console.error('Failed to post:', e)
       toast.error('Could not send your lyric back. Please try again.')
     })
-  }, [artistName, songName, lyric, selectedVibe, selectedSong, username, postId, posting, resetComposeForm])
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, postId, posting, resetComposeForm])
 
   /* ─── promote + reply — navigate first, write in background ─ */
   const promoteAndReply = (echo: typeof echoes[0]) => {
@@ -278,6 +283,7 @@ function LyricBackContent() {
 
   /* ─── resonate ───────────────────────────────────────────── */
   const toggleResonate = async (echoId: string) => {
+    if (!requireAuth()) return
     if (!db) return
     const myId = getMargoActorId()
     const already = resonated.has(echoId)
@@ -306,7 +312,6 @@ function LyricBackContent() {
 
   return (
     <main style={{ minHeight: '100vh', background: bg, position: 'relative' }}>
-      <MargoNav />
 
       {/* Ambient glow — identical to feed */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
@@ -476,7 +481,7 @@ function LyricBackContent() {
                   display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                   background: gold, color: bg,
                   borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                  fontSize: '0.5rem', letterSpacing: '1.5px', textTransform: 'uppercase',
+                  fontSize: '0.5rem', letterSpacing: '1px', textTransform: 'uppercase',
                   border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1,
                 }}
               >Continue</button>
@@ -669,7 +674,6 @@ function LyricBackContent() {
                 <div
                   key={lb.id}
                   style={{
-                    /* Identical to feed PostCard */
                     background: 'rgba(255,255,255,0.02)',
                     border: '1px solid rgba(255,255,255,0.06)',
                     borderRadius: '20px', padding: '20px',
@@ -683,7 +687,6 @@ function LyricBackContent() {
                     background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
                   }} />
 
-                  {/* Header */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{
@@ -711,17 +714,14 @@ function LyricBackContent() {
                     )}
                   </div>
 
-                  {/* Lyric */}
                   <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '12px' }}>
                     &ldquo;{lb.lyric}&rdquo;
                   </p>
 
-                  {/* Song credit */}
                   <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '20px' }}>
                     {lb.song} · {lb.artist}
                   </p>
 
-                  {/* Actions — exactly matches feed PostCard */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
                     <button onClick={() => toggleResonate(lb.id)} style={{
@@ -747,9 +747,9 @@ function LyricBackContent() {
                       <span style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Lyric Back</span>
                     </button>
 
-                    {/* Card — was "Share" in old feed, now "Card" everywhere, same ↗ icon */}
                     <button
                       onClick={() => {
+                        if (!requireAuth()) return
                         setCardData({
                           lyric: lb.lyric, song: lb.song, artist: lb.artist, id: lb.id,
                           parentLyric: respondingTo?.text,

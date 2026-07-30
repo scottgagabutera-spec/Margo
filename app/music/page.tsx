@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MargoNav } from '@/components/margo-nav'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import { useIsPlaying } from '@/hooks/useAudioEngine'
@@ -11,6 +10,7 @@ import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { HeartIcon } from '@/components/heart-icon'
 import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 
 function formatNum(n: number): string {
@@ -157,6 +157,7 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
   const [focusedMoment, setFocusedMoment] = useState<LyricMoment | null>(null)
   const [focusedIndex, setFocusedIndex] = useState(0)
   const [playingKey, setPlayingKey] = useState<string | null>(null)
+  const { requireAuth } = useAuthGate()
   const cycleRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const vibePoolRef = useRef<LyricMoment[]>([])
   const slotQueueRef = useRef<number>(0) // next slot to replace
@@ -707,6 +708,7 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
                       </button>
                       <Link
                         href={`/music/player?id=${focusedMoment.songId}${focusedMoment.audioUrl ? '&au=' + encodeURIComponent(focusedMoment.audioUrl) : ''}&t=${Math.floor(focusedMoment.start)}`}
+                        onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
                         style={{
                           padding: '10px 20px',
                           background: 'var(--gold)',
@@ -807,6 +809,7 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
   song: Song; onClose: () => void; resonated: boolean; onResonate: (id: string) => void; resonateCount: number
 }) {
   const { lines } = useSharedLines(song.title, song.artist)
+  const { requireAuth } = useAuthGate()
   const isActive = song.status === 'live' || song.status === 'active'
   return (
     <div onClick={onClose} className="margo-preview-scrim" style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeInOverlay 250ms ease forwards' }}>
@@ -858,7 +861,12 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
               {resonated ? <><HeartIcon filled size={14} color="currentColor" /> Resonate</> : <><HeartIcon filled={false} size={14} color="currentColor" /> Resonate</>}
             </button>
             {isActive ? (
-              <Link href={`/music/player?id=${song.id}${song.audioUrl ? '&au=' + encodeURIComponent(song.audioUrl) : ''}`} className="play-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', minHeight: '52px', transition: 'all 200ms ease', boxShadow: '0 6px 28px rgba(232,197,71,0.28)' }}><PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now</Link>
+              <Link
+                href={`/music/player?id=${song.id}${song.audioUrl ? '&au=' + encodeURIComponent(song.audioUrl) : ''}`}
+                className="play-btn"
+                onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', minHeight: '52px', transition: 'all 200ms ease', boxShadow: '0 6px 28px rgba(232,197,71,0.28)' }}
+              ><PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now</Link>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 28px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-3)', minHeight: '52px' }}>{song.comingSoonLabel || 'Coming Soon'}</div>
             )}
@@ -909,6 +917,7 @@ export default function MusicPage() {
   const { songs, loading } = useSongs()
   const [preview, setPreview] = useState<Song | null>(null)
   const [search, setSearch] = useState('')
+  const { requireAuth } = useAuthGate()
 
   const [songResonateCounts, setSongResonateCounts] = useState<Record<string, number>>({})
   const [resonatedSongs, setResonatedSongs] = useState<Set<string>>(() => {
@@ -939,6 +948,7 @@ export default function MusicPage() {
   }, [])
 
   const toggleSongResonate = useCallback((songId: string) => {
+    if (!requireAuth()) return
     if (typeof window === 'undefined') return
     const myId = getMargoActorId()
     const already = resonatedSongs.has(songId)
@@ -955,7 +965,7 @@ export default function MusicPage() {
         already ? dbRemove(songResonateRef) : dbSet(songResonateRef, true)
       })
     }).catch(() => {})
-  }, [resonatedSongs])
+  }, [resonatedSongs, requireAuth])
 
   const featuredSong = songs.length
     ? songs.reduce((a, b) => ((b.lyricUses || 0) > (a.lyricUses || 0) ? b : a))
@@ -995,7 +1005,6 @@ export default function MusicPage() {
         .music-search:focus { border-color: rgba(232,197,71,0.4) !important; outline: none; }
       `}</style>
 
-      <MargoNav />
 
       {preview && (
         <SongPreview
@@ -1060,7 +1069,12 @@ export default function MusicPage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <Link href={`/music/player?id=${featuredSong.id}${featuredSong.audioUrl ? '&au=' + encodeURIComponent(featuredSong.audioUrl) : ''}`} className="play-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', transition: 'all 200ms ease' }}><PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now</Link>
+              <Link
+                href={`/music/player?id=${featuredSong.id}${featuredSong.audioUrl ? '&au=' + encodeURIComponent(featuredSong.audioUrl) : ''}`}
+                className="play-btn"
+                onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', transition: 'all 200ms ease' }}
+              ><PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now</Link>
               <button onClick={() => toggleSongResonate(featuredSong.id)} style={{ padding: '12px 20px', background: resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.06)', border: '1px solid ' + (resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.15)'), borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 200ms ease', color: resonatedSongs.has(featuredSong.id) ? 'var(--gold)' : 'rgba(255,255,255,0.7)' }}>
                 {resonatedSongs.has(featuredSong.id) ? <><HeartIcon filled size={14} color="currentColor" /> Resonate</> : <><HeartIcon filled={false} size={14} color="currentColor" /> Resonate</>}
               </button>

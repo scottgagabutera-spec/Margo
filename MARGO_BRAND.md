@@ -269,7 +269,7 @@ DON'T:
 
 ### Rule 1 — No Unicode or emoji as UI icons
 
-**Rule:** Never use Unicode characters (▶ ◀ ♪ × ✕ ♡ ♥ ↩ ↗ ← → ✦ ✓ ✗ ⚑ or any glyph) inside `<span>`, `<div>`, or `<button>` as a visual icon. Text labels may use words only (“Back”, “Close”, “Play Now”). Icons must be inline SVG components or approved shared components (`PlayPauseIcon`, `MargoLogo`, lucide icons where already established).
+**Rule:** Never use Unicode characters (▶ ◀ ♪ × ✕ ♡ ♥ ↩ ↗ ← → ✦ ✓ ✗ ⚑ or any glyph) inside `<span>`, `<div>`, or `<button>` as a visual icon. Text labels may use words only ("Back", "Close", "Play Now"). Icons must be inline SVG components or approved shared components (`PlayPauseIcon`, `MargoLogo`, lucide icons where already established).
 
 **Standards:** PREMIUM · CONSISTENCY · UNIQUE FOR MARGO · MOBILE FIRST
 
@@ -528,7 +528,7 @@ onMouseLeave={() => setHover(null)}
 
 ### Rule 13 — Navigation arrows in copy
 
-**Rule:** Prefer words over Unicode arrows in CTAs (“Full Karaoke”, “Back”, “Next”). If an arrow is decorative in marketing copy, use SVG. Never `→` or `←` inside primary buttons or links that act as icons.
+**Rule:** Prefer words over Unicode arrows in CTAs ("Full Karaoke", "Back", "Next"). If an arrow is decorative in marketing copy, use SVG. Never `→` or `←` inside primary buttons or links that act as icons.
 
 **Standards:** CONSISTENCY · PREMIUM
 
@@ -548,7 +548,7 @@ onMouseLeave={() => setHover(null)}
 
 ### Rule 15 — Admin and status UI: no Unicode status glyphs
 
-**Rule:** Admin success/error/flag states use color + text (“Saved”, “Failed”, “3 flags”), not `✓` `✗` `⚑` `✦` in buttons or status strings. Internal tools still follow Margo icon rules.
+**Rule:** Admin success/error/flag states use color + text ("Saved", "Failed", "3 flags"), not `✓` `✗` `⚑` `✦` in buttons or status strings. Internal tools still follow Margo icon rules.
 
 **Standards:** CONSISTENCY · PREMIUM
 

@@ -5,6 +5,8 @@ import { getDatabase } from 'firebase/database'
 import { app } from '@/lib/firebase'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { ref, onValue, update, remove, push, set, get, runTransaction } from 'firebase/database'
+import { ArtistsTab } from '@/components/artists-tab'
+import { BackButton } from '@/components/back-button'
 
 // ── Types ──
 interface Post {
@@ -912,7 +914,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tab, setTab] = useState<'posts'|'music'|'licensed'|'featured'|'pages'>('posts')
+  const [tab, setTab] = useState<'posts'|'music'|'licensed'|'featured'|'pages'|'artists'>('posts')
 
   useEffect(() => {
     if (!auth) { setAuthChecked(true); return }
@@ -942,6 +944,7 @@ export default function AdminPage() {
     { key: 'licensed', label: 'Licensed Artists' },
     { key: 'featured', label: 'Featured' },
     { key: 'pages', label: 'Pages' },
+    { key: 'artists', label: 'Artists' },
   ]
 
   return (
@@ -949,9 +952,12 @@ export default function AdminPage() {
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '100px 24px 80px' }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <div>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>Margo</p>
-            <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>Admin</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <BackButton fallbackHref="/feed" />
+            <div>
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>Margo</p>
+              <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>Admin</h1>
+            </div>
           </div>
           <button onClick={() => auth && signOut(auth)} style={S.ghostBtn}>Sign Out</button>
         </div>
@@ -967,6 +973,7 @@ export default function AdminPage() {
         {tab === 'licensed' && <LicensedTab />}
         {tab === 'featured' && <FeaturedTab />}
         {tab === 'pages'    && <PagesTab />}
+        {tab === 'artists'  && <ArtistsTab />}
       </div>
     </div>
   )

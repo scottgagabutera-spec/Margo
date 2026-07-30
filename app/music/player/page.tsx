@@ -11,6 +11,7 @@ import { Song } from '@/hooks/useSongs'
 import { CardExportModal } from '@/components/card-export-modal'
 import { useAudioEngine, useAudioCurrentTime } from '@/hooks/useAudioEngine'
 import { playFull, togglePlayPause, stop, playFullSeek } from '@/lib/audio-engine'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 interface LyricLine {
   id: number
@@ -31,6 +32,7 @@ function PlayerContent() {
   const earlyAudioUrl = searchParams.get('au')
   const { song, lyrics: realLyrics, loading } = useSong(songId)
   const { songs } = useSongs()
+  const { requireAuth } = useAuthGate()
 
   // ── Engine state ─────────────────────────────────────────────────
   const engineState = useAudioEngine()
@@ -93,6 +95,7 @@ function PlayerContent() {
   }, [songId])
 
   const startPlayback = useCallback(() => {
+    if (!requireAuth()) return
     if (!songId || !audioUrl) return
     setShowTapOverlay(false)
     playedSongIdRef.current = songId
@@ -106,7 +109,7 @@ function PlayerContent() {
       autoplay: true,
       source: 'karaoke',
     })
-  }, [audioUrl, songId, songArtist, songArtwork, songTitle])
+  }, [requireAuth, audioUrl, songId, songArtist, songArtwork, songTitle])
 
   // ─── Detect song end from engine state ─────────────────────────────
   useEffect(() => {
@@ -423,7 +426,14 @@ function PlayerContent() {
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-3)', margin: '3px 0 0' }}>Share this lyric with your emotion on the feed</p>
               </div>
             </Link>
-            <button className="share-option" onClick={() => { setShareOpen(false); setTimeout(() => setCardExportOpen(true), 180) }}>
+            <button
+              className="share-option"
+              onClick={() => {
+                if (!requireAuth()) return
+                setShareOpen(false)
+                setTimeout(() => setCardExportOpen(true), 180)
+              }}
+            >
               <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>🖼</div>
               <div style={{ textAlign: 'left' }}>
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Share as Card</p>

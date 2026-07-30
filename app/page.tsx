@@ -1,8 +1,10 @@
 'use client'
 import MargoLogo from '@/components/MargoLogo';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { ref, onValue } from 'firebase/database';
+import { useIdentity } from '@/hooks/useIdentity';
 
 interface Post {
   id: string;
@@ -84,11 +86,23 @@ function TickerCard({ post }: { post: Post }) {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const { user, loading: identityLoading } = useIdentity();
   const [mounted, setMounted] = useState(false);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [featuredLyric, setFeaturedLyric] = useState<{text:string,artist:string,song:string} | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Returning signed-in (non-anonymous) users don't need the marketing
+  // page re-sold to them — send them straight to their feed. Anonymous
+  // and first-time visitors fall through and see the page as built.
+  useEffect(() => {
+    if (identityLoading) return;
+    if (user && !user.isAnonymous) {
+      router.replace('/feed');
+    }
+  }, [identityLoading, user, router]);
 
   useEffect(() => {
     if (!db) return;
@@ -112,7 +126,10 @@ export default function Home() {
     return () => unsub();
   }, []);
 
-  if (!mounted) return null;
+  // Don't render the landing page while we're still figuring out who's
+  // asking, or once we already know they're signed in and about to be
+  // redirected — avoids a flash of the marketing page for real users.
+  if (!mounted || identityLoading || (user && !user.isAnonymous)) return null;
 
   const liveCards = allPosts.slice(0, 4);
 

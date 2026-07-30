@@ -288,7 +288,7 @@ interface PlayFullRequest {
 | End | Timer at `endSec + 0.3s` pad; pause; `playing=false`; keep `mode='snippet'` for UI | Natural `ended` event |
 | Progress bar | `(current - start) / (end - start)` | `current / duration` |
 | Seek | Remapped within snippet window | Full timeline |
-| Mini player | Shows line text + “Open Karaoke” | Shows title + scrubber |
+| Mini player | Shows line text + "Open Karaoke" | Shows title + scrubber |
 | Engagement | No play count (v1) | Play qualification timer |
 
 **Snippet max duration cap:** `min((endSec - startSec) + 0.3, 30)` seconds for board auto-rotate compatibility (board may call `stop()` separately).
@@ -575,7 +575,7 @@ No `songPlays`, no `songResonates`, no counter fields on `songs/{id}`.
 | Feed tier-1 | Compose links `songId` + `audioUrl` on post; feed plays via `playSnippet` / tier-1 `playFull` |
 | Karaoke | `/music/player?id={songId}` — `useSong` + engine `playFull` |
 
-**Admin “Go live” checklist (UI):** audioUrl ✓, srt ✓, lineVibes ✓, artwork ✓, status=live, songStats initialized.
+**Admin "Go live" checklist (UI):** audioUrl ✓, srt ✓, lineVibes ✓, artwork ✓, status=live, songStats initialized.
 
 ## 5.4 Admin visibility (target)
 
