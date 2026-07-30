@@ -285,15 +285,6 @@ export default function Home() {
   // redirected — avoids a flash of the marketing page for real users.
   if (!mounted || identityLoading || (user && !user.isAnonymous)) return null;
 
-  const ac: Record<string,number> = {};
-  const sc: Record<string,number> = {};
-  allPosts.forEach(p => {
-    const a = p.knowledge?.artist;
-    const s = p.knowledge?.song;
-    if (a && a !== 'Unknown Artist') { const k = a.trim(); ac[k] = (ac[k]||0)+1; }
-    if (s && s !== 'Unknown Song')   { const k = s.trim(); sc[k] = (sc[k]||0)+1; }
-  });
-
   const heroExchange = pickExchange(allPosts) || FALLBACK_EXCHANGE;
 
   const navLink: React.CSSProperties = {
@@ -331,8 +322,8 @@ export default function Home() {
     <div style={{position:'relative', width:'100%', overflow:'hidden', background:'var(--bg)'}}>
       {/* Ambient */}
       <div style={{position:'fixed', inset:0, overflow:'hidden', pointerEvents:'none', zIndex:0}}>
-        <div style={{position:'absolute', top:'-8rem', left:'-8rem', width:'24rem', height:'24rem', background:'var(--gold-glow)', borderRadius:'50%', filter:'blur(80px)'}} />
-        <div style={{position:'absolute', bottom:'-10rem', right:'-10rem', width:'24rem', height:'24rem', background:'rgba(232,197,71,0.04)', borderRadius:'50%', filter:'blur(80px)'}} />
+        <div style={{position:'absolute', top:'-10rem', left:'-10rem', width:'22rem', height:'22rem', background:'rgba(232,197,71,0.05)', borderRadius:'50%', filter:'blur(120px)'}} />
+        <div style={{position:'absolute', bottom:'-10rem', right:'-10rem', width:'22rem', height:'22rem', background:'rgba(232,197,71,0.03)', borderRadius:'50%', filter:'blur(120px)'}} />
       </div>
 
       {/* Nav */}
@@ -352,23 +343,10 @@ export default function Home() {
       <section style={{
         position:'relative', zIndex:5,
         display:'flex', flexDirection:'column', alignItems:'center',
-        padding:'32px 24px 16px',
+        padding:'64px 24px 16px',
         textAlign:'center',
         maxWidth:'56rem', margin:'0 auto',
       }}>
-        <div style={{
-          display:'inline-flex', alignItems:'center', gap:'8px',
-          marginBottom:'24px', padding:'8px 16px',
-          background:'var(--gold-faint)',
-          border:'1px solid var(--gold-border)',
-          borderRadius:'50px',
-        }}>
-          <div style={{width:'6px', height:'6px', background:'var(--gold)', borderRadius:'50%'}} />
-          <span style={{fontSize:'0.6rem', color:'var(--gold)', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'1.5px', textTransform:'uppercase'}}>
-            {allPosts.length || '…'} lyrics live right now
-          </span>
-        </div>
-
         <h1 style={{
           fontFamily:'var(--font-lora), serif',
           fontSize:'clamp(2.5rem, 8vw, 5rem)',
@@ -482,34 +460,15 @@ export default function Home() {
         `}</style>
       </section>
 
-      {/* Discover Artists teaser */}
+      {/* Explore more music */}
       <section style={{position:'relative', zIndex:5, textAlign:'center', padding:'0 24px 56px', maxWidth:'40rem', margin:'0 auto'}}>
         <h2 style={{fontFamily:'var(--font-lora),serif', fontSize:'1.5rem', fontWeight:600, color:'var(--text)', marginBottom:'12px'}}>
-          Real songs. Real independent artists.
+          There&apos;s more where that came from.
         </h2>
         <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.9rem', color:'var(--text-2)', lineHeight:1.7, marginBottom:'24px'}}>
-          Every lyric on Margo comes from a real song — including original music from independent artists you won&apos;t find anywhere else yet.
+          Browse original songs from independent artists on Margo.
         </p>
-        <a href="/music" style={secondaryCta}>Discover Artists</a>
-      </section>
-
-      {/* Divider */}
-      <div style={{height:'1px', background:'linear-gradient(to right, transparent, var(--border), transparent)', margin:'0 0 40px'}} />
-
-      {/* Stats — simple counts only, no dashboard framing */}
-      <section style={{position:'relative', zIndex:5, maxWidth:'56rem', margin:'0 auto', padding:'0 24px 56px'}}>
-        <div style={{display:'flex', justifyContent:'center', gap:'56px', flexWrap:'wrap'}}>
-          {[
-            { n: allPosts.length, label: 'Lyrics' },
-            { n: Object.keys(ac).length, label: 'Artists' },
-            { n: Object.keys(sc).length, label: 'Songs' },
-          ].map(stat => (
-            <div key={stat.label} style={{textAlign:'center'}}>
-              <div style={{fontFamily:'var(--font-lora),serif', fontSize:'2rem', fontWeight:700, color:'var(--text)', lineHeight:1}}>{stat.n || '0'}</div>
-              <div style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', fontWeight:700, color:'var(--text-3)', letterSpacing:'2px', textTransform:'uppercase', marginTop:'8px'}}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
+        <a href="/music" style={secondaryCta}>Explore Music</a>
       </section>
 
       {/* Footer */}
