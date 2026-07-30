@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -22,6 +22,11 @@ const VIBE_COLORS: Record<string, string> = {
   spiritual: '#c8a0ff', proud: '#FFB347',
 }
 
+// Drag-to-dismiss tuning — a slow partial drag snaps back, a fast flick
+// or a drag past DISMISS_DISTANCE dismisses regardless of how far it went.
+const DISMISS_DISTANCE = 44 // px
+const DISMISS_VELOCITY = 0.5 // px/ms
+
 export function MiniPlayer() {
   const pathname = usePathname()
   const engineState = useAudioEngine()
@@ -35,6 +40,70 @@ export function MiniPlayer() {
 
   const { playing, muted, volume, currentTime, duration, mode, songId, title, artist, artwork, vibe, snippet } = engineState
 
+  // ── Dismiss state ────────────────────────────────────────────────
+  // Hiding the bar never stops playback — the engine keeps running.
+  // A new track reactivates the bar automatically, same as a real player.
+  const [dismissed, setDismissed] = useState(false)
+  useEffect(() => { setDismissed(false) }, [songId])
+
+  // ── Drag-to-dismiss gesture on the collapsed bar ─────────────────
+  const [barOffset, setBarOffset] = useState(0)
+  const [barAnimating, setBarAnimating] = useState(false)
+  const barDragRef = useRef<{ startY: number; startTime: number } | null>(null)
+
+  const isInteractiveTarget = (target: EventTarget | null) =>
+    target instanceof HTMLElement && !!target.closest('button, a, [data-no-drag]')
+
+  const barDragStart = (clientY: number, target: EventTarget | null) => {
+    if (isInteractiveTarget(target)) return
+    barDragRef.current = { startY: clientY, startTime: Date.now() }
+    setBarAnimating(false)
+  }
+  const barDragMove = (clientY: number) => {
+    const ds = barDragRef.current
+    if (!ds) return
+    let delta = clientY - ds.startY
+    if (delta < 0) delta *= 0.25 // resistance when dragging upward — this bar only dismisses downward
+    setBarOffset(delta)
+  }
+  const barDragEnd = (clientY: number) => {
+    const ds = barDragRef.current
+    if (!ds) { setBarOffset(0); return }
+    const delta = clientY - ds.startY
+    const elapsed = Math.max(1, Date.now() - ds.startTime)
+    const velocity = delta / elapsed
+    barDragRef.current = null
+    setBarAnimating(true)
+    if (delta > DISMISS_DISTANCE || velocity > DISMISS_VELOCITY) {
+      setBarOffset(120)
+      window.setTimeout(() => {
+        setDismissed(true)
+        setBarOffset(0)
+        setBarAnimating(false)
+      }, 180)
+    } else {
+      setBarOffset(0)
+    }
+  }
+
+  const onBarTouchStart = (e: React.TouchEvent) => barDragStart(e.touches[0].clientY, e.target)
+  const onBarTouchMove = (e: React.TouchEvent) => barDragMove(e.touches[0].clientY)
+  const onBarTouchEnd = (e: React.TouchEvent) => barDragEnd(e.changedTouches[0].clientY)
+
+  const onBarMouseDown = (e: React.MouseEvent) => {
+    barDragStart(e.clientY, e.target)
+    if (!barDragRef.current) return
+    const onMove = (ev: MouseEvent) => barDragMove(ev.clientY)
+    const onUp = (ev: MouseEvent) => {
+      barDragEnd(ev.clientY)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  // ── Seek bar (unrelated to dismiss drag — marked data-no-drag) ───
   const seekFromX = useCallback((clientX: number) => {
     const bar = progressRef.current
     if (!bar) return
@@ -43,13 +112,13 @@ export function MiniPlayer() {
     if (mode === 'snippet') {
       seekSnippetProgress(pct)
     } else {
-      // full mode — convert pct to seconds
       if (duration > 0) playFullSeek((pct / 100) * duration)
     }
   }, [mode, duration])
 
   const onProgressMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     setDragging(true)
     seekFromX(e.clientX)
     const onMove = (ev: MouseEvent) => seekFromX(ev.clientX)
@@ -59,6 +128,7 @@ export function MiniPlayer() {
   }
 
   const onProgressTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation()
     setDragging(true)
     seekFromX(e.touches[0].clientX)
     const onMove = (ev: TouchEvent) => seekFromX(ev.touches[0].clientX)
@@ -78,10 +148,11 @@ export function MiniPlayer() {
   const fmt = (s: number) =>
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
-  // Hide when idle, on karaoke page, or on feed page
+  // Hide when idle, on karaoke page, on feed page, or user-dismissed
   if (engineState.mode === 'idle') return null
   if (pathname?.startsWith('/music/player')) return null
   if (pathname?.startsWith('/feed')) return null
+  if (dismissed) return null
 
   const isSnippet = mode === 'snippet'
   const vibeColor = vibe ? (VIBE_COLORS[vibe.toLowerCase()] || '#E8C547') : '#E8C547'
@@ -102,7 +173,7 @@ export function MiniPlayer() {
           0%, 100% { opacity: 0.9; }
           50%       { opacity: 1; text-shadow: 0 0 20px rgba(232,197,71,0.3); }
         }
-        .mp-bar { animation: riseUp 400ms cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        .mp-bar { animation: riseUp 400ms cubic-bezier(0.34,1.56,0.64,1) forwards; touch-action: pan-x; }
         .mp-sheet { animation: sheetIn 420ms cubic-bezier(0.32,0.72,0,1) forwards; }
         .mp-lyric-pulse { animation: linePulse 3s ease-in-out infinite; }
         .mp-btn { transition: opacity 150ms ease, transform 150ms ease; }
@@ -139,14 +210,28 @@ export function MiniPlayer() {
 
       {/* ── Collapsed bar ─────────────────────────────────────────── */}
       {!expanded && (
-        <div className="mp-bar margo-mp-bar" style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 90,
-          borderTop: '1px solid rgba(232,197,71,0.12)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
-        }}>
+        <div
+          className="mp-bar margo-mp-bar"
+          onTouchStart={onBarTouchStart}
+          onTouchMove={onBarTouchMove}
+          onTouchEnd={onBarTouchEnd}
+          onMouseDown={onBarMouseDown}
+          style={{
+            position: 'fixed',
+            bottom: 'var(--margo-tabbar-h, 0px)', // stacks above the tab bar — never overlaps it
+            left: 0, right: 0, zIndex: 90,
+            borderTop: '1px solid rgba(232,197,71,0.12)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            transform: `translateY(${barOffset}px)`,
+            opacity: Math.max(0, 1 - Math.max(0, barOffset) / 150),
+            transition: barAnimating ? 'transform 200ms ease, opacity 200ms ease' : 'none',
+          }}
+        >
 
           {/* Gold progress line — top edge */}
-          <div style={{ position: 'relative', minHeight: 'var(--margo-touch-min)', height: '2px', display: 'flex', alignItems: 'center', background: 'rgba(232,197,71,0.08)', cursor: 'pointer', boxSizing: 'border-box' }}
+          <div
+            data-no-drag
+            style={{ position: 'relative', minHeight: 'var(--margo-touch-min)', height: '2px', display: 'flex', alignItems: 'center', background: 'rgba(232,197,71,0.08)', cursor: 'pointer', boxSizing: 'border-box' }}
             onClick={(e) => {
               const rect = e.currentTarget.getBoundingClientRect()
               const pct = ((e.clientX - rect.left) / rect.width) * 100
@@ -279,6 +364,24 @@ export function MiniPlayer() {
                     <path d="M15.54 8.46a5 5 0 010 7.07" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </>
                 )}
+              </svg>
+            </button>
+
+            {/* Close / minimize — explicit dismiss control, paired with the drag gesture above */}
+            <button
+              className="mp-btn"
+              onClick={() => setDismissed(true)}
+              aria-label="Minimize player"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(255,255,255,0.32)',
+                minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
+                padding: '6px', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
 

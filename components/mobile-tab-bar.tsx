@@ -1,8 +1,10 @@
 'use client'
+import { useRef, useLayoutEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useNotifications } from '@/hooks/useNotifications'
+import { useAudioEngine } from '@/hooks/useAudioEngine'
 
 const font = 'var(--font-lora), serif'
 
@@ -10,6 +12,25 @@ export function MobileTabBar() {
   const pathname = usePathname()
   const { user, identity } = useIdentity()
   const { unreadCount } = useNotifications()
+  const engineState = useAudioEngine()
+  const navRef = useRef<HTMLElement | null>(null)
+
+  // Publish our real rendered height as a CSS var so anything else that
+  // stacks above the bottom of the screen (e.g. MiniPlayer) can position
+  // itself relative to us instead of guessing a fixed pixel value.
+  // On desktop this bar is display:none, so offsetHeight is 0 and the
+  // var naturally falls back to 0 — no separate desktop/mobile branching needed.
+  useLayoutEffect(() => {
+    const el = navRef.current
+    if (!el) return
+    const setVar = () => {
+      document.documentElement.style.setProperty('--margo-tabbar-h', `${el.offsetHeight}px`)
+    }
+    setVar()
+    const ro = new ResizeObserver(setVar)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const isOnFeed = pathname === '/feed'
   const isOnMusic = pathname?.startsWith('/music')
@@ -19,6 +40,8 @@ export function MobileTabBar() {
   const isSignedIn = !!user && !user.isAnonymous
   const ownProfileHref = identity ? `/profile/${identity.username}` : '/signin'
   const isOnProfile = isSignedIn && pathname === ownProfileHref
+
+  const isMusicActive = engineState.mode !== 'idle'
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -35,7 +58,7 @@ export function MobileTabBar() {
   }
 
   return (
-    <nav className="margo-mobile-tabbar" style={{
+    <nav ref={navRef} className="margo-mobile-tabbar" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
       display: 'none',
       gridTemplateColumns: 'repeat(5, 1fr)',
@@ -56,6 +79,14 @@ export function MobileTabBar() {
           <path d="M8 15a2 2 0 1 1-2-2 2 2 0 0 1 2 2Zm8-2a2 2 0 1 1-2-2 2 2 0 0 1 2 2ZM8 15V4l8-1v10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
         <span style={labelStyle}>Music</span>
+        {isMusicActive && !isOnMusic && (
+          <span style={{
+            position: 'absolute', top: '-2px', right: 'calc(50% - 14px)',
+            width: '6px', height: '6px', borderRadius: '50%',
+            background: 'var(--gold)',
+            boxShadow: '0 0 6px rgba(232,197,71,0.7)',
+          }} />
+        )}
       </Link>
 
       <Link
