@@ -6,6 +6,14 @@ import { db } from '@/lib/firebase';
 import { ref, onValue } from 'firebase/database';
 import { useIdentity } from '@/hooks/useIdentity';
 
+interface Echo {
+  lyric?: string;
+  artist?: string;
+  song?: string;
+  username?: string;
+  status?: string;
+}
+
 interface Post {
   id: string;
   text?: string;
@@ -14,9 +22,21 @@ interface Post {
   username?: string;
   timestamp?: number;
   knowledge?: { artist?: string; song?: string };
+  echoes?: Record<string, Echo>;
 }
 
-// Emotion system
+interface ExchangePair {
+  postLyric: string;
+  postSong?: string;
+  postArtist?: string;
+  postUser?: string;
+  replyLyric: string;
+  replySong?: string;
+  replyArtist?: string;
+  replyUser?: string;
+}
+
+// Emotion system (ticker only)
 const EMOTION_COLORS: Record<string,string> = {
   love:'#FF6B9D', heartbreak:'#ff6060', hope:'#7B9FFF', nostalgia:'#E8C547',
   healing:'#4ade80', joy:'#ffc847', rage:'#FF6440', loneliness:'#a0a0ff',
@@ -85,12 +105,128 @@ function TickerCard({ post }: { post: Post }) {
   );
 }
 
+// Fallback exchange — used until a real post + Lyric Back pair exists in the data.
+// Mirrors the actual exported Lyric Back card format (see MARGO_mirror_LyricBack card).
+const FALLBACK_EXCHANGE: ExchangePair = {
+  postLyric: "Keep me in your mirror but don't take your eyes off the road, holding on won't get us any nearer cause we got a long way to go…",
+  postSong: 'Mirror',
+  postArtist: 'Madison',
+  replyLyric: 'See you again.',
+  replySong: 'See You Again',
+  replyArtist: 'Wiz Khalifa',
+};
+
+function pickExchange(posts: Post[]): ExchangePair | null {
+  for (const p of posts) {
+    if (!p.echoes || !p.text) continue;
+    const activeEchoes = Object.values(p.echoes).filter(e => e && e.lyric && e.status !== 'hidden');
+    if (activeEchoes.length === 0) continue;
+    const echo = activeEchoes[0];
+    return {
+      postLyric: p.text,
+      postSong: p.knowledge?.song,
+      postArtist: p.knowledge?.artist,
+      postUser: p.username,
+      replyLyric: echo.lyric as string,
+      replySong: echo.song,
+      replyArtist: echo.artist,
+      replyUser: echo.username,
+    };
+  }
+  return null;
+}
+
+// Two chat-style bubbles — the actual mechanic, shown rather than described.
+function ExchangeBubble({ variant, lyric, meta, byline }: {
+  variant: 'gold' | 'dark';
+  lyric: string;
+  meta?: string;
+  byline?: string;
+}) {
+  const isGold = variant === 'gold';
+  const tailStyle: React.CSSProperties = {
+    position: 'absolute', bottom: '-9px', width: '18px', height: '18px',
+    background: isGold ? 'var(--gold)' : 'var(--surface-2)',
+    borderRight: isGold ? 'none' : '1px solid var(--border-hi)',
+    borderBottom: isGold ? 'none' : '1px solid var(--border-hi)',
+    transform: 'rotate(45deg)',
+    ...(isGold ? { left: '28px' } : { right: '28px' }),
+  };
+  return (
+    <div style={{
+      position: 'relative',
+      alignSelf: isGold ? 'flex-start' : 'flex-end',
+      width: '92%',
+      maxWidth: '460px',
+      background: isGold ? 'var(--gold)' : 'var(--surface-2)',
+      color: isGold ? 'var(--bg)' : 'var(--text)',
+      border: isGold ? 'none' : '1px solid var(--border-hi)',
+      borderRadius: '18px',
+      padding: '20px 24px',
+      textAlign: 'left',
+      boxSizing: 'border-box',
+    }}>
+      <p style={{
+        fontFamily: 'var(--font-lora),serif', fontStyle: 'italic',
+        fontSize: '1rem', lineHeight: 1.6, margin: 0,
+      }}>{lyric}</p>
+      {(meta || byline) && (
+        <div style={{
+          marginTop: '14px', paddingTop: '12px',
+          borderTop: `1px solid ${isGold ? 'rgba(7,6,10,0.15)' : 'var(--border)'}`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+          gap: '8px', flexWrap: 'wrap',
+        }}>
+          {meta && (
+            <span style={{
+              fontFamily: 'var(--font-lora),serif', fontSize: '0.7rem', fontWeight: 700,
+              letterSpacing: '0.5px', opacity: 0.85,
+            }}>{meta}</span>
+          )}
+          {byline && (
+            <span style={{
+              fontFamily: 'var(--font-lora),serif', fontSize: '0.7rem',
+              opacity: isGold ? 0.7 : 0.5,
+            }}>{byline}</span>
+          )}
+        </div>
+      )}
+      <div style={tailStyle} />
+    </div>
+  );
+}
+
+function Exchange({ pair, spacing = '40px' }: { pair: ExchangePair; spacing?: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing, width: '100%' }}>
+      <ExchangeBubble
+        variant="gold"
+        lyric={`"${pair.postLyric}"`}
+        meta={pair.postSong}
+        byline={[pair.postArtist, pair.postUser ? `@${pair.postUser}` : null].filter(Boolean).join(' · ')}
+      />
+      <ExchangeBubble
+        variant="dark"
+        lyric={`"${pair.replyLyric}"`}
+        meta={pair.replySong}
+        byline={[pair.replyArtist, pair.replyUser ? `@${pair.replyUser}` : null].filter(Boolean).join(' · ')}
+      />
+    </div>
+  );
+}
+
+const HOW_IT_WORKS = [
+  { n: '1', title: 'Post a lyric', text: 'Pick a line that says how you feel. Tag the vibe.' },
+  { n: '2', title: 'Get a Lyric Back', text: 'Someone replies with a line of their own.' },
+  { n: '3', title: 'Discover the artist', text: 'Follow, listen, hear the whole song.' },
+];
+
 export default function Home() {
   const router = useRouter();
   const { user, loading: identityLoading } = useIdentity();
   const [mounted, setMounted] = useState(false);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
-  const [featuredLyric, setFeaturedLyric] = useState<{text:string,artist:string,song:string} | null>(null);
+  const [featuredExchange, setFeaturedExchange] = useState<ExchangePair | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -118,10 +254,28 @@ export default function Home() {
     return () => unsub();
   }, []);
 
+  // adminConfig/featuredLyric — extended to optionally carry a `reply` object
+  // ({ text, artist, song, username }) for the curated exchange section.
+  // Renders nothing until a reply is set in the admin panel.
   useEffect(() => {
     if (!db) return;
     const unsub = onValue(ref(db, 'adminConfig/featuredLyric'), (snap) => {
-      if (snap.exists()) setFeaturedLyric(snap.val());
+      if (!snap.exists()) { setFeaturedExchange(null); return; }
+      const val = snap.val();
+      if (val?.text && val?.reply?.text) {
+        setFeaturedExchange({
+          postLyric: val.text,
+          postSong: val.song,
+          postArtist: val.artist,
+          postUser: val.username,
+          replyLyric: val.reply.text,
+          replySong: val.reply.song,
+          replyArtist: val.reply.artist,
+          replyUser: val.reply.username,
+        });
+      } else {
+        setFeaturedExchange(null);
+      }
     });
     return () => unsub();
   }, []);
@@ -131,44 +285,16 @@ export default function Home() {
   // redirected — avoids a flash of the marketing page for real users.
   if (!mounted || identityLoading || (user && !user.isAnonymous)) return null;
 
-  const liveCards = allPosts.slice(0, 4);
-
   const ac: Record<string,number> = {};
   const sc: Record<string,number> = {};
-  const ec: Record<string,number> = {};
   allPosts.forEach(p => {
     const a = p.knowledge?.artist;
     const s = p.knowledge?.song;
-    const e = p.emotion || 'Nostalgia';
     if (a && a !== 'Unknown Artist') { const k = a.trim(); ac[k] = (ac[k]||0)+1; }
     if (s && s !== 'Unknown Song')   { const k = s.trim(); sc[k] = (sc[k]||0)+1; }
-    ec[e] = (ec[e]||0)+1;
   });
-  const ae = Object.entries(ac).sort((a,b) => b[1]-a[1]);
-  const se = Object.entries(sc).sort((a,b) => b[1]-a[1]);
-  const te = Object.entries(ec).sort((a,b) => b[1]-a[1])[0];
-  const topArtist = ae[0]?.[1] >= 2 ? ae[0][0] : null;
-  const topSong = se[0]?.[1] >= 2 ? se[0][0] : null;
-  const topEmotion = te ? te[0] : null;
 
-  const stats = [
-    { number: String(allPosts.length || '0'), label: 'Lyrics', context: 'on Margo' },
-    { number: String(Object.keys(ac).length || '0'), label: 'Artists', context: 'quoted on Margo' },
-    { number: String(Object.keys(sc).length || '0'), label: 'Songs', context: 'on Margo' },
-    { value: topArtist || '—', label: 'Top Artist', context: 'most quoted' },
-    { value: topSong || '—', label: 'Top Song', context: 'most used' },
-    { value: topEmotion || '—', label: 'Top Feeling', context: 'right now' },
-  ];
-
-  const timeAgo = (ts?: number) => {
-    if (!ts) return '';
-    const diff = Date.now() - ts;
-    const m = Math.floor(diff / 60000);
-    if (m < 60) return m + 'm ago';
-    const h = Math.floor(m / 60);
-    if (h < 24) return h + 'h ago';
-    return Math.floor(h / 24) + 'd ago';
-  };
+  const heroExchange = pickExchange(allPosts) || FALLBACK_EXCHANGE;
 
   const navLink: React.CSSProperties = {
     padding: '8px 12px',
@@ -179,6 +305,25 @@ export default function Home() {
     textTransform: 'uppercase',
     color: 'var(--text-2)',
     textDecoration: 'none',
+    transition: 'all 150ms ease',
+  };
+
+  const secondaryCta: React.CSSProperties = {
+    padding: '13px 28px',
+    background: 'transparent',
+    color: 'var(--text-2)',
+    border: '1px solid var(--border-hi)',
+    borderRadius: '50px',
+    fontFamily: 'var(--font-lora),serif',
+    fontWeight: 600,
+    fontSize: '0.6rem',
+    letterSpacing: '1px',
+    textTransform: 'uppercase',
+    textDecoration: 'none',
+    minHeight: '48px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     transition: 'all 150ms ease',
   };
 
@@ -233,7 +378,7 @@ export default function Home() {
           color:'var(--text)',
           marginBottom:'16px',
         }}>
-          Say it with a song.
+          Talk in lyrics.
         </h1>
 
         <p style={{
@@ -242,13 +387,17 @@ export default function Home() {
           color:'var(--text-2)',
           lineHeight:1.7,
           maxWidth:'32rem',
-          marginBottom:'32px',
+          marginBottom:'40px',
           fontStyle:'italic',
         }}>
-          The lyric you send. The one they send back. That&apos;s Margo.
+          Send a line from a song. Someone sends one back. That&apos;s Margo.
         </p>
 
-        <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'10px', width:'100%', maxWidth:'290px', marginBottom:'32px'}}>
+        <div style={{ width: '100%', maxWidth: '520px', marginBottom: '40px' }}>
+          <Exchange pair={heroExchange} />
+        </div>
+
+        <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'10px', width:'100%', maxWidth:'290px', marginBottom:'16px'}}>
           <a href="/feed" style={{
             padding:'17px 28px',
             background:'var(--gold)',
@@ -268,47 +417,40 @@ export default function Home() {
             boxShadow:'0 6px 28px rgba(232,197,71,0.28)',
             transition:'all 150ms ease',
           }}>See What&apos;s Live</a>
-          <a href="/compose" style={{
-            padding:'13px 28px',
-            background:'transparent',
-            color:'var(--text-2)',
-            border:'1px solid var(--border-hi)',
-            borderRadius:'50px',
-            fontFamily:'var(--font-lora),serif',
-            fontWeight:600,
-            fontSize:'0.6rem',
-            letterSpacing:'1px',
-            textTransform:'uppercase',
-            textDecoration:'none',
-            minHeight:'48px',
-            width:'100%',
-            display:'flex',
-            alignItems:'center',
-            justifyContent:'center',
-            transition:'all 150ms ease',
-          }}>Share a Lyric</a>
+          <a href="/compose" style={{ ...secondaryCta, width: '100%' }}>Share a Lyric</a>
         </div>
       </section>
 
-      {/* Featured Lyric */}
-      {featuredLyric && (
-        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'48rem', margin:'0 auto 24px'}}>
-          <div style={{
-            background:'var(--surface)',
-            border:'1px solid var(--gold-border)',
-            borderRadius:'16px',
-            padding:'40px 32px',
-            textAlign:'center',
-          }}>
-            <p style={{fontFamily:'var(--font-lora),serif', fontStyle:'italic', fontSize:'1.5rem', color:'var(--text)', lineHeight:1.6, marginBottom:'16px'}}>
-              &ldquo;{featuredLyric.text}&rdquo;
-            </p>
-            <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.82rem', color:'var(--gold)', letterSpacing:'0.5px'}}>
-              — {featuredLyric.artist}{featuredLyric.song ? ` · ${featuredLyric.song}` : ''}
-            </p>
-          </div>
+      {/* How It Works */}
+      <section style={{position:'relative', zIndex:5, maxWidth:'56rem', margin:'0 auto', padding:'24px 24px 56px'}}>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'32px'}}>
+          {HOW_IT_WORKS.map(step => (
+            <div key={step.n} style={{textAlign:'center'}}>
+              <div style={{
+                width:'40px', height:'40px', borderRadius:'50%',
+                background:'var(--gold-faint)', border:'1px solid var(--gold-border)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                margin:'0 auto 16px',
+                fontFamily:'var(--font-lora),serif', fontWeight:700, color:'var(--gold)',
+              }}>{step.n}</div>
+              <h3 style={{fontFamily:'var(--font-lora),serif', fontSize:'1rem', fontWeight:600, color:'var(--text)', marginBottom:'8px'}}>{step.title}</h3>
+              <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.8rem', color:'var(--text-2)', lineHeight:1.6}}>{step.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Divider */}
+      <div style={{height:'1px', background:'linear-gradient(to right, transparent, var(--border), transparent)', margin:'0 0 48px'}} />
+
+      {/* Featured Exchange — curated, only renders once a reply is set in adminConfig/featuredLyric */}
+      {featuredExchange && (
+        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'40rem', margin:'0 auto 48px'}}>
+          <div style={{fontSize:'0.6rem', color:'var(--text-3)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>Exchange of the Week</div>
+          <Exchange pair={featuredExchange} spacing="32px" />
         </section>
       )}
+
       {/* Lyric Stream */}
       <section style={{position:'relative', zIndex:5, width:'100%', margin:'0 auto 32px', overflow:'hidden'}}>
         <div style={{fontSize:'0.6rem', color:'var(--text-3)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>↓ What people are saying right now</div>
@@ -340,26 +482,31 @@ export default function Home() {
         `}</style>
       </section>
 
-      {/* Divider */}
-      <div style={{height:'1px', background:'linear-gradient(to right, transparent, var(--border), transparent)', margin:'32px 0'}} />
+      {/* Discover Artists teaser */}
+      <section style={{position:'relative', zIndex:5, textAlign:'center', padding:'0 24px 56px', maxWidth:'40rem', margin:'0 auto'}}>
+        <h2 style={{fontFamily:'var(--font-lora),serif', fontSize:'1.5rem', fontWeight:600, color:'var(--text)', marginBottom:'12px'}}>
+          Real songs. Real independent artists.
+        </h2>
+        <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.9rem', color:'var(--text-2)', lineHeight:1.7, marginBottom:'24px'}}>
+          Every lyric on Margo comes from a real song — including original music from independent artists you won&apos;t find anywhere else yet.
+        </p>
+        <a href="/music" style={secondaryCta}>Discover Artists</a>
+      </section>
 
-      {/* Stats */}
-      <section style={{position:'relative', zIndex:5, maxWidth:'80rem', margin:'0 auto', padding:'0 24px 48px'}}>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'0'}}>
-          {stats.map((stat, idx) => (
-            <div key={idx} style={{
-              display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center',
-              padding:'16px 8px',
-              borderRight: idx % 3 !== 2 ? '1px solid var(--border)' : 'none',
-              borderBottom: idx < 3 ? '1px solid var(--border)' : 'none',
-            }}>
-              {stat.number ? (
-                <div style={{fontFamily:'var(--font-lora),serif', fontSize:'2rem', fontWeight:700, color:'var(--text)', lineHeight:1, marginBottom:'8px'}}>{stat.number}</div>
-              ) : (
-                <div style={{fontFamily:'var(--font-lora),serif', fontSize:'1.1rem', fontWeight:700, color:'var(--gold)', lineHeight:1, marginBottom:'8px', textTransform:'uppercase', letterSpacing:'1px'}}>{stat.value}</div>
-              )}
-              <div style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', fontWeight:700, color:'var(--text-3)', letterSpacing:'2px', textTransform:'uppercase', marginBottom:'4px'}}>{stat.label}</div>
-              <div style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', color:'var(--text-2)', letterSpacing:'0.5px'}}>{stat.context}</div>
+      {/* Divider */}
+      <div style={{height:'1px', background:'linear-gradient(to right, transparent, var(--border), transparent)', margin:'0 0 40px'}} />
+
+      {/* Stats — simple counts only, no dashboard framing */}
+      <section style={{position:'relative', zIndex:5, maxWidth:'56rem', margin:'0 auto', padding:'0 24px 56px'}}>
+        <div style={{display:'flex', justifyContent:'center', gap:'56px', flexWrap:'wrap'}}>
+          {[
+            { n: allPosts.length, label: 'Lyrics' },
+            { n: Object.keys(ac).length, label: 'Artists' },
+            { n: Object.keys(sc).length, label: 'Songs' },
+          ].map(stat => (
+            <div key={stat.label} style={{textAlign:'center'}}>
+              <div style={{fontFamily:'var(--font-lora),serif', fontSize:'2rem', fontWeight:700, color:'var(--text)', lineHeight:1}}>{stat.n || '0'}</div>
+              <div style={{fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', fontWeight:700, color:'var(--text-3)', letterSpacing:'2px', textTransform:'uppercase', marginTop:'8px'}}>{stat.label}</div>
             </div>
           ))}
         </div>
