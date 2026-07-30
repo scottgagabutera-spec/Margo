@@ -24,6 +24,17 @@ export interface ThreadPartner {
  * and `otherUsername`, and determines send permission from the other
  * person's `who_can_message` setting (everyone / followers / no_one).
  *
+ * canSend here is a client-side UX signal only (disables the Send
+ * button early) — the real enforcement is the can_message() function
+ * inside the messages table's RLS insert policy, so a direct API call
+ * can't bypass this setting even if this client-side check were wrong
+ * or skipped.
+ *
+ * "followers" means the SENDER must follow the RECIPIENT — checking
+ * follower_id = sender, followee_id = recipient. An earlier version
+ * of this had the two swapped, which checked the reverse relationship
+ * and could both wrongly allow and wrongly block real cases.
+ *
  * The realtime effect depends on `userId` (a stable primitive), not
  * the `user` object itself — see useUnreadMessagesCount.ts for the
  * full explanation of why depending on the object reference caused
@@ -65,11 +76,6 @@ export function useThread(otherUsername: string) {
       return
     }
 
-    // Captured as its own const right after the null check — TS narrows
-    // `userId` inside this effect body, but that narrowing doesn't
-    // survive into the nested `run` function below, since it's a
-    // separate function scope. `uid` is a plain string, so no
-    // narrowing issue there.
     const uid = userId
 
     let active = true
@@ -104,8 +110,8 @@ export function useThread(otherUsername: string) {
         const { data: f } = await supabase
           .from('follows')
           .select('status')
-          .eq('follower_id', other.id)
-          .eq('followee_id', uid)
+          .eq('follower_id', uid)
+          .eq('followee_id', other.id)
           .maybeSingle()
         if (active) setCanSend(f?.status === 'accepted')
       } else {

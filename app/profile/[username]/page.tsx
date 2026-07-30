@@ -121,21 +121,34 @@ export default function ProfilePage() {
     await supabase.auth.signOut()
   }
 
-  // Mutual-accept follow model: a first click sends a pending request;
-  // clicking again while pending cancels it; clicking while already
-  // accepted unfollows. There's no accept/decline inbox for incoming
-  // requests yet — that's a separate piece of UI still to build.
+  // Mutual-accept follow model: a first click sends a request. The
+  // database (set_follow_status trigger) decides the actual resulting
+  // status — 'accepted' immediately for public profiles, 'pending' for
+  // private ones — so the client reads back what the trigger set
+  // rather than assuming 'pending'. Clicking again while pending
+  // cancels the request; clicking while already accepted unfollows.
+  // There's no accept/decline inbox for incoming requests yet on this
+  // page — that lives in notifications.
   const handleFollowClick = async () => {
     if (!user || !profile || followBusy) return
     setFollowBusy(true)
     try {
       if (followStatus === null) {
-        const { error } = await supabase.from('follows').insert({
-          follower_id: user.id,
-          followee_id: profile.id,
-          status: 'pending',
-        })
-        if (!error) setFollowStatus('pending')
+        const { data, error } = await supabase
+          .from('follows')
+          .insert({
+            follower_id: user.id,
+            followee_id: profile.id,
+          })
+          .select('status')
+          .single()
+        if (!error && data) {
+          const resultStatus = data.status as FollowStatus
+          setFollowStatus(resultStatus)
+          if (resultStatus === 'accepted') {
+            setFollowerCount(c => (c !== null ? c + 1 : c))
+          }
+        }
       } else {
         const { error } = await supabase.from('follows')
           .delete()
