@@ -484,7 +484,6 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
     setGeneratingSRT(true)
     setSrtStatus('Reading audio with Whisper AI — ~30 seconds…')
     try {
-      // Whisper runs FIRST — nothing saved to Firebase until it succeeds
       const res = await fetch('/api/whisper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -495,7 +494,6 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
         setSrtStatus('✗ ' + (data.error || 'Failed — audio must be MP3 under 25MB'))
         return
       }
-      // Only save to Firebase after Whisper succeeds
       setSrtStatus('Lyrics ready — saving song…')
       const payload = { ...form, srt: data.srt } as any
       delete payload.id
@@ -576,7 +574,6 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
     <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(232,197,71,0.2)', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
       <h3 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--gold)', marginBottom: '20px' }}>{song?.id ? 'Edit Song' : 'Add Song'}</h3>
       
-      {/* Core fields — always visible */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
         {field('Title', 'title', 'text', 'Song title')}
         {field('Artist', 'artist', 'text', 'Artist name')}
@@ -593,7 +590,6 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
       {field('Audio URL (R2)', 'audioUrl', 'text', 'https://audio.trymargo.com/Margo/audio/filename.wav')}
       {field('Artwork URL', 'artwork', 'text', 'https://…')}
 
-      {/* Generate SRT button */}
       <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.15)', borderRadius: '12px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px', marginBottom: '12px' }}>
           <div><label style={S.label}>Language</label><select value={whisperLang} onChange={e => setWhisperLang(e.target.value)} style={{ ...S.input, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', color: 'var(--text)', colorScheme: 'dark' }}><option value="auto">Auto-detect</option><optgroup label="── African"><option value="zu">Zulu</option><option value="af">Afrikaans</option><option value="am">Amharic</option><option value="ha">Hausa</option><option value="ig">Igbo</option><option value="rw">Kinyarwanda</option><option value="mg">Malagasy</option><option value="sn">Shona</option><option value="so">Somali</option><option value="st">Sesotho</option><option value="sw">Swahili</option><option value="xh">Xhosa</option><option value="yo">Yoruba</option></optgroup><optgroup label="── Asian / Pacific"><option value="tl">Filipino / Tagalog</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="hi">Hindi</option><option value="bn">Bengali</option><option value="id">Indonesian</option><option value="ms">Malay</option><option value="th">Thai</option><option value="vi">Vietnamese</option><option value="km">Khmer</option><option value="lo">Lao</option><option value="my">Burmese</option><option value="ne">Nepali</option><option value="si">Sinhala</option><option value="ta">Tamil</option><option value="te">Telugu</option><option value="ur">Urdu</option></optgroup><optgroup label="── European"><option value="en">English</option><option value="pt">Portuguese</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="nl">Dutch</option><option value="pl">Polish</option><option value="ro">Romanian</option><option value="ru">Russian</option><option value="tr">Turkish</option><option value="uk">Ukrainian</option><option value="cs">Czech</option><option value="sk">Slovak</option><option value="hr">Croatian</option><option value="bg">Bulgarian</option><option value="el">Greek</option><option value="fi">Finnish</option><option value="hu">Hungarian</option><option value="no">Norwegian</option><option value="sv">Swedish</option><option value="da">Danish</option></optgroup><optgroup label="── Middle East / Central Asia"><option value="ar">Arabic</option><option value="he">Hebrew</option><option value="fa">Persian</option><option value="az">Azerbaijani</option><option value="kk">Kazakh</option><option value="uz">Uzbek</option></optgroup></select></div>
@@ -613,7 +609,6 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
         {srtStatus && <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: srtStatus.startsWith('✓') ? '#4ade80' : '#ff6060', margin: 0 }}>{srtStatus}</p>}
       </div>
 
-      {/* Tag Vibes block */}
       {(form.srt && song?.id) && (
         <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(232,197,71,0.03)', border: '1px solid rgba(232,197,71,0.1)', borderRadius: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: vibeStatus ? '10px' : '0' }}>
@@ -629,7 +624,6 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
         </div>
       )}
 
-      {/* Streaming links — collapsed */}
       <button onClick={() => setShowStreaming(s => !s)} style={{ ...S.ghostBtn, width: '100%', textAlign: 'left', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
         <span>Streaming Links</span>
         <span>{showStreaming ? '▲' : '▼'}</span>
@@ -654,7 +648,6 @@ function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSa
         </div>
       )}
 
-      {/* Lyrics — collapsed unless SRT exists */}
       <button onClick={() => setShowLyrics(s => !s)} style={{ ...S.ghostBtn, width: '100%', textAlign: 'left', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
         <span>Lyrics {form.srt ? '✓' : ''}</span>
         <span>{showLyrics ? '▲' : '▼'}</span>
@@ -818,16 +811,33 @@ function LicensedTab() {
 
 // ── Featured Tab ──
 function FeaturedTab() {
-  const [form, setForm] = useState({ text: '', artist: '', song: '' })
+  const empty = { text: '', artist: '', song: '', username: '', reply: { text: '', artist: '', song: '', username: '' } }
+  const [form, setForm] = useState(empty)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (!db) return
     get(ref(db, 'adminConfig/featuredLyric')).then(snap => {
-      if (snap.exists()) setForm(snap.val())
+      if (snap.exists()) {
+        const val = snap.val()
+        setForm({
+          text: val.text || '',
+          artist: val.artist || '',
+          song: val.song || '',
+          username: val.username || '',
+          reply: {
+            text: val.reply?.text || '',
+            artist: val.reply?.artist || '',
+            song: val.reply?.song || '',
+            username: val.reply?.username || '',
+          },
+        })
+      }
     })
   }, [])
+
+  const setReply = (k: string, v: string) => setForm(f => ({ ...f, reply: { ...f.reply, [k]: v } }))
 
   const save = async () => {
     if (!db) return
@@ -837,32 +847,64 @@ function FeaturedTab() {
     setTimeout(() => setSaved(false), 2000)
   }
 
+  const canSave = form.text.trim() && form.reply.text.trim()
+
   return (
     <div style={{ maxWidth: '560px' }}>
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '24px', lineHeight: 1.6 }}>
-        The featured lyric appears on the landing page hero. Update it anytime.
+        Appears on the landing page as "Exchange of the Week." Stays hidden until both the original lyric and the reply are filled in.
       </p>
+
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>Original Post</p>
       <div style={{ marginBottom: '14px' }}>
         <label style={S.label}>Lyric</label>
         <textarea value={form.text} onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
-          rows={3} placeholder="Enter the lyric…"
-          style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} />
+          rows={3} placeholder="Enter the lyric…" style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px', marginBottom: '14px' }}>
         <div>
           <label style={S.label}>Artist</label>
-          <input value={form.artist} onChange={e => setForm(f => ({ ...f, artist: e.target.value }))}
-            placeholder="Artist name" style={S.input} />
+          <input value={form.artist} onChange={e => setForm(f => ({ ...f, artist: e.target.value }))} placeholder="Artist name" style={S.input} />
         </div>
         <div>
           <label style={S.label}>Song</label>
-          <input value={form.song} onChange={e => setForm(f => ({ ...f, song: e.target.value }))}
-            placeholder="Song title" style={S.input} />
+          <input value={form.song} onChange={e => setForm(f => ({ ...f, song: e.target.value }))} placeholder="Song title" style={S.input} />
         </div>
       </div>
-      <button onClick={save} disabled={saving} style={{ ...S.btn, opacity: saving ? 0.6 : 1 }}>
-        {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save Featured Lyric'}
+      <div style={{ marginBottom: '28px' }}>
+        <label style={S.label}>Posted by (optional)</label>
+        <input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="username" style={S.input} />
+      </div>
+
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>Reply (Lyric Back)</p>
+      <div style={{ marginBottom: '14px' }}>
+        <label style={S.label}>Lyric</label>
+        <textarea value={form.reply.text} onChange={e => setReply('text', e.target.value)}
+          rows={3} placeholder="Enter the reply lyric…" style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px', marginBottom: '14px' }}>
+        <div>
+          <label style={S.label}>Artist</label>
+          <input value={form.reply.artist} onChange={e => setReply('artist', e.target.value)} placeholder="Artist name" style={S.input} />
+        </div>
+        <div>
+          <label style={S.label}>Song</label>
+          <input value={form.reply.song} onChange={e => setReply('song', e.target.value)} placeholder="Song title" style={S.input} />
+        </div>
+      </div>
+      <div style={{ marginBottom: '20px' }}>
+        <label style={S.label}>Replied by (optional)</label>
+        <input value={form.reply.username} onChange={e => setReply('username', e.target.value)} placeholder="username" style={S.input} />
+      </div>
+
+      <button onClick={save} disabled={saving || !canSave} style={{ ...S.btn, opacity: (saving || !canSave) ? 0.6 : 1 }}>
+        {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save Featured Exchange'}
       </button>
+      {!canSave && (
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', marginTop: '10px' }}>
+          Both lyrics are required — the section stays hidden on the landing page until then.
+        </p>
+      )}
     </div>
   )
 }
@@ -950,7 +992,6 @@ export default function AdminPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '100px 24px 80px' }}>
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <BackButton fallbackHref="/feed" />
@@ -961,13 +1002,11 @@ export default function AdminPage() {
           </div>
           <button onClick={() => auth && signOut(auth)} style={S.ghostBtn}>Sign Out</button>
         </div>
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '28px' }}>
           {tabs.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={S.tab(tab === t.key)}>{t.label}</button>
           ))}
         </div>
-        {/* Content */}
         {tab === 'posts'    && <PostsTab />}
         {tab === 'music' && <MusicTab key="music" />}
         {tab === 'licensed' && <LicensedTab />}
