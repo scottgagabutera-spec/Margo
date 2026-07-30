@@ -299,25 +299,6 @@ export default function Home() {
     transition: 'all 150ms ease',
   };
 
-  const secondaryCta: React.CSSProperties = {
-    padding: '13px 28px',
-    background: 'transparent',
-    color: 'var(--text-2)',
-    border: '1px solid var(--border-hi)',
-    borderRadius: '50px',
-    fontFamily: 'var(--font-lora),serif',
-    fontWeight: 600,
-    fontSize: '0.6rem',
-    letterSpacing: '1px',
-    textTransform: 'uppercase',
-    textDecoration: 'none',
-    minHeight: '48px',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 150ms ease',
-  };
-
   return (
     <div style={{position:'relative', width:'100%', overflow:'hidden', background:'var(--bg)'}}>
       {/* Ambient */}
@@ -395,7 +376,6 @@ export default function Home() {
             boxShadow:'0 6px 28px rgba(232,197,71,0.28)',
             transition:'all 150ms ease',
           }}>See What&apos;s Live</a>
-          <a href="/compose" style={{ ...secondaryCta, width: '100%' }}>Share a Lyric</a>
         </div>
       </section>
 
@@ -465,10 +445,9 @@ export default function Home() {
         <h2 style={{fontFamily:'var(--font-lora),serif', fontSize:'1.5rem', fontWeight:600, color:'var(--text)', marginBottom:'12px'}}>
           There&apos;s more where that came from.
         </h2>
-        <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.9rem', color:'var(--text-2)', lineHeight:1.7, marginBottom:'24px'}}>
+        <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.9rem', color:'var(--text-2)', lineHeight:1.7}}>
           Browse original songs from independent artists on Margo.
         </p>
-        <a href="/music" style={secondaryCta}>Explore Music</a>
       </section>
 
       {/* Footer */}
