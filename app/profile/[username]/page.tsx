@@ -24,6 +24,7 @@ interface ProfileData {
   signatureLyric: string | null
   signatureSong: string | null
   signatureArtist: string | null
+  isPrivate: boolean
 }
 
 type FollowStatus = null | 'pending' | 'accepted'
@@ -47,7 +48,7 @@ export default function ProfilePage() {
     setNotFound(false)
     supabase
       .from('profiles')
-      .select('id, username, display_name, is_artist, bio, avatar_url, signature_lyric, signature_song, signature_artist')
+      .select('id, username, display_name, is_artist, bio, avatar_url, signature_lyric, signature_song, signature_artist, is_private')
       .eq('username', params.username)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -67,6 +68,7 @@ export default function ProfilePage() {
           signatureLyric: data.signature_lyric,
           signatureSong: data.signature_song,
           signatureArtist: data.signature_artist,
+          isPrivate: !!data.is_private,
         })
         setLoading(false)
 
@@ -109,6 +111,12 @@ export default function ProfilePage() {
     () => profile ? posts.filter(p => p.authorUid === profile.id) : [],
     [posts, profile]
   )
+
+  // Giants-style privacy: identity (avatar, name, bio, counts) always
+  // shows. Content (their lyrics) is locked to non-followers on a
+  // private profile — owner and accepted followers see it, everyone
+  // else sees a locked message instead of the actual posts.
+  const canViewContent = !profile?.isPrivate || isOwnProfile || followStatus === 'accepted'
 
   const applicationStatus = application?.status ?? 'none'
   const showApplyCTA = isOwnProfile && !identity?.isArtist
@@ -214,9 +222,19 @@ export default function ProfilePage() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
               <div>
-                <h1 style={{ fontFamily: font, fontSize: '1.4rem', color: 'var(--text)', marginBottom: '4px' }}>
-                  {profile.displayName}
-                </h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <h1 style={{ fontFamily: font, fontSize: '1.4rem', color: 'var(--text)' }}>
+                    {profile.displayName}
+                  </h1>
+                  {profile.isPrivate && (
+                    <span style={{
+                      fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                      letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 8px',
+                      borderRadius: '50px', background: 'var(--surface-2)',
+                      border: '1px solid var(--border)', color: 'var(--text-3)',
+                    }}>Private</span>
+                  )}
+                </div>
                 <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>
                   @{profile.username}
                 </p>
@@ -237,21 +255,34 @@ export default function ProfilePage() {
               )}
 
               {!isOwnProfile && user && (
-                <button
-                  type="button"
-                  onClick={handleFollowClick}
-                  disabled={followBusy}
-                  style={{
-                    minHeight: 'var(--margo-touch-min)', padding: '0 26px',
-                    display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                    background: followStatus ? 'transparent' : 'var(--gold)',
-                    color: followStatus ? 'var(--text-2)' : 'var(--bg)',
-                    border: followStatus ? '1px solid var(--border)' : 'none',
-                    borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.9rem',
-                    cursor: followBusy ? 'not-allowed' : 'pointer', flexShrink: 0,
-                    opacity: followBusy ? 0.7 : 1,
-                  }}
-                >{followLabel}</button>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                  <Link
+                    href={`/messages/${profile.username}`}
+                    style={{
+                      minHeight: 'var(--margo-touch-min)', padding: '0 22px',
+                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                      background: 'transparent', color: 'var(--text-2)',
+                      border: '1px solid var(--border)', borderRadius: '50px',
+                      fontFamily: font, fontWeight: 700, fontSize: '0.9rem',
+                      textDecoration: 'none', cursor: 'pointer',
+                    }}
+                  >Message</Link>
+                  <button
+                    type="button"
+                    onClick={handleFollowClick}
+                    disabled={followBusy}
+                    style={{
+                      minHeight: 'var(--margo-touch-min)', padding: '0 26px',
+                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                      background: followStatus ? 'transparent' : 'var(--gold)',
+                      color: followStatus ? 'var(--text-2)' : 'var(--bg)',
+                      border: followStatus ? '1px solid var(--border)' : 'none',
+                      borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.9rem',
+                      cursor: followBusy ? 'not-allowed' : 'pointer',
+                      opacity: followBusy ? 0.7 : 1,
+                    }}
+                  >{followLabel}</button>
+                </div>
               )}
             </div>
 
@@ -320,7 +351,19 @@ export default function ProfilePage() {
 
             <div style={{ marginBottom: '28px' }}>
               <p style={sectionLabelStyle}>{isOwnProfile ? 'Your Lyrics' : 'Lyrics'}</p>
-              {ownPosts.length === 0 ? (
+              {!canViewContent ? (
+                <div style={{
+                  border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
+                  textAlign: 'center',
+                }}>
+                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic', marginBottom: '4px' }}>
+                    This account is private.
+                  </p>
+                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>
+                    Follow {profile.displayName} to see their lyrics.
+                  </p>
+                </div>
+              ) : ownPosts.length === 0 ? (
                 isOwnProfile ? (
                   <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic', textDecoration: 'none' }}>
                     Share your first lyric →

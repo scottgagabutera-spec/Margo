@@ -558,6 +558,11 @@ export default function FeedPage() {
     return () => unsub()
   }, [])
 
+  // Privacy filtering (private authors hidden from non-followers) now
+  // happens once, inside usePosts() itself — it delegates to the same
+  // useVisibleAuthorIds hook the profile page relies on. `posts` here
+  // is already the filtered set; no second filter needed.
+
   const getEngagement = (post: Post) => {
     const s = postStats[post.id] || {}
     return (s.views || 0) + ((s.resonateCount || 0) * 4) + ((s.echoCount || 0) * 5)

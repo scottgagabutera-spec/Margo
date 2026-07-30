@@ -1,7 +1,9 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { db } from '@/lib/firebase'
 import { ref, query, orderByChild, limitToLast, onValue } from 'firebase/database'
+import { useVisibleAuthorIds } from '@/hooks/useVisibleAuthorIds'
+
 export interface Post {
   id: string
   text?: string
@@ -18,9 +20,11 @@ export interface Post {
   songId?: string | null
   audioUrl?: string | null
 }
+
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+
   useEffect(() => {
     if (!db) { setLoading(false); return }
     const postsRef = query(ref(db, 'posts'), orderByChild('timestamp'), limitToLast(200))
@@ -36,5 +40,18 @@ export function usePosts() {
     })
     return () => unsub()
   }, [])
-  return { posts, loading }
+
+  // Single source of truth for privacy filtering — same hook the feed
+  // page and any other consumer use, scoped to only the authors present
+  // in this batch rather than fetching every private profile in the app.
+  // This is a display-layer fix only; it does not replace Firebase
+  // security rules, which still need to enforce this at the data layer.
+  const authorUids = useMemo(() => posts.map(p => p.authorUid), [posts])
+  const visibleAuthorIds = useVisibleAuthorIds(authorUids)
+
+  const visiblePosts = useMemo(() => {
+    return posts.filter(p => !p.authorUid || visibleAuthorIds.has(p.authorUid))
+  }, [posts, visibleAuthorIds])
+
+  return { posts: visiblePosts, loading }
 }
