@@ -5,7 +5,7 @@ import { getDatabase } from 'firebase/database'
 import { app } from '@/lib/firebase'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { ref, onValue, update, remove, push, set, get, runTransaction } from 'firebase/database'
-import { ArtistsTab } from '@/components/artists-tab'
+import { ArtistApplicationsTab } from '@/components/artist-applications-tab'
 import { BackButton } from '@/components/back-button'
 
 // ── Types ──
@@ -1012,7 +1012,7 @@ export default function AdminPage() {
         {tab === 'licensed' && <LicensedTab />}
         {tab === 'featured' && <FeaturedTab />}
         {tab === 'pages'    && <PagesTab />}
-        {tab === 'artists'  && <ArtistsTab />}
+        {tab === 'artists'  && <ArtistApplicationsTab />}
       </div>
     </div>
   )
