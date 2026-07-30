@@ -312,7 +312,6 @@ export default function Home() {
         position:'relative', zIndex:10,
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'16px 40px',
-        borderBottom:'1px solid var(--border)',
       }}>
         <a href="/" style={{textDecoration:'none'}}>
           <MargoLogo tier="symbol" size={32} rings wordmark />
@@ -398,12 +397,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Divider */}
-      <div style={{height:'1px', background:'linear-gradient(to right, transparent, var(--border), transparent)', margin:'0 0 48px'}} />
-
       {/* Featured Exchange — curated, only renders once a reply is set in adminConfig/featuredLyric */}
       {featuredExchange && (
-        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'40rem', margin:'0 auto 48px'}}>
+        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'40rem', margin:'0 auto 56px'}}>
           <div style={{fontSize:'0.6rem', color:'var(--text-3)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>Exchange of the Week</div>
           <Exchange pair={featuredExchange} spacing="32px" />
         </section>
@@ -453,21 +449,23 @@ export default function Home() {
       {/* Footer */}
       <footer style={{
         position:'relative', zIndex:10,
-        borderTop:'1px solid var(--border)',
-        padding:'24px 40px',
-        display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'center', gap:'24px',
+        padding:'56px 40px var(--margo-page-padding-bottom)',
+        display:'flex', flexDirection:'column', alignItems:'center', gap:'20px',
       }}>
-        <div style={{display:'flex', alignItems:'center', gap:'24px'}}>
+        <div style={{display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'center', gap:'8px'}}>
           {['About','Privacy','Terms','Contact'].map(link => (
             <a key={link} href={`/${link.toLowerCase()}`} style={{
-              fontSize:'0.6rem', color:'var(--text-3)',
+              fontSize:'1rem', color:'var(--text)',
               fontFamily:'var(--font-lora),serif',
-              letterSpacing:'1px', textTransform:'uppercase',
+              letterSpacing:'0.5px',
               textDecoration:'none', transition:'color 150ms ease',
+              padding:'10px 16px', minHeight:'44px',
+              display:'inline-flex', alignItems:'center', justifyContent:'center',
+              boxSizing:'border-box',
             }}>{link}</a>
           ))}
         </div>
-        <div style={{fontSize:'0.6rem', color:'var(--text-3)', fontFamily:'var(--font-lora),serif', letterSpacing:'1px'}}>© {new Date().getFullYear()} Margo</div>
+        <div style={{fontSize:'0.7rem', color:'var(--text-2)', fontFamily:'var(--font-lora),serif', letterSpacing:'1px'}}>© {new Date().getFullYear()} Margo</div>
       </footer>
     </div>
   );
