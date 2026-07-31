@@ -20,17 +20,12 @@ interface LyricLine {
   end: number
 }
 
-function parseLyrics(raw: unknown): LyricLine[] {
-  if (Array.isArray(raw)) return raw as LyricLine[]
-  return []
-}
-
 function PlayerContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const songId = searchParams.get('id')
   const earlyAudioUrl = searchParams.get('au')
-  const { song, lyrics: realLyrics, loading } = useSong(songId)
+  const { song, lyrics, loading } = useSong(songId)
   const { songs } = useSongs()
   const { requireAuth } = useAuthGate()
 
@@ -40,8 +35,7 @@ function PlayerContent() {
   const isPlaying = engineState.playing && engineState.songId === songId
   const isBuffering = engineState.buffering && engineState.songId === songId
 
-  const lyrics: LyricLine[] = realLyrics.length > 0 ? realLyrics : parseLyrics(song?.lyrics)
-  const duration = (song as any)?.duration || 180
+  const duration = song?.durationSec || 180
 
   const [currentLyricIndex, setCurrentLyricIndex] = useState(0)
   const [shareOpen, setShareOpen] = useState(false)
@@ -51,10 +45,10 @@ function PlayerContent() {
   const [showTapOverlay, setShowTapOverlay] = useState(true)
   const [songEnded, setSongEnded] = useState(false)
   const [endedTitle, setEndedTitle] = useState('')
-  const audioUrl = earlyAudioUrl || (song as any)?.audioUrl
-  const songTitle = (song as any)?.title || ''
-  const songArtist = (song as any)?.artist || ''
-  const songArtwork = (song as any)?.artwork ?? null
+  const audioUrl = earlyAudioUrl || song?.audioUrl
+  const songTitle = song?.title || ''
+  const songArtist = song?.artist || ''
+  const songArtwork = song?.artwork ?? null
 
   const lyricRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -121,7 +115,7 @@ function PlayerContent() {
       !songEnded
     ) {
       setSongEnded(true)
-      setEndedTitle((song as any)?.title || '')
+      setEndedTitle(song?.title || '')
       setTrayOpen(true)
     }
   }, [engineState.mode, engineState.songId, songId, songEnded, song])
@@ -192,7 +186,7 @@ function PlayerContent() {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
   const currentLyric = lyrics.find(l => l.id === currentLyricIndex)
-  const composeUrl = `/compose?lyric=${encodeURIComponent(currentLyric?.line || '')}&song=${encodeURIComponent((song as any)?.title || '')}&artist=${encodeURIComponent((song as any)?.artist || '')}&artwork=${encodeURIComponent((song as any)?.artwork || '')}&songId=${encodeURIComponent(songId || '')}&audioUrl=${encodeURIComponent((song as any)?.audioUrl || '')}`
+  const composeUrl = `/compose?lyric=${encodeURIComponent(currentLyric?.line || '')}&song=${encodeURIComponent(song?.title || '')}&artist=${encodeURIComponent(song?.artist || '')}&artwork=${encodeURIComponent(song?.artwork || '')}&songId=${encodeURIComponent(songId || '')}&audioUrl=${encodeURIComponent(song?.audioUrl || '')}`
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -261,8 +255,8 @@ function PlayerContent() {
         <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link href="/music" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text)', textDecoration: 'none', opacity: 0.75, letterSpacing: '0.5px' }}>← Music</Link>
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{(song as any)?.title || '—'}</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>{(song as any)?.artist || '—'}</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{song?.title || '—'}</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>{song?.artist || '—'}</p>
           </div>
           <div style={{ width: '60px' }} />
         </div>
@@ -418,7 +412,7 @@ function PlayerContent() {
           <div className="share-sheet">
             <div className="share-pill" />
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1rem', color: 'var(--gold)', textAlign: 'center', marginBottom: '6px', lineHeight: 1.5 }}>"{currentLyric?.line}"</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-3)', textAlign: 'center', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '24px' }}>{(song as any)?.title} · {(song as any)?.artist}</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-3)', textAlign: 'center', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '24px' }}>{song?.title} · {song?.artist}</p>
             <Link href={composeUrl} className="share-option" onClick={() => setShareOpen(false)}>
               <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>✦</div>
               <div>
@@ -449,8 +443,8 @@ function PlayerContent() {
         open={cardExportOpen}
         onOpenChange={setCardExportOpen}
         lyric={currentLyric?.line || ''}
-        song={(song as any)?.title || ''}
-        artist={(song as any)?.artist || ''}
+        song={song?.title || ''}
+        artist={song?.artist || ''}
       />
     </div>
   )

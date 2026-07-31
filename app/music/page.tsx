@@ -11,6 +11,7 @@ import { HeartIcon } from '@/components/heart-icon'
 import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { supabase } from '@/lib/supabase'
 
 
 function formatNum(n: number): string {
@@ -166,30 +167,20 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
   const playingRef = useRef(false) // rapid-tap guard
   const CYCLE_MS = 5500
 
-  // Build all moments from songs with lineVibes
+  // Build all moments directly from each song's structured lyricLines —
+  // no SRT parsing needed anymore, the schema already gives us real rows.
   useEffect(() => {
     const moments: LyricMoment[] = []
     songs.forEach(song => {
-      const lineVibes = (song as any).lineVibes as Record<string, string[]> | undefined
-      if (!lineVibes || !song.srt) return
-      const blocks = song.srt.trim().split(/\n\s*\n/)
-      blocks.forEach((block, i) => {
-        const parts = block.trim().split('\n')
-        if (parts.length < 3) return
-        const match = parts[1].match(/(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/)
-        if (!match) return
-        const toSec = (h: string, m: string, s: string, ms: string) =>
-          parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(s) + parseInt(ms) / 1000
-        const line = parts.slice(2).join(' ').trim()
-        if (line.length < 5) return // skip very short filler
-        const vibes = lineVibes[String(i)] || []
-        if (vibes.length === 0) return
+      if (!song.lyricLines || song.lyricLines.length === 0) return
+      song.lyricLines.forEach(line => {
+        if (line.text.length < 5) return // skip very short filler
+        if (!line.vibes || line.vibes.length === 0) return
         moments.push({
-          line, lineId: i,
-          start: toSec(match[1], match[2], match[3], match[4]),
-          end: toSec(match[5], match[6], match[7], match[8]),
+          line: line.text, lineId: line.lineIndex,
+          start: line.startSec, end: line.endSec,
           songId: song.id, songTitle: song.title, artist: song.artist,
-          artwork: song.artwork, audioUrl: song.audioUrl, vibes,
+          artwork: song.artwork, audioUrl: song.audioUrl, vibes: line.vibes,
         })
       })
     })
@@ -610,7 +601,7 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
 
           {filtered.length === 0 ? (
             loading ? (
-              // Skeleton cards while Firebase loads — never show empty board
+              // Skeleton cards while Supabase loads — never show empty board
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', padding: '8px 0' }}>
                 {Array(6).fill(null).map((_, i) => (
                   <div key={i} style={{
@@ -920,51 +911,68 @@ export default function MusicPage() {
   const { requireAuth } = useAuthGate()
 
   const [songResonateCounts, setSongResonateCounts] = useState<Record<string, number>>({})
-  const [resonatedSongs, setResonatedSongs] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set()
-    try { return new Set(JSON.parse(localStorage.getItem('margoSongResonated') || '[]')) } catch { return new Set() }
-  })
+  const [resonatedSongs, setResonatedSongs] = useState<Set<string>>(new Set())
 
+  // Load this actor's resonated songs + current counts from Supabase once
+  // songs are known, then keep counts live via the useSongs realtime
+  // subscription on song_stats (see hooks/useSongs.ts).
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (songs.length === 0) return
     const myId = getMargoActorId()
-    let unsub: (() => void) | null = null
-    import('firebase/database').then(({ ref: dbRef, onValue: dbOnValue, getDatabase }) => {
-      import('@/lib/firebase').then(({ app }) => {
-        const db2 = getDatabase(app ?? undefined)
-        unsub = dbOnValue(dbRef(db2, 'songResonates'), (snap) => {
-          const data = snap.val() || {}
-          const myResonated = new Set<string>()
-          Object.keys(data).forEach(sid => { if (data[sid]?.[myId]) myResonated.add(sid) })
-          const counts: Record<string, number> = {}
-          Object.keys(data).forEach(sid => { counts[sid] = Object.keys(data[sid] || {}).length })
-          setSongResonateCounts(counts)
-          setResonatedSongs(myResonated)
-          try { localStorage.setItem('margoSongResonated', JSON.stringify([...myResonated])) } catch {}
-        })
-      })
-    }).catch(() => {})
-    return () => { unsub?.() }
-  }, [])
 
-  const toggleSongResonate = useCallback((songId: string) => {
+    const counts: Record<string, number> = {}
+    songs.forEach(s => { counts[s.id] = s.resonates || 0 })
+    setSongResonateCounts(counts)
+
+    supabase
+      .from('song_resonates')
+      .select('song_id')
+      .eq('actor_id', myId)
+      .then(({ data, error }) => {
+        if (error) { console.error('failed to load resonated songs', error); return }
+        setResonatedSongs(new Set((data || []).map(r => r.song_id)))
+      })
+  }, [songs])
+
+  // Keep counts in sync whenever the underlying songs list refreshes (e.g.
+  // after the realtime subscription in useSongs updates a stats row).
+  useEffect(() => {
+    setSongResonateCounts(prev => {
+      const next = { ...prev }
+      songs.forEach(s => { next[s.id] = s.resonates || 0 })
+      return next
+    })
+  }, [songs])
+
+  const toggleSongResonate = useCallback(async (songId: string) => {
     if (!requireAuth()) return
-    if (typeof window === 'undefined') return
     const myId = getMargoActorId()
     const already = resonatedSongs.has(songId)
+
+    // Optimistic UI update
     setResonatedSongs(prev => {
       const next = new Set(prev)
       already ? next.delete(songId) : next.add(songId)
-      try { localStorage.setItem('margoSongResonated', JSON.stringify([...next])) } catch {}
       return next
     })
-    import('firebase/database').then(({ ref: dbRef, set: dbSet, remove: dbRemove, getDatabase }) => {
-      import('@/lib/firebase').then(({ app }) => {
-        const db2 = getDatabase(app ?? undefined)
-        const songResonateRef = dbRef(db2, `songResonates/${songId}/${myId}`)
-        already ? dbRemove(songResonateRef) : dbSet(songResonateRef, true)
-      })
-    }).catch(() => {})
+    setSongResonateCounts(prev => ({
+      ...prev,
+      [songId]: Math.max(0, (prev[songId] || 0) + (already ? -1 : 1)),
+    }))
+
+    if (already) {
+      const { error } = await supabase
+        .from('song_resonates')
+        .delete()
+        .eq('song_id', songId)
+        .eq('actor_id', myId)
+      if (error) console.error('failed to remove resonate', error)
+    } else {
+      const { error } = await supabase
+        .from('song_resonates')
+        .insert({ song_id: songId, actor_id: myId })
+      if (error) console.error('failed to add resonate', error)
+    }
   }, [resonatedSongs, requireAuth])
 
   const featuredSong = songs.length
@@ -976,7 +984,7 @@ export default function MusicPage() {
     .filter(s => {
       if (!search.trim()) return true
       const q = search.toLowerCase()
-      return s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q) || (s.tags || []).some(t => t.toLowerCase().includes(q))
+      return s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
     })
 
   const { lines: sharedLines } = useSharedLines(featuredSong?.title, featuredSong?.artist)

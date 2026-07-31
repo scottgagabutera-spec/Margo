@@ -1,7 +1,7 @@
 'use client'
+
 import { useState, useEffect } from 'react'
-import { db } from '@/lib/firebase'
-import { ref, onValue } from 'firebase/database'
+import { supabase } from '@/lib/supabase'
 import { Song } from '@/hooks/useSongs'
 
 export interface LyricLine {
@@ -11,32 +11,84 @@ export interface LyricLine {
   end: number
 }
 
-function parseSRT(srt: string): LyricLine[] {
-  const blocks = srt.trim().split(/\n\s*\n/)
-  const lines: LyricLine[] = []
-  blocks.forEach((block, i) => {
-    const parts = block.trim().split('\n')
-    if (parts.length < 3) return
-    const timePart = parts[1]
-    const match = timePart.match(
-      /(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/
-    )
-    if (!match) return
-    const toSec = (h: string, m: string, s: string, ms: string) =>
-      parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(s) + parseInt(ms) / 1000
-    const start = toSec(match[1], match[2], match[3], match[4])
-    const end = toSec(match[5], match[6], match[7], match[8])
-    const line = parts.slice(2).join(' ').trim()
-    lines.push({ id: i, line, start, end })
-  })
-  return lines
+// Same shape as SONGS_SELECT in useSongs.ts, just scoped to a single row.
+const SONG_SELECT = `
+  id, title, artist_display_name, artwork_url, audio_url, description,
+  status, coming_soon_label, order, youtube_url, spotify_url,
+  apple_music_url, soundcloud_url, audiomack_url, boomplay_url,
+  duration_sec, created_at,
+  song_stats ( plays, resonate_count, lyric_uses ),
+  lyric_lines (
+    id, line_index, text, start_sec, end_sec,
+    lyric_line_vibes ( vibe )
+  )
+`
+
+interface RawSongRow {
+  id: string
+  title: string
+  artist_display_name: string
+  artwork_url: string | null
+  audio_url: string | null
+  description: string | null
+  status: string
+  coming_soon_label: string | null
+  order: number | null
+  youtube_url: string | null
+  spotify_url: string | null
+  apple_music_url: string | null
+  soundcloud_url: string | null
+  audiomack_url: string | null
+  boomplay_url: string | null
+  duration_sec: number | null
+  created_at: string
+  song_stats: { plays: number; resonate_count: number; lyric_uses: number }[] | null
+  lyric_lines: {
+    id: string
+    line_index: number
+    text: string
+    start_sec: number
+    end_sec: number
+    lyric_line_vibes: { vibe: string }[] | null
+  }[] | null
 }
 
-function parsePlainLyrics(lyrics: string): LyricLine[] {
-  return lyrics
-    .split('\n')
-    .filter(l => l.trim())
-    .map((line, i) => ({ id: i, line: line.trim(), start: i * 8, end: (i + 1) * 8 }))
+function transformRow(row: RawSongRow): Song {
+  const stats = row.song_stats?.[0]
+  const lyricLines = (row.lyric_lines || [])
+    .slice()
+    .sort((a, b) => a.line_index - b.line_index)
+    .map((l) => ({
+      lineIndex: l.line_index,
+      text: l.text,
+      startSec: Number(l.start_sec),
+      endSec: Number(l.end_sec),
+      vibes: (l.lyric_line_vibes || []).map((v) => v.vibe),
+    }))
+
+  return {
+    id: row.id,
+    title: row.title,
+    artist: row.artist_display_name,
+    artwork: row.artwork_url,
+    audioUrl: row.audio_url,
+    description: row.description,
+    status: row.status,
+    comingSoonLabel: row.coming_soon_label,
+    order: row.order,
+    youtubeUrl: row.youtube_url,
+    spotifyUrl: row.spotify_url,
+    appleMusicUrl: row.apple_music_url,
+    soundcloudUrl: row.soundcloud_url,
+    audiomackUrl: row.audiomack_url,
+    boomplayUrl: row.boomplay_url,
+    durationSec: row.duration_sec,
+    plays: stats?.plays ?? 0,
+    resonates: stats?.resonate_count ?? 0,
+    lyricUses: stats?.lyric_uses ?? 0,
+    createdAt: row.created_at,
+    lyricLines,
+  }
 }
 
 export function useSong(id: string | null) {
@@ -45,20 +97,52 @@ export function useSong(id: string | null) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!db || !id) { setLoading(false); return }
-    const songRef = ref(db, `songs/${id}`)
-    const unsub = onValue(songRef, (snap) => {
-      if (!snap.exists()) { setLoading(false); return }
-      const s: Song = { ...snap.val(), id: snap.key }
-      setSong(s)
-      if (s.srt) {
-        setLyrics(parseSRT(s.srt))
-      } else if (s.lyrics) {
-        setLyrics(parsePlainLyrics(s.lyrics))
-      }
+    if (!id) {
+      setSong(null)
+      setLyrics([])
       setLoading(false)
-    })
-    return () => unsub()
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+
+    async function fetchSong() {
+      const { data, error } = await supabase
+        .from('songs')
+        .select(SONG_SELECT)
+        .eq('id', id as string)
+        .single()
+
+      if (cancelled) return
+
+      if (error || !data) {
+        console.error('useSong: failed to fetch song', error)
+        setSong(null)
+        setLyrics([])
+        setLoading(false)
+        return
+      }
+
+      const s = transformRow(data as unknown as RawSongRow)
+
+      // Map from the shared LyricLine shape (lineIndex/text/startSec/endSec)
+      // to the player-page shape (id/line/start/end).
+      const mappedLyrics: LyricLine[] = s.lyricLines.map((l) => ({
+        id: l.lineIndex,
+        line: l.text,
+        start: l.startSec,
+        end: l.endSec,
+      }))
+
+      setSong(s)
+      setLyrics(mappedLyrics)
+      setLoading(false)
+    }
+
+    fetchSong()
+
+    return () => { cancelled = true }
   }, [id])
 
   return { song, lyrics, loading }
