@@ -1,5 +1,5 @@
 # Margo — Music & Artist Catalog: Firebase → Supabase Migration Plan
-*Draft v1 — July 2026 — Living document*
+*Draft v1 — July 2026 — Living document — last updated July 31, 2026*
 
 **Purpose:** move songs, lyric lines/vibes, and song engagement fully onto Supabase, connected directly to `profiles` — no separate `artists` table, no Tier 1/2/3 licensing distinction. An artist is a `profiles` row with `is_artist = true`. This is the next phase after the identity migration (`MARGO_SUPABASE_MIGRATION_PLAN.md`), and it supersedes the Tier-based sections of `MARGO_TARGET_ARCHITECTURE_AUDIO_ENGAGEMENT.md` (Section 5) and `MARGO_RIGHTS_AND_DISCOVERY_PLAN.md` (Section 1.3) — those documents' *audio engine* and *legal-foundation* content still stands; their *artist-tier* content is replaced by this doc.
 
@@ -7,21 +7,49 @@
 
 ---
 
+## Progress Log
+
+**July 31, 2026 — Phase 1 and Phase 2 schema shipped and verified live.**
+
+Two branches merged to `main`, in order:
+
+1. **`feat/artist-approval-supabase`** (merged `8cdba62`) —
+   - New file `components/artist-applications-tab.tsx`: Supabase-backed replacement for the old Firebase `artists-tab.tsx`. Two sections — **Applications** (approve/reject pending `artist_applications`, filterable by pending/approved/rejected/all) and **Moderation** (warn/freeze/remove already-approved artists, ported from the old `ArtistsTab`'s working logic, filterable by active/warned/frozen/removed/all).
+   - `app/admin/page.tsx` updated: import and render swapped from `ArtistsTab` → `ArtistApplicationsTab`. Old `components/artists-tab.tsx` deleted (186 lines, zero remaining call sites confirmed before removal).
+   - Applied directly via the Supabase SQL Editor against production, then verified with `information_schema` queries (all confirmed present):
+     - `profiles.artist_status` (`text`, not null, default `'active'`), `artist_status_reason` (`text`, nullable), `artist_status_updated_at` (`timestamptz`, nullable) — Section 2B.
+     - `artist_application_approved` trigger on `artist_applications`, `BEFORE UPDATE` — Section 2. Confirmed firing correctly: sets `profiles.is_artist = true` and stamps `reviewed_at` when `status` transitions to `'approved'`.
+   - Confirmed live at `/admin` → Artists tab: renders correctly, shows "No applications." / clean empty states since the tables start empty (screenshot-verified July 31).
+
+2. **`chore/track-migration-sql`** (merged `3aa758a`) —
+   - Ran the full Section 3 schema directly via the Supabase SQL Editor first, then tracked the SQL in git afterward (dashboard-run, then backfilled into version control — not the reverse).
+   - Tables created and verified present: `songs`, `lyric_lines`, `lyric_line_vibes`, `song_plays`, `song_resonates`, `song_stats`.
+   - All 10 RLS policies verified present via `pg_policies` query (see exact list in Section 3 below).
+   - Storage buckets `song-audio` and `song-artwork` created (public read, uid-scoped upload/update).
+   - **One addition beyond this doc's original Section 3 text**, made when actually running the migration: a `song_plays` → `song_stats.plays` sync trigger (`on_song_play_change`), mirroring the `song_resonates` → `resonate_count` trigger. The original Section 3 code block only wired up `resonate_count`; without the matching plays trigger, `song_stats.plays` would have sat at 0 forever.
+   - Both files now tracked in repo: `supabase/migrations/20260731_artist_approval_trigger.sql`, `supabase/migrations/20260731_songs_and_engagement_schema.sql`.
+
+**What this means for the build order (Section 7 below):** Phase 1 is fully done. Phase 2 is done for schema/RLS/storage — the remaining Phase 2 work (if any is later identified) would only be additive, not a redo.
+
+**What's next:** Phase 3 (self-serve upload UI) is the next unblocked piece of work, but it's gated on the one open product decision in Section 8 — instant-live vs. admin-reviewed song publishing. Nothing else is blocking; this is a product call, not a technical one.
+
+---
+
 ## 0. What audit turned up — real gaps, not hypothetical ones
 
 Before proposing anything new, here's what's actually true in the live codebase right now, confirmed by reading the real files:
 
-| # | Finding | Why it matters |
-|---|---|---|
-| 1 | `profiles.is_artist` is **read** in 5 places (`profile/[username]`, `settings`, `useIdentity`, `profile-lookup`) but **never written** anywhere in app code | The artist-application loop is currently incomplete — something outside git (manual Studio edit, or an untracked trigger) is the only thing that could be flipping this today. No visible mechanism ties `artist_applications.status = 'approved'` to `profiles.is_artist = true`. |
-| 2 | Two parallel "who's a real artist" systems exist simultaneously | `adminConfig/licensedArtists` (Firebase, managed by `LicensedTab` in admin) vs. `artist_applications` (Supabase, the new system). `useApprovedArtists` bridges them by hardcoding `['margo', 'trymargo']` + querying approved applications — but the admin UI still writes to the *old* Firebase list, disconnected from the new table. These can silently drift apart. |
-| 3 | No admin UI exists to approve/reject `artist_applications` rows — **confirmed** | `components/artists-tab.tsx` reviewed. It is a **third, separate system**: it moderates a Firebase `artists/{uid}` node (`status: active/warned/frozen/removed`) and its own inline copy states "Artists get access immediately on signup" — meaning it predates `artist_applications` entirely and has no concept of a pending application. It cannot approve anything; it only warns/freezes/removes artists who are already active. Nothing in the app sets `artist_applications.status = 'approved'`. |
-| 4 | Song creation (`SongForm` in admin) is 100% Firebase — admin-authored only | There is no self-serve upload path at all today. Every song is manually entered by the admin, including audio URL, artwork URL, and streaming links. The Whisper (`/api/whisper`) and vibe-tagging (`/api/tag-vibes`) pipelines write directly to `songs/{id}.srt` and `songs/{id}.lineVibes` in Firebase. |
-| 5 | `compose/page.tsx` links a post to a song via **text matching**, not a foreign key | `handleSelectSong` scans the entire Firebase `songs` tree client-side, comparing lowercased title/artist strings, to find `linkedSongId`. This only works because song catalog is small and admin-curated with clean titles — it will misfire increasingly as a real self-serve catalog grows (typos, duplicate titles, featuring artists, etc.). |
-| 6 | `useSongs` and `useSharedLines` are unchanged Firebase RTDB, as already known | Confirmed no drift since the earlier review — still full-tree listener, still client-side SRT parsing, still O(n) post-scanning for shared lines. |
-| 7 | `useSong.ts` (singular, single-song detail — the karaoke player's data source) is a **second, independent** Firebase reader with its **own duplicated SRT/plain-lyrics parser**, separate from `LyricBoard`'s parsing logic in `useSongs`/`app/music/page.tsx` | Two parsers reading the same underlying shape means a parsing bug fix in one place can silently not apply to the other. Once `lyric_lines` is a real table (Section 3), both call sites become simple `select` queries and the duplicated parser logic is deleted entirely — not migrated, removed. |
-| 8 | `useLicensedArtists.ts` (the Firebase predecessor to `useApprovedArtists.ts`) still exists in the repo, identical `{ artists, isLicensed, loading }` shape and hardcoded fallback names | **Confirmed dead code** — `git grep -rn "useLicensedArtists" -- app/ components/` returns zero matches. Safe to delete in Phase 7 (or sooner, as a one-line cleanup folded into any open branch) — no live inconsistency, just an unused leftover from the `useApprovedArtists` swap. |
-| 9 | `ArtistsTab` moderates a **third, independent artist concept** — Firebase `artists/{uid}` with `active/warned/frozen/removed` status, `agreedToRightsWarranty`, `email`, `displayName` — entirely separate from both `adminConfig/licensedArtists` and `artist_applications`/`profiles.is_artist` | This is a real moderation feature (warn, freeze, remove, with a reason shown to the artist and a Firebase notification pushed) — worth keeping the *concept*, not the storage. It needs a Supabase home so it operates on the same `profiles` row as everything else, rather than a fourth place an artist's standing could live. See Section 2A below. |
+| # | Finding | Why it matters | Status |
+|---|---|---|---|
+| 1 | `profiles.is_artist` is **read** in 5 places (`profile/[username]`, `settings`, `useIdentity`, `profile-lookup`) but **never written** anywhere in app code | The artist-application loop was incomplete — nothing tied `artist_applications.status = 'approved'` to `profiles.is_artist = true`. | ✅ **Resolved** — `artist_application_approved` trigger now closes this loop, live in production. |
+| 2 | Two parallel "who's a real artist" systems exist simultaneously | `adminConfig/licensedArtists` (Firebase, `LicensedTab`) vs. `artist_applications` (Supabase). `useApprovedArtists` bridges them by hardcoding `['margo', 'trymargo']` + querying approved applications. | ⏳ **Still open** — resolved conceptually now that approval writes `is_artist`, but `LicensedTab`/`useLicensedArtists.ts` retirement is Phase 7, not done yet. |
+| 3 | No admin UI exists to approve/reject `artist_applications` rows | `artists-tab.tsx` predated `artist_applications` entirely, had no concept of a pending application. | ✅ **Resolved** — `artist-applications-tab.tsx` shipped, live at `/admin`. |
+| 4 | Song creation (`SongForm` in admin) is 100% Firebase — admin-authored only | No self-serve upload path exists today. | ⏳ **Still open** — this is Phase 3, not started. |
+| 5 | `compose/page.tsx` links a post to a song via **text matching**, not a foreign key | Will misfire as a real self-serve catalog grows. | ⏳ **Still open** — this is Phase 6, depends on Phase 5 landing first. |
+| 6 | `useSongs` and `useSharedLines` are unchanged Firebase RTDB | Full-tree listener, client-side SRT parsing, O(n) post-scanning. | ⏳ **Still open** — this is Phase 5, not started. |
+| 7 | `useSong.ts` has its own duplicated SRT/plain-lyrics parser, separate from `useSongs`'s | Two parsers reading the same shape — a bug fix in one won't apply to the other. | ⏳ **Still open** — resolved by Phase 5 (both call sites become `select` queries, both parsers deleted). |
+| 8 | `useLicensedArtists.ts` still exists, confirmed dead code (`git grep` returns zero matches) | Safe to delete, no live inconsistency. | ⏳ **Still open** — scheduled for Phase 7, not yet deleted. |
+| 9 | `ArtistsTab` moderated a third, independent artist concept (Firebase `artists/{uid}`) | Real moderation feature worth keeping the *concept* of, not the storage. | ✅ **Resolved** — moderation logic ported onto `profiles.artist_status`, live in production; old Firebase `artists/{uid}` node never existed so no backfill/retirement needed. |
 
 None of this is a criticism of what exists — the Firebase-era admin-curated model was the right call to move fast pre-artist-signup. It's just the concrete starting line for what needs to change now that self-serve upload is the goal.
 
@@ -39,18 +67,20 @@ profiles (existing)
        ↑
        │ owner_profile_id
        │
-     songs (new)
+     songs (new)                          ✅ live in production
        ↑
        │ song_id
        │
-  lyric_lines (new) ──< lyric_line_vibes (new)
+  lyric_lines (new) ──< lyric_line_vibes (new)   ✅ live in production
 ```
 
 This also directly answers "where does the artist come from" for the compose flow and music page: it's always `profiles`, never a second identity system.
 
 ---
 
-## 2. Closing Gap #1 — the missing `is_artist` trigger
+## 2. ✅ DONE — Closing Gap #1 — the missing `is_artist` trigger
+
+*Applied to production July 31, 2026. Tracked at `supabase/migrations/20260731_artist_approval_trigger.sql`.*
 
 This is small but blocking — nothing else in this plan matters if applications approve into a dead end. Add a trigger so approval is atomic and can never be forgotten by a future admin action:
 
@@ -81,6 +111,8 @@ create trigger artist_application_approved
 ```
 *(Changed to `before update` from `after update` so the trigger can set `new.reviewed_at` on the row being written, per the confirmed schema in Section 2A — an `after` trigger can't modify the row it's firing on.)*
 
+**Verified live:** `select trigger_name, event_manipulation, action_timing from information_schema.triggers where event_object_table = 'artist_applications';` returned `artist_application_approved | UPDATE | BEFORE`.
+
 ## 2A. Confirmed schema (via `information_schema.columns`)
 
 No more guessing — here's what's actually live:
@@ -104,6 +136,9 @@ profiles
   followers_count   integer                   not null   default 0
   following_count   integer                   not null   default 0
   posts_count       integer                   not null   default 0
+  artist_status              text        not null default 'active'   ✅ added 7/31/26
+  artist_status_reason       text                                     ✅ added 7/31/26
+  artist_status_updated_at   timestamptz                               ✅ added 7/31/26
 
 artist_applications
   id                    uuid       not null   default gen_random_uuid()
@@ -118,13 +153,15 @@ artist_applications
 ```
 
 Two things worth noting from the real schema:
-- **`artist_applications.reviewed_at` already exists** and is currently written by nothing in the app — a clean signal this was planned for from the start, just never wired to an admin action. The trigger below sets it.
+- **`artist_applications.reviewed_at` already existed** and was written by nothing in the app — a clean signal this was planned for from the start, just never wired to an admin action. The trigger now sets it, confirmed working in production.
 - **`profiles` already has `followers_count`/`following_count`/`posts_count` as denormalized integer counters**, updated by triggers presumably (per the identity migration doc's follow system). `song_stats` in Section 3 follows the exact same pattern already established here — consistent with existing conventions, not a new one.
-- **Firebase `artists/{uid}` does not exist** — confirmed from the live RTDB tree (`adminConfig`, `analytics`, `engagement`, `pages`, `postStats`, `posts`, `songPlays`, `songResonates`, `songStats`, `songs`, `vibeIndex` — no `artists`). Since only Margo/Trymargo has ever posted, `ArtistsTab` has nothing to moderate yet. **The backfill concern in the original Section 2A draft is resolved — there is nothing to migrate.** The new `profiles.artist_status` columns start clean.
+- **Firebase `artists/{uid}` never existed** — confirmed from the live RTDB tree (`adminConfig`, `analytics`, `engagement`, `pages`, `postStats`, `posts`, `songPlays`, `songResonates`, `songStats`, `songs`, `vibeIndex` — no `artists`). No backfill was ever needed; `profiles.artist_status` simply started at its `'active'` default for every artist going forward.
 
-## 2B. Consolidating the moderation concept (`ArtistsTab`'s real job)
+## 2B. ✅ DONE — Consolidating the moderation concept (`ArtistsTab`'s real job)
 
-`ArtistsTab`'s warn/freeze/remove functionality is worth preserving — it's a real, working feature (reason shown to the artist, notification pushed, filter by status). But it currently operates on a fourth data location (`artists/{uid}` in Firebase) that has no relationship to `profiles` or `artist_applications` at all. Consolidate onto `profiles`:
+*Applied to production July 31, 2026, alongside Section 2.*
+
+`ArtistsTab`'s warn/freeze/remove functionality was worth preserving — a real, working feature (reason shown to the artist, notification pushed, filter by status). It operated on a fourth data location (`artists/{uid}` in Firebase) with no relationship to `profiles` or `artist_applications`. Consolidated onto `profiles`:
 
 ```sql
 alter table public.profiles
@@ -135,15 +172,17 @@ alter table public.profiles
 ```
 
 - `artist_status` only means anything when `is_artist = true` — no separate table needed, same reasoning as Section 1.
-- The warn/freeze/remove admin actions become simple `profiles` updates instead of a Firebase `artists/{uid}` write, and the "notify the artist" step becomes a row in whatever the eventual Supabase notifications table is (per `MARGO_IDENTITY_SUPABASE_MIGRATION_PLAN.md`'s existing notifications work — reuse that, don't build a second notification path).
-- `frozen`/`removed` should also gate song visibility: add `and p.artist_status = 'active'` to the `songs` RLS "public reads live songs" policy (Section 3) so a frozen artist's catalog stops surfacing publicly without deleting anything.
-- Existing Firebase `artists/{uid}` rows would have needed a one-time backfill into these new `profiles` columns before `ArtistsTab` is cut over — **confirmed not needed**: the node doesn't exist in the live database (Section 2A), so `profiles.artist_status` simply starts at its `'active'` default for every artist going forward.
+- The warn/freeze/remove admin actions are now simple `profiles` updates in `artist-applications-tab.tsx`'s `ModerationSection`.
+- **Still open:** the "notify the artist" step (`notifyProfile()` in the component) is written against a **guessed** `notifications` table shape (`profile_id`, `type`, `message`, `read`, `created_at`) — flagged in the code comment itself. Needs confirming against the real `hooks/useNotifications.tsx` schema before it's trusted to actually deliver notifications, not just avoid throwing.
+- `frozen`/`removed` gates song visibility: the Section 3 `songs` RLS "public reads live songs" policy includes `and p.artist_status = 'active'` — done as part of the Phase 2 schema push, not deferred.
 
-**Net result:** one admin tab, rebuilt against Supabase, that does two things — approve/reject pending `artist_applications` (new, doesn't exist today) and warn/freeze/remove already-approved artists (ported from `ArtistsTab`'s existing, working logic). Retire the Firebase `artists/{uid}` node once the backfill is verified.
+**Net result — shipped:** one admin tab, live against Supabase, that does two things — approve/reject pending `artist_applications` and warn/freeze/remove already-approved artists. Old Firebase `artists/{uid}` node never existed, so nothing to retire there.
 
 ---
 
-## 3. Schema — songs, lyrics, vibes, engagement
+## 3. ✅ DONE — Schema — songs, lyrics, vibes, engagement
+
+*Applied to production July 31, 2026. Tracked at `supabase/migrations/20260731_songs_and_engagement_schema.sql`. Verified via `information_schema.tables` (all 6 tables present) and `pg_policies` (all 10 policies present).*
 
 Field types below follow the confirmed `profiles`/`artist_applications` conventions from Section 2A (e.g. `integer` denormalized counters, `timestamptz`, `text` over `varchar`) plus reasonable defaults inferred from the Firebase `Song` shape (`useSongs.ts`, admin `SongForm`) for fields with no existing Postgres precedent.
 
@@ -246,9 +285,30 @@ create trigger song_resonate_insert after insert on public.song_resonates
   for each row execute function public.on_song_resonate_change();
 create trigger song_resonate_delete after delete on public.song_resonates
   for each row execute function public.on_song_resonate_change();
+
+-- ✅ ADDED beyond original plan text, at execution time (see Progress Log):
+-- song_plays → song_stats.plays sync trigger, same pattern as resonate_count.
+-- Without this, song_stats.plays would never populate.
+create or replace function public.on_song_play_change()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.song_stats (song_id, plays)
+  values (new.song_id, 0)
+  on conflict (song_id) do nothing;
+
+  update public.song_stats
+  set plays = (select count(*) from public.song_plays where song_id = new.song_id),
+      updated_at = now()
+  where song_id = new.song_id;
+  return null;
+end;
+$$;
+
+create trigger song_play_insert after insert on public.song_plays
+  for each row execute function public.on_song_play_change();
 ```
 
-### RLS policies
+### RLS policies — all 10 verified live via `pg_policies`
 
 ```sql
 alter table public.songs enable row level security;
@@ -258,11 +318,21 @@ alter table public.song_plays enable row level security;
 alter table public.song_resonates enable row level security;
 alter table public.song_stats enable row level security;
 
--- Public can read live/coming-soon songs; owner can read all their own (incl. drafts)
+-- Public can read live/coming-soon songs from artists in good standing;
+-- owner can always read their own (incl. drafts, regardless of standing).
+-- The artist_status gate (Section 2B) was folded in at execution time.
 create policy "public reads live songs" on public.songs
-  for select using (status in ('live', 'coming_soon') or owner_profile_id = auth.uid());
+  for select using (
+    (
+      status in ('live', 'coming_soon')
+      and exists (
+        select 1 from public.profiles p
+        where p.id = owner_profile_id and p.artist_status = 'active'
+      )
+    )
+    or owner_profile_id = auth.uid()
+  );
 
--- Only artists can insert, only into their own profile_id
 create policy "artists insert own songs" on public.songs
   for insert with check (
     owner_profile_id = auth.uid()
@@ -272,10 +342,17 @@ create policy "artists insert own songs" on public.songs
 create policy "owner updates own songs" on public.songs
   for update using (owner_profile_id = auth.uid());
 
--- Lyric lines/vibes follow the parent song's visibility
 create policy "read lines of visible songs" on public.lyric_lines
   for select using (
-    exists (select 1 from public.songs s where s.id = song_id and (s.status in ('live','coming_soon') or s.owner_profile_id = auth.uid()))
+    exists (
+      select 1 from public.songs s
+      where s.id = song_id
+        and (
+          (s.status in ('live','coming_soon')
+            and exists (select 1 from public.profiles p where p.id = s.owner_profile_id and p.artist_status = 'active'))
+          or s.owner_profile_id = auth.uid()
+        )
+    )
   );
 
 create policy "owner writes own lines" on public.lyric_lines
@@ -283,43 +360,70 @@ create policy "owner writes own lines" on public.lyric_lines
     exists (select 1 from public.songs s where s.id = song_id and s.owner_profile_id = auth.uid())
   );
 
--- Engagement — public read (for stats), write only as self
+-- ✅ Written out in full at execution time (original doc had marked these
+-- "omitted for brevity" — no longer true, they're live).
+create policy "read vibes of visible lines" on public.lyric_line_vibes
+  for select using (
+    exists (
+      select 1 from public.lyric_lines ll
+      join public.songs s on s.id = ll.song_id
+      where ll.id = line_id
+        and (
+          (s.status in ('live','coming_soon')
+            and exists (select 1 from public.profiles p where p.id = s.owner_profile_id and p.artist_status = 'active'))
+          or s.owner_profile_id = auth.uid()
+        )
+    )
+  );
+
+create policy "owner writes own vibes" on public.lyric_line_vibes
+  for all using (
+    exists (
+      select 1 from public.lyric_lines ll
+      join public.songs s on s.id = ll.song_id
+      where ll.id = line_id and s.owner_profile_id = auth.uid()
+    )
+  );
+
 create policy "public reads song_stats" on public.song_stats for select using (true);
 
 create policy "authenticated writes own resonate" on public.song_resonates
   for all using (actor_id = coalesce(auth.uid()::text, actor_id));
+
+-- Plays are anonymous-friendly (session-based, no auth required) —
+-- anyone can insert, no one reads raw session rows (only song_stats.plays is public).
+create policy "anyone records a play" on public.song_plays
+  for insert with check (true);
 ```
 
-*(Vibes and plays policies follow the same shape — omitted for brevity, same pattern applies.)*
+**Verified live (10 policies confirmed via `pg_policies`):** `owner writes own vibes`, `read vibes of visible lines` (`lyric_line_vibes`) · `owner writes own lines`, `read lines of visible songs` (`lyric_lines`) · `anyone records a play` (`song_plays`) · `authenticated writes own resonate` (`song_resonates`) · `public reads song_stats` (`song_stats`) · `artists insert own songs`, `owner updates own songs`, `public reads live songs` (`songs`).
 
-### Storage buckets
+### Storage buckets — ✅ live
 
 ```sql
 insert into storage.buckets (id, name, public) values ('song-audio', 'song-audio', true);
 insert into storage.buckets (id, name, public) values ('song-artwork', 'song-artwork', true);
 ```
-RLS on `storage.objects`: artist can upload/update only into a path prefixed with their own `auth.uid()` (e.g. `song-audio/{uid}/{songId}.mp3`), public can read.
+RLS on `storage.objects`: artist can upload/update only into a path prefixed with their own `auth.uid()` (e.g. `song-audio/{uid}/{songId}.mp3`), public can read. Applied and live.
 
 ---
 
-## 4. Upload → live pipeline
+## 4. Upload → live pipeline — NOT STARTED (Phase 3)
 
 | Step | Where | Detail |
 |---|---|---|
 | 1. Apply as artist | `/apply-artist` (exists) | Unchanged |
-| 2. Admin approves | Admin UI (needs confirming/building — see Gap #3) | Trigger from Section 2 flips `profiles.is_artist` automatically once `status='approved'` is set |
-| 3. "Upload Song" appears | Profile page or a new `/upload-song` route, gated on `identity.isArtist` | New UI — reuse `SongForm`'s field layout/copy, but write to Supabase + Storage instead of Firebase |
-| 4. Upload audio + artwork | Direct-to-Storage upload from the browser (`supabase.storage.from('song-audio').upload(...)`) | `songs` row created with `status='draft'` first, then updated with URLs |
-| 5. Lyric/vibe pipeline | `/api/whisper` + `/api/tag-vibes` — **need rewriting** to write `lyric_lines`/`lyric_line_vibes` rows instead of one `srt` string + `lineVibes` object | Same AI calls, different write target. This is real work, not a config change — worth its own branch. |
-| 6. Go live | Artist (or admin, if review-before-publish is wanted) sets `status='live'` once audio + artwork + lyric_lines exist | Simple checklist gate in the upload UI, same idea as the old admin "Go live" checklist |
+| 2. Admin approves | `/admin` → Artists tab | ✅ **Done** — trigger from Section 2 flips `profiles.is_artist` automatically once `status='approved'` is set, live in production |
+| 3. "Upload Song" appears | Profile page or a new `/upload-song` route, gated on `identity.isArtist` | ⏳ **Not started** — reuse `SongForm`'s field layout/copy, write to Supabase + Storage instead of Firebase |
+| 4. Upload audio + artwork | Direct-to-Storage upload from the browser (`supabase.storage.from('song-audio').upload(...)`) | ⏳ **Not started** — buckets exist and are ready (Section 3) |
+| 5. Lyric/vibe pipeline | `/api/whisper` + `/api/tag-vibes` rewritten to write `lyric_lines`/`lyric_line_vibes` | ⏳ **Not started** — Phase 4 |
+| 6. Go live | Artist (or admin) sets `status='live'` | ⏳ **Not started** — blocked on the product decision below |
 
-**Open product question, not a code question:** should artist-uploaded songs go live immediately, or queue for admin review first (closer to the current admin-only model)? Doesn't block the schema/upload-mechanics work — can be a `status` value (`pending_review`) added later without a migration.
+**🔴 Open product question, blocking Phase 3 start:** should artist-uploaded songs go live immediately, or queue for admin review first (closer to the current admin-only model)? Doesn't block *schema* work (already done) — does determine the shape of the upload UI's final gate.
 
 ---
 
-## 5. Music page rebuild — what changes for the reader
-
-This is where the "nice music page UI" goal and the technical migration are actually the same piece of work, not two separate tasks:
+## 5. Music page rebuild — NOT STARTED (Phase 5)
 
 - **Discovery board** (`LyricBoard`): today it downloads every song, parses every SRT client-side, shuffles in JS. Becomes one query:
   ```sql
@@ -332,41 +436,38 @@ This is where the "nice music page UI" goal and the technical migration are actu
   order by random() limit 6;
   ```
   Same discovery-by-vibe experience, but the card can now show and link to the **real artist's profile** — something the current Firebase model has no clean way to do, since `songs.artist` is just a free-text string today.
-- **Song grid**: reads `songs where status='live'`, paginated (per the earlier scaling review — cap at ~24, load more). Each card can link to `/profile/{artist_username}`.
+- **Song grid**: reads `songs where status='live'`, paginated (cap at ~24, load more). Each card can link to `/profile/{artist_username}`.
 - **Search**: moves from client-side substring scan to a real Postgres `ilike`/`tsvector` query once catalog size warrants it.
-- **`useSharedLines`**: becomes a real query once `posts.song_id` is a proper foreign key (depends on the separate, still-deferred `posts` migration per the identity doc — until then, this hook stays on Firebase, reading a Postgres `song_id` isn't possible from an RTDB post).
+- **`useSharedLines`**: becomes a real query once `posts.song_id` is a proper foreign key (still-deferred `posts` migration per the identity doc).
 
 ---
 
-## 6. `compose` page changes
+## 6. `compose` page changes — NOT STARTED (Phase 6)
 
-- Song search/link (`handleSelectSong`) stops doing text-matching against a full Firebase tree scan. Once songs live in Postgres: `select id, audio_url from songs where owner_profile_id = ... and lower(title) = lower($1)` — or better, let the artist attach their own song directly via a picker scoped to *their own* catalog, removing the fuzzy-matching problem entirely for artist-authored posts.
-- `useApprovedArtists`/`isLicensed` — once every real artist is just `profiles.is_artist`, this hook's whole reason for existing (bridging two systems) goes away. Simplify to a direct `identity.isArtist` check, retire the Firebase `adminConfig/licensedArtists` list and the `LicensedTab` admin UI that manages it.
+- Song search/link (`handleSelectSong`) stops doing text-matching against a full Firebase tree scan. Once songs live in Postgres: `select id, audio_url from songs where owner_profile_id = ... and lower(title) = lower($1)` — or better, let the artist attach their own song directly via a picker scoped to *their own* catalog.
+- `useApprovedArtists`/`isLicensed` — simplify to a direct `identity.isArtist` check, retire the Firebase `adminConfig/licensedArtists` list and the `LicensedTab` admin UI that manages it.
 
 ---
 
 ## 7. Recommended build order
 
-| Phase | Work | Est. shape |
+| Phase | Work | Status |
 |---|---|---|
-| **1** | Trigger (Section 2) + build the admin approval/moderation tab (Section 2A) + `profiles.artist_status` columns + one-time backfill from Firebase `artists/{uid}` | Small-medium, unblocks everything else. This replaces `ArtistsTab`'s Firebase reads/writes with Supabase ones — same UI shape, new backend. |
-| **2** | Schema + RLS + storage buckets (Section 3) | One migration file |
-| **3** | Self-serve upload UI + Storage wiring | New page/component |
-| **4** | Rewrite `/api/whisper` + `/api/tag-vibes` to write Postgres | Medium — same AI logic, new persistence |
-| **5** | Music page reads (`useSongs`, `LyricBoard`, grid, search) **and** `useSong` (karaoke detail) → Supabase | Medium-large, this is also the UI refresh. Delete both SRT parsers (`useSongs`'s inline parsing and `useSong`'s `parseSRT`/`parsePlainLyrics`) once both read `lyric_lines` directly — don't port the parsers, remove them. |
-| **6** | `compose` song-linking → real FK / artist-owned picker | Small once Phase 5 lands |
-| **7** | Retire `adminConfig/licensedArtists`, `LicensedTab`, `useLicensedArtists.ts` (confirm zero remaining call sites first), old Firebase `songs` tree | Cleanup, after a dual-write/verification window |
+| **1** | Trigger (Section 2) + admin approval/moderation tab (Section 2A/2B) + `profiles.artist_status` columns | ✅ **Done** — merged `feat/artist-approval-supabase` → `main` (`8cdba62`), verified live in Supabase production |
+| **2** | Schema + RLS + storage buckets (Section 3) | ✅ **Done** — merged `chore/track-migration-sql` → `main` (`3aa758a`), verified live in Supabase production |
+| **3** | Self-serve upload UI + Storage wiring | 🔴 **Blocked** on instant-live vs. admin-reviewed product decision (Section 4/8) |
+| **4** | Rewrite `/api/whisper` + `/api/tag-vibes` to write Postgres | ⏳ Not started |
+| **5** | Music page reads (`useSongs`, `LyricBoard`, grid, search) **and** `useSong` (karaoke detail) → Supabase | ⏳ Not started |
+| **6** | `compose` song-linking → real FK / artist-owned picker | ⏳ Not started |
+| **7** | Retire `adminConfig/licensedArtists`, `LicensedTab`, `useLicensedArtists.ts`, old Firebase `songs` tree | ⏳ Not started |
 
 ---
 
-## 8. Open items before Phase 1 starts
+## 8. Open items
 
-Both prior open items are now resolved (Section 2A confirmed the real schema; the Firebase `artists/{uid}` node doesn't exist, so no backfill is needed). One remains:
-
-1. **Product decision:** instant-live vs. admin-reviewed song publishing (Section 4) — doesn't block schema work, does affect the upload UI's final state.
-
-Phase 1 is otherwise unblocked and can start as soon as this doc is reviewed.
+1. **🔴 Product decision (blocking Phase 3):** instant-live vs. admin-reviewed song publishing (Section 4) — doesn't block schema work (already done), does determine the upload UI's final gate.
+2. **⚠️ Notifications schema (not blocking, but flagged in code):** `artist-applications-tab.tsx`'s `notifyProfile()` helper is written against a guessed `notifications` table shape. Needs confirming against the real `hooks/useNotifications.tsx` schema before artist-facing notifications can be trusted to actually deliver.
 
 ---
 
-*Next step once the two open files are in hand: write the actual migration SQL file as `supabase/migrations/{date}_songs_and_engagement.sql`, and open `feat/music-supabase` for Phase 1–2.*
+*Next step: settle the instant-live-vs-review decision, then open a new branch (e.g. `feat/song-upload-ui`) for Phase 3.*
