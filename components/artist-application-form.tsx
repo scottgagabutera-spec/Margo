@@ -6,6 +6,7 @@ import {
   type ArtistApplicationLinks,
   type ApplicantType,
 } from '@/hooks/useArtistApplication'
+import { normalizeSunoUrl } from '@/lib/suno'
 
 const font = 'var(--font-lora), serif'
 
@@ -80,6 +81,18 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
     }
   }
 
+  // Fills in "https://suno.com/@" for whatever the artist typed the
+  // moment they leave the field, so someone who just types their handle
+  // ("trymargo" or "@trymargo") sees it turn into a real profile link
+  // without having to know or type the full URL themselves.
+  const handleSunoBlur = () => {
+    if (!links.suno) return
+    const normalized = normalizeSunoUrl(links.suno)
+    if (normalized !== links.suno) {
+      setLinks(prev => ({ ...prev, suno: normalized }))
+    }
+  }
+
   const handleImportLinktree = async () => {
     if (!linktreeUrl.trim()) return
     setLinktreeStatus({ kind: 'loading' })
@@ -104,8 +117,14 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
 
   const handleVerifySuno = async () => {
     if (!links.suno || !sunoCode) return
+    // Normalize right before sending, as a safety net in case blur never
+    // fired (e.g. autofill, or the user clicked straight to this button).
+    const normalized = normalizeSunoUrl(links.suno)
+    if (normalized !== links.suno) {
+      setLinks(prev => ({ ...prev, suno: normalized }))
+    }
     setSunoVerifying(true)
-    const result = await verifySunoLink(links.suno.trim(), sunoCode)
+    const result = await verifySunoLink(normalized.trim(), sunoCode)
     setSunoVerifying(false)
     if (!result.success) {
       setSunoVerified(false)
@@ -119,10 +138,16 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
   const handleSubmit = async () => {
     setError('')
     setLoading(true)
+    // Same safety net on final submit — the stored link should always be
+    // a full URL, regardless of whether the Suno field was ever blurred.
+    const normalizedLinks: ArtistApplicationLinks = {
+      ...links,
+      suno: links.suno ? normalizeSunoUrl(links.suno) : links.suno,
+    }
     const result = await submitArtistApplication({
       applicantType,
       displayArtistName,
-      links,
+      links: normalizedLinks,
       note,
       rightsAgreed,
       sunoVerification: sunoVerified && sunoCode ? { code: sunoCode } : null,
@@ -190,9 +215,9 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
               Add your Suno profile, then prove it's yours by pasting a short code into your bio.
             </p>
             <label style={labelStyle}>Suno Profile</label>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: sunoCode ? '12px' : 0 }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: sunoCode ? '4px' : 0 }}>
               <input type="text" value={links.suno || ''} onChange={e => setLink('suno', e.target.value)}
-                placeholder="suno.com/@yourname" style={inputStyle} />
+                onBlur={handleSunoBlur} placeholder="@yourname" style={inputStyle} />
               {!sunoCode && (
                 <button type="button" onClick={handleGetSunoCode} disabled={!links.suno?.trim()}
                   style={{ ...goldBtn, opacity: !links.suno?.trim() ? 0.5 : 1 }}>
@@ -200,6 +225,9 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
                 </button>
               )}
             </div>
+            <p style={{ fontFamily: font, fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', marginBottom: sunoCode ? '12px' : 0 }}>
+              Just your handle works — no need to paste the full link.
+            </p>
             {sunoCode && !sunoVerified && (
               <div>
                 <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text)', marginBottom: '8px', lineHeight: 1.5 }}>

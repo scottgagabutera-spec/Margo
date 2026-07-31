@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { normalizeSunoUrl } from '@/lib/suno'
 
 export const runtime = 'nodejs'
 
@@ -21,9 +22,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ verified: false, error: 'Missing url or code.' }, { status: 400 })
   }
 
+  // Accept a bare handle ("trymargo" / "@trymargo") as well as a full
+  // URL — normalized here too (not just client-side) so a direct API
+  // call with just a handle doesn't bounce with "Not a valid URL."
+  const normalizedUrl = normalizeSunoUrl(url)
+
   let parsed: URL
   try {
-    parsed = new URL(url)
+    parsed = new URL(normalizedUrl)
   } catch {
     return NextResponse.json({ verified: false, error: 'Not a valid URL.' }, { status: 400 })
   }
@@ -44,9 +50,9 @@ export async function POST(req: NextRequest) {
 
     // NOTE: checks raw server-rendered HTML for the code. If Suno renders
     // the bio client-side, this false-negatives even when the code is
-    // genuinely there — needs a live test against a real profile before
-    // this is trusted. A false negative here just routes the applicant
-    // to manual review, not a broken approval — safe failure mode.
+    // genuinely there. Confirmed via live test on 2026-07-31 that the
+    // bio text does appear in the server-rendered HTML for at least one
+    // real profile, so the plain-fetch approach works for that case.
     const found = html.includes(code)
     return NextResponse.json({ verified: found })
   } catch {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { normalizeSunoUrl } from '@/lib/suno'
 
 export const runtime = 'nodejs'
 
@@ -19,7 +20,11 @@ function getRequestingClient() {
 
 async function checkSunoCode(url: string, code: string): Promise<boolean> {
   try {
-    const parsed = new URL(url)
+    // Accept a bare handle here too, same as /api/verify-artist-link —
+    // this is the route that actually decides approval, so it can't
+    // rely on the browser having already normalized the value.
+    const normalizedUrl = normalizeSunoUrl(url)
+    const parsed = new URL(normalizedUrl)
     if (!/(^|\.)suno\.com$/.test(parsed.hostname)) return false
     const res = await fetch(parsed.toString(), {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MargoVerifyBot/1.0)' },
@@ -68,6 +73,14 @@ export async function POST(req: NextRequest) {
   for (const [key, value] of Object.entries(links || {})) {
     if (typeof value === 'string' && value.trim()) cleanedLinks[key] = value.trim()
   }
+
+  // Store the fully-normalized Suno URL, not whatever partial handle the
+  // artist typed — so the admin tab and any future re-checks always see
+  // a real, clickable profile link.
+  if (cleanedLinks.suno) {
+    cleanedLinks.suno = normalizeSunoUrl(cleanedLinks.suno)
+  }
+
   if (Object.keys(cleanedLinks).length === 0) {
     return NextResponse.json({ success: false, error: 'Add at least one link so we can verify you.' }, { status: 400 })
   }
