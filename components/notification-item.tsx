@@ -22,6 +22,12 @@ function messageFor(n: Notification) {
     case 'resonate': return `${name} resonated with your lyric`
     case 'follow': return `${name} started following you`
     case 'follow_request': return `${name} wants to follow you`
+    case 'artist_approved': return `You're approved as an artist on Margo`
+    case 'artist_rejected': return `Your artist application wasn't approved this time`
+    case 'warned': return `You received a warning on your artist account`
+    case 'frozen': return `Your artist account was frozen`
+    case 'removed': return `Your artist status was removed`
+    case 'restored': return `Your artist account was restored to good standing`
     default: return `${name} did something`
   }
 }
@@ -32,6 +38,9 @@ function hrefFor(n: Notification) {
     case 'resonate': return n.postId ? `/feed?post=${n.postId}` : '/feed'
     case 'follow': return n.actor ? `/profile/${n.actor.username}` : '/feed'
     case 'follow_request': return n.actor ? `/profile/${n.actor.username}` : '/feed'
+    case 'artist_approved': return '/upload-song'
+    case 'artist_rejected': return '/apply-artist'
+    case 'warned': case 'frozen': case 'removed': case 'restored': return '/settings'
     default: return '/feed'
   }
 }
@@ -48,6 +57,29 @@ function TypeIcon({ type }: { type: Notification['type'] }) {
     return (
       <svg width="14" height="14" viewBox="0 0 20 20" fill="var(--gold)">
         <path d="M10 17s-6-4-6-8.5A3.5 3.5 0 0 1 10 6a3.5 3.5 0 0 1 6 2.5C16 13 10 17 10 17Z" />
+      </svg>
+    )
+  }
+  if (type === 'artist_approved' || type === 'restored') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+        <path d="M4 10.5 8 14.5 16 6" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  if (type === 'artist_rejected' || type === 'removed') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+        <path d="M6 6l8 8M14 6l-8 8" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  if (type === 'warned' || type === 'frozen') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+        <path d="M10 4 17 16H3L10 4Z" stroke="var(--gold)" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M10 9v3" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="10" cy="13.5" r="0.75" fill="var(--gold)" />
       </svg>
     )
   }
