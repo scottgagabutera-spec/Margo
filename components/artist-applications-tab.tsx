@@ -71,21 +71,28 @@ const STATUS_COLOR: Record<string, string> = {
   removed: '#ff6060',
 }
 
-/**
- * TODO — confirm against the real hooks/useNotifications.tsx schema before
- * this ships. This assumes a `notifications` table shaped like:
- *   profile_id uuid, type text, message text, read boolean, created_at timestamptz
- * Adjust column names if the real table differs — this is a placeholder,
- * not a confirmed schema.
- */
-async function notifyProfile(profileId: string, type: string, message: string) {
+// Matches the real hooks/useNotifications.tsx schema, confirmed against
+// production July 31, 2026: recipient_id, actor_id, type, created_at, read_at.
+// No `message`/`profile_id`/`read` columns exist — those were a guess from
+// before the schema was confirmed. Display copy for these types (what the
+// bell UI shows) needs to be added wherever useNotifications.tsx's render
+// logic lives — this table has no free-text field to carry it.
+type ModerationNotificationType =
+  | 'artist_approved'
+  | 'artist_rejected'
+  | 'warned'
+  | 'frozen'
+  | 'removed'
+  | 'restored'
+
+async function notifyProfile(recipientId: string, type: ModerationNotificationType) {
+  const { data: { user } } = await supabase.auth.getUser()
   const { error } = await supabase.from('notifications').insert({
-    profile_id: profileId,
+    recipient_id: recipientId,
+    actor_id: user?.id ?? null,
     type,
-    message,
-    read: false,
   })
-  if (error) console.error('Failed to notify profile (check notifications table schema):', error)
+  if (error) console.error('Failed to notify profile:', error)
 }
 
 // ── Applications section ──
@@ -133,13 +140,7 @@ function ApplicationsSection() {
       return
     }
 
-    await notifyProfile(
-      app.profile_id,
-      decision === 'approved' ? 'artist_approved' : 'artist_rejected',
-      decision === 'approved'
-        ? "You're approved as an artist on Margo — you can upload songs whenever you're ready."
-        : "Your artist application wasn't approved this time. You're welcome to update your details and reapply."
-    )
+    await notifyProfile(app.profile_id, decision === 'approved' ? 'artist_approved' : 'artist_rejected')
 
     setActioningId(null)
     load()
@@ -256,7 +257,7 @@ function ModerationSection() {
       return
     }
 
-    await notifyProfile(actionTarget.id, `admin_${actionTarget.type}`, reason)
+    await notifyProfile(actionTarget.id, newStatus)
     setActionTarget(null)
     setReason('')
     load()
@@ -272,7 +273,7 @@ function ModerationSection() {
       console.error('Failed to restore artist:', error)
       return
     }
-    await notifyProfile(id, 'admin_restored', 'Your account has been restored to good standing.')
+    await notifyProfile(id, 'restored')
     load()
   }
 

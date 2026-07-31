@@ -3,7 +3,10 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 
-export type NotificationType = 'message' | 'resonate' | 'follow' | 'follow_request'
+export type NotificationType =
+  | 'message' | 'resonate' | 'follow' | 'follow_request'
+  | 'warned' | 'frozen' | 'removed' | 'restored'
+  | 'artist_approved' | 'artist_rejected'
 
 export interface Notification {
   id: string
