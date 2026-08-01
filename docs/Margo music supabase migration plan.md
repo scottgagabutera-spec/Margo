@@ -1,5 +1,5 @@
 # Margo — Music & Artist Catalog: Firebase → Supabase Migration Plan
-*Draft v1 — July 2026 — Living document — last updated August 1, 2026*
+*Draft v1 — July 2026 — Living document — last updated August 1, 2026 (Phase 4 route verified, product + admin scope decisions resolved)*
 
 **Purpose:** move songs, lyric lines/vibes, and song engagement fully onto Supabase, connected directly to `profiles` — no separate `artists` table, no Tier 1/2/3 licensing distinction. An artist is a `profiles` row with `is_artist = true`. This is the next phase after the identity migration (`MARGO_SUPABASE_MIGRATION_PLAN.md`), and it supersedes the Tier-based sections of `MARGO_TARGET_ARCHITECTURE_AUDIO_ENGAGEMENT.md` (Section 5) and `MARGO_RIGHTS_AND_DISCOVERY_PLAN.md` (Section 1.3) — those documents' *audio engine* and *legal-foundation* content still stands; their *artist-tier* content is replaced by this doc.
 
@@ -80,6 +80,39 @@ Also read the following files directly to confirm (not guess) their current stat
 - **Phase 4 has NOT started, confirmed by reading the actual route files.** This matters more than a routine "not started yet" — it means **all 399 lyric_lines and 379 vibes currently live came entirely from the one-time migration script**, not from any working upload pipeline. If a new song were uploaded through the (not-yet-built) Phase 3 UI today, there is no code path that would populate its lyrics or vibes into Postgres. See Section 8, new item #3.
 - **`useSharedLines` (part of Phase 5) has NOT started**, confirmed by reading the hook directly.
 - **`compose` song-linking (Phase 6) has NOT started**, confirmed by reading the page directly — including that new posts still go to Firebase, not Supabase, which Section 6 hadn't previously called out explicitly.
+
+---
+
+**August 1, 2026 (later) — Product decision made; admin scope decision made; Phase 4 route rewritten and verified working end-to-end.**
+
+**🟢 Product decision resolved (closes Section 8, item 1):** Artist-uploaded songs go **instant-live**, not admin-reviewed. This matches the standard self-serve creator model (upload → immediately visible, same as posting on any platform) rather than a review queue. Approval happens once, at the artist-application stage (Section 2) — after that, an approved artist publishes directly, same as any other creator platform. Admin's job does not include reviewing individual songs.
+
+**🟢 Admin scope decision made (new, not previously scoped):** `admin/page.tsx`'s current `MusicTab`/`SongForm`/`LicensedTab` will be **retired**, not kept. Reading the actual file confirmed something important: `SongForm` is 100% Firebase — creating or editing a song there has **zero effect on the real Supabase catalog** that `/music` actually reads from (the 10 live songs came entirely from the migration script, never from this admin form). So today, this tab is not just outdated, it's actively misleading — an admin could "save changes" to a song there and nothing would happen to what users actually see.
+
+Going forward, admin is scoped to **people and general oversight, never individual content authoring**:
+- Keep: `PostsTab`, `ArtistApplicationsTab` (approve/reject/moderate), `FeaturedTab`, `PagesTab`
+- Retire: `MusicTab`, `SongForm`, `LicensedTab`, `useLicensedArtists.ts` (Section 0, Gap #8 — now has a concrete trigger to actually delete it, not just "someday")
+- Replace with: a new **Catalog tab** — read-heavy, lists all artists (from `profiles where is_artist=true`) and their songs with play/resonate stats, allows moderation-level actions only (e.g. toggle a song `live`/`hidden`), but has **no upload, no audio/artwork fields, no "Generate SRT" button, no "Save Song" form**. Authoring belongs entirely to the artist-facing upload page (Phase 3), not admin. **Not yet built** — scoped here, not started.
+
+**🟢 Phase 4 rewritten and verified working end-to-end, via isolated test (no admin UI, no real song touched):**
+
+- Rewrote `app/api/tag-vibes/route.ts` to require `songId`, delete any existing `lyric_lines` for that song first (supports re-processing; `lyric_line_vibes` cascade-deletes automatically), insert new `lyric_lines`, then insert `lyric_line_vibes` using the real generated line ids. Returns `{songId, linesWritten, vibesWritten}` instead of raw transcript JSON.
+- Uses `getSupabaseAdmin()` from `lib/supabase-admin.ts` (service-role client, bypasses RLS) — correct choice since this route writes on behalf of a user in a server context with no `auth.uid()` available.
+- Deliberately left `songs.status` untouched by this route — publishing state stays entirely in Phase 3's upload flow, not buried in the tagging endpoint.
+- `app/api/whisper/route.ts` was left unchanged — it already does its one job correctly (audio in, SRT out); no Postgres writes belong there.
+- **Test performed:** built `scripts/test-tag-vibes-route.mjs` — creates a throwaway `status='draft'` test song (so it never appears on `/music`), calls the rewritten route against it with fake 3-line SRT text, verifies the actual rows in `lyric_lines`/`lyric_line_vibes`, then deletes the test song (cascade cleanup). Zero risk to the 10 real live songs.
+- **Required setup discovered along the way:** `OPENAI_API_KEY` was **never set** in `.env.local` — confirmed via `Get-Content .env.local | Select-String "OPENAI"` (empty result), plus checked Windows env vars and git history for any leaked key (all empty). This means the whisper/tag-vibes pipeline was never actually runnable, even from the old admin `SongForm` — clicking "Generate SRT" or "Tag Vibes" there would have failed with the same missing-key error. A new OpenAI API key was created and added to `.env.local`.
+- **Test result — full success:**
+  ```
+  Route response: { songId: '...', linesWritten: 3, vibesWritten: 2 }
+  lyric_lines: 3 rows, correct line_index/text/start_sec/end_sec, including a
+    zero-vibe filler line ("Hmm") correctly tagged with no vibes
+  lyric_line_vibes: 2 rows, correctly referencing the real generated lyric_lines.id
+  Cleanup: test song deleted, cascade removed lines/vibes, zero leftover data
+  ```
+  This confirms the full round trip works: OpenAI Whisper-style tagging call → Supabase writes → correct id-matching between `lyric_lines` and `lyric_line_vibes` → safe re-processing (delete-then-insert) → cascade cleanup.
+
+**What this means for build order:** Phase 4's actual route logic is now proven correct — the only missing piece is a real caller, since the old admin `SongForm` is being retired rather than extended. The next concrete step is Phase 3: the artist-facing upload page, gated on `identity.isArtist`, instant-live, which will call `/api/whisper` → rewritten `/api/tag-vibes` in sequence against a real Supabase song it creates.
 
 ---
 
@@ -466,20 +499,20 @@ This data came entirely from the one-time `migrate-songs-to-supabase.mjs` script
 
 ---
 
-## 4. Upload → live pipeline — NOT STARTED (Phase 3)
+## 4. Upload → live pipeline — NOT STARTED (Phase 3), but unblocked
+
+**🟢 Product decision resolved (Aug 1, 2026):** instant-live. An artist who has already been approved (Section 2's trigger) publishes songs directly — no per-song admin review. This is now settled, not open.
 
 | Step | Where | Detail |
 |---|---|---|
 | 1. Apply as artist | `/apply-artist` (exists) | Unchanged |
 | 2. Admin approves | `/admin` → Artists tab | ✅ **Done** — trigger from Section 2 flips `profiles.is_artist` automatically once `status='approved'` is set, live in production. Notifications on this path now also confirmed working (Section 2B). |
-| 3. "Upload Song" appears | Profile page or a new `/upload-song` route, gated on `identity.isArtist` | ⏳ **Not started** — reuse `SongForm`'s field layout/copy, write to Supabase + Storage instead of Firebase |
+| 3. "Upload Song" appears | A new artist-facing route (e.g. `/upload-song`, or under the artist's own profile), gated on `identity.isArtist` | ⏳ **Not started.** Reuse `SongForm`'s field layout/copy (the UX is good), but rebuild it against Supabase — the old form itself is being retired, not extended, since it writes to Firebase and has no effect on the real catalog (see Progress Log, Aug 1 later entry). |
 | 4. Upload audio + artwork | Direct-to-Storage upload from the browser (`supabase.storage.from('song-audio').upload(...)`) | ⏳ **Not started** — buckets exist and are ready (Section 3) |
-| 5. Lyric/vibe pipeline | `/api/whisper` + `/api/tag-vibes` rewritten to write `lyric_lines`/`lyric_line_vibes` | ⏳ **Not started, confirmed by direct file read Aug 1.** Both routes are unchanged — `/api/whisper` returns a raw SRT string, `/api/tag-vibes` takes SRT in and returns tagged JSON out. Neither writes to Postgres. See Section 8, item 3 — this is a build-order risk, not just a backlog item. |
-| 6. Go live | Artist (or admin) sets `status='live'` | ⏳ **Not started** — blocked on the product decision below |
+| 5. Lyric/vibe pipeline | `/api/whisper` + `/api/tag-vibes` rewritten to write `lyric_lines`/`lyric_line_vibes` | ✅ **`/api/tag-vibes` rewritten and verified working, Aug 1, 2026** — see Progress Log for full test results. Requires `songId`, writes real `lyric_lines`/`lyric_line_vibes` rows, safe to re-run (delete-then-insert). `/api/whisper` unchanged (already correct — audio in, SRT out, no Postgres writes needed there). **What's still missing is a real caller** — the upload page in step 3 needs to call whisper, then this rewritten route, in sequence. |
+| 6. Go live | Automatic — `status` is set to `'live'` directly by the upload flow, no separate approval step | ⏳ **Not started** — straightforward once step 3 exists, now that the instant-live decision is settled |
 
-**🔴 Open product question, blocking Phase 3 start:** should artist-uploaded songs go live immediately, or queue for admin review first (closer to the current admin-only model)? Doesn't block *schema* work (already done) — does determine the shape of the upload UI's final gate.
-
-**🔴 New, more urgent than the product question above:** even once that decision is made, Phase 3 (upload UI) should not ship *before* Phase 4 (whisper/tag-vibes rewrite) — otherwise a newly uploaded song goes live with audio/artwork but silently has zero lyric lines and no vibes, since nothing calls the transcription/tagging pipeline against Postgres. See Section 8, item 3.
+**Admin's role in this pipeline, now explicit:** admin approves the *artist* once (Section 2). Admin has no role in approving individual *songs*. The retired `MusicTab`/`SongForm` is being replaced by a read-only Catalog tab (Progress Log, Aug 1 later entry) for oversight, not gatekeeping.
 
 ---
 
@@ -524,8 +557,8 @@ Planned direction, unchanged from original doc: once songs live in Postgres, `se
 |---|---|---|
 | **1** | Trigger (Section 2) + admin approval/moderation tab (Section 2A/2B) + `profiles.artist_status` columns | ✅ **Done** — merged `feat/artist-approval-supabase` → `main` (`8cdba62`), verified live in Supabase production |
 | **2** | Schema + RLS + storage buckets (Section 3) | ✅ **Done** — merged `chore/track-migration-sql` → `main` (`3aa758a`), verified live in Supabase production, row counts confirmed Aug 1 |
-| **3** | Self-serve upload UI + Storage wiring | 🔴 **Blocked** on instant-live vs. admin-reviewed product decision (Section 4/8) — **and recommended to sequence after Phase 4, not before** (see Section 8, item 3) |
-| **4** | Rewrite `/api/whisper` + `/api/tag-vibes` to write Postgres | ⏳ **Not started, confirmed by direct file read Aug 1.** Currently the only reason any lyric/vibe data exists in production is the one-time migration script — no live pipeline populates new songs. |
+| **3** | Self-serve upload UI + Storage wiring | ⏳ **Unblocked, not started.** Product decision resolved (instant-live, Aug 1). Phase 4's route is done and tested, so this can now proceed without the earlier sequencing risk. Also now scoped to include retiring `admin`'s `MusicTab`/`SongForm`/`LicensedTab` in favor of a general-purpose Catalog tab (see Progress Log). |
+| **4** | Rewrite `/api/whisper` + `/api/tag-vibes` to write Postgres | ✅ **Done and verified, Aug 1, 2026.** `/api/tag-vibes` rewritten to require `songId` and persist real `lyric_lines`/`lyric_line_vibes` rows; tested end-to-end via a throwaway test song with zero risk to live data. `/api/whisper` confirmed already correct, unchanged. Only remaining piece: a real caller (Phase 3's upload page). |
 | **5** | Music page reads (`useSongs`, `LyricBoard`, grid, search) **and** `useSong` (karaoke detail) → Supabase | ✅ **Partially done** — merged `29ec9ab`. `useSongs`, `useSong`, discovery board, and player page all confirmed live on Supabase. `useSharedLines` and search remain Firebase/client-side, not started. |
 | **6** | `compose` song-linking → real FK / artist-owned picker | ⏳ **Not started, confirmed by direct file read Aug 1.** Also newly confirmed: post creation itself is still Firebase, not just the song-linking logic. |
 | **7** | Retire `adminConfig/licensedArtists`, `LicensedTab`, `useLicensedArtists.ts`, old Firebase `songs` tree | ⏳ Not started |
@@ -534,11 +567,12 @@ Planned direction, unchanged from original doc: once songs live in Postgres, `se
 
 ## 8. Open items
 
-1. **🔴 Product decision (blocking Phase 3):** instant-live vs. admin-reviewed song publishing (Section 4) — doesn't block schema work (already done), does determine the upload UI's final gate.
+1. ~~**🔴 Product decision (blocking Phase 3)**~~ — ✅ **Resolved August 1, 2026.** Instant-live: an approved artist publishes songs directly, no per-song admin review. Admin approves the artist once (Section 2), never individual songs.
 2. ~~**⚠️ Notifications schema**~~ — ✅ **Resolved August 1, 2026** (merged `16baa8f`). `notifyProfile()` confirmed against real schema; artist-status notifications can now be trusted to deliver.
-3. **🆕 New, Aug 1, 2026 — build-order risk, not just a backlog item:** Phase 4 (whisper/tag-vibes → Postgres) has not started, confirmed by direct file read. This means there is currently **no working path for a newly-uploaded song's lyrics/vibes to reach Postgres** — the only reason data exists today is the one-time migration script. Phase 3 (self-serve upload) should be sequenced *after*, or at minimum *alongside*, Phase 4 — not before it. Shipping Phase 3 first would let an artist upload a song that goes live with audio/artwork but silently has zero lyric lines and no vibes, since nothing would call the whisper/tag-vibes rewrite for it.
-4. **🆕 New, Aug 1, 2026 — scoping gap:** `compose`'s post-creation path (not just song-linking) is still 100% Firebase — new posts write to `push(ref(db,'posts'), post)`. This is a second migration surface (posts, not just songs) that isn't currently scoped as its own phase anywhere in this document. Worth deciding whether it's folded into Phase 6 or tracked separately, likely alongside the "still-deferred `posts` migration" mentioned in Section 5 re: `useSharedLines`.
+3. ~~**🆕 Build-order risk: Phase 4 not started**~~ — ✅ **Resolved August 1, 2026.** `/api/tag-vibes` rewritten to write real `lyric_lines`/`lyric_line_vibes` rows, tested end-to-end via an isolated throwaway-song test (zero risk to live data), confirmed working including correct filler-line handling and safe re-processing. `/api/whisper` confirmed already correct, unchanged.
+4. **🆕 New, Aug 1, 2026 — scoping gap, still open:** `compose`'s post-creation path (not just song-linking) is still 100% Firebase — new posts write to `push(ref(db,'posts'), post)`. This is a second migration surface (posts, not just songs) that isn't currently scoped as its own phase anywhere in this document. Worth deciding whether it's folded into Phase 6 or tracked separately, likely alongside the "still-deferred `posts` migration" mentioned in Section 5 re: `useSharedLines`.
+5. **🆕 New, Aug 1, 2026 — scoping decision made, not yet built:** `admin/page.tsx`'s `MusicTab`, `SongForm`, and `LicensedTab` are being retired (not extended) in favor of a general-purpose, read-only Catalog tab — see Progress Log for full reasoning. This is now scoped but not started; folding it into Phase 3 (since both involve the same "who authors a song" boundary) or tracking it as its own small phase is an open sequencing choice, not a product question.
 
 ---
 
-*Next step: settle the instant-live-vs-review decision AND resolve Phase 4 sequencing (item 3 above) before opening `feat/song-upload-ui` — shipping upload UI ahead of a working lyric/vibe pipeline would ship a visible gap, not just a smaller one.*
+*Next step: build Phase 3 — the artist-facing upload page (instant-live, gated on `identity.isArtist`), reusing `SongForm`'s UX but rebuilt against Supabase + Storage, calling `/api/whisper` then the now-proven `/api/tag-vibes`. Alongside or shortly after, retire `admin`'s Music/SongForm/Licensed tabs per item 5 above.*
