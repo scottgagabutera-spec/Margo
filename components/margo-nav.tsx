@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -38,6 +38,7 @@ const font = 'var(--font-lora), serif'
  */
 export function MargoNav() {
   const pathname = usePathname()
+  const router = useRouter()
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const avatarMenuRef = useRef<HTMLDivElement>(null)
   const { user, identity } = useIdentity()
@@ -61,6 +62,7 @@ export function MargoNav() {
   const handleSignOut = async () => {
     setAvatarMenuOpen(false)
     await supabase.auth.signOut()
+    router.push('/feed')
   }
 
   useEffect(() => { setAvatarMenuOpen(false) }, [pathname])

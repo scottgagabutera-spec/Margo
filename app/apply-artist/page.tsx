@@ -34,11 +34,11 @@ export default function ApplyArtistPage() {
 
   if (identity.isArtist) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ position: 'fixed', top: '16px', left: '16px', zIndex: 60 }}>
-          <BackButton fallbackHref={ownProfileHref} />
-        </div>
-        <div style={{ width: '100%', maxWidth: '420px', textAlign: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div style={{ maxWidth: '420px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom, 80px)', textAlign: 'center' }}>
+          <div style={{ marginBottom: '24px', textAlign: 'left' }}>
+            <BackButton fallbackHref={ownProfileHref} />
+          </div>
           <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>
             Margo
           </p>
@@ -66,11 +66,11 @@ export default function ApplyArtistPage() {
 
   if (status === 'pending') {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ position: 'fixed', top: '16px', left: '16px', zIndex: 60 }}>
-          <BackButton fallbackHref={ownProfileHref} />
-        </div>
-        <div style={{ width: '100%', maxWidth: '420px', textAlign: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div style={{ maxWidth: '420px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom, 80px)', textAlign: 'center' }}>
+          <div style={{ marginBottom: '24px', textAlign: 'left' }}>
+            <BackButton fallbackHref={ownProfileHref} />
+          </div>
           <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>
             Margo
           </p>
@@ -86,11 +86,11 @@ export default function ApplyArtistPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div style={{ position: 'fixed', top: '16px', left: '16px', zIndex: 60 }}>
-        <BackButton fallbackHref={ownProfileHref} />
-      </div>
-      <div style={{ width: '100%' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom, 80px)' }}>
+        <div style={{ marginBottom: '24px' }}>
+          <BackButton fallbackHref={ownProfileHref} />
+        </div>
         {status === 'rejected' && (
           <p style={{
             fontFamily: font, fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)',

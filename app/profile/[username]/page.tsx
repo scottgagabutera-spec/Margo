@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -31,6 +31,7 @@ type FollowStatus = null | 'pending' | 'accepted'
 
 export default function ProfilePage() {
   const params = useParams<{ username: string }>()
+  const router = useRouter()
   const { user, identity } = useIdentity()
   const { application } = useArtistApplication()
   const { posts } = usePosts()
@@ -88,9 +89,6 @@ export default function ProfilePage() {
 
   const isOwnProfile = !!identity && !!profile && identity.username === profile.username
 
-  // Look up the viewer's own relationship to this profile — separate
-  // from the aggregate counts above, since this is specific to the
-  // signed-in viewer, not the profile being viewed.
   useEffect(() => {
     if (!user || !profile || isOwnProfile) { setFollowStatus(null); return }
     let active = true
@@ -112,10 +110,6 @@ export default function ProfilePage() {
     [posts, profile]
   )
 
-  // Giants-style privacy: identity (avatar, name, bio, counts) always
-  // shows. Content (their lyrics) is locked to non-followers on a
-  // private profile — owner and accepted followers see it, everyone
-  // else sees a locked message instead of the actual posts.
   const canViewContent = !profile?.isPrivate || isOwnProfile || followStatus === 'accepted'
 
   const applicationStatus = application?.status ?? 'none'
@@ -127,16 +121,9 @@ export default function ProfilePage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+    router.push('/feed')
   }
 
-  // Mutual-accept follow model: a first click sends a request. The
-  // database (set_follow_status trigger) decides the actual resulting
-  // status — 'accepted' immediately for public profiles, 'pending' for
-  // private ones — so the client reads back what the trigger set
-  // rather than assuming 'pending'. Clicking again while pending
-  // cancels the request; clicking while already accepted unfollows.
-  // There's no accept/decline inbox for incoming requests yet on this
-  // page — that lives in notifications.
   const handleFollowClick = async () => {
     if (!user || !profile || followBusy) return
     setFollowBusy(true)
@@ -296,7 +283,7 @@ export default function ProfilePage() {
               }}>Margo Artist</span>
             )}
 
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', gap: '20px', marginBottom: isOwnProfile ? '16px' : '20px' }}>
               <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
                 <strong style={{ color: 'var(--text)' }}>{followerCount ?? '—'}</strong> followers
               </span>
@@ -304,6 +291,30 @@ export default function ProfilePage() {
                 <strong style={{ color: 'var(--text)' }}>{followingCount ?? '—'}</strong> following
               </span>
             </div>
+
+            {isOwnProfile && (
+              <div style={{
+                display: 'flex', flexWrap: 'wrap', gap: '6px 18px',
+                paddingBottom: '20px', marginBottom: '20px',
+                borderBottom: '1px solid var(--border)',
+              }}>
+                <Link href="/settings" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', textDecoration: 'none' }}>
+                  Account settings
+                </Link>
+                {showApplyCTA && (
+                  <Link href="/apply-artist" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', textDecoration: 'none' }}>
+                    {applyLabel}
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
 
             <div style={{ marginBottom: '24px' }}>
               <p style={sectionLabelStyle}>Bio</p>
@@ -392,29 +403,6 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-
-            {isOwnProfile && (
-              <div style={{
-                display: 'flex', flexWrap: 'wrap', gap: '8px 20px',
-                borderTop: '1px solid var(--border)', paddingTop: '20px', marginBottom: '24px',
-              }}>
-                <Link href="/settings" style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', textDecoration: 'none' }}>
-                  Account settings
-                </Link>
-                {showApplyCTA && (
-                  <Link href="/apply-artist" style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', textDecoration: 'none' }}>
-                    {applyLabel}
-                  </Link>
-                )}
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                >
-                  Sign out
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
