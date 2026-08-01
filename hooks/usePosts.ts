@@ -56,12 +56,14 @@ const POST_SELECT = `
   author_profile_id,
   created_at,
   profiles:author_profile_id ( username, avatar_url ),
-  post_stats ( resonate_count, echo_count )
+  post_stats ( resonate_count, echo_count ),
+  songs:song_id ( audio_url )
 `
 
 function mapRow(row: any): Post {
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
   const stats = Array.isArray(row.post_stats) ? row.post_stats[0] : row.post_stats
+  const linkedSong = Array.isArray(row.songs) ? row.songs[0] : row.songs
 
   return {
     id: row.id,
@@ -93,7 +95,7 @@ function mapRow(row: any): Post {
     resonates: stats?.resonate_count ?? 0,
     replies: stats?.echo_count ?? 0,
     songId: row.song_id ?? null,
-    audioUrl: null,
+    audioUrl: linkedSong?.audio_url ?? null,
   }
 }
 
