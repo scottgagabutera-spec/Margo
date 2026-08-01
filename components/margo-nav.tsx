@@ -29,6 +29,12 @@ const font = 'var(--font-lora), serif'
  * than depending on an external CSS class loading correctly — this was
  * the root cause of the nav appearing transparent with content visible
  * scrolling behind it.
+ *
+ * Studio (artist upload dashboard) follows the same pattern as
+ * Apply as an Artist below: desktop nav shows it in the avatar
+ * dropdown, gated on identity.isArtist. Mobile parity for this link
+ * lives wherever Apply as an Artist lives on the own-profile page,
+ * not here — same reasoning as the comment above.
  */
 export function MargoNav() {
   const pathname = usePathname()
@@ -72,6 +78,7 @@ export function MargoNav() {
 
   const avatarDropdownItems = ownProfileHref ? [
     { href: ownProfileHref, label: 'Profile' },
+    ...(identity?.isArtist ? [{ href: '/studio', label: 'Studio' }] : []),
     { href: '/settings', label: 'Account Settings' },
     ...(showApplyCTA ? [{ href: '/apply-artist', label: applyLabel }] : []),
   ] : []
