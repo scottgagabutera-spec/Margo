@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 const VIBES = ['CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL', 'NOSTALGIA', 'JOY', 'LOVE', 'HYPE', 'PROUD']
 
-function parseSRT(srt: string): { id: number; line: string; start: number; end: number }[] {
+interface ParsedLine {
+  id: number
+  line: string
+  start: number
+  end: number
+}
+
+function parseSRT(srt: string): ParsedLine[] {
   const blocks = srt.trim().split(/\n\s*\n/)
-  const lines: { id: number; line: string; start: number; end: number }[] = []
+  const lines: ParsedLine[] = []
   blocks.forEach((block, i) => {
     const parts = block.trim().split('\n')
     if (parts.length < 3) return
@@ -26,8 +34,10 @@ function parseSRT(srt: string): { id: number; line: string; start: number; end: 
 
 export async function POST(request: NextRequest) {
   try {
-    const { srt, songTitle, artist } = await request.json()
+    const { srt, songTitle, artist, songId } = await request.json()
+
     if (!srt) return NextResponse.json({ error: 'srt required' }, { status: 400 })
+    if (!songId) return NextResponse.json({ error: 'songId required' }, { status: 400 })
     if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OpenAI not configured' }, { status: 503 })
 
     const lines = parseSRT(srt)
@@ -54,7 +64,7 @@ Return JSON in this exact format:
 {"tags": {"0": ["HOPE","HYPE"], "1": ["LOVE"], "2": [], ...}}
 Every line index must be present. Empty array for filler lines.`
 
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -71,13 +81,13 @@ Every line index must be present. Empty array for filler lines.`
       }),
     })
 
-    if (!res.ok) {
-      const err = await res.json()
+    if (!gptRes.ok) {
+      const err = await gptRes.json()
       return NextResponse.json({ error: 'GPT failed', detail: err }, { status: 500 })
     }
 
-    const data = await res.json()
-    const raw = data.choices?.[0]?.message?.content?.trim() || ''
+    const gptData = await gptRes.json()
+    const raw = gptData.choices?.[0]?.message?.content?.trim() || ''
 
     let parsed: { tags: Record<string, string[]> }
     try {
@@ -86,15 +96,82 @@ Every line index must be present. Empty array for filler lines.`
       return NextResponse.json({ error: 'GPT returned invalid JSON', raw }, { status: 500 })
     }
 
-    const result = lines.map(l => ({
-      id: l.id,
-      line: l.line,
-      start: l.start,
-      end: l.end,
+    const taggedLines = lines.map(l => ({
+      lineIndex: l.id,
+      text: l.line,
+      startSec: l.start,
+      endSec: l.end,
       vibes: (parsed.tags[String(l.id)] || []).filter((v: string) => VIBES.includes(v)),
     }))
 
-    return NextResponse.json({ lines: result })
+    // ── Persist to Supabase ──────────────────────────────────────────
+    const supabase = getSupabaseAdmin()
+
+    // Confirm the song actually exists before writing anything against it —
+    // avoids silently creating orphaned lyric_lines for a bad songId.
+    const { data: songRow, error: songLookupErr } = await supabase
+      .from('songs')
+      .select('id')
+      .eq('id', songId)
+      .single()
+
+    if (songLookupErr || !songRow) {
+      return NextResponse.json({ error: 'songId not found', detail: songLookupErr?.message }, { status: 404 })
+    }
+
+    // Re-processing support: wipe any existing lines for this song first.
+    // lyric_line_vibes cascade-deletes automatically (FK on delete cascade).
+    const { error: deleteErr } = await supabase
+      .from('lyric_lines')
+      .delete()
+      .eq('song_id', songId)
+
+    if (deleteErr) {
+      return NextResponse.json({ error: 'Failed to clear existing lines', detail: deleteErr.message }, { status: 500 })
+    }
+
+    // Insert lyric_lines, get back generated ids matched to line_index
+    const { data: insertedLines, error: insertLinesErr } = await supabase
+      .from('lyric_lines')
+      .insert(
+        taggedLines.map(l => ({
+          song_id: songId,
+          line_index: l.lineIndex,
+          text: l.text,
+          start_sec: l.startSec,
+          end_sec: l.endSec,
+        }))
+      )
+      .select('id, line_index')
+
+    if (insertLinesErr || !insertedLines) {
+      return NextResponse.json({ error: 'Failed to insert lyric_lines', detail: insertLinesErr?.message }, { status: 500 })
+    }
+
+    // Map line_index -> generated line id, so vibes attach to the right row
+    const lineIdByIndex = new Map(insertedLines.map(row => [row.line_index, row.id]))
+
+    const vibeRows = taggedLines.flatMap(l => {
+      const lineId = lineIdByIndex.get(l.lineIndex)
+      if (!lineId) return []
+      return l.vibes.map((vibe: string) => ({ line_id: lineId, vibe }))
+    })
+
+    if (vibeRows.length > 0) {
+      const { error: insertVibesErr } = await supabase
+        .from('lyric_line_vibes')
+        .insert(vibeRows)
+
+      if (insertVibesErr) {
+        return NextResponse.json({ error: 'Failed to insert lyric_line_vibes', detail: insertVibesErr.message }, { status: 500 })
+      }
+    }
+
+    return NextResponse.json({
+      songId,
+      linesWritten: insertedLines.length,
+      vibesWritten: vibeRows.length,
+    })
   } catch (err: any) {
     return NextResponse.json({ error: 'Tag vibes failed', detail: err.message }, { status: 500 })
   }
