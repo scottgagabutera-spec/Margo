@@ -6,10 +6,8 @@ export const dynamic = 'force-dynamic'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
-import { db, auth } from '@/lib/firebase'
-import { ref, push, serverTimestamp, get } from 'firebase/database'
+import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
-import { useApprovedArtists } from '@/hooks/useApprovedArtists'
 import { CardExportModal } from '@/components/card-export-modal'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 
@@ -58,7 +56,6 @@ function ComposeInner() {
   const router = useRouter()
   const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
   const { requireAuth } = useAuthGate()
-  const { isLicensed } = useApprovedArtists()
   const searchParams = useSearchParams()
   useEffect(() => {
     const lyricParam = searchParams.get('lyric')
@@ -132,24 +129,34 @@ function ComposeInner() {
     setShowResults(false)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
-    if (isLicensed(result.artist) && db) {
-      try {
-        const snap = await get(ref(db, 'songs'))
-        snap.forEach((child) => {
-          const s = child.val()
-          const titleMatch = s.title?.toLowerCase().trim() === result.title.toLowerCase().trim()
-          const artistMatch = s.artist?.toLowerCase().trim() === result.artist.toLowerCase().trim()
-          if (titleMatch && artistMatch) {
-            setLinkedSongId(child.key)
-            setLinkedAudioUrl(s.audioUrl || null)
-          }
-        })
-      } catch (e) {
-        console.error('Song lookup failed:', e)
+
+    // Real FK lookup against the live Supabase catalog — replaces the old
+    // Firebase full-tree scan + isLicensed() gate (Section 6, Gap #5). The
+    // isLicensed() gate existed purely as a cheap pre-filter before doing
+    // an expensive tree read; a direct indexed query doesn't need that
+    // gate at all, so it's dropped rather than replaced. Only songs that
+    // are actually live in Margo's own catalog get linked — everything
+    // else still posts fine as free-text song/artist metadata, same as
+    // before.
+    try {
+      const { data, error } = await supabase
+        .from('songs')
+        .select('id, audio_url')
+        .eq('status', 'live')
+        .ilike('title', result.title.trim())
+        .ilike('artist_display_name', result.artist.trim())
+        .maybeSingle()
+
+      if (!error && data) {
+        setLinkedSongId(data.id)
+        setLinkedAudioUrl(data.audio_url || null)
       }
+    } catch (e) {
+      console.error('Song lookup failed:', e)
     }
+
     setStep(2)
-  }, [isLicensed])
+  }, [])
 
   const handleLyricComplete = useCallback(async () => {
     if (lyric.trim().length === 0) return
@@ -194,57 +201,53 @@ function ComposeInner() {
     if (isPrivate) { setShowExport(true); return }
     if (!identity || !user) { setPostError('Still setting things up — try again in a moment.'); return }
 
-    console.log('Firebase auth state:', auth?.currentUser)
-
     setPosting(true)
     setPostError(null)
 
-    const post = {
-      text: lyric,
-      emotion: selectedVibe || null,
-      mode: 'share',
-      status: 'active',
-      flagCount: 0,
-      knowledge: {
-        song: songName,
-        artist: artistName,
-        artwork: selectedSong?.artwork || null,
-        geniusId: selectedSong?.id || null,
-      },
-      youtubeMeta: null,
-      songId: linkedSongId || null,
-      audioUrl: linkedAudioUrl || null,
-      username: identity.displayName || null,
-      authorUid: user.uid,
-      authorAvatarUrl: identity.avatarUrl || null,
-      timestamp: serverTimestamp(),
-      lang: navigator.language.split('-')[0] || 'en',
-    }
+    // Confirmed via useIdentity.ts: IdentityUser sets both `id` and `uid`
+    // to the same Supabase auth id (a deliberate compatibility shim), so
+    // user.id is always correct here — no ambiguity after all.
+    const authorId = user.id
 
     try {
-      if (!db) throw new Error('Database not available')
-      const result = await push(ref(db, 'posts'), post)
-      setPostedId(result.key)
+      const { data, error: insertErr } = await supabase
+        .from('posts')
+        .insert({
+          text: lyric,
+          emotion: selectedVibe || null,
+          status: 'active',
+          flag_count: 0,
+          song_id: linkedSongId || null,
+          song_title: songName,
+          artist_name: artistName,
+          artwork_url: selectedSong?.artwork || null,
+          genius_id: selectedSong?.id || null,
+          author_profile_id: authorId,
+          parent_post_id: null,
+          lang: navigator.language.split('-')[0] || 'en',
+        })
+        .select('id')
+        .single()
 
-      if (result.key && linkedSongId && db) {
-        import('firebase/database').then(({ ref: dbRef, runTransaction }) => {
-          if (db) {
-            runTransaction(dbRef(db, `songs/${linkedSongId}/lyricUses`), (cur) => (cur || 0) + 1)
-            runTransaction(dbRef(db, `songStats/${linkedSongId}/lyricUses`), (cur) => (cur || 0) + 1)
-          }
-        }).catch(() => {})
-      }
+      if (insertErr) throw insertErr
 
-      // Moderation now runs and writes flagCount entirely server-side via
-      // the admin SDK in /api/moderate — the client just fires the request
-      // with postId included and doesn't need the response back.
-      if (result.key) {
-        fetch('/api/moderate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: lyric, postId: result.key }),
-        }).catch(() => {})
-      }
+      const newPostId = data.id
+      setPostedId(newPostId)
+
+      // song_stats.lyric_uses is now incremented automatically by the
+      // post_song_link_insert trigger whenever a post with a real song_id
+      // is created — no manual runTransaction needed here anymore
+      // (previously two separate Firebase transactions against
+      // songs/{id}/lyricUses and songStats/{id}/lyricUses).
+
+      // Moderation still runs entirely server-side via /api/moderate —
+      // the client just fires the request with the real postId and
+      // doesn't need the response back.
+      fetch('/api/moderate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: lyric, postId: newPostId }),
+      }).catch(() => {})
 
       setPosting(false)
       setShowSharePrompt(true)
@@ -253,7 +256,7 @@ function ComposeInner() {
       setPostError('Something went wrong. Please try again.')
       setPosting(false)
     }
-  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, isLicensed, linkedSongId, linkedAudioUrl])
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, linkedSongId, linkedAudioUrl])
 
   const resetCompose = () => {
     setStep(1)

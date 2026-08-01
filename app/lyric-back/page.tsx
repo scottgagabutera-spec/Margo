@@ -5,9 +5,8 @@ import { toast } from 'sonner'
 import { Search } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
 import { HeartIcon } from '@/components/heart-icon'
-import { db } from '@/lib/firebase'
+import { supabase } from '@/lib/supabase'
 import { useEchoes } from '@/hooks/useEchoes'
-import { ref, push, set, remove, serverTimestamp, runTransaction } from 'firebase/database'
 import { useIdentity } from '@/hooks/useIdentity'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useSearchParams } from 'next/navigation'
@@ -92,11 +91,20 @@ function parseVibeFromString(raw: string | undefined | null): Vibe | null {
 }
 
 function LyricBackContent() {
-  const { user, identity } = useIdentity()
+  const { user } = useIdentity()
   const { requireAuth } = useAuthGate()
   const searchParams = useSearchParams()
   const postId = searchParams.get('postId')
-  const { post: respondingTo } = usePost(postId)
+  const echoId = searchParams.get('echoId')
+  // FIX, Aug 1, 2026 (Section 8, item 15): previously echoId was read from
+  // the URL but never used — "Responding to" always showed the top-level
+  // post even when promoteAndReply linked to a specific echo. Now that
+  // posts.parent_post_id supports real arbitrary-depth threading, replying
+  // to a specific echo shows THAT echo as the parent, not its top-level
+  // ancestor. respondingToId is also what gets written as parent_post_id
+  // in handlePost below.
+  const respondingToId = echoId || postId
+  const { post: respondingTo } = usePost(respondingToId)
   const { echoes, loading: echoesLoading } = useEchoes(postId)
 
   const [step, setStep] = useState(1)
@@ -223,7 +231,7 @@ function LyricBackContent() {
   }, [])
 
   /* ─── post ───────────────────────────────────────────────── */
-  const handlePost = useCallback((isPrivate: boolean) => {
+  const handlePost = useCallback(async (isPrivate: boolean) => {
     if (!requireAuth()) return
     if (posting) return
     if (!lyric || !songName || !artistName) return
@@ -231,49 +239,47 @@ function LyricBackContent() {
       setPostError('Choose a vibe before sending.')
       return
     }
-    if (!db) {
-      setPostError('Could not connect. Please try again.')
+    if (!user) {
+      setPostError('Still setting things up — try again in a moment.')
       return
     }
     setPosting(true)
     setPostError(null)
 
-    const writePromise = postId
-      ? push(ref(db, `posts/${postId}/echoes`), {
-          lyric, song: songName, artist: artistName,
-          emotion: selectedVibe, username: identity?.displayName || null,
-          authorUid: user?.id || null,
-          timestamp: serverTimestamp(), resonates: {},
-        }).then(() => {
-          // increment postStats.echoCount atomically
-          runTransaction(ref(db!, `postStats/${postId}/echoCount`), (current) => (current || 0) + 1)
-          // also increment songStats if this post is linked to a song
-          return import('firebase/database').then(({ ref: dbRef, get: dbGet, runTransaction: dbTx }) => {
-            if (!db) return
-            return dbGet(dbRef(db, `posts/${postId}/songId`)).then(snap => {
-              if (snap.exists() && snap.val()) {
-                dbTx(dbRef(db!, `songStats/${snap.val()}/echoCount`), (cur) => (cur || 0) + 1)
-              }
-            })
-          })
-        })
-      : push(ref(db, 'posts'), {
-          text: lyric, emotion: selectedVibe, mode: 'share',
-          status: isPrivate ? 'private' : 'active',
-          knowledge: { song: songName, artist: artistName, artwork: selectedSong?.artwork || null },
-          username: identity?.displayName || null,
-          authorUid: user?.id || null,
-          timestamp: serverTimestamp(),
-        })
+    // Confirmed via useIdentity.ts: IdentityUser sets both `id` and `uid`
+    // to the same Supabase auth id, so user.id is always correct here.
+    const authorId = user.id
+
+    // Replying (respondingToId set) creates a real threaded post with
+    // parent_post_id — this is what makes reply-to-a-reply work naturally
+    // now, instead of the old flat posts/{id}/echoes nesting. A fresh
+    // Lyric Back with no parent (respondingToId null) is a new top-level
+    // post, same as compose's handlePost.
+    const { error: insertErr } = await supabase.from('posts').insert({
+      text: lyric,
+      emotion: selectedVibe,
+      status: respondingToId ? 'active' : (isPrivate ? 'private' : 'active'),
+      song_title: songName,
+      artist_name: artistName,
+      artwork_url: !respondingToId ? (selectedSong?.artwork || null) : null,
+      author_profile_id: authorId,
+      parent_post_id: respondingToId || null,
+    })
 
     resetComposeForm()
     setPosting(false)
 
-    writePromise.catch((e) => {
-      console.error('Failed to post:', e)
+    if (insertErr) {
+      console.error('Failed to post:', insertErr)
       toast.error('Could not send your lyric back. Please try again.')
-    })
-  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, postId, posting, resetComposeForm])
+    }
+    // post_stats.echo_count on the parent is kept in sync automatically
+    // by the post_reply_insert trigger — no manual runTransaction needed
+    // (previously two separate Firebase transactions against
+    // postStats/{id}/echoCount and songStats/{id}/echoCount; the latter
+    // has no Supabase equivalent since song_stats tracks lyric_uses, not
+    // echo counts — flagging this as a dropped field, not silently kept).
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user, respondingToId, posting, resetComposeForm])
 
   /* ─── promote + reply — navigate first, write in background ─ */
   const promoteAndReply = (echo: typeof echoes[0]) => {
@@ -282,9 +288,14 @@ function LyricBackContent() {
   }
 
   /* ─── resonate ───────────────────────────────────────────── */
+  // Echo resonates now write to the same post_resonates table as
+  // top-level post resonates, since every echo is a real posts row with
+  // its own id — the three separate resonate concepts flagged in
+  // Section 8, item 14 (song-level / post-level / echo-level) collapse
+  // to two now: song_resonates (unchanged) and post_resonates (covers
+  // both top-level posts and echoes uniformly).
   const toggleResonate = async (echoId: string) => {
     if (!requireAuth()) return
-    if (!db) return
     const myId = getMargoActorId()
     const already = resonated.has(echoId)
     setResonated(prev => { const n = new Set(prev); already ? n.delete(echoId) : n.add(echoId); return n })
@@ -295,9 +306,20 @@ function LyricBackContent() {
         + (already ? -1 : 1)
       ),
     }))
-    const rRef = ref(db, `analytics/${echoId}/resonates/${myId}`)
     try {
-      already ? await remove(rRef) : await set(rRef, true)
+      if (already) {
+        const { error } = await supabase
+          .from('post_resonates')
+          .delete()
+          .eq('post_id', echoId)
+          .eq('actor_id', myId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('post_resonates')
+          .insert({ post_id: echoId, actor_id: myId })
+        if (error) throw error
+      }
     } catch {
       setResonated(prev => { const n = new Set(prev); already ? n.add(echoId) : n.delete(echoId); return n })
       setResonateCounts(prev => ({ ...prev, [echoId]: Math.max(0, (prev[echoId] || 0) + (already ? 1 : -1)) }))
