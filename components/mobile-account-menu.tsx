@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
@@ -10,6 +10,7 @@ const font = 'var(--font-lora), serif'
 
 export function MobileAccountMenu() {
   const pathname = usePathname()
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const sheetRef = useRef<HTMLDivElement>(null)
   const { user, identity } = useIdentity()
@@ -28,6 +29,7 @@ export function MobileAccountMenu() {
   const handleSignOut = async () => {
     setOpen(false)
     await supabase.auth.signOut()
+    router.push('/feed')
   }
 
   useEffect(() => { setOpen(false) }, [pathname])
@@ -44,6 +46,7 @@ export function MobileAccountMenu() {
 
   const items = [
     { href: ownProfileHref, label: 'Profile' },
+    ...(identity?.isArtist ? [{ href: '/studio', label: 'Studio' }] : []),
     { href: '/settings', label: 'Account Settings' },
     ...(showApplyCTA ? [{ href: '/apply-artist', label: applyLabel }] : []),
   ]
