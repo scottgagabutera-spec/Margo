@@ -1,6 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+
+const font = 'var(--font-lora), serif'
 
 interface SongUploadFormProps {
   artistDisplayName: string
@@ -23,12 +25,12 @@ const inputStyle: React.CSSProperties = {
   width: '100%', padding: '12px 14px',
   background: 'var(--surface-2)', border: '1px solid var(--border)',
   borderRadius: '10px', color: 'var(--text)',
-  fontFamily: 'var(--font-lora), serif', fontSize: '1rem',
+  fontFamily: font, fontSize: '1rem',
   outline: 'none', boxSizing: 'border-box', minHeight: '44px',
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontFamily: 'var(--font-lora), serif',
+  display: 'block', fontFamily: font,
   fontSize: '0.6rem', color: 'var(--text-3)',
   textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px',
 }
@@ -40,6 +42,15 @@ function ChevronIcon({ open }: { open: boolean }) {
       transition: 'transform 220ms cubic-bezier(0.16, 1, 0.3, 1)',
     }}>
       <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function UploadIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+      <path d="M11 14V3M11 3L6.5 7.5M11 3l4.5 4.5" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.5 15v2.5A1.5 1.5 0 0 0 5 19h12a1.5 1.5 0 0 0 1.5-1.5V15" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -68,6 +79,8 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [artworkFile, setArtworkFile] = useState<File | null>(null)
   const [artworkPreview, setArtworkPreview] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const artworkInputRef = useRef<HTMLInputElement>(null)
 
   const [showStreaming, setShowStreaming] = useState(false)
   const [youtubeUrl, setYoutubeUrl] = useState('')
@@ -82,7 +95,6 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
 
   const [stage, setStage] = useState<Stage>('idle')
   const [error, setError] = useState('')
-  // Kept so a failed lyrics/vibes step can be retried without re-uploading files
   const [pendingSongId, setPendingSongId] = useState<string | null>(null)
   const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null)
 
@@ -92,6 +104,14 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
     setArtworkFile(file)
     if (artworkPreview) URL.revokeObjectURL(artworkPreview)
     setArtworkPreview(file ? URL.createObjectURL(file) : null)
+  }
+
+  const handleArtworkDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (busy) return
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.type.startsWith('image/')) handleArtworkChange(file)
   }
 
   const runLyricsPipeline = async (songId: string, audioUrl: string) => {
@@ -213,50 +233,125 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
 
   return (
     <div style={{
-      background: 'var(--surface)', border: '1px solid var(--gold-border)',
+      background: 'var(--surface)', border: '1px solid var(--border)',
       borderRadius: '16px', padding: '24px',
     }}>
-      <h3 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', color: 'var(--gold)', marginBottom: '20px', fontWeight: 600 }}>
+      <h3 style={{ fontFamily: font, fontSize: '1.15rem', color: 'var(--text)', marginBottom: '20px', fontWeight: 600 }}>
         Upload a Song
       </h3>
 
-      <div style={{ marginBottom: '16px' }}>
-        <label style={labelStyle}>Title</label>
-        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Song title" style={inputStyle} disabled={busy} />
-      </div>
-
-      <div style={{ marginBottom: '16px' }}>
-        <label style={labelStyle}>Artist Name</label>
-        <input value={artistName} onChange={e => setArtistName(e.target.value)} placeholder="Artist or stage name" style={inputStyle} disabled={busy} />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(180px, 260px) 1fr',
+        gap: '24px',
+        marginBottom: '20px',
+      }}
+      className="studio-poster-grid"
+      >
+        {/* Live poster preview — doubles as the artwork dropzone */}
         <div>
-          <label style={labelStyle}>Audio File</label>
           <input
-            type="file" accept="audio/*"
-            onChange={e => setAudioFile(e.target.files?.[0] || null)}
-            style={{ ...inputStyle, padding: '10px 14px' }}
-            disabled={busy}
-          />
-          {audioFile && (
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '6px' }}>
-              {audioFile.name}
-            </p>
-          )}
-        </div>
-        <div>
-          <label style={labelStyle}>Artwork (required)</label>
-          <input
+            ref={artworkInputRef}
             type="file" accept="image/*"
             onChange={e => handleArtworkChange(e.target.files?.[0] || null)}
-            style={{ ...inputStyle, padding: '10px 14px' }}
+            style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
             disabled={busy}
           />
-          {artworkPreview && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={artworkPreview} alt="" style={{ width: '44px', height: '44px', borderRadius: '6px', objectFit: 'cover', marginTop: '6px' }} />
-          )}
+          <button
+            type="button"
+            onClick={() => !busy && artworkInputRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); if (!busy) setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleArtworkDrop}
+            aria-label={artworkFile ? 'Change artwork' : 'Add artwork'}
+            style={{
+              position: 'relative', width: '100%', aspectRatio: '1 / 1',
+              borderRadius: '16px', overflow: 'hidden',
+              border: artworkPreview ? '1px solid var(--border)' : `1.5px dashed ${dragOver ? 'var(--gold)' : 'var(--gold-border)'}`,
+              background: artworkPreview ? 'var(--surface-2)' : 'var(--gold-faint)',
+              cursor: busy ? 'default' : 'pointer', padding: 0,
+              display: 'block', boxSizing: 'border-box',
+              transition: 'border-color 150ms ease',
+            }}
+          >
+            {artworkPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={artworkPreview} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{
+                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px', textAlign: 'center',
+              }}>
+                <UploadIcon />
+                <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>
+                  Add Artwork
+                </span>
+                <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--text-3)' }}>
+                  Required · drag &amp; drop or tap
+                </span>
+              </div>
+            )}
+
+            {artworkPreview && (
+              <>
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'linear-gradient(to top, rgba(7,6,10,0.92) 0%, rgba(7,6,10,0.2) 55%, rgba(7,6,10,0) 75%)',
+                }} />
+                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '14px', textAlign: 'left' }}>
+                  <p style={{
+                    fontFamily: font, fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)',
+                    lineHeight: 1.25, marginBottom: '2px',
+                    overflow: 'hidden', textOverflow: 'ellipsis',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any,
+                  }}>
+                    {title.trim() || 'Untitled'}
+                  </p>
+                  <p style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    {(artistName || artistDisplayName).trim() || '—'}
+                  </p>
+                </div>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Core fields */}
+        <div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>Title</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Song title" style={inputStyle} disabled={busy} />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>Artist Name</label>
+            <input value={artistName} onChange={e => setArtistName(e.target.value)} placeholder="Artist or stage name" style={inputStyle} disabled={busy} />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>Audio File</label>
+            <label style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              minHeight: '44px', padding: '0 16px',
+              background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '50px',
+              fontFamily: font, fontSize: '0.7rem', fontWeight: 600,
+              letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-2)',
+              cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+            }}>
+              {audioFile ? 'Change Audio' : 'Choose Audio File'}
+              <input
+                type="file" accept="audio/*"
+                onChange={e => setAudioFile(e.target.files?.[0] || null)}
+                style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+                disabled={busy}
+              />
+            </label>
+            {audioFile && (
+              <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '8px' }}>
+                {audioFile.name}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -272,7 +367,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
 
       <div style={{
         marginBottom: '20px', padding: '16px',
-        background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '12px',
+        background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px',
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
           <div>
@@ -318,7 +413,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
             />
           </div>
         </div>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-2)', marginTop: '10px', lineHeight: 1.5 }}>
+        <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '10px', lineHeight: 1.5 }}>
           Whisper AI reads the audio and tags every line with a vibe automatically once you publish.
         </p>
       </div>
@@ -330,7 +425,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           background: 'transparent', border: '1px solid var(--border)', borderRadius: '10px',
           padding: '11px 16px', color: 'var(--text-2)',
-          fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem',
+          fontFamily: font, fontSize: '0.7rem',
           textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer',
           minHeight: '44px',
         }}
@@ -371,11 +466,9 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
 
       {stage !== 'idle' && (
         <p style={{
-          fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
-          /* NOTE: no lib/tokens/emotions.ts available yet — using inline rgba
-             as a stand-in for success/error states. Swap to a real token
-             (e.g. var(--emotion-heartbreak) / var(--emotion-healing)) once
-             that module is shared. */
+          fontFamily: font, fontSize: '0.82rem',
+          /* NOTE: no lib/tokens/emotions.ts available — inline rgba stand-in
+             for success/error states until that module exists. */
           color: stage === 'error' ? 'rgba(255,96,96,0.9)' : stage === 'done' ? 'rgba(74,222,128,0.9)' : 'var(--text-2)',
           marginBottom: '16px',
         }}>
@@ -389,7 +482,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
             onClick={handleRetry}
             style={{
               minHeight: '48px', padding: '14px 24px', background: 'var(--gold)', color: 'var(--bg)',
-              border: 'none', borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+              border: 'none', borderRadius: '50px', fontFamily: font,
               fontWeight: 700, fontSize: '0.7rem', letterSpacing: '1.5px',
               textTransform: 'uppercase', cursor: 'pointer',
             }}
@@ -403,7 +496,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
             style={{
               minHeight: '48px', padding: '14px 24px',
               background: 'var(--gold)', color: 'var(--bg)', border: 'none',
-              borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+              borderRadius: '50px', fontFamily: font,
               fontWeight: 700, fontSize: '0.7rem', letterSpacing: '1.5px',
               textTransform: 'uppercase', cursor: busy ? 'default' : 'pointer',
               opacity: busy ? 0.6 : 1,
@@ -418,7 +511,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
           style={{
             minHeight: '44px', padding: '11px 16px', background: 'transparent',
             color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: '50px',
-            fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem',
+            fontFamily: font, fontSize: '0.7rem',
             letterSpacing: '1px', textTransform: 'uppercase', cursor: busy ? 'default' : 'pointer',
             opacity: busy ? 0.5 : 1,
           }}
@@ -426,6 +519,14 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
           Cancel
         </button>
       </div>
+
+      <style>{`
+        @media (max-width: 639px) {
+          .studio-poster-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

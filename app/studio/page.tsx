@@ -6,6 +6,8 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { SongUploadForm } from '@/components/studio/song-upload-form'
 import { BackButton } from '@/components/back-button'
 
+const font = 'var(--font-lora), serif'
+
 interface StudioSong {
   id: string
   title: string
@@ -21,33 +23,21 @@ interface SongStat {
   resonate_count: number
 }
 
-// Inline SVG — never Unicode, per brand system Rule 1
-function ChevronIcon({ open }: { open: boolean }) {
+function PlusIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{
-      transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-      transition: 'transform 220ms cubic-bezier(0.16, 1, 0.3, 1)',
-    }}>
-      <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M10 3v14M3 10h14" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   )
 }
 
 function statusLabel(status: StudioSong['status']) {
   switch (status) {
-    case 'live': return 'Live'
     case 'processing': return 'Processing'
     case 'coming_soon': return 'Coming Soon'
     case 'hidden': return 'Hidden'
-    default: return 'Draft'
-  }
-}
-
-function statusColor(status: StudioSong['status']) {
-  switch (status) {
-    case 'live': return 'var(--gold)'
-    case 'processing': return 'var(--text-2)'
-    default: return 'var(--text-3)'
+    case 'draft': return 'Draft'
+    default: return null
   }
 }
 
@@ -82,6 +72,8 @@ export default function StudioPage() {
       const statMap: Record<string, SongStat> = {}
       ;(statRows || []).forEach((s: SongStat) => { statMap[s.song_id] = s })
       setStats(statMap)
+    } else {
+      setStats({})
     }
     setSongsLoading(false)
   }, [])
@@ -96,10 +88,13 @@ export default function StudioPage() {
     loadSongs()
   }
 
+  const totalPlays = Object.values(stats).reduce((sum, s) => sum + (s.plays || 0), 0)
+  const totalResonates = Object.values(stats).reduce((sum, s) => sum + (s.resonate_count || 0), 0)
+
   if (identityLoading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-lora), serif', color: 'var(--text-3)' }}>Loading…</p>
+        <p style={{ fontFamily: font, color: 'var(--text-3)' }}>Loading…</p>
       </div>
     )
   }
@@ -108,20 +103,20 @@ export default function StudioPage() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
         <div style={{ maxWidth: '520px', margin: '0 auto', padding: '120px 24px 80px', textAlign: 'center' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
             Studio
           </p>
-          <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(1.6rem, 5vw, 2.2rem)', color: 'var(--text)', fontWeight: 700, marginBottom: '16px', lineHeight: 1.3 }}>
+          <h1 style={{ fontFamily: font, fontSize: 'clamp(1.6rem, 5vw, 2.2rem)', color: 'var(--text)', fontWeight: 700, marginBottom: '16px', lineHeight: 1.3 }}>
             Your songs, straight to Margo.
           </h1>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: '32px' }}>
+          <p style={{ fontFamily: font, fontSize: '1rem', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: '32px' }}>
             Apply as an artist to publish your own catalog — audio, artwork, and synced lyrics, live the moment you hit publish.
           </p>
           <Link href="/apply-artist" style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             minHeight: '48px', padding: '14px 24px',
             background: 'var(--gold)', color: 'var(--bg)',
-            fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.7rem',
+            fontFamily: font, fontWeight: 700, fontSize: '0.7rem',
             letterSpacing: '1.5px', textTransform: 'uppercase',
             borderRadius: '50px', textDecoration: 'none',
           }}>
@@ -134,41 +129,41 @@ export default function StudioPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <div style={{ maxWidth: '760px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom, 80px)' }}>
+      <div style={{ maxWidth: '860px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom, 80px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
           <BackButton fallbackHref="/feed" />
           <div>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>
+            <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>
               Margo
             </p>
-            <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>
+            <h1 style={{ fontFamily: font, fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>
               Studio
             </h1>
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-2)' }}>
-            {songsLoading ? 'Loading your catalog…' : `${songs.length} song${songs.length !== 1 ? 's' : ''}`}
-          </p>
-          <button
-            onClick={() => setShowUpload(s => !s)}
-            style={{
-              minHeight: '44px', padding: '0 24px',
-              background: 'var(--gold)', color: 'var(--bg)', border: 'none',
-              borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
-              fontWeight: 700, fontSize: '0.7rem', letterSpacing: '1.5px',
-              textTransform: 'uppercase', cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', gap: '8px',
-              transition: 'transform 150ms ease, opacity 150ms ease',
-            }}
-          >
-            {showUpload ? 'Close' : 'Upload a Song'}
-          </button>
-        </div>
+        {!songsLoading && songs.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
+            {[
+              ['Songs', songs.length],
+              ['Plays', totalPlays],
+              ['Resonates', totalResonates],
+            ].map(([label, val]) => (
+              <div key={label as string} style={{
+                textAlign: 'center', padding: '16px 8px',
+                background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px',
+              }}>
+                <p style={{ fontFamily: font, fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold)' }}>{val}</p>
+                <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
+                  {label}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {showUpload && (
-          <div style={{ marginBottom: '24px' }}>
+          <div style={{ marginBottom: '32px' }}>
             <SongUploadForm
               artistDisplayName={identity.displayName}
               onComplete={handleUploadComplete}
@@ -177,56 +172,89 @@ export default function StudioPage() {
           </div>
         )}
 
-        {!songsLoading && songs.length === 0 && !showUpload && (
+        {!showUpload && (
           <div style={{
-            textAlign: 'center', padding: '64px 24px',
-            border: '1px solid var(--border)', borderRadius: '16px',
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px',
           }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', fontStyle: 'italic', color: 'var(--text-2)', marginBottom: '4px' }}>
-              Nothing here yet.
-            </p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-3)' }}>
-              Upload your first song to see it here.
-            </p>
+            <button
+              onClick={() => setShowUpload(true)}
+              aria-label="Upload a song"
+              style={{
+                aspectRatio: '1 / 1', borderRadius: '16px',
+                border: '1.5px dashed var(--gold-border)', background: 'var(--gold-faint)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                cursor: 'pointer', transition: 'transform 150ms ease, background 150ms ease',
+              }}
+            >
+              <PlusIcon />
+              <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>
+                Upload
+              </span>
+            </button>
+
+            {songsLoading && (
+              <div style={{
+                aspectRatio: '1 / 1', borderRadius: '16px', background: 'var(--surface-2)',
+              }} />
+            )}
+
+            {songs.map(song => {
+              const stat = stats[song.id]
+              const label = statusLabel(song.status)
+              return (
+                <div key={song.id} style={{
+                  position: 'relative', aspectRatio: '1 / 1', borderRadius: '16px',
+                  overflow: 'hidden', background: 'var(--surface-2)',
+                  opacity: song.status === 'hidden' ? 0.5 : 1,
+                }}>
+                  {song.artwork_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={song.artwork_url} alt="" style={{
+                      position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+                    }} />
+                  )}
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(to top, rgba(7,6,10,0.92) 0%, rgba(7,6,10,0.25) 55%, rgba(7,6,10,0) 75%)',
+                  }} />
+                  {label && (
+                    <span style={{
+                      position: 'absolute', top: '10px', right: '10px',
+                      fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                      color: 'var(--text)', background: 'rgba(7,6,10,0.7)',
+                      padding: '4px 8px', borderRadius: '50px',
+                      textTransform: 'uppercase', letterSpacing: '0.5px',
+                    }}>
+                      {label}
+                    </span>
+                  )}
+                  <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '12px' }}>
+                    <p style={{
+                      fontFamily: font, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)',
+                      marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis',
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any,
+                      lineHeight: 1.25,
+                    }}>
+                      {song.title}
+                    </p>
+                    <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {stat ? `${stat.plays} plays · ${stat.resonate_count} resonates` : '—'}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
 
-        {songs.map(song => {
-          const stat = stats[song.id]
-          return (
-            <div key={song.id} style={{
-              display: 'flex', alignItems: 'center', gap: '16px',
-              padding: '16px', marginBottom: '10px',
-              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px',
-              opacity: song.status === 'hidden' ? 0.5 : 1,
-            }}>
-              <div style={{
-                width: '56px', height: '56px', borderRadius: '8px', flexShrink: 0,
-                background: 'var(--surface-2)', overflow: 'hidden',
-              }}>
-                {song.artwork_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={song.artwork_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                )}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, color: 'var(--text)', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {song.title}
-                </p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-3)' }}>
-                  {stat ? `${stat.plays} plays · ${stat.resonate_count} resonates` : '—'}
-                </p>
-              </div>
-              <span style={{
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600,
-                textTransform: 'uppercase', letterSpacing: '1px',
-                color: statusColor(song.status), flexShrink: 0,
-              }}>
-                {statusLabel(song.status)}
-              </span>
-            </div>
-          )
-        })}
+        {!songsLoading && songs.length === 0 && !showUpload && (
+          <p style={{
+            fontFamily: font, fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-3)',
+            textAlign: 'center', marginTop: '16px',
+          }}>
+            Nothing on your wall yet.
+          </p>
+        )}
       </div>
     </div>
   )
