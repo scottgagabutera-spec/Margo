@@ -14,8 +14,6 @@ import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
-import { db } from '@/lib/firebase'
-import { ref, set, remove, onValue, runTransaction } from 'firebase/database'
 import Link from 'next/link'
 import {
   playSnippet,
@@ -67,19 +65,22 @@ function timeAgo(ts: number) {
 
 interface LyricLine { id: number; line: string; start: number; end: number }
 
-function parseSRT(srt: string): LyricLine[] {
-  const blocks = srt.trim().split(/\n\s*\n/)
-  const lines: LyricLine[] = []
-  blocks.forEach((block, i) => {
-    const parts = block.trim().split('\n')
-    if (parts.length < 3) return
-    const match = parts[1].match(/(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})/)
-    if (!match) return
-    const toSec = (h: string, m: string, s: string, ms: string) =>
-      parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(s) + parseInt(ms) / 1000
-    lines.push({ id: i, line: parts.slice(2).join(' ').trim(), start: toSec(match[1],match[2],match[3],match[4]), end: toSec(match[5],match[6],match[7],match[8]) })
-  })
-  return lines
+// ── Migrated Aug 1, 2026 ───────────────────────────────────────────────
+// parseSRT is gone. Both components below used to fetch songs/{songId}
+// from Firebase and client-side parse a raw .srt string — the same
+// duplicate-parser problem already fixed once for useSongs/useSong
+// (Section 8, item 10). Supabase's lyric_lines table already holds real,
+// pre-parsed rows (line_index/text/start_sec/end_sec) from the migration
+// — querying it directly means there's no SRT text to parse at all here
+// anymore, not just a different way of parsing it.
+async function fetchLyricLines(songId: string): Promise<LyricLine[]> {
+  const { data, error } = await supabase
+    .from('lyric_lines')
+    .select('line_index, text, start_sec, end_sec')
+    .eq('song_id', songId)
+    .order('line_index', { ascending: true })
+  if (error || !data) return []
+  return data.map(l => ({ id: l.line_index, line: l.text, start: l.start_sec, end: l.end_sec }))
 }
 
 function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork }: {
@@ -95,12 +96,8 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
 
   useEffect(() => {
-    if (songId && db) {
-      import('firebase/database').then(({ get, ref: dbRef }) => {
-        get(dbRef(db!, `songs/${songId}`)).then(snap => {
-          if (snap.exists() && snap.val().srt) setLyrics(parseSRT(snap.val().srt))
-        }).catch(() => {})
-      }).catch(() => {})
+    if (songId) {
+      fetchLyricLines(songId).then(setLyrics)
     }
   }, [audioUrl, songId])
 
@@ -165,12 +162,9 @@ function Tier1Player({ audioUrl, songId, postText }: {
   const playedRef = useRef(false)
 
   const loadLyrics = async () => {
-    if (lyricsLoaded || !songId || !db) return
-    try {
-      const { get, ref: dbRef } = await import('firebase/database')
-      const snap = await get(dbRef(db, `songs/${songId}`))
-      if (snap.exists()) { const s = snap.val(); if (s.srt) setLyrics(parseSRT(s.srt)) }
-    } catch {}
+    if (lyricsLoaded || !songId) return
+    const lines = await fetchLyricLines(songId)
+    setLyrics(lines)
     setLyricsLoaded(true)
   }
 
@@ -305,7 +299,7 @@ function PostCard({
   }, [audioUrl, isTier1])
 
   useEffect(() => {
-    if (!db || viewedRef.current) return
+    if (viewedRef.current) return
     const el = cardRef.current
     if (!el) return
     const sessionKey = `viewed_${post.id}`
@@ -316,8 +310,10 @@ function PostCard({
           viewedRef.current = true
           obs.disconnect()
           try { sessionStorage.setItem(sessionKey, '1') } catch {}
-          import('firebase/database').then(({ ref: dbRef, runTransaction: dbTx }) => {
-            if (db) dbTx(dbRef(db, `postStats/${post.id}/views`), (cur) => (cur || 0) + 1)
+          // Dedup-free counter RPC (Posts & Engagement schema) — replaces
+          // the old Firebase runTransaction against postStats/{id}/views.
+          supabase.rpc('increment_post_view', { p_post_id: post.id }).then(({ error }) => {
+            if (error) console.error('Failed to record view:', error)
           })
         }
       },
@@ -535,27 +531,67 @@ export default function FeedPage() {
   const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number }>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
 
+  // Fetches all post_stats rows once, plus a Realtime subscription to
+  // mirror the old Firebase onValue live-update behavior. At 133 posts
+  // this is a cheap full-table read — worth revisiting with a scoped
+  // query (or pagination) if the catalog grows large enough to matter.
+  // Requires Realtime enabled on post_stats (Database → Replication);
+  // without it this just means stats won't live-update, initial load
+  // still works.
   useEffect(() => {
-    if (!db) return
-    const unsub = onValue(ref(db, 'postStats'), (snap) => {
-      setPostStats(snap.val() || {})
-    })
-    return () => unsub()
+    let cancelled = false
+    async function loadStats() {
+      const { data, error } = await supabase
+        .from('post_stats')
+        .select('post_id, views, resonate_count, echo_count')
+      if (cancelled) return
+      if (error) { console.error('Failed to load post_stats:', error); return }
+      const map: Record<string, { views?: number; resonateCount?: number; echoCount?: number }> = {}
+      for (const row of data || []) {
+        map[row.post_id] = { views: row.views, resonateCount: row.resonate_count, echoCount: row.echo_count }
+      }
+      setPostStats(map)
+    }
+    loadStats()
+
+    const channel = supabase
+      .channel('feed-post-stats')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_stats' }, () => loadStats())
+      .subscribe()
+
+    return () => { cancelled = true; supabase.removeChannel(channel) }
   }, [])
 
+  // Which posts THIS person has resonated with — post_resonates rows
+  // scoped to their own actor_id, replacing the old Firebase pattern of
+  // pulling the entire analytics tree and filtering client-side for
+  // matches under myId.
   useEffect(() => {
-    if (!db) return
     const myId = getMargoActorId()
-    const unsub = onValue(ref(db, `analytics`), (snap) => {
-      const data = snap.val() || {}
-      const myResonated = new Set<string>()
-      Object.keys(data).forEach(id => {
-        if (data[id]?.resonates?.[myId]) myResonated.add(id)
-      })
-      setResonated(myResonated)
-      try { localStorage.setItem('margoResonated', JSON.stringify([...myResonated])) } catch {}
-    })
-    return () => unsub()
+    let cancelled = false
+    async function loadMyResonates() {
+      const { data, error } = await supabase
+        .from('post_resonates')
+        .select('post_id')
+        .eq('actor_id', myId)
+      if (cancelled) return
+      if (error) { console.error('Failed to load resonates:', error); return }
+      const mine = new Set((data || []).map(r => r.post_id))
+      setResonated(mine)
+      try { localStorage.setItem('margoResonated', JSON.stringify([...mine])) } catch {}
+    }
+    loadMyResonates()
+
+    const channel = supabase
+      .channel('feed-my-resonates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_resonates', filter: `actor_id=eq.${myId}` },
+        () => loadMyResonates()
+      )
+      .subscribe()
+
+    return () => { cancelled = true; supabase.removeChannel(channel) }
   }, [])
 
   // Privacy filtering (private authors hidden from non-followers) now
@@ -629,22 +665,28 @@ export default function FeedPage() {
       return next
     })
     setResonateCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + (already ? -1 : 1)) }))
-    if (!db) return
-    const rRef = ref(db, `analytics/${postId}/resonates/${myId}`)
+
     try {
-      already ? await remove(rRef) : await set(rRef, true)
-      runTransaction(ref(db, `postStats/${postId}/resonateCount`), (current) => Math.max(0, (current || 0) + (already ? -1 : 1)))
-      const dbSafe = db
-      if (dbSafe) {
-        import('firebase/database').then(async ({ ref: dbRef, get, set: dbSet, remove: dbRemove }) => {
-          const snap = await get(dbRef(dbSafe, `posts/${postId}/songId`))
-          const linkedSongId = snap.exists() ? snap.val() : null
-          if (linkedSongId) {
-            const songResonateRef = dbRef(dbSafe, `songResonates/${linkedSongId}/${myId}`)
-            already ? dbRemove(songResonateRef) : dbSet(songResonateRef, true)
-          }
-        }).catch(() => {})
+      if (already) {
+        const { error } = await supabase.from('post_resonates').delete().eq('post_id', postId).eq('actor_id', myId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('post_resonates').insert({ post_id: postId, actor_id: myId })
+        if (error) throw error
       }
+      // post_stats.resonate_count is kept in sync automatically by the
+      // post_resonate_insert/delete triggers — no manual update needed
+      // (previously a separate Firebase runTransaction).
+      //
+      // DROPPED BEHAVIOR, FLAGGED NOT SILENTLY PORTED: the old Firebase
+      // version also mirrored this into songResonates/{linkedSongId}/{myId}
+      // whenever the post had a linked songId — treating "resonating with
+      // a lyric post about song X" as equivalent to "resonating with song
+      // X itself." The Posts & Engagement schema keeps song_resonates and
+      // post_resonates as separate, unlinked tables with no cross-write
+      // hook, and the plan doc doesn't call this linkage out as intended
+      // behavior to preserve. Left out rather than guessed back in — flag
+      // if this was actually load-bearing for song-level stats anywhere.
       if (!already) {
         const post = posts.find(p => p.id === postId)
         if (post) void notifyResonate(post)
