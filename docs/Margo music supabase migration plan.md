@@ -1,5 +1,5 @@
 # Margo — Music & Artist Catalog: Firebase → Supabase Migration Plan
-*Draft v1 — July 2026 — Living document — last updated August 1, 2026 (Posts & Engagement schema for Phase 6 applied and verified live in Supabase)*
+*Draft v1 — July 2026 — Living document — last updated August 2, 2026 (Phase 6 app code shipped and verified live; snippet matching and edit-lyric features added — see Progress Log)*
 
 **Purpose:** move songs, lyric lines/vibes, and song engagement fully onto Supabase, connected directly to `profiles` — no separate `artists` table, no Tier 1/2/3 licensing distinction. An artist is a `profiles` row with `is_artist = true`. This is the next phase after the identity migration (`MARGO_SUPABASE_MIGRATION_PLAN.md`), and it supersedes the Tier-based sections of `MARGO_TARGET_ARCHITECTURE_AUDIO_ENGAGEMENT.md` (Section 5) and `MARGO_RIGHTS_AND_DISCOVERY_PLAN.md` (Section 1.3) — those documents' *audio engine* and *legal-foundation* content still stands; their *artist-tier* content is replaced by this doc.
 
@@ -92,7 +92,7 @@ Also read the following files directly to confirm (not guess) their current stat
 Going forward, admin is scoped to **people and general oversight, never individual content authoring**:
 - Keep: `PostsTab`, `ArtistApplicationsTab` (approve/reject/moderate), `FeaturedTab`, `PagesTab`
 - Retire: `MusicTab`, `SongForm`, `LicensedTab`, `useLicensedArtists.ts` (Section 0, Gap #8 — now has a concrete trigger to actually delete it, not just "someday")
-- Replace with: a new **Catalog tab** — read-heavy, lists all artists (from `profiles where is_artist=true`) and their songs with play/resonate stats, allows moderation-level actions only (e.g. toggle a song `live`/`hidden`), but has **no upload, no audio/artwork fields, no "Generate SRT" button, no "Save Song" form**. Authoring belongs entirely to the artist-facing upload page (Phase 3), not admin. **Not yet built** — scoped here, not started.
+- Replace with: a new **Catalog tab** — read-heavy, lists all artists (from `profiles where is_artist=true`) and their songs with play/resonate stats, allows moderation-level actions only (e.g. toggle a song `live`/`hidden`), but has **no upload, no audio/artwork fields, no "Generate SRT" button, no "Save Song" form**. Authoring belongs entirely to the artist-facing upload page (Phase 3), not admin. **Still not built as of Aug 2, 2026** — scoped here, not started. Phase 7 item.
 
 **🟢 Phase 4 rewritten and verified working end-to-end, via isolated test (no admin UI, no real song touched):**
 
@@ -123,7 +123,7 @@ Going forward, admin is scoped to **people and general oversight, never individu
    - `components/studio/song-upload-form.tsx`: uploads audio/artwork directly to the `song-audio`/`song-artwork` Storage buckets (Section 3), inserts a `songs` row with `status: 'processing'`, then calls `/api/whisper` → the rewritten `/api/tag-vibes` in sequence exactly as scoped, then sets `status: 'live'` on success.
    - This is the "real caller" Section 4/7 flagged as the only missing piece after Phase 4's route was proven correct via isolated test — Phase 3 and Phase 4 are now both closed as a pair.
    - `tsc --noEmit` and `npm run build` both clean at merge time.
-   - **Not yet confirmed:** no real artist has uploaded a real song through this flow in production yet — Phase 4's route was only tested via the isolated throwaway-song script, and Phase 3's UI hasn't had an end-to-end production run logged. Worth doing one real upload and confirming `songs`/`lyric_lines`/`lyric_line_vibes` all populate correctly before calling this phase fully verified, not just merged.
+   - **Not yet confirmed:** no real artist has uploaded a real song through this flow in production yet — Phase 4's route was only tested via the isolated throwaway-song script, and Phase 3's UI hasn't had an end-to-end production run logged. Worth doing one real upload and confirming `songs`/`lyric_lines`/`lyric_line_vibes` all populate correctly before calling this phase fully verified, not just merged. **Still true as of Aug 2, 2026** — no real production upload has been logged.
    - Two small known issues carried into this merge, not blocking: (1) if the audio or artwork Storage upload itself fails (before the `songs` row is inserted), there's no retry path and the partially-uploaded file isn't cleaned up — a source of storage cruft over time; (2) the upload form's error/success message color uses a raw inline `rgba()` instead of a CSS variable, self-flagged in the component's own comment as a stopgap since no `lib/tokens/emotions.ts` exists yet — small design-system debt (Section 0-style gap), worth a follow-up.
 
 ---
@@ -140,21 +140,101 @@ While auditing `compose`, the feed, `useSharedLines`, `usePosts`, and `usePost` 
 
 **Decision:** given how entangled these are — a partial migration risks new posts writing to the wrong place or the feed silently failing to show them — Phase 6 is scoped as one connected "Posts & Engagement" migration rather than separate `compose`-only and `feed`-only passes.
 
-**Schema applied directly via the Supabase SQL Editor** (dashboard-run, to be tracked in git as `supabase/migrations/20260801_posts_and_engagement_schema.sql` once file-tracked, same dashboard-then-git order as Section 3):
+**Schema applied directly via the Supabase SQL Editor**, tracked at `supabase/migrations/20260801_posts_and_engagement_schema.sql`, same dashboard-then-git order as Section 3:
 
 - Tables created and verified present via `information_schema.tables`: `posts`, `post_resonates`, `post_stats`.
 - All 6 RLS policies verified present via `pg_policies`: `public reads active posts`, `authenticated users insert own posts`, `owner updates own posts`, `owner deletes own posts` (all on `posts`) · `public reads post_stats` (`post_stats`) · `authenticated writes own post_resonate` (`post_resonates`).
 - All 5 triggers verified present via `information_schema.triggers`: `post_reply_insert`, `post_reply_delete` (on `posts`, sync `post_stats.echo_count` from Lyric Back replies) · `post_resonate_insert`, `post_resonate_delete` (on `post_resonates`, sync `post_stats.resonate_count`) · `post_song_link_insert` (on `posts`, **closes the `song_stats.lyric_uses` gap** — increments the linked song's `lyric_uses` whenever a post with a real `song_id` is created).
 - `increment_post_view(p_post_id uuid)` RPC function also applied — a safe, dedup-free view counter callable via `supabase.rpc('increment_post_view', { p_post_id })`, replacing the Firebase `runTransaction` view-count pattern.
 
-**What this means for build order:** the schema/RLS/triggers layer of Phase 6 is done, following the exact same "schema first, verified via `information_schema`/`pg_policies`, then app code" sequence Phase 2 used. What remains, not yet started:
-- Migration script (Firebase `posts` → Supabase `posts`/`post_stats`, same pattern as `migrate-songs-to-supabase.mjs`) — `song_id` should resolve directly from each post's existing `songId` field rather than needing fuzzy matching, since the old post already carried the real linked id.
-- Rewrite `usePosts`/`usePost` to read from Supabase.
-- Rewrite `compose/page.tsx`'s `handleSelectSong` (real FK query instead of tree scan + string match) and `handlePost` (insert into Supabase `posts` instead of Firebase `push`).
-- Rewrite `useSharedLines` as a real Postgres group-by query on `posts.song_id`.
-- Rewrite the feed's resonate/view/echo logic to call `post_resonates`/`increment_post_view`/replies instead of the Firebase `analytics`/`postStats` paths.
-- Fix `Tier1Player`/`SnippetIconButton` to read `lyric_lines` (already live via `useSong`) instead of re-parsing Firebase SRT — same fix category as Gap #7, just not yet applied to these two components.
-- Retire `useApprovedArtists`/`isLicensed()` in favor of a direct `identity.isArtist` or `songs.owner_profile_id` check (removes a dependency Phase 7 was going to handle anyway).
+**What this means for build order:** the schema/RLS/triggers layer of Phase 6 landed this day. The app-code layer (migration script, `usePosts`/`usePost`, `compose`, `lyric-back`, the feed, `useSharedLines`) shipped the following day — see the Aug 2, 2026 entries below.
+
+---
+
+**August 1–2, 2026 — Phase 6 app code: fully shipped, verified, and merged. Migration run and confirmed 133/133.**
+
+This is the single largest connected piece of work in this doc's history — six merged branches, one bug found and fixed in production, and two entirely new features (snippet matching, edit-lyric) that weren't originally scoped anywhere in this plan. Documented here as one continuous arc since the branches depended on each other in sequence.
+
+**6. `migrate-posts-to-supabase.mjs`** (one-time script, run directly, not a merged app-code branch) —
+- Same pattern as `migrate-songs-to-supabase.mjs`: reads a single local full Firebase root export JSON, no live Firebase connection, no service account credential.
+- **Real findings from direct export analysis, not assumptions:**
+  - Of 112 top-level Firebase posts, exactly 5 were duplicate standalone copies of nested `echoes` (written twice by `lyric-back.tsx`'s old dual-write pattern — same id, same parent, same content). Deduped: built the full set of nested-echo ids first, skipped any top-level post whose id was in that set, so each is created exactly once via the echo pass with the correct `parent_post_id`.
+  - Echo-level `resonates` live nested directly inside the echo object (`echo.resonates`), never at `analytics/{echoId}/resonates` as the first draft of the script assumed — that path never exists in the real data. Would have silently produced zero echo resonates if not caught.
+  - Author resolution: only 1 of 112 Firebase posts had a real `authorUid` matching a `profiles.id` directly — confirmed by direct query, not assumed. Everything else predates real Supabase accounts. Decision: no fake profiles minted for legacy content; `posts.author_profile_id` is nullable, legacy content carries a plain-text `legacy_author_label` instead. A check constraint (`posts_author_or_legacy_check`) guarantees every post has one or the other, never neither.
+  - Song linking resolves via `songs.firebase_id` (preserved from the old Firebase key), never `songId === songs.id`.
+  - Exactly one entry existed under `analytics/{postId}/replies/{replyId}` — a third, structurally different reply shape (`anonName`, `userId`, a raw numeric resonate count instead of an actor-id object) with no relationship to `posts` or `echoes`. Too small a sample (n=1), too structurally different to safely generalize — flagged in the script's log output, not migrated automatically. **Manually inserted afterward** via a one-off SQL statement once its real Supabase parent id was looked up from the migration log's `idMap`.
+- **Run result, verified against production via SQL after the fact:**
+  ```
+  Top-level posts seen: 112
+  Deduped (standalone twin of a nested echo): 5
+  Echoes migrated: 25
+  Real author (profile-linked): 1
+  Legacy author (label only): 131
+  Unresolved song links: 0
+  Unhandled analytics/*/replies (flagged, not auto-migrated): 1 (manually inserted after)
+  Errors: 0
+  ```
+  Post-run verification queries confirmed: 132 rows from the script + 1 manual insert = **133/133 pieces of content accounted for**, split 107 top-level / 26 echo-and-manual, 0 broken author rows (never both null), 0 posts with an unresolved `song_id` that should have had one, `post_stats`/`post_resonates` populated alongside every row.
+
+**7. `fix/lyric-back-nested-threading`** (merged `6f298de`) — the main Phase 6 app-code branch —
+- `hooks/usePosts.ts` / `hooks/usePost.ts` rewritten to Supabase `select` queries (joined to `profiles` for author display and `post_stats` for resonate/echo counts), replacing Firebase `onValue` listeners entirely. **Deliberate compatibility choice:** the returned `Post` object keeps the old Firebase-shaped field names (`timestamp`, `knowledge`, `authorUid`, etc.) even though the underlying Supabase columns are named differently — this meant downstream components needed far fewer changes, only the hooks' internal mapping layer changed.
+- **Behavior change from the Firebase version:** `usePosts()` now only returns top-level posts (`parent_post_id is null`) by design — replies/echoes have their own real rows now and are structurally excluded from the main feed query rather than fetched-then-filtered client-side.
+- `hooks/useEchoes.ts` rewritten to query Supabase `posts` where `parent_post_id` matches, joined to `post_resonates` to rebuild a `Record<actorId, true>` shape matching what the page's optimistic-update logic expected.
+- `app/compose/page.tsx`: `handleSelectSong` replaced with a real FK lookup against `songs` (`ilike` on title/artist, `status = 'live'`) — the old Firebase full-tree scan and the `isLicensed()` gate from `useApprovedArtists` are both gone; the FK lookup itself replaces the need for a pre-filter gate. `handlePost` now inserts into Supabase `posts` instead of Firebase `push`. `song_stats.lyric_uses` now increments automatically via the `post_song_link_insert` trigger — the old manual Firebase `runTransaction` calls were removed.
+- `app/lyric-back/page.tsx`: `handlePost` now inserts into Supabase `posts` with `parent_post_id` set for replies (or `null` for a fresh top-level Lyric Back) instead of the old flat `posts/{id}/echoes` nesting. `toggleResonate` now writes to `post_resonates` instead of Firebase `analytics/{echoId}/resonates`.
+- **Real pre-existing bug fixed (closes Section 8, item 15):** `promoteAndReply`'s `echoId` URL param was read but never used — "Responding to" always showed the top-level post regardless of which specific echo was clicked. Now `respondingToId = echoId || postId`, and that's also what's written as `parent_post_id` on the reply — since `posts.parent_post_id` is self-referencing, this gives real arbitrary-depth threading for free, not just a one-level flat structure.
+- Verified: `tsc --noEmit` and `npm run build` both clean.
+
+**8. `feat/feed-supabase-migration`** (merged `5d89679`) —
+- `app/feed/page.tsx`: view tracking now calls the `increment_post_view` RPC instead of a Firebase transaction. Post stats (views/resonates/echoes) fetched once from `post_stats` plus a Realtime subscription. "Did I resonate with this" now queries `post_resonates` scoped to the viewer's own `actor_id`, replacing a full-tree Firebase `analytics` pull. `toggleResonate` writes to `post_resonates`; `resonate_count` syncs automatically via trigger.
+- `Tier1Player`/`SnippetIconButton` (Section 8, item 10) — both now query `lyric_lines` directly via a shared `fetchLyricLines()` helper instead of fetching a raw Firebase `.srt` string and parsing it client-side. This fully closes item #10 — there is no SRT text to parse anymore at all in these two components, not just a different way of parsing it.
+- **Deliberately dropped, not silently ported, flagged in code comment:** the old Firebase `toggleResonate` also mirrored a post resonate into `songResonates/{linkedSongId}/{myId}` whenever the post was linked to a song — treating "resonating with a lyric post about song X" as equivalent to "resonating with song X itself." The Posts & Engagement schema keeps `song_resonates` and `post_resonates` fully separate with no cross-write hook, and this plan never called that linkage out as intended behavior to preserve. Left out. **Flagged here in case it turns out to have been load-bearing for song-level stats.**
+- Verified: `tsc --noEmit` and `npm run build` both clean.
+
+**9. `feat/shared-lines-supabase`** (merged `3a6c4b1`) — closes Section 8, item 6 (`useSharedLines`) —
+- **Honest note, not a full fix:** this doc's original Section 5 SQL sketch envisioned a real `where song_id = $1 group by text` join. That's not what shipped, deliberately — only ~12 of 133 migrated posts carry a real `song_id`; a strict FK join would silently exclude the vast majority of real historical shared-line data (121 posts have `song_title` text with no `song_id`, confirmed by direct query — these are legacy free-text mentions, not broken links). So `useSharedLines` keeps the same fuzzy song/artist text-matching strategy the Firebase version used, now against Supabase instead of a Firebase tree scan. Still fetches all top-level posts and filters client-side — fine at current volume (133 posts), worth a real query later once `song_id` coverage improves or volume grows.
+- Verified: `tsc --noEmit` and `npm run build` both clean.
+
+**10. `fix/post-audio-url-tier1-bug`** (merged `88d2651`) — **a real regression, introduced and fixed same day** —
+- `usePosts`/`usePost` had hardcoded `audioUrl: null` on every post (a known-gap comment left in intentionally, then never followed up on) — meaning **every post, including ones correctly linked to a real trymargo song via `song_id`, rendered as non-Tier1** in the feed, falling through to the generic Apple Music/YouTube link fallback instead of showing the snippet button and player. Caught via screenshot during a live Vercel preview check.
+- Fix: both hooks now join `songs:song_id ( audio_url )` and populate `audioUrl` from the joined row.
+- Verified: `tsc --noEmit` and `npm run build` both clean.
+
+**What this means for build order:** **Phase 6 is done.** Migration, schema, and app code across `usePosts`/`usePost`/`useEchoes`, `compose`, `lyric-back`, the feed, and `useSharedLines` are all live on `main`, all verified via `tsc --noEmit` + `npm run build`, and the migrated data has been spot-checked directly in Supabase. The only remaining Firebase-touching surface in the posts/engagement area is `useApprovedArtists`/`LicensedTab` (Phase 7, dead weight now that `compose` no longer calls it, but not yet deleted).
+
+**⚠️ Unverified, worth confirming:** several of today's hooks (`usePosts`, `usePost`, `useEchoes`, the feed's post_stats/resonate subscriptions) subscribe to Postgres Realtime for live updates. Whether Realtime replication is actually turned on for `posts`, `post_stats`, and `post_resonates` in the Supabase dashboard (Database → Replication) was never explicitly checked this session. If it's off, everything still works on initial load — it just silently won't live-update, which is easy to miss in casual testing. **Action item: check this before calling Phase 6 fully verified end-to-end**, not just "code correct."
+
+---
+
+**August 2, 2026 — Two new features shipped, neither originally scoped anywhere in this document: deterministic snippet matching, and edit-lyric.**
+
+These emerged from a direct product conversation about what "Margo as both social and streaming platform" requires long-term — not from anything in the original plan text. Documented here as net-new scope, not a continuation of a prior section.
+
+### Deterministic snippet matching
+
+**Problem found in production:** the feed's snippet button (`SnippetIconButton`) picked which real `lyric_lines` row a post's quoted text corresponded to via **fuzzy substring matching, re-run on every render** — and when nothing matched (a typed lyric that wasn't a character-for-character SRT substring, common with the 140-char compose cap or minor wording differences), it silently fell back to `lyrics[0]`, meaning the button played **the entire song from the start** instead of the quoted moment. Confirmed live via a real trymargo post where this exact failure occurred.
+
+**11. `feat/snippet-matching`** (merged `66c7e1d`) —
+- `posts.snippet_start_sec`/`snippet_end_sec` added (nullable — a post with no confident match simply doesn't get a snippet button, rather than a forced wrong guess).
+- `lib/lyric-match.ts` — new shared matching function, used identically at post-creation and (later) edit time. Uses normalized edit-distance similarity (Levenshtein, with a containment-based confidence boost for truncated/expanded quotes) against a confidence threshold, returning `null` rather than guessing when nothing is confident enough.
+- `compose/page.tsx`: captures exact `start`/`end` when arriving via a player share link (already known precisely there, no matching needed), or runs `matchLyricLine` against the linked song's real `lyric_lines` when the person typed their own lyric after picking a song via search.
+- `lyric-back/page.tsx`: **gained real song linking for the first time** — it never had this before (a pre-existing gap, not introduced by this branch), meaning Lyric Back posts could never become Tier1 regardless of any other fix. Now does the same FK lookup `compose` has, plus the same matcher call.
+- `music/player/page.tsx`'s share sheet and `music/page.tsx`'s board focused-panel both now pass exact `start`/`end` through their respective share URLs — skipping matching entirely for those two entry points. **The board's focused panel also gained a "Post to Feed" option it never had before** (previously only "Play Snippet" and "Full Karaoke" existed there).
+- Feed's `SnippetIconButton` now uses stored timing directly when present; the fuzzy fetch-and-match path is kept only as a fallback for posts created before this column existed, and even that fallback **no longer force-falls-back to `lyrics[0]`** — if nothing matches, the button does nothing rather than playing the wrong part of the song.
+- Verified: `tsc --noEmit` and `npm run build` both clean.
+
+### Edit-lyric
+
+**Design decision, grounded in a comparison of current patterns (X's time-boxed visible-history edit vs. Instagram/Facebook's silent unlimited caption edit):** on Margo, editing a lyric corrects a transcription against a fixed, real, immutable ground truth (the actual song and timestamp) — it is not rewriting a claim the way an edited tweet can be. Categorically closer to fixing a caption typo than rewriting a tweet's meaning. **Decision: silent, unlimited, no visible "Edited" label or version history** — the Instagram/Facebook pattern, not X's.
+
+**12. `feat/edit-lyric-post`** (merged `3c25918`) —
+- `posts.updated_at` added, auto-maintained via a `before update` trigger. **Never surfaced in the UI anywhere** — exists purely for internal debugging/support, consistent with the "no visible history" decision above.
+- `components/edit-post-modal.tsx` — new modal, matching `CardExportModal`'s established interaction pattern (overlay + centered panel) rather than introducing a new UI pattern. Re-runs `matchLyricLine` and `/api/moderate` on save — an edit is treated as functionally a re-submission of the same checks a fresh post gets, not a bypass of them.
+- If the post already has replies (`echo_count > 0`), the modal shows a **non-blocking** context note ("X people have replied to this — they're still responding to what you originally wrote") rather than preventing the edit outright — respects the owner's ability to fix their own content without silently breaking the context of existing replies.
+- Feed: a small pencil affordance appears next to the "Margo Original" badge slot, gated strictly on `post.authorUid === user.id` — never shown on anyone else's posts, never shown on legacy posts with no real `author_profile_id` (there's no signed-in owner to authorize an edit on those).
+- Verified: `tsc --noEmit` and `npm run build` both clean.
+
+**What this means for build order:** these two features close the loop the plan doc's original Section 6 sketch didn't anticipate — the "share a specific lyric moment" experience across all three entry points (compose search, player share, board share) is now deterministic end-to-end, and a mismatched snippet is now self-correctable by the post's owner rather than a permanent wrong state. Neither of these is tracked as a numbered phase below since they cut across Phase 6 rather than extending it linearly — see the new Section 9.
 
 ---
 
@@ -165,13 +245,13 @@ Before proposing anything new, here's what's actually true in the live codebase 
 | # | Finding | Why it matters | Status |
 |---|---|---|---|
 | 1 | `profiles.is_artist` is **read** in 5 places (`profile/[username]`, `settings`, `useIdentity`, `profile-lookup`) but **never written** anywhere in app code | The artist-application loop was incomplete — nothing tied `artist_applications.status = 'approved'` to `profiles.is_artist = true`. | ✅ **Resolved** — `artist_application_approved` trigger now closes this loop, live in production. |
-| 2 | Two parallel "who's a real artist" systems exist simultaneously | `adminConfig/licensedArtists` (Firebase, `LicensedTab`) vs. `artist_applications` (Supabase). `useApprovedArtists` bridges them by hardcoding `['margo', 'trymargo']` + querying approved applications. | ⏳ **Still open** — resolved conceptually now that approval writes `is_artist`, but `LicensedTab`/`useLicensedArtists.ts` retirement is Phase 7, not done yet. Confirmed `compose/page.tsx` still calls the old `isLicensed()` from this hook (Aug 1 file read). |
+| 2 | Two parallel "who's a real artist" systems exist simultaneously | `adminConfig/licensedArtists` (Firebase, `LicensedTab`) vs. `artist_applications` (Supabase). `useApprovedArtists` bridges them by hardcoding `['margo', 'trymargo']` + querying approved applications. | ⏳ **Still open, but now dead weight rather than a live inconsistency.** `compose/page.tsx` no longer calls `isLicensed()` at all (removed as part of the Phase 6 rewrite, Aug 1–2). `useApprovedArtists.ts`/`LicensedTab`/`adminConfig/licensedArtists` still physically exist, unused by any real write path — safe to delete, Phase 7. |
 | 3 | No admin UI exists to approve/reject `artist_applications` rows | `artists-tab.tsx` predated `artist_applications` entirely, had no concept of a pending application. | ✅ **Resolved** — `artist-applications-tab.tsx` shipped, live at `/admin`. |
 | 4 | Song creation (`SongForm` in admin) is 100% Firebase — admin-authored only | No self-serve upload path existed. | ✅ **Resolved** — self-serve upload now exists via `/studio` (Phase 3), merged Aug 1, 2026. The old `SongForm` itself is still 100% Firebase and still slated for retirement (Section 8, item 5) — it hasn't been deleted yet, just superseded as the real upload path. |
-| 5 | `compose/page.tsx` links a post to a song via **text matching**, not a foreign key | Will misfire as a real self-serve catalog grows. | ⏳ **Still open** — confirmed still true by direct file read Aug 1. `handleSelectSong` still does a manual Firebase tree scan with `.toLowerCase().trim()` matching. This is Phase 6, depends on Phase 5 landing first (Phase 5 is only partially done — see Progress Log). |
-| 6 | `useSongs` and `useSharedLines` are unchanged Firebase RTDB | Full-tree listener, client-side SRT parsing, O(n) post-scanning. | ⏳ **Partially resolved** — `useSongs` ✅ rewritten to Supabase (merged `29ec9ab`). `useSharedLines` ⏳ confirmed still Firebase RTDB by direct file read Aug 1 — unchanged, no work started. |
+| 5 | `compose/page.tsx` links a post to a song via **text matching**, not a foreign key | Will misfire as a real self-serve catalog grows. | ✅ **Resolved, Aug 1–2, 2026.** `handleSelectSong` now does a real Supabase FK query (`ilike` on `songs.title`/`artist_display_name`, `status = 'live'`) instead of a Firebase tree scan. `lyric-back/page.tsx` gained the identical real lookup for the first time (it never had one before). |
+| 6 | `useSongs` and `useSharedLines` are unchanged Firebase RTDB | Full-tree listener, client-side SRT parsing, O(n) post-scanning. | ✅ **Resolved for `useSongs`** (merged `29ec9ab`, July 31). ✅ **Resolved for `useSharedLines`, Aug 2, 2026** — now queries Supabase, though it keeps the same fuzzy text-matching strategy rather than a strict FK join; see the Aug 2 Progress Log entry for why a strict join isn't safe yet. |
 | 7 | `useSong.ts` has its own duplicated SRT/plain-lyrics parser, separate from `useSongs`'s | Two parsers reading the same shape — a bug fix in one won't apply to the other. | ✅ **Resolved** — both hooks rewritten to Supabase `select` queries, both parsers deleted, merged `29ec9ab`. |
-| 8 | `useLicensedArtists.ts` still exists, confirmed dead code (`git grep` returns zero matches) | Safe to delete, no live inconsistency. | ⏳ **Still open** — scheduled for Phase 7, not yet deleted. |
+| 8 | `useLicensedArtists.ts` still exists, confirmed dead code (`git grep` returns zero matches) | Safe to delete, no live inconsistency. | ⏳ **Still open** — scheduled for Phase 7, not yet deleted. Now genuinely dead (see item #2 above), not just orphaned. |
 | 9 | `ArtistsTab` moderated a third, independent artist concept (Firebase `artists/{uid}`) | Real moderation feature worth keeping the *concept* of, not the storage. | ✅ **Resolved** — moderation logic ported onto `profiles.artist_status`, live in production; old Firebase `artists/{uid}` node never existed so no backfill/retirement needed. |
 
 None of this is a criticism of what exists — the Firebase-era admin-curated model was the right call to move fast pre-artist-signup. It's just the concrete starting line for what needs to change now that self-serve upload is the goal.
@@ -195,6 +275,14 @@ profiles (existing)
        │ song_id
        │
   lyric_lines (new) ──< lyric_line_vibes (new)   ✅ live in production
+       ↑
+       │ (fuzzy match, not FK — see Aug 2 note)
+       │
+     posts (new, ✅ live in production, Aug 1–2, 2026)
+       │
+       │ parent_post_id (self-referencing — real threading)
+       ├──< post_resonates
+       └──< post_stats
 ```
 
 This also directly answers "where does the artist come from" for the compose flow and music page: it's always `profiles`, never a second identity system.
@@ -537,7 +625,7 @@ Direct query via `scripts/check-songs-count.mjs` confirms:
 | `lyric_lines` | 399 |
 | `lyric_line_vibes` | 379 |
 
-This data came entirely from the one-time `migrate-songs-to-supabase.mjs` script (Section — see Progress Log, Phase 4 status below). No new-upload pipeline had populated any of it as of the Aug 1 audit — the `/studio` self-serve pipeline (Progress Log, later Aug 1 entry) can now add to these counts, but hasn't yet been confirmed to have done so.
+This data came entirely from the one-time `migrate-songs-to-supabase.mjs` script. No new-upload pipeline had populated any of it as of the Aug 1 audit — the `/studio` self-serve pipeline (Section 4) can now add to these counts, but no real production upload has been confirmed as of Aug 2, 2026.
 
 ---
 
@@ -545,7 +633,7 @@ This data came entirely from the one-time `migrate-songs-to-supabase.mjs` script
 
 **🟢 Product decision resolved (Aug 1, 2026):** instant-live. An artist who has already been approved (Section 2's trigger) publishes songs directly — no per-song admin review. This is settled.
 
-**🟢 Shipped (Aug 1, 2026, later):** the full pipeline below is built and merged via `feat/studio-poster-redesign`. What remains is confirming a real, end-to-end production upload — everything so far has been verified either via `tsc`/build passing or via the isolated Phase 4 test script, not via one real artist uploading one real song through `/studio`.
+**🟢 Shipped (Aug 1, 2026, later):** the full pipeline below is built and merged via `feat/studio-poster-redesign`. What remains is confirming a real, end-to-end production upload — everything so far has been verified either via `tsc`/build passing or via the isolated Phase 4 test script, not via one real artist uploading one real song through `/studio`. **Still true as of Aug 2, 2026.**
 
 | Step | Where | Detail |
 |---|---|---|
@@ -560,42 +648,32 @@ This data came entirely from the one-time `migrate-songs-to-supabase.mjs` script
 - If the audio or artwork Storage upload itself fails (before the `songs` row exists), there's no retry — the partial file isn't cleaned up, and clicking submit again just restarts with a fresh `songId`, orphaning the first attempt's file in Storage.
 - The upload form's error/success text color uses a raw inline `rgba()` value rather than a CSS variable — self-flagged in the component's own comment, a small design-system debt item (see Section 8).
 
-**Admin's role in this pipeline, now explicit:** admin approves the *artist* once (Section 2). Admin has no role in approving individual *songs*. The retired `MusicTab`/`SongForm` is being replaced by a read-only Catalog tab (Progress Log, Aug 1 entry) for oversight, not gatekeeping — not yet built.
+**Admin's role in this pipeline, now explicit:** admin approves the *artist* once (Section 2). Admin has no role in approving individual *songs*. The retired `MusicTab`/`SongForm` is being replaced by a read-only Catalog tab (Progress Log, Aug 1 entry) for oversight, not gatekeeping — not yet built, Phase 7.
 
 ---
 
-## 5. Music page rebuild — PARTIALLY DONE (Phase 5)
+## 5. ✅ MOSTLY DONE — Music page rebuild (Phase 5)
 
 **✅ Done, confirmed live (merged `29ec9ab`):**
 - **Discovery board** (`LyricBoard` in `app/music/page.tsx`): now builds all discovery moments directly from `song.lyricLines`, which comes from `useSongs()`'s real Supabase query. No more client-side SRT parsing, no more full-tree download-and-parse. Confirmed live against 10 real songs / 399 lines / 379 vibes.
 - **Song grid and karaoke player** (`app/music/player/page.tsx`, via `useSong()`): both read real Supabase data, typed correctly, no Firebase fallback code left.
+- **Aug 2, 2026 additions:** the board's focused-lyric panel gained a "Post to Feed" share option (previously only "Play Snippet" and "Full Karaoke" existed there), and the player's share sheet now passes exact lyric timing through to `compose` — see Section 9.
 
-**⏳ Not started, confirmed by direct file read Aug 1:**
-- **`useSharedLines.ts`** — still unchanged Firebase RTDB. Still does a full `posts` tree scan via `onValue(query(ref(db,'posts'), orderByChild('timestamp')))`, with substring `.includes()` matching on song/artist text to compute "most shared lines." Becomes a real query once `posts.song_id` is a proper foreign key (still-deferred `posts` migration per the identity doc) — nothing has moved on this yet.
+**✅ Resolved, Aug 2, 2026 — `useSharedLines.ts`.** No longer Firebase. Queries Supabase `posts` directly. **Kept the same fuzzy song/artist text-matching strategy** the Firebase version used rather than a strict `song_id` join — see the Aug 2 Progress Log entry for why (most historical posts don't carry a real `song_id`, so a strict join would silently exclude the majority of real data). Worth a real query once `song_id` coverage across posts improves.
+
+**⏳ Not started:**
 - **Search** — still client-side substring scan over the in-memory song list, not a real Postgres `ilike`/`tsvector` query. Not yet warranted at 10 songs, but flagged as still-original-plan.
-
-Original planned query for the discovery board (now effectively implemented, in spirit, via `useSongs()` client-side joins rather than this exact SQL — worth confirming later whether a dedicated server-side query would outperform the current client-side filter-by-vibe approach as the catalog grows beyond 10 songs):
-```sql
-select ll.text, ll.start_sec, ll.end_sec, s.id as song_id, s.title, s.artwork_url, s.audio_url, p.display_name as artist_name, p.username as artist_username
-from lyric_lines ll
-join lyric_line_vibes v on v.line_id = ll.id
-join songs s on s.id = ll.song_id
-join profiles p on p.id = s.owner_profile_id
-where v.vibe = $1 and s.status = 'live'
-order by random() limit 6;
-```
 
 ---
 
-## 6. `compose` page changes — NOT STARTED (Phase 6)
+## 6. ✅ DONE — `compose`/`lyric-back` song-linking and post creation (Phase 6)
 
-Confirmed unchanged by direct file read Aug 1, 2026:
+*Was "NOT STARTED" as of Aug 1, 2026's earlier audit; fully shipped by Aug 2, 2026. See the Aug 1–2 Progress Log entry for the complete branch-by-branch account. Summary of the final state:*
 
-- Song search/link (`handleSelectSong`) still does a full Firebase `songs` tree read (`get(ref(db,'songs'))`) with manual `snap.forEach` + `.toLowerCase().trim()` string matching against the searched title/artist — the exact text-matching approach flagged as Gap #5 in Section 0, not yet touched.
-- Still gated by `isLicensed(result.artist)` from the old Firebase-era `useApprovedArtists` hook, not a direct `identity.isArtist` check.
-- **New finding, not previously called out explicitly:** new posts from `compose` still write entirely to Firebase (`push(ref(db, 'posts'), post)`), including the `songId`/`audioUrl` link fields. This means even once song search/linking moves to Supabase, the *post* itself remains on Firebase RTDB — a second, separate migration surface not yet scoped anywhere in this document.
-
-Planned direction, unchanged from original doc: once songs live in Postgres, `select id, audio_url from songs where owner_profile_id = ... and lower(title) = lower($1)` — or better, let the artist attach their own song directly via a picker scoped to *their own* catalog. `useApprovedArtists`/`isLicensed` simplifies to a direct `identity.isArtist` check, retiring the Firebase `adminConfig/licensedArtists` list and the `LicensedTab` admin UI that manages it (Phase 7).
+- `compose/page.tsx`'s `handleSelectSong` does a real Supabase FK query against `songs` (`ilike` on title/artist, `status='live'`) — the Firebase tree scan and the `isLicensed()`/`useApprovedArtists` gate are both gone. `handlePost` inserts into Supabase `posts`.
+- `lyric-back/page.tsx`'s `handlePost` also inserts into Supabase `posts`, with `parent_post_id` set for replies — and, new as of Aug 2, does the same real song FK lookup `compose` has, which it never had before.
+- `song_stats.lyric_uses` now has a real, working write path via the `post_song_link_insert` trigger — no more manual Firebase transactions, no more silently-stuck-at-zero column.
+- **Original Section 6 planned direction** ("once songs live in Postgres, `select id, audio_url from songs where owner_profile_id = ... and lower(title) = lower($1)`") — implemented close to as planned, using `ilike` rather than exact `lower()` equality for a bit more forgiveness on minor formatting differences, and scoped to `status = 'live'` rather than the artist's own catalog specifically (any live song can be linked, not just the searcher's own — matches how a normal music-tagging flow works elsewhere, e.g. Instagram music stickers).
 
 ---
 
@@ -605,11 +683,12 @@ Planned direction, unchanged from original doc: once songs live in Postgres, `se
 |---|---|---|
 | **1** | Trigger (Section 2) + admin approval/moderation tab (Section 2A/2B) + `profiles.artist_status` columns | ✅ **Done** — merged `feat/artist-approval-supabase` → `main` (`8cdba62`), verified live in Supabase production |
 | **2** | Schema + RLS + storage buckets (Section 3) | ✅ **Done** — merged `chore/track-migration-sql` → `main` (`3aa758a`), verified live in Supabase production, row counts confirmed Aug 1 |
-| **3** | Self-serve upload UI + Storage wiring | ✅ **Done** — merged `feat/studio-poster-redesign` → `main`. `tsc`/`build` clean. Pending one real end-to-end production upload to fully verify (no production run logged yet). Also still pending: retiring `admin`'s `MusicTab`/`SongForm`/`LicensedTab` in favor of a general-purpose Catalog tab (see Progress Log) — scoped, not started. |
-| **4** | Rewrite `/api/whisper` + `/api/tag-vibes` to write Postgres | ✅ **Done and verified.** `/api/tag-vibes` rewritten to require `songId` and persist real `lyric_lines`/`lyric_line_vibes` rows; tested end-to-end via a throwaway test song with zero risk to live data. `/api/whisper` confirmed already correct, unchanged. Now has a real caller too — `/studio`'s upload form (Phase 3). |
-| **5** | Music page reads (`useSongs`, `LyricBoard`, grid, search) **and** `useSong` (karaoke detail) → Supabase | ✅ **Partially done** — merged `29ec9ab`. `useSongs`, `useSong`, discovery board, and player page all confirmed live on Supabase. `useSharedLines` and search remain Firebase/client-side, not started. |
-| **6** | Posts & Engagement — `compose` song-linking, post creation, feed reads, resonate/view/echo, `useSharedLines` → Supabase | ⏳ **Schema/RLS/triggers done and verified live** (`posts`, `post_resonates`, `post_stats`, all 5 triggers, all 6 policies — see Progress Log). **App code not started**: `usePosts`/`usePost`, `compose`'s `handleSelectSong`/`handlePost`, the feed's resonate/view/echo logic, `useSharedLines`, and the feed's duplicate SRT parsing (`Tier1Player`/`SnippetIconButton`) are all still confirmed-unchanged Firebase, per direct file reads Aug 1. |
-| **7** | Retire `adminConfig/licensedArtists`, `LicensedTab`, `useLicensedArtists.ts`, old Firebase `songs` tree | ⏳ Not started |
+| **3** | Self-serve upload UI + Storage wiring | ✅ **Done** — merged `feat/studio-poster-redesign` → `main`. `tsc`/`build` clean. **Still pending one real end-to-end production upload to fully verify** (no production run logged as of Aug 2, 2026). Also still pending: retiring `admin`'s `MusicTab`/`SongForm`/`LicensedTab` in favor of a general-purpose Catalog tab (see Progress Log) — scoped, not started, Phase 7. |
+| **4** | Rewrite `/api/whisper` + `/api/tag-vibes` to write Postgres | ✅ **Done and verified.** `/api/tag-vibes` rewritten to require `songId` and persist real `lyric_lines`/`lyric_line_vibes` rows; tested end-to-end via a throwaway test song with zero risk to live data. `/api/whisper` confirmed already correct, unchanged. Has a real caller — `/studio`'s upload form (Phase 3). |
+| **5** | Music page reads (`useSongs`, `LyricBoard`, grid, search) **and** `useSong` (karaoke detail) → Supabase | ✅ **Mostly done.** `useSongs`, `useSong`, discovery board, player page, and now `useSharedLines` (Aug 2) all live on Supabase. Only client-side search remains as originally planned, not yet warranted at current catalog size. |
+| **6** | Posts & Engagement — `compose` song-linking, post creation, feed reads, resonate/view/echo, `useSharedLines` → Supabase | ✅ **Done, Aug 1–2, 2026.** Migration script run and verified 133/133. `usePosts`/`usePost`/`useEchoes`, `compose`, `lyric-back`, the feed, and `useSharedLines` all rewritten, merged, and verified via `tsc --noEmit` + `npm run build` at each step. One production bug found and fixed same day (hardcoded `audioUrl: null` breaking Tier1 detection). See the full Progress Log entry for the six-branch account. |
+| **6.5** *(new, not in original phase numbering)* | Deterministic snippet matching + edit-lyric | ✅ **Done, Aug 2, 2026.** See Section 9 — this cuts across Phase 6 rather than extending it linearly, hence the new sub-number rather than a Phase 7 renumber. |
+| **7** | Retire `adminConfig/licensedArtists`, `LicensedTab`, `useLicensedArtists.ts`, old Firebase `songs` tree; build the read-only admin Catalog tab | ⏳ **Not started.** `useApprovedArtists`/`isLicensed()` is now confirmed dead code (item #2 in Section 0 — no live caller left after the Phase 6 rewrite), making this a pure deletion rather than a migration. |
 
 ---
 
@@ -618,18 +697,86 @@ Planned direction, unchanged from original doc: once songs live in Postgres, `se
 1. ~~**🔴 Product decision (blocking Phase 3)**~~ — ✅ **Resolved August 1, 2026.** Instant-live: an approved artist publishes songs directly, no per-song admin review. Admin approves the artist once (Section 2), never individual songs.
 2. ~~**⚠️ Notifications schema**~~ — ✅ **Resolved August 1, 2026** (merged `16baa8f`). `notifyProfile()` confirmed against real schema; artist-status notifications can now be trusted to deliver.
 3. ~~**🆕 Build-order risk: Phase 4 not started**~~ — ✅ **Resolved August 1, 2026.** `/api/tag-vibes` rewritten to write real `lyric_lines`/`lyric_line_vibes` rows, tested end-to-end via an isolated throwaway-song test (zero risk to live data), confirmed working including correct filler-line handling and safe re-processing. `/api/whisper` confirmed already correct, unchanged.
-4. **🆕 New, Aug 1, 2026 — scoping gap, still open:** `compose`'s post-creation path (not just song-linking) is still 100% Firebase — new posts write to `push(ref(db,'posts'), post)`. This is a second migration surface (posts, not just songs) that isn't currently scoped as its own phase anywhere in this document. Worth deciding whether it's folded into Phase 6 or tracked separately, likely alongside the "still-deferred `posts` migration" mentioned in Section 5 re: `useSharedLines`.
-5. **🆕 New, Aug 1, 2026 — scoping decision made, not yet built:** `admin/page.tsx`'s `MusicTab`, `SongForm`, and `LicensedTab` are being retired (not extended) in favor of a general-purpose, read-only Catalog tab — see Progress Log for full reasoning. This is now scoped but not started; folding it into Phase 3 (since both involve the same "who authors a song" boundary) or tracking it as its own small phase is an open sequencing choice, not a product question. Now that Phase 3 itself has shipped without this tab, it's effectively its own remaining task rather than something that can piggyback on Phase 3 work.
-6. **🆕 New, Aug 1, 2026 — Phase 3 gap, not blocking, corrected after direct file read of `song-upload-form.tsx`:** the form does have a working retry path (`pendingSongId`/`pendingAudioUrl` state, `handleRetry`) that resumes the lyrics pipeline without restarting — this was not previously credited. The real, narrower gap: if the **Storage upload itself** (audio or artwork) fails, before any `songs` row exists, there's no retry and the partial file isn't cleaned up. A fresh submit attempt after that specific failure mode generates a new `songId` and re-uploads from scratch, orphaning the first attempt's file. Not urgent at current volume.
-7. **🆕 New, Aug 1, 2026 — Phase 3 gap, not blocking:** `song-upload-form.tsx`'s stage-status text (error/success states) uses a hardcoded inline `rgba()` color rather than a CSS variable, because no `lib/tokens/emotions.ts` module exists yet to hold semantic success/error colors. Self-flagged in the component's own code comment as a stopgap. Small, isolated violation of the "all colors via CSS variables" design-system rule (Section 0-style debt) — low risk of spreading since it's currently one component, but worth fixing before other components copy the pattern.
-8. **🆕 New, Aug 1, 2026 — verification gap:** Phase 3's upload pipeline has been merged and passes `tsc`/`build`, and Phase 4's route logic was separately proven correct via an isolated script — but no one has yet run a real end-to-end upload through `/studio` in production and confirmed all three tables (`songs`, `lyric_lines`, `lyric_line_vibes`) populate correctly together. Worth doing once before treating Phase 3/4 as fully verified rather than just merged.
-9. ~~**🆕 New, Aug 1, 2026 — confirmed by direct file read of `app/compose/page.tsx`:** `song_stats.lyric_uses` has no write path.~~ — ✅ **Schema-level fix applied and verified August 1, 2026.** The `post_song_link_insert` trigger (Posts & Engagement schema, Progress Log) now increments `song_stats.lyric_uses` whenever a post with a real `song_id` is created. This only takes effect once `compose`'s write path actually moves to Supabase `posts` (still not started, see Phase 6 build order below) — the trigger is live and correct, but nothing calls it yet.
-10. **🆕 New, Aug 1, 2026 — confirmed by direct file read of the feed (`Tier1Player`, `SnippetIconButton`):** both components independently call `get(ref(db, 'songs/{songId}'))` and run their own local `parseSRT()` client-side to find the currently-playing lyric line. This is a third, still-Firebase SRT parser — the same category of problem Gap #7 already fixed once for `useSongs`/`useSong` (which now read real `lyric_lines` rows from Supabase), just not yet applied here. Once `usePosts`/the feed read from Supabase, these two components should read `lyric_lines` via the song's `id` (already available through `useSong`) instead of re-fetching and re-parsing SRT.
-12. **✅ Confirmed, Aug 1, 2026 — direct file read of `components/studio/song-upload-form.tsx`:** the Phase 3 Progress Log's claim that the upload form calls `/api/whisper` → `/api/tag-vibes` in sequence is now verified against the actual component (previously only known via the other session's self-report). `runLyricsPipeline` confirms this exactly. `/api/sync-lyrics` (Section 8, discovered same day) is **not** called anywhere in this flow — it remains a fourth, unconnected route with no known caller anywhere in the app.
-13. **🆕 New, Aug 1, 2026 — confirmed by direct file read of `app/lyric-back/page.tsx`:** this page is a **second, independent post-creation entry point**, separate from `compose/page.tsx`. `handlePost` branches on whether a `postId` is present: replying to an existing post writes a child object to Firebase `posts/{postId}/echoes`; starting a fresh Lyric Back with no parent writes a **new top-level post** via `push(ref(db,'posts'), ...)` — the same Firebase write `compose` does, entirely independently. **This means the Phase 6 rewrite of `handlePost` must cover both files, not just `compose`** — migrating `compose` alone would leave `lyric-back` still creating new posts on Firebase.
-14. **🆕 New, Aug 1, 2026 — confirmed by direct file read of `lyric-back/page.tsx` and `useEchoes.ts`:** there are three separate, differently-shaped "resonate" concepts across the app, not two: song-level (`song_resonates`, Section 3, live in Supabase), post-level (the feed, Firebase `analytics/{postId}/resonates/{actorId}`), and now confirmed **echo-level** (`lyric-back/page.tsx`'s `toggleResonate`, Firebase `analytics/{echoId}/resonates/{actorId}`). If echoes become real `posts` rows with `parent_post_id` under the Posts & Engagement design, echo-resonates naturally collapse into the same `post_resonates` table — but this should be an explicit design decision before Phase 6 app code is written, not an assumption.
-15. **🆕 New, Aug 1, 2026 — real pre-existing product bug, confirmed by direct file read, not introduced by this migration:** `lyric-back/page.tsx`'s `promoteAndReply` navigates to `/lyric-back?postId=X&echoId=Y`, intending to let someone reply to a *specific echo*. Confirmed by reading `useEchoes.ts` that `echoId` is never read anywhere — the page always re-fetches and displays the **original top-level post** as "Responding to," discarding which reply was actually clicked. Firebase's structure is flat by design (a post has echoes; an echo can't have its own echoes), so this isn't just a missing param read, it's a structural limitation. **Design decision needed for Phase 6:** `posts.parent_post_id` on a self-referencing table naturally supports true arbitrary-depth threading for free — worth deciding explicitly whether to fix this bug as part of the migration, or intentionally preserve today's flat one-level behavior.
+4. ~~**🆕 Scoping gap: `compose`'s post-creation path still 100% Firebase**~~ — ✅ **Resolved Aug 1–2, 2026.** Folded into Phase 6 as originally suggested here. Both `compose` and `lyric-back` (item #13 below) now write to Supabase.
+5. **🆕 New, Aug 1, 2026 — scoping decision made, not yet built:** `admin/page.tsx`'s `MusicTab`, `SongForm`, and `LicensedTab` are being retired (not extended) in favor of a general-purpose, read-only Catalog tab — see Progress Log for full reasoning. **Still not started as of Aug 2, 2026** — Phase 7.
+6. **🆕 New, Aug 1, 2026 — Phase 3 gap, not blocking, corrected after direct file read of `song-upload-form.tsx`:** the form does have a working retry path (`pendingSongId`/`pendingAudioUrl` state, `handleRetry`) that resumes the lyrics pipeline without restarting — this was not previously credited. The real, narrower gap: if the **Storage upload itself** (audio or artwork) fails, before any `songs` row exists, there's no retry and the partial file isn't cleaned up. Not urgent at current volume.
+7. **🆕 New, Aug 1, 2026 — Phase 3 gap, not blocking:** `song-upload-form.tsx`'s stage-status text (error/success states) uses a hardcoded inline `rgba()` color rather than a CSS variable. Self-flagged in the component's own code comment as a stopgap. Small, isolated design-system debt — worth fixing before other components copy the pattern.
+8. **🆕 New, Aug 1, 2026 — verification gap, still open Aug 2, 2026:** no one has yet run a real end-to-end upload through `/studio` in production and confirmed all three tables (`songs`, `lyric_lines`, `lyric_line_vibes`) populate correctly together outside the isolated test script. Worth doing once before treating Phase 3/4 as fully verified rather than just merged.
+9. ~~**🆕 `song_stats.lyric_uses` has no write path**~~ — ✅ **Fully resolved, Aug 1–2, 2026.** The `post_song_link_insert` trigger was live from Aug 1 but had nothing calling it (nothing wrote real `posts.song_id` rows yet). Now that `compose` and `lyric-back` both insert real posts with `song_id` set, this column has a genuine, working write path for the first time.
+10. ~~**Duplicate Firebase SRT parsers in `Tier1Player`/`SnippetIconButton`**~~ — ✅ **Fully resolved, Aug 1–2, 2026.** Both now read `lyric_lines` directly (Aug 1 feed rewrite), and as of Aug 2's snippet-matching work, most posts don't even need the fallback parsing path at all since exact timing is stored on the post itself.
+12. ~~**`song-upload-form.tsx` pipeline verification**~~ — ✅ **Confirmed, Aug 1, 2026** — see item #6 above for the retry-path correction.
+13. ~~**`lyric-back/page.tsx` is a second, independent post-creation entry point**~~ — ✅ **Resolved, Aug 1–2, 2026.** Both `compose` and `lyric-back` now write to Supabase `posts`; the migration correctly deduped the 5 legacy Firebase posts that existed as duplicates of nested echoes from the old dual-write pattern this item describes.
+14. ~~**Three separate "resonate" concepts (song/post/echo-level)**~~ — ✅ **Resolved, Aug 1, 2026.** Echoes are now real `posts` rows, so echo-resonates collapsed naturally into the same `post_resonates` table as top-level post resonates. Two concepts remain by design: `song_resonates` (song-level) and `post_resonates` (covers both top-level posts and replies uniformly) — confirmed as the intended end state, not an oversight.
+15. ~~**`promoteAndReply`'s `echoId` never read — "Responding to" always shows the top-level post**~~ — ✅ **Fixed, Aug 1, 2026**, as part of the Phase 6 rewrite (`fix/lyric-back-nested-threading`). `respondingToId = echoId || postId` now drives both the displayed context and the `parent_post_id` written on reply.
+16. **🆕 New, Aug 1, 2026 — dropped behavior, flagged not silently ported:** the old Firebase feed also mirrored a post resonate into `songResonates/{linkedSongId}/{myId}` whenever the post was linked to a song. No schema equivalent exists in the Posts & Engagement design (`song_resonates`/`post_resonates` are fully separate, no cross-write hook), and this was never called out as intended behavior anywhere in this plan. Left out of the rewrite. **Still open — flag if this turns out to have mattered for song-level stats.**
+17. **🆕 New, Aug 1, 2026 — one Firebase post left unmigrated by the script, handled manually:** exactly 1 of 133 total pieces of content (`analytics/{postId}/replies/{replyId}`, a structurally distinct third reply shape with a raw numeric resonate count and no relation to `posts`/`echoes`) was too small a sample and too different in shape to safely auto-migrate. Flagged in the script's log, then manually inserted via a one-off SQL statement using its real Supabase parent id (looked up from the migration log's `idMap`). **Fully resolved** — 133/133 confirmed, but worth remembering this one post's history is slightly different from the other 132 if it's ever debugged.
+18. **🆕 New, Aug 1, 2026 — honest scope note, not a bug:** `useSharedLines.ts` (Section 5, Section 8 item formerly #6) uses fuzzy song/artist text matching against Supabase, not the strict `song_id` join this doc's original Section 5 SQL sketch envisioned. This is deliberate — most historical posts (121 of 133) don't carry a real `song_id`. Worth revisiting once `song_id` coverage improves.
+19. **🆕 New, Aug 2, 2026 — snippet-matching honest note, not a bug:** `lib/lyric-match.ts`'s confidence threshold (0.55) was chosen reasonably but has not been tuned against real usage data — worth revisiting once there's a meaningful sample of edited/re-matched posts to see whether it's too strict (too many posts silently get no snippet button) or too loose (occasional wrong matches slip through).
+20. **🆕 New, Aug 2, 2026 — unverified, action item:** several Phase 6 and Section 9 hooks (`usePosts`, `usePost`, `useEchoes`, the feed's `post_stats`/`post_resonates` subscriptions) depend on Supabase Realtime replication being enabled for `posts`, `post_stats`, and `post_resonates` (Database → Replication in the dashboard) to live-update. This was never explicitly checked. If it's off, initial loads still work correctly — only live-updating silently doesn't happen, which is easy to miss in casual testing. **Needs a direct check before Phase 6/9 can be called fully verified end-to-end**, not just "code correct."
+21. **🆕 New, Aug 2, 2026 — Phase 7 is now smaller than originally scoped, worth noting:** `useApprovedArtists.ts` is confirmed to have zero remaining callers after the Phase 6 rewrite removed `compose`'s last use of `isLicensed()`. Its Phase 7 retirement is now a pure deletion (file + its Firebase `adminConfig/licensedArtists` source), not a migration — lower-risk than originally implied by grouping it with the admin Catalog tab build in the same phase number.
 
 ---
 
-*Next step: do one real end-to-end upload through `/studio` to confirm Phase 3/4 work correctly together in production (Section 8, item 8). Alongside or shortly after, retire `admin`'s Music/SongForm/Licensed tabs in favor of the scoped Catalog tab (item 5), and begin Phase 6 (`compose` song-linking + post-creation migration, item 4).*
+## 9. New scope, Aug 2, 2026 — Deterministic snippet matching & edit-lyric
+
+*Not present in this document's original scope. Added here as its own section rather than folded into Section 6, since it cuts across `compose`, `lyric-back`, the feed, and the music page rather than extending any one of them linearly. See the Aug 2, 2026 Progress Log entry above for the full branch-by-branch account; this section is the durable reference for the design decisions, kept separate from the log so future readers don't have to dig through log entries to find the reasoning.*
+
+### 9.1 Why this needed to exist
+
+The feed's snippet button matched a post's quoted lyric text to a real `lyric_lines` row via fuzzy substring search, re-run on every render, with a silent fallback to `lyrics[0]` when nothing matched — meaning the "play just this line" button could end up playing the entire song from the beginning. Confirmed live in production against a real trymargo post. Root cause: the match was never computed once and stored; it was re-guessed every time, forever, against text that might not be a clean substring of the real SRT line (compose's 140-char cap, minor wording differences, punctuation).
+
+### 9.2 Schema
+
+```sql
+alter table public.posts
+  add column if not exists snippet_start_sec numeric,
+  add column if not exists snippet_end_sec numeric;
+
+alter table public.posts
+  add column if not exists updated_at timestamptz;
+
+create or replace function public.on_post_updated()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger post_updated_at
+  before update on public.posts
+  for each row
+  execute function public.on_post_updated();
+```
+
+Both nullable by design: a post with no linked song, or where the matcher finds nothing confident, simply doesn't render a snippet button. `updated_at` is never surfaced in the UI — see 9.4.
+
+### 9.3 `lib/lyric-match.ts` — the shared matcher
+
+One function, called identically from three places (post creation in `compose`, post creation in `lyric-back`, and post editing): given a `songId` and typed text, fetch that song's real `lyric_lines`, score each against the typed text using normalized Levenshtein edit-distance similarity (with a containment-based confidence boost for truncated/expanded quotes — common given the 140-char compose cap), and return the best match only if it clears a 0.55 confidence threshold. Below that, returns `null` rather than guessing — a missing snippet button is a smaller problem than one that plays the wrong part of a song.
+
+Two entry points skip this matcher entirely and pass exact timing straight through instead, since they already know it precisely:
+- The player page's share sheet (the currently-playing lyric line's real `start`/`end`).
+- The music board's focused-lyric panel (same — it's already showing a specific real `lyric_lines` row).
+
+### 9.4 Edit-lyric — design decision
+
+Compared X's edit pattern (time-boxed, capped edit count, visible "Edited" label with tap-through version history — appropriate because rewriting a tweet can change what was actually claimed) against Instagram/Facebook's pattern (silent, unlimited, no visible history — appropriate because a caption is decoration on the actual content, not the content itself).
+
+**Margo's posts fall into the second bucket.** Correcting a lyric transcription against a real, fixed song and timestamp that never moved is closer to fixing a caption typo than rewriting a tweet's meaning — the person isn't changing what they meant, they're fixing a transcription error against a ground truth that already existed. **Decision: silent, unlimited edits, no visible "Edited" label, no version history.** `posts.updated_at` exists only for internal debugging/support.
+
+Engagement (resonates, replies, view counts) is untouched by an edit — it's an `UPDATE` on the same row, not a new post.
+
+**One real coherence risk, handled non-blockingly:** if a post already has replies, those replies' "Responding to" context is pulled live from the parent's current text. Editing after replies exist could make existing replies look like they're responding to something different. Resolved by showing a one-line note in the edit modal ("X people have replied to this — they're still responding to what you originally wrote") rather than blocking the edit — respects the owner's right to fix their own content without silently corrupting others' context, without being a hard wall.
+
+Legacy posts (`legacy_author_label`, no real `author_profile_id`) are not editable — there's no signed-in owner to authorize it. The edit affordance is gated on `post.authorUid === user.id`.
+
+### 9.5 What still isn't built
+
+- No bulk "fix all my mismatched snippets" tool — each edit is one post at a time, by design (matches the scope of what was actually asked for).
+- The 0.55 confidence threshold (Section 8, item 19) hasn't been validated against real usage.
+- Only lyric *text* is editable through this modal — song/artist linking, vibe/emotion, and privacy status are not editable after posting. Not scoped; would need its own design pass if wanted later (in particular, changing the linked song after creation likely needs the same replies-context consideration as text edits, maybe more so).
+
+---
+
+*Next step: confirm Supabase Realtime replication is actually enabled for `posts`/`post_stats`/`post_resonates` (Section 8, item 20) — the one unverified assumption underneath everything shipped Aug 1–2. Alongside or shortly after: do one real end-to-end song upload through `/studio` to close out Phase 3/4 verification (Section 8, item 8), then move to Phase 7 (retire `useApprovedArtists`/`LicensedTab`/`useLicensedArtists.ts` — now pure deletions, Section 8 item 21 — and build the read-only admin Catalog tab).*
