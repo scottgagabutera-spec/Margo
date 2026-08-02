@@ -6,6 +6,7 @@ import { Search } from 'lucide-react'
 import { CardExportModal } from '@/components/card-export-modal'
 import { HeartIcon } from '@/components/heart-icon'
 import { supabase } from '@/lib/supabase'
+import { matchLyricLine } from '@/lib/lyric-match'
 import { useEchoes } from '@/hooks/useEchoes'
 import { useIdentity } from '@/hooks/useIdentity'
 import { getMargoActorId } from '@/lib/engagement/session'
@@ -125,6 +126,11 @@ function LyricBackContent() {
   const [resonated, setResonated] = useState<Set<string>>(new Set())
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
   const [showCard, setShowCard] = useState(false)
+  // Real FK lookup against Supabase songs, mirroring compose/page.tsx —
+  // closes the pre-existing gap where lyric-back never linked a song at
+  // all, meaning its posts could never be Tier1 / never get a snippet
+  // button regardless of the audioUrl fix.
+  const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
   const [cardData, setCardData] = useState<{
     lyric: string; song: string; artist: string; id: string;
     parentLyric?: string; parentSong?: string; parentArtist?: string;
@@ -154,11 +160,27 @@ function LyricBackContent() {
     }
   }, [])
 
-  const handleSelectSong = useCallback((result: SearchResult) => {
+  const handleSelectSong = useCallback(async (result: SearchResult) => {
     setSelectedSong(result)
     setArtistName(result.artist)
     setSongName(result.title)
     setShowResults(false)
+    setLinkedSongId(null)
+
+    try {
+      const { data, error } = await supabase
+        .from('songs')
+        .select('id')
+        .eq('status', 'live')
+        .ilike('title', result.title.trim())
+        .ilike('artist_display_name', result.artist.trim())
+        .maybeSingle()
+
+      if (!error && data) setLinkedSongId(data.id)
+    } catch (e) {
+      console.error('Song lookup failed:', e)
+    }
+
     setStep(2)
   }, [])
 
@@ -228,6 +250,7 @@ function LyricBackContent() {
     setSuggestedVibe(null)
     setEmotionError(null)
     setPostError(null)
+    setLinkedSongId(null)
   }, [])
 
   /* ─── post ───────────────────────────────────────────────── */
@@ -255,15 +278,31 @@ function LyricBackContent() {
     // now, instead of the old flat posts/{id}/echoes nesting. A fresh
     // Lyric Back with no parent (respondingToId null) is a new top-level
     // post, same as compose's handlePost.
+    // Resolve snippet timing against the linked song's real lyric_lines
+    // — same shared matcher compose uses. Null songId or no confident
+    // match just means no snippet button, not a wrong guess.
+    let resolvedStart: number | null = null
+    let resolvedEnd: number | null = null
+    if (linkedSongId) {
+      const match = await matchLyricLine(supabase, linkedSongId, lyric)
+      if (match) {
+        resolvedStart = match.startSec
+        resolvedEnd = match.endSec
+      }
+    }
+
     const { error: insertErr } = await supabase.from('posts').insert({
       text: lyric,
       emotion: selectedVibe,
       status: respondingToId ? 'active' : (isPrivate ? 'private' : 'active'),
+      song_id: linkedSongId || null,
       song_title: songName,
       artist_name: artistName,
       artwork_url: !respondingToId ? (selectedSong?.artwork || null) : null,
       author_profile_id: authorId,
       parent_post_id: respondingToId || null,
+      snippet_start_sec: resolvedStart,
+      snippet_end_sec: resolvedEnd,
     })
 
     resetComposeForm()
@@ -279,7 +318,12 @@ function LyricBackContent() {
     // postStats/{id}/echoCount and songStats/{id}/echoCount; the latter
     // has no Supabase equivalent since song_stats tracks lyric_uses, not
     // echo counts — flagging this as a dropped field, not silently kept).
-  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user, respondingToId, posting, resetComposeForm])
+    //
+    // song_stats.lyric_uses now increments automatically via the
+    // post_song_link_insert trigger whenever song_id is set, same as
+    // compose — this was never possible before since lyric-back never
+    // linked a song at all.
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user, respondingToId, posting, resetComposeForm, linkedSongId])
 
   /* ─── promote + reply — navigate first, write in background ─ */
   const promoteAndReply = (echo: typeof echoes[0]) => {

@@ -711,6 +711,21 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
                           display: 'inline-block',
                         }}
                       >Full Karaoke →</Link>
+                      <Link
+                        href={`/compose?lyric=${encodeURIComponent(focusedMoment.line)}&song=${encodeURIComponent(focusedMoment.songTitle)}&artist=${encodeURIComponent(focusedMoment.artist)}&artwork=${encodeURIComponent(focusedMoment.artwork || '')}&songId=${encodeURIComponent(focusedMoment.songId)}&audioUrl=${encodeURIComponent(focusedMoment.audioUrl || '')}&start=${focusedMoment.start}&end=${focusedMoment.end}`}
+                        onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
+                        style={{
+                          padding: '10px 20px',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          borderRadius: '50px',
+                          fontFamily: 'var(--font-lora), serif',
+                          fontSize: '0.58rem', fontWeight: 700,
+                          letterSpacing: '1px', textTransform: 'uppercase',
+                          color: 'rgba(255,255,255,0.75)', textDecoration: 'none',
+                          display: 'inline-block',
+                        }}
+                      >Post to Feed</Link>
                     </div>
                   </div>
                 </div>

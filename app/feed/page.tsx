@@ -83,9 +83,10 @@ async function fetchLyricLines(songId: string): Promise<LyricLine[]> {
   return data.map(l => ({ id: l.line_index, line: l.text, start: l.start_sec, end: l.end_sec }))
 }
 
-function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork }: {
+function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork, snippetStart, snippetEnd }: {
   audioUrl: string; songId: string | null; postText?: string
   songTitle?: string; artist?: string; artwork?: string | null
+  snippetStart?: number | null; snippetEnd?: number | null
 }) {
   const engineState = useAudioEngine()
   const isThisPlaying = engineState.playing &&
@@ -94,12 +95,18 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     engineState.snippet?.lineText === (postText || '')
 
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
+  const hasExactTiming = snippetStart != null && snippetEnd != null
 
+  // Legacy fallback only — posts created before snippet_start_sec/
+  // snippet_end_sec existed (or where the matcher found nothing
+  // confident at creation time) don't have exact timing stored, so this
+  // still fetches lyric_lines for a best-effort fuzzy match. Posts with
+  // real stored timing skip this fetch entirely.
   useEffect(() => {
-    if (songId) {
+    if (songId && !hasExactTiming) {
       fetchLyricLines(songId).then(setLyrics)
     }
-  }, [audioUrl, songId])
+  }, [audioUrl, songId, hasExactTiming])
 
   const toggle = () => {
     if (isThisPlaying) {
@@ -107,10 +114,26 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
       return
     }
 
-    const needle = (postText || '').toLowerCase().trim()
-    const match = lyrics.find(l =>
-      l.line.toLowerCase().includes(needle) || needle.includes(l.line.toLowerCase())
-    ) || lyrics[0]
+    // Exact timing stored on the post — no guessing, use it directly.
+    // This is the fix: previously every card re-guessed via fuzzy text
+    // search on every render, silently falling back to lyrics[0] (the
+    // whole song from the top) whenever nothing matched.
+    let startSec = snippetStart ?? 0
+    let endSec = snippetEnd ?? 5
+    let lineIndex = 0
+
+    if (!hasExactTiming) {
+      const needle = (postText || '').toLowerCase().trim()
+      const match = lyrics.find(l =>
+        l.line.toLowerCase().includes(needle) || needle.includes(l.line.toLowerCase())
+      )
+      // No forced fallback to lyrics[0] anymore — if nothing matches,
+      // this button simply won't have a confident snippet to play.
+      if (!match) return
+      startSec = match.start
+      endSec = match.end
+      lineIndex = match.id
+    }
 
     void playSnippet({
       songId: songId || audioUrl,
@@ -118,10 +141,10 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
       title: songTitle || '',
       artist: artist || '',
       artwork: artwork ?? null,
-      lineIndex: match?.id ?? 0,
-      lineText: postText || match?.line || '',
-      startSec: match?.start ?? 0,
-      endSec: match?.end ?? 5,
+      lineIndex,
+      lineText: postText || '',
+      startSec,
+      endSec,
       source: 'feed',
     })
   }
@@ -390,7 +413,7 @@ function PostCard({
           &ldquo;{post.text}&rdquo;
         </p>
         {isTier1 && audioUrl && (
-          <SnippetIconButton audioUrl={audioUrl} songId={post.songId || null} postText={post.text} songTitle={post.knowledge?.song || ''} artist={post.knowledge?.artist || ''} artwork={post.knowledge?.artwork || null} />
+          <SnippetIconButton audioUrl={audioUrl} songId={post.songId || null} postText={post.text} songTitle={post.knowledge?.song || ''} artist={post.knowledge?.artist || ''} artwork={post.knowledge?.artwork || null} snippetStart={post.snippetStart} snippetEnd={post.snippetEnd} />
         )}
       </div>
 

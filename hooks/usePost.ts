@@ -20,6 +20,8 @@ const POST_SELECT = `
   legacy_author_label,
   author_profile_id,
   created_at,
+  snippet_start_sec,
+  snippet_end_sec,
   profiles:author_profile_id ( username, avatar_url ),
   post_stats ( resonate_count, echo_count ),
   songs:song_id ( audio_url )
@@ -61,6 +63,8 @@ function mapRow(row: any): Post {
     replies: stats?.echo_count ?? 0,
     songId: row.song_id ?? null,
     audioUrl: linkedSong?.audio_url ?? null,
+    snippetStart: row.snippet_start_sec ?? null,
+    snippetEnd: row.snippet_end_sec ?? null,
   }
 }
 

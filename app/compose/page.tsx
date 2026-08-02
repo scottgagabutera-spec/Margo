@@ -7,6 +7,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { matchLyricLine } from '@/lib/lyric-match'
 import { useIdentity } from '@/hooks/useIdentity'
 import { CardExportModal } from '@/components/card-export-modal'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -71,6 +72,13 @@ function ComposeInner() {
       const audioUrlParam = searchParams.get('audioUrl')
       if (songIdParam) setLinkedSongId(songIdParam)
       if (audioUrlParam) setLinkedAudioUrl(audioUrlParam)
+      // Exact snippet timing from the player's share sheet — already
+      // known precisely there (it's the currently-playing lyric line),
+      // so no matching needed at all for this entry point.
+      const startParam = searchParams.get('start')
+      const endParam = searchParams.get('end')
+      if (startParam) setSnippetStart(parseFloat(startParam))
+      if (endParam) setSnippetEnd(parseFloat(endParam))
       setStep(3)
     }
   }, [])
@@ -92,6 +100,12 @@ function ComposeInner() {
   const [showSharePrompt, setShowSharePrompt] = useState(false)
   const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
   const [linkedAudioUrl, setLinkedAudioUrl] = useState<string | null>(null)
+  // Exact snippet timing — either passed in directly from the player's
+  // share sheet (exact), or matched at post time against the linked
+  // song's real lyric_lines via matchLyricLine (best-effort, may be null
+  // if nothing matches confidently).
+  const [snippetStart, setSnippetStart] = useState<number | null>(null)
+  const [snippetEnd, setSnippetEnd] = useState<number | null>(null)
   const [posting, setPosting] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
   const emotionAbortRef = useRef<AbortController | null>(null)
@@ -129,6 +143,8 @@ function ComposeInner() {
     setShowResults(false)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
+    setSnippetStart(null)
+    setSnippetEnd(null)
 
     // Real FK lookup against the live Supabase catalog — replaces the old
     // Firebase full-tree scan + isLicensed() gate (Section 6, Gap #5). The
@@ -209,6 +225,25 @@ function ComposeInner() {
     // user.id is always correct here — no ambiguity after all.
     const authorId = user.id
 
+    // Resolve snippet timing. Exact values already set (from the player's
+    // share link) take priority and skip matching entirely. Otherwise, if
+    // a real song is linked, run the shared matcher against its actual
+    // lyric_lines — this is the fix for the reported bug where a typed
+    // lyric that wasn't a character-for-character SRT substring matched
+    // nothing and silently fell back to playing the whole song. If no
+    // song is linked, or the matcher can't find a confident match,
+    // resolvedStart/End stay null and the post simply won't get a
+    // snippet button — no wrong guess forced through.
+    let resolvedStart = snippetStart
+    let resolvedEnd = snippetEnd
+    if ((resolvedStart == null || resolvedEnd == null) && linkedSongId) {
+      const match = await matchLyricLine(supabase, linkedSongId, lyric)
+      if (match) {
+        resolvedStart = match.startSec
+        resolvedEnd = match.endSec
+      }
+    }
+
     try {
       const { data, error: insertErr } = await supabase
         .from('posts')
@@ -225,6 +260,8 @@ function ComposeInner() {
           author_profile_id: authorId,
           parent_post_id: null,
           lang: navigator.language.split('-')[0] || 'en',
+          snippet_start_sec: resolvedStart,
+          snippet_end_sec: resolvedEnd,
         })
         .select('id')
         .single()
@@ -256,7 +293,7 @@ function ComposeInner() {
       setPostError('Something went wrong. Please try again.')
       setPosting(false)
     }
-  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, linkedSongId, linkedAudioUrl])
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd])
 
   const resetCompose = () => {
     setStep(1)
@@ -272,6 +309,8 @@ function ComposeInner() {
     setShowExport(false)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
+    setSnippetStart(null)
+    setSnippetEnd(null)
     setPosting(false)
     setPostError(null)
     setBannerDismissed(false)
