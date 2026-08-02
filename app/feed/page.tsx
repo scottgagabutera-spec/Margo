@@ -778,7 +778,7 @@ export default function FeedPage() {
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         <div style={{ position: 'absolute', top: '-128px', left: '-128px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(80px)' }} />
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
@@ -795,7 +795,7 @@ export default function FeedPage() {
           (and by extension the feed content below it) drift under the
           nav. Now reads the same measured value MargoNav publishes,
           so this can't drift out of sync again. */}
-      <div style={{ position: 'sticky', top: 'var(--nav-height)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 56px) 20px 0' }}>
+      <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 56px) 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <div style={{ position: 'relative', paddingBottom: hasActiveFilter ? '10px' : '20px' }}>
             <input
