@@ -10,7 +10,7 @@ import {
   MusicNoteIcon,
   ShareIcon,
 } from '@/components/icons'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
@@ -45,8 +45,12 @@ const VIBE_LABELS: Record<string, string> = {
   sendit: 'Send It', letout: 'Let Out',
 }
 
-const VIBES = ['ALL', 'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL', 'NOSTALGIA', 'JOY', 'LOVE', 'HYPE', 'PROUD', 'HEARTBREAK', 'PAIN', 'LONELINESS', 'LOST', 'RAGE', 'SENDIT', 'LETOUT']
-const SORTS = ['NEW', 'TRENDING', 'TOP']
+// ── Earned-tag thresholds ────────────────────────────────────────────
+// A post only ever shows one of these — never a permanent row of tabs.
+// NEW: posted in the last 24h. TRENDING/TOP: in the current top-N by
+// score, computed once across the whole unfiltered post list below.
+const NEW_WINDOW_HOURS = 24
+const RANK_BADGE_COUNT = 5
 
 function normalizeEmotion(e: string) {
   if (!e) return ''
@@ -67,13 +71,6 @@ function timeAgo(ts: number) {
 interface LyricLine { id: number; line: string; start: number; end: number }
 
 // ── Migrated Aug 1, 2026 ───────────────────────────────────────────────
-// parseSRT is gone. Both components below used to fetch songs/{songId}
-// from Firebase and client-side parse a raw .srt string — the same
-// duplicate-parser problem already fixed once for useSongs/useSong
-// (Section 8, item 10). Supabase's lyric_lines table already holds real,
-// pre-parsed rows (line_index/text/start_sec/end_sec) from the migration
-// — querying it directly means there's no SRT text to parse at all here
-// anymore, not just a different way of parsing it.
 async function fetchLyricLines(songId: string): Promise<LyricLine[]> {
   const { data, error } = await supabase
     .from('lyric_lines')
@@ -98,11 +95,6 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const hasExactTiming = snippetStart != null && snippetEnd != null
 
-  // Legacy fallback only — posts created before snippet_start_sec/
-  // snippet_end_sec existed (or where the matcher found nothing
-  // confident at creation time) don't have exact timing stored, so this
-  // still fetches lyric_lines for a best-effort fuzzy match. Posts with
-  // real stored timing skip this fetch entirely.
   useEffect(() => {
     if (songId && !hasExactTiming) {
       fetchLyricLines(songId).then(setLyrics)
@@ -115,10 +107,6 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
       return
     }
 
-    // Exact timing stored on the post — no guessing, use it directly.
-    // This is the fix: previously every card re-guessed via fuzzy text
-    // search on every render, silently falling back to lyrics[0] (the
-    // whole song from the top) whenever nothing matched.
     let startSec = snippetStart ?? 0
     let endSec = snippetEnd ?? 5
     let lineIndex = 0
@@ -128,8 +116,6 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
       const match = lyrics.find(l =>
         l.line.toLowerCase().includes(needle) || needle.includes(l.line.toLowerCase())
       )
-      // No forced fallback to lyrics[0] anymore — if nothing matches,
-      // this button simply won't have a confident snippet to play.
       if (!match) return
       startSec = match.start
       endSec = match.end
@@ -285,8 +271,26 @@ function Tier1Player({ audioUrl, songId, postText }: {
   )
 }
 
+// ── Earned tag pill — only rendered when a post actually qualifies ────
+function EarnedTag({ label, onClick }: { label: 'New' | 'Trending' | 'Top'; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onClick() }}
+      style={{
+        fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
+        letterSpacing: '1.2px', textTransform: 'uppercase', padding: '3px 9px',
+        borderRadius: '50px', background: 'rgba(232,197,71,0.1)',
+        border: '1px solid var(--gold-border)', color: 'var(--gold)',
+        cursor: 'pointer', flexShrink: 0,
+      }}
+    >{label}</button>
+  )
+}
+
 function PostCard({
-  post, resonated, resonateCount, echoCount, onResonate, onExport
+  post, resonated, resonateCount, echoCount, onResonate, onExport,
+  isNew, isTrending, isTop, onSelectVibe, onSelectRank,
 }: {
   post: Post
   resonated: boolean
@@ -294,6 +298,11 @@ function PostCard({
   echoCount: number
   onResonate: (id: string) => void
   onExport: (post: Post) => void
+  isNew: boolean
+  isTrending: boolean
+  isTop: boolean
+  onSelectVibe: (vibe: string) => void
+  onSelectRank: (rank: 'NEW' | 'TRENDING' | 'TOP') => void
 }) {
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -337,8 +346,6 @@ function PostCard({
           viewedRef.current = true
           obs.disconnect()
           try { sessionStorage.setItem(sessionKey, '1') } catch {}
-          // Dedup-free counter RPC (Posts & Engagement schema) — replaces
-          // the old Firebase runTransaction against postStats/{id}/views.
           supabase.rpc('increment_post_view', { p_post_id: post.id }).then(({ error }) => {
             if (error) console.error('Failed to record view:', error)
           })
@@ -399,6 +406,13 @@ function PostCard({
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {(isNew || isTrending || isTop) && (
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {isNew && <EarnedTag label="New" onClick={() => onSelectRank('NEW')} />}
+              {isTrending && <EarnedTag label="Trending" onClick={() => onSelectRank('TRENDING')} />}
+              {isTop && <EarnedTag label="Top" onClick={() => onSelectRank('TOP')} />}
+            </div>
+          )}
           {isTier1 && (
             <span style={{
               fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
@@ -532,12 +546,16 @@ function PostCard({
         </button>
 
         {label && (
-          <span style={{
-            fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
-            letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
-            borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
-            color,
-          }}>{label}</span>
+          <button
+            type="button"
+            onClick={() => onSelectVibe(emotion.toUpperCase())}
+            style={{
+              fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+              letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
+              borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
+              border: 'none', cursor: 'pointer', color,
+            }}
+          >{label}</button>
         )}
       </div>
 
@@ -589,13 +607,6 @@ export default function FeedPage() {
   const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number }>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
 
-  // Fetches all post_stats rows once, plus a Realtime subscription to
-  // mirror the old Firebase onValue live-update behavior. At 133 posts
-  // this is a cheap full-table read — worth revisiting with a scoped
-  // query (or pagination) if the catalog grows large enough to matter.
-  // Requires Realtime enabled on post_stats (Database → Replication);
-  // without it this just means stats won't live-update, initial load
-  // still works.
   useEffect(() => {
     let cancelled = false
     async function loadStats() {
@@ -620,10 +631,6 @@ export default function FeedPage() {
     return () => { cancelled = true; supabase.removeChannel(channel) }
   }, [])
 
-  // Which posts THIS person has resonated with — post_resonates rows
-  // scoped to their own actor_id, replacing the old Firebase pattern of
-  // pulling the entire analytics tree and filtering client-side for
-  // matches under myId.
   useEffect(() => {
     const myId = getMargoActorId()
     let cancelled = false
@@ -652,11 +659,6 @@ export default function FeedPage() {
     return () => { cancelled = true; supabase.removeChannel(channel) }
   }, [])
 
-  // Privacy filtering (private authors hidden from non-followers) now
-  // happens once, inside usePosts() itself — it delegates to the same
-  // useVisibleAuthorIds hook the profile page relies on. `posts` here
-  // is already the filtered set; no second filter needed.
-
   const getEngagement = (post: Post) => {
     const s = postStats[post.id] || {}
     return (s.views || 0) + ((s.resonateCount || 0) * 4) + ((s.echoCount || 0) * 5)
@@ -667,14 +669,40 @@ export default function FeedPage() {
     return (Date.now() - post.timestamp) / 3600000
   }
 
-  const getScore = (post: Post) => {
+  // Refactored to take the sort mode as an argument (was reading
+  // selectedSort from closure) so we can score every post under every
+  // mode once, up front, to compute which posts EARN a badge — instead
+  // of only ever knowing scores under whichever single sort was active.
+  const getScoreFor = (post: Post, sort: string) => {
     const age = getAge(post)
     const engage = getEngagement(post)
-    if (selectedSort === 'NEW') return Math.exp(-age / 18) * 1000 + engage * 0.05
-    if (selectedSort === 'TRENDING') return engage / Math.pow(age + 2, 1.4)
-    if (selectedSort === 'TOP') return engage
+    if (sort === 'NEW') return Math.exp(-age / 18) * 1000 + engage * 0.05
+    if (sort === 'TRENDING') return engage / Math.pow(age + 2, 1.4)
+    if (sort === 'TOP') return engage
     return 0
   }
+
+  // Earned-badge sets — computed once from the full unfiltered post
+  // list, independent of whatever filter is currently active. A badge
+  // is never permanent chrome; it only exists on posts that actually
+  // rank in the top N right now.
+  const { newIds, trendingIds, topIds } = useMemo(() => {
+    const newIds = new Set(posts.filter(p => getAge(p) < NEW_WINDOW_HOURS).map(p => p.id))
+    const trendingIds = new Set(
+      [...posts]
+        .sort((a, b) => getScoreFor(b, 'TRENDING') - getScoreFor(a, 'TRENDING'))
+        .slice(0, RANK_BADGE_COUNT)
+        .map(p => p.id)
+    )
+    const topIds = new Set(
+      [...posts]
+        .sort((a, b) => getScoreFor(b, 'TOP') - getScoreFor(a, 'TOP'))
+        .slice(0, RANK_BADGE_COUNT)
+        .map(p => p.id)
+    )
+    return { newIds, trendingIds, topIds }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts, postStats])
 
   const filteredPosts = posts
     .filter(p => {
@@ -690,12 +718,8 @@ export default function FeedPage() {
         (p.username || '').toLowerCase().includes(q)
       )
     })
-    .sort((a, b) => getScore(b) - getScore(a))
+    .sort((a, b) => getScoreFor(b, selectedSort) - getScoreFor(a, selectedSort))
 
-  // Fires a 'resonate' notification row directly to Supabase, since
-  // resonates happen in Firebase and can't be picked up by a DB
-  // trigger the way messages/follows are. Only fires when someone
-  // resonates with (not un-resonates) a post that isn't their own.
   const notifyResonate = async (post: Post) => {
     if (!user?.id) return
     if (!post.authorUid || post.authorUid === user.id) return
@@ -732,19 +756,6 @@ export default function FeedPage() {
         const { error } = await supabase.from('post_resonates').insert({ post_id: postId, actor_id: myId })
         if (error) throw error
       }
-      // post_stats.resonate_count is kept in sync automatically by the
-      // post_resonate_insert/delete triggers — no manual update needed
-      // (previously a separate Firebase runTransaction).
-      //
-      // DROPPED BEHAVIOR, FLAGGED NOT SILENTLY PORTED: the old Firebase
-      // version also mirrored this into songResonates/{linkedSongId}/{myId}
-      // whenever the post had a linked songId — treating "resonating with
-      // a lyric post about song X" as equivalent to "resonating with song
-      // X itself." The Posts & Engagement schema keeps song_resonates and
-      // post_resonates as separate, unlinked tables with no cross-write
-      // hook, and the plan doc doesn't call this linkage out as intended
-      // behavior to preserve. Left out rather than guessed back in — flag
-      // if this was actually load-bearing for song-level stats anywhere.
       if (!already) {
         const post = posts.find(p => p.id === postId)
         if (post) void notifyResonate(post)
@@ -764,6 +775,16 @@ export default function FeedPage() {
     setExportPost(post)
   }
 
+  const handleSelectVibe = (vibe: string) => {
+    setSelectedVibe(prev => (prev === vibe ? 'ALL' : vibe))
+  }
+
+  const handleSelectRank = (rank: 'NEW' | 'TRENDING' | 'TOP') => {
+    setSelectedSort(prev => (prev === rank ? 'NEW' : rank))
+  }
+
+  const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
@@ -771,47 +792,22 @@ export default function FeedPage() {
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
       </div>
 
+      {/* Sticky header — search only now. The old permanent vibe-pill row
+          and New/Trending/Top tab row are gone; those filters are now
+          triggered from tags that live ON the posts themselves (see
+          EarnedTag and the vibe label button in PostCard), and only
+          show up here as a dismissible chip once one is active. */}
       <div style={{ position: 'sticky', top: '56px', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 56px) 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
-            {VIBES.map(vibe => (
-              <button key={vibe} onClick={() => setSelectedVibe(vibe)} style={{
-                flexShrink: 0, minHeight: '30px', padding: '0 10px', borderRadius: '50px',
-                display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700,
-                letterSpacing: '0.4px', textTransform: 'uppercase', cursor: 'pointer',
-                border: '1px solid',
-                background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
-                color: selectedVibe === vibe ? 'var(--bg)' : 'rgba(255,255,255,0.45)',
-                borderColor: selectedVibe === vibe ? 'var(--gold)' : 'rgba(255,255,255,0.1)',
-                transition: 'all 150ms ease',
-              }}>{vibe === 'SENDIT' ? 'SEND IT' : vibe === 'LETOUT' ? 'LET OUT' : vibe}</button>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: '0', paddingTop: '6px', paddingBottom: '3px', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            {SORTS.map(sort => (
-              <button key={sort} onClick={() => setSelectedSort(sort)} style={{
-                minHeight: '32px', padding: '0 12px', background: 'none', border: 'none', cursor: 'pointer',
-                display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.54rem', fontWeight: 700,
-                letterSpacing: '1.1px', textTransform: 'uppercase',
-                color: selectedSort === sort ? 'var(--gold)' : 'var(--text-3)',
-                borderBottom: selectedSort === sort ? '2px solid var(--gold)' : '2px solid transparent',
-                transition: 'all 150ms ease',
-              }}>{sort}</button>
-            ))}
-          </div>
-
-          <div style={{ position: 'relative', paddingBottom: '32px', paddingTop: '6px' }}>
+          <div style={{ position: 'relative', paddingBottom: hasActiveFilter ? '10px' : '20px' }}>
             <input
               type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search lyrics, songs, artists, feelings..."
               style={{
-                width: '100%', height: '32px', padding: '0 34px 0 12px',
+                width: '100%', height: '36px', padding: '0 34px 0 12px',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: '9px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.66rem', outline: 'none', boxSizing: 'border-box',
+                fontSize: '0.7rem', outline: 'none', boxSizing: 'border-box',
               }}
             />
             {searchQuery && (
@@ -829,10 +825,41 @@ export default function FeedPage() {
               </button>
             )}
           </div>
+
+          {hasActiveFilter && (
+            <div style={{ display: 'flex', gap: '6px', paddingBottom: '16px' }}>
+              {selectedVibe !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedVibe('ALL')}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '4px 10px', borderRadius: '50px',
+                    background: 'var(--gold)', border: 'none', cursor: 'pointer',
+                    fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+                    letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--bg)',
+                  }}
+                >Filtering: {selectedVibe} <CloseIcon size={10} color="var(--bg)" /></button>
+              )}
+              {selectedSort !== 'NEW' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedSort('NEW')}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '4px 10px', borderRadius: '50px',
+                    background: 'transparent', border: '1px solid var(--gold-border)', cursor: 'pointer',
+                    fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+                    letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gold)',
+                  }}
+                >{selectedSort} <CloseIcon size={10} color="var(--gold)" /></button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '56px 24px var(--margo-page-padding-bottom)' }}>
+      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px var(--margo-page-padding-bottom)' }}>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
             {[0,1,2].map(i => (
@@ -865,6 +892,11 @@ export default function FeedPage() {
               echoCount={postStats[post.id]?.echoCount ?? 0}
               onResonate={toggleResonate}
               onExport={handleExport}
+              isNew={newIds.has(post.id)}
+              isTrending={trendingIds.has(post.id)}
+              isTop={topIds.has(post.id)}
+              onSelectVibe={handleSelectVibe}
+              onSelectRank={handleSelectRank}
             />
           ))}
         </div>
