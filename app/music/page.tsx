@@ -8,6 +8,7 @@ import { useSharedLines } from '@/hooks/useSharedLines'
 import { useIsPlaying } from '@/hooks/useAudioEngine'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { HeartIcon } from '@/components/heart-icon'
+import { SaveQueueButton } from '@/components/save-queue-button'
 import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -726,6 +727,17 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
                           display: 'inline-block',
                         }}
                       >Post to Feed</Link>
+                      {/*
+                        Save Queue button — saves whatever the audio engine is
+                        currently playing through (the vibe-filtered pool set by
+                        playSnippet() above), not just this single moment.
+                        Title defaults to the active vibe filter so "My Mix" vs
+                        "CHILL Mix" is meaningful without asking the user to type
+                        anything up front.
+                      */}
+                      <SaveQueueButton
+                        defaultTitle={activeVibe === 'ALL' ? 'My Mix' : `${activeVibe} Mix`}
+                      />
                     </div>
                   </div>
                 </div>
