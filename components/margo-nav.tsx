@@ -35,12 +35,29 @@ const font = 'var(--font-lora), serif'
  * dropdown, gated on identity.isArtist. Mobile parity for this link
  * lives wherever Apply as an Artist lives on the own-profile page,
  * not here — same reasoning as the comment above.
+ *
+ * --- Aug 2, 2026 ---
+ * Nav is `position: fixed`, which removes it from document flow —
+ * nothing below it automatically reserves space, so any page that
+ * doesn't manually pad for it will have its content overlap under
+ * the nav from the very first paint (not just on scroll). Rather than
+ * hardcoding a guessed pixel offset on every page that needs to clear
+ * the nav (the old bug — e.g. Studio's hardcoded 100px, apply-artist's
+ * missing padding entirely), the nav now measures its own real
+ * rendered height at runtime via ResizeObserver and publishes it as
+ * `--nav-height` on the document root. Every other page/component
+ * that needs to clear the nav references `var(--nav-height)` instead
+ * of guessing a number — this makes the whole class of overlap bugs
+ * structurally impossible instead of something to re-fix per page.
+ * A static fallback value is set below in case CSS needs it before
+ * this effect runs on first client paint.
  */
 export function MargoNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const avatarMenuRef = useRef<HTMLDivElement>(null)
+  const navElRef = useRef<HTMLElement>(null)
   const { user, identity } = useIdentity()
   const { application } = useArtistApplication()
 
@@ -78,6 +95,22 @@ export function MargoNav() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [avatarMenuOpen])
 
+  // Measures the nav's real rendered height (which changes across
+  // breakpoints, font load, etc.) and publishes it as a CSS var on
+  // the document root so any page can reliably clear the nav without
+  // guessing a pixel value.
+  useEffect(() => {
+    const el = navElRef.current
+    if (!el) return
+    const setVar = () => {
+      document.documentElement.style.setProperty('--nav-height', `${el.offsetHeight}px`)
+    }
+    setVar()
+    const ro = new ResizeObserver(setVar)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const avatarDropdownItems = ownProfileHref ? [
     { href: ownProfileHref, label: 'Profile' },
     ...(identity?.isArtist ? [{ href: '/studio', label: 'Studio' }] : []),
@@ -86,7 +119,7 @@ export function MargoNav() {
   ] : []
 
   return (
-    <nav className="margo-nav-bar" style={{
+    <nav ref={navElRef} className="margo-nav-bar" style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
       padding: '14px 24px',
       background: 'var(--bg)',
@@ -246,6 +279,12 @@ export function MargoNav() {
       </div>
 
       <style>{`
+        :root {
+          /* Fallback so nothing snaps/jumps before the ResizeObserver
+             effect above runs on first client paint. Real value takes
+             over immediately after mount and stays in sync on resize. */
+          --nav-height: 72px;
+        }
         .margo-desktop-nav {
           display: none;
         }
