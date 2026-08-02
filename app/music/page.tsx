@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSongs, Song } from '@/hooks/useSongs'
@@ -8,12 +8,12 @@ import { useSharedLines } from '@/hooks/useSharedLines'
 import { useIsPlaying } from '@/hooks/useAudioEngine'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { HeartIcon } from '@/components/heart-icon'
+import { CloseIcon } from '@/components/icons'
 import { SaveQueueButton } from '@/components/save-queue-button'
 import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { supabase } from '@/lib/supabase'
-
 
 function formatNum(n: number): string {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
@@ -22,6 +22,13 @@ function formatNum(n: number): string {
 }
 
 const VIBES = ['ALL', 'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL', 'NOSTALGIA', 'JOY', 'LOVE', 'HYPE', 'PROUD']
+
+// Earned-tag thresholds for the Songs row — mirrors the Feed pattern
+// (badge only if a song actually qualifies, never permanent chrome).
+// "New" is intentionally left out — Song doesn't expose a createdAt/
+// timestamp field in what's been reviewed so far. Add it back once
+// that field is confirmed to exist.
+const RANK_BADGE_COUNT = 8
 
 interface LyricMoment {
   line: string
@@ -34,6 +41,13 @@ interface LyricMoment {
   artwork?: string | null
   audioUrl?: string | null
   vibes: string[]
+}
+
+interface ArtistPreview {
+  id: string
+  username: string | null
+  displayName: string | null
+  avatarUrl: string | null
 }
 
 function formatTime(s: number) {
@@ -60,122 +74,113 @@ function SmallStatBlock({ value, label, gold }: { value: number; label: string; 
   )
 }
 
-// ─── Single Lyric Card ────────────────────────────────────────────────
-function LyricCard({
-  moment,
-  visible,
-  isPlaying,
-  onClick,
-  onPlay,
-  cardRefProp,
-  index,
-}: {
+// ── Earned tag pill — reused across Songs row ──────────────────────────
+function EarnedTag({ label }: { label: 'Trending' | 'Top' }) {
+  return (
+    <span style={{
+      position: 'absolute', top: '8px', left: '8px',
+      fontFamily: 'var(--font-lora), serif', fontSize: '0.46rem', fontWeight: 700,
+      letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 8px',
+      borderRadius: '50px', background: 'rgba(7,6,10,0.75)',
+      border: '1px solid var(--gold-border)', color: 'var(--gold)',
+      zIndex: 2,
+    }}>{label}</span>
+  )
+}
+
+// ── Section header — shared by every row ────────────────────────────────
+function RowHeader({ title, subtitle, viewMoreHref, onViewMore }: {
+  title: string
+  subtitle?: string
+  viewMoreHref?: string
+  onViewMore?: () => void
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '14px', gap: '12px' }}>
+      <div>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.1rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{title}</p>
+        {subtitle && (
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-3)', margin: '2px 0 0' }}>{subtitle}</p>
+        )}
+      </div>
+      {viewMoreHref ? (
+        <Link href={viewMoreHref} style={{
+          fontFamily: 'var(--font-lora), serif', fontSize: '0.56rem', fontWeight: 700,
+          letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gold)',
+          textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap',
+        }}>View more →</Link>
+      ) : onViewMore ? (
+        <button onClick={onViewMore} style={{
+          fontFamily: 'var(--font-lora), serif', fontSize: '0.56rem', fontWeight: 700,
+          letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gold)',
+          background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap', padding: 0,
+        }}>View more →</button>
+      ) : null}
+    </div>
+  )
+}
+
+// ── Lyric Moment card — used in the horizontal row ──────────────────────
+function MomentCard({ moment, isPlaying, onClick, onPlay }: {
   moment: LyricMoment
-  visible: boolean
   isPlaying: boolean
   onClick: () => void
   onPlay: (e: React.MouseEvent) => void
-  cardRefProp?: (el: HTMLDivElement | null) => void
-  index?: number
 }) {
-  const cardRef = useRef<HTMLDivElement>(null)
-
   return (
     <div
-      ref={cardRefProp ?? cardRef}
-      data-lyric-idx={index}
-      className="lyric-card"
       onClick={onClick}
+      className="moment-card"
       style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'scale(1)' : 'scale(0.97)',
-        padding: '18px 18px',
-        background: isPlaying ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.025)',
-        border: `1px solid ${isPlaying ? 'rgba(232,197,71,0.25)' : 'rgba(255,255,255,0.08)'}`,
-        borderRadius: '14px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        cursor: 'pointer',
-        overflow: 'hidden',
-        transition: 'opacity 700ms cubic-bezier(0.4,0,0.2,1), transform 700ms cubic-bezier(0.4,0,0.2,1), border-color 200ms ease, background 200ms ease',
-        willChange: 'opacity, transform',
+        flexShrink: 0, width: '240px', scrollSnapAlign: 'start',
+        padding: '16px', background: isPlaying ? 'rgba(232,197,71,0.06)' : 'rgba(255,255,255,0.025)',
+        border: `1px solid ${isPlaying ? 'rgba(232,197,71,0.28)' : 'rgba(255,255,255,0.08)'}`,
+        borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '10px',
+        cursor: 'pointer', transition: 'border-color 200ms ease, background 200ms ease',
       }}
     >
-      <p className="lyric-text" style={{
-        fontFamily: 'var(--font-lora), serif',
-        fontStyle: 'italic',
-        fontSize: '0.95rem',
-        color: 'var(--text)',
-        lineHeight: 1.55,
-        flex: 1,
-        margin: 0,
-      }}>
-        &ldquo;{moment.line}&rdquo;
-      </p>
+      <p style={{
+        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.88rem',
+        color: 'var(--text)', lineHeight: 1.5, margin: 0,
+        display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        minHeight: '4.2em',
+      }}>&ldquo;{moment.line}&rdquo;</p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {moment.artwork && (
-            <div style={{ position: 'relative', width: '28px', height: '28px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
-              <Image src={moment.artwork} alt={moment.songTitle} fill style={{ objectFit: 'cover' }} />
-            </div>
-          )}
-          <div>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>{moment.songTitle}</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{formatTime(moment.start)}</p>
-          </div>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.songTitle}</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{formatTime(moment.start)}</p>
         </div>
-        <button
-          className="snippet-btn"
-          onClick={onPlay}
-          style={{
-            width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
-            background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
-            border: '1px solid rgba(232,197,71,0.25)',
-            cursor: 'pointer', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, transition: 'background 200ms ease',
-            padding: 0, boxSizing: 'border-box',
-          }}
-        >
-          <PlayPauseIcon playing={isPlaying} size={16} color="var(--gold)" />
+        <button onClick={onPlay} style={{
+          width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
+          background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
+          border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
+        }}>
+          <PlayPauseIcon playing={isPlaying} size={15} color="var(--gold)" />
         </button>
       </div>
     </div>
   )
 }
 
-// ─── Lyric Discovery Board ────────────────────────────────────────────
-function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
-  const [activeVibe, setActiveVibe] = useState('ALL')
+// ── Lyric Moments row ─────────────────────────────────────────────────
+// Scoped vibe chips live HERE, not page-wide — this is the one place
+// that filter still matters. Manual tap-to-preview while browsing;
+// "View more" opens the full connected/swipeable takeover.
+function LyricMomentsSection({ songs }: { songs: Song[] }) {
+  const [rowVibe, setRowVibe] = useState('ALL')
   const [allMoments, setAllMoments] = useState<LyricMoment[]>([])
-  // 6 slots: desktop 3×2, mobile 2×3
-  const SLOT_COUNT = 6
-  const [slots, setSlots] = useState<(LyricMoment | null)[]>(Array(SLOT_COUNT).fill(null))
-  const [slotVisible, setSlotVisible] = useState<boolean[]>(Array(SLOT_COUNT).fill(false))
-  // Keep slotsRef in sync
-  useEffect(() => { slotsRef.current = slots }, [slots])
-
-  const [focusedMoment, setFocusedMoment] = useState<LyricMoment | null>(null)
-  const [focusedIndex, setFocusedIndex] = useState(0)
   const [playingKey, setPlayingKey] = useState<string | null>(null)
+  const [takeover, setTakeover] = useState<{ open: boolean; index: number }>({ open: false, index: 0 })
   const { requireAuth } = useAuthGate()
-  const cycleRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const vibePoolRef = useRef<LyricMoment[]>([])
-  const slotQueueRef = useRef<number>(0) // next slot to replace
-  const playingKeyRef = useRef<string | null>(null)  // mirror of playingKey for cycle timer
-  const slotsRef = useRef<(LyricMoment | null)[]>(Array(SLOT_COUNT).fill(null)) // mirror of slots for cycle timer
-  const playingRef = useRef(false) // rapid-tap guard
-  const CYCLE_MS = 5500
+  const playingRef = useRef(false)
 
-  // Build all moments directly from each song's structured lyricLines —
-  // no SRT parsing needed anymore, the schema already gives us real rows.
   useEffect(() => {
     const moments: LyricMoment[] = []
     songs.forEach(song => {
       if (!song.lyricLines || song.lyricLines.length === 0) return
       song.lyricLines.forEach(line => {
-        if (line.text.length < 5) return // skip very short filler
+        if (line.text.length < 5) return
         if (!line.vibes || line.vibes.length === 0) return
         moments.push({
           line: line.text, lineId: line.lineIndex,
@@ -185,7 +190,6 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
         })
       })
     })
-    // Shuffle
     for (let i = moments.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [moments[i], moments[j]] = [moments[j], moments[i]]
@@ -193,190 +197,6 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
     setAllMoments(moments)
   }, [songs])
 
-  // Pre-warm first 3 unique audioUrls as soon as songs arrive — fills the pool
-  // before any card is visible so first tap is instant even in incognito
-  useEffect(() => {
-    if (songs.length === 0) return
-    const seen = new Set<string>()
-    for (const song of songs) {
-      if (!song.audioUrl) continue
-      if (seen.has(song.audioUrl)) continue
-      seen.add(song.audioUrl)
-      warmUrl(song.audioUrl)
-      if (seen.size >= 3) break  // pool size — stop here, rest handled by IntersectionObserver
-    }
-  }, [songs])
-
-  // Audio warming for remaining cards done per-card via IntersectionObserver in LyricCard
-  // Centralized viewport-driven warming (visible cards + lookahead)
-  const cardElementsRef = useRef<(HTMLDivElement | null)[]>([])
-  const [visibleIndices, setVisibleIndices] = useState<number[]>([])
-  const visibleIndicesRef = useRef<Set<number>>(new Set())
-  const observerRef = useRef<IntersectionObserver | null>(null)
-  const debounceTimerRef = useRef<number | null>(null)
-
-  // Create a single IntersectionObserver for the board
-  useEffect(() => {
-    observerRef.current = new IntersectionObserver((entries) => {
-      let changed = false
-      const next = new Set(visibleIndicesRef.current)
-      for (const entry of entries) {
-        const attr = entry.target.getAttribute && entry.target.getAttribute('data-lyric-idx')
-        if (attr == null) continue
-        const idx = Number(attr)
-        if (entry.isIntersecting) {
-          if (!next.has(idx)) { next.add(idx); changed = true }
-        } else {
-          if (next.has(idx)) { next.delete(idx); changed = true }
-        }
-      }
-      if (changed) {
-        visibleIndicesRef.current = new Set(next)
-        setVisibleIndices(Array.from(next))
-      }
-    }, { root: null, rootMargin: '300px', threshold: 0.01 })
-
-    return () => { observerRef.current?.disconnect(); observerRef.current = null }
-  }, [])
-
-  // Keep the ref in sync if visibleIndices is changed elsewhere
-  useEffect(() => {
-    visibleIndicesRef.current = new Set(visibleIndices)
-  }, [visibleIndices])
-
-  // Observe current card elements whenever slots change
-  useEffect(() => {
-    const obs = observerRef.current
-    if (!obs) return
-    obs.disconnect()
-    // Ensure refs array length matches slots
-    cardElementsRef.current = cardElementsRef.current.slice(0, slots.length)
-    for (let i = 0; i < slots.length; i++) {
-      const el = cardElementsRef.current[i]
-      if (el) obs.observe(el)
-    }
-    return () => obs.disconnect()
-  }, [slots])
-
-  // Debounced warmUrls call when visibleIndices update
-  useEffect(() => {
-    if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current)
-    debounceTimerRef.current = window.setTimeout(() => {
-      const filteredList = activeVibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(activeVibe))
-      const urls: string[] = []
-      const seen = new Set<string>()
-
-      visibleIndices.forEach(idx => {
-        const m = slots[idx]
-        if (!m) return
-        if (m.audioUrl && !seen.has(m.audioUrl)) { urls.push(m.audioUrl); seen.add(m.audioUrl) }
-        const pos = filteredList.findIndex(mm => mm.songId === m.songId && mm.lineId === m.lineId)
-        for (let k = 1; k <= 3; k++) {
-          const next = filteredList[pos + k]
-          if (next && next.audioUrl && !seen.has(next.audioUrl)) { urls.push(next.audioUrl); seen.add(next.audioUrl) }
-        }
-      })
-
-      if (urls.length > 0) warmUrls(urls)
-    }, 150)
-    return () => { if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current) }
-  }, [visibleIndices, slots, activeVibe, allMoments])
-  const getFiltered = useCallback((vibe: string) => {
-    return vibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(vibe))
-  }, [allMoments])
-
-  // Initialize slots when moments or vibe changes
-  const initSlots = useCallback((filtered: LyricMoment[]) => {
-    const initial = filtered.slice(0, SLOT_COUNT)
-    setSlots(initial.map((m, i) => i < initial.length ? m : null))
-    // Staggered fade in
-    setSlotVisible(Array(SLOT_COUNT).fill(false))
-    initial.forEach((_, i) => {
-      setTimeout(() => {
-        setSlotVisible(prev => {
-          const next = [...prev]
-          next[i] = true
-          return next
-        })
-      }, i * 120)
-    })
-    slotQueueRef.current = 0
-    vibePoolRef.current = [...filtered]
-  }, [])
-
-  useEffect(() => {
-    if (allMoments.length === 0) return
-    const filtered = getFiltered(activeVibe)
-    initSlots(filtered)
-  }, [allMoments, activeVibe, initSlots, getFiltered])
-
-  // Start cycling
-  useEffect(() => {
-    if (cycleRef.current) clearInterval(cycleRef.current)
-    if (focusedMoment) return
-
-    cycleRef.current = setInterval(() => {
-      const pool = vibePoolRef.current
-      if (pool.length <= SLOT_COUNT) return
-
-      // Skip playing slot — never fade out a card that's currently playing
-      let slotIdx = slotQueueRef.current % SLOT_COUNT
-      const playingKeyNow = playingKeyRef.current
-      if (playingKeyNow) {
-        let tries = 0
-        while (tries < SLOT_COUNT) {
-          const candidate = slotQueueRef.current % SLOT_COUNT
-          const slotMoment = slotsRef.current[candidate]
-          const slotKey = slotMoment ? `${slotMoment.songId}_${slotMoment.lineId}` : ''
-          if (slotKey !== playingKeyNow) { slotIdx = candidate; break }
-          slotQueueRef.current++
-          tries++
-        }
-      }
-      slotQueueRef.current++
-
-      // Pick a moment not currently shown
-      setSlots(prev => {
-        const currentIds = new Set(prev.map(m => m ? `${m.songId}_${m.lineId}` : ''))
-        const candidates = pool.filter(m => !currentIds.has(`${m.songId}_${m.lineId}`))
-        if (candidates.length === 0) return prev
-
-        const next = candidates[Math.floor(Math.random() * candidates.length)]
-
-        // Fade out that slot
-        setSlotVisible(vis => {
-          const nv = [...vis]
-          nv[slotIdx] = false
-          return nv
-        })
-
-        // After fade out completes, swap and fade in
-        setTimeout(() => {
-          setSlots(s => {
-            const ns = [...s]
-            ns[slotIdx] = next
-            return ns
-          })
-          setTimeout(() => {
-            setSlotVisible(vis => {
-              const nv = [...vis]
-              nv[slotIdx] = true
-              return nv
-            })
-          }, 80)
-        }, 650)
-
-        return prev
-      })
-    }, CYCLE_MS)
-
-    return () => { if (cycleRef.current) clearInterval(cycleRef.current) }
-  }, [allMoments, activeVibe, focusedMoment])
-
-  // Keep refs in sync with state for use inside setInterval/setTimeout closures
-  useEffect(() => { playingKeyRef.current = playingKey }, [playingKey])
-
-  // Sync playingKey with engine state
   useEffect(() => {
     return subscribeAudioEngine(state => {
       if (!state.playing || state.mode === 'idle' || state.mode === 'full') {
@@ -387,442 +207,325 @@ function LyricBoard({ songs, loading }: { songs: Song[], loading: boolean }) {
     })
   }, [])
 
-  const playSnippet = useCallback((moment: LyricMoment) => {
+  const filtered = useMemo(
+    () => rowVibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(rowVibe)),
+    [allMoments, rowVibe]
+  )
+  const preview = filtered.slice(0, 12)
+
+  const playMoment = useCallback((moment: LyricMoment, pool: LyricMoment[]) => {
     if (!moment.audioUrl) return
     const key = `${moment.songId}_${moment.lineId}`
-
-    // Same card while playing — stop
-    if (playingKeyRef.current === key) {
-      engineStop()
-      setPlayingKey(null)
-      playingKeyRef.current = null
-      return
-    }
-
-    // Rapid-tap guard — debounce 80ms to prevent double-fire
     if (playingRef.current) return
     playingRef.current = true
     setTimeout(() => { playingRef.current = false }, 80)
 
-    // Wire queue for mini player prev/next
-    const queueItems = vibePoolRef.current
-      .filter(m => m.audioUrl)
-      .map(m => ({
-        songId: m.songId,
-        audioUrl: m.audioUrl!,
-        title: m.songTitle,
-        artist: m.artist,
-        artwork: m.artwork ?? null,
-        lineIndex: m.lineId,
-        lineText: m.line,
-        startSec: m.start,
-        endSec: m.end,
-        vibe: (m.vibes && m.vibes[0]) || null,
-      }))
-    const currentIdx = queueItems.findIndex(
-      q => q.songId === moment.songId && q.lineIndex === moment.lineId
-    )
-    setQueue(queueItems, currentIdx >= 0 ? currentIdx : 0)
+    const queueItems = pool.filter(m => m.audioUrl).map(m => ({
+      songId: m.songId, audioUrl: m.audioUrl!, title: m.songTitle, artist: m.artist,
+      artwork: m.artwork ?? null, lineIndex: m.lineId, lineText: m.line,
+      startSec: m.start, endSec: m.end, vibe: (m.vibes && m.vibes[0]) || null,
+    }))
+    const idx = queueItems.findIndex(q => q.songId === moment.songId && q.lineIndex === moment.lineId)
+    setQueue(queueItems, idx >= 0 ? idx : 0)
 
-    // Play via engine — instant if URL already browser-cached
     void enginePlaySnippet({
-      songId: moment.songId,
-      audioUrl: moment.audioUrl,
-      title: moment.songTitle,
-      artist: moment.artist,
-      artwork: moment.artwork ?? null,
-      lineIndex: moment.lineId,
-      lineText: moment.line,
-      startSec: moment.start,
-      endSec: moment.end,
-      vibe: (moment.vibes && moment.vibes[0]) || null,
+      songId: moment.songId, audioUrl: moment.audioUrl, title: moment.songTitle, artist: moment.artist,
+      artwork: moment.artwork ?? null, lineIndex: moment.lineId, lineText: moment.line,
+      startSec: moment.start, endSec: moment.end, vibe: (moment.vibes && moment.vibes[0]) || null,
       source: 'music-board',
     })
-  }, [playingKey])
+  }, [])
 
-  const handleCardClick = (moment: LyricMoment) => {
-    const filtered = getFiltered(activeVibe)
-    const idx = filtered.findIndex(m => m.lineId === moment.lineId && m.songId === moment.songId)
-    setFocusedIndex(idx >= 0 ? idx : 0)
-    setFocusedMoment(moment)
-    if (cycleRef.current) { clearInterval(cycleRef.current); cycleRef.current = null }
-    playSnippet(moment)
+  const openTakeover = (index: number) => {
+    setTakeover({ open: true, index })
+    if (filtered[index]) playMoment(filtered[index], filtered)
   }
 
-  const handleNext = () => {
-    const filtered = getFiltered(activeVibe)
-    const next = filtered[(focusedIndex + 1) % filtered.length]
-    setFocusedIndex((focusedIndex + 1) % filtered.length)
-    setFocusedMoment(next)
-    playSnippet(next)
-  }
+  const takeoverMoment = takeover.open ? filtered[takeover.index] : null
 
-  const handleBack = () => {
-    const filtered = getFiltered(activeVibe)
-    const prev = filtered[(focusedIndex - 1 + filtered.length) % filtered.length]
-    setFocusedIndex((focusedIndex - 1 + filtered.length) % filtered.length)
-    setFocusedMoment(prev)
-    playSnippet(prev)
-  }
+  const advanceTakeover = useCallback((dir: 1 | -1) => {
+    if (filtered.length === 0) return
+    const next = (takeover.index + dir + filtered.length) % filtered.length
+    setTakeover({ open: true, index: next })
+    playMoment(filtered[next], filtered)
+  }, [filtered, takeover.index, playMoment])
 
-  const handleClose = () => {
-    engineStop()
-    setFocusedMoment(null)
-    setPlayingKey(null)
-  }
-
-  const handleVibe = (vibe: string) => {
-    engineStop()
-    setFocusedMoment(null)
-    setPlayingKey(null)
-    setActiveVibe(vibe)
-  }
-
-  const filtered = getFiltered(activeVibe)
+  // Connected/auto-advancing playback inside the takeover — once someone
+  // commits into the experience, snippets chain automatically rather
+  // than requiring a tap per line.
+  useEffect(() => {
+    if (!takeover.open) return
+    return subscribeAudioEngine(state => {
+      if (!state.playing && state.mode === 'idle' && takeoverMoment) {
+        advanceTakeover(1)
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [takeover.open, takeoverMoment])
 
   return (
-    <section>
-      <style>{`
-        .lyric-card:active,
-        .lyric-card:focus-visible {
-          border-color: rgba(232,197,71,0.2) !important;
-          background: rgba(255,255,255,0.04) !important;
-        }
-        @media (hover: hover) and (pointer: fine) {
-          .lyric-card:hover {
-            border-color: rgba(232,197,71,0.2) !important;
-            background: rgba(255,255,255,0.04) !important;
-          }
-        }
-        .snippet-btn:active { background: rgba(232,197,71,0.22) !important; }
-        @media (hover: hover) and (pointer: fine) {
-          .snippet-btn:hover { background: rgba(232,197,71,0.22) !important; }
-        }
-        .vibe-pill { transition: all 180ms ease; cursor: pointer; white-space: nowrap; }
-        .vibe-pill:active {
-          border-color: rgba(232,197,71,0.4) !important;
-          color: rgba(255,255,255,0.8) !important;
-        }
-        @media (hover: hover) and (pointer: fine) {
-          .vibe-pill:hover { border-color: rgba(232,197,71,0.4) !important; color: rgba(255,255,255,0.8) !important; }
-        }
-        .focus-nav-btn:active,
-        .focus-nav-btn:focus-visible {
-          border-color: rgba(255,255,255,0.2) !important;
-          color: var(--text) !important;
-        }
-        @media (hover: hover) and (pointer: fine) {
-          .focus-nav-btn:hover { border-color: rgba(255,255,255,0.2) !important; color: var(--text) !important; }
-        }
+    <section style={{ marginBottom: '40px' }}>
+      <RowHeader
+        title="Lyric Moments"
+        subtitle="Lines picked for how they feel, not just what's playing"
+        onViewMore={() => openTakeover(0)}
+      />
 
-        /* Pill scroll — mobile single row */
-        .vibe-pills-scroll {
-          display: flex;
-          gap: 8px;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
-          padding-bottom: 4px;
-        }
-        .vibe-pills-scroll::-webkit-scrollbar { display: none; }
+      <div className="vibe-pills-scroll" style={{ marginBottom: '14px' }}>
+        {VIBES.map(v => (
+          <button key={v} onClick={() => setRowVibe(v)} className="vibe-pill" style={{
+            flexShrink: 0, minHeight: '30px', padding: '0 14px',
+            display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+            background: rowVibe === v ? 'var(--gold)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${rowVibe === v ? 'var(--gold)' : 'rgba(255,255,255,0.1)'}`,
+            borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+            fontSize: '0.52rem', fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase',
+            color: rowVibe === v ? 'var(--bg)' : 'rgba(255,255,255,0.4)',
+          }}>{v}</button>
+        ))}
+      </div>
 
-        /* Board grid — uniform row heights so cards never break frame */
-        .board-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          grid-auto-rows: minmax(140px, auto);
-          gap: 12px;
-          overflow: hidden;
-        }
-        @media (max-width: 768px) {
-          .board-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 8px !important;
-          }
-        }
-        /* Clamp long lyrics so they never overflow card */
-        .lyric-text {
-          display: -webkit-box;
-          -webkit-line-clamp: 4;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        @keyframes focusIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-
-      <div style={{ padding: '100px 16px 32px', width: '100%', maxWidth: '72rem', margin: '0 auto', boxSizing: 'border-box' }}>
-
-        {/* Label */}
-        <p style={{
-          fontFamily: 'var(--font-lora), serif',
-          fontSize: '0.5rem', fontWeight: 700,
-          color: 'var(--text-3)',
-          letterSpacing: '3px', textTransform: 'uppercase',
-          marginBottom: '14px',
-        }}>Discover by vibe</p>
-
-        {/* Pills — horizontal scroll, no wrap */}
-        <div className="vibe-pills-scroll" style={{ marginBottom: '24px' }}>
-          {VIBES.map(v => (
-            <button
-              key={v}
-              className="vibe-pill"
-              onClick={() => handleVibe(v)}
-              style={{
-                flexShrink: 0,
-                minHeight: 'var(--margo-touch-min)', padding: '0 16px',
-                display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                background: activeVibe === v ? 'var(--gold)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${activeVibe === v ? 'var(--gold)' : 'rgba(255,255,255,0.1)'}`,
-                borderRadius: '50px',
-                fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.55rem', fontWeight: 700,
-                letterSpacing: '1.5px', textTransform: 'uppercase',
-                color: activeVibe === v ? 'var(--bg)' : 'rgba(255,255,255,0.4)',
-              }}
-            >{v}</button>
+      {preview.length === 0 ? (
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.85rem' }}>
+          No lines tagged for {rowVibe} yet.
+        </p>
+      ) : (
+        <div className="row-scroll">
+          {preview.map((moment, i) => (
+            <MomentCard
+              key={`${moment.songId}_${moment.lineId}`}
+              moment={moment}
+              isPlaying={playingKey === `${moment.songId}_${moment.lineId}`}
+              onClick={() => openTakeover(i)}
+              onPlay={(e) => { e.stopPropagation(); playMoment(moment, filtered) }}
+            />
           ))}
         </div>
+      )}
 
-        {/* Board container — the "stage" */}
-        <div className="board-stage" style={{
-          background: 'rgba(232,197,71,0.025)',
-          border: '1px solid rgba(232,197,71,0.22)',
-          boxShadow: '0 0 0 1px rgba(232,197,71,0.08), inset 0 1px 0 rgba(232,197,71,0.08)',
-          borderRadius: '20px',
-          padding: '20px',
-          marginBottom: '0',
-          minHeight: '340px',
-          position: 'relative',
-        }}>
+      {/* ── Takeover — full connected/swipeable Vibe Mix experience ── */}
+      {takeover.open && takeoverMoment && (
+        <div className="margo-preview-scrim" style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ width: '100%', maxWidth: '560px', background: 'rgba(20,17,28,0.98)', border: '1px solid rgba(232,197,71,0.2)', borderRadius: '20px', padding: '32px 28px', position: 'relative' }}>
+            <button onClick={() => { engineStop(); setTakeover({ open: false, index: 0 }) }} style={{
+              position: 'absolute', top: '16px', right: '16px',
+              width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.45)', cursor: 'pointer', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box',
+            }}><CloseIcon size={14} color="rgba(255,255,255,0.6)" /></button>
 
-          {filtered.length === 0 ? (
-            loading ? (
-              // Skeleton cards while Supabase loads — never show empty board
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', padding: '8px 0' }}>
-                {Array(6).fill(null).map((_, i) => (
-                  <div key={i} style={{
-                    minHeight: '150px', borderRadius: '14px',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    animation: `pulse 1.4s ease-in-out ${i * 0.12}s infinite`,
-                  }} />
-                ))}
-                <style>{`@keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:0.7} }`}</style>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem' }}>
-                  No lines tagged for {activeVibe} yet.
-                </p>
-              </div>
-            )
-          ) : focusedMoment ? (
-            /* ── Focused mode ── */
-            <div style={{ animation: 'focusIn 350ms ease forwards' }}>
-              <div style={{
-                padding: '32px 28px',
-                background: 'rgba(232,197,71,0.04)',
-                border: '1px solid rgba(232,197,71,0.18)',
-                borderRadius: '16px',
-                marginBottom: '16px',
-                position: 'relative',
-              }}>
-                <button
-                  onClick={handleClose}
-                  style={{
-                    position: 'absolute', top: '16px', right: '16px',
-                    width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'rgba(255,255,255,0.45)', fontSize: '1rem',
-                    cursor: 'pointer', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--font-lora), serif', boxSizing: 'border-box',
-                  }}
-                >×</button>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '18px' }}>
+              {rowVibe === 'ALL' ? 'Mix' : `${rowVibe} Mix`} · auto-continues
+            </p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', color: 'var(--text)', lineHeight: 1.45, marginBottom: '14px' }}>
+              &ldquo;{takeoverMoment.line}&rdquo;
+            </p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '22px' }}>
+              {takeoverMoment.songTitle} · {takeoverMoment.artist}
+            </p>
 
-                <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
-                  {focusedMoment.artwork && (
-                    <div style={{ position: 'relative', width: '56px', height: '56px', flexShrink: 0, borderRadius: '10px', overflow: 'hidden' }}>
-                      <Image src={focusedMoment.artwork} alt={focusedMoment.songTitle} fill style={{ objectFit: 'cover' }} />
-                    </div>
-                  )}
-                  <div style={{ flex: 1 }}>
-                    <p style={{
-                      fontFamily: 'var(--font-lora), serif',
-                      fontStyle: 'italic',
-                      fontSize: 'clamp(1.1rem, 3vw, 1.55rem)',
-                      fontWeight: 600, color: 'var(--text)',
-                      lineHeight: 1.45, marginBottom: '12px',
-                    }}>
-                      &ldquo;{focusedMoment.line}&rdquo;
-                    </p>
-                    <p style={{
-                      fontFamily: 'var(--font-lora), serif',
-                      fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)',
-                      letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '18px',
-                    }}>
-                      {focusedMoment.songTitle} · {focusedMoment.artist} · {formatTime(focusedMoment.start)}
-                    </p>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <button
-                        className="snippet-btn"
-                        onClick={() => playSnippet(focusedMoment)}
-                        style={{
-                          padding: '10px 20px',
-                          background: playingKey === `${focusedMoment.songId}_${focusedMoment.lineId}` ? 'rgba(232,197,71,0.18)' : 'rgba(232,197,71,0.1)',
-                          border: '1px solid rgba(232,197,71,0.3)',
-                          borderRadius: '50px',
-                          fontFamily: 'var(--font-lora), serif',
-                          fontSize: '0.58rem', fontWeight: 700,
-                          letterSpacing: '1px', textTransform: 'uppercase',
-                          color: 'var(--gold)', cursor: 'pointer',
-                          transition: 'background 200ms ease',
-                          display: 'inline-flex', alignItems: 'center', gap: '8px',
-                        }}
-                      >
-                        {playingKey === `${focusedMoment.songId}_${focusedMoment.lineId}` ? (
-                          <>
-                            <PlayPauseIcon playing={true} size={14} color="var(--gold)" />
-                            Pause
-                          </>
-                        ) : (
-                          <>
-                            <PlayPauseIcon playing={false} size={14} color="var(--gold)" />
-                            Play Snippet
-                          </>
-                        )}
-                      </button>
-                      <Link
-                        href={`/music/player?id=${focusedMoment.songId}${focusedMoment.audioUrl ? '&au=' + encodeURIComponent(focusedMoment.audioUrl) : ''}&t=${Math.floor(focusedMoment.start)}`}
-                        onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
-                        style={{
-                          padding: '10px 20px',
-                          background: 'var(--gold)',
-                          borderRadius: '50px',
-                          fontFamily: 'var(--font-lora), serif',
-                          fontSize: '0.58rem', fontWeight: 700,
-                          letterSpacing: '1px', textTransform: 'uppercase',
-                          color: 'var(--bg)', textDecoration: 'none',
-                          display: 'inline-block',
-                        }}
-                      >Full Karaoke →</Link>
-                      <Link
-                        href={`/compose?lyric=${encodeURIComponent(focusedMoment.line)}&song=${encodeURIComponent(focusedMoment.songTitle)}&artist=${encodeURIComponent(focusedMoment.artist)}&artwork=${encodeURIComponent(focusedMoment.artwork || '')}&songId=${encodeURIComponent(focusedMoment.songId)}&audioUrl=${encodeURIComponent(focusedMoment.audioUrl || '')}&start=${focusedMoment.start}&end=${focusedMoment.end}`}
-                        onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
-                        style={{
-                          padding: '10px 20px',
-                          background: 'rgba(255,255,255,0.05)',
-                          border: '1px solid rgba(255,255,255,0.12)',
-                          borderRadius: '50px',
-                          fontFamily: 'var(--font-lora), serif',
-                          fontSize: '0.58rem', fontWeight: 700,
-                          letterSpacing: '1px', textTransform: 'uppercase',
-                          color: 'rgba(255,255,255,0.75)', textDecoration: 'none',
-                          display: 'inline-block',
-                        }}
-                      >Post to Feed</Link>
-                      {/*
-                        Save Queue button — saves whatever the audio engine is
-                        currently playing through (the vibe-filtered pool set by
-                        playSnippet() above), not just this single moment.
-                        Title defaults to the active vibe filter so "My Mix" vs
-                        "CHILL Mix" is meaningful without asking the user to type
-                        anything up front.
-                      */}
-                      <SaveQueueButton
-                        defaultTitle={activeVibe === 'ALL' ? 'My Mix' : `${activeVibe} Mix`}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Vibe tags */}
-                <div style={{ display: 'flex', gap: '6px', marginTop: '20px', flexWrap: 'wrap' }}>
-                  {focusedMoment.vibes.map(v => (
-                    <span key={v} style={{
-                      padding: '3px 10px',
-                      background: 'rgba(232,197,71,0.07)',
-                      border: '1px solid rgba(232,197,71,0.18)',
-                      borderRadius: '50px',
-                      fontFamily: 'var(--font-lora), serif',
-                      fontSize: '0.46rem', fontWeight: 700,
-                      letterSpacing: '1.5px', textTransform: 'uppercase',
-                      color: 'var(--gold)',
-                    }}>{v}</span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Back / Next */}
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                <button
-                  className="focus-nav-btn"
-                  onClick={handleBack}
-                  style={{
-                    minHeight: 'var(--margo-touch-min)', padding: '0 28px',
-                    display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '50px',
-                    fontFamily: 'var(--font-lora), serif',
-                    fontSize: '0.58rem', fontWeight: 700,
-                    letterSpacing: '1px', textTransform: 'uppercase',
-                    color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
-                    transition: 'all 180ms ease',
-                  }}
-                >← Back</button>
-                <button
-                  className="focus-nav-btn"
-                  onClick={handleNext}
-                  style={{
-                    minHeight: 'var(--margo-touch-min)', padding: '0 28px',
-                    display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '50px',
-                    fontFamily: 'var(--font-lora), serif',
-                    fontSize: '0.58rem', fontWeight: 700,
-                    letterSpacing: '1px', textTransform: 'uppercase',
-                    color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
-                    transition: 'all 180ms ease',
-                  }}
-                >Next →</button>
-              </div>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+              <SaveQueueButton defaultTitle={rowVibe === 'ALL' ? 'My Mix' : `${rowVibe} Mix`} />
+              <Link
+                href={`/compose?lyric=${encodeURIComponent(takeoverMoment.line)}&song=${encodeURIComponent(takeoverMoment.songTitle)}&artist=${encodeURIComponent(takeoverMoment.artist)}&songId=${encodeURIComponent(takeoverMoment.songId)}&audioUrl=${encodeURIComponent(takeoverMoment.audioUrl || '')}&start=${takeoverMoment.start}&end=${takeoverMoment.end}`}
+                onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
+                style={{
+                  padding: '10px 20px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
+                  letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.75)', textDecoration: 'none',
+                }}
+              >Post to Feed</Link>
             </div>
-          ) : (
-            /* ── Cycling board ── */
-            <div className="board-grid">
-              {slots.map((moment, idx) =>
-                moment ? (
-                  <LyricCard
-                    key={`${moment.songId}_${moment.lineId}_${idx}`}
-                    moment={moment}
-                    visible={slotVisible[idx]}
-                    isPlaying={playingKey === `${moment.songId}_${moment.lineId}`}
-                    onClick={() => handleCardClick(moment)}
-                    onPlay={(e) => { e.stopPropagation(); playSnippet(moment) }}
-                    cardRefProp={(el) => { cardElementsRef.current[idx] = el }}
-                    index={idx}
-                  />
-                ) : (
-                  <div key={`empty_${idx}`} style={{ minHeight: '150px', borderRadius: '16px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)' }} />
-                )
-              )}
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button onClick={() => advanceTakeover(-1)} style={{
+                minHeight: 'var(--margo-touch-min)', padding: '0 26px', background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.56rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
+              }}>← Back</button>
+              <button onClick={() => advanceTakeover(1)} style={{
+                minHeight: 'var(--margo-touch-min)', padding: '0 26px', background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.56rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
+              }}>Next →</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+// ── Songs card — used in the Songs row ──────────────────────────────────
+function SongRowCard({ song, badge, onPreview }: { song: Song; badge: 'Trending' | 'Top' | null; onPreview: (song: Song) => void }) {
+  const isActive = song.status === 'live' || song.status === 'active'
+  const isPlayingThisSong = useIsPlaying(song.id)
+  return (
+    <div style={{ flexShrink: 0, width: '160px', scrollSnapAlign: 'start', cursor: 'pointer' }} onClick={() => onPreview(song)}>
+      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', marginBottom: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+        {badge && <EarnedTag label={badge} />}
+        {song.artwork ? (
+          <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} sizes="160px" />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(232,197,71,0.08), rgba(255,255,255,0.03))' }} />
+        )}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,6,10,0.85) 0%, transparent 55%)', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: '10px' }}>
+          {isActive && (
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PlayPauseIcon playing={isPlayingThisSong} size={14} color="var(--bg)" />
             </div>
           )}
         </div>
+      </div>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', marginBottom: '2px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-3)', margin: 0 }}>{song.artist}</p>
+    </div>
+  )
+}
+
+// ── Songs row ────────────────────────────────────────────────────────
+function SongsSection({ songs, onPreview }: { songs: Song[]; onPreview: (song: Song) => void }) {
+  // Trending = engagement relative to catalog; Top = raw lyricUses.
+  // "New" intentionally omitted — see note at top of file.
+  const { trendingIds, topIds } = useMemo(() => {
+    const byEngagement = [...songs].sort((a, b) => ((b.plays || 0) + (b.resonates || 0) * 3) - ((a.plays || 0) + (a.resonates || 0) * 3))
+    const byLyricUses = [...songs].sort((a, b) => (b.lyricUses || 0) - (a.lyricUses || 0))
+    return {
+      trendingIds: new Set(byEngagement.slice(0, RANK_BADGE_COUNT).map(s => s.id)),
+      topIds: new Set(byLyricUses.filter(s => (s.lyricUses || 0) > 0).slice(0, RANK_BADGE_COUNT).map(s => s.id)),
+    }
+  }, [songs])
+
+  if (songs.length === 0) return null
+
+  return (
+    <section style={{ marginBottom: '40px' }}>
+      <RowHeader title="Songs" subtitle="New and trending across Margo" viewMoreHref="/music/songs" />
+      <div className="row-scroll">
+        {songs.map(song => (
+          <SongRowCard
+            key={song.id}
+            song={song}
+            badge={topIds.has(song.id) ? 'Top' : trendingIds.has(song.id) ? 'Trending' : null}
+            onPreview={onPreview}
+          />
+        ))}
       </div>
     </section>
   )
 }
 
-// ─── Song Preview Sheet ───────────────────────────────────────────────
+// ── Artists row ──────────────────────────────────────────────────────
+// Direct Supabase query, same pattern already used elsewhere on this
+// page — no dedicated hook exists for this yet. Song count is left out
+// deliberately since the songs↔profiles relationship isn't confirmed.
+function ArtistsSection() {
+  const [artists, setArtists] = useState<ArtistPreview[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url')
+      .eq('is_artist', true)
+      .limit(12)
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) { console.error('Failed to load artists:', error); setLoading(false); return }
+        setArtists((data || []).map(p => ({
+          id: p.id, username: p.username, displayName: p.display_name, avatarUrl: p.avatar_url,
+        })))
+        setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  if (!loading && artists.length === 0) return null
+
+  return (
+    <section style={{ marginBottom: '40px' }}>
+      <RowHeader title="Artists" subtitle="Independent artists on Margo" viewMoreHref="/artists" />
+      {loading ? (
+        <div className="row-scroll">
+          {Array(6).fill(null).map((_, i) => (
+            <div key={i} style={{ flexShrink: 0, width: '96px', textAlign: 'center' }}>
+              <div style={{ width: '84px', height: '84px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', margin: '0 auto' }} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="row-scroll">
+          {artists.map(artist => (
+            <Link key={artist.id} href={`/profile/${artist.username || ''}`} style={{ flexShrink: 0, width: '96px', textAlign: 'center', textDecoration: 'none' }}>
+              <div style={{ width: '84px', height: '84px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 10px', border: '1px solid rgba(232,197,71,0.25)', background: 'linear-gradient(135deg, rgba(232,197,71,0.2), rgba(232,197,71,0.05))' }}>
+                {artist.avatarUrl ? (
+                  <img src={artist.avatarUrl} alt={artist.displayName || artist.username || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.1rem', fontWeight: 700, color: 'var(--gold)' }}>
+                      {(artist.displayName || artist.username || '?').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
+                {artist.displayName || artist.username}
+              </p>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+// ── Most Shared Lyric Moments row ────────────────────────────────────
+// Approximation until a true cross-song lyric-line usage aggregation
+// exists: ranks songs by lyricUses and surfaces each one's top shared
+// line via useSharedLines. Flagged as a stopgap, not final data logic.
+function MostSharedSection({ songs }: { songs: Song[] }) {
+  const topSongs = useMemo(
+    () => [...songs].filter(s => (s.lyricUses || 0) > 0).sort((a, b) => (b.lyricUses || 0) - (a.lyricUses || 0)).slice(0, 6),
+    [songs]
+  )
+  if (topSongs.length === 0) return null
+
+  return (
+    <section style={{ marginBottom: '40px' }}>
+      <RowHeader title="Most Shared" subtitle="The lines people keep coming back to" />
+      <div className="row-scroll">
+        {topSongs.map(song => <MostSharedCard key={song.id} song={song} />)}
+      </div>
+    </section>
+  )
+}
+
+function MostSharedCard({ song }: { song: Song }) {
+  const { lines } = useSharedLines(song.title, song.artist)
+  const top = lines[0]
+  if (!top) return null
+  return (
+    <Link href="/compose" style={{ flexShrink: 0, width: '260px', scrollSnapAlign: 'start', textDecoration: 'none' }}>
+      <div style={{ padding: '16px', background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.15)', borderRadius: '14px', height: '100%', boxSizing: 'border-box' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--text)', lineHeight: 1.55, marginBottom: '12px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          &ldquo;{top.line}&rdquo;
+        </p>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '4px' }}>
+          {top.uses} {top.uses === 1 ? 'use' : 'uses'}
+        </p>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+          {song.title} · {song.artist}
+        </p>
+      </div>
+    </Link>
+  )
+}
+
+// ── Song Preview Sheet — unchanged from prior version ───────────────────
 function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
   song: Song; onClose: () => void; resonated: boolean; onResonate: (id: string) => void; resonateCount: number
 }) {
@@ -836,11 +539,9 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
         @keyframes slideUp { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
         .play-btn:active { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
         .close-btn:active { background: rgba(255,255,255,0.1) !important; }
-        .shared-line-row:active { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
         @media (hover: hover) and (pointer: fine) {
           .play-btn:hover { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
           .close-btn:hover { background: rgba(255,255,255,0.1) !important; }
-          .shared-line-row:hover { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
         }
         @media (min-width: 1024px) { .preview-sheet { border-radius: 20px; max-width: 520px; margin: auto; max-height: 85vh; } .preview-wrap { align-items: center; } }
       `}</style>
@@ -895,54 +596,87 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
   )
 }
 
-// ─── Song Card ────────────────────────────────────────────────────────
-function SongCard({ song, onPreview }: { song: Song; onPreview: (song: Song) => void }) {
-  const isActive = song.status === 'live' || song.status === 'active'
-  const isPlayingThisSong = useIsPlaying(song.id)
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+// ── Search results ───────────────────────────────────────────────────
+// Client-side interim search across song title/artist AND lyric line
+// text. This is a stopgap for real Postgres full-text/trigram search
+// (flagged in the redesign doc as a separate backend pass) — functional
+// now, but should be swapped for a server query once that ships.
+function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: Song[]; onPreviewSong: (song: Song) => void }) {
+  const q = query.toLowerCase().trim()
+
+  const matchedSongs = useMemo(
+    () => songs.filter(s => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)),
+    [songs, q]
+  )
+
+  const matchedLines = useMemo(() => {
+    const results: { song: Song; line: string; start: number }[] = []
+    songs.forEach(song => {
+      song.lyricLines?.forEach(l => {
+        if (l.text.toLowerCase().includes(q)) {
+          results.push({ song, line: l.text, start: l.startSec })
+        }
+      })
+    })
+    return results.slice(0, 20)
+  }, [songs, q])
+
+  if (matchedSongs.length === 0 && matchedLines.length === 0) {
+    return (
+      <div style={{ padding: '48px 0', textAlign: 'center' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem' }}>
+          Nothing found for &ldquo;{query}&rdquo;
+        </p>
+      </div>
+    )
+  }
+
   return (
-    <div style={{ cursor: 'pointer' }} className="song-card-wrap" onClick={() => onPreview(song)} onTouchStart={() => { pressTimer.current = setTimeout(() => onPreview(song), 500) }} onTouchEnd={() => { if (pressTimer.current) clearTimeout(pressTimer.current) }} onTouchMove={() => { if (pressTimer.current) clearTimeout(pressTimer.current) }}>
-      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', marginBottom: '14px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
-        {song.artwork ? (
-          <Image className="song-card-img" src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover', transition: 'transform 400ms ease' }} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(232,197,71,0.08), rgba(255,255,255,0.03))' }} />
-        )}
-        <div className="song-card-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,6,10,0.92) 0%, rgba(7,6,10,0.4) 60%, transparent 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: '16px' }}>
-          {isActive ? (
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(232,197,71,0.4)', marginBottom: '8px' }}><PlayPauseIcon playing={isPlayingThisSong} size={20} color="var(--bg)" /></div>
-          ) : (
-            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--gold)', padding: '5px 12px', border: '1px solid rgba(232,197,71,0.3)', borderRadius: '50px', background: 'rgba(232,197,71,0.08)', marginBottom: '8px' }}>{song.comingSoonLabel || 'Coming Soon'}</span>
-          )}
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.6)', letterSpacing: '1px', textTransform: 'uppercase' }}>View Details</p>
-        </div>
-        {!isActive && <div style={{ position: 'absolute', inset: 0, background: 'rgba(7,6,10,0.5)', filter: 'grayscale(60%)' }} />}
-      </div>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', marginBottom: '3px', lineHeight: 1.3 }}>{song.title}</p>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: 'var(--text-3)', marginBottom: '8px' }}>{song.artist}</p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', color: 'var(--text-3)' }}>{formatNum(song.plays || 0)} plays</span>
-        {isActive && song.lyricUses ? (
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--gold)' }}>{formatNum(song.lyricUses)} lyric uses</span>
-        ) : null}
-      </div>
+    <div style={{ paddingBottom: '32px' }}>
+      {matchedLines.length > 0 && (
+        <section style={{ marginBottom: '32px' }}>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>Matching lyrics</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {matchedLines.map((m, i) => (
+              <Link key={i} href={`/music/player?id=${m.song.id}${m.song.audioUrl ? '&au=' + encodeURIComponent(m.song.audioUrl) : ''}&t=${Math.floor(m.start)}`} style={{ textDecoration: 'none' }}>
+                <div style={{ padding: '14px 18px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px' }}>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '6px' }}>&ldquo;{m.line}&rdquo;</p>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)', letterSpacing: '1px', textTransform: 'uppercase' }}>{m.song.title} · {m.song.artist}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+      {matchedSongs.length > 0 && (
+        <section>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>Songs & artists</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
+            {matchedSongs.map(song => (
+              <div key={song.id} style={{ cursor: 'pointer' }} onClick={() => onPreviewSong(song)}>
+                <div style={{ position: 'relative', aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', marginBottom: '8px' }}>
+                  {song.artwork ? <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} sizes="140px" /> : <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.04)' }} />}
+                </div>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-3)', margin: 0 }}>{song.artist}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────
+// ── Main Page ────────────────────────────────────────────────────────
 export default function MusicPage() {
   const { songs, loading } = useSongs()
   const [preview, setPreview] = useState<Song | null>(null)
   const [search, setSearch] = useState('')
-  const { requireAuth } = useAuthGate()
 
   const [songResonateCounts, setSongResonateCounts] = useState<Record<string, number>>({})
   const [resonatedSongs, setResonatedSongs] = useState<Set<string>>(new Set())
 
-  // Load this actor's resonated songs + current counts from Supabase once
-  // songs are known, then keep counts live via the useSongs realtime
-  // subscription on song_stats (see hooks/useSongs.ts).
   useEffect(() => {
     if (songs.length === 0) return
     const myId = getMargoActorId()
@@ -961,8 +695,6 @@ export default function MusicPage() {
       })
   }, [songs])
 
-  // Keep counts in sync whenever the underlying songs list refreshes (e.g.
-  // after the realtime subscription in useSongs updates a stats row).
   useEffect(() => {
     setSongResonateCounts(prev => {
       const next = { ...prev }
@@ -972,11 +704,9 @@ export default function MusicPage() {
   }, [songs])
 
   const toggleSongResonate = useCallback(async (songId: string) => {
-    if (!requireAuth()) return
     const myId = getMargoActorId()
     const already = resonatedSongs.has(songId)
 
-    // Optimistic UI update
     setResonatedSongs(prev => {
       const next = new Set(prev)
       already ? next.delete(songId) : next.add(songId)
@@ -988,58 +718,36 @@ export default function MusicPage() {
     }))
 
     if (already) {
-      const { error } = await supabase
-        .from('song_resonates')
-        .delete()
-        .eq('song_id', songId)
-        .eq('actor_id', myId)
+      const { error } = await supabase.from('song_resonates').delete().eq('song_id', songId).eq('actor_id', myId)
       if (error) console.error('failed to remove resonate', error)
     } else {
-      const { error } = await supabase
-        .from('song_resonates')
-        .insert({ song_id: songId, actor_id: myId })
+      const { error } = await supabase.from('song_resonates').insert({ song_id: songId, actor_id: myId })
       if (error) console.error('failed to add resonate', error)
     }
-  }, [resonatedSongs, requireAuth])
+  }, [resonatedSongs])
 
-  const featuredSong = songs.length
-    ? songs.reduce((a, b) => ((b.lyricUses || 0) > (a.lyricUses || 0) ? b : a))
-    : null
-
-  const filteredSongs = songs
-    .filter(s => s.id !== featuredSong?.id)
-    .filter(s => {
-      if (!search.trim()) return true
-      const q = search.toLowerCase()
-      return s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
-    })
-
-  const { lines: sharedLines } = useSharedLines(featuredSong?.title, featuredSong?.artist)
-
-  // No blocking loading gate — page renders immediately, board populates as data arrives
+  const isSearching = search.trim().length > 0
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <style>{`
-        @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes slideUp { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-        .song-card-wrap { transition: transform 300ms cubic-bezier(0.34,1.56,0.64,1); }
-        .song-card-overlay { opacity: 0.85; transition: opacity 250ms ease; }
-        .song-card-wrap:active .song-card-overlay { opacity: 1 !important; }
-        @media (hover: hover) and (pointer: fine) {
-          .song-card-wrap:hover { transform: translateY(-6px); }
-          .song-card-wrap:hover .song-card-overlay { opacity: 1 !important; }
-          .song-card-wrap:hover .song-card-img { transform: scale(1.06); }
+        .row-scroll {
+          display: flex; gap: 12px; overflow-x: auto;
+          scroll-snap-type: x proximity; padding-bottom: 4px;
         }
-        .play-btn:active { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
-        .shared-line-row:active { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
+        .vibe-pills-scroll {
+          display: flex; gap: 8px; overflow-x: auto;
+          -webkit-overflow-scrolling: touch; padding-bottom: 2px;
+        }
+        .moment-card:active, .moment-card:focus-visible {
+          border-color: rgba(232,197,71,0.2) !important;
+          background: rgba(255,255,255,0.04) !important;
+        }
         @media (hover: hover) and (pointer: fine) {
-          .play-btn:hover { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
-          .shared-line-row:hover { background: rgba(232,197,71,0.06) !important; border-color: rgba(232,197,71,0.2) !important; }
+          .moment-card:hover { border-color: rgba(232,197,71,0.2) !important; background: rgba(255,255,255,0.04) !important; }
         }
         .music-search:focus { border-color: rgba(232,197,71,0.4) !important; outline: none; }
       `}</style>
-
 
       {preview && (
         <SongPreview
@@ -1051,128 +759,49 @@ export default function MusicPage() {
         />
       )}
 
-      {/* ── Lyric Discovery Board ── */}
-      <LyricBoard songs={songs} loading={loading} />
-
-      {/* ── Divider ── */}
-      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.07), transparent)', margin: '40px 16px 0' }} />
-
-      {/* ── Hero — Featured Song — shows skeleton while loading ── */}
-      {loading ? (
-        <section style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 16px' }}>
-          <div style={{ width: '100%', aspectRatio: '4/3', minHeight: '280px', borderRadius: '20px', background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
-          <style>{`@keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }`}</style>
-        </section>
-      ) : featuredSong && (
-        <section style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 16px' }}>
-          {/* Artwork — clean, no overlay text */}
-          <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', minHeight: '280px', borderRadius: '20px 20px 0 0', overflow: 'hidden', marginBottom: '0' }}>
-            {featuredSong.artwork ? (
-              <Image src={featuredSong.artwork} alt={featuredSong.title} fill style={{ objectFit: 'cover', objectPosition: 'center top' }} priority />
-            ) : (
-              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(232,197,71,0.08), rgba(255,255,255,0.02))' }} />
-            )}
-            {/* Subtle bottom fade only — no text on top */}
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to top, rgba(7,6,10,0.6) 0%, transparent 100%)' }} />
-            {/* Featured badge top-left */}
-            <div className="margo-featured-badge" style={{ position: 'absolute', top: '16px', left: '16px', padding: '5px 14px', border: '1px solid rgba(232,197,71,0.35)', borderRadius: '50px' }}>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.48rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '2.5px', textTransform: 'uppercase', margin: 0 }}>Featured</p>
-            </div>
-          </div>
-
-          {/* Info block — below the artwork, clean */}
-          <div style={{
-            background: 'linear-gradient(to bottom, rgba(20,17,28,0.97), rgba(14,12,18,0.99))',
-            border: '1px solid rgba(255,255,255,0.07)',
-            borderTop: 'none',
-            borderRadius: '0 0 20px 20px',
-            padding: '24px 28px 28px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '18px' }}>
-              <div>
-                <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(1.5rem, 4vw, 2.6rem)', fontWeight: 400, color: 'var(--text)', lineHeight: 1.1, marginBottom: '4px' }}>{featuredSong.title}</h2>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.88rem', color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>{featuredSong.artist}</p>
-              </div>
-              <div style={{ display: 'flex', gap: '20px', alignItems: 'center', paddingTop: '4px' }}>
-                <StatBlock value={featuredSong.plays || 0} label="Plays" />
-                <StatBlock value={songResonateCounts[featuredSong.id] || 0} label="Resonates" />
-                {(featuredSong.lyricUses || 0) > 0 && (
-                  <div style={{ paddingLeft: '20px', borderLeft: '1px solid rgba(232,197,71,0.25)' }}>
-                    <StatBlock value={featuredSong.lyricUses || 0} label="Lyric Uses" gold />
-                  </div>
-                )}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <Link
-                href={`/music/player?id=${featuredSong.id}${featuredSong.audioUrl ? '&au=' + encodeURIComponent(featuredSong.audioUrl) : ''}`}
-                className="play-btn"
-                onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', transition: 'all 200ms ease' }}
-              ><PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now</Link>
-              <button onClick={() => toggleSongResonate(featuredSong.id)} style={{ padding: '12px 20px', background: resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.06)', border: '1px solid ' + (resonatedSongs.has(featuredSong.id) ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.15)'), borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 200ms ease', color: resonatedSongs.has(featuredSong.id) ? 'var(--gold)' : 'rgba(255,255,255,0.7)' }}>
-                {resonatedSongs.has(featuredSong.id) ? <><HeartIcon filled size={14} color="currentColor" /> Resonate</> : <><HeartIcon filled={false} size={14} color="currentColor" /> Resonate</>}
-              </button>
-              <button onClick={() => setPreview(featuredSong)} style={{ padding: '12px 20px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.58rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', transition: 'all 200ms ease' }}>Details</button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ── Most Shared Lines ── */}
-      {featuredSong && sharedLines.length > 0 && (
-        <section style={{ padding: '48px 16px', maxWidth: '72rem', margin: '0 auto' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '20px' }}>
-            Most shared lines — {featuredSong.title}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {sharedLines.map((lyric) => (
-              <Link key={lyric.id} href="/compose" style={{ textDecoration: 'none' }}>
-                <div className="shared-line-row" style={{ padding: '18px 22px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', transition: 'all 200ms ease', cursor: 'pointer' }}>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1.05rem', color: 'var(--text)', lineHeight: 1.6 }}>&ldquo;{lyric.line}&rdquo;</p>
-                  <div style={{ flexShrink: 0, textAlign: 'center' }}>
-                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.1rem', fontWeight: 700, color: 'var(--gold)', margin: 0 }}>{lyric.uses}</p>
-                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', color: 'var(--gold)', opacity: 0.6, letterSpacing: '1px', textTransform: 'uppercase', marginTop: '2px' }}>uses</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)', margin: '0 16px' }} />
-
-      {/* ── More Songs ── */}
-      {songs.length > 1 && (
-        <section style={{ padding: '48px 16px', maxWidth: '72rem', margin: '0 auto' }}>
-          <style>{`
-            .more-songs-grid {
-              display: grid;
-              grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-              gap: 24px;
-            }
-            @media (max-width: 480px) {
-              .more-songs-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
-                gap: 16px !important;
-              }
-            }
-          `}</style>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', margin: 0 }}>More Songs</p>
-            <input className="music-search" type="text" placeholder="Search songs…" value={search} onChange={e => setSearch(e.target.value)} style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px', padding: '10px 20px', width: '200px', transition: 'border-color 200ms ease' }} />
-          </div>
-          {filteredSongs.length === 0 && search && (
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem', textAlign: 'center', padding: '48px' }}>No songs found for &ldquo;{search}&rdquo;</p>
+      {/* Sticky unified search — the only page-wide sticky element now */}
+      <div style={{ position: 'sticky', top: '56px', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 40px) 16px 16px' }}>
+        <div style={{ maxWidth: '72rem', margin: '0 auto', position: 'relative' }}>
+          <input
+            className="music-search"
+            type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search lyrics, songs, artists…"
+            style={{
+              width: '100%', height: '44px', padding: '0 40px 0 16px',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '50px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
+              fontSize: '0.82rem', boxSizing: 'border-box', transition: 'border-color 200ms ease',
+            }}
+          />
+          {search && (
+            <button aria-label="Clear search" onClick={() => setSearch('')} style={{
+              position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
+              width: '38px', height: '38px', borderRadius: '50%', background: 'none', border: 'none',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}><CloseIcon size={14} color="var(--text-3)" /></button>
           )}
-          <div className="more-songs-grid">
-            {filteredSongs.map(song => (
-              <SongCard key={song.id} song={song} onPreview={setPreview} />
+        </div>
+      </div>
+
+      <div style={{ padding: '0 16px 32px', width: '100%', maxWidth: '72rem', margin: '0 auto', boxSizing: 'border-box' }}>
+        {isSearching ? (
+          <SearchResults query={search} songs={songs} onPreviewSong={setPreview} />
+        ) : loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', padding: '8px 0' }}>
+            {Array(6).fill(null).map((_, i) => (
+              <div key={i} style={{ minHeight: '150px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', animation: `pulse 1.4s ease-in-out ${i * 0.12}s infinite` }} />
             ))}
+            <style>{`@keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:0.7} }`}</style>
           </div>
-        </section>
-      )}
+        ) : (
+          <>
+            <LyricMomentsSection songs={songs} />
+            <SongsSection songs={songs} onPreview={setPreview} />
+            <ArtistsSection />
+            <MostSharedSection songs={songs} />
+          </>
+        )}
+      </div>
     </div>
   )
 }
