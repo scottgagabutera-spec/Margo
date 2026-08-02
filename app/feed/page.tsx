@@ -14,6 +14,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
+import { EditPostModal } from '@/components/edit-post-modal'
 import Link from 'next/link'
 import {
   playSnippet,
@@ -295,6 +296,7 @@ function PostCard({
   onExport: (post: Post) => void
 }) {
   const { requireAuth } = useAuthGate()
+  const { user } = useIdentity()
   const authorProfile = useAuthorProfile(post.authorUid || null)
   const viewedRef = useRef(false)
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
@@ -303,6 +305,8 @@ function PostCard({
   const isTier1 = !!post.audioUrl
   const audioUrl = post.audioUrl || null
   const cardRef = useRef<HTMLDivElement>(null)
+  const isOwner = !!user?.id && !!post.authorUid && post.authorUid === user.id
+  const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
     if (!audioUrl || !isTier1) return
@@ -394,15 +398,46 @@ function PostCard({
             <UsernameTag authorUid={post.authorUid || null} fallbackName={post.username} />
           </div>
         </div>
-        {isTier1 && (
-          <span style={{
-            fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
-            letterSpacing: '1.5px', textTransform: 'uppercase', padding: '4px 10px',
-            borderRadius: '50px', background: 'rgba(232,197,71,0.12)',
-            border: '1px solid var(--gold-border)', color: 'var(--gold)',
-          }}>Margo Original</span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {isTier1 && (
+            <span style={{
+              fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+              letterSpacing: '1.5px', textTransform: 'uppercase', padding: '4px 10px',
+              borderRadius: '50px', background: 'rgba(232,197,71,0.12)',
+              border: '1px solid var(--gold-border)', color: 'var(--gold)',
+            }}>Margo Original</span>
+          )}
+          {isOwner && (
+            <button
+              type="button"
+              aria-label="Edit lyric"
+              onClick={() => setEditOpen(true)}
+              style={{
+                width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                color: 'var(--text-3)', cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
+
+      {isOwner && (
+        <EditPostModal
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          postId={post.id}
+          initialText={post.text || ''}
+          songId={post.songId || null}
+          echoCount={echoCount}
+        />
+      )}
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }}>
         <p style={{
