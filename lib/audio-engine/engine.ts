@@ -71,6 +71,44 @@ let _crossfadeTimer: ReturnType<typeof setTimeout> | null = null
 let _crossfadeRAF: number | null = null
 let _crossfadeActive = false
 
+// FIX: the crossfade's in-flight context, lifted out of beginCrossfade's
+// local scope so other public actions (pause, seek) can resolve an
+// in-progress fade deterministically instead of colliding with it. Without
+// this, tapping pause mid-fade only paused the outgoing track — the
+// incoming track kept ramping up untouched in the background, and the
+// scheduled finishCrossfade() would then unconditionally set playing:true
+// again a moment later, silently undoing the pause.
+let _cfGeneration: number | null = null
+let _cfNextItem: LyricMomentQueueItem | null = null
+let _cfNextIndex: number | null = null
+let _cfOutgoing: HTMLAudioElement | null = null
+let _cfIncoming: HTMLAudioElement | null = null
+
+function clearCrossfadeContext(): void {
+  _cfGeneration = null
+  _cfNextItem = null
+  _cfNextIndex = null
+  _cfOutgoing = null
+  _cfIncoming = null
+}
+
+/**
+ * If a crossfade is currently in flight, snap it to completion right now
+ * instead of letting it keep animating. Called at the top of any action
+ * that needs a single, settled "active" element to operate on — pause,
+ * seek — so the action lands on a track that won't get silently
+ * overridden a few hundred ms later when the fade would have finished
+ * on its own.
+ */
+function resolveCrossfadeNow(): void {
+  if (!_crossfadeActive) return
+  if (_cfGeneration === null || !_cfNextItem || _cfNextIndex === null || !_cfOutgoing || !_cfIncoming) {
+    cancelCrossfade()
+    return
+  }
+  finishCrossfade(_cfGeneration, _cfNextItem, _cfNextIndex, _cfOutgoing, _cfIncoming)
+}
+
 function activeAudio(): HTMLAudioElement | null {
   return _activeIsA ? _audioA : _audioB
 }
@@ -103,6 +141,7 @@ function cancelCrossfade(): void {
     other.pause()
     other.volume = 0
   }
+  clearCrossfadeContext()
 }
 
 // ── Notify / patch ────────────────────────────────────────────────
@@ -289,6 +328,11 @@ function beginCrossfade(generation: number): void {
   }
 
   _crossfadeActive = true
+  _cfGeneration = generation
+  _cfNextItem = nextItem
+  _cfNextIndex = nextIndex
+  _cfOutgoing = outgoing
+  _cfIncoming = incoming
 
   // Should already be preloaded via preloadInactiveForCrossfade(), called
   // when this crossfade was scheduled — this is just a safety net in case
@@ -305,10 +349,19 @@ function beginCrossfade(generation: number): void {
   incoming.volume = 0
   const incomingPlay = incoming.play()
   incomingPlay.catch(() => {
-    // If the browser blocks this (rare mid-session, since the page
-    // already has an active playback gesture unlocking audio), the fade
-    // below still completes and the metadata/queue position still hands
-    // off correctly — the person just may need one tap to resume sound.
+    // FIX: previously this was a silent no-op — the fade would keep
+    // animating volumes on an element that never actually started
+    // playing, ending in dead air on the incoming track while state
+    // still said playing:true. Now: abort this crossfade attempt
+    // cleanly, restore the outgoing track to full volume (it's still
+    // legitimately playing — no reason to lose it), and fall back to
+    // the normal end-of-snippet timer so the queue still advances,
+    // just with a hard cut for this one transition instead of a fade.
+    if (generation !== _handlerGeneration) return
+    if (!_crossfadeActive) return
+    cancelCrossfade()
+    outgoing.volume = _state.muted ? 0 : _state.volume
+    armSnippetTimer(generation)
   })
 
   const startTime = performance.now()
@@ -344,6 +397,7 @@ function finishCrossfade(
 ): void {
   clearCrossfadeTimer()
   _crossfadeActive = false
+  clearCrossfadeContext()
 
   outgoing.pause()
   outgoing.volume = 0
@@ -710,6 +764,13 @@ export async function playFull(request: PlayFullRequest): Promise<void> {
 }
 
 export function togglePlayPause(): void {
+  // FIX: if a crossfade is mid-flight, snap it to completion first. Without
+  // this, pausing during a fade only paused the outgoing track — the
+  // incoming track kept ramping up in the background — and the scheduled
+  // finishCrossfade() would then set playing:true again a moment later,
+  // silently undoing the pause the person just did.
+  resolveCrossfadeNow()
+
   const audio = activeAudio()
   if (_state.mode === 'idle' || !audio) return
 
@@ -795,6 +856,7 @@ export function stop(options?: StopOptions): void {
 // ── Public API: seek ──────────────────────────────────────────────
 
 export function seekSnippetProgress(pct: number): void {
+  resolveCrossfadeNow()
   const audio = activeAudio()
   if (_state.mode !== 'snippet' || !_state.snippet || !audio) return
   const { startSec, endSec } = _state.snippet
@@ -807,6 +869,7 @@ export function seekSnippetProgress(pct: number): void {
 }
 
 export function playFullSeek(sec: number): void {
+  resolveCrossfadeNow()
   const audio = activeAudio()
   if (_state.mode !== 'full' || !audio) return
   const t = Math.max(0, sec)
