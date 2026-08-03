@@ -171,6 +171,8 @@ function RowHeader({ title, subtitle, viewMoreHref, onViewMore }: {
 }
 
 // ── Lyric Moment card — used in the horizontal row ──────────────────────
+// FIX: now shows moment.artist beneath the song title. Previously only
+// songTitle was rendered, so every card looked like it had no artist.
 function MomentCard({ moment, isPlaying, onClick, onPlay, onSelectVibe }: {
   moment: LyricMoment
   isPlaying: boolean
@@ -205,7 +207,7 @@ function MomentCard({ moment, isPlaying, onClick, onPlay, onSelectVibe }: {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ minWidth: 0 }}>
           <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.songTitle}</p>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{formatTime(moment.start)}</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
         </div>
         <button onClick={onPlay} style={{
           width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
@@ -262,8 +264,18 @@ function LyricMomentsSection({ moments, playingKey, onOpenTakeover, onPlayMoment
 }
 
 // ── Lyric Mixtapes card — full vibe-color fill, one per vibe ──────────
-function MixtapeCard({ vibe, count, sampleLine, onClick }: {
-  vibe: string; count: number; sampleLine: string; onClick: () => void
+// FIX: the play circle is now a real <button> with its own onClick and
+// stopPropagation, instead of a plain decorative <div>. Previously the
+// card's single onClick (which opens the takeover) caught every tap,
+// including taps on the circle, so there was no way to just play a
+// mixtape without opening the full-screen takeover.
+function MixtapeCard({ vibe, count, sampleLine, onClick, onPlay, isPlaying }: {
+  vibe: string
+  count: number
+  sampleLine: string
+  onClick: () => void
+  onPlay: (e: React.MouseEvent) => void
+  isPlaying: boolean
 }) {
   const color = vibeColor(vibe)
   return (
@@ -294,12 +306,16 @@ function MixtapeCard({ vibe, count, sampleLine, onClick }: {
           fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
           color: 'rgba(255,255,255,0.55)', letterSpacing: '1px', textTransform: 'uppercase',
         }}>{count} {count === 1 ? 'moment' : 'moments'}</span>
-        <div style={{
-          width: '34px', height: '34px', borderRadius: '50%', background: color,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <PlayPauseIcon playing={false} size={14} color="var(--bg)" />
-        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onPlay(e) }}
+          style={{
+            width: '34px', height: '34px', borderRadius: '50%', background: color,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            border: 'none', cursor: 'pointer', padding: 0,
+          }}
+        >
+          <PlayPauseIcon playing={isPlaying} size={14} color="var(--bg)" />
+        </button>
       </div>
     </div>
   )
@@ -307,11 +323,15 @@ function MixtapeCard({ vibe, count, sampleLine, onClick }: {
 
 // ── Lyric Mixtapes row — one card per vibe, full lines queued in order.
 // Reuses the same takeover + queue mechanics as Lyric Moments instead of
-// duplicating audio logic: tapping a mixtape just opens the takeover
-// with that vibe's full moment pool. ──────────────────────────────────
-function LyricMixtapesSection({ allMoments, onOpenTakeover }: {
+// duplicating audio logic: tapping a mixtape's card body opens the
+// takeover with that vibe's full moment pool. Tapping the play circle
+// instead plays the mixtape's queue directly, without opening the
+// takeover. ─────────────────────────────────────────────────────────
+function LyricMixtapesSection({ allMoments, onOpenTakeover, onPlayMixtape, playingVibe }: {
   allMoments: LyricMoment[]
   onOpenTakeover: (pool: LyricMoment[], index: number, label: string) => void
+  onPlayMixtape: (pool: LyricMoment[], e: React.MouseEvent) => void
+  playingVibe: string | null
 }) {
   const mixtapes = useMemo(() => {
     return VIBES.filter(v => v !== 'ALL').map(vibe => {
@@ -332,7 +352,9 @@ function LyricMixtapesSection({ allMoments, onOpenTakeover }: {
             vibe={vibe}
             count={pool.length}
             sampleLine={pool[0].line}
+            isPlaying={playingVibe === vibe}
             onClick={() => onOpenTakeover(pool, 0, `${vibe} Mixtape`)}
+            onPlay={(e) => onPlayMixtape(pool, e)}
           />
         ))}
       </div>
@@ -847,6 +869,16 @@ export default function DiscoverPage() {
     })
   }, [])
 
+  // FIX: dedicated handler for tapping a Mixtape card's play circle
+  // directly, so it starts playback (which now auto-advances through
+  // the whole queue via the engine.ts fix) without opening the
+  // full-screen takeover.
+  const playMixtape = useCallback((pool: LyricMoment[], e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (pool.length === 0) return
+    playMoment(pool[0], pool)
+  }, [playMoment])
+
   // ── Takeover — shared by Lyric Moments AND Lyric Mixtapes. Each just
   // hands in whichever pool + starting index applies; no duplicated
   // audio-queue logic between the two rows. ─────────────────────────
@@ -1087,7 +1119,12 @@ export default function DiscoverPage() {
             />
             <SongsSection songs={songs} onPreview={setPreview} />
             <ResonanceSection posts={posts} songs={songs} selectedVibe={selectedVibe} onSelectVibe={setSelectedVibe} />
-            <LyricMixtapesSection allMoments={allMoments} onOpenTakeover={openTakeover} />
+            <LyricMixtapesSection
+              allMoments={allMoments}
+              onOpenTakeover={openTakeover}
+              onPlayMixtape={playMixtape}
+              playingVibe={takeoverMoment ? null : (playingKey ? (allMoments.find(m => `${m.songId}_${m.lineId}` === playingKey)?.vibes[0] ?? null) : null)}
+            />
             <ArtistsSection />
           </>
         )}

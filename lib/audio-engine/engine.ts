@@ -144,6 +144,11 @@ function bindAudioHandlers(generation: number): void {
   }
 }
 
+// FIX (auto-advance): when a snippet ends naturally, check whether it's part
+// of a queue (a Mixtape or a Moments takeover pool) and, if there's a next
+// item, play it automatically instead of just stopping. This is what makes
+// a Mixtape play through its whole vibe lineup instead of stopping after
+// the first line.
 function pauseSnippetAtEnd(): void {
   const audio = _audio
   if (!audio) return
@@ -152,6 +157,11 @@ function pauseSnippetAtEnd(): void {
   releaseWakeLock()
   patch({ playing: false })
   syncMediaSessionFromState(_state)
+
+  const { queue, queueIndex } = _state
+  if (queue.length > 0 && queueIndex < queue.length - 1) {
+    queueNext()
+  }
 }
 
 // ── Load / ready ──────────────────────────────────────────────────
@@ -357,7 +367,13 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
   patch({ playing: true, error: null })
   requestWakeLock()
   syncMediaSessionFromState(_state)
-  armSnippetTimer(generation)
+
+  // FIX (cutoff bug): the snippet timer used to start counting down the
+  // instant play() was called, not when audio was actually audible. On
+  // any real buffering delay, that made snippets sound like they cut off
+  // early — the timer's clock and the audible playback clock disagreed.
+  // Now the timer only starts once playPromise resolves (see below),
+  // so it always counts from when sound actually started.
 
   // Handle play promise result in background — does not block gesture
   playPromise.then(() => {
@@ -367,6 +383,7 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
     if (Math.abs(audio.currentTime - request.startSec) > 1) {
       audio.currentTime = request.startSec
     }
+    armSnippetTimer(generation)
   }).catch(() => {
     if (generation !== _handlerGeneration) return
     patch({ playing: false, buffering: false, error: 'Play blocked — tap to start' })
