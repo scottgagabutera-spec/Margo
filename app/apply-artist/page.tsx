@@ -48,8 +48,13 @@ export default function ApplyArtistPage() {
           <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, marginBottom: '28px' }}>
             You can upload songs independently whenever you're ready.
           </p>
+          {/* FIX: this used to route to /compose, which is the
+              lyric-Resonance posting flow, not song upload. The real
+              upload tool is /studio (gated on identity.isArtist there
+              too), so this button now correctly matches the promise
+              made in the copy above it. */}
           <button
-            onClick={() => router.push('/compose')}
+            onClick={() => router.push('/studio')}
             style={{
               padding: '14px 24px', background: 'var(--gold)', color: 'var(--bg)',
               border: 'none', borderRadius: '50px', fontFamily: font, fontWeight: 700,
@@ -57,7 +62,7 @@ export default function ApplyArtistPage() {
               cursor: 'pointer', minHeight: '44px', boxSizing: 'border-box',
             }}
           >
-            Go to Compose
+            Go to Studio
           </button>
         </div>
       </div>

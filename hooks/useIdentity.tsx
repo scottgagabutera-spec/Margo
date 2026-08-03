@@ -16,10 +16,16 @@ function generateUsername() {
   return `${instrument}${number}`
 }
 
+export type ArtistStatus = 'active' | 'warned' | 'frozen' | 'removed' | null
+
 export interface Identity {
   username: string
   displayName: string
   isArtist: boolean
+  // Moderation state for approved artists — null for non-artists or
+  // legacy rows predating the moderation system (treated as active).
+  // Studio access and the public ArtistBadge both key off this.
+  artistStatus: ArtistStatus
   isPrivate: boolean
   bio: string | null
   avatarUrl: string | null
@@ -46,6 +52,7 @@ function mapRow(row: any): Identity {
     username: row.username,
     displayName: row.display_name,
     isArtist: row.is_artist,
+    artistStatus: row.artist_status ?? null,
     isPrivate: row.is_private,
     bio: row.bio,
     avatarUrl: row.avatar_url,
@@ -106,10 +113,11 @@ const IdentityContext = createContext<IdentityContextValue | null>(null)
  * explicitly. Anything that changes profiles columns on the server
  * without going through one of the update/set functions exposed here
  * (for example, a DB trigger flipping is_artist to true after an
- * instant-approve artist application) will NOT be reflected in
- * `identity` until refreshIdentity() is called. Callers that trigger
- * such a server-side change must call refreshIdentity() themselves
- * afterward. It no-ops if there is no signed-in user.
+ * instant-approve artist application, or an admin action flipping
+ * artist_status) will NOT be reflected in `identity` until
+ * refreshIdentity() is called. Callers that trigger such a server-side
+ * change must call refreshIdentity() themselves afterward. It no-ops
+ * if there is no signed-in user.
  */
 export function IdentityProvider({ children }: { children: ReactNode }) {
   const { user: supabaseUser, loading: authLoading } = useAuthGate()
@@ -260,7 +268,8 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
    * profiles column on the server without going through one of the
    * update or set functions above — for example, a DB trigger
    * flipping is_artist to true after an instant-approve artist
-   * application. No-ops if there is no signed-in user.
+   * application, or an admin moderation action changing artist_status.
+   * No-ops if there is no signed-in user.
    */
   const refreshIdentity = useCallback(async () => {
     if (!identityUser) return

@@ -31,6 +31,16 @@ function PlusIcon() {
   )
 }
 
+function PauseCircleIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="var(--text-3)" strokeWidth="1.5" />
+      <rect x="9" y="8" width="2" height="8" rx="1" fill="var(--text-3)" />
+      <rect x="13" y="8" width="2" height="8" rx="1" fill="var(--text-3)" />
+    </svg>
+  )
+}
+
 function statusLabel(status: StudioSong['status']) {
   switch (status) {
     case 'processing': return 'Processing'
@@ -78,10 +88,16 @@ export default function StudioPage() {
     setSongsLoading(false)
   }, [])
 
+  // FIX: songs were only ever loaded gated on identity?.isArtist, with
+  // no check on artist_status — a frozen or removed artist's uploaded
+  // catalog would still load normally here, and (more importantly, see
+  // the gate below) they could still upload new songs while suspended.
+  const isActiveArtist = identity?.isArtist && (identity.artistStatus === 'active' || identity.artistStatus === 'warned' || !identity.artistStatus)
+
   useEffect(() => {
-    if (identity?.isArtist) loadSongs()
+    if (isActiveArtist) loadSongs()
     else setSongsLoading(false)
-  }, [identity?.isArtist, loadSongs])
+  }, [isActiveArtist, loadSongs])
 
   const handleUploadComplete = () => {
     setShowUpload(false)
@@ -121,6 +137,41 @@ export default function StudioPage() {
             borderRadius: '50px', textDecoration: 'none',
           }}>
             Apply as an Artist
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // FIX: a frozen or removed artist previously hit the exact same fully
+  // functional Studio as an active one — is_artist stays true through a
+  // freeze/removal, so the old `!identity?.isArtist` gate never caught
+  // it. This is the actual enforcement point for those moderation
+  // states; without it, freezing or removing an artist in Admin had no
+  // real effect on their ability to keep uploading.
+  if (identity.artistStatus === 'frozen' || identity.artistStatus === 'removed') {
+    const isRemoved = identity.artistStatus === 'removed'
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div style={{ maxWidth: '460px', margin: '0 auto', padding: '120px 24px 80px', textAlign: 'center' }}>
+          <div style={{ marginBottom: '24px' }}>
+            <PauseCircleIcon />
+          </div>
+          <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
+            Studio
+          </p>
+          <h1 style={{ fontFamily: font, fontSize: '1.4rem', color: 'var(--text)', fontWeight: 400, marginBottom: '12px' }}>
+            {isRemoved ? 'Studio access has been removed' : 'Studio access is temporarily paused'}
+          </h1>
+          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', lineHeight: 1.6, marginBottom: '24px' }}>
+            {isRemoved
+              ? "Your artist standing on Margo has been removed. If you think this is a mistake, reach out to us."
+              : "Your artist standing is on hold. Existing songs stay live, but new uploads are paused until this is resolved."}
+          </p>
+          <Link href={`/profile/${identity.username}`} style={{
+            fontFamily: font, fontSize: '0.75rem', color: 'var(--gold)', textDecoration: 'none',
+          }}>
+            Back to your profile →
           </Link>
         </div>
       </div>

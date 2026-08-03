@@ -5,12 +5,14 @@ import Link from 'next/link'
 import { useSongs } from '@/hooks/useSongs'
 import { CatalogGrid } from '@/components/catalog-grid'
 import { supabase } from '@/lib/supabase'
+import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 
 interface ArtistPreview {
   id: string
   username: string | null
   displayName: string | null
   avatarUrl: string | null
+  artistStatus: ArtistStatus
 }
 
 function ArtistCatalogCard({ artist, songCount }: { artist: ArtistPreview; songCount: number }) {
@@ -32,8 +34,13 @@ function ArtistCatalogCard({ artist, songCount }: { artist: ArtistPreview; songC
           </div>
         )}
       </div>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '0 0 2px' }}>
-        {name}
+      <p style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+        fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: '0 0 2px',
+      }}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+        <ArtistBadge isArtist artistStatus={artist.artistStatus} size={11} />
       </p>
       {songCount > 0 && (
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'var(--text-3)', letterSpacing: '0.5px', textTransform: 'uppercase', margin: 0 }}>
@@ -53,13 +60,19 @@ export default function ArtistsCatalogPage() {
     let cancelled = false
     supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url')
+      .select('id, username, display_name, avatar_url, artist_status')
       .eq('is_artist', true)
       .then(({ data, error }) => {
         if (cancelled) return
         if (error) { console.error('Failed to load artists:', error); setLoading(false); return }
-        setArtists((data || []).map(p => ({
-          id: p.id, username: p.username, displayName: p.display_name, avatarUrl: p.avatar_url,
+        // A public directory should only ever list artists in good
+        // standing — frozen/removed are excluded entirely here rather
+        // than shown without a badge, since listing them at all implies
+        // they're an active part of the roster.
+        const visible = (data || []).filter(p => p.artist_status !== 'frozen' && p.artist_status !== 'removed')
+        setArtists(visible.map(p => ({
+          id: p.id, username: p.username, displayName: p.display_name,
+          avatarUrl: p.avatar_url, artistStatus: p.artist_status ?? null,
         })))
         setLoading(false)
       })

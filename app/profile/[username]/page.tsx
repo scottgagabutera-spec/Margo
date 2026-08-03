@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { usePosts } from '@/hooks/usePosts'
+import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 
 const font = 'var(--font-lora), serif'
 
@@ -19,6 +20,7 @@ interface ProfileData {
   username: string
   displayName: string
   isArtist: boolean
+  artistStatus: ArtistStatus
   bio: string | null
   avatarUrl: string | null
   signatureLyric: string | null
@@ -49,7 +51,7 @@ export default function ProfilePage() {
     setNotFound(false)
     supabase
       .from('profiles')
-      .select('id, username, display_name, is_artist, bio, avatar_url, signature_lyric, signature_song, signature_artist, is_private')
+      .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, signature_lyric, signature_song, signature_artist, is_private')
       .eq('username', params.username)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -64,6 +66,7 @@ export default function ProfilePage() {
           username: data.username,
           displayName: data.display_name,
           isArtist: data.is_artist,
+          artistStatus: data.artist_status ?? null,
           bio: data.bio,
           avatarUrl: data.avatar_url,
           signatureLyric: data.signature_lyric,
@@ -273,15 +276,14 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {profile.isArtist && (
-              <span style={{
-                display: 'inline-block', marginBottom: '16px',
-                fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
-                letterSpacing: '1.5px', textTransform: 'uppercase', padding: '4px 10px',
-                borderRadius: '50px', background: 'rgba(232,197,71,0.12)',
-                border: '1px solid var(--gold-border)', color: 'var(--gold)',
-              }}>Margo Artist</span>
-            )}
+            {/* Swapped the old hand-coded "Margo Artist" pill for the
+                shared ArtistBadge — same visual result here (it already
+                renders the labeled pill variant), but now this and every
+                other surface that shows an artist's identity render
+                from one component instead of drifting independently. */}
+            <div style={{ marginBottom: '16px' }}>
+              <ArtistBadge isArtist={profile.isArtist} artistStatus={profile.artistStatus} size={13} label />
+            </div>
 
             <div style={{ display: 'flex', gap: '20px', marginBottom: isOwnProfile ? '16px' : '20px' }}>
               <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
@@ -301,6 +303,11 @@ export default function ProfilePage() {
                 <Link href="/settings" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', textDecoration: 'none' }}>
                   Account settings
                 </Link>
+                {identity?.isArtist && (
+                  <Link href="/studio" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', textDecoration: 'none' }}>
+                    Studio
+                  </Link>
+                )}
                 {showApplyCTA && (
                   <Link href="/apply-artist" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', textDecoration: 'none' }}>
                     {applyLabel}

@@ -6,6 +6,7 @@ export interface AuthorProfile {
   username: string
   displayName: string
   isArtist: boolean
+  artistStatus: 'active' | 'warned' | 'frozen' | 'removed' | null
   avatarUrl: string | null
 }
 
@@ -29,7 +30,7 @@ async function flush() {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, is_artist, avatar_url')
+    .select('id, username, display_name, is_artist, artist_status, avatar_url')
     .in('id', ids)
 
   if (error) {
@@ -46,6 +47,7 @@ async function flush() {
       username: row.username,
       displayName: row.display_name,
       isArtist: row.is_artist,
+      artistStatus: row.artist_status ?? null,
       avatarUrl: row.avatar_url,
     })
   })
