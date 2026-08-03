@@ -1,6 +1,23 @@
 /**
- * Margo AudioEngine — single DOM <audio> controller (module singleton)
+ * Margo AudioEngine — dual DOM <audio> controller (module singleton)
  * @see docs/TARGET_ARCHITECTURE_AUDIO_ENGAGEMENT.md Section 2.3–2.4
+ *
+ * CROSSFADE NOTE: this engine now drives TWO <audio> elements instead of
+ * one. Only one is ever "active" (the one requireAudio()/activeAudio()
+ * returns, and the one all normal playback functions operate on) — the
+ * second only comes alive during the ~800ms window where the engine is
+ * handing off from one queued snippet to the next, so a Mixtape/Moments
+ * queue crossfades smoothly instead of hard-cutting between lines.
+ *
+ * FIX (post-review): the inactive element is now pre-buffered as soon as
+ * a crossfade is *scheduled* (armSnippetTimer), not only when the fade
+ * actually *begins* 800ms before the end. This avoids a dead-air gap if
+ * the next track hasn't finished loading by the time the fade curve
+ * starts ramping its volume up.
+ *
+ * FIX (post-review): setVolume()/toggleMute() changes made mid-crossfade
+ * now take effect immediately — the fade loop reads live volume/mute
+ * state every frame instead of a value captured once at fade start.
  */
 
 import {
@@ -23,12 +40,71 @@ import { recordQualifiedPlay, getPlayThresholdSec } from '@/lib/engagement/plays
 // ── Module state ──────────────────────────────────────────────────
 
 let _state: AudioEngineState = { ...INITIAL_AUDIO_ENGINE_STATE }
-let _audio: HTMLAudioElement | null = null
+
+// Two elements instead of one. _activeIsA tracks which one is currently
+// "the" player that all normal playback code operates on via
+// activeAudio()/requireAudio(). The other one is silent and idle except
+// during the brief crossfade window.
+let _audioA: HTMLAudioElement | null = null
+let _audioB: HTMLAudioElement | null = null
+let _activeIsA = true
+
 let _listeners = new Set<AudioEngineListener>()
 let _snippetTimer: ReturnType<typeof setTimeout> | null = null
 let _handlerGeneration = 0
 let _wakeLock: WakeLockSentinel | null = null
 let _qualifiedPlayFired = false
+
+// ── Crossfade state ────────────────────────────────────────────────
+
+// How long the overlap between an ending snippet and the next queued one
+// lasts. 800ms is a deliberate middle ground: long enough to feel like a
+// real transition instead of a click, short enough that it doesn't blur
+// two short lyric lines into each other or eat into either one's meaning.
+const CROSSFADE_MS = 800
+// If a snippet is shorter than this, there isn't enough runway to fit a
+// clean fade — the engine falls back to the old hard-stop-then-advance
+// behavior for that transition instead of overlapping awkwardly.
+const MIN_SNIPPET_MS_FOR_CROSSFADE = CROSSFADE_MS * 1.5
+
+let _crossfadeTimer: ReturnType<typeof setTimeout> | null = null
+let _crossfadeRAF: number | null = null
+let _crossfadeActive = false
+
+function activeAudio(): HTMLAudioElement | null {
+  return _activeIsA ? _audioA : _audioB
+}
+
+function inactiveAudio(): HTMLAudioElement | null {
+  return _activeIsA ? _audioB : _audioA
+}
+
+function clearCrossfadeTimer(): void {
+  if (_crossfadeTimer) {
+    clearTimeout(_crossfadeTimer)
+    _crossfadeTimer = null
+  }
+  if (_crossfadeRAF !== null) {
+    cancelAnimationFrame(_crossfadeRAF)
+    _crossfadeRAF = null
+  }
+}
+
+// Called whenever a fresh, explicit playback action starts (a new
+// playSnippet/playFull call, or stop()) — this guarantees a crossfade
+// that got interrupted (e.g. someone taps "Next" mid-fade) can't leave
+// the other element quietly playing in the background afterward.
+function cancelCrossfade(): void {
+  clearCrossfadeTimer()
+  if (!_crossfadeActive) return
+  _crossfadeActive = false
+  const other = inactiveAudio()
+  if (other) {
+    other.pause()
+    other.volume = 0
+  }
+}
+
 // ── Notify / patch ────────────────────────────────────────────────
 
 function notify(): void {
@@ -55,6 +131,7 @@ function patch(partial: Partial<AudioEngineState>): void {
 }
 
 function bumpSession(): number {
+  cancelCrossfade()
   _handlerGeneration += 1
   patch({ sessionGeneration: _handlerGeneration })
   return _handlerGeneration
@@ -88,10 +165,11 @@ function releaseWakeLock(): void {
 // ── Audio element guard ───────────────────────────────────────────
 
 function requireAudio(): HTMLAudioElement {
-  if (!_audio) {
+  const el = activeAudio()
+  if (!el) {
     throw new Error('[AudioEngine] No audio element attached — mount AudioEngineProvider first')
   }
-  return _audio
+  return el
 }
 
 // ── Handler binding (generation-guarded) ──────────────────────────
@@ -119,8 +197,11 @@ function bindAudioHandlers(generation: number): void {
       _qualifiedPlayFired = true
       void recordQualifiedPlay(_state.songId)
     }
-    /* Snippet: clamp stop at endSec (timer is primary; this guards drift) */
-    if (_state.mode === 'snippet' && _state.snippet && _state.playing) {
+    /* Snippet: clamp stop at endSec (timer is primary; this guards drift).
+       Skipped while a crossfade is in progress — the crossfade's own
+       finishCrossfade() is what ends this element, not this clamp, and
+       firing both would double-advance the queue. */
+    if (_state.mode === 'snippet' && _state.snippet && _state.playing && !_crossfadeActive) {
       if (audio.currentTime >= _state.snippet.endSec + 0.05) {
         pauseSnippetAtEnd()
       }
@@ -144,13 +225,13 @@ function bindAudioHandlers(generation: number): void {
   }
 }
 
-// FIX (auto-advance): when a snippet ends naturally, check whether it's part
-// of a queue (a Mixtape or a Moments takeover pool) and, if there's a next
-// item, play it automatically instead of just stopping. This is what makes
-// a Mixtape play through its whole vibe lineup instead of stopping after
-// the first line.
+// Auto-advance fallback: runs when a snippet ends with no crossfade in
+// play (either there was no next queue item, or the snippet was too
+// short to fit one — see MIN_SNIPPET_MS_FOR_CROSSFADE). Still checks for
+// a next queue item so a short-clip Mixtape still plays all the way
+// through, just with a hard cut instead of a fade for that one transition.
 function pauseSnippetAtEnd(): void {
-  const audio = _audio
+  const audio = activeAudio()
   if (!audio) return
   clearSnippetTimer()
   audio.pause()
@@ -162,6 +243,137 @@ function pauseSnippetAtEnd(): void {
   if (queue.length > 0 && queueIndex < queue.length - 1) {
     queueNext()
   }
+}
+
+// ── Crossfade ──────────────────────────────────────────────────────
+
+// FIX: pre-buffer the next queued track on the inactive element as soon
+// as a crossfade is scheduled (called from armSnippetTimer), rather than
+// waiting until beginCrossfade fires 800ms before the end. This gives the
+// browser the full remaining snippet duration (not just 800ms) to fetch
+// and decode the next file, so by the time the fade actually starts,
+// the incoming element can play immediately instead of stalling silently
+// under a rising volume ramp.
+function preloadInactiveForCrossfade(nextItem: LyricMomentQueueItem): void {
+  const incoming = inactiveAudio()
+  if (!incoming) return
+  const sameSrc =
+    incoming.src === nextItem.audioUrl ||
+    incoming.src === new URL(nextItem.audioUrl, window.location.href).href
+  if (!sameSrc) {
+    incoming.pause()
+    incoming.src = nextItem.audioUrl
+    incoming.volume = 0
+    incoming.load()
+  }
+}
+
+// Fires ~CROSSFADE_MS before the current snippet's natural end (scheduled
+// by armSnippetTimer below). Starts the next queued snippet quietly on
+// the currently-inactive element, then ramps volumes across both
+// elements using an equal-power curve (cos/sin quarter-waves) so the
+// combined perceived loudness stays roughly constant through the fade,
+// instead of the audible dip a straight linear fade produces.
+function beginCrossfade(generation: number): void {
+  if (generation !== _handlerGeneration) return
+
+  const { queue, queueIndex } = _state
+  const nextIndex = queueIndex + 1
+  const nextItem = queue[nextIndex]
+  const outgoing = activeAudio()
+  const incoming = inactiveAudio()
+
+  if (!nextItem || !outgoing || !incoming) {
+    pauseSnippetAtEnd()
+    return
+  }
+
+  _crossfadeActive = true
+
+  // Should already be preloaded via preloadInactiveForCrossfade(), called
+  // when this crossfade was scheduled — this is just a safety net in case
+  // the queue changed since then.
+  const sameSrc =
+    incoming.src === nextItem.audioUrl ||
+    incoming.src === new URL(nextItem.audioUrl, window.location.href).href
+  if (!sameSrc) {
+    incoming.pause()
+    incoming.src = nextItem.audioUrl
+    incoming.load()
+  }
+  try { incoming.currentTime = nextItem.startSec } catch { /* best effort if not ready yet */ }
+  incoming.volume = 0
+  const incomingPlay = incoming.play()
+  incomingPlay.catch(() => {
+    // If the browser blocks this (rare mid-session, since the page
+    // already has an active playback gesture unlocking audio), the fade
+    // below still completes and the metadata/queue position still hands
+    // off correctly — the person just may need one tap to resume sound.
+  })
+
+  const startTime = performance.now()
+  const step = (now: number) => {
+    if (generation !== _handlerGeneration) return
+    // FIX: read volume/mute live each frame instead of a value captured
+    // once at fade start, so a mid-fade volume/mute change takes effect
+    // immediately instead of waiting for the fade to finish.
+    const liveTarget = _state.muted ? 0 : _state.volume
+    const t = Math.min(1, (now - startTime) / CROSSFADE_MS)
+    outgoing.volume = Math.cos((t * Math.PI) / 2) * liveTarget
+    incoming.volume = Math.sin((t * Math.PI) / 2) * liveTarget
+    if (t < 1) {
+      _crossfadeRAF = requestAnimationFrame(step)
+    } else {
+      finishCrossfade(generation, nextItem, nextIndex, outgoing, incoming)
+    }
+  }
+  _crossfadeRAF = requestAnimationFrame(step)
+}
+
+// Completes the handoff: the outgoing element is fully silenced and
+// paused, the incoming element becomes the new "active" element, and the
+// engine's public state (title/artist/artwork/snippet/queueIndex) swaps
+// over to the new track in one atomic patch — so the mini-player and any
+// UI reading engine state update in sync with what's actually audible.
+function finishCrossfade(
+  generation: number,
+  nextItem: LyricMomentQueueItem,
+  nextIndex: number,
+  outgoing: HTMLAudioElement,
+  incoming: HTMLAudioElement,
+): void {
+  clearCrossfadeTimer()
+  _crossfadeActive = false
+
+  outgoing.pause()
+  outgoing.volume = 0
+  _activeIsA = !_activeIsA
+  incoming.volume = _state.muted ? 0 : _state.volume
+
+  const snippet: SnippetBounds = {
+    startSec: nextItem.startSec,
+    endSec: nextItem.endSec,
+    lineIndex: nextItem.lineIndex,
+    lineText: nextItem.lineText,
+  }
+
+  patch({
+    songId: nextItem.songId,
+    audioUrl: nextItem.audioUrl,
+    title: nextItem.title,
+    artist: nextItem.artist,
+    artwork: nextItem.artwork ?? null,
+    vibe: nextItem.vibe ?? null,
+    snippet,
+    queueIndex: nextIndex,
+    currentTime: nextItem.startSec,
+    playing: true,
+    error: null,
+  })
+
+  bindAudioHandlers(generation)
+  syncMediaSessionFromState(_state)
+  armSnippetTimer(generation)
 }
 
 // ── Load / ready ──────────────────────────────────────────────────
@@ -230,13 +442,34 @@ async function prepareSource(audioUrl: string, generation: number): Promise<void
 
 function armSnippetTimer(generation: number): void {
   clearSnippetTimer()
+  clearCrossfadeTimer()
   const snippet = _state.snippet
   if (!snippet || _state.mode !== 'snippet') return
   const ms = getSnippetStopDurationMs(snippet.startSec, snippet.endSec)
-  _snippetTimer = setTimeout(() => {
-    if (generation !== _handlerGeneration) return
-    pauseSnippetAtEnd()
-  }, ms)
+
+  const { queue, queueIndex } = _state
+  const hasNext = queue.length > 0 && queueIndex < queue.length - 1
+
+  if (hasNext && ms >= MIN_SNIPPET_MS_FOR_CROSSFADE) {
+    // FIX: kick off pre-buffering on the inactive element right away —
+    // don't wait for the crossfade window itself to start loading it.
+    const nextItem = queue[queueIndex + 1]
+    if (nextItem) preloadInactiveForCrossfade(nextItem)
+
+    // Schedule a smooth handoff to the next queued moment instead of a
+    // hard stop — beginCrossfade fires early enough that the fade
+    // finishes right as this snippet's natural end arrives.
+    const crossfadeStartDelay = ms - CROSSFADE_MS
+    _crossfadeTimer = setTimeout(() => {
+      if (generation !== _handlerGeneration) return
+      beginCrossfade(generation)
+    }, crossfadeStartDelay)
+  } else {
+    _snippetTimer = setTimeout(() => {
+      if (generation !== _handlerGeneration) return
+      pauseSnippetAtEnd()
+    }, ms)
+  }
 }
 
 // ── Core play helpers ─────────────────────────────────────────────
@@ -305,11 +538,19 @@ export function getAudioEngineState(): AudioEngineState {
 
 // ── Public API: lifecycle ─────────────────────────────────────────
 
-export function attachAudioElement(el: HTMLAudioElement): void {
-  _audio = el
-  el.preload = 'auto'
-  el.setAttribute('playsinline', '')
-  el.volume = _state.muted ? 0 : _state.volume
+// Attaches BOTH audio elements the AudioEngineProvider mounts. elA
+// starts as the active/audible element; elB starts silent and idle,
+// only becoming audible during a crossfade.
+export function attachAudioElements(elA: HTMLAudioElement, elB: HTMLAudioElement): void {
+  _audioA = elA
+  _audioB = elB
+  _activeIsA = true
+  ;[elA, elB].forEach(el => {
+    el.preload = 'auto'
+    el.setAttribute('playsinline', '')
+  })
+  elA.volume = _state.muted ? 0 : _state.volume
+  elB.volume = 0
   bindMediaSessionHandlers()
 }
 
@@ -368,12 +609,11 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
   requestWakeLock()
   syncMediaSessionFromState(_state)
 
-  // FIX (cutoff bug): the snippet timer used to start counting down the
-  // instant play() was called, not when audio was actually audible. On
-  // any real buffering delay, that made snippets sound like they cut off
-  // early — the timer's clock and the audible playback clock disagreed.
-  // Now the timer only starts once playPromise resolves (see below),
-  // so it always counts from when sound actually started.
+  // The snippet timer (and, if applicable, the crossfade it schedules)
+  // only starts counting once playback is actually confirmed audible —
+  // starting it the instant play() was called meant any real buffering
+  // delay made snippets sound like they cut off early, since the timer's
+  // clock and the audible playback clock disagreed.
 
   // Handle play promise result in background — does not block gesture
   playPromise.then(() => {
@@ -456,10 +696,11 @@ export async function playFull(request: PlayFullRequest): Promise<void> {
 }
 
 export function togglePlayPause(): void {
-  if (_state.mode === 'idle' || !_audio) return
+  const audio = activeAudio()
+  if (_state.mode === 'idle' || !audio) return
 
   if (_state.playing) {
-    _audio.pause()
+    audio.pause()
     clearSnippetTimer()
     releaseWakeLock()
     patch({ playing: false })
@@ -468,7 +709,6 @@ export function togglePlayPause(): void {
   }
 
   const generation = _handlerGeneration
-  const audio = requireAudio()
 
   if (_state.mode === 'snippet' && _state.snippet) {
     if (
@@ -506,13 +746,17 @@ export function stop(options?: StopOptions): void {
   clearSnippetTimer()
   releaseWakeLock()
 
-  if (_audio) {
-    _audio.pause()
-    _audio.onloadedmetadata = null
-    _audio.ontimeupdate = null
-    _audio.onended = null
-    _audio.onerror = null
-  }
+  ;[_audioA, _audioB].forEach(el => {
+    if (!el) return
+    el.pause()
+    el.onloadedmetadata = null
+    el.ontimeupdate = null
+    el.onended = null
+    el.onerror = null
+  })
+  _activeIsA = true
+  if (_audioA) _audioA.volume = _state.muted ? 0 : _state.volume
+  if (_audioB) _audioB.volume = 0
 
   const clearQueue = options?.clearQueue === true
   patch({
@@ -537,20 +781,22 @@ export function stop(options?: StopOptions): void {
 // ── Public API: seek ──────────────────────────────────────────────
 
 export function seekSnippetProgress(pct: number): void {
-  if (_state.mode !== 'snippet' || !_state.snippet || !_audio) return
+  const audio = activeAudio()
+  if (_state.mode !== 'snippet' || !_state.snippet || !audio) return
   const { startSec, endSec } = _state.snippet
   const span = endSec - startSec
   if (span <= 0) return
   const clamped = Math.max(0, Math.min(100, pct))
   const t = startSec + (clamped / 100) * span
-  _audio.currentTime = t
+  audio.currentTime = t
   patch({ currentTime: t })
 }
 
 export function playFullSeek(sec: number): void {
-  if (_state.mode !== 'full' || !_audio) return
+  const audio = activeAudio()
+  if (_state.mode !== 'full' || !audio) return
   const t = Math.max(0, sec)
-  _audio.currentTime = t
+  audio.currentTime = t
   patch({ currentTime: t })
   if (!_state.playing) {
     togglePlayPause()
@@ -597,13 +843,15 @@ export function warmUrl(audioUrl: string): void {
 export function setVolume(vol: number): void {
   const v = Math.max(0, Math.min(1, vol))
   patch({ volume: v, muted: v === 0 })
-  if (_audio) _audio.volume = v
+  const audio = activeAudio()
+  if (audio) audio.volume = v
 }
 
 export function toggleMute(): void {
   const muted = !_state.muted
   patch({ muted })
-  if (_audio) _audio.volume = muted ? 0 : _state.volume
+  const audio = activeAudio()
+  if (audio) audio.volume = muted ? 0 : _state.volume
 }
 
 // ── Aggregate export (spec §2.3) ─────────────────────────────────
@@ -611,7 +859,7 @@ export function toggleMute(): void {
 export const audioEngine = {
   subscribe: subscribeAudioEngine,
   getState: getAudioEngineState,
-  attachAudioElement,
+  attachAudioElements,
   playSnippet,
   playFull,
   togglePlayPause,

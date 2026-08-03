@@ -4,7 +4,10 @@
  * Margo AudioEngineProvider
  * @see docs/TARGET_ARCHITECTURE_AUDIO_ENGAGEMENT.md Section 2.1
  *
- * Mounts the single hidden <audio> element and attaches it to the engine.
+ * Mounts TWO hidden <audio> elements and attaches them to the engine.
+ * Two elements (instead of one) are what make the equal-power crossfade
+ * between queued Lyric Moments / Mixtape snippets possible: one element
+ * fades out the ending snippet while the other fades in the next one.
  * Must wrap {children} in app/layout.tsx above <MiniPlayer />.
  *
  * Also handles:
@@ -14,20 +17,22 @@
 
 import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { attachAudioElement, stop } from '@/lib/audio-engine/engine'
+import { attachAudioElements, stop } from '@/lib/audio-engine'
 import { clearMediaSessionHandlers } from '@/lib/audio-engine/media-session'
 import { warmPreloadUrl } from '@/lib/audio-engine/preload-cache'
 
 function AudioEngineInner() {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioRefA = useRef<HTMLAudioElement | null>(null)
+  const audioRefB = useRef<HTMLAudioElement | null>(null)
   const searchParams = useSearchParams()
 
-  // Attach the DOM <audio> element to the engine on mount
+  // Attach both DOM <audio> elements to the engine on mount
   useEffect(() => {
-    const el = audioRef.current
-    if (!el) return
+    const elA = audioRefA.current
+    const elB = audioRefB.current
+    if (!elA || !elB) return
 
-    attachAudioElement(el)
+    attachAudioElements(elA, elB)
 
     // Warm ?au= query param (karaoke pre-buffer path)
     const au = searchParams?.get('au')
@@ -51,19 +56,28 @@ function AudioEngineInner() {
   }, [searchParams])
 
   return (
-    <audio
-      ref={audioRef}
-      playsInline
-      preload="auto"
-      style={{ display: 'none' }}
-      aria-hidden="true"
-    />
+    <>
+      <audio
+        ref={audioRefA}
+        playsInline
+        preload="auto"
+        style={{ display: 'none' }}
+        aria-hidden="true"
+      />
+      <audio
+        ref={audioRefB}
+        playsInline
+        preload="auto"
+        style={{ display: 'none' }}
+        aria-hidden="true"
+      />
+    </>
   )
 }
 
 /**
  * Wrap in Suspense because useSearchParams() requires it in Next.js App Router.
- * The audio element is mounted immediately — Suspense boundary is transparent.
+ * Both audio elements are mounted immediately — Suspense boundary is transparent.
  */
 import { Suspense } from 'react'
 

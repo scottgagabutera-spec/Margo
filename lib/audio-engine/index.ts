@@ -35,7 +35,7 @@ export {
 export {
   subscribeAudioEngine,
   getAudioEngineState,
-  attachAudioElement,
+  attachAudioElements,
   playSnippet,
   playFull,
   togglePlayPause,
