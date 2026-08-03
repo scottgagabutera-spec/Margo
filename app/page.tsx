@@ -316,7 +316,7 @@ export default function Home() {
         <a href="/" style={{textDecoration:'none'}}>
           <MargoLogo tier="symbol" size={32} rings wordmark />
         </a>
-        <a href="/music" style={{...navLink, color:'var(--gold)', fontWeight:700}}>Music</a>
+        <a href="/discover" style={{...navLink, color:'var(--gold)', fontWeight:700}}>Discover</a>
       </nav>
 
       {/* Hero */}

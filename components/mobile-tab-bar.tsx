@@ -33,7 +33,7 @@ export function MobileTabBar() {
   }, [])
 
   const isOnFeed = pathname === '/feed'
-  const isOnMusic = pathname?.startsWith('/music')
+  const isOnDiscover = pathname?.startsWith('/discover')
   const isOnCompose = pathname === '/compose'
   const isOnNotifications = pathname === '/notifications'
 
@@ -74,12 +74,12 @@ export function MobileTabBar() {
         <span style={labelStyle}>Feed</span>
       </Link>
 
-      <Link href="/music" style={tabStyle(isOnMusic)}>
+      <Link href="/discover" style={tabStyle(isOnDiscover)}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <path d="M8 15a2 2 0 1 1-2-2 2 2 0 0 1 2 2Zm8-2a2 2 0 1 1-2-2 2 2 0 0 1 2 2ZM8 15V4l8-1v10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-        <span style={labelStyle}>Music</span>
-        {isMusicActive && !isOnMusic && (
+        <span style={labelStyle}>Discover</span>
+        {isMusicActive && !isOnDiscover && (
           <span style={{
             position: 'absolute', top: '-2px', right: 'calc(50% - 14px)',
             width: '6px', height: '6px', borderRadius: '50%',

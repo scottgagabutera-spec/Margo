@@ -150,7 +150,7 @@ export function MiniPlayer() {
 
   // Hide when idle, on karaoke page, on feed page, or user-dismissed
   if (engineState.mode === 'idle') return null
-  if (pathname?.startsWith('/music/player')) return null
+  if (pathname?.startsWith('/song/')) return null
   if (pathname?.startsWith('/feed')) return null
   if (dismissed) return null
 
@@ -620,7 +620,7 @@ export function MiniPlayer() {
               {/* Full Karaoke CTA */}
               {songId && !isSnippet && (
                 <Link
-                  href={`/music/player?id=${songId}&autoplay=1`}
+                  href={`/song/${songId}`}
                   onClick={() => setExpanded(false)}
                   className="mp-karaoke-btn"
                   style={{

@@ -15,7 +15,7 @@ const font = 'var(--font-lora), serif'
  * Top nav. Logo + MessagesIcon are always visible (both mobile and
  * desktop) — giants put DM access in the top bar, not the bottom tab
  * bar, since the bottom bar is already full at 5 slots. Text nav
- * (Feed/Music, Share a Lyric, notification bell, avatar menu) stays
+ * (Feed/Discover, Share a Lyric, notification bell, avatar menu) stays
  * desktop-only; mobile gets those via MobileTabBar instead.
  *
  * Account settings / Apply as artist / Sign out no longer live here
@@ -51,6 +51,12 @@ const font = 'var(--font-lora), serif'
  * structurally impossible instead of something to re-fix per page.
  * A static fallback value is set below in case CSS needs it before
  * this effect runs on first client paint.
+ *
+ * --- Aug 3, 2026 ---
+ * Music renamed to Discover (route /music → /discover) as part of the
+ * row-based redesign — see MARGO_MUSIC_FEED_STATUS.md. Nav label and
+ * active-state check updated below; /music itself now permanently
+ * redirects to /discover via next.config.js.
  */
 export function MargoNav() {
   const pathname = usePathname()
@@ -62,7 +68,7 @@ export function MargoNav() {
   const { application } = useArtistApplication()
 
   const isOnFeed = pathname === '/feed'
-  const isOnMusic = pathname?.startsWith('/music')
+  const isOnDiscover = pathname?.startsWith('/discover')
   const isOnCompose = pathname === '/compose'
   const isOnSignin = pathname === '/signin'
 
@@ -139,7 +145,7 @@ export function MargoNav() {
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[
               { href: '/feed', label: 'Feed', active: isOnFeed },
-              { href: '/music', label: 'Music', active: isOnMusic },
+              { href: '/discover', label: 'Discover', active: isOnDiscover },
             ].map(({ href, label, active }) => (
               <Link key={href} href={href} style={{
                 fontSize: '0.75rem', fontFamily: font,

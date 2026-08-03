@@ -559,7 +559,7 @@ function PostCard({
             </div>
             {post.songId && (
               <Link
-                href={`/music/player?id=${post.songId}${audioUrl ? '&au=' + encodeURIComponent(audioUrl) : ''}`}
+                href={`/song/${post.songId}`}
                 aria-label="Full Karaoke"
                 onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
                 style={{
