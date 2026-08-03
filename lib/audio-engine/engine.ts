@@ -347,6 +347,20 @@ function finishCrossfade(
 
   outgoing.pause()
   outgoing.volume = 0
+  // FIX: clear this element's handlers now that it's going inactive. It
+  // will very likely be reused as the *incoming* element for the next
+  // queued crossfade (see preloadInactiveForCrossfade / beginCrossfade),
+  // and without this, its stale onloadedmetadata/ontimeupdate/onended/
+  // onerror handlers stay live — the generation guard inside them doesn't
+  // block them, since no new session started — and they fire against
+  // state that now belongs to a different, newly-active track. That
+  // mismatch is what caused every transition after the first one in a
+  // queue to misbehave (premature stop, corrupted currentTime/duration,
+  // or the queue silently failing to advance).
+  outgoing.onloadedmetadata = null
+  outgoing.ontimeupdate = null
+  outgoing.onended = null
+  outgoing.onerror = null
   _activeIsA = !_activeIsA
   incoming.volume = _state.muted ? 0 : _state.volume
 
