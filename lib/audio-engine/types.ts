@@ -21,7 +21,7 @@ export const SNIPPET_MAX_DURATION_SEC = 30
 
 // ── Sources (analytics / debugging — not user-facing) ─────────────
 
-export type SnippetPlaybackSource = 'feed' | 'music-board' | 'mini-player'
+export type SnippetPlaybackSource = 'feed' | 'music-board' | 'mini-player' | 'music-resonance-row'
 
 export type FullPlaybackSource = 'karaoke' | 'feed-tier1'
 

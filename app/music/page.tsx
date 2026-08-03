@@ -6,6 +6,8 @@ import Image from 'next/image'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import { useIsPlaying } from '@/hooks/useAudioEngine'
+import { usePosts } from '@/hooks/usePosts'
+import type { Post } from '@/hooks/usePosts'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { HeartIcon } from '@/components/heart-icon'
 import { CloseIcon } from '@/components/icons'
@@ -29,6 +31,17 @@ const VIBES = ['ALL', 'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL', 'NOST
 // timestamp field in what's been reviewed so far. Add it back once
 // that field is confirmed to exist.
 const RANK_BADGE_COUNT = 8
+
+// Minimum word count for a lyric line to be eligible as a Lyric Moment.
+// This ONLY gates what Margo curates into the Moments row/takeover —
+// it never restricts what a person can post as a Resonance. A short
+// line is a perfectly valid thing to say; it's just not always a
+// strong enough fragment to stand alone as a curated card.
+const MIN_MOMENT_WORDS = 4
+
+function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length
+}
 
 interface LyricMoment {
   line: string
@@ -167,6 +180,12 @@ function MomentCard({ moment, isPlaying, onClick, onPlay }: {
 // Scoped vibe chips live HERE, not page-wide — this is the one place
 // that filter still matters. Manual tap-to-preview while browsing;
 // "View more" opens the full connected/swipeable takeover.
+//
+// Eligibility: a line only qualifies as a Moment if it has at least
+// MIN_MOMENT_WORDS words AND has vibes tagged. This is a curation gate
+// for Margo's own picks only — it has no bearing on what someone can
+// post as a Resonance (see ResonanceSection below), where any length
+// is valid because it's the person's own choice, not Margo's pick.
 function LyricMomentsSection({ songs }: { songs: Song[] }) {
   const [rowVibe, setRowVibe] = useState('ALL')
   const [allMoments, setAllMoments] = useState<LyricMoment[]>([])
@@ -180,7 +199,7 @@ function LyricMomentsSection({ songs }: { songs: Song[] }) {
     songs.forEach(song => {
       if (!song.lyricLines || song.lyricLines.length === 0) return
       song.lyricLines.forEach(line => {
-        if (line.text.length < 5) return
+        if (wordCount(line.text) < MIN_MOMENT_WORDS) return
         if (!line.vibes || line.vibes.length === 0) return
         moments.push({
           line: line.text, lineId: line.lineIndex,
@@ -355,6 +374,104 @@ function LyricMomentsSection({ songs }: { songs: Song[] }) {
           </div>
         </div>
       )}
+    </section>
+  )
+}
+
+// ── Resonance card — used in the Resonance row ──────────────────────────
+function ResonanceCard({ post, isPlaying, onPlay }: {
+  post: Post
+  isPlaying: boolean
+  onPlay: (e: React.MouseEvent) => void
+}) {
+  return (
+    <Link
+      href={`/lyric-back?postId=${post.id}`}
+      style={{
+        flexShrink: 0, width: '240px', scrollSnapAlign: 'start',
+        padding: '16px', background: 'rgba(255,255,255,0.025)',
+        border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px',
+        display: 'flex', flexDirection: 'column', gap: '10px', textDecoration: 'none',
+      }}
+    >
+      <p style={{
+        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.88rem',
+        color: 'var(--text)', lineHeight: 1.5, margin: 0,
+        display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        minHeight: '4.2em',
+      }}>&ldquo;{post.text}&rdquo;</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {post.knowledge?.song || 'Margo'}
+          </p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>
+            @{post.username || 'listener'}
+          </p>
+        </div>
+        {post.audioUrl && (
+          <button onClick={onPlay} style={{
+            width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
+            background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
+            border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
+          }}>
+            <PlayPauseIcon playing={isPlaying} size={15} color="var(--gold)" />
+          </button>
+        )}
+      </div>
+    </Link>
+  )
+}
+
+// ── Resonance row ────────────────────────────────────────────────────
+// Reuses the same usePosts() feed data — no new query needed. A
+// Resonance is any real post with a songId attached (a snippet someone
+// actually chose to post), regardless of length or vibe. Unlike Lyric
+// Moments, nothing here is curated or word-count gated — this is the
+// person's own choice, not Margo's pick. Someone saying hello with
+// three words from a song still belongs here.
+//
+// Scope: currently global (most recent resonances across all of
+// Margo), not limited to songs shown elsewhere on this page — this
+// row is meant to answer "what's Margo talking about right now."
+function ResonanceSection({ posts }: { posts: Post[] }) {
+  const [playingId, setPlayingId] = useState<string | null>(null)
+
+  const resonances = useMemo(
+    () => posts.filter(p => p.songId && p.text).slice(0, 12),
+    [posts]
+  )
+
+  useEffect(() => {
+    return subscribeAudioEngine(state => {
+      if (!state.playing || state.mode !== 'snippet') { setPlayingId(null); return }
+      const match = resonances.find(p => p.songId === state.songId && p.text === state.snippet?.lineText)
+      setPlayingId(match?.id ?? null)
+    })
+  }, [resonances])
+
+  const playResonance = (post: Post, e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!post.audioUrl || !post.songId) return
+    void enginePlaySnippet({
+      songId: post.songId, audioUrl: post.audioUrl, title: post.knowledge?.song || '', artist: post.knowledge?.artist || '',
+      artwork: post.knowledge?.artwork ?? null, lineIndex: 0, lineText: post.text || '',
+      startSec: post.snippetStart ?? 0, endSec: post.snippetEnd ?? 5,
+      vibe: null, source: 'music-resonance-row',
+    })
+  }
+
+  if (resonances.length === 0) return null
+
+  return (
+    <section style={{ marginBottom: '40px' }}>
+      <RowHeader title="Resonance" subtitle="What people are saying, using songs" viewMoreHref="/feed" />
+      <div className="row-scroll">
+        {resonances.map(post => (
+          <ResonanceCard key={post.id} post={post} isPlaying={playingId === post.id} onPlay={(e) => playResonance(post, e)} />
+        ))}
+      </div>
     </section>
   )
 }
@@ -671,6 +788,7 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
 // ── Main Page ────────────────────────────────────────────────────────
 export default function MusicPage() {
   const { songs, loading } = useSongs()
+  const { posts } = usePosts()
   const [preview, setPreview] = useState<Song | null>(null)
   const [search, setSearch] = useState('')
 
@@ -796,6 +914,7 @@ export default function MusicPage() {
         ) : (
           <>
             <LyricMomentsSection songs={songs} />
+            <ResonanceSection posts={posts} />
             <SongsSection songs={songs} onPreview={setPreview} />
             <ArtistsSection />
             <MostSharedSection songs={songs} />
