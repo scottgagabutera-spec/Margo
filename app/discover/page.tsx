@@ -777,7 +777,8 @@ export default function DiscoverPage() {
   // ── Shared vibe filter — replaces the old permanent ALL/CHILL/HOPE/...
   // pill row. Set by tapping a vibe tag on any Moment or Resonance card;
   // shown as a single dismissible chip instead of a row that's always
-  // taking up space, same pattern app/feed/page.tsx already uses.
+  // taking up space, same pattern app/feed/page.tsx already uses. Tap the
+  // chip itself to clear back to ALL.
   const [selectedVibe, setSelectedVibe] = useState('ALL')
 
   // ── Lyric Moments — computed once per songs load, shuffled once so
@@ -930,7 +931,12 @@ export default function DiscoverPage() {
   const isSearching = search.trim().length > 0
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+    // paddingTop reserves space for the fixed nav — same fix already
+    // applied in app/feed/page.tsx. Without this, the sticky search bar
+    // below (and everything under it, including the "Lyric Moments"
+    // title and the vibe-filter chip) can render underneath the fixed
+    // nav on load instead of below it.
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
       <style>{`
         .row-scroll {
           display: flex; gap: 12px; overflow-x: auto;
@@ -1010,8 +1016,13 @@ export default function DiscoverPage() {
         </div>
       )}
 
-      {/* Sticky unified search — the only page-wide sticky element now */}
-      <div style={{ position: 'sticky', top: '56px', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 40px) 16px 16px' }}>
+      {/* Sticky unified search — the only page-wide sticky element now.
+          top now reads the same measured nav height as the page's own
+          paddingTop above, instead of a hardcoded 56px guess that
+          undershot the real fixed-nav height and let this bar (and the
+          "Lyric Moments" title / vibe-filter chip below it) drift
+          under the nav on load. */}
+      <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 40px) 16px 16px' }}>
         <div style={{ maxWidth: '72rem', margin: '0 auto', position: 'relative' }}>
           <input
             className="music-search"
@@ -1048,11 +1059,13 @@ export default function DiscoverPage() {
           <>
             {/* Dismissible vibe-filter chip — replaces the old permanent
                 pill row. Only appears once a vibe tag has been tapped on
-                a Moment or Resonance card. */}
+                a Moment or Resonance card. Tap the chip itself (or its
+                built-in × ) to clear the filter back to ALL. */}
             {selectedVibe !== 'ALL' && (
               <div style={{ marginBottom: '20px' }}>
                 <button
                   onClick={() => setSelectedVibe('ALL')}
+                  aria-label={`Clear ${selectedVibe} filter`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '6px',
                     padding: '5px 12px', borderRadius: '50px',

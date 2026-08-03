@@ -206,6 +206,17 @@ export function MiniPlayer() {
             letter-spacing: 2.5px !important;
           }
         }
+        .mp-close-btn { transition: all 150ms ease; }
+        .mp-close-btn:active {
+          background: rgba(232,197,71,0.2) !important;
+          border-color: rgba(232,197,71,0.5) !important;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .mp-close-btn:hover {
+            background: rgba(232,197,71,0.2) !important;
+            border-color: rgba(232,197,71,0.5) !important;
+          }
+        }
       `}</style>
 
       {/* ── Collapsed bar ─────────────────────────────────────────── */}
@@ -367,21 +378,24 @@ export function MiniPlayer() {
               </svg>
             </button>
 
-            {/* Close / minimize — explicit dismiss control, paired with the drag gesture above */}
+            {/* Close — explicit dismiss control, paired with the drag
+                gesture above. Solid gold circle with a clear X so it
+                reads unambiguously as "close this," not "collapse a
+                section" (which the old faint chevron read as). */}
             <button
-              className="mp-btn"
+              className="mp-btn mp-close-btn"
               onClick={() => setDismissed(true)}
-              aria-label="Minimize player"
+              aria-label="Close player"
               style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'rgba(255,255,255,0.32)',
+                background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.25)',
+                borderRadius: '50%', color: 'var(--gold, #E8C547)',
                 minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
                 padding: '6px', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box',
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </button>
 
@@ -421,7 +435,10 @@ export function MiniPlayer() {
 
             <div style={{ padding: '16px 28px 0' }}>
 
-              {/* Top row — vibe tag + close */}
+              {/* Top row — vibe tag + close. Close button now matches
+                  the gold-circle treatment used on the collapsed bar
+                  and elsewhere in Discover (e.g. the Takeover close
+                  button), instead of the old faint white × text glyph. */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                 {vibe ? (
                   <span style={{
@@ -433,13 +450,21 @@ export function MiniPlayer() {
                     boxShadow: `0 0 12px ${vibeColor}22`,
                   }}>{vibe}</span>
                 ) : <div />}
-                <button className="mp-btn" onClick={() => setExpanded(false)} style={{
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '50%', width: '32px', height: '32px',
-                  cursor: 'pointer', color: 'rgba(255,255,255,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '1rem', fontFamily: 'serif',
-                }}>×</button>
+                <button
+                  className="mp-btn mp-close-btn"
+                  onClick={() => setExpanded(false)}
+                  aria-label="Collapse player"
+                  style={{
+                    background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.25)',
+                    borderRadius: '50%', width: '32px', height: '32px',
+                    cursor: 'pointer', color: 'var(--gold, #E8C547)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </button>
               </div>
 
               {/* Artwork */}
