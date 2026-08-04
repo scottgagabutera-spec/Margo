@@ -12,7 +12,7 @@ import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { HeartIcon } from '@/components/heart-icon'
 import { CloseIcon } from '@/components/icons'
 import { SaveQueueButton } from '@/components/save-queue-button'
-import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine } from '@/lib/audio-engine'
+import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine, togglePlayPause } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { supabase } from '@/lib/supabase'
@@ -91,6 +91,10 @@ interface TakeoverState {
   index: number
   pool: LyricMoment[]
   label: string
+  // Which Mixtape (by vibe) this takeover was opened from, if any — threaded
+  // through to playMoment on every advance so the mini-player / mixtape row
+  // highlighting stays correct even while browsing inside the takeover.
+  mixtapeVibe: string | null
 }
 
 function formatTime(s: number) {
@@ -329,8 +333,8 @@ function MixtapeCard({ vibe, count, sampleLine, onClick, onPlay, isPlaying }: {
 // takeover. ─────────────────────────────────────────────────────────
 function LyricMixtapesSection({ allMoments, onOpenTakeover, onPlayMixtape, playingVibe }: {
   allMoments: LyricMoment[]
-  onOpenTakeover: (pool: LyricMoment[], index: number, label: string) => void
-  onPlayMixtape: (pool: LyricMoment[], e: React.MouseEvent) => void
+  onOpenTakeover: (pool: LyricMoment[], index: number, label: string, vibe: string) => void
+  onPlayMixtape: (vibe: string, pool: LyricMoment[], e: React.MouseEvent) => void
   playingVibe: string | null
 }) {
   const mixtapes = useMemo(() => {
@@ -353,8 +357,8 @@ function LyricMixtapesSection({ allMoments, onOpenTakeover, onPlayMixtape, playi
             count={pool.length}
             sampleLine={pool[0].line}
             isPlaying={playingVibe === vibe}
-            onClick={() => onOpenTakeover(pool, 0, `${vibe} Mixtape`)}
-            onPlay={(e) => onPlayMixtape(pool, e)}
+            onClick={() => onOpenTakeover(pool, 0, `${vibe} Mixtape`, vibe)}
+            onPlay={(e) => onPlayMixtape(vibe, pool, e)}
           />
         ))}
       </div>
@@ -810,6 +814,23 @@ export default function DiscoverPage() {
   const { requireAuth } = useAuthGate()
   const playingRef = useRef(false)
 
+  // ── Active Mixtape tracking ────────────────────────────────────────
+  // Which vibe-mixtape (if any) is the currently active queue. Tracked
+  // explicitly here instead of inferred from the playing moment's own
+  // vibe tags — a moment can carry multiple vibes (e.g. ['love',
+  // 'nostalgia']), so inferring "which mixtape is playing" from
+  // moment.vibes[0] was unreliable: it reflected the moment's own
+  // primary tag, not which mixtape queue the person actually started.
+  // Cleared whenever playback stops or moves to something that isn't
+  // this mixtape (a different mixtape, or a plain Lyric Moment tap).
+  const [activeMixtapeVibe, setActiveMixtapeVibe] = useState<string | null>(null)
+
+  useEffect(() => {
+    return subscribeAudioEngine(state => {
+      if (state.mode === 'idle') setActiveMixtapeVibe(null)
+    })
+  }, [])
+
   useEffect(() => {
     const moments: LyricMoment[] = []
     songs.forEach(song => {
@@ -847,7 +868,13 @@ export default function DiscoverPage() {
     [allMoments, selectedVibe]
   )
 
-  const playMoment = useCallback((moment: LyricMoment, pool: LyricMoment[]) => {
+  // playMoment now takes an optional mixtapeVibe tag identifying which
+  // Mixtape (if any) this play originates from — threaded through to
+  // activeMixtapeVibe so the Mixtape row highlighting stays accurate
+  // regardless of which of a moment's several vibe tags happens to be
+  // first. A plain Lyric Moment tap (no mixtapeVibe passed) correctly
+  // clears any previously-active mixtape highlight.
+  const playMoment = useCallback((moment: LyricMoment, pool: LyricMoment[], mixtapeVibe?: string | null) => {
     if (!moment.audioUrl) return
     if (playingRef.current) return
     playingRef.current = true
@@ -860,6 +887,7 @@ export default function DiscoverPage() {
     }))
     const idx = queueItems.findIndex(q => q.songId === moment.songId && q.lineIndex === moment.lineId)
     setQueue(queueItems, idx >= 0 ? idx : 0)
+    setActiveMixtapeVibe(mixtapeVibe ?? null)
 
     void enginePlaySnippet({
       songId: moment.songId, audioUrl: moment.audioUrl, title: moment.songTitle, artist: moment.artist,
@@ -869,32 +897,39 @@ export default function DiscoverPage() {
     })
   }, [])
 
-  // FIX: dedicated handler for tapping a Mixtape card's play circle
-  // directly, so it starts playback (which now auto-advances through
-  // the whole queue via the engine.ts fix) without opening the
-  // full-screen takeover.
-  const playMixtape = useCallback((pool: LyricMoment[], e: React.MouseEvent) => {
+  // FIX: tapping a Mixtape's play circle now checks whether that exact
+  // mixtape is already the active queue first. If so, this just toggles
+  // pause/resume in place — previously every tap unconditionally called
+  // playMoment(pool[0], pool), which meant re-tapping a mixtape that was
+  // already 6 songs deep into its own rotation would silently restart it
+  // from song #1, killing the rotation instead of pausing/resuming it.
+  const playMixtape = useCallback((vibe: string, pool: LyricMoment[], e: React.MouseEvent) => {
     e.stopPropagation()
     if (pool.length === 0) return
-    playMoment(pool[0], pool)
-  }, [playMoment])
+    if (activeMixtapeVibe === vibe) {
+      togglePlayPause()
+      return
+    }
+    playMoment(pool[0], pool, vibe)
+  }, [playMoment, activeMixtapeVibe])
 
   // ── Takeover — shared by Lyric Moments AND Lyric Mixtapes. Each just
   // hands in whichever pool + starting index applies; no duplicated
   // audio-queue logic between the two rows. ─────────────────────────
-  const [takeover, setTakeover] = useState<TakeoverState>({ open: false, index: 0, pool: [], label: 'Mix' })
+  const [takeover, setTakeover] = useState<TakeoverState>({ open: false, index: 0, pool: [], label: 'Mix', mixtapeVibe: null })
 
-  const openTakeover = useCallback((pool: LyricMoment[], index: number, label?: string) => {
+  const openTakeover = useCallback((pool: LyricMoment[], index: number, label?: string, mixtapeVibe?: string) => {
     if (pool.length === 0) return
-    setTakeover({ open: true, index, pool, label: label || (selectedVibe === 'ALL' ? 'Mix' : `${selectedVibe} Mix`) })
-    playMoment(pool[index], pool)
+    const vibeTag = mixtapeVibe ?? null
+    setTakeover({ open: true, index, pool, label: label || (selectedVibe === 'ALL' ? 'Mix' : `${selectedVibe} Mix`), mixtapeVibe: vibeTag })
+    playMoment(pool[index], pool, vibeTag)
   }, [playMoment, selectedVibe])
 
   const advanceTakeover = useCallback((dir: 1 | -1) => {
     setTakeover(prev => {
       if (!prev.open || prev.pool.length === 0) return prev
       const next = (prev.index + dir + prev.pool.length) % prev.pool.length
-      playMoment(prev.pool[next], prev.pool)
+      playMoment(prev.pool[next], prev.pool, prev.mixtapeVibe)
       return { ...prev, index: next }
     })
   }, [playMoment])
@@ -999,7 +1034,7 @@ export default function DiscoverPage() {
       {takeover.open && takeoverMoment && (
         <div className="margo-preview-scrim" style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ width: '100%', maxWidth: '560px', background: 'rgba(20,17,28,0.98)', border: '1px solid rgba(232,197,71,0.2)', borderRadius: '20px', padding: '32px 28px', position: 'relative' }}>
-            <button onClick={() => { engineStop(); setTakeover({ open: false, index: 0, pool: [], label: 'Mix' }) }} style={{
+            <button onClick={() => { engineStop(); setTakeover({ open: false, index: 0, pool: [], label: 'Mix', mixtapeVibe: null }) }} style={{
               position: 'absolute', top: '16px', right: '16px',
               width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
               background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
@@ -1123,7 +1158,7 @@ export default function DiscoverPage() {
               allMoments={allMoments}
               onOpenTakeover={openTakeover}
               onPlayMixtape={playMixtape}
-              playingVibe={takeoverMoment ? null : (playingKey ? (allMoments.find(m => `${m.songId}_${m.lineId}` === playingKey)?.vibes[0] ?? null) : null)}
+              playingVibe={playingKey && !takeoverMoment ? activeMixtapeVibe : null}
             />
             <ArtistsSection />
           </>

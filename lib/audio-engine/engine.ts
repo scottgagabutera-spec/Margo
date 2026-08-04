@@ -71,6 +71,29 @@ let _crossfadeTimer: ReturnType<typeof setTimeout> | null = null
 let _crossfadeRAF: number | null = null
 let _crossfadeActive = false
 
+// FIX: audio URLs that have failed to play at least once this "session"
+// (i.e. since the last setQueue or a full stop). A large Vibe Mixtape can
+// easily include one song with a broken/missing/unreachable file, and
+// without this, the engine had no way to recover — it would either die
+// silently on that track, or (worse) loop forever retrying the exact same
+// broken URL via queueNext(). Every place that decides "what's next in
+// the queue" now routes through findNextPlayableIndex(), which walks
+// forward and skips anything already known to be broken. Monotonic and
+// naturally bounded — no retry counters or recursion-depth caps needed.
+let _brokenAudioUrls = new Set<string>()
+
+/**
+ * Finds the first playable (not known-broken) queue index at or after
+ * `fromIndex`. Returns -1 if nothing playable remains.
+ */
+function findNextPlayableIndex(fromIndex: number): number {
+  const { queue } = _state
+  for (let i = fromIndex; i < queue.length; i++) {
+    if (!_brokenAudioUrls.has(queue[i].audioUrl)) return i
+  }
+  return -1
+}
+
 // FIX: the crossfade's in-flight context, lifted out of beginCrossfade's
 // local scope so other public actions (pause, seek) can resolve an
 // in-progress fade deterministically instead of colliding with it. Without
@@ -260,7 +283,18 @@ function bindAudioHandlers(generation: number): void {
     if (generation !== _handlerGeneration) return
     clearSnippetTimer()
     releaseWakeLock()
-    patch({ playing: false, buffering: false, error: 'Playback failed' })
+    // FIX: previously this just set an error and stopped — one broken
+    // file anywhere in a large mixtape would silently kill playback for
+    // everything after it. Now: mark this URL broken so nothing retries
+    // it, then auto-advance to the next genuinely playable queue item.
+    if (_state.audioUrl) _brokenAudioUrls.add(_state.audioUrl)
+    patch({ playing: false, buffering: false, error: 'Playback failed — skipping' })
+    const { queue, queueIndex } = _state
+    const nextPlayable = findNextPlayableIndex(queueIndex + 1)
+    if (nextPlayable !== -1) {
+      patch({ queueIndex: nextPlayable, error: null })
+      void playSnippet(queueItemToSnippetRequest(queue[nextPlayable], 'mini-player'))
+    }
   }
 }
 
@@ -317,8 +351,8 @@ function beginCrossfade(generation: number): void {
   if (generation !== _handlerGeneration) return
 
   const { queue, queueIndex } = _state
-  const nextIndex = queueIndex + 1
-  const nextItem = queue[nextIndex]
+  const nextIndex = findNextPlayableIndex(queueIndex + 1)
+  const nextItem = nextIndex !== -1 ? queue[nextIndex] : undefined
   const outgoing = activeAudio()
   const incoming = inactiveAudio()
 
@@ -359,6 +393,7 @@ function beginCrossfade(generation: number): void {
     // just with a hard cut for this one transition instead of a fade.
     if (generation !== _handlerGeneration) return
     if (!_crossfadeActive) return
+    _brokenAudioUrls.add(nextItem.audioUrl)
     cancelCrossfade()
     outgoing.volume = _state.muted ? 0 : _state.volume
     armSnippetTimer(generation)
@@ -516,13 +551,14 @@ function armSnippetTimer(generation: number): void {
   const ms = getSnippetStopDurationMs(snippet.startSec, snippet.endSec)
 
   const { queue, queueIndex } = _state
-  const hasNext = queue.length > 0 && queueIndex < queue.length - 1
+  const nextPlayableIndex = findNextPlayableIndex(queueIndex + 1)
+  const hasNext = nextPlayableIndex !== -1
 
   if (hasNext && ms >= MIN_SNIPPET_MS_FOR_CROSSFADE) {
     // FIX: kick off pre-buffering on the inactive element right away —
     // don't wait for the crossfade window itself to start loading it.
-    const nextItem = queue[queueIndex + 1]
-    if (nextItem) preloadInactiveForCrossfade(nextItem)
+    const nextItem = queue[nextPlayableIndex]
+    preloadInactiveForCrossfade(nextItem)
 
     // Schedule a smooth handoff to the next queued moment instead of a
     // hard stop — beginCrossfade fires early enough that the fade
@@ -834,6 +870,7 @@ export function stop(options?: StopOptions): void {
   if (_audioB) _audioB.volume = 0
 
   const clearQueue = options?.clearQueue === true
+  if (clearQueue) _brokenAudioUrls.clear()
   patch({
     mode: 'idle',
     playing: false,
@@ -883,16 +920,17 @@ export function playFullSeek(sec: number): void {
 // ── Public API: queue ─────────────────────────────────────────────
 
 export function setQueue(items: LyricMomentQueueItem[], index: number): void {
+  _brokenAudioUrls.clear()
   const safeIndex = items.length === 0 ? 0 : Math.max(0, Math.min(index, items.length - 1))
   patch({ queue: items, queueIndex: safeIndex })
 }
 
 export function queueNext(): void {
   const { queue, queueIndex } = _state
-  if (queueIndex >= queue.length - 1) return
-  const nextIndex = queueIndex + 1
-  patch({ queueIndex: nextIndex })
-  const item = queue[nextIndex]
+  const nextPlayable = findNextPlayableIndex(queueIndex + 1)
+  if (nextPlayable === -1) return
+  patch({ queueIndex: nextPlayable })
+  const item = queue[nextPlayable]
   if (item) void playSnippet(queueItemToSnippetRequest(item, 'mini-player'))
 }
 
