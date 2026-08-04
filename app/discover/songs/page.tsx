@@ -1,12 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import Link from 'next/link'
-import Image from 'next/image'
 import { useSongs, Song } from '@/hooks/useSongs'
-import { useIsPlaying } from '@/hooks/useAudioEngine'
-import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { CatalogGrid, CatalogSortOption } from '@/components/catalog-grid'
+import { SongCatalogCard } from '@/components/song-catalog-card'
 
 // Same vibe vocabulary + palette used on /discover — kept here as a local
 // copy for now since the source isn't exported from app/discover/page.tsx.
@@ -34,45 +31,6 @@ const SORT_OPTIONS: CatalogSortOption[] = [
 ]
 
 const RANK_BADGE_COUNT = 8
-
-function EarnedTag({ label }: { label: 'Trending' | 'Top' }) {
-  return (
-    <span style={{
-      position: 'absolute', top: '8px', left: '8px',
-      fontFamily: 'var(--font-lora), serif', fontSize: '0.46rem', fontWeight: 700,
-      letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 8px',
-      borderRadius: '50px', background: 'rgba(7,6,10,0.75)',
-      border: '1px solid var(--gold-border)', color: 'var(--gold)',
-      zIndex: 2,
-    }}>{label}</span>
-  )
-}
-
-function SongCatalogCard({ song, badge }: { song: Song; badge: 'Trending' | 'Top' | null }) {
-  const isActive = song.status === 'live' || song.status === 'active'
-  const isPlayingThisSong = useIsPlaying(song.id)
-  return (
-    <Link href={`/song/${song.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', marginBottom: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
-        {badge && <EarnedTag label={badge} />}
-        {song.artwork ? (
-          <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} sizes="220px" />
-        ) : (
-          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(232,197,71,0.08), rgba(255,255,255,0.03))' }} />
-        )}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,6,10,0.85) 0%, transparent 55%)', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: '10px' }}>
-          {isActive && (
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PlayPauseIcon playing={isPlayingThisSong} size={14} color="var(--bg)" />
-            </div>
-          )}
-        </div>
-      </div>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', marginBottom: '2px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-3)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.artist}</p>
-    </Link>
-  )
-}
 
 function VibeFilterRow({ selected, onSelect }: { selected: string; onSelect: (vibe: string) => void }) {
   return (

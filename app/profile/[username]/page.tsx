@@ -7,6 +7,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { usePosts } from '@/hooks/usePosts'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
+import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
 
 const font = 'var(--font-lora), serif'
 
@@ -29,6 +30,14 @@ interface ProfileData {
   isPrivate: boolean
 }
 
+interface ArtistSongRow {
+  id: string
+  title: string
+  artist_display_name: string
+  artwork_url: string | null
+  status: string
+}
+
 type FollowStatus = null | 'pending' | 'accepted'
 
 export default function ProfilePage() {
@@ -44,6 +53,15 @@ export default function ProfilePage() {
   const [followingCount, setFollowingCount] = useState<number | null>(null)
   const [followStatus, setFollowStatus] = useState<FollowStatus>(null)
   const [followBusy, setFollowBusy] = useState(false)
+
+  // ── Discography — public, live-only catalog for this profile, if
+  // they're an artist. Deliberately a separate, simpler query than
+  // Studio's own (which includes draft/processing/hidden and is
+  // owner-only) — this is what a fan or stranger should see: finished
+  // work only, nothing in progress. ──────────────────────────────────
+  const [artistSongs, setArtistSongs] = useState<ArtistSongRow[]>([])
+  const [artistSongsLoading, setArtistSongsLoading] = useState(false)
+  const [artistStats, setArtistStats] = useState({ totalPlays: 0, totalResonates: 0 })
 
   useEffect(() => {
     let active = true
@@ -89,6 +107,56 @@ export default function ProfilePage() {
       })
     return () => { active = false }
   }, [params.username])
+
+  useEffect(() => {
+    if (!profile?.isArtist) {
+      setArtistSongs([])
+      setArtistStats({ totalPlays: 0, totalResonates: 0 })
+      return
+    }
+    let active = true
+    setArtistSongsLoading(true)
+    supabase
+      .from('songs')
+      .select('id, title, artist_display_name, artwork_url, status')
+      .eq('owner_profile_id', profile.id)
+      .eq('status', 'live')
+      .order('created_at', { ascending: false })
+      .then(async ({ data, error }) => {
+        if (!active) return
+        if (error) {
+          console.error('Failed to load artist discography:', error)
+          setArtistSongsLoading(false)
+          return
+        }
+        const list = (data || []) as ArtistSongRow[]
+        setArtistSongs(list)
+
+        if (list.length > 0) {
+          const { data: statRows, error: statErr } = await supabase
+            .from('song_stats')
+            .select('plays, resonate_count')
+            .in('song_id', list.map(s => s.id))
+          if (!active) return
+          if (statErr) {
+            console.error('Failed to load discography stats:', statErr)
+          } else {
+            const totals = (statRows || []).reduce(
+              (acc, s) => ({
+                totalPlays: acc.totalPlays + (s.plays || 0),
+                totalResonates: acc.totalResonates + (s.resonate_count || 0),
+              }),
+              { totalPlays: 0, totalResonates: 0 }
+            )
+            setArtistStats(totals)
+          }
+        } else {
+          setArtistStats({ totalPlays: 0, totalResonates: 0 })
+        }
+        setArtistSongsLoading(false)
+      })
+    return () => { active = false }
+  }, [profile?.id, profile?.isArtist])
 
   const isOwnProfile = !!identity && !!profile && identity.username === profile.username
 
@@ -276,11 +344,6 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Swapped the old hand-coded "Margo Artist" pill for the
-                shared ArtistBadge — same visual result here (it already
-                renders the labeled pill variant), but now this and every
-                other surface that shows an artist's identity render
-                from one component instead of drifting independently. */}
             <div style={{ marginBottom: '16px' }}>
               <ArtistBadge isArtist={profile.isArtist} artistStatus={profile.artistStatus} size={13} label />
             </div>
@@ -366,6 +429,54 @@ export default function ProfilePage() {
                 </p>
               )}
             </div>
+
+            {/* ── Discography — only rendered for artists. Live songs
+                only (never draft/processing/hidden — those stay private
+                to Studio). Stats line gives an at-a-glance sense of
+                reach; grid reuses the exact same card as the Songs
+                catalog page so a song looks identical wherever it's
+                encountered. ── */}
+            {profile.isArtist && (
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                  <p style={{ ...sectionLabelStyle, marginBottom: 0 }}>Discography</p>
+                  {artistSongs.length > 0 && (
+                    <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '0.5px' }}>
+                      {artistStats.totalPlays.toLocaleString()} plays · {artistStats.totalResonates.toLocaleString()} resonates
+                    </span>
+                  )}
+                </div>
+
+                {artistSongsLoading ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '14px' }}>
+                    {Array(4).fill(null).map((_, i) => (
+                      <div key={i} style={{ aspectRatio: '1', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }} />
+                    ))}
+                  </div>
+                ) : artistSongs.length === 0 ? (
+                  <p style={{ fontFamily: font, fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text-3)' }}>
+                    {isOwnProfile ? (
+                      <>Nothing live yet — head to <Link href="/studio" style={{ color: 'var(--gold)' }}>Studio</Link> to publish your first song.</>
+                    ) : (
+                      `${profile.displayName} hasn't published a song yet.`
+                    )}
+                  </p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '14px' }}>
+                    {artistSongs.map(song => {
+                      const cardData: SongCardData = {
+                        id: song.id,
+                        title: song.title,
+                        artist: song.artist_display_name,
+                        artwork: song.artwork_url,
+                        status: song.status,
+                      }
+                      return <SongCatalogCard key={song.id} song={cardData} />
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{ marginBottom: '28px' }}>
               <p style={sectionLabelStyle}>{isOwnProfile ? 'Your Lyrics' : 'Lyrics'}</p>
