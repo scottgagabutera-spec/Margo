@@ -57,15 +57,28 @@ let _qualifiedPlayFired = false
 
 // ── Crossfade state ────────────────────────────────────────────────
 
-// How long the overlap between an ending snippet and the next queued one
-// lasts. 800ms is a deliberate middle ground: long enough to feel like a
-// real transition instead of a click, short enough that it doesn't blur
-// two short lyric lines into each other or eat into either one's meaning.
-const CROSSFADE_MS = 800
-// If a snippet is shorter than this, there isn't enough runway to fit a
-// clean fade — the engine falls back to the old hard-stop-then-advance
-// behavior for that transition instead of overlapping awkwardly.
-const MIN_SNIPPET_MS_FOR_CROSSFADE = CROSSFADE_MS * 1.5
+// FIX (post-review): previously the engine only attempted a crossfade if
+// a snippet's own duration cleared a fixed 1.2s floor (CROSSFADE_MS * 1.5).
+// A Lyric Moment can legally be as short as 4 words — well under a
+// second in many cases — so any Mixtape whose lines happened to be short
+// silently got zero crossfades, every transition, while a Mixtape with
+// longer lines faded smoothly. That looked like "some mixtapes just don't
+// transition" when it was really "any snippet under ~1.2s never got a
+// chance." Now the crossfade duration itself scales to each snippet — a
+// fraction of its own length, clamped between a small floor and the
+// original ceiling — so every transition gets a proportional fade
+// consistently, regardless of how short or long that particular line is.
+const CROSSFADE_MAX_MS = 800
+const CROSSFADE_MIN_MS = 250
+const CROSSFADE_FRACTION = 0.35
+// Only truly degenerate snippets (well under half a second) skip the
+// fade entirely and fall back to a hard cut — there's no meaningful
+// overlap to build even at the floor duration.
+const MIN_SNIPPET_MS_FOR_ANY_CROSSFADE = 400
+
+function computeCrossfadeMs(snippetMs: number): number {
+  return Math.max(CROSSFADE_MIN_MS, Math.min(CROSSFADE_MAX_MS, snippetMs * CROSSFADE_FRACTION))
+}
 
 let _crossfadeTimer: ReturnType<typeof setTimeout> | null = null
 let _crossfadeRAF: number | null = null
@@ -114,6 +127,17 @@ function clearCrossfadeContext(): void {
   _cfOutgoing = null
   _cfIncoming = null
 }
+
+// FIX: rapid play/pause taps race against the browser's async play()
+// promise. If you tap resume, then tap pause again before that play()
+// promise resolves, the pause happens immediately — but the earlier
+// play()'s .then() callback has no idea a newer tap happened, and fires
+// later, silently overwriting state back to playing:true. That's what
+// made rapid tapping feel "stuck" or "confused." Every togglePlayPause()
+// call now stamps a token; async callbacks check it's still current
+// before applying anything, so a stale resolution can never clobber a
+// newer tap's result.
+let _toggleToken = 0
 
 /**
  * If a crossfade is currently in flight, snap it to completion right now
@@ -300,7 +324,7 @@ function bindAudioHandlers(generation: number): void {
 
 // Auto-advance fallback: runs when a snippet ends with no crossfade in
 // play (either there was no next queue item, or the snippet was too
-// short to fit one — see MIN_SNIPPET_MS_FOR_CROSSFADE). Still checks for
+// short to fit any meaningful overlap. Still checks for
 // a next queue item so a short-clip Mixtape still plays all the way
 // through, just with a hard cut instead of a fade for that one transition.
 function pauseSnippetAtEnd(): void {
@@ -341,13 +365,13 @@ function preloadInactiveForCrossfade(nextItem: LyricMomentQueueItem): void {
   }
 }
 
-// Fires ~CROSSFADE_MS before the current snippet's natural end (scheduled
+// Fires shortly before the current snippet's natural end (scheduled
 // by armSnippetTimer below). Starts the next queued snippet quietly on
 // the currently-inactive element, then ramps volumes across both
 // elements using an equal-power curve (cos/sin quarter-waves) so the
 // combined perceived loudness stays roughly constant through the fade,
 // instead of the audible dip a straight linear fade produces.
-function beginCrossfade(generation: number): void {
+function beginCrossfade(generation: number, durationMs: number): void {
   if (generation !== _handlerGeneration) return
 
   const { queue, queueIndex } = _state
@@ -406,7 +430,7 @@ function beginCrossfade(generation: number): void {
     // once at fade start, so a mid-fade volume/mute change takes effect
     // immediately instead of waiting for the fade to finish.
     const liveTarget = _state.muted ? 0 : _state.volume
-    const t = Math.min(1, (now - startTime) / CROSSFADE_MS)
+    const t = Math.min(1, (now - startTime) / durationMs)
     outgoing.volume = Math.cos((t * Math.PI) / 2) * liveTarget
     incoming.volume = Math.sin((t * Math.PI) / 2) * liveTarget
     if (t < 1) {
@@ -554,19 +578,21 @@ function armSnippetTimer(generation: number): void {
   const nextPlayableIndex = findNextPlayableIndex(queueIndex + 1)
   const hasNext = nextPlayableIndex !== -1
 
-  if (hasNext && ms >= MIN_SNIPPET_MS_FOR_CROSSFADE) {
+  if (hasNext && ms >= MIN_SNIPPET_MS_FOR_ANY_CROSSFADE) {
     // FIX: kick off pre-buffering on the inactive element right away —
     // don't wait for the crossfade window itself to start loading it.
     const nextItem = queue[nextPlayableIndex]
     preloadInactiveForCrossfade(nextItem)
 
-    // Schedule a smooth handoff to the next queued moment instead of a
-    // hard stop — beginCrossfade fires early enough that the fade
+    // Duration scales to THIS snippet's own length — a short lyric line
+    // gets a short, proportional fade instead of no fade at all; a long
+    // one gets the full 800ms. Schedule fires early enough that the fade
     // finishes right as this snippet's natural end arrives.
-    const crossfadeStartDelay = ms - CROSSFADE_MS
+    const crossfadeDurationMs = computeCrossfadeMs(ms)
+    const crossfadeStartDelay = ms - crossfadeDurationMs
     _crossfadeTimer = setTimeout(() => {
       if (generation !== _handlerGeneration) return
-      beginCrossfade(generation)
+      beginCrossfade(generation, crossfadeDurationMs)
     }, crossfadeStartDelay)
   } else {
     _snippetTimer = setTimeout(() => {
@@ -807,6 +833,12 @@ export function togglePlayPause(): void {
   // silently undoing the pause the person just did.
   resolveCrossfadeNow()
 
+  // FIX: every call gets its own token. Any earlier in-flight play()
+  // promise's callbacks check this before applying their result — so
+  // rapid pause→play→pause taps can't have a stale resolution land after
+  // a newer tap and silently override it.
+  const toggleToken = ++_toggleToken
+
   const audio = activeAudio()
   if (_state.mode === 'idle' || !audio) return
 
@@ -834,19 +866,26 @@ export function togglePlayPause(): void {
       .play()
       .then(() => {
         if (generation !== _handlerGeneration) return
+        if (toggleToken !== _toggleToken) return
         patch({ playing: true, error: null })
         requestWakeLock()
         armSnippetTimer(generation)
         syncMediaSessionFromState(_state)
       })
-      .catch(() => patch({ error: 'Play blocked — tap to start' }))
+      .catch(() => {
+        if (toggleToken !== _toggleToken) return
+        patch({ error: 'Play blocked — tap to start' })
+      })
     return
   }
 
   /* full mode — call play() immediately on gesture stack, let browser buffer while playing */
   bindMediaSessionHandlers()
   syncMediaSessionFromState(_state)
-  audio.play().catch(() => patch({ error: 'Play blocked — tap to start' }))
+  audio.play().catch(() => {
+    if (toggleToken !== _toggleToken) return
+    patch({ error: 'Play blocked — tap to start' })
+  })
   patch({ playing: true, error: null })
   requestWakeLock()
   syncMediaSessionFromState(_state)
