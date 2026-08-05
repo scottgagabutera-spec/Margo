@@ -388,3 +388,10 @@ html, body {
     animation: none !important;
   }
 }
+/* Hide mobile tab bar while keyboard-safe forms mark chrome active
+   (Compose typing / search sheet). Avoids fighting sticky CTAs. */
+@media (max-width: 639px) {
+  html[data-margo-keyboard="1"] .margo-mobile-tabbar {
+    display: none !important;
+  }
+}

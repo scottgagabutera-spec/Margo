@@ -24,11 +24,14 @@ interface ComposeLinePickerProps {
   onPick: (line: ComposeLyricLine) => void
   onSkip?: () => void
   onBack: () => void
+  /** When true, parent renders Skip in KeyboardSafeCtaBar — hide inline Skip. */
+  stickySkip?: boolean
 }
 
 /**
  * Tap-to-pick a real lyric_lines row for a Margo catalog song.
  * Timing comes straight from the row — no fuzzy match.
+ * List height uses dvh + --margo-vv-height so iOS keyboard open remains scrollable.
  */
 export function ComposeLinePicker({
   lines,
@@ -38,6 +41,7 @@ export function ComposeLinePicker({
   onPick,
   onSkip,
   onBack,
+  stickySkip = false,
 }: ComposeLinePickerProps) {
   return (
     <div>
@@ -57,10 +61,10 @@ export function ComposeLinePicker({
         <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
           Pick the line
         </h1>
-        <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '4px' }}>
+        <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
           Tap the lyric that matches the moment
         </p>
-        <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-3)' }}>
+        <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
           {artistName} · {songTitle}
         </p>
       </div>
@@ -73,17 +77,17 @@ export function ComposeLinePicker({
 
       {!loading && lines.length === 0 && (
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.9rem', marginBottom: '20px' }}>
+          <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: stickySkip ? 0 : '20px' }}>
             No synced lyrics for this song yet.
           </p>
-          {onSkip && (
+          {onSkip && !stickySkip && (
             <button
               type="button"
               onClick={onSkip}
               style={{
                 minHeight: 'var(--margo-touch-min)', padding: '0 24px',
                 display: 'inline-flex', alignItems: 'center',
-                background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px',
+                background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))', borderRadius: '50px',
                 fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
                 letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer',
               }}
@@ -95,9 +99,11 @@ export function ComposeLinePicker({
       {!loading && lines.length > 0 && (
         <div
           style={{
-            maxHeight: 'min(52vh, 420px)',
+            maxHeight: 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.48), 420px)',
             overflowY: 'auto',
             overscrollBehavior: 'contain',
+            touchAction: 'pan-y',
+            WebkitOverflowScrolling: 'touch',
             border: '1px solid var(--border)',
             borderRadius: '16px',
             background: 'var(--surface)',

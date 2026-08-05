@@ -12,6 +12,9 @@ import { searchMargoSongs } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
 import { CardExportModal } from '@/components/card-export-modal'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
+import { ComposeSearchSheet } from '@/components/compose-search-sheet'
+import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
+import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 
 type Source = 'margo' | 'genius' | 'apple'
@@ -55,12 +58,6 @@ const backBtnStyle: React.CSSProperties = {
   marginBottom: '32px', padding: '0 12px', minHeight: 'var(--margo-touch-min)',
   display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
   transition: 'color 150ms ease',
-}
-
-function sourceLabel(s: Source) {
-  if (s === 'margo') return 'On Margo'
-  if (s === 'genius') return 'Genius'
-  return 'Apple Music'
 }
 
 function songKey(title: string, artist: string) {
@@ -134,6 +131,10 @@ function ComposeInner() {
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
+
+  // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
+  // and hides the mobile tab bar while typing / search sheet is open.
+  const { keyboardOpen, chromeHidden } = useKeyboardSafeChrome({ forceActive: showResults })
 
   const resetComposeViewport = useCallback(() => {
     if (typeof document !== 'undefined') {
@@ -489,11 +490,11 @@ function ComposeInner() {
 
 
   return (
-    <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
+    <main ref={composeRootRef} style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
       <div style={{ position: 'fixed', top: '25%', left: '25%', width: '384px', height: '384px', background: 'rgba(232,197,71,0.05)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
       <div style={{ position: 'fixed', bottom: '25%', right: '25%', width: '256px', height: '256px', background: 'rgba(232,197,71,0.08)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
-      <div style={{ paddingTop: '120px', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '24px', paddingRight: '24px' }}>
+      <div style={{ paddingTop: '120px', paddingBottom: 'calc(var(--margo-page-padding-bottom) + 88px)', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
           {/* ── Step 1: Search ── */}
@@ -509,34 +510,7 @@ function ComposeInner() {
                   placeholder="Search by lyric, song or artist..."
                   style={{ width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
               </div>
-              {showResults && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflowY: 'auto', maxHeight: 'min(52vh, 420px)', overscrollBehavior: 'contain', zIndex: 50 }}>
-                  {searchLoading && <div style={{ textAlign: 'center', padding: '16px', fontFamily: font, color: 'var(--gold)', fontSize: '0.82rem' }}>Searching…</div>}
-                  {searchResults.map((result) => (
-                    <button key={result.source + '-' + result.id} onClick={() => handleSelectSong(result)}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'background 150ms ease' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--gold-faint)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                      {result.artwork && <img src={result.artwork} alt={result.title} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontFamily: font, color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.title}</p>
-                        <p style={{ fontFamily: font, color: 'var(--text-3)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.artist}</p>
-                      </div>
-                      <span style={{
-                        flexShrink: 0,
-                        fontSize: '0.5rem',
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase' as const,
-                        padding: '2px 8px',
-                        borderRadius: '50px',
-                        fontFamily: font,
-                        color: result.source === 'margo' ? 'var(--gold)' : 'var(--text-3)',
-                        border: result.source === 'margo' ? '1px solid var(--gold-border)' : '1px solid var(--border)',
-                      }}>{sourceLabel(result.source)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+
             </div>
           </div>
 
@@ -548,6 +522,7 @@ function ComposeInner() {
                 loading={linesLoading}
                 songTitle={songName}
                 artistName={artistName}
+                stickySkip
                 onPick={(line) => {
                   setSnippetStart(line.startSec)
                   setSnippetEnd(line.endSec)
@@ -614,10 +589,8 @@ function ComposeInner() {
                   <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
                     placeholder="Type your lyric here..." rows={4}
                     style={{ width: '100%', background: 'transparent', fontSize: '1.5rem', fontFamily: font, fontStyle: 'italic', color: 'var(--gold)', textAlign: 'center', lineHeight: 1.6, border: 'none', outline: 'none', resize: 'none', position: 'relative', zIndex: 10, boxSizing: 'border-box' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', position: 'relative', zIndex: 10 }}>
-                    <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)' }}>{lyric.length}/140</span>
-                    <button onClick={handleLyricComplete} disabled={lyric.trim().length === 0}
-                      style={{ minHeight: 'var(--margo-touch-min)', padding: '0 24px', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1 }}>Continue</button>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '16px', position: 'relative', zIndex: 10 }}>
+                    <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)' }}>{lyric.length}/140</span>
                   </div>
                 </div>
               </>
@@ -673,26 +646,7 @@ function ComposeInner() {
                     </button>
                   ))}
                 </div>
-                {/* Confirm vibe button — only active when a vibe is selected */}
-                <div style={{ textAlign: 'center' }}>
-                  <button
-                    onClick={handleConfirmVibe}
-                    disabled={!selectedVibe}
-                    style={{
-                      minHeight: 'var(--margo-touch-min)', padding: '0 36px',
-                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                      background: selectedVibe ? 'var(--gold)' : 'transparent',
-                      color: selectedVibe ? 'var(--bg)' : 'var(--text-3)',
-                      border: selectedVibe ? 'none' : '1px solid var(--border)',
-                      borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                      fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
-                      cursor: selectedVibe ? 'pointer' : 'not-allowed',
-                      boxShadow: selectedVibe ? '0 6px 28px rgba(232,197,71,0.28)' : 'none',
-                      transition: 'all 200ms ease',
-                      opacity: selectedVibe ? 1 : 0.5,
-                    }}
-                  >{selectedVibe ? `Post with ${VIBE_LABELS[selectedVibe]}` : 'Select a vibe to continue'}</button>
-                </div>
+                {/* Primary confirm lives in KeyboardSafeCtaBar */}
               </>
             )}
           </div>
@@ -752,20 +706,84 @@ function ComposeInner() {
               <p style={{ fontFamily: font, fontSize: '0.82rem', color: '#ff6b6b', textAlign: 'center', marginBottom: '16px' }}>{postError}</p>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '320px', margin: '0 auto', opacity: buttonsBlocked ? 0.4 : 1, pointerEvents: buttonsBlocked ? 'none' : 'auto' }}>
-              <button onClick={() => handlePost(false)} disabled={posting || identityLoading}
-                style={{ padding: '15px 28px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: posting ? 'not-allowed' : 'pointer', boxShadow: '0 6px 28px rgba(232,197,71,0.28)', opacity: posting ? 0.7 : 1, transition: 'opacity 150ms ease' }}>
-                {posting ? 'Posting…' : 'Post to Feed'}
-              </button>
-              <button onClick={() => handlePost(true)} disabled={posting}
-                style={{ padding: '13px 28px', background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--border-hi)', borderRadius: '50px', fontFamily: font, fontWeight: 600, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
-                Keep Private
-              </button>
-            </div>
+            {/* Post actions live in KeyboardSafeCtaBar */}
           </div>
 
         </div>
       </div>
+
+
+      <ComposeSearchSheet
+        open={showResults && step === 1}
+        loading={searchLoading}
+        results={searchResults}
+        onSelect={handleSelectSong}
+        onClose={() => setShowResults(false)}
+      />
+
+      {/* Sticky primary actions — VisualViewport pins above keyboard */}
+      {showLinePicker && !linesLoading && margoLines.length === 0 && (
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
+          <button
+            type="button"
+            onClick={() => {
+              setSnippetStart(null)
+              setSnippetEnd(null)
+              setLinePickComplete(true)
+            }}
+            style={keyboardSafePrimaryBtnStyle}
+          >Continue without a snippet</button>
+        </KeyboardSafeCtaBar>
+      )}
+
+      {step === 2 && !showLinePicker && (
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
+          <button
+            type="button"
+            onClick={handleLyricComplete}
+            disabled={lyric.trim().length === 0}
+            style={{ ...keyboardSafePrimaryBtnStyle, opacity: lyric.trim().length === 0 ? 0.4 : 1 }}
+          >Continue</button>
+        </KeyboardSafeCtaBar>
+      )}
+
+      {step === 3 && !emotionLoading && (
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
+          <button
+            type="button"
+            onClick={handleConfirmVibe}
+            disabled={!selectedVibe}
+            style={{
+              ...keyboardSafePrimaryBtnStyle,
+              opacity: selectedVibe ? 1 : 0.5,
+              cursor: selectedVibe ? 'pointer' : 'not-allowed',
+              background: selectedVibe ? 'var(--gold)' : 'transparent',
+              color: selectedVibe ? 'var(--text-on-gold, var(--bg))' : 'var(--text-muted)',
+              border: selectedVibe ? 'none' : '1px solid var(--border)',
+              boxShadow: selectedVibe ? keyboardSafePrimaryBtnStyle.boxShadow : 'none',
+            }}
+          >{selectedVibe ? 'Post with ' + VIBE_LABELS[selectedVibe] : 'Select a vibe to continue'}</button>
+        </KeyboardSafeCtaBar>
+      )}
+
+      {step === 4 && (
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
+          <div style={{ opacity: buttonsBlocked ? 0.4 : 1, pointerEvents: buttonsBlocked ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => handlePost(false)}
+              disabled={posting || identityLoading}
+              style={{ ...keyboardSafePrimaryBtnStyle, opacity: posting ? 0.7 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
+            >{posting ? 'Posting…' : 'Post to Feed'}</button>
+            <button
+              type="button"
+              onClick={() => handlePost(true)}
+              disabled={posting}
+              style={keyboardSafeSecondaryBtnStyle}
+            >Keep Private</button>
+          </div>
+        </KeyboardSafeCtaBar>
+      )}
 
       <CardExportModal
         open={showExport}
