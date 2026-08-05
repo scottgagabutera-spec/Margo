@@ -542,7 +542,7 @@ export default function AccountSettingsPage() {
             <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)', marginBottom: 16 }}>
               You have not applied as an artist yet.
             </p>
-            <Link href="/apply">
+            <Link href="/apply-artist">
               <TierTwoButton onClick={() => {}}>Apply as an Artist</TierTwoButton>
             </Link>
           </>

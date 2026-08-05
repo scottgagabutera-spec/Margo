@@ -38,7 +38,7 @@ function hrefFor(n: Notification) {
     case 'resonate': return n.postId ? `/feed?post=${n.postId}` : '/feed'
     case 'follow': return n.actor ? `/profile/${n.actor.username}` : '/feed'
     case 'follow_request': return n.actor ? `/profile/${n.actor.username}` : '/feed'
-    case 'artist_approved': return '/upload-song'
+    case 'artist_approved': return '/studio'
     case 'artist_rejected': return '/apply-artist'
     case 'warned': case 'frozen': case 'removed': case 'restored': return '/settings'
     default: return '/feed'
