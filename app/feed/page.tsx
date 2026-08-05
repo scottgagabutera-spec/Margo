@@ -247,7 +247,7 @@ function Tier1Player({ audioUrl, songId, postText }: {
           <PlayPauseIcon playing={playing} buffering={isBuffering} size={14} color='var(--bg)' />
         </button>
         <div style={{ flex: 1 }}>
-          <div ref={progressRef} onMouseDown={onMouseDown} onTouchStart={onTouchStart}
+          <div ref={progressRef} className="margo-seek-scrub" onMouseDown={onMouseDown} onTouchStart={onTouchStart}
             style={{ minHeight: 'var(--margo-touch-min)', height: '20px', display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '2px', boxSizing: 'border-box' }}>
             <div style={{ position: 'relative', width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
               <div style={{ height: '100%', width: progress + '%', background: 'var(--gold)', borderRadius: '2px', transition: dragging ? 'none' : 'width 200ms linear' }} />

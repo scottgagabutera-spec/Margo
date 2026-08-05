@@ -7,6 +7,7 @@ import { NotificationsProvider } from '@/hooks/useNotifications'
 import { MiniPlayer } from '@/components/mini-player'
 import { MargoNav } from '@/components/margo-nav'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
+import { TabSwipeProvider } from '@/hooks/useTabSwipe'
 import { Toaster } from '@/components/ui/sonner'
 import type { Metadata, Viewport } from 'next'
 import { Lora, Syne } from 'next/font/google'
@@ -193,7 +194,9 @@ export default function RootLayout({
               <AudioEngineProvider>
                 <NotificationsProvider>
                   <MargoNav />
-                  {children}
+                  <TabSwipeProvider>
+                    {children}
+                  </TabSwipeProvider>
                   <MobileTabBar />
                 </NotificationsProvider>
               </AudioEngineProvider>

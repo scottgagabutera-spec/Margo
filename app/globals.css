@@ -395,3 +395,25 @@ html, body {
     display: none !important;
   }
 }
+
+/* Primary-tab swipe enter — direction set by TabSwipeProvider via sessionStorage */
+@keyframes margo-tab-enter-from-right {
+  from { opacity: 0.72; transform: translateX(14%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes margo-tab-enter-from-left {
+  from { opacity: 0.72; transform: translateX(-14%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.margo-tab-slide-from-right {
+  animation: margo-tab-enter-from-right 320ms var(--ease-out) both;
+}
+.margo-tab-slide-from-left {
+  animation: margo-tab-enter-from-left 320ms var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .margo-tab-slide-from-right,
+  .margo-tab-slide-from-left {
+    animation: none !important;
+  }
+}
