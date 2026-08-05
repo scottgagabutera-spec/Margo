@@ -107,16 +107,14 @@ export function useTextFieldFocus() {
 }
 
 /**
- * Compose-ready keyboard chrome: visual viewport metrics + optional
- * html[data-margo-keyboard] for tab-bar hide while typing / sheets open.
+ * Keyboard-safe chrome: visual viewport metrics + html[data-margo-keyboard]
+ * for tab-bar hide while a text field is focused or the keyboard is open.
+ * No force flags — same path for every Compose step / future form.
  */
-export function useKeyboardSafeChrome(options?: {
-  /** Force chrome hide even without a focused field (e.g. search sheet open). */
-  forceActive?: boolean
-}) {
+export function useKeyboardSafeChrome() {
   const metrics = useVisualViewport({ publishCssVars: true })
   const textFocused = useTextFieldFocus()
-  const active = textFocused || !!options?.forceActive || metrics.keyboardOpen
+  const active = textFocused || metrics.keyboardOpen
 
   useEffect(() => {
     const root = document.documentElement

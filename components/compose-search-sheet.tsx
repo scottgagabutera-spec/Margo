@@ -47,7 +47,7 @@ export function ComposeSearchSheet({
         position: 'fixed',
         inset: 0,
         zIndex: 70,
-        pointerEvents: 'auto',
+        pointerEvents: 'none',
       }}
     >
       <button
@@ -60,8 +60,9 @@ export function ComposeSearchSheet({
           border: 'none',
           padding: 0,
           margin: 0,
-          background: 'var(--margo-scrim)',
+          background: 'transparent',
           cursor: 'pointer',
+          pointerEvents: 'auto',
         }}
       />
       <div
@@ -77,8 +78,10 @@ export function ComposeSearchSheet({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          boxShadow: '0 -12px 40px rgba(0,0,0,0.45)',
+          boxShadow: '0 -8px 28px rgba(0,0,0,0.22)',
           transition: 'bottom 120ms var(--ease-out)',
+          pointerEvents: 'auto',
+          zIndex: 1,
         }}
       >
         <div

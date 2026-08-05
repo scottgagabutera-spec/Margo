@@ -134,7 +134,7 @@ function ComposeInner() {
 
   // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
   // and hides the mobile tab bar while typing / search sheet is open.
-  const { keyboardOpen, chromeHidden } = useKeyboardSafeChrome({ forceActive: showResults })
+  const { keyboardOpen, chromeHidden } = useKeyboardSafeChrome()
 
   const resetComposeViewport = useCallback(() => {
     if (typeof document !== 'undefined') {
