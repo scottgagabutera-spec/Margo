@@ -8,11 +8,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { matchLyricLine } from '@/lib/lyric-match'
+import { searchMargoSongs } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
 import { CardExportModal } from '@/components/card-export-modal'
+import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 
-type Source = 'genius' | 'apple'
+type Source = 'margo' | 'genius' | 'apple'
 
 interface SearchResult {
   id: string
@@ -20,6 +22,8 @@ interface SearchResult {
   artist: string
   artwork: string
   source: Source
+  margoSongId?: string
+  audioUrl?: string | null
 }
 
 type Vibe =
@@ -53,6 +57,16 @@ const backBtnStyle: React.CSSProperties = {
   transition: 'color 150ms ease',
 }
 
+function sourceLabel(s: Source) {
+  if (s === 'margo') return 'On Margo'
+  if (s === 'genius') return 'Genius'
+  return 'Apple Music'
+}
+
+function songKey(title: string, artist: string) {
+  return title.trim().toLowerCase() + '|' + artist.trim().toLowerCase()
+}
+
 function ComposeInner() {
   const router = useRouter()
   const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
@@ -79,6 +93,7 @@ function ComposeInner() {
       const endParam = searchParams.get('end')
       if (startParam) setSnippetStart(parseFloat(startParam))
       if (endParam) setSnippetEnd(parseFloat(endParam))
+      if (songIdParam) setLinePickComplete(true)
       setStep(3)
     }
   }, [])
@@ -106,33 +121,96 @@ function ComposeInner() {
   // if nothing matches confidently).
   const [snippetStart, setSnippetStart] = useState<number | null>(null)
   const [snippetEnd, setSnippetEnd] = useState<number | null>(null)
+  const [margoLines, setMargoLines] = useState<ComposeLyricLine[]>([])
+  const [linesLoading, setLinesLoading] = useState(false)
+  const [linePickComplete, setLinePickComplete] = useState(false)
   const [posting, setPosting] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
   const emotionAbortRef = useRef<AbortController | null>(null)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchGenRef = useRef(0)
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
 
-  const handleSearch = useCallback(async (value: string) => {
-    setSearchQuery(value)
-    if (value.length < 2) { setShowResults(false); setSearchResults([]); return }
+  const runSearch = useCallback(async (value: string) => {
+    const gen = ++searchGenRef.current
     setShowResults(true)
     setSearchLoading(true)
     try {
-      const res = await fetch(`/api/genius?song=${encodeURIComponent(value)}`)
-      const data = await res.json()
-      setSearchResults((data.results || []).map((r: any) => ({
-        id: String(r.id || r.song),
-        title: r.song,
-        artist: r.artist,
-        artwork: r.artwork || '',
-        source: r.source as Source,
-      })))
+      const [margoHits, geniusRes] = await Promise.all([
+        searchMargoSongs(supabase, value),
+        fetch('/api/genius?song=' + encodeURIComponent(value)).then(async (res) => {
+          if (!res.ok) return { results: [] as any[] }
+          try {
+            const data = await res.json()
+            if (data?.error) return { results: [] as any[] }
+            return data
+          } catch {
+            return { results: [] as any[] }
+          }
+        }).catch(() => ({ results: [] as any[] })),
+      ])
+
+      if (gen !== searchGenRef.current) return
+
+      const margoMapped: SearchResult[] = margoHits.map((song) => ({
+        id: song.id,
+        title: song.title,
+        artist: song.artist,
+        artwork: song.artwork || '',
+        source: 'margo' as const,
+        margoSongId: song.id,
+        audioUrl: song.audioUrl,
+      }))
+
+      const margoKeys = new Set(margoMapped.map((r) => songKey(r.title, r.artist)))
+
+      const externalMapped: SearchResult[] = (geniusRes.results || []).map((r: any) => {
+        const rawSource = String(r.source || '').toLowerCase()
+        const source: Source = (rawSource === 'itunes' || rawSource === 'apple') ? 'apple' : 'genius'
+        return {
+          id: String(r.id || r.song),
+          title: r.song,
+          artist: r.artist,
+          artwork: r.artwork || '',
+          source,
+        }
+      }).filter((r: SearchResult) => !margoKeys.has(songKey(r.title, r.artist)))
+
+      setSearchResults([...margoMapped, ...externalMapped].slice(0, 10))
     } catch {
+      if (gen !== searchGenRef.current) return
       setSearchResults([])
     } finally {
+      if (gen === searchGenRef.current) setSearchLoading(false)
+    }
+  }, [])
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value)
+    if (value.length < 2) {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current)
+        searchTimerRef.current = null
+      }
+      searchGenRef.current++
+      setShowResults(false)
+      setSearchResults([])
       setSearchLoading(false)
+      return
+    }
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => {
+      searchTimerRef.current = null
+      runSearch(value)
+    }, 300)
+  }, [runSearch])
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
     }
   }, [])
 
@@ -141,19 +219,49 @@ function ComposeInner() {
     setArtistName(result.artist)
     setSongName(result.title)
     setShowResults(false)
-    setLinkedSongId(null)
-    setLinkedAudioUrl(null)
     setSnippetStart(null)
     setSnippetEnd(null)
 
-    // Real FK lookup against the live Supabase catalog — replaces the old
-    // Firebase full-tree scan + isLicensed() gate (Section 6, Gap #5). The
-    // isLicensed() gate existed purely as a cheap pre-filter before doing
-    // an expensive tree read; a direct indexed query doesn't need that
-    // gate at all, so it's dropped rather than replaced. Only songs that
-    // are actually live in Margo's own catalog get linked — everything
-    // else still posts fine as free-text song/artist metadata, same as
-    // before.
+    if (result.source === 'margo') {
+      setLinkedSongId(result.margoSongId!)
+      setLinkedAudioUrl(result.audioUrl || null)
+      setLinePickComplete(false)
+      setMargoLines([])
+      setLinesLoading(true)
+      setStep(2)
+      try {
+        const { data, error } = await supabase
+          .from('lyric_lines')
+          .select('line_index, text, start_sec, end_sec')
+          .eq('song_id', result.margoSongId!)
+          .order('line_index', { ascending: true })
+
+        if (!error && data) {
+          setMargoLines(data.map((row) => ({
+            lineIndex: row.line_index,
+            text: row.text,
+            startSec: row.start_sec,
+            endSec: row.end_sec,
+          })))
+        } else {
+          setMargoLines([])
+        }
+      } catch (e) {
+        console.error('Lyric lines fetch failed:', e)
+        setMargoLines([])
+      } finally {
+        setLinesLoading(false)
+      }
+      return
+    }
+
+    // External (Genius / Apple) — clear direct links, then attempt
+    // title+artist lookup against the live Margo catalog.
+    setLinkedSongId(null)
+    setLinkedAudioUrl(null)
+    setLinePickComplete(true)
+    setMargoLines([])
+
     try {
       const { data, error } = await supabase
         .from('songs')
@@ -226,14 +334,9 @@ function ComposeInner() {
     const authorId = user.id
 
     // Resolve snippet timing. Exact values already set (from the player's
-    // share link) take priority and skip matching entirely. Otherwise, if
-    // a real song is linked, run the shared matcher against its actual
-    // lyric_lines — this is the fix for the reported bug where a typed
-    // lyric that wasn't a character-for-character SRT substring matched
-    // nothing and silently fell back to playing the whole song. If no
-    // song is linked, or the matcher can't find a confident match,
-    // resolvedStart/End stay null and the post simply won't get a
-    // snippet button — no wrong guess forced through.
+    // share link or a Margo line pick) take priority and skip matching.
+    // Otherwise, if a real song is linked (external post-hoc path), run
+    // the shared matcher against its actual lyric_lines.
     let resolvedStart = snippetStart
     let resolvedEnd = snippetEnd
     if ((resolvedStart == null || resolvedEnd == null) && linkedSongId) {
@@ -256,7 +359,7 @@ function ComposeInner() {
           song_title: songName,
           artist_name: artistName,
           artwork_url: selectedSong?.artwork || null,
-          genius_id: selectedSong?.id || null,
+          genius_id: selectedSong?.source === 'margo' ? null : (selectedSong?.id || null),
           author_profile_id: authorId,
           parent_post_id: null,
           lang: navigator.language.split('-')[0] || 'en',
@@ -311,6 +414,9 @@ function ComposeInner() {
     setLinkedAudioUrl(null)
     setSnippetStart(null)
     setSnippetEnd(null)
+    setMargoLines([])
+    setLinesLoading(false)
+    setLinePickComplete(false)
     setPosting(false)
     setPostError(null)
     setBannerDismissed(false)
@@ -359,6 +465,8 @@ function ComposeInner() {
   // displayName at least once, or dismissed it for this compose session.
   const showNameBanner = step === 4 && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
+  const showLinePicker = step === 2 && selectedSong?.source === 'margo' && !linePickComplete
+
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
@@ -377,7 +485,7 @@ function ComposeInner() {
             <div style={{ position: 'relative' }}>
               <div style={{ position: 'relative' }}>
                 <Search style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: 'var(--text-3)' }} />
-                <input type="text" value={searchQuery} onChange={(e) => handleSearch(e.target.value)}
+                <input type="text" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search by lyric, song or artist..."
                   style={{ width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
               </div>
@@ -385,7 +493,7 @@ function ComposeInner() {
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', zIndex: 50 }}>
                   {searchLoading && <div style={{ textAlign: 'center', padding: '16px', fontFamily: font, color: 'var(--gold)', fontSize: '0.82rem' }}>Searching…</div>}
                   {searchResults.map((result) => (
-                    <button key={result.id} onClick={() => handleSelectSong(result)}
+                    <button key={result.source + '-' + result.id} onClick={() => handleSelectSong(result)}
                       style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'background 150ms ease' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'var(--gold-faint)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
@@ -394,6 +502,17 @@ function ComposeInner() {
                         <p style={{ fontFamily: font, color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.title}</p>
                         <p style={{ fontFamily: font, color: 'var(--text-3)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.artist}</p>
                       </div>
+                      <span style={{
+                        flexShrink: 0,
+                        fontSize: '0.5rem',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase' as const,
+                        padding: '2px 8px',
+                        borderRadius: '50px',
+                        fontFamily: font,
+                        color: result.source === 'margo' ? 'var(--gold)' : 'var(--text-3)',
+                        border: result.source === 'margo' ? '1px solid var(--gold-border)' : '1px solid var(--border)',
+                      }}>{sourceLabel(result.source)}</span>
                     </button>
                   ))}
                 </div>
@@ -401,36 +520,87 @@ function ComposeInner() {
             </div>
           </div>
 
-          {/* ── Step 2: Lyric Input ── */}
+          {/* ── Step 2: Line picker (Margo) or lyric input ── */}
           <div style={{ display: step === 2 ? 'block' : 'none' }}>
-            <button style={backBtnStyle} onClick={() => { setStep(1); setSelectedSong(null); setArtistName(''); setSongName('') }}>← Back</button>
-            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Set the stage</h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Enter the lyric that moves you</p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-              <div>
-                <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Artist</label>
-                <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
-                  style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Song</label>
-                <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
-                  style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
-              </div>
-            </div>
-            <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '256px', height: '128px', background: 'rgba(232,197,71,0.1)', filter: 'blur(40px)', pointerEvents: 'none' }} />
-              <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-                placeholder="Type your lyric here..." rows={4}
-                style={{ width: '100%', background: 'transparent', fontSize: '1.5rem', fontFamily: font, fontStyle: 'italic', color: 'var(--gold)', textAlign: 'center', lineHeight: 1.6, border: 'none', outline: 'none', resize: 'none', position: 'relative', zIndex: 10, boxSizing: 'border-box' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', position: 'relative', zIndex: 10 }}>
-                <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)' }}>{lyric.length}/140</span>
-                <button onClick={handleLyricComplete} disabled={lyric.trim().length === 0}
-                  style={{ minHeight: 'var(--margo-touch-min)', padding: '0 24px', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1 }}>Continue</button>
-              </div>
-            </div>
+            {showLinePicker ? (
+              <ComposeLinePicker
+                lines={margoLines}
+                loading={linesLoading}
+                songTitle={songName}
+                artistName={artistName}
+                onPick={(line) => {
+                  setSnippetStart(line.startSec)
+                  setSnippetEnd(line.endSec)
+                  setLinePickComplete(true)
+                }}
+                onSkip={() => {
+                  setSnippetStart(null)
+                  setSnippetEnd(null)
+                  setLinePickComplete(true)
+                }}
+                onBack={() => {
+                  setStep(1)
+                  setSelectedSong(null)
+                  setArtistName('')
+                  setSongName('')
+                  setLinkedSongId(null)
+                  setLinkedAudioUrl(null)
+                  setMargoLines([])
+                  setLinePickComplete(false)
+                  setSnippetStart(null)
+                  setSnippetEnd(null)
+                }}
+              />
+            ) : (
+              <>
+                <button style={backBtnStyle} onClick={() => {
+                  if (selectedSong?.source === 'margo') {
+                    setLinePickComplete(false)
+                  } else {
+                    setStep(1)
+                    setSelectedSong(null)
+                    setArtistName('')
+                    setSongName('')
+                    setLinkedSongId(null)
+                    setLinkedAudioUrl(null)
+                    setSnippetStart(null)
+                    setSnippetEnd(null)
+                  }
+                }}>← Back</button>
+                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                  <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Set the stage</h1>
+                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Enter the lyric that moves you</p>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Artist</label>
+                    <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
+                      style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Song</label>
+                    <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
+                      style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+                {snippetStart != null && snippetEnd != null && selectedSong?.source === 'margo' && (
+                  <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--gold)', opacity: 0.85, textAlign: 'center', marginBottom: '12px' }}>
+                    Snippet locked to a Margo lyric line
+                  </p>
+                )}
+                <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '256px', height: '128px', background: 'rgba(232,197,71,0.1)', filter: 'blur(40px)', pointerEvents: 'none' }} />
+                  <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
+                    placeholder="Type your lyric here..." rows={4}
+                    style={{ width: '100%', background: 'transparent', fontSize: '1.5rem', fontFamily: font, fontStyle: 'italic', color: 'var(--gold)', textAlign: 'center', lineHeight: 1.6, border: 'none', outline: 'none', resize: 'none', position: 'relative', zIndex: 10, boxSizing: 'border-box' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', position: 'relative', zIndex: 10 }}>
+                    <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)' }}>{lyric.length}/140</span>
+                    <button onClick={handleLyricComplete} disabled={lyric.trim().length === 0}
+                      style={{ minHeight: 'var(--margo-touch-min)', padding: '0 24px', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', opacity: lyric.trim().length === 0 ? 0.4 : 1 }}>Continue</button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* ── Step 3: Vibe Selection ── */}
@@ -588,3 +758,4 @@ function ComposeInner() {
 export default function ComposePage() {
   return <Suspense><ComposeInner /></Suspense>
 }
+

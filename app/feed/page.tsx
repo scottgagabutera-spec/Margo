@@ -458,17 +458,26 @@ function PostCard({
         )}
       </div>
 
-      {(post.knowledge?.song || post.knowledge?.artist) && (
-        <p style={{
+      {(post.knowledge?.song || post.knowledge?.artist) && (() => {
+        const attribution = post.knowledge.song && post.knowledge.artist
+          ? `${post.knowledge.song} · ${post.knowledge.artist}`
+          : (post.knowledge.song || post.knowledge.artist || '')
+        const attrStyle: React.CSSProperties = {
           fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
           color: 'rgba(255,255,255,0.75)', letterSpacing: '1px', textTransform: 'uppercase',
           marginBottom: '20px',
-        }}>
-          {post.knowledge.song && post.knowledge.artist
-            ? `${post.knowledge.song} · ${post.knowledge.artist}`
-            : post.knowledge.song || post.knowledge.artist}
-        </p>
-      )}
+        }
+        // Linked Margo catalog posts deep-link to karaoke; external
+        // attribution stays plain text (outbound art/YouTube links elsewhere).
+        if (post.songId) {
+          return (
+            <Link href={`/song/${post.songId}`} style={{ ...attrStyle, display: 'block', textDecoration: 'none' }}>
+              {attribution}
+            </Link>
+          )
+        }
+        return <p style={attrStyle}>{attribution}</p>
+      })()}
 
       {!isTier1 && (post.youtubeMeta?.thumbnail || post.knowledge?.artwork) && (
         <Link

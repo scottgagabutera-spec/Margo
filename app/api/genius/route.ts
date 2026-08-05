@@ -64,7 +64,7 @@ async function searchItunes(query: string): Promise<SearchResult[]> {
     artworkFull: t.artworkUrl100 ? t.artworkUrl100.replace('100x100bb', '600x600bb') : null,
     geniusUrl: null,
     id: null,
-    source: 'itunes',
+    source: 'apple',
   }))
 }
 
