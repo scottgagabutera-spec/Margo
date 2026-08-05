@@ -154,6 +154,8 @@ function PostsTab() {
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [catalogFilter, setCatalogFilter] = useState<'all' | 'active' | 'private' | 'hidden'>('all')
+  const [catalogBusyId, setCatalogBusyId] = useState<string | null>(null)
+  const [catalogActionError, setCatalogActionError] = useState<string | null>(null)
 
   const loadEchoes = async (postId: string) => {
     if (!db) return
@@ -330,6 +332,39 @@ function PostsTab() {
     }
   }
 
+  /** Real feed/Discover read Supabase posts.status — never Firebase. */
+  const patchSupabasePostStatus = async (postId: string, status: string) => {
+    if (!auth?.currentUser) throw new Error('Not signed in')
+    const token = await auth.currentUser.getIdToken()
+    const res = await fetch('/api/admin/catalog-posts', {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id: postId, status }),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
+    return body as { id: string; status: string }
+  }
+
+  const toggleCatalogHide = async (post: CatalogPost) => {
+    if (catalogBusyId) return
+    const newStatus = post.status === 'hidden' ? 'active' : 'hidden'
+    setCatalogBusyId(post.id)
+    setCatalogActionError(null)
+    try {
+      await patchSupabasePostStatus(post.id, newStatus)
+      setCatalogPosts(prev => prev.map(p => (p.id === post.id ? { ...p, status: newStatus } : p)))
+    } catch (e: any) {
+      setCatalogActionError(e.message || 'Failed to update post status')
+    } finally {
+      setCatalogBusyId(null)
+    }
+  }
+
+  /** Firebase list Hide — legacy RTDB only. Live moderation is Catalog above. */
   const toggleHide = async (post: Post) => {
     if (!db) return
     const newStatus = post.status === 'hidden' ? 'active' : 'hidden'
@@ -391,13 +426,13 @@ function PostsTab() {
         ))}
       </div>
 
-      {/* Supabase Catalog (read-only) */}
+      {/* Supabase Catalog — live posts (Hide/Show) */}
       <div style={{ marginBottom: '24px' }}>
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px' }}>
-          Supabase Catalog (read-only)
+          Supabase Catalog — live posts (Hide/Show)
         </p>
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginBottom: '12px', lineHeight: 1.5 }}>
-          Includes private posts for product insight — not shown on the public feed.
+          These are the posts Feed and Discover actually read. Includes private rows for product insight. Hide removes a post from public feeds.
         </p>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
           {(['all', 'active', 'private', 'hidden'] as const).map(f => (
@@ -434,23 +469,40 @@ function PostsTab() {
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
                   {[post.song, post.artist, author].filter(Boolean).join(' · ')}
                 </p>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{
-                    fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '1.5px',
-                    color: isPrivate ? 'var(--gold)' : isHidden ? '#ff6060' : 'rgba(255,255,255,0.4)',
-                    border: `1px solid ${isPrivate ? 'var(--gold)' : isHidden ? 'rgba(255,96,96,0.4)' : 'rgba(255,255,255,0.15)'}`,
-                    borderRadius: '6px', padding: '2px 8px',
-                  }}>{status}</span>
-                  {post.emotion && (
-                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      {post.emotion}
-                    </span>
-                  )}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '1.5px',
+                      color: isPrivate ? 'var(--gold)' : isHidden ? '#ff6060' : 'rgba(255,255,255,0.4)',
+                      border: `1px solid ${isPrivate ? 'var(--gold)' : isHidden ? 'rgba(255,96,96,0.4)' : 'rgba(255,255,255,0.15)'}`,
+                      borderRadius: '6px', padding: '2px 8px',
+                    }}>{status}</span>
+                    {post.emotion && (
+                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        {post.emotion}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleCatalogHide(post)}
+                    disabled={catalogBusyId === post.id}
+                    style={{
+                      ...(isHidden ? S.btn : S.dangerBtn),
+                      opacity: catalogBusyId === post.id ? 0.6 : 1,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {catalogBusyId === post.id ? '…' : isHidden ? 'Show' : 'Hide'}
+                  </button>
                 </div>
               </div>
             )
           })
+        )}
+        {catalogActionError && (
+          <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.75rem', padding: '8px 0 0' }}>{catalogActionError}</p>
         )}
       </div>
 
@@ -472,7 +524,7 @@ function PostsTab() {
         </div>
       ))}
 
-      {/* Posts */}
+      {/* Firebase legacy posts — Hide only mutates RTDB; live moderation is Catalog above */}
       {loading ? <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '32px' }}>Loading…</p> : filtered.map(post => {
         const a = analytics[post.id] || {}
         const resonateCount = Object.keys(a.resonates || {}).length
