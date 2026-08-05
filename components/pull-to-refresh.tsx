@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
 import MargoLogo from '@/components/MargoLogo'
+import { LoadingRing } from '@/components/loading-ring'
 
 const THRESHOLD = 80
 const MAX_PULL = 130
@@ -19,7 +20,7 @@ interface PullToRefreshProps {
 /**
  * Lightweight pull-to-refresh for primary scroll pages.
  * Touch-driven (does not rely on browser overscroll bounce).
- * Indicator uses brand mark + motion across pull / ready / refreshing.
+ * Indicator: static Margo mark + LoadingRing (progress / ready / spin).
  */
 export function PullToRefresh({
   onRefresh,
@@ -117,11 +118,8 @@ export function PullToRefresh({
 
   const progress = Math.min(1, pull / THRESHOLD)
   const ready = pull >= THRESHOLD && !refreshing
-  const pullRotation = progress * 200
 
-  let markClass = ''
-  if (refreshing) markClass = 'margo-spin'
-  else if (ready) markClass = 'margo-soft-pulse'
+  const ringState = refreshing ? 'spinning' : ready ? 'ready' : 'progress'
 
   return (
     <>
@@ -168,16 +166,14 @@ export function PullToRefresh({
               transition: 'background 150ms var(--ease-out), border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out)',
             }}
           >
-            <div
-              className={markClass}
-              style={{
-                display: 'flex',
-                transform: refreshing || ready ? undefined : `rotate(${pullRotation}deg)`,
-                transition: ready ? 'transform 200ms var(--ease-out)' : undefined,
-              }}
+            <LoadingRing
+              size={36}
+              strokeWidth={2}
+              state={ringState}
+              progress={progress}
             >
-              <MargoLogo tier="mark" size={22} />
-            </div>
+              <MargoLogo tier="mark" size={18} />
+            </LoadingRing>
           </div>
           <span
             style={{

@@ -1,0 +1,146 @@
+'use client'
+
+const font = 'var(--font-lora), serif'
+
+export interface ComposeSearchHit {
+  id: string
+  title: string
+  artist: string
+  artwork: string
+  source: 'margo' | 'genius' | 'apple'
+  margoSongId?: string
+  audioUrl?: string | null
+}
+
+function sourceLabel(s: ComposeSearchHit['source']) {
+  if (s === 'margo') return 'On Margo'
+  if (s === 'genius') return 'Genius'
+  return 'Apple Music'
+}
+
+interface ComposeSearchDropdownProps {
+  open: boolean
+  loading: boolean
+  results: ComposeSearchHit[]
+  onSelect: (result: ComposeSearchHit) => void
+  onClose: () => void
+}
+
+/**
+ * Inline song-search dropdown — anchored under the search field.
+ * Keyboard-safe maxHeight (dvh + --margo-vv-height), contained scroll,
+ * transparent outside-tap dismiss (no scrim).
+ */
+export function ComposeSearchDropdown({
+  open,
+  loading,
+  results,
+  onSelect,
+  onClose,
+}: ComposeSearchDropdownProps) {
+  if (!open) return null
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Dismiss search"
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 45,
+          border: 'none',
+          padding: 0,
+          margin: 0,
+          background: 'transparent',
+          cursor: 'default',
+        }}
+      />
+      <div
+        role="listbox"
+        aria-label="Song search results"
+        style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          marginTop: '8px',
+          zIndex: 50,
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '16px',
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          touchAction: 'pan-y',
+          WebkitOverflowScrolling: 'touch',
+          maxHeight: 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.42), 420px)',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.28)',
+        }}
+      >
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '16px', fontFamily: font, color: 'var(--gold)', fontSize: '0.82rem' }}>
+            Searching…
+          </div>
+        )}
+        {!loading && results.length === 0 && (
+          <p style={{ textAlign: 'center', padding: '20px', fontFamily: font, color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>
+            No songs found
+          </p>
+        )}
+        {results.map((result) => (
+          <button
+            key={result.source + '-' + result.id}
+            type="button"
+            role="option"
+            onClick={() => onSelect(result)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              padding: '14px 16px',
+              minHeight: 'var(--margo-touch-min)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              boxSizing: 'border-box',
+            }}
+          >
+            {result.artwork && (
+              <img
+                src={result.artwork}
+                alt=""
+                style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+              />
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontFamily: font, color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {result.title}
+              </p>
+              <p style={{ fontFamily: font, color: 'var(--text-secondary)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {result.artist}
+              </p>
+            </div>
+            <span
+              style={{
+                flexShrink: 0,
+                fontSize: '0.6rem',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                padding: '2px 8px',
+                borderRadius: '50px',
+                fontFamily: font,
+                color: result.source === 'margo' ? 'var(--gold)' : 'var(--text-muted)',
+                border: result.source === 'margo' ? '1px solid var(--gold-border)' : '1px solid var(--border)',
+              }}
+            >
+              {sourceLabel(result.source)}
+            </span>
+          </button>
+        ))}
+      </div>
+    </>
+  )
+}

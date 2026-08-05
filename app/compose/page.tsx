@@ -12,7 +12,7 @@ import { searchMargoSongs } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
 import { CardExportModal } from '@/components/card-export-modal'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
-import { ComposeSearchSheet } from '@/components/compose-search-sheet'
+import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -503,14 +503,20 @@ function ComposeInner() {
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Find your lyric</h1>
               <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Search by lyric, song, or artist</p>
             </div>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', zIndex: 50 }}>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={20} color="var(--text-disabled, var(--text-3))" /></span>
                 <input type="text" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search by lyric, song or artist..."
                   style={{ width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
               </div>
-
+              <ComposeSearchDropdown
+                open={showResults}
+                loading={searchLoading}
+                results={searchResults}
+                onSelect={handleSelectSong}
+                onClose={() => setShowResults(false)}
+              />
             </div>
           </div>
 
@@ -711,15 +717,6 @@ function ComposeInner() {
 
         </div>
       </div>
-
-
-      <ComposeSearchSheet
-        open={showResults && step === 1}
-        loading={searchLoading}
-        results={searchResults}
-        onSelect={handleSelectSong}
-        onClose={() => setShowResults(false)}
-      />
 
       {/* Sticky primary actions — VisualViewport pins above keyboard */}
       {showLinePicker && !linesLoading && margoLines.length === 0 && (

@@ -1,5 +1,7 @@
 'use client'
 
+import { ChevronUpIcon } from '@/components/icons/chevron-up-icon'
+
 const font = 'var(--font-lora), serif'
 
 interface NewItemsPillProps {
@@ -11,6 +13,7 @@ interface NewItemsPillProps {
 
 /**
  * Sticky "Show N …" control — X/Twitter timeline pattern, Margo tokens.
+ * Quiet badge language (matches Feed EarnedTag), not primary-CTA weight.
  * Shared by Feed and Discover; keep list buffering in useNewItemsBuffer.
  */
 export function NewItemsPill({ count, onReveal, noun = 'new lyrics' }: NewItemsPillProps) {
@@ -30,26 +33,28 @@ export function NewItemsPill({ count, onReveal, noun = 'new lyrics' }: NewItemsP
         transform: 'translateX(-50%)',
         zIndex: 45,
         minHeight: 'var(--margo-touch-min)',
-        padding: '0 18px',
+        padding: '0 16px',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '8px',
+        gap: '6px',
         boxSizing: 'border-box',
-        background: 'var(--gold)',
-        color: 'var(--text-on-gold, var(--bg))',
-        border: 'none',
+        /* Feed EarnedTag recipe: gold-tint fill, thin gold border, gold type — not solid CTA gold */
+        background: 'rgba(232,197,71,0.1)',
+        color: 'var(--gold)',
+        border: '1px solid var(--gold-border)',
         borderRadius: '50px',
         fontFamily: font,
         fontWeight: 700,
         fontSize: '0.6rem',
-        letterSpacing: '1px',
+        letterSpacing: '1.2px',
         textTransform: 'uppercase',
         cursor: 'pointer',
-        boxShadow: '0 8px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06)',
+        boxShadow: 'none',
         animation: 'fadeInUp 280ms var(--ease-out) both',
       }}
     >
+      <ChevronUpIcon size={14} color="var(--gold)" />
       {label}
     </button>
   )
