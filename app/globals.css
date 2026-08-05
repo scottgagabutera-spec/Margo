@@ -365,3 +365,26 @@ html, body {
   border-color: var(--gold-border) !important;
   outline: none;
 }
+
+@keyframes margo-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes margo-soft-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.88; transform: scale(1.07); }
+}
+
+.margo-spin {
+  animation: margo-spin 0.85s linear infinite;
+}
+.margo-soft-pulse {
+  animation: margo-soft-pulse 900ms var(--ease-out) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .margo-spin,
+  .margo-soft-pulse {
+    animation: none !important;
+  }
+}

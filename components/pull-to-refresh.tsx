@@ -12,14 +12,21 @@ interface PullToRefreshProps {
   children: ReactNode
   /** When false, gesture is disabled (e.g. offline modal open). Default true. */
   enabled?: boolean
+  /** Optional: parent can hide sibling UI (e.g. new-posts pill) while refreshing. */
+  onRefreshingChange?: (refreshing: boolean) => void
 }
 
 /**
  * Lightweight pull-to-refresh for primary scroll pages.
  * Touch-driven (does not rely on browser overscroll bounce).
- * Indicator uses brand mark + 44px touch-sized ring (Brand §15).
+ * Indicator uses brand mark + motion across pull / ready / refreshing.
  */
-export function PullToRefresh({ onRefresh, children, enabled = true }: PullToRefreshProps) {
+export function PullToRefresh({
+  onRefresh,
+  children,
+  enabled = true,
+  onRefreshingChange,
+}: PullToRefreshProps) {
   const [pull, setPull] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const startY = useRef(0)
@@ -27,7 +34,9 @@ export function PullToRefresh({ onRefresh, children, enabled = true }: PullToRef
   const pullRef = useRef(0)
   const refreshingRef = useRef(false)
   const onRefreshRef = useRef(onRefresh)
+  const onRefreshingChangeRef = useRef(onRefreshingChange)
   onRefreshRef.current = onRefresh
+  onRefreshingChangeRef.current = onRefreshingChange
 
   const atTop = useCallback(() => {
     if (typeof window === 'undefined') return false
@@ -79,6 +88,7 @@ export function PullToRefresh({ onRefresh, children, enabled = true }: PullToRef
       }
       refreshingRef.current = true
       setRefreshing(true)
+      onRefreshingChangeRef.current?.(true)
       pullRef.current = THRESHOLD
       setPull(THRESHOLD)
       try {
@@ -86,6 +96,7 @@ export function PullToRefresh({ onRefresh, children, enabled = true }: PullToRef
       } finally {
         refreshingRef.current = false
         setRefreshing(false)
+        onRefreshingChangeRef.current?.(false)
         pullRef.current = 0
         setPull(0)
       }
@@ -105,7 +116,12 @@ export function PullToRefresh({ onRefresh, children, enabled = true }: PullToRef
   }, [enabled, atTop])
 
   const progress = Math.min(1, pull / THRESHOLD)
-  const ready = pull >= THRESHOLD
+  const ready = pull >= THRESHOLD && !refreshing
+  const pullRotation = progress * 200
+
+  let markClass = ''
+  if (refreshing) markClass = 'margo-spin'
+  else if (ready) markClass = 'margo-soft-pulse'
 
   return (
     <>
@@ -133,8 +149,9 @@ export function PullToRefresh({ onRefresh, children, enabled = true }: PullToRef
             alignItems: 'center',
             gap: '8px',
             paddingBottom: '12px',
-            opacity: progress,
+            opacity: Math.max(progress, refreshing ? 1 : 0),
             transform: `scale(${0.75 + progress * 0.25}) translateY(${(1 - progress) * 8}px)`,
+            transition: refreshing ? 'opacity 150ms var(--ease-out)' : undefined,
           }}
         >
           <div
@@ -147,14 +164,25 @@ export function PullToRefresh({ onRefresh, children, enabled = true }: PullToRef
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              boxShadow: ready || refreshing ? '0 0 20px var(--gold-glow)' : 'none',
+              transition: 'background 150ms var(--ease-out), border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out)',
             }}
           >
-            <MargoLogo tier="mark" size={22} />
+            <div
+              className={markClass}
+              style={{
+                display: 'flex',
+                transform: refreshing || ready ? undefined : `rotate(${pullRotation}deg)`,
+                transition: ready ? 'transform 200ms var(--ease-out)' : undefined,
+              }}
+            >
+              <MargoLogo tier="mark" size={22} />
+            </div>
           </div>
           <span
             style={{
               fontFamily: font,
-              fontSize: '0.55rem',
+              fontSize: '0.6rem',
               letterSpacing: '1.5px',
               textTransform: 'uppercase',
               color: 'var(--gold)',

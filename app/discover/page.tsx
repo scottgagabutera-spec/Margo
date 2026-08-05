@@ -19,6 +19,8 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { supabase } from '@/lib/supabase'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { PullToRefresh } from '@/components/pull-to-refresh'
+import { NewItemsPill } from '@/components/new-items-pill'
+import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 
 function formatNum(n: number): string {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
@@ -799,7 +801,14 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
 // ── Main Page ────────────────────────────────────────────────────────
 export default function DiscoverPage() {
   const { songs, loading, refetch } = useSongs()
-  const { posts, reload: reloadPosts } = usePosts()
+  const { posts: livePosts, reload: reloadPosts } = usePosts()
+  const {
+    items: posts,
+    pendingCount,
+    flushPending,
+    applyImmediate,
+  } = useNewItemsBuffer(livePosts)
+  const [ptrBusy, setPtrBusy] = useState(false)
   const [preview, setPreview] = useState<Song | null>(null)
   const [search, setSearch] = useState('')
 
@@ -1004,8 +1013,17 @@ export default function DiscoverPage() {
   const isSearching = search.trim().length > 0
 
   return (
-    <PullToRefresh onRefresh={async () => { await Promise.all([refetch(), reloadPosts()]) }}>
+    <PullToRefresh
+      onRefreshingChange={setPtrBusy}
+      onRefresh={async () => {
+        const [, latest] = await Promise.all([refetch(), reloadPosts()])
+        applyImmediate(latest)
+      }}
+    >
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
+      {!ptrBusy && pendingCount > 0 && (
+        <NewItemsPill count={pendingCount} onReveal={flushPending} noun="new lyrics" />
+      )}
       <style>{`
         .row-scroll {
           display: flex; gap: 12px; overflow-x: auto;

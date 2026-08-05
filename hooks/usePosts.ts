@@ -111,7 +111,7 @@ export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<Post[]> => {
     const { data, error } = await supabase
       .from('posts')
       .select(POST_SELECT)
@@ -124,10 +124,12 @@ export function usePosts() {
       console.error('usePosts: failed to load posts', error)
       setPosts([])
       setLoading(false)
-      return
+      return []
     }
-    setPosts((data ?? []).map(mapRow))
+    const mapped = (data ?? []).map(mapRow)
+    setPosts(mapped)
     setLoading(false)
+    return mapped
   }, [])
 
   useEffect(() => {

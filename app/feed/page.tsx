@@ -34,6 +34,8 @@ import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { PullToRefresh } from '@/components/pull-to-refresh'
+import { NewItemsPill } from '@/components/new-items-pill'
+import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
 import { ArtistBadge } from '@/components/artist-badge'
 import { PostThumbnail } from '@/components/post-thumbnail'
@@ -601,7 +603,14 @@ function PostCard({
 }
 
 export default function FeedPage() {
-  const { posts, loading, reload } = usePosts()
+  const { posts: livePosts, loading, reload } = usePosts()
+  const {
+    items: posts,
+    pendingCount,
+    flushPending,
+    applyImmediate,
+  } = useNewItemsBuffer(livePosts)
+  const [ptrBusy, setPtrBusy] = useState(false)
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const [selectedVibe, setSelectedVibe] = useState('ALL')
@@ -810,8 +819,17 @@ export default function FeedPage() {
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   return (
-    <PullToRefresh onRefresh={async () => { await reload() }}>
+    <PullToRefresh
+      onRefreshingChange={setPtrBusy}
+      onRefresh={async () => {
+        const latest = await reload()
+        applyImmediate(latest)
+      }}
+    >
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
+      {!ptrBusy && pendingCount > 0 && (
+        <NewItemsPill count={pendingCount} onReveal={flushPending} noun="new lyrics" />
+      )}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         <div style={{ position: 'absolute', top: '-128px', left: '-128px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(80px)' }} />
         <div style={{ position: 'absolute', bottom: '-160px', right: '-160px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
