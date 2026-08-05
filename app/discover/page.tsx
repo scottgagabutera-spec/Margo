@@ -16,6 +16,8 @@ import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { supabase } from '@/lib/supabase'
+import { MargoSearchInput } from '@/components/margo-search-input'
+import { PullToRefresh } from '@/components/pull-to-refresh'
 
 function formatNum(n: number): string {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
@@ -792,8 +794,8 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
 
 // ── Main Page ────────────────────────────────────────────────────────
 export default function DiscoverPage() {
-  const { songs, loading } = useSongs()
-  const { posts } = usePosts()
+  const { songs, loading, refetch } = useSongs()
+  const { posts, reload: reloadPosts } = usePosts()
   const [preview, setPreview] = useState<Song | null>(null)
   const [search, setSearch] = useState('')
 
@@ -998,11 +1000,7 @@ export default function DiscoverPage() {
   const isSearching = search.trim().length > 0
 
   return (
-    // paddingTop reserves space for the fixed nav — same fix already
-    // applied in app/feed/page.tsx. Without this, the sticky search bar
-    // below (and everything under it, including the "Lyric Moments"
-    // title and the vibe-filter chip) can render underneath the fixed
-    // nav on load instead of below it.
+    <PullToRefresh onRefresh={async () => { await Promise.all([refetch(), reloadPosts()]) }}>
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
       <style>{`
         .row-scroll {
@@ -1090,25 +1088,12 @@ export default function DiscoverPage() {
           "Lyric Moments" title / vibe-filter chip below it) drift
           under the nav on load. */}
       <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 40px) 16px 16px' }}>
-        <div style={{ maxWidth: '72rem', margin: '0 auto', position: 'relative' }}>
-          <input
-            className="music-search"
-            type="text" value={search} onChange={e => setSearch(e.target.value)}
+        <div style={{ maxWidth: '72rem', margin: '0 auto' }}>
+          <MargoSearchInput
+            value={search}
+            onChange={setSearch}
             placeholder="Search lyrics, songs, artists…"
-            style={{
-              width: '100%', height: '44px', padding: '0 40px 0 16px',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '50px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
-              fontSize: '0.82rem', boxSizing: 'border-box', transition: 'border-color 200ms ease',
-            }}
           />
-          {search && (
-            <button aria-label="Clear search" onClick={() => setSearch('')} style={{
-              position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
-              width: '38px', height: '38px', borderRadius: '50%', background: 'none', border: 'none',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}><CloseIcon size={14} color="var(--text-3)" /></button>
-          )}
         </div>
       </div>
 
@@ -1165,5 +1150,6 @@ export default function DiscoverPage() {
         )}
       </div>
     </div>
+    </PullToRefresh>
   )
 }

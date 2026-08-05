@@ -32,6 +32,10 @@ import { UsernameTag } from '@/components/username-tag'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
+import { MargoSearchInput } from '@/components/margo-search-input'
+import { PullToRefresh } from '@/components/pull-to-refresh'
+import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
+import { ArtistBadge } from '@/components/artist-badge'
 
 const EMOTION_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -591,12 +595,13 @@ function PostCard({
 }
 
 export default function FeedPage() {
-  const { posts, loading } = usePosts()
+  const { posts, loading, reload } = usePosts()
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const [selectedVibe, setSelectedVibe] = useState('ALL')
   const [selectedSort, setSelectedSort] = useState('NEW')
   const [searchQuery, setSearchQuery] = useState('')
+  const [people, setPeople] = useState<ProfileSearchHit[]>([])
   const [resonated, setResonated] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -705,6 +710,17 @@ export default function FeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts, postStats])
 
+
+  useEffect(() => {
+    const q = searchQuery.trim()
+    if (q.length < 2) { setPeople([]); return }
+    const t = setTimeout(async () => {
+      const hits = await searchProfiles(supabase, q)
+      setPeople(hits)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [searchQuery])
+
   const filteredPosts = posts
     .filter(p => {
       const norm = normalizeEmotion(p.emotion || '')
@@ -716,7 +732,8 @@ export default function FeedPage() {
         (p.knowledge?.song || '').toLowerCase().includes(q) ||
         (p.knowledge?.artist || '').toLowerCase().includes(q) ||
         (p.emotion || '').toLowerCase().includes(q) ||
-        (p.username || '').toLowerCase().includes(q)
+        (p.username || '').toLowerCase().includes(q) ||
+        (p.authorDisplayName || '').toLowerCase().includes(q)
       )
     })
     .sort((a, b) => getScoreFor(b, selectedSort) - getScoreFor(a, selectedSort))
@@ -787,6 +804,7 @@ export default function FeedPage() {
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   return (
+    <PullToRefresh onRefresh={async () => { await reload() }}>
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         <div style={{ position: 'absolute', top: '-128px', left: '-128px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(80px)' }} />
@@ -806,31 +824,12 @@ export default function FeedPage() {
           so this can't drift out of sync again. */}
       <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 56px) 20px 0' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-          <div style={{ position: 'relative', paddingBottom: hasActiveFilter ? '10px' : '20px' }}>
-            <input
-              type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search lyrics, songs, artists, feelings..."
-              style={{
-                width: '100%', height: '36px', padding: '0 34px 0 12px',
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '9px', color: 'var(--text)', fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.7rem', outline: 'none', boxSizing: 'border-box',
-              }}
+          <div style={{ paddingBottom: hasActiveFilter ? '10px' : '20px' }}>
+            <MargoSearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search lyrics, songs, artists, people…"
             />
-            {searchQuery && (
-              <button
-                type="button"
-                aria-label="Clear search"
-                onClick={() => setSearchQuery('')}
-                style={{
-                position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: '38px', height: '38px', padding: 0,
-              }}>
-                <CloseIcon size={14} color="var(--text-3)" />
-              </button>
-            )}
           </div>
 
           {hasActiveFilter && (
@@ -875,7 +874,7 @@ export default function FeedPage() {
           </div>
         )}
 
-        {!loading && filteredPosts.length === 0 && (
+        {!loading && filteredPosts.length === 0 && !(searchQuery.trim() && people.length > 0) && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '1rem', marginBottom: '16px' }}>
               {searchQuery ? `No lyrics found for "${searchQuery}"` : `No ${selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet`}
@@ -886,6 +885,35 @@ export default function FeedPage() {
               fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
               letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
             }}>Be the first</Link>
+          </div>
+        )}
+
+
+        {searchQuery.trim() && people.length > 0 && (
+          <div style={{ marginBottom: '28px' }}>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '12px' }}>People</p>
+            {people.map(p => (
+              <Link key={p.id} href={`/profile/${p.username}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', textDecoration: 'none', borderBottom: '1px solid var(--border)', minHeight: 'var(--margo-touch-min)' }}>
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+                  background: p.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {p.avatarUrl ? (
+                    <img src={p.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', fontWeight: 700, color: 'var(--bg)' }}>
+                      {(p.displayName || p.username || '??').slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.9rem', margin: 0 }}>{p.displayName}</p>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.75rem', margin: 0 }}>@{p.username}</p>
+                </div>
+                {p.isArtist && <ArtistBadge isArtist artistStatus={p.artistStatus} size={12} />}
+              </Link>
+            ))}
           </div>
         )}
 
@@ -925,5 +953,6 @@ export default function FeedPage() {
         postId={exportPost?.id}
       />
     </div>
+    </PullToRefresh>
   )
 }

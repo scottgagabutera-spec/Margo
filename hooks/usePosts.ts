@@ -13,6 +13,7 @@ export interface Post {
   username?: string | null
   authorUid?: string | null
   authorAvatarUrl?: string | null
+  authorDisplayName?: string | null
   timestamp?: number
   resonates?: number
   replies?: number
@@ -59,7 +60,7 @@ const POST_SELECT = `
   created_at,
   snippet_start_sec,
   snippet_end_sec,
-  profiles:author_profile_id ( username, avatar_url ),
+  profiles:author_profile_id ( username, display_name, avatar_url ),
   post_stats ( resonate_count, echo_count ),
   songs:song_id ( audio_url )
 `
@@ -95,6 +96,7 @@ function mapRow(row: any): Post {
     username: profile?.username ?? row.legacy_author_label ?? null,
     authorUid: row.author_profile_id ?? null,
     authorAvatarUrl: profile?.avatar_url ?? null,
+    authorDisplayName: profile?.display_name ?? null,
     timestamp: row.created_at ? new Date(row.created_at).getTime() : undefined,
     resonates: stats?.resonate_count ?? 0,
     replies: stats?.echo_count ?? 0,
@@ -157,5 +159,5 @@ export function usePosts() {
     return posts.filter(p => !p.authorUid || visibleAuthorIds.has(p.authorUid))
   }, [posts, visibleAuthorIds])
 
-  return { posts: visiblePosts, loading }
+  return { posts: visiblePosts, loading, reload: load }
 }

@@ -531,6 +531,7 @@ function ComposeInner() {
                 onPick={(line) => {
                   setSnippetStart(line.startSec)
                   setSnippetEnd(line.endSec)
+                  setLyric((line.text || '').slice(0, 140))
                   setLinePickComplete(true)
                 }}
                 onSkip={() => {

@@ -354,3 +354,9 @@ html, body {
   background: var(--bg);
   overscroll-behavior-y: none;
 }
+
+.margo-search:focus,
+.margo-search:focus-visible {
+  border-color: var(--gold-border) !important;
+  outline: none;
+}
