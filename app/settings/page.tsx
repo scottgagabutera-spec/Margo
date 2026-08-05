@@ -441,7 +441,7 @@ export default function AccountSettingsPage() {
         {[
           { key: 'newFollower', label: 'New followers' },
           { key: 'newMessage', label: 'New messages' },
-          { key: 'lyricBack', label: 'Lyric backs on your posts' },
+          { key: 'lyricBack', label: 'Lyric Backs on your posts' },
           { key: 'resonate', label: 'Resonates on your posts' },
           { key: 'emailDigest', label: 'Weekly email digest' },
         ].map((row) => (
@@ -484,7 +484,7 @@ export default function AccountSettingsPage() {
               Private account
             </div>
             <div style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)' }}>
-              Only accepted followers see your full profile
+              Only accepted followers can see your lyrics
             </div>
           </div>
           <Toggle
@@ -530,7 +530,7 @@ export default function AccountSettingsPage() {
         <SectionLabel>Artist Status</SectionLabel>
         {profile.is_artist ? (
           <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--gold)' }}>
-            You are a verified Margo artist.
+            You are a Verified Artist.
           </p>
         ) : application ? (
           <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-2)' }}>

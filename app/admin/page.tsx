@@ -715,7 +715,7 @@ function MusicTab() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          {songs.length} song{songs.length !== 1 ? 's' : ''} · Live instantly on /music
+          {songs.length} song{songs.length !== 1 ? 's' : ''} · Live instantly on /discover
         </p>
         <button onClick={() => setEditingSong('new')} style={S.btn}>+ Add Song</button>
       </div>

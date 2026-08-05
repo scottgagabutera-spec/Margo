@@ -236,7 +236,7 @@ export default function EditProfilePage() {
             }}>
               <div>
                 <p style={{ fontFamily: font, fontSize: '1rem', color: 'var(--text)', marginBottom: '4px' }}>Private Profile</p>
-                <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)' }}>Only approved followers can see your posts.</p>
+                <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)' }}>Only approved followers can see your lyrics.</p>
               </div>
               <button
                 type="button"

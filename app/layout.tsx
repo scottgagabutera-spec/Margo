@@ -161,7 +161,7 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'MusicGroup',
               name: 'Trymargo',
-              url: 'https://trymargo.com/music',
+              url: 'https://trymargo.com/discover',
               image: 'https://trymargo.com/icon.svg',
               description:
                 'Trymargo is an original music artist. Listen on Spotify, Apple Music, Boomplay, YouTube and all major streaming platforms.',

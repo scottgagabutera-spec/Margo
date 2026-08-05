@@ -126,7 +126,7 @@ export default function StudioPage() {
             Your songs, straight to Margo.
           </h1>
           <p style={{ fontFamily: font, fontSize: '1rem', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: '32px' }}>
-            Apply as an artist to publish your own catalog — audio, artwork, and synced lyrics, live the moment you hit publish.
+            Apply as an artist to publish your own songs — audio, artwork, and synced lyrics, live the moment you hit publish.
           </p>
           <Link href="/apply-artist" style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -166,7 +166,7 @@ export default function StudioPage() {
           <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', lineHeight: 1.6, marginBottom: '24px' }}>
             {isRemoved
               ? "Your artist standing on Margo has been removed. If you think this is a mistake, reach out to us."
-              : "Your artist standing is on hold. Existing songs stay live, but new uploads are paused until this is resolved."}
+              : "Your artist standing is on hold. Your songs are hidden from public view while your account is under review, and new uploads are paused until this is resolved."}
           </p>
           <Link href={`/profile/${identity.username}`} style={{
             fontFamily: font, fontSize: '0.75rem', color: 'var(--gold)', textDecoration: 'none',
@@ -303,7 +303,7 @@ export default function StudioPage() {
             fontFamily: font, fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-3)',
             textAlign: 'center', marginTop: '16px',
           }}>
-            Nothing on your wall yet.
+            No songs yet — upload your first.
           </p>
         )}
       </div>

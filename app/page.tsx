@@ -441,8 +441,8 @@ export default function Home() {
         <h2 style={{fontFamily:'var(--font-lora),serif', fontSize:'1.5rem', fontWeight:600, color:'var(--text)', marginBottom:'12px'}}>
           There&apos;s more where that came from.
         </h2>
-        <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.9rem', color:'var(--text-2)', lineHeight:1.7}}>
-          Browse original songs from independent artists on Margo.
+        <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.9rem', lineHeight:1.7}}>
+          <a href="/discover" style={{color:'var(--gold)', textDecoration:'none'}}>Browse original songs from independent artists on Margo.</a>
         </p>
       </section>
 

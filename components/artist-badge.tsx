@@ -27,7 +27,7 @@ interface ArtistBadgeProps {
   isArtist: boolean
   artistStatus?: ArtistStatus
   size?: number
-  // When true, renders the full labeled pill ("Margo Artist") used on
+  // When true, renders the full labeled pill ("Verified Artist") used on
   // the profile page. When false (default), renders just the compact
   // seal icon — meant to sit inline next to a name in tight spaces
   // like Feed cards, the Artists grid, or lyric-back attribution.
@@ -42,7 +42,7 @@ function VerifiedSeal({ size }: { size: number }) {
       viewBox="0 0 24 24"
       fill="none"
       role="img"
-      aria-label="Verified Margo Artist"
+      aria-label="Verified Artist"
       style={{ flexShrink: 0 }}
     >
       <path
@@ -78,7 +78,7 @@ export function ArtistBadge({ isArtist, artistStatus, size = 14, label = false }
       }}
     >
       <VerifiedSeal size={size} />
-      Margo Artist
+      Verified Artist
     </span>
   )
 }

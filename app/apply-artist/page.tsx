@@ -43,7 +43,7 @@ export default function ApplyArtistPage() {
             Margo
           </p>
           <h1 style={{ fontFamily: font, fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400, marginBottom: '12px' }}>
-            You're a verified artist
+            You're a Verified Artist
           </h1>
           <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, marginBottom: '28px' }}>
             You can upload songs independently whenever you're ready.
