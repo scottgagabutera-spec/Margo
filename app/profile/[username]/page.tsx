@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { usePosts } from '@/hooks/usePosts'
+import { useOwnPrivatePosts } from '@/hooks/useOwnPrivatePosts'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
 
@@ -185,6 +186,13 @@ export default function ProfilePage() {
   const ownPosts = useMemo(
     () => profile ? posts.filter(p => p.authorUid === profile.id) : [],
     [posts, profile]
+  )
+
+  // Private lyrics: only fetched when the viewer owns this profile. RLS
+  // also blocks other users from selecting status=private rows.
+  const { posts: privatePosts } = useOwnPrivatePosts(
+    isOwnProfile && profile ? profile.id : null,
+    isOwnProfile
   )
 
   const canViewContent = !profile?.isPrivate || isOwnProfile || followStatus === 'accepted'
@@ -525,20 +533,26 @@ export default function ProfilePage() {
                   border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
                   textAlign: 'center',
                 }}>
-                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic', marginBottom: '4px' }}>
+                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '4px' }}>
                     This account is private.
                   </p>
-                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>
+                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                     Follow {profile.displayName} to see their lyrics.
                   </p>
                 </div>
               ) : ownPosts.length === 0 ? (
                 isOwnProfile ? (
-                  <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic', textDecoration: 'none' }}>
-                    Share your first lyric →
-                  </Link>
+                  privatePosts.length > 0 ? (
+                    <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      No public lyrics yet — your private ones are below.
+                    </p>
+                  ) : (
+                    <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
+                      Share your first lyric →
+                    </Link>
+                  )
                 ) : (
-                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                     Hasn&rsquo;t shared a lyric yet.
                   </p>
                 )
@@ -552,7 +566,7 @@ export default function ProfilePage() {
                         &ldquo;{post.text}&rdquo;
                       </p>
                       {(post.knowledge?.song || post.knowledge?.artist) && (
-                        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
                           {post.knowledge?.song}{post.knowledge?.song && post.knowledge?.artist ? ' · ' : ''}{post.knowledge?.artist}
                         </p>
                       )}
@@ -561,6 +575,38 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
+
+            {isOwnProfile && privatePosts.length > 0 && (
+              <div style={{ marginBottom: '28px' }}>
+                <p style={sectionLabelStyle}>Private</p>
+                <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.45 }}>
+                  Only you can see these — they stay off the Feed.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {privatePosts.map(post => (
+                    <div key={post.id} style={{
+                      border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '18px',
+                      background: 'var(--gold-faint)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
+                        <span style={{
+                          fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
+                          color: 'var(--gold)', letterSpacing: '1.5px', textTransform: 'uppercase',
+                        }}>Private</span>
+                      </div>
+                      <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '8px' }}>
+                        &ldquo;{post.text}&rdquo;
+                      </p>
+                      {(post.knowledge?.song || post.knowledge?.artist) && (
+                        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                          {post.knowledge?.song}{post.knowledge?.song && post.knowledge?.artist ? ' · ' : ''}{post.knowledge?.artist}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

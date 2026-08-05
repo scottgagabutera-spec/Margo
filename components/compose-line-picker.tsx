@@ -1,4 +1,5 @@
 'use client'
+import { ArrowLeftIcon } from '@/components/icons'
 
 export interface ComposeLyricLine {
   lineIndex: number
@@ -46,11 +47,11 @@ export function ComposeLinePicker({
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
           fontFamily: font, fontSize: '0.82rem',
-          color: 'var(--text-3)', letterSpacing: '0.5px',
+          color: 'var(--text-secondary)', letterSpacing: '0.5px',
           marginBottom: '32px', padding: '0 12px', minHeight: 'var(--margo-touch-min)',
-          display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+          display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
         }}
-      >← Back</button>
+      ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
 
       <div style={{ textAlign: 'center', marginBottom: '28px' }}>
         <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
@@ -96,6 +97,7 @@ export function ComposeLinePicker({
           style={{
             maxHeight: 'min(52vh, 420px)',
             overflowY: 'auto',
+            overscrollBehavior: 'contain',
             border: '1px solid var(--border)',
             borderRadius: '16px',
             background: 'var(--surface)',
@@ -125,7 +127,7 @@ export function ComposeLinePicker({
               <span
                 style={{
                   fontFamily: font,
-                  fontSize: '0.55rem',
+                  fontSize: '0.6rem',
                   color: 'var(--gold)',
                   letterSpacing: '0.5px',
                   flexShrink: 0,

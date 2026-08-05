@@ -132,13 +132,13 @@ export function AuthForm({ mode, onSuccess, onSwitchMode }: AuthFormProps) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div>
-          <label style={{ display: 'block', fontFamily: font, fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px' }}>Email</label>
+          <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px' }}>Email</label>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleEmailSubmit()}
             style={{ width: '100%', height: '44px', padding: '0 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'var(--text)', fontFamily: font, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} />
         </div>
         <div>
-          <label style={{ display: 'block', fontFamily: font, fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px' }}>Password</label>
+          <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px' }}>Password</label>
           <input type="password" value={password} onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleEmailSubmit()}
             style={{ width: '100%', height: '44px', padding: '0 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'var(--text)', fontFamily: font, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} />

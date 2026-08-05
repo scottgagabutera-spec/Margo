@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search } from 'lucide-react'
+import { ArrowLeftIcon, SearchIcon } from '@/components/icons'
 import { supabase } from '@/lib/supabase'
 import { matchLyricLine } from '@/lib/lyric-match'
 import { searchMargoSongs } from '@/lib/search-margo-songs'
@@ -51,9 +51,9 @@ const font = 'var(--font-lora), serif'
 const backBtnStyle: React.CSSProperties = {
   background: 'none', border: 'none', cursor: 'pointer',
   fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
-  color: 'var(--text-3)', letterSpacing: '0.5px',
+  color: 'var(--text-secondary, var(--text-2))', letterSpacing: '0.5px',
   marginBottom: '32px', padding: '0 12px', minHeight: 'var(--margo-touch-min)',
-  display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+  display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
   transition: 'color 150ms ease',
 }
 
@@ -112,7 +112,7 @@ function ComposeInner() {
   const [emotionLoading, setEmotionLoading] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [postedId, setPostedId] = useState<string | null>(null)
-  const [showSharePrompt, setShowSharePrompt] = useState(false)
+  const [completionMode, setCompletionMode] = useState<'public' | 'private' | null>(null)
   const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
   const [linkedAudioUrl, setLinkedAudioUrl] = useState<string | null>(null)
   // Exact snippet timing — either passed in directly from the player's
@@ -129,10 +129,24 @@ function ComposeInner() {
   const emotionAbortRef = useRef<AbortController | null>(null)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchGenRef = useRef(0)
+  const composeRootRef = useRef<HTMLElement | null>(null)
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
+
+  const resetComposeViewport = useCallback(() => {
+    if (typeof document !== 'undefined') {
+      const active = document.activeElement
+      if (active instanceof HTMLElement) active.blur()
+    }
+    if (typeof window !== 'undefined') window.scrollTo(0, 0)
+    composeRootRef.current?.scrollIntoView({ block: 'start' })
+  }, [])
+
+  useEffect(() => {
+    resetComposeViewport()
+  }, [step, linePickComplete, resetComposeViewport])
 
   const runSearch = useCallback(async (value: string) => {
     const gen = ++searchGenRef.current
@@ -322,13 +336,12 @@ function ComposeInner() {
   const handlePost = useCallback(async (isPrivate: boolean) => {
     if (!requireAuth()) return
     if (!lyric || !songName || !artistName) return
-    if (isPrivate) { setShowExport(true); return }
     if (!identity || !user) { setPostError('Still setting things up — try again in a moment.'); return }
 
     setPosting(true)
     setPostError(null)
 
-    // Confirmed via useIdentity.ts: IdentityUser sets both `id` and `uid`
+    // Confirmed via useIdentity.ts: IdentityUser sets both id and uid
     // to the same Supabase auth id (a deliberate compatibility shim), so
     // user.id is always correct here — no ambiguity after all.
     const authorId = user.id
@@ -353,7 +366,7 @@ function ComposeInner() {
         .insert({
           text: lyric,
           emotion: selectedVibe || null,
-          status: 'active',
+          status: isPrivate ? 'private' : 'active',
           flag_count: 0,
           song_id: linkedSongId || null,
           song_title: songName,
@@ -382,7 +395,8 @@ function ComposeInner() {
 
       // Moderation still runs entirely server-side via /api/moderate —
       // the client just fires the request with the real postId and
-      // doesn't need the response back.
+      // doesn't need the response back. Private posts still run through
+      // moderation for admin insight.
       fetch('/api/moderate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -390,13 +404,15 @@ function ComposeInner() {
       }).catch(() => {})
 
       setPosting(false)
-      setShowSharePrompt(true)
+      setCompletionMode(isPrivate ? 'private' : 'public')
+      resetComposeViewport()
     } catch (e) {
       console.error('Failed to post:', e)
       setPostError('Something went wrong. Please try again.')
       setPosting(false)
     }
-  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd])
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, linkedSongId, snippetStart, snippetEnd, resetComposeViewport])
+
 
   const resetCompose = () => {
     setStep(1)
@@ -408,7 +424,7 @@ function ComposeInner() {
     setSelectedVibe(null)
     setSuggestedVibe(null)
     setPostedId(null)
-    setShowSharePrompt(false)
+    setCompletionMode(null)
     setShowExport(false)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
@@ -422,39 +438,43 @@ function ComposeInner() {
     setBannerDismissed(false)
   }
 
-  if (showSharePrompt) {
+  if (completionMode) {
+    const isPrivateSave = completionMode === 'private'
     return (
-      <main style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', paddingTop: '80px' }}>
           <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--text)', marginBottom: '8px' }}>
-            Your lyric is live.
+            {isPrivateSave ? 'Saved privately.' : 'Your lyric is live.'}
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '32px', letterSpacing: '0.5px' }}>
-            Want to share it beyond Margo?
+          <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '32px', letterSpacing: '0.5px' }}>
+            {isPrivateSave ? 'Only you can see this — it stays off the Feed.' : 'Want to share it beyond Margo?'}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
             <button
-              onClick={() => { setShowExport(true); setShowSharePrompt(false) }}
+              onClick={() => { setShowExport(true) }}
               style={{
-                padding: '15px 28px', background: 'var(--gold)', color: 'var(--bg)',
+                padding: '15px 28px', background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
                 borderRadius: '50px', fontFamily: font, fontWeight: 700,
                 fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
                 border: 'none', cursor: 'pointer', boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
               }}
             >Share as Card</button>
             <button
-              onClick={() => router.push('/feed')}
+              onClick={() => router.push(isPrivateSave ? (identity?.username ? '/profile/' + identity.username : '/feed') : '/feed')}
               style={{
-                padding: '13px 28px', background: 'transparent', color: 'var(--text-3)',
-                border: '1px solid var(--border)', borderRadius: '50px', fontFamily: font,
+                padding: '13px 28px', background: 'transparent', color: 'var(--text-secondary, var(--text-2))',
+                border: '1px solid var(--border-hi)', borderRadius: '50px', fontFamily: font,
                 fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
               }}
-            >See it on the Feed</button>
+            >{isPrivateSave ? 'Back to your profile' : 'See it on the Feed'}</button>
           </div>
         </div>
         <CardExportModal
           open={showExport}
-          onOpenChange={(o) => { setShowExport(o); if (!o) router.push('/feed') }}
+          onOpenChange={(o) => {
+            setShowExport(o)
+            if (!o) router.push(isPrivateSave ? (identity?.username ? '/profile/' + identity.username : '/feed') : '/feed')
+          }}
           lyric={lyric} song={songName} artist={artistName} postId={postedId || undefined}
         />
       </main>
@@ -469,7 +489,7 @@ function ComposeInner() {
 
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
+    <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <div style={{ position: 'fixed', top: '25%', left: '25%', width: '384px', height: '384px', background: 'rgba(232,197,71,0.05)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
       <div style={{ position: 'fixed', bottom: '25%', right: '25%', width: '256px', height: '256px', background: 'rgba(232,197,71,0.08)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
@@ -484,13 +504,13 @@ function ComposeInner() {
             </div>
             <div style={{ position: 'relative' }}>
               <div style={{ position: 'relative' }}>
-                <Search style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: 'var(--text-3)' }} />
+                <span style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={20} color="var(--text-disabled, var(--text-3))" /></span>
                 <input type="text" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search by lyric, song or artist..."
                   style={{ width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
               </div>
               {showResults && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', zIndex: 50 }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflowY: 'auto', maxHeight: 'min(52vh, 420px)', overscrollBehavior: 'contain', zIndex: 50 }}>
                   {searchLoading && <div style={{ textAlign: 'center', padding: '16px', fontFamily: font, color: 'var(--gold)', fontSize: '0.82rem' }}>Searching…</div>}
                   {searchResults.map((result) => (
                     <button key={result.source + '-' + result.id} onClick={() => handleSelectSong(result)}
@@ -567,7 +587,7 @@ function ComposeInner() {
                     setSnippetStart(null)
                     setSnippetEnd(null)
                   }
-                }}>← Back</button>
+                }}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
                   <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Set the stage</h1>
                   <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Enter the lyric that moves you</p>
@@ -607,7 +627,7 @@ function ComposeInner() {
           {/* ── Step 3: Vibe Selection ── */}
           <div style={{ display: step === 3 ? 'block' : 'none' }}>
             {!emotionLoading && (
-              <button style={backBtnStyle} onClick={() => setStep(2)}>← Back</button>
+              <button style={backBtnStyle} onClick={() => setStep(2)}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             )}
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
@@ -679,7 +699,7 @@ function ComposeInner() {
 
           {/* ── Step 4: Preview + Post ── */}
           <div style={{ display: step === 4 ? 'block' : 'none' }}>
-            <button style={backBtnStyle} onClick={() => setStep(3)}>← Back</button>
+            <button style={backBtnStyle} onClick={() => setStep(3)}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Ready to share?</h1>
               <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Your lyric is set to go</p>

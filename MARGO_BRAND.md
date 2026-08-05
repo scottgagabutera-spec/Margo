@@ -68,7 +68,7 @@ Type scale:
 - 0.75rem 700                 — Nav links (uppercase, letter-spacing 2px)
 - 0.7rem 400                  — Timestamps, counts, usernames
 - 0.6rem 600                  — Labels, vibe tags, uppercase UI elements
-- MINIMUM: 0.6rem             — nothing smaller, ever
+- MINIMUM / TYPE FLOOR: 0.6rem — nothing smaller on user-facing UI, ever
 
 Logo font: Syne 800 — MARGO wordmark ONLY. Nothing else uses Syne.
 
@@ -82,16 +82,30 @@ Removed fonts (never bring back):
 All colors are CSS variables defined in app/globals.css.
 NEVER hardcode a color value anywhere — always use var(--name).
 
-Core:
+### Surfaces
 - --bg: #07060A (near-black, never pure black)
 - --surface: #0F0E13 (cards, sheets, modals)
 - --surface-2: #161420
 - --surface-3: #1E1B2A
 - --border: rgba(255,255,255,0.07)
 - --border-hi: rgba(255,255,255,0.12)
-- --text: #F4F1ED (warm white, not pure white)
-- --text-2: #9A98A4 (artist names, captions)
-- --text-3: #555360 (placeholders, disabled)
+
+### Text hierarchy (contrast-safe on --bg / --surface)
+- **--text** (#F4F1ED) — Primary copy, display names, lyrics, hero lines.
+- **--text-secondary** (#B8B6C0) — Interactive or meaningfully-read UI: @handles, secondary CTAs, action labels, timestamps users actually read, artist/caption lines when secondary to a title.
+- **--text-muted** (#8A8894) — Supporting meta that is visible but not primary (song labels under a lyric card, inactive helper text).
+- **--text-disabled** (#5C5A66) — Placeholders and disabled controls ONLY. Never for handles, CTAs, or body-secondary copy.
+- **--text-on-gold** (= `var(--bg)`) — Text on gold buttons / gold fills.
+
+**Rules:**
+1. Interactive or meaningfully-read UI must use `--text-secondary` or brighter. Never `--text-disabled`, and never raw white opacity below ~0.45 for that role.
+2. Type floor is **0.6rem** brand-wide (Section 3). Nothing smaller for user-facing labels.
+3. Prefer named text tokens over ad-hoc `rgba(255,255,255,…)` greys.
+
+**Deprecated aliases (one release):**
+- `--text-2` → resolves to `var(--text-secondary)`
+- `--text-3` → resolves to `var(--text-disabled)`
+New code must not introduce `--text-2` / `--text-3`. Migrate call sites to the named hierarchy above.
 
 Gold — The Margo Signature:
 - --gold: #E8C547 (logo, buttons, active states, resonate)
@@ -116,6 +130,41 @@ Emotion colors (Margo unique identity — never remove):
 
 ---
 
+## 4B. Icon System
+
+Single family for all product UI icons (tabs, feed actions, close/back/search).
+
+**Geometry**
+- ViewBox: 24×24
+- Stroke: 1.5
+- Caps / joins: round
+- Default: outline (stroke). Fill only for active/selected states (e.g. resonated heart, play triangle where filled is the glyph)
+
+**Source of truth:** `components/icons/*` exported from `components/icons/index.ts`.
+Do not introduce a second heart/search path with a different stroke. `components/heart-icon.tsx` is a thin adapter over the icons package for legacy `filled` prop call sites — prefer importing from `@/components/icons` in new code.
+
+**No Unicode as icons** — see Section 14 Rule 1. Back / Close / Play affordances use `ArrowLeftIcon`, `CloseIcon`, `PlayIcon` / `PlayPauseIcon`.
+
+**Semantic map**
+
+| Feature | Icon | Notes |
+|---------|------|--------|
+| Feed (tab) | House (inline tab SVG) | Primary home |
+| Discover (tab) | `CompassIcon` | Finding lyrics / artists / people — **not** a music note |
+| Compose (tab) | Plus in gold circle | Create |
+| Alerts (tab) | Bell | Notifications |
+| You (tab) | Person / avatar | Profile |
+| Resonate | `HeartIcon` / `HeartFilledIcon` | One heart family only |
+| Lyric Back | `LyricBackIcon` | Reply curve |
+| Card / share image | `CardIcon` | Export frame |
+| Search | `SearchIcon` | Do not use bare Lucide Search |
+| Music / playing chrome | `MusicNoteIcon` / `PlayPauseIcon` | Playback meaning only — not Discover tab |
+| Back | `ArrowLeftIcon` | Word label "Back" beside icon |
+| Close | `CloseIcon` | aria-label Close |
+
+**Compliance check for any new component:** Does it import from `@/components/icons` (or PlayPauseIcon / MargoLogo)? Stroke 1.5? Correct glyph for the job? No Unicode glyph standing in as an icon? If any answer is no, it fails this section.
+
+---
 ## 5. Spacing Scale
 
 4px, 8px, 12px, 16px, 24px, 32px, 48px, 64px, 88px, 120px
@@ -269,7 +318,7 @@ DON'T:
 
 ### Rule 1 — No Unicode or emoji as UI icons
 
-**Rule:** Never use Unicode characters (▶ ◀ ♪ × ✕ ♡ ♥ ↩ ↗ ← → ✦ ✓ ✗ ⚑ or any glyph) inside `<span>`, `<div>`, or `<button>` as a visual icon. Text labels may use words only ("Back", "Close", "Play Now"). Icons must be inline SVG components or approved shared components (`PlayPauseIcon`, `MargoLogo`, lucide icons where already established).
+**Rule:** Never use Unicode characters (▶ ◀ ♪ × ✕ ♡ ♥ ↩ ↗ ← → ✦ ✓ ✗ ⚑ or any glyph) inside `<span>`, `<div>`, or `<button>` as a visual icon. Text labels may use words only ("Back", "Close", "Play Now"). Icons must be inline SVG components from `components/icons` or approved shared components (`PlayPauseIcon`, `MargoLogo`). Do not add bare Lucide icons with a different stroke.
 
 **Standards:** PREMIUM · CONSISTENCY · UNIQUE FOR MARGO · MOBILE FIRST
 

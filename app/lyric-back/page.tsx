@@ -2,9 +2,10 @@
 
 import { useState, useCallback, useRef, Suspense } from 'react'
 import { toast } from 'sonner'
-import { Search } from 'lucide-react'
+import { SearchIcon } from '@/components/icons'
 import { CardExportModal } from '@/components/card-export-modal'
 import { HeartIcon } from '@/components/heart-icon'
+import { AuthorMeta } from '@/components/username-tag'
 import { supabase } from '@/lib/supabase'
 import { matchLyricLine } from '@/lib/lyric-match'
 import { useEchoes } from '@/hooks/useEchoes'
@@ -58,8 +59,8 @@ const gold       = 'var(--gold)'
 const surface    = 'var(--surface)'
 const border     = 'var(--border)'
 const text       = 'var(--text)'
-const text2      = 'var(--text-2)'
-const text3      = 'var(--text-3)'
+const text2      = 'var(--text-secondary)'
+const text3      = 'var(--text-secondary)'
 const bg         = 'var(--bg)'
 
 const vibeBtnStyle: React.CSSProperties = {
@@ -400,7 +401,7 @@ function LyricBackContent() {
             width: '60%', height: '1px',
             background: 'linear-gradient(to right, transparent, rgba(232,197,71,0.5), transparent)',
           }} />
-          <p style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 700, color: text3, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>
             Responding to
           </p>
           <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '10px' }}>
@@ -414,12 +415,17 @@ function LyricBackContent() {
             </p>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {respondingTo?.username && (
-              <span style={{ fontFamily: font, fontSize: '0.6rem', color: text3 }}>by {respondingTo.username}</span>
+            {respondingTo && (
+              <AuthorMeta
+                authorUid={respondingTo.authorUid}
+                fallbackName={respondingTo.username}
+                size="compact"
+                handlePrefix="by "
+              />
             )}
             {parentVibeLabel && (
               <span style={{
-                fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
                 letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
                 borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
                 color: EMOTION_COLORS[normalizeEmotion(respondingTo!.emotion!).toLowerCase()] || text3,
@@ -460,7 +466,7 @@ function LyricBackContent() {
               Find your lyric back
             </p>
             <div style={{ position: 'relative' }}>
-              <Search style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: 'var(--text-3)' }} />
+              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={15} color="var(--text-disabled)" /></span>
               <input
                 type="text"
                 value={searchQuery}
@@ -671,7 +677,7 @@ function LyricBackContent() {
             {selectedVibe && (
               <span style={{
                 display: 'inline-block', marginBottom: '20px',
-                fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
                 letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
                 borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
                 color: EMOTION_COLORS[normalizeEmotion(selectedVibe).toLowerCase()] || text3,
@@ -760,19 +766,21 @@ function LyricBackContent() {
                         background: 'linear-gradient(135deg, var(--gold), var(--gold-2))',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
-                        <span style={{ fontFamily: font, fontSize: '0.55rem', fontWeight: 700, color: bg }}>
+                        <span style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: bg }}>
                           {(lb.username || '??').slice(0, 2).toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <p style={{ fontFamily: font, fontSize: '0.82rem', fontWeight: 600, color: text, marginBottom: '1px' }}>
-                          {lb.username || 'Anonymous'}
-                        </p>
+                        <AuthorMeta
+                          authorUid={lb.authorUid}
+                          fallbackName={lb.username || 'Anonymous'}
+                          size="default"
+                        />
                       </div>
                     </div>
                     {lb.emotion && (
                       <span style={{
-                        fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                        fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
                         letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
                         borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
                         color: emotionColor,

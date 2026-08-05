@@ -9,6 +9,8 @@ export interface Echo {
   artist: string
   emotion: string
   username: string
+  displayName?: string
+  authorUid?: string
   timestamp: number
   resonates?: Record<string, boolean>
   status?: string
@@ -36,7 +38,7 @@ const ECHO_SELECT = `
   legacy_author_label,
   author_profile_id,
   created_at,
-  profiles:author_profile_id ( username ),
+  profiles:author_profile_id ( username, display_name ),
   post_resonates ( actor_id )
 `
 
@@ -53,6 +55,8 @@ function mapRow(row: any): Echo {
     artist: row.artist_name || '',
     emotion: row.emotion || '',
     username: profile?.username ?? row.legacy_author_label ?? 'Anonymous',
+    displayName: profile?.display_name ?? undefined,
+    authorUid: row.author_profile_id ?? undefined,
     timestamp: row.created_at ? new Date(row.created_at).getTime() : 0,
     resonates,
     status: row.status,
@@ -71,7 +75,7 @@ export function useEchoes(postId: string | null) {
       .from('posts')
       .select(ECHO_SELECT)
       .eq('parent_post_id', id)
-      .neq('status', 'hidden')
+      .not('status', 'in', '("hidden","private")')
       .order('created_at', { ascending: false })
 
     if (error) {

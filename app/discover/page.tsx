@@ -11,6 +11,7 @@ import type { Post } from '@/hooks/usePosts'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { HeartIcon } from '@/components/heart-icon'
 import { CloseIcon } from '@/components/icons'
+import { AuthorMeta } from '@/components/username-tag'
 import { SaveQueueButton } from '@/components/save-queue-button'
 import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine, togglePlayPause } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
@@ -212,8 +213,8 @@ function MomentCard({ moment, isPlaying, onClick, onPlay, onSelectVibe }: {
       }}>&ldquo;{moment.line}&rdquo;</p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ minWidth: 0 }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.songTitle}</p>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.songTitle}</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
         </div>
         <button onClick={onPlay} style={{
           width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
@@ -412,12 +413,15 @@ function ResonanceCard({ post, isPlaying, onPlay, onSelectVibe }: {
             </div>
           )}
           <div style={{ minWidth: 0 }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {post.knowledge?.song || 'Margo'}
             </p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>
-              @{post.username || 'listener'}
-            </p>
+            <AuthorMeta
+              authorUid={post.authorUid}
+              fallbackName={post.username || 'listener'}
+              linkProfile={false}
+              size="compact"
+            />
           </div>
         </div>
         {post.audioUrl && (
@@ -1038,9 +1042,9 @@ export default function DiscoverPage() {
               background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
               color: 'rgba(255,255,255,0.45)', cursor: 'pointer', display: 'flex',
               alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box',
-            }}><CloseIcon size={14} color="rgba(255,255,255,0.6)" /></button>
+            }}><CloseIcon size={14} color="var(--text-secondary)" /></button>
 
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '18px' }}>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '18px' }}>
               {takeover.label} · auto-continues
             </p>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', color: 'var(--text)', lineHeight: 1.45, marginBottom: '14px' }}>

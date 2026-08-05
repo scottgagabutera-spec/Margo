@@ -1,4 +1,5 @@
 'use client'
+import { ArrowLeftIcon, MusicNoteIcon, PlayIcon } from '@/components/icons'
 
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
@@ -274,10 +275,11 @@ export default function SongPage() {
       {/* Header */}
       <header style={{ position: 'fixed', top: '8px', left: 0, right: 0, zIndex: 40, padding: '16px 24px' }}>
         <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/discover" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text)', textDecoration: 'none', opacity: 0.75, letterSpacing: '0.5px' }}>← Discover</Link>
+          <Link href="/discover" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text)', textDecoration: 'none', opacity: 0.75, letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <ArrowLeftIcon size={16} color="currentColor" /> Discover</Link>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{song?.title || '—'}</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>{song?.artist || '—'}</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0 }}>{song?.artist || '—'}</p>
           </div>
           <div style={{ width: '60px' }} />
         </div>
@@ -353,11 +355,11 @@ export default function SongPage() {
           {/* Song ended label */}
           {songEnded ? (
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '3px', textTransform: 'uppercase', margin: 0, marginBottom: '4px' }}>Song ended</p>
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '3px', textTransform: 'uppercase', margin: 0, marginBottom: '4px' }}>Song ended</p>
               <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', margin: 0, opacity: 0.8 }}>{endedTitle}</p>
             </div>
           ) : (
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', margin: 0, marginBottom: '16px', opacity: 0.85, textAlign: 'center' }}>Up Next</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', margin: 0, marginBottom: '16px', opacity: 0.85, textAlign: 'center' }}>Up Next</p>
           )}
 
           {/* Song cards */}
@@ -373,7 +375,7 @@ export default function SongPage() {
                   {s.artwork
                     ? <Image src={s.artwork} alt={s.title} fill style={{ objectFit: 'cover' }} />
                     : <div style={{ width: '100%', height: '100%', background: 'rgba(232,197,71,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ color: 'var(--gold)', fontSize: '1rem', opacity: 0.5 }}>♪</span>
+                        <MusicNoteIcon size={16} color="var(--gold)" />
                       </div>
                   }
                 </div>
@@ -381,7 +383,7 @@ export default function SongPage() {
                   <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: i === 0 ? '0.95rem' : '0.82rem', fontWeight: 600, color: i === 0 ? 'var(--text)' : 'rgba(255,255,255,0.6)', margin: 0, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</p>
                   <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-3)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.artist}</p>
                 </div>
-                <div style={{ width: i === 0 ? '32px' : '26px', height: i === 0 ? '32px' : '26px', borderRadius: '50%', background: i === 0 ? 'var(--gold)' : 'rgba(255,255,255,0.06)', border: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === 0 ? '0.65rem' : '0.55rem', color: i === 0 ? 'var(--bg)' : 'rgba(255,255,255,0.4)', flexShrink: 0 }}>▶</div>
+                <div style={{ width: i === 0 ? '32px' : '26px', height: i === 0 ? '32px' : '26px', borderRadius: '50%', background: i === 0 ? 'var(--gold)' : 'rgba(255,255,255,0.06)', border: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === 0 ? '0.65rem' : '0.55rem', color: i === 0 ? 'var(--bg)' : 'rgba(255,255,255,0.4)', flexShrink: 0 }}></div>
               </button>
             )) : (
               <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.88rem', textAlign: 'center', padding: '12px 0' }}>No more songs available</p>
@@ -399,7 +401,7 @@ export default function SongPage() {
           </div>
 
           {songEnded && primaryNext && (
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: '12px', letterSpacing: '1px' }}>Playing next automatically…</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '12px', letterSpacing: '1px' }}>Playing next automatically…</p>
           )}
         </div>
       )}

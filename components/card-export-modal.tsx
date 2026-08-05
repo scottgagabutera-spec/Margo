@@ -1,4 +1,5 @@
 'use client'
+import { CloseIcon } from '@/components/icons'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 
@@ -482,13 +483,15 @@ export function CardExportModal({
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '2px', textTransform: 'uppercase' }}>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase' }}>
             {isDualCard ? 'Lyric Back Card' : 'Share Card'}
           </p>
           <button
+            type="button"
+            aria-label="Close"
             onClick={() => onOpenChange(false)}
-            style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >×</button>
+            style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+          ><CloseIcon size={14} color="var(--text-secondary)" /></button>
         </div>
 
         {/* Canvas preview — scrollable so full card is reachable */}
@@ -501,7 +504,7 @@ export function CardExportModal({
 
         {/* Theme row */}
         <div style={{ padding: '16px 20px 0' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '10px' }}>Theme</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '10px' }}>Theme</p>
           <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
             {THEMES.map(t => (
               <button
@@ -526,7 +529,7 @@ export function CardExportModal({
 
         {/* Shape row */}
         <div style={{ padding: '14px 20px 0' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '10px' }}>Shape</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '10px' }}>Shape</p>
           <div style={{ display: 'flex', gap: '8px' }}>
             {SHAPES.map(s => (
               <button
@@ -541,7 +544,7 @@ export function CardExportModal({
                 }}
               >
                 <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: shape === s.id ? '#E8C547' : 'rgba(255,255,255,0.5)', marginBottom: '2px' }}>{s.label}</span>
-                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', color: 'rgba(255,255,255,0.25)' }}>{s.ratio}</span>
+                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)' }}>{s.ratio}</span>
               </button>
             ))}
           </div>

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
+import { CompassIcon } from '@/components/icons'
 
 const font = 'var(--font-lora), serif'
 
@@ -49,11 +50,11 @@ export function MobileTabBar() {
     minHeight: 'var(--margo-touch-min)',
     justifySelf: 'center',
     position: 'relative',
-    color: active ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
+    color: active ? 'var(--gold)' : 'var(--text-muted)',
   })
 
   const labelStyle: React.CSSProperties = {
-    fontFamily: font, fontSize: '0.55rem', fontWeight: 600,
+    fontFamily: font, fontSize: '0.6rem', fontWeight: 600,
     letterSpacing: '0.5px', textTransform: 'uppercase',
   }
 
@@ -75,9 +76,7 @@ export function MobileTabBar() {
       </Link>
 
       <Link href="/discover" style={tabStyle(isOnDiscover)}>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <path d="M8 15a2 2 0 1 1-2-2 2 2 0 0 1 2 2Zm8-2a2 2 0 1 1-2-2 2 2 0 0 1 2 2ZM8 15V4l8-1v10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        <CompassIcon size={20} color="currentColor" />
         <span style={labelStyle}>Discover</span>
         {isMusicActive && !isOnDiscover && (
           <span style={{

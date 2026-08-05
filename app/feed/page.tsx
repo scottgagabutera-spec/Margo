@@ -36,6 +36,7 @@ import { MargoSearchInput } from '@/components/margo-search-input'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
 import { ArtistBadge } from '@/components/artist-badge'
+import { PostThumbnail } from '@/components/post-thumbnail'
 
 const EMOTION_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -492,7 +493,12 @@ function PostCard({
           style={{ display: 'block', marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none' }}
         >
           <div style={{ position: 'relative' }}>
-            <img src={post.youtubeMeta?.thumbnail || post.knowledge?.artwork || ''} alt="" style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }} />
+            <PostThumbnail
+              youtubeThumbnail={post.youtubeMeta?.thumbnail}
+              artwork={post.knowledge?.artwork}
+              alt=""
+              style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }}
+            />
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ShareIcon size={16} color="var(--bg)" />
@@ -511,14 +517,14 @@ function PostCard({
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
           background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
           minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
-          color: resonated ? 'var(--gold)' : 'var(--text-2)',
+          color: resonated ? 'var(--gold)' : 'var(--text-secondary)',
           transition: 'color 150ms ease',
         }}>
           {resonated
             ? <HeartFilledIcon size={18} color="var(--gold)" />
-            : <HeartIcon size={18} color="var(--text-2)" />
+            : <HeartIcon size={18} color="var(--text-secondary)" />
           }
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
             {resonateCount > 0 ? resonateCount + ' ' : ''}Resonate
           </span>
         </button>
@@ -528,11 +534,11 @@ function PostCard({
           aria-label="Lyric Back"
           style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          color: 'var(--text-2)', textDecoration: 'none', padding: '8px 12px',
+          color: 'var(--text-secondary)', textDecoration: 'none', padding: '8px 12px',
           minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
           transition: 'color 150ms ease',
         }}>
-          <LyricBackIcon size={18} color="var(--text-2)" />
+          <LyricBackIcon size={18} color="var(--text-secondary)" />
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>{echoCount > 0 ? echoCount + ' ' : ''}Lyric Back</span>
         </Link>
 
@@ -544,9 +550,9 @@ function PostCard({
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
           background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
           minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
-          color: 'var(--text-2)', transition: 'color 150ms ease',
+          color: 'var(--text-secondary)', transition: 'color 150ms ease',
         }}>
-          <CardIcon size={18} color="var(--text-2)" />
+          <CardIcon size={18} color="var(--text-secondary)" />
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Card</span>
         </button>
 
@@ -909,7 +915,7 @@ export default function FeedPage() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.9rem', margin: 0 }}>{p.displayName}</p>
-                  <p style={{ color: 'var(--text-3)', fontSize: '0.75rem', margin: 0 }}>@{p.username}</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', margin: 0 }}>@{p.username}</p>
                 </div>
                 {p.isArtist && <ArtistBadge isArtist artistStatus={p.artistStatus} size={12} />}
               </Link>

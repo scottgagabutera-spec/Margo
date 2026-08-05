@@ -18,6 +18,11 @@ interface Echo {
   id: string; lyric?: string; song?: string; artist?: string
   username?: string; emotion?: string; timestamp?: number; status?: string
 }
+interface CatalogPost {
+  id: string; text: string; emotion: string | null; status: string
+  song: string | null; artist: string | null; username: string | null
+  displayName?: string | null
+}
 
 interface Song {
   id: string; title: string; artist: string; order?: number; status?: string
@@ -145,6 +150,10 @@ function PostsTab() {
   const [playBackfillStatus, setPlayBackfillStatus] = useState<string | null>(null)
   const [playBackfillRunning, setPlayBackfillRunning] = useState(false)
   const [postFilter, setPostFilter] = useState<'all' | 'active' | 'hidden'>('active')
+  const [catalogPosts, setCatalogPosts] = useState<CatalogPost[]>([])
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState<string | null>(null)
+  const [catalogFilter, setCatalogFilter] = useState<'all' | 'active' | 'private' | 'hidden'>('all')
 
   const loadEchoes = async (postId: string) => {
     if (!db) return
@@ -241,6 +250,42 @@ function PostsTab() {
     return () => { unsub(); unsub2() }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    async function loadCatalog() {
+      if (!auth?.currentUser) {
+        if (!cancelled) {
+          setCatalogError('Not signed in')
+          setCatalogLoading(false)
+        }
+        return
+      }
+      setCatalogLoading(true)
+      setCatalogError(null)
+      try {
+        const token = await auth.currentUser.getIdToken()
+        const res = await fetch('/api/admin/catalog-posts', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}))
+          throw new Error(body.error || `HTTP ${res.status}`)
+        }
+        const data = await res.json()
+        if (!cancelled) setCatalogPosts(data.posts || [])
+      } catch (e: any) {
+        if (!cancelled) {
+          setCatalogError(e.message || 'Failed to load catalog')
+          setCatalogPosts([])
+        }
+      } finally {
+        if (!cancelled) setCatalogLoading(false)
+      }
+    }
+    loadCatalog()
+    return () => { cancelled = true }
+  }, [])
+
   const runResonateBackfill = async () => {
     if (!db || resonateBackfillRunning) return
     setResonateBackfillRunning(true)
@@ -302,6 +347,13 @@ function PostsTab() {
       (p.username || '').toLowerCase().includes(q)
   })
 
+  const filteredCatalog = catalogPosts.filter(p => {
+    if (catalogFilter === 'active' && p.status !== 'active') return false
+    if (catalogFilter === 'private' && p.status !== 'private') return false
+    if (catalogFilter === 'hidden' && p.status !== 'hidden') return false
+    return true
+  })
+
   const totalPosts = posts.filter(p => p.status !== 'hidden').length
   const totalViews = Object.values(analytics).reduce((s, a) => s + (a.views || 0), 0)
   const totalResonates = Object.values(analytics).reduce((s, a) => s + Object.keys(a.resonates || {}).length, 0)
@@ -337,6 +389,69 @@ function PostsTab() {
             padding: '4px 12px',
           }}>{f}</button>
         ))}
+      </div>
+
+      {/* Supabase Catalog (read-only) */}
+      <div style={{ marginBottom: '24px' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px' }}>
+          Supabase Catalog (read-only)
+        </p>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginBottom: '12px', lineHeight: 1.5 }}>
+          Includes private posts for product insight — not shown on the public feed.
+        </p>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          {(['all', 'active', 'private', 'hidden'] as const).map(f => (
+            <button key={f} onClick={() => setCatalogFilter(f)} style={{
+              ...S.ghostBtn,
+              fontFamily: 'var(--font-lora), serif',
+              fontSize: '0.6rem',
+              textTransform: 'uppercase',
+              letterSpacing: '1.5px',
+              borderBottom: catalogFilter === f ? '1px solid var(--gold)' : '1px solid transparent',
+              color: catalogFilter === f ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
+              borderRadius: 0,
+              padding: '4px 12px',
+            }}>{f}</button>
+          ))}
+        </div>
+        {catalogLoading ? (
+          <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '24px' }}>Loading catalog…</p>
+        ) : catalogError ? (
+          <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.75rem', padding: '12px 0' }}>{catalogError}</p>
+        ) : filteredCatalog.length === 0 ? (
+          <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', padding: '12px 0' }}>No posts match this filter.</p>
+        ) : (
+          filteredCatalog.map(post => {
+            const status = post.status || 'active'
+            const isPrivate = status === 'private'
+            const isHidden = status === 'hidden'
+            const author = post.displayName || post.username || 'anon'
+            return (
+              <div key={post.id} style={{ ...S.card, opacity: isHidden ? 0.45 : 1, marginBottom: '10px' }}>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '6px', lineHeight: 1.4 }}>
+                  &ldquo;{post.text.slice(0, 120)}{post.text.length > 120 ? '…' : ''}&rdquo;
+                </p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                  {[post.song, post.artist, author].filter(Boolean).join(' · ')}
+                </p>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '1.5px',
+                    color: isPrivate ? 'var(--gold)' : isHidden ? '#ff6060' : 'rgba(255,255,255,0.4)',
+                    border: `1px solid ${isPrivate ? 'var(--gold)' : isHidden ? 'rgba(255,96,96,0.4)' : 'rgba(255,255,255,0.15)'}`,
+                    borderRadius: '6px', padding: '2px 8px',
+                  }}>{status}</span>
+                  {post.emotion && (
+                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      {post.emotion}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        )}
       </div>
 
       {/* Backfill tools */}
