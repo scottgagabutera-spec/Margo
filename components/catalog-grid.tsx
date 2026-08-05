@@ -4,13 +4,16 @@
  * CatalogGrid — the shared "browse everything" layout.
  *
  * Owns: sticky search bar, optional sort pills, optional extra filter row
- * (e.g. vibe chips), loading skeleton, empty state, and the responsive
- * card grid itself.
+ * (e.g. vibe chips), an optional topContent slot for page-specific header
+ * content (e.g. an artist's avatar/name/back-button on a discography
+ * subpage), loading skeleton, empty state, and the responsive card grid
+ * itself.
  *
  * Does NOT own: what the cards look like, or how items are sorted/fetched
- * — that's the page's job. This keeps Songs and Artists from having to
- * rebuild the same frame twice, while staying free to render completely
- * different card designs inside it.
+ * — that's the page's job. This keeps Songs, Artists, and per-artist
+ * discography pages from each rebuilding the same frame, while staying
+ * free to render completely different card designs and header content
+ * inside it.
  */
 
 import React, { useMemo, useState } from 'react'
@@ -35,6 +38,13 @@ interface CatalogGridProps<T> {
   onSortChange?: (value: string) => void
   // Extra filter UI rendered below the sort pills — e.g. vibe chips.
   extraFilters?: React.ReactNode
+  // Page-specific header content rendered above the search bar, inside
+  // the same sticky/nav-offset container — e.g. a back button plus an
+  // artist's avatar/name/badge on a per-artist discography page. Kept
+  // inside CatalogGrid's own wrapper (rather than the page rendering it
+  // as a separate sibling above CatalogGrid) so the nav-height offset
+  // and sticky behavior stay correct without doubling up padding.
+  topContent?: React.ReactNode
   emptyMessage?: string
   // Grid column minimum width in px — 160 fits Song-style square cards,
   // Artists pages typically want something smaller (e.g. 110).
@@ -53,6 +63,7 @@ export function CatalogGrid<T>({
   activeSort,
   onSortChange,
   extraFilters,
+  topContent,
   emptyMessage = 'Nothing here yet.',
   minCardWidth = 160,
   skeletonCount = 10,
@@ -78,6 +89,8 @@ export function CatalogGrid<T>({
           so this page doesn't drift under the fixed nav on load. */}
       <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 40px) 16px 16px' }}>
         <div style={{ maxWidth: '72rem', margin: '0 auto' }}>
+          {topContent}
+
           <div style={{ position: 'relative', marginBottom: sortOptions?.length || extraFilters ? '14px' : 0 }}>
             <input
               className="catalog-search"

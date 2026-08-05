@@ -11,6 +11,12 @@ import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-ca
 
 const font = 'var(--font-lora), serif'
 
+// How many songs show in the profile's own preview row before someone
+// needs to click through to the full discography page. Kept small and
+// horizontally scrollable on purpose — this is a taste, not the whole
+// catalog; the full list lives at /profile/[username]/songs.
+const DISCOGRAPHY_PREVIEW_COUNT = 8
+
 const sectionLabelStyle: React.CSSProperties = {
   fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)',
   textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px',
@@ -55,10 +61,10 @@ export default function ProfilePage() {
   const [followBusy, setFollowBusy] = useState(false)
 
   // ── Discography — public, live-only catalog for this profile, if
-  // they're an artist. Deliberately a separate, simpler query than
-  // Studio's own (which includes draft/processing/hidden and is
-  // owner-only) — this is what a fan or stranger should see: finished
-  // work only, nothing in progress. ──────────────────────────────────
+  // they're an artist. Only the total count + a small preview slice are
+  // used on this page; the full browsable list lives at its own route
+  // (/profile/[username]/songs) so this page never has to render every
+  // song inline. ──────────────────────────────────────────────────────
   const [artistSongs, setArtistSongs] = useState<ArtistSongRow[]>([])
   const [artistSongsLoading, setArtistSongsLoading] = useState(false)
   const [artistStats, setArtistStats] = useState({ totalPlays: 0, totalResonates: 0 })
@@ -239,6 +245,11 @@ export default function ProfilePage() {
 
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
+      <style>{`
+        .discog-row { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 4px; }
+        .discog-row::-webkit-scrollbar { display: none; }
+      `}</style>
+
       {loading && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '160px 0' }}>
           {[0, 1, 2].map(i => (
@@ -348,13 +359,25 @@ export default function ProfilePage() {
               <ArtistBadge isArtist={profile.isArtist} artistStatus={profile.artistStatus} size={13} label />
             </div>
 
-            <div style={{ display: 'flex', gap: '20px', marginBottom: isOwnProfile ? '16px' : '20px' }}>
+            {/* Stats row — Songs added as a third, clickable stat matching
+                the same visual weight as followers/following, instead of
+                the full catalog being dumped inline further down. Only
+                shown for artists. */}
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: isOwnProfile ? '16px' : '20px' }}>
               <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
                 <strong style={{ color: 'var(--text)' }}>{followerCount ?? '—'}</strong> followers
               </span>
               <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
                 <strong style={{ color: 'var(--text)' }}>{followingCount ?? '—'}</strong> following
               </span>
+              {profile.isArtist && (
+                <Link
+                  href={`/profile/${profile.username}/songs`}
+                  style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)', textDecoration: 'none' }}
+                >
+                  <strong style={{ color: 'var(--text)' }}>{artistSongsLoading ? '—' : artistSongs.length}</strong> songs
+                </Link>
+              )}
             </div>
 
             {isOwnProfile && (
@@ -430,27 +453,40 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* ── Discography — only rendered for artists. Live songs
-                only (never draft/processing/hidden — those stay private
-                to Studio). Stats line gives an at-a-glance sense of
-                reach; grid reuses the exact same card as the Songs
-                catalog page so a song looks identical wherever it's
-                encountered. ── */}
+            {/* ── Discography preview — a taste, not the whole catalog.
+                Capped at DISCOGRAPHY_PREVIEW_COUNT and horizontally
+                scrollable (same row pattern Discover already uses for
+                Songs/Moments), so this section takes up roughly one
+                row's height regardless of how many songs an artist has.
+                "View all" and the Songs stat above both go to the same
+                full discography page. ── */}
             {profile.isArtist && (
               <div style={{ marginBottom: '28px' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
-                  <p style={{ ...sectionLabelStyle, marginBottom: 0 }}>Discography</p>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '14px' }}>
+                  <div>
+                    <p style={{ ...sectionLabelStyle, marginBottom: '2px' }}>Discography</p>
+                    {artistSongs.length > 0 && (
+                      <p style={{ fontFamily: font, fontSize: '0.62rem', color: 'var(--text-3)', margin: 0 }}>
+                        {artistStats.totalPlays.toLocaleString()} plays · {artistStats.totalResonates.toLocaleString()} resonates
+                      </p>
+                    )}
+                  </div>
                   {artistSongs.length > 0 && (
-                    <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '0.5px' }}>
-                      {artistStats.totalPlays.toLocaleString()} plays · {artistStats.totalResonates.toLocaleString()} resonates
-                    </span>
+                    <Link
+                      href={`/profile/${profile.username}/songs`}
+                      style={{
+                        fontFamily: font, fontSize: '0.56rem', fontWeight: 700,
+                        letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gold)',
+                        textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap',
+                      }}
+                    >View all →</Link>
                   )}
                 </div>
 
                 {artistSongsLoading ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '14px' }}>
+                  <div className="discog-row">
                     {Array(4).fill(null).map((_, i) => (
-                      <div key={i} style={{ aspectRatio: '1', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }} />
+                      <div key={i} style={{ flexShrink: 0, width: '130px', aspectRatio: '1', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }} />
                     ))}
                   </div>
                 ) : artistSongs.length === 0 ? (
@@ -462,8 +498,8 @@ export default function ProfilePage() {
                     )}
                   </p>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '14px' }}>
-                    {artistSongs.map(song => {
+                  <div className="discog-row">
+                    {artistSongs.slice(0, DISCOGRAPHY_PREVIEW_COUNT).map(song => {
                       const cardData: SongCardData = {
                         id: song.id,
                         title: song.title,
@@ -471,7 +507,11 @@ export default function ProfilePage() {
                         artwork: song.artwork_url,
                         status: song.status,
                       }
-                      return <SongCatalogCard key={song.id} song={cardData} />
+                      return (
+                        <div key={song.id} style={{ flexShrink: 0, width: '130px', scrollSnapAlign: 'start' }}>
+                          <SongCatalogCard song={cardData} />
+                        </div>
+                      )
                     })}
                   </div>
                 )}
