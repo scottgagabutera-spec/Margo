@@ -16,7 +16,7 @@
   --text-muted: #8A8894;
   --text-disabled: #5C5A66;
   --text-on-gold: var(--bg);
-  /* Deprecated aliases (one release) — prefer --text-secondary / --text-disabled */
+  /* Deprecated aliases — keep as safety net only; new code must use named tokens (see MARGO_BRAND.md §4) */
   --text-2: var(--text-secondary);
   --text-3: var(--text-disabled);
   --gold: #E8C547;

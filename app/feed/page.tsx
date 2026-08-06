@@ -261,16 +261,16 @@ function Tier1Player({ audioUrl, songId, postText }: {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)' }}>{fmt(currentTime)}</span>
-            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)' }}>{duration > 0 ? fmt(duration) : '--:--'}</span>
+            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)' }}>{fmt(currentTime)}</span>
+            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)' }}>{duration > 0 ? fmt(duration) : '--:--'}</span>
           </div>
         </div>
       </div>
 
       {playing && (
         <div style={{ minHeight: '32px', padding: '8px 12px', background: 'rgba(232,197,71,0.06)', borderRadius: '8px', borderLeft: '2px solid var(--gold)', transition: 'all 200ms ease' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: currentLine ? 'var(--gold)' : 'var(--text-3)', lineHeight: 1.4, margin: 0, transition: 'color 200ms ease', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {currentLine ? currentLine.line : <MusicNoteIcon size={14} color="var(--text-3)" />}
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: currentLine ? 'var(--gold)' : 'var(--text-muted)', lineHeight: 1.4, margin: 0, transition: 'color 200ms ease', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {currentLine ? currentLine.line : <MusicNoteIcon size={14} color="var(--text-muted)" />}
           </p>
         </div>
       )}
@@ -316,7 +316,7 @@ function PostCard({
   const authorProfile = useAuthorProfile(post.authorUid || null)
   const viewedRef = useRef(false)
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
-  const color = EMOTION_COLORS[emotion] || 'var(--text-3)'
+  const color = EMOTION_COLORS[emotion] || 'var(--text-disabled)'
   const label = VIBE_LABELS[emotion] || post.emotion || ''
   const isTier1 = !!post.audioUrl
   const audioUrl = post.audioUrl || null
@@ -428,7 +428,7 @@ function PostCard({
               style={{
                 width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                color: 'var(--text-3)', cursor: 'pointer', display: 'flex',
+                color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
               }}
             >
@@ -900,12 +900,12 @@ export default function FeedPage() {
 
         {!loading && filteredPosts.length === 0 && !(searchQuery.trim() && people.length > 0) && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '1rem', marginBottom: '16px' }}>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {searchQuery ? `No lyrics found for "${searchQuery}"` : `No ${selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet`}
             </p>
             <Link href="/compose" style={{
               padding: '10px 24px', border: '1px solid var(--border)',
-              borderRadius: '50px', color: 'var(--text-3)',
+              borderRadius: '50px', color: 'var(--text-secondary)',
               fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
               letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
             }}>Be the first</Link>
@@ -963,7 +963,7 @@ export default function FeedPage() {
         {!loading && filteredPosts.length > 0 && (
           <div style={{ textAlign: 'center', marginTop: '48px' }}>
             <div style={{ height: '1px', width: '96px', background: 'linear-gradient(to right, transparent, var(--border), transparent)', margin: '0 auto 16px' }} />
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-3)' }}>you&apos;ve felt them all</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-muted)' }}>you&apos;ve felt them all</p>
           </div>
         )}
       </main>
