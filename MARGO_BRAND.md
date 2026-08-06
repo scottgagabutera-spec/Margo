@@ -1,5 +1,5 @@
 # MARGO — Brand Identity & Design System
-*Version 4.0 — May 2026 — Living document, update with every design decision*
+*Version 4.3 — August 2026 — Living document, update with every design decision*
 
 ---
 
@@ -70,6 +70,8 @@ Type scale:
 - 0.6rem 600                  — Labels, vibe tags, uppercase UI elements
 - MINIMUM / TYPE FLOOR: 0.6rem — nothing smaller on user-facing UI, ever
 
+> **Note:** this floor applies to decorative/meta text (labels, tags, timestamps). Interactive control text (buttons, tappable labels) is governed by Section 14 Rule 3 as refined by Section 15 — see those sections; this scale does not override them.
+
 Logo font: Syne 800 — MARGO wordmark ONLY. Nothing else uses Syne.
 
 Removed fonts (never bring back):
@@ -93,19 +95,20 @@ NEVER hardcode a color value anywhere — always use var(--name).
 ### Text hierarchy (contrast-safe on --bg / --surface)
 - **--text** (#F4F1ED) — Primary copy, display names, lyrics, hero lines.
 - **--text-secondary** (#B8B6C0) — Interactive or meaningfully-read UI: @handles, secondary CTAs, action labels, timestamps users actually read, artist/caption lines when secondary to a title.
-- **--text-muted** (#8A8894) — Supporting meta that is visible but not primary (song labels under a lyric card, inactive helper text).
-- **--text-disabled** (#5C5A66) — Placeholders and disabled controls ONLY. Never for handles, CTAs, or body-secondary copy.
+- **--text-muted** (#8A8894) — Supporting meta that is visible but not primary (song labels under a lyric card, inactive helper text, status labels like "Coming Soon").
+- **--text-disabled** (#5C5A66) — Placeholders, disabled controls, and decorative fallback chrome (e.g. an icon's fallback color when no meaningful value applies) ONLY. Never for handles, CTAs, or body-secondary copy.
 - **--text-on-gold** (= `var(--bg)`) — Text on gold buttons / gold fills.
 
 **Rules:**
 1. Interactive or meaningfully-read UI must use `--text-secondary` or brighter. Never `--text-disabled`, and never raw white opacity below ~0.45 for that role.
-2. Type floor is **0.6rem** brand-wide (Section 3). Nothing smaller for user-facing labels.
+2. Type floor is **0.6rem** brand-wide for decorative/meta text (Section 3). Interactive control text follows Section 14 Rule 3 / Section 15.
 3. Prefer named text tokens over ad-hoc `rgba(255,255,255,…)` greys.
 
-**Deprecated aliases (one release):**
-- `--text-2` → resolves to `var(--text-secondary)`
-- `--text-3` → resolves to `var(--text-disabled)`
-New code must not introduce `--text-2` / `--text-3`. Migrate call sites to the named hierarchy above.
+**Deprecated aliases — status:**
+- `--text-2` → resolves to `var(--text-secondary)`. No remaining call sites in `app/` or `components/` as of the `feat/fix-text-3-contrast` migration; alias kept in `globals.css` only for safety.
+- `--text-3` → resolves to `var(--text-disabled)`. Migration (`feat/fix-text-3-contrast`) reclassified every product call site in `app/` + `components/` into `--text-secondary`, `--text-muted`, or an explicit `--text-disabled` reference. As of that migration, `--text-3` itself is no longer directly referenced in product code — alias retained in `globals.css` only as a safety net for any missed or future stragglers.
+- New code must not introduce `--text-2` / `--text-3`. Use the named hierarchy above directly.
+- Out of scope for that migration (unchanged, tracked separately): legacy `assets/css/*`, root `index.html`, `public/*.html` — confirmed dead/unserved, folded into a future "remove pre-Next residue" cleanup; `app/admin/page.tsx`'s raw `rgba()` usage — tracked as a later opacity-token batch, not a `--text-3` case.
 
 Gold — The Margo Signature:
 - --gold: #E8C547 (logo, buttons, active states, resonate)
@@ -141,7 +144,7 @@ Single family for all product UI icons (tabs, feed actions, close/back/search).
 - Default: outline (stroke). Fill only for active/selected states (e.g. resonated heart, play triangle where filled is the glyph)
 
 **Source of truth:** `components/icons/*` exported from `components/icons/index.ts`.
-Do not introduce a second heart/search path with a different stroke. `components/heart-icon.tsx` is a thin adapter over the icons package for legacy `filled` prop call sites — prefer importing from `@/components/icons` in new code.
+Do not introduce a second heart/search path with a different stroke. `components/heart-icon.tsx` is a thin adapter over the icons package for legacy `filled` prop call sites — prefer importing from `@/components/icons` in new code (see Section 13, which follows this guidance).
 
 **No Unicode as icons** — see Section 14 Rule 1. Back / Close / Play affordances use `ArrowLeftIcon`, `CloseIcon`, `PlayIcon` / `PlayPauseIcon`.
 
@@ -203,8 +206,10 @@ Never use arbitrary values outside this scale.
 
 ## 9. Navigation System
 
+### Marketing / desktop header nav
+
 Desktop (640px+):
-  [Logo left] ............ [Feed] [Music] [Share a Lyric] [≡]
+  [Logo left] ............ [Feed] [Discover] [Share a Lyric] [≡]
 
 Mobile (<640px):
   [Logo left] ............ [+ gold circle] [≡]
@@ -214,13 +219,27 @@ Hamburger opens full-page overlay:
   - Large italic Lora links centered
   - Staggered fade-in animation
   - Gold dot on active page
-  - Links: Feed, Music, Share a Lyric, About, Contact
+  - Links: Feed, Discover, Share a Lyric, About, Contact
 
 Active page indicator: gold underline bar (18px wide, 2px tall) below nav link.
+
+### Primary in-app tab bar
+
+This is distinct from the marketing header above — it's the persistent bottom tab bar used across the logged-in product. Icons and order are defined in Section 4B's semantic map:
+
+1. **Feed** — House icon — primary home
+2. **Discover** — `CompassIcon` — finding lyrics / artists / people
+3. **Compose** — Plus in gold circle — create
+4. **Alerts** — Bell — notifications
+5. **You** — Person / avatar — profile
+
+`music` as a standalone nav destination is retired — `app/music/page.tsx` exists only as a permanent redirect to `/discover` for old links, and is not a live nav target. Do not add new nav references to "Music"; use "Discover."
 
 ---
 
 ## 10. Button System
+
+> **Font size on interactive text:** all tiers below use Section 3's decorative type scale (0.6–0.7rem) for button copy. This is the correct, current pattern — not stale. Section 14 Rule 3's ≥1rem minimum is refined by Section 15's permanent design rule: CTA emphasis comes from color, contrast, weight, and gold, not larger type, and the **touch target** (not the font) is what must grow to ≥44px. Follow the sizing below; grow `minWidth`/`minHeight`/padding, not `fontSize`, to hit the touch-target minimum.
 
 ### Tier 1 — Primary CTA
 One per screen. The unmissable action.
@@ -229,19 +248,23 @@ One per screen. The unmissable action.
 - Padding: 14px 24px — Border-radius: 50px — Min-height: 48px
 
 ### Tier 2 — Secondary Action
-- Background: var(--surface-2) — Color: var(--text-2)
+- Background: var(--surface-2) — Color: var(--text-secondary)
 - Border: 1px solid var(--border)
 - Font: Lora 600, 0.6rem, uppercase
 - Padding: 11px 16px — Border-radius: 50px
 
 ### Tier 3 — Inline Feed Action (pill)
 - Background: rgba(255,255,255,0.05)
+- Color: var(--text-secondary)
 - Border: 1px solid rgba(255,255,255,0.10)
 - Font: Lora 600, 0.6rem, uppercase, letter-spacing 1px
 - Padding: 6px 14px — Border-radius: 50px — Min touch: 44px
 
+### Tier 4 — *(reserved, not yet specified)*
+No pattern currently defined for this tier. If a new button style is needed that doesn't fit Tiers 1–3 or 5, define it here rather than improvising ad hoc — don't skip straight to Tier 5.
+
 ### Tier 5 — Ghost/Dismiss
-- Background: rgba(255,255,255,0.05) — Color: var(--text-3)
+- Background: rgba(255,255,255,0.05) — Color: var(--text-disabled)
 - Size: 32x32px visual, border-radius 50%, 44x44px touch target
 
 Rules for ALL tiers:
@@ -292,17 +315,18 @@ DO:
 - Update this document before merging any design changes
 - Use components/MargoLogo.tsx for all logo instances
 - Use components/play-pause-icon.tsx for all play/pause buttons
-- Use components/heart-icon.tsx for all heart/resonate icons
+- Import heart/resonate icons from `@/components/icons` (Section 4B) — `components/heart-icon.tsx` is a legacy adapter, not the preferred source for new code
 - Never use unicode, emoji, or text glyphs as visual elements anywhere in the app
 
 DON'T:
 - Hardcode any color
 - Use any font other than Lora and Syne
 - Add a new color without updating this document
-- Go below 0.6rem font size
+- Go below the type floor for decorative text, or below Section 14 Rule 3 / Section 15 for interactive text
 - Create touch targets smaller than 44px
 - Animate layout properties (width, height, top, left)
 - Use emoji for play/pause — always use PlayPauseIcon component
+- Introduce `--text-2` or `--text-3` in new code (Section 4)
 
 ---
 
@@ -337,7 +361,7 @@ DON'T:
 <Link>▶ Play Now</Link>
 ```
 
-**Audit evidence:**
+**Audit evidence (original May 2026 audit — status per-file tracked in migration branches, not here):**
 | File | Line | Violation |
 |------|------|-----------|
 | `app/feed/page.tsx` | 274, 381, 636 | ♪ placeholder, ▶ tier-2 overlay, × clear |
@@ -401,6 +425,8 @@ color: srtStatus.startsWith('✓') ? '#4ade80' : '#ff6060'
 
 **Rule:** Any tappable control label, button text, nav link, vibe pill, search field, or feed action caption must be **≥ `1rem` (16px)**. Metadata only (timestamps, legal fine print, disabled hints) may go to `0.875rem` (14px) minimum — never below. Section 3 type scale `0.6rem` labels are **deprecated for interactive UI**; update components to meet this rule, not the old minimum.
 
+> **Refined by Section 15:** in practice, this rule is enforced via **touch-target size**, not font size, for short CTA/pill labels. See Section 15's permanent design rule and Pattern 2 — decorative and CTA-style short labels may stay at Section 3 scale (0.6–0.7rem) as long as the tappable container meets 44×44px. Rule 3 as originally written still governs longer-form interactive body copy (e.g. paragraph-length links, form field text) where small type genuinely harms legibility.
+
 **Standards:** MOBILE FIRST · PREMIUM · GIANTS WAY · USER EXPERIENCE · CONSISTENCY
 
 **Correct:**
@@ -416,7 +442,7 @@ color: srtStatus.startsWith('✓') ? '#4ade80' : '#ff6060'
 <input style={{ fontSize: '0.75rem' }} />
 ```
 
-**Audit evidence (systemic — each file has dozens):**
+**Audit evidence (historical — largely superseded by Section 15's touch-target pattern; treat as resolved where a `--margo-touch-min` container wraps the label, not as an open violation list):**
 | File | Example lines | Sizes found |
 |------|---------------|-------------|
 | `app/feed/page.tsx` | 401, 597–604, 610–617, 629 | `0.5rem`–`0.75rem` on buttons/inputs |
@@ -567,7 +593,7 @@ onMouseLeave={() => setHover(null)}
 
 ### Rule 12 — Centralize emotion colors and export themes
 
-**Rule:** `EMOTION_COLORS` and card-export palette definitions live in **one** module imported by feed, compose, lyric-back, landing, mini-player. Canvas export may use computed values from tokens, not a second hex copy per file.
+**Rule:** `EMOTION_COLORS` and card-export palette definitions live in **one** module imported by feed, compose, lyric-back, landing, mini-player. Canvas export may use computed values from tokens, not a second hex copy per file. The fallback color for an unmapped emotion (e.g. `EMOTION_COLORS[emotion] || ...`) should resolve to `var(--text-disabled)`, not a hardcoded hex or an ad hoc `--text-3` reference.
 
 **Standards:** LONG TERM · APP READY · CONSISTENCY
 
@@ -627,7 +653,8 @@ onMouseLeave={() => setHover(null)}
 
 - [ ] No Unicode/emoji used as icons in changed files
 - [ ] No new `#hex` or duplicated `EMOTION_COLORS` in TSX
-- [ ] Interactive text ≥ `1rem`; touch targets ≥ 44px
+- [ ] No new `--text-2` / `--text-3` references (Section 4)
+- [ ] Interactive text meets Section 14 Rule 3 as refined by Section 15; touch targets ≥ 44px
 - [ ] Play/pause uses `PlayPauseIcon` only
 - [ ] Audio uses in-DOM element + Media Session wired to real playback
 - [ ] No `accentColor` sliders or `<audio controls>`
@@ -642,7 +669,7 @@ onMouseLeave={() => setHover(null)}
 
 **Ten standards enforced by this section:** MOBILE FIRST · USER EXPERIENCE · PREMIUM · APP READY · CONSISTENCY · VERY LOGICAL · GIANTS WAY
 
-**Cross-reference:** Section 14 Rule 8 (hover-only) and Rule 9 (backdrop-filter) are enforced here with concrete tokens and CSS patterns.
+**Cross-reference:** Section 14 Rule 3 (interactive text size) is refined here — see the permanent design rule immediately below. Rule 8 (hover-only) and Rule 9 (backdrop-filter) are enforced here with concrete tokens and CSS patterns.
 
 ---
 
@@ -654,7 +681,7 @@ Small type on **decorative** UI (vibe pills, action labels, badges, metadata, up
 - **Touch targets** on interactive controls must still be ≥ 44×44px via container `minWidth` / `minHeight` / padding (`var(--margo-touch-min)`), with **text size unchanged**.
 - **Interactive** = receives tap/click (buttons, links, pills, scrubbers, nav icons). **Decorative** = label inside a tappable row, timestamp, count, badge copy, artist metadata — keep scale from Section 3; only fix unreadable contrast, not size.
 
-This rule **refines** Section 14 Rule 3 for Margo: Rule 3 targets illegible interactive captions; decorative `0.6rem`–`0.7rem` labels inside 44px containers remain valid.
+This rule **refines** Section 14 Rule 3 for Margo: Rule 3 targets illegible interactive captions (longer-form body-style interactive text); decorative and short-CTA `0.6rem`–`0.7rem` labels inside 44px containers remain valid — this includes Section 10's button tiers.
 
 ---
 
@@ -723,7 +750,7 @@ bottom: 'var(--margo-player-viewport-bottom)';
   minWidth: 'var(--margo-touch-min)',
   minHeight: 'var(--margo-touch-min)',
   padding: '0 14px',
-  fontSize: '0.6rem', /* aesthetic unchanged */
+  fontSize: '0.6rem', /* aesthetic unchanged — see Section 10 note + Section 15 permanent design rule */
   boxSizing: 'border-box',
   display: 'inline-flex',
   alignItems: 'center',
@@ -851,4 +878,12 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ---
 
-*Last updated: May 2026 — Version 4.2 (Section 15 Mobile Responsiveness Rules — Patterns 1–4 sprint)*
+## Changelog
+
+- **4.3 (Aug 2026):** Fixed version-number mismatch (header now matches footer). Finalized `--text-2`/`--text-3` deprecation status per `feat/fix-text-3-contrast` migration — no remaining product call sites. Resolved Section 10/Section 4 contradiction (Tier 2/5 button colors now reference named tokens, not deprecated aliases). Added missing Tier 4 placeholder in Section 10. Resolved the three-way conflict between Section 10 button font sizes, Section 14 Rule 3, and Section 15's permanent design rule — added explicit cross-references so Rule 3 alone doesn't read as contradicting Section 10/15. Updated Section 9 nav references from "Music" to "Discover"; documented the in-app bottom tab bar (previously undefined in Section 9, only implied by Section 4B). Aligned Section 13's heart-icon guidance with Section 4B (prefer `@/components/icons`, `heart-icon.tsx` is legacy). Documented "Coming Soon" pill and emotion-fallback-color resolutions from the `--text-3` classification decisions.
+- **4.2 (May 2026):** Added Section 15 Mobile Responsiveness Rules (Patterns 1–4).
+- **4.0 (May 2026):** Added Section 4B Icon System, Section 14 Permanent Enforcement Rules from full codebase audit.
+
+---
+
+*Last updated: August 2026 — Version 4.3*
