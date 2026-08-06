@@ -501,11 +501,11 @@ function ComposeInner() {
           <div style={{ display: step === 1 ? 'block' : 'none' }}>
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Find your lyric</h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Search by lyric, song, or artist</p>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Search by lyric, song, or artist</p>
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
               <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={20} color="var(--text-disabled, var(--text-3))" /></span>
+                <span style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={20} color="var(--text-disabled)" /></span>
                 <input type="text" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search by lyric, song or artist..."
                   style={{ width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
@@ -571,16 +571,16 @@ function ComposeInner() {
                 }}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
                   <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Set the stage</h1>
-                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Enter the lyric that moves you</p>
+                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Enter the lyric that moves you</p>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                   <div>
-                    <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Artist</label>
+                    <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Artist</label>
                     <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
                       style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Song</label>
+                    <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Song</label>
                     <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
                       style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
                   </div>
@@ -612,14 +612,14 @@ function ComposeInner() {
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
                 {emotionLoading ? 'Reading the room…' : 'How does it feel?'}
               </h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                 {emotionLoading ? 'Finding the right vibe for your lyric' : suggestedVibe ? 'We sensed something — confirm or change it' : 'Pick the vibe that fits'}
               </p>
             </div>
 
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '24px', marginBottom: '24px', textAlign: 'center' }}>
               <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.25rem', color: 'var(--text)', marginBottom: '8px' }}>&ldquo;{lyric}&rdquo;</p>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>— {artistName}, {songName}</p>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>— {artistName}, {songName}</p>
             </div>
 
             {emotionLoading && (
@@ -662,13 +662,13 @@ function ComposeInner() {
             <button style={backBtnStyle} onClick={() => setStep(3)}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Ready to share?</h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>Your lyric is set to go</p>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Your lyric is set to go</p>
             </div>
 
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', marginBottom: '24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '256px', height: '128px', background: 'rgba(232,197,71,0.1)', filter: 'blur(40px)', pointerEvents: 'none' }} />
               <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--gold)', marginBottom: '16px', position: 'relative', zIndex: 1 }}>&ldquo;{lyric}&rdquo;</p>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', marginBottom: '16px', position: 'relative', zIndex: 1 }}>— {artistName}, {songName}</p>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '16px', position: 'relative', zIndex: 1 }}>— {artistName}, {songName}</p>
               {selectedVibe && (
                 <span style={{ display: 'inline-block', padding: '6px 16px', background: 'rgba(232,197,71,0.15)', border: '1px solid var(--gold-border)', borderRadius: '50px', fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase', position: 'relative', zIndex: 1 }}>{VIBE_LABELS[selectedVibe]}</span>
               )}
@@ -682,7 +682,7 @@ function ComposeInner() {
                     <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text)', marginBottom: '4px' }}>
                       You'll post as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
                     </p>
-                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '16px', lineHeight: 1.5 }}>
+                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
                       We gave you this name — it's yours on Margo. You can change how it's shown anytime.
                     </p>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -694,14 +694,14 @@ function ComposeInner() {
                   </>
                 ) : (
                   <>
-                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-3)', marginBottom: '12px' }}>Choose how your name appears on posts.</p>
+                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Choose how your name appears on posts.</p>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value.slice(0, 30))} maxLength={30} autoFocus
                         style={{ flex: 1, height: '44px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, fontSize: '0.9rem', outline: 'none' }} />
                       <button onClick={async () => { if (nameInput.trim()) { await updateDisplayName(nameInput); setEditingName(false); setBannerDismissed(true) } }} disabled={!nameInput.trim()}
                         style={{ padding: '0 20px', height: '44px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '12px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer', opacity: nameInput.trim() ? 1 : 0.4 }}>Confirm</button>
                       <button onClick={() => setEditingName(false)}
-                        style={{ padding: '0 16px', height: '44px', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: '12px', fontFamily: font, fontSize: '0.6rem', cursor: 'pointer' }}>Cancel</button>
+                        style={{ padding: '0 16px', height: '44px', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '12px', fontFamily: font, fontSize: '0.6rem', cursor: 'pointer' }}>Cancel</button>
                     </div>
                   </>
                 )}
