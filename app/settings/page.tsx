@@ -49,7 +49,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
         fontWeight: 700,
         letterSpacing: '2px',
         textTransform: 'uppercase',
-        color: 'var(--text-3)',
+        color: 'var(--text-muted)',
         marginBottom: '12px',
       }}
     >
@@ -344,7 +344,7 @@ export default function AccountSettingsPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--text-3)', fontFamily: font }}>
+      <div style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
         Loading your settings.
       </div>
     )
@@ -352,7 +352,7 @@ export default function AccountSettingsPage() {
 
   if (!profile) {
     return (
-      <div style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--text-3)', fontFamily: font }}>
+      <div style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
         Sign in to view account settings.
       </div>
     )
@@ -483,7 +483,7 @@ export default function AccountSettingsPage() {
             <div style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)' }}>
               Private account
             </div>
-            <div style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)' }}>
+            <div style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
               Only accepted followers can see your lyrics
             </div>
           </div>
@@ -557,7 +557,7 @@ export default function AccountSettingsPage() {
           <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)', marginBottom: 4 }}>
             {profile.deactivated_at ? 'Your account is hidden' : 'Hide your account'}
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: 16 }}>
+          <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
             {profile.deactivated_at
               ? 'Your profile is not visible to others. Bring it back anytime.'
               : 'Your profile becomes invisible to everyone but you. Reversible anytime.'}
@@ -571,7 +571,7 @@ export default function AccountSettingsPage() {
           <p style={{ fontFamily: font, fontSize: '0.9rem', color: '#ff6060', marginBottom: 4 }}>
             Delete your account
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', marginBottom: 16 }}>
+          <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
             This permanently removes your profile, messages, and follows. It cannot be undone.
           </p>
           <input

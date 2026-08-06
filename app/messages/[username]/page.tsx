@@ -36,12 +36,12 @@ export default function ThreadPage() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-3)', marginBottom: '16px' }}>
+          <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '16px' }}>
             Sign in to send messages
           </p>
           <Link href="/signin" style={{
             padding: '10px 24px', border: '1px solid var(--border)', borderRadius: '50px',
-            color: 'var(--text-3)', fontFamily: font, fontSize: '0.6rem',
+            color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
             letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
           }}>Sign In</Link>
         </div>
@@ -60,7 +60,7 @@ export default function ThreadPage() {
           type="button"
           onClick={() => router.push('/messages')}
           aria-label="Back to messages"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-3)' }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)' }}
         >
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
             <path d="M12 4l-6 6 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -109,7 +109,7 @@ export default function ThreadPage() {
                   <p style={{ fontFamily: font, fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>{m.body}</p>
                   <p style={{
                     fontFamily: font, fontSize: '0.55rem', margin: '4px 0 0',
-                    color: mine ? 'rgba(11,11,11,0.55)' : 'var(--text-3)',
+                    color: mine ? 'rgba(11,11,11,0.55)' : 'var(--text-muted)',
                   }}>{timeLabel(m.createdAt)}</p>
                 </div>
               </div>
@@ -125,7 +125,7 @@ export default function ThreadPage() {
       }}>
         <div style={{ maxWidth: '560px', margin: '0 auto' }}>
           {!canSend ? (
-            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem', color: 'var(--text-3)', textAlign: 'center' }}>
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
               {partner ? `${partner.displayName} isn't accepting messages right now` : ''}
             </p>
           ) : (

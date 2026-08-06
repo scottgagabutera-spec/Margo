@@ -34,9 +34,9 @@ function PlusIcon() {
 function PauseCircleIcon() {
   return (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="10" stroke="var(--text-3)" strokeWidth="1.5" />
-      <rect x="9" y="8" width="2" height="8" rx="1" fill="var(--text-3)" />
-      <rect x="13" y="8" width="2" height="8" rx="1" fill="var(--text-3)" />
+      <circle cx="12" cy="12" r="10" stroke="var(--text-muted)" strokeWidth="1.5" />
+      <rect x="9" y="8" width="2" height="8" rx="1" fill="var(--text-muted)" />
+      <rect x="13" y="8" width="2" height="8" rx="1" fill="var(--text-muted)" />
     </svg>
   )
 }
@@ -110,7 +110,7 @@ export default function StudioPage() {
   if (identityLoading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: font, color: 'var(--text-3)' }}>Loading…</p>
+        <p style={{ fontFamily: font, color: 'var(--text-muted)' }}>Loading…</p>
       </div>
     )
   }
@@ -157,13 +157,13 @@ export default function StudioPage() {
           <div style={{ marginBottom: '24px' }}>
             <PauseCircleIcon />
           </div>
-          <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
             Studio
           </p>
           <h1 style={{ fontFamily: font, fontSize: '1.4rem', color: 'var(--text)', fontWeight: 400, marginBottom: '12px' }}>
             {isRemoved ? 'Studio access has been removed' : 'Studio access is temporarily paused'}
           </h1>
-          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', lineHeight: 1.6, marginBottom: '24px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '24px' }}>
             {isRemoved
               ? "Your artist standing on Margo has been removed. If you think this is a mistake, reach out to us."
               : "Your artist standing is on hold. Your songs are hidden from public view while your account is under review, and new uploads are paused until this is resolved."}
@@ -205,7 +205,7 @@ export default function StudioPage() {
                 background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px',
               }}>
                 <p style={{ fontFamily: font, fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold)' }}>{val}</p>
-                <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
+                <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>
                   {label}
                 </p>
               </div>
@@ -300,7 +300,7 @@ export default function StudioPage() {
 
         {!songsLoading && songs.length === 0 && !showUpload && (
           <p style={{
-            fontFamily: font, fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-3)',
+            fontFamily: font, fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-secondary)',
             textAlign: 'center', marginTop: '16px',
           }}>
             No songs yet — upload your first.

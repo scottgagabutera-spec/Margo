@@ -143,7 +143,7 @@ export function NotificationItem({
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '4px 0 10px' }}>
             <TypeIcon type={notification.type} />
-            <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)' }}>
+            <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)' }}>
               {timeAgo(notification.createdAt)}
             </span>
           </div>
@@ -195,7 +195,7 @@ export function NotificationItem({
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
           <TypeIcon type={notification.type} />
-          <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)' }}>
+          <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)' }}>
             {timeAgo(notification.createdAt)}
           </span>
         </div>

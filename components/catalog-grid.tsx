@@ -114,7 +114,7 @@ export function CatalogGrid<T>({
                   width: '38px', height: '38px', borderRadius: '50%', background: 'none', border: 'none',
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
-              ><CloseIcon size={14} color="var(--text-3)" /></button>
+              ><CloseIcon size={14} color="var(--text-secondary)" /></button>
             )}
           </div>
 
@@ -133,7 +133,7 @@ export function CatalogGrid<T>({
                       letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
                       background: active ? 'var(--gold)' : 'rgba(255,255,255,0.04)',
                       border: `1px solid ${active ? 'var(--gold)' : 'rgba(255,255,255,0.1)'}`,
-                      color: active ? 'var(--bg)' : 'var(--text-3)',
+                      color: active ? 'var(--bg)' : 'var(--text-secondary)',
                     }}
                   >{opt.label}</button>
                 )
@@ -162,7 +162,7 @@ export function CatalogGrid<T>({
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: '64px 0', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem' }}>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
               {search ? `Nothing found for “${search}”` : emptyMessage}
             </p>
           </div>

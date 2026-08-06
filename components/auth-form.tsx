@@ -126,7 +126,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode }: AuthFormProps) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
         <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
-        <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '1px' }}>or</span>
+        <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>or</span>
         <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
       </div>
 
@@ -157,7 +157,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode }: AuthFormProps) {
       </div>
 
       {onSwitchMode && (
-        <p style={{ textAlign: 'center', marginTop: '24px', fontFamily: font, fontSize: '0.78rem', color: 'var(--text-3)' }}>
+        <p style={{ textAlign: 'center', marginTop: '24px', fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
           {mode === 'signup' ? 'Already have an account? ' : 'New here? '}
           <button
             onClick={() => onSwitchMode(mode === 'signup' ? 'signin' : 'signup')}

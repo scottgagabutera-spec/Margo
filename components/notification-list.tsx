@@ -28,7 +28,7 @@ export function NotificationList({
     return (
       <p style={{
         fontFamily: font, fontStyle: 'italic', fontSize: '0.8rem',
-        color: 'var(--text-3)', textAlign: 'center', padding: '32px 16px',
+        color: 'var(--text-secondary)', textAlign: 'center', padding: '32px 16px',
       }}>{emptyLabel}</p>
     )
   }

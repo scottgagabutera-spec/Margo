@@ -28,16 +28,16 @@ export default function ContactPage() {
               { label: 'Investors and Partners', email: 'contact@trymargo.com', note: 'Margo is independently built and actively seeking partners and investors who see this early.' },
             ].map((block, i, arr) => (
               <div key={block.label} style={{ marginBottom: i === arr.length - 1 ? 0 : '32px' }}>
-                <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>{block.label}</div>
+                <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>{block.label}</div>
                 <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text-2)', marginBottom: '4px' }}>
                   <a href={`mailto:${block.email}`} style={{ color: 'var(--gold)', textDecoration: 'none' }}>{block.email}</a>
                 </div>
-                <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-3)', lineHeight: 1.5 }}>{block.note}</div>
+                <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{block.note}</div>
               </div>
             ))}
 
             <div style={{ marginTop: '32px' }}>
-              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '8px' }}>LinkedIn</div>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>LinkedIn</div>
               <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text-2)' }}>
                 <a href="https://linkedin.com/company/trymargo" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none' }}>linkedin.com/company/trymargo</a>
               </div>
@@ -46,7 +46,7 @@ export default function ContactPage() {
 
           <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '64px', paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
             {['about', 'privacy', 'terms', 'contact'].map(p => (
-              <Link key={p} href={`/${p}`} style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-3)', textDecoration: 'none' }}>{p}</Link>
+              <Link key={p} href={`/${p}`} style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)', textDecoration: 'none' }}>{p}</Link>
             ))}
           </div>
         </div>

@@ -66,7 +66,7 @@ export function NotificationBell() {
           padding: '8px', zIndex: 60,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px 10px' }}>
-            <span style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+            <span style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
               Notifications
             </span>
           </div>

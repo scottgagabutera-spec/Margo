@@ -32,12 +32,12 @@ export default function MessagesPage() {
 
         {!isSignedIn ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-3)', marginBottom: '16px' }}>
+            <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '16px' }}>
               Sign in to see your messages
             </p>
             <Link href="/signin" style={{
               padding: '10px 24px', border: '1px solid var(--border)', borderRadius: '50px',
-              color: 'var(--text-3)', fontFamily: font, fontSize: '0.6rem',
+              color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
               letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
             }}>Sign In</Link>
           </div>
@@ -54,7 +54,7 @@ export default function MessagesPage() {
                     background: 'none', border: 'none', cursor: 'pointer',
                     fontFamily: font, fontSize: '0.62rem', fontWeight: 700,
                     letterSpacing: '1.2px', textTransform: 'uppercase',
-                    color: tab === t ? 'var(--gold)' : 'var(--text-3)',
+                    color: tab === t ? 'var(--gold)' : 'var(--text-secondary)',
                     borderBottom: tab === t ? '2px solid var(--gold)' : '2px solid transparent',
                   }}
                 >
@@ -72,7 +72,7 @@ export default function MessagesPage() {
                 </div>
               </div>
             ) : list.length === 0 ? (
-              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.8rem', color: 'var(--text-3)', textAlign: 'center', padding: '48px 16px' }}>
+              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '48px 16px' }}>
                 {tab === 'inbox' ? 'No conversations yet' : 'No message requests'}
               </p>
             ) : (
@@ -107,13 +107,13 @@ export default function MessagesPage() {
                         {c.otherUser.displayName}
                       </p>
                       <p style={{
-                        fontFamily: font, fontSize: '0.72rem', color: c.unreadCount > 0 ? 'var(--text)' : 'var(--text-3)',
+                        fontFamily: font, fontSize: '0.72rem', color: c.unreadCount > 0 ? 'var(--text)' : 'var(--text-secondary)',
                         margin: '2px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       }}>
                         {c.lastMessage.senderId !== c.otherUser.id ? 'You: ' : ''}{c.lastMessage.body}
                       </p>
                     </div>
-                    <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', flexShrink: 0 }}>
+                    <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', flexShrink: 0 }}>
                       {timeAgo(c.lastMessage.createdAt)}
                     </span>
                     {c.unreadCount > 0 && (

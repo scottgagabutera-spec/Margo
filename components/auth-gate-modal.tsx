@@ -62,7 +62,7 @@ export function AuthGateModal({ open, onOpenChange }: AuthGateModalProps) {
           }}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M1 1L13 13M13 1L1 13" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M1 1L13 13M13 1L1 13" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </button>
 
@@ -79,7 +79,7 @@ export function AuthGateModal({ open, onOpenChange }: AuthGateModalProps) {
             display: 'block', width: '100%', textAlign: 'center',
             marginTop: '20px', padding: '8px', minHeight: '44px',
             background: 'none', border: 'none', cursor: 'pointer',
-            fontFamily: font, fontSize: '0.78rem', color: 'var(--text-3)',
+            fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)',
           }}
         >
           Maybe later

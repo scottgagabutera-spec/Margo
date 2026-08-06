@@ -111,13 +111,13 @@ export function EditPostModal({
           borderRadius: '20px', padding: '28px 24px',
         }}
       >
-        <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px', textAlign: 'center' }}>
+        <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px', textAlign: 'center' }}>
           Edit Lyric
         </p>
 
         {echoCount > 0 && (
           <p style={{
-            fontFamily: font, fontSize: '0.72rem', color: 'var(--text-3)',
+            fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)',
             background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', lineHeight: 1.5,
           }}>
@@ -139,7 +139,7 @@ export function EditPostModal({
           }}
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-          <span style={{ fontFamily: font, fontSize: '0.55rem', color: 'var(--text-3)' }}>{text.length}/140</span>
+          <span style={{ fontFamily: font, fontSize: '0.55rem', color: 'var(--text-muted)' }}>{text.length}/140</span>
         </div>
 
         {error && (
@@ -155,7 +155,7 @@ export function EditPostModal({
             style={{
               flex: 1, padding: '12px', minHeight: '44px', boxSizing: 'border-box',
               background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '50px', color: 'var(--text-3)', fontFamily: font,
+              borderRadius: '50px', color: 'var(--text-secondary)', fontFamily: font,
               fontSize: '0.58rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase',
               cursor: saving ? 'not-allowed' : 'pointer',
             }}

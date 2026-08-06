@@ -65,7 +65,7 @@ export default function SigninPage() {
             }}>
               &ldquo;I have got a thousand lives and I live them all for free&rdquo;
             </p>
-            <p style={{ fontFamily: font, fontSize: '0.72rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+            <p style={{ fontFamily: font, fontSize: '0.72rem', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
               A Thousand Lives · TryMargo
             </p>
             <div style={{ height: '1px', width: '64px', background: 'var(--gold-border)', margin: '40px 0' }} />

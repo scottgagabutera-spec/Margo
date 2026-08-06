@@ -31,7 +31,7 @@ const inputStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   display: 'block', fontFamily: font,
-  fontSize: '0.6rem', color: 'var(--text-3)',
+  fontSize: '0.6rem', color: 'var(--text-muted)',
   textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '6px',
 }
 
@@ -286,7 +286,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
                 <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 700 }}>
                   Add Artwork
                 </span>
-                <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--text-3)' }}>
+                <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--text-muted)' }}>
                   Required · drag &amp; drop or tap
                 </span>
               </div>
@@ -347,7 +347,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
               />
             </label>
             {audioFile && (
-              <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '8px' }}>
+              <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px' }}>
                 {audioFile.name}
               </p>
             )}
@@ -413,7 +413,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
             />
           </div>
         </div>
-        <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '10px', lineHeight: 1.5 }}>
+        <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '10px', lineHeight: 1.5 }}>
           Whisper AI reads the audio and tags every line with a vibe automatically once you publish.
         </p>
       </div>

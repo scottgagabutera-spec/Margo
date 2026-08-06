@@ -34,12 +34,12 @@ export default function NotificationsPage() {
 
         {!isSignedIn ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-3)', marginBottom: '16px' }}>
+            <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', marginBottom: '16px' }}>
               Sign in to see your notifications
             </p>
             <Link href="/signin" style={{
               padding: '10px 24px', border: '1px solid var(--border)', borderRadius: '50px',
-              color: 'var(--text-3)', fontFamily: font, fontSize: '0.6rem',
+              color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
               letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none',
             }}>Sign In</Link>
           </div>

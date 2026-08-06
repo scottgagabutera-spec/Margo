@@ -71,7 +71,7 @@ export function MargoSearchInput({
             padding: 0,
           }}
         >
-          <CloseIcon size={14} color="var(--text-3)" />
+          <CloseIcon size={14} color="var(--text-secondary)" />
         </button>
       ) : null}
     </div>

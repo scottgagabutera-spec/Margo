@@ -9,7 +9,7 @@ const font = 'var(--font-lora), serif'
 const gold = 'var(--gold)'
 const bg = 'var(--bg)'
 const text2 = 'var(--text-2)'
-const text3 = 'var(--text-3)'
+const textMuted = 'var(--text-muted)'
 
 interface AvatarUploadProps {
   currentAvatarUrl: string | null
@@ -131,7 +131,7 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
         style={{ display: 'none' }}
       />
 
-      <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, textAlign: 'center' }}>
+      <p style={{ fontFamily: font, fontSize: '0.6rem', color: textMuted, textAlign: 'center' }}>
         JPG, PNG, or WebP. Max 5MB.
       </p>
     </div>
