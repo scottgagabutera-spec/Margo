@@ -112,7 +112,7 @@ function SmallStatBlock({ value, label, gold }: { value: number; label: string; 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', fontWeight: 700, color: gold ? 'var(--gold)' : 'var(--text)', margin: 0 }}>{formatNum(value)}</p>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700, color: gold ? 'var(--gold)' : 'var(--text-3)', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: '3px', opacity: gold ? 0.7 : 1 }}>{label}</p>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700, color: gold ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: '3px', opacity: gold ? 0.7 : 1 }}>{label}</p>
     </div>
   )
 }
@@ -159,7 +159,7 @@ function RowHeader({ title, subtitle, viewMoreHref, onViewMore }: {
       <div>
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.1rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{title}</p>
         {subtitle && (
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-3)', margin: '2px 0 0' }}>{subtitle}</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>{subtitle}</p>
         )}
       </div>
       {viewMoreHref ? (
@@ -251,7 +251,7 @@ function LyricMomentsSection({ moments, playingKey, onOpenTakeover, onPlayMoment
       />
 
       {preview.length === 0 ? (
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.85rem' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
           No lines tagged for {selectedVibe} yet.
         </p>
       ) : (
@@ -550,8 +550,8 @@ function SongRowCard({ song, badge, onPreview }: { song: Song; badge: 'Trending'
           )}
         </div>
       </div>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-3)', marginBottom: '2px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-3)', margin: 0 }}>{song.artist}</p>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-secondary)', marginBottom: '2px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-secondary)', margin: 0 }}>{song.artist}</p>
     </div>
   )
 }
@@ -714,7 +714,7 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', minHeight: '52px', transition: 'all 200ms ease', boxShadow: '0 6px 28px rgba(232,197,71,0.28)' }}
               ><PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now</Link>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 28px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-3)', minHeight: '52px' }}>{song.comingSoonLabel || 'Coming Soon'}</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 28px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-muted)', minHeight: '52px' }}>{song.comingSoonLabel || 'Coming Soon'}</div>
             )}
           </div>
         </div>
@@ -754,7 +754,7 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
   if (matchedSongs.length === 0 && matchedLines.length === 0) {
     return (
       <div style={{ padding: '48px 0', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.95rem' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
           Nothing found for &ldquo;{query}&rdquo;
         </p>
       </div>
@@ -765,13 +765,13 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
     <div style={{ paddingBottom: '32px' }}>
       {matchedLines.length > 0 && (
         <section style={{ marginBottom: '32px' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>Matching lyrics</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>Matching lyrics</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {matchedLines.map((m, i) => (
               <Link key={i} href={`/song/${m.song.id}?t=${Math.floor(m.start)}`} style={{ textDecoration: 'none' }}>
                 <div style={{ padding: '14px 18px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px' }}>
                   <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '6px' }}>&ldquo;{m.line}&rdquo;</p>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-3)', letterSpacing: '1px', textTransform: 'uppercase' }}>{m.song.title} · {m.song.artist}</p>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>{m.song.title} · {m.song.artist}</p>
                 </div>
               </Link>
             ))}
@@ -780,7 +780,7 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
       )}
       {matchedSongs.length > 0 && (
         <section>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>Songs & artists</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>Songs & artists</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
             {matchedSongs.map(song => (
               <div key={song.id} style={{ cursor: 'pointer' }} onClick={() => onPreviewSong(song)}>
@@ -788,7 +788,7 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
                   {song.artwork ? <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} sizes="140px" /> : <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.04)' }} />}
                 </div>
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-3)', margin: 0 }}>{song.artist}</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-secondary)', margin: 0 }}>{song.artist}</p>
               </div>
             ))}
           </div>

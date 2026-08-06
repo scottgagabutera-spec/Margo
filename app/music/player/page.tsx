@@ -259,7 +259,7 @@ function PlayerContent() {
           <Link href="/music" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text)', textDecoration: 'none', opacity: 0.75, letterSpacing: '0.5px' }}>← Music</Link>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{song?.title || '—'}</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-3)', margin: 0 }}>{song?.artist || '—'}</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0 }}>{song?.artist || '—'}</p>
           </div>
           <div style={{ width: '60px' }} />
         </div>
@@ -282,7 +282,7 @@ function PlayerContent() {
         }}
       >
         {lyrics.length === 0 && (
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '1rem', textAlign: 'center', marginTop: '-40vh' }}>No lyrics available yet.</p>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', textAlign: 'center', marginTop: '-40vh' }}>No lyrics available yet.</p>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
           {lyrics.map(lyric => {
@@ -335,7 +335,7 @@ function PlayerContent() {
           {/* Song ended label */}
           {songEnded ? (
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '3px', textTransform: 'uppercase', margin: 0, marginBottom: '4px' }}>Song ended</p>
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '3px', textTransform: 'uppercase', margin: 0, marginBottom: '4px' }}>Song ended</p>
               <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', margin: 0, opacity: 0.8 }}>{endedTitle}</p>
             </div>
           ) : (
@@ -361,12 +361,12 @@ function PlayerContent() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: i === 0 ? '0.95rem' : '0.82rem', fontWeight: 600, color: i === 0 ? 'var(--text)' : 'rgba(255,255,255,0.6)', margin: 0, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</p>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-3)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.artist}</p>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.artist}</p>
                 </div>
                 <div style={{ width: i === 0 ? '32px' : '26px', height: i === 0 ? '32px' : '26px', borderRadius: '50%', background: i === 0 ? 'var(--gold)' : 'rgba(255,255,255,0.06)', border: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === 0 ? '0.65rem' : '0.55rem', color: i === 0 ? 'var(--bg)' : 'rgba(255,255,255,0.4)', flexShrink: 0 }}>▶</div>
               </button>
             )) : (
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-3)', fontSize: '0.88rem', textAlign: 'center', padding: '12px 0' }}>No more songs available</p>
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '0.88rem', textAlign: 'center', padding: '12px 0' }}>No more songs available</p>
             )}
           </div>
 
@@ -415,12 +415,12 @@ function PlayerContent() {
           <div className="share-sheet">
             <div className="share-pill" />
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1rem', color: 'var(--gold)', textAlign: 'center', marginBottom: '6px', lineHeight: 1.5 }}>"{currentLyric?.line}"</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-3)', textAlign: 'center', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '24px' }}>{song?.title} · {song?.artist}</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)', textAlign: 'center', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '24px' }}>{song?.title} · {song?.artist}</p>
             <Link href={composeUrl} className="share-option" onClick={() => setShareOpen(false)}>
               <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>✦</div>
               <div>
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Post to Margo Feed</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-3)', margin: '3px 0 0' }}>Share this lyric with your emotion on the feed</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Share this lyric with your emotion on the feed</p>
               </div>
             </Link>
             <button
@@ -434,10 +434,10 @@ function PlayerContent() {
               <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>🖼</div>
               <div style={{ textAlign: 'left' }}>
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Share as Card</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-3)', margin: '3px 0 0' }}>Export a lyric card — choose theme, shape, save or share</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Export a lyric card — choose theme, shape, save or share</p>
               </div>
             </button>
-            <button onClick={() => setShareOpen(false)} style={{ width: '100%', padding: '16px', marginTop: '8px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-3)', letterSpacing: '1px' }}>Cancel</button>
+            <button onClick={() => setShareOpen(false)} style={{ width: '100%', padding: '16px', marginTop: '8px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-secondary)', letterSpacing: '1px' }}>Cancel</button>
           </div>
         </>
       )}
