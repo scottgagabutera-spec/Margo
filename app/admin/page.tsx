@@ -1,10 +1,8 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { auth, db } from '@/lib/firebase'
-import { getDatabase } from 'firebase/database'
-import { app } from '@/lib/firebase'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
-import { ref, onValue, update, remove, push, set, get } from 'firebase/database'
+import { ref, onValue, update, set, get } from 'firebase/database'
 import { ArtistApplicationsTab } from '@/components/artist-applications-tab'
 import { BackButton } from '@/components/back-button'
 
@@ -24,13 +22,6 @@ interface CatalogPost {
   displayName?: string | null
 }
 
-interface Song {
-  id: string; title: string; artist: string; order?: number; status?: string
-  audioUrl?: string; artwork?: string; youtubeUrl?: string; spotifyUrl?: string
-  appleMusicUrl?: string; audiomackUrl?: string; soundcloudUrl?: string
-  boomplayUrl?: string; srt?: string; lyrics?: string; description?: string
-  comingSoonLabel?: string
-}
 interface Analytics { views?: number; resonates?: Record<string,boolean> }
 
 const S: Record<string, any> = {
@@ -657,301 +648,209 @@ function PostsTab() {
   )
 }
 
-// ── Song Form ──
-function SongForm({ song, onSave, onCancel }: { song: Partial<Song> | null; onSave: () => void; onCancel: () => void }) {
-  const empty: Partial<Song> = { title: '', artist: 'Trymargo', status: 'live', audioUrl: '', artwork: '', youtubeUrl: '', spotifyUrl: '', appleMusicUrl: '', audiomackUrl: '', soundcloudUrl: '', boomplayUrl: '', srt: '', lyrics: '', description: '', comingSoonLabel: '' }
-  const [form, setForm] = useState<Partial<Song>>(song || empty)
-  const [saving, setSaving] = useState(false)
-  const [showStreaming, setShowStreaming] = useState(false)
-  const [showLyrics, setShowLyrics] = useState(!!(song?.srt || song?.lyrics))
-  const [generatingSRT, setGeneratingSRT] = useState(false)
-  const [whisperLang, setWhisperLang] = useState('auto')
-  const [lyricsHint, setLyricsHint] = useState('')
-  const [srtStatus, setSrtStatus] = useState('')
-  const [taggingVibes, setTaggingVibes] = useState(false)
-  const [vibeStatus, setVibeStatus] = useState('')
-  const set_ = (k: keyof Song, v: string) => setForm(f => ({ ...f, [k]: v }))
-
-  const save = async () => {
-    if (!db || !form.title) return
-    setSaving(true)
-    const payload = { ...form }
-    delete payload.id
-    if (song?.id) {
-      await update(ref(db, `songs/${song.id}`), payload)
-    } else {
-      const snap = await get(ref(db, 'songs'))
-      const count = snap.exists() ? Object.keys(snap.val()).length : 0
-      await push(ref(db, 'songs'), { ...payload, order: count, createdAt: Date.now() })
-    }
-    setSaving(false)
-    onSave()
-  }
-
-  const generateSRT = async () => {
-    if (!form.audioUrl) { setSrtStatus('Add an Audio URL first'); return }
-    if (!form.title) { setSrtStatus('Add a Title first'); return }
-    setGeneratingSRT(true)
-    setSrtStatus('Reading audio with Whisper AI — ~30 seconds…')
-    try {
-      const res = await fetch('/api/whisper', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audioUrl: form.audioUrl, language: whisperLang === 'auto' ? undefined : whisperLang, prompt: lyricsHint.trim() || undefined }),
-      })
-      const data = await res.json()
-      if (!data.srt) {
-        setSrtStatus('✗ ' + (data.error || 'Failed — audio must be MP3 under 25MB'))
-        return
-      }
-      setSrtStatus('Lyrics ready — saving song…')
-      const payload = { ...form, srt: data.srt } as any
-      delete payload.id
-      if (db) {
-        if (song?.id) {
-          await update(ref(db, `songs/${song.id}`), payload)
-        } else {
-          const snap = await get(ref(db, 'songs'))
-          const count = snap.exists() ? Object.keys(snap.val()).length : 0
-          await push(ref(db, 'songs'), { ...payload, order: count, createdAt: Date.now() })
-        }
-        setSrtStatus('✓ Done — song live with synced lyrics')
-        setTimeout(() => onSave(), 1000)
-      }
-    } catch (e: any) {
-      setSrtStatus('✗ ' + e.message)
-    } finally {
-      setGeneratingSRT(false)
-    }
-  }
-
-  const tagVibes = async () => {
-    if (!form.srt) { setVibeStatus('Generate SRT first'); return }
-    if (!form.title) { setVibeStatus('Add a title first'); return }
-    if (!song?.id) { setVibeStatus('Save the song first, then tag vibes'); return }
-    setTaggingVibes(true)
-    setVibeStatus('AI tagging each lyric line — ~15 seconds…')
-    try {
-      const res = await fetch('/api/tag-vibes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ srt: form.srt, songTitle: form.title, artist: form.artist || 'Trymargo' }),
-      })
-      const data = await res.json()
-      if (!data.lines) { setVibeStatus('✗ ' + (data.error || 'Tagging failed')); return }
-      const lineVibes: Record<string, string[]> = {}
-      const vibeIndex: Record<string, Record<string, boolean>> = {}
-      data.lines.forEach((l: any) => {
-        if (l.vibes && l.vibes.length > 0) {
-          lineVibes[String(l.id)] = l.vibes
-          l.vibes.forEach((v: string) => {
-            if (!vibeIndex[v]) vibeIndex[v] = {}
-            vibeIndex[v][l.id] = true
-          })
-        }
-      })
-      const { ref: dbRef, update: dbUpdate, getDatabase } = await import('firebase/database')
-      const { app: fbApp } = await import('@/lib/firebase')
-      const db2 = getDatabase(fbApp ?? undefined)
-      await dbUpdate(dbRef(db2, 'songs/' + song.id), { lineVibes })
-      const indexUpdates: Record<string, boolean> = {}
-      Object.entries(vibeIndex).forEach(([vibe, lineMap]) => {
-        Object.keys(lineMap).forEach(lineId => {
-          indexUpdates['vibeIndex/' + vibe + '/' + song.id + '_' + lineId] = true
-        })
-      })
-      if (Object.keys(indexUpdates).length > 0) {
-        await dbUpdate(dbRef(db2, '/'), indexUpdates)
-      }
-      const taggedCount = data.lines.filter((l: any) => l.vibes?.length > 0).length
-      setVibeStatus('✓ ' + taggedCount + ' lines tagged across ' + Object.keys(vibeIndex).length + ' vibes')
-    } catch (e) {
-      setVibeStatus('✗ ' + (e instanceof Error ? e.message : 'Unknown error'))
-    } finally {
-      setTaggingVibes(false)
-    }
-  }
-
-  const field = (label: string, key: keyof Song, type = 'text', placeholder = '') => (
-    <div style={{ marginBottom: '14px' }}>
-      <label style={S.label}>{label}</label>
-      <input type={type} value={(form[key] as string) || ''} onChange={e => set_(key, e.target.value)}
-        placeholder={placeholder} style={S.input} />
-    </div>
-  )
-
-  return (
-    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(232,197,71,0.2)', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
-      <h3 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--gold)', marginBottom: '20px' }}>{song?.id ? 'Edit Song' : 'Add Song'}</h3>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        {field('Title', 'title', 'text', 'Song title')}
-        {field('Artist', 'artist', 'text', 'Artist name')}
-      </div>
-      <div style={{ marginBottom: '14px' }}>
-        <label style={S.label}>Status</label>
-        <select value={form.status || 'live'} onChange={e => set_('status', e.target.value)}
-          style={{ ...S.input, cursor: 'pointer' }}>
-          <option value="live">Live</option>
-          <option value="coming_soon">Coming Soon</option>
-          <option value="hidden">Hidden</option>
-        </select>
-      </div>
-      {field('Audio URL (R2)', 'audioUrl', 'text', 'https://audio.trymargo.com/Margo/audio/filename.wav')}
-      {field('Artwork URL', 'artwork', 'text', 'https://…')}
-
-      <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.15)', borderRadius: '12px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px', marginBottom: '12px' }}>
-          <div><label style={S.label}>Language</label><select value={whisperLang} onChange={e => setWhisperLang(e.target.value)} style={{ ...S.input, cursor: 'pointer', background: 'rgba(255,255,255,0.04)', color: 'var(--text)', colorScheme: 'dark' }}><option value="auto">Auto-detect</option><optgroup label="── African"><option value="zu">Zulu</option><option value="af">Afrikaans</option><option value="am">Amharic</option><option value="ha">Hausa</option><option value="ig">Igbo</option><option value="rw">Kinyarwanda</option><option value="mg">Malagasy</option><option value="sn">Shona</option><option value="so">Somali</option><option value="st">Sesotho</option><option value="sw">Swahili</option><option value="xh">Xhosa</option><option value="yo">Yoruba</option></optgroup><optgroup label="── Asian / Pacific"><option value="tl">Filipino / Tagalog</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="hi">Hindi</option><option value="bn">Bengali</option><option value="id">Indonesian</option><option value="ms">Malay</option><option value="th">Thai</option><option value="vi">Vietnamese</option><option value="km">Khmer</option><option value="lo">Lao</option><option value="my">Burmese</option><option value="ne">Nepali</option><option value="si">Sinhala</option><option value="ta">Tamil</option><option value="te">Telugu</option><option value="ur">Urdu</option></optgroup><optgroup label="── European"><option value="en">English</option><option value="pt">Portuguese</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="nl">Dutch</option><option value="pl">Polish</option><option value="ro">Romanian</option><option value="ru">Russian</option><option value="tr">Turkish</option><option value="uk">Ukrainian</option><option value="cs">Czech</option><option value="sk">Slovak</option><option value="hr">Croatian</option><option value="bg">Bulgarian</option><option value="el">Greek</option><option value="fi">Finnish</option><option value="hu">Hungarian</option><option value="no">Norwegian</option><option value="sv">Swedish</option><option value="da">Danish</option></optgroup><optgroup label="── Middle East / Central Asia"><option value="ar">Arabic</option><option value="he">Hebrew</option><option value="fa">Persian</option><option value="az">Azerbaijani</option><option value="kk">Kazakh</option><option value="uz">Uzbek</option></optgroup></select></div>
-          <div><label style={S.label}>Key lyrics hint (optional)</label><input type="text" value={lyricsHint} onChange={e => setLyricsHint(e.target.value)} placeholder="Paste hook or chorus — helps Whisper get words right" style={S.input} /></div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: srtStatus ? '10px' : '0' }}>
-          <div>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text)', marginBottom: '2px' }}>AI Lyrics Sync</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.5px' }}>Whisper AI reads the audio and generates synced karaoke lyrics automatically</p>
-          </div>
-          <button
-            onClick={generateSRT}
-            disabled={generatingSRT || !form.audioUrl}
-            style={{ ...S.btn, flexShrink: 0, marginLeft: '16px', opacity: (!form.audioUrl || generatingSRT) ? 0.5 : 1 }}
-          >{generatingSRT ? 'Generating…' : '✦ Generate'}</button>
-        </div>
-        {srtStatus && <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: srtStatus.startsWith('✓') ? '#4ade80' : '#ff6060', margin: 0 }}>{srtStatus}</p>}
-      </div>
-
-      {(form.srt && song?.id) && (
-        <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(232,197,71,0.03)', border: '1px solid rgba(232,197,71,0.1)', borderRadius: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: vibeStatus ? '10px' : '0' }}>
-            <div>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text)', marginBottom: '2px' }}>Vibe Tagging</p>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.5px' }}>AI tags each lyric line with vibes — powers the discovery board</p>
-            </div>
-            <button onClick={tagVibes} disabled={taggingVibes} style={{ ...S.btn, flexShrink: 0, marginLeft: '16px', opacity: taggingVibes ? 0.5 : 1 }}>
-              {taggingVibes ? 'Tagging…' : '✦ Tag Vibes'}
-            </button>
-          </div>
-          {vibeStatus && <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: vibeStatus.startsWith('✓') ? '#4ade80' : '#ff6060', margin: 0 }}>{vibeStatus}</p>}
-        </div>
-      )}
-
-      <button onClick={() => setShowStreaming(s => !s)} style={{ ...S.ghostBtn, width: '100%', textAlign: 'left', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
-        <span>Streaming Links</span>
-        <span>{showStreaming ? '▲' : '▼'}</span>
-      </button>
-      {showStreaming && (
-        <div style={{ marginBottom: '12px' }}>
-          {field('YouTube URL', 'youtubeUrl', 'text', 'https://youtube.com/…')}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-            {field('Spotify URL', 'spotifyUrl')}
-            {field('Apple Music URL', 'appleMusicUrl')}
-            {field('Audiomack URL', 'audiomackUrl')}
-            {field('SoundCloud URL', 'soundcloudUrl')}
-            {field('Boomplay URL', 'boomplayUrl')}
-            {field('Coming Soon Label', 'comingSoonLabel', 'text', 'e.g. Drop Q3 2025')}
-          </div>
-          <div style={{ marginBottom: '14px' }}>
-            <label style={S.label}>Description</label>
-            <textarea value={form.description || ''} onChange={e => set_('description', e.target.value)}
-              rows={2} placeholder="Short description shown on music page"
-              style={{ ...S.input, resize: 'vertical', lineHeight: 1.5 }} />
-          </div>
-        </div>
-      )}
-
-      <button onClick={() => setShowLyrics(s => !s)} style={{ ...S.ghostBtn, width: '100%', textAlign: 'left', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
-        <span>Lyrics {form.srt ? '✓' : ''}</span>
-        <span>{showLyrics ? '▲' : '▼'}</span>
-      </button>
-      {showLyrics && (
-        <div style={{ marginBottom: '12px' }}>
-          <div style={{ marginBottom: '14px' }}>
-            <label style={S.label}>SRT Lyrics (synced karaoke) — auto-generated above</label>
-            <textarea value={form.srt || ''} onChange={e => set_('srt', e.target.value)}
-              rows={8} placeholder="Generated automatically by Whisper AI, or paste manually"
-              style={{ ...S.input, resize: 'vertical', fontFamily: 'monospace', fontSize: '0.7rem', lineHeight: 1.6 }} />
-          </div>
-          <div style={{ marginBottom: '14px' }}>
-            <label style={S.label}>Plain Lyrics</label>
-            <textarea value={form.lyrics || ''} onChange={e => set_('lyrics', e.target.value)}
-              rows={4} style={{ ...S.input, resize: 'vertical', lineHeight: 1.6 }} />
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <button onClick={save} disabled={saving} style={{ ...S.btn, opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save Song'}</button>
-        <button onClick={onCancel} style={S.ghostBtn}>Cancel</button>
-      </div>
-    </div>
-  )
+// ── Catalog Tab (Supabase songs — read-only oversight) ──
+interface CatalogSong {
+  id: string
+  title: string
+  artistDisplayName: string
+  status: string
+  artworkUrl: string | null
+  audioUrl: string | null
+  ownerProfileId: string | null
+  ownerUsername: string | null
+  ownerDisplayName: string | null
+  artistStatus: string | null
+  createdAt: string | null
 }
 
-// ── Music Tab ──
-function MusicTab() {
-  const [songs, setSongs] = useState<Song[]>([])
-  const [editingSong, setEditingSong] = useState<Partial<Song> | null | 'new'>(null)
+function CatalogSongsTab() {
+  const [songs, setSongs] = useState<CatalogSong[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'processing' | 'live' | 'coming_soon' | 'hidden'>('all')
+  const [artistStatusFilter, setArtistStatusFilter] = useState<'all' | 'active' | 'warned' | 'frozen' | 'removed'>('all')
+  const [ownerQuery, setOwnerQuery] = useState('')
+  const [titleQuery, setTitleQuery] = useState('')
 
   useEffect(() => {
-    if (!app) return
-    try {
-      const database = getDatabase(app)
-      const unsub = onValue(
-        ref(database, 'songs'),
-        snap => {
-          const list: Song[] = []
-          let i = 0
-          try {
-            snap.forEach(child => {
-              i++
-              list.push({ ...child.val(), id: child.key as string })
-            })
-          } catch(e) { console.error('[MusicTab] forEach error:', e) }
-          setSongs(list.sort((a, b) => (a.order || 0) - (b.order || 0)))
-        },
-        err => console.error('[MusicTab] Firebase error:', err)
-      )
-      return () => unsub()
-    } catch (err) {
-      console.error('[MusicTab] Init error:', err)
+    let cancelled = false
+    async function load() {
+      if (!auth?.currentUser) {
+        if (!cancelled) {
+          setError('Not signed in')
+          setLoading(false)
+        }
+        return
+      }
+      setLoading(true)
+      setError(null)
+      try {
+        const token = await auth.currentUser.getIdToken()
+        const res = await fetch('/api/admin/catalog-songs', {
+          headers: { Authorization: 'Bearer ' + token },
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
+        if (!cancelled) setSongs(Array.isArray(body.songs) ? body.songs : [])
+      } catch (e: any) {
+        if (!cancelled) {
+          setError(e.message || 'Failed to load catalog')
+          setSongs([])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
+    load()
+    return () => { cancelled = true }
   }, [])
 
-  const deleteSong = async (id: string) => {
-    if (!db || !confirm('Delete this song? This cannot be undone.')) return
-    await remove(ref(db, `songs/${id}`))
+  const filtered = songs.filter(s => {
+    if (statusFilter !== 'all' && s.status !== statusFilter) return false
+    if (artistStatusFilter !== 'all' && (s.artistStatus || '') !== artistStatusFilter) return false
+    if (titleQuery.trim()) {
+      const q = titleQuery.toLowerCase()
+      if (!(s.title || '').toLowerCase().includes(q)) return false
+    }
+    if (ownerQuery.trim()) {
+      const q = ownerQuery.toLowerCase()
+      const hay = [
+        s.ownerUsername,
+        s.ownerDisplayName,
+        s.artistDisplayName,
+      ].filter(Boolean).join(' ').toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    return true
+  })
+
+  const chip = (active: boolean) => ({
+    ...S.ghostBtn,
+    fontFamily: 'var(--font-lora), serif',
+    fontSize: '0.6rem',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '1.5px',
+    borderBottom: active ? '1px solid var(--gold)' : '1px solid transparent',
+    color: active ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
+    borderRadius: 0,
+    padding: '4px 12px',
+  })
+
+  const statusColor = (status: string) => {
+    if (status === 'live') return 'var(--gold)'
+    if (status === 'hidden') return '#ff6060'
+    if (status === 'processing') return '#7B9FFF'
+    if (status === 'coming_soon') return '#ffc847'
+    return 'rgba(255,255,255,0.4)'
+  }
+
+  const artistStatusColor = (st: string | null) => {
+    if (st === 'active') return 'rgba(255,255,255,0.35)'
+    if (st === 'warned') return '#ffc847'
+    if (st === 'frozen') return '#7B9FFF'
+    if (st === 'removed') return '#ff6060'
+    return 'rgba(255,255,255,0.25)'
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          {songs.length} song{songs.length !== 1 ? 's' : ''} · Live instantly on /discover
-        </p>
-        <button onClick={() => setEditingSong('new')} style={S.btn}>+ Add Song</button>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px' }}>
+        Supabase Catalog — all songs
+      </p>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginBottom: '16px', lineHeight: 1.5 }}>
+        Read-only oversight of every Studio / Supabase upload, including drafts and songs owned by frozen or removed artists. Artists publish via Studio — this tab does not upload.
+      </p>
+
+      <input
+        type="text"
+        value={titleQuery}
+        onChange={e => setTitleQuery(e.target.value)}
+        placeholder="Search song title…"
+        style={{ ...S.input, marginBottom: '10px' }}
+      />
+      <input
+        type="text"
+        value={ownerQuery}
+        onChange={e => setOwnerQuery(e.target.value)}
+        placeholder="Filter by artist / owner (username, display name, or stage name)…"
+        style={{ ...S.input, marginBottom: '14px' }}
+      />
+
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px' }}>Song status</p>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+        {(['all', 'draft', 'processing', 'live', 'coming_soon', 'hidden'] as const).map(f => (
+          <button key={f} type="button" onClick={() => setStatusFilter(f)} style={chip(statusFilter === f)}>{f}</button>
+        ))}
       </div>
-      {editingSong === 'new' && <SongForm song={null} onSave={() => setEditingSong(null)} onCancel={() => setEditingSong(null)} />}
-      {songs.map((song, i) => (
-        <div key={song.id || i}>
-          {editingSong && typeof editingSong === 'object' && editingSong.id === song.id
-            ? <SongForm song={song} onSave={() => setEditingSong(null)} onCancel={() => setEditingSong(null)} />
-            : (
-              <div style={{ ...S.card, opacity: song.status === 'hidden' ? 0.45 : 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text)', marginBottom: '2px' }}>{song.title}</p>
-                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      {song.artist} · {song.status || 'live'} {song.audioUrl ? '· 🎵 audio' : ''} {song.srt ? '· 📝 srt' : ''}
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => setEditingSong(song)} style={S.ghostBtn}>Edit</button>
-                    <button onClick={() => deleteSong(song.id)} style={S.dangerBtn}>Delete</button>
+
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px' }}>Artist status</p>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {(['all', 'active', 'warned', 'frozen', 'removed'] as const).map(f => (
+          <button key={f} type="button" onClick={() => setArtistStatusFilter(f)} style={chip(artistStatusFilter === f)}>{f}</button>
+        ))}
+      </div>
+
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
+        {loading ? '…' : filtered.length + ' of ' + songs.length + ' songs'}
+      </p>
+
+      {loading ? (
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '24px' }}>Loading catalog…</p>
+      ) : error ? (
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.75rem', padding: '12px 0' }}>{error}</p>
+      ) : filtered.length === 0 ? (
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', padding: '12px 0' }}>No songs match these filters.</p>
+      ) : (
+        filtered.map(song => {
+          const owner = song.ownerDisplayName || song.ownerUsername || 'unknown'
+          const at = song.ownerUsername ? '@' + song.ownerUsername : null
+          return (
+            <div key={song.id} style={{ ...S.card, opacity: song.status === 'hidden' ? 0.45 : 1, marginBottom: '10px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                {song.artworkUrl ? (
+                  <img
+                    src={song.artworkUrl}
+                    alt=""
+                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0, background: 'rgba(255,255,255,0.04)' }}
+                  />
+                ) : (
+                  <div style={{ width: 48, height: 48, borderRadius: 8, flexShrink: 0, background: 'rgba(255,255,255,0.04)' }} />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', color: 'var(--text)', marginBottom: '4px' }}>
+                    {song.title}
+                  </p>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+                    {song.artistDisplayName}
+                    {' · '}
+                    {owner}
+                    {at ? ' · ' + at : ''}
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{
+                      fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '1.5px',
+                      color: statusColor(song.status),
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '6px', padding: '2px 8px',
+                    }}>{song.status}</span>
+                    <span style={{
+                      fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '1.5px',
+                      color: artistStatusColor(song.artistStatus),
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '6px', padding: '2px 8px',
+                    }}>{song.artistStatus || 'no status'}</span>
+                    {song.audioUrl && (
+                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>audio</span>
+                    )}
                   </div>
                 </div>
               </div>
-            )}
-        </div>
-      ))}
+            </div>
+          )
+        })
+      )}
     </div>
   )
 }
@@ -1166,7 +1065,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tab, setTab] = useState<'posts'|'music'|'licensed'|'featured'|'pages'|'artists'>('posts')
+  const [tab, setTab] = useState<'posts'|'catalog'|'licensed'|'featured'|'pages'|'artists'>('posts')
 
   useEffect(() => {
     if (!auth) { setAuthChecked(true); return }
@@ -1192,7 +1091,7 @@ export default function AdminPage() {
 
   const tabs: { key: typeof tab; label: string }[] = [
     { key: 'posts', label: 'Posts' },
-    { key: 'music', label: 'Music' },
+    { key: 'catalog', label: 'Catalog' },
     { key: 'licensed', label: 'Licensed Artists' },
     { key: 'featured', label: 'Featured' },
     { key: 'pages', label: 'Pages' },
@@ -1218,7 +1117,7 @@ export default function AdminPage() {
           ))}
         </div>
         {tab === 'posts'    && <PostsTab />}
-        {tab === 'music' && <MusicTab key="music" />}
+        {tab === 'catalog' && <CatalogSongsTab key="catalog" />}
         {tab === 'licensed' && <LicensedTab />}
         {tab === 'featured' && <FeaturedTab />}
         {tab === 'pages'    && <PagesTab />}
