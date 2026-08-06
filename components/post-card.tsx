@@ -31,7 +31,7 @@ import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 import { PostThumbnail } from '@/components/post-thumbnail'
 
-export type PostCardVariant = 'feed' | 'compact'
+export type PostCardVariant = 'feed' | 'compact' | 'row'
 
 const REPORT_REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Other'] as const
 
@@ -330,7 +330,10 @@ export function PostCard({
   const [replayMenuOpen, setReplayMenuOpen] = useState(false)
   const [quoteOpen, setQuoteOpen] = useState(false)
   const [quoteText, setQuoteText] = useState('')
-  const isCompact = variant === 'compact'
+  const [rowExpanded, setRowExpanded] = useState(false)
+  // row collapses to a dense one-liner; expand renders the compact card in place
+  const isRow = variant === 'row'
+  const isCompact = variant === 'compact' || (isRow && rowExpanded)
   const avatarPx = isCompact ? '32px' : '40px'
   const cardPadding = isCompact ? '12px' : '16px'
 
@@ -388,6 +391,42 @@ export function PostCard({
     )
   }
 
+  if (isRow && !rowExpanded) {
+    const songLine = [post.knowledge?.song, post.knowledge?.artist].filter(Boolean).join(' · ')
+    return (
+      <button
+        type="button"
+        onClick={() => setRowExpanded(true)}
+        aria-label="Expand lyric"
+        style={{
+          display: 'block', width: '100%', textAlign: 'left', boxSizing: 'border-box',
+          background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)',
+          padding: '12px 4px', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+          minHeight: 'var(--margo-touch-min)',
+        }}
+      >
+        <p style={{
+          margin: 0, fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem',
+          color: 'var(--text)', lineHeight: 1.4,
+          display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}>
+          {post.text || 'Untitled lyric'}
+        </p>
+        {songLine ? (
+          <p style={{
+            margin: '4px 0 0', fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem',
+            color: 'var(--text-muted)', lineHeight: 1.3,
+            display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}>
+            {songLine}
+          </p>
+        ) : null}
+      </button>
+    )
+  }
+
   return (
     <div ref={cardRef} style={{
       background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
@@ -396,6 +435,24 @@ export function PostCard({
       position: 'relative', overflow: 'hidden',
       transition: 'border-color 200ms ease',
     }}>
+      {isRow && (
+        <button
+          type="button"
+          onClick={() => setRowExpanded(false)}
+          aria-label="Collapse lyric"
+          style={{
+            position: 'absolute', top: '8px', right: '8px', zIndex: 2,
+            width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', padding: 0, WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <span style={{ display: 'inline-flex', transform: 'rotate(-90deg)' }}>
+            <ChevronRightIcon size={14} color="var(--text-muted)" />
+          </span>
+        </button>
+      )}
       <div style={{
         position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
         width: '60%', height: '1px',

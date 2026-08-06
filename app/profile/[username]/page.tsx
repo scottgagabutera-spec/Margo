@@ -7,6 +7,8 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { usePosts } from '@/hooks/usePosts'
 import { useOwnPrivatePosts } from '@/hooks/useOwnPrivatePosts'
+import { useProfileReplays } from '@/hooks/useProfileReplays'
+import { useAuthorLyricBacks } from '@/hooks/useAuthorLyricBacks'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
 import { PostCard } from '@/components/post-card'
@@ -51,6 +53,8 @@ interface ArtistSongRow {
 }
 
 type FollowStatus = null | 'pending' | 'accepted'
+
+type ProfileContentTab = 'lyrics' | 'replays' | 'backs'
 
 export default function ProfilePage() {
   const params = useParams<{ username: string }>()
@@ -200,6 +204,8 @@ export default function ProfilePage() {
     isOwnProfile
   )
 
+  const [contentTab, setContentTab] = useState<ProfileContentTab>('lyrics')
+
   const { requireAuth } = useAuthGate()
   const [resonated, setResonated] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
@@ -210,6 +216,27 @@ export default function ProfilePage() {
   })
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
+
+  const handleExport = (post: Post) => {
+    if (!requireAuth()) return
+    setExportPost(post)
+  }
+
+  const canViewContent = !profile?.isPrivate || isOwnProfile || followStatus === 'accepted'
+
+  const { items: profileReplays, loading: replaysLoading } = useProfileReplays(
+    profile?.id ?? null,
+    !!canViewContent && contentTab === 'replays'
+  )
+  const { posts: lyricBacks, loading: backsLoading } = useAuthorLyricBacks(
+    profile?.id ?? null,
+    !!canViewContent && contentTab === 'backs'
+  )
+
+  const allTabPosts = useMemo(() => {
+    const replayPosts = profileReplays.map(r => r.post)
+    return [...ownPosts, ...privatePosts, ...replayPosts, ...lyricBacks]
+  }, [ownPosts, privatePosts, profileReplays, lyricBacks])
 
   const toggleResonate = async (postId: string) => {
     if (!requireAuth()) return
@@ -222,7 +249,7 @@ export default function ProfilePage() {
       return next
     })
     setResonateCounts(prev => {
-      const fromPost = [...ownPosts, ...privatePosts].find(x => x.id === postId)?.resonates ?? 0
+      const fromPost = allTabPosts.find(x => x.id === postId)?.resonates ?? 0
       const current = prev[postId] ?? fromPost
       return { ...prev, [postId]: Math.max(0, current + (already ? -1 : 1)) }
     })
@@ -247,13 +274,6 @@ export default function ProfilePage() {
       }))
     }
   }
-
-  const handleExport = (post: Post) => {
-    if (!requireAuth()) return
-    setExportPost(post)
-  }
-
-  const canViewContent = !profile?.isPrivate || isOwnProfile || followStatus === 'accepted'
 
   const applicationStatus = application?.status ?? 'none'
   const showApplyCTA = isOwnProfile && !identity?.isArtist
@@ -585,7 +605,44 @@ export default function ProfilePage() {
             )}
 
             <div style={{ marginBottom: '28px' }}>
-              <p style={sectionLabelStyle}>{isOwnProfile ? 'Your Lyrics' : 'Lyrics'}</p>
+              <div
+                role="tablist"
+                aria-label="Profile content"
+                style={{
+                  display: 'flex', gap: '4px', marginBottom: '16px',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                {([
+                  { id: 'lyrics' as const, label: isOwnProfile ? 'Your Lyrics' : 'Lyrics' },
+                  { id: 'replays' as const, label: 'Replays' },
+                  { id: 'backs' as const, label: 'Lyric Backs' },
+                ]).map(tab => {
+                  const active = contentTab === tab.id
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setContentTab(tab.id)}
+                      style={{
+                        flex: 1, minHeight: 'var(--margo-touch-min)',
+                        fontFamily: font, fontSize: '0.58rem', fontWeight: 700,
+                        letterSpacing: '1px', textTransform: 'uppercase',
+                        color: active ? 'var(--gold)' : 'var(--text-muted)',
+                        background: 'transparent', border: 'none',
+                        borderBottom: active ? '2px solid var(--gold)' : '2px solid transparent',
+                        marginBottom: '-1px', cursor: 'pointer',
+                        WebkitTapHighlightColor: 'transparent', padding: '8px 4px',
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </div>
+
               {!canViewContent ? (
                 <div style={{
                   border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
@@ -598,28 +655,88 @@ export default function ProfilePage() {
                     Follow {profile.displayName} to see their lyrics.
                   </p>
                 </div>
-              ) : ownPosts.length === 0 ? (
-                isOwnProfile ? (
-                  privatePosts.length > 0 ? (
-                    <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                      No public lyrics yet — your private ones are below.
-                    </p>
+              ) : contentTab === 'lyrics' ? (
+                ownPosts.length === 0 ? (
+                  isOwnProfile ? (
+                    privatePosts.length > 0 ? (
+                      <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        No public lyrics yet — your private ones are below.
+                      </p>
+                    ) : (
+                      <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
+                        Share your first lyric →
+                      </Link>
+                    )
                   ) : (
-                    <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
-                      Share your first lyric →
-                    </Link>
+                    <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                      Hasn&rsquo;t shared a lyric yet.
+                    </p>
                   )
                 ) : (
-                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                    Hasn&rsquo;t shared a lyric yet.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {ownPosts.map(post => (
+                      <PostCard
+                        key={post.id}
+                        variant="row"
+                        post={post}
+                        resonated={resonated.has(post.id)}
+                        resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+                        echoCount={post.replies ?? 0}
+                        onResonate={toggleResonate}
+                        onExport={handleExport}
+                      />
+                    ))}
+                  </div>
                 )
+              ) : contentTab === 'replays' ? (
+                replaysLoading ? (
+                  <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                    Loading replays…
+                  </p>
+                ) : profileReplays.length === 0 ? (
+                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                    {isOwnProfile ? 'No replays yet — tap Replay on a lyric in the feed.' : 'No replays yet.'}
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {profileReplays.map(item => (
+                      <div key={item.id}>
+                        {item.quoteText ? (
+                          <p style={{
+                            margin: '0 4px 2px', paddingTop: '10px',
+                            fontFamily: font, fontSize: '0.82rem',
+                            color: 'var(--text-secondary)', lineHeight: 1.4,
+                          }}>
+                            {item.quoteText}
+                          </p>
+                        ) : null}
+                        <PostCard
+                          variant="row"
+                          post={item.post}
+                          resonated={resonated.has(item.post.id)}
+                          resonateCount={resonateCounts[item.post.id] ?? item.post.resonates ?? 0}
+                          echoCount={item.post.replies ?? 0}
+                          onResonate={toggleResonate}
+                          onExport={handleExport}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : backsLoading ? (
+                <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  Loading lyric backs…
+                </p>
+              ) : lyricBacks.length === 0 ? (
+                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                  {isOwnProfile ? 'No lyric backs yet.' : 'No lyric backs yet.'}
+                </p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {ownPosts.map(post => (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {lyricBacks.map(post => (
                     <PostCard
                       key={post.id}
-                      variant="compact"
+                      variant="row"
                       post={post}
                       resonated={resonated.has(post.id)}
                       resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}

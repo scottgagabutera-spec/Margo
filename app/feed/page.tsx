@@ -17,6 +17,8 @@ import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
 import { ArtistBadge } from '@/components/artist-badge'
 import { PostCard, normalizeEmotion } from '@/components/post-card'
+import { ReplayAttribution } from '@/components/replay-attribution'
+import { useFolloweeReplays } from '@/hooks/useFolloweeReplays'
 
 // ── Earned-tag thresholds (feed ranking only) ─────────────────────────
 const NEW_WINDOW_HOURS = 24
@@ -30,6 +32,7 @@ export default function FeedPage() {
     flushPending,
     applyImmediate,
   } = useNewItemsBuffer(livePosts)
+  const { replays: followeeReplays } = useFolloweeReplays()
   const [ptrBusy, setPtrBusy] = useState(false)
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -194,23 +197,66 @@ export default function FeedPage() {
     return () => clearTimeout(t)
   }, [searchQuery])
 
-  const filteredPosts = posts
-    .filter(p => {
-      const norm = normalizeEmotion(p.emotion || '')
-      const matchesVibe = selectedVibe === 'ALL' || norm === selectedVibe
-      if (!searchQuery.trim()) return matchesVibe
-      const q = searchQuery.toLowerCase()
-      return matchesVibe && (
-        (p.text || '').toLowerCase().includes(q) ||
-        (p.knowledge?.song || '').toLowerCase().includes(q) ||
-        (p.knowledge?.artist || '').toLowerCase().includes(q) ||
-        (p.emotion || '').toLowerCase().includes(q) ||
-        (p.username || '').toLowerCase().includes(q) ||
-        (p.authorDisplayName || '').toLowerCase().includes(q)
-      )
-    })
-    .sort((a, b) => getScoreFor(b, selectedSort) - getScoreFor(a, selectedSort))
+  const matchesFeedFilters = (p: Post) => {
+    const norm = normalizeEmotion(p.emotion || '')
+    const matchesVibe = selectedVibe === 'ALL' || norm === selectedVibe
+    if (!searchQuery.trim()) return matchesVibe
+    const q = searchQuery.toLowerCase()
+    return matchesVibe && (
+      (p.text || '').toLowerCase().includes(q) ||
+      (p.knowledge?.song || '').toLowerCase().includes(q) ||
+      (p.knowledge?.artist || '').toLowerCase().includes(q) ||
+      (p.emotion || '').toLowerCase().includes(q) ||
+      (p.username || '').toLowerCase().includes(q) ||
+      (p.authorDisplayName || '').toLowerCase().includes(q)
+    )
+  }
 
+  type FeedItem =
+    | { kind: 'post'; key: string; post: Post; sortAt: number }
+    | {
+        kind: 'replay'
+        key: string
+        post: Post
+        sortAt: number
+        quoteText: string | null
+        replayerUsername: string | null
+        replayerDisplayName: string | null
+      }
+
+  const feedItems = useMemo((): FeedItem[] => {
+    const originals: FeedItem[] = posts
+      .filter(matchesFeedFilters)
+      .map(p => ({
+        kind: 'post' as const,
+        key: `p-${p.id}`,
+        post: p,
+        sortAt: p.timestamp || 0,
+      }))
+
+    // Interleave Replays from followees (+ self). Feed stays global for
+    // originals; this only injects attribution wrappers into the timeline.
+    const replayItems: FeedItem[] = followeeReplays
+      .filter(r => matchesFeedFilters(r.post))
+      .map(r => ({
+        kind: 'replay' as const,
+        key: `r-${r.id}`,
+        post: r.post,
+        sortAt: r.createdAt,
+        quoteText: r.quoteText,
+        replayerUsername: r.replayerUsername,
+        replayerDisplayName: r.replayerDisplayName,
+      }))
+
+    const merged = [...originals, ...replayItems]
+    if (selectedSort === 'NEW') {
+      merged.sort((a, b) => b.sortAt - a.sortAt)
+    } else {
+      merged.sort((a, b) => getScoreFor(b.post, selectedSort) - getScoreFor(a.post, selectedSort))
+    }
+    return merged
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts, followeeReplays, selectedVibe, selectedSort, searchQuery, postStats])
   const notifyResonate = async (post: Post) => {
     if (!user?.id) return
     if (!post.authorUid || post.authorUid === user.id) return
@@ -441,7 +487,7 @@ export default function FeedPage() {
           </div>
         )}
 
-        {!loading && filteredPosts.length === 0 && !(searchQuery.trim() && people.length > 0) && (
+        {!loading && feedItems.length === 0 && !(searchQuery.trim() && people.length > 0) && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {searchQuery ? `No lyrics found for "${searchQuery}"` : `No ${selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet`}
@@ -484,29 +530,41 @@ export default function FeedPage() {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {filteredPosts.map(post => (
-            <PostCard
-              key={post.id}
-              post={post}
-              resonated={resonated.has(post.id)}
-              resonateCount={postStats[post.id]?.resonateCount ?? resonateCounts[post.id] ?? post.resonates ?? 0}
-              echoCount={postStats[post.id]?.echoCount ?? 0}
-              onResonate={toggleResonate}
-              replayed={replayed.has(post.id)}
-              replayCount={postStats[post.id]?.replayCount ?? replayCounts[post.id] ?? post.replays ?? 0}
-              onReplay={toggleReplay}
-              onQuoteReplay={quoteReplay}
-              onExport={handleExport}
-              isNew={newIds.has(post.id)}
-              isTrending={trendingIds.has(post.id)}
-              isTop={topIds.has(post.id)}
-              onSelectVibe={handleSelectVibe}
-              onSelectRank={handleSelectRank}
-            />
-          ))}
+          {feedItems.map(item => {
+            const post = item.post
+            const cardProps = {
+              post,
+              resonated: resonated.has(post.id),
+              resonateCount: postStats[post.id]?.resonateCount ?? resonateCounts[post.id] ?? post.resonates ?? 0,
+              echoCount: postStats[post.id]?.echoCount ?? 0,
+              onResonate: toggleResonate,
+              replayed: replayed.has(post.id),
+              replayCount: postStats[post.id]?.replayCount ?? replayCounts[post.id] ?? post.replays ?? 0,
+              onReplay: toggleReplay,
+              onQuoteReplay: quoteReplay,
+              onExport: handleExport,
+              isNew: newIds.has(post.id),
+              isTrending: trendingIds.has(post.id),
+              isTop: topIds.has(post.id),
+              onSelectVibe: handleSelectVibe,
+              onSelectRank: handleSelectRank,
+            }
+            if (item.kind === 'replay') {
+              return (
+                <ReplayAttribution
+                  key={item.key}
+                  username={item.replayerUsername}
+                  displayName={item.replayerDisplayName}
+                  quoteText={item.quoteText}
+                  cardProps={cardProps}
+                />
+              )
+            }
+            return <PostCard key={item.key} {...cardProps} />
+          })}
         </div>
 
-        {!loading && filteredPosts.length > 0 && (
+        {!loading && feedItems.length > 0 && (
           <div style={{ textAlign: 'center', marginTop: '48px' }}>
             <div style={{ height: '1px', width: '96px', background: 'linear-gradient(to right, transparent, var(--border), transparent)', margin: '0 auto 16px' }} />
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-muted)' }}>you&apos;ve felt them all</p>
