@@ -1,4 +1,5 @@
 'use client'
+import { toast } from 'sonner'
 import { CloseIcon } from '@/components/icons'
 import { useState, useEffect, useMemo } from 'react'
 import { usePosts } from '@/hooks/usePosts'
@@ -44,7 +45,15 @@ export default function FeedPage() {
     } catch { return new Set() }
   })
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
-  const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number }>>({})
+  const [replayed, setReplayed] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const saved = localStorage.getItem('margoReplayed')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch { return new Set() }
+  })
+  const [replayCounts, setReplayCounts] = useState<Record<string, number>>({})
+  const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number; replayCount?: number }>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
 
   useEffect(() => {
@@ -52,12 +61,12 @@ export default function FeedPage() {
     async function loadStats() {
       const { data, error } = await supabase
         .from('post_stats')
-        .select('post_id, views, resonate_count, echo_count')
+        .select('post_id, views, resonate_count, echo_count, replay_count')
       if (cancelled) return
       if (error) { console.error('Failed to load post_stats:', error); return }
-      const map: Record<string, { views?: number; resonateCount?: number; echoCount?: number }> = {}
+      const map: Record<string, { views?: number; resonateCount?: number; echoCount?: number; replayCount?: number }> = {}
       for (const row of data || []) {
-        map[row.post_id] = { views: row.views, resonateCount: row.resonate_count, echoCount: row.echo_count }
+        map[row.post_id] = { views: row.views, resonateCount: row.resonate_count, echoCount: row.echo_count, replayCount: row.replay_count }
       }
       setPostStats(map)
     }
@@ -98,6 +107,37 @@ export default function FeedPage() {
 
     return () => { cancelled = true; supabase.removeChannel(channel) }
   }, [])
+
+  // Load user's Replays — replayer_id must be auth profile uuid (RLS: auth.uid() = replayer_id).
+  // Do NOT use getMargoActorId() here; that is a display-name actor string for resonates.
+  useEffect(() => {
+    if (!user?.id) return
+    const myId = user.id
+    let cancelled = false
+    async function loadMyReplays() {
+      const { data, error } = await supabase
+        .from('post_replays')
+        .select('post_id')
+        .eq('replayer_id', myId)
+      if (cancelled) return
+      if (error) { console.error('Failed to load replays:', error); return }
+      const mine = new Set((data || []).map(r => r.post_id))
+      setReplayed(mine)
+      try { localStorage.setItem('margoReplayed', JSON.stringify([...mine])) } catch {}
+    }
+    loadMyReplays()
+
+    const channel = supabase
+      .channel('feed-my-replays')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_replays', filter: `replayer_id=eq.${myId}` },
+        () => loadMyReplays()
+      )
+      .subscribe()
+
+    return () => { cancelled = true; supabase.removeChannel(channel) }
+  }, [user?.id])
 
   const getEngagement = (post: Post) => {
     const s = postStats[post.id] || {}
@@ -218,6 +258,91 @@ export default function FeedPage() {
         return next
       })
       setResonateCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + (already ? 1 : -1)) }))
+    }
+  }
+
+  const toggleReplay = async (postId: string) => {
+    if (!requireAuth()) return
+    if (!user?.id) return
+    if (replayed.has(postId)) {
+      toast.success('Already replayed')
+      return
+    }
+    const myId = user.id
+    setReplayed(prev => {
+      const next = new Set(prev)
+      next.add(postId)
+      try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+      return next
+    })
+    setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + 1) }))
+
+    try {
+      const { error } = await supabase.from('post_replays').insert({
+        post_id: postId,
+        replayer_id: myId,
+        quote_text: null,
+      })
+      if (error) throw error
+      toast.success('Replayed')
+    } catch (err) {
+      console.error('Failed to replay:', err)
+      setReplayed(prev => {
+        const next = new Set(prev)
+        next.delete(postId)
+        try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+        return next
+      })
+      setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) - 1) }))
+    }
+  }
+
+  const quoteReplay = async (postId: string, quoteText: string) => {
+    if (!requireAuth()) return
+    if (!user?.id) return
+    const text = quoteText.trim()
+    if (!text) return
+    const myId = user.id
+    const already = replayed.has(postId)
+
+    if (!already) {
+      setReplayed(prev => {
+        const next = new Set(prev)
+        next.add(postId)
+        try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+        return next
+      })
+      setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + 1) }))
+    }
+
+    try {
+      if (already) {
+        const { error } = await supabase
+          .from('post_replays')
+          .update({ quote_text: text })
+          .eq('post_id', postId)
+          .eq('replayer_id', myId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('post_replays').insert({
+          post_id: postId,
+          replayer_id: myId,
+          quote_text: text,
+        })
+        if (error) throw error
+      }
+      toast.success('Replayed')
+    } catch (err) {
+      console.error('Failed to quote-replay:', err)
+      if (!already) {
+        setReplayed(prev => {
+          const next = new Set(prev)
+          next.delete(postId)
+          try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+          return next
+        })
+        setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) - 1) }))
+      }
     }
   }
 
@@ -367,6 +492,10 @@ export default function FeedPage() {
               resonateCount={postStats[post.id]?.resonateCount ?? resonateCounts[post.id] ?? post.resonates ?? 0}
               echoCount={postStats[post.id]?.echoCount ?? 0}
               onResonate={toggleResonate}
+              replayed={replayed.has(post.id)}
+              replayCount={postStats[post.id]?.replayCount ?? replayCounts[post.id] ?? post.replays ?? 0}
+              onReplay={toggleReplay}
+              onQuoteReplay={quoteReplay}
               onExport={handleExport}
               isNew={newIds.has(post.id)}
               isTrending={trendingIds.has(post.id)}

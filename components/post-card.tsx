@@ -11,6 +11,7 @@ import {
   LyricBackIcon,
   MoreIcon,
   MusicNoteIcon,
+  ReplayIcon,
   ShareIcon,
 } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
@@ -48,6 +49,10 @@ export interface PostCardProps {
   onSelectVibe?: (vibe: string) => void
   onSelectRank?: (rank: 'NEW' | 'TRENDING' | 'TOP') => void
   variant?: PostCardVariant
+  replayed?: boolean
+  replayCount?: number
+  onReplay?: (id: string) => void
+  onQuoteReplay?: (id: string, quoteText: string) => void
 }
 
 const EMOTION_COLORS: Record<string, string> = {
@@ -302,6 +307,7 @@ export function PostCard({
   post, resonated, resonateCount, echoCount, onResonate, onExport,
   isNew = false, isTrending = false, isTop = false, onSelectVibe, onSelectRank,
   variant = 'feed',
+  replayed = false, replayCount = 0, onReplay, onQuoteReplay,
 }: PostCardProps) {
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -321,6 +327,9 @@ export function PostCard({
   const [reportMsg, setReportMsg] = useState<string | null>(null)
   const [hideBusy, setHideBusy] = useState(false)
   const [hiddenLocally, setHiddenLocally] = useState(false)
+  const [replayMenuOpen, setReplayMenuOpen] = useState(false)
+  const [quoteOpen, setQuoteOpen] = useState(false)
+  const [quoteText, setQuoteText] = useState('')
   const isCompact = variant === 'compact'
   const avatarPx = isCompact ? '32px' : '40px'
   const cardPadding = isCompact ? '12px' : '16px'
@@ -721,6 +730,131 @@ export function PostCard({
           <CardIcon size={18} color="var(--text-secondary)" />
           <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Card</span>
         </button>
+
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            aria-label="Replay"
+            aria-expanded={replayMenuOpen}
+            onClick={() => {
+              setReplayMenuOpen(o => !o)
+              setQuoteOpen(false)
+              setQuoteText('')
+            }}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+              background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
+              minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
+              color: replayed ? 'var(--gold)' : 'var(--text-secondary)',
+              transition: 'color 150ms ease',
+            }}
+          >
+            <ReplayIcon size={18} color={replayed ? 'var(--gold)' : 'var(--text-secondary)'} />
+            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+              {replayCount > 0 ? replayCount + ' ' : ''}Replay
+            </span>
+          </button>
+          {replayMenuOpen && !quoteOpen && (
+            <div
+              role="menu"
+              style={{
+                position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '6px', zIndex: 20,
+                minWidth: '160px', background: 'var(--bg)',
+                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
+                padding: '6px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+              }}
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  if (!requireAuth()) return
+                  onReplay?.(post.id)
+                  setReplayMenuOpen(false)
+                }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
+                  color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                  cursor: 'pointer', borderRadius: '8px',
+                }}
+              >Replay</button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  if (!requireAuth()) return
+                  setQuoteOpen(true)
+                }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
+                  color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                  cursor: 'pointer', borderRadius: '8px',
+                }}
+              >Add your take</button>
+            </div>
+          )}
+          {replayMenuOpen && quoteOpen && (
+            <div
+              style={{
+                position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '6px', zIndex: 20,
+                width: '220px', background: 'var(--bg)',
+                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
+                padding: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+              }}
+            >
+              <textarea
+                value={quoteText}
+                onChange={(e) => setQuoteText(e.target.value)}
+                placeholder="Add your take…"
+                rows={3}
+                style={{
+                  width: '100%', boxSizing: 'border-box', resize: 'vertical',
+                  fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                  color: 'var(--text)', background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
+                  padding: '10px', outline: 'none', marginBottom: '8px',
+                }}
+              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = quoteText.trim()
+                    if (!text) return
+                    if (!requireAuth()) return
+                    onQuoteReplay?.(post.id, text)
+                    setReplayMenuOpen(false)
+                    setQuoteOpen(false)
+                    setQuoteText('')
+                  }}
+                  style={{
+                    flex: 1, minHeight: '44px', padding: '0 12px',
+                    background: 'var(--gold)', border: 'none', borderRadius: '8px',
+                    color: 'var(--bg)', fontFamily: 'var(--font-lora), serif',
+                    fontSize: '0.75rem', fontWeight: 700, letterSpacing: '1px',
+                    textTransform: 'uppercase', cursor: 'pointer',
+                  }}
+                >Submit</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuoteOpen(false)
+                    setQuoteText('')
+                    setReplayMenuOpen(false)
+                  }}
+                  style={{
+                    flex: 1, minHeight: '44px', padding: '0 12px',
+                    background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
+                    color: 'var(--text-muted)', fontFamily: 'var(--font-lora), serif',
+                    fontSize: '0.75rem', cursor: 'pointer',
+                  }}
+                >Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {label && (
           <button

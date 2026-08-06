@@ -17,6 +17,7 @@ export interface Post {
   timestamp?: number
   resonates?: number
   replies?: number
+  replays?: number
   songId?: string | null
   audioUrl?: string | null
   snippetStart?: number | null
@@ -61,7 +62,7 @@ const POST_SELECT = `
   snippet_start_sec,
   snippet_end_sec,
   profiles:author_profile_id ( username, display_name, avatar_url ),
-  post_stats ( resonate_count, echo_count ),
+  post_stats ( resonate_count, echo_count, replay_count ),
   songs:song_id ( audio_url )
 `
 
@@ -100,6 +101,7 @@ function mapRow(row: any): Post {
     timestamp: row.created_at ? new Date(row.created_at).getTime() : undefined,
     resonates: stats?.resonate_count ?? 0,
     replies: stats?.echo_count ?? 0,
+    replays: stats?.replay_count ?? 0,
     songId: row.song_id ?? null,
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
