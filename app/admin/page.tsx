@@ -855,69 +855,6 @@ function CatalogSongsTab() {
   )
 }
 
-// ── Licensed Artists Tab ──
-function LicensedTab() {
-  const [artists, setArtists] = useState<string[]>([])
-  const [newArtist, setNewArtist] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (!db) return
-    return onValue(ref(db, 'adminConfig/licensedArtists'), snap => {
-      if (snap.exists()) {
-        const data = snap.val()
-        if (Array.isArray(data)) {
-          setArtists(data.map(String).filter(Boolean))
-        } else if (typeof data === 'string') {
-          setArtists([data].filter(Boolean))
-        } else if (typeof data === 'object' && data !== null) {
-          setArtists(Object.values(data).map(String).filter(Boolean))
-        }
-      } else {
-        setArtists(['trymargo'])
-      }
-    })
-  }, [])
-
-  const add = async () => {
-    const name = newArtist.toLowerCase().trim()
-    if (!name || artists.includes(name) || !db) return
-    setSaving(true)
-    const updated = [...artists, name]
-    await set(ref(db, 'adminConfig/licensedArtists'), updated)
-    setNewArtist('')
-    setSaving(false)
-  }
-
-  const remove_ = async (name: string, e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!db) return
-    const updated = artists.filter(a => a !== name)
-    await set(ref(db, 'adminConfig/licensedArtists'), updated)
-  }
-
-  return (
-    <div>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '24px', lineHeight: 1.6 }}>
-        Artists listed here get Tier 1 treatment — gold border, Margo Original badge, inline karaoke player on the feed.
-      </p>
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
-        <input value={newArtist} onChange={e => setNewArtist(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && add()}
-          placeholder="Artist name (lowercase)" style={{ ...S.input, flex: 1 }} />
-        <button onClick={add} disabled={saving} style={S.btn}>Add</button>
-      </div>
-      {artists.map(name => (
-        <div key={name} style={{ ...S.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', color: 'var(--text)' }}>{name}</p>
-          <button onClick={(e) => remove_(name, e)} onMouseDown={e => e.stopPropagation()} style={S.dangerBtn}>Remove</button>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // ── Featured Tab ──
 function FeaturedTab() {
   const empty = { text: '', artist: '', song: '', username: '', reply: { text: '', artist: '', song: '', username: '' } }
@@ -1018,54 +955,12 @@ function FeaturedTab() {
   )
 }
 
-// ── Pages Tab ──
-function PagesTab() {
-  const pages = ['about', 'privacy', 'terms', 'contact']
-  const [activePage, setActivePage] = useState('about')
-  const [content, setContent] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    if (!db) return
-    get(ref(db, `pages/${activePage}`)).then(snap => {
-      setContent(snap.exists() ? (snap.val().content || '') : '')
-    })
-  }, [activePage])
-
-  const save = async () => {
-    if (!db) return
-    setSaving(true)
-    await set(ref(db, `pages/${activePage}`), { content, updatedAt: Date.now() })
-    setSaving(false); setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0' }}>
-        {pages.map(p => (
-          <button key={p} onClick={() => setActivePage(p)} style={S.tab(activePage === p)}>
-            {p.charAt(0).toUpperCase() + p.slice(1)}
-          </button>
-        ))}
-      </div>
-      <textarea value={content} onChange={e => setContent(e.target.value)}
-        rows={16} placeholder={`Enter ${activePage} page content…`}
-        style={{ ...S.input, resize: 'vertical', lineHeight: 1.7, marginBottom: '16px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
-      <button onClick={save} disabled={saving} style={{ ...S.btn, opacity: saving ? 0.6 : 1 }}>
-        {saved ? 'Saved ✓' : saving ? 'Saving…' : `Save ${activePage.charAt(0).toUpperCase() + activePage.slice(1)}`}
-      </button>
-    </div>
-  )
-}
-
 // ── Main Admin Page ──
 export default function AdminPage() {
   const [user, setUser] = useState<any>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tab, setTab] = useState<'posts'|'catalog'|'licensed'|'featured'|'pages'|'artists'>('posts')
+  const [tab, setTab] = useState<'posts'|'catalog'|'featured'|'artists'>('posts')
 
   useEffect(() => {
     if (!auth) { setAuthChecked(true); return }
@@ -1092,9 +987,7 @@ export default function AdminPage() {
   const tabs: { key: typeof tab; label: string }[] = [
     { key: 'posts', label: 'Posts' },
     { key: 'catalog', label: 'Catalog' },
-    { key: 'licensed', label: 'Licensed Artists' },
     { key: 'featured', label: 'Featured' },
-    { key: 'pages', label: 'Pages' },
     { key: 'artists', label: 'Artists' },
   ]
 
@@ -1118,9 +1011,7 @@ export default function AdminPage() {
         </div>
         {tab === 'posts'    && <PostsTab />}
         {tab === 'catalog' && <CatalogSongsTab key="catalog" />}
-        {tab === 'licensed' && <LicensedTab />}
         {tab === 'featured' && <FeaturedTab />}
-        {tab === 'pages'    && <PagesTab />}
         {tab === 'artists'  && <ArtistApplicationsTab />}
       </div>
     </div>
