@@ -329,6 +329,60 @@
   }
 }
 
+/* Feed/post action row — X-style icons: icon + count on one line.
+   Word labels only at desktop (≥640px) where space allows. */
+.margo-feed-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 0;
+  width: 100%;
+}
+.margo-feed-action {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center;
+  gap: 6px !important;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--margo-touch-min);
+  padding: 8px 4px !important;
+  box-sizing: border-box;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-feed-action__count {
+  font-family: var(--font-lora), serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.margo-feed-action__label {
+  display: none;
+  font-family: var(--font-lora), serif;
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+@media (min-width: 640px) {
+  .margo-feed-action {
+    gap: 8px !important;
+    padding: 8px 10px !important;
+  }
+  .margo-feed-action__label {
+    display: inline;
+  }
+}
+
 .margo-mp-scrim {
   background: rgba(5, 4, 8, 0.88);
   backdrop-filter: blur(28px);

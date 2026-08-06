@@ -331,6 +331,8 @@ export function PostCard({
   const [quoteOpen, setQuoteOpen] = useState(false)
   const [quoteText, setQuoteText] = useState('')
   const [rowExpanded, setRowExpanded] = useState(false)
+  const [avatarBroken, setAvatarBroken] = useState(false)
+  useEffect(() => { setAvatarBroken(false) }, [post.authorAvatarUrl, post.authorUid])
   // row collapses to a dense one-liner; expand renders the compact card in place
   const isRow = variant === 'row'
   const isCompact = variant === 'compact' || (isRow && rowExpanded)
@@ -377,7 +379,8 @@ export function PostCard({
     return () => obs.disconnect()
   }, [post.id])
 
-  const avatarUrl = post.authorAvatarUrl || authorProfile?.avatarUrl || null
+  const rawAvatarUrl = (post.authorAvatarUrl || authorProfile?.avatarUrl || '').trim()
+  const avatarUrl = rawAvatarUrl && !avatarBroken ? rawAvatarUrl : null
 
   if (hiddenLocally && isCompact) {
     return (
@@ -475,15 +478,15 @@ export function PostCard({
             overflow: 'hidden',
           }}>
             {avatarUrl ? (
-              <img src={avatarUrl} alt={post.username || 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : isTier1 ? (
-              <svg width='26' height='26' viewBox='-4 -4 88 88' xmlns='http://www.w3.org/2000/svg'>
-                <path d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57'
-                  fill='none' stroke='var(--bg)' strokeWidth='7' strokeLinecap='round' strokeLinejoin='round' />
-              </svg>
+              <img src={avatarUrl} alt={post.username || 'avatar'} onError={() => setAvatarBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', fontWeight: 700, color: 'var(--gold)' }}>
-                {post.username ? post.username.charAt(0).toUpperCase() : 'ML'}
+              <span style={{
+                fontFamily: 'var(--font-lora), serif',
+                fontSize: isCompact ? '0.6rem' : '0.7rem',
+                fontWeight: 700,
+                color: isTier1 ? 'var(--bg)' : 'var(--gold)',
+              }}>
+                {post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : 'ML')}
               </span>
             )}
           </div>
@@ -685,12 +688,24 @@ export function PostCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }}>
         <p style={{
           fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
-          fontSize: 'clamp(1.1rem, 2.4vw, 1.5rem)', color: 'var(--text)',
+          fontSize: isCompact ? '1rem' : 'clamp(1.1rem, 2.4vw, 1.5rem)', color: 'var(--text)',
           lineHeight: 1.45, flex: 1, margin: 0,
         }}>
           &ldquo;{post.text}&rdquo;
         </p>
-        {isTier1 && audioUrl && (
+        {isCompact && (post.knowledge?.artwork || post.youtubeMeta?.thumbnail) && (
+          <PostThumbnail
+            youtubeThumbnail={post.youtubeMeta?.thumbnail}
+            artwork={post.knowledge?.artwork}
+            alt=""
+            style={{
+              width: '56px', height: '56px', borderRadius: '8px',
+              objectFit: 'cover', flexShrink: 0,
+              border: '1px solid var(--border)',
+            }}
+          />
+        )}
+        {!isCompact && isTier1 && audioUrl && (
           <SnippetIconButton audioUrl={audioUrl} songId={post.songId || null} postText={post.text} songTitle={post.knowledge?.song || ''} artist={post.knowledge?.artist || ''} artwork={post.knowledge?.artwork || null} snippetStart={post.snippetStart} snippetEnd={post.snippetEnd} />
         )}
       </div>
@@ -740,58 +755,62 @@ export function PostCard({
         </Link>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div>
+      <div className="margo-feed-actions">
         <button
           type="button"
+          className="margo-feed-action"
           aria-label={resonated ? 'Remove resonate' : 'Resonate'}
           onClick={() => onResonate(post.id)}
           style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
-          minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
-          color: resonated ? 'var(--gold)' : 'var(--text-secondary)',
-          transition: 'color 150ms ease',
-        }}>
+            color: resonated ? 'var(--gold)' : 'var(--text-secondary)',
+            transition: 'color 150ms ease',
+          }}
+        >
           {resonated
             ? <HeartFilledIcon size={18} color="var(--gold)" />
             : <HeartIcon size={18} color="var(--text-secondary)" />
           }
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            {resonateCount > 0 ? resonateCount + ' ' : ''}Resonate
-          </span>
+          {resonateCount > 0 ? (
+            <span className="margo-feed-action__count">{resonateCount}</span>
+          ) : null}
+          <span className="margo-feed-action__label">Resonate</span>
         </button>
 
         <Link
           href={`/lyric-back?postId=${post.id}`}
+          className="margo-feed-action"
           aria-label="Lyric Back"
           style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          color: 'var(--text-secondary)', textDecoration: 'none', padding: '8px 12px',
-          minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
-          transition: 'color 150ms ease',
-        }}>
+            color: 'var(--text-secondary)',
+            transition: 'color 150ms ease',
+          }}
+        >
           <LyricBackIcon size={18} color="var(--text-secondary)" />
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>{echoCount > 0 ? echoCount + ' ' : ''}Lyric Back</span>
+          {echoCount > 0 ? (
+            <span className="margo-feed-action__count">{echoCount}</span>
+          ) : null}
+          <span className="margo-feed-action__label">Lyric Back</span>
         </Link>
 
         <button
           type="button"
+          className="margo-feed-action"
           aria-label="Export lyric card"
           onClick={() => onExport(post)}
           style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
-          minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
-          color: 'var(--text-secondary)', transition: 'color 150ms ease',
-        }}>
+            color: 'var(--text-secondary)', transition: 'color 150ms ease',
+          }}
+        >
           <CardIcon size={18} color="var(--text-secondary)" />
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Card</span>
+          <span className="margo-feed-action__label">Card</span>
         </button>
 
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', flex: '1 1 0', minWidth: 0 }}>
           <button
             type="button"
-            aria-label="Replay"
+            className="margo-feed-action"
+            aria-label={replayed ? 'Undo Replay' : 'Replay'}
             aria-expanded={replayMenuOpen}
             onClick={() => {
               setReplayMenuOpen(o => !o)
@@ -799,17 +818,16 @@ export function PostCard({
               setQuoteText('')
             }}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-              background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
-              minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
+              width: '100%',
               color: replayed ? 'var(--gold)' : 'var(--text-secondary)',
               transition: 'color 150ms ease',
             }}
           >
             <ReplayIcon size={18} color={replayed ? 'var(--gold)' : 'var(--text-secondary)'} />
-            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-              {replayCount > 0 ? replayCount + ' ' : ''}Replay
-            </span>
+            {replayCount > 0 ? (
+              <span className="margo-feed-action__count">{replayCount}</span>
+            ) : null}
+            <span className="margo-feed-action__label">Replay</span>
           </button>
           {replayMenuOpen && !quoteOpen && (
             <div
@@ -835,7 +853,7 @@ export function PostCard({
                   color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
                   cursor: 'pointer', borderRadius: '8px',
                 }}
-              >Replay</button>
+              >{replayed ? 'Undo Replay' : 'Replay'}</button>
               <button
                 type="button"
                 role="menuitem"
@@ -912,6 +930,7 @@ export function PostCard({
             </div>
           )}
         </div>
+      </div>
 
         {label && (
           <button
@@ -921,13 +940,14 @@ export function PostCard({
               fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
               letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
               borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
-              border: 'none', cursor: 'pointer', color,
+              border: 'none', cursor: 'pointer', color, flexShrink: 0,
+              marginTop: '8px',
             }}
           >{label}</button>
         )}
       </div>
 
-      {isTier1 && (
+      {isTier1 && !isCompact && (
         <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ flex: 1 }}>

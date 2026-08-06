@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -13,6 +13,7 @@ import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
+import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -205,6 +206,8 @@ export default function ProfilePage() {
   )
 
   const [contentTab, setContentTab] = useState<ProfileContentTab>('lyrics')
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const accountMenuRef = useRef<HTMLDivElement>(null)
 
   const { requireAuth } = useAuthGate()
   const [resonated, setResonated] = useState<Set<string>>(() => {
@@ -223,6 +226,17 @@ export default function ProfilePage() {
   }
 
   const canViewContent = !profile?.isPrivate || isOwnProfile || followStatus === 'accepted'
+
+  useEffect(() => {
+    if (!accountMenuOpen) return
+    const onDoc = (e: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+        setAccountMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [accountMenuOpen])
 
   const { items: profileReplays, loading: replaysLoading } = useProfileReplays(
     profile?.id ?? null,
@@ -396,17 +410,98 @@ export default function ProfilePage() {
               </div>
 
               {isOwnProfile && (
-                <Link
-                  href="/profile/edit"
-                  style={{
-                    minHeight: 'var(--margo-touch-min)', padding: '0 22px',
-                    display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                    background: 'var(--surface-2)', color: 'var(--text-2)',
-                    border: '1px solid var(--border)', borderRadius: '50px',
-                    fontFamily: font, fontWeight: 600, fontSize: '0.9rem',
-                    textDecoration: 'none', cursor: 'pointer', flexShrink: 0,
-                  }}
-                >Edit Profile</Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <Link
+                    href="/profile/edit"
+                    style={{
+                      minHeight: 'var(--margo-touch-min)', padding: '0 18px',
+                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                      background: 'var(--surface-2)', color: 'var(--text-secondary)',
+                      border: '1px solid var(--border)', borderRadius: '50px',
+                      fontFamily: font, fontWeight: 600, fontSize: '0.6rem',
+                      letterSpacing: '1.5px', textTransform: 'uppercase',
+                      textDecoration: 'none', cursor: 'pointer',
+                    }}
+                  >Edit Profile</Link>
+                  <div ref={accountMenuRef} style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      aria-label="Account menu"
+                      aria-expanded={accountMenuOpen}
+                      onClick={() => setAccountMenuOpen(o => !o)}
+                      style={{
+                        width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        background: accountMenuOpen ? 'var(--surface-2)' : 'transparent',
+                        border: '1px solid var(--border)', borderRadius: '50%',
+                        cursor: 'pointer', padding: 0, boxSizing: 'border-box',
+                        WebkitTapHighlightColor: 'transparent',
+                      }}
+                    >
+                      <MoreIcon size={18} color="var(--text-secondary)" />
+                    </button>
+                    {accountMenuOpen && (
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                        minWidth: '200px', background: 'var(--bg)',
+                        border: '1px solid var(--border)', borderRadius: '10px',
+                        boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
+                        padding: '6px', zIndex: 40,
+                      }}>
+                        <Link
+                          href="/settings"
+                          onClick={() => setAccountMenuOpen(false)}
+                          style={{
+                            display: 'flex', alignItems: 'center',
+                            minHeight: 'var(--margo-touch-min)',
+                            fontFamily: font, fontSize: '0.8rem',
+                            textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                            padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
+                          }}
+                        >Account Settings</Link>
+                        {identity?.isArtist && (
+                          <Link
+                            href="/studio"
+                            onClick={() => setAccountMenuOpen(false)}
+                            style={{
+                              display: 'flex', alignItems: 'center',
+                              minHeight: 'var(--margo-touch-min)',
+                              fontFamily: font, fontSize: '0.8rem',
+                              textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                              padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
+                            }}
+                          >Studio</Link>
+                        )}
+                        {showApplyCTA && (
+                          <Link
+                            href="/apply-artist"
+                            onClick={() => setAccountMenuOpen(false)}
+                            style={{
+                              display: 'flex', alignItems: 'center',
+                              minHeight: 'var(--margo-touch-min)',
+                              fontFamily: font, fontSize: '0.8rem',
+                              textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                              padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
+                            }}
+                          >{applyLabel}</Link>
+                        )}
+                        <div style={{ height: '1px', background: 'var(--border)', margin: '6px 4px' }} />
+                        <button
+                          type="button"
+                          onClick={() => { setAccountMenuOpen(false); void handleSignOut() }}
+                          style={{
+                            display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left',
+                            minHeight: 'var(--margo-touch-min)',
+                            fontFamily: font, fontSize: '0.8rem',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: 'rgba(255,255,255,0.5)',
+                            padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
+                          }}
+                        >Sign Out</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {!isOwnProfile && user && (
@@ -449,7 +544,7 @@ export default function ProfilePage() {
                 the same visual weight as followers/following, instead of
                 the full catalog being dumped inline further down. Only
                 shown for artists. */}
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: isOwnProfile ? '16px' : '20px' }}>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '20px' }}>
               <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
                 <strong style={{ color: 'var(--text)' }}>{followerCount ?? '—'}</strong> followers
               </span>
@@ -465,35 +560,6 @@ export default function ProfilePage() {
                 </Link>
               )}
             </div>
-
-            {isOwnProfile && (
-              <div style={{
-                display: 'flex', flexWrap: 'wrap', gap: '6px 18px',
-                paddingBottom: '20px', marginBottom: '20px',
-                borderBottom: '1px solid var(--border)',
-              }}>
-                <Link href="/settings" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                  Account settings
-                </Link>
-                {identity?.isArtist && (
-                  <Link href="/studio" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                    Studio
-                  </Link>
-                )}
-                {showApplyCTA && (
-                  <Link href="/apply-artist" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                    {applyLabel}
-                  </Link>
-                )}
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                >
-                  Sign out
-                </button>
-              </div>
-            )}
 
             <div style={{ marginBottom: '24px' }}>
               <p style={sectionLabelStyle}>Bio</p>

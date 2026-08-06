@@ -12,7 +12,11 @@ const firebaseConfig = {
   appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-const app = typeof window !== 'undefined'
+// Skip client init when public Firebase env is incomplete — Supabase is the
+// primary identity path; a half-configured Firebase app fatally crashes the UI.
+const hasFirebaseConfig = !!(firebaseConfig.projectId && firebaseConfig.apiKey)
+
+const app = typeof window !== 'undefined' && hasFirebaseConfig
   ? (getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0])
   : null
 

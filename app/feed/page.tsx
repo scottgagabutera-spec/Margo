@@ -222,6 +222,7 @@ export default function FeedPage() {
         quoteText: string | null
         replayerUsername: string | null
         replayerDisplayName: string | null
+        replayerAvatarUrl: string | null
       }
 
   const feedItems = useMemo((): FeedItem[] => {
@@ -246,6 +247,7 @@ export default function FeedPage() {
         quoteText: r.quoteText,
         replayerUsername: r.replayerUsername,
         replayerDisplayName: r.replayerDisplayName,
+        replayerAvatarUrl: r.replayerAvatarUrl,
       }))
 
     const merged = [...originals, ...replayItems]
@@ -310,11 +312,38 @@ export default function FeedPage() {
   const toggleReplay = async (postId: string) => {
     if (!requireAuth()) return
     if (!user?.id) return
-    if (replayed.has(postId)) {
-      toast.success('Already replayed')
+    const myId = user.id
+    const already = replayed.has(postId)
+
+    if (already) {
+      setReplayed(prev => {
+        const next = new Set(prev)
+        next.delete(postId)
+        try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+        return next
+      })
+      setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) - 1) }))
+      try {
+        const { error } = await supabase
+          .from('post_replays')
+          .delete()
+          .eq('post_id', postId)
+          .eq('replayer_id', myId)
+        if (error) throw error
+        toast.success('Replay removed')
+      } catch (err) {
+        console.error('Failed to un-replay:', err)
+        setReplayed(prev => {
+          const next = new Set(prev)
+          next.add(postId)
+          try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+          return next
+        })
+        setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + 1) }))
+      }
       return
     }
-    const myId = user.id
+
     setReplayed(prev => {
       const next = new Set(prev)
       next.add(postId)
@@ -555,8 +584,9 @@ export default function FeedPage() {
                   key={item.key}
                   username={item.replayerUsername}
                   displayName={item.replayerDisplayName}
+                  avatarUrl={item.replayerAvatarUrl}
                   quoteText={item.quoteText}
-                  cardProps={cardProps}
+                  cardProps={{ ...cardProps, variant: 'compact' }}
                 />
               )
             }

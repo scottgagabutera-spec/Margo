@@ -11,6 +11,7 @@ export interface FolloweeReplay {
   replayerId: string
   replayerUsername: string | null
   replayerDisplayName: string | null
+  replayerAvatarUrl: string | null
   post: Post
 }
 
@@ -19,7 +20,7 @@ const REPLAY_FEED_SELECT = `
   quote_text,
   created_at,
   replayer_id,
-  profiles:replayer_id ( username, display_name ),
+  profiles:replayer_id ( username, display_name, avatar_url ),
   posts:post_id (
     id,
     text,
@@ -152,6 +153,7 @@ export function useFolloweeReplays(limit = 80) {
         replayerId: row.replayer_id,
         replayerUsername: profile?.username ?? null,
         replayerDisplayName: profile?.display_name ?? null,
+        replayerAvatarUrl: profile?.avatar_url ?? null,
         post,
       })
     }
