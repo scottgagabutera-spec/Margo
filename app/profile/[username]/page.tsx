@@ -9,6 +9,11 @@ import { usePosts } from '@/hooks/usePosts'
 import { useOwnPrivatePosts } from '@/hooks/useOwnPrivatePosts'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
+import { PostCard } from '@/components/post-card'
+import { CardExportModal } from '@/components/card-export-modal'
+import type { Post } from '@/hooks/usePosts'
+import { getMargoActorId } from '@/lib/engagement/session'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const font = 'var(--font-lora), serif'
 
@@ -194,6 +199,59 @@ export default function ProfilePage() {
     isOwnProfile && profile ? profile.id : null,
     isOwnProfile
   )
+
+  const { requireAuth } = useAuthGate()
+  const [resonated, setResonated] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const saved = localStorage.getItem('margoResonated')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch { return new Set() }
+  })
+  const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
+  const [exportPost, setExportPost] = useState<Post | null>(null)
+
+  const toggleResonate = async (postId: string) => {
+    if (!requireAuth()) return
+    const already = resonated.has(postId)
+    const myId = getMargoActorId()
+    setResonated(prev => {
+      const next = new Set(prev)
+      already ? next.delete(postId) : next.add(postId)
+      try { localStorage.setItem('margoResonated', JSON.stringify([...next])) } catch {}
+      return next
+    })
+    setResonateCounts(prev => {
+      const fromPost = [...ownPosts, ...privatePosts].find(x => x.id === postId)?.resonates ?? 0
+      const current = prev[postId] ?? fromPost
+      return { ...prev, [postId]: Math.max(0, current + (already ? -1 : 1)) }
+    })
+    try {
+      if (already) {
+        const { error } = await supabase.from('post_resonates').delete().eq('post_id', postId).eq('actor_id', myId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('post_resonates').insert({ post_id: postId, actor_id: myId })
+        if (error) throw error
+      }
+    } catch {
+      setResonated(prev => {
+        const next = new Set(prev)
+        already ? next.add(postId) : next.delete(postId)
+        try { localStorage.setItem('margoResonated', JSON.stringify([...next])) } catch {}
+        return next
+      })
+      setResonateCounts(prev => ({
+        ...prev,
+        [postId]: Math.max(0, (prev[postId] || 0) + (already ? 1 : -1)),
+      }))
+    }
+  }
+
+  const handleExport = (post: Post) => {
+    if (!requireAuth()) return
+    setExportPost(post)
+  }
 
   const canViewContent = !profile?.isPrivate || isOwnProfile || followStatus === 'accepted'
 
@@ -559,18 +617,16 @@ export default function ProfilePage() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {ownPosts.map(post => (
-                    <div key={post.id} style={{
-                      border: '1px solid var(--border)', borderRadius: '16px', padding: '18px',
-                    }}>
-                      <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '8px' }}>
-                        &ldquo;{post.text}&rdquo;
-                      </p>
-                      {(post.knowledge?.song || post.knowledge?.artist) && (
-                        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                          {post.knowledge?.song}{post.knowledge?.song && post.knowledge?.artist ? ' · ' : ''}{post.knowledge?.artist}
-                        </p>
-                      )}
-                    </div>
+                    <PostCard
+                      key={post.id}
+                      variant="compact"
+                      post={post}
+                      resonated={resonated.has(post.id)}
+                      resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+                      echoCount={post.replies ?? 0}
+                      onResonate={toggleResonate}
+                      onExport={handleExport}
+                    />
                   ))}
                 </div>
               )}
@@ -584,25 +640,16 @@ export default function ProfilePage() {
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {privatePosts.map(post => (
-                    <div key={post.id} style={{
-                      border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '18px',
-                      background: 'var(--gold-faint)',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
-                        <span style={{
-                          fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                          color: 'var(--gold)', letterSpacing: '1.5px', textTransform: 'uppercase',
-                        }}>Private</span>
-                      </div>
-                      <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '8px' }}>
-                        &ldquo;{post.text}&rdquo;
-                      </p>
-                      {(post.knowledge?.song || post.knowledge?.artist) && (
-                        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                          {post.knowledge?.song}{post.knowledge?.song && post.knowledge?.artist ? ' · ' : ''}{post.knowledge?.artist}
-                        </p>
-                      )}
-                    </div>
+                    <PostCard
+                      key={post.id}
+                      variant="compact"
+                      post={post}
+                      resonated={resonated.has(post.id)}
+                      resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+                      echoCount={post.replies ?? 0}
+                      onResonate={toggleResonate}
+                      onExport={handleExport}
+                    />
                   ))}
                 </div>
               </div>
@@ -610,6 +657,14 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+      <CardExportModal
+        open={!!exportPost}
+        onOpenChange={(o) => { if (!o) setExportPost(null) }}
+        lyric={exportPost?.text || ''}
+        song={exportPost?.knowledge?.song || ''}
+        artist={exportPost?.knowledge?.artist || ''}
+        postId={exportPost?.id}
+      />
     </main>
   )
 }
