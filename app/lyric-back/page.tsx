@@ -133,7 +133,10 @@ function LyricBackContent() {
   // in handlePost below.
   const respondingToId = echoId || postId
   const { post: respondingTo } = usePost(respondingToId)
-  const { echoes, loading: echoesLoading } = useEchoes(postId)
+  // List Lyric Backs on the post being replied to (works for arbitrary depth).
+  // Was useEchoes(postId): broke nesting when legacy ?echoId= was present —
+  // PostCard now uses ?postId={replyId}, so respondingToId===postId in that path.
+  const { echoes, loading: echoesLoading } = useEchoes(respondingToId)
 
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
