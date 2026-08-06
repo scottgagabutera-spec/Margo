@@ -43,7 +43,7 @@ function ArtistCatalogCard({ artist, songCount }: { artist: ArtistPreview; songC
         <ArtistBadge isArtist artistStatus={artist.artistStatus} size={11} />
       </p>
       {songCount > 0 && (
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'var(--text-3)', letterSpacing: '0.5px', textTransform: 'uppercase', margin: 0 }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', margin: 0 }}>
           {songCount} {songCount === 1 ? 'song' : 'songs'}
         </p>
       )}

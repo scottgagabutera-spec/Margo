@@ -15,7 +15,7 @@ const inputStyle: React.CSSProperties = {
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontFamily: font, fontSize: '0.875rem', color: 'var(--text-3)',
+  display: 'block', fontFamily: font, fontSize: '0.875rem', color: 'var(--text-secondary)',
   textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px',
 }
 
@@ -146,7 +146,7 @@ export default function EditProfilePage() {
         <div style={{ maxWidth: '560px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Edit Profile</h1>
-            <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-3)' }}>How you show up on Margo</p>
+            <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-secondary)' }}>How you show up on Margo</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -175,7 +175,7 @@ export default function EditProfilePage() {
             <div>
               <label style={labelStyle}>Username</label>
               <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontFamily: font, color: 'var(--text-3)', fontSize: '1rem' }}>@</span>
+                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontFamily: font, color: 'var(--text-secondary)', fontSize: '1rem' }}>@</span>
                 <input
                   type="text"
                   value={username}
@@ -183,7 +183,7 @@ export default function EditProfilePage() {
                   style={{ ...inputStyle, paddingLeft: '30px' }}
                 />
               </div>
-              <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', marginTop: '6px' }}>
+              <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
                 Lowercase letters, numbers, and underscores only.
               </p>
             </div>
@@ -197,14 +197,14 @@ export default function EditProfilePage() {
                 placeholder="Tell people what Margo means to you..."
                 style={{ ...inputStyle, height: 'auto', padding: '14px 16px', resize: 'none', lineHeight: 1.5 }}
               />
-              <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', marginTop: '6px', textAlign: 'right' }}>
+              <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'right' }}>
                 {bio.length}/160
               </p>
             </div>
 
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '20px' }}>
               <label style={{ ...labelStyle, marginBottom: '16px' }}>Signature Lyric</label>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)', marginTop: '-8px', marginBottom: '16px' }}>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '-8px', marginBottom: '16px' }}>
                 The line that says it about you — not tied to any post.
               </p>
               <textarea
@@ -236,7 +236,7 @@ export default function EditProfilePage() {
             }}>
               <div>
                 <p style={{ fontFamily: font, fontSize: '1rem', color: 'var(--text)', marginBottom: '4px' }}>Private Profile</p>
-                <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)' }}>Only approved followers can see your lyrics.</p>
+                <p style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Only approved followers can see your lyrics.</p>
               </div>
               <button
                 type="button"

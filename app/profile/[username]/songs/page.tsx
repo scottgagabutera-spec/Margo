@@ -95,7 +95,7 @@ export default function ArtistDiscographyPage() {
   if (notFound) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-3)' }}>No discography here.</p>
+        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)' }}>No discography here.</p>
       </div>
     )
   }
@@ -137,7 +137,7 @@ export default function ArtistDiscographyPage() {
                   </p>
                   <ArtistBadge isArtist={artist.isArtist} artistStatus={artist.artistStatus} size={13} />
                 </div>
-                <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '0.5px', textTransform: 'uppercase', margin: 0 }}>
+                <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase', margin: 0 }}>
                   Discography
                 </p>
               </div>

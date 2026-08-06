@@ -19,7 +19,7 @@ const font = 'var(--font-lora), serif'
 const DISCOGRAPHY_PREVIEW_COUNT = 8
 
 const sectionLabelStyle: React.CSSProperties = {
-  fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-3)',
+  fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)',
   textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px',
 }
 
@@ -267,7 +267,7 @@ export default function ProfilePage() {
       )}
 
       {!loading && notFound && (
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-3)', textAlign: 'center', fontSize: '1rem', paddingTop: '160px' }}>
+        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '1rem', paddingTop: '160px' }}>
           No one here by that name.
         </p>
       )}
@@ -308,11 +308,11 @@ export default function ProfilePage() {
                       fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
                       letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 8px',
                       borderRadius: '50px', background: 'var(--surface-2)',
-                      border: '1px solid var(--border)', color: 'var(--text-3)',
+                      border: '1px solid var(--border)', color: 'var(--text-muted)',
                     }}>Private</span>
                   )}
                 </div>
-                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-3)' }}>
+                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                   @{profile.username}
                 </p>
               </div>
@@ -394,23 +394,23 @@ export default function ProfilePage() {
                 paddingBottom: '20px', marginBottom: '20px',
                 borderBottom: '1px solid var(--border)',
               }}>
-                <Link href="/settings" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', textDecoration: 'none' }}>
+                <Link href="/settings" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
                   Account settings
                 </Link>
                 {identity?.isArtist && (
-                  <Link href="/studio" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', textDecoration: 'none' }}>
+                  <Link href="/studio" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
                     Studio
                   </Link>
                 )}
                 {showApplyCTA && (
-                  <Link href="/apply-artist" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', textDecoration: 'none' }}>
+                  <Link href="/apply-artist" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
                     {applyLabel}
                   </Link>
                 )}
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-3)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
                 >
                   Sign out
                 </button>
@@ -424,11 +424,11 @@ export default function ProfilePage() {
                   {profile.bio}
                 </p>
               ) : isOwnProfile ? (
-                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic', textDecoration: 'none' }}>
+                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
                   Add a bio →
                 </Link>
               ) : (
-                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                   No bio yet.
                 </p>
               )}
@@ -445,17 +445,17 @@ export default function ProfilePage() {
                     &ldquo;{profile.signatureLyric}&rdquo;
                   </p>
                   {(profile.signatureSong || profile.signatureArtist) && (
-                    <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-3)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                    <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
                       {profile.signatureSong}{profile.signatureSong && profile.signatureArtist ? ' · ' : ''}{profile.signatureArtist}
                     </p>
                   )}
                 </>
               ) : isOwnProfile ? (
-                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic', textDecoration: 'none' }}>
+                <Link href="/profile/edit" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
                   Add the lyric that says it best →
                 </Link>
               ) : (
-                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-3)', fontStyle: 'italic' }}>
+                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                   Hasn&rsquo;t picked one yet.
                 </p>
               )}
@@ -474,7 +474,7 @@ export default function ProfilePage() {
                   <div>
                     <p style={{ ...sectionLabelStyle, marginBottom: '2px' }}>Discography</p>
                     {artistSongs.length > 0 && (
-                      <p style={{ fontFamily: font, fontSize: '0.62rem', color: 'var(--text-3)', margin: 0 }}>
+                      <p style={{ fontFamily: font, fontSize: '0.62rem', color: 'var(--text-muted)', margin: 0 }}>
                         {artistStats.totalPlays.toLocaleString()} plays · {artistStats.totalResonates.toLocaleString()} resonates
                       </p>
                     )}
@@ -498,7 +498,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 ) : artistSongs.length === 0 ? (
-                  <p style={{ fontFamily: font, fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text-3)' }}>
+                  <p style={{ fontFamily: font, fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
                     {isOwnProfile ? (
                       <>Nothing live yet — head to <Link href="/studio" style={{ color: 'var(--gold)' }}>Studio</Link> to publish your first song.</>
                     ) : (
