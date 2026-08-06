@@ -4,7 +4,7 @@ import { auth, db } from '@/lib/firebase'
 import { getDatabase } from 'firebase/database'
 import { app } from '@/lib/firebase'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
-import { ref, onValue, update, remove, push, set, get, runTransaction } from 'firebase/database'
+import { ref, onValue, update, remove, push, set, get } from 'firebase/database'
 import { ArtistApplicationsTab } from '@/components/artist-applications-tab'
 import { BackButton } from '@/components/back-button'
 
@@ -156,14 +156,29 @@ function PostsTab() {
   const [catalogFilter, setCatalogFilter] = useState<'all' | 'active' | 'private' | 'hidden'>('all')
   const [catalogBusyId, setCatalogBusyId] = useState<string | null>(null)
   const [catalogActionError, setCatalogActionError] = useState<string | null>(null)
+  const [echoesLoadingId, setEchoesLoadingId] = useState<string | null>(null)
+  const [echoBusyId, setEchoBusyId] = useState<string | null>(null)
 
+  /** Lyric backs are posts rows (parent_post_id set) — same as useEchoes, but include hidden + private for moderation. */
   const loadEchoes = async (postId: string) => {
-    if (!db) return
-    const snap = await get(ref(db, `posts/${postId}/echoes`))
-    if (!snap.exists()) return
-    const list: Echo[] = []
-    snap.forEach(child => { list.push({ ...child.val(), id: child.key }) })
-    setEchoes(prev => ({ ...prev, [postId]: list }))
+    if (!auth?.currentUser) return
+    setEchoesLoadingId(postId)
+    setCatalogActionError(null)
+    try {
+      const token = await auth.currentUser.getIdToken()
+      const res = await fetch('/api/admin/catalog-posts?parent_post_id=' + encodeURIComponent(postId), {
+        headers: { Authorization: 'Bearer ' + token },
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
+      const list: Echo[] = Array.isArray(body.echoes) ? body.echoes : []
+      setEchoes(prev => ({ ...prev, [postId]: list }))
+    } catch (e: any) {
+      setCatalogActionError(e.message || 'Failed to load lyric backs')
+      setEchoes(prev => ({ ...prev, [postId]: [] }))
+    } finally {
+      setEchoesLoadingId(null)
+    }
   }
 
   const toggleExpandPost = (postId: string) => {
@@ -176,16 +191,21 @@ function PostsTab() {
   }
 
   const toggleHideEcho = async (postId: string, echo: Echo) => {
-    if (!db) return
+    if (echoBusyId) return
     const newStatus = echo.status === 'hidden' ? 'active' : 'hidden'
-    const delta = newStatus === 'hidden' ? -1 : 1
-    await update(ref(db, `posts/${postId}/echoes/${echo.id}`), { status: newStatus })
-    // Keep postStats.echoCount accurate — only count active echoes
-    runTransaction(ref(db, `postStats/${postId}/echoCount`), (cur) => Math.max(0, (cur || 0) + delta))
-    setEchoes(prev => ({
-      ...prev,
-      [postId]: (prev[postId] || []).map(e => e.id === echo.id ? { ...e, status: newStatus } : e)
-    }))
+    setEchoBusyId(echo.id)
+    setCatalogActionError(null)
+    try {
+      await patchSupabasePostStatus(echo.id, newStatus)
+      setEchoes(prev => ({
+        ...prev,
+        [postId]: (prev[postId] || []).map(e => e.id === echo.id ? { ...e, status: newStatus } : e)
+      }))
+    } catch (e: any) {
+      setCatalogActionError(e.message || 'Failed to update lyric back')
+    } finally {
+      setEchoBusyId(null)
+    }
   }
 
   const runBackfill = async () => {
@@ -394,6 +414,75 @@ function PostsTab() {
   const totalResonates = Object.values(analytics).reduce((s, a) => s + Object.keys(a.resonates || {}).length, 0)
   const flagged = posts.filter(p => (p.flagCount || 0) > 0 && p.status !== 'hidden').length
 
+  const renderEchoPanel = (parentId: string) => {
+    const postEchoes = echoes[parentId] || []
+    const loading = echoesLoadingId === parentId
+    const activeN = postEchoes.filter(e => e.status !== 'hidden' && e.status !== 'private').length
+    const hiddenN = postEchoes.filter(e => e.status === 'hidden').length
+    const privateN = postEchoes.filter(e => e.status === 'private').length
+    return (
+      <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
+        {loading ? (
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>Loading lyric backs…</p>
+        ) : postEchoes.length === 0 ? (
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>No lyric backs yet.</p>
+        ) : (
+          <>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
+              {activeN} active · {hiddenN} hidden · {privateN} private
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {postEchoes.map(echo => {
+                const isEchoHidden = echo.status === 'hidden'
+                const isEchoPrivate = echo.status === 'private'
+                return (
+                  <div key={echo.id} style={{
+                    background: isEchoHidden ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
+                    borderRadius: '12px', padding: '12px 14px',
+                    border: '1px solid ' + (isEchoHidden ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)'),
+                    opacity: isEchoHidden ? 0.5 : 1,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px'
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '6px' }}>
+                        &ldquo;{echo.lyric}&rdquo;
+                      </p>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          {echo.song} · {echo.artist}
+                        </span>
+                        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>·</span>
+                        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          {echo.username || 'anon'}
+                        </span>
+                        {echo.emotion && (
+                          <>
+                            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>·</span>
+                            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>{echo.emotion}</span>
+                          </>
+                        )}
+                        {isEchoHidden && <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: '#ff6060', textTransform: 'uppercase', letterSpacing: '1px' }}>hidden</span>}
+                        {isEchoPrivate && <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>private</span>}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleHideEcho(parentId, echo)}
+                      disabled={echoBusyId === echo.id}
+                      style={{ ...(isEchoHidden ? S.btn : S.dangerBtn), flexShrink: 0, opacity: echoBusyId === echo.id ? 0.6 : 1 }}
+                    >
+                      {echoBusyId === echo.id ? '…' : isEchoHidden ? 'Show' : 'Hide'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
       {/* Stats row */}
@@ -461,6 +550,7 @@ function PostsTab() {
             const isPrivate = status === 'private'
             const isHidden = status === 'hidden'
             const author = post.displayName || post.username || 'anon'
+            const isExpanded = expandedPost === post.id
             return (
               <div key={post.id} style={{ ...S.card, opacity: isHidden ? 0.45 : 1, marginBottom: '10px' }}>
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '6px', lineHeight: 1.4 }}>
@@ -484,19 +574,25 @@ function PostsTab() {
                       </span>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleCatalogHide(post)}
-                    disabled={catalogBusyId === post.id}
-                    style={{
-                      ...(isHidden ? S.btn : S.dangerBtn),
-                      opacity: catalogBusyId === post.id ? 0.6 : 1,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {catalogBusyId === post.id ? '…' : isHidden ? 'Show' : 'Hide'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    <button type="button" onClick={() => toggleExpandPost(post.id)} style={{ ...S.ghostBtn, fontSize: '0.55rem' }}>
+                      {isExpanded ? 'Hide Backs' : 'Lyric Backs'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleCatalogHide(post)}
+                      disabled={catalogBusyId === post.id}
+                      style={{
+                        ...(isHidden ? S.btn : S.dangerBtn),
+                        opacity: catalogBusyId === post.id ? 0.6 : 1,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {catalogBusyId === post.id ? '…' : isHidden ? 'Show' : 'Hide'}
+                    </button>
+                  </div>
                 </div>
+                {isExpanded && renderEchoPanel(post.id)}
               </div>
             )
           })
@@ -530,7 +626,6 @@ function PostsTab() {
         const resonateCount = Object.keys(a.resonates || {}).length
         const isHidden = post.status === 'hidden'
         const isFlagged = (post.flagCount || 0) > 0
-        const postEchoes = echoes[post.id] || []
         const isExpanded = expandedPost === post.id
         return (
           <div key={post.id} style={{ ...S.card, opacity: isHidden ? 0.45 : 1, borderColor: isFlagged ? 'rgba(255,96,96,0.3)' : 'rgba(255,255,255,0.06)', marginBottom: '12px' }}>
@@ -554,59 +649,7 @@ function PostsTab() {
                 </button>
               </div>
             </div>
-            {/* Echo dropdown */}
-            {isExpanded && (
-              <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
-                {postEchoes.length === 0 ? (
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>No lyric backs yet.</p>
-                ) : (
-                  <>
-                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
-                      {postEchoes.filter(e => e.status !== 'hidden').length} active · {postEchoes.filter(e => e.status === 'hidden').length} hidden
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {postEchoes.map(echo => {
-                        const isEchoHidden = echo.status === 'hidden'
-                        return (
-                          <div key={echo.id} style={{
-                            background: isEchoHidden ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
-                            borderRadius: '12px', padding: '12px 14px',
-                            border: `1px solid ${isEchoHidden ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)'}`,
-                            opacity: isEchoHidden ? 0.5 : 1,
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px'
-                          }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '6px' }}>
-                                "{echo.lyric}"
-                              </p>
-                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                  {echo.song} · {echo.artist}
-                                </span>
-                                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>·</span>
-                                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                  {echo.username || 'anon'}
-                                </span>
-                                {echo.emotion && (
-                                  <>
-                                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>·</span>
-                                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>{echo.emotion}</span>
-                                  </>
-                                )}
-                                {isEchoHidden && <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: '#ff6060', textTransform: 'uppercase', letterSpacing: '1px' }}>hidden</span>}
-                              </div>
-                            </div>
-                            <button onClick={() => toggleHideEcho(post.id, echo)} style={{ ...isEchoHidden ? S.btn : S.dangerBtn, flexShrink: 0 }}>
-                              {isEchoHidden ? 'Show' : 'Hide'}
-                            </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
+            {isExpanded && renderEchoPanel(post.id)}
           </div>
         )
       })}

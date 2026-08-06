@@ -36,10 +36,57 @@ async function assertAdmin(request: NextRequest): Promise<{ ok: true } | { ok: f
   }
 }
 
+const POST_SELECT = `
+  id,
+  text,
+  emotion,
+  status,
+  song_title,
+  artist_name,
+  legacy_author_label,
+  author_profile_id,
+  created_at,
+  flag_count,
+  parent_post_id,
+  profiles:author_profile_id ( username, display_name )
+`
+
+function mapCatalogPost(row: any) {
+  const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+  return {
+    id: row.id,
+    text: row.text ?? '',
+    emotion: row.emotion ?? null,
+    status: row.status ?? 'active',
+    song: row.song_title ?? null,
+    artist: row.artist_name ?? null,
+    username: profile?.username ?? row.legacy_author_label ?? null,
+    displayName: profile?.display_name ?? null,
+    createdAt: row.created_at ?? null,
+    flagCount: row.flag_count ?? 0,
+  }
+}
+
+/** Echo shape aligned with admin PostsTab / useEchoes mapping. */
+function mapEcho(row: any) {
+  const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+  return {
+    id: row.id,
+    lyric: row.text ?? '',
+    song: row.song_title ?? '',
+    artist: row.artist_name ?? '',
+    emotion: row.emotion ?? '',
+    username: profile?.username ?? row.legacy_author_label ?? 'anon',
+    displayName: profile?.display_name ?? undefined,
+    timestamp: row.created_at ? new Date(row.created_at).getTime() : 0,
+    status: row.status ?? 'active',
+  }
+}
+
 /**
- * Read-only Supabase posts catalog for the admin Posts tab (includes
- * status=private). Auth: Firebase ID token must match adminConfig/allowedUid.
- * Uses service-role Supabase client — never expose that key to the browser.
+ * GET without query: top-level catalog posts (parent_post_id is null).
+ * GET ?parent_post_id=: child lyric backs for admin moderation — includes
+ * hidden and private (service role; unlike public useEchoes).
  */
 export async function GET(request: NextRequest) {
   const gate = await assertAdmin(request)
@@ -47,22 +94,27 @@ export async function GET(request: NextRequest) {
 
   try {
     const admin = getSupabaseAdmin()
+    const parentId = request.nextUrl.searchParams.get('parent_post_id')?.trim() || ''
+
+    if (parentId) {
+      const { data, error } = await admin
+        .from('posts')
+        .select(POST_SELECT)
+        .eq('parent_post_id', parentId)
+        .order('created_at', { ascending: false })
+        .limit(200)
+
+      if (error) {
+        console.error('[catalog-posts echoes]', error)
+        return NextResponse.json({ error: 'Failed to load lyric backs' }, { status: 500 })
+      }
+
+      return NextResponse.json({ echoes: (data ?? []).map(mapEcho) })
+    }
+
     const { data, error } = await admin
       .from('posts')
-      .select(`
-        id,
-        text,
-        emotion,
-        status,
-        song_title,
-        artist_name,
-        legacy_author_label,
-        author_profile_id,
-        created_at,
-        flag_count,
-        parent_post_id,
-        profiles:author_profile_id ( username, display_name )
-      `)
+      .select(POST_SELECT)
       .is('parent_post_id', null)
       .order('created_at', { ascending: false })
       .limit(300)
@@ -72,23 +124,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to load posts' }, { status: 500 })
     }
 
-    const posts = (data ?? []).map((row: any) => {
-      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
-      return {
-        id: row.id,
-        text: row.text ?? '',
-        emotion: row.emotion ?? null,
-        status: row.status ?? 'active',
-        song: row.song_title ?? null,
-        artist: row.artist_name ?? null,
-        username: profile?.username ?? row.legacy_author_label ?? null,
-        displayName: profile?.display_name ?? null,
-        createdAt: row.created_at ?? null,
-        flagCount: row.flag_count ?? 0,
-      }
-    })
-
-    return NextResponse.json({ posts })
+    return NextResponse.json({ posts: (data ?? []).map(mapCatalogPost) })
   } catch (e: any) {
     console.error('[catalog-posts]', e)
     return NextResponse.json({ error: e?.message || 'Failed to load posts' }, { status: 500 })
@@ -98,7 +134,7 @@ export async function GET(request: NextRequest) {
 const ALLOWED_STATUS = new Set(['active', 'hidden', 'private'])
 
 /**
- * Toggle / set status on a real Supabase posts row (what Feed / Discover read).
+ * Set status on any posts row by id (top-level or lyric-back reply).
  * Body: { id: string, status: 'active' | 'hidden' | 'private' }
  */
 export async function PATCH(request: NextRequest) {
