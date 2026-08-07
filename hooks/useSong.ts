@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { Song } from '@/hooks/useSongs'
+
+const supabase = createClient()
 
 export interface LyricLine {
   id: number

@@ -1,8 +1,10 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import type { Post } from '@/hooks/usePosts'
+
+const supabase = createClient()
 
 export interface FolloweeReplay {
   id: string

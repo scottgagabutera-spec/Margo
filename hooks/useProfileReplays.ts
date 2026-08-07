@@ -1,7 +1,9 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/hooks/usePosts'
+
+const supabase = createClient()
 
 /** Replays this profile made (for profile Replays tab). */
 export interface ProfileReplayItem {
