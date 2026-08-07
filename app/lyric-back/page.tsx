@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, Suspense } from 'react'
 import { toast } from 'sonner'
 import { SearchIcon } from '@/components/icons'
 import { CardExportModal } from '@/components/card-export-modal'
-import { HeartIcon } from '@/components/heart-icon'
 import { AuthorMeta } from '@/components/username-tag'
 import { supabase } from '@/lib/supabase'
 import { matchLyricLine } from '@/lib/lyric-match'
@@ -14,6 +13,9 @@ import { getMargoActorId } from '@/lib/engagement/session'
 import { useSearchParams } from 'next/navigation'
 import { usePost } from '@/hooks/usePost'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { PostCard } from '@/components/post-card'
+import type { Post } from '@/hooks/usePosts'
+import type { Echo } from '@/hooks/useEchoes'
 
 type Source = 'genius' | 'apple'
 
@@ -92,6 +94,30 @@ function parseVibeFromString(raw: string | undefined | null): Vibe | null {
   return VIBES.includes(key as Vibe) ? (key as Vibe) : null
 }
 
+/** Map Echo → Post contract consumed by shared PostCard (Step 1). */
+function echoToPost(lb: Echo): Post {
+  return {
+    id: lb.id,
+    text: lb.lyric,
+    emotion: lb.emotion,
+    status: lb.status,
+    knowledge: (lb.song || lb.artist || lb.artwork)
+      ? { song: lb.song || undefined, artist: lb.artist || undefined, artwork: lb.artwork ?? null }
+      : undefined,
+    username: lb.username,
+    authorUid: lb.authorUid ?? null,
+    authorAvatarUrl: lb.authorAvatarUrl ?? null,
+    authorDisplayName: lb.displayName ?? null,
+    timestamp: lb.timestamp,
+    resonates: lb.resonateCount ?? 0,
+    replies: lb.echoCount ?? 0,
+    songId: lb.songId ?? null,
+    audioUrl: lb.audioUrl ?? null,
+    snippetStart: lb.snippetStart ?? null,
+    snippetEnd: lb.snippetEnd ?? null,
+  }
+}
+
 function LyricBackContent() {
   const { user } = useIdentity()
   const { requireAuth } = useAuthGate()
@@ -107,7 +133,10 @@ function LyricBackContent() {
   // in handlePost below.
   const respondingToId = echoId || postId
   const { post: respondingTo } = usePost(respondingToId)
-  const { echoes, loading: echoesLoading } = useEchoes(postId)
+  // List Lyric Backs on the post being replied to (works for arbitrary depth).
+  // Was useEchoes(postId): broke nesting when legacy ?echoId= was present —
+  // PostCard now uses ?postId={replyId}, so respondingToId===postId in that path.
+  const { echoes, loading: echoesLoading } = useEchoes(respondingToId)
 
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
@@ -326,12 +355,6 @@ function LyricBackContent() {
     // linked a song at all.
   }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user, respondingToId, posting, resetComposeForm, linkedSongId])
 
-  /* ─── promote + reply — navigate first, write in background ─ */
-  const promoteAndReply = (echo: typeof echoes[0]) => {
-    // Navigate to this echo's lyric-back page — no feed post created
-    window.location.href = `/lyric-back?postId=${encodeURIComponent(postId || '')}&echoId=${encodeURIComponent(echo.id)}`
-  }
-
   /* ─── resonate ───────────────────────────────────────────── */
   // Echo resonates now write to the same post_resonates table as
   // top-level post resonates, since every echo is a real posts row with
@@ -347,7 +370,7 @@ function LyricBackContent() {
     setResonateCounts(prev => ({
       ...prev,
       [echoId]: Math.max(0,
-        (prev[echoId] ?? Object.keys(echoes.find(e => e.id === echoId)?.resonates || {}).length)
+        (prev[echoId] ?? echoes.find(e => e.id === echoId)?.resonateCount ?? Object.keys(echoes.find(e => e.id === echoId)?.resonates || {}).length)
         + (already ? -1 : 1)
       ),
     }))
@@ -736,115 +759,31 @@ function LyricBackContent() {
               </p>
             )}
             {echoes.map(lb => {
-              const echoVibe = parseVibeFromString(lb.emotion)
-              const echoVibeLabel = echoVibe ? VIBE_LABELS[echoVibe] : lb.emotion
-              const emotionKey = normalizeEmotion(lb.emotion || '').toLowerCase()
-              const emotionColor = EMOTION_COLORS[emotionKey] || text3
-              const resonateCount = resonateCounts[lb.id] ?? Object.keys(lb.resonates || {}).length
-              const hasResonated = resonated.has(lb.id)
+              const post = echoToPost(lb)
+              const resonateCount = resonateCounts[lb.id] ?? lb.resonateCount ?? 0
               return (
-                <div
+                <PostCard
                   key={lb.id}
-                  style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '20px', padding: '20px',
-                    position: 'relative', overflow: 'hidden',
-                    transition: 'border-color 200ms ease',
+                  variant="compact"
+                  post={post}
+                  resonated={resonated.has(lb.id)}
+                  resonateCount={resonateCount}
+                  echoCount={lb.echoCount ?? 0}
+                  onResonate={toggleResonate}
+                  onExport={(p) => {
+                    if (!requireAuth()) return
+                    setCardData({
+                      lyric: p.text || '',
+                      song: p.knowledge?.song || '',
+                      artist: p.knowledge?.artist || '',
+                      id: p.id,
+                      parentLyric: respondingTo?.text,
+                      parentSong: respondingTo?.knowledge?.song,
+                      parentArtist: respondingTo?.knowledge?.artist,
+                    })
+                    setShowCard(true)
                   }}
-                >
-                  <div style={{
-                    position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-                    width: '60%', height: '1px',
-                    background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
-                  }} />
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-                        background: 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <span style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: bg }}>
-                          {(lb.username || '??').slice(0, 2).toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <AuthorMeta
-                          authorUid={lb.authorUid}
-                          fallbackName={lb.username || 'Anonymous'}
-                          size="default"
-                        />
-                      </div>
-                    </div>
-                    {lb.emotion && (
-                      <span style={{
-                        fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                        letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
-                        borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
-                        color: emotionColor,
-                      }}>{echoVibeLabel}</span>
-                    )}
-                  </div>
-
-                  <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '12px' }}>
-                    &ldquo;{lb.lyric}&rdquo;
-                  </p>
-
-                  <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '20px' }}>
-                    {lb.song} · {lb.artist}
-                  </p>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-
-                    <button onClick={() => toggleResonate(lb.id)} style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                      background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
-                      minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
-                      color: hasResonated ? gold : text2,
-                      transition: 'color 150ms ease',
-                    }}>
-                      <span style={{ fontSize: '1rem' }}><HeartIcon filled={hasResonated} size={18} color="currentColor" /></span>
-                      <span style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                        {resonateCount > 0 ? resonateCount : 'Resonate'}
-                      </span>
-                    </button>
-
-                    <button onClick={() => promoteAndReply(lb)} style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                      background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
-                      minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
-                      color: text2, transition: 'color 150ms ease',
-                    }}>
-                      <span style={{ fontSize: '1rem' }}>↩</span>
-                      <span style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Lyric Back</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        if (!requireAuth()) return
-                        setCardData({
-                          lyric: lb.lyric, song: lb.song, artist: lb.artist, id: lb.id,
-                          parentLyric: respondingTo?.text,
-                          parentSong: respondingTo?.knowledge?.song,
-                          parentArtist: respondingTo?.knowledge?.artist,
-                        })
-                        setShowCard(true)
-                      }}
-                      style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                        background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
-                        minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
-                        color: text2, transition: 'color 150ms ease',
-                      }}
-                    >
-                      <span style={{ fontSize: '1rem' }}>↗</span>
-                      <span style={{ fontFamily: font, fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Card</span>
-                    </button>
-
-                  </div>
-                </div>
+                />
               )
             })}
           </div>

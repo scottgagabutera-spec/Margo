@@ -1,0 +1,32 @@
+---
+description: Margo UI must follow Brand Identity v4+ ten standards and Section 14/15 enforcement rules
+globs: app/**/*.{tsx,ts,css},components/**/*.{tsx,ts},MARGO_BRAND.md,app/globals.css
+alwaysApply: false
+---
+
+# Margo UI / Design System Gate
+
+Authoritative spec: `MARGO_BRAND.md` (Brand Identity & Design System). Especially **Section 14** (17 enforcement rules) and **Section 15** (mobile patterns). Do not treat the ten standards as slogans — translate them into the concrete tokens, components, and patterns in that doc.
+
+## Ten standards (every UI-touching change)
+
+GIANTS WAY · MODERN · PREMIUM · UNIQUE FOR MARGO · LONG TERM · USER EXPERIENCE · CONSISTENCY · VERY LOGICAL · MOBILE FIRST · APP READY
+
+## Before implementing UI work
+
+1. Read the relevant sections of `MARGO_BRAND.md` (colors, touch, icons, audio, nav, search UI, etc.).
+2. Prefer existing shared components (`PlayPauseIcon`, `HeartIcon`, `MargoLogo`, Feed SVG set, CSS variables in `globals.css`) over new one-offs.
+3. If the user’s request would violate a Section 14/15 rule or one of the ten standards, **flag it before building** — do not silently ship an inconsistent UI.
+
+## Hard reminders (see Section 14 for full detail)
+
+- No Unicode/emoji as icons — SVG components only
+- No hardcoded hex/rgba in TSX — use CSS variables (`var(--gold)`, etc.); intentional `EMOTION_COLORS` map is the documented exception
+- Touch targets ≥ 44px; no hover-only interactions on touch surfaces
+- `backdrop-filter` needs a solid mobile fallback
+- One play/pause: `PlayPauseIcon`; resonate: `HeartIcon`
+- Audio via in-DOM engine patterns in Section 14 Rule 6–7 — no native media chrome
+
+## Scope
+
+Production Next.js paths (`app/`, `components/`). Do not copy legacy `js/` or `public/*.html` patterns into new UI.

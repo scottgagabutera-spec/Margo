@@ -298,6 +298,13 @@ Empty states are invitations, not errors.
 - Minimum 44x44px on all interactive elements
 - Pills and tags: min-height 28px visual, 44px touch via padding
 
+### Feed action row (Resonate / Lyric Back / Card / Replay)
+- **Hard requirement:** one horizontal row at 375px — never wrap the four actions onto a second line. Test against the longest label (**LYRIC BACK**) plus real double-digit counts.
+- **Labels stay visible on mobile** — do not drop to icon-only. Shrink mobile label type (`.margo-feed-action__label`, ~0.4rem) so icon + label fit; increase label size at ≥640px.
+- **Counts are compact badges** tucked on the icon corner (`.margo-feed-action__badge`), not full-size inline numbers competing with the label.
+- Touch targets remain ≥44px via padding/min-height. Source: `components/post-card.tsx` + `.margo-feed-action*` in `app/globals.css`.
+- `aria-label` still carries the full action name.
+
 ### Audio
 - preload="auto" always — never preload="metadata"
 - Pass audioUrl as ?au= URL param for instant buffering before Firebase resolves
@@ -478,14 +485,13 @@ import { PlayPauseIcon } from '@/components/play-pause-icon'
 
 ### Rule 5 — Feed actions use the same SVG icon set everywhere
 
-**Rule:** Resonate, Lyric Back, Card, close, search clear, and share must use the same inline SVG (or shared icon components) on feed, lyric-back, music, and compose. Do not use Unicode hearts/arrows on one page and SVG on another.
+**Rule:** Resonate, Lyric Back, Card, Replay, close, search clear, and share must use the same inline SVG (or shared icon components) on feed, lyric-back, music, and compose. Do not use Unicode hearts/arrows on one page and SVG on another. On mobile, follow Section 12 **Feed action row** — labels stay visible at reduced size; counts as icon badges; never wrap the row.
 
-**Standards:** CONSISTENCY · PREMIUM · UNIQUE FOR MARGO
+**Standards:** CONSISTENCY · PREMIUM · UNIQUE FOR MARGO · MOBILE FIRST
 
-**Correct:** `app/feed/page.tsx:395–427` — SVG paths + text label.
+**Correct:** `components/post-card.tsx` — SVG icons + `.margo-feed-action` layout; labels via `.margo-feed-action__label`.
 
-**Wrong:** `app/lyric-back/page.tsx:728,739,760` — `♥` `♡` `↩` `↗` in spans; `app/music/page.tsx:715` — `♥` `♡` in button.
-
+**Wrong:** Column-stacked icon + label that wraps on narrow screens; Unicode `♥` `♡` `↩` as icons.
 ---
 
 ### Rule 6 — Audio: in-DOM `<audio>` + single playback module

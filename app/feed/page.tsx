@@ -1,35 +1,13 @@
 'use client'
-import { PlayPauseIcon } from '@/components/play-pause-icon'
-import {
-  CardIcon,
-  ChevronRightIcon,
-  CloseIcon,
-  HeartFilledIcon,
-  HeartIcon,
-  LyricBackIcon,
-  MusicNoteIcon,
-  ShareIcon,
-} from '@/components/icons'
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { toast } from 'sonner'
+import { CloseIcon } from '@/components/icons'
+import { useState, useEffect, useMemo } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
-import { EditPostModal } from '@/components/edit-post-modal'
 import Link from 'next/link'
-import {
-  playSnippet,
-  stop,
-  playFull,
-  togglePlayPause,
-  setQueue,
-  warmUrl,
-  subscribeAudioEngine,
-} from '@/lib/audio-engine'
-import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { UsernameTag } from '@/components/username-tag'
-import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 import { MargoSearchInput } from '@/components/margo-search-input'
@@ -38,569 +16,13 @@ import { NewItemsPill } from '@/components/new-items-pill'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
 import { ArtistBadge } from '@/components/artist-badge'
-import { PostThumbnail } from '@/components/post-thumbnail'
+import { PostCard, normalizeEmotion } from '@/components/post-card'
+import { ReplayAttribution } from '@/components/replay-attribution'
+import { useFolloweeReplays } from '@/hooks/useFolloweeReplays'
 
-const EMOTION_COLORS: Record<string, string> = {
-  love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
-  nostalgia: '#E8C547', healing: '#4ade80', joy: '#ffc847',
-  rage: '#FF6440', loneliness: '#a0a0ff', sendit: '#00e5c8', letout: '#c864ff',
-}
-
-const VIBE_LABELS: Record<string, string> = {
-  love: 'Love', heartbreak: 'Heartbreak', hope: 'Hope', nostalgia: 'Nostalgia',
-  healing: 'Healing', joy: 'Joy', rage: 'Rage', loneliness: 'Loneliness',
-  sendit: 'Send It', letout: 'Let Out',
-}
-
-// ── Earned-tag thresholds ────────────────────────────────────────────
-// A post only ever shows one of these — never a permanent row of tabs.
-// NEW: posted in the last 24h. TRENDING/TOP: in the current top-N by
-// score, computed once across the whole unfiltered post list below.
+// ── Earned-tag thresholds (feed ranking only) ─────────────────────────
 const NEW_WINDOW_HOURS = 24
 const RANK_BADGE_COUNT = 5
-
-function normalizeEmotion(e: string) {
-  if (!e) return ''
-  return e.replace(/send.?it/i, 'SENDIT').replace(/let.?out/i, 'LETOUT')
-    .replace('SendIt', 'SENDIT').replace('LetOut', 'LETOUT')
-    .replace('SEND IT', 'SENDIT').replace('LET OUT', 'LETOUT')
-    .toUpperCase()
-}
-
-function timeAgo(ts: number) {
-  const diff = (Date.now() - ts) / 1000
-  if (diff < 60) return 'just now'
-  if (diff < 3600) return Math.floor(diff / 60) + 'm ago'
-  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago'
-  return Math.floor(diff / 86400) + 'd ago'
-}
-
-interface LyricLine { id: number; line: string; start: number; end: number }
-
-// ── Migrated Aug 1, 2026 ───────────────────────────────────────────────
-async function fetchLyricLines(songId: string): Promise<LyricLine[]> {
-  const { data, error } = await supabase
-    .from('lyric_lines')
-    .select('line_index, text, start_sec, end_sec')
-    .eq('song_id', songId)
-    .order('line_index', { ascending: true })
-  if (error || !data) return []
-  return data.map(l => ({ id: l.line_index, line: l.text, start: l.start_sec, end: l.end_sec }))
-}
-
-function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artwork, snippetStart, snippetEnd }: {
-  audioUrl: string; songId: string | null; postText?: string
-  songTitle?: string; artist?: string; artwork?: string | null
-  snippetStart?: number | null; snippetEnd?: number | null
-}) {
-  const engineState = useAudioEngine()
-  const isThisPlaying = engineState.playing &&
-    engineState.mode === 'snippet' &&
-    engineState.songId === songId &&
-    engineState.snippet?.lineText === (postText || '')
-
-  const [lyrics, setLyrics] = useState<LyricLine[]>([])
-  const hasExactTiming = snippetStart != null && snippetEnd != null
-
-  useEffect(() => {
-    if (songId && !hasExactTiming) {
-      fetchLyricLines(songId).then(setLyrics)
-    }
-  }, [audioUrl, songId, hasExactTiming])
-
-  const toggle = () => {
-    if (isThisPlaying) {
-      stop()
-      return
-    }
-
-    let startSec = snippetStart ?? 0
-    let endSec = snippetEnd ?? 5
-    let lineIndex = 0
-
-    if (!hasExactTiming) {
-      const needle = (postText || '').toLowerCase().trim()
-      const match = lyrics.find(l =>
-        l.line.toLowerCase().includes(needle) || needle.includes(l.line.toLowerCase())
-      )
-      if (!match) return
-      startSec = match.start
-      endSec = match.end
-      lineIndex = match.id
-    }
-
-    void playSnippet({
-      songId: songId || audioUrl,
-      audioUrl,
-      title: songTitle || '',
-      artist: artist || '',
-      artwork: artwork ?? null,
-      lineIndex,
-      lineText: postText || '',
-      startSec,
-      endSec,
-      source: 'feed',
-    })
-  }
-
-  return (
-    <button
-      onClick={toggle}
-      style={{
-        width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
-        background: isThisPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
-        border: '1px solid rgba(232,197,71,0.25)',
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'background 200ms ease', marginTop: '4px',
-        padding: 0, boxSizing: 'border-box',
-      }}
-    >
-      <PlayPauseIcon playing={isThisPlaying} size={16} color="var(--gold)" />
-    </button>
-  )
-}
-
-function Tier1Player({ audioUrl, songId, postText }: {
-  audioUrl: string; songId: string | null; postText?: string
-}) {
-  const engineState = useAudioEngine()
-  const { requireAuth } = useAuthGate()
-  const isThisSong = engineState.songId === (songId || audioUrl)
-  const playing = engineState.playing && isThisSong && engineState.mode === 'full'
-  const isBuffering = engineState.buffering && isThisSong
-  const progress = isThisSong ? engineState.progress : 0
-  const currentTime = isThisSong ? engineState.currentTime : 0
-  const duration = isThisSong ? engineState.duration : 0
-
-  const [lyrics, setLyrics] = useState<LyricLine[]>([])
-  const [lyricsLoaded, setLyricsLoaded] = useState(false)
-  const progressRef = useRef<HTMLDivElement | null>(null)
-  const [dragging, setDragging] = useState(false)
-  const playedRef = useRef(false)
-
-  const loadLyrics = async () => {
-    if (lyricsLoaded || !songId) return
-    const lines = await fetchLyricLines(songId)
-    setLyrics(lines)
-    setLyricsLoaded(true)
-  }
-
-  const toggle = async () => {
-    if (!requireAuth()) return
-    loadLyrics()
-    if (isThisSong && engineState.mode === 'full') {
-      void togglePlayPause()
-      return
-    }
-    stop()
-    playedRef.current = true
-    void playFull({
-      songId: songId || audioUrl,
-      audioUrl,
-      title: '',
-      artist: '',
-      artwork: null,
-      startSec: 0,
-      autoplay: true,
-      source: 'feed-tier1',
-    })
-  }
-
-  const seekFromX = (clientX: number) => {
-    const bar = progressRef.current
-    if (!bar || !duration || !isThisSong) return
-    const rect = bar.getBoundingClientRect()
-    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-    import('@/lib/audio-engine').then(({ playFullSeek }) => playFullSeek(pct * duration))
-  }
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault(); setDragging(true); seekFromX(e.clientX)
-    const onMove = (ev: MouseEvent) => seekFromX(ev.clientX)
-    const onUp = () => { setDragging(false); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-  }
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setDragging(true); seekFromX(e.touches[0].clientX)
-    const onMove = (ev: TouchEvent) => seekFromX(ev.touches[0].clientX)
-    const onEnd = () => { setDragging(false); window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd) }
-    window.addEventListener('touchmove', onMove); window.addEventListener('touchend', onEnd)
-  }
-
-  const fmt = (s: number) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
-  const currentLine = lyrics.find(l => currentTime >= l.start && currentTime < l.end)
-
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: currentLine ? '12px' : '0' }}>
-        <button
-          onMouseDown={e => e.preventDefault()}
-          onClick={toggle}
-          style={{
-            width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
-            background: 'var(--gold)', border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            outline: 'none', WebkitTapHighlightColor: 'transparent',
-            touchAction: 'manipulation', userSelect: 'none', boxSizing: 'border-box',
-          }}>
-          <PlayPauseIcon playing={playing} buffering={isBuffering} size={14} color='var(--bg)' />
-        </button>
-        <div style={{ flex: 1 }}>
-          <div ref={progressRef} className="margo-seek-scrub" onMouseDown={onMouseDown} onTouchStart={onTouchStart}
-            style={{ minHeight: 'var(--margo-touch-min)', height: '20px', display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '2px', boxSizing: 'border-box' }}>
-            <div style={{ position: 'relative', width: '100%', height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
-              <div style={{ height: '100%', width: progress + '%', background: 'var(--gold)', borderRadius: '2px', transition: dragging ? 'none' : 'width 200ms linear' }} />
-              <div style={{
-                position: 'absolute', top: '50%', left: progress + '%',
-                transform: 'translate(-50%, -50%)',
-                width: '10px', height: '10px', borderRadius: '50%',
-                background: 'var(--gold)', boxShadow: '0 0 4px rgba(232,197,71,0.6)',
-                transition: dragging ? 'none' : 'left 200ms linear',
-              }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)' }}>{fmt(currentTime)}</span>
-            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)' }}>{duration > 0 ? fmt(duration) : '--:--'}</span>
-          </div>
-        </div>
-      </div>
-
-      {playing && (
-        <div style={{ minHeight: '32px', padding: '8px 12px', background: 'rgba(232,197,71,0.06)', borderRadius: '8px', borderLeft: '2px solid var(--gold)', transition: 'all 200ms ease' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: currentLine ? 'var(--gold)' : 'var(--text-muted)', lineHeight: 1.4, margin: 0, transition: 'color 200ms ease', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {currentLine ? currentLine.line : <MusicNoteIcon size={14} color="var(--text-muted)" />}
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Earned tag pill — only rendered when a post actually qualifies ────
-function EarnedTag({ label, onClick }: { label: 'New' | 'Trending' | 'Top'; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); onClick() }}
-      style={{
-        fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
-        letterSpacing: '1.2px', textTransform: 'uppercase', padding: '3px 9px',
-        borderRadius: '50px', background: 'rgba(232,197,71,0.1)',
-        border: '1px solid var(--gold-border)', color: 'var(--gold)',
-        cursor: 'pointer', flexShrink: 0,
-      }}
-    >{label}</button>
-  )
-}
-
-function PostCard({
-  post, resonated, resonateCount, echoCount, onResonate, onExport,
-  isNew, isTrending, isTop, onSelectVibe, onSelectRank,
-}: {
-  post: Post
-  resonated: boolean
-  resonateCount: number
-  echoCount: number
-  onResonate: (id: string) => void
-  onExport: (post: Post) => void
-  isNew: boolean
-  isTrending: boolean
-  isTop: boolean
-  onSelectVibe: (vibe: string) => void
-  onSelectRank: (rank: 'NEW' | 'TRENDING' | 'TOP') => void
-}) {
-  const { requireAuth } = useAuthGate()
-  const { user } = useIdentity()
-  const authorProfile = useAuthorProfile(post.authorUid || null)
-  const viewedRef = useRef(false)
-  const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
-  const color = EMOTION_COLORS[emotion] || 'var(--text-disabled)'
-  const label = VIBE_LABELS[emotion] || post.emotion || ''
-  const isTier1 = !!post.audioUrl
-  const audioUrl = post.audioUrl || null
-  const cardRef = useRef<HTMLDivElement>(null)
-  const isOwner = !!user?.id && !!post.authorUid && post.authorUid === user.id
-  const [editOpen, setEditOpen] = useState(false)
-
-  useEffect(() => {
-    if (!audioUrl || !isTier1) return
-    const el = cardRef.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          warmUrl(audioUrl)
-          obs.disconnect()
-        }
-      },
-      { threshold: 0.1 }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [audioUrl, isTier1])
-
-  useEffect(() => {
-    if (viewedRef.current) return
-    const el = cardRef.current
-    if (!el) return
-    const sessionKey = `viewed_${post.id}`
-    try { if (sessionStorage.getItem(sessionKey)) return } catch {}
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          viewedRef.current = true
-          obs.disconnect()
-          try { sessionStorage.setItem(sessionKey, '1') } catch {}
-          supabase.rpc('increment_post_view', { p_post_id: post.id }).then(({ error }) => {
-            if (error) console.error('Failed to record view:', error)
-          })
-        }
-      },
-      { threshold: 0.5 }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [post.id])
-
-  const avatarUrl = post.authorAvatarUrl || authorProfile?.avatarUrl || null
-
-  return (
-    <div ref={cardRef} style={{
-      background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
-      border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
-      borderRadius: '18px', padding: '16px',
-      position: 'relative', overflow: 'hidden',
-      transition: 'border-color 200ms ease',
-    }}>
-      <div style={{
-        position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '60%', height: '1px',
-        background: isTier1
-          ? 'linear-gradient(to right, transparent, rgba(232,197,71,0.5), transparent)'
-          : 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
-      }} />
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-            background: avatarUrl
-              ? 'none'
-              : isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
-            border: avatarUrl
-              ? '1px solid rgba(255,255,255,0.08)'
-              : isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden',
-          }}>
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={post.username || 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : isTier1 ? (
-              <svg width='26' height='26' viewBox='-4 -4 88 88' xmlns='http://www.w3.org/2000/svg'>
-                <path d='M17 57 L17 27 L29 45 L40 26 L51 45 L63 27 L63 57'
-                  fill='none' stroke='var(--bg)' strokeWidth='7' strokeLinecap='round' strokeLinejoin='round' />
-              </svg>
-            ) : (
-              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', fontWeight: 700, color: 'var(--gold)' }}>
-                {post.username ? post.username.charAt(0).toUpperCase() : 'ML'}
-              </span>
-            )}
-          </div>
-          <div>
-            <UsernameTag authorUid={post.authorUid || null} fallbackName={post.username} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {(isNew || isTrending || isTop) && (
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {isNew && <EarnedTag label="New" onClick={() => onSelectRank('NEW')} />}
-              {isTrending && <EarnedTag label="Trending" onClick={() => onSelectRank('TRENDING')} />}
-              {isTop && <EarnedTag label="Top" onClick={() => onSelectRank('TOP')} />}
-            </div>
-          )}
-          {isOwner && (
-            <button
-              type="button"
-              aria-label="Edit lyric"
-              onClick={() => setEditOpen(true)}
-              style={{
-                width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-              </svg>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {isOwner && (
-        <EditPostModal
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          postId={post.id}
-          initialText={post.text || ''}
-          songId={post.songId || null}
-          echoCount={echoCount}
-        />
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }}>
-        <p style={{
-          fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
-          fontSize: 'clamp(1.1rem, 2.4vw, 1.5rem)', color: 'var(--text)',
-          lineHeight: 1.45, flex: 1, margin: 0,
-        }}>
-          &ldquo;{post.text}&rdquo;
-        </p>
-        {isTier1 && audioUrl && (
-          <SnippetIconButton audioUrl={audioUrl} songId={post.songId || null} postText={post.text} songTitle={post.knowledge?.song || ''} artist={post.knowledge?.artist || ''} artwork={post.knowledge?.artwork || null} snippetStart={post.snippetStart} snippetEnd={post.snippetEnd} />
-        )}
-      </div>
-
-      {(post.knowledge?.song || post.knowledge?.artist) && (() => {
-        const attribution = post.knowledge.song && post.knowledge.artist
-          ? `${post.knowledge.song} · ${post.knowledge.artist}`
-          : (post.knowledge.song || post.knowledge.artist || '')
-        const attrStyle: React.CSSProperties = {
-          fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
-          color: 'rgba(255,255,255,0.75)', letterSpacing: '1px', textTransform: 'uppercase',
-          marginBottom: '20px',
-        }
-        // Linked Margo catalog posts deep-link to karaoke; external
-        // attribution stays plain text (outbound art/YouTube links elsewhere).
-        if (post.songId) {
-          return (
-            <Link href={`/song/${post.songId}`} style={{ ...attrStyle, display: 'block', textDecoration: 'none' }}>
-              {attribution}
-            </Link>
-          )
-        }
-        return <p style={attrStyle}>{attribution}</p>
-      })()}
-
-      {!isTier1 && (post.youtubeMeta?.thumbnail || post.knowledge?.artwork) && (
-        <Link
-          href={post.youtubeMeta?.youtubeUrl || `https://music.apple.com/search?term=${encodeURIComponent((post.knowledge?.song || '') + ' ' + (post.knowledge?.artist || ''))}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={post.youtubeMeta?.youtubeUrl ? 'Watch on YouTube' : 'Open in Apple Music'}
-          style={{ display: 'block', marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none' }}
-        >
-          <div style={{ position: 'relative' }}>
-            <PostThumbnail
-              youtubeThumbnail={post.youtubeMeta?.thumbnail}
-              artwork={post.knowledge?.artwork}
-              alt=""
-              style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }}
-            />
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ShareIcon size={16} color="var(--bg)" />
-              </div>
-            </div>
-          </div>
-        </Link>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button
-          type="button"
-          aria-label={resonated ? 'Remove resonate' : 'Resonate'}
-          onClick={() => onResonate(post.id)}
-          style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
-          minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
-          color: resonated ? 'var(--gold)' : 'var(--text-secondary)',
-          transition: 'color 150ms ease',
-        }}>
-          {resonated
-            ? <HeartFilledIcon size={18} color="var(--gold)" />
-            : <HeartIcon size={18} color="var(--text-secondary)" />
-          }
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-            {resonateCount > 0 ? resonateCount + ' ' : ''}Resonate
-          </span>
-        </button>
-
-        <Link
-          href={`/lyric-back?postId=${post.id}`}
-          aria-label="Lyric Back"
-          style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          color: 'var(--text-secondary)', textDecoration: 'none', padding: '8px 12px',
-          minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
-          transition: 'color 150ms ease',
-        }}>
-          <LyricBackIcon size={18} color="var(--text-secondary)" />
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>{echoCount > 0 ? echoCount + ' ' : ''}Lyric Back</span>
-        </Link>
-
-        <button
-          type="button"
-          aria-label="Export lyric card"
-          onClick={() => onExport(post)}
-          style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-          background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px',
-          minWidth: '44px', minHeight: '44px', boxSizing: 'border-box',
-          color: 'var(--text-secondary)', transition: 'color 150ms ease',
-        }}>
-          <CardIcon size={18} color="var(--text-secondary)" />
-          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 600, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Card</span>
-        </button>
-
-        {label && (
-          <button
-            type="button"
-            onClick={() => onSelectVibe(emotion.toUpperCase())}
-            style={{
-              fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
-              letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
-              borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
-              border: 'none', cursor: 'pointer', color,
-            }}
-          >{label}</button>
-        )}
-      </div>
-
-      {isTier1 && (
-        <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ flex: 1 }}>
-              {audioUrl && <Tier1Player audioUrl={audioUrl} songId={post.songId || null} postText={post.text} />}
-            </div>
-            {post.songId && (
-              <Link
-                href={`/song/${post.songId}`}
-                aria-label="Full Karaoke"
-                onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
-                style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                minHeight: 'var(--margo-touch-min)', boxSizing: 'border-box',
-                fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
-                color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase',
-                textDecoration: 'none', padding: '0 14px', border: '1px solid var(--gold-border)',
-                borderRadius: '50px', flexShrink: 0, alignSelf: 'flex-start',
-              }}>
-                Full Karaoke
-                <ChevronRightIcon size={12} color="var(--gold)" />
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 export default function FeedPage() {
   const { posts: livePosts, loading, reload } = usePosts()
@@ -610,6 +32,7 @@ export default function FeedPage() {
     flushPending,
     applyImmediate,
   } = useNewItemsBuffer(livePosts)
+  const { replays: followeeReplays } = useFolloweeReplays()
   const [ptrBusy, setPtrBusy] = useState(false)
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -625,7 +48,15 @@ export default function FeedPage() {
     } catch { return new Set() }
   })
   const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
-  const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number }>>({})
+  const [replayed, setReplayed] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const saved = localStorage.getItem('margoReplayed')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch { return new Set() }
+  })
+  const [replayCounts, setReplayCounts] = useState<Record<string, number>>({})
+  const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number; replayCount?: number }>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
 
   useEffect(() => {
@@ -633,12 +64,12 @@ export default function FeedPage() {
     async function loadStats() {
       const { data, error } = await supabase
         .from('post_stats')
-        .select('post_id, views, resonate_count, echo_count')
+        .select('post_id, views, resonate_count, echo_count, replay_count')
       if (cancelled) return
       if (error) { console.error('Failed to load post_stats:', error); return }
-      const map: Record<string, { views?: number; resonateCount?: number; echoCount?: number }> = {}
+      const map: Record<string, { views?: number; resonateCount?: number; echoCount?: number; replayCount?: number }> = {}
       for (const row of data || []) {
-        map[row.post_id] = { views: row.views, resonateCount: row.resonate_count, echoCount: row.echo_count }
+        map[row.post_id] = { views: row.views, resonateCount: row.resonate_count, echoCount: row.echo_count, replayCount: row.replay_count }
       }
       setPostStats(map)
     }
@@ -679,6 +110,37 @@ export default function FeedPage() {
 
     return () => { cancelled = true; supabase.removeChannel(channel) }
   }, [])
+
+  // Load user's Replays — replayer_id must be auth profile uuid (RLS: auth.uid() = replayer_id).
+  // Do NOT use getMargoActorId() here; that is a display-name actor string for resonates.
+  useEffect(() => {
+    if (!user?.id) return
+    const myId = user.id
+    let cancelled = false
+    async function loadMyReplays() {
+      const { data, error } = await supabase
+        .from('post_replays')
+        .select('post_id')
+        .eq('replayer_id', myId)
+      if (cancelled) return
+      if (error) { console.error('Failed to load replays:', error); return }
+      const mine = new Set((data || []).map(r => r.post_id))
+      setReplayed(mine)
+      try { localStorage.setItem('margoReplayed', JSON.stringify([...mine])) } catch {}
+    }
+    loadMyReplays()
+
+    const channel = supabase
+      .channel('feed-my-replays')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_replays', filter: `replayer_id=eq.${myId}` },
+        () => loadMyReplays()
+      )
+      .subscribe()
+
+    return () => { cancelled = true; supabase.removeChannel(channel) }
+  }, [user?.id])
 
   const getEngagement = (post: Post) => {
     const s = postStats[post.id] || {}
@@ -725,7 +187,6 @@ export default function FeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts, postStats])
 
-
   useEffect(() => {
     const q = searchQuery.trim()
     if (q.length < 2) { setPeople([]); return }
@@ -736,23 +197,68 @@ export default function FeedPage() {
     return () => clearTimeout(t)
   }, [searchQuery])
 
-  const filteredPosts = posts
-    .filter(p => {
-      const norm = normalizeEmotion(p.emotion || '')
-      const matchesVibe = selectedVibe === 'ALL' || norm === selectedVibe
-      if (!searchQuery.trim()) return matchesVibe
-      const q = searchQuery.toLowerCase()
-      return matchesVibe && (
-        (p.text || '').toLowerCase().includes(q) ||
-        (p.knowledge?.song || '').toLowerCase().includes(q) ||
-        (p.knowledge?.artist || '').toLowerCase().includes(q) ||
-        (p.emotion || '').toLowerCase().includes(q) ||
-        (p.username || '').toLowerCase().includes(q) ||
-        (p.authorDisplayName || '').toLowerCase().includes(q)
-      )
-    })
-    .sort((a, b) => getScoreFor(b, selectedSort) - getScoreFor(a, selectedSort))
+  const matchesFeedFilters = (p: Post) => {
+    const norm = normalizeEmotion(p.emotion || '')
+    const matchesVibe = selectedVibe === 'ALL' || norm === selectedVibe
+    if (!searchQuery.trim()) return matchesVibe
+    const q = searchQuery.toLowerCase()
+    return matchesVibe && (
+      (p.text || '').toLowerCase().includes(q) ||
+      (p.knowledge?.song || '').toLowerCase().includes(q) ||
+      (p.knowledge?.artist || '').toLowerCase().includes(q) ||
+      (p.emotion || '').toLowerCase().includes(q) ||
+      (p.username || '').toLowerCase().includes(q) ||
+      (p.authorDisplayName || '').toLowerCase().includes(q)
+    )
+  }
 
+  type FeedItem =
+    | { kind: 'post'; key: string; post: Post; sortAt: number }
+    | {
+        kind: 'replay'
+        key: string
+        post: Post
+        sortAt: number
+        quoteText: string | null
+        replayerUsername: string | null
+        replayerDisplayName: string | null
+        replayerAvatarUrl: string | null
+      }
+
+  const feedItems = useMemo((): FeedItem[] => {
+    const originals: FeedItem[] = posts
+      .filter(matchesFeedFilters)
+      .map(p => ({
+        kind: 'post' as const,
+        key: `p-${p.id}`,
+        post: p,
+        sortAt: p.timestamp || 0,
+      }))
+
+    // Interleave Replays from followees (+ self). Feed stays global for
+    // originals; this only injects attribution wrappers into the timeline.
+    const replayItems: FeedItem[] = followeeReplays
+      .filter(r => matchesFeedFilters(r.post))
+      .map(r => ({
+        kind: 'replay' as const,
+        key: `r-${r.id}`,
+        post: r.post,
+        sortAt: r.createdAt,
+        quoteText: r.quoteText,
+        replayerUsername: r.replayerUsername,
+        replayerDisplayName: r.replayerDisplayName,
+        replayerAvatarUrl: r.replayerAvatarUrl,
+      }))
+
+    const merged = [...originals, ...replayItems]
+    if (selectedSort === 'NEW') {
+      merged.sort((a, b) => b.sortAt - a.sortAt)
+    } else {
+      merged.sort((a, b) => getScoreFor(b.post, selectedSort) - getScoreFor(a.post, selectedSort))
+    }
+    return merged
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts, followeeReplays, selectedVibe, selectedSort, searchQuery, postStats])
   const notifyResonate = async (post: Post) => {
     if (!user?.id) return
     if (!post.authorUid || post.authorUid === user.id) return
@@ -800,6 +306,118 @@ export default function FeedPage() {
         return next
       })
       setResonateCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + (already ? 1 : -1)) }))
+    }
+  }
+
+  const toggleReplay = async (postId: string) => {
+    if (!requireAuth()) return
+    if (!user?.id) return
+    const myId = user.id
+    const already = replayed.has(postId)
+
+    if (already) {
+      setReplayed(prev => {
+        const next = new Set(prev)
+        next.delete(postId)
+        try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+        return next
+      })
+      setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) - 1) }))
+      try {
+        const { error } = await supabase
+          .from('post_replays')
+          .delete()
+          .eq('post_id', postId)
+          .eq('replayer_id', myId)
+        if (error) throw error
+        toast.success('Replay removed')
+      } catch (err) {
+        console.error('Failed to un-replay:', err)
+        setReplayed(prev => {
+          const next = new Set(prev)
+          next.add(postId)
+          try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+          return next
+        })
+        setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + 1) }))
+      }
+      return
+    }
+
+    setReplayed(prev => {
+      const next = new Set(prev)
+      next.add(postId)
+      try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+      return next
+    })
+    setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + 1) }))
+
+    try {
+      const { error } = await supabase.from('post_replays').insert({
+        post_id: postId,
+        replayer_id: myId,
+        quote_text: null,
+      })
+      if (error) throw error
+      toast.success('Replayed')
+    } catch (err) {
+      console.error('Failed to replay:', err)
+      setReplayed(prev => {
+        const next = new Set(prev)
+        next.delete(postId)
+        try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+        return next
+      })
+      setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) - 1) }))
+    }
+  }
+
+  const quoteReplay = async (postId: string, quoteText: string) => {
+    if (!requireAuth()) return
+    if (!user?.id) return
+    const text = quoteText.trim()
+    if (!text) return
+    const myId = user.id
+    const already = replayed.has(postId)
+
+    if (!already) {
+      setReplayed(prev => {
+        const next = new Set(prev)
+        next.add(postId)
+        try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+        return next
+      })
+      setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) + 1) }))
+    }
+
+    try {
+      if (already) {
+        const { error } = await supabase
+          .from('post_replays')
+          .update({ quote_text: text })
+          .eq('post_id', postId)
+          .eq('replayer_id', myId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('post_replays').insert({
+          post_id: postId,
+          replayer_id: myId,
+          quote_text: text,
+        })
+        if (error) throw error
+      }
+      toast.success('Replayed')
+    } catch (err) {
+      console.error('Failed to quote-replay:', err)
+      if (!already) {
+        setReplayed(prev => {
+          const next = new Set(prev)
+          next.delete(postId)
+          try { localStorage.setItem('margoReplayed', JSON.stringify([...next])) } catch {}
+          return next
+        })
+        setReplayCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 0) - 1) }))
+      }
     }
   }
 
@@ -898,7 +516,7 @@ export default function FeedPage() {
           </div>
         )}
 
-        {!loading && filteredPosts.length === 0 && !(searchQuery.trim() && people.length > 0) && (
+        {!loading && feedItems.length === 0 && !(searchQuery.trim() && people.length > 0) && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {searchQuery ? `No lyrics found for "${searchQuery}"` : `No ${selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet`}
@@ -911,7 +529,6 @@ export default function FeedPage() {
             }}>Be the first</Link>
           </div>
         )}
-
 
         {searchQuery.trim() && people.length > 0 && (
           <div style={{ marginBottom: '28px' }}>
@@ -942,25 +559,42 @@ export default function FeedPage() {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {filteredPosts.map(post => (
-            <PostCard
-              key={post.id}
-              post={post}
-              resonated={resonated.has(post.id)}
-              resonateCount={postStats[post.id]?.resonateCount ?? resonateCounts[post.id] ?? post.resonates ?? 0}
-              echoCount={postStats[post.id]?.echoCount ?? 0}
-              onResonate={toggleResonate}
-              onExport={handleExport}
-              isNew={newIds.has(post.id)}
-              isTrending={trendingIds.has(post.id)}
-              isTop={topIds.has(post.id)}
-              onSelectVibe={handleSelectVibe}
-              onSelectRank={handleSelectRank}
-            />
-          ))}
+          {feedItems.map(item => {
+            const post = item.post
+            const cardProps = {
+              post,
+              resonated: resonated.has(post.id),
+              resonateCount: postStats[post.id]?.resonateCount ?? resonateCounts[post.id] ?? post.resonates ?? 0,
+              echoCount: postStats[post.id]?.echoCount ?? 0,
+              onResonate: toggleResonate,
+              replayed: replayed.has(post.id),
+              replayCount: postStats[post.id]?.replayCount ?? replayCounts[post.id] ?? post.replays ?? 0,
+              onReplay: toggleReplay,
+              onQuoteReplay: quoteReplay,
+              onExport: handleExport,
+              isNew: newIds.has(post.id),
+              isTrending: trendingIds.has(post.id),
+              isTop: topIds.has(post.id),
+              onSelectVibe: handleSelectVibe,
+              onSelectRank: handleSelectRank,
+            }
+            if (item.kind === 'replay') {
+              return (
+                <ReplayAttribution
+                  key={item.key}
+                  username={item.replayerUsername}
+                  displayName={item.replayerDisplayName}
+                  avatarUrl={item.replayerAvatarUrl}
+                  quoteText={item.quoteText}
+                  cardProps={{ ...cardProps, variant: 'compact' }}
+                />
+              )
+            }
+            return <PostCard key={item.key} {...cardProps} />
+          })}
         </div>
 
-        {!loading && filteredPosts.length > 0 && (
+        {!loading && feedItems.length > 0 && (
           <div style={{ textAlign: 'center', marginTop: '48px' }}>
             <div style={{ height: '1px', width: '96px', background: 'linear-gradient(to right, transparent, var(--border), transparent)', margin: '0 auto 16px' }} />
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-muted)' }}>you&apos;ve felt them all</p>

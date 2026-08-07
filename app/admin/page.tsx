@@ -4,6 +4,7 @@ import { auth, db } from '@/lib/firebase'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { ref, onValue, update, set, get } from 'firebase/database'
 import { ArtistApplicationsTab } from '@/components/artist-applications-tab'
+import { PostReportsTab } from '@/components/post-reports-tab'
 import { BackButton } from '@/components/back-button'
 
 // ── Types ──
@@ -960,7 +961,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<any>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tab, setTab] = useState<'posts'|'catalog'|'featured'|'artists'>('posts')
+  const [tab, setTab] = useState<'posts'|'catalog'|'featured'|'artists'|'reports'>('posts')
 
   useEffect(() => {
     if (!auth) { setAuthChecked(true); return }
@@ -989,6 +990,7 @@ export default function AdminPage() {
     { key: 'catalog', label: 'Catalog' },
     { key: 'featured', label: 'Featured' },
     { key: 'artists', label: 'Artists' },
+    { key: 'reports', label: 'Reports' },
   ]
 
   return (
@@ -1013,6 +1015,7 @@ export default function AdminPage() {
         {tab === 'catalog' && <CatalogSongsTab key="catalog" />}
         {tab === 'featured' && <FeaturedTab />}
         {tab === 'artists'  && <ArtistApplicationsTab />}
+        {tab === 'reports'  && <PostReportsTab />}
       </div>
     </div>
   )

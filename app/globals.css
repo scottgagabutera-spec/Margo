@@ -329,6 +329,94 @@
   }
 }
 
+/* Feed/post action row — one line at 375px: icon (with count badge) + label.
+   Counts sit as small badges on the icon, not full-size inline numbers.
+   Word labels stay visible on mobile at a reduced size so LYRIC BACK still fits. */
+.margo-feed-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 0;
+  width: 100%;
+}
+.margo-feed-action {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center;
+  gap: 4px !important;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--margo-touch-min);
+  padding: 8px 2px !important;
+  box-sizing: border-box;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.margo-feed-action__icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.margo-feed-action__badge {
+  position: absolute;
+  top: -7px;
+  right: -9px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-lora), serif;
+  font-size: 0.5rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: 50px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.margo-feed-action__label {
+  display: inline !important;
+  font-family: var(--font-lora), serif;
+  font-size: 0.4rem;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  min-width: 0;
+}
+@media (min-width: 640px) {
+  .margo-feed-action {
+    gap: 6px !important;
+    padding: 8px 8px !important;
+  }
+  .margo-feed-action__label {
+    font-size: 0.55rem;
+    letter-spacing: 1.5px;
+  }
+  .margo-feed-action__badge {
+    top: -8px;
+    right: -10px;
+    font-size: 0.52rem;
+  }
+}
+
 .margo-mp-scrim {
   background: rgba(5, 4, 8, 0.88);
   backdrop-filter: blur(28px);

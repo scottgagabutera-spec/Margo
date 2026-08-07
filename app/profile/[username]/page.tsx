@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -7,8 +7,16 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { usePosts } from '@/hooks/usePosts'
 import { useOwnPrivatePosts } from '@/hooks/useOwnPrivatePosts'
+import { useProfileReplays } from '@/hooks/useProfileReplays'
+import { useAuthorLyricBacks } from '@/hooks/useAuthorLyricBacks'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
+import { PostCard } from '@/components/post-card'
+import { CardExportModal } from '@/components/card-export-modal'
+import { MoreIcon } from '@/components/icons'
+import type { Post } from '@/hooks/usePosts'
+import { getMargoActorId } from '@/lib/engagement/session'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const font = 'var(--font-lora), serif'
 
@@ -46,6 +54,8 @@ interface ArtistSongRow {
 }
 
 type FollowStatus = null | 'pending' | 'accepted'
+
+type ProfileContentTab = 'lyrics' | 'replays' | 'backs'
 
 export default function ProfilePage() {
   const params = useParams<{ username: string }>()
@@ -195,7 +205,89 @@ export default function ProfilePage() {
     isOwnProfile
   )
 
+  const [contentTab, setContentTab] = useState<ProfileContentTab>('lyrics')
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const accountMenuRef = useRef<HTMLDivElement>(null)
+
+  const { requireAuth } = useAuthGate()
+  const [resonated, setResonated] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const saved = localStorage.getItem('margoResonated')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch { return new Set() }
+  })
+  const [resonateCounts, setResonateCounts] = useState<Record<string, number>>({})
+  const [exportPost, setExportPost] = useState<Post | null>(null)
+
+  const handleExport = (post: Post) => {
+    if (!requireAuth()) return
+    setExportPost(post)
+  }
+
   const canViewContent = !profile?.isPrivate || isOwnProfile || followStatus === 'accepted'
+
+  useEffect(() => {
+    if (!accountMenuOpen) return
+    const onDoc = (e: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+        setAccountMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [accountMenuOpen])
+
+  const { items: profileReplays, loading: replaysLoading } = useProfileReplays(
+    profile?.id ?? null,
+    !!canViewContent && contentTab === 'replays'
+  )
+  const { posts: lyricBacks, loading: backsLoading } = useAuthorLyricBacks(
+    profile?.id ?? null,
+    !!canViewContent && contentTab === 'backs'
+  )
+
+  const allTabPosts = useMemo(() => {
+    const replayPosts = profileReplays.map(r => r.post)
+    return [...ownPosts, ...privatePosts, ...replayPosts, ...lyricBacks]
+  }, [ownPosts, privatePosts, profileReplays, lyricBacks])
+
+  const toggleResonate = async (postId: string) => {
+    if (!requireAuth()) return
+    const already = resonated.has(postId)
+    const myId = getMargoActorId()
+    setResonated(prev => {
+      const next = new Set(prev)
+      already ? next.delete(postId) : next.add(postId)
+      try { localStorage.setItem('margoResonated', JSON.stringify([...next])) } catch {}
+      return next
+    })
+    setResonateCounts(prev => {
+      const fromPost = allTabPosts.find(x => x.id === postId)?.resonates ?? 0
+      const current = prev[postId] ?? fromPost
+      return { ...prev, [postId]: Math.max(0, current + (already ? -1 : 1)) }
+    })
+    try {
+      if (already) {
+        const { error } = await supabase.from('post_resonates').delete().eq('post_id', postId).eq('actor_id', myId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('post_resonates').insert({ post_id: postId, actor_id: myId })
+        if (error) throw error
+      }
+    } catch {
+      setResonated(prev => {
+        const next = new Set(prev)
+        already ? next.add(postId) : next.delete(postId)
+        try { localStorage.setItem('margoResonated', JSON.stringify([...next])) } catch {}
+        return next
+      })
+      setResonateCounts(prev => ({
+        ...prev,
+        [postId]: Math.max(0, (prev[postId] || 0) + (already ? 1 : -1)),
+      }))
+    }
+  }
 
   const applicationStatus = application?.status ?? 'none'
   const showApplyCTA = isOwnProfile && !identity?.isArtist
@@ -318,17 +410,98 @@ export default function ProfilePage() {
               </div>
 
               {isOwnProfile && (
-                <Link
-                  href="/profile/edit"
-                  style={{
-                    minHeight: 'var(--margo-touch-min)', padding: '0 22px',
-                    display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                    background: 'var(--surface-2)', color: 'var(--text-2)',
-                    border: '1px solid var(--border)', borderRadius: '50px',
-                    fontFamily: font, fontWeight: 600, fontSize: '0.9rem',
-                    textDecoration: 'none', cursor: 'pointer', flexShrink: 0,
-                  }}
-                >Edit Profile</Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <Link
+                    href="/profile/edit"
+                    style={{
+                      minHeight: 'var(--margo-touch-min)', padding: '0 18px',
+                      display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+                      background: 'var(--surface-2)', color: 'var(--text-secondary)',
+                      border: '1px solid var(--border)', borderRadius: '50px',
+                      fontFamily: font, fontWeight: 600, fontSize: '0.6rem',
+                      letterSpacing: '1.5px', textTransform: 'uppercase',
+                      textDecoration: 'none', cursor: 'pointer',
+                    }}
+                  >Edit Profile</Link>
+                  <div ref={accountMenuRef} style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      aria-label="Account menu"
+                      aria-expanded={accountMenuOpen}
+                      onClick={() => setAccountMenuOpen(o => !o)}
+                      style={{
+                        width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        background: accountMenuOpen ? 'var(--surface-2)' : 'transparent',
+                        border: '1px solid var(--border)', borderRadius: '50%',
+                        cursor: 'pointer', padding: 0, boxSizing: 'border-box',
+                        WebkitTapHighlightColor: 'transparent',
+                      }}
+                    >
+                      <MoreIcon size={18} color="var(--text-secondary)" />
+                    </button>
+                    {accountMenuOpen && (
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                        minWidth: '200px', background: 'var(--bg)',
+                        border: '1px solid var(--border)', borderRadius: '10px',
+                        boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
+                        padding: '6px', zIndex: 40,
+                      }}>
+                        <Link
+                          href="/settings"
+                          onClick={() => setAccountMenuOpen(false)}
+                          style={{
+                            display: 'flex', alignItems: 'center',
+                            minHeight: 'var(--margo-touch-min)',
+                            fontFamily: font, fontSize: '0.8rem',
+                            textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                            padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
+                          }}
+                        >Account Settings</Link>
+                        {identity?.isArtist && (
+                          <Link
+                            href="/studio"
+                            onClick={() => setAccountMenuOpen(false)}
+                            style={{
+                              display: 'flex', alignItems: 'center',
+                              minHeight: 'var(--margo-touch-min)',
+                              fontFamily: font, fontSize: '0.8rem',
+                              textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                              padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
+                            }}
+                          >Studio</Link>
+                        )}
+                        {showApplyCTA && (
+                          <Link
+                            href="/apply-artist"
+                            onClick={() => setAccountMenuOpen(false)}
+                            style={{
+                              display: 'flex', alignItems: 'center',
+                              minHeight: 'var(--margo-touch-min)',
+                              fontFamily: font, fontSize: '0.8rem',
+                              textDecoration: 'none', color: 'rgba(255,255,255,0.75)',
+                              padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
+                            }}
+                          >{applyLabel}</Link>
+                        )}
+                        <div style={{ height: '1px', background: 'var(--border)', margin: '6px 4px' }} />
+                        <button
+                          type="button"
+                          onClick={() => { setAccountMenuOpen(false); void handleSignOut() }}
+                          style={{
+                            display: 'flex', alignItems: 'center', width: '100%', textAlign: 'left',
+                            minHeight: 'var(--margo-touch-min)',
+                            fontFamily: font, fontSize: '0.8rem',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: 'rgba(255,255,255,0.5)',
+                            padding: '0 12px', borderRadius: '6px', boxSizing: 'border-box',
+                          }}
+                        >Sign Out</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {!isOwnProfile && user && (
@@ -371,7 +544,7 @@ export default function ProfilePage() {
                 the same visual weight as followers/following, instead of
                 the full catalog being dumped inline further down. Only
                 shown for artists. */}
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: isOwnProfile ? '16px' : '20px' }}>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '20px' }}>
               <span style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-2)' }}>
                 <strong style={{ color: 'var(--text)' }}>{followerCount ?? '—'}</strong> followers
               </span>
@@ -387,35 +560,6 @@ export default function ProfilePage() {
                 </Link>
               )}
             </div>
-
-            {isOwnProfile && (
-              <div style={{
-                display: 'flex', flexWrap: 'wrap', gap: '6px 18px',
-                paddingBottom: '20px', marginBottom: '20px',
-                borderBottom: '1px solid var(--border)',
-              }}>
-                <Link href="/settings" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                  Account settings
-                </Link>
-                {identity?.isArtist && (
-                  <Link href="/studio" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                    Studio
-                  </Link>
-                )}
-                {showApplyCTA && (
-                  <Link href="/apply-artist" style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                    {applyLabel}
-                  </Link>
-                )}
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  style={{ fontFamily: font, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                >
-                  Sign out
-                </button>
-              </div>
-            )}
 
             <div style={{ marginBottom: '24px' }}>
               <p style={sectionLabelStyle}>Bio</p>
@@ -527,7 +671,44 @@ export default function ProfilePage() {
             )}
 
             <div style={{ marginBottom: '28px' }}>
-              <p style={sectionLabelStyle}>{isOwnProfile ? 'Your Lyrics' : 'Lyrics'}</p>
+              <div
+                role="tablist"
+                aria-label="Profile content"
+                style={{
+                  display: 'flex', gap: '4px', marginBottom: '16px',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                {([
+                  { id: 'lyrics' as const, label: isOwnProfile ? 'Your Lyrics' : 'Lyrics' },
+                  { id: 'replays' as const, label: 'Replays' },
+                  { id: 'backs' as const, label: 'Lyric Backs' },
+                ]).map(tab => {
+                  const active = contentTab === tab.id
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setContentTab(tab.id)}
+                      style={{
+                        flex: 1, minHeight: 'var(--margo-touch-min)',
+                        fontFamily: font, fontSize: '0.58rem', fontWeight: 700,
+                        letterSpacing: '1px', textTransform: 'uppercase',
+                        color: active ? 'var(--gold)' : 'var(--text-muted)',
+                        background: 'transparent', border: 'none',
+                        borderBottom: active ? '2px solid var(--gold)' : '2px solid transparent',
+                        marginBottom: '-1px', cursor: 'pointer',
+                        WebkitTapHighlightColor: 'transparent', padding: '8px 4px',
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </div>
+
               {!canViewContent ? (
                 <div style={{
                   border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
@@ -540,37 +721,95 @@ export default function ProfilePage() {
                     Follow {profile.displayName} to see their lyrics.
                   </p>
                 </div>
-              ) : ownPosts.length === 0 ? (
-                isOwnProfile ? (
-                  privatePosts.length > 0 ? (
-                    <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                      No public lyrics yet — your private ones are below.
-                    </p>
+              ) : contentTab === 'lyrics' ? (
+                ownPosts.length === 0 ? (
+                  isOwnProfile ? (
+                    privatePosts.length > 0 ? (
+                      <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        No public lyrics yet — your private ones are below.
+                      </p>
+                    ) : (
+                      <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
+                        Share your first lyric →
+                      </Link>
+                    )
                   ) : (
-                    <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
-                      Share your first lyric →
-                    </Link>
+                    <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                      Hasn&rsquo;t shared a lyric yet.
+                    </p>
                   )
                 ) : (
-                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                    Hasn&rsquo;t shared a lyric yet.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {ownPosts.map(post => (
+                      <PostCard
+                        key={post.id}
+                        variant="row"
+                        post={post}
+                        resonated={resonated.has(post.id)}
+                        resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+                        echoCount={post.replies ?? 0}
+                        onResonate={toggleResonate}
+                        onExport={handleExport}
+                      />
+                    ))}
+                  </div>
                 )
+              ) : contentTab === 'replays' ? (
+                replaysLoading ? (
+                  <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                    Loading replays…
+                  </p>
+                ) : profileReplays.length === 0 ? (
+                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                    {isOwnProfile ? 'No replays yet — tap Replay on a lyric in the feed.' : 'No replays yet.'}
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {profileReplays.map(item => (
+                      <div key={item.id}>
+                        {item.quoteText ? (
+                          <p style={{
+                            margin: '0 4px 2px', paddingTop: '10px',
+                            fontFamily: font, fontSize: '0.82rem',
+                            color: 'var(--text-secondary)', lineHeight: 1.4,
+                          }}>
+                            {item.quoteText}
+                          </p>
+                        ) : null}
+                        <PostCard
+                          variant="row"
+                          post={item.post}
+                          resonated={resonated.has(item.post.id)}
+                          resonateCount={resonateCounts[item.post.id] ?? item.post.resonates ?? 0}
+                          echoCount={item.post.replies ?? 0}
+                          onResonate={toggleResonate}
+                          onExport={handleExport}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : backsLoading ? (
+                <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  Loading lyric backs…
+                </p>
+              ) : lyricBacks.length === 0 ? (
+                <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                  {isOwnProfile ? 'No lyric backs yet.' : 'No lyric backs yet.'}
+                </p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {ownPosts.map(post => (
-                    <div key={post.id} style={{
-                      border: '1px solid var(--border)', borderRadius: '16px', padding: '18px',
-                    }}>
-                      <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '8px' }}>
-                        &ldquo;{post.text}&rdquo;
-                      </p>
-                      {(post.knowledge?.song || post.knowledge?.artist) && (
-                        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                          {post.knowledge?.song}{post.knowledge?.song && post.knowledge?.artist ? ' · ' : ''}{post.knowledge?.artist}
-                        </p>
-                      )}
-                    </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {lyricBacks.map(post => (
+                    <PostCard
+                      key={post.id}
+                      variant="row"
+                      post={post}
+                      resonated={resonated.has(post.id)}
+                      resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+                      echoCount={post.replies ?? 0}
+                      onResonate={toggleResonate}
+                      onExport={handleExport}
+                    />
                   ))}
                 </div>
               )}
@@ -584,25 +823,16 @@ export default function ProfilePage() {
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {privatePosts.map(post => (
-                    <div key={post.id} style={{
-                      border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '18px',
-                      background: 'var(--gold-faint)',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
-                        <span style={{
-                          fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-                          color: 'var(--gold)', letterSpacing: '1.5px', textTransform: 'uppercase',
-                        }}>Private</span>
-                      </div>
-                      <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '8px' }}>
-                        &ldquo;{post.text}&rdquo;
-                      </p>
-                      {(post.knowledge?.song || post.knowledge?.artist) && (
-                        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                          {post.knowledge?.song}{post.knowledge?.song && post.knowledge?.artist ? ' · ' : ''}{post.knowledge?.artist}
-                        </p>
-                      )}
-                    </div>
+                    <PostCard
+                      key={post.id}
+                      variant="compact"
+                      post={post}
+                      resonated={resonated.has(post.id)}
+                      resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+                      echoCount={post.replies ?? 0}
+                      onResonate={toggleResonate}
+                      onExport={handleExport}
+                    />
                   ))}
                 </div>
               </div>
@@ -610,6 +840,14 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+      <CardExportModal
+        open={!!exportPost}
+        onOpenChange={(o) => { if (!o) setExportPost(null) }}
+        lyric={exportPost?.text || ''}
+        song={exportPost?.knowledge?.song || ''}
+        artist={exportPost?.knowledge?.artist || ''}
+        postId={exportPost?.id}
+      />
     </main>
   )
 }

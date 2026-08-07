@@ -11,9 +11,18 @@ export interface Echo {
   username: string
   displayName?: string
   authorUid?: string
+  authorAvatarUrl?: string | null
   timestamp: number
+  /** @deprecated Prefer resonateCount from post_stats — kept for optimistic UI during Step 3 migration */
   resonates?: Record<string, boolean>
+  resonateCount?: number
+  echoCount?: number
   status?: string
+  songId?: string | null
+  snippetStart?: number | null
+  snippetEnd?: number | null
+  audioUrl?: string | null
+  artwork?: string | null
 }
 
 // ── Migrated Aug 1, 2026 ───────────────────────────────────────────────
@@ -23,27 +32,34 @@ export interface Echo {
 // Echo interface/field names (lyric, song, artist) so lyric-back/page.tsx
 // doesn't need further changes beyond what's already been done.
 //
-// `resonates` is rebuilt as a Record<actorId, true> from the joined
-// post_resonates rows, matching the old Firebase shape exactly, since
-// the page's optimistic-update logic (Object.keys(...).length) depends
-// on that shape rather than a plain count.
+// Aug 2026 (postcard unification): also select song_id / snippet timing /
+// songs.audio_url so Lyric Backs can render Tier1 audio via shared PostCard.
+// resonateCount/echoCount come from post_stats (same source as the feed).
 
 const ECHO_SELECT = `
   id,
   text,
   song_title,
   artist_name,
+  artwork_url,
   emotion,
   status,
+  song_id,
+  snippet_start_sec,
+  snippet_end_sec,
   legacy_author_label,
   author_profile_id,
   created_at,
-  profiles:author_profile_id ( username, display_name ),
-  post_resonates ( actor_id )
+  profiles:author_profile_id ( username, display_name, avatar_url ),
+  post_resonates ( actor_id ),
+  post_stats ( resonate_count, echo_count ),
+  songs:song_id ( audio_url, artwork_url )
 `
 
 function mapRow(row: any): Echo {
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+  const stats = Array.isArray(row.post_stats) ? row.post_stats[0] : row.post_stats
+  const linkedSong = Array.isArray(row.songs) ? row.songs[0] : row.songs
   const resonateRows: { actor_id: string }[] = row.post_resonates || []
   const resonates: Record<string, boolean> = {}
   for (const r of resonateRows) resonates[r.actor_id] = true
@@ -57,9 +73,17 @@ function mapRow(row: any): Echo {
     username: profile?.username ?? row.legacy_author_label ?? 'Anonymous',
     displayName: profile?.display_name ?? undefined,
     authorUid: row.author_profile_id ?? undefined,
+    authorAvatarUrl: profile?.avatar_url ?? null,
     timestamp: row.created_at ? new Date(row.created_at).getTime() : 0,
     resonates,
+    resonateCount: stats?.resonate_count ?? Object.keys(resonates).length,
+    echoCount: stats?.echo_count ?? 0,
     status: row.status,
+    songId: row.song_id ?? null,
+    snippetStart: row.snippet_start_sec ?? null,
+    snippetEnd: row.snippet_end_sec ?? null,
+    audioUrl: linkedSong?.audio_url ?? null,
+    artwork: row.artwork_url ?? linkedSong?.artwork_url ?? null,
   }
 }
 

@@ -33,10 +33,12 @@ export function PostThumbnail({
     const push = (u: string | null | undefined) => {
       if (u && !urls.includes(u)) urls.push(u)
     }
-    push(youtubeThumbnail || null)
+    // Prefer mqdefault first — hqdefault 404s for many videos and spams the console.
     if (youtubeThumbnail) {
       push(youtubeVariant(youtubeThumbnail, 'mqdefault'))
       push(youtubeVariant(youtubeThumbnail, 'sddefault'))
+      const mq = youtubeVariant(youtubeThumbnail, 'mqdefault')
+      if (mq !== youtubeThumbnail) push(youtubeThumbnail)
     }
     push(artwork || null)
     push(PLACEHOLDER)
