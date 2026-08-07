@@ -31,6 +31,12 @@ const nextConfig = {
         destination: '/discover',
         permanent: true,
       },
+      // Alias for Copyright Policy / DMCA designated-agent page.
+      {
+        source: '/copyright-policy',
+        destination: '/dmca',
+        permanent: true,
+      },
     ]
   },
 }

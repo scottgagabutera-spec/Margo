@@ -22,19 +22,32 @@ export default function ContactPage() {
           </p>
 
           <div style={{ background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.12)', borderRadius: '12px', padding: '28px', marginBottom: '16px' }}>
-            {[
-              { label: 'General', email: 'contact@trymargo.com', note: 'Questions, feedback, partnerships, press.' },
-              { label: 'Copyright and Legal', email: 'contact@trymargo.com', note: 'Rights holder requests and content removal. We review all requests and act promptly.' },
-              { label: 'Investors and Partners', email: 'contact@trymargo.com', note: 'Margo is independently built and actively seeking partners and investors who see this early.' },
-            ].map((block, i, arr) => (
-              <div key={block.label} style={{ marginBottom: i === arr.length - 1 ? 0 : '32px' }}>
-                <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>{block.label}</div>
-                <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text-2)', marginBottom: '4px' }}>
-                  <a href={`mailto:${block.email}`} style={{ color: 'var(--gold)', textDecoration: 'none' }}>{block.email}</a>
-                </div>
-                <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{block.note}</div>
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>General</div>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text-2)', marginBottom: '4px' }}>
+                <a href="mailto:contact@trymargo.com" style={{ color: 'var(--gold)', textDecoration: 'none' }}>contact@trymargo.com</a>
               </div>
-            ))}
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>Questions, feedback, partnerships, press.</div>
+            </div>
+
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Copyright and Legal</div>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text-2)', marginBottom: '4px' }}>
+                <a href="mailto:dmca@trymargo.com" style={{ color: 'var(--gold)', textDecoration: 'none' }}>dmca@trymargo.com</a>
+                {' · '}
+                <Link href="/dmca" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Copyright Policy</Link>
+              </div>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>DMCA notices, counter-notices, and rights-holder requests.</div>
+            </div>
+
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Investors and Partners</div>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text-2)', marginBottom: '4px' }}>
+                <a href="mailto:contact@trymargo.com" style={{ color: 'var(--gold)', textDecoration: 'none' }}>contact@trymargo.com</a>
+              </div>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>Margo is independently built and actively seeking partners and investors who see this early.</div>
+            </div>
+
 
             <div style={{ marginTop: '32px' }}>
               <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>LinkedIn</div>
@@ -45,7 +58,7 @@ export default function ContactPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '64px', paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
-            {['about', 'privacy', 'terms', 'contact'].map(p => (
+            {['about', 'privacy', 'terms', 'dmca', 'contact'].map(p => (
               <Link key={p} href={`/${p}`} style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)', textDecoration: 'none' }}>{p}</Link>
             ))}
           </div>

@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import {
   useArtistApplication,
   generateVerificationCode,
@@ -272,16 +273,18 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
         </div>
 
         {/*
-          PLACEHOLDER — pending legal review.
-          This warranty language must be reviewed and finalized before this
-          form is opened to real artists. Do not treat this copy as final.
+          Interim warranty — replace when counsel signs off final artist ToS language.
+          Links to live /terms and /dmca (Copyright Policy).
         */}
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontFamily: font, fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, padding: '4px 0' }}>
           <input type="checkbox" checked={rightsAgreed} onChange={e => setRightsAgreed(e.target.checked)}
             style={{ marginTop: '3px', width: '18px', height: '18px', flexShrink: 0, accentColor: 'var(--gold)' }} />
           <span>
-            [PLACEHOLDER] I confirm that I own the rights to any music I upload, or have explicit permission from
-            the rights holder to distribute it on Margo, and I agree to Margo's Terms of Use and Copyright Policy.
+            I confirm that I own or have the necessary rights to the music and content I upload, and that it does not
+            infringe on any third party&apos;s copyright. I agree to Margo&apos;s{' '}
+            <Link href="/terms" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Terms of Use</Link>
+            {' '}and{' '}
+            <Link href="/dmca" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Copyright Policy</Link>.
           </span>
         </label>
 
