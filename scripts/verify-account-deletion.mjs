@@ -6,11 +6,19 @@
  *  - third-party post referencing the same song (must SURVIVE with song_id = null)
  *  - queue_items on own queue + (if possible) another owner's queue
  *
- * Env (.env.local): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * Auth path: signs in as the throwaway user via @supabase/ssr (cookie
+ * jar), then POSTs /api/delete-account with those cookies — exercising
+ * the real cookie-based route auth, not a service-role purge bypass.
+ * Admin/service role is still used for fixtures + post-assertions only.
+ *
+ * Env (.env.local): NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+ *   SUPABASE_SERVICE_ROLE_KEY
+ * Optional: VERIFY_BASE_URL (default http://localhost:3000) — Next must be running
  * Usage: node scripts/verify-account-deletion.mjs
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
@@ -31,9 +39,11 @@ function loadEnvFile() {
 loadEnvFile()
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const service = process.env.SUPABASE_SERVICE_ROLE_KEY
-if (!url || !service) {
-  console.error('Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY')
+const baseUrl = (process.env.VERIFY_BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
+if (!url || !anonKey || !service) {
+  console.error('Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY')
   process.exit(1)
 }
 
@@ -48,24 +58,6 @@ const username = `del${String(stamp).slice(-10)}`
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg)
-}
-
-async function removeBucketPrefix(bucket, userId) {
-  const { data: entries, error: listError } = await admin.storage
-    .from(bucket)
-    .list(userId, { limit: 1000 })
-  if (listError) {
-    const msg = listError.message || String(listError)
-    if (/not found|does not exist/i.test(msg)) return
-    throw new Error(`[storage:${bucket}] list failed: ${msg}`)
-  }
-  if (!entries?.length) return
-  const paths = entries
-    .filter((e) => e.name && e.name !== '.emptyFolderPlaceholder')
-    .map((e) => `${userId}/${e.name}`)
-  if (!paths.length) return
-  const { error } = await admin.storage.from(bucket).remove(paths)
-  if (error) throw new Error(`[storage:${bucket}] remove failed: ${error.message}`)
 }
 
 async function tableExists(name) {
@@ -99,6 +91,69 @@ async function ensureProfile(userId, uname, displayName) {
       .insert({ id: userId, username: uname, display_name: displayName })
     if (error) throw new Error(`profiles insert: ${error.message}`)
   }
+}
+
+/** Sign in with password using an in-memory cookie jar that mirrors @supabase/ssr. */
+async function cookieHeaderFromPasswordSignIn(email, password) {
+  const jar = new Map()
+  const supabase = createServerClient(url, anonKey, {
+    cookies: {
+      getAll() {
+        return Array.from(jar.entries()).map(([name, value]) => ({ name, value }))
+      },
+      setAll(cookiesToSet) {
+        for (const { name, value } of cookiesToSet) {
+          if (value) jar.set(name, value)
+          else jar.delete(name)
+        }
+      },
+    },
+  })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error || !data.session) {
+    throw new Error(`signInWithPassword: ${error?.message || 'no session'}`)
+  }
+  if (jar.size === 0) {
+    throw new Error('signIn wrote no auth cookies — cannot exercise cookie-based API auth')
+  }
+  return Array.from(jar.entries())
+    .map(([name, value]) => `${name}=${value}`)
+    .join('; ')
+}
+
+/** LocalStorage-style session token only — no Cookie header (old clients). */
+async function accessTokenFromPasswordSignIn(email, password) {
+  const supabase = createClient(url, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error || !data.session?.access_token) {
+    throw new Error(`bearer signIn: ${error?.message || 'no access_token'}`)
+  }
+  return data.session.access_token
+}
+
+async function deleteAccountViaApi({ cookieHeader, accessToken, confirmUsername }) {
+  const headers = { 'Content-Type': 'application/json' }
+  if (cookieHeader) headers.Cookie = cookieHeader
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`
+  const res = await fetch(`${baseUrl}/api/delete-account`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ confirmUsername }),
+  })
+  let body = null
+  try {
+    body = await res.json()
+  } catch {
+    body = null
+  }
+  if (!res.ok) {
+    throw new Error(
+      `POST /api/delete-account → ${res.status}: ${JSON.stringify(body) || '(empty body)'}`,
+    )
+  }
+  return body
 }
 
 async function main() {
@@ -246,23 +301,52 @@ async function main() {
     if (error) throw new Error(`storage upload ${bucket}: ${error.message}`)
   }
 
-  console.log('Fixtures OK. Purging deleter only…')
-  await removeBucketPrefix('avatars', userId)
-  await removeBucketPrefix('song-audio', userId)
-  await removeBucketPrefix('song-artwork', userId)
+  console.log('Fixtures OK. Verifying dual-accept auth on /api/delete-account…')
+  console.log('  VERIFY_BASE_URL =', baseUrl)
 
-  const { error: purgeError } = await admin.rpc('purge_user_account_data', {
-    p_user_id: userId,
-    p_username: username,
+  // Negative check: bare request without cookies/Bearer must 401
+  const unauth = await fetch(`${baseUrl}/api/delete-account`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ confirmUsername: username }),
   })
-  if (purgeError) {
-    console.error('  RPC purgeError (full):', JSON.stringify(purgeError, null, 2))
-    throw new Error(`RPC: [${purgeError.code}] ${purgeError.message}`)
-  }
-  console.log('  used transactional RPC purge_user_account_data')
+  assert(unauth.status === 401, `expected 401 without auth, got ${unauth.status}`)
+  console.log('  unauthenticated POST → 401 (ok)')
 
-  const { error: authDelErr } = await admin.auth.admin.deleteUser(userId)
-  if (authDelErr) throw new Error(`auth.deleteUser: ${authDelErr.message}`)
+  // Bearer-only path (simulates settings/page.tsx before Phase 5)
+  const bearerStamp = stamp + 2
+  const bearerEmail = `bearer-del-${bearerStamp}@example.com`
+  const bearerPassword = `BearerDel_${bearerStamp}!aA1`
+  const bearerUsername = `bdl${String(bearerStamp).slice(-10)}`
+  const { data: bearerCreated, error: bearerCreateErr } = await admin.auth.admin.createUser({
+    email: bearerEmail,
+    password: bearerPassword,
+    email_confirm: true,
+  })
+  if (bearerCreateErr || !bearerCreated.user) {
+    throw new Error(`createUser bearer: ${bearerCreateErr?.message}`)
+  }
+  const bearerUserId = bearerCreated.user.id
+  await ensureProfile(bearerUserId, bearerUsername, 'Bearer Delete Test')
+  const accessToken = await accessTokenFromPasswordSignIn(bearerEmail, bearerPassword)
+  const bearerDelete = await deleteAccountViaApi({
+    accessToken,
+    confirmUsername: bearerUsername,
+  })
+  assert(bearerDelete?.success === true, 'Bearer-only delete-account failed')
+  assert((await countEq('profiles', 'id', bearerUserId)) === 0, 'Bearer-deleted profile still exists')
+  console.log('  Bearer-only POST /api/delete-account → success (ok)')
+
+  // Cookie-only path (linked-song fixtures)
+  const cookieHeader = await cookieHeaderFromPasswordSignIn(email, password)
+  console.log('  auth cookies set:', cookieHeader.split('; ').map((c) => c.split('=')[0]).join(', '))
+  const deleteResult = await deleteAccountViaApi({
+    cookieHeader,
+    confirmUsername: username,
+  })
+  console.log('  delete-account cookie response:', JSON.stringify(deleteResult))
+  assert(deleteResult?.success === true, 'delete-account did not return success: true')
+  console.log('  cookie-only POST /api/delete-account → success (ok)')
 
   console.log('\n--- Linked-song / queue assertions ---')
 
@@ -338,7 +422,7 @@ async function main() {
   await admin.from('profiles').delete().eq('id', otherId)
   await admin.auth.admin.deleteUser(otherId)
 
-  console.log('PASS — linked-song case: song gone, owned post gone, survivor song_id=null, queue_items cascaded.')
+  console.log('PASS — cookie + Bearer dual-accept delete-account; linked-song case: song gone, owned post gone, survivor song_id=null, queue_items cascaded.')
   console.log('Spot-check deleted userId (should be absent):', userId)
 }
 
