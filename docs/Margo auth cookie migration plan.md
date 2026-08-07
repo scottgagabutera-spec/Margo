@@ -55,18 +55,31 @@ cookies via `next/headers`), and root `middleware.ts` (refreshes
 session cookie on every request). Old `lib/supabase.ts` untouched.
 Nothing switches over yet — deployable with zero behavior change.
 
-### Phase 2 — OAuth callback becomes a server Route Handler
+### Phase 2 — OAuth callback becomes a server Route Handler — COMPLETE
 Replace the client-side exchange in `app/auth/callback/page.tsx` with
 `app/auth/callback/route.ts`, using the new server client to exchange
 the code and set the cookie, then redirect to `/feed`.
 **Verify manually:** sign out, sign in with Google, confirm landing on
 `/feed` logged in, confirm a session cookie now exists in dev tools.
 
+**Interim state (expected until Phase 4):** cookie session now works via
+the new server route, but `useIdentity` / `supabase-auth-provider.tsx`
+still write profile data via the old localStorage client, causing an RLS
+`42501` error on profile writes until Phase 4 lands. Known/expected —
+not a regression.
+
 ### Phase 3 — Switch the two server-verified API routes
 `delete-account` and `submit-artist-application` move from Bearer
 header to reading the session cookie via the new server client.
 Reuse the existing verification-script pattern from the account
 deletion fix.
+
+**Dual-accept bridge (temporary until Phase 5):** both routes prefer
+cookie `auth.getUser()`, then fall back to `Authorization: Bearer` so
+unmigrated callers keep working. Exists only for:
+`app/settings/page.tsx` and `hooks/useArtistApplication.ts`. Remove the
+Bearer fallback from both API routes once those two files are switched
+over in Phase 5.
 
 ### Phase 4 — `supabase-auth-provider.tsx` + `useIdentity.tsx`
 The load-bearing piece nearly everything else depends on. Swap the
