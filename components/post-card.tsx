@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import {
   CardIcon,
@@ -30,6 +31,7 @@ import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { supabase } from '@/lib/supabase'
 import { useIdentity } from '@/hooks/useIdentity'
 import { PostThumbnail } from '@/components/post-thumbnail'
+import { VibeTag } from '@/components/vibe-tag'
 
 export type PostCardVariant = 'feed' | 'compact' | 'row'
 
@@ -53,6 +55,8 @@ export interface PostCardProps {
   replayCount?: number
   onReplay?: (id: string) => void
   onQuoteReplay?: (id: string, quoteText: string) => void
+  /** When true, skip whole-card navigate (e.g. already on /post/[id]). */
+  disableCardNav?: boolean
 }
 
 const EMOTION_COLORS: Record<string, string> = {
@@ -308,7 +312,9 @@ export function PostCard({
   isNew = false, isTrending = false, isTop = false, onSelectVibe, onSelectRank,
   variant = 'feed',
   replayed = false, replayCount = 0, onReplay, onQuoteReplay,
+  disableCardNav = false,
 }: PostCardProps) {
+  const router = useRouter()
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
   const authorProfile = useAuthorProfile(post.authorUid || null)
@@ -430,14 +436,33 @@ export function PostCard({
     )
   }
 
+  const goToPost = (e: React.MouseEvent) => {
+    if (disableCardNav || isRow) return
+    const t = e.target as HTMLElement | null
+    if (t?.closest?.('a, button, textarea, input, [data-no-card-nav]')) return
+    router.push('/post/' + post.id)
+  }
+
   return (
-    <div ref={cardRef} style={{
-      background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
-      border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
-      borderRadius: '18px', padding: cardPadding,
-      position: 'relative', overflow: 'hidden',
-      transition: 'border-color 200ms ease',
-    }}>
+    <div
+      ref={cardRef}
+      onClick={goToPost}
+      style={{
+        background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
+        border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
+        borderRadius: '18px', padding: cardPadding,
+        position: 'relative', overflow: 'visible',
+        transition: 'border-color 200ms ease',
+        cursor: disableCardNav || isRow ? 'default' : 'pointer',
+      }}
+    >
+      {label && !isRow ? (
+        <VibeTag
+          label={label}
+          color={color}
+          onClick={() => onSelectVibe?.(emotion.toUpperCase())}
+        />
+      ) : null}
       {isRow && (
         <button
           type="button"
@@ -755,7 +780,7 @@ export function PostCard({
         </Link>
       )}
 
-      <div>
+      <div data-no-card-nav>
       <div className="margo-feed-actions">
         <button
           type="button"
@@ -767,13 +792,15 @@ export function PostCard({
             transition: 'color 150ms ease',
           }}
         >
-          {resonated
-            ? <HeartFilledIcon size={18} color="var(--gold)" />
-            : <HeartIcon size={18} color="var(--text-secondary)" />
-          }
-          {resonateCount > 0 ? (
-            <span className="margo-feed-action__count">{resonateCount}</span>
-          ) : null}
+          <span className="margo-feed-action__icon-wrap">
+            {resonated
+              ? <HeartFilledIcon size={18} color="var(--gold)" />
+              : <HeartIcon size={18} color="var(--text-secondary)" />
+            }
+            {resonateCount > 0 ? (
+              <span className="margo-feed-action__badge">{resonateCount}</span>
+            ) : null}
+          </span>
           <span className="margo-feed-action__label">Resonate</span>
         </button>
 
@@ -786,10 +813,12 @@ export function PostCard({
             transition: 'color 150ms ease',
           }}
         >
-          <LyricBackIcon size={18} color="var(--text-secondary)" />
-          {echoCount > 0 ? (
-            <span className="margo-feed-action__count">{echoCount}</span>
-          ) : null}
+          <span className="margo-feed-action__icon-wrap">
+            <LyricBackIcon size={18} color="var(--text-secondary)" />
+            {echoCount > 0 ? (
+              <span className="margo-feed-action__badge">{echoCount}</span>
+            ) : null}
+          </span>
           <span className="margo-feed-action__label">Lyric Back</span>
         </Link>
 
@@ -802,7 +831,9 @@ export function PostCard({
             color: 'var(--text-secondary)', transition: 'color 150ms ease',
           }}
         >
-          <CardIcon size={18} color="var(--text-secondary)" />
+          <span className="margo-feed-action__icon-wrap">
+            <CardIcon size={18} color="var(--text-secondary)" />
+          </span>
           <span className="margo-feed-action__label">Card</span>
         </button>
 
@@ -823,10 +854,12 @@ export function PostCard({
               transition: 'color 150ms ease',
             }}
           >
-            <ReplayIcon size={18} color={replayed ? 'var(--gold)' : 'var(--text-secondary)'} />
-            {replayCount > 0 ? (
-              <span className="margo-feed-action__count">{replayCount}</span>
-            ) : null}
+            <span className="margo-feed-action__icon-wrap">
+              <ReplayIcon size={18} color={replayed ? 'var(--gold)' : 'var(--text-secondary)'} />
+              {replayCount > 0 ? (
+                <span className="margo-feed-action__badge">{replayCount}</span>
+              ) : null}
+            </span>
             <span className="margo-feed-action__label">Replay</span>
           </button>
           {replayMenuOpen && !quoteOpen && (
@@ -932,19 +965,6 @@ export function PostCard({
         </div>
       </div>
 
-        {label && (
-          <button
-            type="button"
-            onClick={() => onSelectVibe?.(emotion.toUpperCase())}
-            style={{
-              fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
-              letterSpacing: '1px', textTransform: 'uppercase', padding: '4px 10px',
-              borderRadius: '50px', background: 'rgba(255,255,255,0.04)',
-              border: 'none', cursor: 'pointer', color, flexShrink: 0,
-              marginTop: '8px',
-            }}
-          >{label}</button>
-        )}
       </div>
 
       {isTier1 && !isCompact && (

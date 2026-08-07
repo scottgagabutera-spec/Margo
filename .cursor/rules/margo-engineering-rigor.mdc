@@ -1,0 +1,30 @@
+---
+description: Verify assumptions, reuse existing patterns, and flag inconsistencies on all work
+alwaysApply: true
+---
+
+# Engineering rigor (all work)
+
+Applies to every task — UI, backend, RLS, copy, and infra — not only frontend files.
+
+## Verify, don’t guess
+
+- Check the actual source of truth before acting (RLS policies in migrations / live `pg_policies`, route existence under `app/`, real column names, existing helpers).
+- Prefer reading the relevant file/section over assuming from memory or product copy.
+- If production state may differ from repo migrations, say so explicitly.
+
+## Reuse before inventing
+
+- Search for existing utilities, hooks, components, and API routes first.
+- Extend shared patterns (`lib/`, `hooks/`, `components/`) instead of duplicating near-copies.
+- Match local naming, error handling, and style of the surrounding code.
+
+## Flag inconsistencies
+
+- Surface mismatches you notice (copy vs behavior, badge vs RLS, dead links, dual sources of truth) even when not asked to fix them.
+- For UI-touching work, also apply `.cursor/rules/margo-ui-design-system.mdc` and `MARGO_BRAND.md` Sections 14–15 — flag requests that would violate those standards before building.
+
+## Minimal, surgical changes
+
+- Targeted diffs only; don’t restructure files to fix one issue.
+- No drive-by refactors or unrequested docs.
