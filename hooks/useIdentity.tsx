@@ -1,8 +1,10 @@
 'use client'
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+
+const supabase = createClient()
 
 const INSTRUMENTS = [
   'guitar', 'piano', 'violin', 'cello', 'drums', 'bass', 'flute', 'harp',

@@ -1,8 +1,10 @@
 'use client'
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { AuthGateModal } from '@/components/auth-gate-modal'
+
+const supabase = createClient()
 
 interface AuthGateContextValue {
   user: User | null
@@ -24,8 +26,8 @@ const AuthGateContext = createContext<AuthGateContextValue | null>(null)
  * instead of letting the action through. Dismissing it ("Maybe Later"
  * or the X) simply cancels that action â€” nothing is written.
  *
- * A signed-in user's session persists via Supabase's own localStorage
- * handling, so returning visitors are recognized automatically on
+ * A signed-in user's session persists via the @supabase/ssr cookie
+ * browser client, so returning visitors are recognized automatically on
  * load without re-authenticating â€” this provider's session check on
  * mount + onAuthStateChange listener below is what surfaces that.
  */
