@@ -453,7 +453,7 @@ export default function Home() {
         display:'flex', flexDirection:'column', alignItems:'center', gap:'20px',
       }}>
         <div style={{display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'center', gap:'8px'}}>
-          {['About','Privacy','Terms','Contact'].map(link => (
+          {['About','Privacy','Terms','DMCA','Contact'].map(link => (
             <a key={link} href={`/${link.toLowerCase()}`} style={{
               fontSize:'1rem', color:'var(--text)',
               fontFamily:'var(--font-lora),serif',

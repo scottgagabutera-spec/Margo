@@ -43,7 +43,7 @@ export default function AboutPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '64px', paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
-            {['about', 'privacy', 'terms', 'contact'].map(p => (
+            {['about', 'privacy', 'terms', 'dmca', 'contact'].map(p => (
               <Link key={p} href={`/${p}`} style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-secondary)', textDecoration: 'none' }}>{p}</Link>
             ))}
           </div>
