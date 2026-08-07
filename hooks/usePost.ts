@@ -1,7 +1,9 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { Post } from '@/hooks/usePosts'
+
+const supabase = createClient()
 
 const POST_SELECT = `
   id,

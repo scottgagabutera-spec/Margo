@@ -1,7 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
+
+const supabase = createClient()
 
 /**
  * Depends on `user?.id` (a stable primitive) rather than the `user`

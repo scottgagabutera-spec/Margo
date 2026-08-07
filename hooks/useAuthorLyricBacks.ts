@@ -1,7 +1,9 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/hooks/usePosts'
+
+const supabase = createClient()
 
 /**
  * Lyric Backs authored by a profile (posts with parent_post_id set).
