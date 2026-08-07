@@ -1,7 +1,11 @@
 'use client'
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
+
+// Cookie-session client (Phase 4 bridge). Reads/writes notifications under
+// RLS require the JWT from the auth cookie — the old localStorage client 401s.
+const supabase = createClient()
 
 export type NotificationType =
   | 'message' | 'resonate' | 'follow' | 'follow_request'
