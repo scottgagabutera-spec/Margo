@@ -104,13 +104,15 @@ begin
   delete from public.artist_applications
   where profile_id = p_user_id;
 
-  -- Optional listen queues owned by this profile (FK without cascade)
+  -- Optional listen queues owned by this profile (queue_items cascade from queues)
   if to_regclass('public.queues') is not null then
     delete from public.queues
     where owner_profile_id = p_user_id;
   end if;
 
-  -- Songs: children (lyric_lines, vibes, plays, resonates, stats) cascade from songs
+  -- Songs owned by this user. Remaining posts by other authors that reference
+  -- these songs get song_id SET NULL (posts_song_id_fkey). queue_items that
+  -- reference these songs CASCADE-delete (queue_items_song_id_fkey).
   delete from public.songs
   where owner_profile_id = p_user_id;
 
