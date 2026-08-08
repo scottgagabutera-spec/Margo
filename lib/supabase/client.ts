@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { broadcastSessionCleared } from '@/lib/supabase/auth-broadcast'
 
 /**
  * Auth core — browser client with access token only in process memory.
@@ -63,6 +64,7 @@ async function refreshAccessToken(): Promise<boolean> {
 }
 
 async function failSession() {
+  // signOutBrowser broadcasts session-cleared — other tabs mirror an explicit logout.
   await signOutBrowser()
   onSessionInvalid?.()
 }
@@ -136,4 +138,6 @@ export async function signOutBrowser() {
   } catch {
     // best-effort cookie clear
   }
+  // Explicit logout and failSession share this path — sync other tabs.
+  broadcastSessionCleared()
 }
