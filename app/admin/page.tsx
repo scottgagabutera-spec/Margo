@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { auth, db } from '@/lib/firebase'
+import { auth, db, ensureFirebase } from '@/lib/firebase'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { ref, onValue, update, set, get } from 'firebase/database'
 import { ArtistApplicationsTab } from '@/components/artist-applications-tab'
@@ -70,14 +70,18 @@ const S: Record<string, any> = {
 }
 
 // ── Login ──
-function LoginForm({ onLogin }: { onLogin: () => void }) {
+function LoginForm({ onLogin, firebaseReady }: { onLogin: () => void; firebaseReady: boolean }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async () => {
-    if (!auth) return
+    ensureFirebase()
+    if (!auth) {
+      setError('Firebase isn\'t configured in this environment.')
+      return
+    }
     setLoading(true); setError('')
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password)
@@ -115,8 +119,12 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
               style={S.input} />
           </div>
-          {error && <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: '#ff6060' }}>{error}</p>}
-          <button onClick={handleLogin} disabled={loading} style={{ ...S.btn, width: '100%', padding: '14px', opacity: loading ? 0.6 : 1 }}>
+          {(!firebaseReady || error) && (
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: '#ff6060' }}>
+              {!firebaseReady ? "Firebase isn't configured in this environment." : error}
+            </p>
+          )}
+          <button onClick={handleLogin} disabled={loading || !firebaseReady} style={{ ...S.btn, width: '100%', padding: '14px', opacity: (loading || !firebaseReady) ? 0.6 : 1 }}>
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </div>
@@ -964,6 +972,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<'posts'|'catalog'|'featured'|'artists'|'reports'>('posts')
 
   useEffect(() => {
+    ensureFirebase()
     if (!auth) { setAuthChecked(true); return }
     return onAuthStateChanged(auth, async u => {
       setUser(u)
@@ -983,7 +992,7 @@ export default function AdminPage() {
     </div>
   )
 
-  if (!user || !isAdmin) return <LoginForm onLogin={() => {}} />
+  if (!user || !isAdmin) return <LoginForm onLogin={() => {}} firebaseReady={!!auth} />
 
   const tabs: { key: typeof tab; label: string }[] = [
     { key: 'posts', label: 'Posts' },
