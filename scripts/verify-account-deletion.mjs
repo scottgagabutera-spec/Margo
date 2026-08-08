@@ -301,10 +301,10 @@ async function main() {
     if (error) throw new Error(`storage upload ${bucket}: ${error.message}`)
   }
 
-  console.log('Fixtures OK. Verifying dual-accept auth on /api/delete-account…')
+  console.log('Fixtures OK. Verifying cookie-only auth on /api/delete-account…')
   console.log('  VERIFY_BASE_URL =', baseUrl)
 
-  // Negative check: bare request without cookies/Bearer must 401
+  // Negative check: bare request without cookies must 401
   const unauth = await fetch(`${baseUrl}/api/delete-account`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -313,7 +313,7 @@ async function main() {
   assert(unauth.status === 401, `expected 401 without auth, got ${unauth.status}`)
   console.log('  unauthenticated POST → 401 (ok)')
 
-  // Bearer-only path (simulates settings/page.tsx before Phase 5)
+  // Bearer-only must 401 now that the Phase 3 dual-accept fallback is gone
   const bearerStamp = stamp + 2
   const bearerEmail = `bearer-del-${bearerStamp}@example.com`
   const bearerPassword = `BearerDel_${bearerStamp}!aA1`
@@ -329,13 +329,19 @@ async function main() {
   const bearerUserId = bearerCreated.user.id
   await ensureProfile(bearerUserId, bearerUsername, 'Bearer Delete Test')
   const accessToken = await accessTokenFromPasswordSignIn(bearerEmail, bearerPassword)
-  const bearerDelete = await deleteAccountViaApi({
-    accessToken,
-    confirmUsername: bearerUsername,
+  const bearerRes = await fetch(`${baseUrl}/api/delete-account`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ confirmUsername: bearerUsername }),
   })
-  assert(bearerDelete?.success === true, 'Bearer-only delete-account failed')
-  assert((await countEq('profiles', 'id', bearerUserId)) === 0, 'Bearer-deleted profile still exists')
-  console.log('  Bearer-only POST /api/delete-account → success (ok)')
+  assert(bearerRes.status === 401, `expected 401 for Bearer-only auth, got ${bearerRes.status}`)
+  assert((await countEq('profiles', 'id', bearerUserId)) === 1, 'Bearer-only request deleted profile')
+  console.log('  Bearer-only POST /api/delete-account → 401 (ok)')
+  await admin.from('profiles').delete().eq('id', bearerUserId)
+  await admin.auth.admin.deleteUser(bearerUserId)
 
   // Cookie-only path (linked-song fixtures)
   const cookieHeader = await cookieHeaderFromPasswordSignIn(email, password)
@@ -422,7 +428,7 @@ async function main() {
   await admin.from('profiles').delete().eq('id', otherId)
   await admin.auth.admin.deleteUser(otherId)
 
-  console.log('PASS — cookie + Bearer dual-accept delete-account; linked-song case: song gone, owned post gone, survivor song_id=null, queue_items cascaded.')
+  console.log('PASS — cookie-only delete-account (Bearer rejected); linked-song case: song gone, owned post gone, survivor song_id=null, queue_items cascaded.')
   console.log('Spot-check deleted userId (should be absent):', userId)
 }
 

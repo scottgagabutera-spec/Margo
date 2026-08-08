@@ -318,15 +318,12 @@ export default function AccountSettingsPage() {
     }
     setDeleteError(null)
     setDeleting(true)
-    const { data: sessionData } = await supabase.auth.getSession()
-    const accessToken = sessionData?.session?.access_token
 
     try {
       const res = await fetch('/api/delete-account', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ confirmUsername }),
       })

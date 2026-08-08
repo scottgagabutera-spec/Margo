@@ -201,14 +201,10 @@ export function useArtistApplication() {
         return { success: false, error: 'You must agree to the rights warranty to continue.' }
       }
 
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData?.session?.access_token
-      if (!token) return { success: false, error: 'Not signed in.' }
-
       try {
         const res = await fetch('/api/submit-artist-application', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             applicantType: data.applicantType,
             displayArtistName: name,

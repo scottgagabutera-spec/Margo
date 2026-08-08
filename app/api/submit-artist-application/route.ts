@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { normalizeSunoUrl } from '@/lib/suno'
 
 export const runtime = 'nodejs'
 
-// Session is resolved from the auth cookie via @supabase/ssr first.
+// Session is resolved from the auth cookie via @supabase/ssr.
 // profile_id is never trusted from the request body — always derived
 // from the verified user, so a request can never claim to apply on
 // someone else's behalf.
@@ -32,32 +31,9 @@ async function checkSunoCode(url: string, code: string): Promise<boolean> {
 }
 
 export async function POST(req: NextRequest) {
-  // Prefer cookie session (Phase 3).
   const supabase = await createServerSupabase()
-  let profileId: string | null = null
   const { data: cookieUserData, error: cookieUserErr } = await supabase.auth.getUser()
-  if (!cookieUserErr && cookieUserData?.user) {
-    profileId = cookieUserData.user.id
-  }
-
-  // TEMPORARY: Bearer fallback for callers not yet migrated to cookie auth.
-  // Remove once settings/page.tsx and useArtistApplication.ts are migrated (Phase 5).
-  if (!profileId) {
-    const authHeader = req.headers.get('authorization') || ''
-    const token = authHeader.replace(/^Bearer\s+/i, '')
-    if (token) {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      if (url && anonKey) {
-        const bearerClient = createClient(url, anonKey)
-        const { data: bearerUserData, error: bearerErr } =
-          await bearerClient.auth.getUser(token)
-        if (!bearerErr && bearerUserData?.user) {
-          profileId = bearerUserData.user.id
-        }
-      }
-    }
-  }
+  const profileId = !cookieUserErr ? cookieUserData?.user?.id ?? null : null
 
   if (!profileId) {
     return NextResponse.json({ success: false, error: 'Not signed in.' }, { status: 401 })
