@@ -1,9 +1,10 @@
 'use client'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
-import { createClient as createBrowserClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import type { AuthError } from '@supabase/supabase-js'
+
+const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 
@@ -68,10 +69,8 @@ export function AuthForm({ mode, onSuccess, onSwitchMode }: AuthFormProps) {
     const redirectTo = `${window.location.origin}/auth/callback`
     try {
       // PKCE code verifier must live in a cookie so the server Route Handler
-      // at /auth/callback can exchange the code (Phase 2). Other auth still
-      // uses the old localStorage client until later migration phases.
-      const browser = createBrowserClient()
-      const { error: oauthError } = await browser.auth.signInWithOAuth({
+      // at /auth/callback can exchange the code (Phase 2).
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
         options: { redirectTo },
       })
