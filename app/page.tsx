@@ -2,8 +2,6 @@
 import MargoLogo from '@/components/MargoLogo';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase';
-import { ref, onValue } from 'firebase/database';
 import { createClient } from '@/lib/supabase/client';
 import { useIdentity } from '@/hooks/useIdentity';
 
@@ -243,8 +241,7 @@ export default function Home() {
   }, [identityLoading, user, router]);
 
   // B1: live corpus from Supabase (ticker). Hero pickExchange stays but usually
-  // falls through to FALLBACK_EXCHANGE — nested Firebase echoes are gone. Featured
-  // exchange remains on RTDB until B2.
+  // falls through to FALLBACK_EXCHANGE — nested Firebase echoes are gone.
   useEffect(() => {
     let cancelled = false
     const supabase = createClient()
@@ -279,30 +276,41 @@ export default function Home() {
     return () => { cancelled = true }
   }, []);
 
-  // adminConfig/featuredLyric — extended to optionally carry a `reply` object
-  // ({ text, artist, song, username }) for the curated exchange section.
-  // Renders nothing until a reply is set in the admin panel.
+  // B2: curated Exchange of the Week from Supabase singleton.
+  // Visibility: only set featuredExchange when both lyrics are non-empty (render rule).
   useEffect(() => {
-    if (!db) return;
-    const unsub = onValue(ref(db, 'adminConfig/featuredLyric'), (snap) => {
-      if (!snap.exists()) { setFeaturedExchange(null); return; }
-      const val = snap.val();
-      if (val?.text && val?.reply?.text) {
-        setFeaturedExchange({
-          postLyric: val.text,
-          postSong: val.song,
-          postArtist: val.artist,
-          postUser: val.username,
-          replyLyric: val.reply.text,
-          replySong: val.reply.song,
-          replyArtist: val.reply.artist,
-          replyUser: val.reply.username,
-        });
-      } else {
-        setFeaturedExchange(null);
+    let cancelled = false
+    const supabase = createClient()
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('site_featured_exchange')
+        .select('post_text, post_artist, post_song, post_username, reply_text, reply_artist, reply_song, reply_username')
+        .eq('id', 1)
+        .maybeSingle()
+      if (cancelled) return
+      if (error) {
+        console.error('[landing] failed to load featured exchange:', error.message)
+        setFeaturedExchange(null)
+        return
       }
-    });
-    return () => unsub();
+      const postLyric = (data?.post_text || '').trim()
+      const replyLyric = (data?.reply_text || '').trim()
+      if (!postLyric || !replyLyric) {
+        setFeaturedExchange(null)
+        return
+      }
+      setFeaturedExchange({
+        postLyric,
+        postSong: data?.post_song || undefined,
+        postArtist: data?.post_artist || undefined,
+        postUser: data?.post_username || undefined,
+        replyLyric,
+        replySong: data?.reply_song || undefined,
+        replyArtist: data?.reply_artist || undefined,
+        replyUser: data?.reply_username || undefined,
+      })
+    })()
+    return () => { cancelled = true }
   }, []);
 
   // Don't render the landing page while we're still figuring out who's
@@ -422,7 +430,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Exchange — curated, only renders once a reply is set in adminConfig/featuredLyric */}
+      {/* Featured Exchange — curated; only renders when both lyrics are non-empty in site_featured_exchange */}
       {featuredExchange && (
         <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'40rem', margin:'0 auto 56px'}}>
           <div style={{fontSize:'0.6rem', color:'var(--text-muted)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>Exchange of the Week</div>
