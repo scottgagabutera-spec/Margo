@@ -1,6 +1,10 @@
 'use client'
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { createClient, setBrowserAccessToken } from '@/lib/supabase/client'
+import {
+  createClient,
+  setBrowserAccessToken,
+  setOnSessionInvalid,
+} from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { AuthGateModal } from '@/components/auth-gate-modal'
 
@@ -56,6 +60,14 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       console.error('[auth core] /api/auth/me failed:', err)
       applyAuthPayload(null)
     }
+  }, [applyAuthPayload])
+
+  // Register once per mount; clear on unmount so refresh-failure never hits a stale closure.
+  useEffect(() => {
+    setOnSessionInvalid(() => {
+      applyAuthPayload(null)
+    })
+    return () => setOnSessionInvalid(null)
   }, [applyAuthPayload])
 
   useEffect(() => {
