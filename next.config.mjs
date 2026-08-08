@@ -37,6 +37,13 @@ const nextConfig = {
         destination: '/dmca',
         permanent: true,
       },
+      // Stale static privacy copy (public/privacy.html) — App Router
+      // /privacy is the only live policy surface.
+      {
+        source: '/privacy.html',
+        destination: '/privacy',
+        permanent: true,
+      },
     ]
   },
 }
