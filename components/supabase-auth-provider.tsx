@@ -5,6 +5,7 @@ import {
   setBrowserAccessToken,
   setOnSessionInvalid,
 } from '@/lib/supabase/client'
+import { clearLegacyAuthStorage } from '@/lib/supabase/clear-legacy-auth-storage'
 import type { User } from '@supabase/supabase-js'
 import { AuthGateModal } from '@/components/auth-gate-modal'
 
@@ -48,6 +49,8 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, [])
 
   const rehydrate = useCallback(async () => {
+    // Always wipe readable legacy auth material before /me (shadowing fix).
+    clearLegacyAuthStorage()
     try {
       const res = await fetch('/api/auth/me', { credentials: 'include' })
       if (!res.ok) {
