@@ -1,13 +1,16 @@
 /**
  * Prove cookie-session client can write profiles (RLS) — the Phase 2
  * 42501 failure mode when localStorage client had no JWT.
+ * Also asserts Tier A HttpOnly Set-Cookie + no refresh_token leak via Auth core routes.
  *
- * Usage: node scripts/verify-identity-cookie-profile.mjs
+ * Usage (Next must be running for Tier A checks): node scripts/verify-identity-cookie-profile.mjs
+ * Optional: VERIFY_BASE_URL (default http://localhost:3000)
  */
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
+import { verifyHttpOnlyAuthCore } from './lib/assert-httponly-auth.mjs'
 
 function loadEnvFile() {
   const p = resolve(process.cwd(), '.env.local')
@@ -31,6 +34,7 @@ loadEnvFile()
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const service = process.env.SUPABASE_SERVICE_ROLE_KEY
+const baseUrl = (process.env.VERIFY_BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
 if (!url || !anonKey || !service) {
   console.error('Missing Supabase env vars')
   process.exit(1)
@@ -87,6 +91,10 @@ async function main() {
     throw new Error(`expected anon RLS 42501, got ${JSON.stringify(anonErr)}`)
   }
 
+  // Tier A: real /api/auth/login Set-Cookie is HttpOnly; no refresh_token leak
+  console.log('VERIFY_BASE_URL =', baseUrl)
+  await verifyHttpOnlyAuthCore({ baseUrl, email, password })
+
   // Cookie-session client (same storage model as lib/supabase/client.ts)
   const { supabase } = cookieClient()
   const { error: signErr } = await supabase.auth.signInWithPassword({ email, password })
@@ -123,7 +131,9 @@ async function main() {
 
   await admin.from('profiles').delete().eq('id', userId)
   await admin.auth.admin.deleteUser(userId)
-  console.log('PASS — cookie-session client can insert/update profiles; RLS 42501 only hits unauthenticated')
+  console.log(
+    'PASS — cookie-session client can insert/update profiles; RLS 42501 only hits unauthenticated; Tier A HttpOnly auth OK',
+  )
 }
 
 main().catch(async (err) => {

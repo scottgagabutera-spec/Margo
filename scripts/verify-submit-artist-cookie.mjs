@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
+import { verifyHttpOnlyAuthCore } from './lib/assert-httponly-auth.mjs'
 
 function loadEnvFile() {
   const p = resolve(process.cwd(), '.env.local')
@@ -120,6 +121,13 @@ async function main() {
     console.log('unauth →', unauth.status, unauthBody)
     if (unauth.status !== 401) throw new Error(`expected 401 without auth, got ${unauth.status}`)
 
+    // Tier A: real /api/auth/login Set-Cookie is HttpOnly; no refresh_token leak
+    await verifyHttpOnlyAuthCore({
+      baseUrl,
+      email: cookieUser.email,
+      password: cookieUser.password,
+    })
+
     const cookie = await cookieHeaderFromPasswordSignIn(cookieUser.email, cookieUser.password)
     const cookieRes = await fetch(`${baseUrl}/api/submit-artist-application`, {
       method: 'POST',
@@ -163,7 +171,7 @@ async function main() {
       throw new Error(`expected 401 for Bearer-only auth, got ${bearerRes.status}`)
     }
 
-    console.log('PASS — submit-artist-application accepts cookie; rejects Bearer-only')
+    console.log('PASS — submit-artist-application accepts cookie; rejects Bearer-only; Tier A HttpOnly auth OK')
   } finally {
     await cleanupUser(cookieUser.userId)
     await cleanupUser(bearerUser.userId)
