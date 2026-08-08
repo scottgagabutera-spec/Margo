@@ -3,14 +3,16 @@
  * @see docs/TARGET_ARCHITECTURE_AUDIO_ENGAGEMENT.md Section 3.2
  *
  * Rules:
- * - Only full karaoke listens count (never snippets)
- * - Minimum: 30 seconds continuous OR 50% of track if duration < 60s
- * - Dedup: engagement/plays/{songId}/{sessionId} — one write per session ever
- * - Aggregate: songStats/{songId}/plays incremented atomically
- * - Never increments songs/{id}/plays directly (legacy field frozen)
+ * - Only full karaoke listens count (never snippets) — enforced by AudioEngine
+ * - Minimum: 30 seconds (wall clock position) OR 50% of track if duration < 60s
+ * - Dedup: song_plays PK (song_id, session_id) — one row per session ever
+ * - Aggregate: song_stats.plays via on_song_play_change trigger (do not increment manually)
  */
 
+import { createClient } from '@/lib/supabase/client'
 import { getMargoSessionId } from './session'
+
+const supabase = createClient()
 
 // ── Qualification threshold ───────────────────────────────────────
 
@@ -29,12 +31,12 @@ export function getPlayThresholdSec(durationSec: number): number {
 
 /**
  * Record a qualified play for a song.
- * Safe to call multiple times — Firebase dedup prevents double-counting.
+ * Safe to call multiple times — primary key prevents double-counting.
  *
  * Flow:
- * 1. Check engagement/plays/{songId}/{sessionId} — if exists, skip
- * 2. Set the flag
- * 3. runTransaction on songStats/{songId}/plays to increment
+ * 1. Insert song_plays { song_id, session_id }
+ * 2. Unique violation (23505) = already counted for this session — ignore
+ * 3. Trigger bumps song_stats.plays on successful insert
  */
 export async function recordQualifiedPlay(songId: string): Promise<void> {
   if (!songId) return
@@ -42,50 +44,27 @@ export async function recordQualifiedPlay(songId: string): Promise<void> {
   if (sessionId === 'ssr-session' || sessionId === 'blocked-session') return
 
   try {
-    const { getDatabase, ref, runTransaction } = await import('firebase/database')
-    const { app } = await import('@/lib/firebase')
-    if (!app) return
-    const db = getDatabase(app)
-
-    const dedupRef = ref(db, `engagement/plays/${songId}/${sessionId}`)
-    const dedupResult = await runTransaction(dedupRef, (current) => {
-      if (current) return
-      return { qualifiedAt: Date.now() }
+    const { error } = await supabase.from('song_plays').insert({
+      song_id: songId,
+      session_id: sessionId,
     })
-    if (!dedupResult.committed) return
-
-    const statsRef = ref(db, `songStats/${songId}/plays`)
-    await runTransaction(statsRef, (current) => {
-      return (current || 0) + 1
+    if (!error) return
+    // Expected dedup — already recorded for this session
+    if (error.code === '23505') return
+    console.error('[recordQualifiedPlay] song_plays insert failed:', error.message, {
+      code: error.code,
+      songId,
     })
-  } catch {
+  } catch (e) {
     // Non-critical — never throw, never block playback
+    console.error('[recordQualifiedPlay] unexpected error:', e)
   }
 }
 
-export async function recordSnippetPlay(songId: string): Promise<void> {
-  if (!songId) return
-  const sessionId = getMargoSessionId()
-  if (sessionId === 'ssr-session' || sessionId === 'blocked-session') return
-
-  try {
-    const { getDatabase, ref, runTransaction } = await import('firebase/database')
-    const { app } = await import('@/lib/firebase')
-    if (!app) return
-    const db = getDatabase(app)
-
-    const dedupRef = ref(db, `engagement/snippets/${songId}/${sessionId}`)
-    const dedupResult = await runTransaction(dedupRef, (current) => {
-      if (current) return
-      return { qualifiedAt: Date.now() }
-    })
-    if (!dedupResult.committed) return
-
-    const statsRef = ref(db, `songStats/${songId}/snippetPlays`)
-    await runTransaction(statsRef, (current) => {
-      return (current || 0) + 1
-    })
-  } catch {
-    // Non-critical — never throw, never block playback
-  }
+/**
+ * Unused — AudioEngine never records snippet plays.
+ * Kept as a no-op stub so old imports (if any) stay harmless; delete in a later cleanup.
+ */
+export async function recordSnippetPlay(_songId: string): Promise<void> {
+  return
 }
