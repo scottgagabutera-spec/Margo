@@ -21,6 +21,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
+import { verifyHttpOnlyAuthCore } from './lib/assert-httponly-auth.mjs'
 
 function loadEnvFile() {
   const p = resolve(process.cwd(), '.env.local')
@@ -303,6 +304,9 @@ async function main() {
 
   console.log('Fixtures OK. Verifying cookie-only auth on /api/delete-account…')
   console.log('  VERIFY_BASE_URL =', baseUrl)
+
+  // Tier A: real /api/auth/login Set-Cookie is HttpOnly; no refresh_token leak
+  await verifyHttpOnlyAuthCore({ baseUrl, email, password })
 
   // Negative check: bare request without cookies must 401
   const unauth = await fetch(`${baseUrl}/api/delete-account`, {
