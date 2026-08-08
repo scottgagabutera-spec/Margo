@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { ref, onValue } from 'firebase/database';
+import { createClient } from '@/lib/supabase/client';
 import { useIdentity } from '@/hooks/useIdentity';
 
 interface Echo {
@@ -105,7 +106,8 @@ function TickerCard({ post }: { post: Post }) {
   );
 }
 
-// Fallback exchange — used until a real post + Lyric Back pair exists in the data.
+// Fallback exchange — default hero after B1 (Supabase posts have no nested echoes,
+// so pickExchange rarely matches until B2 featured or a future pair query).
 // Mirrors the actual exported Lyric Back card format (see MARGO_mirror_LyricBack card).
 const FALLBACK_EXCHANGE: ExchangePair = {
   postLyric: "Keep me in your mirror but don't take your eyes off the road, holding on won't get us any nearer cause we got a long way to go…",
@@ -240,18 +242,41 @@ export default function Home() {
     }
   }, [identityLoading, user, router]);
 
+  // B1: live corpus from Supabase (ticker). Hero pickExchange stays but usually
+  // falls through to FALLBACK_EXCHANGE — nested Firebase echoes are gone. Featured
+  // exchange remains on RTDB until B2.
   useEffect(() => {
-    if (!db) return;
-    const unsub = onValue(ref(db, 'posts'), (snap) => {
-      const data: Post[] = [];
-      snap.forEach((child) => {
-        const p = child.val();
-        p.id = child.key;
-        if (p.status !== 'hidden' && p.status !== 'private') data.unshift(p);
-      });
-      setAllPosts(data);
-    });
-    return () => unsub();
+    let cancelled = false
+    const supabase = createClient()
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('id, text, emotion, status, song_title, artist_name, created_at')
+        .is('parent_post_id', null)
+        .not('status', 'in', '("hidden","private")')
+        .order('created_at', { ascending: false })
+        .limit(40)
+      if (cancelled) return
+      if (error) {
+        console.error('[landing] failed to load posts for ticker:', error.message)
+        setAllPosts([])
+        return
+      }
+      setAllPosts(
+        (data ?? []).map((row) => ({
+          id: row.id,
+          text: row.text ?? undefined,
+          emotion: row.emotion ?? undefined,
+          status: row.status ?? undefined,
+          timestamp: row.created_at ? new Date(row.created_at).getTime() : undefined,
+          knowledge:
+            row.song_title || row.artist_name
+              ? { song: row.song_title ?? undefined, artist: row.artist_name ?? undefined }
+              : undefined,
+        })),
+      )
+    })()
+    return () => { cancelled = true }
   }, []);
 
   // adminConfig/featuredLyric — extended to optionally carry a `reply` object
