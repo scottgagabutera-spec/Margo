@@ -80,12 +80,11 @@ export function AuthForm({ mode, onSuccess, onSwitchMode }: AuthFormProps) {
     }
   }
 
-  const handleOAuthSubmit = async (_provider: 'google' | 'discord') => {
+  const handleOAuthSubmit = (provider: 'google' | 'discord') => {
     setLoading(true)
     setError('')
-    // Auth core: OAuth start needs a server PKCE route — not wired yet.
-    setError('Google/Discord sign-in is temporarily unavailable. Use email and password.')
-    setLoading(false)
+    // Full navigation — server sets PKCE verifier cookie, then redirects to provider.
+    window.location.assign('/api/auth/oauth/' + provider)
   }
 
   return (
