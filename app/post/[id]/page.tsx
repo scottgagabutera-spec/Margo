@@ -11,8 +11,10 @@ import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { ArrowLeftIcon } from '@/components/icons'
+
+const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 

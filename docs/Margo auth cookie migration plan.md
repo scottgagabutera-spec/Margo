@@ -77,9 +77,10 @@ deletion fix.
 **Dual-accept bridge (temporary until Phase 5):** both routes prefer
 cookie `auth.getUser()`, then fall back to `Authorization: Bearer` so
 unmigrated callers keep working. Exists only for:
-`app/settings/page.tsx` and `hooks/useArtistApplication.ts`. Remove the
-Bearer fallback from both API routes once those two files are switched
-over in Phase 5.
+`app/settings/page.tsx` and `hooks/useArtistApplication.ts`.
+`useArtistApplication.ts` migrated in Batch A; `settings/page.tsx`
+migrates in Batch C — remove the Bearer fallback from both API routes
+once Batch C merges.
 
 ### Phase 4 — `supabase-auth-provider.tsx` + `useIdentity.tsx`
 The load-bearing piece nearly everything else depends on. Swap the
@@ -89,12 +90,24 @@ same shape, so this should be close to a like-for-like swap.
 **Verify:** auth gate opens/closes correctly on a sample of gated
 pages (compose, feed, profile) before moving on.
 
-### Phase 5 — Remaining 33 files, batched by risk
-- **Batch A** — 18 hooks (mostly RLS reads, lower risk, first)
-- **Batch B** — 9 components
-- **Batch C** — 12 pages, saving `margo-nav`, `mobile-account-menu`,
-  `settings`, `profile/[username]`, `auth-form` for last (these touch
-  `signOut` directly)
+### Phase 5 — Remaining client call sites, batched by risk
+- **Batch A — COMPLETE (merged):** 16 hooks swapped to
+  `@/lib/supabase/client` (`useIdentity` / `useNotifications` already
+  done in Phase 4). Includes write-heavy `useThread` + Bearer-session
+  `useArtistApplication`.
+- **Batch B — COMPLETE (merged):** 8 components — including
+  `margo-nav`, `mobile-account-menu` (sign-out), and `auth-form`
+  (email + OAuth unified on cookie client). Also:
+  `artist-applications-tab`, `avatar-upload`, `edit-post-modal`,
+  `post-card`, `studio/song-upload-form`.
+- **Batch C — in progress:** 13 remaining files (11 pages + 2 lib
+  helpers), including `settings/page.tsx` and
+  `profile/[username]/page.tsx` (own-profile Sign Out — last leftover
+  localStorage `signOut` after Batch B). List: `artists`, `compose`,
+  `discover`, `feed` (unifies Phase 4 dual-client bridge), `lyric-back`,
+  `music`, `post/[id]`, `profile/[username]/songs`,
+  `profile/[username]`, `settings`, `studio`, plus `lib/profile-lookup.ts`
+  and `lib/queues.ts`.
 
 Each batch is its own branch, own tsc/build check, merged before the
 next batch starts.

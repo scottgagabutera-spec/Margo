@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { CatalogGrid, CatalogSortOption } from '@/components/catalog-grid'
 import { SongCatalogCard } from '@/components/song-catalog-card'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 import { BackButton } from '@/components/back-button'
+
+const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 

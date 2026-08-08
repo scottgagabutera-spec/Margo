@@ -8,7 +8,6 @@ import { CardExportModal } from '@/components/card-export-modal'
 import Link from 'next/link'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { supabase } from '@/lib/supabase'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { MargoSearchInput } from '@/components/margo-search-input'
@@ -21,9 +20,7 @@ import { PostCard, normalizeEmotion } from '@/components/post-card'
 import { ReplayAttribution } from '@/components/replay-attribution'
 import { useFolloweeReplays } from '@/hooks/useFolloweeReplays'
 
-// Cookie-session client for auth-gated resonate writes only (Phase 4 bridge).
-// Rest of this file still uses the old localStorage client until Phase 5.
-const cookieSupabase = createClient()
+const supabase = createClient()
 
 // ── Earned-tag thresholds (feed ranking only) ─────────────────────────
 const NEW_WINDOW_HOURS = 24
@@ -268,7 +265,7 @@ export default function FeedPage() {
     if (!user?.id) return
     if (!post.authorUid || post.authorUid === user.id) return
     try {
-      const { error } = await cookieSupabase.from('notifications').insert({
+      const { error } = await supabase.from('notifications').insert({
         recipient_id: post.authorUid,
         actor_id: user.id,
         type: 'resonate',
@@ -294,10 +291,10 @@ export default function FeedPage() {
 
     try {
       if (already) {
-        const { error } = await cookieSupabase.from('post_resonates').delete().eq('post_id', postId).eq('actor_id', myId)
+        const { error } = await supabase.from('post_resonates').delete().eq('post_id', postId).eq('actor_id', myId)
         if (error) throw error
       } else {
-        const { error } = await cookieSupabase.from('post_resonates').insert({ post_id: postId, actor_id: myId })
+        const { error } = await supabase.from('post_resonates').insert({ post_id: postId, actor_id: myId })
         if (error) throw error
       }
       if (!already) {

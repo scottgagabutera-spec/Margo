@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSongs } from '@/hooks/useSongs'
 import { CatalogGrid } from '@/components/catalog-grid'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
+
+const supabase = createClient()
 
 interface ArtistPreview {
   id: string

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { SearchIcon } from '@/components/icons'
 import { CardExportModal } from '@/components/card-export-modal'
 import { AuthorMeta } from '@/components/username-tag'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { matchLyricLine } from '@/lib/lyric-match'
 import { useEchoes } from '@/hooks/useEchoes'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -16,6 +16,8 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { PostCard } from '@/components/post-card'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
+
+const supabase = createClient()
 
 type Source = 'genius' | 'apple'
 

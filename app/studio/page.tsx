@@ -1,10 +1,12 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { SongUploadForm } from '@/components/studio/song-upload-form'
 import { BackButton } from '@/components/back-button'
+
+const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 
