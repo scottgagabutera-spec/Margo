@@ -1,6 +1,6 @@
 'use client'
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, setBrowserAccessToken } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { AuthGateModal } from '@/components/auth-gate-modal'
 
@@ -10,65 +10,87 @@ interface AuthGateContextValue {
   user: User | null
   loading: boolean
   requireAuth: () => boolean
+  /** Re-read httpOnly session → memory access token (after login/logout). */
+  rehydrate: () => Promise<void>
 }
 
 const AuthGateContext = createContext<AuthGateContextValue | null>(null)
 
 /**
- * Mount once at the root of the app (app/layout.tsx), alongside the
- * existing Firebase AuthProvider during the migration window.
- *
- * No anonymous session is created anymore â€” per the "giant way" gate
- * decision, browsing/search/compose flow/snippet playback stay fully
- * open with no Supabase user at all. The first time someone triggers a
- * gated action (post, resonate, lyric back, card export, full song
- * play), requireAuth() opens a dismissible sign-up/sign-in modal
- * instead of letting the action through. Dismissing it ("Maybe Later"
- * or the X) simply cancels that action â€” nothing is written.
- *
- * A signed-in user's session persists via the @supabase/ssr cookie
- * browser client, so returning visitors are recognized automatically on
- * load without re-authenticating â€” this provider's session check on
- * mount + onAuthStateChange listener below is what surfaces that.
+ * Auth core: hydrate from GET /api/auth/me (access_token only).
+ * Refresh token never enters JS — stays in httpOnly cookies.
  */
 export function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [gateOpen, setGateOpen] = useState(false)
 
+  const applyAuthPayload = useCallback((body: {
+    user?: { id: string; email?: string | null; is_anonymous?: boolean } | null
+    access_token?: string
+  } | null) => {
+    if (body?.access_token && body?.user) {
+      setBrowserAccessToken(body.access_token)
+      setUser({
+        id: body.user.id,
+        email: body.user.email ?? undefined,
+        is_anonymous: body.user.is_anonymous,
+      } as User)
+      setGateOpen(false)
+      return
+    }
+    setBrowserAccessToken(null)
+    setUser(null)
+  }, [])
+
+  const rehydrate = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'include' })
+      if (!res.ok) {
+        applyAuthPayload(null)
+        return
+      }
+      const body = await res.json()
+      applyAuthPayload(body)
+    } catch (err) {
+      console.error('[auth core] /api/auth/me failed:', err)
+      applyAuthPayload(null)
+    }
+  }, [applyAuthPayload])
+
   useEffect(() => {
     let cancelled = false
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (cancelled) return
-      setUser(session?.user ?? null)
-      setLoading(false)
+    async function boot() {
+      try {
+        await rehydrate()
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void boot()
+
+    // Optional safety net: if GoTrue emits a user (e.g. leftover), prefer /me.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      // Intentionally empty — session lives in httpOnly cookies + memory bearer.
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (cancelled) return
-      setUser(session?.user ?? null)
-      // A successful sign-up/sign-in closes the gate automatically,
-      // wherever it was opened from.
-      if (session?.user) setGateOpen(false)
-    })
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
+  }, [rehydrate])
 
-    return () => { cancelled = true; subscription.unsubscribe() }
-  }, [])
-
-  // Call before any gated action. Returns true immediately if already
-  // signed in. Otherwise opens the modal and returns false â€” the
-  // caller should stop the action right there; requireAuth() does not
-  // block/await the sign-in, since the modal itself is the retry path.
   const requireAuth = useCallback((): boolean => {
-    if (loading) return false // session check not resolved yet â€” fail closed, not open
+    if (loading) return false
     if (user) return true
     setGateOpen(true)
     return false
   }, [user, loading])
 
   return (
-    <AuthGateContext.Provider value={{ user, loading, requireAuth }}>
+    <AuthGateContext.Provider value={{ user, loading, requireAuth, rehydrate }}>
       {children}
       <AuthGateModal open={gateOpen} onOpenChange={setGateOpen} />
     </AuthGateContext.Provider>

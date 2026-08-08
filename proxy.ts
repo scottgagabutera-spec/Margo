@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -10,6 +11,7 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: supabaseCookieOptions,
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -30,8 +32,7 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Refresh the session cookie when present. Do not gate routes here —
-  // Phase 1 is additive; existing localStorage auth is unchanged.
+  // Refresh the httpOnly session cookie when present.
   // Do not run code between createServerClient and getUser().
   await supabase.auth.getUser()
 

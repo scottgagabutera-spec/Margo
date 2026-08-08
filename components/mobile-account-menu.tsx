@@ -4,9 +4,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
-import { createClient } from '@/lib/supabase/client'
-
-const supabase = createClient()
+import { signOutBrowser } from '@/lib/supabase/client'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const font = 'var(--font-lora), serif'
 
@@ -16,6 +15,7 @@ export function MobileAccountMenu() {
   const [open, setOpen] = useState(false)
   const sheetRef = useRef<HTMLDivElement>(null)
   const { user, identity } = useIdentity()
+  const { rehydrate } = useAuthGate()
   const { application } = useArtistApplication()
 
   const isSignedIn = !!user && !user.isAnonymous
@@ -30,7 +30,8 @@ export function MobileAccountMenu() {
 
   const handleSignOut = async () => {
     setOpen(false)
-    await supabase.auth.signOut()
+    await signOutBrowser()
+    await rehydrate()
     router.push('/feed')
   }
 

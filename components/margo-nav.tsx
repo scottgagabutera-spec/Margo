@@ -5,11 +5,10 @@ import { useState, useEffect, useRef } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
-import { createClient } from '@/lib/supabase/client'
+import { signOutBrowser } from '@/lib/supabase/client'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 import { NotificationBell } from '@/components/notification-bell'
 import { MessagesIcon } from '@/components/messages-icon'
-
-const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 
@@ -67,6 +66,7 @@ export function MargoNav() {
   const avatarMenuRef = useRef<HTMLDivElement>(null)
   const navElRef = useRef<HTMLElement>(null)
   const { user, identity } = useIdentity()
+  const { rehydrate } = useAuthGate()
   const { application } = useArtistApplication()
 
   const isOnFeed = pathname === '/feed'
@@ -86,7 +86,8 @@ export function MargoNav() {
 
   const handleSignOut = async () => {
     setAvatarMenuOpen(false)
-    await supabase.auth.signOut()
+    await signOutBrowser()
+    await rehydrate()
     router.push('/feed')
   }
 

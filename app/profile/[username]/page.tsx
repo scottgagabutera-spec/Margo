@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, signOutBrowser } from '@/lib/supabase/client'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { usePosts } from '@/hooks/usePosts'
@@ -15,7 +16,6 @@ import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
-import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const supabase = createClient()
 
@@ -210,7 +210,7 @@ export default function ProfilePage() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const accountMenuRef = useRef<HTMLDivElement>(null)
 
-  const { requireAuth } = useAuthGate()
+  const { requireAuth, rehydrate } = useAuthGate()
   const [resonated, setResonated] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -299,7 +299,8 @@ export default function ProfilePage() {
     'Apply as an artist'
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await signOutBrowser()
+    await rehydrate()
     router.push('/feed')
   }
 
