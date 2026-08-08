@@ -1,14 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
 
 /**
  * OAuth PKCE callback (Google / Discord).
- * Exchanges ?code= for a session and writes the auth cookie on the
- * redirect response, then sends the browser to /feed.
+ * Writes httpOnly session cookies on the redirect response.
  *
- * Cookie I/O matches lib/supabase/server.ts (getAll/setAll), but is
- * bound to the redirect NextResponse so Set-Cookie survives the 307.
- * Replaces the old client-side page.tsx exchange.
+ * Auth core note: OAuth *start* still requires a server-owned PKCE
+ * verifier cookie (browser setAll is a no-op). Full OAuth start lands
+ * in a follow-up Auth core slice — password login works via /api/auth/login.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: supabaseCookieOptions,
       cookies: {
         getAll() {
           return request.cookies.getAll()

@@ -1,10 +1,9 @@
 'use client'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
+import { setBrowserAccessToken } from '@/lib/supabase/client'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 import type { AuthError } from '@supabase/supabase-js'
-
-const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 
@@ -16,7 +15,7 @@ interface AuthFormProps {
   onSwitchMode?: (mode: Mode) => void
 }
 
-function friendlyError(e: AuthError): string {
+function friendlyError(e: AuthError | { message?: string }): string {
   const msg = e?.message || ''
   if (msg.includes('already registered') || msg.toLowerCase().includes('already been registered') || msg.toLowerCase().includes('user already registered')) {
     return 'That email already has an account — try signing in instead.'
@@ -37,6 +36,7 @@ function friendlyError(e: AuthError): string {
 }
 
 export function AuthForm({ mode, onSuccess, onSwitchMode }: AuthFormProps) {
+  const { rehydrate } = useAuthGate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -46,16 +46,33 @@ export function AuthForm({ mode, onSuccess, onSwitchMode }: AuthFormProps) {
     setLoading(true)
     setError('')
     try {
-      if (mode === 'signup') {
-        const { error: signUpError } = await supabase.auth.signUp({ email, password })
-        if (signUpError) throw signUpError
-        toast.success('Welcome to Margo.')
-        onSuccess?.()
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInError) throw signInError
-        onSuccess?.()
+      const path = mode === 'signup' ? '/api/auth/signup' : '/api/auth/login'
+      const res = await fetch(path, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw { message: body.error || 'Something went wrong. Please try again.' }
       }
+
+      if (body.access_token) {
+        setBrowserAccessToken(body.access_token)
+        await rehydrate()
+        if (mode === 'signup') toast.success('Welcome to Margo.')
+        onSuccess?.()
+        return
+      }
+
+      if (mode === 'signup' && body.needs_confirmation) {
+        toast.success('Check your email to confirm your account.')
+        onSuccess?.()
+        return
+      }
+
+      throw { message: 'Something went wrong. Please try again.' }
     } catch (e) {
       setError(friendlyError(e as AuthError))
     } finally {
@@ -63,22 +80,12 @@ export function AuthForm({ mode, onSuccess, onSwitchMode }: AuthFormProps) {
     }
   }
 
-  const handleOAuthSubmit = async (provider: 'google' | 'discord') => {
+  const handleOAuthSubmit = async (_provider: 'google' | 'discord') => {
     setLoading(true)
     setError('')
-    const redirectTo = `${window.location.origin}/auth/callback`
-    try {
-      // PKCE code verifier must live in a cookie so the server Route Handler
-      // at /auth/callback can exchange the code (Phase 2).
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo },
-      })
-      if (oauthError) throw oauthError
-    } catch (e) {
-      setError(friendlyError(e as AuthError))
-      setLoading(false)
-    }
+    // Auth core: OAuth start needs a server PKCE route — not wired yet.
+    setError('Google/Discord sign-in is temporarily unavailable. Use email and password.')
+    setLoading(false)
   }
 
   return (

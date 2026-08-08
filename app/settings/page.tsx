@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, signOutBrowser } from '@/lib/supabase/client'
 import { BackButton } from '@/components/back-button'
 
 const supabase = createClient()
@@ -333,7 +333,7 @@ export default function AccountSettingsPage() {
         setDeleting(false)
         return
       }
-      await supabase.auth.signOut()
+      await signOutBrowser()
       window.location.href = '/'
     } catch {
       setDeleteError('Could not reach the server. Try again.')
