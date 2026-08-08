@@ -9,8 +9,8 @@ import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
-import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useIdentity } from '@/hooks/useIdentity'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeftIcon } from '@/components/icons'
 
@@ -47,6 +47,7 @@ export default function PostDetailPage() {
   const { post, loading } = usePost(postId)
   const { echoes } = useEchoes(postId)
   const { requireAuth } = useAuthGate()
+  const { user } = useIdentity()
   const [resonated, setResonated] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
@@ -67,8 +68,9 @@ export default function PostDetailPage() {
 
   const toggleResonate = async (id: string) => {
     if (!requireAuth()) return
+    if (!user?.id) return
     const already = resonated.has(id)
-    const myId = getMargoActorId()
+    const myId = user.id
     setResonated(prev => {
       const next = new Set(prev)
       already ? next.delete(id) : next.add(id)
