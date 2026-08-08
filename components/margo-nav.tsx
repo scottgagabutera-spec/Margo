@@ -5,9 +5,11 @@ import { useState, useEffect, useRef } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { NotificationBell } from '@/components/notification-bell'
 import { MessagesIcon } from '@/components/messages-icon'
+
+const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 

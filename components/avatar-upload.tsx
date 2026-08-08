@@ -2,8 +2,10 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
+
+const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 const gold = 'var(--gold)'

@@ -28,10 +28,12 @@ import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UsernameTag } from '@/components/username-tag'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { PostThumbnail } from '@/components/post-thumbnail'
 import { VibeTag } from '@/components/vibe-tag'
+
+const supabase = createClient()
 
 export type PostCardVariant = 'feed' | 'compact' | 'row'
 

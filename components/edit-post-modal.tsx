@@ -1,7 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { matchLyricLine } from '@/lib/lyric-match'
+
+const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 
