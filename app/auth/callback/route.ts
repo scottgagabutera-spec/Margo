@@ -4,11 +4,9 @@ import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
 
 /**
  * OAuth PKCE callback (Google / Discord).
- * Writes httpOnly session cookies on the redirect response.
- *
- * Auth core note: OAuth *start* still requires a server-owned PKCE
- * verifier cookie (browser setAll is a no-op). Full OAuth start lands
- * in a follow-up Auth core slice — password login works via /api/auth/login.
+ * Exchanges ?code= for a session using the httpOnly PKCE verifier cookie
+ * set by GET /api/auth/oauth/[provider], then writes session cookies on
+ * the /feed redirect. Browser rehydrate via GET /api/auth/me.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
