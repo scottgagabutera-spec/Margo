@@ -15,6 +15,7 @@ import { SaveQueueButton } from '@/components/save-queue-button'
 import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useIdentity } from '@/hooks/useIdentity'
 import { createClient } from '@/lib/supabase/client'
 
 const supabase = createClient()
@@ -791,6 +792,7 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
 export default function MusicPage() {
   const { songs, loading } = useSongs()
   const { posts } = usePosts()
+  const { user } = useIdentity()
   const [preview, setPreview] = useState<Song | null>(null)
   const [search, setSearch] = useState('')
 
@@ -799,7 +801,9 @@ export default function MusicPage() {
 
   useEffect(() => {
     if (songs.length === 0) return
-    const myId = getMargoActorId()
+    // Signed-in: auth.uid()::text for RLS. Unsigned: keep display-name actor
+    // (coalesce open path) — out of scope for Batch 5b.
+    const myId = user?.id ?? getMargoActorId()
 
     const counts: Record<string, number> = {}
     songs.forEach(s => { counts[s.id] = s.resonates || 0 })
@@ -813,7 +817,7 @@ export default function MusicPage() {
         if (error) { console.error('failed to load resonated songs', error); return }
         setResonatedSongs(new Set((data || []).map(r => r.song_id)))
       })
-  }, [songs])
+  }, [songs, user?.id])
 
   useEffect(() => {
     setSongResonateCounts(prev => {
@@ -824,7 +828,7 @@ export default function MusicPage() {
   }, [songs])
 
   const toggleSongResonate = useCallback(async (songId: string) => {
-    const myId = getMargoActorId()
+    const myId = user?.id ?? getMargoActorId()
     const already = resonatedSongs.has(songId)
 
     setResonatedSongs(prev => {
@@ -844,7 +848,7 @@ export default function MusicPage() {
       const { error } = await supabase.from('song_resonates').insert({ song_id: songId, actor_id: myId })
       if (error) console.error('failed to add resonate', error)
     }
-  }, [resonatedSongs])
+  }, [resonatedSongs, user?.id])
 
   const isSearching = search.trim().length > 0
 
