@@ -15,7 +15,9 @@ import { SaveQueueButton } from '@/components/save-queue-button'
 import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
+
+const supabase = createClient()
 
 function formatNum(n: number): string {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'

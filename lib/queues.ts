@@ -1,6 +1,8 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { getAudioEngineState } from '@/lib/audio-engine'
 import type { LyricMomentQueueItem } from '@/lib/audio-engine'
+
+const supabase = createClient()
 
 export interface SaveQueueResult {
   queueId: string

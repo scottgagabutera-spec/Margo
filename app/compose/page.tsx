@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeftIcon, SearchIcon } from '@/components/icons'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { matchLyricLine } from '@/lib/lyric-match'
 import { searchMargoSongs } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -16,6 +16,8 @@ import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+
+const supabase = createClient()
 
 type Source = 'margo' | 'genius' | 'apple'
 

@@ -2,8 +2,10 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { BackButton } from '@/components/back-button'
+
+const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
 
