@@ -1,6 +1,6 @@
 /**
- * Dual-accept smoke for POST /api/submit-artist-application:
- * cookie session + Bearer-only (old client) paths.
+ * Cookie-session smoke for POST /api/submit-artist-application.
+ * Asserts unauth + Bearer-only → 401; cookie session → success.
  * Usage (Next must be running): node scripts/verify-submit-artist-cookie.mjs
  */
 import { createClient } from '@supabase/supabase-js'
@@ -129,9 +129,9 @@ async function main() {
       },
       body: JSON.stringify({
         applicantType: 'independent',
-        displayArtistName: 'Cookie Phase3 Band',
+        displayArtistName: 'Cookie Auth Band',
         links: { website: 'https://example.com/band' },
-        note: 'phase3 cookie auth smoke',
+        note: 'cookie auth smoke',
         rightsAgreed: true,
       }),
     })
@@ -151,20 +151,19 @@ async function main() {
       },
       body: JSON.stringify({
         applicantType: 'independent',
-        displayArtistName: 'Bearer Phase3 Band',
+        displayArtistName: 'Bearer Rejected Band',
         links: { website: 'https://example.com/bearer-band' },
-        note: 'phase3 bearer fallback smoke',
+        note: 'bearer must 401 after fallback removal',
         rightsAgreed: true,
       }),
     })
     const bearerBody = await bearerRes.json()
     console.log('Bearer-only auth →', bearerRes.status, bearerBody)
-    if (bearerRes.status === 401) throw new Error('Bearer-only session rejected')
-    if (!bearerRes.ok || !bearerBody.success) {
-      throw new Error(`Bearer submit failed: ${JSON.stringify(bearerBody)}`)
+    if (bearerRes.status !== 401) {
+      throw new Error(`expected 401 for Bearer-only auth, got ${bearerRes.status}`)
     }
 
-    console.log('PASS — submit-artist-application accepts cookie and Bearer-only sessions')
+    console.log('PASS — submit-artist-application accepts cookie; rejects Bearer-only')
   } finally {
     await cleanupUser(cookieUser.userId)
     await cleanupUser(bearerUser.userId)

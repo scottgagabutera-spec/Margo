@@ -15,35 +15,15 @@ import {
 
 export async function POST(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !anonKey || !serviceKey) {
+  if (!supabaseUrl || !serviceKey) {
     console.error('[delete-account] Missing Supabase env vars')
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
   }
 
-  // Prefer cookie session (Phase 3).
   const supabase = await createServerSupabase()
-  let userId: string | null = null
   const { data: cookieUserData, error: cookieUserError } = await supabase.auth.getUser()
-  if (!cookieUserError && cookieUserData?.user) {
-    userId = cookieUserData.user.id
-  }
-
-  // TEMPORARY: Bearer fallback for callers not yet migrated to cookie auth.
-  // Remove once settings/page.tsx and useArtistApplication.ts are migrated (Phase 5).
-  if (!userId) {
-    const authHeader = req.headers.get('authorization') || ''
-    const token = authHeader.replace(/^Bearer\s+/i, '')
-    if (token) {
-      const bearerClient = createClient(supabaseUrl, anonKey)
-      const { data: bearerUserData, error: bearerError } =
-        await bearerClient.auth.getUser(token)
-      if (!bearerError && bearerUserData?.user) {
-        userId = bearerUserData.user.id
-      }
-    }
-  }
+  const userId = !cookieUserError ? cookieUserData?.user?.id ?? null : null
 
   if (!userId) {
     return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
