@@ -6,7 +6,6 @@ import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
 import Link from 'next/link'
-import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -86,7 +85,8 @@ export default function FeedPage() {
   }, [])
 
   useEffect(() => {
-    const myId = getMargoActorId()
+    if (!user?.id) return
+    const myId = user.id
     let cancelled = false
     async function loadMyResonates() {
       const { data, error } = await supabase
@@ -111,10 +111,9 @@ export default function FeedPage() {
       .subscribe()
 
     return () => { cancelled = true; supabase.removeChannel(channel) }
-  }, [])
+  }, [user?.id])
 
   // Load user's Replays — replayer_id must be auth profile uuid (RLS: auth.uid() = replayer_id).
-  // Do NOT use getMargoActorId() here; that is a display-name actor string for resonates.
   useEffect(() => {
     if (!user?.id) return
     const myId = user.id
@@ -279,8 +278,9 @@ export default function FeedPage() {
 
   const toggleResonate = async (postId: string) => {
     if (!requireAuth()) return
+    if (!user?.id) return
     const already = resonated.has(postId)
-    const myId = getMargoActorId()
+    const myId = user.id
     setResonated(prev => {
       const next = new Set(prev)
       already ? next.delete(postId) : next.add(postId)

@@ -9,7 +9,6 @@ import { createClient } from '@/lib/supabase/client'
 import { matchLyricLine } from '@/lib/lyric-match'
 import { useEchoes } from '@/hooks/useEchoes'
 import { useIdentity } from '@/hooks/useIdentity'
-import { getMargoActorId } from '@/lib/engagement/session'
 import { useSearchParams } from 'next/navigation'
 import { usePost } from '@/hooks/usePost'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -366,7 +365,8 @@ function LyricBackContent() {
   // both top-level posts and echoes uniformly).
   const toggleResonate = async (echoId: string) => {
     if (!requireAuth()) return
-    const myId = getMargoActorId()
+    if (!user?.id) return
+    const myId = user.id
     const already = resonated.has(echoId)
     setResonated(prev => { const n = new Set(prev); already ? n.delete(echoId) : n.add(echoId); return n })
     setResonateCounts(prev => ({

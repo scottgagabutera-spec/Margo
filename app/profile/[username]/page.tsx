@@ -15,7 +15,6 @@ import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
-import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const supabase = createClient()
@@ -256,8 +255,9 @@ export default function ProfilePage() {
 
   const toggleResonate = async (postId: string) => {
     if (!requireAuth()) return
+    if (!user?.id) return
     const already = resonated.has(postId)
-    const myId = getMargoActorId()
+    const myId = user.id
     setResonated(prev => {
       const next = new Set(prev)
       already ? next.delete(postId) : next.add(postId)
