@@ -864,51 +864,137 @@ function CatalogSongsTab() {
   )
 }
 
-// ── Featured Tab ──
+// ── Featured Tab (Supabase site_featured_exchange via admin API) ──
 function FeaturedTab() {
   const empty = { text: '', artist: '', song: '', username: '', reply: { text: '', artist: '', song: '', username: '' } }
   const [form, setForm] = useState(empty)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function authHeaders(): Promise<HeadersInit> {
+    const token = await auth?.currentUser?.getIdToken()
+    if (!token) throw new Error('Not signed in')
+    return { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }
+  }
 
   useEffect(() => {
-    if (!db) return
-    get(ref(db, 'adminConfig/featuredLyric')).then(snap => {
-      if (snap.exists()) {
-        const val = snap.val()
-        setForm({
-          text: val.text || '',
-          artist: val.artist || '',
-          song: val.song || '',
-          username: val.username || '',
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const headers = await authHeaders()
+        const res = await fetch('/api/admin/featured', { headers })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(json.error || 'Failed to load featured')
+        if (!cancelled && json.featured) setForm({
+          text: json.featured.text || '',
+          artist: json.featured.artist || '',
+          song: json.featured.song || '',
+          username: json.featured.username || '',
           reply: {
-            text: val.reply?.text || '',
-            artist: val.reply?.artist || '',
-            song: val.reply?.song || '',
-            username: val.reply?.username || '',
+            text: json.featured.reply?.text || '',
+            artist: json.featured.reply?.artist || '',
+            song: json.featured.reply?.song || '',
+            username: json.featured.reply?.username || '',
           },
         })
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message || 'Failed to load')
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-    })
+    })()
+    return () => { cancelled = true }
   }, [])
 
   const setReply = (k: string, v: string) => setForm(f => ({ ...f, reply: { ...f.reply, [k]: v } }))
 
   const save = async () => {
-    if (!db) return
     setSaving(true)
-    await set(ref(db, 'adminConfig/featuredLyric'), form)
-    setSaving(false); setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setError(null)
+    try {
+      const headers = await authHeaders()
+      const res = await fetch('/api/admin/featured', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(form),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Failed to save')
+      if (json.featured) setForm({
+        text: json.featured.text || '',
+        artist: json.featured.artist || '',
+        song: json.featured.song || '',
+        username: json.featured.username || '',
+        reply: {
+          text: json.featured.reply?.text || '',
+          artist: json.featured.reply?.artist || '',
+          song: json.featured.reply?.song || '',
+          username: json.featured.reply?.username || '',
+        },
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save')
+    } finally {
+      setSaving(false)
+    }
   }
 
+  const importFromRtdb = async () => {
+    setImporting(true)
+    setError(null)
+    try {
+      const headers = await authHeaders()
+      const res = await fetch('/api/admin/featured/import-rtdb', { method: 'POST', headers })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Import failed')
+      if (json.featured) setForm({
+        text: json.featured.text || '',
+        artist: json.featured.artist || '',
+        song: json.featured.song || '',
+        username: json.featured.username || '',
+        reply: {
+          text: json.featured.reply?.text || '',
+          artist: json.featured.reply?.artist || '',
+          song: json.featured.reply?.song || '',
+          username: json.featured.reply?.username || '',
+        },
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (e: any) {
+      setError(e?.message || 'Import failed')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  // UX only — API stores whatever is saved; landing hides until both lyrics exist.
   const canSave = form.text.trim() && form.reply.text.trim()
+
+  if (loading) {
+    return <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.35)' }}>Loading…</p>
+  }
 
   return (
     <div style={{ maxWidth: '560px' }}>
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '24px', lineHeight: 1.6 }}>
         Appears on the landing page as "Exchange of the Week." Stays hidden until both the original lyric and the reply are filled in.
       </p>
+      {error && (
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: '#ff6060', marginBottom: '16px' }}>{error}</p>
+      )}
+      <div style={{ marginBottom: '20px' }}>
+        <button type="button" onClick={importFromRtdb} disabled={importing} style={{ ...S.ghostBtn, opacity: importing ? 0.6 : 1 }}>
+          {importing ? 'Importing…' : 'Import from Firebase RTDB (one-shot)'}
+        </button>
+      </div>
 
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>Original Post</p>
       <div style={{ marginBottom: '14px' }}>
