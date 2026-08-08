@@ -1,22 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getApps, initializeApp, cert, App } from 'firebase-admin/app'
-import { getDatabase } from 'firebase-admin/database'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
-function getAdminApp(): App {
-  if (getApps().length) return getApps()[0]
-  return initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-    databaseURL: process.env.FIREBASE_DATABASE_URL,
-  })
+async function writeFlagCount(postId: string): Promise<void> {
+  try {
+    const { error } = await getSupabaseAdmin()
+      .from('posts')
+      .update({ flag_count: 10 })
+      .eq('id', postId)
+    if (error) {
+      console.error('[moderate] Failed to write flag_count:', error.message, {
+        code: error.code,
+        postId,
+      })
+    }
+  } catch (e) {
+    console.error('[moderate] Failed to write flag_count:', e)
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, postId } = await request.json()  // ← added postId
+    const body = await request.json()
+    const { text, postId } = body as {
+      text?: string
+      postId?: string
+      /** Dev-only: skip OpenAI and force flagged=true to verify flag_count writes. */
+      forceFlagged?: boolean
+    }
+
+    // Local/dev only — never honored in production builds.
+    const forceFlagged =
+      process.env.NODE_ENV === 'development' && body?.forceFlagged === true
+
+    if (forceFlagged) {
+      if (postId) await writeFlagCount(postId)
+      return NextResponse.json({ flagged: true, categories: {}, scores: {}, forced: true })
+    }
+
     if (!text) return NextResponse.json({ flagged: false })
     if (!process.env.OPENAI_API_KEY) return NextResponse.json({ flagged: false })
 
@@ -36,14 +56,8 @@ export async function POST(request: NextRequest) {
     const categories = result?.categories || {}
     const scores = result?.category_scores || {}
 
-    // ← added block: server-side write via admin SDK, bypasses rules correctly
     if (flagged && postId) {
-      try {
-        const db = getDatabase(getAdminApp())
-        await db.ref(`posts/${postId}/flagCount`).set(10)
-      } catch (e) {
-        console.error('[moderate] Failed to write flagCount:', e)
-      }
+      await writeFlagCount(postId)
     }
 
     return NextResponse.json({ flagged, categories, scores })
