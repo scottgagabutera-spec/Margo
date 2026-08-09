@@ -91,15 +91,21 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       if (Date.now() - lastOkAtRef.current < 2500) return
     }
 
+    // Coalesce: assign the shared promise *before* any await so two sync callers
+    // cannot both start a fetch. Soft waiters return after the shared work.
     if (inflightRef.current) {
       await inflightRef.current
-      // Soft callers that waited on another hydrate are done.
       if (soft) return
-      // Hard caller waited — memory already set; avoid a second round-trip.
       if (userRef.current) return
     }
 
-    const run = (async () => {
+    let releaseInflight!: () => void
+    const gate = new Promise<void>((resolve) => {
+      releaseInflight = resolve
+    })
+    inflightRef.current = gate
+
+    try {
       // Always wipe readable legacy auth material before /me (shadowing fix).
       clearLegacyAuthStorage()
       const wantPerf =
@@ -122,7 +128,14 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
         // Genuinely signed out — cookies absent/invalid.
         if (res.status === 401) {
-          if (wantPerf) console.log('[perf] auth/me client', { clientFetchMs: clientMs, status: 401 })
+          if (wantPerf) {
+            console.log('[perf] auth/me client', {
+              source,
+              soft,
+              clientFetchMs: clientMs,
+              status: 401,
+            })
+          }
           applyAuthPayload(null)
           return
         }
@@ -136,15 +149,22 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
         const body = await res.json()
         if (wantPerf) {
-          console.log('[perf] auth/me client', { clientFetchMs: clientMs, server: body?._perf ?? null })
+          console.log('[perf] auth/me client', {
+            source,
+            soft,
+            clientFetchMs: clientMs,
+            server: body?._perf ?? null,
+          })
         }
         const hadUser = !!userRef.current
         applyAuthPayload(body)
         lastOkAtRef.current = Date.now()
 
-        // Announce new session to other tabs (password login, OAuth return boot).
-        // Skip when applying a peer's session-changed (no broadcast loop).
+        // Peers only — cold boot used to broadcast every page load, and the
+        // same document's subscriber BroadcastChannel received that echo →
+        // second /api/auth/me. Skip boot; only announce real login/OAuth.
         if (
+          source !== 'boot' &&
           !soft &&
           !applyingRemoteRef.current &&
           !hadUser &&
@@ -162,13 +182,9 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         console.error('[auth core] /api/auth/me failed:', err)
         applyAuthPayload(null)
       }
-    })()
-
-    inflightRef.current = run
-    try {
-      await run
     } finally {
-      if (inflightRef.current === run) inflightRef.current = null
+      inflightRef.current = null
+      releaseInflight()
     }
   }, [applyAuthPayload])
 
