@@ -18,28 +18,36 @@ export default function AboutPage() {
           <hr style={{ width: '48px', height: '2px', background: 'linear-gradient(90deg, var(--gold), transparent)', margin: '32px 0', border: 'none' }} />
 
           <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', lineHeight: 1.75, color: 'var(--text-2)' }}>
-            <p style={{ marginBottom: '1.4em' }}>People resonate with lyrics. They share them, replay them, send them. This has been happening everywhere for years. But there was never a place built for it.</p>
-            <p style={{ marginBottom: '1.4em' }}>Margo is that place.</p>
+            <p style={{ marginBottom: '1.4em' }}>People have always talked in lyrics. Shared them, saved them, sent them when plain words weren't enough.</p>
+            <p style={{ marginBottom: '1.4em' }}>Margo is a music first social space built for that. A place where conversation starts with a line from a song.</p>
 
-            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Post a lyric</h2>
-            <p style={{ marginBottom: '1.4em' }}>Search a lyric, a song, or an artist name. Margo finds the song and links it to official streaming platforms so anyone can hear it where it lives. Pick the feeling behind it. Post it.</p>
+            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Talk in lyrics</h2>
+            <p style={{ marginBottom: '1.4em' }}>Post a lyric. Tag the feeling behind it. Resonate when someone else's line hits. Reply with a Lyric Back so the conversation stays in music. Replay what stays with you.</p>
+            <p style={{ marginBottom: '1.4em' }}>When you find something worth keeping, export a card, copy the text, or share a link back to Margo.</p>
 
-            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Resonate and reply</h2>
-            <p style={{ marginBottom: '1.4em' }}>Others who feel it can resonate with one tap. Or they reply with their own lyric and their own feeling. That reply is a Lyric Back. The whole conversation stays in music.</p>
+            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>A real social space</h2>
+            <p style={{ marginBottom: '1.4em' }}>Margo is built around people, profiles, and connections. Anonymity isn't the product.</p>
+            <p style={{ marginBottom: '1.4em' }}>Follow people you vibe with. Keep your account private if you want. Message when someone lets you. Choose your username and make your profile yours.</p>
 
-            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Share it anywhere</h2>
-            <p style={{ marginBottom: '1.4em' }}>Every post and every Lyric Back can be saved as a visual card, copied as text, or shared as a link that opens Margo directly on that exchange.</p>
+            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Listen here</h2>
+            <p style={{ marginBottom: '1.4em' }}>Margo isn't only a place to talk about music.</p>
+            <p style={{ marginBottom: '1.4em' }}>Discover and play music hosted on Margo. Browse tracks, open an artist, and listen in app when the music lives here.</p>
 
-            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Original music</h2>
-            <p style={{ marginBottom: '1.4em' }}>Margo also creates original music — commercially licensed and available on all major streaming platforms.</p>
-            <p style={{ marginBottom: '1.4em' }}>Built independently. If this resonates, <Link href="/contact" style={{ color: 'var(--gold)', textDecoration: 'none' }}>get in touch</Link>.</p>
+            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Music on Margo</h2>
+            <p style={{ marginBottom: '1.4em' }}>Music comes to Margo in a few ways.</p>
+            <p style={{ marginBottom: '1.4em' }}><strong style={{ color: 'var(--text)' }}>Margo Originals</strong><br />Music we publish as our own.</p>
+            <p style={{ marginBottom: '1.4em' }}><strong style={{ color: 'var(--text)' }}>Independent and approved artists</strong><br />Creators who apply, get approved, and share their music directly with the community through Studio, including AI-assisted artists who retain their commercial rights.</p>
+            <p style={{ marginBottom: '1.4em' }}><strong style={{ color: 'var(--text)' }}>Redirect only</strong><br />Posts and moments that send you elsewhere to listen when we don't host the full track.</p>
+            <p style={{ marginBottom: '1.4em' }}>Different paths, one place for music.</p>
 
-            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Where we are going</h2>
-            <p style={{ marginBottom: '1.4em' }}>Margo is evolving. What you see today is the beginning — the platform will grow to do more. We encourage you to check back here periodically as features, partnerships, and capabilities expand.</p>
+            <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>For artists</h2>
+            <p style={{ marginBottom: '1.4em' }}>Margo is for the people making the music, too.</p>
+            <p style={{ marginBottom: '1.4em' }}>Apply to become an artist. Once approved, use Studio to upload and manage your music on Margo.</p>
+            <p style={{ marginBottom: '1.4em' }}>We're building a roster of independent artists alongside Margo's own releases. A place where creators can put their music in the same space where people are already talking about it. If this resonates, <Link href="/contact" style={{ color: 'var(--gold)', textDecoration: 'none' }}>get in touch</Link>.</p>
           </div>
 
           <div style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1.5rem', fontWeight: 400, color: 'var(--gold)', marginTop: '48px', opacity: 0.9, lineHeight: 1.4 }}>
-            When words fail, drop a lyric.
+            Warm. Intimate. A little personal.<br />Like finding the exact line that says what you couldn't.<br />When words fail, drop a lyric.
           </div>
 
           <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '64px', paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
