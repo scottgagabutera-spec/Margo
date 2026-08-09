@@ -42,7 +42,7 @@ export default function TermsPage() {
 
             <h2 style={h2Style}>1. What Margo is</h2>
             <p style={pStyle}>Margo is a music and lyric community. You can create an account, post lyric excerpts and related content, Resonate and Lyric Back, Replay others&apos; posts, follow people, message them (subject to their settings), export shareable lyric cards, discover and play music hosted in Margo, and — if approved as an artist — upload and manage your own tracks through Studio.</p>
-            <p style={pStyle}>Margo hosts audio and artwork for many songs directly (including via our storage providers). Some experiences also link out to third-party platforms when a post or catalog entry is redirect-only or includes external links. We may use third-party services for hosting, authentication, analytics, content moderation and related AI processing, and song metadata search to help operate Margo. The specific processors in use at any given time are listed in our <Link href="/privacy" style={linkStyle}>Privacy Policy</Link>, which is the source of truth for vendor details.</p>
+            <p style={pStyle}>Margo hosts audio and artwork for many songs directly (including via our storage providers). Some experiences also link out to third-party platforms when a post or catalog entry is redirect-only or includes external links. We may use third-party services for hosting, authentication, analytics, content moderation and related AI processing, and song metadata search to help operate Margo. Those providers can change over time. How we collect and share information — including through service providers — is described in our <Link href="/privacy" style={linkStyle}>Privacy Policy</Link>.</p>
 
             <h2 style={h2Style}>2. Eligibility and accounts</h2>
             <p style={pStyle}><strong style={strongStyle}>Age.</strong> You must be at least <strong style={strongStyle}>13 years old</strong> to use Margo. If you are under the age of majority where you live, you may use Margo only with a parent or guardian&apos;s consent where required by law. Margo is not directed at children, and we do not knowingly collect personal information from children in violation of applicable law.</p>
@@ -114,7 +114,7 @@ export default function TermsPage() {
 
             <h2 style={h2Style}>10. Third-party services</h2>
             <p style={pStyle}>Margo uses and may link to third-party services for things such as hosting, authentication, analytics, AI-assisted moderation and processing, metadata search, and outbound listening or profile platforms. Those services are governed by their own terms and privacy policies. We are not responsible for third-party sites or services we don&apos;t control.</p>
-            <p style={pStyle}>Which vendors we use can change over time. For the current list of processors and related data practices, see our <Link href="/privacy" style={linkStyle}>Privacy Policy</Link>.</p>
+            <p style={pStyle}>Those providers can change over time. How we collect and share information — including through service providers — is described in our <Link href="/privacy" style={linkStyle}>Privacy Policy</Link>.</p>
 
             <h2 style={h2Style}>11. Changes</h2>
             <p style={pStyle}>We may update these Terms from time to time. We will post the updated Terms with a new effective date. Continued use after changes become effective constitutes acceptance. If you do not agree, stop using Margo and delete your account if you wish.</p>
