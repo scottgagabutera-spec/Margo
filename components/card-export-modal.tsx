@@ -1,5 +1,6 @@
 'use client'
 import { CloseIcon } from '@/components/icons'
+import { recordCardExport } from '@/lib/engagement/card-exports'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 
@@ -435,8 +436,10 @@ export function CardExportModal({
       document.body.appendChild(a); a.click()
       document.body.removeChild(a)
       setTimeout(() => URL.revokeObjectURL(url2), 5000)
+      // Analytics: never await — download must not wait on network
+      void recordCardExport({ postId, theme, shape })
     }, 'image/png')
-  }, [renderCanvas, song, isDualCard, activeShape])
+  }, [renderCanvas, song, isDualCard, activeShape, postId, theme, shape])
 
   /* ─── Copy ──────────────────────────────────────────────── */
   const handleCopy = useCallback(() => {
