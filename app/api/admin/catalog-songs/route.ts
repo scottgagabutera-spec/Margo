@@ -1,40 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getApps, initializeApp, cert, App } from 'firebase-admin/app'
-import { getAuth } from 'firebase-admin/auth'
-import { getDatabase } from 'firebase-admin/database'
+import { assertAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
-
-function getAdminApp(): App {
-  if (getApps().length) return getApps()[0]
-  return initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-    databaseURL: process.env.FIREBASE_DATABASE_URL,
-  })
-}
-
-async function assertAdmin(request: NextRequest): Promise<{ ok: true } | { ok: false; res: NextResponse }> {
-  const header = request.headers.get('authorization') || ''
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : ''
-  if (!token) {
-    return { ok: false, res: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  }
-
-  try {
-    const app = getAdminApp()
-    const decoded = await getAuth(app).verifyIdToken(token)
-    const allowedSnap = await getDatabase(app).ref('adminConfig/allowedUid').get()
-    if (allowedSnap.val() !== decoded.uid) {
-      return { ok: false, res: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-    }
-    return { ok: true }
-  } catch (e: any) {
-    return { ok: false, res: NextResponse.json({ error: e?.message || 'Unauthorized' }, { status: 401 }) }
-  }
-}
 
 const SONG_SELECT = `
   id,
@@ -55,7 +21,7 @@ const SONG_SELECT = `
  * including drafts and songs owned by frozen/removed artists.
  */
 export async function GET(request: NextRequest) {
-  const gate = await assertAdmin(request)
+  const gate = await assertAdmin()
   if (!gate.ok) return gate.res
 
   try {
