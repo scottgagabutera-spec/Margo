@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { touchLastSeen } from '@/lib/engagement/last-seen'
 
 const supabase = createClient()
 
@@ -196,6 +197,28 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
       active = false
     }
   }, [supabaseUser, authLoading, ensureProfile])
+
+  // Heartbeat last_seen_at after profile is ensured; also on focus / visible.
+  useEffect(() => {
+    if (profileLoading || !identityUser || !identity) return
+
+    const userId = identityUser.id
+    void touchLastSeen(userId)
+
+    const onFocus = () => { void touchLastSeen(userId) }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void touchLastSeen(userId)
+      }
+    }
+
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [identityUser, identity, profileLoading])
 
   const updateDisplayName = useCallback(async (newName: string): Promise<ActionResult> => {
     if (!identityUser) return { success: false, error: 'Not signed in.' }
