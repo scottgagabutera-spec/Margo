@@ -94,8 +94,53 @@ const S: Record<string, any> = {
   }),
 }
 
+// ── Overview KPI types (shared by LoginForm, shell, OverviewPanel) ──
+interface OverviewData {
+  pendingReports: number
+  pendingArtistApps: number
+  flaggedPosts: number
+  hiddenPosts: number
+  liveSongs: number
+  approvedArtists: number
+  artistsNeedingAttention: number
+  featuredStatus: 'live' | 'incomplete'
+}
+
+function parseOverviewPayload(raw: unknown): OverviewData | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const featured = o.featuredStatus
+  if (featured !== 'live' && featured !== 'incomplete') return null
+  const nums = [
+    'pendingReports',
+    'pendingArtistApps',
+    'flaggedPosts',
+    'hiddenPosts',
+    'liveSongs',
+    'approvedArtists',
+    'artistsNeedingAttention',
+  ] as const
+  for (const k of nums) {
+    if (typeof o[k] !== 'number') return null
+  }
+  return {
+    pendingReports: o.pendingReports as number,
+    pendingArtistApps: o.pendingArtistApps as number,
+    flaggedPosts: o.flaggedPosts as number,
+    hiddenPosts: o.hiddenPosts as number,
+    liveSongs: o.liveSongs as number,
+    approvedArtists: o.approvedArtists as number,
+    artistsNeedingAttention: o.artistsNeedingAttention as number,
+    featuredStatus: featured,
+  }
+}
+
 // ── Login ──
-function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+function LoginForm({
+  onSuccess,
+}: {
+  onSuccess: (overview: OverviewData | null) => void
+}) {
   const { rehydrate } = useAuthGate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -123,7 +168,8 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       }
       await rehydrate()
 
-      const sessionRes = await adminFetch('/api/admin/session')
+      // Default admin landing is Overview — one assertAdmin + KPIs (no second hop).
+      const sessionRes = await adminFetch('/api/admin/session?overview=1')
       if (sessionRes.status === 403) {
         await signOutBrowser()
         setError("This account doesn't have admin access.")
@@ -134,8 +180,10 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         setError('Invalid credentials.')
         return
       }
+      const sessionBody = await sessionRes.json().catch(() => ({}))
+      const overview = parseOverviewPayload(sessionBody?.overview)
 
-      onSuccess()
+      onSuccess(overview)
     } catch {
       setError('Invalid credentials.')
     } finally {
@@ -909,23 +957,29 @@ function FeaturedTab() {
 }
 
 // ── Overview KPIs ──
-interface OverviewData {
-  pendingReports: number
-  pendingArtistApps: number
-  flaggedPosts: number
-  hiddenPosts: number
-  liveSongs: number
-  approvedArtists: number
-  artistsNeedingAttention: number
-  featuredStatus: 'live' | 'incomplete'
-}
-
-function OverviewPanel({ onNavigate }: { onNavigate: (section: AdminSection) => void }) {
-  const [data, setData] = useState<OverviewData | null>(null)
-  const [loading, setLoading] = useState(true)
+function OverviewPanel({
+  onNavigate,
+  initialData = null,
+}: {
+  onNavigate: (section: AdminSection) => void
+  /** Cold-load KPIs from session?overview=1 — skips GET /api/admin/overview */
+  initialData?: OverviewData | null
+}) {
+  const [data, setData] = useState<OverviewData | null>(initialData)
+  const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (initialData) {
+      setData(initialData)
+      setLoading(false)
+      setError(null)
+      if (typeof window !== 'undefined') {
+        console.log('[perf] admin client waterfall — overview hop skipped (session bundled KPIs)')
+      }
+      return
+    }
+
     let cancelled = false
     ;(async () => {
       setLoading(true)
@@ -954,6 +1008,8 @@ function OverviewPanel({ onNavigate }: { onNavigate: (section: AdminSection) => 
       }
     })()
     return () => { cancelled = true }
+    // initialData only consulted on mount (cold shell pass or panel remount)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   type OverviewCard = {
@@ -1093,23 +1149,32 @@ function AdminShell() {
 
   const [sessionChecked, setSessionChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  /** KPIs from session?overview=1; consumed once by OverviewPanel, then cleared */
+  const [overviewInitial, setOverviewInitial] = useState<OverviewData | null>(null)
 
   useEffect(() => {
     if (authLoading) return
     let cancelled = false
     ;(async () => {
+      const wantOverview = section === 'overview'
+      const sessionPath = wantOverview
+        ? '/api/admin/session?overview=1'
+        : '/api/admin/session'
       const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
       try {
-        // Prefer adminFetch so ?perf=1 sends x-margo-perf
-        const res = await adminFetch('/api/admin/session')
+        const res = await adminFetch(sessionPath)
         const clientMs = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0)
         if (res.ok) {
           const body = await res.json().catch(() => ({}))
           if (body?._perf) {
             console.log('[perf] admin client waterfall — session hop', {
               clientFetchMs: clientMs,
+              includeOverview: wantOverview,
               server: body._perf,
             })
+          }
+          if (wantOverview && !cancelled) {
+            setOverviewInitial(parseOverviewPayload(body?.overview))
           }
         }
         if (!cancelled) setIsAdmin(res.ok)
@@ -1120,9 +1185,12 @@ function AdminShell() {
       }
     })()
     return () => { cancelled = true }
+    // Gate once after auth boot — not on every section change (panels fetch their own data).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading])
 
   const setSection = useCallback((next: AdminSection) => {
+    if (next !== 'overview') setOverviewInitial(null)
     const params = new URLSearchParams(searchParams.toString())
     if (next === 'overview') params.delete('section')
     else params.set('section', next)
@@ -1134,6 +1202,7 @@ function AdminShell() {
     await signOutBrowser()
     setIsAdmin(false)
     setSessionChecked(true)
+    setOverviewInitial(null)
   }
 
   if (authLoading || !sessionChecked) {
@@ -1147,9 +1216,10 @@ function AdminShell() {
   if (!isAdmin) {
     return (
       <LoginForm
-        onSuccess={() => {
+        onSuccess={(overview) => {
           setIsAdmin(true)
           setSessionChecked(true)
+          setOverviewInitial(overview)
         }}
       />
     )
@@ -1237,7 +1307,12 @@ function AdminShell() {
             </div>
           </div>
 
-          {section === 'overview' && <OverviewPanel onNavigate={setSection} />}
+          {section === 'overview' && (
+            <OverviewPanel
+              onNavigate={setSection}
+              initialData={overviewInitial}
+            />
+          )}
           {section === 'posts' && <PostsTab />}
           {section === 'catalog' && <CatalogSongsTab key="catalog" />}
           {section === 'artists' && <ArtistApplicationsTab />}
