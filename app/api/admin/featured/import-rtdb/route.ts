@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app'
-import { getAuth } from 'firebase-admin/auth'
 import { getDatabase } from 'firebase-admin/database'
+import { assertAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 function getAdminApp(): App {
@@ -16,32 +16,13 @@ function getAdminApp(): App {
   })
 }
 
-async function assertAdmin(request: NextRequest): Promise<{ ok: true } | { ok: false; res: NextResponse }> {
-  const header = request.headers.get('authorization') || ''
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : ''
-  if (!token) {
-    return { ok: false, res: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  }
-
-  try {
-    const app = getAdminApp()
-    const decoded = await getAuth(app).verifyIdToken(token)
-    const allowedSnap = await getDatabase(app).ref('adminConfig/allowedUid').get()
-    if (allowedSnap.val() !== decoded.uid) {
-      return { ok: false, res: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-    }
-    return { ok: true }
-  } catch (e: any) {
-    return { ok: false, res: NextResponse.json({ error: e?.message || 'Unauthorized' }, { status: 401 }) }
-  }
-}
-
 /**
  * One-shot: copy RTDB adminConfig/featuredLyric into site_featured_exchange.
  * Same field convention as PUT (store as-is; landing hides unless both lyrics set).
+ * Gate is Supabase is_admin; Firebase Admin is only for RTDB read (until A6).
  */
-export async function POST(request: NextRequest) {
-  const gate = await assertAdmin(request)
+export async function POST(_request: NextRequest) {
+  const gate = await assertAdmin()
   if (!gate.ok) return gate.res
 
   try {

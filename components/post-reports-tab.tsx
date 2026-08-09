@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { auth } from '@/lib/firebase'
 
 type ReportStatus = 'pending' | 'reviewed' | 'dismissed' | 'all'
 
@@ -45,10 +44,10 @@ const S = {
   },
 }
 
-async function authHeaders(): Promise<HeadersInit> {
-  const token = await auth?.currentUser?.getIdToken()
-  if (!token) throw new Error('Not signed in')
-  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+async function adminFetch(input: string, init?: RequestInit) {
+  const headers = new Headers(init?.headers)
+  if (!headers.has('Content-Type') && init?.body) headers.set('Content-Type', 'application/json')
+  return fetch(input, { ...init, credentials: 'include', headers })
 }
 
 export function PostReportsTab() {
@@ -62,8 +61,7 @@ export function PostReportsTab() {
     setLoading(true)
     setError(null)
     try {
-      const headers = await authHeaders()
-      const res = await fetch('/api/admin/post-reports?status=' + encodeURIComponent(filter), { headers })
+      const res = await adminFetch('/api/admin/post-reports?status=' + encodeURIComponent(filter))
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to load reports')
       setReports(json.reports || [])
@@ -80,10 +78,8 @@ export function PostReportsTab() {
   const setStatus = async (id: string, status: 'reviewed' | 'dismissed' | 'pending') => {
     setActioningId(id)
     try {
-      const headers = await authHeaders()
-      const res = await fetch('/api/admin/post-reports', {
+      const res = await adminFetch('/api/admin/post-reports', {
         method: 'PATCH',
-        headers,
         body: JSON.stringify({ id, status }),
       })
       const json = await res.json()

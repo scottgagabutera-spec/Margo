@@ -1,9 +1,5 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useAuthGate } from '@/components/supabase-auth-provider'
-
-const supabase = createClient()
 
 // ── Types ──
 interface ArtistApplicationRow {
@@ -29,6 +25,12 @@ interface ArtistProfileRow {
   artist_status: 'active' | 'warned' | 'frozen' | 'removed'
   artist_status_reason: string | null
   artist_status_updated_at: string | null
+}
+
+async function adminFetch(input: string, init?: RequestInit) {
+  const headers = new Headers(init?.headers)
+  if (!headers.has('Content-Type') && init?.body) headers.set('Content-Type', 'application/json')
+  return fetch(input, { ...init, credentials: 'include', headers })
 }
 
 const S: Record<string, any> = {
@@ -74,83 +76,50 @@ const STATUS_COLOR: Record<string, string> = {
   removed: '#ff6060',
 }
 
-// Matches the real hooks/useNotifications.tsx schema, confirmed against
-// production July 31, 2026: recipient_id, actor_id, type, created_at, read_at.
-// No `message`/`profile_id`/`read` columns exist — those were a guess from
-// before the schema was confirmed. Display copy for these types (what the
-// bell UI shows) needs to be added wherever useNotifications.tsx's render
-// logic lives — this table has no free-text field to carry it.
-type ModerationNotificationType =
-  | 'artist_approved'
-  | 'artist_rejected'
-  | 'warned'
-  | 'frozen'
-  | 'removed'
-  | 'restored'
-
-async function notifyProfile(
-  recipientId: string,
-  type: ModerationNotificationType,
-  actorId: string | null,
-) {
-  const { error } = await supabase.from('notifications').insert({
-    recipient_id: recipientId,
-    actor_id: actorId,
-    type,
-  })
-  if (error) console.error('Failed to notify profile:', error)
-}
-
 // ── Applications section ──
 function ApplicationsSection() {
-  const { user } = useAuthGate()
   const [applications, setApplications] = useState<ArtistApplicationRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending')
   const [actioningId, setActioningId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('artist_applications')
-      .select('*, profiles!artist_applications_profile_id_fkey(username, avatar_url)')
-      .order('submitted_at', { ascending: false })
-
-    if (error) {
-      console.error('Failed to load artist applications:', error)
+    setError(null)
+    try {
+      const res = await adminFetch('/api/admin/artist-applications')
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
+      setApplications(Array.isArray(body.applications) ? body.applications : [])
+    } catch (e: any) {
+      console.error('Failed to load artist applications:', e)
+      setError(e?.message || 'Failed to load applications')
+      setApplications([])
+    } finally {
       setLoading(false)
-      return
     }
-
-    setApplications(
-      (data || []).map((row: any) => ({
-        ...row,
-        username: row.profiles?.username,
-        avatar_url: row.profiles?.avatar_url,
-      }))
-    )
-    setLoading(false)
   }
 
   useEffect(() => { load() }, [])
 
   const review = async (app: ArtistApplicationRow, decision: 'approved' | 'rejected') => {
     setActioningId(app.id)
-    const { error } = await supabase
-      .from('artist_applications')
-      .update({ status: decision })
-      .eq('id', app.id)
-
-    if (error) {
-      console.error('Failed to review application:', error)
+    setError(null)
+    try {
+      const res = await adminFetch('/api/admin/artist-applications', {
+        method: 'PATCH',
+        body: JSON.stringify({ id: app.id, status: decision }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
+      await load()
+    } catch (e: any) {
+      console.error('Failed to review application:', e)
+      setError(e?.message || 'Failed to review application')
+    } finally {
       setActioningId(null)
-      return
     }
-
-    await notifyProfile(app.profile_id, decision === 'approved' ? 'artist_approved' : 'artist_rejected', user?.id ?? null)
-
-    setActioningId(null)
-    load()
   }
 
   const filtered = applications.filter(a => filter === 'all' ? true : a.status === filter)
@@ -167,6 +136,10 @@ function ApplicationsSection() {
           }}>{f}</button>
         ))}
       </div>
+
+      {error && (
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.75rem', marginBottom: '12px' }}>{error}</p>
+      )}
 
       {loading ? (
         <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '32px' }}>Loading…</p>
@@ -220,28 +193,28 @@ function ApplicationsSection() {
 
 // ── Moderation section (approved artists — warn/freeze/remove) ──
 function ModerationSection() {
-  const { user } = useAuthGate()
   const [artists, setArtists] = useState<ArtistProfileRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'active' | 'warned' | 'frozen' | 'removed' | 'all'>('all')
   const [actionTarget, setActionTarget] = useState<{ id: string; type: 'warn' | 'freeze' | 'remove' } | null>(null)
   const [reason, setReason] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url, artist_status, artist_status_reason, artist_status_updated_at')
-      .eq('is_artist', true)
-      .order('artist_status_updated_at', { ascending: false, nullsFirst: false })
-
-    if (error) {
-      console.error('Failed to load artists:', error)
+    setError(null)
+    try {
+      const res = await adminFetch('/api/admin/artist-moderation')
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
+      setArtists(Array.isArray(body.artists) ? body.artists : [])
+    } catch (e: any) {
+      console.error('Failed to load artists:', e)
+      setError(e?.message || 'Failed to load artists')
+      setArtists([])
+    } finally {
       setLoading(false)
-      return
     }
-    setArtists(data || [])
-    setLoading(false)
   }
 
   useEffect(() => { load() }, [])
@@ -251,38 +224,41 @@ function ModerationSection() {
     const statusMap = { warn: 'warned', freeze: 'frozen', remove: 'removed' } as const
     const newStatus = statusMap[actionTarget.type]
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        artist_status: newStatus,
-        artist_status_reason: reason,
-        artist_status_updated_at: new Date().toISOString(),
+    setError(null)
+    try {
+      const res = await adminFetch('/api/admin/artist-moderation', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          id: actionTarget.id,
+          status: newStatus,
+          reason,
+        }),
       })
-      .eq('id', actionTarget.id)
-
-    if (error) {
-      console.error('Failed to apply moderation action:', error)
-      return
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
+      setActionTarget(null)
+      setReason('')
+      await load()
+    } catch (e: any) {
+      console.error('Failed to apply moderation action:', e)
+      setError(e?.message || 'Failed to apply moderation action')
     }
-
-    await notifyProfile(actionTarget.id, newStatus, user?.id ?? null)
-    setActionTarget(null)
-    setReason('')
-    load()
   }
 
   const quickRestore = async (id: string) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ artist_status: 'active', artist_status_reason: null, artist_status_updated_at: new Date().toISOString() })
-      .eq('id', id)
-
-    if (error) {
-      console.error('Failed to restore artist:', error)
-      return
+    setError(null)
+    try {
+      const res = await adminFetch('/api/admin/artist-moderation', {
+        method: 'PATCH',
+        body: JSON.stringify({ id, status: 'active', reason: null }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
+      await load()
+    } catch (e: any) {
+      console.error('Failed to restore artist:', e)
+      setError(e?.message || 'Failed to restore artist')
     }
-    await notifyProfile(id, 'restored', user?.id ?? null)
-    load()
   }
 
   const filtered = artists.filter(a => filter === 'all' ? true : a.artist_status === filter)
@@ -303,6 +279,10 @@ function ModerationSection() {
           }}>{f}</button>
         ))}
       </div>
+
+      {error && (
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.75rem', marginBottom: '12px' }}>{error}</p>
+      )}
 
       {filtered.length === 0 ? (
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '32px' }}>

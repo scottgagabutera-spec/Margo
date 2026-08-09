@@ -1,18 +1,12 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
-import { auth, db, ensureFirebase } from '@/lib/firebase'
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
-import { ref, onValue, update, set, get } from 'firebase/database'
+import { useState, useEffect } from 'react'
+import { setBrowserAccessToken, signOutBrowser } from '@/lib/supabase/client'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 import { ArtistApplicationsTab } from '@/components/artist-applications-tab'
 import { PostReportsTab } from '@/components/post-reports-tab'
 import { BackButton } from '@/components/back-button'
 
 // ── Types ──
-interface Post {
-  id: string; text?: string; emotion?: string; status?: string
-  knowledge?: { song?: string; artist?: string }
-  username?: string; timestamp?: number; tier?: number; flagCount?: number
-}
 interface Echo {
   id: string; lyric?: string; song?: string; artist?: string
   username?: string; emotion?: string; timestamp?: number; status?: string
@@ -21,9 +15,14 @@ interface CatalogPost {
   id: string; text: string; emotion: string | null; status: string
   song: string | null; artist: string | null; username: string | null
   displayName?: string | null
+  flagCount?: number
 }
 
-interface Analytics { views?: number; resonates?: Record<string,boolean> }
+async function adminFetch(input: string, init?: RequestInit) {
+  const headers = new Headers(init?.headers)
+  if (!headers.has('Content-Type') && init?.body) headers.set('Content-Type', 'application/json')
+  return fetch(input, { ...init, credentials: 'include', headers })
+}
 
 const S: Record<string, any> = {
   input: {
@@ -70,33 +69,52 @@ const S: Record<string, any> = {
 }
 
 // ── Login ──
-function LoginForm({ onLogin, firebaseReady }: { onLogin: () => void; firebaseReady: boolean }) {
+function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+  const { rehydrate } = useAuthGate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async () => {
-    ensureFirebase()
-    if (!auth) {
-      setError('Firebase isn\'t configured in this environment.')
-      return
-    }
-    setLoading(true); setError('')
+    setLoading(true)
+    setError('')
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password)
-      const uid = cred.user.uid
-      if (!db) throw new Error('No DB')
-      const snap = await get(ref(db, 'adminConfig/allowedUid'))
-      if (snap.val() !== uid) {
-        await signOut(auth)
-        setError('Access denied.')
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError('Invalid credentials.')
         return
       }
-      onLogin()
-    } catch (e: any) {
-      setError(e.message?.includes('denied') ? 'Access denied.' : 'Invalid credentials.')
-    } finally { setLoading(false) }
+
+      if (body.access_token) {
+        setBrowserAccessToken(body.access_token)
+      }
+      await rehydrate()
+
+      const sessionRes = await fetch('/api/admin/session', { credentials: 'include' })
+      if (sessionRes.status === 403) {
+        await signOutBrowser()
+        setError("This account doesn't have admin access.")
+        return
+      }
+      if (!sessionRes.ok) {
+        await signOutBrowser()
+        setError('Invalid credentials.')
+        return
+      }
+
+      onSuccess()
+    } catch {
+      setError('Invalid credentials.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -119,12 +137,12 @@ function LoginForm({ onLogin, firebaseReady }: { onLogin: () => void; firebaseRe
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
               style={S.input} />
           </div>
-          {(!firebaseReady || error) && (
+          {error && (
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: '#ff6060' }}>
-              {!firebaseReady ? "Firebase isn't configured in this environment." : error}
+              {error}
             </p>
           )}
-          <button onClick={handleLogin} disabled={loading || !firebaseReady} style={{ ...S.btn, width: '100%', padding: '14px', opacity: (loading || !firebaseReady) ? 0.6 : 1 }}>
+          <button onClick={handleLogin} disabled={loading} style={{ ...S.btn, width: '100%', padding: '14px', opacity: loading ? 0.6 : 1 }}>
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </div>
@@ -133,23 +151,11 @@ function LoginForm({ onLogin, firebaseReady }: { onLogin: () => void; firebaseRe
   )
 }
 
-// ── Posts Tab ──
+// ── Posts Tab (Supabase catalog only) ──
 function PostsTab() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [analytics, setAnalytics] = useState<Record<string, Analytics>>({})
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
   const [expandedPost, setExpandedPost] = useState<string | null>(null)
   const [echoes, setEchoes] = useState<Record<string, Echo[]>>({})
-  const [backfillStatus, setBackfillStatus] = useState<string | null>(null)
-  const [backfillRunning, setBackfillRunning] = useState(false)
-  const [resonateBackfillStatus, setResonateBackfillStatus] = useState<string | null>(null)
-  const [resonateBackfillRunning, setResonateBackfillRunning] = useState(false)
-  const [viewsBackfillStatus, setViewsBackfillStatus] = useState<string | null>(null)
-  const [viewsBackfillRunning, setViewsBackfillRunning] = useState(false)
-  const [playBackfillStatus, setPlayBackfillStatus] = useState<string | null>(null)
-  const [playBackfillRunning, setPlayBackfillRunning] = useState(false)
-  const [postFilter, setPostFilter] = useState<'all' | 'active' | 'hidden'>('active')
   const [catalogPosts, setCatalogPosts] = useState<CatalogPost[]>([])
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [catalogError, setCatalogError] = useState<string | null>(null)
@@ -161,14 +167,10 @@ function PostsTab() {
 
   /** Lyric backs are posts rows (parent_post_id set) — same as useEchoes, but include hidden + private for moderation. */
   const loadEchoes = async (postId: string) => {
-    if (!auth?.currentUser) return
     setEchoesLoadingId(postId)
     setCatalogActionError(null)
     try {
-      const token = await auth.currentUser.getIdToken()
-      const res = await fetch('/api/admin/catalog-posts?parent_post_id=' + encodeURIComponent(postId), {
-        headers: { Authorization: 'Bearer ' + token },
-      })
+      const res = await adminFetch('/api/admin/catalog-posts?parent_post_id=' + encodeURIComponent(postId))
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
       const list: Echo[] = Array.isArray(body.echoes) ? body.echoes : []
@@ -190,105 +192,13 @@ function PostsTab() {
     }
   }
 
-  const toggleHideEcho = async (postId: string, echo: Echo) => {
-    if (echoBusyId) return
-    const newStatus = echo.status === 'hidden' ? 'active' : 'hidden'
-    setEchoBusyId(echo.id)
-    setCatalogActionError(null)
-    try {
-      await patchSupabasePostStatus(echo.id, newStatus)
-      setEchoes(prev => ({
-        ...prev,
-        [postId]: (prev[postId] || []).map(e => e.id === echo.id ? { ...e, status: newStatus } : e)
-      }))
-    } catch (e: any) {
-      setCatalogActionError(e.message || 'Failed to update lyric back')
-    } finally {
-      setEchoBusyId(null)
-    }
-  }
-
-  const runBackfill = async () => {
-    if (!db || backfillRunning) return
-    setBackfillRunning(true)
-    setBackfillStatus('Reading posts…')
-    try {
-      const snap = await get(ref(db, 'posts'))
-      if (!snap.exists()) { setBackfillStatus('No posts found.'); return }
-      const posts = snap.val() as Record<string, any>
-      const multiPath: Record<string, number> = {}
-      for (const [postId, post] of Object.entries(posts)) {
-        const echoes = post.echoes ? Object.values(post.echoes as Record<string, any>) : []
-        const echoCount = echoes.filter((e: any) => e.status !== 'hidden').length
-        if (echoCount > 0) multiPath[`postStats/${postId}/echoCount`] = echoCount
-        else if (post.echoes) multiPath[`postStats/${postId}/echoCount`] = 0
-      }
-      if (Object.keys(multiPath).length > 0) {
-        await update(ref(db), multiPath)
-      }
-      setBackfillStatus(`Done — updated ${Object.keys(multiPath).length} posts.`)
-    } catch (e: any) {
-      setBackfillStatus(`Error: ${e.message}`)
-    } finally {
-      setBackfillRunning(false)
-    }
-  }
-
-  const runPlayBackfill = async () => {
-    if (!db || playBackfillRunning) return
-    setPlayBackfillRunning(true)
-    setPlayBackfillStatus('Reading engagement plays…')
-    try {
-      const snap = await get(ref(db, 'engagement/plays'))
-      if (!snap.exists()) { setPlayBackfillStatus('No engagement plays found.'); return }
-      const plays = snap.val() as Record<string, any>
-      const multiPath: Record<string, number> = {}
-      for (const [songId, sessions] of Object.entries(plays)) {
-        const count = sessions ? Object.keys(sessions as Record<string, any>).length : 0
-        if (count > 0) multiPath[`songStats/${songId}/plays`] = count
-      }
-      if (Object.keys(multiPath).length > 0) {
-        await update(ref(db), multiPath)
-      }
-      setPlayBackfillStatus(`Done — updated ${Object.keys(multiPath).length} songs.`)
-    } catch (e: any) {
-      setPlayBackfillStatus(`Error: ${e.message}`)
-    } finally {
-      setPlayBackfillRunning(false)
-    }
-  }
-
-  useEffect(() => {
-    if (!db) return
-    const unsub = onValue(ref(db, 'posts'), snap => {
-      const list: Post[] = []
-      snap.forEach(child => { list.push({ ...child.val(), id: child.key }) })
-      setPosts(list.reverse())
-      setLoading(false)
-    })
-    const unsub2 = onValue(ref(db, 'analytics'), snap => {
-      setAnalytics(snap.val() || {})
-    })
-    return () => { unsub(); unsub2() }
-  }, [])
-
   useEffect(() => {
     let cancelled = false
     async function loadCatalog() {
-      if (!auth?.currentUser) {
-        if (!cancelled) {
-          setCatalogError('Not signed in')
-          setCatalogLoading(false)
-        }
-        return
-      }
       setCatalogLoading(true)
       setCatalogError(null)
       try {
-        const token = await auth.currentUser.getIdToken()
-        const res = await fetch('/api/admin/catalog-posts', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const res = await adminFetch('/api/admin/catalog-posts')
         if (!res.ok) {
           const body = await res.json().catch(() => ({}))
           throw new Error(body.error || `HTTP ${res.status}`)
@@ -308,65 +218,32 @@ function PostsTab() {
     return () => { cancelled = true }
   }, [])
 
-  const runResonateBackfill = async () => {
-    if (!db || resonateBackfillRunning) return
-    setResonateBackfillRunning(true)
-    setResonateBackfillStatus('Reading analytics…')
-    try {
-      const snap = await get(ref(db, 'analytics'))
-      if (!snap.exists()) { setResonateBackfillStatus('No analytics found.'); return }
-      const data = snap.val() as Record<string, any>
-      const multiPath: Record<string, number> = {}
-      for (const [postId, a] of Object.entries(data)) {
-        const count = Object.keys((a as any).resonates || {}).length
-        if (count > 0) multiPath[`postStats/${postId}/resonateCount`] = count
-      }
-      if (Object.keys(multiPath).length > 0) await update(ref(db), multiPath)
-      setResonateBackfillStatus(`Done — updated ${Object.keys(multiPath).length} posts.`)
-    } catch (e: any) {
-      setResonateBackfillStatus(`Error: ${e.message}`)
-    } finally {
-      setResonateBackfillRunning(false)
-    }
-  }
-
-  const runViewsBackfill = async () => {
-    if (!db || viewsBackfillRunning) return
-    setViewsBackfillRunning(true)
-    setViewsBackfillStatus('Reading analytics…')
-    try {
-      const snap = await get(ref(db, 'analytics'))
-      if (!snap.exists()) { setViewsBackfillStatus('No analytics found.'); return }
-      const data = snap.val() as Record<string, any>
-      const multiPath: Record<string, number> = {}
-      for (const [postId, a] of Object.entries(data)) {
-        const views = (a as any).views || 0
-        if (views > 0) multiPath[`postStats/${postId}/views`] = views
-      }
-      if (Object.keys(multiPath).length > 0) await update(ref(db), multiPath)
-      setViewsBackfillStatus(`Done — updated ${Object.keys(multiPath).length} posts.`)
-    } catch (e: any) {
-      setViewsBackfillStatus(`Error: ${e.message}`)
-    } finally {
-      setViewsBackfillRunning(false)
-    }
-  }
-
-  /** Real feed/Discover read Supabase posts.status — never Firebase. */
   const patchSupabasePostStatus = async (postId: string, status: string) => {
-    if (!auth?.currentUser) throw new Error('Not signed in')
-    const token = await auth.currentUser.getIdToken()
-    const res = await fetch('/api/admin/catalog-posts', {
+    const res = await adminFetch('/api/admin/catalog-posts', {
       method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ id: postId, status }),
     })
     const body = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
     return body as { id: string; status: string }
+  }
+
+  const toggleHideEcho = async (postId: string, echo: Echo) => {
+    if (echoBusyId) return
+    const newStatus = echo.status === 'hidden' ? 'active' : 'hidden'
+    setEchoBusyId(echo.id)
+    setCatalogActionError(null)
+    try {
+      await patchSupabasePostStatus(echo.id, newStatus)
+      setEchoes(prev => ({
+        ...prev,
+        [postId]: (prev[postId] || []).map(e => e.id === echo.id ? { ...e, status: newStatus } : e)
+      }))
+    } catch (e: any) {
+      setCatalogActionError(e.message || 'Failed to update lyric back')
+    } finally {
+      setEchoBusyId(null)
+    }
   }
 
   const toggleCatalogHide = async (post: CatalogPost) => {
@@ -384,35 +261,23 @@ function PostsTab() {
     }
   }
 
-  /** Firebase list Hide — legacy RTDB only. Live moderation is Catalog above. */
-  const toggleHide = async (post: Post) => {
-    if (!db) return
-    const newStatus = post.status === 'hidden' ? 'active' : 'hidden'
-    await update(ref(db, `posts/${post.id}`), { status: newStatus })
-  }
-
-  const filtered = posts.filter(p => {
-    if (postFilter === 'active' && p.status === 'hidden') return false
-    if (postFilter === 'hidden' && p.status !== 'hidden') return false
-    if (!search.trim()) return true
-    const q = search.toLowerCase()
-    return (p.text || '').toLowerCase().includes(q) ||
-      (p.knowledge?.song || '').toLowerCase().includes(q) ||
-      (p.knowledge?.artist || '').toLowerCase().includes(q) ||
-      (p.username || '').toLowerCase().includes(q)
-  })
-
   const filteredCatalog = catalogPosts.filter(p => {
     if (catalogFilter === 'active' && p.status !== 'active') return false
     if (catalogFilter === 'private' && p.status !== 'private') return false
     if (catalogFilter === 'hidden' && p.status !== 'hidden') return false
-    return true
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (p.text || '').toLowerCase().includes(q) ||
+      (p.song || '').toLowerCase().includes(q) ||
+      (p.artist || '').toLowerCase().includes(q) ||
+      (p.username || '').toLowerCase().includes(q) ||
+      (p.displayName || '').toLowerCase().includes(q)
   })
 
-  const totalPosts = posts.filter(p => p.status !== 'hidden').length
-  const totalViews = Object.values(analytics).reduce((s, a) => s + (a.views || 0), 0)
-  const totalResonates = Object.values(analytics).reduce((s, a) => s + Object.keys(a.resonates || {}).length, 0)
-  const flagged = posts.filter(p => (p.flagCount || 0) > 0 && p.status !== 'hidden').length
+  const totalActive = catalogPosts.filter(p => p.status === 'active').length
+  const totalPrivate = catalogPosts.filter(p => p.status === 'private').length
+  const totalHidden = catalogPosts.filter(p => p.status === 'hidden').length
+  const flagged = catalogPosts.filter(p => (p.flagCount || 0) > 0 && p.status !== 'hidden').length
 
   const renderEchoPanel = (parentId: string) => {
     const postEchoes = echoes[parentId] || []
@@ -485,37 +350,20 @@ function PostsTab() {
 
   return (
     <div>
-      {/* Stats row */}
+      {/* Stats row — catalog-backed */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
-        {[['Posts Live', totalPosts], ['Total Views', totalViews], ['Resonates', totalResonates], ['Flagged', flagged]].map(([label, val]) => (
+        {[['Active', totalActive], ['Private', totalPrivate], ['Hidden', totalHidden], ['Flagged', flagged]].map(([label, val]) => (
           <div key={label} style={{ ...S.card, textAlign: 'center' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: label === 'Flagged' && Number(val) > 0 ? '#ff6060' : 'var(--gold)', fontWeight: 700 }}>{val}</p>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</p>
           </div>
         ))}
       </div>
-      {/* Search */}
+
       <input type="text" value={search} onChange={e => setSearch(e.target.value)}
         placeholder="Search posts, songs, artists, users…"
         style={{ ...S.input, marginBottom: '16px' }} />
-      {/* Post filter tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        {(['active', 'hidden', 'all'] as const).map(f => (
-          <button key={f} onClick={() => setPostFilter(f)} style={{
-            ...S.ghostBtn,
-            fontFamily: 'var(--font-lora), serif',
-            fontSize: '0.6rem',
-            textTransform: 'uppercase',
-            letterSpacing: '1.5px',
-            borderBottom: postFilter === f ? '1px solid var(--gold)' : '1px solid transparent',
-            color: postFilter === f ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
-            borderRadius: 0,
-            padding: '4px 12px',
-          }}>{f}</button>
-        ))}
-      </div>
 
-      {/* Supabase Catalog — live posts (Hide/Show) */}
       <div style={{ marginBottom: '24px' }}>
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px' }}>
           Supabase Catalog — live posts (Hide/Show)
@@ -573,6 +421,11 @@ function PostsTab() {
                         {post.emotion}
                       </span>
                     )}
+                    {(post.flagCount || 0) > 0 && (
+                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: '#ff6060', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        {post.flagCount} flags
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                     <button type="button" onClick={() => toggleExpandPost(post.id)} style={{ ...S.ghostBtn, fontSize: '0.55rem' }}>
@@ -601,58 +454,6 @@ function PostsTab() {
           <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.75rem', padding: '8px 0 0' }}>{catalogActionError}</p>
         )}
       </div>
-
-      {/* Backfill tools */}
-      {[
-        { label: 'Backfill Echo Counts', desc: 'Counts existing lyric backs → postStats.echoCount', status: backfillStatus, running: backfillRunning, fn: runBackfill },
-        { label: 'Backfill Resonate Counts', desc: 'Reads analytics.resonates → postStats.resonateCount', status: resonateBackfillStatus, running: resonateBackfillRunning, fn: runResonateBackfill },
-        { label: 'Backfill Views', desc: 'Copies analytics.views → postStats.views', status: viewsBackfillStatus, running: viewsBackfillRunning, fn: runViewsBackfill },
-        { label: 'Backfill Play Counts', desc: 'Counts engagement plays → songStats.plays', status: playBackfillStatus, running: playBackfillRunning, fn: runPlayBackfill },
-      ].map(({ label, desc, status, running, fn }) => (
-        <div key={label} style={{ ...S.card, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-          <div>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text)', marginBottom: '4px' }}>{label}</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)' }}>{status || desc}</p>
-          </div>
-          <button onClick={fn} disabled={running} style={{ ...S.btn, opacity: running ? 0.6 : 1, whiteSpace: 'nowrap' }}>
-            {running ? 'Running…' : 'Run'}
-          </button>
-        </div>
-      ))}
-
-      {/* Firebase legacy posts — Hide only mutates RTDB; live moderation is Catalog above */}
-      {loading ? <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '32px' }}>Loading…</p> : filtered.map(post => {
-        const a = analytics[post.id] || {}
-        const resonateCount = Object.keys(a.resonates || {}).length
-        const isHidden = post.status === 'hidden'
-        const isFlagged = (post.flagCount || 0) > 0
-        const isExpanded = expandedPost === post.id
-        return (
-          <div key={post.id} style={{ ...S.card, opacity: isHidden ? 0.45 : 1, borderColor: isFlagged ? 'rgba(255,96,96,0.3)' : 'rgba(255,255,255,0.06)', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)', marginBottom: '6px', lineHeight: 1.4 }}>"{post.text?.slice(0, 120)}{(post.text?.length || 0) > 120 ? '…' : ''}"</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  {post.knowledge?.song} · {post.knowledge?.artist} · {post.username || 'anon'} · {post.tier === 1 ? '⭐ Tier 1' : 'Tier 2'}
-                  {isFlagged && <span style={{ color: '#ff6060', marginLeft: '8px' }}>⚑ {post.flagCount} flags</span>}
-                </p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', marginTop: '4px' }}>
-                  {a.views || 0} views · {resonateCount} resonates · {post.emotion || 'no vibe'}
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                <button onClick={() => toggleExpandPost(post.id)} style={{ ...S.ghostBtn, fontSize: '0.55rem' }}>
-                  {isExpanded ? 'Hide Backs' : 'Lyric Backs'}
-                </button>
-                <button onClick={() => toggleHide(post)} style={isHidden ? S.btn : S.dangerBtn}>
-                  {isHidden ? 'Show' : 'Hide'}
-                </button>
-              </div>
-            </div>
-            {isExpanded && renderEchoPanel(post.id)}
-          </div>
-        )
-      })}
     </div>
   )
 }
@@ -684,20 +485,10 @@ function CatalogSongsTab() {
   useEffect(() => {
     let cancelled = false
     async function load() {
-      if (!auth?.currentUser) {
-        if (!cancelled) {
-          setError('Not signed in')
-          setLoading(false)
-        }
-        return
-      }
       setLoading(true)
       setError(null)
       try {
-        const token = await auth.currentUser.getIdToken()
-        const res = await fetch('/api/admin/catalog-songs', {
-          headers: { Authorization: 'Bearer ' + token },
-        })
+        const res = await adminFetch('/api/admin/catalog-songs')
         const body = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
         if (!cancelled) setSongs(Array.isArray(body.songs) ? body.songs : [])
@@ -874,20 +665,13 @@ function FeaturedTab() {
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function authHeaders(): Promise<HeadersInit> {
-    const token = await auth?.currentUser?.getIdToken()
-    if (!token) throw new Error('Not signed in')
-    return { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }
-  }
-
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       setLoading(true)
       setError(null)
       try {
-        const headers = await authHeaders()
-        const res = await fetch('/api/admin/featured', { headers })
+        const res = await adminFetch('/api/admin/featured')
         const json = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(json.error || 'Failed to load featured')
         if (!cancelled && json.featured) setForm({
@@ -917,10 +701,8 @@ function FeaturedTab() {
     setSaving(true)
     setError(null)
     try {
-      const headers = await authHeaders()
-      const res = await fetch('/api/admin/featured', {
+      const res = await adminFetch('/api/admin/featured', {
         method: 'PUT',
-        headers,
         body: JSON.stringify(form),
       })
       const json = await res.json().catch(() => ({}))
@@ -950,8 +732,7 @@ function FeaturedTab() {
     setImporting(true)
     setError(null)
     try {
-      const headers = await authHeaders()
-      const res = await fetch('/api/admin/featured/import-rtdb', { method: 'POST', headers })
+      const res = await adminFetch('/api/admin/featured/import-rtdb', { method: 'POST' })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'Import failed')
       if (json.featured) setForm({
@@ -985,7 +766,7 @@ function FeaturedTab() {
   return (
     <div style={{ maxWidth: '560px' }}>
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '24px', lineHeight: 1.6 }}>
-        Appears on the landing page as "Exchange of the Week." Stays hidden until both the original lyric and the reply are filled in.
+        Appears on the landing page as &ldquo;Exchange of the Week.&rdquo; Stays hidden until both the original lyric and the reply are filled in.
       </p>
       {error && (
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: '#ff6060', marginBottom: '16px' }}>{error}</p>
@@ -1052,33 +833,51 @@ function FeaturedTab() {
 
 // ── Main Admin Page ──
 export default function AdminPage() {
-  const [user, setUser] = useState<any>(null)
-  const [authChecked, setAuthChecked] = useState(false)
+  const { loading: authLoading } = useAuthGate()
+  const [sessionChecked, setSessionChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tab, setTab] = useState<'posts'|'catalog'|'featured'|'artists'|'reports'>('posts')
+  const [tab, setTab] = useState<'posts' | 'catalog' | 'featured' | 'artists' | 'reports'>('posts')
 
   useEffect(() => {
-    ensureFirebase()
-    if (!auth) { setAuthChecked(true); return }
-    return onAuthStateChanged(auth, async u => {
-      setUser(u)
-      if (u && db) {
-        const snap = await get(ref(db, 'adminConfig/allowedUid'))
-        setIsAdmin(snap.val() === u.uid)
-      } else {
-        setIsAdmin(false)
+    if (authLoading) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/admin/session', { credentials: 'include' })
+        if (!cancelled) setIsAdmin(res.ok)
+      } catch {
+        if (!cancelled) setIsAdmin(false)
+      } finally {
+        if (!cancelled) setSessionChecked(true)
       }
-      setAuthChecked(true)
-    })
-  }, [])
+    })()
+    return () => { cancelled = true }
+  }, [authLoading])
 
-  if (!authChecked) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)' }}>Loading…</p>
-    </div>
-  )
+  const handleSignOut = async () => {
+    await signOutBrowser()
+    setIsAdmin(false)
+    setSessionChecked(true)
+  }
 
-  if (!user || !isAdmin) return <LoginForm onLogin={() => {}} firebaseReady={!!auth} />
+  if (authLoading || !sessionChecked) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)' }}>Loading…</p>
+      </div>
+    )
+  }
+
+  if (!isAdmin) {
+    return (
+      <LoginForm
+        onSuccess={() => {
+          setIsAdmin(true)
+          setSessionChecked(true)
+        }}
+      />
+    )
+  }
 
   const tabs: { key: typeof tab; label: string }[] = [
     { key: 'posts', label: 'Posts' },
@@ -1099,18 +898,18 @@ export default function AdminPage() {
               <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>Admin</h1>
             </div>
           </div>
-          <button onClick={() => auth && signOut(auth)} style={S.ghostBtn}>Sign Out</button>
+          <button onClick={handleSignOut} style={S.ghostBtn}>Sign Out</button>
         </div>
         <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '28px' }}>
           {tabs.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={S.tab(tab === t.key)}>{t.label}</button>
           ))}
         </div>
-        {tab === 'posts'    && <PostsTab />}
+        {tab === 'posts' && <PostsTab />}
         {tab === 'catalog' && <CatalogSongsTab key="catalog" />}
         {tab === 'featured' && <FeaturedTab />}
-        {tab === 'artists'  && <ArtistApplicationsTab />}
-        {tab === 'reports'  && <PostReportsTab />}
+        {tab === 'artists' && <ArtistApplicationsTab />}
+        {tab === 'reports' && <PostReportsTab />}
       </div>
     </div>
   )
