@@ -22,6 +22,13 @@ type RehydrateOptions = {
    * Hard (boot / explicit): non-OK or throw → signed-out UI.
    */
   soft?: boolean
+  /**
+   * Who triggered this call. Focus safety-net is skipped briefly after a
+   * successful hydrate (avoids double /api/auth/me on cold load when the
+   * window fires focus/visibility right after boot). Cross-tab broadcast
+   * must still fetch.
+   */
+  source?: 'boot' | 'explicit' | 'focus' | 'broadcast'
 }
 
 interface AuthGateContextValue {
@@ -48,6 +55,9 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const [gateOpen, setGateOpen] = useState(false)
   const userRef = useRef<User | null>(null)
   const applyingRemoteRef = useRef(false)
+  const inflightRef = useRef<Promise<void> | null>(null)
+  /** Last successful /api/auth/me (ms since epoch) — gates redundant focus soft. */
+  const lastOkAtRef = useRef(0)
   userRef.current = user
 
   const applyAuthPayload = useCallback((body: {
@@ -72,67 +82,93 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, [])
 
   const rehydrate = useCallback(async (opts?: RehydrateOptions) => {
-    // Always wipe readable legacy auth material before /me (shadowing fix).
-    clearLegacyAuthStorage()
     const soft = opts?.soft === true
-    const wantPerf =
-      typeof window !== 'undefined' &&
-      (() => {
-        try {
-          return new URLSearchParams(window.location.search).get('perf') === '1'
-        } catch {
-          return false
+    const source = opts?.source ?? (soft ? 'focus' : 'explicit')
+
+    // Cold-load: boot /me + window focus/visibility often overlap → twin fetches.
+    // Skip focus soft for a short window after any successful hydrate.
+    if (soft && source === 'focus' && lastOkAtRef.current > 0) {
+      if (Date.now() - lastOkAtRef.current < 2500) return
+    }
+
+    if (inflightRef.current) {
+      await inflightRef.current
+      // Soft callers that waited on another hydrate are done.
+      if (soft) return
+      // Hard caller waited — memory already set; avoid a second round-trip.
+      if (userRef.current) return
+    }
+
+    const run = (async () => {
+      // Always wipe readable legacy auth material before /me (shadowing fix).
+      clearLegacyAuthStorage()
+      const wantPerf =
+        typeof window !== 'undefined' &&
+        (() => {
+          try {
+            return new URLSearchParams(window.location.search).get('perf') === '1'
+          } catch {
+            return false
+          }
+        })()
+      const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      try {
+        const headers: HeadersInit = {}
+        if (wantPerf) headers['x-margo-perf'] = '1'
+        const res = await fetch('/api/auth/me', { credentials: 'include', headers })
+        const clientMs = Math.round(
+          (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0,
+        )
+
+        // Genuinely signed out — cookies absent/invalid.
+        if (res.status === 401) {
+          if (wantPerf) console.log('[perf] auth/me client', { clientFetchMs: clientMs, status: 401 })
+          applyAuthPayload(null)
+          return
         }
-      })()
-    const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
+
+        if (!res.ok) {
+          // Soft path: leave UI alone on 5xx / unexpected status.
+          if (soft) return
+          applyAuthPayload(null)
+          return
+        }
+
+        const body = await res.json()
+        if (wantPerf) {
+          console.log('[perf] auth/me client', { clientFetchMs: clientMs, server: body?._perf ?? null })
+        }
+        const hadUser = !!userRef.current
+        applyAuthPayload(body)
+        lastOkAtRef.current = Date.now()
+
+        // Announce new session to other tabs (password login, OAuth return boot).
+        // Skip when applying a peer's session-changed (no broadcast loop).
+        if (
+          !soft &&
+          !applyingRemoteRef.current &&
+          !hadUser &&
+          body?.access_token &&
+          body?.user
+        ) {
+          broadcastSessionChanged()
+        }
+      } catch (err) {
+        // Soft path: thrown fetch (network) — leave UI alone.
+        if (soft) {
+          console.error('[auth core] soft /api/auth/me failed (UI unchanged):', err)
+          return
+        }
+        console.error('[auth core] /api/auth/me failed:', err)
+        applyAuthPayload(null)
+      }
+    })()
+
+    inflightRef.current = run
     try {
-      const headers: HeadersInit = {}
-      if (wantPerf) headers['x-margo-perf'] = '1'
-      const res = await fetch('/api/auth/me', { credentials: 'include', headers })
-      const clientMs = Math.round(
-        (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0,
-      )
-
-      // Genuinely signed out — cookies absent/invalid.
-      if (res.status === 401) {
-        if (wantPerf) console.log('[perf] auth/me client', { clientFetchMs: clientMs, status: 401 })
-        applyAuthPayload(null)
-        return
-      }
-
-      if (!res.ok) {
-        // Soft path: leave UI alone on 5xx / unexpected status.
-        if (soft) return
-        applyAuthPayload(null)
-        return
-      }
-
-      const body = await res.json()
-      if (wantPerf) {
-        console.log('[perf] auth/me client', { clientFetchMs: clientMs, server: body?._perf ?? null })
-      }
-      const hadUser = !!userRef.current
-      applyAuthPayload(body)
-
-      // Announce new session to other tabs (password login, OAuth return boot).
-      // Skip when applying a peer's session-changed (no broadcast loop).
-      if (
-        !soft &&
-        !applyingRemoteRef.current &&
-        !hadUser &&
-        body?.access_token &&
-        body?.user
-      ) {
-        broadcastSessionChanged()
-      }
-    } catch (err) {
-      // Soft path: thrown fetch (network) — leave UI alone.
-      if (soft) {
-        console.error('[auth core] soft /api/auth/me failed (UI unchanged):', err)
-        return
-      }
-      console.error('[auth core] /api/auth/me failed:', err)
-      applyAuthPayload(null)
+      await run
+    } finally {
+      if (inflightRef.current === run) inflightRef.current = null
     }
   }, [applyAuthPayload])
 
@@ -154,7 +190,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       }
       if (message.type === 'session-changed') {
         applyingRemoteRef.current = true
-        void rehydrate({ soft: true }).finally(() => {
+        void rehydrate({ soft: true, source: 'broadcast' }).finally(() => {
           applyingRemoteRef.current = false
         })
       }
@@ -167,7 +203,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     const schedule = () => {
       if (timer) clearTimeout(timer)
       timer = setTimeout(() => {
-        void rehydrate({ soft: true })
+        void rehydrate({ soft: true, source: 'focus' })
       }, 300)
     }
     const onFocus = () => schedule()
@@ -188,7 +224,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
     async function boot() {
       try {
-        await rehydrate()
+        await rehydrate({ source: 'boot' })
       } finally {
         if (!cancelled) setLoading(false)
       }
