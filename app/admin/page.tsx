@@ -1,10 +1,28 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { setBrowserAccessToken, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { ArtistApplicationsTab } from '@/components/artist-applications-tab'
 import { PostReportsTab } from '@/components/post-reports-tab'
 import { BackButton } from '@/components/back-button'
+
+type AdminSection = 'overview' | 'posts' | 'catalog' | 'artists' | 'reports' | 'featured'
+
+const SECTIONS: { key: AdminSection; label: string }[] = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'posts', label: 'Posts' },
+  { key: 'catalog', label: 'Catalog' },
+  { key: 'artists', label: 'Artists' },
+  { key: 'reports', label: 'Reports' },
+  { key: 'featured', label: 'Featured' },
+]
+
+function parseSection(raw: string | null): AdminSection {
+  const allowed: AdminSection[] = ['overview', 'posts', 'catalog', 'artists', 'reports', 'featured']
+  if (raw && (allowed as string[]).includes(raw)) return raw as AdminSection
+  return 'overview'
+}
 
 // ── Types ──
 interface Echo {
@@ -831,12 +849,156 @@ function FeaturedTab() {
   )
 }
 
+// ── Overview KPIs ──
+interface OverviewData {
+  pendingReports: number
+  pendingArtistApps: number
+  flaggedPosts: number
+  hiddenPosts: number
+  liveSongs: number
+  artistsNeedingAttention: number
+  featuredStatus: 'live' | 'incomplete'
+}
+
+function OverviewPanel({ onNavigate }: { onNavigate: (section: AdminSection) => void }) {
+  const [data, setData] = useState<OverviewData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await adminFetch('/api/admin/overview')
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
+        if (!cancelled) setData(body as OverviewData)
+      } catch (e: any) {
+        if (!cancelled) {
+          setError(e?.message || 'Failed to load overview')
+          setData(null)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const cards: {
+    key: string
+    label: string
+    value: string | number
+    warn?: boolean
+    section: AdminSection
+  }[] = data
+    ? [
+        { key: 'reports', label: 'Pending reports', value: data.pendingReports, warn: data.pendingReports > 0, section: 'reports' },
+        { key: 'apps', label: 'Pending artist apps', value: data.pendingArtistApps, warn: data.pendingArtistApps > 0, section: 'artists' },
+        { key: 'flagged', label: 'Flagged posts', value: data.flaggedPosts, warn: data.flaggedPosts > 0, section: 'posts' },
+        { key: 'hidden', label: 'Hidden posts', value: data.hiddenPosts, section: 'posts' },
+        { key: 'songs', label: 'Live songs', value: data.liveSongs, section: 'catalog' },
+        {
+          key: 'artists',
+          label: 'Artists needing attention',
+          value: data.artistsNeedingAttention,
+          warn: data.artistsNeedingAttention > 0,
+          section: 'artists',
+        },
+        {
+          key: 'featured',
+          label: 'Featured exchange',
+          value: data.featuredStatus === 'live' ? 'Live' : 'Incomplete',
+          warn: data.featuredStatus === 'incomplete',
+          section: 'featured',
+        },
+      ]
+    : []
+
+  if (loading) {
+    return (
+      <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.35)', textAlign: 'center', padding: '48px 0' }}>
+        Loading overview…
+      </p>
+    )
+  }
+
+  if (error) {
+    return (
+      <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.85rem', padding: '24px 0' }}>
+        {error}
+      </p>
+    )
+  }
+
+  return (
+    <div>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '24px', lineHeight: 1.6 }}>
+        At-a-glance counts from live Supabase data. Click a card to open that queue.
+      </p>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+          gap: '12px',
+        }}
+      >
+        {cards.map((card) => (
+          <button
+            key={card.key}
+            type="button"
+            onClick={() => onNavigate(card.section)}
+            style={{
+              ...S.card,
+              marginBottom: 0,
+              textAlign: 'left',
+              cursor: 'pointer',
+              width: '100%',
+              font: 'inherit',
+              color: 'inherit',
+            }}
+          >
+            <p
+              style={{
+                fontFamily: 'var(--font-lora), serif',
+                fontSize: '1.5rem',
+                color: card.warn ? '#ff6060' : 'var(--gold)',
+                fontWeight: 700,
+                marginBottom: '8px',
+              }}
+            >
+              {card.value}
+            </p>
+            <p
+              style={{
+                fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.55rem',
+                color: 'rgba(255,255,255,0.35)',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                lineHeight: 1.4,
+              }}
+            >
+              {card.label}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Main Admin Page ──
-export default function AdminPage() {
+function AdminShell() {
   const { loading: authLoading } = useAuthGate()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const section = parseSection(searchParams.get('section'))
+
   const [sessionChecked, setSessionChecked] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tab, setTab] = useState<'posts' | 'catalog' | 'featured' | 'artists' | 'reports'>('posts')
 
   useEffect(() => {
     if (authLoading) return
@@ -853,6 +1015,14 @@ export default function AdminPage() {
     })()
     return () => { cancelled = true }
   }, [authLoading])
+
+  const setSection = useCallback((next: AdminSection) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (next === 'overview') params.delete('section')
+    else params.set('section', next)
+    const q = params.toString()
+    router.replace(q ? `/admin?${q}` : '/admin')
+  }, [router, searchParams])
 
   const handleSignOut = async () => {
     await signOutBrowser()
@@ -879,38 +1049,126 @@ export default function AdminPage() {
     )
   }
 
-  const tabs: { key: typeof tab; label: string }[] = [
-    { key: 'posts', label: 'Posts' },
-    { key: 'catalog', label: 'Catalog' },
-    { key: 'featured', label: 'Featured' },
-    { key: 'artists', label: 'Artists' },
-    { key: 'reports', label: 'Reports' },
-  ]
+  const navBtn = (item: { key: AdminSection; label: string }, opts?: { mobile?: boolean }) => {
+    const active = section === item.key
+    return (
+      <button
+        key={item.key}
+        type="button"
+        onClick={() => setSection(item.key)}
+        style={{
+          display: 'block',
+          width: opts?.mobile ? 'auto' : '100%',
+          textAlign: opts?.mobile ? 'center' : 'left',
+          padding: opts?.mobile ? '8px 14px' : '10px 14px',
+          background: active ? 'rgba(232,197,71,0.08)' : 'transparent',
+          border: 'none',
+          borderLeft: opts?.mobile ? 'none' : (active ? '2px solid var(--gold)' : '2px solid transparent'),
+          borderBottom: opts?.mobile ? (active ? '2px solid var(--gold)' : '2px solid transparent') : 'none',
+          borderRadius: opts?.mobile ? 0 : '0 8px 8px 0',
+          cursor: 'pointer',
+          fontFamily: 'var(--font-lora), serif',
+          fontSize: '0.6rem',
+          fontWeight: 700,
+          letterSpacing: '2px',
+          textTransform: 'uppercase',
+          color: active ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {item.label}
+      </button>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '100px 24px 80px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div
+        style={{
+          maxWidth: '1100px',
+          margin: '0 auto',
+          padding: '88px 24px 80px',
+          display: 'grid',
+          gridTemplateColumns: '200px 1fr',
+          gap: '32px',
+          alignItems: 'start',
+        }}
+        className="admin-shell-grid"
+      >
+        <aside style={{ position: 'sticky', top: 88 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
             <BackButton fallbackHref="/feed" />
             <div>
               <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '4px' }}>Margo</p>
-              <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400 }}>Admin</h1>
+              <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.25rem', color: 'var(--text)', fontWeight: 400, margin: 0 }}>Admin</h1>
             </div>
           </div>
-          <button onClick={handleSignOut} style={S.ghostBtn}>Sign Out</button>
-        </div>
-        <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '28px' }}>
-          {tabs.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={S.tab(tab === t.key)}>{t.label}</button>
-          ))}
-        </div>
-        {tab === 'posts' && <PostsTab />}
-        {tab === 'catalog' && <CatalogSongsTab key="catalog" />}
-        {tab === 'featured' && <FeaturedTab />}
-        {tab === 'artists' && <ArtistApplicationsTab />}
-        {tab === 'reports' && <PostReportsTab />}
+
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '24px' }} className="admin-sidebar-nav">
+            {SECTIONS.map((item) => navBtn(item))}
+          </nav>
+
+          <button type="button" onClick={handleSignOut} style={{ ...S.ghostBtn, width: '100%' }}>
+            Sign Out
+          </button>
+        </aside>
+
+        <main style={{ minWidth: 0 }}>
+          {/* Mobile: horizontal section strip (CSS hides sidebar below breakpoint via inline media workaround) */}
+          <div className="admin-mobile-nav" style={{ display: 'none', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <BackButton fallbackHref="/feed" />
+                <div>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '2px' }}>Margo</p>
+                  <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.2rem', color: 'var(--text)', fontWeight: 400, margin: 0 }}>Admin</h1>
+                </div>
+              </div>
+              <button type="button" onClick={handleSignOut} style={S.ghostBtn}>Sign Out</button>
+            </div>
+            <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 0 }}>
+              {SECTIONS.map((item) => navBtn(item, { mobile: true }))}
+            </div>
+          </div>
+
+          {section === 'overview' && <OverviewPanel onNavigate={setSection} />}
+          {section === 'posts' && <PostsTab />}
+          {section === 'catalog' && <CatalogSongsTab key="catalog" />}
+          {section === 'artists' && <ArtistApplicationsTab />}
+          {section === 'reports' && <PostReportsTab />}
+          {section === 'featured' && <FeaturedTab />}
+        </main>
       </div>
+
+      <style>{`
+        @media (max-width: 800px) {
+          .admin-shell-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0 !important;
+            padding-top: 72px !important;
+          }
+          .admin-shell-grid > aside {
+            display: none !important;
+          }
+          .admin-mobile-nav {
+            display: block !important;
+          }
+        }
+      `}</style>
     </div>
+  )
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)' }}>Loading…</p>
+        </div>
+      }
+    >
+      <AdminShell />
+    </Suspense>
   )
 }
