@@ -169,7 +169,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   )
 }
 
-// ── Posts Tab (Supabase catalog only) ──
+// ── Posts Tab (glance → expand) ──
 function PostsTab() {
   const [search, setSearch] = useState('')
   const [expandedPost, setExpandedPost] = useState<string | null>(null)
@@ -177,13 +177,12 @@ function PostsTab() {
   const [catalogPosts, setCatalogPosts] = useState<CatalogPost[]>([])
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [catalogError, setCatalogError] = useState<string | null>(null)
-  const [catalogFilter, setCatalogFilter] = useState<'all' | 'active' | 'private' | 'hidden'>('all')
+  const [catalogFilter, setCatalogFilter] = useState<'all' | 'active' | 'private' | 'hidden' | 'flagged'>('active')
   const [catalogBusyId, setCatalogBusyId] = useState<string | null>(null)
   const [catalogActionError, setCatalogActionError] = useState<string | null>(null)
   const [echoesLoadingId, setEchoesLoadingId] = useState<string | null>(null)
   const [echoBusyId, setEchoBusyId] = useState<string | null>(null)
 
-  /** Lyric backs are posts rows (parent_post_id set) — same as useEchoes, but include hidden + private for moderation. */
   const loadEchoes = async (postId: string) => {
     setEchoesLoadingId(postId)
     setCatalogActionError(null)
@@ -204,10 +203,10 @@ function PostsTab() {
   const toggleExpandPost = (postId: string) => {
     if (expandedPost === postId) {
       setExpandedPost(null)
-    } else {
-      setExpandedPost(postId)
-      loadEchoes(postId)
+      return
     }
+    setExpandedPost(postId)
+    if (!echoes[postId]) loadEchoes(postId)
   }
 
   useEffect(() => {
@@ -255,7 +254,7 @@ function PostsTab() {
       await patchSupabasePostStatus(echo.id, newStatus)
       setEchoes(prev => ({
         ...prev,
-        [postId]: (prev[postId] || []).map(e => e.id === echo.id ? { ...e, status: newStatus } : e)
+        [postId]: (prev[postId] || []).map(e => e.id === echo.id ? { ...e, status: newStatus } : e),
       }))
     } catch (e: any) {
       setCatalogActionError(e.message || 'Failed to update lyric back')
@@ -283,6 +282,7 @@ function PostsTab() {
     if (catalogFilter === 'active' && p.status !== 'active') return false
     if (catalogFilter === 'private' && p.status !== 'private') return false
     if (catalogFilter === 'hidden' && p.status !== 'hidden') return false
+    if (catalogFilter === 'flagged' && !(p.flagCount && p.flagCount > 0)) return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (p.text || '').toLowerCase().includes(q) ||
@@ -292,10 +292,31 @@ function PostsTab() {
       (p.displayName || '').toLowerCase().includes(q)
   })
 
-  const totalActive = catalogPosts.filter(p => p.status === 'active').length
-  const totalPrivate = catalogPosts.filter(p => p.status === 'private').length
-  const totalHidden = catalogPosts.filter(p => p.status === 'hidden').length
-  const flagged = catalogPosts.filter(p => (p.flagCount || 0) > 0 && p.status !== 'hidden').length
+  const chip = (active: boolean) => ({
+    ...S.ghostBtn,
+    fontFamily: 'var(--font-lora), serif',
+    fontSize: '0.6rem',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '1.5px',
+    borderBottom: active ? '1px solid var(--gold)' : '1px solid transparent',
+    color: active ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
+    borderRadius: 0,
+    padding: '4px 12px',
+  })
+
+  const statusChip = (status: string) => {
+    const isPrivate = status === 'private'
+    const isHidden = status === 'hidden'
+    return (
+      <span style={{
+        fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
+        textTransform: 'uppercase', letterSpacing: '1.5px',
+        color: isPrivate ? 'var(--gold)' : isHidden ? '#ff6060' : 'rgba(255,255,255,0.4)',
+        border: `1px solid ${isPrivate ? 'var(--gold)' : isHidden ? 'rgba(255,96,96,0.4)' : 'rgba(255,255,255,0.15)'}`,
+        borderRadius: '6px', padding: '2px 8px',
+      }}>{status}</span>
+    )
+  }
 
   const renderEchoPanel = (parentId: string) => {
     const postEchoes = echoes[parentId] || []
@@ -304,63 +325,58 @@ function PostsTab() {
     const hiddenN = postEchoes.filter(e => e.status === 'hidden').length
     const privateN = postEchoes.filter(e => e.status === 'private').length
     return (
-      <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
+      <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
+        <p style={{
+          fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)',
+          textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px',
+        }}>
+          Lyric backs
+          {!loading && postEchoes.length > 0 ? ` — ${activeN} active · ${hiddenN} hidden · ${privateN} private` : ''}
+        </p>
         {loading ? (
           <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>Loading lyric backs…</p>
         ) : postEchoes.length === 0 ? (
           <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '12px 0' }}>No lyric backs yet.</p>
         ) : (
-          <>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '12px' }}>
-              {activeN} active · {hiddenN} hidden · {privateN} private
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {postEchoes.map(echo => {
-                const isEchoHidden = echo.status === 'hidden'
-                const isEchoPrivate = echo.status === 'private'
-                return (
-                  <div key={echo.id} style={{
-                    background: isEchoHidden ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
-                    borderRadius: '12px', padding: '12px 14px',
-                    border: '1px solid ' + (isEchoHidden ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)'),
-                    opacity: isEchoHidden ? 0.5 : 1,
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px'
-                  }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '6px' }}>
-                        &ldquo;{echo.lyric}&rdquo;
-                      </p>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                          {echo.song} · {echo.artist}
-                        </span>
-                        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>·</span>
-                        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                          {echo.username || 'anon'}
-                        </span>
-                        {echo.emotion && (
-                          <>
-                            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>·</span>
-                            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>{echo.emotion}</span>
-                          </>
-                        )}
-                        {isEchoHidden && <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: '#ff6060', textTransform: 'uppercase', letterSpacing: '1px' }}>hidden</span>}
-                        {isEchoPrivate && <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>private</span>}
-                      </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {postEchoes.map(echo => {
+              const isEchoHidden = echo.status === 'hidden'
+              const isEchoPrivate = echo.status === 'private'
+              return (
+                <div key={echo.id} style={{
+                  background: isEchoHidden ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
+                  borderRadius: '12px', padding: '12px 14px',
+                  border: '1px solid ' + (isEchoHidden ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)'),
+                  opacity: isEchoHidden ? 0.5 : 1,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px',
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--text)', lineHeight: 1.5, marginBottom: '6px' }}>
+                      &ldquo;{echo.lyric}&rdquo;
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        {[echo.song, echo.artist, echo.username || 'anon'].filter(Boolean).join(' · ')}
+                      </span>
+                      {echo.emotion && (
+                        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>{echo.emotion}</span>
+                      )}
+                      {isEchoHidden && <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: '#ff6060', textTransform: 'uppercase', letterSpacing: '1px' }}>hidden</span>}
+                      {isEchoPrivate && <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>private</span>}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleHideEcho(parentId, echo)}
-                      disabled={echoBusyId === echo.id}
-                      style={{ ...(isEchoHidden ? S.btn : S.dangerBtn), flexShrink: 0, opacity: echoBusyId === echo.id ? 0.6 : 1 }}
-                    >
-                      {echoBusyId === echo.id ? '…' : isEchoHidden ? 'Show' : 'Hide'}
-                    </button>
                   </div>
-                )
-              })}
-            </div>
-          </>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); void toggleHideEcho(parentId, echo) }}
+                    disabled={echoBusyId === echo.id}
+                    style={{ ...(isEchoHidden ? S.btn : S.dangerBtn), flexShrink: 0, opacity: echoBusyId === echo.id ? 0.6 : 1 }}
+                  >
+                    {echoBusyId === echo.id ? '…' : isEchoHidden ? 'Show' : 'Hide'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
         )}
       </div>
     )
@@ -368,110 +384,145 @@ function PostsTab() {
 
   return (
     <div>
-      {/* Stats row — catalog-backed */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
-        {[['Active', totalActive], ['Private', totalPrivate], ['Hidden', totalHidden], ['Flagged', flagged]].map(([label, val]) => (
-          <div key={label} style={{ ...S.card, textAlign: 'center' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: label === 'Flagged' && Number(val) > 0 ? '#ff6060' : 'var(--gold)', fontWeight: 700 }}>{val}</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</p>
-          </div>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px' }}>
+        Posts
+      </p>
+      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginBottom: '16px', lineHeight: 1.5 }}>
+        Feed and Discover posts. Click a row for full text, lyric backs, and hide/show. Hide removes a post from public feeds.
+      </p>
+
+      <input
+        type="text"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Search posts, songs, artists, users…"
+        style={{ ...S.input, marginBottom: '12px' }}
+      />
+
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {(['active', 'private', 'hidden', 'flagged', 'all'] as const).map(f => (
+          <button key={f} type="button" onClick={() => setCatalogFilter(f)} style={chip(catalogFilter === f)}>
+            {f}
+          </button>
         ))}
       </div>
 
-      <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-        placeholder="Search posts, songs, artists, users…"
-        style={{ ...S.input, marginBottom: '16px' }} />
+      {catalogLoading ? (
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '24px' }}>Loading posts…</p>
+      ) : catalogError ? (
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.75rem', padding: '12px 0' }}>{catalogError}</p>
+      ) : filteredCatalog.length === 0 ? (
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', padding: '12px 0' }}>No posts match this filter.</p>
+      ) : (
+        filteredCatalog.map(post => {
+          const status = post.status || 'active'
+          const isHidden = status === 'hidden'
+          const author = post.displayName || post.username || 'anon'
+          const isExpanded = expandedPost === post.id
+          const snippet = post.text.length > 120 ? post.text.slice(0, 120) + '…' : post.text
 
-      <div style={{ marginBottom: '24px' }}>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px' }}>
-          Supabase Catalog — live posts (Hide/Show)
-        </p>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginBottom: '12px', lineHeight: 1.5 }}>
-          These are the posts Feed and Discover actually read. Includes private rows for product insight. Hide removes a post from public feeds.
-        </p>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-          {(['all', 'active', 'private', 'hidden'] as const).map(f => (
-            <button key={f} onClick={() => setCatalogFilter(f)} style={{
-              ...S.ghostBtn,
-              fontFamily: 'var(--font-lora), serif',
-              fontSize: '0.6rem',
-              textTransform: 'uppercase',
-              letterSpacing: '1.5px',
-              borderBottom: catalogFilter === f ? '1px solid var(--gold)' : '1px solid transparent',
-              color: catalogFilter === f ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
-              borderRadius: 0,
-              padding: '4px 12px',
-            }}>{f}</button>
-          ))}
-        </div>
-        {catalogLoading ? (
-          <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '24px' }}>Loading catalog…</p>
-        ) : catalogError ? (
-          <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.75rem', padding: '12px 0' }}>{catalogError}</p>
-        ) : filteredCatalog.length === 0 ? (
-          <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', padding: '12px 0' }}>No posts match this filter.</p>
-        ) : (
-          filteredCatalog.map(post => {
-            const status = post.status || 'active'
-            const isPrivate = status === 'private'
-            const isHidden = status === 'hidden'
-            const author = post.displayName || post.username || 'anon'
-            const isExpanded = expandedPost === post.id
-            return (
-              <div key={post.id} style={{ ...S.card, opacity: isHidden ? 0.45 : 1, marginBottom: '10px' }}>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '6px', lineHeight: 1.4 }}>
-                  &ldquo;{post.text.slice(0, 120)}{post.text.length > 120 ? '…' : ''}&rdquo;
-                </p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
-                  {[post.song, post.artist, author].filter(Boolean).join(' · ')}
-                </p>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          return (
+            <div
+              key={post.id}
+              style={{
+                ...S.card,
+                opacity: isHidden ? 0.45 : 1,
+                marginBottom: '10px',
+                cursor: 'pointer',
+              }}
+              onClick={() => toggleExpandPost(post.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  toggleExpandPost(post.id)
+                }
+              }}
+            >
+              {/* Glance */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{
+                    fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.9rem',
+                    color: 'var(--text)', marginBottom: '8px', lineHeight: 1.4,
+                  }}>
+                    &ldquo;{isExpanded ? post.text : snippet}&rdquo;
+                  </p>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {statusChip(status)}
                     <span style={{
-                      fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
-                      textTransform: 'uppercase', letterSpacing: '1.5px',
-                      color: isPrivate ? 'var(--gold)' : isHidden ? '#ff6060' : 'rgba(255,255,255,0.4)',
-                      border: `1px solid ${isPrivate ? 'var(--gold)' : isHidden ? 'rgba(255,96,96,0.4)' : 'rgba(255,255,255,0.15)'}`,
-                      borderRadius: '6px', padding: '2px 8px',
-                    }}>{status}</span>
-                    {post.emotion && (
-                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        {post.emotion}
-                      </span>
-                    )}
+                      fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem',
+                      color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px',
+                    }}>
+                      {author}
+                    </span>
                     {(post.flagCount || 0) > 0 && (
-                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: '#ff6060', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        {post.flagCount} flags
+                      <span style={{
+                        fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem',
+                        color: '#ff6060', textTransform: 'uppercase', letterSpacing: '1px',
+                      }}>
+                        {post.flagCount} flag{(post.flagCount || 0) === 1 ? '' : 's'}
                       </span>
                     )}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                    <button type="button" onClick={() => toggleExpandPost(post.id)} style={{ ...S.ghostBtn, fontSize: '0.55rem' }}>
-                      {isExpanded ? 'Hide Backs' : 'Lyric Backs'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleCatalogHide(post)}
-                      disabled={catalogBusyId === post.id}
-                      style={{
-                        ...(isHidden ? S.btn : S.dangerBtn),
-                        opacity: catalogBusyId === post.id ? 0.6 : 1,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {catalogBusyId === post.id ? '…' : isHidden ? 'Show' : 'Hide'}
-                    </button>
+                    {!isExpanded && (post.song || post.artist) && (
+                      <span style={{
+                        fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem',
+                        color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '1px',
+                      }}>
+                        {[post.song, post.artist].filter(Boolean).join(' · ')}
+                      </span>
+                    )}
                   </div>
                 </div>
-                {isExpanded && renderEchoPanel(post.id)}
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  aria-hidden
+                  style={{
+                    flexShrink: 0,
+                    marginTop: 4,
+                    transform: isExpanded ? 'rotate(90deg)' : 'none',
+                    transition: 'transform 150ms ease',
+                  }}
+                >
+                  <path d="M4 2L8 6L4 10" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
-            )
-          })
-        )}
-        {catalogActionError && (
-          <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.75rem', padding: '8px 0 0' }}>{catalogActionError}</p>
-        )}
-      </div>
+
+              {/* Expand */}
+              {isExpanded && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <p style={{
+                    fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+                    color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px',
+                    marginTop: '14px', marginBottom: '12px', lineHeight: 1.5,
+                  }}>
+                    {[post.song, post.artist, author, post.emotion].filter(Boolean).join(' · ')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void toggleCatalogHide(post)}
+                    disabled={catalogBusyId === post.id}
+                    style={{
+                      ...(isHidden ? S.btn : S.dangerBtn),
+                      opacity: catalogBusyId === post.id ? 0.6 : 1,
+                    }}
+                  >
+                    {catalogBusyId === post.id ? '…' : isHidden ? 'Show' : 'Hide'}
+                  </button>
+                  {renderEchoPanel(post.id)}
+                </div>
+              )}
+            </div>
+          )
+        })
+      )}
+      {catalogActionError && (
+        <p style={{ fontFamily: 'var(--font-lora), serif', color: '#ff6060', fontSize: '0.75rem', padding: '8px 0 0' }}>{catalogActionError}</p>
+      )}
     </div>
   )
 }
