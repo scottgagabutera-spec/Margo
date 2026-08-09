@@ -76,6 +76,26 @@ const STATUS_COLOR: Record<string, string> = {
   removed: '#ff6060',
 }
 
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden
+      style={{
+        flexShrink: 0,
+        marginTop: 4,
+        transform: open ? 'rotate(90deg)' : 'none',
+        transition: 'transform 150ms ease',
+      }}
+    >
+      <path d="M4 2L8 6L4 10" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 // ── Applications section ──
 function ApplicationsSection() {
   const [applications, setApplications] = useState<ArtistApplicationRow[]>([])
@@ -83,6 +103,7 @@ function ApplicationsSection() {
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending')
   const [actioningId, setActioningId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -124,11 +145,15 @@ function ApplicationsSection() {
 
   const filtered = applications.filter(a => filter === 'all' ? true : a.status === filter)
 
+  const toggleExpand = (id: string) => {
+    setExpandedId(prev => (prev === id ? null : id))
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{
+          <button key={f} type="button" onClick={() => { setFilter(f); setExpandedId(null) }} style={{
             ...S.ghostBtn,
             borderBottom: filter === f ? '1px solid var(--gold)' : '1px solid transparent',
             color: filter === f ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
@@ -147,46 +172,98 @@ function ApplicationsSection() {
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '32px' }}>
           No {filter !== 'all' ? filter : ''} applications.
         </p>
-      ) : filtered.map(app => (
-        <div key={app.id} style={S.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text)', marginBottom: '4px' }}>
-                {app.display_artist_name}
-              </p>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>
-                @{app.username || 'unknown'} · submitted {new Date(app.submitted_at).toLocaleDateString()}
-              </p>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                {Object.entries(app.links || {}).map(([key, url]) => url ? (
-                  <a key={key} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noreferrer"
-                    style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', textDecoration: 'none' }}>
-                    {key}
-                  </a>
-                ) : null)}
-              </div>
-              {app.note && (
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', marginBottom: '8px' }}>
-                  "{app.note}"
+      ) : filtered.map(app => {
+        const isExpanded = expandedId === app.id
+        const noteSnippet = app.note && app.note.length > 80 ? app.note.slice(0, 80) + '…' : app.note
+        return (
+          <div
+            key={app.id}
+            style={{ ...S.card, cursor: 'pointer' }}
+            onClick={() => toggleExpand(app.id)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                toggleExpand(app.id)
+              }
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text)', marginBottom: '4px' }}>
+                  {app.display_artist_name}
                 </p>
-              )}
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: app.status === 'pending' ? '#ffc847' : app.status === 'approved' ? '#4ade80' : '#ff6060', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                {app.status}
-              </p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>
+                  @{app.username || 'unknown'} · submitted {new Date(app.submitted_at).toLocaleDateString()}
+                </p>
+                <p style={{
+                  fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+                  color: app.status === 'pending' ? '#ffc847' : app.status === 'approved' ? '#4ade80' : '#ff6060',
+                  textTransform: 'uppercase', letterSpacing: '1px',
+                }}>
+                  {app.status}
+                </p>
+                {!isExpanded && noteSnippet && (
+                  <p style={{
+                    fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)',
+                    fontStyle: 'italic', marginTop: '8px',
+                  }}>
+                    &ldquo;{noteSnippet}&rdquo;
+                  </p>
+                )}
+              </div>
+              <Chevron open={isExpanded} />
             </div>
-            {app.status === 'pending' && (
-              <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                <button onClick={() => review(app, 'approved')} disabled={actioningId === app.id} style={{ ...S.btn, opacity: actioningId === app.id ? 0.5 : 1 }}>
-                  Approve
-                </button>
-                <button onClick={() => review(app, 'rejected')} disabled={actioningId === app.id} style={{ ...S.dangerBtn, opacity: actioningId === app.id ? 0.5 : 1 }}>
-                  Reject
-                </button>
+
+            {isExpanded && (
+              <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                  {Object.entries(app.links || {}).map(([key, url]) => url ? (
+                    <a key={key} href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noreferrer"
+                      style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', textDecoration: 'none' }}>
+                      {key}
+                    </a>
+                  ) : null)}
+                  {Object.keys(app.links || {}).length === 0 && (
+                    <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+                      No links provided
+                    </span>
+                  )}
+                </div>
+                {app.note && (
+                  <p style={{
+                    fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)',
+                    fontStyle: 'italic', marginBottom: '12px',
+                  }}>
+                    &ldquo;{app.note}&rdquo;
+                  </p>
+                )}
+                {app.status === 'pending' && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => review(app, 'approved')}
+                      disabled={actioningId === app.id}
+                      style={{ ...S.btn, opacity: actioningId === app.id ? 0.5 : 1 }}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => review(app, 'rejected')}
+                      disabled={actioningId === app.id}
+                      style={{ ...S.dangerBtn, opacity: actioningId === app.id ? 0.5 : 1 }}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -196,6 +273,7 @@ function ModerationSection() {
   const [artists, setArtists] = useState<ArtistProfileRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'active' | 'warned' | 'frozen' | 'removed' | 'all'>('all')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [actionTarget, setActionTarget] = useState<{ id: string; type: 'warn' | 'freeze' | 'remove' } | null>(null)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -263,6 +341,25 @@ function ModerationSection() {
 
   const filtered = artists.filter(a => filter === 'all' ? true : a.artist_status === filter)
 
+  const toggleExpand = (id: string) => {
+    setExpandedId(prev => {
+      if (prev === id) {
+        if (actionTarget?.id === id) {
+          setActionTarget(null)
+          setReason('')
+        }
+        return null
+      }
+      return id
+    })
+  }
+
+  const startAction = (id: string, type: 'warn' | 'freeze' | 'remove') => {
+    setExpandedId(id)
+    setActionTarget({ id, type })
+    setReason('')
+  }
+
   if (loading) {
     return <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '32px' }}>Loading…</p>
   }
@@ -271,7 +368,7 @@ function ModerationSection() {
     <div>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {(['active', 'warned', 'frozen', 'removed', 'all'] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{
+          <button key={f} type="button" onClick={() => { setFilter(f); setExpandedId(null); setActionTarget(null); setReason('') }} style={{
             ...S.ghostBtn,
             borderBottom: filter === f ? '1px solid var(--gold)' : '1px solid transparent',
             color: filter === f ? 'var(--gold)' : 'rgba(255,255,255,0.35)',
@@ -288,54 +385,107 @@ function ModerationSection() {
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.85rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', textAlign: 'center', padding: '32px' }}>
           No {filter !== 'all' ? filter : ''} artists.
         </p>
-      ) : filtered.map(artist => (
-        <div key={artist.id} style={S.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text)', marginBottom: '4px' }}>
-                {artist.display_name} <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}>@{artist.username}</span>
-              </p>
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: STATUS_COLOR[artist.artist_status], textTransform: 'uppercase', letterSpacing: '1px' }}>
-                {artist.artist_status}{artist.artist_status_reason ? ` — ${artist.artist_status_reason}` : ''}
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {artist.artist_status !== 'removed' && (
-                <button onClick={() => { setActionTarget({ id: artist.id, type: 'warn' }); setReason('') }} style={S.ghostBtn}>Warn</button>
-              )}
-              {artist.artist_status === 'frozen'
-                ? <button onClick={() => quickRestore(artist.id)} style={S.btn}>Unfreeze</button>
-                : artist.artist_status !== 'removed' && (
-                  <button onClick={() => { setActionTarget({ id: artist.id, type: 'freeze' }); setReason('') }} style={S.dangerBtn}>Freeze</button>
-                )}
-              {artist.artist_status === 'removed'
-                ? <button onClick={() => quickRestore(artist.id)} style={S.btn}>Restore</button>
-                : (
-                  <button onClick={() => { setActionTarget({ id: artist.id, type: 'remove' }); setReason('') }} style={S.dangerBtn}>Remove</button>
-                )}
-            </div>
-          </div>
+      ) : filtered.map(artist => {
+        const isExpanded = expandedId === artist.id
+        const reasonGlance = artist.artist_status_reason
+          ? (artist.artist_status_reason.length > 60
+            ? artist.artist_status_reason.slice(0, 60) + '…'
+            : artist.artist_status_reason)
+          : null
 
-          {actionTarget?.id === artist.id && (
-            <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <label style={S.label}>Reason (shown to the artist)</label>
-              <textarea
-                value={reason}
-                onChange={e => setReason(e.target.value)}
-                rows={2}
-                style={{ ...S.input, resize: 'vertical', marginBottom: '10px' }}
-                placeholder="Explain why — this becomes their notification and, if frozen, the message on their status page."
-              />
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={applyAction} disabled={!reason.trim()} style={{ ...S.btn, opacity: reason.trim() ? 1 : 0.5 }}>
-                  Confirm {actionTarget.type}
-                </button>
-                <button onClick={() => { setActionTarget(null); setReason('') }} style={S.ghostBtn}>Cancel</button>
+        return (
+          <div
+            key={artist.id}
+            style={{ ...S.card, cursor: 'pointer' }}
+            onClick={() => toggleExpand(artist.id)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                toggleExpand(artist.id)
+              }
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', color: 'var(--text)', marginBottom: '4px' }}>
+                  {artist.display_name}{' '}
+                  <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}>@{artist.username}</span>
+                </p>
+                <p style={{
+                  fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+                  color: STATUS_COLOR[artist.artist_status], textTransform: 'uppercase', letterSpacing: '1px',
+                }}>
+                  {artist.artist_status}
+                  {!isExpanded && reasonGlance ? ` — ${reasonGlance}` : ''}
+                </p>
               </div>
+              <Chevron open={isExpanded} />
             </div>
-          )}
-        </div>
-      ))}
+
+            {isExpanded && (
+              <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                {artist.artist_status_reason && (
+                  <p style={{
+                    fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)',
+                    marginBottom: '8px', lineHeight: 1.5,
+                  }}>
+                    Current reason: {artist.artist_status_reason}
+                  </p>
+                )}
+                {artist.artist_status_updated_at && (
+                  <p style={{
+                    fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.28)',
+                    marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px',
+                  }}>
+                    Updated {new Date(artist.artist_status_updated_at).toLocaleString()}
+                  </p>
+                )}
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: actionTarget?.id === artist.id ? '14px' : 0 }}>
+                  {artist.artist_status !== 'removed' && (
+                    <button
+                      type="button"
+                      onClick={() => startAction(artist.id, 'warn')}
+                      style={S.ghostBtn}
+                    >Warn</button>
+                  )}
+                  {artist.artist_status === 'frozen'
+                    ? <button type="button" onClick={() => quickRestore(artist.id)} style={S.btn}>Unfreeze</button>
+                    : artist.artist_status !== 'removed' && (
+                      <button type="button" onClick={() => startAction(artist.id, 'freeze')} style={S.dangerBtn}>Freeze</button>
+                    )}
+                  {artist.artist_status === 'removed'
+                    ? <button type="button" onClick={() => quickRestore(artist.id)} style={S.btn}>Restore</button>
+                    : (
+                      <button type="button" onClick={() => startAction(artist.id, 'remove')} style={S.dangerBtn}>Remove</button>
+                    )}
+                </div>
+
+                {actionTarget?.id === artist.id && (
+                  <div style={{ paddingTop: '4px' }}>
+                    <label style={S.label}>Reason (shown to the artist)</label>
+                    <textarea
+                      value={reason}
+                      onChange={e => setReason(e.target.value)}
+                      rows={2}
+                      style={{ ...S.input, resize: 'vertical', marginBottom: '10px' }}
+                      placeholder="Explain why — this becomes their notification and, if frozen, the message on their status page."
+                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={applyAction} disabled={!reason.trim()} style={{ ...S.btn, opacity: reason.trim() ? 1 : 0.5 }}>
+                        Confirm {actionTarget.type}
+                      </button>
+                      <button type="button" onClick={() => { setActionTarget(null); setReason('') }} style={S.ghostBtn}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -349,12 +499,12 @@ export function ArtistApplicationsTab() {
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '20px', lineHeight: 1.6 }}>
         Applications become artists on approval — this sets profiles.is_artist directly via a
         database trigger. Once approved, use Moderation to warn, freeze, or remove standing as
-        issues come up.
+        issues come up. Click a row to expand details and actions.
       </p>
 
       <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         {(['applications', 'moderation'] as const).map(s => (
-          <button key={s} onClick={() => setSection(s)} style={{
+          <button key={s} type="button" onClick={() => setSection(s)} style={{
             padding: '8px 20px', background: 'none', border: 'none', cursor: 'pointer',
             fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
             letterSpacing: '2px', textTransform: 'uppercase',

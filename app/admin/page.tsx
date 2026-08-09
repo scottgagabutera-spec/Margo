@@ -666,6 +666,7 @@ function CatalogSongsTab() {
   const [artistStatusFilter, setArtistStatusFilter] = useState<'all' | 'active' | 'warned' | 'frozen' | 'removed'>('all')
   const [ownerQuery, setOwnerQuery] = useState('')
   const [titleQuery, setTitleQuery] = useState('')
+  const [expandedSong, setExpandedSong] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -689,6 +690,10 @@ function CatalogSongsTab() {
     load()
     return () => { cancelled = true }
   }, [])
+
+  const toggleExpand = (id: string) => {
+    setExpandedSong(prev => (prev === id ? null : id))
+  }
 
   const filtered = songs.filter(s => {
     if (statusFilter !== 'all' && s.status !== statusFilter) return false
@@ -743,7 +748,7 @@ function CatalogSongsTab() {
         Supabase Catalog — all songs
       </p>
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginBottom: '16px', lineHeight: 1.5 }}>
-        Read-only oversight of every Studio / Supabase upload, including drafts and songs owned by frozen or removed artists. Artists publish via Studio — this tab does not upload.
+        Read-only oversight of every Studio / Supabase upload. Click a row for owner IDs, audio link, and timestamps. Artists publish via Studio — this tab does not upload.
       </p>
 
       <input
@@ -789,49 +794,123 @@ function CatalogSongsTab() {
         filtered.map(song => {
           const owner = song.ownerDisplayName || song.ownerUsername || 'unknown'
           const at = song.ownerUsername ? '@' + song.ownerUsername : null
+          const isExpanded = expandedSong === song.id
           return (
-            <div key={song.id} style={{ ...S.card, opacity: song.status === 'hidden' ? 0.45 : 1, marginBottom: '10px' }}>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                {song.artworkUrl ? (
-                  <img
-                    src={song.artworkUrl}
-                    alt=""
-                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0, background: 'rgba(255,255,255,0.04)' }}
-                  />
-                ) : (
-                  <div style={{ width: 48, height: 48, borderRadius: 8, flexShrink: 0, background: 'rgba(255,255,255,0.04)' }} />
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', color: 'var(--text)', marginBottom: '4px' }}>
-                    {song.title}
-                  </p>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
-                    {song.artistDisplayName}
-                    {' · '}
-                    {owner}
-                    {at ? ' · ' + at : ''}
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span style={{
-                      fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
-                      textTransform: 'uppercase', letterSpacing: '1.5px',
-                      color: statusColor(song.status),
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: '6px', padding: '2px 8px',
-                    }}>{song.status}</span>
-                    <span style={{
-                      fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
-                      textTransform: 'uppercase', letterSpacing: '1.5px',
-                      color: artistStatusColor(song.artistStatus),
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: '6px', padding: '2px 8px',
-                    }}>{song.artistStatus || 'no status'}</span>
-                    {song.audioUrl && (
-                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>audio</span>
-                    )}
+            <div
+              key={song.id}
+              style={{
+                ...S.card,
+                opacity: song.status === 'hidden' ? 0.45 : 1,
+                marginBottom: '10px',
+                cursor: 'pointer',
+              }}
+              onClick={() => toggleExpand(song.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  toggleExpand(song.id)
+                }
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
+                  {song.artworkUrl ? (
+                    <img
+                      src={song.artworkUrl}
+                      alt=""
+                      style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0, background: 'rgba(255,255,255,0.04)' }}
+                    />
+                  ) : (
+                    <div style={{ width: 48, height: 48, borderRadius: 8, flexShrink: 0, background: 'rgba(255,255,255,0.04)' }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', color: 'var(--text)', marginBottom: '4px' }}>
+                      {song.title}
+                    </p>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+                      {song.artistDisplayName}
+                      {!isExpanded && (
+                        <>
+                          {' · '}
+                          {owner}
+                          {at ? ' · ' + at : ''}
+                        </>
+                      )}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span style={{
+                        fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '1.5px',
+                        color: statusColor(song.status),
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '6px', padding: '2px 8px',
+                      }}>{song.status}</span>
+                      <span style={{
+                        fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '1.5px',
+                        color: artistStatusColor(song.artistStatus),
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '6px', padding: '2px 8px',
+                      }}>{song.artistStatus || 'no status'}</span>
+                      {!isExpanded && song.audioUrl && (
+                        <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>audio</span>
+                      )}
+                    </div>
                   </div>
                 </div>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  aria-hidden
+                  style={{
+                    flexShrink: 0,
+                    marginTop: 4,
+                    transform: isExpanded ? 'rotate(90deg)' : 'none',
+                    transition: 'transform 150ms ease',
+                  }}
+                >
+                  <path d="M4 2L8 6L4 10" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
+
+              {isExpanded && (
+                <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', lineHeight: 1.6 }}>
+                    Owner: {owner}{at ? ' · ' + at : ''}
+                  </p>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.28)', letterSpacing: '0.5px', marginBottom: '6px', wordBreak: 'break-all' }}>
+                    Song id: {song.id}
+                  </p>
+                  {song.ownerProfileId && (
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.28)', letterSpacing: '0.5px', marginBottom: '6px', wordBreak: 'break-all' }}>
+                      Owner profile: {song.ownerProfileId}
+                    </p>
+                  )}
+                  {song.createdAt && (
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.28)', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                      Created: {new Date(song.createdAt).toLocaleString()}
+                    </p>
+                  )}
+                  {song.audioUrl ? (
+                    <a
+                      href={song.audioUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '1px' }}
+                    >
+                      Open audio URL
+                    </a>
+                  ) : (
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+                      No audio URL
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )
         })
