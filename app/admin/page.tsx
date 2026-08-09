@@ -95,6 +95,17 @@ const S: Record<string, any> = {
 }
 
 // ── Overview KPI types (shared by LoginForm, shell, OverviewPanel) ──
+interface OverviewGrowthData {
+  signupsTotal: number
+  postsActive: number
+  postsAll: number
+  lyricBacksActive: number
+  lyricBacksAll: number
+  signupsByDay: { date: string; count: number }[]
+  windowDays: number
+  timezone: string
+}
+
 interface OverviewData {
   pendingReports: number
   pendingArtistApps: number
@@ -104,6 +115,42 @@ interface OverviewData {
   approvedArtists: number
   artistsNeedingAttention: number
   featuredStatus: 'live' | 'incomplete'
+  growth: OverviewGrowthData
+}
+
+function parseGrowthPayload(raw: unknown): OverviewGrowthData | null {
+  if (!raw || typeof raw !== 'object') return null
+  const g = raw as Record<string, unknown>
+  const nums = [
+    'signupsTotal',
+    'postsActive',
+    'postsAll',
+    'lyricBacksActive',
+    'lyricBacksAll',
+    'windowDays',
+  ] as const
+  for (const k of nums) {
+    if (typeof g[k] !== 'number') return null
+  }
+  if (typeof g.timezone !== 'string') return null
+  if (!Array.isArray(g.signupsByDay)) return null
+  const signupsByDay: { date: string; count: number }[] = []
+  for (const row of g.signupsByDay) {
+    if (!row || typeof row !== 'object') return null
+    const r = row as Record<string, unknown>
+    if (typeof r.date !== 'string' || typeof r.count !== 'number') return null
+    signupsByDay.push({ date: r.date, count: r.count })
+  }
+  return {
+    signupsTotal: g.signupsTotal as number,
+    postsActive: g.postsActive as number,
+    postsAll: g.postsAll as number,
+    lyricBacksActive: g.lyricBacksActive as number,
+    lyricBacksAll: g.lyricBacksAll as number,
+    signupsByDay,
+    windowDays: g.windowDays as number,
+    timezone: g.timezone as string,
+  }
 }
 
 function parseOverviewPayload(raw: unknown): OverviewData | null {
@@ -111,6 +158,8 @@ function parseOverviewPayload(raw: unknown): OverviewData | null {
   const o = raw as Record<string, unknown>
   const featured = o.featuredStatus
   if (featured !== 'live' && featured !== 'incomplete') return null
+  const growth = parseGrowthPayload(o.growth)
+  if (!growth) return null
   const nums = [
     'pendingReports',
     'pendingArtistApps',
@@ -132,6 +181,7 @@ function parseOverviewPayload(raw: unknown): OverviewData | null {
     approvedArtists: o.approvedArtists as number,
     artistsNeedingAttention: o.artistsNeedingAttention as number,
     featuredStatus: featured,
+    growth,
   }
 }
 
@@ -997,7 +1047,9 @@ function OverviewPanel({
           })
         }
         const { _perf: _drop, ...kpi } = body as OverviewData & { _perf?: unknown }
-        if (!cancelled) setData(kpi as OverviewData)
+        const parsed = parseOverviewPayload(kpi)
+        if (!parsed) throw new Error('Invalid overview payload')
+        if (!cancelled) setData(parsed)
       } catch (e: any) {
         if (!cancelled) {
           setError(e?.message || 'Failed to load overview')
@@ -1132,10 +1184,108 @@ function OverviewPanel({
         <p style={rowLabel}>Needs attention</p>
         <div style={gridStyle}>{actionCards.map(renderCard)}</div>
       </div>
-      <div>
+      <div style={{ marginBottom: '28px' }}>
         <p style={rowLabel}>Catalog & roster</p>
         <div style={gridStyle}>{statCards.map(renderCard)}</div>
       </div>
+      {data?.growth && (
+        <div>
+          <p style={rowLabel}>Growth</p>
+          <div style={gridStyle}>
+            <div style={{ ...S.card, marginBottom: 0 }}>
+              <p style={{
+                fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: 'var(--gold)',
+                fontWeight: 700, marginBottom: '6px',
+              }}>
+                {data.growth.signupsTotal}
+              </p>
+              <p style={{
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)',
+                textTransform: 'uppercase', letterSpacing: '1px', lineHeight: 1.4, marginBottom: '10px',
+              }}>
+                Total signups
+              </p>
+              <SignupSparkline days={data.growth.signupsByDay} />
+              <p style={{
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', color: 'rgba(255,255,255,0.25)',
+                marginTop: '8px', letterSpacing: '0.5px',
+              }}>
+                Last {data.growth.windowDays} days · {data.growth.timezone.replace('_', ' ')}
+              </p>
+            </div>
+            <div style={{ ...S.card, marginBottom: 0 }}>
+              <p style={{
+                fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: 'var(--gold)',
+                fontWeight: 700, marginBottom: '6px',
+              }}>
+                {data.growth.postsActive}
+              </p>
+              <p style={{
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)',
+                textTransform: 'uppercase', letterSpacing: '1px', lineHeight: 1.4, marginBottom: '6px',
+              }}>
+                Posts
+              </p>
+              <p style={{
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.28)',
+                lineHeight: 1.4,
+              }}>
+                {data.growth.postsActive} active · {data.growth.postsAll} total
+              </p>
+            </div>
+            <div style={{ ...S.card, marginBottom: 0 }}>
+              <p style={{
+                fontFamily: 'var(--font-lora), serif', fontSize: '1.5rem', color: 'var(--gold)',
+                fontWeight: 700, marginBottom: '6px',
+              }}>
+                {data.growth.lyricBacksActive}
+              </p>
+              <p style={{
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.35)',
+                textTransform: 'uppercase', letterSpacing: '1px', lineHeight: 1.4, marginBottom: '6px',
+              }}>
+                Lyric backs
+              </p>
+              <p style={{
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'rgba(255,255,255,0.28)',
+                lineHeight: 1.4,
+              }}>
+                {data.growth.lyricBacksActive} active · {data.growth.lyricBacksAll} total
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SignupSparkline({ days }: { days: { date: string; count: number }[] }) {
+  const max = Math.max(1, ...days.map((d) => d.count))
+  return (
+    <div
+      title="Signups per day"
+      style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        gap: '2px',
+        height: 28,
+        width: '100%',
+      }}
+    >
+      {days.map((d) => (
+        <div
+          key={d.date}
+          title={`${d.date}: ${d.count}`}
+          style={{
+            flex: 1,
+            minWidth: 2,
+            height: `${Math.max(8, Math.round((d.count / max) * 100))}%`,
+            background: d.count > 0 ? 'rgba(232,197,71,0.55)' : 'rgba(255,255,255,0.06)',
+            borderRadius: 1,
+          }}
+        />
+      ))}
     </div>
   )
 }
