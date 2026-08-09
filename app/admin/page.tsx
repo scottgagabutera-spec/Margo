@@ -39,6 +39,14 @@ interface CatalogPost {
 async function adminFetch(input: string, init?: RequestInit) {
   const headers = new Headers(init?.headers)
   if (!headers.has('Content-Type') && init?.body) headers.set('Content-Type', 'application/json')
+  // Temporary diagnosis: /admin?perf=1 → server returns `_perf` + logs [perf]
+  if (typeof window !== 'undefined') {
+    try {
+      if (new URLSearchParams(window.location.search).get('perf') === '1') {
+        headers.set('x-margo-perf', '1')
+      }
+    } catch { /* ignore */ }
+  }
   return fetch(input, { ...init, credentials: 'include', headers })
 }
 
@@ -115,7 +123,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       }
       await rehydrate()
 
-      const sessionRes = await fetch('/api/admin/session', { credentials: 'include' })
+      const sessionRes = await adminFetch('/api/admin/session')
       if (sessionRes.status === 403) {
         await signOutBrowser()
         setError("This account doesn't have admin access.")
@@ -922,11 +930,20 @@ function OverviewPanel({ onNavigate }: { onNavigate: (section: AdminSection) => 
     ;(async () => {
       setLoading(true)
       setError(null)
+      const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
       try {
         const res = await adminFetch('/api/admin/overview')
         const body = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status))
-        if (!cancelled) setData(body as OverviewData)
+        const clientMs = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0)
+        if (body._perf && typeof window !== 'undefined') {
+          console.log('[perf] admin client waterfall — overview hop', {
+            clientFetchMs: clientMs,
+            server: body._perf,
+          })
+        }
+        const { _perf: _drop, ...kpi } = body as OverviewData & { _perf?: unknown }
+        if (!cancelled) setData(kpi as OverviewData)
       } catch (e: any) {
         if (!cancelled) {
           setError(e?.message || 'Failed to load overview')
@@ -1081,8 +1098,20 @@ function AdminShell() {
     if (authLoading) return
     let cancelled = false
     ;(async () => {
+      const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
       try {
-        const res = await fetch('/api/admin/session', { credentials: 'include' })
+        // Prefer adminFetch so ?perf=1 sends x-margo-perf
+        const res = await adminFetch('/api/admin/session')
+        const clientMs = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0)
+        if (res.ok) {
+          const body = await res.json().catch(() => ({}))
+          if (body?._perf) {
+            console.log('[perf] admin client waterfall — session hop', {
+              clientFetchMs: clientMs,
+              server: body._perf,
+            })
+          }
+        }
         if (!cancelled) setIsAdmin(res.ok)
       } catch {
         if (!cancelled) setIsAdmin(false)
