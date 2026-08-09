@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback, type CSSProperties } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { setBrowserAccessToken, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -939,25 +939,28 @@ function OverviewPanel({ onNavigate }: { onNavigate: (section: AdminSection) => 
     return () => { cancelled = true }
   }, [])
 
-  const cards: {
+  type OverviewCard = {
     key: string
     label: string
     value: string | number
     warn?: boolean
     section: AdminSection
-  }[] = data
+  }
+
+  // Row 1 = queues that need action; Row 2 = roster/health stats
+  const actionCards: OverviewCard[] = data
     ? [
         { key: 'reports', label: 'Pending reports', value: data.pendingReports, warn: data.pendingReports > 0, section: 'reports' },
         { key: 'apps', label: 'Pending artist apps', value: data.pendingArtistApps, warn: data.pendingArtistApps > 0, section: 'artists' },
         { key: 'flagged', label: 'Flagged posts', value: data.flaggedPosts, warn: data.flaggedPosts > 0, section: 'posts' },
         { key: 'hidden', label: 'Hidden posts', value: data.hiddenPosts, section: 'posts' },
+      ]
+    : []
+
+  const statCards: OverviewCard[] = data
+    ? [
         { key: 'songs', label: 'Live songs', value: data.liveSongs, section: 'catalog' },
-        {
-          key: 'approved',
-          label: 'Approved artists',
-          value: data.approvedArtists,
-          section: 'artists',
-        },
+        { key: 'approved', label: 'Approved artists', value: data.approvedArtists, section: 'artists' },
         {
           key: 'artists',
           label: 'Artists needing attention',
@@ -974,6 +977,62 @@ function OverviewPanel({ onNavigate }: { onNavigate: (section: AdminSection) => 
         },
       ]
     : []
+
+  const rowLabel: CSSProperties = {
+    fontFamily: 'var(--font-lora), serif',
+    fontSize: '0.55rem',
+    color: 'rgba(255,255,255,0.28)',
+    textTransform: 'uppercase',
+    letterSpacing: '1.5px',
+    marginBottom: '10px',
+  }
+
+  const gridStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+    gap: '12px',
+  }
+
+  const renderCard = (card: OverviewCard) => (
+    <button
+      key={card.key}
+      type="button"
+      onClick={() => onNavigate(card.section)}
+      style={{
+        ...S.card,
+        marginBottom: 0,
+        textAlign: 'left',
+        cursor: 'pointer',
+        width: '100%',
+        font: 'inherit',
+        color: 'inherit',
+      }}
+    >
+      <p
+        style={{
+          fontFamily: 'var(--font-lora), serif',
+          fontSize: '1.5rem',
+          color: card.warn ? '#ff6060' : 'var(--gold)',
+          fontWeight: 700,
+          marginBottom: '8px',
+        }}
+      >
+        {card.value}
+      </p>
+      <p
+        style={{
+          fontFamily: 'var(--font-lora), serif',
+          fontSize: '0.55rem',
+          color: 'rgba(255,255,255,0.35)',
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
+          lineHeight: 1.4,
+        }}
+      >
+        {card.label}
+      </p>
+    </button>
+  )
 
   if (loading) {
     return (
@@ -996,53 +1055,13 @@ function OverviewPanel({ onNavigate }: { onNavigate: (section: AdminSection) => 
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '24px', lineHeight: 1.6 }}>
         At-a-glance counts from live Supabase data. Click a card to open that queue.
       </p>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-          gap: '12px',
-        }}
-      >
-        {cards.map((card) => (
-          <button
-            key={card.key}
-            type="button"
-            onClick={() => onNavigate(card.section)}
-            style={{
-              ...S.card,
-              marginBottom: 0,
-              textAlign: 'left',
-              cursor: 'pointer',
-              width: '100%',
-              font: 'inherit',
-              color: 'inherit',
-            }}
-          >
-            <p
-              style={{
-                fontFamily: 'var(--font-lora), serif',
-                fontSize: '1.5rem',
-                color: card.warn ? '#ff6060' : 'var(--gold)',
-                fontWeight: 700,
-                marginBottom: '8px',
-              }}
-            >
-              {card.value}
-            </p>
-            <p
-              style={{
-                fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.55rem',
-                color: 'rgba(255,255,255,0.35)',
-                textTransform: 'uppercase',
-                letterSpacing: '1px',
-                lineHeight: 1.4,
-              }}
-            >
-              {card.label}
-            </p>
-          </button>
-        ))}
+      <div style={{ marginBottom: '28px' }}>
+        <p style={rowLabel}>Needs attention</p>
+        <div style={gridStyle}>{actionCards.map(renderCard)}</div>
+      </div>
+      <div>
+        <p style={rowLabel}>Catalog & roster</p>
+        <div style={gridStyle}>{statCards.map(renderCard)}</div>
       </div>
     </div>
   )
