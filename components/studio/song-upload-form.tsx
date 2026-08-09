@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useIdentity } from '@/hooks/useIdentity'
 
 const supabase = createClient()
 
@@ -75,6 +76,7 @@ const STAGE_LABEL: Record<Stage, string> = {
 }
 
 export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: SongUploadFormProps) {
+  const { user } = useIdentity()
   const [title, setTitle] = useState('')
   const [artistName, setArtistName] = useState(artistDisplayName)
   const [description, setDescription] = useState('')
@@ -178,8 +180,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
     if (!artworkFile) { setError('Artwork is required.'); return }
 
     try {
-      const { data: userData } = await supabase.auth.getUser()
-      const uid = userData?.user?.id
+      const uid = user?.id
       if (!uid) { setError('Not signed in.'); return }
 
       const songId = crypto.randomUUID()

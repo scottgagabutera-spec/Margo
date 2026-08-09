@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const supabase = createClient()
 
@@ -87,11 +88,14 @@ type ModerationNotificationType =
   | 'removed'
   | 'restored'
 
-async function notifyProfile(recipientId: string, type: ModerationNotificationType) {
-  const { data: { user } } = await supabase.auth.getUser()
+async function notifyProfile(
+  recipientId: string,
+  type: ModerationNotificationType,
+  actorId: string | null,
+) {
   const { error } = await supabase.from('notifications').insert({
     recipient_id: recipientId,
-    actor_id: user?.id ?? null,
+    actor_id: actorId,
     type,
   })
   if (error) console.error('Failed to notify profile:', error)
@@ -99,6 +103,7 @@ async function notifyProfile(recipientId: string, type: ModerationNotificationTy
 
 // ── Applications section ──
 function ApplicationsSection() {
+  const { user } = useAuthGate()
   const [applications, setApplications] = useState<ArtistApplicationRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending')
@@ -142,7 +147,7 @@ function ApplicationsSection() {
       return
     }
 
-    await notifyProfile(app.profile_id, decision === 'approved' ? 'artist_approved' : 'artist_rejected')
+    await notifyProfile(app.profile_id, decision === 'approved' ? 'artist_approved' : 'artist_rejected', user?.id ?? null)
 
     setActioningId(null)
     load()
@@ -215,6 +220,7 @@ function ApplicationsSection() {
 
 // ── Moderation section (approved artists — warn/freeze/remove) ──
 function ModerationSection() {
+  const { user } = useAuthGate()
   const [artists, setArtists] = useState<ArtistProfileRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'active' | 'warned' | 'frozen' | 'removed' | 'all'>('all')
@@ -259,7 +265,7 @@ function ModerationSection() {
       return
     }
 
-    await notifyProfile(actionTarget.id, newStatus)
+    await notifyProfile(actionTarget.id, newStatus, user?.id ?? null)
     setActionTarget(null)
     setReason('')
     load()
@@ -275,7 +281,7 @@ function ModerationSection() {
       console.error('Failed to restore artist:', error)
       return
     }
-    await notifyProfile(id, 'restored')
+    await notifyProfile(id, 'restored', user?.id ?? null)
     load()
   }
 

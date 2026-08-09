@@ -27,6 +27,8 @@ type RehydrateOptions = {
 interface AuthGateContextValue {
   user: User | null
   loading: boolean
+  /** True when the signed-in user has an email/password identity. */
+  hasPasswordAuth: boolean
   requireAuth: () => boolean
   /** Re-read httpOnly session → memory access token (after login/logout). */
   rehydrate: (opts?: RehydrateOptions) => Promise<void>
@@ -42,6 +44,7 @@ const AuthGateContext = createContext<AuthGateContextValue | null>(null)
 export function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [hasPasswordAuth, setHasPasswordAuth] = useState(false)
   const [gateOpen, setGateOpen] = useState(false)
   const userRef = useRef<User | null>(null)
   const applyingRemoteRef = useRef(false)
@@ -50,6 +53,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const applyAuthPayload = useCallback((body: {
     user?: { id: string; email?: string | null; is_anonymous?: boolean } | null
     access_token?: string
+    has_password_auth?: boolean
   } | null) => {
     if (body?.access_token && body?.user) {
       setBrowserAccessToken(body.access_token)
@@ -58,11 +62,13 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         email: body.user.email ?? undefined,
         is_anonymous: body.user.is_anonymous,
       } as User)
+      setHasPasswordAuth(body.has_password_auth === true)
       setGateOpen(false)
       return
     }
     setBrowserAccessToken(null)
     setUser(null)
+    setHasPasswordAuth(false)
   }, [])
 
   const rehydrate = useCallback(async (opts?: RehydrateOptions) => {
@@ -190,7 +196,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, [user, loading])
 
   return (
-    <AuthGateContext.Provider value={{ user, loading, requireAuth, rehydrate }}>
+    <AuthGateContext.Provider value={{ user, loading, hasPasswordAuth, requireAuth, rehydrate }}>
       {children}
       <AuthGateModal open={gateOpen} onOpenChange={setGateOpen} />
     </AuthGateContext.Provider>

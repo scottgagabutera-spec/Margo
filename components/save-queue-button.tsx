@@ -5,14 +5,14 @@ import { saveCurrentQueueAsPlaylist } from '@/lib/queues'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 
 export function SaveQueueButton({ defaultTitle }: { defaultTitle: string }) {
-  const { requireAuth } = useAuthGate()
+  const { requireAuth, user } = useAuthGate()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   const handleSave = async () => {
-    if (!requireAuth()) return
+    if (!requireAuth() || !user) return
     setSaving(true)
-    const result = await saveCurrentQueueAsPlaylist(defaultTitle, false)
+    const result = await saveCurrentQueueAsPlaylist(defaultTitle, false, user.id)
     setSaving(false)
     if (result) {
       setSaved(true)

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 import { BackButton } from '@/components/back-button'
 
 const supabase = createClient()
@@ -209,9 +210,9 @@ function TierTwoButton({
 }
 
 export default function AccountSettingsPage() {
+  const { user, loading: authLoading, hasPasswordAuth } = useAuthGate()
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const [hasPasswordAuth, setHasPasswordAuth] = useState(false)
   const [profile, setProfile] = useState<ProfileRow | null>(null)
   const [application, setApplication] = useState<ArtistApplication | null>(null)
   const [notifications, setNotifications] = useState<NotificationPrefs>(DEFAULT_NOTIFICATIONS)
@@ -225,23 +226,29 @@ export default function AccountSettingsPage() {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
+    if (authLoading) return
+
+    if (!user) {
+      setUserId(null)
+      setProfile(null)
+      setApplication(null)
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
+
     async function load() {
-      const { data: authData } = await supabase.auth.getUser()
-      const user = authData?.user
-      if (!user) {
-        setLoading(false)
-        return
-      }
-      setUserId(user.id)
-      setHasPasswordAuth(
-        (user.identities ?? []).some((i) => i.provider === 'email'),
-      )
+      setLoading(true)
+      setUserId(user!.id)
 
       const { data: profileRow } = await supabase
         .from('profiles')
         .select('id, username, is_artist, is_private, who_can_message, deactivated_at, settings')
-        .eq('id', user.id)
+        .eq('id', user!.id)
         .single()
+
+      if (cancelled) return
 
       if (profileRow) {
         setProfile(profileRow as ProfileRow)
@@ -249,22 +256,31 @@ export default function AccountSettingsPage() {
           ...DEFAULT_NOTIFICATIONS,
           ...(profileRow.settings?.notifications ?? {}),
         })
+      } else {
+        setProfile(null)
       }
 
       const { data: applicationRow } = await supabase
         .from('artist_applications')
         .select('status, created_at')
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
+      if (cancelled) return
+
       if (applicationRow) setApplication(applicationRow as ArtistApplication)
+      else setApplication(null)
 
       setLoading(false)
     }
-    load()
-  }, [])
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [authLoading, user])
 
   async function updatePassword() {
     if (newPassword.length < 8) {
@@ -273,13 +289,24 @@ export default function AccountSettingsPage() {
     }
     setPasswordStatus(null)
     setSavingSection('password')
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
-    setSavingSection(null)
-    if (error) {
-      setPasswordStatus(error.message)
-    } else {
+    try {
+      const res = await fetch('/api/auth/update-password', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
+      })
+      const body = await res.json().catch(() => ({}))
+      setSavingSection(null)
+      if (!res.ok) {
+        setPasswordStatus(body.error || 'Could not update password.')
+        return
+      }
       setPasswordStatus('Password updated.')
       setNewPassword('')
+    } catch {
+      setSavingSection(null)
+      setPasswordStatus('Could not reach the server. Try again.')
     }
   }
 
@@ -341,7 +368,7 @@ export default function AccountSettingsPage() {
     }
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
         Loading your settings.
@@ -349,10 +376,18 @@ export default function AccountSettingsPage() {
     )
   }
 
-  if (!profile) {
+  if (!user) {
     return (
       <div style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
         Sign in to view account settings.
+      </div>
+    )
+  }
+
+  if (!profile) {
+    return (
+      <div style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
+        Could not load your profile. Try refreshing the page.
       </div>
     )
   }
