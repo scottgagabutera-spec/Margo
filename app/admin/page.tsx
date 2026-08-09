@@ -856,6 +856,7 @@ interface OverviewData {
   flaggedPosts: number
   hiddenPosts: number
   liveSongs: number
+  approvedArtists: number
   artistsNeedingAttention: number
   featuredStatus: 'live' | 'incomplete'
 }
@@ -900,6 +901,12 @@ function OverviewPanel({ onNavigate }: { onNavigate: (section: AdminSection) => 
         { key: 'flagged', label: 'Flagged posts', value: data.flaggedPosts, warn: data.flaggedPosts > 0, section: 'posts' },
         { key: 'hidden', label: 'Hidden posts', value: data.hiddenPosts, section: 'posts' },
         { key: 'songs', label: 'Live songs', value: data.liveSongs, section: 'catalog' },
+        {
+          key: 'approved',
+          label: 'Approved artists',
+          value: data.approvedArtists,
+          section: 'artists',
+        },
         {
           key: 'artists',
           label: 'Artists needing attention',

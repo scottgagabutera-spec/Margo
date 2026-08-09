@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 /**
  * Glance KPIs for admin overview — exact service-role counts (not list caps).
- * KPI #6 uses real columns profiles.is_artist + profiles.artist_status
+ * Artist KPIs use real columns profiles.is_artist + profiles.artist_status
  * (migration 20260731_artist_approval_trigger.sql).
  */
 export async function GET() {
@@ -41,6 +41,11 @@ export async function GET() {
       .select('id', { count: 'exact', head: true })
       .eq('status', 'live')
 
+    const approvedArtistsQ = admin
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_artist', true)
+
     const artistsAttentionQ = admin
       .from('profiles')
       .select('id', { count: 'exact', head: true })
@@ -59,6 +64,7 @@ export async function GET() {
       flaggedPostsRes,
       hiddenPostsRes,
       liveSongsRes,
+      approvedArtistsRes,
       artistsAttentionRes,
       featuredRes,
     ] = await Promise.all([
@@ -67,6 +73,7 @@ export async function GET() {
       flaggedPostsQ,
       hiddenPostsQ,
       liveSongsQ,
+      approvedArtistsQ,
       artistsAttentionQ,
       featuredQ,
     ])
@@ -77,6 +84,7 @@ export async function GET() {
       flaggedPostsRes.error,
       hiddenPostsRes.error,
       liveSongsRes.error,
+      approvedArtistsRes.error,
       artistsAttentionRes.error,
       featuredRes.error,
     ].filter(Boolean)
@@ -97,6 +105,7 @@ export async function GET() {
       flaggedPosts: flaggedPostsRes.count ?? 0,
       hiddenPosts: hiddenPostsRes.count ?? 0,
       liveSongs: liveSongsRes.count ?? 0,
+      approvedArtists: approvedArtistsRes.count ?? 0,
       artistsNeedingAttention: artistsAttentionRes.count ?? 0,
       featuredStatus,
     })
