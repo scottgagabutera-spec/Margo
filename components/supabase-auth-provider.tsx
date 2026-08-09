@@ -75,11 +75,27 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     // Always wipe readable legacy auth material before /me (shadowing fix).
     clearLegacyAuthStorage()
     const soft = opts?.soft === true
+    const wantPerf =
+      typeof window !== 'undefined' &&
+      (() => {
+        try {
+          return new URLSearchParams(window.location.search).get('perf') === '1'
+        } catch {
+          return false
+        }
+      })()
+    const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now()
     try {
-      const res = await fetch('/api/auth/me', { credentials: 'include' })
+      const headers: HeadersInit = {}
+      if (wantPerf) headers['x-margo-perf'] = '1'
+      const res = await fetch('/api/auth/me', { credentials: 'include', headers })
+      const clientMs = Math.round(
+        (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0,
+      )
 
       // Genuinely signed out — cookies absent/invalid.
       if (res.status === 401) {
+        if (wantPerf) console.log('[perf] auth/me client', { clientFetchMs: clientMs, status: 401 })
         applyAuthPayload(null)
         return
       }
@@ -92,6 +108,9 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       }
 
       const body = await res.json()
+      if (wantPerf) {
+        console.log('[perf] auth/me client', { clientFetchMs: clientMs, server: body?._perf ?? null })
+      }
       const hadUser = !!userRef.current
       applyAuthPayload(body)
 
