@@ -17,12 +17,17 @@ export async function GET() {
     return NextResponse.json({ user: null }, { status: 401 })
   }
 
+  const has_password_auth = (user.identities ?? []).some(
+    (identity) => identity.provider === 'email',
+  )
+
   return NextResponse.json({
     user: {
       id: user.id,
       email: user.email ?? null,
       is_anonymous: user.is_anonymous ?? false,
     },
+    has_password_auth,
     access_token: session.access_token,
   })
 }

@@ -54,22 +54,25 @@ function statusLabel(status: StudioSong['status']) {
 }
 
 export default function StudioPage() {
-  const { identity, loading: identityLoading } = useIdentity()
+  const { user, identity, loading: identityLoading } = useIdentity()
   const [songs, setSongs] = useState<StudioSong[]>([])
   const [stats, setStats] = useState<Record<string, SongStat>>({})
   const [songsLoading, setSongsLoading] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
 
+  const userId = user?.id ?? null
+
   const loadSongs = useCallback(async () => {
+    if (!userId) {
+      setSongsLoading(false)
+      return
+    }
     setSongsLoading(true)
-    const { data: userData } = await supabase.auth.getUser()
-    const uid = userData?.user?.id
-    if (!uid) { setSongsLoading(false); return }
 
     const { data: songRows } = await supabase
       .from('songs')
       .select('id, title, artist_display_name, artwork_url, status, created_at')
-      .eq('owner_profile_id', uid)
+      .eq('owner_profile_id', userId)
       .order('created_at', { ascending: false })
 
     const list = (songRows || []) as StudioSong[]
@@ -88,7 +91,7 @@ export default function StudioPage() {
       setStats({})
     }
     setSongsLoading(false)
-  }, [])
+  }, [userId])
 
   // FIX: songs were only ever loaded gated on identity?.isArtist, with
   // no check on artist_status — a frozen or removed artist's uploaded

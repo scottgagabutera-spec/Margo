@@ -19,9 +19,8 @@ export interface SaveQueueResult {
 export async function saveCurrentQueueAsPlaylist(
   title: string,
   isPublic: boolean,
+  ownerId: string,
 ): Promise<SaveQueueResult | null> {
-  const { data: userData } = await supabase.auth.getUser()
-  const ownerId = userData?.user?.id
   if (!ownerId) return null
 
   const { queue } = getAudioEngineState()
