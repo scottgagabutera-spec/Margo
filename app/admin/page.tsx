@@ -50,6 +50,16 @@ async function adminFetch(input: string, init?: RequestInit) {
   return fetch(input, { ...init, credentials: 'include', headers })
 }
 
+/** Shared admin chrome — soft dark gradient + faint gold bloom (no purple). */
+const ADMIN_PAGE_BG: CSSProperties = {
+  minHeight: '100vh',
+  background: [
+    'radial-gradient(ellipse 85% 50% at 50% -8%, var(--gold-glow), transparent 58%)',
+    'linear-gradient(180deg, var(--gold-faint) 0%, transparent 32%)',
+    'linear-gradient(165deg, var(--surface-2) 0%, var(--bg) 38%, var(--surface) 72%, var(--bg) 100%)',
+  ].join(', '),
+}
+
 const S: Record<string, any> = {
   input: {
     width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.04)',
@@ -242,7 +252,7 @@ function LoginForm({
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+    <div style={{ ...ADMIN_PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ width: '100%', maxWidth: '360px' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>Margo</p>
@@ -1357,7 +1367,7 @@ function AdminShell() {
 
   if (authLoading || !sessionChecked) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ ...ADMIN_PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)' }}>Loading…</p>
       </div>
     )
@@ -1408,7 +1418,7 @@ function AdminShell() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+    <div style={{ ...ADMIN_PAGE_BG }}>
       <div
         style={{
           maxWidth: '1100px',
@@ -1494,7 +1504,7 @@ export default function AdminPage() {
   return (
     <Suspense
       fallback={
-        <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ ...ADMIN_PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <p style={{ fontFamily: 'var(--font-lora), serif', color: 'rgba(255,255,255,0.3)' }}>Loading…</p>
         </div>
       }
