@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
 import MargoLogo from '@/components/MargoLogo'
 import { LoadingRing } from '@/components/loading-ring'
+import { readActiveScrollTop } from '@/components/primary-tab-shell'
 
 const THRESHOLD = 80
 const MAX_PULL = 130
@@ -21,6 +22,9 @@ interface PullToRefreshProps {
  * Lightweight pull-to-refresh for primary scroll pages.
  * Touch-driven (does not rely on browser overscroll bounce).
  * Indicator: static Margo mark + LoadingRing (progress / ready / spin).
+ *
+ * "At top" uses the active primary-tab pane scrollTop when keepalive
+ * scrollports are mounted; falls back to window on full-nav routes.
  */
 export function PullToRefresh({
   onRefresh,
@@ -39,10 +43,7 @@ export function PullToRefresh({
   onRefreshRef.current = onRefresh
   onRefreshingChangeRef.current = onRefreshingChange
 
-  const atTop = useCallback(() => {
-    if (typeof window === 'undefined') return false
-    return (window.scrollY || document.documentElement.scrollTop || 0) <= 2
-  }, [])
+  const atTop = useCallback(() => readActiveScrollTop() <= 2, [])
 
   useEffect(() => {
     if (!enabled) return
@@ -70,7 +71,6 @@ export function PullToRefresh({
         setPull(0)
         return
       }
-      // Resist scroll chaining while pulling down from top
       if (dy > 8 && e.cancelable) e.preventDefault()
       const damped = Math.min(MAX_PULL, dy * 0.55)
       pullRef.current = damped
@@ -118,7 +118,6 @@ export function PullToRefresh({
 
   const progress = Math.min(1, pull / THRESHOLD)
   const ready = pull >= THRESHOLD && !refreshing
-
   const ringState = refreshing ? 'spinning' : ready ? 'ready' : 'progress'
 
   return (

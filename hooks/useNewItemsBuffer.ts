@@ -1,27 +1,36 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import {
+  getActivePrimaryScrollEl,
+  readActiveScrollTop,
+  scrollActiveTo,
+} from '@/components/primary-tab-shell'
 
 const DEFAULT_TOP_PX = 80
 
-function readScrollY() {
-  if (typeof window === 'undefined') return 0
-  return window.scrollY || document.documentElement.scrollTop || 0
-}
-
 /**
- * True when the document is near the top (within thresholdPx).
- * Shared by new-items buffering and any future "stick to head" UX.
+ * True when the active scrollport is near the top (within thresholdPx).
+ * Uses the primary-tab pane when keepalive is active; otherwise window.
  */
 export function useIsNearTop(thresholdPx: number = DEFAULT_TOP_PX) {
+  const pathname = usePathname()
   const [nearTop, setNearTop] = useState(true)
 
   useEffect(() => {
-    const update = () => setNearTop(readScrollY() <= thresholdPx)
+    const update = () => setNearTop(readActiveScrollTop() <= thresholdPx)
     update()
+
+    const pane = getActivePrimaryScrollEl()
+    if (pane) {
+      pane.addEventListener('scroll', update, { passive: true })
+      return () => pane.removeEventListener('scroll', update)
+    }
+
     window.addEventListener('scroll', update, { passive: true })
     return () => window.removeEventListener('scroll', update)
-  }, [thresholdPx])
+  }, [thresholdPx, pathname])
 
   return nearTop
 }
@@ -121,9 +130,7 @@ export function useNewItemsBuffer<T extends { id: string }>(
     displayedRef.current = next
     setDisplayed(next)
     setPendingIds([])
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
+    scrollActiveTo(0, 'smooth')
   }, [])
 
   const applyImmediate = useCallback((snapshot?: T[]) => {

@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
+import { PrimaryTabShell } from '@/components/primary-tab-shell'
 
 const EDGE_ZONE_PX = 24
 const AXIS_SLOP_PX = 10
@@ -196,7 +197,9 @@ export function TabSwipeProvider({ children }: { children: ReactNode }) {
       onAnimationEnd={() => setSlideClass('')}
       style={{ minHeight: '100%' }}
     >
-      {children}
+      <PrimaryTabShell ownProfileHref={ownProfileHref}>
+        {children}
+      </PrimaryTabShell>
     </div>
   )
 }
