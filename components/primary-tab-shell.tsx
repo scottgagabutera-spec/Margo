@@ -24,6 +24,10 @@ import { usePathname } from 'next/navigation'
  *
  * Inactive panes use visibility:hidden + fixed stacking — not display:none —
  * because display:none makes scrollTop read as 0 and corrupted leave-saves.
+ *
+ * Leave saves must NOT trust a live scrollTop read after hide/reflow: browsers
+ * and scroll-anchoring can mutate it. Freeze the last known-good value in a
+ * ref while the pane is active/visible, and restore from that ref on show.
  */
 
 export type PrimaryTabId = 'feed' | 'discover' | 'alerts' | 'you'
@@ -88,6 +92,17 @@ function writeStoredScrollMap(map: Partial<Record<PrimaryTabId, number>>) {
   }
 }
 
+function persistScroll(
+  frozen: Partial<Record<PrimaryTabId, number>>,
+  id: PrimaryTabId,
+  y: number
+) {
+  frozen[id] = y
+  const map = readStoredScrollMap()
+  map[id] = y
+  writeStoredScrollMap(map)
+}
+
 interface PrimaryTabContextValue {
   activeTab: PrimaryTabId | null
   isTabActive: (id: PrimaryTabId) => boolean
@@ -117,6 +132,9 @@ const paneStyle = (active: boolean): CSSProperties => ({
   overflowY: 'auto',
   WebkitOverflowScrolling: 'touch',
   overscrollBehaviorY: 'contain',
+  // Prevent browser scroll-anchoring from rewriting scrollTop during
+  // sibling pane mount / content reflow while this pane is hidden.
+  overflowAnchor: 'none',
   boxSizing: 'border-box',
   visibility: active ? 'visible' : 'hidden',
   pointerEvents: active ? 'auto' : 'none',
@@ -131,6 +149,8 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
   const cacheRef = useRef(new Map<PrimaryTabId, ReactNode>())
   const paneElsRef = useRef(new Map<PrimaryTabId, HTMLElement | null>())
   const prevTabRef = useRef<PrimaryTabId | null>(null)
+  /** Last known-good scrollTop per pane, captured while the pane was active. */
+  const frozenScrollRef = useRef<Partial<Record<PrimaryTabId, number>>>({})
   const [, setCacheVersion] = useState(0)
 
   // First visit only — keep the mounted tree; ignore later Next remount payloads.
@@ -142,6 +162,7 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
     if (!ownProfileHref && cacheRef.current.has('you')) {
       cacheRef.current.delete('you')
       paneElsRef.current.delete('you')
+      delete frozenScrollRef.current.you
       const map = readStoredScrollMap()
       delete map.you
       writeStoredScrollMap(map)
@@ -162,29 +183,43 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
     }
   }, [activeTab])
 
-  // Persist leaving tab to sessionStorage; restore incoming tab from storage if needed.
-  // Safe to read scrollTop here — inactive panes use visibility:hidden (not display:none).
+  // Flush leaving tab from frozen ref (not post-hide live scrollTop);
+  // restore incoming tab from frozen/sessionStorage after hide/reflow.
   useLayoutEffect(() => {
     const prev = prevTabRef.current
+    const frozen = frozenScrollRef.current
 
     if (prev && prev !== activeTab) {
       const el = paneElsRef.current.get(prev)
-      if (el) {
-        const map = readStoredScrollMap()
-        map[prev] = el.scrollTop
-        writeStoredScrollMap(map)
+      // Prefer the freeze taken while active. Only seed from live if we never
+      // recorded a value — and never overwrite a non-zero freeze with a 0 read
+      // that can appear after hide/reflow.
+      const prior = frozen[prev]
+      const live = el?.scrollTop ?? 0
+      const y =
+        prior != null && !(prior > 0 && live === 0) ? prior : live
+      persistScroll(frozen, prev, y)
+      // Re-apply freeze onto the element in case hide/reflow jumped it.
+      if (el && Math.abs(el.scrollTop - y) > 1) {
+        el.scrollTop = y
       }
     }
 
     if (activeTab) {
       const el = paneElsRef.current.get(activeTab)
       if (el) {
-        const stored = readStoredScrollMap()[activeTab]
-        // Prefer live element scrollTop (preserved under visibility:hidden);
-        // storage covers remount / full-nav edge cases.
-        if (stored != null && stored > 0 && Math.abs(el.scrollTop - stored) > 1) {
-          if (el.scrollTop === 0) el.scrollTop = stored
+        const target =
+          frozen[activeTab] ?? readStoredScrollMap()[activeTab] ?? el.scrollTop
+        if (target != null && Math.abs(el.scrollTop - target) > 1) {
+          el.scrollTop = target
         }
+        frozen[activeTab] = target
+        // Second pass after layout settles (sibling pane mount / images).
+        requestAnimationFrame(() => {
+          if (Math.abs(el.scrollTop - target) > 1) {
+            el.scrollTop = target
+          }
+        })
       }
       window.scrollTo(0, 0)
     }
@@ -192,18 +227,23 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
     prevTabRef.current = activeTab
   }, [activeTab, pathname])
 
-  // Continuously mirror active pane scroll into sessionStorage (Compose → back).
+  // Continuously freeze + mirror active pane scroll (Compose → back).
+  // Ignore scroll events once the pane is no longer the active/visible one
+  // so a post-hide jump cannot corrupt the freeze.
   useEffect(() => {
     if (!activeTab) return
     const el = paneElsRef.current.get(activeTab)
     if (!el) return
+    const tabId = activeTab
 
     const onScroll = () => {
-      const map = readStoredScrollMap()
-      map[activeTab] = el.scrollTop
-      writeStoredScrollMap(map)
+      if (el.getAttribute('data-margo-primary-tab-active') !== '1') return
+      if (getComputedStyle(el).visibility !== 'visible') return
+      persistScroll(frozenScrollRef.current, tabId, el.scrollTop)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
+    // Seed freeze with whatever the pane currently has while visible.
+    onScroll()
     return () => el.removeEventListener('scroll', onScroll)
   }, [activeTab, pathname])
 

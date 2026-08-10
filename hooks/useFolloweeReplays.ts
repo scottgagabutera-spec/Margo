@@ -166,11 +166,21 @@ export function useFolloweeReplays(limit = 80) {
   useEffect(() => {
     void load()
     if (!user?.id) return
-    const channel = supabase
-      .channel(`followee-replays-${user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_replays' }, () => { void load() })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    // Unique topic per mount — fixed `followee-replays-${id}` races under
+    // keepalive remount / Strict Mode the same way posts-feed did.
+    try {
+      const topic = `followee-replays:${user.id}:${crypto.randomUUID()}`
+      channel = supabase
+        .channel(topic)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_replays' }, () => { void load() })
+        .subscribe()
+    } catch (err) {
+      console.error('followee-replays realtime failed', err)
+    }
+    return () => {
+      if (channel) supabase.removeChannel(channel)
+    }
   }, [user?.id, load])
 
   return { replays, loading, reload: load }
