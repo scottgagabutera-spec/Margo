@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
+import { useMessaging } from '@/hooks/useMessaging'
 
 const supabase = createClient()
 
@@ -38,13 +39,16 @@ export interface ThreadPartner {
  * and could both wrongly allow and wrongly block real cases.
  *
  * The realtime effect depends on `userId` (a stable primitive), not
- * the `user` object itself — see useUnreadMessagesCount.ts for the
- * full explanation of why depending on the object reference caused
- * Realtime channel teardown/rebuild races elsewhere in the app.
+ * the `user` object itself — see MessagingProvider for the shared
+ * inbox/badge channel; this hook only opens a page-scoped thread channel.
+ *
+ * On successful send / mark-read, updates MessagingProvider locally so
+ * the inbox preview and nav badge stay in sync without a remount.
  */
 export function useThread(otherUsername: string) {
   const { user } = useIdentity()
   const userId = user?.id
+  const { applyOutboundMessage, clearUnreadForPartner } = useMessaging()
   const [partner, setPartner] = useState<ThreadPartner | null>(null)
   const [messages, setMessages] = useState<ThreadMessage[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,9 +72,11 @@ export function useThread(otherUsername: string) {
 
     const unreadIds = (data || []).filter(m => m.sender_id === other.id && !m.read_at).map(m => m.id)
     if (unreadIds.length > 0) {
+      // Optimistic badge/inbox clear; Realtime reload on MessagingProvider confirms.
+      clearUnreadForPartner(other.id)
       await supabase.from('messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds)
     }
-  }, [])
+  }, [clearUnreadForPartner])
 
   useEffect(() => {
     if (!userId || !otherUsername) {
@@ -131,8 +137,12 @@ export function useThread(otherUsername: string) {
             (m.sender_id === uid && m.recipient_id === other.id) ||
             (m.sender_id === other.id && m.recipient_id === uid)
           if (!belongsHere) return
-          setMessages(prev => [...prev, { id: m.id, senderId: m.sender_id, body: m.body, createdAt: m.created_at, readAt: m.read_at }])
+          setMessages(prev => {
+            if (prev.some(existing => existing.id === m.id)) return prev
+            return [...prev, { id: m.id, senderId: m.sender_id, body: m.body, createdAt: m.created_at, readAt: m.read_at }]
+          })
           if (m.sender_id === other.id) {
+            clearUnreadForPartner(other.id)
             supabase.from('messages').update({ read_at: new Date().toISOString() }).eq('id', m.id)
           }
         })
@@ -145,19 +155,51 @@ export function useThread(otherUsername: string) {
       active = false
       if (channel) supabase.removeChannel(channel)
     }
-  }, [userId, otherUsername, loadThread])
+  }, [userId, otherUsername, loadThread, clearUnreadForPartner])
 
   const sendMessage = useCallback(async (body: string) => {
     if (!userId || !partner || !body.trim()) return
     setSending(true)
-    const { error } = await supabase.from('messages').insert({
-      sender_id: userId,
-      recipient_id: partner.id,
-      body: body.trim(),
-    })
+    const trimmed = body.trim()
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        sender_id: userId,
+        recipient_id: partner.id,
+        body: trimmed,
+      })
+      .select('id, sender_id, body, read_at, created_at')
+      .single()
     setSending(false)
-    if (error) console.error('Failed to send message:', error)
-  }, [userId, partner])
+    if (error) {
+      console.error('Failed to send message:', error)
+      return
+    }
+    if (!data) return
+
+    setMessages(prev => {
+      if (prev.some(m => m.id === data.id)) return prev
+      return [...prev, {
+        id: data.id,
+        senderId: data.sender_id,
+        body: data.body,
+        createdAt: data.created_at,
+        readAt: data.read_at,
+      }]
+    })
+
+    applyOutboundMessage({
+      otherUser: {
+        id: partner.id,
+        username: partner.username,
+        displayName: partner.displayName,
+        avatarUrl: partner.avatarUrl,
+      },
+      body: data.body,
+      createdAt: data.created_at,
+      senderId: data.sender_id,
+    })
+  }, [userId, partner, applyOutboundMessage])
 
   return { partner, messages, loading, canSend, sending, sendMessage }
 }
