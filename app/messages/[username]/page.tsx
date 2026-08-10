@@ -4,6 +4,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useThread } from '@/hooks/useThread'
+import { KeyboardSafeCtaBar } from '@/components/keyboard-safe-cta-bar'
+import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 
 const font = 'var(--font-lora), serif'
 
@@ -18,6 +20,9 @@ export default function ThreadPage() {
   const { partner, messages, loading, canSend, sending, sendMessage } = useThread(params.username)
   const [draft, setDraft] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  // Same chrome stack as Compose: --margo-keyboard-inset + data-margo-keyboard
+  // (hides mobile tab bar while typing). Must run before any early return.
+  const { keyboardOpen, chromeHidden } = useKeyboardSafeChrome()
 
   const isSignedIn = !!user && !user.isAnonymous
 
@@ -87,7 +92,13 @@ export default function ThreadPage() {
         )}
       </div>
 
-      <div style={{ flex: 1, maxWidth: '560px', width: '100%', margin: '0 auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{
+        flex: 1, maxWidth: '560px', width: '100%', margin: '0 auto',
+        padding: '16px 20px',
+        // Clear fixed KeyboardSafeCtaBar + tab bar (Compose uses the same stack).
+        paddingBottom: 'calc(88px + var(--margo-tabbar-h, 0px))',
+        display: 'flex', flexDirection: 'column', gap: '10px',
+      }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
             <div style={{ display: 'flex', gap: '6px' }}>
@@ -119,49 +130,44 @@ export default function ThreadPage() {
         <div ref={bottomRef} />
       </div>
 
-      <div style={{
-        position: 'sticky', bottom: 0, background: 'var(--bg)',
-        borderTop: '1px solid rgba(255,255,255,0.06)', padding: '12px 20px calc(12px + env(safe-area-inset-bottom))',
-      }}>
-        <div style={{ maxWidth: '560px', margin: '0 auto' }}>
-          {!canSend ? (
-            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-              {partner ? `${partner.displayName} isn't accepting messages right now` : ''}
-            </p>
-          ) : (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-              <input
-                value={draft}
-                onChange={e => setDraft(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-                placeholder="Write a message..."
-                style={{
-                  flex: 1, height: '40px', padding: '0 14px',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '20px', color: 'var(--text)', fontFamily: font,
-                  fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box',
-                }}
-              />
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={!draft.trim() || sending}
-                aria-label="Send"
-                style={{
-                  width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-                  background: 'var(--gold)', border: 'none', cursor: draft.trim() ? 'pointer' : 'default',
-                  opacity: draft.trim() ? 1 : 0.5,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                  <path d="M3 10l14-7-5 14-2-6-7-1Z" stroke="var(--bg)" strokeWidth="1.5" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
+        {!canSend ? (
+          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center', margin: 0 }}>
+            {partner ? `${partner.displayName} isn't accepting messages right now` : ''}
+          </p>
+        ) : (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+            <input
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+              placeholder="Write a message..."
+              style={{
+                flex: 1, height: '40px', padding: '0 14px',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '20px', color: 'var(--text)', fontFamily: font,
+                fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!draft.trim() || sending}
+              aria-label="Send"
+              style={{
+                width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+                background: 'var(--gold)', border: 'none', cursor: draft.trim() ? 'pointer' : 'default',
+                opacity: draft.trim() ? 1 : 0.5,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                <path d="M3 10l14-7-5 14-2-6-7-1Z" stroke="var(--bg)" strokeWidth="1.5" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </KeyboardSafeCtaBar>
     </div>
   )
 }
