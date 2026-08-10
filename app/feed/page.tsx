@@ -76,12 +76,22 @@ export default function FeedPage() {
     }
     loadStats()
 
-    const channel = supabase
-      .channel('feed-post-stats')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_stats' }, () => loadStats())
-      .subscribe()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    try {
+      const next = supabase.channel(`feed-post-stats:${crypto.randomUUID()}`)
+      next.on('postgres_changes', { event: '*', schema: 'public', table: 'post_stats' }, () => {
+        if (!cancelled) loadStats()
+      })
+      next.subscribe()
+      channel = next
+    } catch (err) {
+      console.error('feed-post-stats realtime failed', err)
+    }
 
-    return () => { cancelled = true; supabase.removeChannel(channel) }
+    return () => {
+      cancelled = true
+      if (channel) void supabase.removeChannel(channel)
+    }
   }, [])
 
   useEffect(() => {
@@ -101,16 +111,24 @@ export default function FeedPage() {
     }
     loadMyResonates()
 
-    const channel = supabase
-      .channel('feed-my-resonates')
-      .on(
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    try {
+      const next = supabase.channel(`feed-my-resonates:${crypto.randomUUID()}`)
+      next.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'post_resonates', filter: `actor_id=eq.${myId}` },
-        () => loadMyResonates()
+        () => { if (!cancelled) loadMyResonates() }
       )
-      .subscribe()
+      next.subscribe()
+      channel = next
+    } catch (err) {
+      console.error('feed-my-resonates realtime failed', err)
+    }
 
-    return () => { cancelled = true; supabase.removeChannel(channel) }
+    return () => {
+      cancelled = true
+      if (channel) void supabase.removeChannel(channel)
+    }
   }, [user?.id])
 
   // Load user's Replays — replayer_id must be auth profile uuid (RLS: auth.uid() = replayer_id).
@@ -131,16 +149,24 @@ export default function FeedPage() {
     }
     loadMyReplays()
 
-    const channel = supabase
-      .channel('feed-my-replays')
-      .on(
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    try {
+      const next = supabase.channel(`feed-my-replays:${crypto.randomUUID()}`)
+      next.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'post_replays', filter: `replayer_id=eq.${myId}` },
-        () => loadMyReplays()
+        () => { if (!cancelled) loadMyReplays() }
       )
-      .subscribe()
+      next.subscribe()
+      channel = next
+    } catch (err) {
+      console.error('feed-my-replays realtime failed', err)
+    }
 
-    return () => { cancelled = true; supabase.removeChannel(channel) }
+    return () => {
+      cancelled = true
+      if (channel) void supabase.removeChannel(channel)
+    }
   }, [user?.id])
 
   const getEngagement = (post: Post) => {
