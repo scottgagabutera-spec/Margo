@@ -3,17 +3,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useConversations } from '@/hooks/useConversations'
+import { RelativeTime } from '@/components/relative-time'
 
 const font = 'var(--font-lora), serif'
-
-function timeAgo(iso: string) {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000
-  if (diff < 60) return 'now'
-  if (diff < 3600) return Math.floor(diff / 60) + 'm'
-  if (diff < 86400) return Math.floor(diff / 3600) + 'h'
-  if (diff < 604800) return Math.floor(diff / 86400) + 'd'
-  return Math.floor(diff / 604800) + 'w'
-}
 
 export default function MessagesPage() {
   const { user } = useIdentity()
@@ -113,9 +105,12 @@ export default function MessagesPage() {
                         {c.lastMessage.senderId !== c.otherUser.id ? 'You: ' : ''}{c.lastMessage.body}
                       </p>
                     </div>
-                    <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', flexShrink: 0 }}>
-                      {timeAgo(c.lastMessage.createdAt)}
-                    </span>
+                    <RelativeTime
+                      date={c.lastMessage.createdAt}
+                      variant="compact"
+                      nowLabel="now"
+                      style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', flexShrink: 0 }}
+                    />
                     {c.unreadCount > 0 && (
                       <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />
                     )}
