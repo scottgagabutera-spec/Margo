@@ -3,17 +3,9 @@ import Link from 'next/link'
 import { useState } from 'react'
 import type { Notification } from '@/hooks/useNotifications'
 import { useNotifications } from '@/hooks/useNotifications'
+import { RelativeTime } from '@/components/relative-time'
 
 const font = 'var(--font-lora), serif'
-
-function timeAgo(iso: string) {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000
-  if (diff < 60) return 'just now'
-  if (diff < 3600) return Math.floor(diff / 60) + 'm'
-  if (diff < 86400) return Math.floor(diff / 3600) + 'h'
-  if (diff < 604800) return Math.floor(diff / 86400) + 'd'
-  return Math.floor(diff / 604800) + 'w'
-}
 
 function messageFor(n: Notification) {
   const name = n.actor?.displayName || n.actor?.username || 'Someone'
@@ -153,9 +145,11 @@ export function NotificationItem({
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '4px 0 10px' }}>
             <TypeIcon type={notification.type} />
-            <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-              {timeAgo(notification.createdAt)}
-            </span>
+            <RelativeTime
+              date={notification.createdAt}
+              variant="compact"
+              style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)' }}
+            />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -205,9 +199,11 @@ export function NotificationItem({
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
           <TypeIcon type={notification.type} />
-          <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-            {timeAgo(notification.createdAt)}
-          </span>
+          <RelativeTime
+            date={notification.createdAt}
+            variant="compact"
+            style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)' }}
+          />
         </div>
       </div>
       {unread && (
