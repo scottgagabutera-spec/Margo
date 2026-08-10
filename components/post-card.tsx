@@ -27,6 +27,7 @@ import {
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UsernameTag } from '@/components/username-tag'
+import { RelativeTime } from '@/components/relative-time'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -80,9 +81,6 @@ export function normalizeEmotion(e: string) {
     .replace('SEND IT', 'SENDIT').replace('LET OUT', 'LETOUT')
     .toUpperCase()
 }
-
-// Relative timestamps: use shared `formatRelativeTime` / `<RelativeTime>` from
-// `@/components/relative-time` when Feed/Discover post cards show age (not in this PR).
 
 interface LyricLine { id: number; line: string; start: number; end: number }
 
@@ -512,8 +510,22 @@ export function PostCard({
               </span>
             )}
           </div>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <UsernameTag authorUid={post.authorUid || null} fallbackName={post.username} />
+            {post.timestamp != null ? (
+              <RelativeTime
+                date={post.timestamp}
+                variant="long"
+                style={{
+                  display: 'block',
+                  marginTop: isCompact ? '1px' : '2px',
+                  fontFamily: 'var(--font-lora), serif',
+                  fontSize: isCompact ? '0.58rem' : '0.6rem',
+                  color: 'var(--text-muted)',
+                  lineHeight: 1.3,
+                }}
+              />
+            ) : null}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
