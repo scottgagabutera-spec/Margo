@@ -17,10 +17,13 @@ import { usePathname } from 'next/navigation'
  * Phase 1 — primary-tab keepalive with per-pane scrollports.
  *
  * Each pane (feed | discover | alerts | you) is its own overflow container.
- * scrollTop lives on the element (survives display:none), so tab switches
+ * scrollTop lives on the element (survives visibility:hidden), so tab switches
  * restore correctly. sessionStorage backs Compose → back / remount cases.
  * history.scrollRestoration is manual while a primary tab is active so the
  * browser does not fight the shell.
+ *
+ * Inactive panes use visibility:hidden + fixed stacking — not display:none —
+ * because display:none makes scrollTop read as 0 and corrupted leave-saves.
  */
 
 export type PrimaryTabId = 'feed' | 'discover' | 'alerts' | 'you'
@@ -107,12 +110,18 @@ interface PrimaryTabShellProps {
 }
 
 const paneStyle = (active: boolean): CSSProperties => ({
-  display: active ? 'block' : 'none',
-  height: '100dvh',
+  // Fixed viewport stack — stays sized while hidden so scrollTop is preserved.
+  // Do NOT use display:none (reads scrollTop as 0 and corrupted leave-saves).
+  position: 'fixed',
+  inset: 0,
   overflowY: 'auto',
   WebkitOverflowScrolling: 'touch',
   overscrollBehaviorY: 'contain',
   boxSizing: 'border-box',
+  visibility: active ? 'visible' : 'hidden',
+  pointerEvents: active ? 'auto' : 'none',
+  // Below tab bar (50) / MiniPlayer (90); above page bg.
+  zIndex: active ? 1 : 0,
 })
 
 export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellProps) {
@@ -154,6 +163,7 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
   }, [activeTab])
 
   // Persist leaving tab to sessionStorage; restore incoming tab from storage if needed.
+  // Safe to read scrollTop here — inactive panes use visibility:hidden (not display:none).
   useLayoutEffect(() => {
     const prev = prevTabRef.current
 
@@ -170,9 +180,10 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
       const el = paneElsRef.current.get(activeTab)
       if (el) {
         const stored = readStoredScrollMap()[activeTab]
-        // Element usually keeps scrollTop under display:none; storage covers remounts.
-        if (stored != null && stored > 0 && el.scrollTop === 0) {
-          el.scrollTop = stored
+        // Prefer live element scrollTop (preserved under visibility:hidden);
+        // storage covers remount / full-nav edge cases.
+        if (stored != null && stored > 0 && Math.abs(el.scrollTop - stored) > 1) {
+          if (el.scrollTop === 0) el.scrollTop = stored
         }
       }
       window.scrollTo(0, 0)

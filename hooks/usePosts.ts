@@ -137,6 +137,9 @@ export function usePosts() {
   }, [])
 
   useEffect(() => {
+    let active = true
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
     load()
 
     // Mirrors the old Firebase onValue live-update behavior. Requires
@@ -144,15 +147,28 @@ export function usePosts() {
     // → Replication) — if it isn't, this subscription silently does
     // nothing and the feed just won't live-update (initial load above
     // still works fine either way).
-    const channel = supabase
-      .channel('posts-feed')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+    //
+    // Channel topic MUST be unique per mount. A fixed name (`posts-feed`)
+    // races when primary-tab keepalive keeps Feed mounted and Discover (also
+    // usePosts) mounts — the second `.on()` hits an already-subscribed topic
+    // and throws "cannot add postgres_changes callbacks after subscribe()".
+    // Same fix pattern as useSongs / song_stats_changes (PR #55).
+    try {
+      const topic = `posts-feed:${crypto.randomUUID()}`
+      const next = supabase.channel(topic)
+      next.on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
+        if (!active) return
         load()
       })
-      .subscribe()
+      next.subscribe()
+      channel = next
+    } catch (err) {
+      console.error('usePosts: realtime subscribe failed', err)
+    }
 
     return () => {
-      supabase.removeChannel(channel)
+      active = false
+      if (channel) void supabase.removeChannel(channel)
     }
   }, [load])
 
