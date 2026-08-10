@@ -142,31 +142,61 @@ export function useSongs() {
   }, [])
 
   useEffect(() => {
+    let active = true
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
     fetchSongs()
 
     // Live-update stats (plays / resonates / lyric uses) without a full
     // refetch — mirrors the old Firebase onValue behavior for songResonates,
     // but scoped to just the stats row that changed.
-    const channel = supabase
-      .channel('song_stats_changes')
-      .on(
+    //
+    // Channel topic MUST be unique per mount. A fixed name (`song_stats_changes`)
+    // races when useSongs remounts before removeChannel finishes (or when two
+    // consumers mount) — the second `.on()` hits an already-subscribed topic and
+    // throws "cannot add postgres_changes callbacks after subscribe()", which
+    // was escaping as an uncaught page error and taking down root chrome.
+    try {
+      const topic = `song_stats_changes:${crypto.randomUUID()}`
+      const next = supabase.channel(topic)
+      next.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'song_stats' },
         (payload) => {
-          const updated = payload.new as { song_id: string; plays: number; resonate_count: number; lyric_uses: number } | null
+          if (!active) return
+          const updated = payload.new as {
+            song_id: string
+            plays: number
+            resonate_count: number
+            lyric_uses: number
+          } | null
           if (!updated) return
           setSongs((prev) =>
             prev.map((s) =>
               s.id === updated.song_id
-                ? { ...s, plays: updated.plays, resonates: updated.resonate_count, lyricUses: updated.lyric_uses }
+                ? {
+                    ...s,
+                    plays: updated.plays,
+                    resonates: updated.resonate_count,
+                    lyricUses: updated.lyric_uses,
+                  }
                 : s
             )
           )
         }
       )
-      .subscribe()
+      next.subscribe()
+      channel = next
+    } catch (err) {
+      // Containment: never let Realtime setup become an uncaught pageerror.
+      // Songs still load via fetchSongs; live stats updates just stay offline.
+      console.error('useSongs: realtime subscribe failed', err)
+    }
 
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      active = false
+      if (channel) void supabase.removeChannel(channel)
+    }
   }, [fetchSongs])
 
   return { songs, loading, refetch: fetchSongs }
