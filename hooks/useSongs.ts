@@ -118,9 +118,22 @@ const SONGS_SELECT = `
   )
 `
 
-export function useSongs() {
+/** Soft-reload after re-activating a paused keepalive pane. */
+const STALE_MS = 60_000
+
+export type UseSongsOptions = {
+  /**
+   * When false (inactive keepalive pane), tear down Realtime but keep
+   * last React state. Default true for non-shell callers.
+   */
+  enabled?: boolean
+}
+
+export function useSongs(options: UseSongsOptions = {}) {
+  const enabled = options.enabled ?? true
   const [songs, setSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
+  const lastLoadedAtRef = useRef(0)
   const songsRef = useRef<Song[]>([])
   useEffect(() => { songsRef.current = songs }, [songs])
 
@@ -139,13 +152,20 @@ export function useSongs() {
 
     setSongs(((data as unknown as RawSongRow[]) || []).map(transformRow))
     setLoading(false)
+    lastLoadedAtRef.current = Date.now()
   }, [])
 
   useEffect(() => {
+    if (!enabled) return
+
     let active = true
     let channel: ReturnType<typeof supabase.channel> | null = null
 
-    fetchSongs()
+    const neverLoaded = lastLoadedAtRef.current === 0
+    const stale = Date.now() - lastLoadedAtRef.current > STALE_MS
+    if (neverLoaded || stale) {
+      void fetchSongs()
+    }
 
     // Live-update stats (plays / resonates / lyric uses) without a full
     // refetch — mirrors the old Firebase onValue behavior for songResonates,
@@ -156,6 +176,9 @@ export function useSongs() {
     // consumers mount) — the second `.on()` hits an already-subscribed topic and
     // throws "cannot add postgres_changes callbacks after subscribe()", which
     // was escaping as an uncaught page error and taking down root chrome.
+    //
+    // Inactive keepalive panes pass enabled:false so only the visible tab
+    // holds a song_stats channel.
     try {
       const topic = `song_stats_changes:${crypto.randomUUID()}`
       const next = supabase.channel(topic)
@@ -197,7 +220,7 @@ export function useSongs() {
       active = false
       if (channel) void supabase.removeChannel(channel)
     }
-  }, [fetchSongs])
+  }, [enabled, fetchSongs])
 
   return { songs, loading, refetch: fetchSongs }
 }

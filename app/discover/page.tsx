@@ -22,6 +22,7 @@ import { MargoSearchInput } from '@/components/margo-search-input'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { NewItemsPill } from '@/components/new-items-pill'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
+import { usePrimaryTab } from '@/components/primary-tab-shell'
 
 const supabase = createClient()
 
@@ -803,8 +804,10 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
 
 // ── Main Page ────────────────────────────────────────────────────────
 export default function DiscoverPage() {
-  const { songs, loading, refetch } = useSongs()
-  const { posts: livePosts, reload: reloadPosts } = usePosts()
+  const { isTabActive } = usePrimaryTab()
+  const discoverLive = isTabActive('discover')
+  const { songs, loading, refetch } = useSongs({ enabled: discoverLive })
+  const { posts: livePosts, reload: reloadPosts } = usePosts({ enabled: discoverLive })
   const {
     items: posts,
     pendingCount,

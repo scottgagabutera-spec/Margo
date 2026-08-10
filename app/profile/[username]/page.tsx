@@ -16,6 +16,7 @@ import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
+import { usePrimaryTab } from '@/components/primary-tab-shell'
 
 const supabase = createClient()
 
@@ -63,7 +64,13 @@ export default function ProfilePage() {
   const router = useRouter()
   const { user, identity } = useIdentity()
   const { application } = useArtistApplication()
-  const { posts } = usePosts()
+  const { isTabActive } = usePrimaryTab()
+  // Own profile is a keepalive "you" pane — pause posts Realtime while hidden.
+  // Other profiles are full navigations (enabled stays true).
+  const isOwnKeepaliveProfile =
+    !!identity?.username && params.username === identity.username
+  const postsLive = !isOwnKeepaliveProfile || isTabActive('you')
+  const { posts } = usePosts({ enabled: postsLive })
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
