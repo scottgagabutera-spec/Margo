@@ -91,69 +91,89 @@ export function useThread(otherUsername: string) {
 
     async function run() {
       setLoading(true)
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, avatar_url, who_can_message')
-        .eq('username', otherUsername)
-        .maybeSingle()
-
-      if (!active) return
-      if (error || !profile) {
+      const timeoutMs = 15_000
+      let timedOut = false
+      const watchdog = setTimeout(() => {
+        timedOut = true
         setLoading(false)
-        return
-      }
-
-      const other: ThreadPartner = {
-        id: profile.id,
-        username: profile.username,
-        displayName: profile.display_name,
-        avatarUrl: profile.avatar_url,
-        whoCanMessage: profile.who_can_message,
-      }
-      setPartner(other)
-
-      if (other.whoCanMessage === 'no_one') {
-        setCanSend(false)
-      } else if (other.whoCanMessage === 'followers') {
-        const { data: f } = await supabase
-          .from('follows')
-          .select('status')
-          .eq('follower_id', uid)
-          .eq('followee_id', other.id)
+      }, timeoutMs)
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('id, username, display_name, avatar_url, who_can_message')
+          .eq('username', otherUsername)
           .maybeSingle()
-        if (active) setCanSend(f?.status === 'accepted')
-      } else {
-        setCanSend(true)
+
+        // Cancelled / timed-out mount — do not keep applying results.
+        if (!active || timedOut) return
+        if (error || !profile) return
+
+        const other: ThreadPartner = {
+          id: profile.id,
+          username: profile.username,
+          displayName: profile.display_name,
+          avatarUrl: profile.avatar_url,
+          whoCanMessage: profile.who_can_message,
+        }
+        setPartner(other)
+
+        if (other.whoCanMessage === 'no_one') {
+          setCanSend(false)
+        } else if (other.whoCanMessage === 'followers') {
+          const { data: f } = await supabase
+            .from('follows')
+            .select('status')
+            .eq('follower_id', uid)
+            .eq('followee_id', other.id)
+            .maybeSingle()
+          if (active && !timedOut) setCanSend(f?.status === 'accepted')
+        } else {
+          setCanSend(true)
+        }
+
+        await loadThread(uid, other)
+        if (!active || timedOut) return
+
+        // Unique topic per mount — shared `thread:uid:other` races under
+        // Strict Mode / fast remount the same way Feed Realtime topics did.
+        const topic =
+          'thread:' + uid + ':' + other.id + ':' + Math.random().toString(36).slice(2, 10)
+        try {
+          channel = supabase
+            .channel(topic)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+              const m: any = payload.new
+              const belongsHere =
+                (m.sender_id === uid && m.recipient_id === other.id) ||
+                (m.sender_id === other.id && m.recipient_id === uid)
+              if (!belongsHere) return
+              setMessages(prev => {
+                if (prev.some(existing => existing.id === m.id)) return prev
+                return [...prev, { id: m.id, senderId: m.sender_id, body: m.body, createdAt: m.created_at, readAt: m.read_at }]
+              })
+              if (m.sender_id === other.id) {
+                clearUnreadForPartner(other.id)
+                supabase.from('messages').update({ read_at: new Date().toISOString() }).eq('id', m.id)
+              }
+            })
+            .subscribe()
+        } catch (err) {
+          console.error('useThread: realtime subscribe failed', err)
+        }
+      } catch (err) {
+        console.error('useThread: load failed', err)
+      } finally {
+        clearTimeout(watchdog)
+        // Always clear — cancelled mounts / hangs otherwise leave a near-black spinner.
+        setLoading(false)
       }
-
-      await loadThread(uid, other)
-      if (!active) return
-
-      channel = supabase
-        .channel(`thread:${uid}:${other.id}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-          const m: any = payload.new
-          const belongsHere =
-            (m.sender_id === uid && m.recipient_id === other.id) ||
-            (m.sender_id === other.id && m.recipient_id === uid)
-          if (!belongsHere) return
-          setMessages(prev => {
-            if (prev.some(existing => existing.id === m.id)) return prev
-            return [...prev, { id: m.id, senderId: m.sender_id, body: m.body, createdAt: m.created_at, readAt: m.read_at }]
-          })
-          if (m.sender_id === other.id) {
-            clearUnreadForPartner(other.id)
-            supabase.from('messages').update({ read_at: new Date().toISOString() }).eq('id', m.id)
-          }
-        })
-        .subscribe()
     }
 
     run()
 
     return () => {
       active = false
-      if (channel) supabase.removeChannel(channel)
+      if (channel) void supabase.removeChannel(channel)
     }
   }, [userId, otherUsername, loadThread, clearUnreadForPartner])
 
