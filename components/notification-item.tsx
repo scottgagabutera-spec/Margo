@@ -36,8 +36,8 @@ function messageFor(n: Notification) {
 function hrefFor(n: Notification) {
   switch (n.type) {
     case 'message': return n.actor ? `/messages/${n.actor.username}` : '/messages'
-    case 'resonate': return n.postId ? `/feed?post=${n.postId}` : '/feed'
-    case 'lyric_back': return n.postId ? `/feed?post=${n.postId}` : '/feed'
+    case 'resonate': return n.postId ? `/post/${n.postId}` : '/feed'
+    case 'lyric_back': return n.postId ? `/post/${n.postId}` : '/feed'
     case 'follow': return n.actor ? `/profile/${n.actor.username}` : '/feed'
     case 'follow_request': return n.actor ? `/profile/${n.actor.username}` : '/feed'
     case 'artist_approved': return '/studio'
@@ -119,7 +119,7 @@ export function NotificationItem({
         <img src={notification.actor.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         <span style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--bg)' }}>
-          {(notification.actor?.displayName || '??').slice(0, 2).toUpperCase()}
+          {(notification.actor?.displayName || notification.actor?.username || '??').slice(0, 2).toUpperCase()}
         </span>
       )}
     </div>

@@ -30,7 +30,52 @@ export interface Notification {
   } | null
 }
 
-function mapRow(row: any): Notification {
+type ActorIdentity = NonNullable<Notification['actor']>
+
+interface NotificationRow {
+  id: string
+  recipient_id: string
+  actor_id: string | null
+  type: NotificationType
+  post_id: string | null
+  message_id: string | null
+  created_at: string
+  read_at: string | null
+}
+
+const SELECT_COLUMNS =
+  'id, recipient_id, actor_id, type, post_id, message_id, created_at, read_at'
+
+/**
+ * Profiles RLS blocks embedding many actors on notification rows (private
+ * accounts the recipient does not yet follow). Hydrate identity via
+ * profiles_for_my_notification_actors — security definer, scoped to actors
+ * that appear on the caller's own notifications only.
+ */
+async function loadActorMap(actorIds: string[]): Promise<Map<string, ActorIdentity>> {
+  const unique = [...new Set(actorIds.filter(Boolean))]
+  const map = new Map<string, ActorIdentity>()
+  if (unique.length === 0) return map
+
+  const { data, error } = await supabase.rpc('profiles_for_my_notification_actors', {
+    p_actor_ids: unique,
+  })
+  if (error) {
+    console.error('Failed to load notification actors:', error)
+    return map
+  }
+  for (const row of data || []) {
+    map.set(row.id, {
+      id: row.id,
+      username: row.username,
+      displayName: row.display_name || row.username,
+      avatarUrl: row.avatar_url,
+    })
+  }
+  return map
+}
+
+function mapRow(row: NotificationRow, actors: Map<string, ActorIdentity>): Notification {
   return {
     id: row.id,
     recipientId: row.recipient_id,
@@ -40,21 +85,39 @@ function mapRow(row: any): Notification {
     messageId: row.message_id,
     createdAt: row.created_at,
     readAt: row.read_at,
-    actor: row.actor
-      ? {
-          id: row.actor.id,
-          username: row.actor.username,
-          displayName: row.actor.display_name,
-          avatarUrl: row.actor.avatar_url,
-        }
-      : null,
+    actor: row.actor_id ? actors.get(row.actor_id) ?? null : null,
   }
 }
 
-const SELECT_WITH_ACTOR = `
-  id, recipient_id, actor_id, type, post_id, message_id, created_at, read_at,
-  actor:profiles!notifications_actor_id_fkey ( id, username, display_name, avatar_url )
-`
+async function fetchNotificationsMapped(userId: string): Promise<Notification[]> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select(SELECT_COLUMNS)
+    .eq('recipient_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (error) throw error
+  const rows = (data || []) as NotificationRow[]
+  const actors = await loadActorMap(rows.map((r) => r.actor_id).filter(Boolean) as string[])
+  return rows.map((r) => mapRow(r, actors))
+}
+
+async function fetchOneNotificationMapped(id: string): Promise<Notification | null> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select(SELECT_COLUMNS)
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error || !data) {
+    if (error) console.error('Failed to load notification:', error)
+    return null
+  }
+  const row = data as NotificationRow
+  const actors = await loadActorMap(row.actor_id ? [row.actor_id] : [])
+  return mapRow(row, actors)
+}
 
 interface NotificationsContextValue {
   notifications: Notification[]
@@ -96,21 +159,15 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     let active = true
 
     async function loadInitial() {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select(SELECT_WITH_ACTOR)
-        .eq('recipient_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(50)
-
-      if (!active) return
-      if (error) {
+      try {
+        const mapped = await fetchNotificationsMapped(userId)
+        if (!active) return
+        setNotifications(mapped)
+      } catch (error) {
         console.error('Failed to load notifications:', error)
-        setLoading(false)
-        return
+      } finally {
+        if (active) setLoading(false)
       }
-      setNotifications((data || []).map(mapRow))
-      setLoading(false)
     }
 
     loadInitial()
@@ -126,13 +183,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           filter: `recipient_id=eq.${userId}`,
         },
         async (payload) => {
-          const { data } = await supabase
-            .from('notifications')
-            .select(SELECT_WITH_ACTOR)
-            .eq('id', payload.new.id)
-            .maybeSingle()
-          if (data && active) {
-            setNotifications(prev => [mapRow(data), ...prev])
+          const mapped = await fetchOneNotificationMapped(payload.new.id)
+          if (mapped && active) {
+            setNotifications(prev => [mapped, ...prev])
           }
         }
       )
