@@ -1,8 +1,9 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import type { Post } from '@/hooks/usePosts'
+import { PRIMARY_TAB_STALE_MS } from '@/hooks/usePosts'
 
 const supabase = createClient()
 
@@ -99,10 +100,15 @@ function mapPost(row: any): Post | null {
  * into the main feed with attribution. Not a following-only feed — originals
  * still come from usePosts; this only injects Replay wrappers.
  */
-export function useFolloweeReplays(limit = 80) {
+export function useFolloweeReplays(
+  limit = 80,
+  options: { enabled?: boolean } = {}
+) {
+  const enabled = options.enabled ?? true
   const { user } = useIdentity()
   const [replays, setReplays] = useState<FolloweeReplay[]>([])
   const [loading, setLoading] = useState(false)
+  const lastLoadedAtRef = useRef(0)
 
   const load = useCallback(async () => {
     if (!user?.id) {
@@ -161,10 +167,18 @@ export function useFolloweeReplays(limit = 80) {
     }
     setReplays(mapped)
     setLoading(false)
+    lastLoadedAtRef.current = Date.now()
   }, [user?.id, limit])
 
   useEffect(() => {
-    void load()
+    if (!enabled) return
+
+    const neverLoaded = lastLoadedAtRef.current === 0
+    const stale = Date.now() - lastLoadedAtRef.current > PRIMARY_TAB_STALE_MS
+    if (neverLoaded || stale) {
+      void load()
+    }
+
     if (!user?.id) return
     let channel: ReturnType<typeof supabase.channel> | null = null
     // Unique topic per mount — fixed `followee-replays-${id}` races under
@@ -181,7 +195,7 @@ export function useFolloweeReplays(limit = 80) {
     return () => {
       if (channel) supabase.removeChannel(channel)
     }
-  }, [user?.id, load])
+  }, [enabled, user?.id, load])
 
   return { replays, loading, reload: load }
 }

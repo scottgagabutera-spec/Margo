@@ -1,9 +1,12 @@
 'use client'
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useVisibleAuthorIds } from '@/hooks/useVisibleAuthorIds'
 
 const supabase = createClient()
+
+/** Soft-reload after re-activating a paused keepalive pane. */
+export const PRIMARY_TAB_STALE_MS = 60_000
 
 export interface Post {
   id: string
@@ -111,9 +114,20 @@ function mapRow(row: any): Post {
   }
 }
 
-export function usePosts() {
+export type UsePostsOptions = {
+  /**
+   * When false (inactive keepalive pane), tear down Realtime and skip
+   * event-driven refetches but keep the last React state for instant show.
+   * Default true for non-shell callers (music, etc.).
+   */
+  enabled?: boolean
+}
+
+export function usePosts(options: UsePostsOptions = {}) {
+  const enabled = options.enabled ?? true
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const lastLoadedAtRef = useRef(0)
 
   const load = useCallback(async (): Promise<Post[]> => {
     const { data, error } = await supabase
@@ -133,14 +147,21 @@ export function usePosts() {
     const mapped = (data ?? []).map(mapRow)
     setPosts(mapped)
     setLoading(false)
+    lastLoadedAtRef.current = Date.now()
     return mapped
   }, [])
 
   useEffect(() => {
+    if (!enabled) return
+
     let active = true
     let channel: ReturnType<typeof supabase.channel> | null = null
 
-    load()
+    const neverLoaded = lastLoadedAtRef.current === 0
+    const stale = Date.now() - lastLoadedAtRef.current > PRIMARY_TAB_STALE_MS
+    if (neverLoaded || stale) {
+      void load()
+    }
 
     // Mirrors the old Firebase onValue live-update behavior. Requires
     // Realtime to be enabled on the `posts` table in Supabase (Database
@@ -153,6 +174,9 @@ export function usePosts() {
     // usePosts) mounts — the second `.on()` hits an already-subscribed topic
     // and throws "cannot add postgres_changes callbacks after subscribe()".
     // Same fix pattern as useSongs / song_stats_changes (PR #55).
+    //
+    // When `enabled` flips false (pane hidden), this effect cleans up so
+    // only the active pane holds a posts-feed channel.
     try {
       const topic = `posts-feed:${crypto.randomUUID()}`
       const next = supabase.channel(topic)
@@ -170,7 +194,7 @@ export function usePosts() {
       active = false
       if (channel) void supabase.removeChannel(channel)
     }
-  }, [load])
+  }, [enabled, load])
 
   // Same privacy-filtering hook as before, unchanged — still a
   // display-layer filter only, not a substitute for RLS enforcement.

@@ -1,7 +1,7 @@
 'use client'
 import { toast } from 'sonner'
 import { CloseIcon } from '@/components/icons'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
@@ -18,22 +18,28 @@ import { ArtistBadge } from '@/components/artist-badge'
 import { PostCard, normalizeEmotion } from '@/components/post-card'
 import { ReplayAttribution } from '@/components/replay-attribution'
 import { useFolloweeReplays } from '@/hooks/useFolloweeReplays'
+import { usePrimaryTab } from '@/components/primary-tab-shell'
 
 const supabase = createClient()
+
+// Soft-reload Feed-local Realtime payloads after pausing a hidden pane.
+const FEED_STALE_MS = 60_000
 
 // ── Earned-tag thresholds (feed ranking only) ─────────────────────────
 const NEW_WINDOW_HOURS = 24
 const RANK_BADGE_COUNT = 5
 
 export default function FeedPage() {
-  const { posts: livePosts, loading, reload } = usePosts()
+  const { isTabActive } = usePrimaryTab()
+  const feedLive = isTabActive('feed')
+  const { posts: livePosts, loading, reload } = usePosts({ enabled: feedLive })
   const {
     items: posts,
     pendingCount,
     flushPending,
     applyImmediate,
   } = useNewItemsBuffer(livePosts)
-  const { replays: followeeReplays } = useFolloweeReplays()
+  const { replays: followeeReplays } = useFolloweeReplays(80, { enabled: feedLive })
   const [ptrBusy, setPtrBusy] = useState(false)
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -59,8 +65,13 @@ export default function FeedPage() {
   const [replayCounts, setReplayCounts] = useState<Record<string, number>>({})
   const [postStats, setPostStats] = useState<Record<string, { views?: number; resonateCount?: number; echoCount?: number; replayCount?: number }>>({})
   const [exportPost, setExportPost] = useState<Post | null>(null)
+  const postStatsLoadedAtRef = useRef(0)
+  const resonatesLoadedAtRef = useRef(0)
+  const replaysLoadedAtRef = useRef(0)
 
   useEffect(() => {
+    if (!feedLive) return
+
     let cancelled = false
     async function loadStats() {
       const { data, error } = await supabase
@@ -73,8 +84,11 @@ export default function FeedPage() {
         map[row.post_id] = { views: row.views, resonateCount: row.resonate_count, echoCount: row.echo_count, replayCount: row.replay_count }
       }
       setPostStats(map)
+      postStatsLoadedAtRef.current = Date.now()
     }
-    loadStats()
+    const neverLoaded = postStatsLoadedAtRef.current === 0
+    const stale = Date.now() - postStatsLoadedAtRef.current > FEED_STALE_MS
+    if (neverLoaded || stale) loadStats()
 
     let channel: ReturnType<typeof supabase.channel> | null = null
     try {
@@ -92,10 +106,10 @@ export default function FeedPage() {
       cancelled = true
       if (channel) void supabase.removeChannel(channel)
     }
-  }, [])
+  }, [feedLive])
 
   useEffect(() => {
-    if (!user?.id) return
+    if (!feedLive || !user?.id) return
     const myId = user.id
     let cancelled = false
     async function loadMyResonates() {
@@ -108,8 +122,11 @@ export default function FeedPage() {
       const mine = new Set((data || []).map(r => r.post_id))
       setResonated(mine)
       try { localStorage.setItem('margoResonated', JSON.stringify([...mine])) } catch {}
+      resonatesLoadedAtRef.current = Date.now()
     }
-    loadMyResonates()
+    const neverLoaded = resonatesLoadedAtRef.current === 0
+    const stale = Date.now() - resonatesLoadedAtRef.current > FEED_STALE_MS
+    if (neverLoaded || stale) loadMyResonates()
 
     let channel: ReturnType<typeof supabase.channel> | null = null
     try {
@@ -129,11 +146,11 @@ export default function FeedPage() {
       cancelled = true
       if (channel) void supabase.removeChannel(channel)
     }
-  }, [user?.id])
+  }, [feedLive, user?.id])
 
   // Load user's Replays — replayer_id must be auth profile uuid (RLS: auth.uid() = replayer_id).
   useEffect(() => {
-    if (!user?.id) return
+    if (!feedLive || !user?.id) return
     const myId = user.id
     let cancelled = false
     async function loadMyReplays() {
@@ -146,8 +163,11 @@ export default function FeedPage() {
       const mine = new Set((data || []).map(r => r.post_id))
       setReplayed(mine)
       try { localStorage.setItem('margoReplayed', JSON.stringify([...mine])) } catch {}
+      replaysLoadedAtRef.current = Date.now()
     }
-    loadMyReplays()
+    const neverLoaded = replaysLoadedAtRef.current === 0
+    const stale = Date.now() - replaysLoadedAtRef.current > FEED_STALE_MS
+    if (neverLoaded || stale) loadMyReplays()
 
     let channel: ReturnType<typeof supabase.channel> | null = null
     try {
@@ -167,7 +187,7 @@ export default function FeedPage() {
       cancelled = true
       if (channel) void supabase.removeChannel(channel)
     }
-  }, [user?.id])
+  }, [feedLive, user?.id])
 
   const getEngagement = (post: Post) => {
     const s = postStats[post.id] || {}
