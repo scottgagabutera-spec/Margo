@@ -342,6 +342,24 @@ function LyricBackContent() {
     if (insertErr) {
       console.error('Failed to post:', insertErr)
       toast.error('Could not send your lyric back. Please try again.')
+      return
+    }
+
+    // Same client-insert pattern as feed resonate notifications. Only when
+    // this is a reply (parent exists) and the parent author is someone else.
+    const parentAuthorId = respondingTo?.authorUid
+    if (respondingToId && parentAuthorId && parentAuthorId !== authorId) {
+      try {
+        const { error: notifErr } = await supabase.from('notifications').insert({
+          recipient_id: parentAuthorId,
+          actor_id: authorId,
+          type: 'lyric_back',
+          post_id: respondingToId,
+        })
+        if (notifErr) console.error('Failed to insert lyric_back notification:', notifErr)
+      } catch (err) {
+        console.error('Failed to insert lyric_back notification:', err)
+      }
     }
     // post_stats.echo_count on the parent is kept in sync automatically
     // by the post_reply_insert trigger — no manual runTransaction needed
@@ -354,7 +372,7 @@ function LyricBackContent() {
     // post_song_link_insert trigger whenever song_id is set, same as
     // compose — this was never possible before since lyric-back never
     // linked a song at all.
-  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user, respondingToId, posting, resetComposeForm, linkedSongId])
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user, respondingToId, respondingTo?.authorUid, posting, resetComposeForm, linkedSongId])
 
   /* ─── resonate ───────────────────────────────────────────── */
   // Echo resonates now write to the same post_resonates table as
