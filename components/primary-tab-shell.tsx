@@ -194,12 +194,11 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
     if (prev && prev !== activeTab) {
       const el = paneElsRef.current.get(prev)
       // Prefer the freeze taken while active. Only seed from live if we never
-      // recorded a value — and never overwrite a non-zero freeze with a 0 read
-      // that can appear after Activity display:none / reflow.
+      // recorded a value. After Activity hide (display:none), live scrollTop
+      // reads as 0 — never let that clobber a frozen prior (including prior=0).
       const prior = frozen[prev]
       const live = el?.scrollTop ?? 0
-      const y =
-        prior != null && !(prior > 0 && live === 0) ? prior : live
+      const y = prior != null ? (live === 0 ? prior : live) : live
       persistScroll(frozen, prev, y)
       // Re-apply freeze onto the element in case hide/reflow jumped it.
       if (el && Math.abs(el.scrollTop - y) > 1) {
