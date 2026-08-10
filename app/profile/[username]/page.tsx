@@ -67,6 +67,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  // Exists + private, but viewer failed profiles SELECT (RLS) — honest empty state.
+  const [privateInaccessible, setPrivateInaccessible] = useState(false)
   const [followerCount, setFollowerCount] = useState<number | null>(null)
   const [followingCount, setFollowingCount] = useState<number | null>(null)
   const [followStatus, setFollowStatus] = useState<FollowStatus>(null)
@@ -85,43 +87,56 @@ export default function ProfilePage() {
     let active = true
     setLoading(true)
     setNotFound(false)
+    setPrivateInaccessible(false)
+    setProfile(null)
     supabase
       .from('profiles')
       .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, signature_lyric, signature_song, signature_artist, is_private')
       .eq('username', params.username)
       .maybeSingle()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (!active) return
-        if (error || !data) {
-          setNotFound(true)
+        if (!error && data) {
+          setProfile({
+            id: data.id,
+            username: data.username,
+            displayName: data.display_name,
+            isArtist: data.is_artist,
+            artistStatus: data.artist_status ?? null,
+            bio: data.bio,
+            avatarUrl: data.avatar_url,
+            signatureLyric: data.signature_lyric,
+            signatureSong: data.signature_song,
+            signatureArtist: data.signature_artist,
+            isPrivate: !!data.is_private,
+          })
           setLoading(false)
+
+          Promise.all([
+            supabase.from('follows').select('*', { count: 'exact', head: true })
+              .eq('followee_id', data.id).eq('status', 'accepted'),
+            supabase.from('follows').select('*', { count: 'exact', head: true })
+              .eq('follower_id', data.id).eq('status', 'accepted'),
+          ]).then(([followers, following]) => {
+            if (!active) return
+            setFollowerCount(followers.count ?? 0)
+            setFollowingCount(following.count ?? 0)
+          })
           return
         }
-        setProfile({
-          id: data.id,
-          username: data.username,
-          displayName: data.display_name,
-          isArtist: data.is_artist,
-          artistStatus: data.artist_status ?? null,
-          bio: data.bio,
-          avatarUrl: data.avatar_url,
-          signatureLyric: data.signature_lyric,
-          signatureSong: data.signature_song,
-          signatureArtist: data.signature_artist,
-          isPrivate: !!data.is_private,
-        })
-        setLoading(false)
 
-        Promise.all([
-          supabase.from('follows').select('*', { count: 'exact', head: true })
-            .eq('followee_id', data.id).eq('status', 'accepted'),
-          supabase.from('follows').select('*', { count: 'exact', head: true })
-            .eq('follower_id', data.id).eq('status', 'accepted'),
-        ]).then(([followers, following]) => {
-          if (!active) return
-          setFollowerCount(followers.count ?? 0)
-          setFollowingCount(following.count ?? 0)
+        // SELECT empty under RLS — distinguish missing vs private locked.
+        const { data: visibility } = await supabase.rpc('profile_visibility_for_username', {
+          p_username: params.username,
         })
+        if (!active) return
+        const row = visibility as { exists?: boolean; is_private?: boolean } | null
+        if (row?.exists && row?.is_private) {
+          setPrivateInaccessible(true)
+        } else {
+          setNotFound(true)
+        }
+        setLoading(false)
       })
     return () => { active = false }
   }, [params.username])
@@ -365,6 +380,24 @@ export default function ProfilePage() {
         <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '1rem', paddingTop: '160px' }}>
           No one here by that name.
         </p>
+      )}
+
+      {!loading && privateInaccessible && (
+        <div style={{
+          maxWidth: '360px', margin: '0 auto', paddingTop: '140px', paddingLeft: '24px', paddingRight: '24px',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            border: '1px solid var(--border)', borderRadius: '16px', padding: '24px',
+          }}>
+            <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '4px' }}>
+              This account is private.
+            </p>
+            <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
+              Only people they accept can see their profile.
+            </p>
+          </div>
+        </div>
       )}
 
       {!loading && profile && (
