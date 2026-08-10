@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  Activity,
   createContext,
   useContext,
   useEffect,
@@ -14,20 +15,22 @@ import {
 import { usePathname } from 'next/navigation'
 
 /**
- * Phase 1 — primary-tab keepalive with per-pane scrollports.
+ * Phase 1 / 1.5 — primary-tab keepalive with per-pane scrollports + Activity.
  *
  * Each pane (feed | discover | alerts | you) is its own overflow container.
- * scrollTop lives on the element (survives visibility:hidden), so tab switches
- * restore correctly. sessionStorage backs Compose → back / remount cases.
+ * Visited panes stay mounted; inactive panes are wrapped in React 19.2
+ * <Activity mode="hidden"> so Effects (Realtime, etc.) tear down while
+ * React state is preserved — framework-native pause (pairs with #59 enabled
+ * gating as belt-and-suspenders).
+ *
+ * Activity hides with display:none (scrollTop reads as 0 while hidden). Leave
+ * saves must NOT trust a live post-hide read — freeze the last known-good
+ * value in a ref while the pane is active, persist to sessionStorage, and
+ * restore from that ref on show. Browser often restores scrollTop when
+ * display returns, but freeze remains non-negotiable.
+ *
  * history.scrollRestoration is manual while a primary tab is active so the
  * browser does not fight the shell.
- *
- * Inactive panes use visibility:hidden + fixed stacking — not display:none —
- * because display:none makes scrollTop read as 0 and corrupted leave-saves.
- *
- * Leave saves must NOT trust a live scrollTop read after hide/reflow: browsers
- * and scroll-anchoring can mutate it. Freeze the last known-good value in a
- * ref while the pane is active/visible, and restore from that ref on show.
  */
 
 export type PrimaryTabId = 'feed' | 'discover' | 'alerts' | 'you'
@@ -125,18 +128,17 @@ interface PrimaryTabShellProps {
 }
 
 const paneStyle = (active: boolean): CSSProperties => ({
-  // Fixed viewport stack — stays sized while hidden so scrollTop is preserved.
-  // Do NOT use display:none (reads scrollTop as 0 and corrupted leave-saves).
+  // Fixed viewport stack. Hide/show for Effects is owned by <Activity>
+  // (display:none while hidden) — do not also use visibility:hidden.
   position: 'fixed',
   inset: 0,
   overflowY: 'auto',
   WebkitOverflowScrolling: 'touch',
   overscrollBehaviorY: 'contain',
   // Prevent browser scroll-anchoring from rewriting scrollTop during
-  // sibling pane mount / content reflow while this pane is hidden.
+  // sibling pane mount / content reflow while this pane is deferred.
   overflowAnchor: 'none',
   boxSizing: 'border-box',
-  visibility: active ? 'visible' : 'hidden',
   pointerEvents: active ? 'auto' : 'none',
   // Below tab bar (50) / MiniPlayer (90); above page bg.
   zIndex: active ? 1 : 0,
@@ -193,7 +195,7 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
       const el = paneElsRef.current.get(prev)
       // Prefer the freeze taken while active. Only seed from live if we never
       // recorded a value — and never overwrite a non-zero freeze with a 0 read
-      // that can appear after hide/reflow.
+      // that can appear after Activity display:none / reflow.
       const prior = frozen[prev]
       const live = el?.scrollTop ?? 0
       const y =
@@ -214,7 +216,7 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
           el.scrollTop = target
         }
         frozen[activeTab] = target
-        // Second pass after layout settles (sibling pane mount / images).
+        // Second pass after layout settles (Activity reveal / sibling mount).
         requestAnimationFrame(() => {
           if (Math.abs(el.scrollTop - target) > 1) {
             el.scrollTop = target
@@ -228,8 +230,8 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
   }, [activeTab, pathname])
 
   // Continuously freeze + mirror active pane scroll (Compose → back).
-  // Ignore scroll events once the pane is no longer the active/visible one
-  // so a post-hide jump cannot corrupt the freeze.
+  // Ignore scroll once the pane is no longer marked active — post-hide
+  // display:none can report scrollTop 0 and must not corrupt the freeze.
   useEffect(() => {
     if (!activeTab) return
     const el = paneElsRef.current.get(activeTab)
@@ -238,7 +240,7 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
 
     const onScroll = () => {
       if (el.getAttribute('data-margo-primary-tab-active') !== '1') return
-      if (getComputedStyle(el).visibility !== 'visible') return
+      if (getComputedStyle(el).display === 'none') return
       persistScroll(frozenScrollRef.current, tabId, el.scrollTop)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
@@ -260,20 +262,24 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
 
   return (
     <PrimaryTabContext.Provider value={ctx}>
-      {cached.map(([id, node]) => (
-        <div
-          key={id}
-          ref={(nodeEl) => {
-            paneElsRef.current.set(id, nodeEl)
-          }}
-          data-margo-primary-tab={id}
-          data-margo-primary-tab-active={activeTab === id ? '1' : '0'}
-          aria-hidden={activeTab !== id}
-          style={paneStyle(activeTab === id)}
-        >
-          {node}
-        </div>
-      ))}
+      {cached.map(([id, node]) => {
+        const active = activeTab === id
+        return (
+          <Activity key={id} mode={active ? 'visible' : 'hidden'}>
+            <div
+              ref={(nodeEl) => {
+                paneElsRef.current.set(id, nodeEl)
+              }}
+              data-margo-primary-tab={id}
+              data-margo-primary-tab-active={active ? '1' : '0'}
+              aria-hidden={!active}
+              style={paneStyle(active)}
+            >
+              {node}
+            </div>
+          </Activity>
+        )
+      })}
 
       {activeTab === null ? children : null}
     </PrimaryTabContext.Provider>
