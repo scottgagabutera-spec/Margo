@@ -20,6 +20,7 @@ function messageFor(n: Notification) {
   switch (n.type) {
     case 'message': return `${name} sent you a message`
     case 'resonate': return `${name} resonated with your lyric`
+    case 'lyric_back': return `${name} replied with a Lyric Back`
     case 'follow': return `${name} started following you`
     case 'follow_request': return `${name} wants to follow you`
     case 'artist_approved': return `You're approved as an artist on Margo`
@@ -36,6 +37,7 @@ function hrefFor(n: Notification) {
   switch (n.type) {
     case 'message': return n.actor ? `/messages/${n.actor.username}` : '/messages'
     case 'resonate': return n.postId ? `/feed?post=${n.postId}` : '/feed'
+    case 'lyric_back': return n.postId ? `/feed?post=${n.postId}` : '/feed'
     case 'follow': return n.actor ? `/profile/${n.actor.username}` : '/feed'
     case 'follow_request': return n.actor ? `/profile/${n.actor.username}` : '/feed'
     case 'artist_approved': return '/studio'
@@ -57,6 +59,14 @@ function TypeIcon({ type }: { type: Notification['type'] }) {
     return (
       <svg width="14" height="14" viewBox="0 0 20 20" fill="var(--gold)">
         <path d="M10 17s-6-4-6-8.5A3.5 3.5 0 0 1 10 6a3.5 3.5 0 0 1 6 2.5C16 13 10 17 10 17Z" />
+      </svg>
+    )
+  }
+  if (type === 'lyric_back') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+        <path d="M7 7H4v3" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M4 10c1.5-3.5 4-5 8-5a6 6 0 0 1 6 6 6 6 0 0 1-6 6H8" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   }
