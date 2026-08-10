@@ -3,6 +3,7 @@ import { AudioEngineProvider } from '@/components/audio-engine-provider'
 import { SupabaseAuthProvider } from '@/components/supabase-auth-provider'
 import { IdentityProvider } from '@/hooks/useIdentity'
 import { NotificationsProvider } from '@/hooks/useNotifications'
+import { MessagingProvider } from '@/hooks/useMessaging'
 import { MiniPlayer } from '@/components/mini-player'
 import { MargoNav } from '@/components/margo-nav'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
@@ -191,11 +192,13 @@ export default function RootLayout({
           <IdentityProvider>
             <AudioEngineProvider>
               <NotificationsProvider>
-                <MargoNav />
-                <TabSwipeProvider>
-                  {children}
-                </TabSwipeProvider>
-                <MobileTabBar />
+                <MessagingProvider>
+                  <MargoNav />
+                  <TabSwipeProvider>
+                    {children}
+                  </TabSwipeProvider>
+                  <MobileTabBar />
+                </MessagingProvider>
               </NotificationsProvider>
             </AudioEngineProvider>
           </IdentityProvider>
