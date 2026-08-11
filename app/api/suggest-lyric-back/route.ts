@@ -7,7 +7,8 @@ import {
 
 /**
  * POST { postIds: string[] }
- * Catalog-only vibe retrieval for Suggested Lyric Back. No OpenAI.
+ * Suggested Lyric Back via gpt-4o-mini ranking over catalog lyric units.
+ * Cached per post (see suggest_lyric_back_cache).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -22,11 +23,13 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin()
+    // Visible feed posts use status = 'active' (not 'public' — that filter
+    // matched zero rows and made Suggested always empty).
     const { data: rows, error } = await supabase
       .from('posts')
-      .select('id, emotion, text, song_id')
+      .select('id, emotion, text, song_id, song_title')
       .in('id', postIds)
-      .eq('status', 'public')
+      .eq('status', 'active')
 
     if (error) {
       console.error('suggest-lyric-back: posts query failed', error)
@@ -40,6 +43,7 @@ export async function POST(request: NextRequest) {
         emotion: r.emotion,
         text: r.text,
         songId: r.song_id,
+        songTitle: r.song_title,
       })),
     )
 
