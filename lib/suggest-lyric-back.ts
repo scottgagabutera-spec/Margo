@@ -1,27 +1,31 @@
 /**
- * Catalog-only Suggested Lyric Back retrieval (v1).
- * Matches posts.emotion → lyric_line_vibes; expands short lines via
- * buildCatalogLyricUnits. No LLM.
+ * Suggested Lyric Back — Approach A.
+ * Ranks eligible catalog lyric units with gpt-4o-mini as replies to a post.
+ * Caches per post in suggest_lyric_back_cache (fingerprint + TTL).
  */
 
+import { createHash } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   buildCatalogLyricUnits,
   type CatalogLyricAtom,
 } from '@/lib/catalog-lyric-unit'
 
-/** Vibes that Studio tags onto lyric_lines today (tag-vibes). */
-export const SUGGEST_VIBES = [
-  'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL',
-  'NOSTALGIA', 'JOY', 'LOVE', 'HYPE', 'PROUD',
-] as const
-
-export type SuggestVibe = (typeof SUGGEST_VIBES)[number]
-
 export const SHORT_LINE_WORDS = 3
 export const MIN_SUGGEST_UNIT_WORDS = 4
 export const SUGGESTIONS_PER_POST = 3
 export const SUGGEST_BATCH_MAX = 25
+
+/** Max catalog units per LLM call before chunk → merge. */
+export const MAX_UNITS_PER_CALL = 120
+
+/** Fresh non-empty cache TTL. */
+export const CACHE_TTL_MS = 18 * 60 * 60 * 1000
+/** Shorter TTL for empty results so we retry sooner. */
+export const CACHE_EMPTY_TTL_MS = 6 * 60 * 60 * 1000
+
+const LLM_CONCURRENCY = 3
+const OPENAI_MODEL = 'gpt-4o-mini'
 
 export type SuggestedLyricBack = {
   text: string
@@ -33,6 +37,7 @@ export type SuggestedLyricBack = {
   endSec: number
   audioUrl?: string | null
   artworkUrl?: string | null
+  /** Optional; used by snippet playback chrome. Not used for matching. */
   vibe: string
 }
 
@@ -41,24 +46,24 @@ export type SuggestPostInput = {
   emotion?: string | null
   text?: string | null
   songId?: string | null
+  songTitle?: string | null
+}
+
+type EligibleUnit = {
+  id: string
+  text: string
+  songId: string
+  songTitle: string
+  artistName: string
+  lineIndex: number
+  startSec: number
+  endSec: number
+  audioUrl: string | null
+  artworkUrl: string | null
 }
 
 function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length
-}
-
-export function normalizeSuggestVibe(raw: string | null | undefined): SuggestVibe | null {
-  if (!raw) return null
-  const key = raw
-    .replace(/send.?it/i, 'SENDIT')
-    .replace(/let.?out/i, 'LETOUT')
-    .replace('SendIt', 'SENDIT')
-    .replace('LetOut', 'LETOUT')
-    .replace('SEND IT', 'SENDIT')
-    .replace('LET OUT', 'LETOUT')
-    .trim()
-    .toUpperCase()
-  return (SUGGEST_VIBES as readonly string[]).includes(key) ? (key as SuggestVibe) : null
 }
 
 function normalizeText(s: string): string {
@@ -69,24 +74,15 @@ function normalizeText(s: string): string {
     .replace(/\s+/g, ' ')
 }
 
-type CandidateRow = {
-  id: string
-  song_id: string
-  line_index: number
-  text: string
-  start_sec: number
-  end_sec: number
-  vibe: string
-  songTitle: string
-  artistName: string
-  artworkUrl: string | null
-  audioUrl: string | null
+function fingerprintUnits(units: EligibleUnit[]): string {
+  const ids = units.map((u) => u.id).sort()
+  return createHash('sha256').update(ids.join('|')).digest('hex').slice(0, 32)
 }
 
 function pickUnit(
   atoms: CatalogLyricAtom[],
   centerLineIndex: number,
-): { text: string; startSec: number; endSec: number; lineIndex: number; vibes: string[] } | null {
+): { text: string; startSec: number; endSec: number; lineIndex: number } | null {
   const built = buildCatalogLyricUnits(atoms, centerLineIndex)
   if (!built) return null
   const unit =
@@ -99,91 +95,68 @@ function pickUnit(
     startSec: unit.startSec,
     endSec: unit.endSec,
     lineIndex: unit.centerLineIndex,
-    vibes: unit.vibes,
   }
 }
 
+async function mapPool<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) return []
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (true) {
+      const idx = next++
+      if (idx >= items.length) return
+      results[idx] = await fn(items[idx])
+    }
+  }
+  const n = Math.min(limit, items.length)
+  await Promise.all(Array.from({ length: n }, () => worker()))
+  return results
+}
+
 /**
- * For each post, return up to SUGGESTIONS_PER_POST catalog lyric units
- * whose vibes overlap the post emotion.
+ * Load all eligible catalog lyric units (live songs, Moments/Suggested unit rules).
+ * No vibe-tag gate — the LLM chooses replies by meaning.
  */
-export async function suggestLyricBacksForPosts(
+export async function loadEligibleCatalogUnits(
   supabase: SupabaseClient,
-  posts: SuggestPostInput[],
-): Promise<Record<string, SuggestedLyricBack[]>> {
-  const result: Record<string, SuggestedLyricBack[]> = {}
-  for (const p of posts) result[p.id] = []
+): Promise<EligibleUnit[]> {
+  const { data: songRows, error: songErr } = await supabase
+    .from('songs')
+    .select('id, title, artist_display_name, artwork_url, audio_url')
+    .eq('status', 'live')
 
-  const actionable = posts
-    .map((p) => ({ post: p, vibe: normalizeSuggestVibe(p.emotion) }))
-    .filter((x): x is { post: SuggestPostInput; vibe: SuggestVibe } => Boolean(x.vibe))
-
-  if (actionable.length === 0) return result
-
-  const neededVibes = [...new Set(actionable.map((a) => a.vibe))]
-
-  const { data: vibeRows, error: vibeErr } = await supabase
-    .from('lyric_line_vibes')
-    .select(`
-      vibe,
-      lyric_lines!inner (
-        id,
-        song_id,
-        line_index,
-        text,
-        start_sec,
-        end_sec,
-        songs!inner (
-          id,
-          title,
-          artist_display_name,
-          artwork_url,
-          audio_url,
-          status
-        )
-      )
-    `)
-    .in('vibe', neededVibes)
-
-  if (vibeErr) {
-    console.error('suggestLyricBacksForPosts: vibe query failed', vibeErr)
-    return result
+  if (songErr) {
+    console.error('loadEligibleCatalogUnits: songs query failed', songErr)
+    return []
   }
+  if (!songRows?.length) return []
 
-  const candidates: CandidateRow[] = []
-  const songIds = new Set<string>()
-
-  for (const row of vibeRows || []) {
-    const line = Array.isArray(row.lyric_lines) ? row.lyric_lines[0] : row.lyric_lines
-    if (!line) continue
-    const song = Array.isArray(line.songs) ? line.songs[0] : line.songs
-    if (!song || song.status !== 'live') continue
-    songIds.add(song.id)
-    candidates.push({
-      id: line.id,
-      song_id: song.id,
-      line_index: line.line_index,
-      text: line.text,
-      start_sec: Number(line.start_sec),
-      end_sec: Number(line.end_sec),
-      vibe: row.vibe,
-      songTitle: song.title,
-      artistName: song.artist_display_name,
-      artworkUrl: song.artwork_url ?? null,
-      audioUrl: song.audio_url ?? null,
-    })
-  }
-
-  if (candidates.length === 0) return result
+  const songMeta = new Map(
+    songRows.map((s) => [
+      s.id as string,
+      {
+        title: s.title as string,
+        artist: s.artist_display_name as string,
+        artworkUrl: (s.artwork_url as string | null) ?? null,
+        audioUrl: (s.audio_url as string | null) ?? null,
+      },
+    ]),
+  )
+  const songIds = [...songMeta.keys()]
 
   const { data: atomRows, error: atomErr } = await supabase
     .from('lyric_lines')
     .select('song_id, line_index, text, start_sec, end_sec')
-    .in('song_id', [...songIds])
+    .in('song_id', songIds)
 
   if (atomErr) {
-    console.error('suggestLyricBacksForPosts: atoms query failed', atomErr)
-    return result
+    console.error('loadEligibleCatalogUnits: lyric_lines query failed', atomErr)
+    return []
   }
 
   const atomsBySong = new Map<string, CatalogLyricAtom[]>()
@@ -201,98 +174,333 @@ export async function suggestLyricBacksForPosts(
     list.sort((a, b) => a.lineIndex - b.lineIndex)
   }
 
-  // Attach vibes onto atoms for union when windowing.
-  const vibeBySongLine = new Map<string, string[]>()
-  for (const c of candidates) {
-    const key = `${c.song_id}_${c.line_index}`
-    const list = vibeBySongLine.get(key) || []
-    if (!list.includes(c.vibe)) list.push(c.vibe)
-    vibeBySongLine.set(key, list)
-  }
-  for (const [songId, list] of atomsBySong) {
-    for (const atom of list) {
-      atom.vibes = vibeBySongLine.get(`${songId}_${atom.lineIndex}`) || []
-    }
-  }
+  const units: EligibleUnit[] = []
+  const seenRanges = new Set<string>()
 
-  const byVibe = new Map<string, CandidateRow[]>()
-  for (const c of candidates) {
-    const list = byVibe.get(c.vibe) || []
-    list.push(c)
-    byVibe.set(c.vibe, list)
-  }
-
-  for (const { post, vibe } of actionable) {
-    const pool = byVibe.get(vibe) || []
-    const postTextNorm = normalizeText(post.text || '')
-    const scored: { score: number; suggestion: SuggestedLyricBack; rangeKey: string }[] = []
-    const seenRanges = new Set<string>()
-
-    for (const c of pool) {
-      if (postTextNorm && normalizeText(c.text) === postTextNorm) continue
-      const atoms = atomsBySong.get(c.song_id)
-      if (!atoms?.length) continue
-      const unit = pickUnit(atoms, c.line_index)
+  for (const [songId, atoms] of atomsBySong) {
+    const meta = songMeta.get(songId)
+    if (!meta || atoms.length === 0) continue
+    for (const atom of atoms) {
+      const unit = pickUnit(atoms, atom.lineIndex)
       if (!unit) continue
-
-      const rangeKey = `${c.song_id}_${unit.startSec}_${unit.endSec}`
+      const rangeKey = `${songId}_${unit.startSec}_${unit.endSec}`
       if (seenRanges.has(rangeKey)) continue
       seenRanges.add(rangeKey)
-
-      let score = 0
-      if (post.songId && c.song_id !== post.songId) score += 3
-      else if (!post.songId) score += 1
-      if (unit.vibes.includes(vibe)) score += 1
-      // Prefer longer units slightly (more “replyable”).
-      score += Math.min(2, Math.floor(wordCount(unit.text) / 6))
-
-      scored.push({
-        score,
-        rangeKey,
-        suggestion: {
-          text: unit.text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim(),
-          songTitle: c.songTitle,
-          artistName: c.artistName,
-          songId: c.song_id,
-          lineIndex: unit.lineIndex,
-          startSec: unit.startSec,
-          endSec: unit.endSec,
-          audioUrl: c.audioUrl,
-          artworkUrl: c.artworkUrl,
-          vibe,
-        },
+      const text = unit.text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
+      if (!text) continue
+      units.push({
+        id: `${songId}:${unit.lineIndex}`,
+        text,
+        songId,
+        songTitle: meta.title,
+        artistName: meta.artist,
+        lineIndex: unit.lineIndex,
+        startSec: unit.startSec,
+        endSec: unit.endSec,
+        audioUrl: meta.audioUrl,
+        artworkUrl: meta.artworkUrl,
       })
     }
+  }
 
-    // Soft diversify: prefer distinct songs in top 3.
-    scored.sort((a, b) => b.score - a.score)
-    const picked: SuggestedLyricBack[] = []
-    const usedSongs = new Set<string>()
-    for (const row of scored) {
-      if (picked.length >= SUGGESTIONS_PER_POST) break
-      if (usedSongs.has(row.suggestion.songId) && picked.length < SUGGESTIONS_PER_POST) {
-        // Skip same-song until we need fillers
-        continue
-      }
-      picked.push(row.suggestion)
-      usedSongs.add(row.suggestion.songId)
-    }
-    if (picked.length < SUGGESTIONS_PER_POST) {
-      for (const row of scored) {
-        if (picked.length >= SUGGESTIONS_PER_POST) break
-        if (picked.some((p) => p.songId === row.suggestion.songId && p.lineIndex === row.suggestion.lineIndex)) {
-          continue
-        }
-        if (picked.some((p) =>
-          p.songId === row.suggestion.songId
-          && p.startSec === row.suggestion.startSec
-          && p.endSec === row.suggestion.endSec
-        )) continue
-        picked.push(row.suggestion)
-      }
-    }
+  units.sort((a, b) => {
+    if (a.songId !== b.songId) return a.songId.localeCompare(b.songId)
+    return a.lineIndex - b.lineIndex
+  })
+  return units
+}
 
-    result[post.id] = picked.slice(0, SUGGESTIONS_PER_POST)
+function chunkUnits<T>(arr: T[], size: number): T[][] {
+  if (arr.length === 0) return []
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
+function parseIdList(raw: string): string[] {
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')
+  try {
+    const parsed = JSON.parse(cleaned) as { ids?: unknown }
+    if (!Array.isArray(parsed?.ids)) return []
+    return parsed.ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  } catch {
+    return []
+  }
+}
+
+async function openaiPickIds(params: {
+  postText: string
+  parentSongTitle?: string | null
+  parentSongId?: string | null
+  units: EligibleUnit[]
+  maxIds: number
+}): Promise<string[]> {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) {
+    console.error('suggestLyricBacks: OPENAI_API_KEY missing')
+    return []
+  }
+  if (params.units.length === 0) return []
+
+  const catalogBlock = params.units
+    .map((u) => `[${u.id}] "${u.text}" — ${u.songTitle} · ${u.artistName}`)
+    .join('\n')
+
+  const parentHint = params.parentSongTitle
+    ? `The post quotes: ${params.parentSongTitle}${params.parentSongId ? ` (song_id ${params.parentSongId})` : ''}.`
+    : 'The post may not be linked to a catalog song.'
+
+  const system = `You help Margo suggest Lyric Backs — real catalog lyric lines that answer a user's post as a conversational reply.
+
+Rules:
+- Pick lines that genuinely respond to the meaning of the post (common sense / dialog), not just the same emotion category.
+- Prefer a different song than the post's own song when an equally good reply exists.
+- Never pick a line that is the same (or near-identical) as the post lyric.
+- Only return ids from the provided list.
+- Return at most ${params.maxIds} ids, fewer if only fewer lines are strong replies. Return zero if none are good.
+- Reply with JSON only: {"ids":["id1","id2"]} — no markdown, no explanation.`
+
+  const user = `Post lyric:
+"${params.postText}"
+
+${parentHint}
+
+Catalog lyric units (pick up to ${params.maxIds}):
+${catalogBlock}`
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      max_tokens: 200,
+      temperature: 0.4,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => '')
+    console.error('suggestLyricBacks: OpenAI failed', res.status, err)
+    return []
+  }
+
+  const data = await res.json() as {
+    choices?: { message?: { content?: string } }[]
+  }
+  const content = data.choices?.[0]?.message?.content || ''
+  return parseIdList(content)
+}
+
+function hydrateSuggestions(
+  ids: string[],
+  byId: Map<string, EligibleUnit>,
+  postTextNorm: string,
+  vibe: string,
+): SuggestedLyricBack[] {
+  const picked: SuggestedLyricBack[] = []
+  const seen = new Set<string>()
+
+  for (const id of ids) {
+    if (picked.length >= SUGGESTIONS_PER_POST) break
+    const u = byId.get(id)
+    if (!u || seen.has(u.id)) continue
+    if (postTextNorm && normalizeText(u.text) === postTextNorm) continue
+    seen.add(u.id)
+    picked.push({
+      text: u.text,
+      songTitle: u.songTitle,
+      artistName: u.artistName,
+      songId: u.songId,
+      lineIndex: u.lineIndex,
+      startSec: u.startSec,
+      endSec: u.endSec,
+      audioUrl: u.audioUrl,
+      artworkUrl: u.artworkUrl,
+      vibe,
+    })
+  }
+
+  // Prefer-other-song is instructed in the LLM prompt; keep model order.
+  return picked.slice(0, SUGGESTIONS_PER_POST)
+}
+
+async function rankUnitsForPost(
+  post: SuggestPostInput,
+  units: EligibleUnit[],
+): Promise<SuggestedLyricBack[]> {
+  const postText = (post.text || '').trim()
+  if (!postText) return []
+
+  const postTextNorm = normalizeText(postText)
+  const pool = units.filter((u) => normalizeText(u.text) !== postTextNorm)
+  if (pool.length === 0) return []
+
+  const byId = new Map(pool.map((u) => [u.id, u]))
+  const vibe = (post.emotion || '').toUpperCase() || ''
+
+  const chunks = chunkUnits(pool, MAX_UNITS_PER_CALL)
+  let candidateIds: string[] = []
+
+  if (chunks.length === 1) {
+    candidateIds = await openaiPickIds({
+      postText,
+      parentSongTitle: post.songTitle,
+      parentSongId: post.songId,
+      units: chunks[0],
+      maxIds: SUGGESTIONS_PER_POST,
+    })
+  } else {
+    const perChunk = await mapPool(chunks, LLM_CONCURRENCY, (chunk) =>
+      openaiPickIds({
+        postText,
+        parentSongTitle: post.songTitle,
+        parentSongId: post.songId,
+        units: chunk,
+        maxIds: SUGGESTIONS_PER_POST,
+      }),
+    )
+    const mergedPool: EligibleUnit[] = []
+    const seen = new Set<string>()
+    for (const ids of perChunk) {
+      for (const id of ids) {
+        const u = byId.get(id)
+        if (!u || seen.has(id)) continue
+        seen.add(id)
+        mergedPool.push(u)
+      }
+    }
+    if (mergedPool.length === 0) return []
+    if (mergedPool.length <= SUGGESTIONS_PER_POST) {
+      candidateIds = mergedPool.map((u) => u.id)
+    } else {
+      candidateIds = await openaiPickIds({
+        postText,
+        parentSongTitle: post.songTitle,
+        parentSongId: post.songId,
+        units: mergedPool,
+        maxIds: SUGGESTIONS_PER_POST,
+      })
+    }
+  }
+
+  return hydrateSuggestions(
+    candidateIds,
+    byId,
+    postTextNorm,
+    vibe,
+  )
+}
+
+type CacheRow = {
+  post_id: string
+  suggestions: SuggestedLyricBack[]
+  catalog_fingerprint: string
+  expires_at: string
+}
+
+async function readCache(
+  supabase: SupabaseClient,
+  postIds: string[],
+  fingerprint: string,
+): Promise<Map<string, SuggestedLyricBack[]>> {
+  const hit = new Map<string, SuggestedLyricBack[]>()
+  if (postIds.length === 0) return hit
+
+  const { data, error } = await supabase
+    .from('suggest_lyric_back_cache')
+    .select('post_id, suggestions, catalog_fingerprint, expires_at')
+    .in('post_id', postIds)
+    .eq('catalog_fingerprint', fingerprint)
+    .gt('expires_at', new Date().toISOString())
+
+  if (error) {
+    console.error('suggestLyricBacks: cache read failed', error)
+    return hit
+  }
+
+  for (const row of (data || []) as CacheRow[]) {
+    const list = Array.isArray(row.suggestions) ? row.suggestions : []
+    hit.set(row.post_id, list.slice(0, SUGGESTIONS_PER_POST))
+  }
+  return hit
+}
+
+async function writeCache(
+  supabase: SupabaseClient,
+  postId: string,
+  suggestions: SuggestedLyricBack[],
+  fingerprint: string,
+): Promise<void> {
+  const ttl = suggestions.length > 0 ? CACHE_TTL_MS : CACHE_EMPTY_TTL_MS
+  const expires = new Date(Date.now() + ttl).toISOString()
+  const { error } = await supabase.from('suggest_lyric_back_cache').upsert({
+    post_id: postId,
+    suggestions,
+    catalog_fingerprint: fingerprint,
+    created_at: new Date().toISOString(),
+    expires_at: expires,
+  }, { onConflict: 'post_id' })
+
+  if (error) {
+    console.error('suggestLyricBacks: cache write failed', error)
+  }
+}
+
+/**
+ * For each post, return 0–SUGGESTIONS_PER_POST catalog lyric units chosen
+ * by gpt-4o-mini as meaningful Lyric Back replies.
+ */
+export async function suggestLyricBacksForPosts(
+  supabase: SupabaseClient,
+  posts: SuggestPostInput[],
+): Promise<Record<string, SuggestedLyricBack[]>> {
+  const result: Record<string, SuggestedLyricBack[]> = {}
+  for (const p of posts) result[p.id] = []
+  if (posts.length === 0) return result
+
+  const units = await loadEligibleCatalogUnits(supabase)
+  if (units.length === 0) return result
+
+  const fingerprint = fingerprintUnits(units)
+  const cacheHits = await readCache(
+    supabase,
+    posts.map((p) => p.id),
+    fingerprint,
+  )
+
+  const misses: SuggestPostInput[] = []
+  for (const post of posts) {
+    if (cacheHits.has(post.id)) {
+      result[post.id] = cacheHits.get(post.id) || []
+    } else if (!(post.text || '').trim()) {
+      result[post.id] = []
+    } else {
+      misses.push(post)
+    }
+  }
+
+  if (misses.length === 0) return result
+
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('suggestLyricBacksForPosts: OPENAI_API_KEY missing — empty suggestions')
+    return result
+  }
+
+  const ranked = await mapPool(misses, LLM_CONCURRENCY, async (post) => {
+    const picks = await rankUnitsForPost(post, units)
+    await writeCache(supabase, post.id, picks, fingerprint)
+    return { id: post.id, picks }
+  })
+
+  for (const row of ranked) {
+    result[row.id] = row.picks
   }
 
   return result
