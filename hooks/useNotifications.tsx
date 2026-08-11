@@ -1,7 +1,7 @@
 'use client'
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useIdentity } from '@/hooks/useIdentity'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 // Cookie-session client (Phase 4 bridge). Reads/writes notifications under
 // RLS require the JWT from the auth cookie — the old localStorage client 401s.
@@ -142,25 +142,31 @@ const NotificationsContext = createContext<NotificationsContextValue | null>(nul
  * (hidden with CSS per breakpoint, not actually unmounted).
  */
 export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const { user } = useIdentity()
+  // Auth gate (not Identity): start the list fetch as soon as JWT is ready,
+  // in parallel with ensureProfile — profile row is not required for RLS here.
+  const { user: authUser, loading: authLoading } = useAuthGate()
+  const userId =
+    !authLoading && authUser && !authUser.is_anonymous ? authUser.id : undefined
+  const signedOut = !authLoading && (!authUser || !!authUser.is_anonymous)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
   const unreadCount = notifications.filter(n => !n.readAt).length
 
   useEffect(() => {
-    if (!user) {
+    if (authLoading) return
+
+    if (signedOut || !userId) {
       setNotifications([])
       setLoading(false)
       return
     }
 
-    const userId = user.id
     let active = true
 
     async function loadInitial() {
       try {
-        const mapped = await fetchNotificationsMapped(userId)
+        const mapped = await fetchNotificationsMapped(userId!)
         if (!active) return
         setNotifications(mapped)
       } catch (error) {
@@ -170,6 +176,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    setLoading(true)
     loadInitial()
 
     const channel = supabase
@@ -195,10 +202,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       active = false
       supabase.removeChannel(channel)
     }
-  }, [user])
+  }, [authLoading, signedOut, userId])
 
   const markAllRead = useCallback(async () => {
-    if (!user) return
+    if (!userId) return
     const unreadIds = notifications.filter(n => !n.readAt).map(n => n.id)
     if (unreadIds.length === 0) return
 
@@ -213,7 +220,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       .in('id', unreadIds)
 
     if (error) console.error('Failed to mark notifications read:', error)
-  }, [user, notifications])
+  }, [userId, notifications])
 
   // Accepting flips the pending follows row to accepted — this also
   // fires the existing notify_on_follow trigger, which inserts a
@@ -222,12 +229,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   // The follow_request notification itself is deleted since it's now
   // resolved, not left around as a stale action item.
   const acceptFollowRequest = useCallback(async (n: Notification) => {
-    if (!user || !n.actorId) return
+    if (!userId || !n.actorId) return
     const { error: followErr } = await supabase
       .from('follows')
       .update({ status: 'accepted' })
       .eq('follower_id', n.actorId)
-      .eq('followee_id', user.id)
+      .eq('followee_id', userId)
       .eq('status', 'pending')
     if (followErr) {
       console.error('Failed to accept follow request:', followErr)
@@ -235,15 +242,15 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
     await supabase.from('notifications').delete().eq('id', n.id)
     setNotifications(prev => prev.filter(x => x.id !== n.id))
-  }, [user])
+  }, [userId])
 
   const declineFollowRequest = useCallback(async (n: Notification) => {
-    if (!user || !n.actorId) return
+    if (!userId || !n.actorId) return
     const { error: followErr } = await supabase
       .from('follows')
       .delete()
       .eq('follower_id', n.actorId)
-      .eq('followee_id', user.id)
+      .eq('followee_id', userId)
       .eq('status', 'pending')
     if (followErr) {
       console.error('Failed to decline follow request:', followErr)
@@ -251,7 +258,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
     await supabase.from('notifications').delete().eq('id', n.id)
     setNotifications(prev => prev.filter(x => x.id !== n.id))
-  }, [user])
+  }, [userId])
 
   return (
     <NotificationsContext.Provider value={{

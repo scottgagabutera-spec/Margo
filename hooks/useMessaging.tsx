@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useIdentity } from '@/hooks/useIdentity'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const supabase = createClient()
 
@@ -133,8 +133,11 @@ async function loadConversations(uid: string): Promise<Conversation[]> {
  * produced "cannot add postgres_changes callbacks after subscribe()".
  */
 export function MessagingProvider({ children }: { children: ReactNode }) {
-  const { user } = useIdentity()
-  const userId = user && !user.isAnonymous ? user.id : undefined
+  // Parallel with Identity ensureProfile — needs JWT only, not profile row.
+  const { user: authUser, loading: authLoading } = useAuthGate()
+  const userId =
+    !authLoading && authUser && !authUser.is_anonymous ? authUser.id : undefined
+  const signedOut = !authLoading && (!authUser || !!authUser.is_anonymous)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -196,7 +199,9 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!userId) {
+    if (authLoading) return
+
+    if (signedOut || !userId) {
       setConversations([])
       setLoading(false)
       return
@@ -233,7 +238,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       active = false
       supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [authLoading, signedOut, userId])
 
   const value = useMemo<MessagingContextValue>(
     () => ({

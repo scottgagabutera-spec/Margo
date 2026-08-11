@@ -1,6 +1,7 @@
 'use client'
 import { NotificationItem } from '@/components/notification-item'
 import type { Notification } from '@/hooks/useNotifications'
+import { NotificationRowSkeletonList } from '@/components/margo-skeletons'
 
 const font = 'var(--font-lora), serif'
 
@@ -13,15 +14,7 @@ export function NotificationList({
   emptyLabel?: string
 }) {
   if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {[0, 1, 2].map(i => (
-            <div key={i} style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--gold)', opacity: 0.5 }} />
-          ))}
-        </div>
-      </div>
-    )
+    return <NotificationRowSkeletonList count={6} />
   }
 
   if (notifications.length === 0) {

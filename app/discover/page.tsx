@@ -4,6 +4,8 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useSongs, Song } from '@/hooks/useSongs'
+import { useLyricMoments } from '@/hooks/useLyricMoments'
+import type { LyricMomentRow } from '@/hooks/useLyricMoments'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import { useIsPlaying } from '@/hooks/useAudioEngine'
 import { usePosts } from '@/hooks/usePosts'
@@ -23,6 +25,7 @@ import { PullToRefresh } from '@/components/pull-to-refresh'
 import { NewItemsPill } from '@/components/new-items-pill'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
+import { DiscoverPageSkeleton } from '@/components/margo-skeletons'
 
 const supabase = createClient()
 
@@ -454,7 +457,7 @@ function ResonanceCard({ post, isPlaying, onPlay, onSelectVibe }: {
 function matchLineInSong(song: Song | undefined, text: string | undefined) {
   if (!song || !text) return null
   const needle = text.toLowerCase().trim()
-  const match = song.lyricLines.find(l =>
+  const match = song.lyricLines?.find(l =>
     l.text.toLowerCase().includes(needle) || needle.includes(l.text.toLowerCase())
   )
   return match || null
@@ -735,7 +738,17 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
 // Matching-lyric links now point at /song/[id]?t=<startSec> — the
 // song page can read the optional t= query param to seek to that
 // line on load. id and audio URL no longer travel through the URL.
-function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: Song[]; onPreviewSong: (song: Song) => void }) {
+function SearchResults({
+  query,
+  songs,
+  moments,
+  onPreviewSong,
+}: {
+  query: string
+  songs: Song[]
+  moments: LyricMomentRow[]
+  onPreviewSong: (song: Song) => void
+}) {
   const q = query.toLowerCase().trim()
 
   const matchedSongs = useMemo(
@@ -744,16 +757,20 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
   )
 
   const matchedLines = useMemo(() => {
-    const results: { song: Song; line: string; start: number }[] = []
-    songs.forEach(song => {
-      song.lyricLines?.forEach(l => {
-        if (l.text.toLowerCase().includes(q)) {
-          results.push({ song, line: l.text, start: l.startSec })
-        }
-      })
+    const results: { songId: string; songTitle: string; artist: string; line: string; start: number }[] = []
+    moments.forEach(m => {
+      if (m.text.toLowerCase().includes(q)) {
+        results.push({
+          songId: m.songId,
+          songTitle: m.songTitle,
+          artist: m.artist,
+          line: m.text,
+          start: m.startSec,
+        })
+      }
     })
     return results.slice(0, 20)
-  }, [songs, q])
+  }, [moments, q])
 
   if (matchedSongs.length === 0 && matchedLines.length === 0) {
     return (
@@ -772,10 +789,10 @@ function SearchResults({ query, songs, onPreviewSong }: { query: string; songs: 
           <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>Matching lyrics</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {matchedLines.map((m, i) => (
-              <Link key={i} href={`/song/${m.song.id}?t=${Math.floor(m.start)}`} style={{ textDecoration: 'none' }}>
+              <Link key={i} href={`/song/${m.songId}?t=${Math.floor(m.start)}`} style={{ textDecoration: 'none' }}>
                 <div style={{ padding: '14px 18px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px' }}>
                   <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '6px' }}>&ldquo;{m.line}&rdquo;</p>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>{m.song.title} · {m.song.artist}</p>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>{m.songTitle} · {m.artist}</p>
                 </div>
               </Link>
             ))}
@@ -807,6 +824,7 @@ export default function DiscoverPage() {
   const { isTabActive } = usePrimaryTab()
   const discoverLive = isTabActive('discover')
   const { songs, loading, refetch } = useSongs({ enabled: discoverLive })
+  const { moments: momentRows, refetch: refetchMoments } = useLyricMoments({ enabled: discoverLive })
   const { posts: livePosts, reload: reloadPosts } = usePosts({ enabled: discoverLive })
   const {
     items: posts,
@@ -855,17 +873,14 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     const moments: LyricMoment[] = []
-    songs.forEach(song => {
-      if (!song.lyricLines || song.lyricLines.length === 0) return
-      song.lyricLines.forEach(line => {
-        if (wordCount(line.text) < MIN_MOMENT_WORDS) return
-        if (!line.vibes || line.vibes.length === 0) return
-        moments.push({
-          line: line.text, lineId: line.lineIndex,
-          start: line.startSec, end: line.endSec,
-          songId: song.id, songTitle: song.title, artist: song.artist,
-          artwork: song.artwork, audioUrl: song.audioUrl, vibes: line.vibes,
-        })
+    momentRows.forEach((row) => {
+      if (wordCount(row.text) < MIN_MOMENT_WORDS) return
+      if (!row.vibes || row.vibes.length === 0) return
+      moments.push({
+        line: row.text, lineId: row.lineIndex,
+        start: row.startSec, end: row.endSec,
+        songId: row.songId, songTitle: row.songTitle, artist: row.artist,
+        artwork: row.artwork, audioUrl: row.audioUrl, vibes: row.vibes,
       })
     })
     for (let i = moments.length - 1; i > 0; i--) {
@@ -873,7 +888,7 @@ export default function DiscoverPage() {
       [moments[i], moments[j]] = [moments[j], moments[i]]
     }
     setAllMoments(moments)
-  }, [songs])
+  }, [momentRows])
 
   useEffect(() => {
     return subscribeAudioEngine(state => {
@@ -1025,7 +1040,7 @@ export default function DiscoverPage() {
     <PullToRefresh
       onRefreshingChange={setPtrBusy}
       onRefresh={async () => {
-        const [, latest] = await Promise.all([refetch(), reloadPosts()])
+        const [, , latest] = await Promise.all([refetch(), refetchMoments(), reloadPosts()])
         applyImmediate(latest)
       }}
     >
@@ -1130,14 +1145,9 @@ export default function DiscoverPage() {
 
       <div style={{ padding: '0 16px 32px', width: '100%', maxWidth: '72rem', margin: '0 auto', boxSizing: 'border-box' }}>
         {isSearching ? (
-          <SearchResults query={search} songs={songs} onPreviewSong={setPreview} />
+          <SearchResults query={search} songs={songs} moments={momentRows} onPreviewSong={setPreview} />
         ) : loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', padding: '8px 0' }}>
-            {Array(6).fill(null).map((_, i) => (
-              <div key={i} style={{ minHeight: '150px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', animation: `pulse 1.4s ease-in-out ${i * 0.12}s infinite` }} />
-            ))}
-            <style>{`@keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:0.7} }`}</style>
-          </div>
+          <DiscoverPageSkeleton />
         ) : (
           <>
             {/* Dismissible vibe-filter chip — replaces the old permanent

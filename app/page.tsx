@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useIdentity } from '@/hooks/useIdentity';
+import { LandingExchangeSkeleton, LandingRedirectSkeleton } from '@/components/margo-skeletons';
 
 interface Echo {
   lyric?: string;
@@ -227,6 +228,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [featuredExchange, setFeaturedExchange] = useState<ExchangePair | null>(null);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -291,12 +293,14 @@ export default function Home() {
       if (error) {
         console.error('[landing] failed to load featured exchange:', error.message)
         setFeaturedExchange(null)
+        setFeaturedLoading(false)
         return
       }
       const postLyric = (data?.post_text || '').trim()
       const replyLyric = (data?.reply_text || '').trim()
       if (!postLyric || !replyLyric) {
         setFeaturedExchange(null)
+        setFeaturedLoading(false)
         return
       }
       setFeaturedExchange({
@@ -309,14 +313,19 @@ export default function Home() {
         replyArtist: data?.reply_artist || undefined,
         replyUser: data?.reply_username || undefined,
       })
+      setFeaturedLoading(false)
     })()
     return () => { cancelled = true }
   }, []);
 
-  // Don't render the landing page while we're still figuring out who's
-  // asking, or once we already know they're signed in and about to be
-  // redirected — avoids a flash of the marketing page for real users.
-  if (!mounted || identityLoading || (user && !user.isAnonymous)) return null;
+  // Hydration gate: avoid SSR/client mismatch on identity-dependent branches.
+  if (!mounted) return null
+
+  // Don't flash marketing to signed-in users — show a Feed-shaped shell
+  // while identity resolves / redirect runs (avoids a blank “nothing responds”).
+  if (identityLoading || (user && !user.isAnonymous)) {
+    return <LandingRedirectSkeleton />
+  }
 
   const heroExchange = pickExchange(allPosts) || FALLBACK_EXCHANGE;
 
@@ -431,12 +440,17 @@ export default function Home() {
       </section>
 
       {/* Featured Exchange — curated; only renders when both lyrics are non-empty in site_featured_exchange */}
-      {featuredExchange && (
+      {featuredLoading ? (
+        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'40rem', margin:'0 auto 56px'}}>
+          <div style={{fontSize:'0.6rem', color:'var(--text-muted)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>Exchange of the Week</div>
+          <LandingExchangeSkeleton />
+        </section>
+      ) : featuredExchange ? (
         <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'40rem', margin:'0 auto 56px'}}>
           <div style={{fontSize:'0.6rem', color:'var(--text-muted)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>Exchange of the Week</div>
           <Exchange pair={featuredExchange} spacing="32px" />
         </section>
-      )}
+      ) : null}
 
       {/* Lyric Stream */}
       <section style={{position:'relative', zIndex:5, width:'100%', margin:'0 auto 32px', overflow:'hidden'}}>
