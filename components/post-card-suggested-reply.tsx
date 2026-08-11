@@ -39,10 +39,13 @@ export function PostCardSuggestedReply({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postIds: [postId] }),
       })
-      if (!res.ok) {
-        throw new Error(`Could not load suggestions (${res.status})`)
+      const data = await res.json().catch(() => ({})) as {
+        suggestions?: Record<string, SuggestedLyricBack[]>
+        error?: string
       }
-      const data = await res.json() as { suggestions?: Record<string, SuggestedLyricBack[]> }
+      if (!res.ok) {
+        throw new Error(data.error || `Could not load suggestions (${res.status})`)
+      }
       const list = (data.suggestions?.[postId] ?? []).slice(0, 3)
       setPicks(list)
       setFetched(true)
