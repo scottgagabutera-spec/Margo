@@ -11,14 +11,14 @@ import {
 
 const supabase = createClient()
 
-/** @deprecated Prefer FeedReplay — alias kept for callers of this hook. */
-export type FolloweeReplay = FeedReplay
+export type { FeedReplay }
 
 /**
- * Recent Replays from accepted followees (+ the viewer). Reserved for a
- * Following-scoped surface. Main Feed discovery uses useRecentReplays.
+ * Recent Replays from anyone (global discovery), for interleaving into the
+ * main Feed with attribution. Originals still come from usePosts; this only
+ * injects Replay wrappers. Following-scoped variant: useFolloweeReplays.
  */
-export function useFolloweeReplays(
+export function useRecentReplays(
   limit = 80,
   options: { enabled?: boolean } = {}
 ) {
@@ -29,38 +29,21 @@ export function useFolloweeReplays(
   const lastLoadedAtRef = useRef(0)
 
   const load = useCallback(async () => {
+    // post_replays SELECT is authenticated; no session → no attributed cards.
     if (!user?.id) {
       setReplays([])
       return
     }
     setLoading(true)
 
-    const { data: followRows, error: followErr } = await supabase
-      .from('follows')
-      .select('followee_id')
-      .eq('follower_id', user.id)
-      .eq('status', 'accepted')
-
-    if (followErr) {
-      console.error('useFolloweeReplays: follows', followErr)
-      setReplays([])
-      setLoading(false)
-      return
-    }
-
-    const replayerIds = Array.from(
-      new Set([user.id, ...(followRows ?? []).map(r => r.followee_id).filter(Boolean)])
-    )
-
     const { data, error } = await supabase
       .from('post_replays')
       .select(REPLAY_FEED_SELECT)
-      .in('replayer_id', replayerIds)
       .order('created_at', { ascending: false })
       .limit(limit)
 
     if (error) {
-      console.error('useFolloweeReplays: replays', error)
+      console.error('useRecentReplays: replays', error)
       setReplays([])
       setLoading(false)
       return
@@ -83,13 +66,13 @@ export function useFolloweeReplays(
     if (!user?.id) return
     let channel: ReturnType<typeof supabase.channel> | null = null
     try {
-      const topic = `followee-replays:${user.id}:${crypto.randomUUID()}`
+      const topic = `recent-replays:${user.id}:${crypto.randomUUID()}`
       channel = supabase
         .channel(topic)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'post_replays' }, () => { void load() })
         .subscribe()
     } catch (err) {
-      console.error('followee-replays realtime failed', err)
+      console.error('recent-replays realtime failed', err)
     }
     return () => {
       if (channel) supabase.removeChannel(channel)
