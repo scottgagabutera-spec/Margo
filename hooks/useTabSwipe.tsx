@@ -14,9 +14,12 @@ export {
  * Layout wrapper for allowlisted primary-tab swipe.
  * Mount once under IdentityProvider; wraps page {children} only.
  *
- * Phase 2.0–2.2: viewport carries static `touch-action: pan-y`. Gesture +
+ * Phase 2: viewport carries static `touch-action: pan-y`. Finger-follow +
  * interruptible spring settle run inside PrimaryTabShell (`enableSwipeGesture`).
- * Swipe commits no longer use CSS enter-slide — strip settle is the only motion.
+ *
+ * Tab-bar taps stay plain <Link> navigations (instant keepalive swap) — that is
+ * intentional, not a missing animation. Swipe owns strip physics; taps own
+ * discrete destination commits. CSS enter-slide was removed in Phase 2.3.
  */
 export function TabSwipeProvider({ children }: { children: ReactNode }) {
   const { user, identity } = useIdentity()
