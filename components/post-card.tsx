@@ -34,6 +34,8 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { PostThumbnail } from '@/components/post-thumbnail'
 import { VibeTag } from '@/components/vibe-tag'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { resolveMomentLines } from '@/lib/post-lines'
+import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
 
 const supabase = createClient()
 
@@ -165,6 +167,105 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     >
       <PlayPauseIcon playing={isThisPlaying} size={16} color="var(--gold)" />
     </button>
+  )
+}
+
+function PostMomentBody({
+  post,
+  isCompact,
+}: {
+  post: Post
+  isCompact: boolean
+}) {
+  const lines = resolveMomentLines(post)
+  const multi = lines.length > 1
+
+  return (
+    <div style={{ marginBottom: multi ? '8px' : '16px' }}>
+      {lines.map((line, i) => {
+        const hasAudio = !!line.audioUrl
+        const attribution = [line.songTitle, line.artistName].filter(Boolean).join(' · ')
+        const attrStyle: React.CSSProperties = {
+          fontFamily: UI_FONT,
+          fontSize: '0.6rem',
+          color: 'rgba(255,255,255,0.75)',
+          letterSpacing: '1px',
+          textTransform: 'uppercase',
+          marginTop: '8px',
+          marginBottom: multi && i < lines.length - 1 ? '0' : '12px',
+        }
+        return (
+          <div key={line.id || `line-${line.position}-${i}`}>
+            {multi && i > 0 ? (
+              <p style={{
+                margin: '10px 0 8px',
+                fontFamily: UI_FONT,
+                fontSize: '0.52rem',
+                fontWeight: 700,
+                letterSpacing: '1.5px',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+                textAlign: 'center',
+              }}>
+                stitch
+              </p>
+            ) : null}
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              ...(multi ? { borderLeft: '2px solid rgba(232,197,71,0.25)', paddingLeft: '12px' } : null),
+            }}>
+              <p style={{
+                fontFamily: LYRIC_FONT,
+                fontStyle: 'italic',
+                fontSize: isCompact ? '1rem' : 'clamp(1.1rem, 2.4vw, 1.5rem)',
+                color: 'var(--text)',
+                lineHeight: 1.45,
+                flex: 1,
+                margin: 0,
+              }}>
+                &ldquo;{line.text}&rdquo;
+              </p>
+              {hasAudio && line.audioUrl ? (
+                <SnippetIconButton
+                  audioUrl={line.audioUrl}
+                  songId={line.songId || null}
+                  postText={line.text}
+                  songTitle={line.songTitle || ''}
+                  artist={line.artistName || ''}
+                  artwork={line.artworkUrl || null}
+                  snippetStart={line.snippetStart}
+                  snippetEnd={line.snippetEnd}
+                />
+              ) : isCompact && line.artworkUrl ? (
+                <PostThumbnail
+                  artwork={line.artworkUrl}
+                  alt=""
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '8px',
+                    objectFit: 'cover',
+                    flexShrink: 0,
+                    border: '1px solid var(--border)',
+                  }}
+                />
+              ) : null}
+            </div>
+            {attribution ? (
+              line.songId ? (
+                <Link href={`/song/${line.songId}`} style={{ ...attrStyle, display: 'block', textDecoration: 'none' }}>
+                  {attribution}
+                </Link>
+              ) : (
+                <p style={attrStyle}>{attribution}</p>
+              )
+            ) : null}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -757,53 +858,9 @@ export function PostCard({
         />
       )}
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }}>
-        <p style={{
-          fontFamily: LYRIC_FONT, fontStyle: 'italic',
-          fontSize: isCompact ? '1rem' : 'clamp(1.1rem, 2.4vw, 1.5rem)', color: 'var(--text)',
-          lineHeight: 1.45, flex: 1, margin: 0,
-        }}>
-          &ldquo;{post.text}&rdquo;
-        </p>
-        {/* Playable catalog snippets keep play on every surface (Feed + profile
-            row/compact). Static thumb only when there is cover art but no audio. */}
-        {isTier1 && audioUrl ? (
-          <SnippetIconButton audioUrl={audioUrl} songId={post.songId || null} postText={post.text} songTitle={post.knowledge?.song || ''} artist={post.knowledge?.artist || ''} artwork={post.knowledge?.artwork || null} snippetStart={post.snippetStart} snippetEnd={post.snippetEnd} />
-        ) : isCompact && (post.knowledge?.artwork || post.youtubeMeta?.thumbnail) ? (
-          <PostThumbnail
-            youtubeThumbnail={post.youtubeMeta?.thumbnail}
-            artwork={post.knowledge?.artwork}
-            alt=""
-            style={{
-              width: '56px', height: '56px', borderRadius: '8px',
-              objectFit: 'cover', flexShrink: 0,
-              border: '1px solid var(--border)',
-            }}
-          />
-        ) : null}
-      </div>
+      <PostMomentBody post={post} isCompact={isCompact} />
 
-      {(post.knowledge?.song || post.knowledge?.artist) && (() => {
-        const attribution = post.knowledge.song && post.knowledge.artist
-          ? `${post.knowledge.song} · ${post.knowledge.artist}`
-          : (post.knowledge.song || post.knowledge.artist || '')
-        const attrStyle: React.CSSProperties = {
-          fontFamily: UI_FONT, fontSize: '0.6rem',
-          color: 'rgba(255,255,255,0.75)', letterSpacing: '1px', textTransform: 'uppercase',
-          marginBottom: '20px',
-        }
-        // Linked Margo catalog posts deep-link to karaoke; external
-        // attribution stays plain text (outbound art/YouTube links elsewhere).
-        if (post.songId) {
-          return (
-            <Link href={`/song/${post.songId}`} style={{ ...attrStyle, display: 'block', textDecoration: 'none' }}>
-              {attribution}
-            </Link>
-          )
-        }
-        return <p style={attrStyle}>{attribution}</p>
-      })()}
-
+      {/* Layout A: external/static cover after lyric when no playable catalog audio on the card mirror. */}
       {!isTier1 && (post.youtubeMeta?.thumbnail || post.knowledge?.artwork) && (
         <Link
           href={post.youtubeMeta?.youtubeUrl || `https://music.apple.com/search?term=${encodeURIComponent((post.knowledge?.song || '') + ' ' + (post.knowledge?.artist || ''))}`}
@@ -827,6 +884,9 @@ export function PostCard({
           </div>
         </Link>
       )}
+
+      {/* Part 3a: reserved Suggested Lyric Back region (null until matching ships). */}
+      <PostCardSuggestedReply suggestedReply={null} />
 
       <div data-no-card-nav>
       <div className="margo-feed-actions">

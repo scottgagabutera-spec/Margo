@@ -26,8 +26,43 @@ const POST_SELECT = `
   snippet_end_sec,
   profiles:author_profile_id ( username, avatar_url ),
   post_stats ( resonate_count, echo_count ),
-  songs:song_id ( audio_url )
+  songs:song_id ( audio_url ),
+  post_lines (
+    id,
+    position,
+    text,
+    song_id,
+    song_title,
+    artist_name,
+    artwork_url,
+    snippet_start_sec,
+    snippet_end_sec,
+    source,
+    songs:song_id ( audio_url )
+  )
 `
+
+function mapPostLines(raw: any[] | null | undefined) {
+  if (!raw || raw.length === 0) return undefined
+  return [...raw]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((row) => {
+      const linked = Array.isArray(row.songs) ? row.songs[0] : row.songs
+      return {
+        id: row.id,
+        position: row.position ?? 0,
+        text: row.text ?? '',
+        songId: row.song_id ?? null,
+        songTitle: row.song_title ?? null,
+        artistName: row.artist_name ?? null,
+        artworkUrl: row.artwork_url ?? null,
+        audioUrl: linked?.audio_url ?? null,
+        snippetStart: row.snippet_start_sec ?? null,
+        snippetEnd: row.snippet_end_sec ?? null,
+        source: row.source || 'external',
+      }
+    })
+}
 
 function mapRow(row: any): Post {
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
@@ -67,6 +102,7 @@ function mapRow(row: any): Post {
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
+    lines: mapPostLines(row.post_lines),
   }
 }
 
