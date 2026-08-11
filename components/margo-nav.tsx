@@ -11,7 +11,7 @@ import { NotificationBell } from '@/components/notification-bell'
 import { MessagesIcon } from '@/components/messages-icon'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
 
-const font = 'var(--font-lora), serif'
+const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
 /**
  * Top nav. Logo + MessagesIcon are always visible (both mobile and

@@ -1,5 +1,5 @@
 # MARGO — Brand Identity & Design System
-*Version 4.3 — August 2026 — Living document, update with every design decision*
+*Version 4.4 — August 2026 — Living document, update with every design decision*
 
 ---
 
@@ -52,17 +52,25 @@ The Symbol IS the Margo logo. The dash below the M is what makes it distinctly M
 
 ---
 
-## 3. Typography — One Font Only
+## 3. Typography — Dual system (UI + lyric)
 
-Every piece of text uses Lora. No exceptions outside the logo.
-Self-hosted via Next.js font system (next/font/google with Lora).
+Margo speaks in two voices:
 
-Type scale:
+1. **UI (Geist Sans)** — nav, buttons, handles, timestamps, labels, toasts, chrome.
+   CSS: `var(--font-geist-sans)` / `lib/fonts.ts` → `UI_FONT`.  
+   Loaded via `geist/font/sans` (variable woff2) on the root layout.
+2. **Lyric (Lora)** — posted lyric quotes, signature lyrics, lyric-led marketing lines.
+   CSS: `var(--font-lora)` / `LYRIC_FONT`. Always italic for the star lyric block.
+3. **Logo (Syne 800)** — MARGO wordmark ONLY via `MargoLogo`. Nothing else uses Syne.
+
+Self-hosted via Next.js font system (`next/font` + `geist`). Do not load Inter.
+
+Type scale (applies to both faces unless noted):
 - clamp(2rem,5vw,3.2rem) 700  — Page hero titles
 - 2rem 700                    — Section titles
 - 1.5rem 600                  — Modal headers, featured lyric
 - 1.15rem 600                 — Card titles, song names
-- 1.1rem 400 italic           — Lyric text (the star, never change)
+- 1.1rem 400 italic **Lora**  — Lyric text (the star, never change face here)
 - 0.95rem 400                 — Body text, descriptions
 - 0.82rem 400                 — Secondary text, artist names
 - 0.75rem 700                 — Nav links (uppercase, letter-spacing 2px)
@@ -72,10 +80,8 @@ Type scale:
 
 > **Note:** this floor applies to decorative/meta text (labels, tags, timestamps). Interactive control text (buttons, tappable labels) is governed by Section 14 Rule 3 as refined by Section 15 — see those sections; this scale does not override them.
 
-Logo font: Syne 800 — MARGO wordmark ONLY. Nothing else uses Syne.
-
 Removed fonts (never bring back):
-- Bebas Neue, DM Sans, Instrument Serif, Space Mono, Google Fonts CDN
+- Bebas Neue, DM Sans, Instrument Serif, Space Mono, Inter, Google Fonts CDN for app UI
 
 ---
 
@@ -314,7 +320,7 @@ Empty states are invitations, not errors.
 ## 13. Do's and Don'ts
 
 DO:
-- Use Lora for all text
+- Use Geist Sans for UI chrome; Lora for lyric quotes; Syne only for the wordmark
 - Use Syne 800 only for MARGO wordmark
 - Use CSS variables for every color
 - Keep gold scarce and meaningful — it means something important
@@ -886,10 +892,11 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ## Changelog
 
+- **4.4 (Aug 2026):** Dual type system — Geist Sans for UI chrome, Lora retained for lyric quotes / signature lyrics / lyric-led marketing. Syne remains wordmark-only. Helpers in `lib/fonts.ts` (`UI_FONT`, `LYRIC_FONT`).
 - **4.3 (Aug 2026):** Fixed version-number mismatch (header now matches footer). Finalized `--text-2`/`--text-3` deprecation status per `feat/fix-text-3-contrast` migration — no remaining product call sites. Resolved Section 10/Section 4 contradiction (Tier 2/5 button colors now reference named tokens, not deprecated aliases). Added missing Tier 4 placeholder in Section 10. Resolved the three-way conflict between Section 10 button font sizes, Section 14 Rule 3, and Section 15's permanent design rule — added explicit cross-references so Rule 3 alone doesn't read as contradicting Section 10/15. Updated Section 9 nav references from "Music" to "Discover"; documented the in-app bottom tab bar (previously undefined in Section 9, only implied by Section 4B). Aligned Section 13's heart-icon guidance with Section 4B (prefer `@/components/icons`, `heart-icon.tsx` is legacy). Documented "Coming Soon" pill and emotion-fallback-color resolutions from the `--text-3` classification decisions.
 - **4.2 (May 2026):** Added Section 15 Mobile Responsiveness Rules (Patterns 1–4).
 - **4.0 (May 2026):** Added Section 4B Icon System, Section 14 Permanent Enforcement Rules from full codebase audit.
 
 ---
 
-*Last updated: August 2026 — Version 4.3*
+*Last updated: August 2026 — Version 4.4*

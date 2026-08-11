@@ -20,6 +20,7 @@ GIANTS WAY · MODERN · PREMIUM · UNIQUE FOR MARGO · LONG TERM · USER EXPERIE
 
 ## Hard reminders (see Section 14 for full detail)
 
+- Typography: **Geist Sans** for UI chrome (`UI_FONT` / `var(--font-geist-sans)`); **Lora** for lyric quotes (`LYRIC_FONT`); **Syne** wordmark only — see MARGO_BRAND §3
 - No Unicode/emoji as icons — SVG components only
 - No hardcoded hex/rgba in TSX — use CSS variables (`var(--gold)`, etc.); intentional `EMOTION_COLORS` map is the documented exception
 - Touch targets ≥ 44px; no hover-only interactions on touch surfaces
