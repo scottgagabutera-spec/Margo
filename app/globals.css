@@ -484,7 +484,31 @@ html, body {
   }
 }
 
-/* Primary-tab swipe enter — direction set by TabSwipeProvider via sessionStorage */
+/*
+ * Phase 2.0 — static touch-action for primary-tab swipe.
+ * pan-y from the first sample: browser owns vertical scroll; horizontal is
+ * left for Pointer Event JS (avoids pointercancel on the first sideways move).
+ * Do NOT claim horizontal only via reactive preventDefault after AXIS_SLOP —
+ * that was Phase A's gap and is too late once the browser has taken the gesture.
+ *
+ * Intersection note (MDN): touch-action is intersected from the hit target up
+ * to the first scrolling container. .row-scroll (overflow-x) is its own
+ * horizontal scroller, so Discover carousels should keep native pan-x even
+ * when a pane ancestor declares pan-y. Verify on real Safari during feel pass.
+ */
+.margo-tab-swipe-viewport {
+  min-height: 100%;
+}
+@media (max-width: 639px) {
+  .margo-tab-swipe-viewport {
+    touch-action: pan-y;
+  }
+  [data-margo-primary-tab] {
+    touch-action: pan-y;
+  }
+}
+
+/* Primary-tab swipe enter — still used on commit until settle-spring (2.2) retires it */
 @keyframes margo-tab-enter-from-right {
   from { opacity: 0.72; transform: translateX(14%); }
   to { opacity: 1; transform: translateX(0); }
