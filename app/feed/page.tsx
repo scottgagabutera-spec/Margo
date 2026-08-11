@@ -17,7 +17,7 @@ import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
 import { ArtistBadge } from '@/components/artist-badge'
 import { PostCard, normalizeEmotion } from '@/components/post-card'
 import { ReplayAttribution } from '@/components/replay-attribution'
-import { useFolloweeReplays } from '@/hooks/useFolloweeReplays'
+import { useRecentReplays } from '@/hooks/useRecentReplays'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
 import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
@@ -42,7 +42,7 @@ export default function FeedPage() {
     flushPending,
     applyImmediate,
   } = useNewItemsBuffer(livePosts)
-  const { replays: followeeReplays } = useFolloweeReplays(80, { enabled: feedLive })
+  const { replays: recentReplays } = useRecentReplays(80, { enabled: feedLive })
   const [ptrBusy, setPtrBusy] = useState(false)
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
@@ -285,9 +285,9 @@ export default function FeedPage() {
         sortAt: p.timestamp || 0,
       }))
 
-    // Interleave Replays from followees (+ self). Feed stays global for
-    // originals; this only injects attribution wrappers into the timeline.
-    const replayItems: FeedItem[] = followeeReplays
+    // Interleave recent Replays from anyone (global discovery). Originals
+    // still come from usePosts; this only injects attribution wrappers.
+    const replayItems: FeedItem[] = recentReplays
       .filter(r => matchesFeedFilters(r.post))
       .map(r => ({
         kind: 'replay' as const,
@@ -308,7 +308,7 @@ export default function FeedPage() {
     }
     return merged
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts, followeeReplays, selectedVibe, selectedSort, searchQuery, postStats])
+  }, [posts, recentReplays, selectedVibe, selectedSort, searchQuery, postStats])
 
   const [suggestedByPostId, setSuggestedByPostId] = useState<Record<string, SuggestedLyricBack[]>>({})
   const [suggestedLoading, setSuggestedLoading] = useState(false)
