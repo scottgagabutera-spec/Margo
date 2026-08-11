@@ -36,7 +36,6 @@ import { VibeTag } from '@/components/vibe-tag'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
-import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
 
 const supabase = createClient()
 
@@ -64,9 +63,6 @@ export interface PostCardProps {
   onQuoteReplay?: (id: string, quoteText: string) => void
   /** When true, skip whole-card navigate (e.g. already on /post/[id]). */
   disableCardNav?: boolean
-  /** Catalog Suggested Lyric Back picks (Feed batch). Empty/omitted hides the slot. */
-  suggestedReplies?: SuggestedLyricBack[] | null
-  suggestedRepliesLoading?: boolean
 }
 
 const EMOTION_COLORS: Record<string, string> = {
@@ -414,8 +410,6 @@ export function PostCard({
   variant = 'feed',
   replayed = false, replayCount = 0, onReplay, onQuoteReplay,
   disableCardNav = false,
-  suggestedReplies = null,
-  suggestedRepliesLoading = false,
 }: PostCardProps) {
   const router = useRouter()
   const { requireAuth } = useAuthGate()
@@ -891,10 +885,9 @@ export function PostCard({
         </Link>
       )}
 
-      {/* Suggested Lyric Back — catalog vibe matches from Margo's music. */}
+      {/* Suggested Lyric Back — on-demand underline; fetches only on tap. */}
       <PostCardSuggestedReply
-        suggestions={suggestedReplies}
-        loading={suggestedRepliesLoading}
+        postId={post.id}
         onAcceptSuggested={(s) => {
           if (!requireAuth()) return
           const q = new URLSearchParams({

@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useState, type CSSProperties } from 'react'
 import { playSnippet, togglePlayPause } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
@@ -9,65 +10,172 @@ import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
 export type { SuggestedLyricBack }
 
 export type PostCardSuggestedReplyProps = {
-  suggestions?: SuggestedLyricBack[] | null
-  loading?: boolean
+  postId: string
   onAcceptSuggested?: (suggestion: SuggestedLyricBack) => void
   onOpenSuggestedSearch?: () => void
 }
 
 /**
- * Suggested Lyric Back — catalog picks from Margo's music (not AI copy).
- * Renders nothing when empty (and not loading).
+ * Suggested Lyric Back — collapsed underline trigger; fetches only on tap.
+ * Expands inline on the same post (no Feed auto-batch).
  */
 export function PostCardSuggestedReply({
-  suggestions,
-  loading = false,
+  postId,
   onAcceptSuggested,
   onOpenSuggestedSearch,
 }: PostCardSuggestedReplyProps) {
-  const picks = suggestions?.slice(0, 3) ?? []
-  if (!loading && picks.length === 0) return null
+  const [expanded, setExpanded] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [picks, setPicks] = useState<SuggestedLyricBack[] | null>(null)
+  const [fetched, setFetched] = useState(false)
+
+  const loadSuggestions = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/suggest-lyric-back', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postIds: [postId] }),
+      })
+      if (!res.ok) {
+        throw new Error(`Could not load suggestions (${res.status})`)
+      }
+      const data = await res.json() as { suggestions?: Record<string, SuggestedLyricBack[]> }
+      const list = (data.suggestions?.[postId] ?? []).slice(0, 3)
+      setPicks(list)
+      setFetched(true)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Could not load suggestions'
+      setError(message)
+      setPicks(null)
+      setFetched(false)
+    } finally {
+      setLoading(false)
+    }
+  }, [postId])
+
+  const handleOpen = useCallback(() => {
+    setExpanded(true)
+    if (!fetched && !loading) {
+      void loadSuggestions()
+    }
+  }, [fetched, loading, loadSuggestions])
+
+  const handleRetry = useCallback(() => {
+    void loadSuggestions()
+  }, [loadSuggestions])
+
+  const triggerStyle: CSSProperties = {
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    margin: '0 0 12px',
+    cursor: 'pointer',
+    fontFamily: UI_FONT,
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    color: 'var(--text-secondary)',
+    textDecoration: 'underline',
+    textUnderlineOffset: 3,
+    minHeight: 'var(--margo-touch-min)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    boxSizing: 'border-box',
+  }
+
+  if (!expanded) {
+    return (
+      <div data-no-card-nav>
+        <button type="button" onClick={handleOpen} style={triggerStyle}>
+          See Lyric Back suggestions
+        </button>
+      </div>
+    )
+  }
+
+  const showEmpty = fetched && !loading && !error && (picks?.length ?? 0) === 0
+  const showPicks = !loading && !error && (picks?.length ?? 0) > 0
 
   return (
     <div
       data-no-card-nav
       style={{
         marginBottom: 16,
-        padding: '14px 14px 12px',
-        borderRadius: 14,
-        border: '1px solid rgba(232,197,71,0.18)',
-        background: 'rgba(232,197,71,0.04)',
+        padding: '12px 0 4px',
       }}
     >
       <p
         style={{
           fontFamily: UI_FONT,
-          fontSize: '0.58rem',
-          fontWeight: 700,
-          letterSpacing: '1.4px',
-          textTransform: 'uppercase',
-          color: 'var(--gold)',
+          fontSize: '0.72rem',
+          fontWeight: 600,
+          color: 'var(--text-secondary)',
           margin: '0 0 10px',
+          textDecoration: 'underline',
+          textUnderlineOffset: 3,
         }}
       >
-        From Margo&apos;s music
+        See Lyric Back suggestions
       </p>
 
-      {loading && picks.length === 0 && (
+      {loading && (
         <p
           style={{
             fontFamily: LYRIC_FONT,
             fontStyle: 'italic',
             fontSize: '0.82rem',
             color: 'var(--text-muted)',
-            margin: 0,
+            margin: '0 0 8px',
           }}
         >
           Finding a line that answers this…
         </p>
       )}
 
-      {picks.length > 0 && (
+      {error && (
+        <div style={{ marginBottom: 8 }}>
+          <p
+            style={{
+              fontFamily: LYRIC_FONT,
+              fontStyle: 'italic',
+              fontSize: '0.82rem',
+              color: 'var(--text-muted)',
+              margin: '0 0 8px',
+            }}
+          >
+            {error}. Try again, or search the catalog.
+          </p>
+          <button
+            type="button"
+            onClick={handleRetry}
+            style={{
+              ...triggerStyle,
+              margin: 0,
+              color: 'var(--gold)',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {showEmpty && (
+        <p
+          style={{
+            fontFamily: LYRIC_FONT,
+            fontStyle: 'italic',
+            fontSize: '0.82rem',
+            color: 'var(--text-muted)',
+            margin: '0 0 8px',
+          }}
+        >
+          No strong Lyric Back match in Margo&apos;s music right now.
+        </p>
+      )}
+
+      {showPicks && picks && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {picks.map((s) => (
             <SuggestionRow
@@ -79,23 +187,13 @@ export function PostCardSuggestedReply({
         </div>
       )}
 
-      {onOpenSuggestedSearch && (
+      {onOpenSuggestedSearch && !loading && (
         <button
           type="button"
           onClick={onOpenSuggestedSearch}
           style={{
+            ...triggerStyle,
             marginTop: 12,
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            fontFamily: UI_FONT,
-            fontSize: '0.72rem',
-            fontWeight: 600,
-            color: 'var(--text-secondary)',
-            textDecoration: 'underline',
-            textUnderlineOffset: 3,
-            minHeight: 'var(--margo-touch-min)',
           }}
         >
           Search the catalog
