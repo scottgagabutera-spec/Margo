@@ -7,10 +7,12 @@ import {
   peekFeedPostsCache,
   warmFeedPosts,
 } from '@/lib/primary-tab-prefetch'
+import type { PostLine } from '@/lib/post-lines'
 
 const supabase = createClient()
 
 export { PRIMARY_TAB_STALE_MS }
+export type { PostLine }
 
 export interface Post {
   id: string
@@ -31,6 +33,11 @@ export interface Post {
   audioUrl?: string | null
   snippetStart?: number | null
   snippetEnd?: number | null
+  /**
+   * Multi-line moment segments when joined. Empty/undefined → render from
+   * top-level text/song/snippet (position-0 mirror).
+   */
+  lines?: PostLine[]
 }
 
 export type UsePostsOptions = {

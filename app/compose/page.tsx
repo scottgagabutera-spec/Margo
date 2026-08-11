@@ -16,10 +16,24 @@ import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { POST_LINES_MAX, type PostLineSource } from '@/lib/post-lines'
 
 const supabase = createClient()
 
 type Source = 'margo' | 'genius' | 'apple'
+
+type ComposeLineDraft = {
+  lyric: string
+  songName: string
+  artistName: string
+  linkedSongId: string | null
+  linkedAudioUrl: string | null
+  artwork: string | null
+  snippetStart: number | null
+  snippetEnd: number | null
+  source: Source | null
+  geniusId: string | null
+}
 
 interface SearchResult {
   id: string
@@ -114,6 +128,8 @@ function ComposeInner() {
   const [completionMode, setCompletionMode] = useState<'public' | 'private' | null>(null)
   const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
   const [linkedAudioUrl, setLinkedAudioUrl] = useState<string | null>(null)
+  /** Lines already stacked via “Add another line” (current draft is separate). */
+  const [committedLines, setCommittedLines] = useState<ComposeLineDraft[]>([])
   // Exact snippet timing — either passed in directly from the player's
   // share sheet (exact), or matched at post time against the linked
   // song's real lyric_lines via matchLyricLine (best-effort, may be null
@@ -336,51 +352,102 @@ function ComposeInner() {
     setStep(4)
   }, [selectedVibe])
 
+  const buildCurrentDraft = useCallback((): ComposeLineDraft => ({
+    lyric: lyric.trim(),
+    songName: songName.trim(),
+    artistName: artistName.trim(),
+    linkedSongId,
+    linkedAudioUrl,
+    artwork: selectedSong?.artwork || null,
+    snippetStart,
+    snippetEnd,
+    source: selectedSong?.source || (linkedSongId ? 'margo' : null),
+    geniusId: selectedSong?.source && selectedSong.source !== 'margo' ? selectedSong.id : null,
+  }), [lyric, songName, artistName, linkedSongId, linkedAudioUrl, selectedSong, snippetStart, snippetEnd])
+
+  const clearDraftFields = useCallback(() => {
+    setSearchQuery('')
+    setShowResults(false)
+    setSearchResults([])
+    setSelectedSong(null)
+    setArtistName('')
+    setSongName('')
+    setLyric('')
+    setLinkedSongId(null)
+    setLinkedAudioUrl(null)
+    setSnippetStart(null)
+    setSnippetEnd(null)
+    setMargoLines([])
+    setLinesLoading(false)
+    setLinePickComplete(false)
+  }, [])
+
+  const handleAddAnotherLine = useCallback(() => {
+    if (!requireAuth()) return
+    if (!lyric.trim() || !songName.trim() || !artistName.trim()) return
+    if (committedLines.length + 1 >= POST_LINES_MAX) return
+    setCommittedLines((prev) => [...prev, buildCurrentDraft()])
+    clearDraftFields()
+    setStep(1)
+    resetComposeViewport()
+  }, [
+    requireAuth, lyric, songName, artistName, committedLines.length,
+    buildCurrentDraft, clearDraftFields, resetComposeViewport,
+  ])
+
   const handlePost = useCallback(async (isPrivate: boolean) => {
     if (!requireAuth()) return
-    if (!lyric || !songName || !artistName) return
     if (!identity || !user) { setPostError('Still setting things up — try again in a moment.'); return }
+
+    const draft = buildCurrentDraft()
+    const lines: ComposeLineDraft[] = [...committedLines]
+    if (draft.lyric && draft.songName && draft.artistName) {
+      lines.push(draft)
+    }
+    if (lines.length === 0) return
+    if (lines.length > POST_LINES_MAX) {
+      setPostError(`Moments can hold up to ${POST_LINES_MAX} lines.`)
+      return
+    }
 
     setPosting(true)
     setPostError(null)
 
-    // Confirmed via useIdentity.ts: IdentityUser sets both id and uid
-    // to the same Supabase auth id (a deliberate compatibility shim), so
-    // user.id is always correct here — no ambiguity after all.
     const authorId = user.id
 
-    // Resolve snippet timing. Exact values already set (from the player's
-    // share link or a Margo line pick) take priority and skip matching.
-    // Otherwise, if a real song is linked (external post-hoc path), run
-    // the shared matcher against its actual lyric_lines.
-    let resolvedStart = snippetStart
-    let resolvedEnd = snippetEnd
-    if ((resolvedStart == null || resolvedEnd == null) && linkedSongId) {
-      const match = await matchLyricLine(supabase, linkedSongId, lyric)
-      if (match) {
-        resolvedStart = match.startSec
-        resolvedEnd = match.endSec
-      }
-    }
-
     try {
+      const resolvedLines: ComposeLineDraft[] = []
+      for (const line of lines) {
+        let resolvedStart = line.snippetStart
+        let resolvedEnd = line.snippetEnd
+        if ((resolvedStart == null || resolvedEnd == null) && line.linkedSongId) {
+          const match = await matchLyricLine(supabase, line.linkedSongId, line.lyric)
+          if (match) {
+            resolvedStart = match.startSec
+            resolvedEnd = match.endSec
+          }
+        }
+        resolvedLines.push({ ...line, snippetStart: resolvedStart, snippetEnd: resolvedEnd })
+      }
+
+      const mirror = resolvedLines[0]
       const { data, error: insertErr } = await supabase
         .from('posts')
         .insert({
-          text: lyric,
+          text: mirror.lyric,
           emotion: selectedVibe || null,
           status: isPrivate ? 'private' : 'active',
           flag_count: 0,
-          song_id: linkedSongId || null,
-          song_title: songName,
-          artist_name: artistName,
-          artwork_url: selectedSong?.artwork || null,
-          genius_id: selectedSong?.source === 'margo' ? null : (selectedSong?.id || null),
+          song_id: mirror.linkedSongId || null,
+          song_title: mirror.songName,
+          artist_name: mirror.artistName,
+          artwork_url: mirror.artwork || null,
+          genius_id: mirror.geniusId || null,
           author_profile_id: authorId,
           parent_post_id: null,
           lang: navigator.language.split('-')[0] || 'en',
-          snippet_start_sec: resolvedStart,
-          snippet_end_sec: resolvedEnd,
+          snippet_start_sec: mirror.snippetStart,
+          snippet_end_sec: mirror.snippetEnd,
         })
         .select('id')
         .single()
@@ -390,20 +457,34 @@ function ComposeInner() {
       const newPostId = data.id
       setPostedId(newPostId)
 
-      // song_stats.lyric_uses is now incremented automatically by the
-      // post_song_link_insert trigger whenever a post with a real song_id
-      // is created — no manual runTransaction needed here anymore
-      // (previously two separate Firebase transactions against
-      // songs/{id}/lyricUses and songStats/{id}/lyricUses).
+      const lineRows = resolvedLines.map((line, position) => {
+        const source: PostLineSource = line.linkedSongId
+          ? 'catalog'
+          : (line.source === 'margo' ? 'catalog' : 'external')
+        return {
+          post_id: newPostId,
+          position,
+          text: line.lyric,
+          song_id: line.linkedSongId || null,
+          song_title: line.songName,
+          artist_name: line.artistName,
+          artwork_url: line.artwork || null,
+          snippet_start_sec: line.snippetStart,
+          snippet_end_sec: line.snippetEnd,
+          source,
+        }
+      })
 
-      // Moderation still runs entirely server-side via /api/moderate —
-      // the client just fires the request with the real postId and
-      // doesn't need the response back. Private posts still run through
-      // moderation for admin insight.
+      const { error: linesErr } = await supabase.from('post_lines').insert(lineRows)
+      if (linesErr) {
+        console.error('Failed to insert post_lines:', linesErr)
+        // Post row already exists — surface soft error but continue completion.
+      }
+
       fetch('/api/moderate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: lyric, postId: newPostId }),
+        body: JSON.stringify({ text: mirror.lyric, postId: newPostId }),
       }).catch(() => {})
 
       setPosting(false)
@@ -414,7 +495,10 @@ function ComposeInner() {
       setPostError('Something went wrong. Please try again.')
       setPosting(false)
     }
-  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, identity, user, linkedSongId, snippetStart, snippetEnd, resetComposeViewport])
+  }, [
+    requireAuth, identity, user, buildCurrentDraft, committedLines,
+    selectedVibe, resetComposeViewport,
+  ])
 
 
   const resetCompose = () => {
@@ -439,6 +523,7 @@ function ComposeInner() {
     setPosting(false)
     setPostError(null)
     setBannerDismissed(false)
+    setCommittedLines([])
   }
 
   if (completionMode) {
@@ -501,9 +586,45 @@ function ComposeInner() {
 
           {/* ── Step 1: Search ── */}
           <div style={{ display: step === 1 ? 'block' : 'none' }}>
+            {committedLines.length > 0 && (
+              <div style={{
+                marginBottom: '28px', padding: '14px 16px',
+                border: '1px solid var(--border)', borderRadius: '14px',
+                background: 'rgba(255,255,255,0.02)',
+              }}>
+                <p style={{
+                  fontFamily: font, fontSize: '0.58rem', fontWeight: 700,
+                  letterSpacing: '1.5px', textTransform: 'uppercase',
+                  color: 'var(--gold)', marginBottom: '10px',
+                }}>
+                  Moment so far · {committedLines.length}/{POST_LINES_MAX} lines
+                </p>
+                {committedLines.map((line, i) => (
+                  <p key={i} style={{
+                    fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem',
+                    color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.4,
+                  }}>
+                    {i + 1}. &ldquo;{line.lyric}&rdquo;
+                    <span style={{
+                      display: 'block', fontStyle: 'normal', fontSize: '0.6rem',
+                      color: 'var(--text-muted)', letterSpacing: '1px',
+                      textTransform: 'uppercase', marginTop: '4px',
+                    }}>
+                      {line.songName} · {line.artistName}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            )}
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Find your lyric</h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Search by lyric, song, or artist</p>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
+                {committedLines.length > 0 ? 'Add another line' : 'Find your lyric'}
+              </h1>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                {committedLines.length > 0
+                  ? 'Catalog moment or search — same flow as the first line'
+                  : 'Search by lyric, song, or artist'}
+              </p>
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
               <div style={{ position: 'relative' }}>
@@ -664,8 +785,26 @@ function ComposeInner() {
             <button style={backBtnStyle} onClick={() => setStep(3)}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Ready to share?</h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Your lyric is set to go</p>
+              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                {committedLines.length > 0 ? 'Your multi-line moment is set to go' : 'Your lyric is set to go'}
+              </p>
             </div>
+
+            {(committedLines.length > 0) && (
+              <div style={{
+                marginBottom: '16px', padding: '12px 14px',
+                border: '1px solid var(--border)', borderRadius: '12px',
+              }}>
+                {committedLines.map((line, i) => (
+                  <p key={`c-${i}`} style={{
+                    fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem',
+                    color: 'var(--text-secondary)', margin: '0 0 8px', lineHeight: 1.4,
+                  }}>
+                    &ldquo;{line.lyric}&rdquo;
+                  </p>
+                ))}
+              </div>
+            )}
 
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', marginBottom: '24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '256px', height: '128px', background: 'rgba(232,197,71,0.1)', filter: 'blur(40px)', pointerEvents: 'none' }} />
@@ -737,12 +876,25 @@ function ComposeInner() {
 
       {step === 2 && !showLinePicker && (
         <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
-          <button
-            type="button"
-            onClick={handleLyricComplete}
-            disabled={lyric.trim().length === 0}
-            style={{ ...keyboardSafePrimaryBtnStyle, opacity: lyric.trim().length === 0 ? 0.4 : 1 }}
-          >Continue</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={handleLyricComplete}
+              disabled={lyric.trim().length === 0}
+              style={{ ...keyboardSafePrimaryBtnStyle, opacity: lyric.trim().length === 0 ? 0.4 : 1 }}
+            >Continue</button>
+            {committedLines.length + 1 < POST_LINES_MAX && (
+              <button
+                type="button"
+                onClick={handleAddAnotherLine}
+                disabled={lyric.trim().length === 0 || !songName.trim() || !artistName.trim()}
+                style={{
+                  ...keyboardSafeSecondaryBtnStyle,
+                  opacity: (lyric.trim().length === 0 || !songName.trim() || !artistName.trim()) ? 0.4 : 1,
+                }}
+              >Add another line</button>
+            )}
+          </div>
         </KeyboardSafeCtaBar>
       )}
 
