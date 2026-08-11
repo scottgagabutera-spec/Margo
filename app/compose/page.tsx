@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeftIcon, SearchIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
 import { matchLyricLine } from '@/lib/lyric-match'
-import { searchMargoSongs } from '@/lib/search-margo-songs'
+import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
 import { CardExportModal } from '@/components/card-export-modal'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
@@ -74,10 +74,6 @@ const backBtnStyle: React.CSSProperties = {
   marginBottom: '32px', padding: '0 12px', minHeight: 'var(--margo-touch-min)',
   display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
   transition: 'color 150ms ease',
-}
-
-function songKey(title: string, artist: string) {
-  return title.trim().toLowerCase() + '|' + artist.trim().toLowerCase()
 }
 
 function ComposeInner() {
@@ -198,7 +194,7 @@ function ComposeInner() {
         audioUrl: song.audioUrl,
       }))
 
-      const margoKeys = new Set(margoMapped.map((r) => songKey(r.title, r.artist)))
+      const margoKeys = new Set(margoMapped.map((r) => songMatchKey(r.title, r.artist)))
 
       const externalMapped: SearchResult[] = (geniusRes.results || []).map((r: any) => {
         const rawSource = String(r.source || '').toLowerCase()
@@ -210,7 +206,7 @@ function ComposeInner() {
           artwork: r.artwork || '',
           source,
         }
-      }).filter((r: SearchResult) => !margoKeys.has(songKey(r.title, r.artist)))
+      }).filter((r: SearchResult) => !margoKeys.has(songMatchKey(r.title, r.artist)))
 
       setSearchResults([...margoMapped, ...externalMapped].slice(0, 10))
     } catch {
@@ -255,9 +251,11 @@ function ComposeInner() {
     setSnippetStart(null)
     setSnippetEnd(null)
 
-    if (result.source === 'margo') {
-      setLinkedSongId(result.margoSongId!)
-      setLinkedAudioUrl(result.audioUrl || null)
+    const enterCatalog = async (songId: string, audioUrl: string | null, catalogTitle?: string, catalogArtist?: string) => {
+      if (catalogTitle) setSongName(catalogTitle)
+      if (catalogArtist) setArtistName(catalogArtist)
+      setLinkedSongId(songId)
+      setLinkedAudioUrl(audioUrl)
       setLinePickComplete(false)
       setMargoLines([])
       setLinesLoading(true)
@@ -266,7 +264,7 @@ function ComposeInner() {
         const { data, error } = await supabase
           .from('lyric_lines')
           .select('line_index, text, start_sec, end_sec')
-          .eq('song_id', result.margoSongId!)
+          .eq('song_id', songId)
           .order('line_index', { ascending: true })
 
         if (!error && data) {
@@ -285,31 +283,37 @@ function ComposeInner() {
       } finally {
         setLinesLoading(false)
       }
+    }
+
+    if (result.source === 'margo') {
+      await enterCatalog(result.margoSongId!, result.audioUrl || null)
       return
     }
 
-    // External (Genius / Apple) — clear direct links, then attempt
-    // title+artist lookup against the live Margo catalog.
+    // External (Genius / Apple) — soft-rematch to live catalog when possible
+    // so studio uploads still get tier-1 / line-picker treatment.
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
     setLinePickComplete(true)
     setMargoLines([])
 
     try {
-      const { data, error } = await supabase
-        .from('songs')
-        .select('id, audio_url')
-        .eq('status', 'live')
-        .ilike('title', result.title.trim())
-        .ilike('artist_display_name', result.artist.trim())
-        .maybeSingle()
-
-      if (!error && data) {
-        setLinkedSongId(data.id)
-        setLinkedAudioUrl(data.audio_url || null)
+      const hit = await matchLiveCatalogSong(supabase, result.title, result.artist)
+      if (hit) {
+        setSelectedSong({
+          id: hit.id,
+          title: hit.title,
+          artist: hit.artist,
+          artwork: hit.artwork || result.artwork,
+          source: 'margo',
+          margoSongId: hit.id,
+          audioUrl: hit.audioUrl,
+        })
+        await enterCatalog(hit.id, hit.audioUrl, hit.title, hit.artist)
+        return
       }
     } catch (e) {
-      console.error('Song lookup failed:', e)
+      console.error('Song rematch failed:', e)
     }
 
     setStep(2)
