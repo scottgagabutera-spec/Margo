@@ -508,7 +508,10 @@ html, body {
   }
 }
 
-/* Primary-tab swipe enter — still used on commit until settle-spring (2.2) retires it */
+/* Primary-tab swipe CSS enter — retired for swipe commits (Phase 2.2 strip
+   settle is the only commit motion). Keyframes kept briefly in case any
+   leftover sessionStorage key is present from an old client tab; safe no-op
+   when unused. Remove in a later cleanup if still dead. */
 @keyframes margo-tab-enter-from-right {
   from { opacity: 0.72; transform: translateX(14%); }
   to { opacity: 1; transform: translateX(0); }

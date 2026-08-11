@@ -281,7 +281,7 @@ export function PrimaryTabShell({
     const prev = prevTabRef.current
     const frozen = frozenScrollRef.current
 
-    // Committed navigation clears visual peek (2.1 may animate first — then clear).
+    // Committed navigation clears visual peek after strip settle (Phase 2.2).
     if (peekMetaRef.current) {
       peekMetaRef.current = null
       stripOffsetRef.current = 0

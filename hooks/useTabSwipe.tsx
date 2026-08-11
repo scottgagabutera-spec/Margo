@@ -1,11 +1,6 @@
 'use client'
 
-import {
-  useLayoutEffect,
-  useState,
-  type ReactNode,
-} from 'react'
-import { usePathname } from 'next/navigation'
+import { type ReactNode } from 'react'
 import { useIdentity } from '@/hooks/useIdentity'
 import { PrimaryTabShell } from '@/components/primary-tab-shell'
 
@@ -19,37 +14,19 @@ export {
  * Layout wrapper for allowlisted primary-tab swipe.
  * Mount once under IdentityProvider; wraps page {children} only.
  *
- * Phase 2.0: viewport carries static `touch-action: pan-y`. Gesture logic
- * runs inside PrimaryTabShell (`enableSwipeGesture`) so peek/strip stay
- * collocated without wrapping keepalive `children` (which would poison cache).
+ * Phase 2.0–2.2: viewport carries static `touch-action: pan-y`. Gesture +
+ * interruptible spring settle run inside PrimaryTabShell (`enableSwipeGesture`).
+ * Swipe commits no longer use CSS enter-slide — strip settle is the only motion.
  */
 export function TabSwipeProvider({ children }: { children: ReactNode }) {
-  const pathname = usePathname()
   const { user, identity } = useIdentity()
 
   const isSignedIn = !!user && !user.isAnonymous
   const ownProfileHref =
     isSignedIn && identity?.username ? `/profile/${identity.username}` : null
 
-  const [slideClass, setSlideClass] = useState('')
-
-  useLayoutEffect(() => {
-    try {
-      const dir = sessionStorage.getItem('margo-tab-swipe-dir')
-      sessionStorage.removeItem('margo-tab-swipe-dir')
-      if (dir === 'next') setSlideClass('margo-tab-slide-from-right')
-      else if (dir === 'prev') setSlideClass('margo-tab-slide-from-left')
-      else setSlideClass('')
-    } catch {
-      setSlideClass('')
-    }
-  }, [pathname])
-
   return (
-    <div
-      className={'margo-tab-swipe-viewport' + (slideClass ? ' ' + slideClass : '')}
-      onAnimationEnd={() => setSlideClass('')}
-    >
+    <div className="margo-tab-swipe-viewport">
       <PrimaryTabShell ownProfileHref={ownProfileHref} enableSwipeGesture>
         {children}
       </PrimaryTabShell>
