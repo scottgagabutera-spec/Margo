@@ -14,6 +14,7 @@ import { useSearchParams } from 'next/navigation'
 import { usePost } from '@/hooks/usePost'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { PostCard } from '@/components/post-card'
+import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 
@@ -167,6 +168,9 @@ function LyricBackContent() {
   const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
   const [snippetStart, setSnippetStart] = useState<number | null>(null)
   const [snippetEnd, setSnippetEnd] = useState<number | null>(null)
+  const [margoLines, setMargoLines] = useState<ComposeLyricLine[]>([])
+  const [linesLoading, setLinesLoading] = useState(false)
+  const [linePickComplete, setLinePickComplete] = useState(false)
   const [cardData, setCardData] = useState<{
     lyric: string; song: string; artist: string; id: string;
     parentLyric?: string; parentSong?: string; parentArtist?: string;
@@ -196,6 +200,7 @@ function LyricBackContent() {
         source: 'margo',
         audioUrl: searchParams.get('audioUrl'),
       })
+      setLinePickComplete(true)
     }
     const startParam = searchParams.get('start')
     const endParam = searchParams.get('end')
@@ -209,6 +214,50 @@ function LyricBackContent() {
     }
     setStep(2)
   }, [searchParams])
+
+  const enterCatalogSong = useCallback(async (songId: string, title: string, artist: string, artwork: string, audioUrl?: string | null) => {
+    setSelectedSong({
+      id: songId,
+      title,
+      artist,
+      artwork: artwork || '',
+      source: 'margo',
+      audioUrl: audioUrl ?? null,
+    })
+    setSongName(title)
+    setArtistName(artist)
+    setLinkedSongId(songId)
+    setSnippetStart(null)
+    setSnippetEnd(null)
+    setLyric('')
+    setLinePickComplete(false)
+    setMargoLines([])
+    setLinesLoading(true)
+    setShowResults(false)
+    setStep(2)
+    try {
+      const { data, error } = await supabase
+        .from('lyric_lines')
+        .select('line_index, text, start_sec, end_sec')
+        .eq('song_id', songId)
+        .order('line_index', { ascending: true })
+      if (!error && data) {
+        setMargoLines(data.map((row) => ({
+          lineIndex: row.line_index,
+          text: row.text,
+          startSec: row.start_sec,
+          endSec: row.end_sec,
+        })))
+      } else {
+        setMargoLines([])
+      }
+    } catch (e) {
+      console.error('Lyric lines fetch failed:', e)
+      setMargoLines([])
+    } finally {
+      setLinesLoading(false)
+    }
+  }, [])
 
   /* ─── search ─────────────────────────────────────────────── */
   const handleSearch = useCallback(async (value: string) => {
@@ -276,41 +325,34 @@ function LyricBackContent() {
   }, [catalogOnly])
 
   const handleSelectSong = useCallback(async (result: SearchResult) => {
-    setSelectedSong(result)
-    setArtistName(result.artist)
-    setSongName(result.title)
     setShowResults(false)
-    setLinkedSongId(null)
-    setSnippetStart(null)
-    setSnippetEnd(null)
 
     if (result.source === 'margo') {
-      setLinkedSongId(result.id)
-      setStep(2)
+      await enterCatalogSong(result.id, result.title, result.artist, result.artwork, result.audioUrl)
       return
     }
 
     try {
       const hit = await matchLiveCatalogSong(supabase, result.title, result.artist)
       if (hit) {
-        setLinkedSongId(hit.id)
-        setSongName(hit.title)
-        setArtistName(hit.artist)
-        setSelectedSong({
-          id: hit.id,
-          title: hit.title,
-          artist: hit.artist,
-          artwork: hit.artwork || result.artwork,
-          source: 'margo',
-          audioUrl: hit.audioUrl,
-        })
+        await enterCatalogSong(hit.id, hit.title, hit.artist, hit.artwork || result.artwork, hit.audioUrl)
+        return
       }
     } catch (e) {
       console.error('Song rematch failed:', e)
     }
 
+    // External — free-text lyric (no synced lines).
+    setSelectedSong(result)
+    setArtistName(result.artist)
+    setSongName(result.title)
+    setLinkedSongId(null)
+    setSnippetStart(null)
+    setSnippetEnd(null)
+    setLinePickComplete(true)
+    setMargoLines([])
     setStep(2)
-  }, [])
+  }, [enterCatalogSong])
 
   const handleLyricComplete = useCallback(async () => {
     if (lyric.trim().length === 0) return
@@ -381,6 +423,8 @@ function LyricBackContent() {
     setLinkedSongId(null)
     setSnippetStart(null)
     setSnippetEnd(null)
+    setMargoLines([])
+    setLinePickComplete(false)
   }, [])
 
   /* ─── post ───────────────────────────────────────────────── */
@@ -657,8 +701,40 @@ function LyricBackContent() {
             )}
           </div>
 
-          {/* Step 2 */}
+          {/* Step 2 — line picker (catalog) or free-text lyric */}
           <div style={{ display: step === 2 ? 'block' : 'none' }}>
+            {selectedSong?.source === 'margo' && !linePickComplete ? (
+              <ComposeLinePicker
+                lines={margoLines}
+                loading={linesLoading}
+                songTitle={songName}
+                artistName={artistName}
+                onPick={(line) => {
+                  setSnippetStart(line.startSec)
+                  setSnippetEnd(line.endSec)
+                  setLyric((line.text || '').slice(0, 140))
+                  setLinePickComplete(true)
+                }}
+                onSkip={() => {
+                  setSnippetStart(null)
+                  setSnippetEnd(null)
+                  setLinePickComplete(true)
+                }}
+                onBack={() => {
+                  setStep(1)
+                  setSelectedSong(null)
+                  setArtistName('')
+                  setSongName('')
+                  setLinkedSongId(null)
+                  setMargoLines([])
+                  setLinePickComplete(false)
+                  setSnippetStart(null)
+                  setSnippetEnd(null)
+                  setLyric('')
+                }}
+              />
+            ) : (
+              <>
             <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '16px' }}>
               Your lyric back
             </p>
@@ -705,6 +781,8 @@ function LyricBackContent() {
                 }}
               >Continue</button>
             </div>
+              </>
+            )}
           </div>
 
           {/* Step 3 */}
