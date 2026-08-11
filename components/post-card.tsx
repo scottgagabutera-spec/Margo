@@ -191,9 +191,12 @@ function PostMomentBody({
           color: 'rgba(255,255,255,0.75)',
           letterSpacing: '1px',
           textTransform: 'uppercase',
-          marginTop: '8px',
-          marginBottom: multi && i < lines.length - 1 ? '0' : '12px',
+          margin: 0,
         }
+        // Catalog/Tier1 lines put play in the lyric row, so show the 56×56
+        // thumb beside attribution instead (external compact already has it
+        // right of the lyric when there's no audio).
+        const showAttrArtwork = hasAudio && !!line.artworkUrl
         return (
           <div key={line.id || `line-${line.position}-${i}`}>
             {multi && i > 0 ? (
@@ -254,13 +257,36 @@ function PostMomentBody({
               ) : null}
             </div>
             {attribution ? (
-              line.songId ? (
-                <Link href={`/song/${line.songId}`} style={{ ...attrStyle, display: 'block', textDecoration: 'none' }}>
-                  {attribution}
-                </Link>
-              ) : (
-                <p style={attrStyle}>{attribution}</p>
-              )
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                marginTop: '8px',
+                marginBottom: multi && i < lines.length - 1 ? '0' : '12px',
+              }}>
+                {showAttrArtwork ? (
+                  <PostThumbnail
+                    artwork={line.artworkUrl}
+                    alt=""
+                    loading="lazy"
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '8px',
+                      objectFit: 'cover',
+                      flexShrink: 0,
+                      border: '1px solid var(--border)',
+                    }}
+                  />
+                ) : null}
+                {line.songId ? (
+                  <Link href={`/song/${line.songId}`} style={{ ...attrStyle, display: 'block', textDecoration: 'none' }}>
+                    {attribution}
+                  </Link>
+                ) : (
+                  <p style={attrStyle}>{attribution}</p>
+                )}
+              </div>
             ) : null}
           </div>
         )
