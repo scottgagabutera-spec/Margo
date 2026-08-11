@@ -185,8 +185,8 @@ export function LandingExchangeSkeleton() {
 }
 
 /**
- * Signed-in visitors on `/` while identity resolves / redirect to Feed.
- * Avoids a blank `null` paint (“nothing responds”).
+ * Signed-in / identity-resolving visitors on /.
+ * Neutral copy — used for first load and Feed redirect (not Feed-only).
  */
 export function LandingRedirectSkeleton() {
   return (
@@ -233,7 +233,7 @@ export function LandingRedirectSkeleton() {
             textAlign: 'center',
           }}
         >
-          Taking you to Feed…
+          Loading…
         </p>
         <FeedPostSkeletonList count={3} />
       </main>
