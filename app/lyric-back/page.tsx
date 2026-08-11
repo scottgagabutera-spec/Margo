@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useCallback, useRef, Suspense } from 'react'
+import { useState, useCallback, useRef, Suspense, useEffect } from 'react'
 import { toast } from 'sonner'
 import { SearchIcon } from '@/components/icons'
 import { CardExportModal } from '@/components/card-export-modal'
 import { AuthorMeta } from '@/components/username-tag'
 import { createClient } from '@/lib/supabase/client'
 import { matchLyricLine } from '@/lib/lyric-match'
+import { searchMargoSongs } from '@/lib/search-margo-songs'
 import { useEchoes } from '@/hooks/useEchoes'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useSearchParams } from 'next/navigation'
@@ -18,7 +19,7 @@ import type { Echo } from '@/hooks/useEchoes'
 
 const supabase = createClient()
 
-type Source = 'genius' | 'apple'
+type Source = 'genius' | 'apple' | 'margo'
 
 interface SearchResult {
   id: string
@@ -26,6 +27,7 @@ interface SearchResult {
   artist: string
   artwork: string
   source: Source
+  audioUrl?: string | null
 }
 
 type Vibe =
@@ -125,6 +127,7 @@ function LyricBackContent() {
   const searchParams = useSearchParams()
   const postId = searchParams.get('postId')
   const echoId = searchParams.get('echoId')
+  const catalogOnly = searchParams.get('catalogOnly') === '1'
   // FIX, Aug 1, 2026 (Section 8, item 15): previously echoId was read from
   // the URL but never used — "Responding to" always showed the top-level
   // post even when promoteAndReply linked to a specific echo. Now that
@@ -162,11 +165,50 @@ function LyricBackContent() {
   // all, meaning its posts could never be Tier1 / never get a snippet
   // button regardless of the audioUrl fix.
   const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
+  const [snippetStart, setSnippetStart] = useState<number | null>(null)
+  const [snippetEnd, setSnippetEnd] = useState<number | null>(null)
   const [cardData, setCardData] = useState<{
     lyric: string; song: string; artist: string; id: string;
     parentLyric?: string; parentSong?: string; parentArtist?: string;
   } | null>(null)
   const emotionAbortRef = useRef<AbortController | null>(null)
+  const prefillAppliedRef = useRef(false)
+
+  // Prefill from Suggested Lyric Back (or Moment → compose-style query).
+  useEffect(() => {
+    if (prefillAppliedRef.current) return
+    const lyricParam = searchParams.get('lyric')
+    const songParam = searchParams.get('song')
+    const artistParam = searchParams.get('artist')
+    if (!lyricParam || !songParam || !artistParam) return
+    prefillAppliedRef.current = true
+    setLyric(lyricParam.slice(0, 140))
+    setSongName(songParam)
+    setArtistName(artistParam)
+    const songIdParam = searchParams.get('songId')
+    if (songIdParam) {
+      setLinkedSongId(songIdParam)
+      setSelectedSong({
+        id: songIdParam,
+        title: songParam,
+        artist: artistParam,
+        artwork: searchParams.get('artwork') || '',
+        source: 'margo',
+        audioUrl: searchParams.get('audioUrl'),
+      })
+    }
+    const startParam = searchParams.get('start')
+    const endParam = searchParams.get('end')
+    if (startParam != null && endParam != null) {
+      const start = Number(startParam)
+      const end = Number(endParam)
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        setSnippetStart(start)
+        setSnippetEnd(end)
+      }
+    }
+    setStep(2)
+  }, [searchParams])
 
   /* ─── search ─────────────────────────────────────────────── */
   const handleSearch = useCallback(async (value: string) => {
@@ -175,21 +217,33 @@ function LyricBackContent() {
     setShowResults(true)
     setSearchLoading(true)
     try {
-      const res = await fetch(`/api/genius?song=${encodeURIComponent(value)}`)
-      const data = await res.json()
-      setSearchResults((data.results || []).map((r: any) => ({
-        id: String(r.id || r.song),
-        title: r.song,
-        artist: r.artist,
-        artwork: r.artwork || '',
-        source: r.source as Source,
-      })))
+      if (catalogOnly) {
+        const hits = await searchMargoSongs(supabase, value, 8)
+        setSearchResults(hits.map((r) => ({
+          id: r.id,
+          title: r.title,
+          artist: r.artist,
+          artwork: r.artwork || '',
+          source: 'margo' as const,
+          audioUrl: r.audioUrl,
+        })))
+      } else {
+        const res = await fetch(`/api/genius?song=${encodeURIComponent(value)}`)
+        const data = await res.json()
+        setSearchResults((data.results || []).map((r: any) => ({
+          id: String(r.id || r.song),
+          title: r.song,
+          artist: r.artist,
+          artwork: r.artwork || '',
+          source: r.source as Source,
+        })))
+      }
     } catch {
       setSearchResults([])
     } finally {
       setSearchLoading(false)
     }
-  }, [])
+  }, [catalogOnly])
 
   const handleSelectSong = useCallback(async (result: SearchResult) => {
     setSelectedSong(result)
@@ -197,6 +251,12 @@ function LyricBackContent() {
     setSongName(result.title)
     setShowResults(false)
     setLinkedSongId(null)
+
+    if (result.source === 'margo') {
+      setLinkedSongId(result.id)
+      setStep(2)
+      return
+    }
 
     try {
       const { data, error } = await supabase
@@ -282,6 +342,8 @@ function LyricBackContent() {
     setEmotionError(null)
     setPostError(null)
     setLinkedSongId(null)
+    setSnippetStart(null)
+    setSnippetEnd(null)
   }, [])
 
   /* ─── post ───────────────────────────────────────────────── */
@@ -312,9 +374,9 @@ function LyricBackContent() {
     // Resolve snippet timing against the linked song's real lyric_lines
     // — same shared matcher compose uses. Null songId or no confident
     // match just means no snippet button, not a wrong guess.
-    let resolvedStart: number | null = null
-    let resolvedEnd: number | null = null
-    if (linkedSongId) {
+    let resolvedStart: number | null = snippetStart
+    let resolvedEnd: number | null = snippetEnd
+    if (linkedSongId && (resolvedStart == null || resolvedEnd == null)) {
       const match = await matchLyricLine(supabase, linkedSongId, lyric)
       if (match) {
         resolvedStart = match.startSec
@@ -372,7 +434,7 @@ function LyricBackContent() {
     // post_song_link_insert trigger whenever song_id is set, same as
     // compose — this was never possible before since lyric-back never
     // linked a song at all.
-  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user, respondingToId, respondingTo?.authorUid, posting, resetComposeForm, linkedSongId])
+  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user, respondingToId, respondingTo?.authorUid, posting, resetComposeForm, linkedSongId, snippetStart, snippetEnd])
 
   /* ─── resonate ───────────────────────────────────────────── */
   // Echo resonates now write to the same post_resonates table as
@@ -506,7 +568,7 @@ function LyricBackContent() {
           {/* Step 1 */}
           <div style={{ display: step === 1 ? 'block' : 'none' }}>
             <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: text, marginBottom: '16px' }}>
-              Find your lyric back
+              {catalogOnly ? "Find a line from Margo's music" : 'Find your lyric back'}
             </p>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={15} color="var(--text-disabled)" /></span>
@@ -514,7 +576,7 @@ function LyricBackContent() {
                 type="text"
                 value={searchQuery}
                 onChange={e => handleSearch(e.target.value)}
-                placeholder="Search by lyric, song or artist..."
+                placeholder={catalogOnly ? 'Search Margo songs and artists…' : 'Search by lyric, song or artist...'}
                 style={{
                   width: '100%', height: '44px', paddingLeft: '40px', paddingRight: '14px',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
@@ -523,6 +585,11 @@ function LyricBackContent() {
                 }}
               />
             </div>
+            {catalogOnly && (
+              <p style={{ fontFamily: font, fontSize: '0.72rem', color: text3, marginTop: '10px' }}>
+                Catalog only — Margo artists
+              </p>
+            )}
             {showResults && (
               <div style={{ marginTop: '6px', background: surface, border: `1px solid ${border}`, borderRadius: '10px', overflow: 'hidden' }}>
                 {searchLoading && (
