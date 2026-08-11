@@ -1,7 +1,8 @@
 /**
  * Suggested Lyric Back — Approach A.
  * Ranks eligible catalog lyric units with gpt-4o-mini as replies to a post.
- * Caches successful non-empty picks only (never caches hard failures or empty).
+ * Soft cross-song diversity assemble after the model returns best + bestOtherSong.
+ * Caches successful non-empty final picks only (never caches hard failures or empty).
  */
 
 import { createHash } from 'crypto'
@@ -63,7 +64,7 @@ type EligibleUnit = {
   artworkUrl: string | null
 }
 
-type PickOk = { ok: true; ids: string[] }
+type PickOk = { ok: true; best: string[]; bestOtherSong: string[] }
 type PickErr = { ok: false; reason: string }
 type PickResult = PickOk | PickErr
 
@@ -229,29 +230,50 @@ function chunkUnits<T>(arr: T[], size: number): T[][] {
   return out
 }
 
-function parseIdList(raw: string): string[] | null {
+function parseIdArray(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
+}
+
+function parseTwoList(raw: string): { best: string[]; bestOtherSong: string[] } | null {
   const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')
   try {
-    const parsed = JSON.parse(cleaned) as { ids?: unknown }
-    if (!Array.isArray(parsed?.ids)) return null
-    return parsed.ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
+    const parsed = JSON.parse(cleaned) as {
+      best?: unknown
+      bestOtherSong?: unknown
+      ids?: unknown
+    }
+    // Preferred shape.
+    if (Array.isArray(parsed?.best) || Array.isArray(parsed?.bestOtherSong)) {
+      return {
+        best: parseIdArray(parsed.best),
+        bestOtherSong: parseIdArray(parsed.bestOtherSong),
+      }
+    }
+    // Legacy single-list fallback (should not be needed after deploy).
+    if (Array.isArray(parsed?.ids)) {
+      return { best: parseIdArray(parsed.ids), bestOtherSong: [] }
+    }
+    return null
   } catch {
     return null
   }
 }
 
-async function openaiPickIds(params: {
+async function openaiPickTwoList(params: {
   postText: string
   parentSongTitle?: string | null
   parentSongId?: string | null
   units: EligibleUnit[]
-  maxIds: number
+  maxBest: number
 }): Promise<PickResult> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     return { ok: false, reason: 'OpenAI is not configured' }
   }
-  if (params.units.length === 0) return { ok: true, ids: [] }
+  if (params.units.length === 0) {
+    return { ok: true, best: [], bestOtherSong: [] }
+  }
 
   const catalogBlock = params.units
     .map((u) => `[${u.id}] "${u.text}" — ${u.songTitle} · ${u.artistName}`)
@@ -261,22 +283,29 @@ async function openaiPickIds(params: {
     ? `The post quotes: ${params.parentSongTitle}${params.parentSongId ? ` (song_id ${params.parentSongId})` : ''}.`
     : 'The post may not be linked to a catalog song.'
 
+  const parentSongClause = params.parentSongId
+    ? `For "bestOtherSong", only include ids whose song is NOT song_id ${params.parentSongId}. Prefer [] over a stretch — only include a line if it would work as a real conversational Lyric Back to this post's meaning (not vague vibe overlap, not filler for variety). Language and meaning must actually answer the post. If none are strong enough, return [].`
+    : `The parent has no catalog song_id. Return "bestOtherSong": [] (diversity is not applied in that case).`
+
   const system = `You help Margo suggest Lyric Backs — real catalog lyric lines that answer a user's post as a conversational reply.
 
 Rules:
 - Pick lines that genuinely respond to the meaning of the post (common sense / dialog), not just the same emotion category.
-- Prefer a different song than the post's own song when an equally good reply exists.
+- Prefer a different song than the post's own song when an equally good reply exists in the overall best list.
 - Never pick a line that is the same (or near-identical) as the post lyric.
 - Only return ids from the provided list.
-- Return at most ${params.maxIds} ids, fewer if only fewer lines are strong replies. Return zero if none are good.
-- Reply with JSON only: {"ids":["id1","id2"]} — no markdown, no explanation.`
+- Return JSON only, no markdown:
+{"best":["id1","id2","id3"],"bestOtherSong":["idA"]}
+- "best": up to ${params.maxBest} strongest replies from the FULL catalog list (any song). Fewer if only fewer are strong. [] if none.
+- "bestOtherSong": up to 2 strongest cross-song replies.
+- ${parentSongClause}`
 
   const user = `Post lyric:
 "${params.postText}"
 
 ${parentHint}
 
-Catalog lyric units (pick up to ${params.maxIds}):
+Catalog lyric units:
 ${catalogBlock}`
 
   let res: Response
@@ -289,7 +318,7 @@ ${catalogBlock}`
       },
       body: JSON.stringify({
         model: OPENAI_MODEL,
-        max_tokens: 200,
+        max_tokens: 300,
         temperature: 0.4,
         messages: [
           { role: 'system', content: system },
@@ -313,12 +342,16 @@ ${catalogBlock}`
     choices?: { message?: { content?: string } }[]
   }
   const content = data.choices?.[0]?.message?.content || ''
-  const ids = parseIdList(content)
-  if (ids == null) {
-    console.error('suggestLyricBacks: OpenAI returned unparseable ids', content.slice(0, 200))
+  const parsed = parseTwoList(content)
+  if (parsed == null) {
+    console.error('suggestLyricBacks: OpenAI returned unparseable two-list', content.slice(0, 200))
     return { ok: false, reason: 'Could not parse suggestion response' }
   }
-  return { ok: true, ids }
+  return {
+    ok: true,
+    best: parsed.best.slice(0, params.maxBest),
+    bestOtherSong: parsed.bestOtherSong.slice(0, 2),
+  }
 }
 
 function hydrateSuggestions(
@@ -326,12 +359,13 @@ function hydrateSuggestions(
   byId: Map<string, EligibleUnit>,
   postTextNorm: string,
   vibe: string,
+  max = SUGGESTIONS_PER_POST,
 ): SuggestedLyricBack[] {
   const picked: SuggestedLyricBack[] = []
   const seen = new Set<string>()
 
   for (const id of ids) {
-    if (picked.length >= SUGGESTIONS_PER_POST) break
+    if (picked.length >= max) break
     const u = byId.get(id)
     if (!u || seen.has(u.id)) continue
     if (postTextNorm && normalizeText(u.text) === postTextNorm) continue
@@ -350,7 +384,45 @@ function hydrateSuggestions(
     })
   }
 
-  return picked.slice(0, SUGGESTIONS_PER_POST)
+  return picked.slice(0, max)
+}
+
+/**
+ * Soft cross-song slot: guarantee ≥1 other-song pick when the model
+ * supplies a real bestOtherSong candidate. Never pad. Never delete a
+ * sole/partial same-song best list — only replace the last of a full
+ * 3-same-song set; otherwise append.
+ */
+export function assembleDiversifiedPicks(
+  best: SuggestedLyricBack[],
+  bestOther: SuggestedLyricBack[],
+  parentSongId: string | null | undefined,
+): SuggestedLyricBack[] {
+  const top = best.slice(0, SUGGESTIONS_PER_POST)
+  if (!parentSongId) return top
+
+  if (top.some((p) => p.songId !== parentSongId)) return top
+
+  const cross = bestOther.find((p) => p.songId !== parentSongId)
+  if (!cross) return top
+
+  const allThreeSame =
+    top.length === SUGGESTIONS_PER_POST
+    && top.every((p) => p.songId === parentSongId)
+
+  if (allThreeSame) {
+    return [...top.slice(0, SUGGESTIONS_PER_POST - 1), cross]
+  }
+
+  const already = top.some((p) =>
+    p.songId === cross.songId
+    && p.lineIndex === cross.lineIndex
+    && p.startSec === cross.startSec
+    && p.endSec === cross.endSec,
+  )
+  if (already) return top
+
+  return [...top, cross].slice(0, SUGGESTIONS_PER_POST)
 }
 
 async function rankUnitsForPost(
@@ -368,26 +440,29 @@ async function rankUnitsForPost(
   const vibe = (post.emotion || '').toUpperCase() || ''
 
   const chunks = chunkUnits(pool, MAX_UNITS_PER_CALL)
-  let candidateIds: string[] = []
+  let bestIds: string[] = []
+  let otherIds: string[] = []
 
   if (chunks.length === 1) {
-    const picked = await openaiPickIds({
+    const picked = await openaiPickTwoList({
       postText,
       parentSongTitle: post.songTitle,
       parentSongId: post.songId,
       units: chunks[0],
-      maxIds: SUGGESTIONS_PER_POST,
+      maxBest: SUGGESTIONS_PER_POST,
     })
     if (!picked.ok) return picked
-    candidateIds = picked.ids
+    bestIds = picked.best
+    otherIds = picked.bestOtherSong
   } else {
+    // Growth fallback: gather best-of-chunk, then one two-list pass on the merge pool.
     const perChunk = await mapPool(chunks, LLM_CONCURRENCY, (chunk) =>
-      openaiPickIds({
+      openaiPickTwoList({
         postText,
         parentSongTitle: post.songTitle,
         parentSongId: post.songId,
         units: chunk,
-        maxIds: SUGGESTIONS_PER_POST,
+        maxBest: SUGGESTIONS_PER_POST,
       }),
     )
     if (perChunk.some((r) => !r.ok)) {
@@ -398,7 +473,7 @@ async function rankUnitsForPost(
     const seen = new Set<string>()
     for (const row of perChunk) {
       if (!row.ok) continue
-      for (const id of row.ids) {
+      for (const id of [...row.best, ...row.bestOtherSong]) {
         const u = byId.get(id)
         if (!u || seen.has(id)) continue
         seen.add(id)
@@ -408,25 +483,23 @@ async function rankUnitsForPost(
     if (mergedPool.length === 0) {
       return { ok: true, picks: [] }
     }
-    if (mergedPool.length <= SUGGESTIONS_PER_POST) {
-      candidateIds = mergedPool.map((u) => u.id)
-    } else {
-      const merged = await openaiPickIds({
-        postText,
-        parentSongTitle: post.songTitle,
-        parentSongId: post.songId,
-        units: mergedPool,
-        maxIds: SUGGESTIONS_PER_POST,
-      })
-      if (!merged.ok) return merged
-      candidateIds = merged.ids
-    }
+    const merged = await openaiPickTwoList({
+      postText,
+      parentSongTitle: post.songTitle,
+      parentSongId: post.songId,
+      units: mergedPool,
+      maxBest: SUGGESTIONS_PER_POST,
+    })
+    if (!merged.ok) return merged
+    bestIds = merged.best
+    otherIds = merged.bestOtherSong
   }
 
-  return {
-    ok: true,
-    picks: hydrateSuggestions(candidateIds, byId, postTextNorm, vibe),
-  }
+  const best = hydrateSuggestions(bestIds, byId, postTextNorm, vibe)
+  const bestOther = hydrateSuggestions(otherIds, byId, postTextNorm, vibe, 2)
+  const picks = assembleDiversifiedPicks(best, bestOther, post.songId)
+
+  return { ok: true, picks }
 }
 
 type CacheRow = {
