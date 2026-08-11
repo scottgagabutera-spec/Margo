@@ -13,7 +13,8 @@ export interface LyricLine {
   end: number
 }
 
-// Same shape as SONGS_SELECT in useSongs.ts, just scoped to a single row.
+// Full song + lyric_lines embed for a single id. Catalog `useSongs` is light
+// (no lines); open/player paths use this for complete lyrics.
 const SONG_SELECT = `
   id, title, artist_display_name, artwork_url, audio_url, description,
   status, coming_soon_label, order, youtube_url, spotify_url,

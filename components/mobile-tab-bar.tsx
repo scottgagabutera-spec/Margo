@@ -6,6 +6,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { CompassIcon } from '@/components/icons'
+import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
 
 const font = 'var(--font-lora), serif'
 
@@ -68,14 +69,14 @@ export function MobileTabBar() {
       background: 'var(--bg)',
       boxShadow: '0 -1px 24px rgba(0,0,0,0.35)',
     }}>
-      <Link href="/feed" style={tabStyle(isOnFeed)}>
+      <Link href="/feed" style={tabStyle(isOnFeed)} {...primaryTabWarmProps('/feed')}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <path d="M3 9L10 3l7 6v7a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1V9Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
         </svg>
         <span style={labelStyle}>Feed</span>
       </Link>
 
-      <Link href="/discover" style={tabStyle(isOnDiscover)}>
+      <Link href="/discover" style={tabStyle(isOnDiscover)} {...primaryTabWarmProps('/discover')}>
         <CompassIcon size={20} color="currentColor" />
         <span style={labelStyle}>Discover</span>
         {isMusicActive && !isOnDiscover && (
@@ -105,7 +106,7 @@ export function MobileTabBar() {
         </svg>
       </Link>
 
-      <Link href="/notifications" style={tabStyle(isOnNotifications)}>
+      <Link href="/notifications" style={tabStyle(isOnNotifications)} {...primaryTabWarmProps('/notifications')}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <path d="M5 8a5 5 0 0 1 10 0c0 3 1 4.5 1.5 5.2.3.4 0 .8-.5.8H4c-.5 0-.8-.4-.5-.8C4 12.5 5 11 5 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
           <path d="M8 16a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>

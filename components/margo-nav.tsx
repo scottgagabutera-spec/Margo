@@ -9,6 +9,7 @@ import { signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { NotificationBell } from '@/components/notification-bell'
 import { MessagesIcon } from '@/components/messages-icon'
+import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
 
 const font = 'var(--font-lora), serif'
 
@@ -150,7 +151,7 @@ export function MargoNav() {
               { href: '/feed', label: 'Feed', active: isOnFeed },
               { href: '/discover', label: 'Discover', active: isOnDiscover },
             ].map(({ href, label, active }) => (
-              <Link key={href} href={href} style={{
+              <Link key={href} href={href} {...primaryTabWarmProps(href)} style={{
                 fontSize: '0.75rem', fontFamily: font,
                 fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
                 textDecoration: 'none',

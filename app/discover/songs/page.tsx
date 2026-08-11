@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useSongs, Song } from '@/hooks/useSongs'
+import { useLyricMoments } from '@/hooks/useLyricMoments'
 import { CatalogGrid, CatalogSortOption } from '@/components/catalog-grid'
 import { SongCatalogCard } from '@/components/song-catalog-card'
 
@@ -59,8 +60,20 @@ function VibeFilterRow({ selected, onSelect }: { selected: string; onSelect: (vi
 
 export default function SongsCatalogPage() {
   const { songs, loading } = useSongs()
+  const { moments } = useLyricMoments()
   const [sort, setSort] = useState('trending')
   const [vibe, setVibe] = useState('ALL')
+
+  const songIdsForVibe = useMemo(() => {
+    if (vibe === 'ALL') return null
+    const ids = new Set<string>()
+    for (const m of moments) {
+      if (m.vibes.some(v => v.toLowerCase() === vibe.toLowerCase())) {
+        ids.add(m.songId)
+      }
+    }
+    return ids
+  }, [moments, vibe])
 
   const { trendingIds, topIds } = useMemo(() => {
     const byEngagement = [...songs].sort((a, b) => ((b.plays || 0) + (b.resonates || 0) * 3) - ((a.plays || 0) + (a.resonates || 0) * 3))
@@ -72,9 +85,9 @@ export default function SongsCatalogPage() {
   }, [songs])
 
   const vibeFiltered = useMemo(() => {
-    if (vibe === 'ALL') return songs
-    return songs.filter(s => s.lyricLines?.some(l => l.vibes?.includes(vibe)))
-  }, [songs, vibe])
+    if (!songIdsForVibe) return songs
+    return songs.filter(s => songIdsForVibe.has(s.id))
+  }, [songs, songIdsForVibe])
 
   const sorted = useMemo(() => {
     const list = [...vibeFiltered]

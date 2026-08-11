@@ -19,6 +19,7 @@ import { PostCard, normalizeEmotion } from '@/components/post-card'
 import { ReplayAttribution } from '@/components/replay-attribution'
 import { useFolloweeReplays } from '@/hooks/useFolloweeReplays'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
+import { FeedPostSkeletonList } from '@/components/margo-skeletons'
 
 const supabase = createClient()
 
@@ -556,13 +557,7 @@ export default function FeedPage() {
       </div>
 
       <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px var(--margo-page-padding-bottom)' }}>
-        {loading && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '64px 0' }}>
-            {[0,1,2].map(i => (
-              <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', opacity: 0.5 }} />
-            ))}
-          </div>
-        )}
+        {loading && <FeedPostSkeletonList count={4} />}
 
         {!loading && feedItems.length === 0 && !(searchQuery.trim() && people.length > 0) && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
