@@ -79,16 +79,38 @@ function mergeHits(
   }
 }
 
-/** Drop last 1–2 tokens as a possible artist suffix → title-only ILIKE. */
-function titlePrefixCandidates(q: string): string[] {
-  const tokens = q.split(/\s+/).filter(Boolean)
-  if (tokens.length < 3) return []
-  const out: string[] = []
-  for (const drop of [1, 2]) {
-    const titlePart = tokens.slice(0, -drop).join(' ')
-    if (titlePart.length >= 2) out.push(titlePart)
+function ilikePat(token: string): string {
+  return `%${sanitizeIlike(token)}%`
+}
+
+/** Expand Margo ↔ Trymargo when searching credit / owner tokens. */
+function artistTokenVariants(token: string): string[] {
+  const t = sanitizeIlike(token)
+  if (t.length < 2) return []
+  const out = new Set<string>([t])
+  if (canonicalArtistKey(t) === 'trymargo') {
+    out.add('trymargo')
+    out.add('margo')
   }
-  return out
+  return [...out]
+}
+
+/**
+ * Split multi-word queries into (artistSide, titleSide) pairs so
+ * "trymargo leave" → owner/credit ~ trymargo AND title ~ leave.
+ */
+function artistTitleSplits(tokens: string[]): { artist: string; title: string }[] {
+  if (tokens.length < 2) return []
+  const splits: { artist: string; title: string }[] = []
+  for (let i = 1; i < tokens.length; i++) {
+    const left = tokens.slice(0, i).join(' ')
+    const right = tokens.slice(i).join(' ')
+    if (left.length >= 2 && right.length >= 2) {
+      splits.push({ artist: left, title: right })
+      splits.push({ artist: right, title: left })
+    }
+  }
+  return splits
 }
 
 /**
@@ -96,9 +118,9 @@ function titlePrefixCandidates(q: string): string[] {
  * Explicitly requires status = 'live' AND owner profiles.artist_status =
  * 'active' (mirrors the public-read songs RLS gate) — not RLS alone.
  *
- * Also matches owner username/display_name, and title prefixes when the
- * query includes a trailing artist token (e.g. "Leave the lights on Trymargo"
- * still finds a song titled "Leave the lights on" credited as "Margo").
+ * Tokenized matching: for multi-word queries, ANDs artist/owner token with
+ * title token (e.g. "trymargo leave"). Also per-token owner username /
+ * display_name matches (not full-query-only).
  */
 export async function searchMargoSongs(
   supabase: SupabaseClient,
@@ -108,8 +130,8 @@ export async function searchMargoSongs(
   const q = sanitizeIlike(query)
   if (q.length < 2) return []
 
+  const tokens = q.split(/\s+/).filter((t) => t.length >= 2)
   const pattern = `%${q}%`
-  const titlePrefixes = titlePrefixCandidates(q)
 
   const liveActive = () =>
     supabase
@@ -118,18 +140,57 @@ export async function searchMargoSongs(
       .eq('status', 'live')
       .eq('profiles.artist_status', 'active')
 
-  const requests = [
+  type Pending = PromiseLike<{ data: any[] | null; error: any }>
+  const requests: Pending[] = [
     liveActive().ilike('title', pattern).limit(limit),
     liveActive().ilike('artist_display_name', pattern).limit(limit),
     liveActive()
       .or(`username.ilike."${pattern}",display_name.ilike."${pattern}"`, { foreignTable: 'profiles' })
       .limit(limit),
-    ...titlePrefixes.map((titlePart) =>
-      liveActive().ilike('title', `%${sanitizeIlike(titlePart)}%`).limit(limit),
-    ),
   ]
 
-  const results = await Promise.all(requests)
+  // Per-token owner match (username / display_name) — not full-query-only.
+  for (const token of tokens) {
+    for (const variant of artistTokenVariants(token)) {
+      const p = ilikePat(variant)
+      requests.push(
+        liveActive()
+          .or(`username.ilike."${p}",display_name.ilike."${p}"`, { foreignTable: 'profiles' })
+          .limit(limit),
+      )
+      requests.push(
+        liveActive().ilike('artist_display_name', p).limit(limit),
+      )
+    }
+  }
+
+  // Owner/credit AND title (order-independent splits). Prefer these for ranking.
+  const andRequests: Pending[] = []
+  for (const split of artistTitleSplits(tokens)) {
+    const titlePat = ilikePat(split.title)
+    for (const variant of artistTokenVariants(split.artist)) {
+      const artistPat = ilikePat(variant)
+      andRequests.push(
+        liveActive()
+          .ilike('title', titlePat)
+          .or(
+            `username.ilike."${artistPat}",display_name.ilike."${artistPat}"`,
+            { foreignTable: 'profiles' },
+          )
+          .limit(limit),
+      )
+      andRequests.push(
+        liveActive()
+          .ilike('title', titlePat)
+          .ilike('artist_display_name', artistPat)
+          .limit(limit),
+      )
+    }
+  }
+
+  // Run AND pairs first so merge order prefers precise hits.
+  const ordered = [...andRequests, ...requests]
+  const results = await Promise.all(ordered)
   for (const r of results) {
     if (r.error) console.error('Margo song search failed:', r.error)
   }
