@@ -28,13 +28,30 @@ export function normalizeSongToken(raw: string): string {
     .trim()
 }
 
+/** Collapse Margo / Trymargo aliases so Apple + catalog rows dedupe. */
+export function canonicalArtistKey(artist: string): string {
+  const a = normalizeSongToken(artist).replace(/\s+/g, '')
+  if (!a) return ''
+  if (a === 'margo' || a === 'trymargo') return 'trymargo'
+  return normalizeSongToken(artist)
+}
+
+function artistsOverlap(a: string, b: string): boolean {
+  const ca = canonicalArtistKey(a)
+  const cb = canonicalArtistKey(b)
+  if (!ca && !cb) return true
+  if (!ca || !cb) return false
+  if (ca === cb) return true
+  return ca.includes(cb) || cb.includes(ca)
+}
+
 /** Dedupe key for merging catalog + Genius/Apple result lists. */
 export function songMatchKey(title: string, artist: string): string {
-  return `${normalizeSongToken(title)}|${normalizeSongToken(artist)}`
+  return `${normalizeSongToken(title)}|${canonicalArtistKey(artist)}`
 }
 
 const CATALOG_SELECT =
-  'id, title, artist_display_name, artwork_url, audio_url, profiles!owner_profile_id!inner(artist_status)'
+  'id, title, artist_display_name, artwork_url, audio_url, profiles!owner_profile_id!inner(artist_status, username, display_name)'
 
 function rowToHit(row: {
   id: string
@@ -52,10 +69,36 @@ function rowToHit(row: {
   }
 }
 
+function mergeHits(
+  map: Map<string, MargoSongHit>,
+  rows: any[] | null | undefined,
+) {
+  for (const row of rows || []) {
+    if (map.has(row.id)) continue
+    map.set(row.id, rowToHit(row))
+  }
+}
+
+/** Drop last 1–2 tokens as a possible artist suffix → title-only ILIKE. */
+function titlePrefixCandidates(q: string): string[] {
+  const tokens = q.split(/\s+/).filter(Boolean)
+  if (tokens.length < 3) return []
+  const out: string[] = []
+  for (const drop of [1, 2]) {
+    const titlePart = tokens.slice(0, -drop).join(' ')
+    if (titlePart.length >= 2) out.push(titlePart)
+  }
+  return out
+}
+
 /**
  * Client-side search of live Margo catalog songs.
  * Explicitly requires status = 'live' AND owner profiles.artist_status =
  * 'active' (mirrors the public-read songs RLS gate) — not RLS alone.
+ *
+ * Also matches owner username/display_name, and title prefixes when the
+ * query includes a trailing artist token (e.g. "Leave the lights on Trymargo"
+ * still finds a song titled "Leave the lights on" credited as "Margo").
  */
 export async function searchMargoSongs(
   supabase: SupabaseClient,
@@ -66,32 +109,33 @@ export async function searchMargoSongs(
   if (q.length < 2) return []
 
   const pattern = `%${q}%`
+  const titlePrefixes = titlePrefixCandidates(q)
 
-  const [byTitle, byArtist] = await Promise.all([
+  const liveActive = () =>
     supabase
       .from('songs')
       .select(CATALOG_SELECT)
       .eq('status', 'live')
       .eq('profiles.artist_status', 'active')
-      .ilike('title', pattern)
-      .limit(limit),
-    supabase
-      .from('songs')
-      .select(CATALOG_SELECT)
-      .eq('status', 'live')
-      .eq('profiles.artist_status', 'active')
-      .ilike('artist_display_name', pattern)
-      .limit(limit),
-  ])
 
-  if (byTitle.error) console.error('Margo song search (title) failed:', byTitle.error)
-  if (byArtist.error) console.error('Margo song search (artist) failed:', byArtist.error)
+  const requests = [
+    liveActive().ilike('title', pattern).limit(limit),
+    liveActive().ilike('artist_display_name', pattern).limit(limit),
+    liveActive()
+      .or(`username.ilike."${pattern}",display_name.ilike."${pattern}"`, { foreignTable: 'profiles' })
+      .limit(limit),
+    ...titlePrefixes.map((titlePart) =>
+      liveActive().ilike('title', `%${sanitizeIlike(titlePart)}%`).limit(limit),
+    ),
+  ]
+
+  const results = await Promise.all(requests)
+  for (const r of results) {
+    if (r.error) console.error('Margo song search failed:', r.error)
+  }
 
   const map = new Map<string, MargoSongHit>()
-  for (const row of [...(byTitle.data || []), ...(byArtist.data || [])]) {
-    if (map.has(row.id)) continue
-    map.set(row.id, rowToHit(row))
-  }
+  for (const r of results) mergeHits(map, r.data)
 
   return Array.from(map.values()).slice(0, limit)
 }
@@ -132,15 +176,17 @@ export async function matchLiveCatalogSong(
   for (const row of data) {
     const nt = normalizeSongToken(row.title)
     const na = normalizeSongToken(row.artist_display_name)
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+    const ownerName = profile?.username || profile?.display_name || ''
     let score = 0
-    const artistOverlap =
+    const artistOk =
       !artistCore
-      || na === artistCore
-      || (artistCore.length >= 2 && (na.includes(artistCore) || artistCore.includes(na)))
+      || artistsOverlap(artistCore, na)
+      || artistsOverlap(artistCore, ownerName)
 
-    if (nt === titleCore && na === artistCore) score = 100
-    else if (nt === titleCore && artistOverlap) score = 80
-    else if ((nt.includes(titleCore) || titleCore.includes(nt)) && artistOverlap) score = 55
+    if (nt === titleCore && artistsOverlap(artistCore, na)) score = 100
+    else if (nt === titleCore && artistOk) score = 80
+    else if ((nt.includes(titleCore) || titleCore.includes(nt)) && artistOk) score = 55
     else if (nt === titleCore) score = 35
 
     if (score > bestScore) {
