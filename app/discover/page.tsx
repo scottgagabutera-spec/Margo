@@ -26,6 +26,7 @@ import { NewItemsPill } from '@/components/new-items-pill'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { DiscoverPageSkeleton } from '@/components/margo-skeletons'
+import { buildCatalogLyricUnits } from '@/lib/catalog-lyric-unit'
 
 const supabase = createClient()
 
@@ -61,12 +62,16 @@ function vibeColor(vibe: string | null | undefined): string {
 // that field is confirmed to exist.
 const RANK_BADGE_COUNT = 8
 
-// Minimum word count for a lyric line to be eligible as a Lyric Moment.
+// Minimum word count for a lyric unit to be eligible as a Lyric Moment.
 // This ONLY gates what Margo curates into the Moments row/takeover —
 // it never restricts what a person can post as a Resonance. A short
 // line is a perfectly valid thing to say; it's just not always a
 // strong enough fragment to stand alone as a curated card.
 const MIN_MOMENT_WORDS = 4
+
+// When a single vibed line is this short or shorter, prefer the shared
+// catalog-unit ±1 adjacent window (same song) before applying MIN_MOMENT_WORDS.
+const SHORT_LINE_WORDS = 3
 
 // Below this many artists, a dedicated Artists row reads as empty
 // rather than inviting — so it stays lower in the page order. Once the
@@ -216,7 +221,7 @@ function MomentCard({ moment, isPlaying, onClick, onPlay, onSelectVibe }: {
       )}
       <p style={{
         fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.88rem',
-        color: 'var(--text)', lineHeight: 1.5, margin: 0,
+        color: 'var(--text)', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-line',
         display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         minHeight: '4.2em',
       }}>&ldquo;{moment.line}&rdquo;</p>
@@ -824,7 +829,11 @@ export default function DiscoverPage() {
   const { isTabActive } = usePrimaryTab()
   const discoverLive = isTabActive('discover')
   const { songs, loading, refetch } = useSongs({ enabled: discoverLive })
-  const { moments: momentRows, refetch: refetchMoments } = useLyricMoments({ enabled: discoverLive })
+  const {
+    moments: momentRows,
+    songAtomsBySongId,
+    refetch: refetchMoments,
+  } = useLyricMoments({ enabled: discoverLive })
   const { posts: livePosts, reload: reloadPosts } = usePosts({ enabled: discoverLive })
   const {
     items: posts,
@@ -873,14 +882,49 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     const moments: LyricMoment[] = []
+    const seenRanges = new Set<string>()
+
     momentRows.forEach((row) => {
-      if (wordCount(row.text) < MIN_MOMENT_WORDS) return
       if (!row.vibes || row.vibes.length === 0) return
+
+      const atoms = songAtomsBySongId[row.songId]
+      const built = atoms?.length
+        ? buildCatalogLyricUnits(atoms, row.lineIndex)
+        : buildCatalogLyricUnits(
+            [{
+              lineIndex: row.lineIndex,
+              text: row.text,
+              startSec: row.startSec,
+              endSec: row.endSec,
+              vibes: row.vibes,
+            }],
+            row.lineIndex,
+          )
+      if (!built) return
+
+      const unit =
+        wordCount(built.single.text) <= SHORT_LINE_WORDS
+          ? built.window
+          : built.single
+
+      if (wordCount(unit.text) < MIN_MOMENT_WORDS) return
+
+      const rangeKey = `${row.songId}_${unit.startLineIndex}_${unit.endLineIndex}`
+      if (seenRanges.has(rangeKey)) return
+      seenRanges.add(rangeKey)
+
       moments.push({
-        line: row.text, lineId: row.lineIndex,
-        start: row.startSec, end: row.endSec,
-        songId: row.songId, songTitle: row.songTitle, artist: row.artist,
-        artwork: row.artwork, audioUrl: row.audioUrl, vibes: row.vibes,
+        line: unit.text,
+        lineId: unit.centerLineIndex,
+        start: unit.startSec,
+        end: unit.endSec,
+        songId: row.songId,
+        songTitle: row.songTitle,
+        artist: row.artist,
+        artwork: row.artwork,
+        audioUrl: row.audioUrl,
+        // Prefer unit union (window may carry neighbor tags); fall back to row.
+        vibes: unit.vibes.length > 0 ? unit.vibes : row.vibes,
       })
     })
     for (let i = moments.length - 1; i > 0; i--) {
@@ -888,7 +932,7 @@ export default function DiscoverPage() {
       [moments[i], moments[j]] = [moments[j], moments[i]]
     }
     setAllMoments(moments)
-  }, [momentRows])
+  }, [momentRows, songAtomsBySongId])
 
   useEffect(() => {
     return subscribeAudioEngine(state => {
@@ -1089,7 +1133,7 @@ export default function DiscoverPage() {
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '18px' }}>
               {takeover.label} · auto-continues
             </p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', color: 'var(--text)', lineHeight: 1.45, marginBottom: '14px' }}>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', color: 'var(--text)', lineHeight: 1.45, marginBottom: '14px', whiteSpace: 'pre-line' }}>
               &ldquo;{takeoverMoment.line}&rdquo;
             </p>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '22px' }}>

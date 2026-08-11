@@ -4,9 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   PRIMARY_TAB_STALE_MS,
   peekMomentsCache,
+  peekMomentsSongAtoms,
   warmLyricMoments,
   type LyricMomentRow,
 } from '@/lib/primary-tab-prefetch'
+import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
 
 export type { LyricMomentRow }
 
@@ -19,19 +21,24 @@ export type UseLyricMomentsOptions = {
 }
 
 /**
- * Discover phase-2: vibed lyric lines only (not the full catalog embed).
- * Pair with light `useSongs` for chrome; full lines still via `useSong(id)`.
+ * Discover phase-2: vibed lyric centers + full song line atoms for catalog-unit
+ * window expansion. Pair with light `useSongs` for chrome.
  */
 export function useLyricMoments(options: UseLyricMomentsOptions = {}) {
   const enabled = options.enabled ?? true
   const cached = peekMomentsCache()
+  const cachedAtoms = peekMomentsSongAtoms()
   const [moments, setMoments] = useState<LyricMomentRow[]>(cached?.data ?? [])
+  const [songAtomsBySongId, setSongAtomsBySongId] = useState<Record<string, CatalogLyricAtom[]>>(
+    cachedAtoms ?? {},
+  )
   const [loading, setLoading] = useState(!cached?.data)
   const lastLoadedAtRef = useRef(cached?.loadedAt ?? 0)
 
   const load = useCallback(async (force = false) => {
     const rows = await warmLyricMoments({ force })
     setMoments(rows)
+    setSongAtomsBySongId(peekMomentsSongAtoms() ?? {})
     setLoading(false)
     lastLoadedAtRef.current = Date.now()
     return rows
@@ -47,5 +54,5 @@ export function useLyricMoments(options: UseLyricMomentsOptions = {}) {
     }
   }, [enabled, load])
 
-  return { moments, loading, refetch: () => load(true) }
+  return { moments, songAtomsBySongId, loading, refetch: () => load(true) }
 }
