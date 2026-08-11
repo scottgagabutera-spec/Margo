@@ -7,6 +7,7 @@ import type { Post } from '@/hooks/usePosts'
 import type { Song } from '@/hooks/useSongs'
 import type { PostLine, PostLineSource } from '@/lib/post-lines'
 import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
+import { mapSongStreamingLinks } from '@/lib/song-streaming-links'
 
 const supabase = createClient()
 
@@ -49,7 +50,15 @@ const POST_SELECT = `
   snippet_end_sec,
   profiles:author_profile_id ( username, display_name, avatar_url ),
   post_stats ( resonate_count, echo_count, replay_count ),
-  songs:song_id ( audio_url ),
+  songs:song_id (
+    audio_url,
+    youtube_url,
+    spotify_url,
+    apple_music_url,
+    soundcloud_url,
+    audiomack_url,
+    boomplay_url
+  ),
   post_lines (
     id,
     position,
@@ -128,6 +137,7 @@ function mapPostRow(row: any): Post {
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
+    streamingLinks: mapSongStreamingLinks(linkedSong),
     lines: mapPostLines(row.post_lines),
   }
 }

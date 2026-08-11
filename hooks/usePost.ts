@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Post } from '@/hooks/usePosts'
+import { mapSongStreamingLinks } from '@/lib/song-streaming-links'
 
 const supabase = createClient()
 
@@ -26,7 +27,15 @@ const POST_SELECT = `
   snippet_end_sec,
   profiles:author_profile_id ( username, avatar_url ),
   post_stats ( resonate_count, echo_count ),
-  songs:song_id ( audio_url ),
+  songs:song_id (
+    audio_url,
+    youtube_url,
+    spotify_url,
+    apple_music_url,
+    soundcloud_url,
+    audiomack_url,
+    boomplay_url
+  ),
   post_lines (
     id,
     position,
@@ -102,6 +111,7 @@ function mapRow(row: any): Post {
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
+    streamingLinks: mapSongStreamingLinks(linkedSong),
     lines: mapPostLines(row.post_lines),
   }
 }

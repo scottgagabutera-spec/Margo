@@ -508,3 +508,19 @@ html, body {
     touch-action: pan-y;
   }
 }
+
+/* Experimental PostCard N-panel strip (Discover .row-scroll pattern). */
+.margo-post-panel-row.row-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+.margo-post-panel {
+  flex: 0 0 calc(100% - 28px);
+  width: calc(100% - 28px);
+  max-width: calc(100% - 28px);
+  box-sizing: border-box;
+}

@@ -8,6 +8,7 @@ import {
   warmFeedPosts,
 } from '@/lib/primary-tab-prefetch'
 import type { PostLine } from '@/lib/post-lines'
+import type { SongStreamingLinks } from '@/lib/song-streaming-links'
 
 const supabase = createClient()
 
@@ -33,6 +34,8 @@ export interface Post {
   audioUrl?: string | null
   snippetStart?: number | null
   snippetEnd?: number | null
+  /** Catalog streaming destinations from joined `songs.*_url` (null when none). */
+  streamingLinks?: SongStreamingLinks | null
   /**
    * Multi-line moment segments when joined. Empty/undefined → render from
    * top-level text/song/snippet (position-0 mirror).
