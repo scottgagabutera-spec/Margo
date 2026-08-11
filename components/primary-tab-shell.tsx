@@ -3,6 +3,7 @@
 import {
   Activity,
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -13,27 +14,26 @@ import {
   type CSSProperties,
 } from 'react'
 import { usePathname } from 'next/navigation'
+import { usePrimaryTabSwipeGesture } from '@/hooks/usePrimaryTabSwipeGesture'
 
 /**
- * Phase 1 / 1.5 — primary-tab keepalive with per-pane scrollports + Activity.
+ * Phase 1 / 1.5 / 2.0 — primary-tab keepalive + Activity + swipe strip.
  *
  * Each pane (feed | discover | alerts | you) is its own overflow container.
- * Visited panes stay mounted; inactive panes are wrapped in React 19.2
- * <Activity mode="hidden"> so Effects (Realtime, etc.) tear down while
- * React state is preserved — framework-native pause (pairs with #59 enabled
- * gating as belt-and-suspenders).
+ * Visited panes stay mounted; inactive panes use <Activity mode="hidden">
+ * so Effects tear down while React state is preserved (#59 enabled gating
+ * remains belt-and-suspenders via isTabActive → enabled).
  *
- * Activity hides with display:none (scrollTop reads as 0 while hidden). Leave
- * saves must NOT trust a live post-hide read — freeze the last known-good
- * value in a ref while the pane is active, persist to sessionStorage, and
- * restore from that ref on show. Browser often restores scrollTop when
- * display returns, but freeze remains non-negotiable.
+ * Phase 2.0: `peekTab` may paint a neighbor during finger-follow without
+ * flipping isTabActive (Realtime stays off until commit). Strip offset is
+ * applied via transform on the pane nodes (compositor), not layout.
  *
- * history.scrollRestoration is manual while a primary tab is active so the
- * browser does not fight the shell.
+ * Leave-save still must not trust live scrollTop after Activity hide —
+ * freeze while active; peek restore uses frozen values and never leave-saves.
  */
 
 export type PrimaryTabId = 'feed' | 'discover' | 'alerts' | 'you'
+export type PrimaryTabPeekDir = 'prev' | 'next'
 
 const SCROLL_STORAGE_KEY = 'margo-primary-tab-scroll'
 
@@ -108,14 +108,31 @@ function persistScroll(
 
 interface PrimaryTabContextValue {
   activeTab: PrimaryTabId | null
-  isTabActive: (id: PrimaryTabId) => boolean
+  peekTab: PrimaryTabId | null
   isOnPrimaryTab: boolean
+  /** True only for the committed route pane — never for paint-only peek. */
+  isTabActive: (id: PrimaryTabId) => boolean
+  hasCachedTab: (id: PrimaryTabId) => boolean
+  /**
+   * Paint neighbor for finger-follow. Returns false if never visited
+   * (nothing in keepalive cache) — caller should fall back to commit-only.
+   */
+  beginPeek: (id: PrimaryTabId, dir: PrimaryTabPeekDir) => boolean
+  /** Direct compositor offset in px (finger delta). No React render. */
+  setStripOffset: (px: number) => void
+  /** Clear peek paint + reset transforms. */
+  endPeek: () => void
 }
 
 const PrimaryTabContext = createContext<PrimaryTabContextValue>({
   activeTab: null,
+  peekTab: null,
   isTabActive: () => false,
   isOnPrimaryTab: false,
+  hasCachedTab: () => false,
+  beginPeek: () => false,
+  setStripOffset: () => {},
+  endPeek: () => {},
 })
 
 export function usePrimaryTab() {
@@ -125,26 +142,31 @@ export function usePrimaryTab() {
 interface PrimaryTabShellProps {
   children: ReactNode
   ownProfileHref: string | null
+  /** Wire Phase 2 swipe when mounted under TabSwipeProvider. */
+  enableSwipeGesture?: boolean
 }
 
-const paneStyle = (active: boolean): CSSProperties => ({
-  // Fixed viewport stack. Hide/show for Effects is owned by <Activity>
-  // (display:none while hidden) — do not also use visibility:hidden.
+const paneStyle = (painted: boolean, isCommittedActive: boolean): CSSProperties => ({
   position: 'fixed',
   inset: 0,
   overflowY: 'auto',
   WebkitOverflowScrolling: 'touch',
   overscrollBehaviorY: 'contain',
-  // Prevent browser scroll-anchoring from rewriting scrollTop during
-  // sibling pane mount / content reflow while this pane is deferred.
   overflowAnchor: 'none',
   boxSizing: 'border-box',
-  pointerEvents: active ? 'auto' : 'none',
-  // Below tab bar (50) / MiniPlayer (90); above page bg.
-  zIndex: active ? 1 : 0,
+  // Reserve vertical pan for the browser; horizontal is for tab swipe JS.
+  // See TabSwipeProvider / .margo-tab-swipe-viewport notes.
+  touchAction: 'pan-y',
+  pointerEvents: isCommittedActive ? 'auto' : 'none',
+  zIndex: isCommittedActive ? 2 : painted ? 1 : 0,
+  // will-change only while a neighbor is painted for follow (set inline during peek).
 })
 
-export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellProps) {
+export function PrimaryTabShell({
+  children,
+  ownProfileHref,
+  enableSwipeGesture = false,
+}: PrimaryTabShellProps) {
   const pathname = usePathname()
   const activeTab = resolvePrimaryTabId(pathname, ownProfileHref)
 
@@ -153,12 +175,81 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
   const prevTabRef = useRef<PrimaryTabId | null>(null)
   /** Last known-good scrollTop per pane, captured while the pane was active. */
   const frozenScrollRef = useRef<Partial<Record<PrimaryTabId, number>>>({})
+  const activeTabRef = useRef<PrimaryTabId | null>(activeTab)
+  const peekMetaRef = useRef<{ id: PrimaryTabId; dir: PrimaryTabPeekDir } | null>(null)
+  const stripOffsetRef = useRef(0)
   const [, setCacheVersion] = useState(0)
+  const [peekTab, setPeekTabState] = useState<PrimaryTabId | null>(null)
+
+  activeTabRef.current = activeTab
 
   // First visit only — keep the mounted tree; ignore later Next remount payloads.
   if (activeTab && !cacheRef.current.has(activeTab)) {
     cacheRef.current.set(activeTab, children)
   }
+
+  const applyStripTransforms = useCallback(() => {
+    const w = typeof window !== 'undefined' ? window.innerWidth : 0
+    const off = stripOffsetRef.current
+    const peek = peekMetaRef.current
+    const active = activeTabRef.current
+
+    for (const [id, el] of paneElsRef.current) {
+      if (!el) continue
+      if (active && id === active) {
+        if (!peek && off === 0) {
+          el.style.transform = ''
+          el.style.willChange = ''
+        } else {
+          el.style.transform = 'translate3d(' + off + 'px,0,0)'
+          el.style.willChange = 'transform'
+        }
+        continue
+      }
+      if (peek && id === peek.id) {
+        const base = peek.dir === 'next' ? w : -w
+        el.style.transform = 'translate3d(' + (off + base) + 'px,0,0)'
+        el.style.willChange = 'transform'
+        continue
+      }
+      el.style.transform = ''
+      el.style.willChange = ''
+    }
+  }, [])
+
+  const endPeek = useCallback(() => {
+    peekMetaRef.current = null
+    stripOffsetRef.current = 0
+    setPeekTabState(null)
+    // Transforms cleared after paint in layout effect; also clear now for snappiness.
+    for (const el of paneElsRef.current.values()) {
+      if (!el) continue
+      el.style.transform = ''
+      el.style.willChange = ''
+    }
+  }, [])
+
+  const beginPeek = useCallback(
+    (id: PrimaryTabId, dir: PrimaryTabPeekDir) => {
+      if (!cacheRef.current.has(id)) return false
+      if (id === activeTabRef.current) return false
+      peekMetaRef.current = { id, dir }
+      setPeekTabState(id)
+      applyStripTransforms()
+      return true
+    },
+    [applyStripTransforms]
+  )
+
+  const setStripOffset = useCallback(
+    (px: number) => {
+      stripOffsetRef.current = px
+      applyStripTransforms()
+    },
+    [applyStripTransforms]
+  )
+
+  const hasCachedTab = useCallback((id: PrimaryTabId) => cacheRef.current.has(id), [])
 
   useEffect(() => {
     if (!ownProfileHref && cacheRef.current.has('you')) {
@@ -168,9 +259,10 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
       const map = readStoredScrollMap()
       delete map.you
       writeStoredScrollMap(map)
+      if (peekMetaRef.current?.id === 'you') endPeek()
       setCacheVersion(v => v + 1)
     }
-  }, [ownProfileHref])
+  }, [ownProfileHref, endPeek])
 
   // Manual history restoration while primary tabs own scroll via panes.
   useEffect(() => {
@@ -178,29 +270,30 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
     if (!activeTab) return
     const prev = history.scrollRestoration
     history.scrollRestoration = 'manual'
-    // Keep the document window at 0 — the pane is the scrollport.
     window.scrollTo(0, 0)
     return () => {
       history.scrollRestoration = prev
     }
   }, [activeTab])
 
-  // Flush leaving tab from frozen ref (not post-hide live scrollTop);
-  // restore incoming tab from frozen/sessionStorage after hide/reflow.
+  // Route commit: leave-save previous active; restore incoming; drop any peek.
   useLayoutEffect(() => {
     const prev = prevTabRef.current
     const frozen = frozenScrollRef.current
 
+    // Committed navigation clears visual peek (2.1 may animate first — then clear).
+    if (peekMetaRef.current) {
+      peekMetaRef.current = null
+      stripOffsetRef.current = 0
+      setPeekTabState(null)
+    }
+
     if (prev && prev !== activeTab) {
       const el = paneElsRef.current.get(prev)
-      // Prefer the freeze taken while active. Only seed from live if we never
-      // recorded a value. After Activity hide (display:none), live scrollTop
-      // reads as 0 — never let that clobber a frozen prior (including prior=0).
       const prior = frozen[prev]
       const live = el?.scrollTop ?? 0
       const y = prior != null ? (live === 0 ? prior : live) : live
       persistScroll(frozen, prev, y)
-      // Re-apply freeze onto the element in case hide/reflow jumped it.
       if (el && Math.abs(el.scrollTop - y) > 1) {
         el.scrollTop = y
       }
@@ -215,7 +308,6 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
           el.scrollTop = target
         }
         frozen[activeTab] = target
-        // Second pass after layout settles (Activity reveal / sibling mount).
         requestAnimationFrame(() => {
           if (Math.abs(el.scrollTop - target) > 1) {
             el.scrollTop = target
@@ -225,12 +317,27 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
       window.scrollTo(0, 0)
     }
 
+    // Reset transforms after commit so panes aren't stuck mid-strip.
+    for (const el of paneElsRef.current.values()) {
+      if (!el) continue
+      el.style.transform = ''
+      el.style.willChange = ''
+    }
+
     prevTabRef.current = activeTab
   }, [activeTab, pathname])
 
-  // Continuously freeze + mirror active pane scroll (Compose → back).
-  // Ignore scroll once the pane is no longer marked active — post-hide
-  // display:none can report scrollTop 0 and must not corrupt the freeze.
+  // Peek paint: restore frozen scroll so the neighbor doesn't flash at 0.
+  useLayoutEffect(() => {
+    if (!peekTab) return
+    const el = paneElsRef.current.get(peekTab)
+    if (!el) return
+    const y = frozenScrollRef.current[peekTab] ?? readStoredScrollMap()[peekTab] ?? 0
+    if (Math.abs(el.scrollTop - y) > 1) el.scrollTop = y
+    applyStripTransforms()
+  }, [peekTab, applyStripTransforms])
+
+  // Continuously freeze + mirror committed-active pane scroll only.
   useEffect(() => {
     if (!activeTab) return
     const el = paneElsRef.current.get(activeTab)
@@ -243,7 +350,6 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
       persistScroll(frozenScrollRef.current, tabId, el.scrollTop)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
-    // Seed freeze with whatever the pane currently has while visible.
     onScroll()
     return () => el.removeEventListener('scroll', onScroll)
   }, [activeTab, pathname])
@@ -251,28 +357,43 @@ export function PrimaryTabShell({ children, ownProfileHref }: PrimaryTabShellPro
   const ctx = useMemo<PrimaryTabContextValue>(
     () => ({
       activeTab,
+      peekTab,
       isOnPrimaryTab: activeTab !== null,
       isTabActive: (id: PrimaryTabId) => activeTab === id,
+      hasCachedTab,
+      beginPeek,
+      setStripOffset,
+      endPeek,
     }),
-    [activeTab]
+    [activeTab, peekTab, hasCachedTab, beginPeek, setStripOffset, endPeek]
   )
+
+  usePrimaryTabSwipeGesture(enableSwipeGesture, ownProfileHref, {
+    beginPeek,
+    setStripOffset,
+    endPeek,
+    hasCachedTab,
+  })
 
   const cached = [...cacheRef.current.entries()]
 
   return (
     <PrimaryTabContext.Provider value={ctx}>
       {cached.map(([id, node]) => {
-        const active = activeTab === id
+        const isCommittedActive = activeTab === id
+        const isPeek = peekTab === id
+        const painted = isCommittedActive || isPeek
         return (
-          <Activity key={id} mode={active ? 'visible' : 'hidden'}>
+          <Activity key={id} mode={painted ? 'visible' : 'hidden'}>
             <div
               ref={(nodeEl) => {
                 paneElsRef.current.set(id, nodeEl)
               }}
               data-margo-primary-tab={id}
-              data-margo-primary-tab-active={active ? '1' : '0'}
-              aria-hidden={!active}
-              style={paneStyle(active)}
+              data-margo-primary-tab-active={isCommittedActive ? '1' : '0'}
+              data-margo-primary-tab-peek={isPeek ? '1' : '0'}
+              aria-hidden={!isCommittedActive}
+              style={paneStyle(painted, isCommittedActive)}
             >
               {node}
             </div>
