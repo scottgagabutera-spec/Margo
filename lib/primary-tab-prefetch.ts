@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/hooks/usePosts'
 import type { Song } from '@/hooks/useSongs'
 import type { PostLine, PostLineSource } from '@/lib/post-lines'
+import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
 
 const supabase = createClient()
 
@@ -289,6 +290,50 @@ export function warmSongs(opts?: { force?: boolean }): Promise<Song[]> {
 // ── Vibed lyric moments (Discover phase 2) ───────────────────────────
 
 const momentsCache: CacheEntry<LyricMomentRow[]> = { data: null, loadedAt: 0, inflight: null }
+/** Full catalog lines for songs that have ≥1 vibed moment (window expansion). */
+const momentsAtomsCache: CacheEntry<Record<string, CatalogLyricAtom[]>> = {
+  data: null,
+  loadedAt: 0,
+  inflight: null,
+}
+
+async function fetchSongAtomsForMoments(
+  songIds: string[],
+  vibesBySongLine: Map<string, string[]>,
+): Promise<Record<string, CatalogLyricAtom[]>> {
+  const out: Record<string, CatalogLyricAtom[]> = {}
+  if (songIds.length === 0) return out
+
+  const { data, error } = await supabase
+    .from('lyric_lines')
+    .select('song_id, line_index, text, start_sec, end_sec')
+    .in('song_id', songIds)
+
+  if (error) {
+    console.error('fetchSongAtomsForMoments: failed', error)
+    return out
+  }
+
+  for (const row of data || []) {
+    const songId = row.song_id as string
+    const lineIndex = row.line_index as number
+    const vibeKey = `${songId}_${lineIndex}`
+    const atom: CatalogLyricAtom = {
+      lineIndex,
+      text: row.text,
+      startSec: Number(row.start_sec),
+      endSec: Number(row.end_sec),
+      vibes: vibesBySongLine.get(vibeKey) || [],
+    }
+    if (!out[songId]) out[songId] = []
+    out[songId].push(atom)
+  }
+
+  for (const id of Object.keys(out)) {
+    out[id].sort((a, b) => a.lineIndex - b.lineIndex)
+  }
+  return out
+}
 
 export async function fetchLyricMoments(): Promise<LyricMomentRow[]> {
   const { data, error } = await supabase
@@ -312,15 +357,19 @@ export async function fetchLyricMoments(): Promise<LyricMomentRow[]> {
 
   if (error) {
     console.error('fetchLyricMoments: failed', error)
+    momentsAtomsCache.data = {}
+    momentsAtomsCache.loadedAt = Date.now()
     return []
   }
 
   const out: LyricMomentRow[] = []
+  const vibesBySongLine = new Map<string, string[]>()
   for (const row of data || []) {
     const song = Array.isArray(row.songs) ? row.songs[0] : row.songs
     if (!song || song.status === 'hidden') continue
     const vibes = (row.lyric_line_vibes || []).map((v: { vibe: string }) => v.vibe).filter(Boolean)
     if (vibes.length === 0) continue
+    vibesBySongLine.set(`${song.id}_${row.line_index}`, vibes)
     out.push({
       lineIndex: row.line_index,
       text: row.text,
@@ -334,6 +383,10 @@ export async function fetchLyricMoments(): Promise<LyricMomentRow[]> {
       vibes,
     })
   }
+
+  const songIds = [...new Set(out.map((r) => r.songId))]
+  momentsAtomsCache.data = await fetchSongAtomsForMoments(songIds, vibesBySongLine)
+  momentsAtomsCache.loadedAt = Date.now()
   return out
 }
 
@@ -342,10 +395,16 @@ export function peekMomentsCache(): { data: LyricMomentRow[]; loadedAt: number }
   return { data: momentsCache.data, loadedAt: momentsCache.loadedAt }
 }
 
+export function peekMomentsSongAtoms(): Record<string, CatalogLyricAtom[]> | null {
+  if (!momentsAtomsCache.data) return null
+  return momentsAtomsCache.data
+}
+
 export function warmLyricMoments(opts?: { force?: boolean }): Promise<LyricMomentRow[]> {
   const force = opts?.force === true
   const fresh =
     momentsCache.data &&
+    momentsAtomsCache.data &&
     Date.now() - momentsCache.loadedAt <= PRIMARY_TAB_STALE_MS
   if (!force && fresh && momentsCache.data) {
     return Promise.resolve(momentsCache.data)
