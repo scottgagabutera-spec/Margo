@@ -1,7 +1,7 @@
 /**
  * Suggested Lyric Back — Approach A.
  * Ranks eligible catalog lyric units with gpt-4o-mini as replies to a post.
- * Caches per post in suggest_lyric_back_cache (fingerprint + TTL).
+ * Caches successful non-empty picks only (never caches hard failures or empty).
  */
 
 import { createHash } from 'crypto'
@@ -16,13 +16,14 @@ export const MIN_SUGGEST_UNIT_WORDS = 4
 export const SUGGESTIONS_PER_POST = 3
 export const SUGGEST_BATCH_MAX = 25
 
-/** Max catalog units per LLM call before chunk → merge. */
-export const MAX_UNITS_PER_CALL = 120
+/**
+ * Soft cap before we chunk. Current catalog (~400 units) fits one call;
+ * keep chunk→merge only as a growth fallback.
+ */
+export const MAX_UNITS_PER_CALL = 500
 
 /** Fresh non-empty cache TTL. */
 export const CACHE_TTL_MS = 18 * 60 * 60 * 1000
-/** Shorter TTL for empty results so we retry sooner. */
-export const CACHE_EMPTY_TTL_MS = 6 * 60 * 60 * 1000
 
 const LLM_CONCURRENCY = 3
 const OPENAI_MODEL = 'gpt-4o-mini'
@@ -60,6 +61,17 @@ type EligibleUnit = {
   endSec: number
   audioUrl: string | null
   artworkUrl: string | null
+}
+
+type PickOk = { ok: true; ids: string[] }
+type PickErr = { ok: false; reason: string }
+type PickResult = PickOk | PickErr
+
+export class SuggestRankError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'SuggestRankError'
+  }
 }
 
 function wordCount(text: string): number {
@@ -217,14 +229,14 @@ function chunkUnits<T>(arr: T[], size: number): T[][] {
   return out
 }
 
-function parseIdList(raw: string): string[] {
+function parseIdList(raw: string): string[] | null {
   const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')
   try {
     const parsed = JSON.parse(cleaned) as { ids?: unknown }
-    if (!Array.isArray(parsed?.ids)) return []
+    if (!Array.isArray(parsed?.ids)) return null
     return parsed.ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
   } catch {
-    return []
+    return null
   }
 }
 
@@ -234,13 +246,12 @@ async function openaiPickIds(params: {
   parentSongId?: string | null
   units: EligibleUnit[]
   maxIds: number
-}): Promise<string[]> {
+}): Promise<PickResult> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    console.error('suggestLyricBacks: OPENAI_API_KEY missing')
-    return []
+    return { ok: false, reason: 'OpenAI is not configured' }
   }
-  if (params.units.length === 0) return []
+  if (params.units.length === 0) return { ok: true, ids: [] }
 
   const catalogBlock = params.units
     .map((u) => `[${u.id}] "${u.text}" — ${u.songTitle} · ${u.artistName}`)
@@ -268,34 +279,46 @@ ${parentHint}
 Catalog lyric units (pick up to ${params.maxIds}):
 ${catalogBlock}`
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      max_tokens: 200,
-      temperature: 0.4,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-    }),
-  })
+  let res: Response
+  try {
+    res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        max_tokens: 200,
+        temperature: 0.4,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+      }),
+    })
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'network error'
+    console.error('suggestLyricBacks: OpenAI fetch failed', message)
+    return { ok: false, reason: 'Could not reach the suggestion service' }
+  }
 
   if (!res.ok) {
     const err = await res.text().catch(() => '')
     console.error('suggestLyricBacks: OpenAI failed', res.status, err)
-    return []
+    return { ok: false, reason: `Suggestion service failed (${res.status})` }
   }
 
   const data = await res.json() as {
     choices?: { message?: { content?: string } }[]
   }
   const content = data.choices?.[0]?.message?.content || ''
-  return parseIdList(content)
+  const ids = parseIdList(content)
+  if (ids == null) {
+    console.error('suggestLyricBacks: OpenAI returned unparseable ids', content.slice(0, 200))
+    return { ok: false, reason: 'Could not parse suggestion response' }
+  }
+  return { ok: true, ids }
 }
 
 function hydrateSuggestions(
@@ -327,20 +350,19 @@ function hydrateSuggestions(
     })
   }
 
-  // Prefer-other-song is instructed in the LLM prompt; keep model order.
   return picked.slice(0, SUGGESTIONS_PER_POST)
 }
 
 async function rankUnitsForPost(
   post: SuggestPostInput,
   units: EligibleUnit[],
-): Promise<SuggestedLyricBack[]> {
+): Promise<{ ok: true; picks: SuggestedLyricBack[] } | PickErr> {
   const postText = (post.text || '').trim()
-  if (!postText) return []
+  if (!postText) return { ok: true, picks: [] }
 
   const postTextNorm = normalizeText(postText)
   const pool = units.filter((u) => normalizeText(u.text) !== postTextNorm)
-  if (pool.length === 0) return []
+  if (pool.length === 0) return { ok: true, picks: [] }
 
   const byId = new Map(pool.map((u) => [u.id, u]))
   const vibe = (post.emotion || '').toUpperCase() || ''
@@ -349,13 +371,15 @@ async function rankUnitsForPost(
   let candidateIds: string[] = []
 
   if (chunks.length === 1) {
-    candidateIds = await openaiPickIds({
+    const picked = await openaiPickIds({
       postText,
       parentSongTitle: post.songTitle,
       parentSongId: post.songId,
       units: chunks[0],
       maxIds: SUGGESTIONS_PER_POST,
     })
+    if (!picked.ok) return picked
+    candidateIds = picked.ids
   } else {
     const perChunk = await mapPool(chunks, LLM_CONCURRENCY, (chunk) =>
       openaiPickIds({
@@ -366,36 +390,43 @@ async function rankUnitsForPost(
         maxIds: SUGGESTIONS_PER_POST,
       }),
     )
+    if (perChunk.some((r) => !r.ok)) {
+      const firstErr = perChunk.find((r): r is PickErr => !r.ok)
+      return firstErr || { ok: false, reason: 'Suggestion service failed' }
+    }
     const mergedPool: EligibleUnit[] = []
     const seen = new Set<string>()
-    for (const ids of perChunk) {
-      for (const id of ids) {
+    for (const row of perChunk) {
+      if (!row.ok) continue
+      for (const id of row.ids) {
         const u = byId.get(id)
         if (!u || seen.has(id)) continue
         seen.add(id)
         mergedPool.push(u)
       }
     }
-    if (mergedPool.length === 0) return []
+    if (mergedPool.length === 0) {
+      return { ok: true, picks: [] }
+    }
     if (mergedPool.length <= SUGGESTIONS_PER_POST) {
       candidateIds = mergedPool.map((u) => u.id)
     } else {
-      candidateIds = await openaiPickIds({
+      const merged = await openaiPickIds({
         postText,
         parentSongTitle: post.songTitle,
         parentSongId: post.songId,
         units: mergedPool,
         maxIds: SUGGESTIONS_PER_POST,
       })
+      if (!merged.ok) return merged
+      candidateIds = merged.ids
     }
   }
 
-  return hydrateSuggestions(
-    candidateIds,
-    byId,
-    postTextNorm,
-    vibe,
-  )
+  return {
+    ok: true,
+    picks: hydrateSuggestions(candidateIds, byId, postTextNorm, vibe),
+  }
 }
 
 type CacheRow = {
@@ -427,6 +458,9 @@ async function readCache(
 
   for (const row of (data || []) as CacheRow[]) {
     const list = Array.isArray(row.suggestions) ? row.suggestions : []
+    // Never treat empty arrays as cache hits — poisoned empties from the
+    // auto-batch storm must not block a fresh LLM rank.
+    if (list.length === 0) continue
     hit.set(row.post_id, list.slice(0, SUGGESTIONS_PER_POST))
   }
   return hit
@@ -438,8 +472,11 @@ async function writeCache(
   suggestions: SuggestedLyricBack[],
   fingerprint: string,
 ): Promise<void> {
-  const ttl = suggestions.length > 0 ? CACHE_TTL_MS : CACHE_EMPTY_TTL_MS
-  const expires = new Date(Date.now() + ttl).toISOString()
+  // Only cache successful non-empty picks. True "no match" and hard failures
+  // both skip write so Retry / next tap can try again.
+  if (suggestions.length === 0) return
+
+  const expires = new Date(Date.now() + CACHE_TTL_MS).toISOString()
   const { error } = await supabase.from('suggest_lyric_back_cache').upsert({
     post_id: postId,
     suggestions,
@@ -456,6 +493,8 @@ async function writeCache(
 /**
  * For each post, return 0–SUGGESTIONS_PER_POST catalog lyric units chosen
  * by gpt-4o-mini as meaningful Lyric Back replies.
+ * Throws {@link SuggestRankError} when the LLM path fails (so the API can 5xx
+ * and the client can Retry instead of caching/showing a false empty).
  */
 export async function suggestLyricBacksForPosts(
   supabase: SupabaseClient,
@@ -489,18 +528,27 @@ export async function suggestLyricBacksForPosts(
   if (misses.length === 0) return result
 
   if (!process.env.OPENAI_API_KEY) {
-    console.error('suggestLyricBacksForPosts: OPENAI_API_KEY missing — empty suggestions')
-    return result
+    throw new SuggestRankError('OpenAI is not configured')
   }
 
   const ranked = await mapPool(misses, LLM_CONCURRENCY, async (post) => {
-    const picks = await rankUnitsForPost(post, units)
-    await writeCache(supabase, post.id, picks, fingerprint)
-    return { id: post.id, picks }
+    const outcome = await rankUnitsForPost(post, units)
+    if (!outcome.ok) {
+      return { id: post.id, ok: false as const, reason: outcome.reason }
+    }
+    await writeCache(supabase, post.id, outcome.picks, fingerprint)
+    return { id: post.id, ok: true as const, picks: outcome.picks }
   })
 
+  const failures = ranked.filter((r) => !r.ok)
+  if (failures.length > 0) {
+    // Single-post path (Feed on-demand) surfaces this to Retry.
+    const reason = !failures[0].ok ? failures[0].reason : 'Suggestion failed'
+    throw new SuggestRankError(reason)
+  }
+
   for (const row of ranked) {
-    result[row.id] = row.picks
+    if (row.ok) result[row.id] = row.picks
   }
 
   return result

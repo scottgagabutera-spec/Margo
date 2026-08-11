@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import {
   SUGGEST_BATCH_MAX,
+  SuggestRankError,
   suggestLyricBacksForPosts,
 } from '@/lib/suggest-lyric-back'
 
 /**
  * POST { postIds: string[] }
  * Suggested Lyric Back via gpt-4o-mini ranking over catalog lyric units.
- * Cached per post (see suggest_lyric_back_cache).
+ * Caches successful non-empty picks only (see suggest_lyric_back_cache).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('suggest-lyric-back failed', err)
-    return NextResponse.json({ error: message }, { status: 500 })
+    const status = err instanceof SuggestRankError ? 502 : 500
+    return NextResponse.json({ error: message }, { status })
   }
 }
