@@ -20,8 +20,6 @@ import { ReplayAttribution } from '@/components/replay-attribution'
 import { useRecentReplays } from '@/hooks/useRecentReplays'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { FeedPostSkeletonList } from '@/components/margo-skeletons'
-import type { SuggestedLyricBack } from '@/lib/suggest-lyric-back'
-import { SUGGEST_BATCH_MAX } from '@/lib/suggest-lyric-back'
 
 const supabase = createClient()
 
@@ -309,51 +307,6 @@ export default function FeedPage() {
     return merged
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts, recentReplays, selectedVibe, selectedSort, searchQuery, postStats])
-
-  const [suggestedByPostId, setSuggestedByPostId] = useState<Record<string, SuggestedLyricBack[]>>({})
-  const [suggestedLoading, setSuggestedLoading] = useState(false)
-  const suggestedFetchedRef = useRef<Set<string>>(new Set())
-
-  // Batch Suggested Lyric Back for posts currently rendered on Feed.
-  useEffect(() => {
-    if (!feedLive) return
-    const ids = [...new Set(feedItems.map((i) => i.post.id))].slice(0, SUGGEST_BATCH_MAX)
-    const missing = ids.filter((id) => !suggestedFetchedRef.current.has(id))
-    if (missing.length === 0) return
-
-    let cancelled = false
-    setSuggestedLoading(true)
-    void (async () => {
-      try {
-        const res = await fetch('/api/suggest-lyric-back', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ postIds: missing }),
-        })
-        if (!res.ok) throw new Error(`suggest ${res.status}`)
-        const data = await res.json() as { suggestions?: Record<string, SuggestedLyricBack[]> }
-        if (cancelled) return
-        for (const id of missing) suggestedFetchedRef.current.add(id)
-        setSuggestedByPostId((prev) => ({ ...prev, ...(data.suggestions || {}) }))
-      } catch (e) {
-        console.error('Feed suggest batch failed', e)
-        if (!cancelled) {
-          for (const id of missing) suggestedFetchedRef.current.add(id)
-          setSuggestedByPostId((prev) => {
-            const next = { ...prev }
-            for (const id of missing) {
-              if (!(id in next)) next[id] = []
-            }
-            return next
-          })
-        }
-      } finally {
-        if (!cancelled) setSuggestedLoading(false)
-      }
-    })()
-
-    return () => { cancelled = true }
-  }, [feedItems, feedLive])
 
   const notifyResonate = async (post: Post) => {
     if (!user?.id) return
@@ -668,9 +621,6 @@ export default function FeedPage() {
               isTop: topIds.has(post.id),
               onSelectVibe: handleSelectVibe,
               onSelectRank: handleSelectRank,
-              suggestedReplies: suggestedByPostId[post.id] ?? null,
-              suggestedRepliesLoading:
-                suggestedLoading && !(post.id in suggestedByPostId),
             }
             if (item.kind === 'replay') {
               return (
