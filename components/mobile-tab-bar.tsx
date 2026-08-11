@@ -8,7 +8,7 @@ import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { CompassIcon } from '@/components/icons'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
 
-const font = 'var(--font-lora), serif'
+const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
 export function MobileTabBar() {
   const pathname = usePathname()

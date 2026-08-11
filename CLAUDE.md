@@ -12,7 +12,7 @@
 - APIs: Genius (lyrics/search), YouTube Data API v3, OpenAI (emotion + moderation)
 - Hosting: Vercel
 - Analytics: Vercel Analytics (cookieless)
-- Fonts: Lora (self-hosted), Syne 800 (logo only)
+- Fonts: Geist Sans (UI), Lora (lyrics), Syne 800 (logo only)
 
 ---
 

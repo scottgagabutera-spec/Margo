@@ -17,10 +17,12 @@ import { CardExportModal } from '@/components/card-export-modal'
 import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
+import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 
-const font = 'var(--font-lora), serif'
+const font = UI_FONT
+const lyricFont = LYRIC_FONT
 
 // How many songs show in the profile's own preview row before someone
 // needs to click through to the full discography page. Kept small and
@@ -453,7 +455,7 @@ export default function ProfilePage() {
               </div>
 
               {isOwnProfile && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'nowrap' }}>
                   <Link
                     href="/profile/edit"
                     style={{
@@ -464,9 +466,10 @@ export default function ProfilePage() {
                       fontFamily: font, fontWeight: 600, fontSize: '0.6rem',
                       letterSpacing: '1.5px', textTransform: 'uppercase',
                       textDecoration: 'none', cursor: 'pointer',
+                      whiteSpace: 'nowrap', flexShrink: 0,
                     }}
                   >Edit Profile</Link>
-                  <div ref={accountMenuRef} style={{ position: 'relative' }}>
+                  <div ref={accountMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
                     <button
                       type="button"
                       aria-label="Account menu"
@@ -474,11 +477,12 @@ export default function ProfilePage() {
                       onClick={() => setAccountMenuOpen(o => !o)}
                       style={{
                         width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
+                        minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         background: accountMenuOpen ? 'var(--surface-2)' : 'transparent',
                         border: '1px solid var(--border)', borderRadius: '50%',
                         cursor: 'pointer', padding: 0, boxSizing: 'border-box',
-                        WebkitTapHighlightColor: 'transparent',
+                        WebkitTapHighlightColor: 'transparent', flexShrink: 0,
                       }}
                     >
                       <MoreIcon size={18} color="var(--text-secondary)" />
@@ -628,7 +632,7 @@ export default function ProfilePage() {
               <p style={sectionLabelStyle}>Signature Lyric</p>
               {profile.signatureLyric ? (
                 <>
-                  <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
+                  <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--gold)', lineHeight: 1.5, marginBottom: '8px' }}>
                     &ldquo;{profile.signatureLyric}&rdquo;
                   </p>
                   {(profile.signatureSong || profile.signatureArtist) && (

@@ -33,6 +33,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { PostThumbnail } from '@/components/post-thumbnail'
 import { VibeTag } from '@/components/vibe-tag'
+import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 
@@ -484,51 +485,88 @@ export function PostCard({
           : 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
       }} />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: avatarPx, height: avatarPx, borderRadius: '50%', flexShrink: 0,
-            background: avatarUrl
-              ? 'none'
-              : isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
-            border: avatarUrl
-              ? '1px solid rgba(255,255,255,0.08)'
-              : isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden',
-          }}>
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={post.username || 'avatar'} onError={() => setAvatarBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <span style={{
-                fontFamily: 'var(--font-lora), serif',
-                fontSize: isCompact ? '0.6rem' : '0.7rem',
-                fontWeight: 700,
-                color: isTier1 ? 'var(--bg)' : 'var(--gold)',
-              }}>
-                {post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : 'ML')}
-              </span>
-            )}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <UsernameTag authorUid={post.authorUid || null} fallbackName={post.username} />
-            {post.timestamp != null ? (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '8px' }}>
+        {(() => {
+          const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
+          const profileHref = profileUsername ? `/profile/${profileUsername}` : null
+          const timeNode = post.timestamp != null ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: isCompact ? '0.58rem' : '0.6rem' }} aria-hidden>·</span>
               <RelativeTime
                 date={post.timestamp}
                 variant="long"
                 style={{
-                  display: 'block',
-                  marginTop: isCompact ? '1px' : '2px',
-                  fontFamily: 'var(--font-lora), serif',
+                  fontFamily: UI_FONT,
                   fontSize: isCompact ? '0.58rem' : '0.6rem',
                   color: 'var(--text-muted)',
                   lineHeight: 1.3,
+                  whiteSpace: 'nowrap',
                 }}
               />
-            ) : null}
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            </span>
+          ) : null
+          const avatar = (
+            <div style={{
+              width: avatarPx, height: avatarPx, borderRadius: '50%', flexShrink: 0,
+              background: avatarUrl
+                ? 'none'
+                : isTier1 ? 'var(--gold)' : 'linear-gradient(135deg, rgba(232,197,71,0.3), rgba(232,197,71,0.1))',
+              border: avatarUrl
+                ? '1px solid rgba(255,255,255,0.08)'
+                : isTier1 ? 'none' : '1px solid rgba(232,197,71,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden',
+            }}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" onError={() => setAvatarBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{
+                  fontFamily: UI_FONT,
+                  fontSize: isCompact ? '0.6rem' : '0.7rem',
+                  fontWeight: 700,
+                  color: isTier1 ? 'var(--bg)' : 'var(--gold)',
+                }}>
+                  {post.username ? post.username.charAt(0).toUpperCase() : (isTier1 ? 'M' : 'ML')}
+                </span>
+              )}
+            </div>
+          )
+          const identityInner = (
+            <>
+              {avatar}
+              <div style={{ minWidth: 0 }}>
+                <UsernameTag
+                  authorUid={post.authorUid || null}
+                  fallbackName={post.username}
+                  linkProfile={false}
+                  layout="stacked"
+                  size={isCompact ? 'compact' : 'default'}
+                  metaAfterHandle={timeNode}
+                />
+              </div>
+            </>
+          )
+          return profileHref ? (
+            <Link
+              href={profileHref}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`View profile @${profileUsername}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1,
+                textDecoration: 'none', color: 'inherit',
+                minHeight: 'var(--margo-touch-min)',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              {identityInner}
+            </Link>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+              {identityInner}
+            </div>
+          )
+        })()}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           {variant === 'feed' && (isNew || isTrending || isTop) && (
             <div style={{ display: 'flex', gap: '6px' }}>
               {isNew && <EarnedTag label="New" onClick={() => onSelectRank?.('NEW')} />}
@@ -721,13 +759,17 @@ export function PostCard({
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }}>
         <p style={{
-          fontFamily: 'var(--font-lora), serif', fontStyle: 'italic',
+          fontFamily: LYRIC_FONT, fontStyle: 'italic',
           fontSize: isCompact ? '1rem' : 'clamp(1.1rem, 2.4vw, 1.5rem)', color: 'var(--text)',
           lineHeight: 1.45, flex: 1, margin: 0,
         }}>
           &ldquo;{post.text}&rdquo;
         </p>
-        {isCompact && (post.knowledge?.artwork || post.youtubeMeta?.thumbnail) && (
+        {/* Playable catalog snippets keep play on every surface (Feed + profile
+            row/compact). Static thumb only when there is cover art but no audio. */}
+        {isTier1 && audioUrl ? (
+          <SnippetIconButton audioUrl={audioUrl} songId={post.songId || null} postText={post.text} songTitle={post.knowledge?.song || ''} artist={post.knowledge?.artist || ''} artwork={post.knowledge?.artwork || null} snippetStart={post.snippetStart} snippetEnd={post.snippetEnd} />
+        ) : isCompact && (post.knowledge?.artwork || post.youtubeMeta?.thumbnail) ? (
           <PostThumbnail
             youtubeThumbnail={post.youtubeMeta?.thumbnail}
             artwork={post.knowledge?.artwork}
@@ -738,10 +780,7 @@ export function PostCard({
               border: '1px solid var(--border)',
             }}
           />
-        )}
-        {!isCompact && isTier1 && audioUrl && (
-          <SnippetIconButton audioUrl={audioUrl} songId={post.songId || null} postText={post.text} songTitle={post.knowledge?.song || ''} artist={post.knowledge?.artist || ''} artwork={post.knowledge?.artwork || null} snippetStart={post.snippetStart} snippetEnd={post.snippetEnd} />
-        )}
+        ) : null}
       </div>
 
       {(post.knowledge?.song || post.knowledge?.artist) && (() => {
@@ -749,7 +788,7 @@ export function PostCard({
           ? `${post.knowledge.song} · ${post.knowledge.artist}`
           : (post.knowledge.song || post.knowledge.artist || '')
         const attrStyle: React.CSSProperties = {
-          fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem',
+          fontFamily: UI_FONT, fontSize: '0.6rem',
           color: 'rgba(255,255,255,0.75)', letterSpacing: '1px', textTransform: 'uppercase',
           marginBottom: '20px',
         }

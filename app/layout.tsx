@@ -11,6 +11,7 @@ import { TabSwipeProvider } from '@/hooks/useTabSwipe'
 import { Toaster } from '@/components/ui/sonner'
 import type { Metadata, Viewport } from 'next'
 import { Lora, Syne } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
@@ -119,7 +120,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${lora.variable} ${syne.variable}`}>
+    <html lang="en" className={`${lora.variable} ${syne.variable} ${GeistSans.variable}`}>
       <head>
         {/* Structured Data — WebApplication */}
         <script
@@ -180,7 +181,7 @@ export default function RootLayout({
       </head>
       <body
         className="antialiased bg-gradient-to-br from-[#08070C] via-[#0a0909] to-[#0f0e14] min-h-screen"
-        style={{ fontFamily: 'var(--font-lora), serif', color: '#F4F1ED' }}
+        style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', color: '#F4F1ED' }}
       >
         <div
           className="fixed inset-0 pointer-events-none z-50 opacity-[0.03]"
@@ -209,7 +210,7 @@ export default function RootLayout({
           offset={0}
           toastOptions={{
             style: {
-              fontFamily: 'var(--font-lora), serif',
+              fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
               background: 'var(--surface)',
               color: 'var(--text)',
               border: '1px solid var(--gold-border)',
