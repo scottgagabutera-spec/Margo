@@ -1,14 +1,14 @@
 'use client'
 
 /**
- * Phase 2.0 / 2.2 — hand-rolled primary-tab swipe (Pointer Events + strip).
+ * Phase 2 — hand-rolled primary-tab swipe (Pointer Events + strip).
  *
  * Static `touch-action: pan-y` reserves horizontal for JS from the first sample.
  * AXIS_SLOP only decides app-level H vs V (scroll/PTR vs tab swipe).
  *
- * Phase 2.2: rAF spring settle (commit → ±W, cancel/edge → 0), interruptible
- * mid-settle (second touch reclaims at current offset), edge rubber-band,
- * no CSS enter-slide on swipe commits (strip settle is the only motion).
+ * Settle: rAF spring (commit → ±W then router.push; cancel/edge → 0 then endPeek).
+ * Interruptible mid-settle; edge rubber-band never navigates.
+ * Tab-bar <Link> taps are out of scope here — they stay instant by design.
  */
 
 import { useEffect } from 'react'
