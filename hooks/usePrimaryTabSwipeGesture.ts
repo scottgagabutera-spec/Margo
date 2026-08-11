@@ -1,13 +1,14 @@
 'use client'
 
 /**
- * Phase 2.0 — hand-rolled primary-tab swipe (Pointer Events + transform strip).
+ * Phase 2.0 / 2.2 — hand-rolled primary-tab swipe (Pointer Events + strip).
  *
- * Static `touch-action: pan-y` on the viewport/panes (globals.css) reserves
- * horizontal for JS from the first sample. AXIS_SLOP_PX only decides whether
- * *this app* claims a horizontal tab gesture vs letting vertical scroll/PTR
- * continue — it must not be the mechanism that fights the browser for the
- * pointer stream (Phase A's preventDefault-after-lock gap).
+ * Static `touch-action: pan-y` reserves horizontal for JS from the first sample.
+ * AXIS_SLOP only decides app-level H vs V (scroll/PTR vs tab swipe).
+ *
+ * Phase 2.2: rAF spring settle (commit → ±W, cancel/edge → 0), interruptible
+ * mid-settle (second touch reclaims at current offset), edge rubber-band,
+ * no CSS enter-slide on swipe commits (strip settle is the only motion).
  */
 
 import { useEffect } from 'react'
@@ -17,13 +18,14 @@ import {
   type PrimaryTabId,
   type PrimaryTabPeekDir,
 } from '@/components/primary-tab-shell'
+import { rubberBandOffset, stepSpring } from '@/lib/tab-swipe-motion'
 
 const EDGE_ZONE_PX = 24
 const AXIS_SLOP_PX = 10
 const SWIPE_DISTANCE_PX = 72
 const SWIPE_VELOCITY_PX_MS = 0.45
+const SETTLE_MAX_MS = 900
 const MOBILE_MQ = '(max-width: 639px)'
-const STORAGE_KEY = 'margo-tab-swipe-dir'
 
 export const TAB_SWIPE_EXCLUDE_SELECTOR = [
   '.row-scroll',
@@ -80,7 +82,10 @@ export function usePrimaryTabSwipeGesture(
     if (!enabled) return
 
     type Axis = null | 'h' | 'v'
+    type Phase = 'idle' | 'dragging' | 'settling'
+
     const tracking = {
+      phase: 'idle' as Phase,
       pointerId: -1,
       armed: false,
       following: false,
@@ -88,17 +93,52 @@ export function usePrimaryTabSwipeGesture(
       startY: 0,
       axis: null as Axis,
       lastX: 0,
+      offset: 0,
       peekHref: null as string | null,
+      peekDir: null as PrimaryTabPeekDir | null,
       samples: [] as { t: number; x: number }[],
     }
 
-    const reset = () => {
+    let raf = 0
+    let settleVelocity = 0
+    let settleTarget = 0
+    let settleStartedAt = 0
+    let settleOnComplete: (() => void) | null = null
+    let lastFrameT = 0
+
+    const applyOffset = (px: number) => {
+      tracking.offset = px
+      setStripOffset(px)
+    }
+
+    const stopSettleRaf = () => {
+      if (raf) cancelAnimationFrame(raf)
+      raf = 0
+      settleOnComplete = null
+    }
+
+    /** Cancel in-flight spring without running its completion (interrupt). */
+    const interruptSettle = () => {
+      stopSettleRaf()
+      tracking.phase = 'idle'
+    }
+
+    const resetDrag = () => {
       tracking.pointerId = -1
       tracking.armed = false
       tracking.following = false
       tracking.axis = null
-      tracking.peekHref = null
       tracking.samples = []
+      // Keep peekHref / peekDir / offset while settling or after interrupt reattach.
+    }
+
+    const hardIdle = () => {
+      interruptSettle()
+      tracking.phase = 'idle'
+      tracking.peekHref = null
+      tracking.peekDir = null
+      tracking.offset = 0
+      resetDrag()
     }
 
     const pushSample = (x: number, t: number) => {
@@ -116,8 +156,162 @@ export function usePrimaryTabSwipeGesture(
       return (last.x - first.x) / dt
     }
 
+    const startSettle = (target: number, velocity: number, onComplete: () => void) => {
+      stopSettleRaf()
+
+      // Reduced motion — jump to target; still run completion (route / endPeek).
+      if (
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        applyOffset(target)
+        tracking.phase = 'idle'
+        onComplete()
+        return
+      }
+
+      tracking.phase = 'settling'
+      settleTarget = target
+      settleVelocity = velocity
+      settleOnComplete = onComplete
+      settleStartedAt = performance.now()
+      lastFrameT = settleStartedAt
+
+      const tick = (now: number) => {
+        const dt = now - lastFrameT
+        lastFrameT = now
+        const next = stepSpring(
+          { offset: tracking.offset, velocity: settleVelocity },
+          settleTarget,
+          dt
+        )
+        settleVelocity = next.velocity
+        applyOffset(next.offset)
+
+        const timedOut = now - settleStartedAt > SETTLE_MAX_MS
+        if (next.done || timedOut) {
+          applyOffset(settleTarget)
+          raf = 0
+          tracking.phase = 'idle'
+          const cb = settleOnComplete
+          settleOnComplete = null
+          cb?.()
+          return
+        }
+        raf = requestAnimationFrame(tick)
+      }
+      raf = requestAnimationFrame(tick)
+    }
+
+    /** Mid-drag: same peek until offset crosses 0, then cancel and maybe opposite. */
+    const updateFollowOffset = (dx: number) => {
+      const w = window.innerWidth
+      const tabs = buildTabSwipeChain(ownProfileHref)
+      if (!pathname) {
+        applyOffset(dx)
+        return
+      }
+      const idx = tabs.indexOf(pathname)
+      if (idx < 0) {
+        applyOffset(dx)
+        return
+      }
+
+      // Edge rubber-band (no neighbor in gesture direction).
+      if (!tracking.peekHref) {
+        applyOffset(rubberBandOffset(dx, w))
+        return
+      }
+
+      // Crossed through 0 — cancel current peek; maybe start opposite (v1).
+      if (tracking.peekDir === 'next' && dx > 0) {
+        endPeek()
+        tracking.peekHref = null
+        tracking.peekDir = null
+        applyOffset(0)
+        const prevIdx = idx - 1
+        if (prevIdx < 0) {
+          applyOffset(rubberBandOffset(dx, w))
+          return
+        }
+        const href = tabs[prevIdx]
+        const tabId = hrefToTabId(href, ownProfileHref)
+        if (tabId && hasCachedTab(tabId) && beginPeek(tabId, 'prev')) {
+          tracking.peekHref = href
+          tracking.peekDir = 'prev'
+          applyOffset(dx)
+        } else {
+          applyOffset(rubberBandOffset(dx, w))
+        }
+        return
+      }
+      if (tracking.peekDir === 'prev' && dx < 0) {
+        endPeek()
+        tracking.peekHref = null
+        tracking.peekDir = null
+        applyOffset(0)
+        const nextIdx = idx + 1
+        if (nextIdx >= tabs.length) {
+          applyOffset(rubberBandOffset(dx, w))
+          return
+        }
+        const href = tabs[nextIdx]
+        const tabId = hrefToTabId(href, ownProfileHref)
+        if (tabId && hasCachedTab(tabId) && beginPeek(tabId, 'next')) {
+          tracking.peekHref = href
+          tracking.peekDir = 'next'
+          applyOffset(dx)
+        } else {
+          applyOffset(rubberBandOffset(dx, w))
+        }
+        return
+      }
+
+      // Same-direction resistance when pulling back toward 0 but not past it.
+      applyOffset(dx)
+    }
+
+    const armHorizontal = (dx: number, e: PointerEvent) => {
+      if (e.target instanceof Element) {
+        try {
+          e.target.setPointerCapture(e.pointerId)
+        } catch {
+          /* ignore */
+        }
+      }
+
+      const tabs = buildTabSwipeChain(ownProfileHref)
+      if (!pathname) return
+      const idx = tabs.indexOf(pathname)
+      if (idx < 0) return
+      const nextIdx = dx < 0 ? idx + 1 : idx - 1
+      const w = window.innerWidth
+
+      if (nextIdx < 0 || nextIdx >= tabs.length) {
+        tracking.following = true
+        tracking.peekHref = null
+        tracking.peekDir = null
+        applyOffset(rubberBandOffset(dx, w))
+        return
+      }
+
+      const href = tabs[nextIdx]
+      const tabId = hrefToTabId(href, ownProfileHref)
+      const dir: PrimaryTabPeekDir = dx < 0 ? 'next' : 'prev'
+      if (tabId && hasCachedTab(tabId) && beginPeek(tabId, dir)) {
+        tracking.peekHref = href
+        tracking.peekDir = dir
+        tracking.following = true
+        applyOffset(dx)
+      } else {
+        // Cold neighbor — commit-only on release (no paint / no spring strip).
+        tracking.following = false
+        tracking.peekHref = href
+        tracking.peekDir = dir
+      }
+    }
+
     const onPointerDown = (e: PointerEvent) => {
-      reset()
       if (!window.matchMedia(MOBILE_MQ).matches) return
       if (e.pointerType === 'mouse' && e.button !== 0) return
       if (!isTabSwipePath(pathname, ownProfileHref)) return
@@ -127,17 +321,49 @@ export function usePrimaryTabSwipeGesture(
       if (e.clientX < EDGE_ZONE_PX || e.clientX > w - EDGE_ZONE_PX) return
       if (isExcludedTarget(e.target)) return
 
+      // Interrupt settle — reclaim at current offset (no jump).
+      if (tracking.phase === 'settling') {
+        interruptSettle()
+        tracking.phase = 'dragging'
+        tracking.pointerId = e.pointerId
+        tracking.armed = true
+        tracking.following = true
+        tracking.axis = 'h'
+        tracking.startX = e.clientX - tracking.offset
+        tracking.startY = e.clientY
+        tracking.lastX = e.clientX
+        tracking.samples = []
+        pushSample(e.clientX, performance.now())
+        if (e.target instanceof Element) {
+          try {
+            e.target.setPointerCapture(e.pointerId)
+          } catch {
+            /* ignore */
+          }
+        }
+        return
+      }
+
+      // Fresh drag — clear any leftover peek/strip from a prior gesture.
+      endPeek()
+      resetDrag()
+      tracking.phase = 'dragging'
       tracking.pointerId = e.pointerId
       tracking.armed = true
       tracking.startX = e.clientX
       tracking.startY = e.clientY
       tracking.lastX = e.clientX
       tracking.axis = null
+      tracking.offset = 0
+      tracking.peekHref = null
+      tracking.peekDir = null
+      tracking.samples = []
       pushSample(e.clientX, performance.now())
     }
 
     const onPointerMove = (e: PointerEvent) => {
       if (!tracking.armed || e.pointerId !== tracking.pointerId) return
+      if (tracking.phase === 'settling') return
       if (tracking.axis === 'v') return
 
       const dx = e.clientX - tracking.startX
@@ -150,72 +376,36 @@ export function usePrimaryTabSwipeGesture(
         if (Math.abs(dy) >= Math.abs(dx)) {
           tracking.axis = 'v'
           tracking.armed = false
+          tracking.phase = 'idle'
           return
         }
         tracking.axis = 'h'
-
-        if (e.target instanceof Element) {
-          try {
-            e.target.setPointerCapture(e.pointerId)
-          } catch {
-            /* ignore */
-          }
-        }
-
-        const tabs = buildTabSwipeChain(ownProfileHref)
-        if (!pathname) return
-        const idx = tabs.indexOf(pathname)
-        if (idx < 0) return
-        const nextIdx = dx < 0 ? idx + 1 : idx - 1
-        if (nextIdx < 0 || nextIdx >= tabs.length) {
-          tracking.following = true
-          tracking.peekHref = null
-          setStripOffset(dx * 0.25)
-          return
-        }
-        const href = tabs[nextIdx]
-        const tabId = hrefToTabId(href, ownProfileHref)
-        const dir: PrimaryTabPeekDir = dx < 0 ? 'next' : 'prev'
-        if (tabId && hasCachedTab(tabId) && beginPeek(tabId, dir)) {
-          tracking.peekHref = href
-          tracking.following = true
-          setStripOffset(dx)
-        } else {
-          tracking.following = false
-          tracking.peekHref = href
-        }
+        armHorizontal(dx, e)
         return
       }
 
       if (tracking.axis === 'h' && tracking.following) {
-        if (!tracking.peekHref) {
-          setStripOffset(dx * 0.25)
-        } else {
-          const dirNext = dx < 0
-          const toward =
-            (dirNext && dx <= 0) || (!dirNext && dx >= 0) ? dx : dx * 0.25
-          setStripOffset(toward)
-        }
+        updateFollowOffset(dx)
       }
     }
 
     const finish = (e: PointerEvent) => {
       if (e.pointerId !== tracking.pointerId) return
+      if (tracking.phase === 'settling') return
       if (!tracking.armed) {
-        reset()
+        resetDrag()
         return
       }
 
       if (tracking.axis !== 'h') {
-        endPeek()
-        reset()
+        if (tracking.peekHref || tracking.offset !== 0) endPeek()
+        hardIdle()
         return
       }
 
-      const tabs = buildTabSwipeChain(ownProfileHref)
       if (!pathname || !isTabSwipePath(pathname, ownProfileHref)) {
         endPeek()
-        reset()
+        hardIdle()
         return
       }
 
@@ -223,36 +413,55 @@ export function usePrimaryTabSwipeGesture(
       const vel = recentVelocity()
       const speed = Math.abs(vel)
       const peekHref = tracking.peekHref
+      const peekDir = tracking.peekDir
+      const following = tracking.following
+      const offsetNow = tracking.offset
 
-      const distanceOk = Math.abs(dx) >= SWIPE_DISTANCE_PX
+      const distanceOk = Math.abs(dx) >= SWIPE_DISTANCE_PX || Math.abs(offsetNow) >= SWIPE_DISTANCE_PX
       const velocityOk =
-        speed >= SWIPE_VELOCITY_PX_MS && Math.sign(vel) === Math.sign(dx || vel)
-      const shouldCommit = distanceOk || velocityOk
+        speed >= SWIPE_VELOCITY_PX_MS && Math.sign(vel) === Math.sign(dx || vel || offsetNow)
+      const shouldCommit = Boolean(peekHref) && (distanceOk || velocityOk)
 
-      reset()
+      resetDrag()
 
-      if (!shouldCommit || !peekHref) {
+      const w = window.innerWidth
+
+      // Cold neighbor: instant route, no strip spring.
+      if (shouldCommit && peekHref && !following) {
         endPeek()
+        tracking.phase = 'idle'
+        tracking.peekHref = null
+        tracking.peekDir = null
+        tracking.offset = 0
+        router.push(peekHref)
         return
       }
 
-      if (tabs.indexOf(pathname) < 0 || tabs.indexOf(peekHref) < 0) {
-        endPeek()
+      if (shouldCommit && peekHref && peekDir && following) {
+        const target = peekDir === 'next' ? -w : w
+        startSettle(target, vel, () => {
+          // Strip already at ±W; route swap clears peek synchronously in shell.
+          tracking.peekHref = null
+          tracking.peekDir = null
+          router.push(peekHref)
+        })
         return
       }
 
-      try {
-        sessionStorage.setItem(STORAGE_KEY, dx < 0 ? 'next' : 'prev')
-      } catch {
-        /* private mode */
-      }
-      router.push(peekHref)
+      // Cancel or edge — spring home, then drop peek paint.
+      startSettle(0, vel, () => {
+        endPeek()
+        tracking.peekHref = null
+        tracking.peekDir = null
+        tracking.offset = 0
+      })
     }
 
     const onPointerCancel = (e: PointerEvent) => {
       if (e.pointerId !== tracking.pointerId) return
+      interruptSettle()
       endPeek()
-      reset()
+      hardIdle()
     }
 
     window.addEventListener('pointerdown', onPointerDown, { passive: true })
@@ -265,6 +474,7 @@ export function usePrimaryTabSwipeGesture(
       window.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('pointerup', finish)
       window.removeEventListener('pointercancel', onPointerCancel)
+      interruptSettle()
       endPeek()
     }
   }, [
