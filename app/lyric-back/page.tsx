@@ -7,7 +7,7 @@ import { CardExportModal } from '@/components/card-export-modal'
 import { AuthorMeta } from '@/components/username-tag'
 import { createClient } from '@/lib/supabase/client'
 import { matchLyricLine } from '@/lib/lyric-match'
-import { searchMargoSongs } from '@/lib/search-margo-songs'
+import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useEchoes } from '@/hooks/useEchoes'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useSearchParams } from 'next/navigation'
@@ -228,15 +228,45 @@ function LyricBackContent() {
           audioUrl: r.audioUrl,
         })))
       } else {
-        const res = await fetch(`/api/genius?song=${encodeURIComponent(value)}`)
-        const data = await res.json()
-        setSearchResults((data.results || []).map((r: any) => ({
-          id: String(r.id || r.song),
-          title: r.song,
+        // Compose-parity: catalog first, then Genius/Apple with normalized dedupe.
+        const [margoHits, geniusRes] = await Promise.all([
+          searchMargoSongs(supabase, value, 8),
+          fetch(`/api/genius?song=${encodeURIComponent(value)}`)
+            .then(async (res) => {
+              if (!res.ok) return { results: [] as any[] }
+              try {
+                const data = await res.json()
+                if (data?.error) return { results: [] as any[] }
+                return data
+              } catch {
+                return { results: [] as any[] }
+              }
+            })
+            .catch(() => ({ results: [] as any[] })),
+        ])
+
+        const margoMapped: SearchResult[] = margoHits.map((r) => ({
+          id: r.id,
+          title: r.title,
           artist: r.artist,
           artwork: r.artwork || '',
-          source: r.source as Source,
-        })))
+          source: 'margo' as const,
+          audioUrl: r.audioUrl,
+        }))
+        const margoKeys = new Set(margoMapped.map((r) => songMatchKey(r.title, r.artist)))
+        const externalMapped: SearchResult[] = (geniusRes.results || []).map((r: any) => {
+          const rawSource = String(r.source || '').toLowerCase()
+          const source: Source = (rawSource === 'itunes' || rawSource === 'apple') ? 'apple' : 'genius'
+          return {
+            id: String(r.id || r.song),
+            title: r.song,
+            artist: r.artist,
+            artwork: r.artwork || '',
+            source,
+          }
+        }).filter((r: SearchResult) => !margoKeys.has(songMatchKey(r.title, r.artist)))
+
+        setSearchResults([...margoMapped, ...externalMapped].slice(0, 10))
       }
     } catch {
       setSearchResults([])
@@ -251,6 +281,8 @@ function LyricBackContent() {
     setSongName(result.title)
     setShowResults(false)
     setLinkedSongId(null)
+    setSnippetStart(null)
+    setSnippetEnd(null)
 
     if (result.source === 'margo') {
       setLinkedSongId(result.id)
@@ -259,17 +291,22 @@ function LyricBackContent() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('songs')
-        .select('id')
-        .eq('status', 'live')
-        .ilike('title', result.title.trim())
-        .ilike('artist_display_name', result.artist.trim())
-        .maybeSingle()
-
-      if (!error && data) setLinkedSongId(data.id)
+      const hit = await matchLiveCatalogSong(supabase, result.title, result.artist)
+      if (hit) {
+        setLinkedSongId(hit.id)
+        setSongName(hit.title)
+        setArtistName(hit.artist)
+        setSelectedSong({
+          id: hit.id,
+          title: hit.title,
+          artist: hit.artist,
+          artwork: hit.artwork || result.artwork,
+          source: 'margo',
+          audioUrl: hit.audioUrl,
+        })
+      }
     } catch (e) {
-      console.error('Song lookup failed:', e)
+      console.error('Song rematch failed:', e)
     }
 
     setStep(2)
