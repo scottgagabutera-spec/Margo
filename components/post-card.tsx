@@ -25,6 +25,7 @@ import {
   warmUrl,
 } from '@/lib/audio-engine'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
+import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UsernameTag } from '@/components/username-tag'
 import { RelativeTime } from '@/components/relative-time'
@@ -103,11 +104,14 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
   songTitle?: string; artist?: string; artwork?: string | null
   snippetStart?: number | null; snippetEnd?: number | null
 }) {
+  const btnRef = useRef<HTMLButtonElement>(null)
   const engineState = useAudioEngine()
+  useWarmAudioUrlOnVisible(audioUrl, btnRef)
   const isThisPlaying = engineState.playing &&
     engineState.mode === 'snippet' &&
     engineState.songId === songId &&
     engineState.snippet?.lineText === (postText || '')
+  const isBuffering = engineState.buffering && isThisPlaying
 
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const hasExactTiming = snippetStart != null && snippetEnd != null
@@ -155,6 +159,7 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
 
   return (
     <button
+      ref={btnRef}
       onClick={toggle}
       style={{
         width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
@@ -165,7 +170,7 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
         padding: 0, boxSizing: 'border-box',
       }}
     >
-      <PlayPauseIcon playing={isThisPlaying} size={16} color="var(--gold)" />
+      <PlayPauseIcon playing={isThisPlaying} buffering={isBuffering} size={16} color="var(--gold)" />
     </button>
   )
 }

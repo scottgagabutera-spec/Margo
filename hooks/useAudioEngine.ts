@@ -61,6 +61,47 @@ export function useIsPlaying(songId: string | null | undefined): boolean {
 }
 
 /**
+ * Returns true when the given songId is buffering (playing state requested
+ * but audio not yet ready).
+ */
+export function useIsBuffering(songId: string | null | undefined): boolean {
+  const [buffering, setBuffering] = useState(false)
+
+  useEffect(() => {
+    const unsub = subscribeAudioEngine(s => {
+      setBuffering(s.buffering && s.songId === songId)
+    })
+    return unsub
+  }, [songId])
+
+  return buffering
+}
+
+/**
+ * Snippet playback UI flags for a specific line (feed cards, discover moments).
+ */
+export function useSnippetPlaybackUi(
+  songId: string | null | undefined,
+  lineKey: string | number | null | undefined,
+): { playing: boolean; buffering: boolean } {
+  const [flags, setFlags] = useState({ playing: false, buffering: false })
+
+  useEffect(() => {
+    const unsub = subscribeAudioEngine(s => {
+      const lineMatch =
+        lineKey == null
+          ? true
+          : s.snippet?.lineIndex === lineKey || s.snippet?.lineText === String(lineKey)
+      const playing = s.playing && s.mode === 'snippet' && s.songId === songId && lineMatch
+      setFlags({ playing, buffering: s.buffering && playing })
+    })
+    return unsub
+  }, [songId, lineKey])
+
+  return flags
+}
+
+/**
  * Returns whether the given songId is the current track
  * (playing or paused — just loaded in engine).
  */

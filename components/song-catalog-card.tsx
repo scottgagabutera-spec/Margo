@@ -1,9 +1,10 @@
 'use client'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useIsPlaying } from '@/hooks/useAudioEngine'
+import { useRef } from 'react'
+import { useIsPlaying, useIsBuffering } from '@/hooks/useAudioEngine'
+import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
-
 /**
  * Minimal shape SongCatalogCard actually needs — deliberately NOT the
  * full Song type from hooks/useSongs, so this card can be fed by any
@@ -17,6 +18,7 @@ export interface SongCardData {
   title: string
   artist: string
   artwork?: string | null
+  audioUrl?: string | null
   status?: string | null
 }
 
@@ -34,11 +36,14 @@ export function EarnedTag({ label }: { label: 'Trending' | 'Top' }) {
 }
 
 export function SongCatalogCard({ song, badge }: { song: SongCardData; badge?: 'Trending' | 'Top' | null }) {
+  const cardRef = useRef<HTMLDivElement>(null)
   const isActive = song.status === 'live' || song.status === 'active'
   const isPlayingThisSong = useIsPlaying(song.id)
+  const isBuffering = useIsBuffering(song.id)
+  useWarmAudioUrlOnVisible(song.audioUrl, cardRef, isActive && !!song.audioUrl)
   return (
     <Link href={`/song/${song.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', marginBottom: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+      <div ref={cardRef} style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', marginBottom: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
         {badge && <EarnedTag label={badge} />}
         {song.artwork ? (
           <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} sizes="220px" />
@@ -48,7 +53,7 @@ export function SongCatalogCard({ song, badge }: { song: SongCardData; badge?: '
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,6,10,0.85) 0%, transparent 55%)', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: '10px' }}>
           {isActive && (
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PlayPauseIcon playing={isPlayingThisSong} size={14} color="var(--bg)" />
+              <PlayPauseIcon playing={isPlayingThisSong} buffering={isBuffering} size={14} color="var(--bg)" />
             </div>
           )}
         </div>

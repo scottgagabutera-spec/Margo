@@ -7,7 +7,8 @@ import { useSongs, Song } from '@/hooks/useSongs'
 import { useLyricMoments } from '@/hooks/useLyricMoments'
 import type { LyricMomentRow } from '@/hooks/useLyricMoments'
 import { useSharedLines } from '@/hooks/useSharedLines'
-import { useIsPlaying } from '@/hooks/useAudioEngine'
+import { useIsPlaying, useIsBuffering } from '@/hooks/useAudioEngine'
+import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
@@ -194,16 +195,20 @@ function RowHeader({ title, subtitle, viewMoreHref, onViewMore }: {
 // ── Lyric Moment card — used in the horizontal row ──────────────────────
 // FIX: now shows moment.artist beneath the song title. Previously only
 // songTitle was rendered, so every card looked like it had no artist.
-function MomentCard({ moment, isPlaying, onClick, onPlay, onSelectVibe }: {
+function MomentCard({ moment, isPlaying, isBuffering, onClick, onPlay, onSelectVibe }: {
   moment: LyricMoment
   isPlaying: boolean
+  isBuffering?: boolean
   onClick: () => void
   onPlay: (e: React.MouseEvent) => void
   onSelectVibe: (vibe: string) => void
 }) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  useWarmAudioUrlOnVisible(moment.audioUrl, cardRef)
   const primaryVibe = moment.vibes[0]
   return (
     <div
+      ref={cardRef}
       onClick={onClick}
       className="moment-card"
       style={{
@@ -236,7 +241,7 @@ function MomentCard({ moment, isPlaying, onClick, onPlay, onSelectVibe }: {
           border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
         }}>
-          <PlayPauseIcon playing={isPlaying} size={15} color="var(--gold)" />
+          <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={15} color="var(--gold)" />
         </button>
       </div>
     </div>
@@ -244,9 +249,10 @@ function MomentCard({ moment, isPlaying, onClick, onPlay, onSelectVibe }: {
 }
 
 // ── Lyric Moments row ─────────────────────────────────────────────────
-function LyricMomentsSection({ moments, playingKey, onOpenTakeover, onPlayMoment, onSelectVibe, selectedVibe }: {
+function LyricMomentsSection({ moments, playingKey, bufferingKey, onOpenTakeover, onPlayMoment, onSelectVibe, selectedVibe }: {
   moments: LyricMoment[]
   playingKey: string | null
+  bufferingKey: string | null
   onOpenTakeover: (pool: LyricMoment[], index: number) => void
   onPlayMoment: (moment: LyricMoment, pool: LyricMoment[]) => void
   onSelectVibe: (vibe: string) => void
@@ -273,6 +279,7 @@ function LyricMomentsSection({ moments, playingKey, onOpenTakeover, onPlayMoment
               key={`${moment.songId}_${moment.lineId}`}
               moment={moment}
               isPlaying={playingKey === `${moment.songId}_${moment.lineId}`}
+              isBuffering={bufferingKey === `${moment.songId}_${moment.lineId}`}
               onClick={() => onOpenTakeover(moments, i)}
               onPlay={(e) => { e.stopPropagation(); onPlayMoment(moment, moments) }}
               onSelectVibe={onSelectVibe}
@@ -290,13 +297,14 @@ function LyricMomentsSection({ moments, playingKey, onOpenTakeover, onPlayMoment
 // card's single onClick (which opens the takeover) caught every tap,
 // including taps on the circle, so there was no way to just play a
 // mixtape without opening the full-screen takeover.
-function MixtapeCard({ vibe, count, sampleLine, onClick, onPlay, isPlaying }: {
+function MixtapeCard({ vibe, count, sampleLine, onClick, onPlay, isPlaying, isBuffering }: {
   vibe: string
   count: number
   sampleLine: string
   onClick: () => void
   onPlay: (e: React.MouseEvent) => void
   isPlaying: boolean
+  isBuffering?: boolean
 }) {
   const color = vibeColor(vibe)
   return (
@@ -335,7 +343,7 @@ function MixtapeCard({ vibe, count, sampleLine, onClick, onPlay, isPlaying }: {
             border: 'none', cursor: 'pointer', padding: 0,
           }}
         >
-          <PlayPauseIcon playing={isPlaying} size={14} color="var(--bg)" />
+          <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={14} color="var(--bg)" />
         </button>
       </div>
     </div>
@@ -348,11 +356,12 @@ function MixtapeCard({ vibe, count, sampleLine, onClick, onPlay, isPlaying }: {
 // takeover with that vibe's full moment pool. Tapping the play circle
 // instead plays the mixtape's queue directly, without opening the
 // takeover. ─────────────────────────────────────────────────────────
-function LyricMixtapesSection({ allMoments, onOpenTakeover, onPlayMixtape, playingVibe }: {
+function LyricMixtapesSection({ allMoments, onOpenTakeover, onPlayMixtape, playingVibe, bufferingVibe }: {
   allMoments: LyricMoment[]
   onOpenTakeover: (pool: LyricMoment[], index: number, label: string, vibe: string) => void
   onPlayMixtape: (vibe: string, pool: LyricMoment[], e: React.MouseEvent) => void
   playingVibe: string | null
+  bufferingVibe: string | null
 }) {
   const mixtapes = useMemo(() => {
     return VIBES.filter(v => v !== 'ALL').map(vibe => {
@@ -374,6 +383,7 @@ function LyricMixtapesSection({ allMoments, onOpenTakeover, onPlayMixtape, playi
             count={pool.length}
             sampleLine={pool[0].line}
             isPlaying={playingVibe === vibe}
+            isBuffering={bufferingVibe === vibe}
             onClick={() => onOpenTakeover(pool, 0, `${vibe} Mixtape`, vibe)}
             onPlay={(e) => onPlayMixtape(vibe, pool, e)}
           />
@@ -384,9 +394,10 @@ function LyricMixtapesSection({ allMoments, onOpenTakeover, onPlayMixtape, playi
 }
 
 // ── Resonance card — used in the Resonance row ──────────────────────────
-function ResonanceCard({ post, isPlaying, onPlay, onSelectVibe }: {
+function ResonanceCard({ post, isPlaying, isBuffering, onPlay, onSelectVibe }: {
   post: Post
   isPlaying: boolean
+  isBuffering?: boolean
   onPlay: (e: React.MouseEvent) => void
   onSelectVibe: (vibe: string) => void
 }) {
@@ -445,7 +456,7 @@ function ResonanceCard({ post, isPlaying, onPlay, onSelectVibe }: {
             border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
           }}>
-            <PlayPauseIcon playing={isPlaying} size={15} color="var(--gold)" />
+            <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={15} color="var(--gold)" />
           </button>
         )}
       </div>
@@ -476,6 +487,7 @@ function ResonanceSection({ posts, songs, selectedVibe, onSelectVibe }: {
   onSelectVibe: (vibe: string) => void
 }) {
   const [playingId, setPlayingId] = useState<string | null>(null)
+  const [bufferingId, setBufferingId] = useState<string | null>(null)
   const songsById = useMemo(() => new Map(songs.map(s => [s.id, s])), [songs])
 
   const resonances = useMemo(() => {
@@ -488,9 +500,14 @@ function ResonanceSection({ posts, songs, selectedVibe, onSelectVibe }: {
 
   useEffect(() => {
     return subscribeAudioEngine(state => {
-      if (!state.playing || state.mode !== 'snippet') { setPlayingId(null); return }
+      if (!state.playing || state.mode !== 'snippet') {
+        setPlayingId(null)
+        setBufferingId(null)
+        return
+      }
       const match = resonances.find(p => p.songId === state.songId && p.text === state.snippet?.lineText)
       setPlayingId(match?.id ?? null)
+      setBufferingId(state.buffering && match ? match.id : null)
     })
   }, [resonances])
 
@@ -534,7 +551,7 @@ function ResonanceSection({ posts, songs, selectedVibe, onSelectVibe }: {
       <RowHeader title="Resonance" subtitle="What people are saying, using songs" viewMoreHref="/feed" />
       <div className="row-scroll">
         {resonances.map(post => (
-          <ResonanceCard key={post.id} post={post} isPlaying={playingId === post.id} onPlay={(e) => playResonance(post, e)} onSelectVibe={onSelectVibe} />
+          <ResonanceCard key={post.id} post={post} isPlaying={playingId === post.id} isBuffering={bufferingId === post.id} onPlay={(e) => playResonance(post, e)} onSelectVibe={onSelectVibe} />
         ))}
       </div>
     </section>
@@ -543,10 +560,13 @@ function ResonanceSection({ posts, songs, selectedVibe, onSelectVibe }: {
 
 // ── Songs card — used in the Songs row ──────────────────────────────────
 function SongRowCard({ song, badge, onPreview }: { song: Song; badge: 'Trending' | 'Top' | null; onPreview: (song: Song) => void }) {
+  const cardRef = useRef<HTMLDivElement>(null)
   const isActive = song.status === 'live' || song.status === 'active'
   const isPlayingThisSong = useIsPlaying(song.id)
+  const isBuffering = useIsBuffering(song.id)
+  useWarmAudioUrlOnVisible(song.audioUrl, cardRef, isActive && !!song.audioUrl)
   return (
-    <div style={{ flexShrink: 0, width: '160px', scrollSnapAlign: 'start', cursor: 'pointer' }} onClick={() => onPreview(song)}>
+    <div ref={cardRef} style={{ flexShrink: 0, width: '160px', scrollSnapAlign: 'start', cursor: 'pointer' }} onClick={() => onPreview(song)}>
       <div style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', marginBottom: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
         {badge && <EarnedTag label={badge} />}
         {song.artwork ? (
@@ -557,7 +577,7 @@ function SongRowCard({ song, badge, onPreview }: { song: Song; badge: 'Trending'
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,6,10,0.85) 0%, transparent 55%)', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', padding: '10px' }}>
           {isActive && (
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <PlayPauseIcon playing={isPlayingThisSong} size={14} color="var(--bg)" />
+              <PlayPauseIcon playing={isPlayingThisSong} buffering={isBuffering} size={14} color="var(--bg)" />
             </div>
           )}
         </div>
@@ -860,6 +880,7 @@ export default function DiscoverPage() {
   // order doesn't reshuffle on every render/filter change. ──────────
   const [allMoments, setAllMoments] = useState<LyricMoment[]>([])
   const [playingKey, setPlayingKey] = useState<string | null>(null)
+  const [bufferingKey, setBufferingKey] = useState<string | null>(null)
   const { requireAuth } = useAuthGate()
   const playingRef = useRef(false)
 
@@ -938,11 +959,20 @@ export default function DiscoverPage() {
     return subscribeAudioEngine(state => {
       if (!state.playing || state.mode === 'idle' || state.mode === 'full') {
         setPlayingKey(null)
+        setBufferingKey(null)
       } else if (state.snippet) {
-        setPlayingKey(`${state.songId}_${state.snippet.lineIndex}`)
+        const key = `${state.songId}_${state.snippet.lineIndex}`
+        setPlayingKey(key)
+        setBufferingKey(state.buffering ? key : null)
       }
     })
   }, [])
+
+  useEffect(() => {
+    if (songs.length === 0) return
+    const urls = songs.map(s => s.audioUrl).filter((u): u is string => !!u)
+    warmUrls(urls)
+  }, [songs])
 
   const filteredMoments = useMemo(
     () => selectedVibe === 'ALL' ? allMoments : allMoments.filter(m => m.vibes.includes(selectedVibe)),
@@ -1217,6 +1247,7 @@ export default function DiscoverPage() {
             <LyricMomentsSection
               moments={filteredMoments}
               playingKey={playingKey}
+              bufferingKey={bufferingKey}
               onOpenTakeover={(pool, index) => openTakeover(pool, index)}
               onPlayMoment={playMoment}
               onSelectVibe={setSelectedVibe}
@@ -1229,6 +1260,7 @@ export default function DiscoverPage() {
               onOpenTakeover={openTakeover}
               onPlayMixtape={playMixtape}
               playingVibe={playingKey && !takeoverMoment ? activeMixtapeVibe : null}
+              bufferingVibe={bufferingKey && !takeoverMoment ? activeMixtapeVibe : null}
             />
             <ArtistsSection />
           </>

@@ -221,6 +221,7 @@ function SuggestionRow({
     && engine.mode === 'snippet'
     && engine.songId === suggestion.songId
     && engine.snippet?.lineIndex === suggestion.lineIndex
+  const isBuffering = isPlaying && engine.buffering
 
   return (
     <div
@@ -317,7 +318,7 @@ function SuggestionRow({
             boxSizing: 'border-box',
           }}
         >
-          <PlayPauseIcon playing={isPlaying} size={15} color="var(--gold)" />
+          <PlayPauseIcon playing={isPlaying} buffering={isBuffering} size={15} color="var(--gold)" />
         </button>
       )}
     </div>

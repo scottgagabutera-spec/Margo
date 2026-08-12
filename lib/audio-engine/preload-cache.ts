@@ -148,14 +148,62 @@ export function getPreloadReadyState(audioUrl: string): number {
 
 /**
  * Get the buffered pool audio element for a URL, if available.
- * Engine uses this to copy buffered data to the main audio element
- * via src transfer — avoids re-fetching already-buffered data.
+ * Engine uses this to promote a warmed element into the active A/B slot.
  */
 export function getPoolAudio(audioUrl: string): HTMLAudioElement | null {
   const slot = findSlot(audioUrl)
   if (!slot) return null
   slot.lastUsed = Date.now()
   return slot.audio
+}
+
+/**
+ * Remove a warmed pool element (readyState >= 2) for handoff to the main
+ * engine. Replaces the slot with a fresh hidden <audio> for future warms.
+ */
+export function takeBufferedPoolElement(audioUrl: string): HTMLAudioElement | null {
+  const slot = findSlot(audioUrl)
+  if (!slot || slot.audio.readyState < 2) return null
+  const el = slot.audio
+  slot.audio = createPoolAudio()
+  slot.url = ''
+  slot.lastUsed = 0
+  el.muted = false
+  el.style.display = 'none'
+  return el
+}
+
+/**
+ * Recycle a detached main-engine <audio> element back into the LRU pool.
+ */
+export function recycleElementToPool(el: HTMLAudioElement): void {
+  if (typeof document === 'undefined') return
+  el.pause()
+  el.removeAttribute('src')
+  el.load()
+  el.muted = true
+  el.volume = 0
+  el.style.display = 'none'
+
+  const emptySlot = _pool.find(s => !s.url)
+  if (emptySlot) {
+    emptySlot.audio.remove()
+    emptySlot.audio = el
+    emptySlot.url = ''
+    emptySlot.lastUsed = 0
+    return
+  }
+
+  if (_pool.length < POOL_SIZE) {
+    _pool.push({ audio: el, url: '', lastUsed: 0 })
+    return
+  }
+
+  const slot = evictLRU()
+  slot.audio.remove()
+  slot.audio = el
+  slot.url = ''
+  slot.lastUsed = 0
 }
 
 /**
