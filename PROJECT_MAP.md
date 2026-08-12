@@ -1,21 +1,14 @@
 # Margo — Project Map
-> **STATUS (Aug 2026): OUTDATED SNAPSHOT (July 2026).** Profile pages are built; Firebase client shim and `useLicensedArtists` are gone; only `package-lock.json` remains. Live catalog is Discover/`/song/[id]`. Prefer CLAUDE.md + the repo tree for current structure. Legacy `js/` / `api/` / `index.html` flagged for removal in hygiene cleanup.
+> **STATUS (Aug 2026): OUTDATED SNAPSHOT (July 2026).** Prefer CLAUDE.md + the repo tree. Profile pages are built; Firebase client shim / `useLicensedArtists` gone; only `package-lock.json`. Live catalog is Discover/`/song/[id]`. Legacy `js/` / `api/*.js` / `index.html` / unused shadcn kit **removed** in `chore/repo-hygiene-cleanup` — sections below that still list them are historical.
 
 
 Generated from a full repo file listing (July 2026). This is a working reference —
 update the relevant section whenever a file's purpose changes meaningfully.
 
-> ⚠️ **Big thing to know first:** this repo appears to contain **two separate apps**:
-> 1. **The current Next.js app** — `app/`, `components/`, `hooks/`, `lib/` — this is what
->    every session so far has actually touched (admin, signin, settings, compose, feed).
-> 2. **A legacy vanilla-JS app** — `js/`, `api/`, `assets/`, `index.html`, `public/*.html` —
->    old-school script files (`js/ui/admin.js` alone is **1,839 lines**, `js/media/share-sheet.js`
->    is 1,043). None of these have come up in any of our sessions.
->
-> If `js/` and `api/` (the `.js` one, not `app/api`) are dead code from before the Next.js
-> migration, they're worth archiving or deleting — right now they're roughly doubling your
-> file count and make "what does this project consist of" much harder to answer. Flagging
-> this rather than assuming — confirm before I treat them as legacy in future work.
+> ✅ **Legacy vanilla app removed (Aug 2026 hygiene).** `js/`, root `api/*.js`, `index.html`,
+> `assets/`, and stale `public/*.html` are gone. The live app is Next.js only (`app/`,
+> `components/`, `hooks/`, `lib/`). Historical inventory sections below may still mention
+> those paths — ignore them; restore from `origin/main-vanilla-backup` if ever needed.
 
 ---
 
