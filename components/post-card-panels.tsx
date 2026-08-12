@@ -68,19 +68,18 @@ export function PostCardPanels({
           }}>
             {coverSrc ? (
               <div style={{
-                flex: '1 1 auto',
+                flex: '1 1 0',
                 minHeight: 0,
                 maxHeight: '180px',
                 borderRadius: '12px',
                 overflow: 'hidden',
-                border: '1px solid var(--border)',
               }}>
                 <PostThumbnail
                   youtubeThumbnail={post.youtubeMeta?.thumbnail}
                   artwork={post.knowledge?.artwork}
                   alt=""
                   loading="lazy"
-                  style={{ width: '100%', height: '100%', minHeight: '80px', objectFit: 'cover', display: 'block' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               </div>
             ) : null}
