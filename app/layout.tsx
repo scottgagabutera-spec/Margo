@@ -24,7 +24,7 @@ const lora = Lora({
 
 const syne = Syne({
   subsets: ['latin'],
-  weight: ['800'],
+  weight: ['600'],
   variable: '--font-syne',
 })
 
