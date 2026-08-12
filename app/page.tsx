@@ -500,8 +500,17 @@ export default function Home() {
         display:'flex', flexDirection:'column', alignItems:'center', gap:'20px',
       }}>
         <div style={{display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'center', gap:'8px'}}>
-          {['About','Privacy','Terms','DMCA','Contact'].map(link => (
-            <a key={link} href={`/${link.toLowerCase()}`} style={{
+          {[
+            { label: 'Feed', href: '/feed' },
+            { label: 'Discover', href: '/discover' },
+            { label: 'Songs', href: '/discover/songs' },
+            { label: 'About', href: '/about' },
+            { label: 'Privacy', href: '/privacy' },
+            { label: 'Terms', href: '/terms' },
+            { label: 'DMCA', href: '/dmca' },
+            { label: 'Contact', href: '/contact' },
+          ].map(link => (
+            <a key={link.href} href={link.href} style={{
               fontSize:'1rem', color:'var(--text)',
               fontFamily:'var(--font-lora),serif',
               letterSpacing:'0.5px',
@@ -509,7 +518,7 @@ export default function Home() {
               padding:'10px 16px', minHeight:'44px',
               display:'inline-flex', alignItems:'center', justifyContent:'center',
               boxSizing:'border-box',
-            }}>{link}</a>
+            }}>{link.label}</a>
           ))}
         </div>
         <div style={{fontSize:'0.7rem', color:'var(--text-2)', fontFamily:'var(--font-lora),serif', letterSpacing:'1px'}}>© {new Date().getFullYear()} Margo</div>
