@@ -72,6 +72,9 @@ export function MargoNav() {
   const { application } = useArtistApplication()
 
   const isOnFeed = pathname === '/feed'
+  // Full lockup (mark + MARGO) only on Feed home. Landing has its own lockup.
+  // Elsewhere: mark/symbol only — tab or page context owns the destination name.
+  const showWordmark = isOnFeed
   const isOnDiscover = pathname?.startsWith('/discover')
   const isOnCompose = pathname === '/compose'
   const isOnSignin = pathname === '/signin'
@@ -148,7 +151,7 @@ export function MargoNav() {
         justifyContent: 'space-between',
       }}>
         <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
-          <MargoLogo tier="symbol" size={28} wordmark rings />
+          <MargoLogo tier="symbol" size={28} wordmark={showWordmark} rings />
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

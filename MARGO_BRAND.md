@@ -1,5 +1,5 @@
 # MARGO — Brand Identity & Design System
-*Version 4.6 — August 2026 — Living document, update with every design decision*
+*Version 4.7 — August 2026 — Living document, update with every design decision*
 
 ---
 
@@ -14,19 +14,20 @@ Margo is a music-first social platform where people communicate through song lyr
 ## 2. Logo & Brand Mark — UNTOUCHABLE
 
 - Mark: The gold circle with the M waveform inside
-- Wordmark: MARGO in Syne 800, gold, **letter-spacing 2px**, uppercase
+- Wordmark: MARGO in **Syne 600**, gold, **letter-spacing 2px**, uppercase
 - Color: Always #E8C547 on dark background (logo exception; elsewhere prefer `var(--gold)`)
 - Rule: Never recolor or redraw. Always use `components/MargoLogo.tsx` — never inline Syne “Margo” text as a logo
 - Wordmark **scales with symbol size** (`~0.43 × size` in px) so lockups stay proportional
-- Letter-spacing is **2px** (tighter than old 3–5px tracking — wide tracking reads as stretched)
+- Letter-spacing is **2px** (at 600 — same tracking as prior 800/2px; do not reopen 3–5px)
+- Face stays **Syne** — weight/tracking only; no Geist/Satoshi wordmark switch
 
 ### The 3 Tiers
 
 | Tier | Name | What it is | When to use |
 |------|------|-----------|-------------|
 | 1 | The Mark | M in gold circle, no dash | Favicon only |
-| 2 | The Symbol | M in gold circle + dash below | Nav, feed header, composer |
-| 3 | The Lockup | Symbol + MARGO wordmark | Landing page nav, OG images |
+| 2 | The Symbol | M in gold circle + dash below | App nav when wordmark is off; composer/export marks |
+| 3 | The Lockup | Symbol + MARGO wordmark | **Feed home nav**, **landing nav**, OG images |
 
 The Symbol IS the Margo logo. The dash below the M is what makes it distinctly Margo.
 
@@ -35,12 +36,14 @@ The Symbol IS the Margo logo. The dash below the M is what makes it distinctly M
 | Context | Tier | Props |
 |---------|------|-------|
 | Browser favicon | Mark (1) | size={16} |
-| Nav bar | Symbol (2) | size={28} wordmark rings |
-| Feed header | Symbol (2) | size={36} rings |
-| Composer header | Symbol (2) | size={32} rings |
-| Landing page nav | Lockup (3) | size={36} wordmark rings |
+| **Feed** app nav (`/feed`) | Lockup (3) | size={28} **wordmark** rings |
+| **Other primary tabs** (Discover, Compose, Alerts, You) | Symbol (2) | size={28} rings — **no wordmark** (tab owns the label) |
+| **Detail** (profile, post, search, settings, studio, …) | Symbol (2) | size={28} rings — **no wordmark**; Back + content title own the header |
+| Landing page nav (`/`) | Lockup (3) | size={36} wordmark rings |
+| Karaoke `/song/[id]` | — | **Neither** — immersive; no app nav |
 | Card export | Symbol (2) | size={48} |
 | Profile hero | — | **No wordmark in body** — person-first; global nav clears above cover |
+| Discover page body | — | **No page-level “DISCOVER” H1** — tab + content rows own orientation |
 
 ### Shadow & Glow Rules
 - In-app: filter: drop-shadow(0 2px 8px rgba(232,197,71,0.25))
@@ -63,7 +66,7 @@ Margo speaks in two voices:
    Loaded via `geist/font/sans` (variable woff2) on the root layout.
 2. **Lyric (Lora)** — posted lyric quotes, signature lyrics, lyric-led marketing lines.
    CSS: `var(--font-lora)` / `LYRIC_FONT`. Always italic for the star lyric block.
-3. **Logo (Syne 800)** — MARGO wordmark ONLY via `MargoLogo`. Nothing else uses Syne.
+3. **Logo (Syne 600)** — MARGO wordmark ONLY via `MargoLogo`. Nothing else uses Syne.
 
 Self-hosted via Next.js font system (`next/font` + `geist`). Do not load Inter.
 
@@ -359,7 +362,7 @@ Empty states are invitations, not errors.
 
 DO:
 - Use Geist Sans for UI chrome; Lora for lyric quotes; Syne only for the wordmark
-- Use Syne 800 only for MARGO wordmark
+- Use Syne **600** only for MARGO wordmark (letter-spacing 2px)
 - Use CSS variables for every color
 - Keep gold scarce and meaningful — it means something important
 - Test on 375px mobile first
@@ -922,6 +925,7 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ## Changelog
 
+- **4.7 (Aug 2026):** Wordmark weight **Syne 600** (was 800) at **2px** tracking — still Syne, no Geist/Satoshi. **Lockup placement:** full wordmark on Feed + landing only; mark/symbol-only on other tabs and detail; karaoke neither. Discover: no page-level “DISCOVER” H1. Landing “There’s more where that came from” section removed.
 - **4.6 (Aug 2026):** Wordmark tracking **2px** (tighter; 5px was doc-sync error that worsened stretch). Canonical **type role grid** with Micro body / compact explainer (`0.65rem`). Landing how-it-works stays 3-up on mobile with compact title+body. Footer pad/gap tightened.
 - **4.5 (Aug 2026):** Wordmark letter-spacing synced to 5px and scales with symbol size. Canonical display-name / @username and song-title / artist stacks. Landing keeps MobileTabBar (marketing mode). Profile nav clearance + avatar lightbox. Account surfaces (settings / edit / studio / apply) use Geist chrome. Footer two-column + social icons. Type floor enforced at 0.6rem.
 - **4.4 (Aug 2026):** Dual type system — Geist Sans for UI chrome, Lora retained for lyric quotes / signature lyrics / lyric-led marketing. Syne remains wordmark-only. Helpers in `lib/fonts.ts` (`UI_FONT`, `LYRIC_FONT`).
@@ -931,4 +935,4 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ---
 
-*Last updated: August 2026 — Version 4.4*
+*Last updated: August 2026 — Version 4.7*

@@ -40,7 +40,7 @@ Live at [trymargo.com](https://trymargo.com)
 | APIs | Genius, YouTube Data API v3, OpenAI |
 | Hosting | Vercel |
 | Analytics | Vercel Analytics (cookieless) |
-| Fonts | Geist Sans (UI), Lora (lyrics), Syne 800 (logo) |
+| Fonts | Geist Sans (UI), Lora (lyrics), Syne 600 (logo) |
 
 ---
 
