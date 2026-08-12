@@ -34,7 +34,13 @@ import {
   queueItemToSnippetRequest,
 } from './types'
 import { syncMediaSessionFromState, bindMediaSessionHandlers, clearMediaSessionHandlers } from './media-session'
-import { registerPreloadSong, warmPreloadUrl } from './preload-cache'
+import {
+  getPreloadReadyState,
+  recycleElementToPool,
+  registerPreloadSong,
+  takeBufferedPoolElement,
+  warmPreloadUrl,
+} from './preload-cache'
 import { recordQualifiedPlay, getPlayThresholdSec } from '@/lib/engagement/plays'
 
 // ── Module state ──────────────────────────────────────────────────
@@ -351,16 +357,69 @@ function pauseSnippetAtEnd(): void {
 // and decode the next file, so by the time the fade actually starts,
 // the incoming element can play immediately instead of stalling silently
 // under a rising volume ramp.
+function urlsMatch(elementSrc: string, audioUrl: string): boolean {
+  if (!elementSrc || !audioUrl) return false
+  if (elementSrc === audioUrl) return true
+  try {
+    const resolved = new URL(audioUrl, window.location.href).href
+    return elementSrc === resolved
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Promote a pool-buffered <audio> into the active A/B slot so playback
+ * reuses in-memory data instead of cold-fetching on the main element.
+ */
+function promotePooledToActive(audioUrl: string): boolean {
+  const pooled = takeBufferedPoolElement(audioUrl)
+  if (!pooled) return false
+
+  const active = activeAudio()
+  if (!active) return false
+
+  pooled.muted = false
+  pooled.volume = _state.muted ? 0 : _state.volume
+  pooled.preload = 'auto'
+  pooled.setAttribute('playsinline', '')
+  pooled.style.display = 'none'
+
+  const parent = active.parentNode
+  if (parent) parent.replaceChild(pooled, active)
+
+  recycleElementToPool(active)
+
+  if (_activeIsA) _audioA = pooled
+  else _audioB = pooled
+
+  return true
+}
+
+/** Set active element src, preferring a warmed pool handoff when available. */
+function assignSourceForPlayback(audioUrl: string): void {
+  const audio = activeAudio()
+  if (!audio) return
+  if (urlsMatch(audio.src, audioUrl)) return
+
+  if (promotePooledToActive(audioUrl)) return
+
+  audio.pause()
+  audio.src = audioUrl
+  if (getPreloadReadyState(audioUrl) < 2) {
+    audio.load()
+  }
+}
+
 function preloadInactiveForCrossfade(nextItem: LyricMomentQueueItem): void {
+  warmPreloadUrl(nextItem.audioUrl)
   const incoming = inactiveAudio()
   if (!incoming) return
-  const sameSrc =
-    incoming.src === nextItem.audioUrl ||
-    incoming.src === new URL(nextItem.audioUrl, window.location.href).href
-  if (!sameSrc) {
-    incoming.pause()
-    incoming.src = nextItem.audioUrl
-    incoming.volume = 0
+  if (urlsMatch(incoming.src, nextItem.audioUrl)) return
+  incoming.pause()
+  incoming.src = nextItem.audioUrl
+  incoming.volume = 0
+  if (getPreloadReadyState(nextItem.audioUrl) < 2) {
     incoming.load()
   }
 }
@@ -503,68 +562,6 @@ function finishCrossfade(
   armSnippetTimer(generation)
 }
 
-// ── Load / ready ──────────────────────────────────────────────────
-// FIX: Use 'canplay' (fires as soon as the browser can start playing — a few
-// frames of data) instead of 'canplaythrough' (fires only after the browser
-// estimates it can play to the end without buffering, which on mobile networks
-// is very late or never).
-// FIX: Do NOT call audio.load() if the element already has the correct src and
-// has already started loading (readyState > 0) — load() resets all buffering
-// progress, causing the very buffering delay we're trying to avoid.
-
-function waitUntilCanPlay(audio: HTMLAudioElement, generation: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (generation !== _handlerGeneration) {
-      reject(new Error('stale'))
-      return
-    }
-    const ready = () => {
-      if (generation !== _handlerGeneration) {
-        reject(new Error('stale'))
-        return
-      }
-      resolve()
-    }
-    // readyState >= 2 (HAVE_CURRENT_DATA) is enough to seek and start playing
-    if (audio.readyState >= 2) {
-      ready()
-      return
-    }
-    patch({ buffering: true })
-    const onCanPlay = () => {
-      audio.removeEventListener('canplay', onCanPlay)
-      audio.removeEventListener('error', onErr)
-      ready()
-    }
-    const onErr = () => {
-      audio.removeEventListener('canplay', onCanPlay)
-      audio.removeEventListener('error', onErr)
-      reject(new Error('load failed'))
-    }
-    audio.addEventListener('canplay', onCanPlay, { once: true })
-    audio.addEventListener('error', onErr, { once: true })
-    // Only call load() if the browser hasn't started loading yet (readyState 0 = HAVE_NOTHING
-    // with no src set, or after an explicit src change in prepareSource).
-    // If readyState is already 1 (HAVE_METADATA) the browser is already fetching — don't reset it.
-    if (audio.readyState === 0) {
-      audio.load()
-    }
-  })
-}
-
-async function prepareSource(audioUrl: string, generation: number): Promise<void> {
-  const audio = requireAudio()
-  const sameSrc =
-    audio.src === audioUrl || audio.src === new URL(audioUrl, window.location.href).href
-  if (!sameSrc) {
-    audio.pause()
-    audio.src = audioUrl
-    // After setting a new src, readyState resets to 0 — load() is needed
-    audio.load()
-  }
-  await waitUntilCanPlay(audio, generation)
-}
-
 // ── Snippet timer (Section 2.6 — single source) ───────────────────
 
 function armSnippetTimer(generation: number): void {
@@ -701,28 +698,9 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
   applyTrackMetadata(request, 'snippet', snippet)
   registerPreloadSong(request.songId, request.audioUrl)
 
+  assignSourceForPlayback(request.audioUrl)
+
   const audio = requireAudio()
-
-  // ── Mobile-first gesture fix ──────────────────────────────────────
-  // ALL mobile browsers (iOS Safari, Android Chrome, Android Firefox) block
-  // audio.play() if it is not called synchronously within the user gesture.
-  // Any `await` before play() breaks the gesture chain.
-  //
-  // Strategy: set src + seek synchronously, then call play() immediately
-  // within the same tick. The browser suspends the play promise while
-  // buffering and resumes it automatically — this works on all platforms.
-  // We do NOT await prepareSource before play(). Instead we let play()
-  // start buffering, then monitor readyState in the background.
-
-  const sameSrc =
-    audio.src === request.audioUrl ||
-    audio.src === new URL(request.audioUrl, window.location.href).href
-
-  if (!sameSrc) {
-    audio.pause()
-    audio.src = request.audioUrl
-    audio.load()
-  }
 
   // Seek to snippet start synchronously
   try { audio.currentTime = request.startSec } catch { /* ignore if not ready yet */ }
@@ -770,17 +748,9 @@ export async function playFull(request: PlayFullRequest): Promise<void> {
   applyTrackMetadata(request, 'full', null)
   registerPreloadSong(request.songId, request.audioUrl)
 
+  assignSourceForPlayback(request.audioUrl)
+
   const audio = requireAudio()
-
-  const sameSrc =
-    audio.src === request.audioUrl ||
-    audio.src === new URL(request.audioUrl, window.location.href).href
-
-  if (!sameSrc) {
-    audio.pause()
-    audio.src = request.audioUrl
-    audio.load()
-  }
 
   bindAudioHandlers(generation)
 

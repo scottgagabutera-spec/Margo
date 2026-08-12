@@ -12,6 +12,7 @@ import {
   queuePrev,
   queueNext,
 } from '@/lib/audio-engine'
+import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { useAudioEngine, useQueueNavigation, usePlaybackProgress } from '@/hooks/useAudioEngine'
 
 const VIBE_COLORS: Record<string, string> = {
@@ -35,16 +36,41 @@ export function MiniPlayer() {
   const [expanded, setExpanded] = useState(false)
   const [dragging, setDragging] = useState(false)
   const progressRef = useRef<HTMLDivElement | null>(null)
+  const barRef = useRef<HTMLDivElement | null>(null)
   const sheetRef = useRef<HTMLDivElement | null>(null)
   const touchStartY = useRef(0)
 
-  const { playing, muted, volume, currentTime, duration, mode, songId, title, artist, artwork, vibe, snippet } = engineState
+  const { playing, buffering, muted, volume, currentTime, duration, mode, songId, title, artist, artwork, vibe, snippet } = engineState
 
   // ── Dismiss state ────────────────────────────────────────────────
-  // Hiding the bar never stops playback — the engine keeps running.
-  // A new track reactivates the bar automatically, same as a real player.
   const [dismissed, setDismissed] = useState(false)
   useEffect(() => { setDismissed(false) }, [songId])
+
+  const isHidden =
+    engineState.mode === 'idle' ||
+    pathname?.startsWith('/song/') ||
+    pathname?.startsWith('/feed') ||
+    dismissed
+
+  // Publish collapsed bar height so page padding clears the mini-player.
+  useEffect(() => {
+    if (isHidden || expanded) {
+      document.documentElement.style.setProperty('--margo-miniplayer-h', '0px')
+      return
+    }
+    const el = barRef.current
+    if (!el) return
+    const setH = () => {
+      document.documentElement.style.setProperty('--margo-miniplayer-h', `${el.offsetHeight}px`)
+    }
+    setH()
+    const ro = new ResizeObserver(setH)
+    ro.observe(el)
+    return () => {
+      ro.disconnect()
+      document.documentElement.style.setProperty('--margo-miniplayer-h', '0px')
+    }
+  }, [isHidden, expanded, songId, playing])
 
   // ── Drag-to-dismiss gesture on the collapsed bar ─────────────────
   const [barOffset, setBarOffset] = useState(0)
@@ -149,10 +175,7 @@ export function MiniPlayer() {
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
   // Hide when idle, on karaoke page, on feed page, or user-dismissed
-  if (engineState.mode === 'idle') return null
-  if (pathname?.startsWith('/song/')) return null
-  if (pathname?.startsWith('/feed')) return null
-  if (dismissed) return null
+  if (isHidden) return null
 
   const isSnippet = mode === 'snippet'
   const vibeColor = vibe ? (VIBE_COLORS[vibe.toLowerCase()] || '#E8C547') : '#E8C547'
@@ -222,6 +245,7 @@ export function MiniPlayer() {
       {/* ── Collapsed bar ─────────────────────────────────────────── */}
       {!expanded && (
         <div
+          ref={barRef}
           className="mp-bar margo-mp-bar"
           onTouchStart={onBarTouchStart}
           onTouchMove={onBarTouchMove}
@@ -329,16 +353,7 @@ export function MiniPlayer() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 4px 16px rgba(232,197,71,0.3)', flexShrink: 0, boxSizing: 'border-box',
             }}>
-              {playing ? (
-                <svg width="12" height="12" viewBox="0 0 20 20" fill="none">
-                  <rect x="4" y="3" width="4" height="14" rx="1.5" fill="#07060A" />
-                  <rect x="12" y="3" width="4" height="14" rx="1.5" fill="#07060A" />
-                </svg>
-              ) : (
-                <svg width="12" height="12" viewBox="0 0 20 20" fill="none">
-                  <path d="M5 3.5L16.5 10L5 16.5V3.5Z" fill="#07060A" />
-                </svg>
-              )}
+              <PlayPauseIcon playing={playing} buffering={buffering} size={12} color="#07060A" />
             </button>
 
             {/* Next */}
@@ -583,16 +598,7 @@ export function MiniPlayer() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: '0 8px 32px rgba(232,197,71,0.4)',
                 }}>
-                  {playing ? (
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <rect x="4" y="3" width="4" height="14" rx="1.5" fill="#07060A" />
-                      <rect x="12" y="3" width="4" height="14" rx="1.5" fill="#07060A" />
-                    </svg>
-                  ) : (
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <path d="M5 3.5L16.5 10L5 16.5V3.5Z" fill="#07060A" />
-                    </svg>
-                  )}
+                  <PlayPauseIcon playing={playing} buffering={buffering} size={20} color="#07060A" />
                 </button>
 
                 <button className="mp-nav-btn mp-btn" onClick={() => void queueNext()} disabled={!canNext} style={{

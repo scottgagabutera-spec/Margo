@@ -33,7 +33,8 @@
   --margo-scrim: rgba(7, 6, 10, 0.97);
   --margo-bar: rgba(10, 9, 13, 0.98);
   --margo-safe-bottom: env(safe-area-inset-bottom, 0px);
-  --margo-page-bottom: 80px;
+  --margo-miniplayer-h: 0px;
+  --margo-page-bottom: calc(var(--margo-tabbar-h, 80px) + var(--margo-miniplayer-h, 0px));
   --margo-page-padding-bottom: calc(var(--margo-page-bottom) + var(--margo-safe-bottom));
   --margo-toast-offset: calc(88px + var(--margo-safe-bottom));
   --margo-player-viewport-bottom: calc(120px + var(--margo-safe-bottom));

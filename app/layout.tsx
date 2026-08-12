@@ -122,6 +122,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${lora.variable} ${syne.variable} ${GeistSans.variable}`}>
       <head>
+        <link rel="dns-prefetch" href="https://audio.trymargo.com" />
+        <link rel="preconnect" href="https://audio.trymargo.com" crossOrigin="anonymous" />
         {/* Structured Data — WebApplication */}
         <script
           type="application/ld+json"
