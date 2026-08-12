@@ -162,9 +162,12 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
 function PostMomentBody({
   post,
   isCompact,
+  clampLines,
 }: {
   post: Post
   isCompact: boolean
+  /** Discover-style clamp for swipe-panel lyric tiles. */
+  clampLines?: number
 }) {
   const lines = resolveMomentLines(post)
   const multi = lines.length > 1
@@ -216,6 +219,14 @@ function PostMomentBody({
                 lineHeight: 1.45,
                 flex: 1,
                 margin: 0,
+                ...(clampLines
+                  ? {
+                      display: '-webkit-box',
+                      WebkitLineClamp: clampLines,
+                      WebkitBoxOrient: 'vertical' as const,
+                      overflow: 'hidden',
+                    }
+                  : null),
               }}>
                 &ldquo;{line.text}&rdquo;
               </p>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import type { Post } from '@/hooks/usePosts'
 import { PostThumbnail } from '@/components/post-thumbnail'
@@ -16,34 +16,21 @@ type PanelSpec = {
   node: ReactNode
 }
 
-const PEEK_PX = 28
-
-function PanelLabel({ children }: { children: ReactNode }) {
-  return (
-    <p style={{
-      margin: '0 0 10px',
-      fontFamily: UI_FONT,
-      fontSize: '0.55rem',
-      fontWeight: 700,
-      letterSpacing: '1.2px',
-      textTransform: 'uppercase',
-      color: 'var(--text-muted)',
-    }}>
-      {children}
-    </p>
-  )
-}
+/** Fixed tile — Discover Moments is 240px; +16px for lyric breathing room. */
+export const POST_PANEL_WIDTH_PX = 256
+export const POST_PANEL_GAP_PX = 12
 
 /**
  * Experimental N-panel swipe strip for feed PostCards.
- * Panel 1 = today's lyric body; other panels opt in when data exists.
+ * Geometry matches Discover: fixed-width tiles + 12px gap; peek is leftover
+ * scroller space, not a calc(100% - peek) formula.
  */
 export function PostCardPanels({
   post,
   children,
 }: {
   post: Post
-  /** Lyric panel body (PostMomentBody) — unchanged default view. */
+  /** Lyric panel body (PostMomentBody) — default view. */
   children: ReactNode
 }) {
   const { requireAuth } = useAuthGate()
@@ -57,9 +44,13 @@ export function PostCardPanels({
     [post.streamingLinks, post.youtubeMeta?.youtubeUrl],
   )
 
+  const lyricNode = isValidElement(children)
+    ? cloneElement(children as React.ReactElement<{ clampLines?: number }>, { clampLines: 4 })
+    : children
+
   const panels: PanelSpec[] = useMemo(() => {
     const list: PanelSpec[] = [
-      { id: 'lyric', label: 'Lyric', node: children },
+      { id: 'lyric', label: 'Lyric', node: lyricNode },
     ]
 
     if (coverSrc) {
@@ -67,17 +58,14 @@ export function PostCardPanels({
         id: 'cover',
         label: 'Cover',
         node: (
-          <div>
-            <PanelLabel>Cover</PanelLabel>
-            <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-              <PostThumbnail
-                youtubeThumbnail={post.youtubeMeta?.thumbnail}
-                artwork={post.knowledge?.artwork}
-                alt=""
-                loading="lazy"
-                style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }}
-              />
-            </div>
+          <div style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+            <PostThumbnail
+              youtubeThumbnail={post.youtubeMeta?.thumbnail}
+              artwork={post.knowledge?.artwork}
+              alt=""
+              loading="lazy"
+              style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }}
+            />
           </div>
         ),
       })
@@ -89,7 +77,6 @@ export function PostCardPanels({
         label: 'Play',
         node: (
           <div>
-            <PanelLabel>Full track</PanelLabel>
             <Tier1Player
               audioUrl={audioUrl}
               songId={post.songId || null}
@@ -107,7 +94,7 @@ export function PostCardPanels({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  marginTop: '14px',
+                  marginTop: '12px',
                   minHeight: 'var(--margo-touch-min)',
                   boxSizing: 'border-box',
                   fontFamily: LYRIC_FONT,
@@ -136,52 +123,49 @@ export function PostCardPanels({
         id: 'links',
         label: 'Listen',
         node: (
-          <div>
-            <PanelLabel>Listen on</PanelLabel>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {linkItems.map((item) => (
-                <a
-                  key={item.id + item.href}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    minHeight: 'var(--margo-touch-min)',
-                    padding: '0 14px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border)',
-                    background: 'rgba(255,255,255,0.03)',
-                    color: 'var(--text)',
-                    textDecoration: 'none',
-                    fontFamily: UI_FONT,
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  {item.label}
-                  <ChevronRightIcon size={14} color="var(--text-muted)" />
-                </a>
-              ))}
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {linkItems.map((item) => (
+              <a
+                key={item.id + item.href}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  minHeight: 'var(--margo-touch-min)',
+                  padding: '0 14px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'rgba(255,255,255,0.03)',
+                  color: 'var(--text)',
+                  textDecoration: 'none',
+                  fontFamily: UI_FONT,
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                }}
+              >
+                {item.label}
+                <ChevronRightIcon size={14} color="var(--text-muted)" />
+              </a>
+            ))}
           </div>
         ),
       })
     }
 
     return list
-  }, [audioUrl, children, coverSrc, linkItems, post.knowledge?.artist, post.knowledge?.artwork, post.knowledge?.song, post.songId, post.text, post.youtubeMeta?.thumbnail, requireAuth])
+  }, [audioUrl, coverSrc, linkItems, lyricNode, post.knowledge?.artist, post.knowledge?.artwork, post.knowledge?.song, post.songId, post.text, post.youtubeMeta?.thumbnail, requireAuth])
+
+  const stride = POST_PANEL_WIDTH_PX + POST_PANEL_GAP_PX
 
   const onScroll = useCallback(() => {
     const el = scrollerRef.current
     if (!el || panels.length <= 1) return
-    const panelW = el.clientWidth - PEEK_PX
-    if (panelW <= 0) return
-    const idx = Math.max(0, Math.min(panels.length - 1, Math.round(el.scrollLeft / panelW)))
+    const idx = Math.max(0, Math.min(panels.length - 1, Math.round(el.scrollLeft / stride)))
     setActive(idx)
-  }, [panels.length])
+  }, [panels.length, stride])
 
   useEffect(() => {
     setActive(0)
@@ -189,7 +173,6 @@ export function PostCardPanels({
     if (el) el.scrollLeft = 0
   }, [post.id, panels.length])
 
-  // Single panel — no chrome (lyric-only posts stay unchanged).
   if (panels.length <= 1) {
     return <>{children}</>
   }
@@ -207,7 +190,6 @@ export function PostCardPanels({
             key={panel.id}
             className="margo-post-panel"
             data-panel={panel.id}
-            style={{ scrollSnapAlign: 'start' }}
           >
             {panel.node}
           </div>
