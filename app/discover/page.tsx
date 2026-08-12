@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useLyricMoments } from '@/hooks/useLyricMoments'
 import type { LyricMomentRow } from '@/hooks/useLyricMoments'
@@ -28,6 +29,7 @@ import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { DiscoverPageSkeleton } from '@/components/margo-skeletons'
 import { buildCatalogLyricUnits } from '@/lib/catalog-lyric-unit'
+import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 
@@ -119,15 +121,6 @@ function formatTime(s: number) {
   const m = Math.floor(s / 60)
   const sec = Math.floor(s % 60)
   return `${m}:${sec.toString().padStart(2, '0')}`
-}
-
-function SmallStatBlock({ value, label, gold }: { value: number; label: string; gold?: boolean }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', fontWeight: 700, color: gold ? 'var(--gold)' : 'var(--text)', margin: 0 }}>{formatNum(value)}</p>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.52rem', fontWeight: 700, color: gold ? 'var(--gold)' : 'var(--text-muted)', letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: '3px', opacity: gold ? 0.7 : 1 }}>{label}</p>
-    </div>
-  )
 }
 
 // ── Earned tag pill — reused across Songs row ──────────────────────────
@@ -690,9 +683,32 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
 }) {
   const { lines } = useSharedLines(song.title, song.artist)
   const { requireAuth } = useAuthGate()
+  const router = useRouter()
   const isActive = song.status === 'live' || song.status === 'active'
+
+  const handlePlayNow = () => {
+    if (!requireAuth()) return
+    router.push(`/song/${song.id}`)
+  }
+
+  const metaBits = [
+    `${formatNum(song.plays || 0)} plays`,
+    `${formatNum(resonateCount)} resonates`,
+    `${formatNum(song.lyricUses || 0)} lyric uses`,
+  ]
+
   return (
-    <div onClick={onClose} className="margo-preview-scrim" style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeInOverlay 250ms ease forwards' }}>
+    <div
+      onClick={onClose}
+      className="margo-preview-scrim"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        // Mode A sheet rule: sit above app chrome (not pad as if chrome shows through).
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        paddingBottom: 'var(--margo-page-bottom)',
+        animation: 'fadeInOverlay 250ms ease forwards',
+      }}
+    >
       <style>{`
         @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
         @keyframes slideUp { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
@@ -702,51 +718,155 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
           .play-btn:hover { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
           .close-btn:hover { background: rgba(255,255,255,0.1) !important; }
         }
-        @media (min-width: 1024px) { .preview-sheet { border-radius: 20px; max-width: 520px; margin: auto; max-height: 85vh; } .preview-wrap { align-items: center; } }
+        @media (min-width: 1024px) {
+          .preview-sheet { border-radius: 20px; max-width: 520px; margin: auto; }
+          .preview-wrap { align-items: center; padding-bottom: 0 !important; }
+          .margo-preview-scrim { padding-bottom: 0 !important; }
+        }
       `}</style>
-      <div className="preview-wrap" onClick={onClose} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-        <div className="preview-sheet" onClick={e => e.stopPropagation()} style={{ background: 'linear-gradient(160deg, rgba(28,24,36,0.98) 0%, rgba(14,12,18,0.99) 100%)', border: '1px solid rgba(255,255,255,0.08)', width: '100%', overflowY: 'auto', position: 'relative', animation: 'slideUp 320ms cubic-bezier(0.34,1.56,0.64,1) forwards', borderRadius: '20px 20px 0 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+      <div
+        className="preview-wrap"
+        onClick={onClose}
+        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+      >
+        <div
+          className="preview-sheet"
+          onClick={e => e.stopPropagation()}
+          style={{
+            background: 'linear-gradient(160deg, rgba(28,24,36,0.98) 0%, rgba(14,12,18,0.99) 100%)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            width: '100%',
+            maxHeight: 'min(90dvh, calc(100dvh - var(--margo-page-bottom) - 8px))',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            position: 'relative',
+            animation: 'slideUp 320ms cubic-bezier(0.34,1.56,0.64,1) forwards',
+            borderRadius: '20px 20px 0 0',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0', flexShrink: 0 }}>
             <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.15)' }} />
           </div>
-          <div style={{ padding: '20px 28px calc(40px + var(--margo-page-bottom))' }}>
-            <button className="close-btn" onClick={onClose} style={{ position: 'absolute', top: '20px', right: '20px', width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease', fontFamily: 'var(--font-lora), serif', boxSizing: 'border-box' }}>×</button>
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '24px' }}>
+
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+            padding: '12px 20px 0 28px', flexShrink: 0, gap: '12px',
+          }}>
+            <div style={{ minWidth: 0, flex: 1, paddingTop: '4px' }}>
+              <p style={{
+                fontFamily: UI_FONT, fontSize: '1.25rem', fontWeight: 600,
+                color: 'var(--text)', margin: '0 0 4px', lineHeight: 1.2,
+              }}>{song.title}</p>
+              <p style={{
+                fontFamily: UI_FONT, fontSize: '0.82rem',
+                color: 'var(--text-secondary)', margin: 0, letterSpacing: '0.3px',
+              }}>{song.artist}</p>
+            </div>
+            <button
+              type="button"
+              className="close-btn"
+              onClick={onClose}
+              aria-label="Close"
+              style={{
+                width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.55)', cursor: 'pointer', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 150ms ease', boxSizing: 'border-box',
+              }}
+            >
+              <CloseIcon size={18} color="currentColor" />
+            </button>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 8px', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: '16px' }}>
               {song.artwork && (
-                <div style={{ position: 'relative', width: '100px', height: '100px', flexShrink: 0, borderRadius: '10px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+                <div style={{
+                  position: 'relative', width: '88px', height: '88px', flexShrink: 0,
+                  borderRadius: '10px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                }}>
                   <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} />
                 </div>
               )}
-              <div style={{ flex: 1, paddingTop: '4px' }}>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.4rem', fontWeight: 600, color: 'var(--text)', marginBottom: '4px', lineHeight: 1.2 }}>{song.title}</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text-2)', marginBottom: '16px', letterSpacing: '0.5px' }}>{song.artist}</p>
-                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                  <SmallStatBlock value={song.plays || 0} label="Plays" />
-                  <SmallStatBlock value={resonateCount} label="Resonates" />
-                  <div style={{ paddingLeft: '20px', borderLeft: '1px solid rgba(232,197,71,0.3)' }}>
-                    <SmallStatBlock value={song.lyricUses || 0} label="Lyric Uses" gold />
-                  </div>
-                </div>
-              </div>
+              <p style={{
+                fontFamily: UI_FONT, fontSize: '0.7rem', color: 'var(--text-muted)',
+                letterSpacing: '0.2px', margin: '8px 0 0', lineHeight: 1.5,
+              }}>
+                {metaBits.join(' · ')}
+              </p>
             </div>
+
             {lines[0] && (
-              <div style={{ padding: '16px 20px', background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.15)', borderRadius: '12px', marginBottom: '20px' }}>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)', lineHeight: 1.65 }}>&ldquo;{lines[0].line}&rdquo;</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '10px' }}>Most shared line · {lines[0].uses} {lines[0].uses === 1 ? 'use' : 'uses'}</p>
+              <div style={{
+                padding: '16px 20px', background: 'rgba(232,197,71,0.04)',
+                border: '1px solid rgba(232,197,71,0.15)', borderRadius: '12px',
+              }}>
+                <p style={{
+                  fontFamily: LYRIC_FONT, fontStyle: 'italic', fontSize: '1.1rem',
+                  color: 'var(--text)', lineHeight: 1.65, margin: 0,
+                }}>&ldquo;{lines[0].line}&rdquo;</p>
+                <p style={{
+                  fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--gold)',
+                  letterSpacing: '1px', textTransform: 'uppercase', marginTop: '10px', marginBottom: 0,
+                }}>
+                  Most shared line · {lines[0].uses} {lines[0].uses === 1 ? 'use' : 'uses'}
+                </p>
               </div>
             )}
-            <button onClick={() => onResonate(song.id)} style={{ width: '100%', padding: '14px', background: resonated ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.04)', border: '1px solid ' + (resonated ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.1)'), borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 200ms ease', color: resonated ? 'var(--gold)' : 'rgba(255,255,255,0.6)', marginBottom: '12px' }}>
-              {resonated ? <><HeartIcon filled size={14} color="currentColor" /> Resonate</> : <><HeartIcon filled={false} size={14} color="currentColor" /> Resonate</>}
+          </div>
+
+          <div style={{
+            flexShrink: 0,
+            padding: '12px 28px calc(16px + var(--margo-safe-bottom))',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            background: 'linear-gradient(180deg, rgba(14,12,18,0.92), rgba(14,12,18,0.99))',
+            display: 'flex', flexDirection: 'column', gap: '10px',
+          }}>
+            <button
+              type="button"
+              onClick={() => onResonate(song.id)}
+              style={{
+                width: '100%', padding: '14px',
+                background: resonated ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.04)',
+                border: '1px solid ' + (resonated ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.1)'),
+                borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.6rem',
+                letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer',
+                transition: 'all 200ms ease', color: resonated ? 'var(--gold)' : 'rgba(255,255,255,0.6)',
+                minHeight: 'var(--margo-touch-min)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
+            >
+              <HeartIcon filled={resonated} size={14} color="currentColor" /> Resonate
             </button>
             {isActive ? (
-              <Link
-                href={`/song/${song.id}`}
+              <button
+                type="button"
                 className="play-btn"
-                onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', textDecoration: 'none', minHeight: '52px', transition: 'all 200ms ease', boxShadow: '0 6px 28px rgba(232,197,71,0.28)' }}
-              ><PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now</Link>
+                onClick={handlePlayNow}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                  padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)',
+                  borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.6rem',
+                  letterSpacing: '1.5px', textTransform: 'uppercase', border: 'none',
+                  minHeight: '52px', transition: 'all 200ms ease', cursor: 'pointer',
+                  boxShadow: '0 6px 28px rgba(232,197,71,0.28)', width: '100%',
+                }}
+              >
+                <PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now
+              </button>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 28px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-muted)', minHeight: '52px' }}>{song.comingSoonLabel || 'Coming Soon'}</div>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '16px 28px', background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px',
+                fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.6rem',
+                letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-muted)',
+                minHeight: '52px',
+              }}>
+                {song.comingSoonLabel || 'Coming Soon'}
+              </div>
             )}
           </div>
         </div>

@@ -1,11 +1,12 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useThread } from '@/hooks/useThread'
 import { KeyboardSafeCtaBar } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
+import { BackButton } from '@/components/back-button'
 
 const font = 'var(--font-lora), serif'
 
@@ -15,7 +16,6 @@ function timeLabel(iso: string) {
 
 export default function ThreadPage() {
   const params = useParams<{ username: string }>()
-  const router = useRouter()
   const { user } = useIdentity()
   const { partner, messages, loading, canSend, sending, sendMessage } = useThread(params.username)
   const [draft, setDraft] = useState('')
@@ -61,16 +61,7 @@ export default function ThreadPage() {
         padding: '70px 20px 12px', boxShadow: '0 1px 24px rgba(0,0,0,0.35)',
         display: 'flex', alignItems: 'center', gap: '10px',
       }}>
-        <button
-          type="button"
-          onClick={() => router.push('/messages')}
-          aria-label="Back to messages"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--text-secondary)' }}
-        >
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <path d="M12 4l-6 6 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        <BackButton fallbackHref="/messages" label="Back" />
         {partner && (
           <>
             <div style={{

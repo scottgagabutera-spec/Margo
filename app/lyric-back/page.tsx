@@ -15,6 +15,7 @@ import { usePost } from '@/hooks/usePost'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { PostCard } from '@/components/post-card'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
+import { BackButton } from '@/components/back-button'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 
@@ -573,6 +574,10 @@ function LyricBackContent() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom)' }}>
+
+        <div style={{ marginBottom: '16px' }}>
+          <BackButton fallbackHref={respondingToId ? `/post/${respondingToId}` : '/feed'} />
+        </div>
 
         {/* ── Responding To — tier-1 style, gold accent ─────── */}
         <div style={{

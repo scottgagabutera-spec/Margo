@@ -10,6 +10,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { NotificationBell } from '@/components/notification-bell'
 import { MessagesIcon } from '@/components/messages-icon'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
+import { hidesAppShell } from '@/lib/chrome-mode'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -74,6 +75,7 @@ export function MargoNav() {
   const isOnDiscover = pathname?.startsWith('/discover')
   const isOnCompose = pathname === '/compose'
   const isOnSignin = pathname === '/signin'
+  const shellHidden = hidesAppShell(pathname)
 
   const isSignedIn = !!user && !user.isAnonymous
   const applicationStatus = application?.status ?? 'none'
@@ -108,8 +110,12 @@ export function MargoNav() {
   // Measures the nav's real rendered height (which changes across
   // breakpoints, font load, etc.) and publishes it as a CSS var on
   // the document root so any page can reliably clear the nav without
-  // guessing a pixel value.
+  // guessing a pixel value. Immersive/marketing modes publish 0.
   useEffect(() => {
+    if (shellHidden) {
+      document.documentElement.style.setProperty('--nav-height', '0px')
+      return
+    }
     const el = navElRef.current
     if (!el) return
     const setVar = () => {
@@ -119,7 +125,7 @@ export function MargoNav() {
     const ro = new ResizeObserver(setVar)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [shellHidden])
 
   const avatarDropdownItems = ownProfileHref ? [
     { href: ownProfileHref, label: 'Profile' },
@@ -127,6 +133,8 @@ export function MargoNav() {
     { href: '/settings', label: 'Account Settings' },
     ...(showApplyCTA ? [{ href: '/apply-artist', label: applyLabel }] : []),
   ] : []
+
+  if (shellHidden) return null
 
   return (
     <nav ref={navElRef} className="margo-nav-bar" style={{

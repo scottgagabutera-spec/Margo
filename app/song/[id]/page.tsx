@@ -1,5 +1,6 @@
 'use client'
-import { ArrowLeftIcon, MusicNoteIcon, PlayIcon } from '@/components/icons'
+import { CloseIcon, MusicNoteIcon, ReplayIcon, ShareIcon, CardIcon } from '@/components/icons'
+import { BackButton } from '@/components/back-button'
 
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
@@ -272,11 +273,10 @@ export default function SongPage() {
         <div style={{ height: '100%', background: 'linear-gradient(to right, var(--gold), #f5d878)', width: `${progress}%`, transition: 'width 100ms linear' }} />
       </div>
 
-      {/* Header */}
+      {/* Header — immersive Mode B: shell chrome is hidden; this is the only top exit */}
       <header style={{ position: 'fixed', top: '8px', left: 0, right: 0, zIndex: 40, padding: '16px 24px' }}>
         <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/discover" style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: 'var(--text)', textDecoration: 'none', opacity: 0.75, letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <ArrowLeftIcon size={16} color="currentColor" /> Discover</Link>
+          <BackButton fallbackHref="/discover" />
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{song?.title || '—'}</p>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0 }}>{song?.artist || '—'}</p>
@@ -393,10 +393,10 @@ export default function SongPage() {
           {/* Loop + Close — centered, prominent */}
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <button type="button" className="tray-action-btn" onClick={handleLoop}>
-              ↺<span>Loop</span>
+              <ReplayIcon size={16} color="currentColor" /><span>Loop</span>
             </button>
             <button type="button" className="tray-action-btn" onClick={handleDismiss}>
-              ✕<span>Close</span>
+              <CloseIcon size={16} color="currentColor" /><span>Close</span>
             </button>
           </div>
 
@@ -437,7 +437,9 @@ export default function SongPage() {
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '1rem', color: 'var(--gold)', textAlign: 'center', marginBottom: '6px', lineHeight: 1.5 }}>"{currentLyric?.line}"</p>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)', textAlign: 'center', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '24px' }}>{song?.title} · {song?.artist}</p>
             <Link href={composeUrl} className="share-option" onClick={() => setShareOpen(false)}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>✦</div>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <ShareIcon size={20} color="var(--gold)" />
+              </div>
               <div>
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Post to Margo Feed</p>
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Share this lyric with your emotion on the feed</p>
@@ -451,7 +453,9 @@ export default function SongPage() {
                 setTimeout(() => setCardExportOpen(true), 180)
               }}
             >
-              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>🖼</div>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CardIcon size={20} color="var(--text)" />
+              </div>
               <div style={{ textAlign: 'left' }}>
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Share as Card</p>
                 <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Export a lyric card — choose theme, shape, save or share</p>

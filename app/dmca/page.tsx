@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 
 const FOOTER_LINKS = ['about', 'privacy', 'terms', 'dmca', 'contact'] as const
 
@@ -11,6 +12,9 @@ export default function DmcaPage() {
         <div style={{ position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%', filter: 'blur(80px)', opacity: 0.06, width: '400px', height: '400px', background: '#6B4EFF', bottom: '-100px', left: '-100px' }} />
 
         <div style={{ maxWidth: '680px', margin: '0 auto', padding: '88px 24px 120px', position: 'relative', zIndex: 1 }}>
+          <div style={{ marginBottom: '16px' }}>
+            <BackButton fallbackHref="/" />
+          </div>
           <div style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '16px' }}>Copyright Policy</div>
 
           <h1 style={{ fontFamily: 'var(--font-lora), serif', fontSize: 'clamp(2rem,5vw,3.2rem)', fontWeight: 700, color: 'var(--text)', lineHeight: 1.15, marginBottom: '12px' }}>
