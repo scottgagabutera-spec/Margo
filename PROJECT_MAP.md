@@ -1,144 +1,303 @@
 # Margo — Project Map
-> **STATUS (Aug 2026): OUTDATED SNAPSHOT (July 2026).** Prefer CLAUDE.md + the repo tree. Profile pages are built; Firebase client shim / `useLicensedArtists` gone; only `package-lock.json`. Live catalog is Discover/`/song/[id]`. Legacy `js/` / `api/*.js` / `index.html` / unused shadcn kit **removed** in `chore/repo-hygiene-cleanup` — sections below that still list them are historical.
 
+> File-level inventory for the **live** Next.js app (post-hygiene PR #86).  
+> Companion architecture map: `ARCHITECTURE.md`. Session laws: `CLAUDE.md`.
 
-Generated from a full repo file listing (July 2026). This is a working reference —
-update the relevant section whenever a file's purpose changes meaningfully.
+**Convention**
 
-> ✅ **Legacy vanilla app removed (Aug 2026 hygiene).** `js/`, root `api/*.js`, `index.html`,
-> `assets/`, and stale `public/*.html` are gone. The live app is Next.js only (`app/`,
-> `components/`, `hooks/`, `lib/`). Historical inventory sections below may still mention
-> those paths — ignore them; restore from `origin/main-vanilla-backup` if ever needed.
+- Routine files: one-line purpose.
+- **Careful:** only for high-risk or non-obvious behavior. Prefer strong inline comments over restating them here.
+- Update a row when a file’s purpose changes meaningfully. Do not aim for exhaustive gotchas — they go stale.
 
----
-
-## `app/` — Next.js App Router (the live app)
-
-| File | Purpose |
-|---|---|
-| `page.tsx` (372) | Landing/home page |
-| `layout.tsx` (207) | Root layout — fonts, providers, global shell |
-| `globals.css` | Global styles |
-| `about/page.tsx`, `contact/page.tsx`, `privacy/page.tsx`, `terms/page.tsx` | Static content pages |
-| `signin/page.tsx` (22) | Unified sign-in (replaces old `/artist/signin`), has `BackButton` |
-| `auth/callback/page.tsx` (60) | OAuth/Supabase auth callback handler |
-| `settings/page.tsx` (606) | Account settings — delete account, etc. |
-| `admin/page.tsx` (980) | Admin dashboard — Posts, Music, Licensed Artists, Featured, Pages, Artists tabs; has `BackButton` |
-| `apply-artist/page.tsx` (106) | In-app artist application flow (post-unified-identity model) |
-| `profile/edit/page.tsx` (305) | Edit own profile |
-| `profile/[username]/page.tsx` (**0 lines**) | ⚠️ **Empty file** — public profile page not yet built, or a stub/leftover. Worth confirming which. |
-| `feed/page.tsx` (793) + `feed/layout.tsx` | Main feed |
-| `compose/page.tsx` (549) + `compose/layout.tsx` | Post composer |
-| `lyric-back/page.tsx` (810) + `lyric-back/layout.tsx` | "Lyric back" reply/echo feature |
-| `music/page.tsx` (1,145) + `music/layout.tsx` | Music/discovery page |
-| `music/player/page.tsx` (469) | Full-screen player view |
-| `api/whisper/route.ts` (43) | Whisper AI transcription → SRT (used by admin SongForm) |
-| `api/tag-vibes/route.ts` (101) | AI vibe-tagging for lyric lines |
-| `api/genius/route.ts` (128) | Genius API integration (lyric lookup) |
-| `api/emotion/route.ts` (64) | Emotion classification for posts |
-| `api/moderate/route.ts` (53) | Content moderation |
-| `api/sync-lyrics/route.ts` (59) | Lyric sync helper |
-| `api/backfill-echo-counts/route.ts` (50) | Server-side backfill endpoint |
-| `api/delete-account/route.ts` (75) | Account deletion (used by `/settings`) |
-
-## `components/` — shared React components
-
-| File | Purpose |
-|---|---|
-| `margo-nav.tsx` (486) | Main nav bar — **this is where the avatar dropdown work goes next** |
-| `back-button.tsx` (44) | The `BackButton` just added across signin/admin/etc. |
-| `auth-form.tsx` (172), `auth-provider.tsx` (34), `auth-gate-modal.tsx` (90) | Auth UI + context |
-| `supabase-auth-provider.tsx` (80) | Supabase-specific auth context (part of the identity migration) |
-| `avatar-upload.tsx` (139) | Profile avatar upload |
-| `artist-application-form.tsx` (157) | Form used by `/apply-artist` |
-| `artists-tab.tsx` (186) | Admin's "Artists" tab content |
-| `admin-trigger.tsx` (49) | Likely the entry point/button that surfaces admin access |
-| `card-export-modal.tsx` (569) | Export a lyric/post as a shareable image card |
-| `mini-player.tsx` (548) | Persistent mini audio player |
-| `audio-engine-provider.tsx` (79) | React context wrapping `lib/audio-engine` |
-| `theme-provider.tsx` (11) | Theme/dark-mode context |
-| `MargoLogo.tsx` (82) | Logo component |
-| `heart-icon.tsx`, `play-pause-icon.tsx`, `share-button.tsx`, `username-tag.tsx` | Small shared UI pieces |
-| `icons/*` (10 files) | Icon components (arrow, card, chevron, close, heart, lyric-back, music-note, share) + shared `icon-props.ts` / `index.ts` barrel |
-| `ui/*` (~50 files) | **shadcn/ui component library** (button, dialog, dropdown-menu, sidebar, table, toast, calendar, carousel, chart, etc.) — standard generated primitives, not custom app logic |
-
-## `hooks/` — data & state hooks
-
-| File | Purpose |
-|---|---|
-| `useIdentity.ts` (243) | Core identity hook — extended with `artistApplication` fields per the identity migration |
-| `useArtistApplication.ts` (116) | Artist application submission logic |
-| `useApprovedArtists.ts` (44), `useLicensedArtists.ts` (35) | Read artist allowlists |
-| `useAudioEngine.ts` (127) | Hook wrapper around `lib/audio-engine` |
-| `useAuthorProfile.ts` (18) | Look up a post's author profile |
-| `useEchoes.ts` (38) | Lyric-back "echoes" data |
-| `usePost.ts` (24), `usePosts.ts` (39) | Single post / posts list |
-| `useSong.ts` (65), `useSongs.ts` (55) | Single song / songs list |
-| `useSharedLines.ts` (70) | Shared lyric lines logic |
-| `use-mobile.ts` (19), `use-toast.ts` (191) | Utility hooks (duplicated in `ui/`, see flag below) |
-
-## `lib/` — core logic, non-React
-
-| File | Purpose |
-|---|---|
-| `firebase.ts` (22) | Firebase app/db init |
-| `supabase.ts` (8) | Supabase client init |
-| `utils.ts` (6) | Generic helpers (likely `cn()` for Tailwind) |
-| `profile-lookup.ts` (76) | Username → profile resolution |
-| `audio-engine/engine.ts` (611) | Core audio playback engine |
-| `audio-engine/index.ts` (70) | Public entry point for the engine |
-| `audio-engine/media-session.ts` (153) | Browser Media Session API integration (lock-screen controls) |
-| `audio-engine/preload-cache.ts` (187) | Audio preloading/caching |
-| `audio-engine/snippet-resolver.ts` (123) | Resolves which audio snippet to play |
-| `audio-engine/types.ts` (229) | Shared audio engine types |
-| `engagement/plays.ts` (91), `engagement/session.ts` (75) | Play-count and session tracking (feeds the admin backfill tools) |
-
-## `api/` — ⚠️ legacy plain-JS API (not `app/api`)
-
-| File | Purpose |
-|---|---|
-| `config.js`, `inspire.js`, `lyricback-og.js`, `posts.js`, `spotify.js`, `youtube.js` | Old serverless functions predating the Next.js `app/api` routes. Likely superseded — confirm before treating as dead. |
-
-## `js/` — ⚠️ legacy vanilla-JS front end
-
-| Subfolder | Purpose |
-|---|---|
-| `core/` | `app.js` (312), `brand.js`, `firebase.js`, `state.js`, `username.js` (595) — old app bootstrap/state |
-| `features/` | `duet-mode.js`, `duet-sheet.js` (1,249!), `echoes.js`, `lyric-back-share.js` (1,016), `motion.js` — old feature implementations, big overlap with current `lyric-back` page |
-| `media/` | GIF studio, poster studio, share-sheet, platform-picker — media export tooling (huge: `share-sheet.js` 1,043, `studio.js` 828, `gif-studio.js` 654) |
-| `ui/` | `admin.js` (**1,839 lines** — the old admin panel, now replaced by `app/admin/page.tsx`), plus feed/composer UI scripts |
-
-## `assets/` & `public/` — static assets
-
-- `assets/css/*` — old app's stylesheets (base, composer, feed, landing, mobile, modals)
-- `assets/fonts/` — Lora & Syne webfonts
-- `public/*.html` — static HTML pages (about, contact, music, privacy, terms) — likely from the pre-Next.js site
-- `public/*.png/ico/svg`, `favicons/` — icons, favicons, OG image, cover art
-
-## `supabase/`
-
-- `migrations/20260728_account_settings.sql` — the migration behind `/settings`
-- `.temp/*` — local CLI cache (gitignored per the earlier `.gitignore` cleanup)
-
-## Root-level docs & config
-
-| File | Purpose |
-|---|---|
-| `docs/MARGO_GROWTH_AND_PLATFORM_PLAN.md` | Growth/platform strategy doc |
-| `docs/MARGO_IDENTITY_SUPABASE_MIGRATION_PLAN.md` | The identity migration plan we've been executing |
-| `docs/TARGET_ARCHITECTURE_AUDIO_ENGAGEMENT.md` | Audio engagement architecture target |
-| `MARGO_RIGHTS_AND_DISCOVERY_PLAN.md` | Song rights / discovery tiers plan |
-| `MARGO_BRAND.md` | Brand guidelines |
-| `CLAUDE.md` | Project instructions for Claude sessions |
-| `.cursor/rules/git-safety.md` | Git safety rules (for Cursor) |
-| `package.json`, `tsconfig.json`, `next.config.mjs`, `postcss.config.mjs`, `vercel.json`, `database.rules.json` | Standard project config |
+Legacy vanilla (`js/`, root `api/*.js`, `index.html`) was removed in hygiene cleanup. Restore from `origin/main-vanilla-backup` only if needed.
 
 ---
 
-## Flags worth resolving
+## 1. `app/` — routes & layouts
 
-1. **Legacy `js/`, `api/`, `assets/`, `public/*.html`** — likely dead weight from before the Next.js migration. Confirm and archive/delete if so; this alone would cut the visible file count roughly in half.
-2. **`app/profile/[username]/page.tsx` is 0 lines** — empty file. Either an unbuilt public profile page or a stray stub.
-3. **Two lockfiles present**: `package-lock.json` *and* `pnpm-lock.yaml`. Usually means two package managers were used at different times — worth picking one and deleting the other to avoid dependency drift.
-4. **Duplicate hooks**: `hooks/use-mobile.ts` / `hooks/use-toast.ts` vs `components/ui/use-mobile.tsx` / `components/ui/use-toast.ts` — likely shadcn's copies vs your own; check which is actually imported and remove the unused pair.
-5. **`ign`, `diff.txt`, `sitemap.xml` (root) vs `public/sitemap.xml`** — small stray/duplicate files worth a quick look.
+### Shell
+
+| File | Purpose |
+|------|---------|
+| `app/layout.tsx` | Root layout — fonts, providers, MiniPlayer, nav/tab chrome, Sonner |
+| `app/page.tsx` | Marketing landing (own nav) |
+| `app/globals.css` | Design tokens, feed/action CSS, safe-area vars |
+
+### Primary product
+
+| File | Purpose |
+|------|---------|
+| `app/feed/page.tsx` + `feed/layout.tsx` | Main lyric feed |
+| `app/discover/page.tsx` + `discover/layout.tsx` | Discover Moments / browse |
+| `app/discover/songs/page.tsx` | Full catalog grid |
+| `app/song/[id]/page.tsx` | Karaoke / full song player (canonical; replaces old `/music/player`) |
+| `app/compose/page.tsx` + `compose/layout.tsx` | Post a lyric |
+| `app/lyric-back/page.tsx` + `lyric-back/layout.tsx` | Reply with a lyric |
+| `app/post/[id]/page.tsx` | Single post thread |
+
+### Account & social
+
+| File | Purpose |
+|------|---------|
+| `app/signin/page.tsx` | Sign in / up entry |
+| `app/auth/callback/route.ts` | OAuth / auth callback |
+| `app/settings/page.tsx` | Account settings, deletion |
+| `app/profile/[username]/page.tsx` | Public profile |
+| `app/profile/[username]/songs/page.tsx` | Profile song grid |
+| `app/profile/edit/page.tsx` | Edit own profile |
+| `app/messages/page.tsx`, `messages/[username]/page.tsx` | DM list + thread |
+| `app/notifications/page.tsx` | Alerts |
+| `app/studio/page.tsx` | Artist studio |
+| `app/apply-artist/page.tsx` | Artist application |
+| `app/artists/page.tsx` | Artists directory / catalog entry |
+
+### Legal / static
+
+| File | Purpose |
+|------|---------|
+| `app/about/page.tsx` | About |
+| `app/contact/page.tsx` | Contact mailboxes |
+| `app/privacy/page.tsx` | Privacy policy |
+| `app/terms/page.tsx` | Terms of use |
+| `app/dmca/page.tsx` | Copyright / DMCA policy + designated-agent contact |
+
+### Admin
+
+| File | Purpose |
+|------|---------|
+| `app/admin/page.tsx` | Admin dashboard (no MargoNav) |
+
+### `app/api/`
+
+| Route | Purpose |
+|-------|---------|
+| `api/auth/*` | Cookie login, logout, me, refresh, signup, OAuth, password |
+| `api/suggest-lyric-back/route.ts` | Suggested Lyric Back ranking API |
+| `api/genius/route.ts` | Genius lyric/song search |
+| `api/emotion/route.ts` | Emotion classification |
+| `api/moderate/route.ts` | OpenAI moderation on write; may bump `posts.flag_count` |
+| `api/whisper/route.ts` | Transcription for Studio uploads |
+| `api/tag-vibes/route.ts` | Vibe tags for lyric lines |
+| `api/delete-account/route.ts` | Account deletion |
+| `api/submit-artist-application/route.ts` | Artist apply |
+| `api/verify-artist-link/route.ts` | Link verification (incl. Suno) |
+| `api/import-linktree/route.ts` | Linktree import helper |
+| `api/admin/session/route.ts` | Admin session assert |
+| `api/admin/overview/route.ts` | Overview KPIs |
+| `api/admin/catalog-songs/route.ts`, `catalog-posts/route.ts` | Catalog ops |
+| `api/admin/artist-applications/route.ts`, `artist-moderation/route.ts` | Artist pipeline |
+| `api/admin/post-reports/route.ts` | User reports |
+| `api/admin/featured/route.ts` | Featured exchange |
+| `api/admin/featured/import-rtdb/route.ts` | **Careful:** Firebase RTDB → featured one-shot; not the live catalog write path |
+
+**Careful (API):** `api/auth/*` (cookie contract); `api/delete-account`; `api/suggest-lyric-back` (cache + status=`active` filter — see inline comments); `api/moderate` (flag_count side effect); `api/admin/featured/import-rtdb`.
+
+---
+
+## 2. `components/`
+
+### Product chrome
+
+| File | Purpose |
+|------|---------|
+| `margo-nav.tsx` | Desktop / shared top nav |
+| `mobile-tab-bar.tsx` | Primary tab bar |
+| `primary-tab-shell.tsx` | Keepalive panes + swipe host |
+| `mini-player.tsx` | Global snippet player bar |
+| `audio-engine-provider.tsx` | Mounts audio engine context |
+| `admin-trigger.tsx` | Hidden B+G / long-press admin entry |
+| `margo-search-input.tsx`, `margo-skeletons.tsx` | Search + loading skeletons |
+| `pull-to-refresh.tsx`, `loading-ring.tsx`, `new-items-pill.tsx` | Feed/Discover chrome |
+| `keyboard-safe-cta-bar.tsx` | Keyboard-aware CTA bar |
+| `mobile-account-menu.tsx` | Mobile account sheet |
+
+### Cards & feed
+
+| File | Purpose |
+|------|---------|
+| `post-card.tsx` | Feed/Discover post card (variants: feed, compact, row, …) |
+| `post-card-suggested-reply.tsx` | On-demand Suggested Lyric Back UI |
+| `post-thumbnail.tsx` | Artwork / YouTube thumb |
+| `replay-attribution.tsx` | Replay wrapper chrome |
+| `edit-post-modal.tsx` | Owner edit |
+| `vibe-tag.tsx`, `relative-time.tsx`, `username-tag.tsx` | Meta chrome |
+
+**Careful:** `post-card-suggested-reply.tsx` — must stay tap-triggered; talks to suggest API/cache contract. `post-card.tsx` — large surface; many variants and action paths (resonate, Lyric Back, Card, Replay).
+
+### Card export
+
+| File | Purpose |
+|------|---------|
+| `card-export-modal.tsx` | PNG lyric card export UI (themes/shapes) |
+
+Wired from Feed, Compose, Lyric Back, post thread, profile, song player. Analytics via `lib/engagement/card-exports.ts` (soft-fail; never block download).
+
+### Catalog / studio / auth UI
+
+| File | Purpose |
+|------|---------|
+| `catalog-grid.tsx`, `song-catalog-card.tsx` | Song grids |
+| `save-queue-button.tsx` | Persist audio queue as playlist |
+| `compose-line-picker.tsx`, `compose-search-dropdown.tsx` | Compose/Lyric Back search UI |
+| `studio/song-upload-form.tsx` | Artist upload + whisper/tag-vibes |
+| `artist-application-form.tsx`, `artist-applications-tab.tsx`, `artist-badge.tsx` | Artist apply / admin / badge |
+| `auth-form.tsx`, `auth-gate-modal.tsx`, `supabase-auth-provider.tsx` | Auth UI + gate |
+| `avatar-upload.tsx`, `back-button.tsx` | Profile / nav helpers |
+| `discover-error-boundary.tsx` | Discover crash boundary |
+| `post-reports-tab.tsx` | Admin reports UI |
+| `notification-bell.tsx`, `notification-item.tsx`, `notification-list.tsx`, `messages-icon.tsx` | Alerts / DM chrome |
+| `MargoLogo.tsx`, `play-pause-icon.tsx`, `heart-icon.tsx` | Brand / playback / resonate icons |
+| `icons/*` | Shared SVG icon set + barrel `icons/index.ts` |
+| `ui/sonner.tsx` | Toast host (only remaining shadcn primitive) |
+
+---
+
+## 3. `hooks/`
+
+| File | Purpose |
+|------|---------|
+| `usePosts.ts`, `usePost.ts` | Feed posts / single post |
+| `useEchoes.ts` | Lyric Backs for a post |
+| `useSongs.ts`, `useSong.ts` | Catalog list / single song + lines |
+| `useSharedLines.ts` | Shared-line signals |
+| `useLyricMoments.ts` | Discover Moments |
+| `useRecentReplays.ts`, `useProfileReplays.ts` | Replay feeds |
+| `useOwnPrivatePosts.ts` | Owner private posts |
+| `useVisibleAuthorIds.ts` | Visibility filter for posts |
+| `useAuthorProfile.ts`, `useAuthorLyricBacks.ts` | Author meta |
+| `useIdentity.tsx` | Signed-in profile / session facade |
+| `useMessaging.tsx`, `useConversations.ts`, `useThread.ts`, `useUnreadMessagesCount.ts` | DMs |
+| `useNotifications.tsx` | Alerts |
+| `useAudioEngine.ts` | Engine React bindings |
+| `useNewItemsBuffer.ts` | PTR / “new items” pill |
+| `useApprovedArtists.ts`, `useArtistApplication.ts` | Artists |
+| `useTabSwipe.tsx`, `usePrimaryTabSwipeGesture.ts` | Primary-tab swipe |
+| `useVisualViewport.ts` | Visual viewport for mobile chrome |
+
+**Careful:** `usePosts.ts` (visibility + replay merge); `useIdentity.tsx`; `usePrimaryTabSwipeGesture.ts` / `useTabSwipe.tsx` (gesture vs scroll exclusions).
+
+---
+
+## 4. `lib/`
+
+### Supabase / auth
+
+| File | Purpose |
+|------|---------|
+| `lib/supabase/client.ts` | Browser cookie client |
+| `lib/supabase/server.ts` | Server cookie client |
+| `lib/supabase/cookie-options.ts` | Cookie options |
+| `lib/supabase/auth-broadcast.ts` | Same-tab auth broadcast |
+| `lib/supabase/clear-legacy-auth-storage.ts` | Clears old localStorage auth |
+| `lib/supabase-admin.ts` | Service-role admin client |
+
+**Careful:** cookie/session contract across `lib/supabase/*` and `app/api/auth/*`.
+
+### Audio engine
+
+| File | Purpose |
+|------|---------|
+| `lib/audio-engine/engine.ts` | Core playback / queue |
+| `lib/audio-engine/index.ts` | Public API |
+| `lib/audio-engine/media-session.ts` | Media Session wiring |
+| `lib/audio-engine/preload-cache.ts` | URL warm/preload |
+| `lib/audio-engine/snippet-resolver.ts` | Snippet resolution |
+| `lib/audio-engine/types.ts` | Shared types |
+
+**Careful:** `engine.ts` — single-instance semantics; Media Session must call real `play`/`pause`. See also `docs/TARGET_ARCHITECTURE_AUDIO_ENGAGEMENT.md` (mostly shipped).
+
+### Suggest / catalog / posts
+
+| File | Purpose |
+|------|---------|
+| `lib/suggest-lyric-back.ts` | Rank + diversity assemble + cache |
+| `lib/catalog-lyric-unit.ts` | Adjacent-line catalog units |
+| `lib/search-margo-songs.ts` | Tokenized catalog search |
+| `lib/search-profiles.ts` | Profile search |
+| `lib/post-lines.ts` | Post line timing helpers |
+| `lib/lyric-match.ts` | Snippet/line matching |
+| `lib/feed-replay-map.ts` | `post_replays` → Feed Replay cards |
+
+**Careful:** `suggest-lyric-back.ts` — empty results must not poison cache (#82); soft cross-song diversity assemble (#83); file header documents Approach A. Prefer that comment block over duplicating here.
+
+### Engagement / account / misc
+
+| File | Purpose |
+|------|---------|
+| `lib/engagement/card-exports.ts` | `card_exports` insert after PNG download |
+| `lib/engagement/plays.ts`, `session.ts`, `last-seen.ts` | Plays / session / last_seen |
+| `lib/queues.ts` | Save current queue as playlist |
+| `lib/purge-user-account.ts` | Full account wipe |
+| `lib/profile-lookup.ts` | Username → profile |
+| `lib/admin-auth.ts`, `admin-overview-kpis.ts` | Admin assert + KPIs |
+| `lib/primary-tab-prefetch.ts`, `primary-tab-warm.ts` | Tab warm/prefetch |
+| `lib/tab-swipe-motion.ts` | Swipe spring / rubber-band math |
+| `lib/fonts.ts`, `utils.ts`, `suno.ts`, `perf-trace.ts` | Fonts, `cn`, Suno URL, perf |
+
+**Careful:** `purge-user-account.ts` (destructive, irreversible).
+
+---
+
+## 5. `supabase/migrations/`
+
+Keep all applied files. Add new dated SQL; never delete history.
+
+Notable recent:
+
+| Migration | One-liner |
+|-----------|-----------|
+| `20260815_card_exports.sql` | Card export analytics table |
+| `20260816_post_lines.sql` | Structured post lyric lines |
+| `20260817_suggest_lyric_back_cache.sql` | Suggest cache table |
+| `20260814_profiles_last_seen_at.sql` | Identity heartbeat |
+| `20260810_complete_account_deletion.sql` | Deletion RPCs / policy |
+| `20260808_post_replays.sql` | Replays |
+| `20260807_post_reports.sql` | Reports |
+
+---
+
+## 6. `scripts/` and `docs/`
+
+| Path | Purpose |
+|------|---------|
+| `scripts/migrate-*-to-supabase.mjs` | One-time migration helpers (historical) |
+| `scripts/verify-*.mjs` | Cookie / deletion / artist verify checks |
+| `scripts/check-songs-count.mjs`, `delete-song.mjs`, `test-tag-vibes-route.mjs` | Ops / route tests |
+| `scripts/lib/assert-httponly-auth.mjs` | Shared auth assert for verifies |
+| `docs/*` | Plans — many stamped ARCHIVE / SUPERSEDED; verify code before treating as backlog |
+
+---
+
+## 7. Config / root
+
+| File | Purpose |
+|------|---------|
+| `next.config.mjs` | Image config; permanent redirects (`/music`, `/music/player`, `/privacy.html`, `/copyright-policy`) |
+| `package.json` | Scripts / deps |
+| `vercel.json` | Framework: nextjs |
+| `.env.example` | Env var **names** only (no secrets) |
+| `ARCHITECTURE.md` | System map |
+| `CLAUDE.md` | Agent / developer laws |
+| `MARGO_BRAND.md` | Brand + UI rules |
+| `MARGO_RIGHTS_AND_DISCOVERY_PLAN.md` | Rights / discovery strategy |
+| `README.md` | Public overview |
+
+---
+
+## 8. High-risk index
+
+Jump list for agents (read inline comments first):
+
+- `lib/suggest-lyric-back.ts` + `app/api/suggest-lyric-back/route.ts` + `components/post-card-suggested-reply.tsx`
+- `lib/supabase/*` + `app/api/auth/*` + `components/supabase-auth-provider.tsx`
+- `lib/audio-engine/engine.ts` + `components/mini-player.tsx`
+- `lib/purge-user-account.ts` + `app/api/delete-account/route.ts`
+- `components/primary-tab-shell.tsx` + `hooks/usePrimaryTabSwipeGesture.ts`
+- `app/api/moderate/route.ts` (write-path moderation + `flag_count`)
+- `components/card-export-modal.tsx` + `lib/engagement/card-exports.ts` (export must not block on analytics)
+- `app/dmca/page.tsx` (legal surface — coordinate with Terms/Privacy)
+- `app/api/admin/featured/import-rtdb/route.ts` (Firebase one-shot — do not confuse with live catalog writes)
+
+---
+
+*Last updated: August 2026*
