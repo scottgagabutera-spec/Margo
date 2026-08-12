@@ -1,7 +1,7 @@
 {
   "name": "Margo",
   "short_name": "Margo",
-  "description": "Communicate through song lyrics. Post a lyric, choose your emotion, get a Lyric Back.",
+  "description": "Talk, listen, and share through song lyrics. Feed, Discover, and Karaoke — music as the language.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#08070C",

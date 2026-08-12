@@ -39,24 +39,27 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
+const SITE_TITLE = 'Margo | Talk, Listen & Share Through Song Lyrics'
+const SITE_DESCRIPTION =
+  'Margo is where people communicate through song lyrics. Listen to lyric moments on Feed, explore songs and artists on Discover, and sing along in Karaoke — music as the language.'
+
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: 'Margo — Communicate Through Song Lyrics',
+    default: SITE_TITLE,
     template: '%s | Margo',
   },
-  description:
-    'Margo is where people speak through song lyrics. Post a lyric, choose your emotion, get a Lyric Back. Original music by Margo on Spotify, Apple Music, Boomplay and all platforms.',
+  description: SITE_DESCRIPTION,
   keywords: [
     'communicate through song lyrics',
-    'lyric back',
+    'lyric social platform',
     'share a lyric',
     'music social platform',
     'song lyrics app',
-    'express emotions with lyrics',
-    'margo music',
+    'lyric feed',
+    'discover lyrics',
+    'karaoke lyrics',
     'trymargo',
-    'original music',
     'lyric sharing',
   ],
   authors: [{ name: 'Margo', url: BASE_URL }],
@@ -80,15 +83,14 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: BASE_URL,
     siteName: 'Margo',
-    title: 'Margo — Communicate Through Song Lyrics',
-    description:
-      'Margo is where people speak through song lyrics. Post a lyric, choose your emotion, get a Lyric Back. Original music by Margo on Spotify, Apple Music and all platforms.',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Margo — Communicate Through Song Lyrics',
+        alt: SITE_TITLE,
       },
     ],
   },
@@ -96,9 +98,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     site: '@OfficialUTM',
     creator: '@OfficialUTM',
-    title: 'Margo — Communicate Through Song Lyrics',
-    description:
-      'Post a lyric. Choose your emotion. Get a Lyric Back. Margo is the platform where music is the language.',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     images: ['/og-image.png'],
   },
   icons: {
@@ -133,8 +134,7 @@ export default function RootLayout({
               '@type': 'WebApplication',
               name: 'Margo',
               url: 'https://trymargo.com',
-              description:
-                'Margo is a social platform where people communicate through song lyrics. Post a lyric tied to an emotion, reply with a Lyric Back, and share exportable lyric cards.',
+              description: SITE_DESCRIPTION,
               applicationCategory: 'MusicApplication',
               operatingSystem: 'Web, iOS, Android',
               offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
