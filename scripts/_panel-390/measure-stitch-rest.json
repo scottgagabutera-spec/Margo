@@ -3,28 +3,32 @@
     "w": 390,
     "h": 844
   },
+  "main": 390,
+  "reading": 324,
+  "readingLeft": 33,
+  "actions": 324,
   "scroller": {
-    "w": 308,
+    "w": 324,
     "h": 226
   },
   "rects": [
     {
       "id": "lyric",
-      "w": 308,
+      "w": 324,
       "h": 226,
-      "left": 41
+      "left": 33
     },
     {
       "id": "player",
-      "w": 308,
+      "w": 324,
       "h": 226,
-      "left": 349
+      "left": 357
     },
     {
       "id": "links",
-      "w": 308,
+      "w": 324,
       "h": 226,
-      "left": 657
+      "left": 681
     }
   ],
   "peek": 0,

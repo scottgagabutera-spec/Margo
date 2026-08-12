@@ -1,15 +1,34 @@
 [PASS] row present — 81 strip(s)
-REST {"viewport":{"w":390,"h":844},"scroller":{"w":308,"h":187.2},"rects":[{"id":"lyric","w":308,"h":187.2,"left":41},{"id":"player","w":308,"h":187.2,"left":349}],"peek":0,"gap":0,"heightEqual":true,"scrollLeft":0,"counter":"1 / 2","panelIds":["lyric","player"]}
+REST {"viewport":{"w":390,"h":844},"main":390,"reading":324,"readingLeft":33,"actions":324,"scroller":{"w":324,"h":187.2},"rects":[{"id":"lyric","w":324,"h":187.2,"left":33},{"id":"player","w":324,"h":187.2,"left":357}],"peek":0,"gap":0,"heightEqual":true,"scrollLeft":0,"counter":"1 / 2","panelIds":["lyric","player"]}
 [PASS] viewport 390 — 390×844
-[PASS] panel width = scroller — 308 vs 308
+[PASS] 390 main ~358 — 390px
+[PASS] panel width = scroller — 324 vs 324
 [PASS] gap ~0 — 0px
 [PASS] no peek — 0px
 [PASS] equal panel heights — 187.2/187.2
 [PASS] counter — 1 / 2
 [PASS] no cover panel — lyric,player
-PANEL2 {"viewport":{"w":390,"h":844},"scroller":{"w":308,"h":187.2},"rects":[{"id":"lyric","w":308,"h":187.2,"left":-267},{"id":"player","w":308,"h":187.2,"left":41}],"peek":308,"gap":0,"heightEqual":true,"scrollLeft":308,"counter":"2 / 2","panelIds":["lyric","player"]}
+PANEL2 {"viewport":{"w":390,"h":844},"main":390,"reading":324,"readingLeft":-291,"actions":324,"scroller":{"w":324,"h":187.2},"rects":[{"id":"lyric","w":324,"h":187.2,"left":-291},{"id":"player","w":324,"h":187.2,"left":33}],"peek":324,"gap":0,"heightEqual":true,"scrollLeft":324,"counter":"2 / 2","panelIds":["lyric","player"]}
 [PASS] snapped panel 2 — player
-STITCH_REST idx=15 {"viewport":{"w":390,"h":844},"scroller":{"w":308,"h":226},"rects":[{"id":"lyric","w":308,"h":226,"left":41},{"id":"player","w":308,"h":226,"left":349},{"id":"links","w":308,"h":226,"left":657}],"peek":0,"gap":0,"heightEqual":true,"scrollLeft":0,"counter":"1 / 3","panelIds":["lyric","player","links"]}
-STITCH_P2 {"viewport":{"w":390,"h":844},"scroller":{"w":308,"h":226},"rects":[{"id":"lyric","w":308,"h":226,"left":-267},{"id":"player","w":308,"h":226,"left":41},{"id":"links","w":308,"h":226,"left":349}],"peek":308,"gap":0,"heightEqual":true,"scrollLeft":308,"counter":"2 / 3","panelIds":["lyric","player","links"]}
+STITCH_REST idx=15 {"viewport":{"w":390,"h":844},"main":390,"reading":324,"readingLeft":33,"actions":324,"scroller":{"w":324,"h":226},"rects":[{"id":"lyric","w":324,"h":226,"left":33},{"id":"player","w":324,"h":226,"left":357},{"id":"links","w":324,"h":226,"left":681}],"peek":0,"gap":0,"heightEqual":true,"scrollLeft":0,"counter":"1 / 3","panelIds":["lyric","player","links"]}
+STITCH_P2 {"viewport":{"w":390,"h":844},"main":390,"reading":324,"readingLeft":-291,"actions":324,"scroller":{"w":324,"h":226},"rects":[{"id":"lyric","w":324,"h":226,"left":-291},{"id":"player","w":324,"h":226,"left":33},{"id":"links","w":324,"h":226,"left":357}],"peek":324,"gap":0,"heightEqual":true,"scrollLeft":324,"counter":"2 / 3","panelIds":["lyric","player","links"]}
 [PASS] stitch equal heights — 226/226/226
 [PASS] stitch frame is tall — 226px
+390 playerIdx=0 linksIdx=6
+[PASS] 390 Tier1 player swipe — idx=0
+[PASS] 390 external links swipe — idx=6
+DESK_REST {"viewport":{"w":1280,"h":800},"main":1152,"reading":640,"readingLeft":320,"actions":640,"scroller":{"w":1086,"h":187.2},"rects":[{"id":"lyric","w":1086,"h":187.2,"left":97},{"id":"player","w":1086,"h":187.2,"left":1183}],"peek":0,"gap":0,"heightEqual":true,"scrollLeft":0,"counter":"1 / 2","panelIds":["lyric","player"]}
+[PASS] viewport 1280 — 1280×800
+[PASS] 1280 main ~1120 — 1152px
+[PASS] 1280 strip ~1088 — 1086px
+[PASS] 1280 reading ≤640 — 640px
+[PASS] 1280 actions ≤640 — 640px
+[PASS] 1280 reading centered — L223 R223
+[PASS] 1280 no peek — 0px
+1280 playerIdx=0 linksIdx=6
+DESK_TIER1_P2 {"viewport":{"w":1280,"h":800},"main":1152,"reading":640,"readingLeft":-766,"actions":640,"scroller":{"w":1086,"h":187.2},"rects":[{"id":"lyric","w":1086,"h":187.2,"left":-989},{"id":"player","w":1086,"h":187.2,"left":97}],"peek":1086,"gap":0,"heightEqual":true,"scrollLeft":1086,"counter":"2 / 2","panelIds":["lyric","player"]}
+[PASS] 1280 Tier1 player swipe — idx=0
+DESK_LINKS_P2 {"viewport":{"w":1280,"h":800},"main":1152,"reading":640,"readingLeft":-766,"actions":640,"scroller":{"w":1086,"h":152},"rects":[{"id":"lyric","w":1086,"h":152,"left":-989},{"id":"links","w":1086,"h":152,"left":97}],"peek":1086,"gap":0,"heightEqual":true,"scrollLeft":1086,"counter":"2 / 2","panelIds":["lyric","links"]}
+[PASS] 1280 external links swipe — idx=6
+DESK_P2 {"viewport":{"w":1280,"h":800},"main":1152,"reading":640,"readingLeft":-766,"actions":640,"scroller":{"w":1086,"h":187.2},"rects":[{"id":"lyric","w":1086,"h":187.2,"left":-989},{"id":"player","w":1086,"h":187.2,"left":97}],"peek":1086,"gap":0,"heightEqual":true,"scrollLeft":1086,"counter":"2 / 2","panelIds":["lyric","player"]}
+[PASS] 1280 snapped panel 2 — player

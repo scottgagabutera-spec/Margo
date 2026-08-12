@@ -3,34 +3,38 @@
     "w": 390,
     "h": 844
   },
+  "main": 390,
+  "reading": 324,
+  "readingLeft": -291,
+  "actions": 324,
   "scroller": {
-    "w": 308,
+    "w": 324,
     "h": 226
   },
   "rects": [
     {
       "id": "lyric",
-      "w": 308,
+      "w": 324,
       "h": 226,
-      "left": -267
+      "left": -291
     },
     {
       "id": "player",
-      "w": 308,
+      "w": 324,
       "h": 226,
-      "left": 41
+      "left": 33
     },
     {
       "id": "links",
-      "w": 308,
+      "w": 324,
       "h": 226,
-      "left": 349
+      "left": 357
     }
   ],
-  "peek": 308,
+  "peek": 324,
   "gap": 0,
   "heightEqual": true,
-  "scrollLeft": 308,
+  "scrollLeft": 324,
   "counter": "2 / 3",
   "panelIds": [
     "lyric",

@@ -1,0 +1,37 @@
+{
+  "viewport": {
+    "w": 1280,
+    "h": 800
+  },
+  "main": 1152,
+  "reading": 640,
+  "readingLeft": -766,
+  "actions": 640,
+  "scroller": {
+    "w": 1086,
+    "h": 152
+  },
+  "rects": [
+    {
+      "id": "lyric",
+      "w": 1086,
+      "h": 152,
+      "left": -989
+    },
+    {
+      "id": "links",
+      "w": 1086,
+      "h": 152,
+      "left": 97
+    }
+  ],
+  "peek": 1086,
+  "gap": 0,
+  "heightEqual": true,
+  "scrollLeft": 1086,
+  "counter": "2 / 2",
+  "panelIds": [
+    "lyric",
+    "links"
+  ]
+}

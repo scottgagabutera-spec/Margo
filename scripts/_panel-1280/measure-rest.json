@@ -1,35 +1,35 @@
 {
   "viewport": {
-    "w": 390,
-    "h": 844
+    "w": 1280,
+    "h": 800
   },
-  "main": 390,
-  "reading": 324,
-  "readingLeft": -291,
-  "actions": 324,
+  "main": 1152,
+  "reading": 640,
+  "readingLeft": 320,
+  "actions": 640,
   "scroller": {
-    "w": 324,
+    "w": 1086,
     "h": 187.2
   },
   "rects": [
     {
       "id": "lyric",
-      "w": 324,
+      "w": 1086,
       "h": 187.2,
-      "left": -291
+      "left": 97
     },
     {
       "id": "player",
-      "w": 324,
+      "w": 1086,
       "h": 187.2,
-      "left": 33
+      "left": 1183
     }
   ],
-  "peek": 324,
+  "peek": 0,
   "gap": 0,
   "heightEqual": true,
-  "scrollLeft": 324,
-  "counter": "2 / 2",
+  "scrollLeft": 0,
+  "counter": "1 / 2",
   "panelIds": [
     "lyric",
     "player"

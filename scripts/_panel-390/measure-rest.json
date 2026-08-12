@@ -3,22 +3,26 @@
     "w": 390,
     "h": 844
   },
+  "main": 390,
+  "reading": 324,
+  "readingLeft": 33,
+  "actions": 324,
   "scroller": {
-    "w": 308,
+    "w": 324,
     "h": 187.2
   },
   "rects": [
     {
       "id": "lyric",
-      "w": 308,
+      "w": 324,
       "h": 187.2,
-      "left": 41
+      "left": 33
     },
     {
       "id": "player",
-      "w": 308,
+      "w": 324,
       "h": 187.2,
-      "left": 349
+      "left": 357
     }
   ],
   "peek": 0,
