@@ -7,6 +7,7 @@ import { useNotifications } from '@/hooks/useNotifications'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { CompassIcon } from '@/components/icons'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
+import { hidesAppShell } from '@/lib/chrome-mode'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -17,12 +18,19 @@ export function MobileTabBar() {
   const engineState = useAudioEngine()
   const navRef = useRef<HTMLElement | null>(null)
 
+  const shellHidden = hidesAppShell(pathname)
+
   // Publish our real rendered height as a CSS var so anything else that
   // stacks above the bottom of the screen (e.g. MiniPlayer) can position
   // itself relative to us instead of guessing a fixed pixel value.
   // On desktop this bar is display:none, so offsetHeight is 0 and the
   // var naturally falls back to 0 — no separate desktop/mobile branching needed.
+  // Immersive/marketing modes hide the bar and publish 0.
   useLayoutEffect(() => {
+    if (shellHidden) {
+      document.documentElement.style.setProperty('--margo-tabbar-h', '0px')
+      return
+    }
     const el = navRef.current
     if (!el) return
     const setVar = () => {
@@ -32,7 +40,7 @@ export function MobileTabBar() {
     const ro = new ResizeObserver(setVar)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [shellHidden])
 
   const isOnFeed = pathname === '/feed'
   const isOnDiscover = pathname?.startsWith('/discover')
@@ -58,6 +66,8 @@ export function MobileTabBar() {
     fontFamily: font, fontSize: '0.6rem', fontWeight: 600,
     letterSpacing: '0.5px', textTransform: 'uppercase',
   }
+
+  if (shellHidden) return null
 
   return (
     <nav ref={navRef} className="margo-mobile-tabbar" style={{

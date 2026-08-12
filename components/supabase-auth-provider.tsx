@@ -260,11 +260,10 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, [rehydrate])
 
   const requireAuth = useCallback((): boolean => {
-    if (loading) return false
     if (user) return true
     setGateOpen(true)
     return false
-  }, [user, loading])
+  }, [user])
 
   return (
     <AuthGateContext.Provider value={{ user, loading, hasPasswordAuth, requireAuth, rehydrate }}>

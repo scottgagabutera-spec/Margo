@@ -12,7 +12,7 @@ import type { Echo } from '@/hooks/useEchoes'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeftIcon } from '@/components/icons'
+import { BackButton } from '@/components/back-button'
 
 const supabase = createClient()
 
@@ -113,18 +113,9 @@ export default function PostDetailPage() {
       padding: '24px 20px var(--margo-page-padding-bottom)',
       maxWidth: '640px', margin: '0 auto',
     }}>
-      <Link
-        href="/feed"
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: '8px',
-          minHeight: 'var(--margo-touch-min)',
-          fontFamily: font, fontSize: '0.75rem', color: 'var(--text-secondary)',
-          textDecoration: 'none', marginBottom: '16px',
-        }}
-      >
-        <ArrowLeftIcon size={16} color="var(--text-secondary)" />
-        Back
-      </Link>
+      <div style={{ marginBottom: '16px' }}>
+        <BackButton fallbackHref="/feed" />
+      </div>
 
       {loading && (
         <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-muted)' }}>

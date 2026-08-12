@@ -5,6 +5,7 @@ import { useSongs, Song } from '@/hooks/useSongs'
 import { useLyricMoments } from '@/hooks/useLyricMoments'
 import { CatalogGrid, CatalogSortOption } from '@/components/catalog-grid'
 import { SongCatalogCard } from '@/components/song-catalog-card'
+import { BackButton } from '@/components/back-button'
 
 // Same vibe vocabulary + palette used on /discover — kept here as a local
 // copy for now since the source isn't exported from app/discover/page.tsx.
@@ -114,6 +115,7 @@ export default function SongsCatalogPage() {
       extraFilters={<VibeFilterRow selected={vibe} onSelect={setVibe} />}
       emptyMessage="No songs yet."
       minCardWidth={160}
+      topContent={<BackButton fallbackHref="/discover" />}
       renderCard={song => (
         <SongCatalogCard
           song={song}
