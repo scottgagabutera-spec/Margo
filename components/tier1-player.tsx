@@ -15,6 +15,7 @@ export function Tier1Player({
   title = '',
   artist = '',
   artwork = null,
+  reserveLineSlot = false,
 }: {
   audioUrl: string
   songId: string | null
@@ -22,6 +23,8 @@ export function Tier1Player({
   title?: string
   artist?: string
   artwork?: string | null
+  /** Keep the current-line box mounted so the card height does not jump on play. */
+  reserveLineSlot?: boolean
 }) {
   const engineState = useAudioEngine()
   const { requireAuth } = useAuthGate()
@@ -106,7 +109,7 @@ export function Tier1Player({
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: currentLine ? '12px' : '0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: (playing || reserveLineSlot) ? '12px' : '0' }}>
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
@@ -153,17 +156,18 @@ export function Tier1Player({
         </div>
       </div>
 
-      {playing && (
+      {(playing || reserveLineSlot) && (
         <div style={{
-          minHeight: '32px', padding: '8px 12px', background: 'rgba(232,197,71,0.06)',
+          minHeight: '48px', padding: '8px 12px', background: 'rgba(232,197,71,0.06)',
           borderRadius: '8px', borderLeft: '2px solid var(--gold)', transition: 'all 200ms ease',
+          boxSizing: 'border-box', display: 'flex', alignItems: 'center',
         }}>
           <p style={{
             fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem',
             color: currentLine ? 'var(--gold)' : 'var(--text-muted)', lineHeight: 1.4, margin: 0,
             transition: 'color 200ms ease', display: 'flex', alignItems: 'center', gap: '6px',
           }}>
-            {currentLine ? currentLine.line : <MusicNoteIcon size={14} color="var(--text-muted)" />}
+            {playing && currentLine ? currentLine.line : <MusicNoteIcon size={14} color="var(--text-muted)" />}
           </p>
         </div>
       )}

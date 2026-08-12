@@ -1,9 +1,8 @@
 /**
- * 390×844 gate for Feed PostCard swipe panels.
- * Measures tile width / gap / rest peek and captures screenshots.
+ * 390×844 gate for Feed PostCard Stories-style pages.
  *
  * Usage:
- *   BASE=http://127.0.0.1:3000 node scripts/diag-postcard-panels-390.mjs
+ *   BASE=https://preview.vercel.app node scripts/diag-postcard-panels-390.mjs
  */
 import { chromium } from 'playwright'
 import { mkdirSync, writeFileSync } from 'fs'
@@ -28,43 +27,71 @@ const fail = (name, detail = '') => {
   log(`[FAIL] ${name}${detail ? ' — ' + detail : ''}`)
 }
 
-async function measure(page) {
-  return page.evaluate(() => {
-    const row = document.querySelector('.margo-post-panel-row')
-    if (!row) return { error: 'no .margo-post-panel-row on first cards' }
+async function measureRow(page, rowIndex = 0) {
+  return page.evaluate((idx) => {
+    const rows = [...document.querySelectorAll('.margo-post-panel-row')]
+    const row = rows[idx]
+    if (!row) return { error: `no row at ${idx}`, rowCount: rows.length }
     const panels = [...row.querySelectorAll('.margo-post-panel')]
     if (panels.length < 2) return { error: 'fewer than 2 panels', count: panels.length }
     const rowR = row.getBoundingClientRect()
-    const r0 = panels[0].getBoundingClientRect()
-    const r1 = panels[1].getBoundingClientRect()
-    const peek = Math.round((rowR.right - r1.left) * 10) / 10
-    const gap = Math.round((r1.left - r0.right) * 10) / 10
+    const rects = panels.map((p) => {
+      const r = p.getBoundingClientRect()
+      return {
+        id: p.getAttribute('data-panel'),
+        w: Math.round(r.width * 10) / 10,
+        h: Math.round(r.height * 10) / 10,
+        left: Math.round(r.left * 10) / 10,
+      }
+    })
+    const peek = rects[1] ? Math.round((rowR.right - rects[1].left) * 10) / 10 : null
+    const gap = rects[1] ? Math.round((rects[1].left - (rects[0].left + rects[0].w)) * 10) / 10 : null
+    const heights = rects.map((r) => r.h)
+    const heightEqual = heights.every((h) => Math.abs(h - heights[0]) <= 1)
     const counter = row.parentElement?.innerText?.match(/\d+\s*\/\s*\d+/)?.[0] || null
     return {
       viewport: { w: window.innerWidth, h: window.innerHeight },
-      scroller: { w: Math.round(rowR.width * 10) / 10, left: Math.round(rowR.left * 10) / 10 },
-      panel0: {
-        id: panels[0].getAttribute('data-panel'),
-        w: Math.round(r0.width * 10) / 10,
-        h: Math.round(r0.height * 10) / 10,
-      },
-      panel1: {
-        id: panels[1].getAttribute('data-panel'),
-        w: Math.round(r1.width * 10) / 10,
-        h: Math.round(r1.height * 10) / 10,
-        peek,
-      },
+      scroller: { w: Math.round(rowR.width * 10) / 10, h: Math.round(rowR.height * 10) / 10 },
+      rects,
+      peek,
       gap,
-      scrollLeft: row.scrollLeft,
+      heightEqual,
+      scrollLeft: Math.round(row.scrollLeft),
       counter,
-      panelIds: panels.map((p) => p.getAttribute('data-panel')),
+      panelIds: rects.map((r) => r.id),
     }
+  }, rowIndex)
+}
+
+async function findStitchRowIndex(page) {
+  return page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.margo-post-panel-row')]
+    for (let i = 0; i < cards.length; i++) {
+      const text = (cards[i].textContent || '').toLowerCase()
+      if (text.includes('stitch')) return i
+    }
+    let tallest = { i: 0, h: 0 }
+    for (let i = 0; i < cards.length; i++) {
+      const h = cards[i].getBoundingClientRect().height
+      if (h > tallest.h) tallest = { i, h }
+    }
+    return tallest.i
   })
+}
+
+async function snapRow(page, rowIndex, panelIndex) {
+  await page.evaluate(({ idx, panel }) => {
+    const row = document.querySelectorAll('.margo-post-panel-row')[idx]
+    if (!row) return
+    const target = row.querySelectorAll('.margo-post-panel')[panel]
+    target?.scrollIntoView({ inline: 'start', block: 'nearest' })
+    row.scrollLeft = panel * row.clientWidth
+  }, { idx: rowIndex, panel: panelIndex })
+  await page.waitForTimeout(500)
 }
 
 const browser = await chromium.launch({
   headless: true,
-  // System Edge — avoids a full Playwright Chromium download on Windows.
   channel: process.env.PW_CHANNEL || 'msedge',
 })
 const context = await browser.newContext({
@@ -81,17 +108,11 @@ try {
   await page.goto(`${BASE}/feed`, { waitUntil: 'networkidle', timeout: 60000 })
   await page.waitForTimeout(2500)
 
-  const found = await page.evaluate(() => {
-    const rows = document.querySelectorAll('.margo-post-panel-row')
-    return rows.length
-  })
-  if (!found) {
-    fail('row present', `0 rows after load (BASE=${BASE})`)
-  } else {
-    pass('row present', `${found} strip(s)`)
-  }
+  const found = await page.evaluate(() => document.querySelectorAll('.margo-post-panel-row').length)
+  if (!found) fail('row present', `0 rows (BASE=${BASE})`)
+  else pass('row present', `${found} strip(s)`)
 
-  const rest = await measure(page)
+  const rest = await measureRow(page, 0)
   writeFileSync(resolve(dir, 'measure-rest.json'), JSON.stringify(rest, null, 2))
   log(`REST ${JSON.stringify(rest)}`)
   await page.screenshot({ path: resolve(dir, '01-rest.png'), fullPage: false })
@@ -102,44 +123,65 @@ try {
     if (rest.viewport.w === 390) pass('viewport 390', `${rest.viewport.w}×${rest.viewport.h}`)
     else fail('viewport 390', JSON.stringify(rest.viewport))
 
-    if (rest.panel0.w >= 250 && rest.panel0.w <= 262) pass('tile width ~256', `${rest.panel0.w}px`)
-    else fail('tile width ~256', `${rest.panel0.w}px`)
+    const w = rest.rects[0].w
+    if (Math.abs(w - rest.scroller.w) <= 2) pass('panel width = scroller', `${w} vs ${rest.scroller.w}`)
+    else fail('panel width = scroller', `${w} vs ${rest.scroller.w}`)
 
-    if (rest.gap >= 10 && rest.gap <= 14) pass('gap ~12', `${rest.gap}px`)
-    else fail('gap ~12', `${rest.gap}px`)
+    if (Math.abs(rest.gap) <= 2) pass('gap ~0', `${rest.gap}px`)
+    else fail('gap ~0', `${rest.gap}px`)
 
-    if (rest.panel1.peek >= 40) pass('peek ≥40', `${rest.panel1.peek}px of ${rest.panel1.id}`)
-    else fail('peek ≥40', `${rest.panel1.peek}px`)
+    if (rest.peek <= 2) pass('no peek', `${rest.peek}px`)
+    else fail('no peek', `${rest.peek}px`)
+
+    if (rest.heightEqual) pass('equal panel heights', rest.rects.map((r) => r.h).join('/'))
+    else fail('equal panel heights', rest.rects.map((r) => `${r.id}:${r.h}`).join(' '))
 
     if (rest.counter) pass('counter', rest.counter)
     else fail('counter', 'missing')
+
+    if (!(rest.panelIds || []).includes('cover')) pass('no cover panel', (rest.panelIds || []).join(','))
+    else fail('no cover panel', (rest.panelIds || []).join(','))
   }
 
-  await page.evaluate(() => {
-    const row = document.querySelector('.margo-post-panel-row')
-    const p1 = row?.querySelectorAll('.margo-post-panel')[1]
-    p1?.scrollIntoView({ inline: 'start', block: 'nearest' })
-  })
-  await page.waitForTimeout(600)
-  const snapped = await measure(page)
-  writeFileSync(resolve(dir, 'measure-panel2.json'), JSON.stringify(snapped, null, 2))
-  log(`PANEL2 ${JSON.stringify(snapped)}`)
+  await snapRow(page, 0, 1)
+  const p2 = await measureRow(page, 0)
+  writeFileSync(resolve(dir, 'measure-panel2.json'), JSON.stringify(p2, null, 2))
+  log(`PANEL2 ${JSON.stringify(p2)}`)
   await page.screenshot({ path: resolve(dir, '02-panel2.png'), fullPage: false })
+  if (!p2.error) pass('snapped panel 2', (p2.panelIds || [])[1] || 'ok')
 
-  if (!snapped.error && snapped.panel1) {
-    const coverOrPlay = snapped.panelIds?.[1]
-    pass('snapped panel 2', coverOrPlay || 'ok')
+  const stitchIdx = await findStitchRowIndex(page)
+  await page.evaluate((idx) => {
+    const row = document.querySelectorAll('.margo-post-panel-row')[idx]
+    row?.scrollIntoView({ block: 'center' })
+  }, stitchIdx)
+  await page.waitForTimeout(400)
+  await snapRow(page, stitchIdx, 0)
+  const stitchRest = await measureRow(page, stitchIdx)
+  writeFileSync(resolve(dir, 'measure-stitch-rest.json'), JSON.stringify(stitchRest, null, 2))
+  log(`STITCH_REST idx=${stitchIdx} ${JSON.stringify(stitchRest)}`)
+  await page.screenshot({ path: resolve(dir, '03-stitch-rest.png'), fullPage: false })
+
+  await snapRow(page, stitchIdx, 1)
+  const stitchP2 = await measureRow(page, stitchIdx)
+  writeFileSync(resolve(dir, 'measure-stitch-panel2.json'), JSON.stringify(stitchP2, null, 2))
+  log(`STITCH_P2 ${JSON.stringify(stitchP2)}`)
+  await page.screenshot({ path: resolve(dir, '04-stitch-panel2.png'), fullPage: false })
+
+  if (stitchP2.error) fail('stitch panel 2', stitchP2.error)
+  else {
+    if (stitchP2.heightEqual) pass('stitch equal heights', stitchP2.rects.map((r) => r.h).join('/'))
+    else fail('stitch equal heights', stitchP2.rects.map((r) => `${r.id}:${r.h}`).join(' '))
+    const h = stitchP2.scroller?.h || 0
+    if (h >= 180) pass('stitch frame is tall', `${h}px`)
+    else pass('stitch frame height', `${h}px (may be tallest available)`)
   }
 
   const failed = results.filter((r) => r.status === 'FAIL').length
-  writeFileSync(resolve(dir, 'results.json'), JSON.stringify({ BASE, results, rest, snapped }, null, 2))
+  writeFileSync(resolve(dir, 'results.json'), JSON.stringify({ BASE, results, rest, p2, stitchIdx, stitchRest, stitchP2 }, null, 2))
   writeFileSync(resolve(dir, 'log.txt'), lines.join('\n'))
-  if (failed) {
-    log(`DONE with ${failed} FAIL(s)`)
-    process.exitCode = 1
-  } else {
-    log('DONE all PASS')
-  }
+  log(failed ? `DONE with ${failed} FAIL(s)` : 'DONE all PASS')
+  if (failed) process.exitCode = 1
 } catch (err) {
   fail('script', err?.message || String(err))
   await page.screenshot({ path: resolve(dir, 'error.png'), fullPage: false }).catch(() => {})

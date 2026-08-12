@@ -1,6 +1,6 @@
 'use client'
 
-import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import type { Post } from '@/hooks/usePosts'
 import { PostThumbnail } from '@/components/post-thumbnail'
@@ -12,107 +12,117 @@ import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 type PanelSpec = {
   id: string
-  label: string
   node: ReactNode
 }
 
-/** Fixed tile — Discover Moments is 240px; +16px for lyric breathing room. */
-export const POST_PANEL_WIDTH_PX = 256
-export const POST_PANEL_GAP_PX = 12
-
 /**
- * Experimental N-panel swipe strip for feed PostCards.
- * Geometry matches Discover: fixed-width tiles + 12px gap; peek is leftover
- * scroller space, not a calc(100% - peek) formula.
+ * Stories-style full-width pages on Feed PostCards.
+ * Height is CSS grid max (one row); peek is none; dots are the cue.
  */
 export function PostCardPanels({
   post,
+  actions,
   children,
 }: {
   post: Post
-  /** Lyric panel body (PostMomentBody) — default view. */
+  /** Action row — Lyric panel only. */
+  actions: ReactNode
   children: ReactNode
 }) {
   const { requireAuth } = useAuthGate()
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const [active, setActive] = useState(0)
 
-  const coverSrc = post.youtubeMeta?.thumbnail || post.knowledge?.artwork || null
   const audioUrl = post.audioUrl || null
+  const coverSrc = post.youtubeMeta?.thumbnail || post.knowledge?.artwork || null
   const linkItems = useMemo(
     () => collectStreamingLinkItems(post.streamingLinks, post.youtubeMeta?.youtubeUrl),
     [post.streamingLinks, post.youtubeMeta?.youtubeUrl],
   )
 
-  const lyricNode = isValidElement(children)
-    ? cloneElement(children as React.ReactElement<{ clampLines?: number }>, { clampLines: 4 })
-    : children
-
   const panels: PanelSpec[] = useMemo(() => {
     const list: PanelSpec[] = [
-      { id: 'lyric', label: 'Lyric', node: lyricNode },
-    ]
-
-    if (coverSrc) {
-      list.push({
-        id: 'cover',
-        label: 'Cover',
+      {
+        id: 'lyric',
         node: (
-          <div style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-            <PostThumbnail
-              youtubeThumbnail={post.youtubeMeta?.thumbnail}
-              artwork={post.knowledge?.artwork}
-              alt=""
-              loading="lazy"
-              style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }}
-            />
+          <div>
+            {children}
+            {actions}
           </div>
         ),
-      })
-    }
+      },
+    ]
 
     if (audioUrl) {
       list.push({
         id: 'player',
-        label: 'Play',
         node: (
-          <div>
-            <Tier1Player
-              audioUrl={audioUrl}
-              songId={post.songId || null}
-              postText={post.text}
-              title={post.knowledge?.song || ''}
-              artist={post.knowledge?.artist || ''}
-              artwork={post.knowledge?.artwork ?? null}
-            />
-            {post.songId ? (
-              <Link
-                href={`/song/${post.songId}`}
-                aria-label="Full Karaoke"
-                onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  marginTop: '12px',
-                  minHeight: 'var(--margo-touch-min)',
-                  boxSizing: 'border-box',
-                  fontFamily: LYRIC_FONT,
-                  fontSize: '0.55rem',
-                  fontWeight: 700,
-                  color: 'var(--gold)',
-                  letterSpacing: '1px',
-                  textTransform: 'uppercase',
-                  textDecoration: 'none',
-                  padding: '0 14px',
-                  border: '1px solid var(--gold-border)',
-                  borderRadius: '50px',
-                }}
-              >
-                Full Karaoke
-                <ChevronRightIcon size={12} color="var(--gold)" />
-              </Link>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            gap: '12px',
+            flex: 1,
+            minHeight: 0,
+            width: '100%',
+          }}>
+            {coverSrc ? (
+              <div style={{
+                flex: '1 1 auto',
+                minHeight: 0,
+                maxHeight: '180px',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                border: '1px solid var(--border)',
+              }}>
+                <PostThumbnail
+                  youtubeThumbnail={post.youtubeMeta?.thumbnail}
+                  artwork={post.knowledge?.artwork}
+                  alt=""
+                  loading="lazy"
+                  style={{ width: '100%', height: '100%', minHeight: '80px', objectFit: 'cover', display: 'block' }}
+                />
+              </div>
             ) : null}
+            <div style={{ flex: '0 0 auto' }}>
+              <Tier1Player
+                audioUrl={audioUrl}
+                songId={post.songId || null}
+                postText={post.text}
+                title={post.knowledge?.song || ''}
+                artist={post.knowledge?.artist || ''}
+                artwork={post.knowledge?.artwork ?? null}
+                reserveLineSlot
+              />
+              {post.songId ? (
+                <Link
+                  href={`/song/${post.songId}`}
+                  aria-label="Full Karaoke"
+                  onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginTop: '12px',
+                    minHeight: 'var(--margo-touch-min)',
+                    boxSizing: 'border-box',
+                    fontFamily: LYRIC_FONT,
+                    fontSize: '0.55rem',
+                    fontWeight: 700,
+                    color: 'var(--gold)',
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase',
+                    textDecoration: 'none',
+                    padding: '0 14px',
+                    border: '1px solid var(--gold-border)',
+                    borderRadius: '50px',
+                  }}
+                >
+                  Full Karaoke
+                  <ChevronRightIcon size={12} color="var(--gold)" />
+                </Link>
+              ) : null}
+            </div>
           </div>
         ),
       })
@@ -121,9 +131,8 @@ export function PostCardPanels({
     if (linkItems.length > 0) {
       list.push({
         id: 'links',
-        label: 'Listen',
         node: (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px', flex: 1 }}>
             {linkItems.map((item) => (
               <a
                 key={item.id + item.href}
@@ -156,16 +165,16 @@ export function PostCardPanels({
     }
 
     return list
-  }, [audioUrl, coverSrc, linkItems, lyricNode, post.knowledge?.artist, post.knowledge?.artwork, post.knowledge?.song, post.songId, post.text, post.youtubeMeta?.thumbnail, requireAuth])
-
-  const stride = POST_PANEL_WIDTH_PX + POST_PANEL_GAP_PX
+  }, [actions, audioUrl, children, coverSrc, linkItems, post.knowledge?.artist, post.knowledge?.artwork, post.knowledge?.song, post.songId, post.text, post.youtubeMeta?.thumbnail, requireAuth])
 
   const onScroll = useCallback(() => {
     const el = scrollerRef.current
     if (!el || panels.length <= 1) return
-    const idx = Math.max(0, Math.min(panels.length - 1, Math.round(el.scrollLeft / stride)))
+    const w = el.clientWidth
+    if (w <= 0) return
+    const idx = Math.max(0, Math.min(panels.length - 1, Math.round(el.scrollLeft / w)))
     setActive(idx)
-  }, [panels.length, stride])
+  }, [panels.length])
 
   useEffect(() => {
     setActive(0)
@@ -174,11 +183,16 @@ export function PostCardPanels({
   }, [post.id, panels.length])
 
   if (panels.length <= 1) {
-    return <>{children}</>
+    return (
+      <>
+        {children}
+        {actions}
+      </>
+    )
   }
 
   return (
-    <div data-no-card-nav style={{ marginBottom: '4px' }}>
+    <div data-no-card-nav>
       <div
         ref={scrollerRef}
         className="row-scroll margo-post-panel-row"

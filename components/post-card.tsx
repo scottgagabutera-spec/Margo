@@ -451,6 +451,195 @@ export function PostCard({
     router.push('/post/' + post.id)
   }
 
+  const actionRow = (
+    <div data-no-card-nav>
+    <div className="margo-feed-actions">
+      <button
+        type="button"
+        className="margo-feed-action"
+        aria-label={resonated ? 'Remove resonate' : 'Resonate'}
+        onClick={() => onResonate(post.id)}
+        style={{
+          color: resonated ? 'var(--gold)' : 'var(--text-secondary)',
+          transition: 'color 150ms ease',
+        }}
+      >
+        <span className="margo-feed-action__icon-wrap">
+          {resonated
+            ? <HeartFilledIcon size={18} color="var(--gold)" />
+            : <HeartIcon size={18} color="var(--text-secondary)" />
+          }
+          {resonateCount > 0 ? (
+            <span className="margo-feed-action__badge">{resonateCount}</span>
+          ) : null}
+        </span>
+        <span className="margo-feed-action__label">Resonate</span>
+      </button>
+
+      <Link
+        href={`/lyric-back?postId=${post.id}`}
+        className="margo-feed-action"
+        aria-label="Lyric Back"
+        style={{
+          color: 'var(--text-secondary)',
+          transition: 'color 150ms ease',
+        }}
+      >
+        <span className="margo-feed-action__icon-wrap">
+          <LyricBackIcon size={18} color="var(--text-secondary)" />
+          {echoCount > 0 ? (
+            <span className="margo-feed-action__badge">{echoCount}</span>
+          ) : null}
+        </span>
+        <span className="margo-feed-action__label">Lyric Back</span>
+      </Link>
+
+      <button
+        type="button"
+        className="margo-feed-action"
+        aria-label="Export lyric card"
+        onClick={() => onExport(post)}
+        style={{
+          color: 'var(--text-secondary)', transition: 'color 150ms ease',
+        }}
+      >
+        <span className="margo-feed-action__icon-wrap">
+          <CardIcon size={18} color="var(--text-secondary)" />
+        </span>
+        <span className="margo-feed-action__label">Card</span>
+      </button>
+
+      <div style={{ position: 'relative', flex: '1 1 0', minWidth: 0 }}>
+        <button
+          type="button"
+          className="margo-feed-action"
+          aria-label={replayed ? 'Undo Replay' : 'Replay'}
+          aria-expanded={replayMenuOpen}
+          onClick={() => {
+            setReplayMenuOpen(o => !o)
+            setQuoteOpen(false)
+            setQuoteText('')
+          }}
+          style={{
+            width: '100%',
+            color: replayed ? 'var(--gold)' : 'var(--text-secondary)',
+            transition: 'color 150ms ease',
+          }}
+        >
+          <span className="margo-feed-action__icon-wrap">
+            <ReplayIcon size={18} color={replayed ? 'var(--gold)' : 'var(--text-secondary)'} />
+            {replayCount > 0 ? (
+              <span className="margo-feed-action__badge">{replayCount}</span>
+            ) : null}
+          </span>
+          <span className="margo-feed-action__label">Replay</span>
+        </button>
+        {replayMenuOpen && !quoteOpen && (
+          <div
+            role="menu"
+            style={{
+              position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '6px', zIndex: 20,
+              minWidth: '160px', background: 'var(--bg)',
+              border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
+              padding: '6px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                if (!requireAuth()) return
+                onReplay?.(post.id)
+                setReplayMenuOpen(false)
+              }}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
+                color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                cursor: 'pointer', borderRadius: '8px',
+              }}
+            >{replayed ? 'Undo Replay' : 'Replay'}</button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                if (!requireAuth()) return
+                setQuoteOpen(true)
+              }}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
+                color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                cursor: 'pointer', borderRadius: '8px',
+              }}
+            >Add your take</button>
+          </div>
+        )}
+        {replayMenuOpen && quoteOpen && (
+          <div
+            style={{
+              position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '6px', zIndex: 20,
+              width: '220px', background: 'var(--bg)',
+              border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
+              padding: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            }}
+          >
+            <textarea
+              value={quoteText}
+              onChange={(e) => setQuoteText(e.target.value)}
+              placeholder="Add your take…"
+              rows={3}
+              style={{
+                width: '100%', boxSizing: 'border-box', resize: 'vertical',
+                fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                color: 'var(--text)', background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
+                padding: '10px', outline: 'none', marginBottom: '8px',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const text = quoteText.trim()
+                  if (!text) return
+                  if (!requireAuth()) return
+                  onQuoteReplay?.(post.id, text)
+                  setReplayMenuOpen(false)
+                  setQuoteOpen(false)
+                  setQuoteText('')
+                }}
+                style={{
+                  flex: 1, minHeight: '44px', padding: '0 12px',
+                  background: 'var(--gold)', border: 'none', borderRadius: '8px',
+                  color: 'var(--bg)', fontFamily: 'var(--font-lora), serif',
+                  fontSize: '0.75rem', fontWeight: 700, letterSpacing: '1px',
+                  textTransform: 'uppercase', cursor: 'pointer',
+                }}
+              >Submit</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuoteOpen(false)
+                  setQuoteText('')
+                  setReplayMenuOpen(false)
+                }}
+                style={{
+                  flex: 1, minHeight: '44px', padding: '0 12px',
+                  background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
+                  color: 'var(--text-muted)', fontFamily: 'var(--font-lora), serif',
+                  fontSize: '0.75rem', cursor: 'pointer',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+
+    </div>
+  )
+
   return (
     <div
       ref={cardRef}
@@ -770,7 +959,7 @@ export function PostCard({
       )}
 
       {usePanels ? (
-        <PostCardPanels post={post}>
+        <PostCardPanels post={post} actions={actionRow}>
           <PostMomentBody post={post} isCompact={isCompact} />
         </PostCardPanels>
       ) : (
@@ -828,192 +1017,7 @@ export function PostCard({
         }}
       />
 
-      <div data-no-card-nav>
-      <div className="margo-feed-actions">
-        <button
-          type="button"
-          className="margo-feed-action"
-          aria-label={resonated ? 'Remove resonate' : 'Resonate'}
-          onClick={() => onResonate(post.id)}
-          style={{
-            color: resonated ? 'var(--gold)' : 'var(--text-secondary)',
-            transition: 'color 150ms ease',
-          }}
-        >
-          <span className="margo-feed-action__icon-wrap">
-            {resonated
-              ? <HeartFilledIcon size={18} color="var(--gold)" />
-              : <HeartIcon size={18} color="var(--text-secondary)" />
-            }
-            {resonateCount > 0 ? (
-              <span className="margo-feed-action__badge">{resonateCount}</span>
-            ) : null}
-          </span>
-          <span className="margo-feed-action__label">Resonate</span>
-        </button>
-
-        <Link
-          href={`/lyric-back?postId=${post.id}`}
-          className="margo-feed-action"
-          aria-label="Lyric Back"
-          style={{
-            color: 'var(--text-secondary)',
-            transition: 'color 150ms ease',
-          }}
-        >
-          <span className="margo-feed-action__icon-wrap">
-            <LyricBackIcon size={18} color="var(--text-secondary)" />
-            {echoCount > 0 ? (
-              <span className="margo-feed-action__badge">{echoCount}</span>
-            ) : null}
-          </span>
-          <span className="margo-feed-action__label">Lyric Back</span>
-        </Link>
-
-        <button
-          type="button"
-          className="margo-feed-action"
-          aria-label="Export lyric card"
-          onClick={() => onExport(post)}
-          style={{
-            color: 'var(--text-secondary)', transition: 'color 150ms ease',
-          }}
-        >
-          <span className="margo-feed-action__icon-wrap">
-            <CardIcon size={18} color="var(--text-secondary)" />
-          </span>
-          <span className="margo-feed-action__label">Card</span>
-        </button>
-
-        <div style={{ position: 'relative', flex: '1 1 0', minWidth: 0 }}>
-          <button
-            type="button"
-            className="margo-feed-action"
-            aria-label={replayed ? 'Undo Replay' : 'Replay'}
-            aria-expanded={replayMenuOpen}
-            onClick={() => {
-              setReplayMenuOpen(o => !o)
-              setQuoteOpen(false)
-              setQuoteText('')
-            }}
-            style={{
-              width: '100%',
-              color: replayed ? 'var(--gold)' : 'var(--text-secondary)',
-              transition: 'color 150ms ease',
-            }}
-          >
-            <span className="margo-feed-action__icon-wrap">
-              <ReplayIcon size={18} color={replayed ? 'var(--gold)' : 'var(--text-secondary)'} />
-              {replayCount > 0 ? (
-                <span className="margo-feed-action__badge">{replayCount}</span>
-              ) : null}
-            </span>
-            <span className="margo-feed-action__label">Replay</span>
-          </button>
-          {replayMenuOpen && !quoteOpen && (
-            <div
-              role="menu"
-              style={{
-                position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '6px', zIndex: 20,
-                minWidth: '160px', background: 'var(--bg)',
-                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
-                padding: '6px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-              }}
-            >
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  if (!requireAuth()) return
-                  onReplay?.(post.id)
-                  setReplayMenuOpen(false)
-                }}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
-                  color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
-                  cursor: 'pointer', borderRadius: '8px',
-                }}
-              >{replayed ? 'Undo Replay' : 'Replay'}</button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  if (!requireAuth()) return
-                  setQuoteOpen(true)
-                }}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
-                  color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
-                  cursor: 'pointer', borderRadius: '8px',
-                }}
-              >Add your take</button>
-            </div>
-          )}
-          {replayMenuOpen && quoteOpen && (
-            <div
-              style={{
-                position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '6px', zIndex: 20,
-                width: '220px', background: 'var(--bg)',
-                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
-                padding: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-              }}
-            >
-              <textarea
-                value={quoteText}
-                onChange={(e) => setQuoteText(e.target.value)}
-                placeholder="Add your take…"
-                rows={3}
-                style={{
-                  width: '100%', boxSizing: 'border-box', resize: 'vertical',
-                  fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
-                  color: 'var(--text)', background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
-                  padding: '10px', outline: 'none', marginBottom: '8px',
-                }}
-              />
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const text = quoteText.trim()
-                    if (!text) return
-                    if (!requireAuth()) return
-                    onQuoteReplay?.(post.id, text)
-                    setReplayMenuOpen(false)
-                    setQuoteOpen(false)
-                    setQuoteText('')
-                  }}
-                  style={{
-                    flex: 1, minHeight: '44px', padding: '0 12px',
-                    background: 'var(--gold)', border: 'none', borderRadius: '8px',
-                    color: 'var(--bg)', fontFamily: 'var(--font-lora), serif',
-                    fontSize: '0.75rem', fontWeight: 700, letterSpacing: '1px',
-                    textTransform: 'uppercase', cursor: 'pointer',
-                  }}
-                >Submit</button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuoteOpen(false)
-                    setQuoteText('')
-                    setReplayMenuOpen(false)
-                  }}
-                  style={{
-                    flex: 1, minHeight: '44px', padding: '0 12px',
-                    background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
-                    color: 'var(--text-muted)', fontFamily: 'var(--font-lora), serif',
-                    fontSize: '0.75rem', cursor: 'pointer',
-                  }}
-                >Cancel</button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      </div>
+      {!usePanels ? actionRow : null}
 
       {!usePanels && isTier1 && !isCompact && (
         <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>

@@ -509,24 +509,33 @@ html, body {
   }
 }
 
-/* Experimental PostCard N-panel strip — Discover geometry: fixed tiles + gap. */
+/* Stories-style PostCard pages: full-width snap, row height = max panel. */
 .margo-post-panel-row.row-scroll {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  column-gap: 0;
   overflow-x: auto;
-  scroll-snap-type: x proximity;
-  padding-bottom: 4px;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.margo-post-panel-row.row-scroll::-webkit-scrollbar {
+  display: none;
 }
 .margo-post-panel {
-  flex: 0 0 256px;
-  width: 256px;
-  max-width: 256px;
-  box-sizing: border-box;
   scroll-snap-align: start;
-  padding: 16px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.025);
+  scroll-snap-stop: always;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+.margo-post-panel[data-panel='lyric'] {
+  justify-content: flex-start;
+}
+.margo-post-panel[data-panel='player'],
+.margo-post-panel[data-panel='links'] {
+  justify-content: center;
 }
