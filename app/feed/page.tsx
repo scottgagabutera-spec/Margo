@@ -514,8 +514,8 @@ export default function FeedPage() {
           (and by extension the feed content below it) drift under the
           nav. Now reads the same measured value MargoNav publishes,
           so this can't drift out of sync again. */}
-      <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 56px) 20px 0' }}>
-        <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+      <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 56px) 16px 0' }}>
+        <div style={{ maxWidth: '72rem', margin: '0 auto' }}>
           <div style={{ paddingBottom: hasActiveFilter ? '10px' : '20px' }}>
             <MargoSearchInput
               value={searchQuery}
@@ -557,7 +557,7 @@ export default function FeedPage() {
         </div>
       </div>
 
-      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px var(--margo-page-padding-bottom)' }}>
+      <main style={{ position: 'relative', zIndex: 5, width: '100%', maxWidth: '72rem', margin: '0 auto', boxSizing: 'border-box', padding: '32px 16px var(--margo-page-padding-bottom)' }}>
         {loading && <FeedPostSkeletonList count={4} />}
 
         {!loading && feedItems.length === 0 && !(searchQuery.trim() && people.length > 0) && (

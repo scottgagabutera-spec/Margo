@@ -963,7 +963,7 @@ export function PostCard({
           <PostMomentBody post={post} isCompact={isCompact} />
         </PostCardPanels>
       ) : (
-        <>
+        <div className={variant === 'feed' ? 'margo-feed-reading' : undefined}>
           <PostMomentBody post={post} isCompact={isCompact} />
 
           {/* Layout A: external/static cover after lyric when no playable catalog audio on the card mirror. */}
@@ -990,10 +990,11 @@ export function PostCard({
               </div>
             </Link>
           )}
-        </>
+        </div>
       )}
 
       {/* Suggested Lyric Back — on-demand underline; fetches only on tap. */}
+      <div className={variant === 'feed' ? 'margo-feed-reading' : undefined}>
       <PostCardSuggestedReply
         postId={post.id}
         onAcceptSuggested={(s) => {
@@ -1016,8 +1017,11 @@ export function PostCard({
           router.push(`/lyric-back?postId=${encodeURIComponent(post.id)}&catalogOnly=1`)
         }}
       />
+      </div>
 
-      {!usePanels ? actionRow : null}
+      {!usePanels ? (
+        variant === 'feed' ? <div className="margo-feed-reading">{actionRow}</div> : actionRow
+      ) : null}
 
       {!usePanels && isTier1 && !isCompact && (
         <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(232,197,71,0.12)' }}>

@@ -45,7 +45,7 @@ export function PostCardPanels({
       {
         id: 'lyric',
         node: (
-          <div>
+          <div className="margo-feed-reading">
             {children}
             {actions}
           </div>

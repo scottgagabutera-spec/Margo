@@ -49,8 +49,17 @@ async function measureRow(page, rowIndex = 0) {
     const heights = rects.map((r) => r.h)
     const heightEqual = heights.every((h) => Math.abs(h - heights[0]) <= 1)
     const counter = row.parentElement?.innerText?.match(/\d+\s*\/\s*\d+/)?.[0] || null
+    const main = document.querySelector('main')
+    const reading = row.querySelector('.margo-feed-reading')
+    const actions = row.querySelector('.margo-feed-actions')
+    const readingR = reading?.getBoundingClientRect()
+    const actionsR = actions?.getBoundingClientRect()
     return {
       viewport: { w: window.innerWidth, h: window.innerHeight },
+      main: main ? Math.round(main.getBoundingClientRect().width * 10) / 10 : null,
+      reading: readingR ? Math.round(readingR.width * 10) / 10 : null,
+      readingLeft: readingR ? Math.round(readingR.left * 10) / 10 : null,
+      actions: actionsR ? Math.round(actionsR.width * 10) / 10 : null,
       scroller: { w: Math.round(rowR.width * 10) / 10, h: Math.round(rowR.height * 10) / 10 },
       rects,
       peek,
@@ -78,6 +87,16 @@ async function findStitchRowIndex(page) {
     }
     return tallest.i
   })
+}
+
+async function findRowWithPanel(page, panelId) {
+  return page.evaluate((id) => {
+    const rows = [...document.querySelectorAll('.margo-post-panel-row')]
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].querySelector(`[data-panel="${id}"]`)) return i
+    }
+    return -1
+  }, panelId)
 }
 
 async function snapRow(page, rowIndex, panelIndex) {
@@ -123,6 +142,8 @@ try {
   } else {
     if (rest.viewport.w === 390) pass('viewport 390', `${rest.viewport.w}×${rest.viewport.h}`)
     else fail('viewport 390', JSON.stringify(rest.viewport))
+    if (rest.main >= 350 && rest.main <= 390) pass('390 main ~358', `${rest.main}px`)
+    else fail('390 main ~358', `${rest.main}px`)
 
     const w = rest.rects[0].w
     if (Math.abs(w - rest.scroller.w) <= 2) pass('panel width = scroller', `${w} vs ${rest.scroller.w}`)
@@ -178,8 +199,123 @@ try {
     else pass('stitch frame height', `${h}px (may be tallest available)`)
   }
 
+  const mobilePlayerIdx = await findRowWithPanel(page, 'player')
+  const mobileLinksIdx = await findRowWithPanel(page, 'links')
+  log(`390 playerIdx=${mobilePlayerIdx} linksIdx=${mobileLinksIdx}`)
+  if (mobilePlayerIdx >= 0) {
+    await page.evaluate((idx) => {
+      document.querySelectorAll('.margo-post-panel-row')[idx]?.scrollIntoView({ block: 'center' })
+    }, mobilePlayerIdx)
+    await page.waitForTimeout(300)
+    await snapRow(page, mobilePlayerIdx, 1)
+    await page.screenshot({ path: resolve(dir, '05-tier1-player.png'), fullPage: false })
+    const mp = await measureRow(page, mobilePlayerIdx)
+    if ((mp.panelIds || [])[1] === 'player') pass('390 Tier1 player swipe', `idx=${mobilePlayerIdx}`)
+    else fail('390 Tier1 player swipe', JSON.stringify(mp.panelIds))
+  } else {
+    fail('390 Tier1 player swipe', 'no player panel on feed')
+  }
+  if (mobileLinksIdx >= 0) {
+    await page.evaluate((idx) => {
+      document.querySelectorAll('.margo-post-panel-row')[idx]?.scrollIntoView({ block: 'center' })
+    }, mobileLinksIdx)
+    await page.waitForTimeout(300)
+    await snapRow(page, mobileLinksIdx, 1)
+    await page.screenshot({ path: resolve(dir, '06-external-links.png'), fullPage: false })
+    const ml = await measureRow(page, mobileLinksIdx)
+    if ((ml.panelIds || []).includes('links')) pass('390 external links swipe', `idx=${mobileLinksIdx}`)
+    else fail('390 external links swipe', JSON.stringify(ml.panelIds))
+  } else {
+    fail('390 external links swipe', 'no links panel on feed')
+  }
+
+  // ── 1280×800 desktop column ──────────────────────────────────────
+  const deskDir = resolve(process.cwd(), 'scripts/_panel-1280')
+  mkdirSync(deskDir, { recursive: true })
+  const deskCtx = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+    deviceScaleFactor: 1,
+  })
+  const desk = await deskCtx.newPage()
+  await desk.goto(`${BASE}/feed`, { waitUntil: 'networkidle', timeout: 60000 })
+  await desk.waitForTimeout(2500)
+  const deskRest = await measureRow(desk, 0)
+  writeFileSync(resolve(deskDir, 'measure-rest.json'), JSON.stringify(deskRest, null, 2))
+  log(`DESK_REST ${JSON.stringify(deskRest)}`)
+  await desk.screenshot({ path: resolve(deskDir, '01-rest.png'), fullPage: false })
+  if (deskRest.error) {
+    fail('1280 measure', deskRest.error)
+  } else {
+    if (deskRest.viewport.w === 1280) pass('viewport 1280', `${deskRest.viewport.w}×${deskRest.viewport.h}`)
+    else fail('viewport 1280', JSON.stringify(deskRest.viewport))
+    if (deskRest.main >= 1100 && deskRest.main <= 1160) pass('1280 main ~1120', `${deskRest.main}px`)
+    else fail('1280 main ~1120', `${deskRest.main}px`)
+    if (deskRest.scroller.w >= 1050 && deskRest.scroller.w <= 1140) pass('1280 strip ~1088', `${deskRest.scroller.w}px`)
+    else fail('1280 strip ~1088', `${deskRest.scroller.w}px`)
+    if (deskRest.reading && deskRest.reading <= 650) pass('1280 reading ≤640', `${deskRest.reading}px`)
+    else fail('1280 reading ≤640', `${deskRest.reading}`)
+    if (deskRest.actions && deskRest.actions <= 650) pass('1280 actions ≤640', `${deskRest.actions}px`)
+    else fail('1280 actions ≤640', `${deskRest.actions}`)
+    if (deskRest.reading && deskRest.readingLeft != null) {
+      const insetL = deskRest.readingLeft - deskRest.rects[0].left
+      const insetR = (deskRest.rects[0].left + deskRest.rects[0].w) - (deskRest.readingLeft + deskRest.reading)
+      if (Math.abs(insetL - insetR) <= 4) pass('1280 reading centered', `L${Math.round(insetL)} R${Math.round(insetR)}`)
+      else fail('1280 reading centered', `L${Math.round(insetL)} R${Math.round(insetR)}`)
+    }
+    if (deskRest.peek <= 2) pass('1280 no peek', `${deskRest.peek}px`)
+    else fail('1280 no peek', `${deskRest.peek}px`)
+  }
+  const playerIdx = await findRowWithPanel(desk, 'player')
+  const linksIdx = await findRowWithPanel(desk, 'links')
+  log(`1280 playerIdx=${playerIdx} linksIdx=${linksIdx}`)
+
+  let deskP2 = deskRest
+  if (playerIdx >= 0) {
+    await desk.evaluate((idx) => {
+      document.querySelectorAll('.margo-post-panel-row')[idx]?.scrollIntoView({ block: 'center' })
+    }, playerIdx)
+    await desk.waitForTimeout(300)
+    await snapRow(desk, playerIdx, 0)
+    await desk.screenshot({ path: resolve(deskDir, '03-tier1-rest.png'), fullPage: false })
+    await snapRow(desk, playerIdx, 1)
+    deskP2 = await measureRow(desk, playerIdx)
+    writeFileSync(resolve(deskDir, 'measure-tier1-panel2.json'), JSON.stringify(deskP2, null, 2))
+    log(`DESK_TIER1_P2 ${JSON.stringify(deskP2)}`)
+    await desk.screenshot({ path: resolve(deskDir, '04-tier1-player.png'), fullPage: false })
+    if ((deskP2.panelIds || [])[1] === 'player') pass('1280 Tier1 player swipe', `idx=${playerIdx}`)
+    else fail('1280 Tier1 player swipe', JSON.stringify(deskP2.panelIds))
+  } else {
+    fail('1280 Tier1 player swipe', 'no player panel on feed')
+  }
+
+  if (linksIdx >= 0) {
+    await desk.evaluate((idx) => {
+      document.querySelectorAll('.margo-post-panel-row')[idx]?.scrollIntoView({ block: 'center' })
+    }, linksIdx)
+    await desk.waitForTimeout(300)
+    await snapRow(desk, linksIdx, 0)
+    await desk.screenshot({ path: resolve(deskDir, '05-external-rest.png'), fullPage: false })
+    await snapRow(desk, linksIdx, 1)
+    const deskLinks = await measureRow(desk, linksIdx)
+    writeFileSync(resolve(deskDir, 'measure-links-panel2.json'), JSON.stringify(deskLinks, null, 2))
+    log(`DESK_LINKS_P2 ${JSON.stringify(deskLinks)}`)
+    await desk.screenshot({ path: resolve(deskDir, '06-external-links.png'), fullPage: false })
+    if ((deskLinks.panelIds || []).includes('links')) pass('1280 external links swipe', `idx=${linksIdx}`)
+    else fail('1280 external links swipe', JSON.stringify(deskLinks.panelIds))
+  } else {
+    fail('1280 external links swipe', 'no links panel on feed')
+  }
+
+  await snapRow(desk, 0, 1)
+  deskP2 = await measureRow(desk, 0)
+  writeFileSync(resolve(deskDir, 'measure-panel2.json'), JSON.stringify(deskP2, null, 2))
+  log(`DESK_P2 ${JSON.stringify(deskP2)}`)
+  await desk.screenshot({ path: resolve(deskDir, '02-panel2.png'), fullPage: false })
+  if (!deskP2.error) pass('1280 snapped panel 2', (deskP2.panelIds || [])[1] || 'ok')
+  await deskCtx.close()
+
   const failed = results.filter((r) => r.status === 'FAIL').length
-  writeFileSync(resolve(dir, 'results.json'), JSON.stringify({ BASE, results, rest, p2, stitchIdx, stitchRest, stitchP2 }, null, 2))
+  writeFileSync(resolve(dir, 'results.json'), JSON.stringify({ BASE, results, rest, p2, stitchIdx, stitchRest, stitchP2, deskRest, deskP2 }, null, 2))
   writeFileSync(resolve(dir, 'log.txt'), lines.join('\n'))
   log(failed ? `DONE with ${failed} FAIL(s)` : 'DONE all PASS')
   if (failed) process.exitCode = 1

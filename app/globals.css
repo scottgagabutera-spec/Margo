@@ -542,3 +542,11 @@ html, body {
 .margo-post-panel[data-panel='links'] {
   justify-content: center;
 }
+
+/* Feed reading measure — lyric + actions stay ~640px, centered in the 72rem column. */
+.margo-feed-reading {
+  width: 100%;
+  max-width: 40rem;
+  margin-left: auto;
+  margin-right: auto;
+}
