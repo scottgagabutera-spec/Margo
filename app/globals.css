@@ -36,7 +36,8 @@
   --margo-miniplayer-h: 0px;
   --margo-page-bottom: calc(var(--margo-tabbar-h, 80px) + var(--margo-miniplayer-h, 0px));
   --margo-page-padding-bottom: calc(var(--margo-page-bottom) + var(--margo-safe-bottom));
-  --margo-toast-offset: calc(88px + var(--margo-safe-bottom));
+  /* Tracks live tab bar + mini-player height (published by those components). */
+  --margo-toast-offset: calc(var(--margo-page-bottom) + 12px);
   --margo-player-viewport-bottom: calc(120px + var(--margo-safe-bottom));
   --margo-player-fade-bottom: calc(112px + var(--margo-safe-bottom));
   --margo-player-hint-bottom: calc(128px + var(--margo-safe-bottom));
