@@ -1,4 +1,6 @@
 # Margo — Auth Cookie Migration Plan
+> **STATUS (Aug 2026): SHIPPED / ARCHIVE.** httpOnly cookie session is live (`lib/supabase/*`, auth route handlers). Ignore the "PLANNED — not started" header below.
+
 
 Status: PLANNED — not started. Long-term architectural workstream,
 same tier as the Firebase→Supabase migration. Do not start until that

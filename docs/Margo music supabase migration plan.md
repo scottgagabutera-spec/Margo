@@ -1,4 +1,6 @@
 # Margo — Music & Artist Catalog: Firebase → Supabase Migration Plan
+> **STATUS (Aug 2026): SHIPPED / ARCHIVE.** Catalog, lyric lines, vibes, and players read Supabase. Live surface is `/discover` + `/song/[id]` — `/music` redirects permanently.
+
 *Draft v1 — July 2026 — Living document — last updated August 2, 2026 (Phase 6 app code shipped and verified live; snippet matching and edit-lyric features added — see Progress Log)*
 
 **Purpose:** move songs, lyric lines/vibes, and song engagement fully onto Supabase, connected directly to `profiles` — no separate `artists` table, no Tier 1/2/3 licensing distinction. An artist is a `profiles` row with `is_artist = true`. This is the next phase after the identity migration (`MARGO_SUPABASE_MIGRATION_PLAN.md`), and it supersedes the Tier-based sections of `MARGO_TARGET_ARCHITECTURE_AUDIO_ENGAGEMENT.md` (Section 5) and `MARGO_RIGHTS_AND_DISCOVERY_PLAN.md` (Section 1.3) — those documents' *audio engine* and *legal-foundation* content still stands; their *artist-tier* content is replaced by this doc.

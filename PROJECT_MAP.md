@@ -1,4 +1,6 @@
 # Margo — Project Map
+> **STATUS (Aug 2026): OUTDATED SNAPSHOT (July 2026).** Profile pages are built; Firebase client shim and `useLicensedArtists` are gone; only `package-lock.json` remains. Live catalog is Discover/`/song/[id]`. Prefer CLAUDE.md + the repo tree for current structure. Legacy `js/` / `api/` / `index.html` flagged for removal in hygiene cleanup.
+
 
 Generated from a full repo file listing (July 2026). This is a working reference —
 update the relevant section whenever a file's purpose changes meaningfully.

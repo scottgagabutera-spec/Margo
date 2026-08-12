@@ -239,7 +239,7 @@ This is distinct from the marketing header above — it's the persistent bottom 
 4. **Alerts** — Bell — notifications
 5. **You** — Person / avatar — profile
 
-`music` as a standalone nav destination is retired — `app/music/page.tsx` exists only as a permanent redirect to `/discover` for old links, and is not a live nav target. Do not add new nav references to "Music"; use "Discover."
+`music` as a standalone nav destination is retired. `next.config.mjs` permanently redirects `/music` → `/discover` and `/music/player` → `/song/[id]`. There is no live Music page in the tree. Do not add nav references to "Music"; use "Discover."
 
 ---
 
@@ -378,8 +378,6 @@ DON'T:
 | File | Line | Violation |
 |------|------|-----------|
 | `app/feed/page.tsx` | 274, 381, 636 | ♪ placeholder, ▶ tier-2 overlay, × clear |
-| `app/music/page.tsx` | 521, 625, 640, 690, 715–717, 742, 910–911 | ×, ←/→ nav, ♥/♡, ▶ Play Now |
-| `app/music/player/page.tsx` | 408, 416, 429, 467 | ♪, ▶, ✕, ✦ |
 | `app/lyric-back/page.tsx` | 493, 728, 739, 760 | ← Back, ♥/♡, ↩, ↗ |
 | `app/compose/page.tsx` | 353, 386, 454 | ← Back |
 | `app/admin/page.tsx` | 193, 255, 270, 274, 293, 319, 321, 371, 385, 388, 419, 624, 666 | ⚑, ✓, ✗, ✦ |
@@ -420,14 +418,11 @@ color: srtStatus.startsWith('✓') ? '#4ade80' : '#ff6060'
 | `app/lyric-back/page.tsx` | 47–50, 374 | emotion map hex, error `#ff6b6b` |
 | `app/page.tsx` | 19–21 | emotion map hex |
 | `app/layout.tsx` | 163–165 | Tailwind `from-[#08070C]` / `via-[#0a0909]` / `to-[#0f0e14]`, body `color: '#F4F1ED'` |
-| `app/music/page.tsx` | 128, 565, 570 | `#E8C547` on play icon |
-| `app/music/player/page.tsx` | 265–266, 278, 301 | `#E8C547`, `#07060A`, `#0f0e14`, `#f5d878` |
 | `app/compose/page.tsx` | 506 | `#ff6b6b` error |
 | `app/admin/page.tsx` | 49, 114, 171, 193, 373, 388 | `#ff6060`, `#4ade80` |
 | `app/about/page.tsx`, `app/contact/page.tsx`, `app/privacy/page.tsx`, `app/terms/page.tsx` | 11 | `#6B4EFF` blob |
 | `components/mini-player.tsx` | 23–27, 114+ | emotion map + ~22 hex hits |
 | `components/card-export-modal.tsx` | 20–25, 58+, 341+, 471+ | export themes + canvas hex |
-| `components/share-button.tsx` | 49 | `bg-[#1a1a1a]` |
 | `components/MargoLogo.tsx` | 28, 52, 56, 62, 72 | logo SVG fills (document as sole exception or tokenize) |
 
 **Exception (document only):** `components/MargoLogo.tsx` may retain fixed logo gold `#E8C547` until tokenized — never copy that pattern elsewhere.
@@ -459,7 +454,6 @@ color: srtStatus.startsWith('✓') ? '#4ade80' : '#ff6060'
 | File | Example lines | Sizes found |
 |------|---------------|-------------|
 | `app/feed/page.tsx` | 401, 597–604, 610–617, 629 | `0.5rem`–`0.75rem` on buttons/inputs |
-| `app/music/page.tsx` | 715–717, 910–911, 960 | `0.58rem`–`0.82rem` on CTAs and search |
 | `app/compose/page.tsx` | 378+ | `0.6rem` CTAs |
 | `app/lyric-back/page.tsx` | 467–475 | `0.5rem` send/continue |
 | `components/margo-nav.tsx` | 61–62, 80–81 | `0.75rem` / `0.6rem` nav |
@@ -469,7 +463,7 @@ color: srtStatus.startsWith('✓') ? '#4ade80' : '#ff6060'
 
 ### Rule 4 — One play/pause affordance: `PlayPauseIcon` only
 
-**Rule:** Every play, pause, and buffering state uses `components/play-pause-icon.tsx`. Same size/color tokens on feed, music, player, and mini-player. Never mix Unicode ▶ on one tier and SVG on another in the same surface.
+**Rule:** Every play, pause, and buffering state uses `components/play-pause-icon.tsx`. Same size/color tokens on feed, Discover, `/song/[id]`, and mini-player. Never mix Unicode ▶ on one tier and SVG on another in the same surface.
 
 **Standards:** CONSISTENCY · PREMIUM · UNIQUE FOR MARGO · MOBILE FIRST
 
@@ -485,13 +479,13 @@ import { PlayPauseIcon } from '@/components/play-pause-icon'
 <Link>▶ Play Now</Link>
 ```
 
-**Audit evidence:** `app/feed/page.tsx:137` (correct) vs `:381` (wrong tier-2); `app/music/page.tsx:717,742,910`; `app/music/player/page.tsx:416`; `components/play-pause-icon.tsx` accepts hardcoded `#E8C547` at call sites — fix callers to `var(--gold)`.
+**Audit evidence:** `app/feed/page.tsx:137` (correct) vs `:381` (wrong tier-2); `components/play-pause-icon.tsx` accepts hardcoded `#E8C547` at call sites — fix callers to `var(--gold)`.
 
 ---
 
 ### Rule 5 — Feed actions use the same SVG icon set everywhere
 
-**Rule:** Resonate, Lyric Back, Card, Replay, close, search clear, and share must use the same inline SVG (or shared icon components) on feed, lyric-back, music, and compose. Do not use Unicode hearts/arrows on one page and SVG on another. On mobile, follow Section 12 **Feed action row** — labels stay visible at reduced size; counts as icon badges; never wrap the row.
+**Rule:** Resonate, Lyric Back, Card, Replay, close, search clear, and share must use the same inline SVG (or shared icon components) on feed, lyric-back, Discover, and compose. Do not use Unicode hearts/arrows on one page and SVG on another. On mobile, follow Section 12 **Feed action row** — labels stay visible at reduced size; counts as icon badges; never wrap the row.
 
 **Standards:** CONSISTENCY · PREMIUM · UNIQUE FOR MARGO · MOBILE FIRST
 
@@ -523,8 +517,6 @@ navigator.mediaSession.setActionHandler('play', () => setPlaying(true)) // no au
 | File | Line | Violation |
 |------|------|-----------|
 | `app/feed/page.tsx` | 73–76, 165–168, 187–194 | `new Audio()`, Media Session desync |
-| `app/music/page.tsx` | 201, 310 | multiple `new Audio()` pools |
-| `app/music/player/page.tsx` | 101–145 | detached audio + session state |
 
 ---
 
@@ -579,7 +571,7 @@ onMouseLeave={() => setHover(null)}
 
 **Wrong:** Full `blur(16px)` on mobile menu with no opaque fallback.
 
-**Audit evidence:** `components/margo-nav.tsx:145–146`; `app/music/page.tsx:675`; `app/music/player/page.tsx:264,277`.
+**Audit evidence:** `components/margo-nav.tsx:145–146`.
 
 ---
 
@@ -589,7 +581,7 @@ onMouseLeave={() => setHover(null)}
 
 **Standards:** APP READY · MOBILE FIRST · MODERN
 
-**Audit evidence:** `app/page.tsx:65–66,302`; `app/music/page.tsx:413–417,435–437`; `app/feed/page.tsx:593` (`WebkitOverflowScrolling`).
+**Audit evidence:** `app/page.tsx:65–66,302`; `app/feed/page.tsx:593` (`WebkitOverflowScrolling`).
 
 ---
 
@@ -619,7 +611,7 @@ onMouseLeave={() => setHover(null)}
 
 **Standards:** CONSISTENCY · PREMIUM
 
-**Audit evidence:** `app/feed/page.tsx:454`; `app/music/page.tsx:587,625,640`; `app/music/player/page.tsx:307`; `app/compose/page.tsx:353+`.
+**Audit evidence:** `app/feed/page.tsx:454`; `app/compose/page.tsx:353+`.
 
 ---
 
@@ -629,7 +621,7 @@ onMouseLeave={() => setHover(null)}
 
 **Standards:** PREMIUM · CONSISTENCY · MOBILE FIRST
 
-**Audit evidence:** `app/feed/page.tsx:636`; `app/music/page.tsx:521,690`; `components/mini-player.tsx:347`; `components/card-export-modal.tsx:491`; `app/music/player/page.tsx:429`.
+**Audit evidence:** `app/feed/page.tsx:636`; `components/mini-player.tsx:347`; `components/card-export-modal.tsx:491`.
 
 ---
 
@@ -737,7 +729,7 @@ bottom: 88px; /* ignores home indicator on iPhone */
 bottom: 'var(--margo-player-viewport-bottom)';
 ```
 
-**Implemented in:** `app/feed/page.tsx`, `app/compose/page.tsx`, `app/lyric-back/page.tsx`, `app/music/player/page.tsx`, `app/layout.tsx` (Sonner `offset={0}` + CSS offset).
+**Implemented in:** `app/feed/page.tsx`, `app/compose/page.tsx`, `app/lyric-back/page.tsx`, `app/layout.tsx` (Sonner `offset={0}` + CSS offset).
 
 ---
 
@@ -778,7 +770,7 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 **Do not change:** Decorative label font sizes on vibe pills, feed action captions, badges, or metadata when applying this pattern — only the **container** dimensions.
 
-**Implemented in:** `components/margo-nav.tsx`, `app/feed/page.tsx`, `app/compose/page.tsx`, `app/lyric-back/page.tsx`, `app/music/page.tsx`, `app/music/player/page.tsx`, `components/mini-player.tsx`.
+**Implemented in:** `components/margo-nav.tsx`, `app/feed/page.tsx`, `app/compose/page.tsx`, `app/lyric-back/page.tsx`, `components/mini-player.tsx`.
 
 ---
 
@@ -832,7 +824,7 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 }
 ```
 
-**Implemented in:** `app/globals.css`, `components/margo-nav.tsx`, `app/page.tsx`, `app/music/page.tsx`, `app/music/player/page.tsx`, `components/mini-player.tsx`.
+**Implemented in:** `app/globals.css`, `components/margo-nav.tsx`, `app/page.tsx`, `components/mini-player.tsx`.
 
 ---
 
@@ -876,7 +868,7 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 **State-only changes:** Pattern 4 adjusts **opacity, transform, background, border-color** on interaction — no font, layout, or size changes.
 
-**Implemented in:** `app/music/page.tsx`, `components/mini-player.tsx`, `app/music/player/page.tsx` (board, preview, song grid, mini-player, up-next tray).
+**Implemented in:** `components/mini-player.tsx` (board, preview, song grid, mini-player, up-next tray).
 
 ---
 
