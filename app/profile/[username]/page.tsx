@@ -18,6 +18,7 @@ import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 
 const supabase = createClient()
 
@@ -82,6 +83,7 @@ export default function ProfilePage() {
   const [followingCount, setFollowingCount] = useState<number | null>(null)
   const [followStatus, setFollowStatus] = useState<FollowStatus>(null)
   const [followBusy, setFollowBusy] = useState(false)
+  const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
 
   // ── Discography — public, live-only catalog for this profile, if
   // they're an artist. Only the total count + a small preview slice are
@@ -378,7 +380,7 @@ export default function ProfilePage() {
       `}</style>
 
       {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '160px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: 'calc(var(--nav-height, 72px) + 88px) 0' }}>
           {[0, 1, 2].map(i => (
             <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', opacity: 0.5 }} />
           ))}
@@ -386,14 +388,14 @@ export default function ProfilePage() {
       )}
 
       {!loading && notFound && (
-        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '1rem', paddingTop: '160px' }}>
+        <p style={{ fontFamily: font, fontStyle: 'italic', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.95rem', paddingTop: 'calc(var(--nav-height, 72px) + 88px)' }}>
           No one here by that name.
         </p>
       )}
 
       {!loading && privateInaccessible && (
         <div style={{
-          maxWidth: '360px', margin: '0 auto', paddingTop: '140px', paddingLeft: '24px', paddingRight: '24px',
+          maxWidth: '360px', margin: '0 auto', paddingTop: 'calc(var(--nav-height, 72px) + 68px)', paddingLeft: '24px', paddingRight: '24px',
           textAlign: 'center',
         }}>
           <div style={{
@@ -413,43 +415,56 @@ export default function ProfilePage() {
         <div>
           <div style={{
             height: '160px', width: '100%',
+            marginTop: 'var(--nav-height, 72px)',
             background: 'linear-gradient(135deg, rgba(232,197,71,0.14), rgba(122,127,214,0.08) 60%, var(--bg))',
           }} />
 
           <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px var(--margo-page-padding-bottom)' }}>
             <div style={{ marginTop: '-44px', marginBottom: '20px' }}>
-              <div style={{
-                width: '88px', height: '88px', borderRadius: '50%',
-                background: profile.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-                border: '4px solid var(--bg)', boxSizing: 'border-box',
-              }}>
-                {profile.avatarUrl ? (
-                  <img src={profile.avatarUrl} alt={profile.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <span style={{ fontFamily: font, fontSize: '1.6rem', fontWeight: 700, color: 'var(--bg)' }}>
+              {profile.avatarUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setAvatarLightboxOpen(true)}
+                  aria-label={`View ${profile.displayName}'s photo`}
+                  style={{
+                    width: '88px', height: '88px', borderRadius: '50%', padding: 0,
+                    background: 'none', border: '4px solid var(--bg)', boxSizing: 'border-box',
+                    overflow: 'hidden', cursor: 'pointer', display: 'block',
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  <img src={profile.avatarUrl} alt={profile.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                </button>
+              ) : (
+                <div style={{
+                  width: '88px', height: '88px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                  border: '4px solid var(--bg)', boxSizing: 'border-box',
+                }}>
+                  <span style={{ fontFamily: font, fontSize: '1.4rem', fontWeight: 700, color: 'var(--bg)' }}>
                     {(profile.displayName || '??').slice(0, 2).toUpperCase()}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <h1 style={{ fontFamily: font, fontSize: '1.4rem', color: 'var(--text)' }}>
+                  <h1 style={{ fontFamily: font, fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
                     {profile.displayName}
                   </h1>
                   {profile.isPrivate && (
                     <span style={{
-                      fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                      fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
                       letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 8px',
                       borderRadius: '50px', background: 'var(--surface-2)',
                       border: '1px solid var(--border)', color: 'var(--text-muted)',
                     }}>Private</span>
                   )}
                 </div>
-                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0 }}>
                   @{profile.username}
                 </p>
               </div>
@@ -560,7 +575,8 @@ export default function ProfilePage() {
                       display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                       background: 'transparent', color: 'var(--text-2)',
                       border: '1px solid var(--border)', borderRadius: '50px',
-                      fontFamily: font, fontWeight: 700, fontSize: '0.9rem',
+                      fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
+                      letterSpacing: '1.2px', textTransform: 'uppercase',
                       textDecoration: 'none', cursor: 'pointer',
                     }}
                   >Message</Link>
@@ -574,7 +590,8 @@ export default function ProfilePage() {
                       background: followStatus ? 'transparent' : 'var(--gold)',
                       color: followStatus ? 'var(--text-2)' : 'var(--bg)',
                       border: followStatus ? '1px solid var(--border)' : 'none',
-                      borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.9rem',
+                      borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
+                      letterSpacing: '1.2px', textTransform: 'uppercase',
                       cursor: followBusy ? 'not-allowed' : 'pointer',
                       opacity: followBusy ? 0.7 : 1,
                     }}
@@ -674,7 +691,7 @@ export default function ProfilePage() {
                     <Link
                       href={`/profile/${profile.username}/songs`}
                       style={{
-                        fontFamily: font, fontSize: '0.56rem', fontWeight: 700,
+                        fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
                         letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gold)',
                         textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap',
                       }}
@@ -741,7 +758,7 @@ export default function ProfilePage() {
                       onClick={() => setContentTab(tab.id)}
                       style={{
                         flex: 1, minHeight: 'var(--margo-touch-min)',
-                        fontFamily: font, fontSize: '0.58rem', fontWeight: 700,
+                        fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
                         letterSpacing: '1px', textTransform: 'uppercase',
                         color: active ? 'var(--gold)' : 'var(--text-muted)',
                         background: 'transparent', border: 'none',
@@ -786,7 +803,7 @@ export default function ProfilePage() {
                     </p>
                   )
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {ownPosts.map(post => (
                       <PostCard
                         key={post.id}
@@ -811,7 +828,7 @@ export default function ProfilePage() {
                     {isOwnProfile ? 'No replays yet — tap Replay on a lyric in the feed.' : 'No replays yet.'}
                   </p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {profileReplays.map(item => (
                       <div key={item.id}>
                         {item.quoteText ? (
@@ -845,7 +862,7 @@ export default function ProfilePage() {
                   {isOwnProfile ? 'No lyric backs yet.' : 'No lyric backs yet.'}
                 </p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {lyricBacks.map(post => (
                     <PostCard
                       key={post.id}
@@ -895,6 +912,14 @@ export default function ProfilePage() {
         artist={exportPost?.knowledge?.artist || ''}
         postId={exportPost?.id}
       />
+      {profile?.avatarUrl ? (
+        <ProfileImageLightbox
+          open={avatarLightboxOpen}
+          onClose={() => setAvatarLightboxOpen(false)}
+          src={profile.avatarUrl}
+          alt={profile.displayName || profile.username}
+        />
+      ) : null}
     </main>
   )
 }

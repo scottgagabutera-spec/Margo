@@ -9,7 +9,9 @@ import {
 } from '@/hooks/useArtistApplication'
 import { normalizeSunoUrl } from '@/lib/suno'
 
-const font = 'var(--font-lora), serif'
+import { UI_FONT } from '@/lib/fonts'
+
+const font = UI_FONT
 
 const LINK_FIELDS: { key: keyof ArtistApplicationLinks; label: string; placeholder: string }[] = [
   { key: 'spotify', label: 'Spotify', placeholder: 'open.spotify.com/artist/...' },
@@ -32,7 +34,7 @@ const inputStyle: React.CSSProperties = {
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontFamily: font, fontSize: '0.55rem',
+  display: 'block', fontFamily: font, fontSize: '0.6rem',
   color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase',
   letterSpacing: '1.5px', marginBottom: '6px',
 }
@@ -164,7 +166,7 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
   return (
     <div style={{ width: '100%', maxWidth: '460px', margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '8px' }}>Margo</p>
+        <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>Artist</p>
         <h1 style={{ fontFamily: font, fontSize: '1.5rem', color: 'var(--text)', fontWeight: 400, marginBottom: '10px' }}>Apply as an Artist</h1>
         <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
           Tell us who you are so we can verify you and unlock independent song uploads.
@@ -226,7 +228,7 @@ export function ArtistApplicationForm({ onSubmitted }: ArtistApplicationFormProp
                 </button>
               )}
             </div>
-            <p style={{ fontFamily: font, fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', marginBottom: sunoCode ? '12px' : 0 }}>
+            <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', marginBottom: sunoCode ? '12px' : 0 }}>
               Just your handle works — no need to paste the full link.
             </p>
             {sunoCode && !sunoVerified && (

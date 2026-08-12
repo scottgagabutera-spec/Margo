@@ -5,10 +5,11 @@ import { useEffect, useState } from 'react'
 import { createClient, signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { BackButton } from '@/components/back-button'
+import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 
-const font = 'var(--font-lora), serif'
+const font = UI_FONT
 
 type WhoCanMessage = 'everyone' | 'followers' | 'no_one'
 
@@ -407,8 +408,8 @@ export default function AccountSettingsPage() {
       <h1
         style={{
           fontFamily: font,
-          fontSize: 'clamp(1.6rem,4vw,2.4rem)',
-          fontWeight: 700,
+          fontSize: '1.5rem',
+          fontWeight: 600,
           color: 'var(--text)',
           marginBottom: '32px',
         }}

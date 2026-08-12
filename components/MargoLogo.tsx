@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * MargoLogo — mark / symbol / lockup.
+ * Wordmark: Syne 800, gold, letter-spacing 5px, uppercase.
+ * Wordmark size scales with the symbol so lockups stay proportional.
+ */
 interface MargoLogoProps {
   tier?: 'mark' | 'symbol' | 'lockup'
   size?: number
@@ -13,6 +18,9 @@ export default function MargoLogo({
   rings = false,
   wordmark = false,
 }: MargoLogoProps) {
+  // Scale wordmark with symbol: 28px → ~0.75rem, 36px → ~0.96rem
+  const wordmarkPx = Math.max(11, Math.round(size * 0.43))
+
   return (
     <>
       {rings && (
@@ -33,7 +41,7 @@ export default function MargoLogo({
           .margo-ring-3 { animation-delay: 1.6s; }
         `}</style>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: Math.max(6, Math.round(size * 0.25)) }}>
         <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
           {rings && (
             <>
@@ -67,8 +75,8 @@ export default function MargoLogo({
           <span style={{
             fontFamily: 'var(--font-syne), sans-serif',
             fontWeight: 800,
-            fontSize: '0.75rem',
-            letterSpacing: '3px',
+            fontSize: `${wordmarkPx}px`,
+            letterSpacing: '5px',
             color: '#E8C547',
             textTransform: 'uppercase',
             lineHeight: 1,

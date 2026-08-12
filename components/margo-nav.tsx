@@ -10,7 +10,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { NotificationBell } from '@/components/notification-bell'
 import { MessagesIcon } from '@/components/messages-icon'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
-import { hidesAppShell } from '@/lib/chrome-mode'
+import { hidesAppNav } from '@/lib/chrome-mode'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -75,7 +75,7 @@ export function MargoNav() {
   const isOnDiscover = pathname?.startsWith('/discover')
   const isOnCompose = pathname === '/compose'
   const isOnSignin = pathname === '/signin'
-  const shellHidden = hidesAppShell(pathname)
+  const shellHidden = hidesAppNav(pathname)
 
   const isSignedIn = !!user && !user.isAnonymous
   const applicationStatus = application?.status ?? 'none'

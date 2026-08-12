@@ -7,7 +7,7 @@ import { useNotifications } from '@/hooks/useNotifications'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { CompassIcon } from '@/components/icons'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
-import { hidesAppShell } from '@/lib/chrome-mode'
+import { hidesTabBar } from '@/lib/chrome-mode'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -18,7 +18,7 @@ export function MobileTabBar() {
   const engineState = useAudioEngine()
   const navRef = useRef<HTMLElement | null>(null)
 
-  const shellHidden = hidesAppShell(pathname)
+  const shellHidden = hidesTabBar(pathname)
 
   // Publish our real rendered height as a CSS var so anything else that
   // stacks above the bottom of the screen (e.g. MiniPlayer) can position

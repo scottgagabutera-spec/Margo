@@ -277,9 +277,9 @@ export default function SongPage() {
       <header style={{ position: 'fixed', top: '8px', left: 0, right: 0, zIndex: 40, padding: '16px 24px' }}>
         <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <BackButton fallbackHref="/discover" />
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{song?.title || '—'}</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: 0 }}>{song?.artist || '—'}</p>
+          <div style={{ textAlign: 'center', minWidth: 0, flex: 1, padding: '0 8px' }}>
+            <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song?.title || '—'}</p>
+            <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-secondary)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song?.artist || '—'}</p>
           </div>
           <div style={{ width: '60px' }} />
         </div>
