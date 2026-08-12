@@ -1,9 +1,15 @@
-[PASS] row present — 91 strip(s)
-REST {"viewport":{"w":390,"h":844},"scroller":{"w":308,"left":41},"panel0":{"id":"lyric","w":256,"h":123.4},"panel1":{"id":"cover","w":256,"h":196,"peek":40},"gap":12,"scrollLeft":0,"counter":"1 / 2","panelIds":["lyric","cover"]}
+[PASS] row present — 81 strip(s)
+REST {"viewport":{"w":390,"h":844},"scroller":{"w":308,"h":187.2},"rects":[{"id":"lyric","w":308,"h":187.2,"left":41},{"id":"player","w":308,"h":187.2,"left":349}],"peek":0,"gap":0,"heightEqual":true,"scrollLeft":0,"counter":"1 / 2","panelIds":["lyric","player"]}
 [PASS] viewport 390 — 390×844
-[PASS] tile width ~256 — 256px
-[PASS] gap ~12 — 12px
-[PASS] peek ≥40 — 40px of cover
+[PASS] panel width = scroller — 308 vs 308
+[PASS] gap ~0 — 0px
+[PASS] no peek — 0px
+[PASS] equal panel heights — 187.2/187.2
 [PASS] counter — 1 / 2
-PANEL2 {"viewport":{"w":390,"h":844},"scroller":{"w":308,"left":41},"panel0":{"id":"lyric","w":256,"h":123.4},"panel1":{"id":"cover","w":256,"h":196,"peek":256},"gap":12,"scrollLeft":216,"counter":"2 / 2","panelIds":["lyric","cover"]}
-[PASS] snapped panel 2 — cover
+[PASS] no cover panel — lyric,player
+PANEL2 {"viewport":{"w":390,"h":844},"scroller":{"w":308,"h":187.2},"rects":[{"id":"lyric","w":308,"h":187.2,"left":-267},{"id":"player","w":308,"h":187.2,"left":41}],"peek":308,"gap":0,"heightEqual":true,"scrollLeft":308,"counter":"2 / 2","panelIds":["lyric","player"]}
+[PASS] snapped panel 2 — player
+STITCH_REST idx=15 {"viewport":{"w":390,"h":844},"scroller":{"w":308,"h":226},"rects":[{"id":"lyric","w":308,"h":226,"left":41},{"id":"player","w":308,"h":226,"left":349},{"id":"links","w":308,"h":226,"left":657}],"peek":0,"gap":0,"heightEqual":true,"scrollLeft":0,"counter":"1 / 3","panelIds":["lyric","player","links"]}
+STITCH_P2 {"viewport":{"w":390,"h":844},"scroller":{"w":308,"h":226},"rects":[{"id":"lyric","w":308,"h":226,"left":-267},{"id":"player","w":308,"h":226,"left":41},{"id":"links","w":308,"h":226,"left":349}],"peek":308,"gap":0,"heightEqual":true,"scrollLeft":308,"counter":"2 / 3","panelIds":["lyric","player","links"]}
+[PASS] stitch equal heights — 226/226/226
+[PASS] stitch frame is tall — 226px

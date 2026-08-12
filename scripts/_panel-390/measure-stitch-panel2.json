@@ -5,29 +5,36 @@
   },
   "scroller": {
     "w": 308,
-    "h": 187.2
+    "h": 226
   },
   "rects": [
     {
       "id": "lyric",
       "w": 308,
-      "h": 187.2,
-      "left": 41
+      "h": 226,
+      "left": -267
     },
     {
       "id": "player",
       "w": 308,
-      "h": 187.2,
+      "h": 226,
+      "left": 41
+    },
+    {
+      "id": "links",
+      "w": 308,
+      "h": 226,
       "left": 349
     }
   ],
-  "peek": 0,
+  "peek": 308,
   "gap": 0,
   "heightEqual": true,
-  "scrollLeft": 0,
-  "counter": "1 / 2",
+  "scrollLeft": 308,
+  "counter": "2 / 3",
   "panelIds": [
     "lyric",
-    "player"
+    "player",
+    "links"
   ]
 }

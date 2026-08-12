@@ -65,14 +65,15 @@ async function measureRow(page, rowIndex = 0) {
 
 async function findStitchRowIndex(page) {
   return page.evaluate(() => {
-    const cards = [...document.querySelectorAll('.margo-post-panel-row')]
-    for (let i = 0; i < cards.length; i++) {
-      const text = (cards[i].textContent || '').toLowerCase()
+    const rows = [...document.querySelectorAll('.margo-post-panel-row')]
+    for (let i = 0; i < rows.length; i++) {
+      const host = rows[i].closest('[class]') || rows[i].parentElement
+      const text = ((host && host.parentElement ? host.parentElement.textContent : rows[i].textContent) || '').toLowerCase()
       if (text.includes('stitch')) return i
     }
     let tallest = { i: 0, h: 0 }
-    for (let i = 0; i < cards.length; i++) {
-      const h = cards[i].getBoundingClientRect().height
+    for (let i = 0; i < rows.length; i++) {
+      const h = rows[i].getBoundingClientRect().height
       if (h > tallest.h) tallest = { i, h }
     }
     return tallest.i
