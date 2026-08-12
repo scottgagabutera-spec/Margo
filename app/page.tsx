@@ -450,20 +450,49 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section style={{position:'relative', zIndex:5, maxWidth:'56rem', margin:'0 auto', padding:'24px 24px 56px'}}>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'32px'}}>
+      {/* How It Works — always 3 columns; compact type on mobile so title+body stay visible */}
+      <section
+        className="margo-how-it-works"
+        style={{ position: 'relative', zIndex: 5, maxWidth: '56rem', margin: '0 auto', padding: '24px 16px 56px' }}
+      >
+        <style>{`
+          .margo-how-it-works__grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+          }
+          .margo-how-it-works__num {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--gold-faint); border: 1px solid var(--gold-border);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 8px;
+            font-family: var(--font-geist-sans), system-ui, sans-serif;
+            font-size: 0.7rem; font-weight: 700; color: var(--gold);
+          }
+          .margo-how-it-works__title {
+            font-family: var(--font-geist-sans), system-ui, sans-serif;
+            font-size: 0.6rem; font-weight: 600; color: var(--text);
+            margin: 0 0 6px; line-height: 1.25;
+          }
+          .margo-how-it-works__body {
+            font-family: var(--font-geist-sans), system-ui, sans-serif;
+            font-size: 0.65rem; font-weight: 400; color: var(--text-secondary);
+            margin: 0; line-height: 1.25;
+          }
+          @media (min-width: 640px) {
+            .margo-how-it-works { padding-left: 24px !important; padding-right: 24px !important; }
+            .margo-how-it-works__grid { gap: 24px; }
+            .margo-how-it-works__num { width: 40px; height: 40px; margin-bottom: 16px; font-size: 0.95rem; }
+            .margo-how-it-works__title { font-size: 1rem; margin-bottom: 8px; line-height: 1.3; }
+            .margo-how-it-works__body { font-size: 0.82rem; line-height: 1.5; }
+          }
+        `}</style>
+        <div className="margo-how-it-works__grid">
           {HOW_IT_WORKS.map(step => (
-            <div key={step.n} style={{textAlign:'center'}}>
-              <div style={{
-                width:'40px', height:'40px', borderRadius:'50%',
-                background:'var(--gold-faint)', border:'1px solid var(--gold-border)',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                margin:'0 auto 16px',
-                fontFamily:'var(--font-lora),serif', fontWeight:700, color:'var(--gold)',
-              }}>{step.n}</div>
-              <h3 style={{fontFamily:'var(--font-lora),serif', fontSize:'1rem', fontWeight:600, color:'var(--text)', marginBottom:'8px'}}>{step.title}</h3>
-              <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.8rem', color:'var(--text-2)', lineHeight:1.6}}>{step.text}</p>
+            <div key={step.n} style={{ textAlign: 'center', minWidth: 0 }}>
+              <div className="margo-how-it-works__num">{step.n}</div>
+              <h3 className="margo-how-it-works__title">{step.title}</h3>
+              <p className="margo-how-it-works__body">{step.text}</p>
             </div>
           ))}
         </div>
@@ -526,8 +555,8 @@ export default function Home() {
       {/* Footer — product | legal columns + social icons */}
       <footer style={{
         position:'relative', zIndex:10,
-        padding:'64px 40px var(--margo-page-padding-bottom)',
-        display:'flex', flexDirection:'column', alignItems:'center', gap:'28px',
+        padding:'48px 40px var(--margo-page-padding-bottom)',
+        display:'flex', flexDirection:'column', alignItems:'center', gap:'20px',
       }}>
         <div style={{
           display:'grid',

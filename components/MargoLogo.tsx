@@ -76,7 +76,7 @@ export default function MargoLogo({
             fontFamily: 'var(--font-syne), sans-serif',
             fontWeight: 800,
             fontSize: `${wordmarkPx}px`,
-            letterSpacing: '5px',
+            letterSpacing: '2px',
             color: '#E8C547',
             textTransform: 'uppercase',
             lineHeight: 1,
