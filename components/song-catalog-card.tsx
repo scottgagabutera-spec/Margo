@@ -26,7 +26,7 @@ export function EarnedTag({ label }: { label: 'Trending' | 'Top' }) {
   return (
     <span style={{
       position: 'absolute', top: '8px', left: '8px',
-      fontFamily: 'var(--font-lora), serif', fontSize: '0.46rem', fontWeight: 700,
+      fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.6rem', fontWeight: 700,
       letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 8px',
       borderRadius: '50px', background: 'rgba(7,6,10,0.75)',
       border: '1px solid var(--gold-border)', color: 'var(--gold)',
@@ -58,8 +58,8 @@ export function SongCatalogCard({ song, badge }: { song: SongCardData; badge?: '
           )}
         </div>
       </div>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-secondary)', marginBottom: '2px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
-      <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.artist}</p>
+      <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.95rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-secondary)', marginBottom: '2px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
+      <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.artist}</p>
     </Link>
   )
 }

@@ -16,3 +16,10 @@ export { PlayIcon } from './play-icon'
 export { ReplayIcon } from './replay-icon'
 export { SearchIcon } from './search-icon'
 export { ShareIcon } from './share-icon'
+export {
+  InstagramIcon,
+  TikTokIcon,
+  XIcon,
+  YouTubeIcon,
+  SpotifyIcon,
+} from './social-icons'

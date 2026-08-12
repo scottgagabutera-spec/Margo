@@ -1,5 +1,5 @@
 # MARGO — Brand Identity & Design System
-*Version 4.4 — August 2026 — Living document, update with every design decision*
+*Version 4.6 — August 2026 — Living document, update with every design decision*
 
 ---
 
@@ -14,10 +14,11 @@ Margo is a music-first social platform where people communicate through song lyr
 ## 2. Logo & Brand Mark — UNTOUCHABLE
 
 - Mark: The gold circle with the M waveform inside
-- Wordmark: MARGO in Syne 800, gold, letter-spacing 5px, uppercase
-- Color: Always #E8C547 on dark background
-- Rule: Never resize, recolor, or alter in any way
-- Component: components/MargoLogo.tsx — always use this, never inline SVG
+- Wordmark: MARGO in Syne 800, gold, **letter-spacing 2px**, uppercase
+- Color: Always #E8C547 on dark background (logo exception; elsewhere prefer `var(--gold)`)
+- Rule: Never recolor or redraw. Always use `components/MargoLogo.tsx` — never inline Syne “Margo” text as a logo
+- Wordmark **scales with symbol size** (`~0.43 × size` in px) so lockups stay proportional
+- Letter-spacing is **2px** (tighter than old 3–5px tracking — wide tracking reads as stretched)
 
 ### The 3 Tiers
 
@@ -37,8 +38,9 @@ The Symbol IS the Margo logo. The dash below the M is what makes it distinctly M
 | Nav bar | Symbol (2) | size={28} wordmark rings |
 | Feed header | Symbol (2) | size={36} rings |
 | Composer header | Symbol (2) | size={32} rings |
-| Landing page nav | Lockup (3) | size={36} rings |
+| Landing page nav | Lockup (3) | size={36} wordmark rings |
 | Card export | Symbol (2) | size={48} |
+| Profile hero | — | **No wordmark in body** — person-first; global nav clears above cover |
 
 ### Shadow & Glow Rules
 - In-app: filter: drop-shadow(0 2px 8px rgba(232,197,71,0.25))
@@ -56,7 +58,7 @@ The Symbol IS the Margo logo. The dash below the M is what makes it distinctly M
 
 Margo speaks in two voices:
 
-1. **UI (Geist Sans)** — nav, buttons, handles, timestamps, labels, toasts, chrome.
+1. **UI (Geist Sans)** — nav, buttons, handles, timestamps, labels, toasts, chrome, **song title / artist metadata**, account settings / studio / apply forms.
    CSS: `var(--font-geist-sans)` / `lib/fonts.ts` → `UI_FONT`.  
    Loaded via `geist/font/sans` (variable woff2) on the root layout.
 2. **Lyric (Lora)** — posted lyric quotes, signature lyrics, lyric-led marketing lines.
@@ -65,20 +67,46 @@ Margo speaks in two voices:
 
 Self-hosted via Next.js font system (`next/font` + `geist`). Do not load Inter.
 
-Type scale (applies to both faces unless noted):
-- clamp(2rem,5vw,3.2rem) 700  — Page hero titles
-- 2rem 700                    — Section titles
-- 1.5rem 600                  — Modal headers, featured lyric
-- 1.15rem 600                 — Card titles, song names
-- 1.1rem 400 italic **Lora**  — Lyric text (the star, never change face here)
-- 0.95rem 400                 — Body text, descriptions
-- 0.82rem 400                 — Secondary text, artist names
-- 0.75rem 700                 — Nav links (uppercase, letter-spacing 2px)
-- 0.7rem 400                  — Timestamps, counts, usernames
-- 0.6rem 600                  — Labels, vibe tags, uppercase UI elements
-- MINIMUM / TYPE FLOOR: 0.6rem — nothing smaller on user-facing UI, ever
+### Type role grid (canonical — sanity-check new UI against this)
 
-> **Note:** this floor applies to decorative/meta text (labels, tags, timestamps). Interactive control text (buttons, tappable labels) is governed by Section 14 Rule 3 as refined by Section 15 — see those sections; this scale does not override them.
+Pick a **role** first; do not invent one-off rem values.
+
+| Role | Size | Weight | Color | Face | Use |
+|------|------|--------|-------|------|-----|
+| Hero | `clamp(2rem,5vw,3.2rem)` (landing may use larger clamp) | 300–700 | `--text` | Lora or Geist by surface | Marketing / page heroes |
+| Page title | `1.5rem` | 600 | `--text` or `--gold` | Geist | Settings, Edit, Studio gates |
+| Display name | `1.25rem` | 600 | `--text` | Geist | Profile only |
+| Song title | `0.95–1.15rem` | 600 | `--text` | Geist | Stacked metadata |
+| Lyric star | `1.1rem` | 400 italic | `--text` | **Lora** | Posted lyrics, signature lyric |
+| Body | `0.95rem` | 400 | `--text` / `--text-secondary` | Geist | Paragraphs, inputs |
+| Secondary | `0.82rem` | 400 | `--text-secondary` | Geist | Subtitles, help |
+| Artist name | `0.75rem` | 400 | `--text-secondary` | Geist | Under song title |
+| Username / meta | `0.7rem` | 400 | `--text-secondary` / muted | Geist | `@handle`, footer links, timestamps |
+| Label / CTA | `0.6rem` | 600–700 | context | Geist | Uppercase chips, micro-buttons; touch ≥44px |
+| **Micro body / compact explainer** | **`0.65rem`** | **400** | `--text-secondary` | Geist | Landing how-it-works body at &lt;640px; other dense 3-up strips. Line-height **1.25**. Not Body, not Secondary. |
+| Floor | **never &lt; `0.6rem`** | — | — | — | Remap illegal sizes up to Label/CTA or Micro body |
+
+Nav links (desktop): `0.75rem` / 700 / uppercase / letter-spacing ~1–2px — still Geist chrome.
+
+> **Note:** Interactive control text is governed by Section 14 Rule 3 as refined by Section 15 — short CTAs stay `0.6–0.7rem` with ≥44px touch targets. Micro body is for **non-interactive** dense support copy only.
+
+### Display name vs username (canonical)
+
+| Role | Size | Weight | Color | Face |
+|------|------|--------|-------|------|
+| Display name | `1.25rem` | 600 | `--text` | Geist |
+| @username | `0.7rem` | 400 | `--text-secondary` | Geist |
+
+### Song title vs artist (canonical)
+
+Always **stack** when space allows (catalog, karaoke header, SongPreview, mini-player expanded, post attribution):
+
+| Role | Size | Weight | Color | Face |
+|------|------|--------|-------|------|
+| Song title | `0.95–1.15rem` | 600 | `--text` | Geist |
+| Artist | `0.7–0.75rem` | 400 | `--text-secondary` | Geist |
+
+Joined `Title · Artist` at one size is **only** for ultra-dense chrome (collapsed mini-player). Prefer `components/song-meta.tsx`.
 
 Removed fonts (never bring back):
 - Bebas Neue, DM Sans, Instrument Serif, Space Mono, Inter, Google Fonts CDN for app UI
@@ -240,6 +268,16 @@ This is distinct from the marketing header above — it's the persistent bottom 
 5. **You** — Person / avatar — profile
 
 `music` as a standalone nav destination is retired. `next.config.mjs` permanently redirects `/music` → `/discover` and `/music/player` → `/song/[id]`. There is no live Music page in the tree. Do not add nav references to "Music"; use "Discover."
+
+### Chrome modes (`lib/chrome-mode.ts`)
+
+| Mode | Path | MargoNav | MobileTabBar |
+|------|------|----------|--------------|
+| `app` | product routes | shown | shown |
+| `marketing` | `/` | hidden (landing has its own nav) | **shown** — deliberate Margo choice |
+| `immersive` | `/song/[id]` | hidden | hidden |
+
+Landing footer: two columns (product | legal), Geist `0.7rem`, social icon row; pads with `--margo-page-padding-bottom`.
 
 ---
 
@@ -884,6 +922,8 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ## Changelog
 
+- **4.6 (Aug 2026):** Wordmark tracking **2px** (tighter; 5px was doc-sync error that worsened stretch). Canonical **type role grid** with Micro body / compact explainer (`0.65rem`). Landing how-it-works stays 3-up on mobile with compact title+body. Footer pad/gap tightened.
+- **4.5 (Aug 2026):** Wordmark letter-spacing synced to 5px and scales with symbol size. Canonical display-name / @username and song-title / artist stacks. Landing keeps MobileTabBar (marketing mode). Profile nav clearance + avatar lightbox. Account surfaces (settings / edit / studio / apply) use Geist chrome. Footer two-column + social icons. Type floor enforced at 0.6rem.
 - **4.4 (Aug 2026):** Dual type system — Geist Sans for UI chrome, Lora retained for lyric quotes / signature lyrics / lyric-led marketing. Syne remains wordmark-only. Helpers in `lib/fonts.ts` (`UI_FONT`, `LYRIC_FONT`).
 - **4.3 (Aug 2026):** Fixed version-number mismatch (header now matches footer). Finalized `--text-2`/`--text-3` deprecation status per `feat/fix-text-3-contrast` migration — no remaining product call sites. Resolved Section 10/Section 4 contradiction (Tier 2/5 button colors now reference named tokens, not deprecated aliases). Added missing Tier 4 placeholder in Section 10. Resolved the three-way conflict between Section 10 button font sizes, Section 14 Rule 3, and Section 15's permanent design rule — added explicit cross-references so Rule 3 alone doesn't read as contradicting Section 10/15. Updated Section 9 nav references from "Music" to "Discover"; documented the in-app bottom tab bar (previously undefined in Section 9, only implied by Section 4B). Aligned Section 13's heart-icon guidance with Section 4B (prefer `@/components/icons`, `heart-icon.tsx` is legacy). Documented "Coming Soon" pill and emotion-fallback-color resolutions from the `--text-3` classification decisions.
 - **4.2 (May 2026):** Added Section 15 Mobile Responsiveness Rules (Patterns 1–4).

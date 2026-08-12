@@ -5,6 +5,36 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useIdentity } from '@/hooks/useIdentity';
 import { LandingExchangeSkeleton, LandingRedirectSkeleton } from '@/components/margo-skeletons';
+import {
+  InstagramIcon,
+  TikTokIcon,
+  XIcon,
+  YouTubeIcon,
+  SpotifyIcon,
+} from '@/components/icons';
+import { UI_FONT } from '@/lib/fonts';
+
+const FOOTER_PRODUCT = [
+  { label: 'Feed', href: '/feed' },
+  { label: 'Discover', href: '/discover' },
+  { label: 'Songs', href: '/discover/songs' },
+] as const
+
+const FOOTER_LEGAL = [
+  { label: 'About', href: '/about' },
+  { label: 'Privacy', href: '/privacy' },
+  { label: 'Terms', href: '/terms' },
+  { label: 'DMCA', href: '/dmca' },
+  { label: 'Contact', href: '/contact' },
+] as const
+
+const FOOTER_SOCIAL = [
+  { label: 'Instagram', href: 'https://www.instagram.com/officialtrymargo', Icon: InstagramIcon },
+  { label: 'TikTok', href: 'https://www.tiktok.com/@officialtrymargo', Icon: TikTokIcon },
+  { label: 'X', href: 'https://x.com/OfficialUTM', Icon: XIcon },
+  { label: 'YouTube', href: 'https://youtube.com/@trymargo', Icon: YouTubeIcon },
+  { label: 'Spotify', href: 'https://open.spotify.com/artist/0rGTnmN8rE5so9ibBrhTbJ', Icon: SpotifyIcon },
+] as const
 
 interface Echo {
   lyric?: string;
@@ -356,7 +386,7 @@ export default function Home() {
         padding:'16px 40px',
       }}>
         <a href="/" style={{textDecoration:'none'}}>
-          <MargoLogo tier="symbol" size={32} rings wordmark />
+          <MargoLogo tier="lockup" size={36} rings wordmark />
         </a>
         <a href="/discover" style={{...navLink, color:'var(--gold)', fontWeight:700}}>Discover</a>
       </nav>
@@ -420,20 +450,49 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section style={{position:'relative', zIndex:5, maxWidth:'56rem', margin:'0 auto', padding:'24px 24px 56px'}}>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'32px'}}>
+      {/* How It Works — always 3 columns; compact type on mobile so title+body stay visible */}
+      <section
+        className="margo-how-it-works"
+        style={{ position: 'relative', zIndex: 5, maxWidth: '56rem', margin: '0 auto', padding: '24px 16px 56px' }}
+      >
+        <style>{`
+          .margo-how-it-works__grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+          }
+          .margo-how-it-works__num {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--gold-faint); border: 1px solid var(--gold-border);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 8px;
+            font-family: var(--font-geist-sans), system-ui, sans-serif;
+            font-size: 0.7rem; font-weight: 700; color: var(--gold);
+          }
+          .margo-how-it-works__title {
+            font-family: var(--font-geist-sans), system-ui, sans-serif;
+            font-size: 0.6rem; font-weight: 600; color: var(--text);
+            margin: 0 0 6px; line-height: 1.25;
+          }
+          .margo-how-it-works__body {
+            font-family: var(--font-geist-sans), system-ui, sans-serif;
+            font-size: 0.65rem; font-weight: 400; color: var(--text-secondary);
+            margin: 0; line-height: 1.25;
+          }
+          @media (min-width: 640px) {
+            .margo-how-it-works { padding-left: 24px !important; padding-right: 24px !important; }
+            .margo-how-it-works__grid { gap: 24px; }
+            .margo-how-it-works__num { width: 40px; height: 40px; margin-bottom: 16px; font-size: 0.95rem; }
+            .margo-how-it-works__title { font-size: 1rem; margin-bottom: 8px; line-height: 1.3; }
+            .margo-how-it-works__body { font-size: 0.82rem; line-height: 1.5; }
+          }
+        `}</style>
+        <div className="margo-how-it-works__grid">
           {HOW_IT_WORKS.map(step => (
-            <div key={step.n} style={{textAlign:'center'}}>
-              <div style={{
-                width:'40px', height:'40px', borderRadius:'50%',
-                background:'var(--gold-faint)', border:'1px solid var(--gold-border)',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                margin:'0 auto 16px',
-                fontFamily:'var(--font-lora),serif', fontWeight:700, color:'var(--gold)',
-              }}>{step.n}</div>
-              <h3 style={{fontFamily:'var(--font-lora),serif', fontSize:'1rem', fontWeight:600, color:'var(--text)', marginBottom:'8px'}}>{step.title}</h3>
-              <p style={{fontFamily:'var(--font-lora),serif', fontSize:'0.8rem', color:'var(--text-2)', lineHeight:1.6}}>{step.text}</p>
+            <div key={step.n} style={{ textAlign: 'center', minWidth: 0 }}>
+              <div className="margo-how-it-works__num">{step.n}</div>
+              <h3 className="margo-how-it-works__title">{step.title}</h3>
+              <p className="margo-how-it-works__body">{step.text}</p>
             </div>
           ))}
         </div>
@@ -493,35 +552,68 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Footer */}
+      {/* Footer — product | legal columns + social icons */}
       <footer style={{
         position:'relative', zIndex:10,
-        padding:'56px 40px var(--margo-page-padding-bottom)',
+        padding:'48px 40px var(--margo-page-padding-bottom)',
         display:'flex', flexDirection:'column', alignItems:'center', gap:'20px',
       }}>
-        <div style={{display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'center', gap:'8px'}}>
-          {[
-            { label: 'Feed', href: '/feed' },
-            { label: 'Discover', href: '/discover' },
-            { label: 'Songs', href: '/discover/songs' },
-            { label: 'About', href: '/about' },
-            { label: 'Privacy', href: '/privacy' },
-            { label: 'Terms', href: '/terms' },
-            { label: 'DMCA', href: '/dmca' },
-            { label: 'Contact', href: '/contact' },
-          ].map(link => (
-            <a key={link.href} href={link.href} style={{
-              fontSize:'1rem', color:'var(--text)',
-              fontFamily:'var(--font-lora),serif',
-              letterSpacing:'0.5px',
-              textDecoration:'none', transition:'color 150ms ease',
-              padding:'10px 16px', minHeight:'44px',
-              display:'inline-flex', alignItems:'center', justifyContent:'center',
-              boxSizing:'border-box',
-            }}>{link.label}</a>
+        <div style={{
+          display:'grid',
+          gridTemplateColumns:'1fr 1fr',
+          gap:'32px 48px',
+          width:'100%',
+          maxWidth:'420px',
+        }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:'4px', alignItems:'flex-start' }}>
+            {FOOTER_PRODUCT.map(link => (
+              <a key={link.href} href={link.href} style={{
+                fontSize:'0.7rem', color:'var(--text)',
+                fontFamily: UI_FONT, fontWeight: 600,
+                letterSpacing:'0.5px', textDecoration:'none',
+                padding:'10px 4px', minHeight:'44px',
+                display:'inline-flex', alignItems:'center',
+                boxSizing:'border-box',
+              }}>{link.label}</a>
+            ))}
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:'4px', alignItems:'flex-start' }}>
+            {FOOTER_LEGAL.map(link => (
+              <a key={link.href} href={link.href} style={{
+                fontSize:'0.7rem', color:'var(--text-muted)',
+                fontFamily: UI_FONT, fontWeight: 500,
+                letterSpacing:'0.5px', textDecoration:'none',
+                padding:'10px 4px', minHeight:'44px',
+                display:'inline-flex', alignItems:'center',
+                boxSizing:'border-box',
+              }}>{link.label}</a>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', flexWrap:'wrap' }}>
+          {FOOTER_SOCIAL.map(({ label, href, Icon }) => (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={label}
+              style={{
+                width:'var(--margo-touch-min)', height:'var(--margo-touch-min)',
+                display:'inline-flex', alignItems:'center', justifyContent:'center',
+                color:'var(--text-secondary)', textDecoration:'none',
+                borderRadius:'50%',
+              }}
+            >
+              <Icon size={18} color="currentColor" />
+            </a>
           ))}
         </div>
-        <div style={{fontSize:'0.7rem', color:'var(--text-2)', fontFamily:'var(--font-lora),serif', letterSpacing:'1px'}}>© {new Date().getFullYear()} Margo</div>
+
+        <div style={{fontSize:'0.7rem', color:'var(--text-muted)', fontFamily: UI_FONT, letterSpacing:'1px'}}>
+          © {new Date().getFullYear()} Margo
+        </div>
       </footer>
     </div>
   );

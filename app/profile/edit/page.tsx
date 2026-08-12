@@ -5,19 +5,21 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { BackButton } from '@/components/back-button'
+import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
-const font = 'var(--font-lora), serif'
+const font = UI_FONT
+const lyricFont = LYRIC_FONT
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', height: '48px', padding: '0 16px',
+  width: '100%', height: '44px', padding: '0 14px',
   background: 'var(--gold-faint)', border: '1px solid var(--border)',
   borderRadius: '12px', color: 'var(--text)', fontFamily: font,
-  fontSize: '1rem', outline: 'none', boxSizing: 'border-box',
+  fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontFamily: font, fontSize: '0.875rem', color: 'var(--text-secondary)',
-  textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px',
+  display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)',
+  textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px', fontWeight: 700,
 }
 
 export default function EditProfilePage() {
@@ -149,8 +151,8 @@ export default function EditProfilePage() {
             <BackButton fallbackHref={`/profile/${identity.username}`} />
           </div>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Edit Profile</h1>
-            <p style={{ fontFamily: font, fontSize: '0.95rem', color: 'var(--text-secondary)' }}>How you show up on Margo</p>
+            <h1 style={{ fontFamily: font, fontSize: '1.5rem', fontWeight: 600, color: 'var(--gold)', marginBottom: '8px' }}>Edit Profile</h1>
+            <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>How you show up on Margo</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -218,7 +220,7 @@ export default function EditProfilePage() {
                 placeholder="The lyric that says it best..."
                 style={{
                   width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none',
-                  fontFamily: font, fontStyle: 'italic', fontSize: '1.15rem', color: 'var(--gold)',
+                  fontFamily: lyricFont, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--gold)',
                   lineHeight: 1.5, marginBottom: '16px', boxSizing: 'border-box',
                 }}
               />
@@ -281,7 +283,8 @@ export default function EditProfilePage() {
                   minHeight: 'var(--margo-touch-min)', padding: '0 24px',
                   display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                   background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--border-hi)',
-                  borderRadius: '50px', fontFamily: font, fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer',
+                  borderRadius: '50px', fontFamily: font, fontWeight: 600, fontSize: '0.6rem',
+                  letterSpacing: '1.2px', textTransform: 'uppercase', cursor: 'pointer',
                 }}
               >Cancel</button>
               <button
@@ -291,8 +294,8 @@ export default function EditProfilePage() {
                   minHeight: 'var(--margo-touch-min)', padding: '0 32px',
                   display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                   background: 'var(--gold)', color: 'var(--bg)', border: 'none',
-                  borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.95rem',
-                  letterSpacing: '0.5px', cursor: saving ? 'not-allowed' : 'pointer',
+                  borderRadius: '50px', fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
+                  letterSpacing: '1.2px', textTransform: 'uppercase', cursor: saving ? 'not-allowed' : 'pointer',
                   boxShadow: '0 6px 28px rgba(232,197,71,0.28)', opacity: saving ? 0.7 : 1,
                   transition: 'opacity 150ms ease',
                 }}

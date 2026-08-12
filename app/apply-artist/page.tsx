@@ -6,7 +6,9 @@ import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { ArtistApplicationForm } from '@/components/artist-application-form'
 import { BackButton } from '@/components/back-button'
 
-const font = 'var(--font-lora), serif'
+import { UI_FONT } from '@/lib/fonts'
+
+const font = UI_FONT
 
 export default function ApplyArtistPage() {
   const router = useRouter()

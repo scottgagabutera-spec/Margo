@@ -5,10 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { SongUploadForm } from '@/components/studio/song-upload-form'
 import { BackButton } from '@/components/back-button'
+import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
-
-const font = 'var(--font-lora), serif'
+const font = UI_FONT
 
 interface StudioSong {
   id: string
@@ -276,7 +276,7 @@ export default function StudioPage() {
                   {label && (
                     <span style={{
                       position: 'absolute', top: '10px', right: '10px',
-                      fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                      fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
                       color: 'var(--text)', background: 'rgba(7,6,10,0.7)',
                       padding: '4px 8px', borderRadius: '50px',
                       textTransform: 'uppercase', letterSpacing: '0.5px',

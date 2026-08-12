@@ -37,6 +37,7 @@ import { VibeTag } from '@/components/vibe-tag'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { PostCardSuggestedReply } from '@/components/post-card-suggested-reply'
+import { SongMeta } from '@/components/song-meta'
 
 const supabase = createClient()
 
@@ -189,15 +190,7 @@ function PostMomentBody({
     <div style={{ marginBottom: multi ? '8px' : '16px' }}>
       {lines.map((line, i) => {
         const hasAudio = !!line.audioUrl
-        const attribution = [line.songTitle, line.artistName].filter(Boolean).join(' · ')
-        const attrStyle: React.CSSProperties = {
-          fontFamily: UI_FONT,
-          fontSize: '0.6rem',
-          color: 'rgba(255,255,255,0.75)',
-          letterSpacing: '1px',
-          textTransform: 'uppercase',
-          margin: 0,
-        }
+        const hasMeta = !!(line.songTitle || line.artistName)
         // Catalog/Tier1 lines put play in the lyric row, so show the 56×56
         // thumb beside attribution instead (external compact already has it
         // right of the lyric when there's no audio).
@@ -208,7 +201,7 @@ function PostMomentBody({
               <p style={{
                 margin: '10px 0 8px',
                 fontFamily: UI_FONT,
-                fontSize: '0.52rem',
+                fontSize: '0.6rem',
                 fontWeight: 700,
                 letterSpacing: '1.5px',
                 textTransform: 'uppercase',
@@ -261,7 +254,7 @@ function PostMomentBody({
                 />
               ) : null}
             </div>
-            {attribution ? (
+            {hasMeta ? (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -284,13 +277,13 @@ function PostMomentBody({
                     }}
                   />
                 ) : null}
-                {line.songId ? (
-                  <Link href={`/song/${line.songId}`} style={{ ...attrStyle, display: 'block', textDecoration: 'none' }}>
-                    {attribution}
-                  </Link>
-                ) : (
-                  <p style={attrStyle}>{attribution}</p>
-                )}
+                <SongMeta
+                  title={line.songTitle}
+                  artist={line.artistName}
+                  href={line.songId ? `/song/${line.songId}` : null}
+                  titleStyle={{ fontSize: '0.82rem' }}
+                  artistStyle={{ fontSize: '0.7rem' }}
+                />
               </div>
             ) : null}
           </div>
@@ -529,7 +522,6 @@ export function PostCard({
   }
 
   if (isRow && !rowExpanded) {
-    const songLine = [post.knowledge?.song, post.knowledge?.artist].filter(Boolean).join(' · ')
     return (
       <button
         type="button"
@@ -543,22 +535,22 @@ export function PostCard({
         }}
       >
         <p style={{
-          margin: 0, fontFamily: 'var(--font-lora), serif', fontSize: '0.95rem',
+          margin: 0, fontFamily: LYRIC_FONT, fontStyle: 'italic', fontSize: '0.95rem',
           color: 'var(--text)', lineHeight: 1.4,
           display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
         }}>
           {post.text || 'Untitled lyric'}
         </p>
-        {songLine ? (
-          <p style={{
-            margin: '4px 0 0', fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem',
-            color: 'var(--text-muted)', lineHeight: 1.3,
-            display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}>
-            {songLine}
-          </p>
+        {(post.knowledge?.song || post.knowledge?.artist) ? (
+          <div style={{ marginTop: '4px' }}>
+            <SongMeta
+              title={post.knowledge?.song}
+              artist={post.knowledge?.artist}
+              titleStyle={{ fontSize: '0.75rem' }}
+              artistStyle={{ fontSize: '0.65rem' }}
+            />
+          </div>
         ) : null}
       </button>
     )
@@ -582,6 +574,7 @@ export function PostCard({
         position: 'relative', overflow: 'visible',
         transition: 'border-color 200ms ease',
         cursor: disableCardNav || isRow ? 'default' : 'pointer',
+        ...(isRow ? { margin: '6px 0 10px' } : null),
       }}
     >
       {label && !isRow ? (

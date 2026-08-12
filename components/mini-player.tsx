@@ -506,13 +506,13 @@ export function MiniPlayer() {
               {/* Song info */}
               <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                 <p style={{
-                  fontFamily: 'var(--font-lora), serif', fontWeight: 600,
-                  fontSize: '1rem', color: '#F4F1ED', margin: '0 0 4px',
+                  fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontWeight: 600,
+                  fontSize: '1.15rem', color: 'var(--text)', margin: '0 0 4px',
                 }}>{title}</p>
                 <p style={{
-                  fontFamily: 'var(--font-lora), serif',
-                  fontSize: '0.65rem', color: 'rgba(255,255,255,0.38)',
-                  letterSpacing: '1px', textTransform: 'uppercase', margin: 0,
+                  fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+                  fontSize: '0.75rem', color: 'var(--text-secondary)',
+                  letterSpacing: '0.3px', margin: 0,
                 }}>{artist}</p>
               </div>
 
