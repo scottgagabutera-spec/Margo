@@ -84,7 +84,7 @@ export function MobileAccountMenu() {
         <div
           onClick={() => setOpen(false)}
           style={{
-            position: 'fixed', inset: 0, zIndex: 70,
+            position: 'fixed', inset: 0, zIndex: 100,
             background: 'rgba(0,0,0,0.6)',
           }}
         >
@@ -96,7 +96,8 @@ export function MobileAccountMenu() {
               background: 'var(--bg)',
               borderTopLeftRadius: '20px', borderTopRightRadius: '20px',
               boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
-              padding: '8px 12px calc(20px + env(safe-area-inset-bottom))',
+              /* Clear tab bar + mini-player + home indicator so last rows stay tappable */
+              padding: '8px 12px var(--margo-page-padding-bottom)',
             }}
           >
             <div style={{

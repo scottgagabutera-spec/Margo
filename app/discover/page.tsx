@@ -709,7 +709,7 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
           <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
             <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.15)' }} />
           </div>
-          <div style={{ padding: '20px 28px 40px' }}>
+          <div style={{ padding: '20px 28px calc(40px + var(--margo-page-bottom))' }}>
             <button className="close-btn" onClick={onClose} style={{ position: 'absolute', top: '20px', right: '20px', width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease', fontFamily: 'var(--font-lora), serif', boxSizing: 'border-box' }}>×</button>
             <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '24px' }}>
               {song.artwork && (

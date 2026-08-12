@@ -49,7 +49,7 @@ export function ComposeSearchDropdown({
         style={{
           position: 'fixed',
           inset: 0,
-          zIndex: 45,
+          zIndex: 54,
           border: 'none',
           padding: 0,
           margin: 0,
@@ -66,7 +66,8 @@ export function ComposeSearchDropdown({
           left: 0,
           right: 0,
           marginTop: '8px',
-          zIndex: 50,
+          /* Above mobile tab bar (z 50) so results aren't painted under it */
+          zIndex: 55,
           background: 'var(--surface)',
           border: '1px solid var(--border)',
           borderRadius: '16px',
@@ -74,7 +75,8 @@ export function ComposeSearchDropdown({
           overscrollBehavior: 'contain',
           touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch',
-          maxHeight: 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.42), 420px)',
+          /* Cap height so the list ends above tab bar + mini-player */
+          maxHeight: 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.42), 420px, calc(var(--margo-vv-height, 100dvh) - var(--margo-page-bottom) - 160px))',
           boxShadow: '0 12px 32px rgba(0,0,0,0.28)',
         }}
       >

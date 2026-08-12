@@ -476,7 +476,8 @@ export function CardExportModal({
           border: '1px solid rgba(255,255,255,0.07)',
           borderBottom: 'none',
           borderRadius: '24px 24px 0 0',
-          padding: '0 0 32px',
+          /* 32px content pad + live tab bar / mini-player / safe-area clearance */
+          padding: '0 0 calc(32px + var(--margo-page-bottom))',
           display: 'flex', flexDirection: 'column',
           maxHeight: '92dvh', overflowY: 'auto',
         }}
