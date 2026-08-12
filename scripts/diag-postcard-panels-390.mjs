@@ -62,7 +62,11 @@ async function measure(page) {
   })
 }
 
-const browser = await chromium.launch({ headless: true })
+const browser = await chromium.launch({
+  headless: true,
+  // System Edge — avoids a full Playwright Chromium download on Windows.
+  channel: process.env.PW_CHANNEL || 'msedge',
+})
 const context = await browser.newContext({
   viewport: { width: 390, height: 844 },
   deviceScaleFactor: 2,

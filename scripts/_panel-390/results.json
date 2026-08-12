@@ -1,0 +1,96 @@
+{
+  "BASE": "https://margo-682rpg7mo-bgss-projects-0f517fe3.vercel.app",
+  "results": [
+    {
+      "name": "row present",
+      "status": "PASS",
+      "detail": "91 strip(s)"
+    },
+    {
+      "name": "viewport 390",
+      "status": "PASS",
+      "detail": "390×844"
+    },
+    {
+      "name": "tile width ~256",
+      "status": "PASS",
+      "detail": "256px"
+    },
+    {
+      "name": "gap ~12",
+      "status": "PASS",
+      "detail": "12px"
+    },
+    {
+      "name": "peek ≥40",
+      "status": "PASS",
+      "detail": "40px of cover"
+    },
+    {
+      "name": "counter",
+      "status": "PASS",
+      "detail": "1 / 2"
+    },
+    {
+      "name": "snapped panel 2",
+      "status": "PASS",
+      "detail": "cover"
+    }
+  ],
+  "rest": {
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "scroller": {
+      "w": 308,
+      "left": 41
+    },
+    "panel0": {
+      "id": "lyric",
+      "w": 256,
+      "h": 123.4
+    },
+    "panel1": {
+      "id": "cover",
+      "w": 256,
+      "h": 196,
+      "peek": 40
+    },
+    "gap": 12,
+    "scrollLeft": 0,
+    "counter": "1 / 2",
+    "panelIds": [
+      "lyric",
+      "cover"
+    ]
+  },
+  "snapped": {
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "scroller": {
+      "w": 308,
+      "left": 41
+    },
+    "panel0": {
+      "id": "lyric",
+      "w": 256,
+      "h": 123.4
+    },
+    "panel1": {
+      "id": "cover",
+      "w": 256,
+      "h": 196,
+      "peek": 256
+    },
+    "gap": 12,
+    "scrollLeft": 216,
+    "counter": "2 / 2",
+    "panelIds": [
+      "lyric",
+      "cover"
+    ]
+  }
+}

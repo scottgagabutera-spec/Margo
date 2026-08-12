@@ -1,0 +1,28 @@
+{
+  "viewport": {
+    "w": 390,
+    "h": 844
+  },
+  "scroller": {
+    "w": 308,
+    "left": 41
+  },
+  "panel0": {
+    "id": "lyric",
+    "w": 256,
+    "h": 123.4
+  },
+  "panel1": {
+    "id": "cover",
+    "w": 256,
+    "h": 196,
+    "peek": 40
+  },
+  "gap": 12,
+  "scrollLeft": 0,
+  "counter": "1 / 2",
+  "panelIds": [
+    "lyric",
+    "cover"
+  ]
+}
