@@ -1,7 +1,6 @@
 /**
  * Shared mapping for Feed Replay attribution cards
- * (post_replays → ReplayAttribution). Used by useRecentReplays (Feed discovery)
- * and useFolloweeReplays (Following-scoped, reserved).
+ * (post_replays → ReplayAttribution). Used by useRecentReplays (Feed discovery).
  */
 import type { Post } from '@/hooks/usePosts'
 
