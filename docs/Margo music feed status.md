@@ -1,4 +1,6 @@
 # Margo — Music & Feed Redesign: Status & Plan
+> **STATUS (Aug 2026): PARTIALLY SUPERSEDED.** Feed earned badges and Discover rename shipped. Treat `/music` references as historical; live discovery is `/discover`. Verify Save Queue and related items in code before planning from this doc.
+
 
 *Living doc, in the style of the other MARGO_*.md docs. Paste this into a new
 conversation to bring Claude up to speed instantly.*

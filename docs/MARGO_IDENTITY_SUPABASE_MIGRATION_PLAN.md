@@ -1,4 +1,6 @@
 # Margo — Identity & Supabase Migration Plan
+> **STATUS (Aug 2026): SHIPPED / ARCHIVE.** Identity, profiles, follows, messaging, and posts/songs are on Supabase. Cookie auth phases also shipped. Keep for history; do not treat Phase tables as current work.
+
 *Draft v2 — July 2026 — Living document*
 
 **Purpose:** single reference for the move from Firebase-only identity to Supabase-backed profiles, follows, and messaging — what's already shipped, what's next, in what order, and exactly which files are touched. Companion to MARGO_RIGHTS_AND_DISCOVERY_PLAN.md, MARGO_BRAND.md, and the Growth & Platform Work Plan — this doc is the execution layer for Phase 1–2 of that roadmap's Section 2.

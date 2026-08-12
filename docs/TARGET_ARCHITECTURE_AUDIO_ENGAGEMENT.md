@@ -1,4 +1,6 @@
 # Margo Target Architecture Spec
+> **STATUS (Aug 2026): MOSTLY SHIPPED.** `lib/audio-engine` + mini-player are live. Karaoke canonical route is `/song/[id]` (not `/music/player`). Use as architecture reference, not a build checklist.
+
 **Audio playback & engagement data integrity**  
 Version 1.0 — May 2026  
 Status: Blueprint (implementation pending)  
