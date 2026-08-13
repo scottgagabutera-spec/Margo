@@ -1,14 +1,13 @@
 // components/avatar-upload.tsx
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 
 const supabase = createClient()
 
 const font = 'var(--font-lora), serif'
-const gold = 'var(--gold)'
 const bg = 'var(--bg)'
 const text2 = 'var(--text-2)'
 const textMuted = 'var(--text-muted)'
@@ -23,8 +22,17 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
   const { user } = useIdentity()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(currentAvatarUrl)
+  // Local override after a successful upload this session; otherwise follow the prop.
+  const [localPreview, setLocalPreview] = useState<string | null>(null)
+  const [imgFailed, setImgFailed] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const previewUrl = localPreview ?? currentAvatarUrl
+  const showPhoto = !!previewUrl && !imgFailed
+
+  useEffect(() => {
+    setImgFailed(false)
+  }, [previewUrl])
 
   const initials = (displayName || '??').slice(0, 2).toUpperCase()
 
@@ -65,7 +73,8 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
 
       if (updateError) throw updateError
 
-      setPreviewUrl(freshUrl)
+      setLocalPreview(freshUrl)
+      setImgFailed(false)
       onUploaded?.(freshUrl)
     } catch (err) {
       console.error('Avatar upload failed:', err)
@@ -81,18 +90,18 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
       <div
         style={{
           width: '88px', height: '88px', borderRadius: '50%', flexShrink: 0,
-          background: previewUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+          background: showPhoto ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden', position: 'relative',
           border: '1px solid rgba(255,255,255,0.08)',
         }}
       >
-        {previewUrl ? (
+        {showPhoto ? (
           <img
-            src={previewUrl}
+            src={previewUrl!}
             alt={displayName}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            onError={() => setPreviewUrl(null)}
+            onError={() => setImgFailed(true)}
           />
         ) : (
           <span style={{ fontFamily: font, fontSize: '1.6rem', fontWeight: 700, color: bg }}>
@@ -122,7 +131,7 @@ export function AvatarUpload({ currentAvatarUrl, displayName, onUploaded }: Avat
           opacity: uploading ? 0.6 : 1,
         }}
       >
-        {uploading ? 'Uploading…' : previewUrl ? 'Change Photo' : 'Add Photo'}
+        {uploading ? 'Uploading…' : showPhoto ? 'Change Photo' : 'Add Photo'}
       </button>
 
       <input
