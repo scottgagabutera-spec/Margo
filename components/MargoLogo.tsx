@@ -2,7 +2,7 @@
 
 /**
  * MargoLogo — mark / symbol / lockup.
- * Wordmark: Syne 600, gold, letter-spacing 2px, uppercase.
+ * Wordmark: Sora 700, gold, letter-spacing 2px, uppercase.
  * Wordmark size scales with the symbol so lockups stay proportional.
  */
 interface MargoLogoProps {
@@ -73,8 +73,8 @@ export default function MargoLogo({
         </div>
         {wordmark && (
           <span style={{
-            fontFamily: 'var(--font-syne), sans-serif',
-            fontWeight: 600,
+            fontFamily: 'var(--font-sora), sans-serif',
+            fontWeight: 700,
             fontSize: `${wordmarkPx}px`,
             letterSpacing: '2px',
             color: '#E8C547',

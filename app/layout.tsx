@@ -11,7 +11,7 @@ import { ChromeModePublisher } from '@/components/chrome-mode'
 import { TabSwipeProvider } from '@/hooks/useTabSwipe'
 import { Toaster } from '@/components/ui/sonner'
 import type { Metadata, Viewport } from 'next'
-import { Lora, Syne } from 'next/font/google'
+import { Lora, Sora } from 'next/font/google'
 import { GeistSans } from 'geist/font/sans'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
@@ -22,10 +22,10 @@ const lora = Lora({
   variable: '--font-lora',
 })
 
-const syne = Syne({
+const sora = Sora({
   subsets: ['latin'],
-  weight: ['600'],
-  variable: '--font-syne',
+  weight: ['700'],
+  variable: '--font-sora',
 })
 
 const BASE_URL = 'https://trymargo.com'
@@ -122,7 +122,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${lora.variable} ${syne.variable} ${GeistSans.variable}`}>
+    <html lang="en" className={`${lora.variable} ${sora.variable} ${GeistSans.variable}`}>
       <head>
         <link rel="dns-prefetch" href="https://audio.trymargo.com" />
         <link rel="preconnect" href="https://audio.trymargo.com" crossOrigin="anonymous" />
