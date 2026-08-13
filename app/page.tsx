@@ -1,6 +1,6 @@
 'use client'
 import MargoLogo from '@/components/MargoLogo';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useIdentity } from '@/hooks/useIdentity';
@@ -33,8 +33,52 @@ const FOOTER_SOCIAL = [
   { label: 'TikTok', href: 'https://www.tiktok.com/@officialtrymargo', Icon: TikTokIcon },
   { label: 'X', href: 'https://x.com/OfficialUTM', Icon: XIcon },
   { label: 'YouTube', href: 'https://youtube.com/@trymargo', Icon: YouTubeIcon },
+] as const
+
+const FOOTER_LISTEN = [
   { label: 'Spotify', href: 'https://open.spotify.com/artist/0rGTnmN8rE5so9ibBrhTbJ', Icon: SpotifyIcon },
 ] as const
+
+const footerLinkStyle: CSSProperties = {
+  fontSize: '0.7rem',
+  color: 'var(--text)',
+  fontFamily: UI_FONT,
+  fontWeight: 600,
+  letterSpacing: '0.5px',
+  textDecoration: 'none',
+  padding: '10px 4px',
+  minHeight: '44px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  boxSizing: 'border-box',
+}
+
+const footerLegalLinkStyle: CSSProperties = {
+  ...footerLinkStyle,
+  color: 'var(--text-muted)',
+  fontWeight: 500,
+}
+
+const footerColLabelStyle: CSSProperties = {
+  fontSize: '0.6rem',
+  fontFamily: UI_FONT,
+  fontWeight: 700,
+  letterSpacing: '1.5px',
+  textTransform: 'uppercase',
+  color: 'var(--gold)',
+  marginBottom: '8px',
+}
+
+const footerIconLinkStyle: CSSProperties = {
+  width: 'var(--margo-touch-min)',
+  height: 'var(--margo-touch-min)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: 'var(--text-secondary)',
+  textDecoration: 'none',
+  borderRadius: '50%',
+}
 
 interface Post {
   id: string;
@@ -498,66 +542,120 @@ export default function Home() {
         `}</style>
       </section>
 
-      {/* Footer — product | legal columns + social icons */}
-      <footer style={{
-        position:'relative', zIndex:10,
-        padding:'48px 40px var(--margo-page-padding-bottom)',
-        display:'flex', flexDirection:'column', alignItems:'center', gap:'20px',
+      {/* Footer — Explore | Legal | Connect (Social + Listen); +32px air above tab bar */}
+      <footer className="margo-landing-footer" style={{
+        position: 'relative', zIndex: 10,
+        padding: '48px 24px calc(var(--margo-page-padding-bottom) + 32px)',
+        display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '28px',
+        width: '100%', maxWidth: '960px', margin: '0 auto', boxSizing: 'border-box',
       }}>
-        <div style={{
-          display:'grid',
-          gridTemplateColumns:'1fr 1fr',
-          gap:'32px 48px',
-          width:'100%',
-          maxWidth:'420px',
-        }}>
-          <div style={{ display:'flex', flexDirection:'column', gap:'4px', alignItems:'flex-start' }}>
+        <style>{`
+          .margo-landing-footer__grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px 32px;
+            width: 100%;
+          }
+          .margo-landing-footer__connect {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+          }
+          .margo-landing-footer__connect-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+          }
+          .margo-landing-footer__icons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            justify-content: center;
+          }
+          .margo-landing-footer__copy {
+            text-align: center;
+          }
+          @media (min-width: 640px) {
+            .margo-landing-footer {
+              padding-left: 40px !important;
+              padding-right: 40px !important;
+            }
+            .margo-landing-footer__grid {
+              grid-template-columns: 1.1fr 1.1fr 0.95fr;
+              gap: 32px 48px;
+            }
+            .margo-landing-footer__connect {
+              grid-column: auto;
+              align-items: flex-start;
+            }
+            .margo-landing-footer__connect-block {
+              align-items: flex-start;
+            }
+            .margo-landing-footer__icons {
+              justify-content: flex-start;
+            }
+            .margo-landing-footer__copy {
+              text-align: left;
+            }
+          }
+        `}</style>
+        <div className="margo-landing-footer__grid">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+            <div style={footerColLabelStyle}>Explore</div>
             {FOOTER_PRODUCT.map(link => (
-              <a key={link.href} href={link.href} style={{
-                fontSize:'0.7rem', color:'var(--text)',
-                fontFamily: UI_FONT, fontWeight: 600,
-                letterSpacing:'0.5px', textDecoration:'none',
-                padding:'10px 4px', minHeight:'44px',
-                display:'inline-flex', alignItems:'center',
-                boxSizing:'border-box',
-              }}>{link.label}</a>
+              <a key={link.href} href={link.href} style={footerLinkStyle}>{link.label}</a>
             ))}
           </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:'4px', alignItems:'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+            <div style={footerColLabelStyle}>Legal</div>
             {FOOTER_LEGAL.map(link => (
-              <a key={link.href} href={link.href} style={{
-                fontSize:'0.7rem', color:'var(--text-muted)',
-                fontFamily: UI_FONT, fontWeight: 500,
-                letterSpacing:'0.5px', textDecoration:'none',
-                padding:'10px 4px', minHeight:'44px',
-                display:'inline-flex', alignItems:'center',
-                boxSizing:'border-box',
-              }}>{link.label}</a>
+              <a key={link.href} href={link.href} style={footerLegalLinkStyle}>{link.label}</a>
             ))}
           </div>
+          <div className="margo-landing-footer__connect">
+            <div className="margo-landing-footer__connect-block">
+              <div style={footerColLabelStyle}>Social</div>
+              <div className="margo-landing-footer__icons">
+                {FOOTER_SOCIAL.map(({ label, href, Icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    style={footerIconLinkStyle}
+                  >
+                    <Icon size={18} color="currentColor" />
+                  </a>
+                ))}
+              </div>
+            </div>
+            <div className="margo-landing-footer__connect-block">
+              <div style={footerColLabelStyle}>Listen</div>
+              <div className="margo-landing-footer__icons">
+                {FOOTER_LISTEN.map(({ label, href, Icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    style={footerIconLinkStyle}
+                  >
+                    <Icon size={18} color="currentColor" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', flexWrap:'wrap' }}>
-          {FOOTER_SOCIAL.map(({ label, href, Icon }) => (
-            <a
-              key={label}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={label}
-              style={{
-                width:'var(--margo-touch-min)', height:'var(--margo-touch-min)',
-                display:'inline-flex', alignItems:'center', justifyContent:'center',
-                color:'var(--text-secondary)', textDecoration:'none',
-                borderRadius:'50%',
-              }}
-            >
-              <Icon size={18} color="currentColor" />
-            </a>
-          ))}
-        </div>
-
-        <div style={{fontSize:'0.7rem', color:'var(--text-muted)', fontFamily: UI_FONT, letterSpacing:'1px'}}>
+        <div className="margo-landing-footer__copy" style={{
+          fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: UI_FONT, letterSpacing: '1px',
+          paddingTop: '8px', borderTop: '1px solid var(--border)',
+        }}>
           © {new Date().getFullYear()} Margo
         </div>
       </footer>
