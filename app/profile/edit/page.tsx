@@ -31,7 +31,7 @@ export default function EditProfilePage() {
   } = useIdentity()
   const { requireAuth } = useAuthGate()
 
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => identity?.avatarUrl ?? null)
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [bio, setBio] = useState('')
@@ -158,7 +158,7 @@ export default function EditProfilePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
               <AvatarUpload
-                currentAvatarUrl={avatarUrl}
+                currentAvatarUrl={avatarUrl ?? identity.avatarUrl ?? null}
                 displayName={displayName || identity.displayName || ''}
                 onUploaded={(url) => {
                   setAvatarUrl(url)
