@@ -1,5 +1,5 @@
 # MARGO — Brand Identity & Design System
-*Version 4.7 — August 2026 — Living document, update with every design decision*
+*Version 4.8 — August 2026 — Living document, update with every design decision*
 
 ---
 
@@ -86,7 +86,7 @@ Pick a **role** first; do not invent one-off rem values.
 | Artist name | `0.75rem` | 400 | `--text-secondary` | Geist | Under song title |
 | Username / meta | `0.7rem` | 400 | `--text-secondary` / muted | Geist | `@handle`, footer links, timestamps |
 | Label / CTA | `0.6rem` | 600–700 | context | Geist | Uppercase chips, micro-buttons; touch ≥44px |
-| **Micro body / compact explainer** | **`0.65rem`** | **400** | `--text-secondary` | Geist | Landing how-it-works body at &lt;640px; other dense 3-up strips. Line-height **1.25**. Not Body, not Secondary. |
+| **Micro body / compact explainer** | **`0.65rem`** | **400** | `--text-secondary` | Geist | Dense non-interactive support only (not landing how-it-works — that uses Secondary/Body + stack layout). Line-height **1.25**. |
 | Floor | **never &lt; `0.6rem`** | — | — | — | Remap illegal sizes up to Label/CTA or Micro body |
 
 Nav links (desktop): `0.75rem` / 700 / uppercase / letter-spacing ~1–2px — still Geist chrome.
@@ -925,6 +925,7 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ## Changelog
 
+- **4.8 (Aug 2026):** Landing typography pass — Lora for lyric/hero voice only; Geist for chrome/meta/CTA. Hero clamp capped. Exchange lyric at Lyric star `1.1rem`. How-it-works stacks on mobile with Secondary/Body (no Micro body). Ticker/nav chrome to Geist.
 - **4.7 (Aug 2026):** Wordmark weight **Syne 600** (was 800) at **2px** tracking — still Syne, no Geist/Satoshi. **Lockup placement:** full wordmark on Feed + landing only; mark/symbol-only on other tabs and detail; karaoke neither. Discover: no page-level “DISCOVER” H1. Landing “There’s more where that came from” section removed.
 - **4.6 (Aug 2026):** Wordmark tracking **2px** (tighter; 5px was doc-sync error that worsened stretch). Canonical **type role grid** with Micro body / compact explainer (`0.65rem`). Landing how-it-works stays 3-up on mobile with compact title+body. Footer pad/gap tightened.
 - **4.5 (Aug 2026):** Wordmark letter-spacing synced to 5px and scales with symbol size. Canonical display-name / @username and song-title / artist stacks. Landing keeps MobileTabBar (marketing mode). Profile nav clearance + avatar lightbox. Account surfaces (settings / edit / studio / apply) use Geist chrome. Footer two-column + social icons. Type floor enforced at 0.6rem.
@@ -935,4 +936,4 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ---
 
-*Last updated: August 2026 — Version 4.7*
+*Last updated: August 2026 — Version 4.8*
