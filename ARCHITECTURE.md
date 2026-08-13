@@ -46,7 +46,7 @@ Margo is a **lyric-social** product: people post song lyrics tagged with emotion
 | Auth / identity | Cookie session, profiles, gates | `lib/supabase/*`, `components/supabase-auth-provider.tsx`, `hooks/useIdentity.tsx`, `app/api/auth/*`, `components/auth-gate-modal.tsx` |
 | Audio | Snippets, queue, full play, Media Session | `lib/audio-engine/*`, `components/mini-player.tsx`, `components/audio-engine-provider.tsx`, `hooks/useAudioEngine.ts` |
 | Social | DMs, alerts, follows | `app/messages/*`, `app/notifications/page.tsx`, `hooks/useMessaging.tsx`, `hooks/useNotifications.tsx` |
-| Studio / artists | Uploads, applications | `app/studio/page.tsx`, `app/apply-artist/page.tsx`, `components/studio/song-upload-form.tsx`, `hooks/useApprovedArtists.ts` |
+| Studio / artists | Uploads, applications | `app/studio/page.tsx`, `app/apply-artist/page.tsx`, `components/studio/song-upload-form.tsx`, `hooks/useArtistApplication.ts` |
 | Trust & safety | Content moderation + copyright agent | `app/api/moderate/route.ts`, `app/dmca/page.tsx`, `components/post-reports-tab.tsx`, `app/api/admin/post-reports/route.ts`, `app/api/admin/artist-moderation/route.ts` |
 | Admin | Internal ops | `app/admin/page.tsx`, `app/api/admin/*`, `lib/admin-auth.ts`, `lib/admin-overview-kpis.ts` |
 | Schema | Applied history | `supabase/migrations/*` |

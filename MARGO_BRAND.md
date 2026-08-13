@@ -1,5 +1,5 @@
 # MARGO — Brand Identity & Design System
-*Version 4.9 — August 2026 — Living document, update with every design decision*
+*Version 4.10 — August 2026 — Living document, update with every design decision*
 
 ---
 
@@ -280,7 +280,7 @@ This is distinct from the marketing header above — it's the persistent bottom 
 | `marketing` | `/` | hidden (landing has its own nav) | **shown** — deliberate Margo choice |
 | `immersive` | `/song/[id]` | hidden | hidden |
 
-Landing footer: two columns (product | legal), Geist `0.7rem`, social icon row; pads with `--margo-page-padding-bottom`.
+Landing footer (desktop): **Explore** | **Talk in Lyrics** | **For Artists** | **Support** | **Connect** (Social + Listen icon groups). Mobile: 2×2 product grid, then Social | Listen as real columns. Legal (Privacy · Terms · DMCA) lives in the © bar under a hairline — not its own column. Inter-link column gap **10px** (44px touch via `::before`). Pads with `--margo-page-padding-bottom` (+ breathing room above the tab bar). Geist for footer chrome.
 
 ---
 
@@ -925,6 +925,7 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ## Changelog
 
+- **4.10 (Aug 2026):** Brand/docs sync — landing footer audience columns documented; logo face **Sora 700** in CLAUDE/README. SEO: sitewide `MusicGroup` removed from root layout; house-artist schema lives on `/profile/margo` only. Sitemap adds `/dmca` + `/artists`. Landing typography pass (#99) still open — not documented as shipped.
 - **4.9 (Aug 2026):** Wordmark face **Sora 700** (was Syne 600) at **2px** tracking / **0.5×** mark. Landing: remove Discover from top nav; footer inter-link visual gap fixed to **10px** column gap with `::before` touch targets; audience columns + legal © bar from prior footer pass.
 - **4.8 (Aug 2026):** Wordmark scale **0.5 ×** mark (was ~0.43) at Syne 600 / 2px — size lever only, no weight change.
 - **4.7 (Aug 2026):** Wordmark weight **Syne 600** (was 800) at **2px** tracking — still Syne, no Geist/Satoshi. **Lockup placement:** full wordmark on Feed + landing only; mark/symbol-only on other tabs and detail; karaoke neither. Discover: no page-level “DISCOVER” H1. Landing “There’s more where that came from” section removed.
@@ -937,4 +938,4 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ---
 
-*Last updated: August 2026 — Version 4.9*
+*Last updated: August 2026 — Version 4.10*

@@ -170,7 +170,7 @@ Wired from Feed, Compose, Lyric Back, post thread, profile, song player. Analyti
 | `useNotifications.tsx` | Alerts |
 | `useAudioEngine.ts` | Engine React bindings |
 | `useNewItemsBuffer.ts` | PTR / “new items” pill |
-| `useApprovedArtists.ts`, `useArtistApplication.ts` | Artists |
+| `useArtistApplication.ts` | Artists |
 | `useTabSwipe.tsx`, `usePrimaryTabSwipeGesture.ts` | Primary-tab swipe |
 | `useVisualViewport.ts` | Visual viewport for mobile chrome |
 
