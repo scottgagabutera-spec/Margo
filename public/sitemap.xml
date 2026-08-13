@@ -57,14 +57,6 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- Lyric Back -->
-  <url>
-    <loc>https://trymargo.com/lyric-back</loc>
-    <lastmod>2026-08-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-
   <!-- About -->
   <url>
     <loc>https://trymargo.com/about</loc>
