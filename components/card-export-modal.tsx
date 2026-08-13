@@ -82,7 +82,7 @@ function drawMargoLockup(
   // Wordmark
   ctx.save()
   ctx.fillStyle = color
-  ctx.font = `800 ${Math.round(size * 0.35)}px Syne, sans-serif`
+  ctx.font = `700 ${Math.round(size * 0.35)}px Sora, sans-serif`
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillText('MARGO', x + size + Math.round(size * 0.18), cy)

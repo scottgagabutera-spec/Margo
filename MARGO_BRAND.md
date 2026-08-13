@@ -1,5 +1,5 @@
 # MARGO — Brand Identity & Design System
-*Version 4.8 — August 2026 — Living document, update with every design decision*
+*Version 4.9 — August 2026 — Living document, update with every design decision*
 
 ---
 
@@ -14,12 +14,12 @@ Margo is a music-first social platform where people communicate through song lyr
 ## 2. Logo & Brand Mark — UNTOUCHABLE
 
 - Mark: The gold circle with the M waveform inside
-- Wordmark: MARGO in **Syne 600**, gold, **letter-spacing 2px**, uppercase
+- Wordmark: MARGO in **Sora 700**, gold, **letter-spacing 2px**, uppercase
 - Color: Always #E8C547 on dark background (logo exception; elsewhere prefer `var(--gold)`)
-- Rule: Never recolor or redraw. Always use `components/MargoLogo.tsx` — never inline Syne “Margo” text as a logo
+- Rule: Never recolor or redraw. Always use `components/MargoLogo.tsx` — never inline Sora “Margo” text as a logo
 - Wordmark **scales with symbol size** (`0.5 × size` in px) so lockups stay proportional
-- Letter-spacing is **2px** (at 600 — same tracking as prior 800/2px; do not reopen 3–5px)
-- Face stays **Syne** — weight/tracking only; no Geist/Satoshi wordmark switch
+- Letter-spacing is **2px** (locked; do not reopen 3–5px)
+- Face is **Sora 700** — wordmark only; no Syne/Geist/Satoshi for MARGO
 
 ### The 3 Tiers
 
@@ -66,7 +66,7 @@ Margo speaks in two voices:
    Loaded via `geist/font/sans` (variable woff2) on the root layout.
 2. **Lyric (Lora)** — posted lyric quotes, signature lyrics, lyric-led marketing lines.
    CSS: `var(--font-lora)` / `LYRIC_FONT`. Always italic for the star lyric block.
-3. **Logo (Syne 600)** — MARGO wordmark ONLY via `MargoLogo`. Nothing else uses Syne.
+3. **Logo (Sora 700)** — MARGO wordmark ONLY via `MargoLogo`. Nothing else uses Sora.
 
 Self-hosted via Next.js font system (`next/font` + `geist`). Do not load Inter.
 
@@ -361,8 +361,8 @@ Empty states are invitations, not errors.
 ## 13. Do's and Don'ts
 
 DO:
-- Use Geist Sans for UI chrome; Lora for lyric quotes; Syne only for the wordmark
-- Use Syne **600** only for MARGO wordmark (letter-spacing 2px)
+- Use Geist Sans for UI chrome; Lora for lyric quotes; Sora only for the wordmark
+- Use Sora **700** only for MARGO wordmark (letter-spacing 2px)
 - Use CSS variables for every color
 - Keep gold scarce and meaningful — it means something important
 - Test on 375px mobile first
@@ -374,7 +374,7 @@ DO:
 
 DON'T:
 - Hardcode any color
-- Use any font other than Lora and Syne
+- Use any font other than Geist, Lora, and Sora (Sora = wordmark only)
 - Add a new color without updating this document
 - Go below the type floor for decorative text, or below Section 14 Rule 3 / Section 15 for interactive text
 - Create touch targets smaller than 44px
@@ -925,6 +925,7 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ## Changelog
 
+- **4.9 (Aug 2026):** Wordmark face **Sora 700** (was Syne 600) at **2px** tracking / **0.5×** mark. Landing: remove Discover from top nav; footer inter-link visual gap fixed to **10px** column gap with `::before` touch targets; audience columns + legal © bar from prior footer pass.
 - **4.8 (Aug 2026):** Wordmark scale **0.5 ×** mark (was ~0.43) at Syne 600 / 2px — size lever only, no weight change.
 - **4.7 (Aug 2026):** Wordmark weight **Syne 600** (was 800) at **2px** tracking — still Syne, no Geist/Satoshi. **Lockup placement:** full wordmark on Feed + landing only; mark/symbol-only on other tabs and detail; karaoke neither. Discover: no page-level “DISCOVER” H1. Landing “There’s more where that came from” section removed.
 - **4.6 (Aug 2026):** Wordmark tracking **2px** (tighter; 5px was doc-sync error that worsened stretch). Canonical **type role grid** with Micro body / compact explainer (`0.65rem`). Landing how-it-works stays 3-up on mobile with compact title+body. Footer pad/gap tightened.
@@ -936,4 +937,4 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ---
 
-*Last updated: August 2026 — Version 4.8*
+*Last updated: August 2026 — Version 4.9*

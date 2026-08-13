@@ -58,12 +58,14 @@ const footerLinkStyle: CSSProperties = {
   fontWeight: 600,
   letterSpacing: '0.3px',
   textDecoration: 'none',
-  padding: '8px 2px',
-  minHeight: '44px',
+  padding: '0 2px',
+  /* Visual stack = column gap (~10px). 44px touch via ::before on .margo-landing-footer__link */
+  minHeight: 'unset',
   display: 'inline-flex',
   alignItems: 'center',
   boxSizing: 'border-box',
-  lineHeight: 1.25,
+  lineHeight: 1.3,
+  position: 'relative',
 }
 
 const footerBarLinkStyle: CSSProperties = {
@@ -394,18 +396,6 @@ export default function Home() {
 
   const heroExchange = featuredExchange || FALLBACK_EXCHANGE;
 
-  const navLink: React.CSSProperties = {
-    padding: '8px 12px',
-    fontSize: '0.82rem',
-    fontFamily: 'var(--font-lora), serif',
-    fontWeight: 600,
-    letterSpacing: '1px',
-    textTransform: 'uppercase',
-    color: 'var(--text-2)',
-    textDecoration: 'none',
-    transition: 'all 150ms ease',
-  };
-
   return (
     <div style={{position:'relative', width:'100%', overflow:'hidden', background:'var(--bg)'}}>
       {/* Ambient */}
@@ -417,13 +407,12 @@ export default function Home() {
       {/* Nav */}
       <nav className="margo-landing-nav" style={{
         position:'relative', zIndex:10,
-        display:'flex', alignItems:'center', justifyContent:'space-between',
+        display:'flex', alignItems:'center', justifyContent:'flex-start',
         padding:'16px 40px',
       }}>
         <a href="/" style={{textDecoration:'none'}}>
           <MargoLogo tier="lockup" size={36} rings wordmark />
         </a>
-        <a href="/discover" style={{...navLink, color:'var(--gold)', fontWeight:700}}>Discover</a>
       </nav>
 
       {/* Hero */}
@@ -581,9 +570,22 @@ export default function Home() {
           .margo-landing-footer__col {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
             align-items: flex-start;
             min-width: 0;
+          }
+          .margo-landing-footer__link {
+            position: relative;
+          }
+          .margo-landing-footer__link::before {
+            content: '';
+            position: absolute;
+            /* Expand hit area to >=44px without inflating visual stack */
+            top: 50%;
+            left: -4px;
+            right: -4px;
+            height: 44px;
+            transform: translateY(-50%);
           }
           .margo-landing-footer__connect {
             display: grid;
@@ -644,7 +646,6 @@ export default function Home() {
             .margo-landing-footer a.margo-landing-footer__link {
               font-size: 0.7rem !important;
               letter-spacing: 0.5px !important;
-              padding: 10px 4px !important;
             }
             .margo-landing-footer__col-label {
               font-size: 0.6rem !important;
