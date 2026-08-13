@@ -16,6 +16,7 @@ import {
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { MusicNoteIcon } from '@/components/icons'
 import { SessionQueueList } from '@/components/session-queue-list'
+import { MiniPlayerFeedChrome } from '@/components/mini-player-feed-chrome'
 import { useAudioEngine, useQueueNavigation, usePlaybackProgress } from '@/hooks/useAudioEngine'
 
 const VIBE_COLORS: Record<string, string> = {
@@ -37,6 +38,8 @@ export function MiniPlayer() {
   const { canPrev, canNext } = useQueueNavigation()
   const progress = usePlaybackProgress()
   const [expanded, setExpanded] = useState(false)
+  /** Feed collapsed level — pill default, orb after swipe-down (A.3). */
+  const [feedChrome, setFeedChrome] = useState<'pill' | 'orb'>('pill')
   const [dragging, setDragging] = useState(false)
   const progressRef = useRef<HTMLDivElement | null>(null)
   const barRef = useRef<HTMLDivElement | null>(null)
@@ -49,17 +52,23 @@ export function MiniPlayer() {
   // Close / dismiss = end session: stop + clear queue (A5). Do not conflate.
   const endSession = useCallback(() => {
     setExpanded(false)
+    setFeedChrome('pill')
     stop({ clearQueue: true })
   }, [])
 
+  const isOnFeed = !!pathname?.startsWith('/feed')
+
+  // Feed shows pill/orb (A.3); karaoke page owns immersive chrome.
   const isHidden =
     engineState.mode === 'idle' ||
-    pathname?.startsWith('/song/') ||
-    pathname?.startsWith('/feed')
+    pathname?.startsWith('/song/')
 
-  // Publish collapsed bar height so page padding clears the mini-player.
+  // Fresh play → pill; leaving Feed keeps orb preference until idle/end.
+  useEffect(() => { setFeedChrome('pill') }, [songId])
+
+  // Full-width bar reserves page padding; Feed pill/orb overlays (h=0).
   useEffect(() => {
-    if (isHidden || expanded) {
+    if (isHidden || expanded || isOnFeed) {
       document.documentElement.style.setProperty('--margo-miniplayer-h', '0px')
       return
     }
@@ -75,7 +84,7 @@ export function MiniPlayer() {
       ro.disconnect()
       document.documentElement.style.setProperty('--margo-miniplayer-h', '0px')
     }
-  }, [isHidden, expanded, songId, playing])
+  }, [isHidden, expanded, isOnFeed, songId, playing])
 
   // ── Drag-to-dismiss gesture on the collapsed bar ─────────────────
   const [barOffset, setBarOffset] = useState(0)
@@ -179,7 +188,7 @@ export function MiniPlayer() {
   const fmt = (s: number) =>
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
-  // Hide when idle, on karaoke page, or on feed (A.3 owns Feed chrome)
+  // Hide when idle or on karaoke page
   if (isHidden) return null
 
   const isSnippet = mode === 'snippet'
@@ -247,8 +256,25 @@ export function MiniPlayer() {
         }
       `}</style>
 
-      {/* ── Collapsed bar ─────────────────────────────────────────── */}
-      {!expanded && (
+      {/* ── Feed collapsed: pill → orb (A.3 / D5) ───────────────── */}
+      {!expanded && isOnFeed && (
+        <MiniPlayerFeedChrome
+          mode={feedChrome}
+          artwork={artwork}
+          title={title || ''}
+          playing={playing}
+          buffering={buffering}
+          progress={progress}
+          vibeColor={vibeColor}
+          onExpand={() => setExpanded(true)}
+          onTogglePlay={() => void togglePlayPause()}
+          onToOrb={() => setFeedChrome('orb')}
+          onToPill={() => setFeedChrome('pill')}
+        />
+      )}
+
+      {/* ── Collapsed bar (non-Feed denser chrome) ──────────────── */}
+      {!expanded && !isOnFeed && (
         <div
           ref={barRef}
           className="mp-bar margo-mp-bar"
@@ -297,7 +323,7 @@ export function MiniPlayer() {
                   <img src={artwork} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               ) : (
-                <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(232,197,71,0.08)', border: '1px solid rgba(232,197,71,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>♪</div>
+                <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(232,197,71,0.08)', border: '1px solid rgba(232,197,71,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MusicNoteIcon size={16} color="var(--gold)" /></div>
               )}
             </div>
 
@@ -454,7 +480,7 @@ export function MiniPlayer() {
             <div style={{ padding: '16px 28px 0' }}>
 
               {/* Top row — vibe tag + collapse (keep session playing).
-                  End listening lives on the collapsed bar X / drag. */}
+                  End listening is the sheet button + non-Feed bar X. */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                 {vibe ? (
                   <span style={{
@@ -654,6 +680,27 @@ export function MiniPlayer() {
               <div style={{ marginBottom: '24px', maxHeight: '220px', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 <SessionQueueList queue={queue} queueIndex={queueIndex} accent={vibeColor} />
               </div>
+
+              {/* End listening — available here so Feed (no bar X) can clear session */}
+              <button
+                type="button"
+                className="mp-btn"
+                onClick={() => endSession()}
+                style={{
+                  display: 'block', width: '100%', marginBottom: '12px',
+                  padding: '12px', minHeight: 'var(--margo-touch-min)',
+                  borderRadius: '50px', cursor: 'pointer',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(255,255,255,0.03)',
+                  color: 'var(--text-secondary)',
+                  fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+                  fontSize: '0.58rem', fontWeight: 700,
+                  letterSpacing: '1.5px', textTransform: 'uppercase',
+                  boxSizing: 'border-box',
+                }}
+              >
+                End listening
+              </button>
 
               {/* Full Karaoke CTA */}
               {songId && !isSnippet && (
