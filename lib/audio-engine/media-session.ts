@@ -120,7 +120,7 @@ export function bindMediaSessionHandlers(): void {
     queueNext()
   })
 
-  /* Stop maps to pause — keeps loaded track for resume */
+  /* Lock-screen Stop = pause (resume later). Ending the session is mini-player End listening → stop({ clearQueue: true }). */
   setHandler('stop', () => {
     const s = getAudioEngineState()
     if (s.playing) togglePlayPause()
