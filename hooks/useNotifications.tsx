@@ -138,7 +138,7 @@ const NotificationsContext = createContext<NotificationsContextValue | null>(nul
  * their own subscription. Two components independently subscribing to
  * the same `notifications:${userId}` channel topic previously caused the
  * "cannot add postgres_changes callbacks after subscribe()" crash when
- * desktop nav and mobile tab bar both mounted NotificationBell-style
+ * desktop nav and mobile tab bar both mounted duplicate notification
  * listeners — keep a single provider.
  */
 export function NotificationsProvider({ children }: { children: ReactNode }) {
