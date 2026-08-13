@@ -1112,6 +1112,7 @@ export default function DiscoverPage() {
     setTimeout(() => { playingRef.current = false }, 80)
 
     const queueItems = pool.filter(m => m.audioUrl).map(m => ({
+      kind: 'snippet' as const,
       songId: m.songId, audioUrl: m.audioUrl!, title: m.songTitle, artist: m.artist,
       artwork: m.artwork ?? null, lineIndex: m.lineId, lineText: m.line,
       startSec: m.start, endSec: m.end, vibe: (m.vibes && m.vibes[0]) || null,

@@ -34,14 +34,23 @@ export interface SnippetBounds {
   lineText: string
 }
 
-// ── Queue (music discovery board + mini player prev/next) ─────────
+// ── Queue (session Up Next — snippets and/or full tracks) ─────────
 
 /**
- * Serializable queue entry — maps from music board `LyricMoment`:
+ * Session queue entry. Discriminated by `kind`:
+ * - `snippet` (default / omitted): lyric window — plays [startSec, endSec], then
+ *   advances to the next item. Never auto-expands into the full track.
+ * - `full`: entire song — plays to natural end, then advances or stops (D4).
+ *
+ * Maps from Discover `LyricMoment` when kind is snippet:
  * lineId → lineIndex, line → lineText, start/end → startSec/endSec, vibes[0] → vibe.
- * No HTMLAudioElement — engine owns the single DOM <audio>.
  */
 export interface LyricMomentQueueItem {
+  /**
+   * `snippet` = play window only then advance (default).
+   * `full` = play whole file then advance / stop.
+   */
+  kind?: 'snippet' | 'full'
   songId: string
   audioUrl: string
   title: string
@@ -52,6 +61,38 @@ export interface LyricMomentQueueItem {
   startSec: number
   endSec: number
   vibe?: string | null
+}
+
+/** True when this queue item is a full-track entry (not a lyric window). */
+export function isFullQueueItem(item: LyricMomentQueueItem): boolean {
+  return item.kind === 'full'
+}
+
+/** Snippet window (default when kind omitted — Discover mixtapes). */
+export function isSnippetQueueItem(item: LyricMomentQueueItem): boolean {
+  return item.kind !== 'full'
+}
+
+/** Build a full-track queue row from catalog song fields. */
+export function fullSongToQueueItem(song: {
+  id: string
+  audioUrl: string
+  title: string
+  artist: string
+  artwork?: string | null
+}): LyricMomentQueueItem {
+  return {
+    kind: 'full',
+    songId: song.id,
+    audioUrl: song.audioUrl,
+    title: song.title,
+    artist: song.artist,
+    artwork: song.artwork ?? null,
+    lineIndex: -1,
+    lineText: '',
+    startSec: 0,
+    endSec: 0,
+  }
 }
 
 /** Derived queue navigation flags for mini-player UI */
@@ -208,6 +249,7 @@ export function getQueueNavigationState(
 
 /**
  * Build a PlaySnippetRequest from a queue item (mini-player prev/next).
+ * Only valid for snippet items — callers must branch on kind first.
  */
 export function queueItemToSnippetRequest(
   item: LyricMomentQueueItem,
@@ -224,6 +266,22 @@ export function queueItemToSnippetRequest(
     startSec: item.startSec,
     endSec: item.endSec,
     vibe: item.vibe ?? null,
+    source,
+  }
+}
+
+/** Build a PlayFullRequest from a full-track queue item. */
+export function queueItemToFullRequest(
+  item: LyricMomentQueueItem,
+  source: FullPlaybackSource = 'karaoke',
+): PlayFullRequest {
+  return {
+    songId: item.songId,
+    audioUrl: item.audioUrl,
+    title: item.title,
+    artist: item.artist,
+    artwork: item.artwork ?? null,
+    autoplay: true,
     source,
   }
 }
