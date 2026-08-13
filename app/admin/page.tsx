@@ -1030,7 +1030,7 @@ function FeaturedTab() {
   return (
     <div style={{ maxWidth: '560px' }}>
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '24px', lineHeight: 1.6 }}>
-        Appears on the landing page as &ldquo;Exchange of the Week.&rdquo; Stays hidden until both the original lyric and the reply are filled in.
+        Appears in the landing page hero. Both lyrics are required — until then the hero shows the default Mirror / Madison fallback.
       </p>
       {error && (
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: '#ff6060', marginBottom: '16px' }}>{error}</p>
@@ -1088,7 +1088,7 @@ function FeaturedTab() {
       </button>
       {!canSave && (
         <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', marginTop: '10px' }}>
-          Both lyrics are required — the section stays hidden on the landing page until then.
+          Both lyrics are required — until then the landing hero uses the default fallback exchange.
         </p>
       )}
     </div>

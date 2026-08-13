@@ -36,14 +36,6 @@ const FOOTER_SOCIAL = [
   { label: 'Spotify', href: 'https://open.spotify.com/artist/0rGTnmN8rE5so9ibBrhTbJ', Icon: SpotifyIcon },
 ] as const
 
-interface Echo {
-  lyric?: string;
-  artist?: string;
-  song?: string;
-  username?: string;
-  status?: string;
-}
-
 interface Post {
   id: string;
   text?: string;
@@ -52,7 +44,6 @@ interface Post {
   username?: string;
   timestamp?: number;
   knowledge?: { artist?: string; song?: string };
-  echoes?: Record<string, Echo>;
 }
 
 interface ExchangePair {
@@ -135,9 +126,8 @@ function TickerCard({ post }: { post: Post }) {
   );
 }
 
-// Fallback exchange — default hero after B1 (Supabase posts have no nested echoes,
-// so pickExchange rarely matches until B2 featured or a future pair query).
-// Mirrors the actual exported Lyric Back card format (see MARGO_mirror_LyricBack card).
+// Fallback exchange — hero empty-state only when site_featured_exchange lacks both lyrics.
+// Mirrors the exported Lyric Back card format (see MARGO_mirror_LyricBack card).
 const FALLBACK_EXCHANGE: ExchangePair = {
   postLyric: "Keep me in your mirror but don't take your eyes off the road, holding on won't get us any nearer cause we got a long way to go…",
   postSong: 'Mirror',
@@ -146,26 +136,6 @@ const FALLBACK_EXCHANGE: ExchangePair = {
   replySong: 'See You Again',
   replyArtist: 'Wiz Khalifa',
 };
-
-function pickExchange(posts: Post[]): ExchangePair | null {
-  for (const p of posts) {
-    if (!p.echoes || !p.text) continue;
-    const activeEchoes = Object.values(p.echoes).filter(e => e && e.lyric && e.status !== 'hidden');
-    if (activeEchoes.length === 0) continue;
-    const echo = activeEchoes[0];
-    return {
-      postLyric: p.text,
-      postSong: p.knowledge?.song,
-      postArtist: p.knowledge?.artist,
-      postUser: p.username,
-      replyLyric: echo.lyric as string,
-      replySong: echo.song,
-      replyArtist: echo.artist,
-      replyUser: echo.username,
-    };
-  }
-  return null;
-}
 
 // Two chat-style bubbles — the actual mechanic, shown rather than described.
 function ExchangeBubble({ variant, lyric, meta, byline }: {
@@ -272,8 +242,7 @@ export default function Home() {
     }
   }, [identityLoading, user, router]);
 
-  // B1: live corpus from Supabase (ticker). Hero pickExchange stays but usually
-  // falls through to FALLBACK_EXCHANGE — nested Firebase echoes are gone.
+  // B1: live corpus from Supabase (ticker only).
   useEffect(() => {
     let cancelled = false
     const supabase = createClient()
@@ -308,8 +277,8 @@ export default function Home() {
     return () => { cancelled = true }
   }, []);
 
-  // B2: curated Exchange of the Week from Supabase singleton.
-  // Visibility: only set featuredExchange when both lyrics are non-empty (render rule).
+  // B2: curated hero exchange from Supabase singleton (id=1).
+  // Only set featuredExchange when both lyrics are non-empty; else hero uses FALLBACK_EXCHANGE.
   useEffect(() => {
     let cancelled = false
     const supabase = createClient()
@@ -357,7 +326,7 @@ export default function Home() {
     return <LandingRedirectSkeleton />
   }
 
-  const heroExchange = pickExchange(allPosts) || FALLBACK_EXCHANGE;
+  const heroExchange = featuredExchange || FALLBACK_EXCHANGE;
 
   const navLink: React.CSSProperties = {
     padding: '8px 12px',
@@ -424,7 +393,7 @@ export default function Home() {
         </p>
 
         <div style={{ width: '100%', maxWidth: '520px', marginBottom: '40px' }}>
-          <Exchange pair={heroExchange} />
+          {featuredLoading ? <LandingExchangeSkeleton /> : <Exchange pair={heroExchange} />}
         </div>
 
         <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'10px', width:'100%', maxWidth:'290px', marginBottom:'16px'}}>
@@ -497,19 +466,6 @@ export default function Home() {
           ))}
         </div>
       </section>
-
-      {/* Featured Exchange — curated; only renders when both lyrics are non-empty in site_featured_exchange */}
-      {featuredLoading ? (
-        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'40rem', margin:'0 auto 56px'}}>
-          <div style={{fontSize:'0.6rem', color:'var(--text-muted)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>Exchange of the Week</div>
-          <LandingExchangeSkeleton />
-        </section>
-      ) : featuredExchange ? (
-        <section style={{position:'relative', zIndex:5, padding:'0 24px', maxWidth:'40rem', margin:'0 auto 56px'}}>
-          <div style={{fontSize:'0.6rem', color:'var(--text-muted)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>Exchange of the Week</div>
-          <Exchange pair={featuredExchange} spacing="32px" />
-        </section>
-      ) : null}
 
       {/* Lyric Stream */}
       <section style={{position:'relative', zIndex:5, width:'100%', margin:'0 auto 32px', overflow:'hidden'}}>
