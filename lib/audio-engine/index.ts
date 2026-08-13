@@ -29,6 +29,10 @@ export {
   getSnippetStopDurationMs,
   getQueueNavigationState,
   queueItemToSnippetRequest,
+  queueItemToFullRequest,
+  isFullQueueItem,
+  isSnippetQueueItem,
+  fullSongToQueueItem,
 } from './types'
 
 // Engine public API
@@ -45,6 +49,7 @@ export {
   setQueue,
   queueNext,
   queuePrev,
+  playQueueItem,
   preloadSong,
   warmUrl,
   setVolume,

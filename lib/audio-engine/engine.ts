@@ -31,6 +31,9 @@ import {
   INITIAL_AUDIO_ENGINE_STATE,
   computePlaybackProgress,
   getSnippetStopDurationMs,
+  isFullQueueItem,
+  isSnippetQueueItem,
+  queueItemToFullRequest,
   queueItemToSnippetRequest,
 } from './types'
 import { syncMediaSessionFromState, bindMediaSessionHandlers, clearMediaSessionHandlers } from './media-session'
@@ -307,6 +310,11 @@ function bindAudioHandlers(generation: number): void {
     releaseWakeLock()
     patch({ playing: false, progress: 0, currentTime: 0 })
     syncMediaSessionFromState(_state)
+    // D4: advance to next queue item, or stop (leave paused at end — no auto-radio)
+    const { queue, queueIndex } = _state
+    if (queue.length > 0 && findNextPlayableIndex(queueIndex + 1) !== -1) {
+      queueNext()
+    }
   }
 
   audio.onerror = () => {
@@ -323,7 +331,7 @@ function bindAudioHandlers(generation: number): void {
     const nextPlayable = findNextPlayableIndex(queueIndex + 1)
     if (nextPlayable !== -1) {
       patch({ queueIndex: nextPlayable, error: null })
-      void playSnippet(queueItemToSnippetRequest(queue[nextPlayable], 'mini-player'))
+      playQueueItem(queue[nextPlayable])
     }
   }
 }
@@ -439,7 +447,8 @@ function beginCrossfade(generation: number, durationMs: number): void {
   const outgoing = activeAudio()
   const incoming = inactiveAudio()
 
-  if (!nextItem || !outgoing || !incoming) {
+  // Crossfade is snippet→snippet only. Mixed / full next = hard cut via queueNext.
+  if (!nextItem || !outgoing || !incoming || !isSnippetQueueItem(nextItem)) {
     pauseSnippetAtEnd()
     return
   }
@@ -574,11 +583,14 @@ function armSnippetTimer(generation: number): void {
   const { queue, queueIndex } = _state
   const nextPlayableIndex = findNextPlayableIndex(queueIndex + 1)
   const hasNext = nextPlayableIndex !== -1
+  const nextItem = hasNext ? queue[nextPlayableIndex] : null
+  // Only schedule crossfade when the next item is also a snippet window.
+  // Snippet → full (or end) uses hard cut: play window, then advance (no auto-expand).
+  const canCrossfade = hasNext && nextItem && isSnippetQueueItem(nextItem) && ms >= MIN_SNIPPET_MS_FOR_ANY_CROSSFADE
 
-  if (hasNext && ms >= MIN_SNIPPET_MS_FOR_ANY_CROSSFADE) {
+  if (canCrossfade && nextItem) {
     // FIX: kick off pre-buffering on the inactive element right away —
     // don't wait for the crossfade window itself to start loading it.
-    const nextItem = queue[nextPlayableIndex]
     preloadInactiveForCrossfade(nextItem)
 
     // Duration scales to THIS snippet's own length — a short lyric line
@@ -928,6 +940,19 @@ export function playFullSeek(sec: number): void {
 
 // ── Public API: queue ─────────────────────────────────────────────
 
+/**
+ * Play the given queue item according to its kind.
+ * Snippet → window only, then advance. Full → whole file, then advance/stop.
+ * Never auto-expands a snippet into the full track.
+ */
+export function playQueueItem(item: LyricMomentQueueItem): void {
+  if (isFullQueueItem(item)) {
+    void playFull(queueItemToFullRequest(item, 'karaoke'))
+  } else {
+    void playSnippet(queueItemToSnippetRequest(item, 'mini-player'))
+  }
+}
+
 export function setQueue(items: LyricMomentQueueItem[], index: number): void {
   _brokenAudioUrls.clear()
   const safeIndex = items.length === 0 ? 0 : Math.max(0, Math.min(index, items.length - 1))
@@ -940,7 +965,7 @@ export function queueNext(): void {
   if (nextPlayable === -1) return
   patch({ queueIndex: nextPlayable })
   const item = queue[nextPlayable]
-  if (item) void playSnippet(queueItemToSnippetRequest(item, 'mini-player'))
+  if (item) playQueueItem(item)
 }
 
 export function queuePrev(): void {
@@ -949,7 +974,7 @@ export function queuePrev(): void {
   const prevIndex = queueIndex - 1
   patch({ queueIndex: prevIndex })
   const item = queue[prevIndex]
-  if (item) void playSnippet(queueItemToSnippetRequest(item, 'mini-player'))
+  if (item) playQueueItem(item)
 }
 
 // ── Public API: preload ───────────────────────────────────────────
@@ -993,6 +1018,7 @@ export const audioEngine = {
   setQueue,
   queueNext,
   queuePrev,
+  playQueueItem,
   preloadSong,
   warmUrl,
   setVolume,

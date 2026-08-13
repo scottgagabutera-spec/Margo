@@ -12,7 +12,7 @@ import { useSongs } from '@/hooks/useSongs'
 import { Song } from '@/hooks/useSongs'
 import { CardExportModal } from '@/components/card-export-modal'
 import { useAudioEngine, useAudioCurrentTime } from '@/hooks/useAudioEngine'
-import { playFull, togglePlayPause, stop, playFullSeek } from '@/lib/audio-engine'
+import { playFull, togglePlayPause, stop, playFullSeek, setQueue, playQueueItem, fullSongToQueueItem, isFullQueueItem, getAudioEngineState, getQueueNavigationState } from '@/lib/audio-engine'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 
 interface LyricLine {
@@ -72,6 +72,8 @@ export default function SongPage() {
   const playedSongIdRef = useRef<string | null>(null)
   // Only honor the ?t= deep link once per page load, not on every render
   const startAtAppliedRef = useRef(false)
+  /** True once playback has passed mid-song — distinguishes natural end from pause-at-start. */
+  const reachedEndZoneRef = useRef(false)
 
   // ─── Next 3 songs — stable, memoized, no flash ─────────────────────
   const nextSongs: Song[] = useMemo(() => {
@@ -86,19 +88,47 @@ export default function SongPage() {
     return result.filter((s, i, arr) => arr.findIndex(x => x.id === s.id) === i).slice(0, 3)
   }, [songs, songId])
 
-  const primaryNext: Song | null = nextSongs[0] ?? null
-
   const navigateToSong = useCallback((s: Song) => {
     if (autoNavRef.current) clearTimeout(autoNavRef.current)
+    if (!s.audioUrl) {
+      router.push(`/song/${s.id}`)
+      return
+    }
+    const st = getAudioEngineState()
+    const idx = st.queue.findIndex((i) => isFullQueueItem(i) && i.songId === s.id)
+    if (idx >= 0) {
+      const item = st.queue[idx]
+      setQueue(st.queue, idx)
+      playQueueItem(item)
+      router.replace(`/song/${s.id}`)
+      return
+    }
     router.push(`/song/${s.id}`)
   }, [router])
 
-  // ─── Reset on song change ───────────────────────────────────────────
+  // ─── Reset on song change (skip stop when session queue advanced here) ─
   useEffect(() => {
-    // Stop any previous song in the engine
+    const st = getAudioEngineState()
+    const q = st.queue[st.queueIndex]
+    const fromSessionQueue =
+      !!q && isFullQueueItem(q) && q.songId === songId && st.mode === 'full'
+
+    if (fromSessionQueue) {
+      playedSongIdRef.current = songId
+      startAtAppliedRef.current = true
+      reachedEndZoneRef.current = false
+      setCurrentLyricIndex(0)
+      setSongEnded(false)
+      setTrayOpen(false)
+      setTrayDismissed(false)
+      setShowTapOverlay(false)
+      return
+    }
+
     stop()
     playedSongIdRef.current = null
     startAtAppliedRef.current = false
+    reachedEndZoneRef.current = false
     setCurrentLyricIndex(0)
     setSongEnded(false)
     setTrayOpen(false)
@@ -113,6 +143,30 @@ export default function SongPage() {
     playedSongIdRef.current = songId
     const startSec = !startAtAppliedRef.current && startAtParam ? Number(startAtParam) || 0 : 0
     startAtAppliedRef.current = true
+
+    // Seed session queue: this track + catalog Up Next (full items only).
+    const items = [
+      fullSongToQueueItem({
+        id: songId,
+        audioUrl,
+        title: songTitle,
+        artist: songArtist,
+        artwork: songArtwork,
+      }),
+      ...nextSongs
+        .filter((s) => !!s.audioUrl)
+        .map((s) =>
+          fullSongToQueueItem({
+            id: s.id,
+            audioUrl: s.audioUrl!,
+            title: s.title,
+            artist: s.artist,
+            artwork: s.artwork ?? null,
+          }),
+        ),
+    ]
+    setQueue(items, 0)
+
     void playFull({
       songId,
       audioUrl,
@@ -123,22 +177,53 @@ export default function SongPage() {
       autoplay: true,
       source: 'karaoke',
     })
-  }, [requireAuth, audioUrl, songId, songArtist, songArtwork, songTitle, startAtParam])
+  }, [requireAuth, audioUrl, songId, songArtist, songArtwork, songTitle, startAtParam, nextSongs])
 
-  // ─── Detect song end from engine state ─────────────────────────────
+  // Follow engine queue advances onto the next full track (same session).
   useEffect(() => {
-    // Engine mode goes idle and songId matches = song finished naturally
-    if (
-      engineState.mode === 'idle' &&
-      engineState.songId === null &&
-      playedSongIdRef.current === songId &&
-      !songEnded
-    ) {
+    if (engineState.mode !== 'full' || !engineState.songId) return
+    if (engineState.songId === songId) return
+    const inQueue = engineState.queue.some(
+      (i) => isFullQueueItem(i) && i.songId === engineState.songId,
+    )
+    if (inQueue) {
+      if (autoNavRef.current) clearTimeout(autoNavRef.current)
+      router.replace(`/song/${engineState.songId}`)
+    }
+  }, [engineState.songId, engineState.mode, engineState.queue, songId, router])
+
+  // ─── Detect natural end when nothing left in session queue (D4 stop) ─
+  useEffect(() => {
+    if (duration > 0 && currentTime > duration * 0.5) {
+      reachedEndZoneRef.current = true
+    }
+  }, [currentTime, duration, songId])
+
+  useEffect(() => {
+    if (songEnded || !songId) return
+    if (engineState.mode !== 'full' || engineState.playing) return
+    if (engineState.songId !== songId) return
+    if (playedSongIdRef.current !== songId) return
+    if (!reachedEndZoneRef.current) return
+    const { canNext } = getQueueNavigationState(engineState.queue, engineState.queueIndex)
+    // onended resets currentTime/progress to 0 while staying in full mode
+    if (!canNext && engineState.progress === 0 && engineState.currentTime === 0) {
       setSongEnded(true)
       setEndedTitle(song?.title || '')
       setTrayOpen(true)
     }
-  }, [engineState.mode, engineState.songId, songId, songEnded, song])
+  }, [
+    engineState.mode,
+    engineState.playing,
+    engineState.songId,
+    engineState.progress,
+    engineState.currentTime,
+    engineState.queue,
+    engineState.queueIndex,
+    songId,
+    songEnded,
+    song,
+  ])
 
   // ─── 15-second early tray trigger ──────────────────────────────────
   useEffect(() => {
@@ -149,14 +234,7 @@ export default function SongPage() {
     }
   }, [currentTime, duration, trayDismissed, trayOpen, songEnded, isPlaying])
 
-  // ─── Auto-navigate 4s after song ends ──────────────────────────────
-  useEffect(() => {
-    if (!songEnded || !primaryNext) return
-    autoNavRef.current = setTimeout(() => {
-      navigateToSong(primaryNext)
-    }, 4000)
-    return () => { if (autoNavRef.current) clearTimeout(autoNavRef.current) }
-  }, [songEnded]) // eslint-disable-line react-hooks/exhaustive-deps
+  // (Auto-advance is engine queueNext on full onended — no router timer.)
 
   // ─── Sync lyric index ───────────────────────────────────────────────
   useEffect(() => {
@@ -400,8 +478,10 @@ export default function SongPage() {
             </button>
           </div>
 
-          {songEnded && primaryNext && (
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '12px', letterSpacing: '1px' }}>Playing next automatically…</p>
+          {songEnded && (
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '12px', letterSpacing: '1px' }}>
+              Queue ended
+            </p>
           )}
         </div>
       )}

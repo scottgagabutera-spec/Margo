@@ -24,9 +24,10 @@ export async function saveCurrentQueueAsPlaylist(
   if (!ownerId) return null
 
   const { queue } = getAudioEngineState()
-  if (queue.length === 0) return null
+  const snippetQueue = queue.filter((item) => item.kind !== 'full')
+  if (snippetQueue.length === 0) return null
 
-  const lineKeys = await resolveLyricLineIds(queue)
+  const lineKeys = await resolveLyricLineIds(snippetQueue)
 
   const { data: queueRow, error: queueErr } = await supabase
     .from('queues')
@@ -45,7 +46,7 @@ export async function saveCurrentQueueAsPlaylist(
     return null
   }
 
-  const items = queue.map((item, position) => ({
+  const items = snippetQueue.map((item, position) => ({
     queue_id: queueRow.id,
     position,
     song_id: item.songId,
