@@ -18,6 +18,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount'
 import { readActiveScrollTop } from '@/components/primary-tab-shell'
+import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 
 /** UI chrome — MARGO_BRAND §3 Geist Sans */
@@ -35,59 +36,11 @@ function badgeLabel(n: number): string {
   return n > 9 ? '9+' : String(n)
 }
 
-/** 3×3 grid — stroke 1.5 per MARGO_BRAND §5 icon system */
-export function HubGridIcon({ active, size = 20 }: { active: boolean; size?: number }) {
-  const stroke = active ? 'var(--gold)' : 'currentColor'
-  const cells = [4, 10, 16]
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden>
-      {cells.map((y) =>
-        cells.map((x) => (
-          <rect
-            key={`${x}-${y}`}
-            x={x - 1.5}
-            y={y - 1.5}
-            width="3"
-            height="3"
-            rx="0.5"
-            stroke={stroke}
-            strokeWidth="1.5"
-          />
-        )),
-      )}
-    </svg>
-  )
-}
-
 function TileIcon({ kind }: { kind: 'library' | 'messages' | 'alerts' }) {
-  const stroke = 'var(--gold)'
-  if (kind === 'library') {
-    return (
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-        <rect x="3" y="4" width="4" height="12" rx="1" stroke={stroke} strokeWidth="1.5" />
-        <rect x="8" y="4" width="4" height="12" rx="1" stroke={stroke} strokeWidth="1.5" />
-        <rect x="13" y="4" width="4" height="12" rx="1" stroke={stroke} strokeWidth="1.5" />
-      </svg>
-    )
-  }
-  if (kind === 'messages') {
-    return (
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-        <path d="M3 5h14v9H7l-4 3V5Z" stroke={stroke} strokeWidth="1.5" strokeLinejoin="round" />
-      </svg>
-    )
-  }
-  return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-      <path
-        d="M5 8a5 5 0 0 1 10 0c0 3 1 4.5 1.5 5.2.3.4 0 .8-.5.8H4c-.5 0-.8-.4-.5-.8C4 12.5 5 11 5 8Z"
-        stroke={stroke}
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path d="M8 16a2 2 0 0 0 4 0" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
+  const color = 'var(--gold)'
+  if (kind === 'library') return <LibraryIcon size={18} color={color} />
+  if (kind === 'messages') return <MessagesIcon size={18} color={color} />
+  return <BellIcon size={18} color={color} />
 }
 
 function HubTile({
@@ -503,7 +456,7 @@ export function HubIconButton() {
         color: open ? 'var(--gold)' : 'rgba(255,255,255,0.5)',
       }}
     >
-      <HubGridIcon active={open} />
+      <HubGridIcon size={20} color="currentColor" />
       {hubBadge ? (
         <span
           style={{
@@ -553,7 +506,7 @@ export function HubTabButton({ style, labelStyle }: { style: CSSProperties; labe
       }}
     >
       <span style={{ position: 'relative', display: 'inline-flex' }}>
-        <HubGridIcon active={open} />
+        <HubGridIcon size={20} color="currentColor" />
         {hubBadge ? (
           <span
             style={{
@@ -602,35 +555,10 @@ export function LibraryNavLink() {
         flexShrink: 0,
       }}
     >
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
-        <rect
-          x="3"
-          y="4"
-          width="4"
-          height="12"
-          rx="1"
-          stroke={active ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}
-          strokeWidth="1.5"
-        />
-        <rect
-          x="8"
-          y="4"
-          width="4"
-          height="12"
-          rx="1"
-          stroke={active ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}
-          strokeWidth="1.5"
-        />
-        <rect
-          x="13"
-          y="4"
-          width="4"
-          height="12"
-          rx="1"
-          stroke={active ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}
-          strokeWidth="1.5"
-        />
-      </svg>
+      <LibraryIcon
+        size={20}
+        color={active ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}
+      />
     </Link>
   )
 }

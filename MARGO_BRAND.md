@@ -189,10 +189,14 @@ Do not introduce a second heart/search path with a different stroke. `components
 
 | Feature | Icon | Notes |
 |---------|------|--------|
+| Hub (tab / trigger) | `HubGridIcon` | App grid — Hub menu |
+| Music Library | `LibraryIcon` | Hub tile + top-bar Library |
+| Messages | `MessagesIcon` | Hub tile / DMs glyph |
+| Alerts | `BellIcon` | Hub tile (notifications) |
 | Feed (tab) | House (inline tab SVG) | Primary home |
 | Discover (tab) | `CompassIcon` | Finding lyrics / artists / people — **not** a music note |
 | Compose (tab) | Plus in gold circle | Create |
-| Alerts (tab) | Bell | Notifications |
+| Alerts (tab) | `BellIcon` | Notifications — absorbed into Hub on mobile |
 | You (tab) | Person / avatar | Profile |
 | Resonate | `HeartIcon` / `HeartFilledIcon` | One heart family only |
 | Lyric Back | `LyricBackIcon` | Reply curve |
