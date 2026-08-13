@@ -1,5 +1,6 @@
 /**
- * Profile layout — MusicGroup JSON-LD for verified public artists with ≥1 major DSP.
+ * Profile layout — MusicGroup JSON-LD for verified public artists.
+ * sameAs from approved application links when present; omitted if none.
  * Platform schema stays in app/layout.tsx (no sitewide MusicGroup).
  */
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
