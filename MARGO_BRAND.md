@@ -1,5 +1,5 @@
 # MARGO — Brand Identity & Design System
-*Version 4.7 — August 2026 — Living document, update with every design decision*
+*Version 4.8 — August 2026 — Living document, update with every design decision*
 
 ---
 
@@ -17,7 +17,7 @@ Margo is a music-first social platform where people communicate through song lyr
 - Wordmark: MARGO in **Syne 600**, gold, **letter-spacing 2px**, uppercase
 - Color: Always #E8C547 on dark background (logo exception; elsewhere prefer `var(--gold)`)
 - Rule: Never recolor or redraw. Always use `components/MargoLogo.tsx` — never inline Syne “Margo” text as a logo
-- Wordmark **scales with symbol size** (`~0.43 × size` in px) so lockups stay proportional
+- Wordmark **scales with symbol size** (`0.5 × size` in px) so lockups stay proportional
 - Letter-spacing is **2px** (at 600 — same tracking as prior 800/2px; do not reopen 3–5px)
 - Face stays **Syne** — weight/tracking only; no Geist/Satoshi wordmark switch
 
@@ -925,6 +925,7 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ## Changelog
 
+- **4.8 (Aug 2026):** Wordmark scale **0.5 ×** mark (was ~0.43) at Syne 600 / 2px — size lever only, no weight change.
 - **4.7 (Aug 2026):** Wordmark weight **Syne 600** (was 800) at **2px** tracking — still Syne, no Geist/Satoshi. **Lockup placement:** full wordmark on Feed + landing only; mark/symbol-only on other tabs and detail; karaoke neither. Discover: no page-level “DISCOVER” H1. Landing “There’s more where that came from” section removed.
 - **4.6 (Aug 2026):** Wordmark tracking **2px** (tighter; 5px was doc-sync error that worsened stretch). Canonical **type role grid** with Micro body / compact explainer (`0.65rem`). Landing how-it-works stays 3-up on mobile with compact title+body. Footer pad/gap tightened.
 - **4.5 (Aug 2026):** Wordmark letter-spacing synced to 5px and scales with symbol size. Canonical display-name / @username and song-title / artist stacks. Landing keeps MobileTabBar (marketing mode). Profile nav clearance + avatar lightbox. Account surfaces (settings / edit / studio / apply) use Geist chrome. Footer two-column + social icons. Type floor enforced at 0.6rem.
@@ -935,4 +936,4 @@ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
 
 ---
 
-*Last updated: August 2026 — Version 4.7*
+*Last updated: August 2026 — Version 4.8*
