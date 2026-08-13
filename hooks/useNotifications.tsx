@@ -133,13 +133,13 @@ const NotificationsContext = createContext<NotificationsContextValue | null>(nul
 /**
  * Owns the single Realtime subscription for a signed-in user's
  * notifications. This must be mounted exactly once (in the root
- * layout) — both NotificationBell (desktop) and MobileTabBar (mobile)
+ * layout) — HubMenu (desktop + mobile) and any remaining consumers
  * read from it via useNotifications() below instead of each opening
  * their own subscription. Two components independently subscribing to
- * the same `notifications:${userId}` channel topic is what caused the
- * "cannot add postgres_changes callbacks after subscribe()" crash,
- * since desktop nav and mobile tab bar are both mounted at once
- * (hidden with CSS per breakpoint, not actually unmounted).
+ * the same `notifications:${userId}` channel topic previously caused the
+ * "cannot add postgres_changes callbacks after subscribe()" crash when
+ * desktop nav and mobile tab bar both mounted NotificationBell-style
+ * listeners — keep a single provider.
  */
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   // Auth gate (not Identity): start the list fetch as soon as JWT is ready,

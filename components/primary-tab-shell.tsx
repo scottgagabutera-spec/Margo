@@ -19,7 +19,7 @@ import { usePrimaryTabSwipeGesture } from '@/hooks/usePrimaryTabSwipeGesture'
 /**
  * Phase 1 / 1.5 / 2.0 — primary-tab keepalive + Activity + swipe strip.
  *
- * Each pane (feed | discover | alerts | you) is its own overflow container.
+ * Each pane (feed | discover | you) is its own overflow container.
  * Visited panes stay mounted; inactive panes use <Activity mode="hidden">
  * so Effects tear down while React state is preserved (#59 enabled gating
  * remains belt-and-suspenders via isTabActive → enabled).
@@ -32,7 +32,7 @@ import { usePrimaryTabSwipeGesture } from '@/hooks/usePrimaryTabSwipeGesture'
  * freeze while active; peek restore uses frozen values and never leave-saves.
  */
 
-export type PrimaryTabId = 'feed' | 'discover' | 'alerts' | 'you'
+export type PrimaryTabId = 'feed' | 'discover' | 'you'
 export type PrimaryTabPeekDir = 'prev' | 'next'
 
 const SCROLL_STORAGE_KEY = 'margo-primary-tab-scroll'
@@ -44,7 +44,6 @@ export function resolvePrimaryTabId(
   if (!pathname) return null
   if (pathname === '/feed') return 'feed'
   if (pathname === '/discover') return 'discover'
-  if (pathname === '/notifications') return 'alerts'
   if (ownProfileHref && pathname === ownProfileHref) return 'you'
   return null
 }
