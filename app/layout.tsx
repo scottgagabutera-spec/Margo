@@ -146,38 +146,12 @@ export default function RootLayout({
                 logo: 'https://trymargo.com/icon.svg',
                 sameAs: [
                   'https://www.instagram.com/officialtrymargo',
-                  'https://open.spotify.com/artist/0rGTnmN8rE5so9ibBrhTbJ',
-                  'https://music.apple.com/us/artist/trymargo/1896142795',
                   'https://www.facebook.com/share/1CiYZanmmg/',
                   'https://x.com/OfficialUTM',
                   'https://youtube.com/@trymargo',
-                  'https://www.boomplay.com/share/artist/130532485',
                   'https://www.tiktok.com/@officialtrymargo',
                 ],
               },
-            }),
-          }}
-        />
-        {/* Structured Data — MusicGroup */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'MusicGroup',
-              name: 'Trymargo',
-              url: 'https://trymargo.com/discover',
-              image: 'https://trymargo.com/icon.svg',
-              description:
-                'Trymargo is an original music artist. Listen on Spotify, Apple Music, Boomplay, YouTube and all major streaming platforms.',
-              sameAs: [
-                'https://open.spotify.com/artist/0rGTnmN8rE5so9ibBrhTbJ',
-                'https://music.apple.com/us/artist/trymargo/1896142795',
-                'https://www.boomplay.com/share/artist/130532485',
-                'https://youtube.com/@trymargo',
-                'https://www.tiktok.com/@officialtrymargo',
-                'https://www.instagram.com/officialtrymargo',
-              ],
             }),
           }}
         />
