@@ -14,6 +14,7 @@ import {
   queueNext,
   queuePrev,
   playFullSeek,
+  stop,
 } from './engine'
 
 const SEEK_STEP_SEC = 10
@@ -120,10 +121,9 @@ export function bindMediaSessionHandlers(): void {
     queueNext()
   })
 
-  /* Lock-screen Stop = pause (resume later). Ending the session is mini-player End listening → stop({ clearQueue: true }). */
+  /* Lock-screen Stop = end session (same as in-app End listening). Pause stays pause-for-resume. */
   setHandler('stop', () => {
-    const s = getAudioEngineState()
-    if (s.playing) togglePlayPause()
+    stop({ clearQueue: true })
   })
 }
 
