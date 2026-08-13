@@ -18,8 +18,8 @@ export default function MargoLogo({
   rings = false,
   wordmark = false,
 }: MargoLogoProps) {
-  // Scale wordmark with symbol: 28px → ~0.75rem, 36px → ~0.96rem
-  const wordmarkPx = Math.max(11, Math.round(size * 0.43))
+  // Scale wordmark with symbol: 28px → 14px, 36px → 18px (0.5 × mark)
+  const wordmarkPx = Math.max(11, Math.round(size * 0.5))
 
   return (
     <>
