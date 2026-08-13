@@ -1,31 +1,29 @@
 'use client'
-import { useRef, useLayoutEffect } from 'react'
+
 import Link from 'next/link'
+import { useRef, useLayoutEffect, type CSSProperties } from 'react'
 import { usePathname } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
-import { useNotifications } from '@/hooks/useNotifications'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { CompassIcon } from '@/components/icons'
+import { HubTabButton } from '@/components/hub-menu'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
 import { hidesTabBar } from '@/lib/chrome-mode'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
+/**
+ * Mobile primary tabs: Feed · Discover · Compose · Hub · You
+ * (5 columns — Hub restored to bottom bar by product request.)
+ */
 export function MobileTabBar() {
   const pathname = usePathname()
   const { user, identity } = useIdentity()
-  const { unreadCount } = useNotifications()
   const engineState = useAudioEngine()
   const navRef = useRef<HTMLElement | null>(null)
 
   const shellHidden = hidesTabBar(pathname)
 
-  // Publish our real rendered height as a CSS var so anything else that
-  // stacks above the bottom of the screen (e.g. MiniPlayer) can position
-  // itself relative to us instead of guessing a fixed pixel value.
-  // On desktop this bar is display:none, so offsetHeight is 0 and the
-  // var naturally falls back to 0 — no separate desktop/mobile branching needed.
-  // Immersive/marketing modes hide the bar and publish 0.
   useLayoutEffect(() => {
     if (shellHidden) {
       document.documentElement.style.setProperty('--margo-tabbar-h', '0px')
@@ -45,7 +43,6 @@ export function MobileTabBar() {
   const isOnFeed = pathname === '/feed'
   const isOnDiscover = pathname?.startsWith('/discover')
   const isOnCompose = pathname === '/compose'
-  const isOnNotifications = pathname === '/notifications'
 
   const isSignedIn = !!user && !user.isAnonymous
   const ownProfileHref = identity ? `/profile/${identity.username}` : '/signin'
@@ -53,7 +50,7 @@ export function MobileTabBar() {
 
   const isMusicActive = engineState.mode !== 'idle'
 
-  const tabStyle = (active: boolean): React.CSSProperties => ({
+  const tabStyle = (active: boolean): CSSProperties => ({
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: '2px', textDecoration: 'none',
     minHeight: 'var(--margo-touch-min)',
@@ -62,7 +59,7 @@ export function MobileTabBar() {
     color: active ? 'var(--gold)' : 'var(--text-muted)',
   })
 
-  const labelStyle: React.CSSProperties = {
+  const labelStyle: CSSProperties = {
     fontFamily: font, fontSize: '0.6rem', fontWeight: 600,
     letterSpacing: '0.5px', textTransform: 'uppercase',
   }
@@ -116,25 +113,7 @@ export function MobileTabBar() {
         </svg>
       </Link>
 
-      <Link href="/notifications" style={tabStyle(isOnNotifications)} {...primaryTabWarmProps('/notifications')}>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <path d="M5 8a5 5 0 0 1 10 0c0 3 1 4.5 1.5 5.2.3.4 0 .8-.5.8H4c-.5 0-.8-.4-.5-.8C4 12.5 5 11 5 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-          <path d="M8 16a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
-        <span style={labelStyle}>Alerts</span>
-        {isSignedIn && unreadCount > 0 && (
-          <span style={{
-            position: 'absolute', top: '-2px', right: 'calc(50% - 16px)',
-            minWidth: '14px', height: '14px', borderRadius: '50%',
-            background: 'var(--gold)', color: 'var(--bg)',
-            fontFamily: font, fontSize: '0.45rem', fontWeight: 700,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '0 3px', boxSizing: 'border-box',
-          }}>
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </Link>
+      <HubTabButton style={tabStyle(false)} labelStyle={labelStyle} />
 
       <Link href={ownProfileHref} style={tabStyle(isOnProfile)}>
         {isSignedIn && identity?.avatarUrl ? (

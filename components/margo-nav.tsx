@@ -7,19 +7,17 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { NotificationBell } from '@/components/notification-bell'
-import { MessagesIcon } from '@/components/messages-icon'
+import { HubIconButton, LibraryNavLink } from '@/components/hub-menu'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
 import { hidesAppNav } from '@/lib/chrome-mode'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
 /**
- * Top nav. Logo + MessagesIcon are always visible (both mobile and
- * desktop) — giants put DM access in the top bar, not the bottom tab
- * bar, since the bottom bar is already full at 5 slots. Text nav
- * (Feed/Discover, Share a Lyric, notification bell, avatar menu) stays
- * desktop-only; mobile gets those via MobileTabBar instead.
+ * Top nav. Logo + Library + Hub are always visible when signed in
+ * (mobile and desktop). Hub launches Messages / Library / Alerts.
+ * Text nav (Feed/Discover, Share a Lyric, avatar menu) stays
+ * desktop-only; mobile primary tabs cover Feed/Discover/Compose/You.
  *
  * Account settings / Apply as artist / Sign out no longer live here
  * on mobile — they moved into the profile page itself (own-profile
@@ -155,7 +153,8 @@ export function MargoNav() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {isSignedIn && <MessagesIcon />}
+          {/* Top-bar Library for signed-in; Hub is bottom-tab on mobile, icon in desktop-nav. */}
+          {isSignedIn && <LibraryNavLink />}
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[
@@ -198,7 +197,9 @@ export function MargoNav() {
               opacity: isOnCompose ? 0.75 : 1,
             }}>Share a Lyric</Link>
 
-            {isSignedIn && <NotificationBell />}
+            <div style={{ marginLeft: '4px' }}>
+              <HubIconButton />
+            </div>
 
             {!isSignedIn ? (
               <Link href="/signin" style={{
