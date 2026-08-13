@@ -5,7 +5,7 @@ import { useRef, useLayoutEffect, type CSSProperties } from 'react'
 import { usePathname } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
-import { CompassIcon, FountainPenIcon } from '@/components/icons'
+import { CompassIcon, PenLineIcon } from '@/components/icons'
 import { HubTabButton } from '@/components/hub-menu'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
 import { hidesTabBar } from '@/lib/chrome-mode'
@@ -108,7 +108,7 @@ export function MobileTabBar() {
           justifySelf: 'center',
         }}
       >
-        <FountainPenIcon size={18} color="var(--bg)" />
+        <PenLineIcon size={18} color="var(--bg)" />
       </Link>
 
       <HubTabButton style={tabStyle(false)} labelStyle={labelStyle} />

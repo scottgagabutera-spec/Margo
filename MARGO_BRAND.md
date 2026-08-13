@@ -195,7 +195,7 @@ Do not introduce a second heart/search path with a different stroke. `components
 | Alerts | `BellIcon` | Hub tile (notifications) |
 | Feed (tab) | House (inline tab SVG) | Primary home |
 | Discover (tab) | `CompassIcon` | Finding lyrics / artists / people — **not** a music note |
-| Compose (tab) | `FountainPenIcon` | Write a lyric — gold FAB, no label |
+| Compose (tab) | `PenLineIcon` | Write a lyric — gold FAB, no label |
 | Alerts (tab) | `BellIcon` | Notifications — absorbed into Hub on mobile |
 | You (tab) | Person / avatar | Profile |
 | Resonate | `HeartIcon` / `HeartFilledIcon` | One heart family only |
