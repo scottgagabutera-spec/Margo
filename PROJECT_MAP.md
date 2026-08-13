@@ -109,7 +109,7 @@ Legacy vanilla (`js/`, root `api/*.js`, `index.html`) was removed in hygiene cle
 | `margo-search-input.tsx`, `margo-skeletons.tsx` | Search + loading skeletons |
 | `pull-to-refresh.tsx`, `loading-ring.tsx`, `new-items-pill.tsx` | Feed/Discover chrome |
 | `keyboard-safe-cta-bar.tsx` | Keyboard-aware CTA bar |
-| `mobile-account-menu.tsx` | Mobile account sheet |
+| `hub-menu.tsx` | Hub panel + Library/Messages/Alerts tiles |
 
 ### Cards & feed
 
@@ -145,7 +145,7 @@ Wired from Feed, Compose, Lyric Back, post thread, profile, song player. Analyti
 | `avatar-upload.tsx`, `back-button.tsx` | Profile / nav helpers |
 | `discover-error-boundary.tsx` | Discover crash boundary |
 | `post-reports-tab.tsx` | Admin reports UI |
-| `notification-bell.tsx`, `notification-item.tsx`, `notification-list.tsx`, `messages-icon.tsx` | Alerts / DM chrome |
+| `notification-item.tsx`, `notification-list.tsx` | Alerts list UI (entry via Hub) |
 | `MargoLogo.tsx`, `play-pause-icon.tsx`, `heart-icon.tsx` | Brand / playback / resonate icons |
 | `icons/*` | Shared SVG icon set + barrel `icons/index.ts` |
 | `ui/sonner.tsx` | Toast host (only remaining shadcn primitive) |
@@ -232,7 +232,7 @@ Wired from Feed, Compose, Lyric Back, post thread, profile, song player. Analyti
 | `lib/admin-auth.ts`, `admin-overview-kpis.ts` | Admin assert + KPIs |
 | `lib/primary-tab-prefetch.ts`, `primary-tab-warm.ts` | Tab warm/prefetch |
 | `lib/tab-swipe-motion.ts` | Swipe spring / rubber-band math |
-| `lib/fonts.ts`, `utils.ts`, `suno.ts`, `perf-trace.ts` | Fonts, `cn`, Suno URL, perf |
+| `lib/fonts.ts`, `suno.ts`, `perf-trace.ts` | Fonts, Suno URL, perf |
 
 **Careful:** `purge-user-account.ts` (destructive, irreversible).
 
