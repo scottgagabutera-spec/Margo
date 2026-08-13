@@ -12,7 +12,7 @@ import {
   YouTubeIcon,
   SpotifyIcon,
 } from '@/components/icons';
-import { UI_FONT } from '@/lib/fonts';
+import { UI_FONT, LYRIC_FONT } from '@/lib/fonts';
 
 const FOOTER_PRODUCT = [
   { label: 'Feed', href: '/feed' },
@@ -146,23 +146,23 @@ function TickerCard({ post }: { post: Post }) {
       pointerEvents:'none', userSelect:'none',
     }}>
       <p style={{
-        fontFamily:'var(--font-lora),serif', fontStyle:'italic',
-        fontSize:'0.95rem', color:'rgba(255,255,255,0.82)',
-        lineHeight:1.5, margin:0, overflow:'hidden',
-        display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical',
+        fontFamily: LYRIC_FONT, fontStyle: 'italic',
+        fontSize: '0.95rem', color: 'rgba(255,255,255,0.82)',
+        lineHeight: 1.5, margin: 0, overflow: 'hidden',
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
       }}>{display}</p>
-      <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <span style={{
-          fontFamily:'var(--font-lora),serif', fontSize:'0.6rem', fontWeight:700,
-          textTransform:'uppercase', letterSpacing:'1.5px',
-          padding:'3px 8px', borderRadius:'50px',
-          background:'rgba(255,255,255,0.06)', color,
+          fontFamily: UI_FONT, fontSize: '0.6rem', fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: '1.5px',
+          padding: '3px 8px', borderRadius: '50px',
+          background: 'rgba(255,255,255,0.06)', color,
         }}>{label}</span>
         {post.knowledge?.artist && post.knowledge.artist !== 'Unknown Artist' && (
           <span style={{
-            fontFamily:'var(--font-lora),serif', fontSize:'0.6rem',
-            color:'rgba(255,255,255,0.25)', overflow:'hidden',
-            whiteSpace:'nowrap', textOverflow:'ellipsis', maxWidth:'100px',
+            fontFamily: UI_FONT, fontSize: '0.7rem',
+            color: 'rgba(255,255,255,0.25)', overflow: 'hidden',
+            whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: '100px',
           }}>{post.knowledge.artist}</span>
         )}
       </div>
@@ -212,8 +212,8 @@ function ExchangeBubble({ variant, lyric, meta, byline }: {
       boxSizing: 'border-box',
     }}>
       <p style={{
-        fontFamily: 'var(--font-lora),serif', fontStyle: 'italic',
-        fontSize: '1rem', lineHeight: 1.6, margin: 0,
+        fontFamily: LYRIC_FONT, fontStyle: 'italic',
+        fontSize: '1.1rem', lineHeight: 1.6, margin: 0,
       }}>{lyric}</p>
       {(meta || byline) && (
         <div style={{
@@ -224,13 +224,13 @@ function ExchangeBubble({ variant, lyric, meta, byline }: {
         }}>
           {meta && (
             <span style={{
-              fontFamily: 'var(--font-lora),serif', fontSize: '0.7rem', fontWeight: 700,
+              fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400,
               letterSpacing: '0.5px', opacity: 0.85,
             }}>{meta}</span>
           )}
           {byline && (
             <span style={{
-              fontFamily: 'var(--font-lora),serif', fontSize: '0.7rem',
+              fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 400,
               opacity: isGold ? 0.7 : 0.5,
             }}>{byline}</span>
           )}
@@ -372,14 +372,14 @@ export default function Home() {
 
   const heroExchange = featuredExchange || FALLBACK_EXCHANGE;
 
-  const navLink: React.CSSProperties = {
+  const navLink: CSSProperties = {
     padding: '8px 12px',
-    fontSize: '0.82rem',
-    fontFamily: 'var(--font-lora), serif',
-    fontWeight: 600,
+    fontSize: '0.75rem',
+    fontFamily: UI_FONT,
+    fontWeight: 700,
     letterSpacing: '1px',
     textTransform: 'uppercase',
-    color: 'var(--text-2)',
+    color: 'var(--text-secondary)',
     textDecoration: 'none',
     transition: 'all 150ms ease',
   };
@@ -413,25 +413,25 @@ export default function Home() {
         maxWidth:'56rem', margin:'0 auto',
       }}>
         <h1 style={{
-          fontFamily:'var(--font-lora), serif',
-          fontSize:'clamp(2.5rem, 8vw, 5rem)',
-          fontWeight:300,
-          lineHeight:1.1,
-          letterSpacing:'-0.02em',
-          color:'var(--text)',
-          marginBottom:'16px',
+          fontFamily: LYRIC_FONT,
+          fontSize: 'clamp(2.25rem, 6vw, 3.75rem)',
+          fontWeight: 300,
+          lineHeight: 1.1,
+          letterSpacing: '-0.02em',
+          color: 'var(--text)',
+          marginBottom: '16px',
         }}>
           Talk in lyrics.
         </h1>
 
         <p style={{
-          fontFamily:'var(--font-lora), serif',
-          fontSize:'0.95rem',
-          color:'var(--text-2)',
-          lineHeight:1.7,
-          maxWidth:'32rem',
-          marginBottom:'40px',
-          fontStyle:'italic',
+          fontFamily: LYRIC_FONT,
+          fontSize: '0.95rem',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.7,
+          maxWidth: '32rem',
+          marginBottom: '40px',
+          fontStyle: 'italic',
         }}>
           Send a line from a song. Someone sends one back. That&apos;s Margo.
         </p>
@@ -440,30 +440,30 @@ export default function Home() {
           {featuredLoading ? <LandingExchangeSkeleton /> : <Exchange pair={heroExchange} />}
         </div>
 
-        <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'10px', width:'100%', maxWidth:'290px', marginBottom:'16px'}}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '100%', maxWidth: '290px', marginBottom: '16px' }}>
           <a href="/feed" style={{
-            padding:'17px 28px',
-            background:'var(--gold)',
-            color:'var(--bg)',
-            borderRadius:'50px',
-            fontFamily:'var(--font-lora),serif',
-            fontWeight:700,
-            fontSize:'0.6rem',
-            letterSpacing:'1px',
-            textTransform:'uppercase',
-            textDecoration:'none',
-            minHeight:'52px',
-            width:'100%',
-            display:'flex',
-            alignItems:'center',
-            justifyContent:'center',
-            boxShadow:'0 6px 28px rgba(232,197,71,0.28)',
-            transition:'all 150ms ease',
+            padding: '17px 28px',
+            background: 'var(--gold)',
+            color: 'var(--bg)',
+            borderRadius: '50px',
+            fontFamily: UI_FONT,
+            fontWeight: 700,
+            fontSize: '0.6rem',
+            letterSpacing: '1px',
+            textTransform: 'uppercase',
+            textDecoration: 'none',
+            minHeight: '52px',
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
+            transition: 'all 150ms ease',
           }}>See What&apos;s Live</a>
         </div>
       </section>
 
-      {/* How It Works — always 3 columns; compact type on mobile so title+body stay visible */}
+      {/* How It Works — stack on mobile (Secondary/Body); 3-col from 640px */}
       <section
         className="margo-how-it-works"
         style={{ position: 'relative', zIndex: 5, maxWidth: '56rem', margin: '0 auto', padding: '24px 16px 56px' }}
@@ -471,33 +471,33 @@ export default function Home() {
         <style>{`
           .margo-how-it-works__grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
+            grid-template-columns: 1fr;
+            gap: 24px;
           }
           .margo-how-it-works__num {
-            width: 28px; height: 28px; border-radius: 50%;
+            width: 36px; height: 36px; border-radius: 50%;
             background: var(--gold-faint); border: 1px solid var(--gold-border);
             display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 8px;
+            margin: 0 auto 12px;
             font-family: var(--font-geist-sans), system-ui, sans-serif;
-            font-size: 0.7rem; font-weight: 700; color: var(--gold);
+            font-size: 0.75rem; font-weight: 700; color: var(--gold);
           }
           .margo-how-it-works__title {
             font-family: var(--font-geist-sans), system-ui, sans-serif;
-            font-size: 0.6rem; font-weight: 600; color: var(--text);
-            margin: 0 0 6px; line-height: 1.25;
+            font-size: 0.82rem; font-weight: 600; color: var(--text);
+            margin: 0 0 8px; line-height: 1.3;
           }
           .margo-how-it-works__body {
             font-family: var(--font-geist-sans), system-ui, sans-serif;
-            font-size: 0.65rem; font-weight: 400; color: var(--text-secondary);
-            margin: 0; line-height: 1.25;
+            font-size: 0.95rem; font-weight: 400; color: var(--text-secondary);
+            margin: 0; line-height: 1.5;
           }
           @media (min-width: 640px) {
             .margo-how-it-works { padding-left: 24px !important; padding-right: 24px !important; }
-            .margo-how-it-works__grid { gap: 24px; }
+            .margo-how-it-works__grid { grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
             .margo-how-it-works__num { width: 40px; height: 40px; margin-bottom: 16px; font-size: 0.95rem; }
-            .margo-how-it-works__title { font-size: 1rem; margin-bottom: 8px; line-height: 1.3; }
-            .margo-how-it-works__body { font-size: 0.82rem; line-height: 1.5; }
+            .margo-how-it-works__title { font-size: 1rem; margin-bottom: 8px; }
+            .margo-how-it-works__body { font-size: 0.82rem; }
           }
         `}</style>
         <div className="margo-how-it-works__grid">
@@ -513,7 +513,11 @@ export default function Home() {
 
       {/* Lyric Stream */}
       <section style={{position:'relative', zIndex:5, width:'100%', margin:'0 auto 32px', overflow:'hidden'}}>
-        <div style={{fontSize:'0.6rem', color:'var(--text-muted)', textAlign:'center', fontFamily:'var(--font-lora),serif', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', marginBottom:'20px'}}>↓ What people are saying right now</div>
+        <div style={{
+          fontSize: '0.6rem', color: 'var(--text-muted)', textAlign: 'center',
+          fontFamily: UI_FONT, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
+          marginBottom: '20px',
+        }}>↓ What people are saying right now</div>
         <div style={{
           position:'relative',
           maskImage:'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
