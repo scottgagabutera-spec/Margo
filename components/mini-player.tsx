@@ -11,6 +11,7 @@ import {
   setVolume,
   queuePrev,
   queueNext,
+  stop,
 } from '@/lib/audio-engine'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { MusicNoteIcon } from '@/components/icons'
@@ -44,15 +45,17 @@ export function MiniPlayer() {
 
   const { playing, buffering, muted, volume, currentTime, duration, mode, songId, title, artist, artwork, vibe, snippet, queue, queueIndex } = engineState
 
-  // ── Dismiss state ────────────────────────────────────────────────
-  const [dismissed, setDismissed] = useState(false)
-  useEffect(() => { setDismissed(false) }, [songId])
+  // Collapse = hide chrome / sheet, keep audio + queue (A.3 pill/orb).
+  // Close / dismiss = end session: stop + clear queue (A5). Do not conflate.
+  const endSession = useCallback(() => {
+    setExpanded(false)
+    stop({ clearQueue: true })
+  }, [])
 
   const isHidden =
     engineState.mode === 'idle' ||
     pathname?.startsWith('/song/') ||
-    pathname?.startsWith('/feed') ||
-    dismissed
+    pathname?.startsWith('/feed')
 
   // Publish collapsed bar height so page padding clears the mini-player.
   useEffect(() => {
@@ -105,9 +108,9 @@ export function MiniPlayer() {
     if (delta > DISMISS_DISTANCE || velocity > DISMISS_VELOCITY) {
       setBarOffset(120)
       window.setTimeout(() => {
-        setDismissed(true)
         setBarOffset(0)
         setBarAnimating(false)
+        endSession()
       }, 180)
     } else {
       setBarOffset(0)
@@ -176,7 +179,7 @@ export function MiniPlayer() {
   const fmt = (s: number) =>
     `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
-  // Hide when idle, on karaoke page, on feed page, or user-dismissed
+  // Hide when idle, on karaoke page, or on feed (A.3 owns Feed chrome)
   if (isHidden) return null
 
   const isSnippet = mode === 'snippet'
@@ -395,14 +398,12 @@ export function MiniPlayer() {
               </svg>
             </button>
 
-            {/* Close — explicit dismiss control, paired with the drag
-                gesture above. Solid gold circle with a clear X so it
-                reads unambiguously as "close this," not "collapse a
-                section" (which the old faint chevron read as). */}
+            {/* End listening — stops audio + clears queue (A5).
+                Distinct from sheet X / scrim / swipe = collapse only. */}
             <button
               className="mp-btn mp-close-btn"
-              onClick={() => setDismissed(true)}
-              aria-label="Close player"
+              onClick={() => endSession()}
+              aria-label="End listening"
               style={{
                 background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.25)',
                 borderRadius: '50%', color: 'var(--gold, #E8C547)',
@@ -452,10 +453,8 @@ export function MiniPlayer() {
 
             <div style={{ padding: '16px 28px 0' }}>
 
-              {/* Top row — vibe tag + close. Close button now matches
-                  the gold-circle treatment used on the collapsed bar
-                  and elsewhere in Discover (e.g. the Takeover close
-                  button), instead of the old faint white × text glyph. */}
+              {/* Top row — vibe tag + collapse (keep session playing).
+                  End listening lives on the collapsed bar X / drag. */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                 {vibe ? (
                   <span style={{
