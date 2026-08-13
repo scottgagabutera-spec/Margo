@@ -13,6 +13,8 @@ import {
   queueNext,
 } from '@/lib/audio-engine'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
+import { MusicNoteIcon } from '@/components/icons'
+import { SessionQueueList } from '@/components/session-queue-list'
 import { useAudioEngine, useQueueNavigation, usePlaybackProgress } from '@/hooks/useAudioEngine'
 
 const VIBE_COLORS: Record<string, string> = {
@@ -40,7 +42,7 @@ export function MiniPlayer() {
   const sheetRef = useRef<HTMLDivElement | null>(null)
   const touchStartY = useRef(0)
 
-  const { playing, buffering, muted, volume, currentTime, duration, mode, songId, title, artist, artwork, vibe, snippet } = engineState
+  const { playing, buffering, muted, volume, currentTime, duration, mode, songId, title, artist, artwork, vibe, snippet, queue, queueIndex } = engineState
 
   // ── Dismiss state ────────────────────────────────────────────────
   const [dismissed, setDismissed] = useState(false)
@@ -497,9 +499,10 @@ export function MiniPlayer() {
                     background: `linear-gradient(135deg, ${vibeColor}18, rgba(232,197,71,0.04))`,
                     border: `1px solid ${vibeColor}25`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '2.5rem',
                     boxShadow: `0 16px 56px rgba(0,0,0,0.5)`,
-                  }}>♪</div>
+                  }}>
+                    <MusicNoteIcon size={36} color="var(--gold)" />
+                  </div>
                 )}
               </div>
 
@@ -646,6 +649,11 @@ export function MiniPlayer() {
                   <path d="M15.54 8.46a5 5 0 010 7.07" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   <path d="M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
+              </div>
+
+              {/* Session Up Next — visible queue (A1 / A2) */}
+              <div style={{ marginBottom: '24px', maxHeight: '220px', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <SessionQueueList queue={queue} queueIndex={queueIndex} accent={vibeColor} />
               </div>
 
               {/* Full Karaoke CTA */}

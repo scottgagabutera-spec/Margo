@@ -977,6 +977,88 @@ export function queuePrev(): void {
   if (item) playQueueItem(item)
 }
 
+/** Jump to an absolute queue index and play that item. */
+export function playQueueIndex(index: number): void {
+  const { queue } = _state
+  if (index < 0 || index >= queue.length) return
+  const item = queue[index]
+  if (!item) return
+  patch({ queueIndex: index })
+  playQueueItem(item)
+}
+
+/**
+ * Remove one queue row. If it was current, play the item that lands in its
+ * slot (or stop if the queue empties). Indices after a pre-current remove
+ * shift down.
+ */
+export function removeQueueIndex(index: number): void {
+  const { queue, queueIndex } = _state
+  if (index < 0 || index >= queue.length) return
+  const next = queue.filter((_, i) => i !== index)
+  if (next.length === 0) {
+    stop({ clearQueue: true })
+    return
+  }
+  if (index === queueIndex) {
+    const newIndex = Math.min(index, next.length - 1)
+    patch({ queue: next, queueIndex: newIndex })
+    playQueueItem(next[newIndex])
+    return
+  }
+  const newIndex = index < queueIndex ? queueIndex - 1 : queueIndex
+  patch({ queue: next, queueIndex: newIndex })
+}
+
+/** Reorder within the session queue; keeps the current track identity. */
+export function moveQueueItem(from: number, to: number): void {
+  const { queue, queueIndex } = _state
+  if (
+    from < 0 ||
+    to < 0 ||
+    from >= queue.length ||
+    to >= queue.length ||
+    from === to
+  ) {
+    return
+  }
+  const next = [...queue]
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  let newIndex = queueIndex
+  if (from === queueIndex) newIndex = to
+  else if (from < queueIndex && to >= queueIndex) newIndex = queueIndex - 1
+  else if (from > queueIndex && to <= queueIndex) newIndex = queueIndex + 1
+  patch({ queue: next, queueIndex: newIndex })
+}
+
+/**
+ * Insert immediately after the current item (Play Next).
+ * Empty queue → becomes the session and starts playing.
+ */
+export function queuePlayNext(item: LyricMomentQueueItem): void {
+  const { queue, queueIndex } = _state
+  if (queue.length === 0) {
+    patch({ queue: [item], queueIndex: 0 })
+    playQueueItem(item)
+    return
+  }
+  const next = [...queue]
+  next.splice(queueIndex + 1, 0, item)
+  patch({ queue: next })
+}
+
+/** Append to the end of Up Next. Empty queue → start playing. */
+export function queueAdd(item: LyricMomentQueueItem): void {
+  const { queue } = _state
+  if (queue.length === 0) {
+    patch({ queue: [item], queueIndex: 0 })
+    playQueueItem(item)
+    return
+  }
+  patch({ queue: [...queue, item] })
+}
+
 // ── Public API: preload ───────────────────────────────────────────
 
 export function preloadSong(songId: string, audioUrl: string): void {
@@ -1019,6 +1101,11 @@ export const audioEngine = {
   queueNext,
   queuePrev,
   playQueueItem,
+  playQueueIndex,
+  removeQueueIndex,
+  moveQueueItem,
+  queuePlayNext,
+  queueAdd,
   preloadSong,
   warmUrl,
   setVolume,
