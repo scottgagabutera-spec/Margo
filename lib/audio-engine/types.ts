@@ -95,6 +95,34 @@ export function fullSongToQueueItem(song: {
   }
 }
 
+/** Build a snippet-window queue row (Resonance / Lyric Moment). */
+export function snippetToQueueItem(snippet: {
+  songId: string
+  audioUrl: string
+  title: string
+  artist: string
+  artwork?: string | null
+  lineIndex: number
+  lineText: string
+  startSec: number
+  endSec: number
+  vibe?: string | null
+}): LyricMomentQueueItem {
+  return {
+    kind: 'snippet',
+    songId: snippet.songId,
+    audioUrl: snippet.audioUrl,
+    title: snippet.title,
+    artist: snippet.artist,
+    artwork: snippet.artwork ?? null,
+    lineIndex: snippet.lineIndex,
+    lineText: snippet.lineText,
+    startSec: snippet.startSec,
+    endSec: snippet.endSec,
+    vibe: snippet.vibe ?? null,
+  }
+}
+
 /** Derived queue navigation flags for mini-player UI */
 export interface QueueNavigationState {
   canPrev: boolean

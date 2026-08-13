@@ -7,7 +7,7 @@ import { BackButton } from '@/components/back-button'
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
 /**
- * Library stub — Listen Later / Liked / Playlists land here as Phase D ships.
+ * Library stub — Liked / Listen Later writes already exist from Discover card actions; Phase D builds this view.
  * Hub Library tile + top-bar Library icon navigate here. Badge stays 0 until
  * a real "new" signal exists.
  */
@@ -42,7 +42,7 @@ export default function LibraryPage() {
           margin: '0 0 28px',
           lineHeight: 1.5,
         }}>
-          Your Listen Later, liked songs, and playlists will live here.
+          Saves from Discover already land in Liked and Listen Later — shelves open here next.
         </p>
 
         {loading ? (
@@ -75,7 +75,7 @@ export default function LibraryPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {[
               { title: 'Listen Later', body: 'Songs you want to play soon.' },
-              { title: 'Liked', body: 'Tracks you resonated with.' },
+              { title: 'Liked', body: 'Songs you liked from Discover and the catalog.' },
               { title: 'Playlists', body: 'Your mixes and saved queues.' },
             ].map((row) => (
               <div
