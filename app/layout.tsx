@@ -7,6 +7,7 @@ import { MessagingProvider } from '@/hooks/useMessaging'
 import { MiniPlayer } from '@/components/mini-player'
 import { MargoNav } from '@/components/margo-nav'
 import { MobileTabBar } from '@/components/mobile-tab-bar'
+import { HubProvider } from '@/components/hub-menu'
 import { ChromeModePublisher } from '@/components/chrome-mode'
 import { TabSwipeProvider } from '@/hooks/useTabSwipe'
 import { Toaster } from '@/components/ui/sonner'
@@ -171,12 +172,14 @@ export default function RootLayout({
             <AudioEngineProvider>
               <NotificationsProvider>
                 <MessagingProvider>
+                  <HubProvider>
                   <ChromeModePublisher />
                   <MargoNav />
                   <TabSwipeProvider>
                     {children}
                   </TabSwipeProvider>
                   <MobileTabBar />
+                  </HubProvider>
                 </MessagingProvider>
               </NotificationsProvider>
             </AudioEngineProvider>

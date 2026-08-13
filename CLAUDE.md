@@ -38,7 +38,7 @@ app/
 
 components/
   margo-nav.tsx            — Desktop/shared nav
-  mobile-tab-bar.tsx       — Primary tab bar (Feed / Discover / Compose / Alerts / You)
+  mobile-tab-bar.tsx       — Primary tab bar (Feed / Discover / Compose / Hub / You)
   primary-tab-shell.tsx    — Keepalive panes + tab swipe
   post-card.tsx            — Feed/Discover post card
   post-card-suggested-reply.tsx — On-demand Suggested Lyric Back
@@ -101,7 +101,7 @@ Backticks inside node -e are interpreted by bash as command substitution. Use st
 
 ### 6. Nav rules
 - Desktop: `MargoNav` (Feed, Discover, Share a Lyric, account)
-- Mobile primary tabs: Feed, Discover, Compose, Alerts, You — via `PrimaryTabShell` / `MobileTabBar`
+- Mobile primary tabs: Feed, Discover, Compose, Hub, You — via `PrimaryTabShell` / `MobileTabBar`
 - Landing (`/`) has its own marketing nav — intentional
 - Song/karaoke page has its own immersive header — intentional
 - Admin has NO nav — internal tool

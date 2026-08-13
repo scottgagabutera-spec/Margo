@@ -6,12 +6,16 @@ import { usePathname } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { CompassIcon } from '@/components/icons'
+import { HubTabButton } from '@/components/hub-menu'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
 import { hidesTabBar } from '@/lib/chrome-mode'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
-/** Mobile primary tabs: Feed · Discover · Compose · You (Alerts absorbed into Hub). */
+/**
+ * Mobile primary tabs: Feed · Discover · Compose · Hub · You
+ * (5 columns — Hub restored to bottom bar by product request.)
+ */
 export function MobileTabBar() {
   const pathname = usePathname()
   const { user, identity } = useIdentity()
@@ -66,7 +70,7 @@ export function MobileTabBar() {
     <nav ref={navRef} className="margo-mobile-tabbar" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
       display: 'none',
-      gridTemplateColumns: 'repeat(4, 1fr)',
+      gridTemplateColumns: 'repeat(5, 1fr)',
       alignItems: 'center',
       padding: '8px 12px calc(8px + env(safe-area-inset-bottom))',
       background: 'var(--bg)',
@@ -108,6 +112,8 @@ export function MobileTabBar() {
           <path d="M7 1v12M1 7h12" stroke="var(--bg)" strokeWidth="2" strokeLinecap="round"/>
         </svg>
       </Link>
+
+      <HubTabButton style={tabStyle(false)} labelStyle={labelStyle} />
 
       <Link href={ownProfileHref} style={tabStyle(isOnProfile)}>
         {isSignedIn && identity?.avatarUrl ? (

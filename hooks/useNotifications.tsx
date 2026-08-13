@@ -133,7 +133,7 @@ const NotificationsContext = createContext<NotificationsContextValue | null>(nul
 /**
  * Owns the single Realtime subscription for a signed-in user's
  * notifications. This must be mounted exactly once (in the root
- * layout) — HubMenu (desktop + mobile) and any remaining consumers
+ * layout) — Hub (desktop icon + mobile tab) and any remaining consumers
  * read from it via useNotifications() below instead of each opening
  * their own subscription. Two components independently subscribing to
  * the same `notifications:${userId}` channel topic previously caused the

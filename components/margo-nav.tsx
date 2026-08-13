@@ -7,7 +7,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { HubMenu, LibraryNavLink } from '@/components/hub-menu'
+import { HubIconButton, LibraryNavLink } from '@/components/hub-menu'
 import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
 import { hidesAppNav } from '@/lib/chrome-mode'
 
@@ -153,12 +153,8 @@ export function MargoNav() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {/* Top-bar Library for signed-in; Hub is bottom-tab on mobile, icon in desktop-nav. */}
           {isSignedIn && <LibraryNavLink />}
-          {isSignedIn && (
-            <div className="margo-hub-mobile-slot">
-              <HubMenu />
-            </div>
-          )}
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[
@@ -201,11 +197,9 @@ export function MargoNav() {
               opacity: isOnCompose ? 0.75 : 1,
             }}>Share a Lyric</Link>
 
-            {isSignedIn && (
-              <div style={{ marginLeft: '4px' }}>
-                <HubMenu />
-              </div>
-            )}
+            <div style={{ marginLeft: '4px' }}>
+              <HubIconButton />
+            </div>
 
             {!isSignedIn ? (
               <Link href="/signin" style={{
@@ -316,18 +310,11 @@ export function MargoNav() {
         .margo-desktop-nav {
           display: none;
         }
-        .margo-hub-mobile-slot {
-          display: flex;
-          align-items: center;
-        }
         @media (min-width: 640px) {
           .margo-desktop-nav {
             display: flex !important;
             align-items: center;
             gap: 4px;
-          }
-          .margo-hub-mobile-slot {
-            display: none !important;
           }
         }
       `}</style>
