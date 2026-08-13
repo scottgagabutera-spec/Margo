@@ -17,7 +17,7 @@ import { HeartIcon } from '@/components/heart-icon'
 import { CloseIcon } from '@/components/icons'
 import { AuthorMeta } from '@/components/username-tag'
 import { SaveQueueButton } from '@/components/save-queue-button'
-import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine, togglePlayPause } from '@/lib/audio-engine'
+import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine, togglePlayPause, queuePlayNext, queueAdd, fullSongToQueueItem } from '@/lib/audio-engine'
 import { getMargoActorId } from '@/lib/engagement/session'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -691,6 +691,34 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
     router.push(`/song/${song.id}`)
   }
 
+  const handlePlayNext = () => {
+    if (!requireAuth()) return
+    if (!song.audioUrl) return
+    queuePlayNext(
+      fullSongToQueueItem({
+        id: song.id,
+        audioUrl: song.audioUrl,
+        title: song.title,
+        artist: song.artist,
+        artwork: song.artwork ?? null,
+      }),
+    )
+  }
+
+  const handleAddToQueue = () => {
+    if (!requireAuth()) return
+    if (!song.audioUrl) return
+    queueAdd(
+      fullSongToQueueItem({
+        id: song.id,
+        audioUrl: song.audioUrl,
+        title: song.title,
+        artist: song.artist,
+        artwork: song.artwork ?? null,
+      }),
+    )
+  }
+
   const metaBits = [
     `${formatNum(song.plays || 0)} plays`,
     `${formatNum(resonateCount)} resonates`,
@@ -841,21 +869,53 @@ function SongPreview({ song, onClose, resonated, onResonate, resonateCount }: {
               <HeartIcon filled={resonated} size={14} color="currentColor" /> Resonate
             </button>
             {isActive ? (
-              <button
-                type="button"
-                className="play-btn"
-                onClick={handlePlayNow}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                  padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)',
-                  borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.6rem',
-                  letterSpacing: '1.5px', textTransform: 'uppercase', border: 'none',
-                  minHeight: '52px', transition: 'all 200ms ease', cursor: 'pointer',
-                  boxShadow: '0 6px 28px rgba(232,197,71,0.28)', width: '100%',
-                }}
-              >
-                <PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="play-btn"
+                  onClick={handlePlayNow}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)',
+                    borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.6rem',
+                    letterSpacing: '1.5px', textTransform: 'uppercase', border: 'none',
+                    minHeight: '52px', transition: 'all 200ms ease', cursor: 'pointer',
+                    boxShadow: '0 6px 28px rgba(232,197,71,0.28)', width: '100%',
+                  }}
+                >
+                  <PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={handlePlayNext}
+                    style={{
+                      flex: 1, padding: '12px',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.55rem',
+                      letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                      color: 'var(--text-secondary)', minHeight: 'var(--margo-touch-min)',
+                    }}
+                  >
+                    Play Next
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddToQueue}
+                    style={{
+                      flex: 1, padding: '12px',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.55rem',
+                      letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                      color: 'var(--text-secondary)', minHeight: 'var(--margo-touch-min)',
+                    }}
+                  >
+                    Add to Queue
+                  </button>
+                </div>
+              </>
             ) : (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',

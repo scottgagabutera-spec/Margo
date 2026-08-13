@@ -12,7 +12,7 @@ import { useSongs } from '@/hooks/useSongs'
 import { Song } from '@/hooks/useSongs'
 import { CardExportModal } from '@/components/card-export-modal'
 import { useAudioEngine, useAudioCurrentTime } from '@/hooks/useAudioEngine'
-import { playFull, togglePlayPause, stop, playFullSeek, setQueue, playQueueItem, fullSongToQueueItem, isFullQueueItem, getAudioEngineState, getQueueNavigationState } from '@/lib/audio-engine'
+import { playFull, togglePlayPause, stop, playFullSeek, setQueue, playQueueItem, fullSongToQueueItem, isFullQueueItem, getAudioEngineState, getQueueNavigationState, queuePlayNext, queueAdd } from '@/lib/audio-engine'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 
 interface LyricLine {
@@ -443,26 +443,94 @@ export default function SongPage() {
           {/* Song cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
             {nextSongs.length > 0 ? nextSongs.map((s, i) => (
-              <button
+              <div
                 key={s.id}
-                type="button"
-                className={`next-song-card${i === 0 ? ' primary' : ''}`}
-                onClick={() => navigateToSong(s)}
+                style={{
+                  display: 'flex', flexDirection: 'column', gap: '6px',
+                  padding: '10px 12px',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: i === 0 ? 'rgba(232,197,71,0.06)' : 'rgba(255,255,255,0.02)',
+                }}
               >
-                <div style={{ position: 'relative', width: i === 0 ? '50px' : '42px', height: i === 0 ? '50px' : '42px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
-                  {s.artwork
-                    ? <Image src={s.artwork} alt={s.title} fill style={{ objectFit: 'cover' }} />
-                    : <div style={{ width: '100%', height: '100%', background: 'rgba(232,197,71,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <MusicNoteIcon size={16} color="var(--gold)" />
-                      </div>
-                  }
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: i === 0 ? '0.95rem' : '0.82rem', fontWeight: 600, color: i === 0 ? 'var(--text)' : 'rgba(255,255,255,0.6)', margin: 0, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</p>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.artist}</p>
-                </div>
-                <div style={{ width: i === 0 ? '32px' : '26px', height: i === 0 ? '32px' : '26px', borderRadius: '50%', background: i === 0 ? 'var(--gold)' : 'rgba(255,255,255,0.06)', border: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: i === 0 ? '0.65rem' : '0.55rem', color: i === 0 ? 'var(--bg)' : 'rgba(255,255,255,0.4)', flexShrink: 0 }}></div>
-              </button>
+                <button
+                  type="button"
+                  className={`next-song-card${i === 0 ? ' primary' : ''}`}
+                  onClick={() => navigateToSong(s)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    width: '100%', background: 'none', border: 'none',
+                    cursor: 'pointer', padding: 0, textAlign: 'left',
+                  }}
+                >
+                  <div style={{ position: 'relative', width: i === 0 ? '50px' : '42px', height: i === 0 ? '50px' : '42px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
+                    {s.artwork
+                      ? <Image src={s.artwork} alt={s.title} fill style={{ objectFit: 'cover' }} />
+                      : <div style={{ width: '100%', height: '100%', background: 'rgba(232,197,71,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <MusicNoteIcon size={16} color="var(--gold)" />
+                        </div>
+                    }
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: i === 0 ? '0.95rem' : '0.82rem', fontWeight: 600, color: i === 0 ? 'var(--text)' : 'rgba(255,255,255,0.6)', margin: 0, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</p>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.artist}</p>
+                  </div>
+                </button>
+                {s.audioUrl && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        queuePlayNext(fullSongToQueueItem({
+                          id: s.id,
+                          audioUrl: s.audioUrl!,
+                          title: s.title,
+                          artist: s.artist,
+                          artwork: s.artwork ?? null,
+                        }))
+                      }}
+                      style={{
+                        flex: 1, minHeight: 'var(--margo-touch-min)',
+                        borderRadius: '50px',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'rgba(255,255,255,0.04)',
+                        color: 'var(--text-secondary)',
+                        fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+                        fontSize: '0.55rem', fontWeight: 700,
+                        letterSpacing: '1px', textTransform: 'uppercase',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Play Next
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        queueAdd(fullSongToQueueItem({
+                          id: s.id,
+                          audioUrl: s.audioUrl!,
+                          title: s.title,
+                          artist: s.artist,
+                          artwork: s.artwork ?? null,
+                        }))
+                      }}
+                      style={{
+                        flex: 1, minHeight: 'var(--margo-touch-min)',
+                        borderRadius: '50px',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'rgba(255,255,255,0.04)',
+                        color: 'var(--text-secondary)',
+                        fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+                        fontSize: '0.55rem', fontWeight: 700,
+                        letterSpacing: '1px', textTransform: 'uppercase',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Add to Queue
+                    </button>
+                  </div>
+                )}
+              </div>
             )) : (
               <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '0.88rem', textAlign: 'center', padding: '12px 0' }}>No more songs available</p>
             )}
