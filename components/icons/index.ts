@@ -19,6 +19,7 @@ export { MusicNoteIcon } from './music-note-icon'
 export { PenLineIcon } from './pen-line-icon'
 export { PlayIcon } from './play-icon'
 export { ReplayIcon } from './replay-icon'
+export { RefreshArrowIcon } from './refresh-arrow-icon'
 export { SearchIcon } from './search-icon'
 export { ShareIcon } from './share-icon'
 export {

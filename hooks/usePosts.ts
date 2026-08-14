@@ -53,12 +53,15 @@ export function usePosts(options: UsePostsOptions = {}) {
   const enabled = options.enabled ?? true
   const cached = peekFeedPostsCache()
   const [posts, setPosts] = useState<Post[]>(cached?.data ?? [])
-  const [loading, setLoading] = useState(!cached?.data)
+  const [loading, setLoading] = useState(!cached)
   const lastLoadedAtRef = useRef(cached?.loadedAt ?? 0)
 
   const load = useCallback(async (force = false): Promise<Post[]> => {
     const mapped = await warmFeedPosts({ force })
-    setPosts(mapped)
+    setPosts(prev => {
+      if (mapped.length === 0 && prev.length > 0) return prev
+      return mapped
+    })
     setLoading(false)
     lastLoadedAtRef.current = Date.now()
     return mapped

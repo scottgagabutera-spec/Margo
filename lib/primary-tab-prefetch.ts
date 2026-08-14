@@ -157,7 +157,7 @@ export async function fetchFeedPosts(): Promise<Post[]> {
 }
 
 export function peekFeedPostsCache(): { data: Post[]; loadedAt: number } | null {
-  if (!postsCache.data) return null
+  if (!postsCache.data || postsCache.data.length === 0) return null
   return { data: postsCache.data, loadedAt: postsCache.loadedAt }
 }
 
@@ -173,6 +173,10 @@ export function warmFeedPosts(opts?: { force?: boolean }): Promise<Post[]> {
   if (postsCache.inflight) return postsCache.inflight
 
   const p = fetchFeedPosts().then((rows) => {
+    if (rows.length === 0 && postsCache.data && postsCache.data.length > 0) {
+      postsCache.inflight = null
+      return postsCache.data
+    }
     postsCache.data = rows
     postsCache.loadedAt = Date.now()
     postsCache.inflight = null
