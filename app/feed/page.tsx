@@ -11,8 +11,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { PullToRefresh } from '@/components/pull-to-refresh'
-import { NewItemsPill } from '@/components/new-items-pill'
+import { ContentUpdatesBar } from '@/components/content-updates-bar'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
+import { useContentUpdates } from '@/hooks/useContentUpdates'
 import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
 import { ArtistBadge } from '@/components/artist-badge'
 import { PostCard, normalizeEmotion } from '@/components/post-card'
@@ -40,6 +41,9 @@ export default function FeedPage() {
     flushPending,
     applyImmediate,
   } = useNewItemsBuffer(livePosts)
+  const { songCount, artistCount, openSongs, openArtists } = useContentUpdates({
+    enabled: feedLive,
+  })
   const { replays: recentReplays } = useRecentReplays(80, { enabled: feedLive })
   const [ptrBusy, setPtrBusy] = useState(false)
   const { requireAuth } = useAuthGate()
@@ -495,8 +499,15 @@ export default function FeedPage() {
       }}
     >
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
-      {!ptrBusy && pendingCount > 0 && (
-        <NewItemsPill count={pendingCount} onReveal={flushPending} noun="new lyrics" />
+      {!ptrBusy && (pendingCount > 0 || songCount > 0 || artistCount > 0) && (
+        <ContentUpdatesBar
+          lyricsCount={pendingCount}
+          songCount={songCount}
+          artistCount={artistCount}
+          onLyrics={flushPending}
+          onSongs={openSongs}
+          onArtists={openArtists}
+        />
       )}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         <div style={{ position: 'absolute', top: '-128px', left: '-128px', width: '384px', height: '384px', background: 'rgba(232,197,71,0.04)', borderRadius: '50%', filter: 'blur(80px)' }} />

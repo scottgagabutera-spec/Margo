@@ -1,39 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { usePathname } from 'next/navigation'
-import {
-  getActivePrimaryScrollEl,
-  readActiveScrollTop,
-  scrollActiveTo,
-} from '@/components/primary-tab-shell'
-
-const DEFAULT_TOP_PX = 80
-
-/**
- * True when the active scrollport is near the top (within thresholdPx).
- * Uses the primary-tab pane when keepalive is active; otherwise window.
- */
-export function useIsNearTop(thresholdPx: number = DEFAULT_TOP_PX) {
-  const pathname = usePathname()
-  const [nearTop, setNearTop] = useState(() => readActiveScrollTop() <= thresholdPx)
-
-  useEffect(() => {
-    const update = () => setNearTop(readActiveScrollTop() <= thresholdPx)
-    update()
-
-    const pane = getActivePrimaryScrollEl()
-    if (pane) {
-      pane.addEventListener('scroll', update, { passive: true })
-      return () => pane.removeEventListener('scroll', update)
-    }
-
-    window.addEventListener('scroll', update, { passive: true })
-    return () => window.removeEventListener('scroll', update)
-  }, [thresholdPx, pathname])
-
-  return nearTop
-}
+import { scrollActiveTo } from '@/components/primary-tab-shell'
 
 export interface UseNewItemsBufferResult<T extends { id: string }> {
   /** Stable list shown in the UI (may lag live while scrolled). */
@@ -51,7 +19,7 @@ export interface UseNewItemsBufferResult<T extends { id: string }> {
 }
 
 /**
- * Buffers newly arrived list head items while the user is scrolled down
+ * Buffers newly arrived list head items so the visible list never auto-jumps
  * (X/Twitter "Show N posts" pattern). Updates/deletes to already-visible
  * rows still apply in place so resonate counts stay live.
  *
@@ -60,12 +28,8 @@ export interface UseNewItemsBufferResult<T extends { id: string }> {
  */
 export function useNewItemsBuffer<T extends { id: string }>(
   liveItems: T[],
-  options?: { scrollThresholdPx?: number }
+  _options?: { scrollThresholdPx?: number }
 ): UseNewItemsBufferResult<T> {
-  const nearTop = useIsNearTop(options?.scrollThresholdPx ?? DEFAULT_TOP_PX)
-  const nearTopRef = useRef(nearTop)
-  nearTopRef.current = nearTop
-
   const liveRef = useRef(liveItems)
   liveRef.current = liveItems
 
@@ -109,13 +73,6 @@ export function useNewItemsBuffer<T extends { id: string }>(
       displayedRef.current = refreshed
       setDisplayed(refreshed)
       setPendingIds((ids) => ids.filter((id) => liveById.has(id)))
-      return
-    }
-
-    if (nearTopRef.current) {
-      displayedRef.current = [...brandNew, ...refreshed]
-      setDisplayed(displayedRef.current)
-      setPendingIds([])
       return
     }
 
