@@ -18,6 +18,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
 import { readActiveScrollTop } from '@/components/primary-tab-shell'
 import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon } from '@/components/icons'
+import { LoadingRing } from '@/components/loading-ring'
 import { UI_FONT } from '@/lib/fonts'
 import type { HubSurface, HubSurfaceId } from '@/lib/hub/surfaces'
 
@@ -64,11 +65,15 @@ function HubPresenceDot({ visible, top, right }: { visible: boolean; top: string
 function HubTile({
   surface,
   signedIn,
-  onNavigate,
+  pending,
+  locked,
+  onBeginNavigate,
 }: {
   surface: HubSurface
   signedIn: boolean
-  onNavigate?: () => void
+  pending: boolean
+  locked: boolean
+  onBeginNavigate: (href: string) => boolean
 }) {
   const { href, id, label, unread, wide } = surface
   const badge = signedIn ? badgeLabel(unread) : ''
@@ -76,22 +81,30 @@ function HubTile({
   return (
     <Link
       href={dest}
-      onClick={onNavigate}
+      onClick={(e) => {
+        if (locked || pending || !onBeginNavigate(dest)) {
+          e.preventDefault()
+        }
+      }}
       data-margo-hub-root
+      aria-busy={pending}
+      className="margo-hub-tile"
       style={{
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
         padding: '14px 12px',
         borderRadius: '12px',
-        border: '1px solid rgba(255,255,255,0.08)',
-        background: 'rgba(255,255,255,0.02)',
+        border: pending ? '1px solid var(--gold-border)' : '1px solid rgba(255,255,255,0.08)',
+        background: pending ? 'var(--gold-faint)' : 'rgba(255,255,255,0.02)',
         textDecoration: 'none',
         position: 'relative',
         minHeight: '112px',
         boxSizing: 'border-box',
         gridColumn: wide ? '1 / -1' : undefined,
-        opacity: signedIn ? 1 : 0.85,
+        opacity: signedIn ? (locked ? 0.45 : 1) : 0.85,
+        pointerEvents: locked ? 'none' : 'auto',
+        transition: 'background 80ms var(--ease-out), border-color 80ms var(--ease-out)',
       }}
     >
       {badge ? (
@@ -131,16 +144,21 @@ function HubTile({
       >
         {label}
       </span>
-      {/* Reserved preview slot — live content later */}
+      {/* Preview slot — spinner while the destination RSC is in flight */}
       <div
         style={{
           flex: 1,
           minHeight: '40px',
           borderRadius: '8px',
-          border: '1px dashed rgba(255,255,255,0.06)',
+          border: pending ? 'none' : '1px dashed rgba(255,255,255,0.06)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
-        aria-hidden
-      />
+        aria-hidden={!pending}
+      >
+        {pending ? <LoadingRing size={28} strokeWidth={2} state="spinning" /> : null}
+      </div>
     </Link>
   )
 }
@@ -153,6 +171,8 @@ type HubContextValue = {
   hubHasUnread: boolean
   surfaces: HubSurface[]
   signedIn: boolean
+  pendingHref: string | null
+  beginNavigate: (href: string) => boolean
 }
 
 const HubContext = createContext<HubContextValue | null>(null)
@@ -167,10 +187,14 @@ function HubTiles({
   signedIn,
   close,
   surfaces,
+  pendingHref,
+  beginNavigate,
 }: {
   signedIn: boolean
   close: () => void
   surfaces: HubSurface[]
+  pendingHref: string | null
+  beginNavigate: (href: string) => boolean
 }) {
   return (
     <>
@@ -222,19 +246,25 @@ function HubTiles({
           </Link>
         </div>
       )}
-      {surfaces.map((surface) => (
-        <HubTile
-          key={surface.id}
-          surface={surface}
-          signedIn={signedIn}
-        />
-      ))}
+      {surfaces.map((surface) => {
+        const dest = signedIn ? surface.href : '/signin'
+        return (
+          <HubTile
+            key={surface.id}
+            surface={surface}
+            signedIn={signedIn}
+            pending={pendingHref === dest}
+            locked={!!pendingHref && pendingHref !== dest}
+            onBeginNavigate={beginNavigate}
+          />
+        )
+      })}
     </>
   )
 }
 
 function HubPanel() {
-  const { open, close, signedIn, surfaces } = useHub()
+  const { open, close, signedIn, surfaces, pendingHref, beginNavigate } = useHub()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
@@ -245,6 +275,8 @@ function HubPanel() {
     signedIn,
     close,
     surfaces,
+    pendingHref,
+    beginNavigate,
   }
 
   return createPortal(
@@ -311,6 +343,10 @@ function HubPanel() {
       </div>
 
       <style>{`
+        .margo-hub-tile:active {
+          background: var(--gold-faint) !important;
+          border-color: var(--gold-border) !important;
+        }
         @media (min-width: 640px) {
           .margo-hub-sheet { display: none !important; }
           .margo-hub-panel { display: block !important; }
@@ -329,19 +365,42 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const { surfaces, hasActivity } = useHubSurfaces(signedIn)
 
   const [open, setOpen] = useState(false)
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const pendingHrefRef = useRef<string | null>(null)
   const scrollOriginRef = useRef(0)
   const lastScrollRef = useRef({ y: 0, t: 0 })
 
-  const close = useCallback(() => setOpen(false), [])
-  const toggle = useCallback(() => setOpen((v) => !v), [])
+  const close = useCallback(() => {
+    pendingHrefRef.current = null
+    setOpen(false)
+    setPendingHref(null)
+  }, [])
+  const toggle = useCallback(() => {
+    setOpen((v) => {
+      if (v) {
+        pendingHrefRef.current = null
+        setPendingHref(null)
+      }
+      return !v
+    })
+  }, [])
+  const beginNavigate = useCallback((href: string) => {
+    if (pendingHrefRef.current) return false
+    pendingHrefRef.current = href
+    setPendingHref(href)
+    return true
+  }, [])
 
   useEffect(() => {
+    pendingHrefRef.current = null
     setOpen(false)
+    setPendingHref(null)
   }, [pathname])
 
   useEffect(() => {
     if (!open) return
     const onPointer = (e: MouseEvent | TouchEvent) => {
+      if (pendingHrefRef.current) return
       const target = e.target
       if (!(target instanceof Element)) return
       if (target.closest('[data-margo-hub-root]')) return
@@ -378,7 +437,7 @@ export function HubProvider({ children }: { children: ReactNode }) {
       const vy = Math.abs(y - prev.y) / dt
       lastScrollRef.current = { y, t: now }
       if (Math.abs(y - scrollOriginRef.current) >= SCROLL_DISTANCE_PX || vy >= SCROLL_VELOCITY_PX_MS) {
-        close()
+        if (!pendingHrefRef.current) close()
       }
     }
 
@@ -392,8 +451,11 @@ export function HubProvider({ children }: { children: ReactNode }) {
   }, [open, close])
 
   const value = useMemo(
-    () => ({ open, setOpen, toggle, close, hubHasUnread: hasActivity, surfaces, signedIn }),
-    [open, toggle, close, hasActivity, surfaces, signedIn],
+    () => ({
+      open, setOpen, toggle, close, hubHasUnread: hasActivity, surfaces, signedIn,
+      pendingHref, beginNavigate,
+    }),
+    [open, toggle, close, hasActivity, surfaces, signedIn, pendingHref, beginNavigate],
   )
 
   return (
