@@ -33,6 +33,7 @@ export {
   isFullQueueItem,
   isSnippetQueueItem,
   fullSongToQueueItem,
+  snippetToQueueItem,
 } from './types'
 
 // Engine public API
