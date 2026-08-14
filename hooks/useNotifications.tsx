@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useForegroundCatchup } from '@/hooks/useForegroundCatchup'
 
 // Cookie-session client (Phase 4 bridge). Reads/writes notifications under
 // RLS require the JWT from the auth cookie — the old localStorage client 401s.
@@ -123,6 +124,7 @@ interface NotificationsContextValue {
   notifications: Notification[]
   unreadCount: number
   loading: boolean
+  refetch: () => Promise<void>
   markAllRead: () => Promise<void>
   acceptFollowRequest: (notification: Notification) => Promise<void>
   declineFollowRequest: (notification: Notification) => Promise<void>
@@ -153,6 +155,20 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const unreadCount = notifications.filter(n => !n.readAt).length
 
+  const refetch = useCallback(async () => {
+    if (!userId) return
+    try {
+      const mapped = await fetchNotificationsMapped(userId)
+      setNotifications(mapped)
+    } catch (error) {
+      console.error('Failed to load notifications:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [userId])
+
+  useForegroundCatchup(refetch, !!userId)
+
   useEffect(() => {
     if (authLoading) return
 
@@ -164,35 +180,39 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     let active = true
 
-    async function loadInitial() {
-      try {
-        const mapped = await fetchNotificationsMapped(userId!)
-        if (!active) return
-        setNotifications(mapped)
-      } catch (error) {
-        console.error('Failed to load notifications:', error)
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-
     setLoading(true)
-    loadInitial()
+    void refetch()
 
     const channel = supabase
       .channel(`notifications:${userId}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'notifications',
           filter: `recipient_id=eq.${userId}`,
         },
         async (payload) => {
-          const mapped = await fetchOneNotificationMapped(payload.new.id)
-          if (mapped && active) {
-            setNotifications(prev => [mapped, ...prev])
+          if (!active) return
+          if (payload.eventType === 'DELETE') {
+            const oldRow = payload.old as { id?: string } | null
+            if (oldRow?.id) {
+              setNotifications((prev) => prev.filter((n) => n.id !== oldRow.id))
+            }
+            return
+          }
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const id = (payload.new as { id?: string } | null)?.id
+            if (!id) return
+            const mapped = await fetchOneNotificationMapped(id)
+            if (!mapped || !active) return
+            setNotifications((prev) => {
+              const without = prev.filter((n) => n.id !== mapped.id)
+              return [mapped, ...without].sort(
+                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+              )
+            })
           }
         }
       )
@@ -202,7 +222,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       active = false
       supabase.removeChannel(channel)
     }
-  }, [authLoading, signedOut, userId])
+  }, [authLoading, signedOut, userId, refetch])
 
   const markAllRead = useCallback(async () => {
     if (!userId) return
@@ -262,7 +282,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   return (
     <NotificationsContext.Provider value={{
-      notifications, unreadCount, loading, markAllRead,
+      notifications, unreadCount, loading, refetch, markAllRead,
       acceptFollowRequest, declineFollowRequest,
     }}>
       {children}

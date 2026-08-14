@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useForegroundCatchup } from '@/hooks/useForegroundCatchup'
 
 const supabase = createClient()
 
@@ -52,6 +53,7 @@ interface MessagingContextValue {
     createdAt: string
     senderId: string
   }) => void
+  refetch: () => Promise<void>
   /** Drop unread for a partner after opening their thread / marking read. */
   clearUnreadForPartner: (partnerId: string) => void
 }
@@ -198,6 +200,15 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const refetch = useCallback(async () => {
+    if (!userId) return
+    const list = await loadConversations(userId)
+    setConversations(list)
+    setLoading(false)
+  }, [userId])
+
+  useForegroundCatchup(refetch, !!userId)
+
   useEffect(() => {
     if (authLoading) return
 
@@ -209,15 +220,8 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
 
     let active = true
 
-    async function load() {
-      const list = await loadConversations(userId!)
-      if (!active) return
-      setConversations(list)
-      setLoading(false)
-    }
-
     setLoading(true)
-    load()
+    void refetch()
 
     // One channel topic per user — both filters registered before subscribe.
     const channel = supabase
@@ -225,12 +229,12 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages', filter: `recipient_id=eq.${userId}` },
-        () => { if (active) load() }
+        () => { if (active) void refetch() }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages', filter: `sender_id=eq.${userId}` },
-        () => { if (active) load() }
+        () => { if (active) void refetch() }
       )
       .subscribe()
 
@@ -238,7 +242,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       active = false
       supabase.removeChannel(channel)
     }
-  }, [authLoading, signedOut, userId])
+  }, [authLoading, signedOut, userId, refetch])
 
   const value = useMemo<MessagingContextValue>(
     () => ({
@@ -247,6 +251,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       requests,
       unreadCount,
       loading,
+      refetch,
       applyOutboundMessage,
       clearUnreadForPartner,
     }),
@@ -256,6 +261,7 @@ export function MessagingProvider({ children }: { children: ReactNode }) {
       requests,
       unreadCount,
       loading,
+      refetch,
       applyOutboundMessage,
       clearUnreadForPartner,
     ]

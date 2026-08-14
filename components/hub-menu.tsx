@@ -68,7 +68,7 @@ function HubTile({
 }: {
   surface: HubSurface
   signedIn: boolean
-  onNavigate: () => void
+  onNavigate?: () => void
 }) {
   const { href, id, label, unread, wide } = surface
   const badge = signedIn ? badgeLabel(unread) : ''
@@ -227,7 +227,6 @@ function HubTiles({
           key={surface.id}
           surface={surface}
           signedIn={signedIn}
-          onNavigate={close}
         />
       ))}
     </>

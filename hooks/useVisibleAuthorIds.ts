@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useIdentity } from '@/hooks/useIdentity'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const supabase = createClient()
 
@@ -16,16 +16,19 @@ const supabase = createClient()
  *  - the viewer is the author themselves
  *  - the viewer follows the author with an accepted follow (private profile)
  *
- * This mirrors the profile-page locked-content rule so a private
- * account's lyrics never surface on any surface a non-follower can
- * reach — main feed, search, etc. — not just when visiting their
- * profile directly. Privacy and messaging permission are separate
- * axes; this hook only governs post/content visibility.
+ * Unknown privacy is NOT treated as visible — that was the logged-in
+ * empty/swap flash (show everyone, then drop private accounts, then
+ * restore follows). Callers should keep loading until `ready`.
  */
 export function useVisibleAuthorIds(authorUids: (string | null | undefined)[]) {
-  const { user } = useIdentity()
+  const { user: authUser, loading: authLoading } = useAuthGate()
+  const signedIn = !authLoading && !!authUser && !authUser.is_anonymous
+  const viewerId = signedIn ? authUser!.id : null
+
   const [privacyMap, setPrivacyMap] = useState<Record<string, boolean>>({})
+  const [privacyEpoch, setPrivacyEpoch] = useState('')
   const [acceptedFollows, setAcceptedFollows] = useState<Set<string>>(new Set())
+  const [followsEpoch, setFollowsEpoch] = useState('')
 
   const uniqueIdsKey = useMemo(
     () => Array.from(new Set(authorUids.filter((id): id is string => !!id))).sort().join(','),
@@ -37,51 +40,70 @@ export function useVisibleAuthorIds(authorUids: (string | null | undefined)[]) {
   )
 
   useEffect(() => {
-    if (uniqueIds.length === 0) return
+    if (uniqueIds.length === 0) {
+      setPrivacyEpoch('')
+      return
+    }
     let active = true
     supabase
       .from('profiles')
       .select('id, is_private')
       .in('id', uniqueIds)
       .then(({ data, error }) => {
-        if (!active || error || !data) return
+        if (!active || error) return
         setPrivacyMap(prev => {
           const next = { ...prev }
-          data.forEach(row => { next[row.id] = !!row.is_private })
+          uniqueIds.forEach(id => {
+            const row = data?.find(r => r.id === id)
+            next[id] = row ? !!row.is_private : false
+          })
           return next
         })
+        setPrivacyEpoch(uniqueIdsKey)
       })
     return () => { active = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uniqueIdsKey])
+  }, [uniqueIdsKey, uniqueIds])
 
   useEffect(() => {
-    if (!user || uniqueIds.length === 0) { setAcceptedFollows(new Set()); return }
+    if (authLoading) return
+    if (!viewerId || uniqueIds.length === 0) {
+      setAcceptedFollows(new Set())
+      setFollowsEpoch(uniqueIdsKey)
+      return
+    }
     let active = true
     supabase
       .from('follows')
       .select('followee_id')
-      .eq('follower_id', user.id)
+      .eq('follower_id', viewerId)
       .eq('status', 'accepted')
       .in('followee_id', uniqueIds)
       .then(({ data, error }) => {
-        if (!active || error || !data) return
-        setAcceptedFollows(new Set(data.map(r => r.followee_id)))
+        if (!active || error) return
+        setAcceptedFollows(new Set((data || []).map(r => r.followee_id)))
+        setFollowsEpoch(uniqueIdsKey)
       })
     return () => { active = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, uniqueIdsKey])
+  }, [authLoading, viewerId, uniqueIdsKey, uniqueIds])
 
-  return useMemo(() => {
+  const privacyReady = uniqueIds.length === 0 || privacyEpoch === uniqueIdsKey
+  const followsReady =
+    uniqueIds.length === 0 ||
+    (!authLoading && (!viewerId || followsEpoch === uniqueIdsKey))
+  const ready = !authLoading && privacyReady && followsReady
+
+  const ids = useMemo(() => {
     const visible = new Set<string>()
+    if (!ready) return visible
     uniqueIds.forEach(id => {
       const isPrivate = privacyMap[id]
-      if (isPrivate === undefined) { visible.add(id); return }
+      if (isPrivate === undefined) return
       if (!isPrivate) { visible.add(id); return }
-      if (user && id === user.id) { visible.add(id); return }
+      if (viewerId && id === viewerId) { visible.add(id); return }
       if (acceptedFollows.has(id)) visible.add(id)
     })
     return visible
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uniqueIdsKey, privacyMap, acceptedFollows, user])
+  }, [ready, uniqueIds, uniqueIdsKey, privacyMap, acceptedFollows, viewerId])
+
+  return { ids, ready }
 }
