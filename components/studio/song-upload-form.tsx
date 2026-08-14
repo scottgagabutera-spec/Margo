@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 
@@ -11,6 +11,15 @@ interface SongUploadFormProps {
   artistDisplayName: string
   onComplete: () => void
   onCancel: () => void
+  /** When set, the form updates this songs.id instead of inserting a new row. */
+  songId?: string | null
+}
+
+interface LoadedLine {
+  line_index: number
+  text: string
+  start_sec: number
+  end_sec: number
 }
 
 type Stage =
@@ -75,14 +84,20 @@ const STAGE_LABEL: Record<Stage, string> = {
   error: '',
 }
 
-export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: SongUploadFormProps) {
+export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId = null }: SongUploadFormProps) {
   const { user } = useIdentity()
+  const isEdit = !!songId
   const [title, setTitle] = useState('')
   const [artistName, setArtistName] = useState(artistDisplayName)
   const [description, setDescription] = useState('')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [artworkFile, setArtworkFile] = useState<File | null>(null)
   const [artworkPreview, setArtworkPreview] = useState<string | null>(null)
+  const [existingAudioUrl, setExistingAudioUrl] = useState<string | null>(null)
+  const [existingArtworkUrl, setExistingArtworkUrl] = useState<string | null>(null)
+  const [lyricsDraft, setLyricsDraft] = useState('')
+  const [originalLines, setOriginalLines] = useState<LoadedLine[]>([])
+  const [loadBusy, setLoadBusy] = useState(isEdit)
   const [dragOver, setDragOver] = useState(false)
   const artworkInputRef = useRef<HTMLInputElement>(null)
 
@@ -102,12 +117,66 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
   const [pendingSongId, setPendingSongId] = useState<string | null>(null)
   const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null)
 
-  const busy = stage !== 'idle' && stage !== 'error' && stage !== 'done'
+  const busy = loadBusy || (stage !== 'idle' && stage !== 'error' && stage !== 'done')
+
+  useEffect(() => {
+    if (!songId) return
+    let cancelled = false
+    ;(async () => {
+      setLoadBusy(true)
+      setError('')
+      const { data: song, error: songErr } = await supabase
+        .from('songs')
+        .select('id, title, artist_display_name, description, artwork_url, audio_url, youtube_url, spotify_url, apple_music_url, soundcloud_url, audiomack_url, boomplay_url')
+        .eq('id', songId)
+        .single()
+      if (cancelled) return
+      if (songErr || !song) {
+        setError(songErr?.message || 'Could not load this song.')
+        setStage('error')
+        setLoadBusy(false)
+        return
+      }
+      setTitle(song.title || '')
+      setArtistName(song.artist_display_name || artistDisplayName)
+      setDescription(song.description || '')
+      setExistingArtworkUrl(song.artwork_url)
+      setExistingAudioUrl(song.audio_url)
+      setArtworkPreview(song.artwork_url)
+      setYoutubeUrl(song.youtube_url || '')
+      setSpotifyUrl(song.spotify_url || '')
+      setAppleMusicUrl(song.apple_music_url || '')
+      setSoundcloudUrl(song.soundcloud_url || '')
+      setAudiomackUrl(song.audiomack_url || '')
+      setBoomplayUrl(song.boomplay_url || '')
+      if (song.youtube_url || song.spotify_url || song.apple_music_url || song.soundcloud_url || song.audiomack_url || song.boomplay_url) {
+        setShowStreaming(true)
+      }
+
+      const { data: lines, error: linesErr } = await supabase
+        .from('lyric_lines')
+        .select('line_index, text, start_sec, end_sec')
+        .eq('song_id', songId)
+        .order('line_index', { ascending: true })
+      if (cancelled) return
+      if (linesErr) {
+        setError(linesErr.message)
+        setStage('error')
+        setLoadBusy(false)
+        return
+      }
+      const loaded = (lines || []) as LoadedLine[]
+      setOriginalLines(loaded)
+      setLyricsDraft(loaded.map((l) => l.text).join('\n'))
+      setLoadBusy(false)
+    })()
+    return () => { cancelled = true }
+  }, [songId, artistDisplayName])
 
   const handleArtworkChange = (file: File | null) => {
     setArtworkFile(file)
-    if (artworkPreview) URL.revokeObjectURL(artworkPreview)
-    setArtworkPreview(file ? URL.createObjectURL(file) : null)
+    if (artworkPreview?.startsWith('blob:')) URL.revokeObjectURL(artworkPreview)
+    setArtworkPreview(file ? URL.createObjectURL(file) : existingArtworkUrl)
   }
 
   const handleArtworkDrop = (e: React.DragEvent) => {
@@ -176,18 +245,112 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
   const handleSubmit = async () => {
     setError('')
     if (!title.trim()) { setError('Add a title.'); return }
-    if (!audioFile) { setError('Add an audio file.'); return }
-    if (!artworkFile) { setError('Artwork is required.'); return }
 
     try {
       const uid = user?.id
       if (!uid) { setError('Not signed in.'); return }
 
-      const songId = crypto.randomUUID()
+      if (isEdit && songId) {
+        const lyricTexts = lyricsDraft.split('\n').map((l) => l.trim()).filter((l) => l.length > 0)
+        if (originalLines.length > 0 && lyricTexts.length === 0) {
+          setError('Lyrics cannot be empty.')
+          return
+        }
+
+        let audioUrl = existingAudioUrl
+        let artworkUrl = existingArtworkUrl
+
+        if (audioFile) {
+          setStage('uploading-audio')
+          const audioExt = extFromFile(audioFile)
+          const audioPath = `${uid}/${songId}.${audioExt}`
+          const { error: audioUploadErr } = await supabase.storage
+            .from('song-audio')
+            .upload(audioPath, audioFile, { contentType: audioFile.type || undefined, upsert: true })
+          if (audioUploadErr) throw new Error('Could not upload audio: ' + audioUploadErr.message)
+          const { data: audioPublic } = supabase.storage.from('song-audio').getPublicUrl(audioPath)
+          audioUrl = audioPublic.publicUrl
+        }
+
+        if (artworkFile) {
+          setStage('uploading-artwork')
+          const artworkExt = extFromFile(artworkFile)
+          const artworkPath = `${uid}/${songId}.${artworkExt}`
+          const { error: artworkUploadErr } = await supabase.storage
+            .from('song-artwork')
+            .upload(artworkPath, artworkFile, { contentType: artworkFile.type || undefined, upsert: true })
+          if (artworkUploadErr) throw new Error('Could not upload artwork: ' + artworkUploadErr.message)
+          const { data: artworkPublic } = supabase.storage.from('song-artwork').getPublicUrl(artworkPath)
+          artworkUrl = artworkPublic.publicUrl
+        }
+
+        setStage('saving-song')
+        const { error: updateErr } = await supabase
+          .from('songs')
+          .update({
+            title: title.trim(),
+            artist_display_name: (artistName || artistDisplayName).trim(),
+            artwork_url: artworkUrl,
+            audio_url: audioUrl,
+            description: description.trim() || null,
+            youtube_url: youtubeUrl.trim() || null,
+            spotify_url: spotifyUrl.trim() || null,
+            apple_music_url: appleMusicUrl.trim() || null,
+            soundcloud_url: soundcloudUrl.trim() || null,
+            audiomack_url: audiomackUrl.trim() || null,
+            boomplay_url: boomplayUrl.trim() || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', songId)
+          .eq('owner_profile_id', uid)
+        if (updateErr) throw new Error('Could not save song: ' + updateErr.message)
+
+        if (lyricTexts.length > 0) {
+          let lastEnd = 0
+          const rows = lyricTexts.map((text, line_index) => {
+            const orig = originalLines.find((l) => l.line_index === line_index)
+            if (orig) {
+              lastEnd = Number(orig.end_sec)
+              return {
+                song_id: songId,
+                line_index,
+                text,
+                start_sec: orig.start_sec,
+                end_sec: orig.end_sec,
+              }
+            }
+            const start_sec = lastEnd
+            const end_sec = start_sec + 3
+            lastEnd = end_sec
+            return { song_id: songId, line_index, text, start_sec, end_sec }
+          })
+
+          const { error: upsertErr } = await supabase
+            .from('lyric_lines')
+            .upsert(rows, { onConflict: 'song_id,line_index' })
+          if (upsertErr) throw new Error('Could not save lyrics: ' + upsertErr.message)
+
+          const { error: trimErr } = await supabase
+            .from('lyric_lines')
+            .delete()
+            .eq('song_id', songId)
+            .gt('line_index', lyricTexts.length - 1)
+          if (trimErr) throw new Error('Could not trim extra lyric lines: ' + trimErr.message)
+        }
+
+        setStage('done')
+        setTimeout(onComplete, 900)
+        return
+      }
+
+      if (!audioFile) { setError('Add an audio file.'); return }
+      if (!artworkFile) { setError('Artwork is required.'); return }
+
+      const newSongId = crypto.randomUUID()
 
       setStage('uploading-audio')
       const audioExt = extFromFile(audioFile)
-      const audioPath = `${uid}/${songId}.${audioExt}`
+      const audioPath = `${uid}/${newSongId}.${audioExt}`
       const { error: audioUploadErr } = await supabase.storage
         .from('song-audio')
         .upload(audioPath, audioFile, { contentType: audioFile.type || undefined })
@@ -197,7 +360,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
 
       setStage('uploading-artwork')
       const artworkExt = extFromFile(artworkFile)
-      const artworkPath = `${uid}/${songId}.${artworkExt}`
+      const artworkPath = `${uid}/${newSongId}.${artworkExt}`
       const { error: artworkUploadErr } = await supabase.storage
         .from('song-artwork')
         .upload(artworkPath, artworkFile, { contentType: artworkFile.type || undefined })
@@ -207,7 +370,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
 
       setStage('saving-song')
       const { error: insertErr } = await supabase.from('songs').insert({
-        id: songId,
+        id: newSongId,
         owner_profile_id: uid,
         title: title.trim(),
         artist_display_name: (artistName || artistDisplayName).trim(),
@@ -224,10 +387,10 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
       })
       if (insertErr) throw new Error('Could not save song: ' + insertErr.message)
 
-      setPendingSongId(songId)
+      setPendingSongId(newSongId)
       setPendingAudioUrl(audioUrl)
 
-      await runLyricsPipeline(songId, audioUrl)
+      await runLyricsPipeline(newSongId, audioUrl)
     } catch (e: any) {
       setError(e.message || 'Something went wrong.')
       setStage('error')
@@ -240,7 +403,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
       borderRadius: '16px', padding: '24px',
     }}>
       <h3 style={{ fontFamily: font, fontSize: '1.15rem', color: 'var(--text)', marginBottom: '20px', fontWeight: 600 }}>
-        Upload a Song
+        {isEdit ? 'Edit Song' : 'Upload a Song'}
       </h3>
 
       <div style={{
@@ -266,7 +429,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
             onDragOver={e => { e.preventDefault(); if (!busy) setDragOver(true) }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleArtworkDrop}
-            aria-label={artworkFile ? 'Change artwork' : 'Add artwork'}
+            aria-label={artworkPreview ? 'Change artwork' : 'Add artwork'}
             style={{
               position: 'relative', width: '100%', aspectRatio: '1 / 1',
               borderRadius: '16px', overflow: 'hidden',
@@ -290,7 +453,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
                   Add Artwork
                 </span>
                 <span style={{ fontFamily: font, fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                  Required · drag &amp; drop or tap
+                  {isEdit ? 'Optional · drag &amp; drop or tap' : 'Required · drag &amp; drop or tap'}
                 </span>
               </div>
             )}
@@ -341,7 +504,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
               letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-2)',
               cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
             }}>
-              {audioFile ? 'Change Audio' : 'Choose Audio File'}
+              {audioFile ? 'Change Audio' : isEdit ? 'Replace Audio' : 'Choose Audio File'}
               <input
                 type="file" accept="audio/*"
                 onChange={e => setAudioFile(e.target.files?.[0] || null)}
@@ -352,6 +515,11 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
             {audioFile && (
               <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px' }}>
                 {audioFile.name}
+              </p>
+            )}
+            {isEdit && !audioFile && existingAudioUrl && (
+              <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+                Current audio stays unless you replace it.
               </p>
             )}
           </div>
@@ -368,6 +536,24 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
         />
       </div>
 
+      {isEdit && (
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>Lyrics</label>
+          <textarea
+            value={lyricsDraft}
+            onChange={e => setLyricsDraft(e.target.value)}
+            rows={10}
+            placeholder="One lyric line per row. Timing stays with each line index."
+            style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, minHeight: '160px' }}
+            disabled={busy}
+          />
+          <p style={{ fontFamily: font, fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>
+            Editing a line keeps its id. New lines append; removed trailing lines are dropped.
+          </p>
+        </div>
+      )}
+
+      {!isEdit && (
       <div style={{
         marginBottom: '20px', padding: '16px',
         background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px',
@@ -420,6 +606,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
           Whisper AI reads the audio and tags every line with a vibe automatically once you publish.
         </p>
       </div>
+      )}
 
       <button
         onClick={() => setShowStreaming(s => !s)}
@@ -467,15 +654,21 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
         </div>
       )}
 
-      {stage !== 'idle' && (
+      {loadBusy && (
+        <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-2)', marginBottom: '16px' }}>
+          Loading song…
+        </p>
+      )}
+
+      {(stage !== 'idle' || error) && (
         <p style={{
           fontFamily: font, fontSize: '0.82rem',
           /* NOTE: no lib/tokens/emotions.ts available — inline rgba stand-in
              for success/error states until that module exists. */
-          color: stage === 'error' ? 'rgba(255,96,96,0.9)' : stage === 'done' ? 'rgba(74,222,128,0.9)' : 'var(--text-2)',
+          color: stage === 'error' || (error && stage === 'idle') ? 'rgba(255,96,96,0.9)' : stage === 'done' ? 'rgba(74,222,128,0.9)' : 'var(--text-2)',
           marginBottom: '16px',
         }}>
-          {stage === 'error' ? error : STAGE_LABEL[stage]}
+          {stage === 'error' || (error && stage === 'idle') ? error : isEdit && stage === 'done' ? 'Saved.' : STAGE_LABEL[stage]}
         </p>
       )}
 
@@ -505,7 +698,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel }: Song
               opacity: busy ? 0.6 : 1,
             }}
           >
-            {busy ? 'Publishing…' : 'Publish Song'}
+            {busy ? (isEdit ? 'Saving…' : 'Publishing…') : isEdit ? 'Save Changes' : 'Publish Song'}
           </button>
         )}
         <button

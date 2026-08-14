@@ -59,6 +59,7 @@ export default function StudioPage() {
   const [stats, setStats] = useState<Record<string, SongStat>>({})
   const [songsLoading, setSongsLoading] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
+  const [editingSongId, setEditingSongId] = useState<string | null>(null)
 
   const userId = user?.id ?? null
 
@@ -106,6 +107,7 @@ export default function StudioPage() {
 
   const handleUploadComplete = () => {
     setShowUpload(false)
+    setEditingSongId(null)
     loadSongs()
   }
 
@@ -221,9 +223,11 @@ export default function StudioPage() {
         {showUpload && (
           <div style={{ marginBottom: '32px' }}>
             <SongUploadForm
+              key={editingSongId ?? 'new'}
               artistDisplayName={identity.displayName}
+              songId={editingSongId}
               onComplete={handleUploadComplete}
-              onCancel={() => setShowUpload(false)}
+              onCancel={() => { setShowUpload(false); setEditingSongId(null) }}
             />
           </div>
         )}
@@ -233,7 +237,7 @@ export default function StudioPage() {
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px',
           }}>
             <button
-              onClick={() => setShowUpload(true)}
+              onClick={() => { setEditingSongId(null); setShowUpload(true) }}
               aria-label="Upload a song"
               style={{
                 aspectRatio: '1 / 1', borderRadius: '16px',
@@ -258,10 +262,18 @@ export default function StudioPage() {
               const stat = stats[song.id]
               const label = statusLabel(song.status)
               return (
-                <div key={song.id} style={{
+                <button
+                  type="button"
+                  key={song.id}
+                  onClick={() => { setEditingSongId(song.id); setShowUpload(true) }}
+                  aria-label={`Edit ${song.title}`}
+                  style={{
                   position: 'relative', aspectRatio: '1 / 1', borderRadius: '16px',
                   overflow: 'hidden', background: 'var(--surface-2)',
                   opacity: song.status === 'hidden' ? 0.5 : 1,
+                  border: 'none', padding: 0, cursor: 'pointer',
+                  width: '100%', textAlign: 'left',
+                  minHeight: 'var(--margo-touch-min)',
                 }}>
                   {song.artwork_url && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -297,7 +309,7 @@ export default function StudioPage() {
                       {stat ? `${stat.plays} plays · ${stat.resonate_count} resonates` : '—'}
                     </p>
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>
