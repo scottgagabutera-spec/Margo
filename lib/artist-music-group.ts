@@ -7,8 +7,8 @@
  * Visibility mirrors `shouldShowArtistBadge` in components/artist-badge.tsx
  * (kept local so this module stays server-safe — do not import from 'use client').
  *
- * Follow-up: links live on artist_applications only and are not editable
- * post-approval on the profile — can go stale.
+ * Follow-up: live outbound links live on profiles.artist_links (editable).
+ * artist_applications.links remain the verification snapshot from apply.
  */
 
 export type ArtistStatus = 'active' | 'warned' | 'frozen' | 'removed' | null | undefined
@@ -24,6 +24,8 @@ export type ArtistApplicationLinks = {
   instagram?: string
   tiktok?: string
   suno?: string
+  x?: string
+  linktree?: string
   other?: string
   [key: string]: string | undefined
 }
@@ -40,6 +42,8 @@ const SAME_AS_KEYS = [
   'instagram',
   'tiktok',
   'suno',
+  'x',
+  'linktree',
   'other',
 ] as const
 

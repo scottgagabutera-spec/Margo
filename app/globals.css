@@ -384,7 +384,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-lora), serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.5rem;
   font-weight: 700;
   line-height: 1;
@@ -398,7 +398,7 @@
 }
 .margo-feed-action__label {
   display: inline !important;
-  font-family: var(--font-lora), serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 0.4rem;
   font-weight: 600;
   letter-spacing: 0.6px;

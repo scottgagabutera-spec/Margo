@@ -200,6 +200,10 @@ export default function FeedPage() {
     }
   }, [feedLive, user?.id])
 
+  // Feed rank (client-side on the currently loaded list, not a DB rank):
+  // New badge = created within 24h. Trending = top 5 by engage/(ageHrs+2)^1.4.
+  // Top = top 5 by lifetime engage. engage = views + 4*resonates + 5*echoes.
+  // Replays and song plays do not affect Feed badges.
   const getEngagement = (post: Post) => {
     const s = postStats[post.id] || {}
     return (s.views || 0) + ((s.resonateCount || 0) * 4) + ((s.echoCount || 0) * 5)
@@ -556,7 +560,7 @@ export default function FeedPage() {
                     display: 'inline-flex', alignItems: 'center', gap: '6px',
                     padding: '4px 10px', borderRadius: '50px',
                     background: 'var(--gold)', border: 'none', cursor: 'pointer',
-                    fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+                    fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.55rem', fontWeight: 700,
                     letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--bg)',
                   }}
                 >Filtering: {selectedVibe} <CloseIcon size={10} color="var(--bg)" /></button>
@@ -569,7 +573,7 @@ export default function FeedPage() {
                     display: 'inline-flex', alignItems: 'center', gap: '6px',
                     padding: '4px 10px', borderRadius: '50px',
                     background: 'transparent', border: '1px solid var(--gold-border)', cursor: 'pointer',
-                    fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+                    fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.55rem', fontWeight: 700,
                     letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gold)',
                   }}
                 >{selectedSort} <CloseIcon size={10} color="var(--gold)" /></button>

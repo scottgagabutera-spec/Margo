@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { touchLastSeen } from '@/lib/engagement/last-seen'
+import { sanitizeArtistLinks } from '@/lib/artist-links'
+import type { ArtistApplicationLinks } from '@/lib/artist-music-group'
 
 const supabase = createClient()
 
@@ -35,6 +37,7 @@ export interface Identity {
   signatureLyric: string | null
   signatureSong: string | null
   signatureArtist: string | null
+  artistLinks: ArtistApplicationLinks
   createdAt: string
 }
 
@@ -62,6 +65,7 @@ function mapRow(row: any): Identity {
     signatureLyric: row.signature_lyric,
     signatureSong: row.signature_song,
     signatureArtist: row.signature_artist,
+    artistLinks: sanitizeArtistLinks(row.artist_links),
     createdAt: row.created_at,
   }
 }
@@ -74,6 +78,7 @@ interface IdentityContextValue {
   changeUsername: (newUsername: string) => Promise<ActionResult>
   updateSignatureLyric: (data: { lyric: string; song: string; artist: string }) => Promise<ActionResult>
   updateBio: (newBio: string) => Promise<ActionResult>
+  updateArtistLinks: (links: Record<string, string>) => Promise<ActionResult>
   setPrivate: (isPrivate: boolean) => Promise<ActionResult>
   syncAvatarUrl: (url: string) => void
   refreshIdentity: () => Promise<void>
@@ -275,6 +280,15 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
     return { success: true }
   }, [identityUser])
 
+  const updateArtistLinks = useCallback(async (links: Record<string, string>): Promise<ActionResult> => {
+    if (!identityUser) return { success: false, error: 'Not signed in.' }
+    const cleaned = sanitizeArtistLinks(links)
+    const { error } = await supabase.from('profiles').update({ artist_links: cleaned }).eq('id', identityUser.id)
+    if (error) return { success: false, error: 'Could not save your links.' }
+    setIdentityState(prev => (prev ? { ...prev, artistLinks: cleaned } : prev))
+    return { success: true }
+  }, [identityUser])
+
   const setPrivate = useCallback(async (isPrivate: boolean): Promise<ActionResult> => {
     if (!identityUser) return { success: false, error: 'Not signed in.' }
     const { error } = await supabase.from('profiles').update({ is_private: isPrivate }).eq('id', identityUser.id)
@@ -320,6 +334,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
         changeUsername,
         updateSignatureLyric,
         updateBio,
+        updateArtistLinks,
         setPrivate,
         syncAvatarUrl,
         refreshIdentity,

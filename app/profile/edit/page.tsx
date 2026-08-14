@@ -6,6 +6,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { BackButton } from '@/components/back-button'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { ARTIST_LINK_FIELDS, sanitizeArtistLinks } from '@/lib/artist-links'
 
 const font = UI_FONT
 const lyricFont = LYRIC_FONT
@@ -27,7 +28,7 @@ export default function EditProfilePage() {
   const {
     user, identity, loading,
     updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate,
-    syncAvatarUrl,
+    updateArtistLinks, syncAvatarUrl,
   } = useIdentity()
   const { requireAuth } = useAuthGate()
 
@@ -39,6 +40,7 @@ export default function EditProfilePage() {
   const [song, setSong] = useState('')
   const [artist, setArtist] = useState('')
   const [isPrivate, setIsPrivateLocal] = useState(false)
+  const [artistLinkDraft, setArtistLinkDraft] = useState<Record<string, string>>({})
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +67,11 @@ export default function EditProfilePage() {
       setSong(identity.signatureSong || '')
       setArtist(identity.signatureArtist || '')
       setIsPrivateLocal(identity.isPrivate)
+      const seeded: Record<string, string> = {}
+      for (const field of ARTIST_LINK_FIELDS) {
+        seeded[field.key] = identity.artistLinks?.[field.key] || ''
+      }
+      setArtistLinkDraft(seeded)
     }
   }, [identity])
 
@@ -105,6 +112,13 @@ export default function EditProfilePage() {
     if (isPrivate !== identity.isPrivate) {
       tasks.push(setPrivate(isPrivate))
     }
+    if (identity.isArtist) {
+      const next = sanitizeArtistLinks(artistLinkDraft)
+      const prev = sanitizeArtistLinks(identity.artistLinks)
+      if (JSON.stringify(next) !== JSON.stringify(prev)) {
+        tasks.push(updateArtistLinks(artistLinkDraft))
+      }
+    }
 
     if (tasks.length === 0) {
       setSaving(false)
@@ -127,7 +141,7 @@ export default function EditProfilePage() {
         router.push(`/profile/${destinationUsername}`)
       }, 900)
     }
-  }, [identity, displayName, username, bio, lyric, song, artist, isPrivate, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, router])
+  }, [identity, displayName, username, bio, lyric, song, artist, isPrivate, artistLinkDraft, updateDisplayName, changeUsername, updateBio, updateSignatureLyric, setPrivate, updateArtistLinks, router])
 
   if (loading || !identity) {
     return (
@@ -207,6 +221,32 @@ export default function EditProfilePage() {
                 {bio.length}/160
               </p>
             </div>
+
+            {identity.isArtist && (
+              <div>
+                <label style={labelStyle}>Social &amp; streaming</label>
+                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
+                  Full URL or @handle. These show on your public profile — they do not replace your artist application.
+                </p>
+                {(['social', 'streaming', 'hub'] as const).map((group) => (
+                  <div key={group} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: group === 'hub' ? 0 : '16px' }}>
+                    {ARTIST_LINK_FIELDS.filter((f) => f.group === group).map((field) => (
+                      <div key={field.key}>
+                        <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>{field.label}</label>
+                        <input
+                          type="text"
+                          value={artistLinkDraft[field.key] || ''}
+                          onChange={(e) => setArtistLinkDraft((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                          placeholder={field.placeholder}
+                          style={inputStyle}
+                          autoComplete="off"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '20px' }}>
               <label style={{ ...labelStyle, marginBottom: '16px' }}>Signature Lyric</label>

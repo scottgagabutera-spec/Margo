@@ -18,7 +18,9 @@ import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
+import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
+import type { ArtistApplicationLinks } from '@/lib/artist-music-group'
 
 const supabase = createClient()
 
@@ -48,6 +50,7 @@ interface ProfileData {
   signatureSong: string | null
   signatureArtist: string | null
   isPrivate: boolean
+  artistLinks: ArtistApplicationLinks
 }
 
 interface ArtistSongRow {
@@ -60,7 +63,7 @@ interface ArtistSongRow {
 
 type FollowStatus = null | 'pending' | 'accepted'
 
-type ProfileContentTab = 'lyrics' | 'replays' | 'backs'
+type ProfileContentTab = 'lyrics' | 'replays' | 'backs' | 'private'
 
 export default function ProfilePage() {
   const params = useParams<{ username: string }>()
@@ -102,7 +105,7 @@ export default function ProfilePage() {
     setProfile(null)
     supabase
       .from('profiles')
-      .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, signature_lyric, signature_song, signature_artist, is_private')
+      .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, signature_lyric, signature_song, signature_artist, is_private, artist_links')
       .eq('username', params.username)
       .maybeSingle()
       .then(async ({ data, error }) => {
@@ -120,6 +123,7 @@ export default function ProfilePage() {
             signatureSong: data.signature_song,
             signatureArtist: data.signature_artist,
             isPrivate: !!data.is_private,
+            artistLinks: (data.artist_links && typeof data.artist_links === 'object') ? data.artist_links : {},
           })
           setLoading(false)
 
@@ -642,6 +646,10 @@ export default function ProfilePage() {
               )}
             </div>
 
+            {profile.isArtist && (
+              <ProfileArtistLinks links={profile.artistLinks} />
+            )}
+
             <div style={{
               background: 'rgba(232,197,71,0.04)', border: '1px solid rgba(232,197,71,0.22)',
               borderRadius: '20px', padding: '24px', textAlign: 'left', marginBottom: '28px',
@@ -747,6 +755,7 @@ export default function ProfilePage() {
                   { id: 'lyrics' as const, label: isOwnProfile ? 'Your Lyrics' : 'Lyrics' },
                   { id: 'replays' as const, label: 'Replays' },
                   { id: 'backs' as const, label: 'Lyric Backs' },
+                  ...(isOwnProfile ? [{ id: 'private' as const, label: 'Private' }] : []),
                 ]).map(tab => {
                   const active = contentTab === tab.id
                   return (
@@ -788,15 +797,9 @@ export default function ProfilePage() {
               ) : contentTab === 'lyrics' ? (
                 ownPosts.length === 0 ? (
                   isOwnProfile ? (
-                    privatePosts.length > 0 ? (
-                      <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                        No public lyrics yet — your private ones are below.
-                      </p>
-                    ) : (
-                      <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
-                        Share your first lyric →
-                      </Link>
-                    )
+                    <Link href="/compose" style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic', textDecoration: 'none' }}>
+                      Share your first lyric →
+                    </Link>
                   ) : (
                     <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                       Hasn&rsquo;t shared a lyric yet.
@@ -853,6 +856,27 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 )
+              ) : contentTab === 'private' ? (
+                privatePosts.length === 0 ? (
+                  <p style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                    Nothing private yet — use Keep Private when you compose.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {privatePosts.map(post => (
+                      <PostCard
+                        key={post.id}
+                        variant="row"
+                        post={post}
+                        resonated={resonated.has(post.id)}
+                        resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
+                        echoCount={post.replies ?? 0}
+                        onResonate={toggleResonate}
+                        onExport={handleExport}
+                      />
+                    ))}
+                  </div>
+                )
               ) : backsLoading ? (
                 <p style={{ fontFamily: font, fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                   Loading lyric backs…
@@ -878,29 +902,6 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-
-            {isOwnProfile && privatePosts.length > 0 && (
-              <div style={{ marginBottom: '28px' }}>
-                <p style={sectionLabelStyle}>Private</p>
-                <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.45 }}>
-                  Only you can see these — they stay off the Feed.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {privatePosts.map(post => (
-                    <PostCard
-                      key={post.id}
-                      variant="compact"
-                      post={post}
-                      resonated={resonated.has(post.id)}
-                      resonateCount={resonateCounts[post.id] ?? post.resonates ?? 0}
-                      echoCount={post.replies ?? 0}
-                      onResonate={toggleResonate}
-                      onExport={handleExport}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
