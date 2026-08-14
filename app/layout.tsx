@@ -174,11 +174,16 @@ export default function RootLayout({
                 <MessagingProvider>
                   <HubProvider>
                   <ChromeModePublisher />
-                  <MargoNav />
-                  <TabSwipeProvider>
+                  <TabSwipeProvider
+                    chrome={
+                      <>
+                        <MargoNav />
+                        <MobileTabBar />
+                      </>
+                    }
+                  >
                     {children}
                   </TabSwipeProvider>
-                  <MobileTabBar />
                   </HubProvider>
                 </MessagingProvider>
               </NotificationsProvider>

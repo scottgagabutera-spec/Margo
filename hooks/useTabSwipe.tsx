@@ -17,11 +17,16 @@ export {
  * Phase 2: viewport carries static `touch-action: pan-y`. Finger-follow +
  * interruptible spring settle run inside PrimaryTabShell (`enableSwipeGesture`).
  *
- * Tab-bar taps stay plain <Link> navigations (instant keepalive swap) — that is
- * intentional, not a missing animation. Swipe owns strip physics; taps own
- * discrete destination commits. CSS enter-slide was removed in Phase 2.3.
+ * Tab-bar taps use optimistic paint in PrimaryTabShell (cached pane first,
+ * RSC in the background). Swipe owns strip physics; taps own discrete commits.
  */
-export function TabSwipeProvider({ children }: { children: ReactNode }) {
+export function TabSwipeProvider({
+  children,
+  chrome,
+}: {
+  children: ReactNode
+  chrome?: ReactNode
+}) {
   const { user, identity } = useIdentity()
 
   const isSignedIn = !!user && !user.isAnonymous
@@ -30,7 +35,7 @@ export function TabSwipeProvider({ children }: { children: ReactNode }) {
 
   return (
     <div className="margo-tab-swipe-viewport">
-      <PrimaryTabShell ownProfileHref={ownProfileHref} enableSwipeGesture>
+      <PrimaryTabShell ownProfileHref={ownProfileHref} enableSwipeGesture chrome={chrome}>
         {children}
       </PrimaryTabShell>
     </div>

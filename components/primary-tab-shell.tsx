@@ -3,6 +3,7 @@
 import {
   Activity,
   createContext,
+  startTransition,
   useCallback,
   useContext,
   useEffect,
@@ -10,29 +11,31 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent,
   type ReactNode,
   type CSSProperties,
 } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { usePrimaryTabSwipeGesture } from '@/hooks/usePrimaryTabSwipeGesture'
+import { PrimaryTabPaneSkeleton } from '@/components/margo-skeletons'
+import { warmPrimaryTab } from '@/lib/primary-tab-prefetch'
 
 /**
- * Phase 1 / 1.5 / 2.0 — primary-tab keepalive + Activity + swipe strip.
+ * Phase 1 / 1.5 / 2.0 / optimistic tap — primary-tab keepalive + Activity + swipe strip.
  *
- * Each pane (feed | discover | you) is its own overflow container.
+ * Each pane (feed | discover | compose | you) is its own overflow container.
  * Visited panes stay mounted; inactive panes use <Activity mode="hidden">
- * so Effects tear down while React state is preserved (#59 enabled gating
- * remains belt-and-suspenders via isTabActive → enabled).
+ * so Effects tear down while React state is preserved.
  *
- * Phase 2.0: `peekTab` may paint a neighbor during finger-follow without
- * flipping isTabActive (Realtime stays off until commit). Strip offset is
- * applied via transform on the pane nodes (compositor), not layout.
+ * Tab taps: if the pane is cached, paint it immediately and router.push in
+ * the background. Do not wait for RSC. Uncached destinations show a skeleton
+ * until the route commits, then seed the cache (never from a loading fallback).
  *
- * Leave-save still must not trust live scrollTop after Activity hide —
- * freeze while active; peek restore uses frozen values and never leave-saves.
+ * Peek still does not flip isTabActive (Realtime stays off until the painted
+ * destination is the active tab, including optimistic).
  */
 
-export type PrimaryTabId = 'feed' | 'discover' | 'you'
+export type PrimaryTabId = 'feed' | 'discover' | 'compose' | 'you'
 export type PrimaryTabPeekDir = 'prev' | 'next'
 
 const SCROLL_STORAGE_KEY = 'margo-primary-tab-scroll'
@@ -42,9 +45,11 @@ export function resolvePrimaryTabId(
   ownProfileHref: string | null
 ): PrimaryTabId | null {
   if (!pathname) return null
-  if (pathname === '/feed') return 'feed'
-  if (pathname === '/discover') return 'discover'
-  if (ownProfileHref && pathname === ownProfileHref) return 'you'
+  const path = pathname.split('?')[0]
+  if (path === '/feed') return 'feed'
+  if (path === '/discover') return 'discover'
+  if (path === '/compose') return 'compose'
+  if (ownProfileHref && path === ownProfileHref) return 'you'
   return null
 }
 
@@ -105,21 +110,20 @@ function persistScroll(
   writeStoredScrollMap(map)
 }
 
+function isModifiedClick(event: MouseEvent<HTMLAnchorElement>): boolean {
+  return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0
+}
+
 interface PrimaryTabContextValue {
   activeTab: PrimaryTabId | null
   peekTab: PrimaryTabId | null
   isOnPrimaryTab: boolean
-  /** True only for the committed route pane — never for paint-only peek. */
+  /** True for the painted destination (optimistic or committed) — never peek-only. */
   isTabActive: (id: PrimaryTabId) => boolean
   hasCachedTab: (id: PrimaryTabId) => boolean
-  /**
-   * Paint neighbor for finger-follow. Returns false if never visited
-   * (nothing in keepalive cache) — caller should fall back to commit-only.
-   */
+  navigatePrimaryTab: (href: string, event?: MouseEvent<HTMLAnchorElement>) => boolean
   beginPeek: (id: PrimaryTabId, dir: PrimaryTabPeekDir) => boolean
-  /** Direct compositor offset in px (finger delta). No React render. */
   setStripOffset: (px: number) => void
-  /** Clear peek paint + reset transforms. */
   endPeek: () => void
 }
 
@@ -129,6 +133,7 @@ const PrimaryTabContext = createContext<PrimaryTabContextValue>({
   isTabActive: () => false,
   isOnPrimaryTab: false,
   hasCachedTab: () => false,
+  navigatePrimaryTab: () => false,
   beginPeek: () => false,
   setStripOffset: () => {},
   endPeek: () => {},
@@ -138,11 +143,25 @@ export function usePrimaryTab() {
   return useContext(PrimaryTabContext)
 }
 
+/** Warm + optimistic navigate for primary-tab <Link>s (mobile bar + desktop nav). */
+export function usePrimaryTabLinkProps(href: string) {
+  const { navigatePrimaryTab } = usePrimaryTab()
+  const warm = () => warmPrimaryTab(href)
+  return {
+    onPointerEnter: warm,
+    onPointerDown: warm,
+    onClick: (e: MouseEvent<HTMLAnchorElement>) => {
+      navigatePrimaryTab(href, e)
+    },
+  }
+}
+
 interface PrimaryTabShellProps {
   children: ReactNode
   ownProfileHref: string | null
-  /** Wire Phase 2 swipe when mounted under TabSwipeProvider. */
   enableSwipeGesture?: boolean
+  /** Nav / tab bar — must sit inside this provider for optimistic clicks. */
+  chrome?: ReactNode
 }
 
 const paneStyle = (painted: boolean, isCommittedActive: boolean): CSSProperties => ({
@@ -153,26 +172,26 @@ const paneStyle = (painted: boolean, isCommittedActive: boolean): CSSProperties 
   overscrollBehaviorY: 'contain',
   overflowAnchor: 'none',
   boxSizing: 'border-box',
-  // Reserve vertical pan for the browser; horizontal is for tab swipe JS.
-  // See TabSwipeProvider / .margo-tab-swipe-viewport notes.
   touchAction: 'pan-y',
   pointerEvents: isCommittedActive ? 'auto' : 'none',
   zIndex: isCommittedActive ? 2 : painted ? 1 : 0,
-  // will-change only while a neighbor is painted for follow (set inline during peek).
 })
 
 export function PrimaryTabShell({
   children,
   ownProfileHref,
   enableSwipeGesture = false,
+  chrome,
 }: PrimaryTabShellProps) {
   const pathname = usePathname()
-  const activeTab = resolvePrimaryTabId(pathname, ownProfileHref)
+  const router = useRouter()
+  const routeTab = resolvePrimaryTabId(pathname, ownProfileHref)
+  const [optimisticTab, setOptimisticTab] = useState<PrimaryTabId | null>(null)
+  const activeTab = optimisticTab ?? routeTab
 
   const cacheRef = useRef(new Map<PrimaryTabId, ReactNode>())
   const paneElsRef = useRef(new Map<PrimaryTabId, HTMLElement | null>())
   const prevTabRef = useRef<PrimaryTabId | null>(null)
-  /** Last known-good scrollTop per pane, captured while the pane was active. */
   const frozenScrollRef = useRef<Partial<Record<PrimaryTabId, number>>>({})
   const activeTabRef = useRef<PrimaryTabId | null>(activeTab)
   const peekMetaRef = useRef<{ id: PrimaryTabId; dir: PrimaryTabPeekDir } | null>(null)
@@ -182,10 +201,17 @@ export function PrimaryTabShell({
 
   activeTabRef.current = activeTab
 
-  // First visit only — keep the mounted tree; ignore later Next remount payloads.
-  if (activeTab && !cacheRef.current.has(activeTab)) {
-    cacheRef.current.set(activeTab, children)
+  // Seed cache only after the App Router has committed this tab, so we never
+  // freeze a loading fallback as the keepalive tree.
+  if (routeTab && !cacheRef.current.has(routeTab)) {
+    cacheRef.current.set(routeTab, children)
   }
+
+  useLayoutEffect(() => {
+    if (optimisticTab && routeTab === optimisticTab) {
+      setOptimisticTab(null)
+    }
+  }, [routeTab, optimisticTab])
 
   const applyStripTransforms = useCallback(() => {
     const w = typeof window !== 'undefined' ? window.innerWidth : 0
@@ -220,7 +246,6 @@ export function PrimaryTabShell({
     peekMetaRef.current = null
     stripOffsetRef.current = 0
     setPeekTabState(null)
-    // Transforms cleared after paint in layout effect; also clear now for snappiness.
     for (const el of paneElsRef.current.values()) {
       if (!el) continue
       el.style.transform = ''
@@ -250,6 +275,27 @@ export function PrimaryTabShell({
 
   const hasCachedTab = useCallback((id: PrimaryTabId) => cacheRef.current.has(id), [])
 
+  const navigatePrimaryTab = useCallback((href: string, event?: MouseEvent<HTMLAnchorElement>) => {
+    if (event && isModifiedClick(event)) return false
+    const path = href.split('?')[0]
+    const id = resolvePrimaryTabId(path, ownProfileHref)
+    if (!id) return false
+    event?.preventDefault()
+    if (id === 'compose' && href.includes('?')) {
+      cacheRef.current.delete('compose')
+      setCacheVersion(v => v + 1)
+    }
+    if (id === activeTabRef.current && routeTab === id && !href.includes('?')) {
+      return true
+    }
+    endPeek()
+    setOptimisticTab(id)
+    startTransition(() => {
+      router.push(href)
+    })
+    return true
+  }, [ownProfileHref, routeTab, router, endPeek])
+
   useEffect(() => {
     if (!ownProfileHref && cacheRef.current.has('you')) {
       cacheRef.current.delete('you')
@@ -263,7 +309,6 @@ export function PrimaryTabShell({
     }
   }, [ownProfileHref, endPeek])
 
-  // Manual history restoration while primary tabs own scroll via panes.
   useEffect(() => {
     if (typeof history === 'undefined') return
     if (!activeTab) return
@@ -275,12 +320,10 @@ export function PrimaryTabShell({
     }
   }, [activeTab])
 
-  // Route commit: leave-save previous active; restore incoming; drop any peek.
   useLayoutEffect(() => {
     const prev = prevTabRef.current
     const frozen = frozenScrollRef.current
 
-    // Committed navigation clears visual peek after strip settle (Phase 2.2).
     if (peekMetaRef.current) {
       peekMetaRef.current = null
       stripOffsetRef.current = 0
@@ -316,7 +359,6 @@ export function PrimaryTabShell({
       window.scrollTo(0, 0)
     }
 
-    // Reset transforms after commit so panes aren't stuck mid-strip.
     for (const el of paneElsRef.current.values()) {
       if (!el) continue
       el.style.transform = ''
@@ -326,7 +368,6 @@ export function PrimaryTabShell({
     prevTabRef.current = activeTab
   }, [activeTab, pathname])
 
-  // Peek paint: restore frozen scroll so the neighbor doesn't flash at 0.
   useLayoutEffect(() => {
     if (!peekTab) return
     const el = paneElsRef.current.get(peekTab)
@@ -336,7 +377,6 @@ export function PrimaryTabShell({
     applyStripTransforms()
   }, [peekTab, applyStripTransforms])
 
-  // Continuously freeze + mirror committed-active pane scroll only.
   useEffect(() => {
     if (!activeTab) return
     const el = paneElsRef.current.get(activeTab)
@@ -360,11 +400,12 @@ export function PrimaryTabShell({
       isOnPrimaryTab: activeTab !== null,
       isTabActive: (id: PrimaryTabId) => activeTab === id,
       hasCachedTab,
+      navigatePrimaryTab,
       beginPeek,
       setStripOffset,
       endPeek,
     }),
-    [activeTab, peekTab, hasCachedTab, beginPeek, setStripOffset, endPeek]
+    [activeTab, peekTab, hasCachedTab, navigatePrimaryTab, beginPeek, setStripOffset, endPeek]
   )
 
   usePrimaryTabSwipeGesture(enableSwipeGesture, ownProfileHref, {
@@ -372,12 +413,17 @@ export function PrimaryTabShell({
     setStripOffset,
     endPeek,
     hasCachedTab,
+    prepareTab: (id) => {
+      setOptimisticTab(id)
+    },
   })
 
   const cached = [...cacheRef.current.entries()]
+  const showSkeleton = !!activeTab && !cacheRef.current.has(activeTab)
 
   return (
     <PrimaryTabContext.Provider value={ctx}>
+      {chrome}
       {cached.map(([id, node]) => {
         const isCommittedActive = activeTab === id
         const isPeek = peekTab === id
@@ -399,6 +445,15 @@ export function PrimaryTabShell({
           </Activity>
         )
       })}
+
+      {showSkeleton && activeTab && (
+        <div
+          data-margo-primary-tab-skeleton={activeTab}
+          style={paneStyle(true, true)}
+        >
+          <PrimaryTabPaneSkeleton tab={activeTab} />
+        </div>
+      )}
 
       {activeTab === null ? children : null}
     </PrimaryTabContext.Provider>

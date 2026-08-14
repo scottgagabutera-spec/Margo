@@ -111,10 +111,10 @@ export function useTextFieldFocus() {
  * for tab-bar hide while a text field is focused or the keyboard is open.
  * No force flags — same path for every Compose step / future form.
  */
-export function useKeyboardSafeChrome() {
-  const metrics = useVisualViewport({ publishCssVars: true })
+export function useKeyboardSafeChrome(enabled = true) {
+  const metrics = useVisualViewport({ publishCssVars: enabled })
   const textFocused = useTextFieldFocus()
-  const active = textFocused || metrics.keyboardOpen
+  const active = enabled && (textFocused || metrics.keyboardOpen)
 
   useEffect(() => {
     const root = document.documentElement

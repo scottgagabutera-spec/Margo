@@ -240,3 +240,24 @@ export function LandingRedirectSkeleton() {
     </div>
   )
 }
+
+/** First-visit optimistic tab — shown until the route commits and seeds keepalive. */
+export function PrimaryTabPaneSkeleton({
+  tab,
+}: {
+  tab: 'feed' | 'discover' | 'compose' | 'you'
+}) {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--bg)',
+      padding: 'calc(var(--nav-height, 72px) + 24px) 20px var(--margo-page-padding-bottom)',
+    }}>
+      {tab === 'discover' ? (
+        <DiscoverPageSkeleton />
+      ) : (
+        <FeedPostSkeletonList count={tab === 'compose' ? 2 : 4} />
+      )}
+    </div>
+  )
+}

@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { matchLyricLine } from '@/lib/lyric-match'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
+import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { CardExportModal } from '@/components/card-export-modal'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
@@ -80,6 +81,8 @@ function ComposeInner() {
   const router = useRouter()
   const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
   const { requireAuth } = useAuthGate()
+  const { isTabActive } = usePrimaryTab()
+  const composeLive = isTabActive('compose')
   const searchParams = useSearchParams()
   useEffect(() => {
     const lyricParam = searchParams.get('lyric')
@@ -148,7 +151,7 @@ function ComposeInner() {
 
   // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
   // and hides the mobile tab bar while typing / search sheet is open.
-  const { keyboardOpen, chromeHidden } = useKeyboardSafeChrome()
+  const { keyboardOpen, chromeHidden } = useKeyboardSafeChrome(composeLive)
 
   const resetComposeViewport = useCallback(() => {
     if (typeof document !== 'undefined') {
