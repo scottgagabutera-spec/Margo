@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { CardOverflowMenu } from '@/components/card-overflow-menu'
 import { VibeTagPill } from '@/components/vibe-tag-pill'
@@ -32,7 +32,7 @@ export function ResonanceCard({
   const hasVibeTag = (DISCOVER_VIBES as readonly string[]).includes(emotion)
 
   return (
-    <Link
+    <PendingNavLink
       href={`/lyric-back?postId=${post.id}`}
       style={{
         flexShrink: variant === 'row' ? 0 : undefined,
@@ -101,6 +101,6 @@ export function ResonanceCard({
           </button>
         )}
       </div>
-    </Link>
+    </PendingNavLink>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { UI_FONT } from '@/lib/fonts'
+import { PendingNavLink } from '@/components/pending-nav-link'
 
 type SongMetaProps = {
   title?: string | null
@@ -46,7 +47,7 @@ export function SongMeta({
       </span>
     )
     if (href) {
-      return <a href={href} style={{ textDecoration: 'none', color: 'inherit' }}>{node}</a>
+      return <PendingNavLink href={href} indicator="tint" style={{ textDecoration: 'none', color: 'inherit' }}>{node}</PendingNavLink>
     }
     return node
   }
@@ -90,9 +91,9 @@ export function SongMeta({
 
   if (href) {
     return (
-      <a href={href} style={{ textDecoration: 'none', color: 'inherit', display: 'block', minWidth: 0 }}>
+      <PendingNavLink href={href} indicator="tint" style={{ textDecoration: 'none', color: 'inherit', display: 'block', minWidth: 0 }}>
         {body}
-      </a>
+      </PendingNavLink>
     )
   }
   return body

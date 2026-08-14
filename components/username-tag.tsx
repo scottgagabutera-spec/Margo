@@ -1,8 +1,8 @@
 'use client'
-import Link from 'next/link'
 import type { CSSProperties, ReactNode } from 'react'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { ArtistBadge } from '@/components/artist-badge'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import { UI_FONT } from '@/lib/fonts'
 
 export interface AuthorMetaProps {
@@ -82,15 +82,16 @@ export function AuthorMeta({
 
   const handleNode = username ? (
     linkProfile ? (
-      <Link
+      <PendingNavLink
         href={`/profile/${username}`}
+        indicator="tint"
         style={handleStyle}
         onClick={(e) => e.stopPropagation()}
         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--gold)' }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)' }}
+        onMouseLeave={(e) => { if (!e.currentTarget.getAttribute('aria-busy')) e.currentTarget.style.color = 'var(--text-secondary)' }}
       >
         {handleLabel}
-      </Link>
+      </PendingNavLink>
     ) : (
       <span style={handleStyle}>{handleLabel}</span>
     )

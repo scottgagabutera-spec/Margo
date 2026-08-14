@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useConversations } from '@/hooks/useConversations'
 import { RelativeTime } from '@/components/relative-time'
@@ -70,7 +71,7 @@ export default function MessagesPage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {list.map(c => (
-                  <Link
+                  <PendingNavLink
                     key={c.otherUser.id}
                     href={`/messages/${c.otherUser.username}`}
                     style={{
@@ -114,7 +115,7 @@ export default function MessagesPage() {
                     {c.unreadCount > 0 && (
                       <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />
                     )}
-                  </Link>
+                  </PendingNavLink>
                 ))}
               </div>
             )}

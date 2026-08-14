@@ -19,6 +19,7 @@ import { useHubSurfaces } from '@/hooks/useHubSurfaces'
 import { readActiveScrollTop } from '@/components/primary-tab-shell'
 import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon } from '@/components/icons'
 import { LoadingRing } from '@/components/loading-ring'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import { UI_FONT } from '@/lib/fonts'
 import type { HubSurface, HubSurfaceId } from '@/lib/hub/surfaces'
 
@@ -530,9 +531,10 @@ export function LibraryNavLink() {
   const pathname = usePathname()
   const active = pathname === '/library' || pathname?.startsWith('/library/')
   return (
-    <Link
+    <PendingNavLink
       href="/library"
       aria-label="Music Library"
+      ringSize={18}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -542,12 +544,13 @@ export function LibraryNavLink() {
         position: 'relative',
         boxSizing: 'border-box',
         flexShrink: 0,
+        borderRadius: '8px',
       }}
     >
       <LibraryIcon
         size={20}
         color={active ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}
       />
-    </Link>
+    </PendingNavLink>
   )
 }

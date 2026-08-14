@@ -28,6 +28,7 @@ import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UsernameTag } from '@/components/username-tag'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import { RelativeTime } from '@/components/relative-time'
 import { useAuthorProfile } from '@/hooks/useAuthorProfile'
 import { createClient } from '@/lib/supabase/client'
@@ -672,8 +673,9 @@ export function PostCard({
             </>
           )
           return profileHref ? (
-            <Link
+            <PendingNavLink
               href={profileHref}
+              indicator="tint"
               onClick={(e) => e.stopPropagation()}
               aria-label={`View profile @${profileUsername}`}
               style={{
@@ -681,10 +683,11 @@ export function PostCard({
                 textDecoration: 'none', color: 'inherit',
                 minHeight: 'var(--margo-touch-min)',
                 WebkitTapHighlightColor: 'transparent',
+                borderRadius: '8px',
               }}
             >
               {identityInner}
-            </Link>
+            </PendingNavLink>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
               {identityInner}
@@ -957,10 +960,11 @@ export function PostCard({
           <span className="margo-feed-action__label">Resonate</span>
         </button>
 
-        <Link
+        <PendingNavLink
           href={`/lyric-back?postId=${post.id}`}
           className="margo-feed-action"
           aria-label="Lyric Back"
+          indicator="tint"
           style={{
             color: 'var(--text-secondary)',
             transition: 'color 150ms ease',
@@ -973,7 +977,7 @@ export function PostCard({
             ) : null}
           </span>
           <span className="margo-feed-action__label">Lyric Back</span>
-        </Link>
+        </PendingNavLink>
 
         <button
           type="button"
@@ -1127,9 +1131,10 @@ export function PostCard({
               {audioUrl && <Tier1Player audioUrl={audioUrl} songId={post.songId || null} postText={post.text} />}
             </div>
             {variant === 'feed' && post.songId && (
-              <Link
+              <PendingNavLink
                 href={`/song/${post.songId}`}
                 aria-label="Full Karaoke"
+                indicator="tint"
                 onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
                 style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -1141,7 +1146,7 @@ export function PostCard({
               }}>
                 Full Karaoke
                 <ChevronRightIcon size={12} color="var(--gold)" />
-              </Link>
+              </PendingNavLink>
             )}
           </div>
         </div>

@@ -1,5 +1,5 @@
 'use client'
-import Link from 'next/link'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import Image from 'next/image'
 import { useRef } from 'react'
 import { useIsPlaying, useIsBuffering } from '@/hooks/useAudioEngine'
@@ -45,7 +45,7 @@ export function SongCatalogCard({ song, badge }: { song: SongCardData; badge?: '
   return (
     <div ref={cardRef} style={{ position: 'relative' }}>
       <div style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', marginBottom: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
-        <Link href={`/song/${song.id}`} style={{ textDecoration: 'none', display: 'block', position: 'absolute', inset: 0 }}>
+        <PendingNavLink href={`/song/${song.id}`} style={{ textDecoration: 'none', display: 'block', position: 'absolute', inset: 0, borderRadius: '12px', overflow: 'hidden' }}>
           {badge && <EarnedTag label={badge} />}
           {song.artwork ? (
             <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} sizes="220px" />
@@ -59,13 +59,13 @@ export function SongCatalogCard({ song, badge }: { song: SongCardData; badge?: '
               </div>
             )}
           </div>
-        </Link>
+        </PendingNavLink>
         <SongCardActions song={song} placement="cover" />
       </div>
-      <Link href={`/song/${song.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+      <PendingNavLink href={`/song/${song.id}`} indicator="tint" style={{ textDecoration: 'none', display: 'block', borderRadius: '8px' }}>
         <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.95rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-secondary)', marginBottom: '2px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
         <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.artist}</p>
-      </Link>
+      </PendingNavLink>
     </div>
   )
 }

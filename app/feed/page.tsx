@@ -6,6 +6,7 @@ import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
 import Link from 'next/link'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -597,7 +598,7 @@ export default function FeedPage() {
           <div style={{ marginBottom: '28px' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '12px' }}>People</p>
             {people.map(p => (
-              <Link key={p.id} href={`/profile/${p.username}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', textDecoration: 'none', borderBottom: '1px solid var(--border)', minHeight: 'var(--margo-touch-min)' }}>
+              <PendingNavLink key={p.id} href={`/profile/${p.username}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', textDecoration: 'none', borderBottom: '1px solid var(--border)', minHeight: 'var(--margo-touch-min)' }}>
                 <div style={{
                   width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
                   background: p.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
@@ -616,7 +617,7 @@ export default function FeedPage() {
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', margin: 0 }}>@{p.username}</p>
                 </div>
                 {p.isArtist && <ArtistBadge isArtist artistStatus={p.artistStatus} size={12} />}
-              </Link>
+              </PendingNavLink>
             ))}
           </div>
         )}
