@@ -15,7 +15,7 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
 /**
  * Top nav. Logo + Library + Hub are always visible when signed in
- * (mobile and desktop). Hub launches Messages / Library / Alerts.
+ * (mobile and desktop). Hub launches Messages / Library / Notifications.
  * Text nav (Feed/Discover, Share a Lyric, avatar menu) stays
  * desktop-only; mobile primary tabs cover Feed/Discover/Compose/You.
  *
