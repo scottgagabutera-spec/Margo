@@ -35,7 +35,10 @@
   --margo-safe-bottom: env(safe-area-inset-bottom, 0px);
   --margo-miniplayer-h: 0px;
   --margo-page-bottom: calc(var(--margo-tabbar-h, 80px) + var(--margo-miniplayer-h, 0px));
-  --margo-page-padding-bottom: calc(var(--margo-page-bottom) + var(--margo-safe-bottom));
+  /* Desktop sets --margo-tabbar-h to 0px (fallback 80px does not apply). Keep a
+     content gutter so last rows are not flush with the viewport edge. */
+  --margo-content-gutter-bottom: 48px;
+  --margo-page-padding-bottom: calc(var(--margo-page-bottom) + var(--margo-safe-bottom) + var(--margo-content-gutter-bottom));
   /* Tracks live tab bar + mini-player height (published by those components). */
   --margo-toast-offset: calc(var(--margo-page-bottom) + 12px);
   /* Immersive karaoke (/song) — safe-area + local chrome only (no tab bar). */

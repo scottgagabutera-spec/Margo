@@ -256,7 +256,7 @@ export default function LibraryPage() {
               )}
             </section>
 
-            <section>
+            <section style={{ paddingBottom: '24px' }}>
               <div style={{ marginBottom: '14px' }}>
                 <h2 style={{ fontFamily: UI_FONT, fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
                   Playlists · {playlists.length}
