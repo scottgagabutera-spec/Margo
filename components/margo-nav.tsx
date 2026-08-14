@@ -8,7 +8,7 @@ import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { HubIconButton, LibraryNavLink } from '@/components/hub-menu'
-import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
+import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesAppNav } from '@/lib/chrome-mode'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
@@ -62,6 +62,10 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 export function MargoNav() {
   const pathname = usePathname()
   const router = useRouter()
+  const { activeTab } = usePrimaryTab()
+  const feedLink = usePrimaryTabLinkProps('/feed')
+  const discoverLink = usePrimaryTabLinkProps('/discover')
+  const composeLink = usePrimaryTabLinkProps('/compose')
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const avatarMenuRef = useRef<HTMLDivElement>(null)
   const navElRef = useRef<HTMLElement>(null)
@@ -69,12 +73,12 @@ export function MargoNav() {
   const { rehydrate } = useAuthGate()
   const { application } = useArtistApplication()
 
-  const isOnFeed = pathname === '/feed'
+  const isOnFeed = activeTab === 'feed' || (!activeTab && pathname === '/feed')
   // Full lockup (mark + MARGO) only on Feed home. Landing has its own lockup.
   // Elsewhere: mark/symbol only — tab or page context owns the destination name.
   const showWordmark = isOnFeed
-  const isOnDiscover = pathname?.startsWith('/discover')
-  const isOnCompose = pathname === '/compose'
+  const isOnDiscover = activeTab === 'discover' || (!activeTab && !!pathname?.startsWith('/discover'))
+  const isOnCompose = activeTab === 'compose' || (!activeTab && pathname === '/compose')
   const isOnSignin = pathname === '/signin'
   const shellHidden = hidesAppNav(pathname)
 
@@ -158,10 +162,10 @@ export function MargoNav() {
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">
             {[
-              { href: '/feed', label: 'Feed', active: isOnFeed },
-              { href: '/discover', label: 'Discover', active: isOnDiscover },
-            ].map(({ href, label, active }) => (
-              <Link key={href} href={href} {...primaryTabWarmProps(href)} style={{
+              { href: '/feed', label: 'Feed', active: isOnFeed, linkProps: feedLink },
+              { href: '/discover', label: 'Discover', active: isOnDiscover, linkProps: discoverLink },
+            ].map(({ href, label, active, linkProps }) => (
+              <Link key={href} href={href} {...linkProps} style={{
                 fontSize: '0.75rem', fontFamily: font,
                 fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
                 textDecoration: 'none',
@@ -184,7 +188,7 @@ export function MargoNav() {
               </Link>
             ))}
 
-            <Link href="/compose" style={{
+            <Link href="/compose" {...composeLink} style={{
               fontSize: '0.6rem', fontFamily: font,
               fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
               textDecoration: 'none', color: 'var(--bg)',

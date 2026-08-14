@@ -8,7 +8,8 @@
  *
  * Settle: rAF spring (commit → ±W then router.push; cancel/edge → 0 then endPeek).
  * Interruptible mid-settle; edge rubber-band never navigates.
- * Tab-bar <Link> taps are out of scope here — they stay instant by design.
+ * Tab-bar taps are handled by PrimaryTabShell.navigatePrimaryTab (optimistic
+ * paint). This hook only owns swipe strip physics. Compose is tap-only.
  */
 
 import { useEffect } from 'react'
@@ -66,6 +67,8 @@ export type PrimaryTabSwipeApi = {
   setStripOffset: (px: number) => void
   endPeek: () => void
   hasCachedTab: (id: PrimaryTabId) => boolean
+  /** Paint destination before router.push so swipe-commit is not RSC-blocked. */
+  prepareTab: (id: PrimaryTabId) => void
 }
 
 /** Call from inside PrimaryTabShell after peek/strip APIs exist. */
@@ -76,7 +79,7 @@ export function usePrimaryTabSwipeGesture(
 ) {
   const pathname = usePathname()
   const router = useRouter()
-  const { beginPeek, setStripOffset, endPeek, hasCachedTab } = api
+  const { beginPeek, setStripOffset, endPeek, hasCachedTab, prepareTab } = api
 
   useEffect(() => {
     if (!enabled) return
@@ -433,6 +436,8 @@ export function usePrimaryTabSwipeGesture(
         tracking.peekHref = null
         tracking.peekDir = null
         tracking.offset = 0
+        const tabId = hrefToTabId(peekHref, ownProfileHref)
+        if (tabId) prepareTab(tabId)
         router.push(peekHref)
         return
       }
@@ -443,6 +448,8 @@ export function usePrimaryTabSwipeGesture(
           // Strip already at ±W; route swap clears peek synchronously in shell.
           tracking.peekHref = null
           tracking.peekDir = null
+          const tabId = hrefToTabId(peekHref, ownProfileHref)
+          if (tabId) prepareTab(tabId)
           router.push(peekHref)
         })
         return
@@ -486,5 +493,6 @@ export function usePrimaryTabSwipeGesture(
     setStripOffset,
     endPeek,
     hasCachedTab,
+    prepareTab,
   ])
 }

@@ -7,7 +7,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { CompassIcon, PenLineIcon } from '@/components/icons'
 import { HubTabButton } from '@/components/hub-menu'
-import { primaryTabWarmProps } from '@/lib/primary-tab-warm'
+import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesTabBar } from '@/lib/chrome-mode'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
@@ -19,6 +19,10 @@ const font = 'var(--font-geist-sans), system-ui, sans-serif'
 export function MobileTabBar() {
   const pathname = usePathname()
   const { user, identity } = useIdentity()
+  const { activeTab } = usePrimaryTab()
+  const feedLink = usePrimaryTabLinkProps('/feed')
+  const discoverLink = usePrimaryTabLinkProps('/discover')
+  const composeLink = usePrimaryTabLinkProps('/compose')
   const engineState = useAudioEngine()
   const navRef = useRef<HTMLElement | null>(null)
 
@@ -40,13 +44,14 @@ export function MobileTabBar() {
     return () => ro.disconnect()
   }, [shellHidden])
 
-  const isOnFeed = pathname === '/feed'
-  const isOnDiscover = pathname?.startsWith('/discover')
-  const isOnCompose = pathname === '/compose'
+  const isOnFeed = activeTab === 'feed' || (!activeTab && pathname === '/feed')
+  const isOnDiscover = activeTab === 'discover' || (!activeTab && !!pathname?.startsWith('/discover'))
+  const isOnCompose = activeTab === 'compose' || (!activeTab && pathname === '/compose')
 
   const isSignedIn = !!user && !user.isAnonymous
   const ownProfileHref = identity ? `/profile/${identity.username}` : '/signin'
-  const isOnProfile = isSignedIn && pathname === ownProfileHref
+  const youLink = usePrimaryTabLinkProps(ownProfileHref)
+  const isOnProfile = activeTab === 'you' || (isSignedIn && pathname === ownProfileHref)
 
   const isMusicActive = engineState.mode !== 'idle'
 
@@ -76,14 +81,14 @@ export function MobileTabBar() {
       background: 'var(--bg)',
       boxShadow: '0 -1px 24px rgba(0,0,0,0.35)',
     }}>
-      <Link href="/feed" style={tabStyle(isOnFeed)} {...primaryTabWarmProps('/feed')}>
+      <Link href="/feed" style={tabStyle(isOnFeed)} {...feedLink}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <path d="M3 9L10 3l7 6v7a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1V9Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
         </svg>
         <span style={labelStyle}>Feed</span>
       </Link>
 
-      <Link href="/discover" style={tabStyle(isOnDiscover)} {...primaryTabWarmProps('/discover')}>
+      <Link href="/discover" style={tabStyle(isOnDiscover)} {...discoverLink}>
         <CompassIcon size={20} color="currentColor" />
         <span style={labelStyle}>Discover</span>
         {isMusicActive && !isOnDiscover && (
@@ -99,6 +104,7 @@ export function MobileTabBar() {
       <Link
         href="/compose"
         aria-label="Share a lyric"
+        {...composeLink}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           width: '46px', height: '46px', borderRadius: '50%',
@@ -113,7 +119,7 @@ export function MobileTabBar() {
 
       <HubTabButton style={tabStyle(false)} labelStyle={labelStyle} />
 
-      <Link href={ownProfileHref} style={tabStyle(isOnProfile)}>
+      <Link href={ownProfileHref} style={tabStyle(isOnProfile)} {...(isSignedIn ? youLink : {})}>
         {isSignedIn && identity?.avatarUrl ? (
           <span style={{
             width: '20px', height: '20px', borderRadius: '50%', overflow: 'hidden',
