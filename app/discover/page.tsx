@@ -26,6 +26,8 @@ import { buildLyricMomentsFromRows, type LyricMoment } from '@/lib/lyric-moments
 import { playLyricMomentPool, queueLyricMoment } from '@/lib/lyric-moment-playback'
 import { playResonancePost, queueResonancePost } from '@/lib/resonance-snippet'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { useNotifications } from '@/hooks/useNotifications'
+import { useMessaging } from '@/hooks/useMessaging'
 import { createClient } from '@/lib/supabase/client'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { PullToRefresh } from '@/components/pull-to-refresh'
@@ -865,6 +867,8 @@ export default function DiscoverPage() {
   const [playingKey, setPlayingKey] = useState<string | null>(null)
   const [bufferingKey, setBufferingKey] = useState<string | null>(null)
   const { requireAuth } = useAuthGate()
+  const { refetch: refetchNotifications } = useNotifications()
+  const { refetch: refetchMessages } = useMessaging()
   const playingRef = useRef(false)
 
   // ── Active Mixtape tracking ────────────────────────────────────────
@@ -989,7 +993,13 @@ export default function DiscoverPage() {
     <PullToRefresh
       onRefreshingChange={setPtrBusy}
       onRefresh={async () => {
-        const [, , latest] = await Promise.all([refetch(), refetchMoments(), reloadPosts()])
+        const [, , latest] = await Promise.all([
+          refetch(),
+          refetchMoments(),
+          reloadPosts(),
+          refetchNotifications(),
+          refetchMessages(),
+        ])
         applyImmediate(latest)
       }}
     >

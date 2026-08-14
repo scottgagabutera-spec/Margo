@@ -170,7 +170,7 @@ export function warmFeedPosts(opts?: { force?: boolean }): Promise<Post[]> {
   if (!force && fresh && postsCache.data) {
     return Promise.resolve(postsCache.data)
   }
-  if (postsCache.inflight) return postsCache.inflight
+  if (!force && postsCache.inflight) return postsCache.inflight
 
   const p = fetchFeedPosts().then((rows) => {
     if (rows.length === 0 && postsCache.data && postsCache.data.length > 0) {

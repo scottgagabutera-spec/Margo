@@ -420,6 +420,7 @@ export function PrimaryTabShell({
 
   const cached = [...cacheRef.current.entries()]
   const showSkeleton = !!activeTab && !cacheRef.current.has(activeTab)
+  const onPrimarySurface = routeTab !== null || optimisticTab !== null
 
   return (
     <PrimaryTabContext.Provider value={ctx}>
@@ -438,7 +439,10 @@ export function PrimaryTabShell({
               data-margo-primary-tab-active={isCommittedActive ? '1' : '0'}
               data-margo-primary-tab-peek={isPeek ? '1' : '0'}
               aria-hidden={!isCommittedActive}
-              style={paneStyle(painted, isCommittedActive)}
+              style={{
+                ...paneStyle(painted, isCommittedActive),
+                display: onPrimarySurface ? undefined : 'none',
+              }}
             >
               {node}
             </div>

@@ -9,6 +9,8 @@ import Link from 'next/link'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
+import { useNotifications } from '@/hooks/useNotifications'
+import { useMessaging } from '@/hooks/useMessaging'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { ContentUpdatesBar } from '@/components/content-updates-bar'
@@ -48,6 +50,8 @@ export default function FeedPage() {
   const [ptrBusy, setPtrBusy] = useState(false)
   const { requireAuth } = useAuthGate()
   const { user } = useIdentity()
+  const { refetch: refetchNotifications } = useNotifications()
+  const { refetch: refetchMessages } = useMessaging()
   const [selectedVibe, setSelectedVibe] = useState('ALL')
   const [selectedSort, setSelectedSort] = useState('NEW')
   const [searchQuery, setSearchQuery] = useState('')
@@ -494,7 +498,11 @@ export default function FeedPage() {
     <PullToRefresh
       onRefreshingChange={setPtrBusy}
       onRefresh={async () => {
-        const latest = await reload()
+        const [latest] = await Promise.all([
+          reload(),
+          refetchNotifications(),
+          refetchMessages(),
+        ])
         applyImmediate(latest)
       }}
     >
