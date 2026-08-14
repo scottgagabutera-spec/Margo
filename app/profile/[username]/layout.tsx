@@ -1,8 +1,8 @@
 /**
- * Profile layout — MusicGroup JSON-LD for verified public artists.
- * sameAs from approved application links when present; omitted if none.
- * Platform schema stays in app/layout.tsx (no sitewide MusicGroup).
+ * Profile layout — stream the page immediately; JSON-LD is SEO-only and
+ * must not block first paint of the You tab / profile body.
  */
+import { Suspense } from 'react'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import {
@@ -21,25 +21,32 @@ export default async function ProfileUsernameLayout({
 }) {
   const { username: rawUsername } = await params
   const username = (rawUsername || '').trim()
-  const jsonLd = username ? await loadMusicGroupForUsername(username) : null
 
   return (
     <>
-      {jsonLd ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
+      {username ? (
+        <Suspense fallback={null}>
+          <ProfileJsonLd username={username} />
+        </Suspense>
       ) : null}
       {children}
     </>
   )
 }
 
+async function ProfileJsonLd({ username }: { username: string }) {
+  const jsonLd = await loadMusicGroupForUsername(username)
+  if (!jsonLd) return null
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  )
+}
+
 async function loadMusicGroupForUsername(username: string) {
   try {
-    // Prefer cookie client for public profile fields; fall back to admin if
-    // env is available (needed for application links under RLS).
     const supabase = await createServerSupabase()
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')

@@ -36,6 +36,7 @@ import { NewItemsPill } from '@/components/new-items-pill'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { DiscoverPageSkeleton } from '@/components/margo-skeletons'
+import { catalogRankIds } from '@/lib/catalog-rank'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
@@ -56,7 +57,9 @@ function vibeColor(vibe: string | null | undefined): string {
 // "New" is intentionally left out — Song doesn't expose a createdAt/
 // timestamp field in what's been reviewed so far. Add it back once
 // that field is confirmed to exist.
-const RANK_BADGE_COUNT = 8
+// Home row: at most 3 earned badges, and only with real plays/resonates
+// or lyric uses (see lib/catalog-rank.ts). Zero-stat songs never qualify.
+const RANK_BADGE_COUNT = 3
 
 
 // Below this many artists, a dedicated Artists row reads as empty
@@ -376,14 +379,10 @@ function SongRowCard({ song, badge, onPreview }: { song: Song; badge: 'Trending'
 
 // ── Songs row ────────────────────────────────────────────────────────
 function SongsSection({ songs, onPreview }: { songs: Song[]; onPreview: (song: Song) => void }) {
-  const { trendingIds, topIds } = useMemo(() => {
-    const byEngagement = [...songs].sort((a, b) => ((b.plays || 0) + (b.resonates || 0) * 3) - ((a.plays || 0) + (a.resonates || 0) * 3))
-    const byLyricUses = [...songs].sort((a, b) => (b.lyricUses || 0) - (a.lyricUses || 0))
-    return {
-      trendingIds: new Set(byEngagement.slice(0, RANK_BADGE_COUNT).map(s => s.id)),
-      topIds: new Set(byLyricUses.filter(s => (s.lyricUses || 0) > 0).slice(0, RANK_BADGE_COUNT).map(s => s.id)),
-    }
-  }, [songs])
+  const { trendingIds, topIds } = useMemo(
+    () => catalogRankIds(songs, RANK_BADGE_COUNT),
+    [songs]
+  )
 
   if (songs.length === 0) return null
 

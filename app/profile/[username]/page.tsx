@@ -10,7 +10,7 @@ import { usePosts } from '@/hooks/usePosts'
 import { useOwnPrivatePosts } from '@/hooks/useOwnPrivatePosts'
 import { useProfileReplays } from '@/hooks/useProfileReplays'
 import { useAuthorLyricBacks } from '@/hooks/useAuthorLyricBacks'
-import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
+import { ArtistBadge } from '@/components/artist-badge'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
@@ -20,7 +20,7 @@ import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
-import type { ArtistApplicationLinks } from '@/lib/artist-music-group'
+import { peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
 
 const supabase = createClient()
 
@@ -38,20 +38,7 @@ const sectionLabelStyle: React.CSSProperties = {
   textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '8px',
 }
 
-interface ProfileData {
-  id: string
-  username: string
-  displayName: string
-  isArtist: boolean
-  artistStatus: ArtistStatus
-  bio: string | null
-  avatarUrl: string | null
-  signatureLyric: string | null
-  signatureSong: string | null
-  signatureArtist: string | null
-  isPrivate: boolean
-  artistLinks: ArtistApplicationLinks
-}
+type ProfileData = WarmProfileRow
 
 interface ArtistSongRow {
   id: string
@@ -77,13 +64,13 @@ export default function ProfilePage() {
     !!identity?.username && params.username === identity.username
   const postsLive = !isOwnKeepaliveProfile || isTabActive('you')
   const { posts } = usePosts({ enabled: postsLive })
-  const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const cached = typeof params.username === 'string' ? peekProfileCache(params.username) : null
+  const [profile, setProfile] = useState<ProfileData | null>(cached?.profile ?? null)
+  const [loading, setLoading] = useState(!cached)
   const [notFound, setNotFound] = useState(false)
-  // Exists + private, but viewer failed profiles SELECT (RLS) — honest empty state.
   const [privateInaccessible, setPrivateInaccessible] = useState(false)
-  const [followerCount, setFollowerCount] = useState<number | null>(null)
-  const [followingCount, setFollowingCount] = useState<number | null>(null)
+  const [followerCount, setFollowerCount] = useState<number | null>(cached?.followerCount ?? null)
+  const [followingCount, setFollowingCount] = useState<number | null>(cached?.followingCount ?? null)
   const [followStatus, setFollowStatus] = useState<FollowStatus>(null)
   const [followBusy, setFollowBusy] = useState(false)
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
@@ -99,61 +86,47 @@ export default function ProfilePage() {
 
   useEffect(() => {
     let active = true
-    setLoading(true)
-    setNotFound(false)
-    setPrivateInaccessible(false)
-    setProfile(null)
-    supabase
-      .from('profiles')
-      .select('id, username, display_name, is_artist, artist_status, bio, avatar_url, signature_lyric, signature_song, signature_artist, is_private, artist_links')
-      .eq('username', params.username)
-      .maybeSingle()
-      .then(async ({ data, error }) => {
-        if (!active) return
-        if (!error && data) {
-          setProfile({
-            id: data.id,
-            username: data.username,
-            displayName: data.display_name,
-            isArtist: data.is_artist,
-            artistStatus: data.artist_status ?? null,
-            bio: data.bio,
-            avatarUrl: data.avatar_url,
-            signatureLyric: data.signature_lyric,
-            signatureSong: data.signature_song,
-            signatureArtist: data.signature_artist,
-            isPrivate: !!data.is_private,
-            artistLinks: (data.artist_links && typeof data.artist_links === 'object') ? data.artist_links : {},
-          })
-          setLoading(false)
+    const username = params.username
+    const cachedNow = peekProfileCache(username)
+    if (cachedNow) {
+      setProfile(cachedNow.profile)
+      setFollowerCount(cachedNow.followerCount)
+      setFollowingCount(cachedNow.followingCount)
+      setLoading(false)
+      setNotFound(false)
+      setPrivateInaccessible(false)
+    } else {
+      setProfile((prev) => (prev?.username === username ? prev : null))
+    }
 
-          Promise.all([
-            supabase.from('follows').select('*', { count: 'exact', head: true })
-              .eq('followee_id', data.id).eq('status', 'accepted'),
-            supabase.from('follows').select('*', { count: 'exact', head: true })
-              .eq('follower_id', data.id).eq('status', 'accepted'),
-          ]).then(([followers, following]) => {
-            if (!active) return
-            setFollowerCount(followers.count ?? 0)
-            setFollowingCount(following.count ?? 0)
-          })
-          return
-        }
-
-        // SELECT empty under RLS — distinguish missing vs private locked.
-        const { data: visibility } = await supabase.rpc('profile_visibility_for_username', {
-          p_username: params.username,
-        })
-        if (!active) return
-        const row = visibility as { exists?: boolean; is_private?: boolean } | null
-        if (row?.exists && row?.is_private) {
-          setPrivateInaccessible(true)
-        } else {
-          setNotFound(true)
-        }
+    void warmProfile(username).then(async (bundle) => {
+      if (!active) return
+      if (bundle) {
+        setProfile(bundle.profile)
+        setFollowerCount(bundle.followerCount)
+        setFollowingCount(bundle.followingCount)
+        setNotFound(false)
+        setPrivateInaccessible(false)
         setLoading(false)
+        return
+      }
+
+      const { data: visibility } = await supabase.rpc('profile_visibility_for_username', {
+        p_username: username,
       })
+      if (!active) return
+      const row = visibility as { exists?: boolean; is_private?: boolean } | null
+      if (row?.exists && row?.is_private) {
+        setPrivateInaccessible(true)
+        setProfile(null)
+      } else {
+        setNotFound(true)
+        setProfile(null)
+      }
+      setLoading(false)
+    })
     return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- do not wipe on identity-only updates
   }, [params.username])
 
   useEffect(() => {

@@ -6,6 +6,7 @@ import { useLyricMoments } from '@/hooks/useLyricMoments'
 import { CatalogGrid, CatalogSortOption } from '@/components/catalog-grid'
 import { SongCatalogCard } from '@/components/song-catalog-card'
 import { BackButton } from '@/components/back-button'
+import { catalogRankIds } from '@/lib/catalog-rank'
 
 // Same vibe vocabulary + palette used on /discover — kept here as a local
 // copy for now since the source isn't exported from app/discover/page.tsx.
@@ -32,7 +33,7 @@ const SORT_OPTIONS: CatalogSortOption[] = [
   { value: 'az', label: 'A–Z' },
 ]
 
-const RANK_BADGE_COUNT = 8
+const RANK_BADGE_COUNT = 5
 
 function VibeFilterRow({ selected, onSelect }: { selected: string; onSelect: (vibe: string) => void }) {
   return (
@@ -76,14 +77,10 @@ export default function SongsCatalogPage() {
     return ids
   }, [moments, vibe])
 
-  const { trendingIds, topIds } = useMemo(() => {
-    const byEngagement = [...songs].sort((a, b) => ((b.plays || 0) + (b.resonates || 0) * 3) - ((a.plays || 0) + (a.resonates || 0) * 3))
-    const byLyricUses = [...songs].sort((a, b) => (b.lyricUses || 0) - (a.lyricUses || 0))
-    return {
-      trendingIds: new Set(byEngagement.slice(0, RANK_BADGE_COUNT).map(s => s.id)),
-      topIds: new Set(byLyricUses.filter(s => (s.lyricUses || 0) > 0).slice(0, RANK_BADGE_COUNT).map(s => s.id)),
-    }
-  }, [songs])
+  const { trendingIds, topIds } = useMemo(
+    () => catalogRankIds(songs, RANK_BADGE_COUNT),
+    [songs]
+  )
 
   const vibeFiltered = useMemo(() => {
     if (!songIdsForVibe) return songs

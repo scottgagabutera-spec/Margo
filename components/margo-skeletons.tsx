@@ -241,6 +241,26 @@ export function LandingRedirectSkeleton() {
   )
 }
 
+/** You tab / profile: avatar, name, bio, content tabs. */
+export function ProfilePageSkeleton() {
+  return (
+    <div style={{ paddingTop: 8 }}>
+      <PulseStyle />
+      <div style={bone({ height: 160, width: '100%', borderRadius: 0, border: 'none', margin: '0 -20px 16px' }, 0)} />
+      <div style={bone({ width: 88, height: 88, borderRadius: '50%', border: 'none', marginTop: -52, marginBottom: 16 }, 40)} />
+      <div style={bone({ height: 14, width: '42%', borderRadius: 4, border: 'none', marginBottom: 8 }, 80)} />
+      <div style={bone({ height: 10, width: '28%', borderRadius: 4, border: 'none', marginBottom: 20 }, 100)} />
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+        <div style={bone({ height: 12, width: 72, borderRadius: 4, border: 'none' }, 120)} />
+        <div style={bone({ height: 12, width: 72, borderRadius: 4, border: 'none' }, 140)} />
+      </div>
+      <div style={bone({ height: 10, width: '88%', borderRadius: 4, border: 'none', marginBottom: 8 }, 160)} />
+      <div style={bone({ height: 10, width: '70%', borderRadius: 4, border: 'none', marginBottom: 28 }, 180)} />
+      <FeedPostSkeletonList count={3} />
+    </div>
+  )
+}
+
 /** First-visit optimistic tab — shown until the route commits and seeds keepalive. */
 export function PrimaryTabPaneSkeleton({
   tab,
@@ -255,6 +275,8 @@ export function PrimaryTabPaneSkeleton({
     }}>
       {tab === 'discover' ? (
         <DiscoverPageSkeleton />
+      ) : tab === 'you' ? (
+        <ProfilePageSkeleton />
       ) : (
         <FeedPostSkeletonList count={tab === 'compose' ? 2 : 4} />
       )}

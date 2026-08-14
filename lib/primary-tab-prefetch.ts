@@ -7,6 +7,7 @@ import type { Post } from '@/hooks/usePosts'
 import type { Song } from '@/hooks/useSongs'
 import type { PostLine, PostLineSource } from '@/lib/post-lines'
 import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
+import { warmProfile } from '@/lib/profile-warm'
 
 const supabase = createClient()
 
@@ -439,6 +440,11 @@ export function warmPrimaryTab(href: string): void {
     void warmLyricMoments()
     void warmFeedPosts()
     return
+  }
+  const profileMatch = href.match(/^\/profile\/([^/?#]+)$/)
+  if (profileMatch) {
+    void warmProfile(decodeURIComponent(profileMatch[1]))
+    void warmFeedPosts()
   }
   // Notifications list is owned by NotificationsProvider (auth-gated); no public warm.
 }

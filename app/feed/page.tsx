@@ -235,12 +235,14 @@ export default function FeedPage() {
     const newIds = new Set(posts.filter(p => getAge(p) < NEW_WINDOW_HOURS).map(p => p.id))
     const trendingIds = new Set(
       [...posts]
+        .filter(p => getEngagement(p) > 0)
         .sort((a, b) => getScoreFor(b, 'TRENDING') - getScoreFor(a, 'TRENDING'))
         .slice(0, RANK_BADGE_COUNT)
         .map(p => p.id)
     )
     const topIds = new Set(
       [...posts]
+        .filter(p => getEngagement(p) > 0)
         .sort((a, b) => getScoreFor(b, 'TOP') - getScoreFor(a, 'TOP'))
         .slice(0, RANK_BADGE_COUNT)
         .map(p => p.id)
