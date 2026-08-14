@@ -1,6 +1,6 @@
 import { DEFAULT_ICON_COLOR, DEFAULT_ICON_SIZE, type MargoIconProps } from './icon-props'
 
-/** Bell — Alerts / notifications (Hub tile). */
+/** Bell — Notifications (Hub tile). */
 export function BellIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COLOR }: MargoIconProps) {
   return (
     <svg

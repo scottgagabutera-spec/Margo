@@ -43,7 +43,7 @@ function isExcludedTarget(target: EventTarget | null): boolean {
   return Boolean(target.closest(TAB_SWIPE_EXCLUDE_SELECTOR))
 }
 
-/** Ordered swipe chain — Compose and /signin are never included. Alerts live in Hub. */
+/** Ordered swipe chain — Compose and /signin are never included. Notifications live in Hub. */
 export function buildTabSwipeChain(ownProfileHref: string | null): string[] {
   const tabs = ['/feed', '/discover']
   if (ownProfileHref) tabs.push(ownProfileHref)

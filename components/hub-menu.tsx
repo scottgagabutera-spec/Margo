@@ -15,11 +15,11 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { useNotifications } from '@/hooks/useNotifications'
-import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount'
+import { useHubSurfaces } from '@/hooks/useHubSurfaces'
 import { readActiveScrollTop } from '@/components/primary-tab-shell'
 import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
+import type { HubSurface, HubSurfaceId } from '@/lib/hub/surfaces'
 
 /** UI chrome — MARGO_BRAND §3 Geist Sans */
 const font = UI_FONT
@@ -36,31 +36,42 @@ function badgeLabel(n: number): string {
   return n > 9 ? '9+' : String(n)
 }
 
-function TileIcon({ kind }: { kind: 'library' | 'messages' | 'alerts' }) {
+function TileIcon({ kind }: { kind: HubSurfaceId }) {
   const color = 'var(--gold)'
   if (kind === 'library') return <LibraryIcon size={18} color={color} />
   if (kind === 'messages') return <MessagesIcon size={18} color={color} />
   return <BellIcon size={18} color={color} />
 }
 
+function HubPresenceDot({ visible, top, right }: { visible: boolean; top: string; right: string }) {
+  if (!visible) return null
+  return (
+    <span
+      aria-hidden
+      style={{
+        position: 'absolute',
+        top,
+        right,
+        width: '8px',
+        height: '8px',
+        borderRadius: '50%',
+        background: 'var(--gold)',
+      }}
+    />
+  )
+}
+
 function HubTile({
-  href,
-  kind,
-  label,
-  count,
+  surface,
   signedIn,
   onNavigate,
-  wide,
 }: {
-  href: string
-  kind: 'library' | 'messages' | 'alerts'
-  label: string
-  count: number
+  surface: HubSurface
   signedIn: boolean
   onNavigate: () => void
-  wide?: boolean
 }) {
-  const badge = signedIn ? badgeLabel(count) : ''
+  const { href, id, label, unread, wide } = surface
+  const badge = signedIn ? badgeLabel(unread) : ''
   const dest = signedIn ? href : '/signin'
   return (
     <Link
@@ -107,7 +118,7 @@ function HubTile({
           {badge}
         </span>
       ) : null}
-      <TileIcon kind={kind} />
+      <TileIcon kind={id} />
       <span
         style={{
           fontFamily: font,
@@ -139,7 +150,8 @@ type HubContextValue = {
   setOpen: (v: boolean) => void
   toggle: () => void
   close: () => void
-  hubBadge: string
+  hubHasUnread: boolean
+  surfaces: HubSurface[]
   signedIn: boolean
 }
 
@@ -154,15 +166,11 @@ function useHub(): HubContextValue {
 function HubTiles({
   signedIn,
   close,
-  alertsUnread,
-  messagesUnread,
-  libraryUnread,
+  surfaces,
 }: {
   signedIn: boolean
   close: () => void
-  alertsUnread: number
-  messagesUnread: number
-  libraryUnread: number
+  surfaces: HubSurface[]
 }) {
   return (
     <>
@@ -186,7 +194,7 @@ function HubTiles({
               lineHeight: 1.4,
             }}
           >
-            Sign in to see your Messages, Music Library, and Alerts
+            Sign in to see your Messages, Music Library, and Notifications
           </p>
           <Link
             href="/signin"
@@ -214,57 +222,30 @@ function HubTiles({
           </Link>
         </div>
       )}
-      {/* Library first / full-width — product priority + labeled (not icon-only) */}
-      <HubTile
-        href="/library"
-        kind="library"
-        label="Music Library"
-        count={libraryUnread}
-        signedIn={signedIn}
-        onNavigate={close}
-        wide
-      />
-      <HubTile
-        href="/messages"
-        kind="messages"
-        label="Messages"
-        count={messagesUnread}
-        signedIn={signedIn}
-        onNavigate={close}
-      />
-      <HubTile
-        href="/notifications"
-        kind="alerts"
-        label="Alerts"
-        count={alertsUnread}
-        signedIn={signedIn}
-        onNavigate={close}
-      />
+      {surfaces.map((surface) => (
+        <HubTile
+          key={surface.id}
+          surface={surface}
+          signedIn={signedIn}
+          onNavigate={close}
+        />
+      ))}
     </>
   )
 }
 
 function HubPanel() {
-  const { open, close, signedIn } = useHub()
-  const { notifications } = useNotifications()
-  const messagesUnread = useUnreadMessagesCount()
+  const { open, close, signedIn, surfaces } = useHub()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
-
-  const alertsUnread = signedIn
-    ? notifications.filter((n) => !n.readAt && n.type !== 'message').length
-    : 0
-  const libraryUnread = 0
 
   if (!mounted || !open) return null
 
   const tileProps = {
     signedIn,
     close,
-    alertsUnread,
-    messagesUnread,
-    libraryUnread,
+    surfaces,
   }
 
   return createPortal(
@@ -346,18 +327,11 @@ export function HubProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuthGate()
   const signedIn = !authLoading && !!user && !user.is_anonymous
 
-  const { notifications } = useNotifications()
-  const messagesUnread = useUnreadMessagesCount()
+  const { surfaces, hasActivity } = useHubSurfaces(signedIn)
 
   const [open, setOpen] = useState(false)
   const scrollOriginRef = useRef(0)
   const lastScrollRef = useRef({ y: 0, t: 0 })
-
-  const alertsUnread = signedIn
-    ? notifications.filter((n) => !n.readAt && n.type !== 'message').length
-    : 0
-  const hubTotal = signedIn ? messagesUnread + alertsUnread : 0
-  const hubBadge = badgeLabel(hubTotal)
 
   const close = useCallback(() => setOpen(false), [])
   const toggle = useCallback(() => setOpen((v) => !v), [])
@@ -419,8 +393,8 @@ export function HubProvider({ children }: { children: ReactNode }) {
   }, [open, close])
 
   const value = useMemo(
-    () => ({ open, setOpen, toggle, close, hubBadge, signedIn }),
-    [open, toggle, close, hubBadge, signedIn],
+    () => ({ open, setOpen, toggle, close, hubHasUnread: hasActivity, surfaces, signedIn }),
+    [open, toggle, close, hasActivity, surfaces, signedIn],
   )
 
   return (
@@ -433,13 +407,13 @@ export function HubProvider({ children }: { children: ReactNode }) {
 
 /** Desktop / top-bar icon trigger — 44×44 touch (Brand §14). */
 export function HubIconButton() {
-  const { open, toggle, hubBadge } = useHub()
+  const { open, toggle, hubHasUnread } = useHub()
   return (
     <button
       type="button"
       data-margo-hub-root
       onClick={toggle}
-      aria-label="Hub"
+      aria-label={hubHasUnread ? 'Hub, new activity' : 'Hub'}
       aria-expanded={open}
       style={{
         display: 'flex',
@@ -457,43 +431,20 @@ export function HubIconButton() {
       }}
     >
       <HubGridIcon size={20} color="currentColor" />
-      {hubBadge ? (
-        <span
-          style={{
-            position: 'absolute',
-            top: '6px',
-            right: '6px',
-            minWidth: '15px',
-            height: '15px',
-            borderRadius: '50%',
-            background: 'var(--gold)',
-            color: 'var(--bg)',
-            fontFamily: font,
-            fontSize: '0.55rem',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 3px',
-            boxSizing: 'border-box',
-          }}
-        >
-          {hubBadge}
-        </span>
-      ) : null}
+      <HubPresenceDot visible={hubHasUnread} top="6px" right="6px" />
     </button>
   )
 }
 
 /** Mobile tab-bar Hub control — label visible (Brand §14 feed-action rule). */
 export function HubTabButton({ style, labelStyle }: { style: CSSProperties; labelStyle: CSSProperties }) {
-  const { open, toggle, hubBadge } = useHub()
+  const { open, toggle, hubHasUnread } = useHub()
   return (
     <button
       type="button"
       data-margo-hub-root
       onClick={toggle}
-      aria-label="Hub"
+      aria-label={hubHasUnread ? 'Hub, new activity' : 'Hub'}
       aria-expanded={open}
       style={{
         ...style,
@@ -507,30 +458,7 @@ export function HubTabButton({ style, labelStyle }: { style: CSSProperties; labe
     >
       <span style={{ position: 'relative', display: 'inline-flex' }}>
         <HubGridIcon size={20} color="currentColor" />
-        {hubBadge ? (
-          <span
-            style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-8px',
-              minWidth: '14px',
-              height: '14px',
-              borderRadius: '50%',
-              background: 'var(--gold)',
-              color: 'var(--bg)',
-              fontFamily: font,
-              fontSize: '0.5rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 3px',
-              boxSizing: 'border-box',
-            }}
-          >
-            {hubBadge}
-          </span>
-        ) : null}
+        <HubPresenceDot visible={hubHasUnread} top="-2px" right="-2px" />
       </span>
       <span style={labelStyle}>Hub</span>
     </button>

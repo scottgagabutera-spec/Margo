@@ -440,5 +440,5 @@ export function warmPrimaryTab(href: string): void {
     void warmFeedPosts()
     return
   }
-  // Alerts list is owned by NotificationsProvider (auth-gated); no public warm.
+  // Notifications list is owned by NotificationsProvider (auth-gated); no public warm.
 }
