@@ -50,3 +50,46 @@ export function SpotifyIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COL
     </svg>
   )
 }
+
+export function AppleMusicIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COLOR }: MargoIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M9 16.2V7.6l10-2.1v8.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="7.2" cy="16.2" r="2.2" stroke={color} strokeWidth="1.5" />
+      <circle cx="17.2" cy="14" r="2.2" stroke={color} strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+export function SoundCloudIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COLOR }: MargoIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M4 15.5v-3M6.2 17V11M8.4 17V9.5M10.6 17V8M13 17V10.2c0-2 1.5-3.4 3.4-3.4 1.7 0 3.1 1.2 3.4 2.8H20a2.5 2.5 0 0 1 0 5h-7" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function LinktreeIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COLOR }: MargoIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M12 4v16M8 8l4-4 4 4M8 12h8M9 16l3 4 3-4" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function AudiomackIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COLOR }: MargoIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M5 17V9l3.5 6L12 7l3.5 8L19 9v8" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function BoomplayIcon({ size = DEFAULT_ICON_SIZE, color = DEFAULT_ICON_COLOR }: MargoIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.5" />
+      <path d="M10 8.5v7l6-3.5-6-3.5Z" fill={color} />
+    </svg>
+  )
+}

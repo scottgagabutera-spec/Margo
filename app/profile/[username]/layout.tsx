@@ -10,6 +10,7 @@ import {
   type ArtistApplicationLinks,
   type ArtistStatus,
 } from '@/lib/artist-music-group'
+import { artistLinksForSameAs } from '@/lib/artist-links'
 
 export default async function ProfileUsernameLayout({
   children,
@@ -42,13 +43,13 @@ async function loadMusicGroupForUsername(username: string) {
     const supabase = await createServerSupabase()
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, is_artist, artist_status, is_private')
+      .select('id, username, display_name, avatar_url, is_artist, artist_status, is_private, artist_links')
       .eq('username', username)
       .maybeSingle()
 
     if (profileErr || !profile) return null
 
-    let links: ArtistApplicationLinks | null = null
+    let links: ArtistApplicationLinks | null = (profile.artist_links || null) as ArtistApplicationLinks | null
     let applicationDisplayName: string | null = null
 
     try {
@@ -64,12 +65,13 @@ async function loadMusicGroupForUsername(username: string) {
 
       if (application) {
         applicationDisplayName = application.display_artist_name ?? null
-        links = (application.links || null) as ArtistApplicationLinks | null
+        links = artistLinksForSameAs(
+          profile.artist_links as ArtistApplicationLinks | null,
+          (application.links || null) as ArtistApplicationLinks | null
+        )
       }
     } catch {
-      // Missing service role in some local/preview envs — skip schema rather
-      // than throw and break the profile page.
-      return null
+      // Missing service role — still emit schema from public artist_links.
     }
 
     return buildArtistMusicGroupJsonLd({

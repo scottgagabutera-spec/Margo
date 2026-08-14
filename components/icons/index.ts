@@ -28,4 +28,9 @@ export {
   XIcon,
   YouTubeIcon,
   SpotifyIcon,
+  AppleMusicIcon,
+  SoundCloudIcon,
+  LinktreeIcon,
+  AudiomackIcon,
+  BoomplayIcon,
 } from './social-icons'

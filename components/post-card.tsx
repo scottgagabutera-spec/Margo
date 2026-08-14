@@ -419,7 +419,7 @@ function EarnedTag({ label, onClick }: { label: 'New' | 'Trending' | 'Top'; onCl
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick() }}
       style={{
-        fontFamily: 'var(--font-lora), serif', fontSize: '0.5rem', fontWeight: 700,
+        fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.55rem', fontWeight: 700,
         letterSpacing: '1.2px', textTransform: 'uppercase', padding: '3px 9px',
         borderRadius: '50px', background: 'rgba(232,197,71,0.1)',
         border: '1px solid var(--gold-border)', color: 'var(--gold)',
