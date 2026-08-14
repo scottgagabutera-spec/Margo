@@ -143,7 +143,7 @@ Margo is a **lyric-social** product: people post song lyrics tagged with emotion
 | Coding session rules | `CLAUDE.md` |
 | Visual / touch / brand rules | `MARGO_BRAND.md` |
 | Shipped migration narratives | `docs/*` (many stamped ARCHIVE — verify code before planning from them) |
-| Rights / growth strategy | `MARGO_RIGHTS_AND_DISCOVERY_PLAN.md`, `docs/MARGO_GROWTH_AND_PLATFORM_PLAN.md` |
+| Rights / growth strategy | `MARGO_RIGHTS_AND_DISCOVERY_PLAN.md` |
 
 ---
 
