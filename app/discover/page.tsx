@@ -14,13 +14,17 @@ import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { HeartIcon } from '@/components/heart-icon'
-import { CardOverflowMenu } from '@/components/card-overflow-menu'
-import { SongCardActions, buildSnippetQueueOverflowItems } from '@/components/song-card-actions'
+import { SongCardActions } from '@/components/song-card-actions'
+import { LyricMomentCard } from '@/components/lyric-moment-card'
+import { ResonanceCard } from '@/components/resonance-card'
 import { useSongLibrarySaves } from '@/hooks/useSongLibrarySaves'
 import { CloseIcon } from '@/components/icons'
-import { AuthorMeta } from '@/components/username-tag'
 import { SaveQueueButton } from '@/components/save-queue-button'
-import { playSnippet as enginePlaySnippet, stop as engineStop, setQueue, warmUrl, warmUrls, subscribeAudioEngine, togglePlayPause, queuePlayNext, queueAdd, fullSongToQueueItem, snippetToQueueItem } from '@/lib/audio-engine'
+import { stop as engineStop, warmUrls, subscribeAudioEngine, togglePlayPause, queuePlayNext, queueAdd, fullSongToQueueItem } from '@/lib/audio-engine'
+import { DISCOVER_VIBES, discoverVibeColor } from '@/lib/discover-vibes'
+import { buildLyricMomentsFromRows, type LyricMoment } from '@/lib/lyric-moments-board'
+import { playLyricMomentPool, queueLyricMoment } from '@/lib/lyric-moment-playback'
+import { playResonancePost, queueResonancePost } from '@/lib/resonance-snippet'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { createClient } from '@/lib/supabase/client'
 import { MargoSearchInput } from '@/components/margo-search-input'
@@ -29,7 +33,6 @@ import { NewItemsPill } from '@/components/new-items-pill'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { DiscoverPageSkeleton } from '@/components/margo-skeletons'
-import { buildCatalogLyricUnits } from '@/lib/catalog-lyric-unit'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
@@ -40,23 +43,9 @@ function formatNum(n: number): string {
   return String(n)
 }
 
-const VIBES = ['ALL', 'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL', 'NOSTALGIA', 'JOY', 'LOVE', 'HYPE', 'PROUD']
-
-// Shared vibe → color map, keyed lowercase to match how vibes are stored
-// on lyric_line_vibes and post.emotion. Mirrors the palette already used
-// in components/mini-player.tsx and app/page.tsx — worth consolidating
-// into a single lib/vibe-colors.ts so all three can't drift apart again.
-// NOTE: 'hype' has no established color anywhere else in the codebase —
-// this is a placeholder pick, swap for whatever fits the palette.
-const VIBE_COLORS: Record<string, string> = {
-  chill: '#60b8ff', hope: '#7B9FFF', healing: '#4ade80', grateful: '#a0e080',
-  spiritual: '#c8a0ff', nostalgia: '#E8C547', joy: '#ffc847', love: '#FF6B9D',
-  hype: '#FF4D4D', proud: '#FFB347',
-}
-
+const VIBES = DISCOVER_VIBES
 function vibeColor(vibe: string | null | undefined): string {
-  if (!vibe) return 'var(--gold)'
-  return VIBE_COLORS[vibe.toLowerCase()] || 'var(--gold)'
+  return discoverVibeColor(vibe)
 }
 
 // Earned-tag thresholds for the Songs row — mirrors the Feed pattern
@@ -66,16 +55,6 @@ function vibeColor(vibe: string | null | undefined): string {
 // that field is confirmed to exist.
 const RANK_BADGE_COUNT = 8
 
-// Minimum word count for a lyric unit to be eligible as a Lyric Moment.
-// This ONLY gates what Margo curates into the Moments row/takeover —
-// it never restricts what a person can post as a Resonance. A short
-// line is a perfectly valid thing to say; it's just not always a
-// strong enough fragment to stand alone as a curated card.
-const MIN_MOMENT_WORDS = 4
-
-// When a single vibed line is this short or shorter, prefer the shared
-// catalog-unit ±1 adjacent window (same song) before applying MIN_MOMENT_WORDS.
-const SHORT_LINE_WORDS = 3
 
 // Below this many artists, a dedicated Artists row reads as empty
 // rather than inviting — so it stays lower in the page order. Once the
@@ -83,22 +62,6 @@ const SHORT_LINE_WORDS = 3
 // after Lyric Moments) so it can actually do promotion work.
 const ARTIST_ROW_PROMOTE_THRESHOLD = 5
 
-function wordCount(text: string): number {
-  return text.trim().split(/\s+/).filter(Boolean).length
-}
-
-interface LyricMoment {
-  line: string
-  start: number
-  end: number
-  lineId: number
-  songId: string
-  songTitle: string
-  artist: string
-  artwork?: string | null
-  audioUrl?: string | null
-  vibes: string[]
-}
 
 interface ArtistPreview {
   id: string
@@ -138,22 +101,6 @@ function EarnedTag({ label }: { label: 'Trending' | 'Top' }) {
   )
 }
 
-// ── Clickable vibe pill — used on Moment/Resonance cards. Replaces the
-// old permanent ALL/CHILL/HOPE/... row: instead of a filter row that's
-// always on screen, each card carries its own vibe tag, and tapping it
-// sets the shared filter. Saves the vertical space the old row cost. ──
-function VibeTagPill({ vibe, onClick }: { vibe: string; onClick: (e: React.MouseEvent) => void }) {
-  const color = vibeColor(vibe)
-  return (
-    <button onClick={onClick} style={{
-      fontFamily: 'var(--font-lora), serif', fontSize: '0.48rem', fontWeight: 700,
-      letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 9px',
-      borderRadius: '50px', background: `${color}18`, border: `1px solid ${color}40`,
-      color, cursor: 'pointer', flexShrink: 0,
-    }}>{vibe}</button>
-  )
-}
-
 // ── Section header — shared by every row ────────────────────────────────
 function RowHeader({ title, subtitle, viewMoreHref, onViewMore }: {
   title: string
@@ -186,73 +133,6 @@ function RowHeader({ title, subtitle, viewMoreHref, onViewMore }: {
   )
 }
 
-// ── Lyric Moment card — used in the horizontal row ──────────────────────
-// FIX: now shows moment.artist beneath the song title. Previously only
-// songTitle was rendered, so every card looked like it had no artist.
-function MomentCard({ moment, isPlaying, isBuffering, onClick, onPlay, onSelectVibe, onPlayNext, onAddQueue }: {
-  moment: LyricMoment
-  isPlaying: boolean
-  isBuffering?: boolean
-  onClick: () => void
-  onPlay: (e: React.MouseEvent) => void
-  onSelectVibe: (vibe: string) => void
-  onPlayNext: () => void
-  onAddQueue: () => void
-}) {
-  const cardRef = useRef<HTMLDivElement>(null)
-  useWarmAudioUrlOnVisible(moment.audioUrl, cardRef)
-  const primaryVibe = moment.vibes[0]
-  return (
-    <div
-      ref={cardRef}
-      onClick={onClick}
-      className="moment-card"
-      style={{
-        flexShrink: 0, width: '240px', scrollSnapAlign: 'start',
-        padding: '16px', background: isPlaying ? 'rgba(232,197,71,0.06)' : 'rgba(255,255,255,0.025)',
-        border: `1px solid ${isPlaying ? 'rgba(232,197,71,0.28)' : 'rgba(255,255,255,0.08)'}`,
-        borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '10px',
-        cursor: 'pointer', transition: 'border-color 200ms ease, background 200ms ease',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          {primaryVibe && (
-            <VibeTagPill vibe={primaryVibe} onClick={(e) => { e.stopPropagation(); onSelectVibe(primaryVibe) }} />
-          )}
-        </div>
-        <CardOverflowMenu
-          items={buildSnippetQueueOverflowItems({
-            canQueue: !!moment.audioUrl,
-            onPlayNext,
-            onAdd: onAddQueue,
-          })}
-        />
-      </div>
-      <p style={{
-        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.88rem',
-        color: 'var(--text)', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-line',
-        display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        minHeight: '4.2em',
-      }}>&ldquo;{moment.line}&rdquo;</p>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ minWidth: 0 }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.songTitle}</p>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{moment.artist}</p>
-        </div>
-        <button onClick={onPlay} style={{
-          width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
-          background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
-          border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
-        }}>
-          <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={15} color="var(--gold)" />
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ── Lyric Moments row ─────────────────────────────────────────────────
 function LyricMomentsSection({ moments, playingKey, bufferingKey, onOpenTakeover, onPlayMoment, onQueueMoment, onSelectVibe, selectedVibe }: {
   moments: LyricMoment[]
@@ -271,7 +151,7 @@ function LyricMomentsSection({ moments, playingKey, bufferingKey, onOpenTakeover
       <RowHeader
         title="Lyric Moments"
         subtitle="Lines picked for how they feel, not just what's playing"
-        onViewMore={() => onOpenTakeover(moments, 0)}
+        viewMoreHref="/discover/moments"
       />
 
       {preview.length === 0 ? (
@@ -281,7 +161,7 @@ function LyricMomentsSection({ moments, playingKey, bufferingKey, onOpenTakeover
       ) : (
         <div className="row-scroll">
           {preview.map((moment, i) => (
-            <MomentCard
+            <LyricMomentCard
               key={`${moment.songId}_${moment.lineId}`}
               moment={moment}
               isPlaying={playingKey === `${moment.songId}_${moment.lineId}`}
@@ -401,103 +281,6 @@ function LyricMixtapesSection({ allMoments, onOpenTakeover, onPlayMixtape, playi
   )
 }
 
-// ── Resonance card — used in the Resonance row ──────────────────────────
-function ResonanceCard({ post, isPlaying, isBuffering, onPlay, onSelectVibe, onPlayNext, onAddQueue }: {
-  post: Post
-  isPlaying: boolean
-  isBuffering?: boolean
-  onPlay: (e: React.MouseEvent) => void
-  onSelectVibe: (vibe: string) => void
-  onPlayNext: () => void
-  onAddQueue: () => void
-}) {
-  // Only shows a tag when the post's emotion happens to exist in the
-  // Discover vibe vocabulary (VIBES). Feed's emotion list includes a few
-  // values (heartbreak, rage, loneliness, sendit, letout) that Discover's
-  // filter doesn't — those posts just won't carry a clickable tag here
-  // until the two taxonomies are reconciled into one shared list.
-  const emotion = (post.emotion || '').toUpperCase()
-  const hasVibeTag = VIBES.includes(emotion)
-
-  return (
-    <Link
-      href={`/lyric-back?postId=${post.id}`}
-      style={{
-        flexShrink: 0, width: '240px', scrollSnapAlign: 'start',
-        padding: '16px', background: 'rgba(255,255,255,0.025)',
-        border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px',
-        display: 'flex', flexDirection: 'column', gap: '10px', textDecoration: 'none',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          {hasVibeTag && (
-            <VibeTagPill vibe={emotion} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSelectVibe(emotion) }} />
-          )}
-        </div>
-        <CardOverflowMenu
-          items={buildSnippetQueueOverflowItems({
-            canQueue: !!post.audioUrl && !!post.songId,
-            onPlayNext,
-            onAdd: onAddQueue,
-          })}
-        />
-      </div>
-      <p style={{
-        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.88rem',
-        color: 'var(--text)', lineHeight: 1.5, margin: 0,
-        display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        minHeight: '4.2em',
-      }}>&ldquo;{post.text}&rdquo;</p>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-          {post.knowledge?.artwork && (
-            <div style={{ width: '30px', height: '30px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
-              <img src={post.knowledge.artwork} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          )}
-          <div style={{ minWidth: 0 }}>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {post.knowledge?.song || 'Margo'}
-            </p>
-            <AuthorMeta
-              authorUid={post.authorUid}
-              fallbackName={post.username || 'listener'}
-              linkProfile={false}
-              size="compact"
-            />
-          </div>
-        </div>
-        {post.audioUrl && (
-          <button onClick={onPlay} style={{
-            width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
-            background: isPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
-            border: '1px solid rgba(232,197,71,0.25)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
-          }}>
-            <PlayPauseIcon playing={isPlaying} buffering={!!isBuffering} size={15} color="var(--gold)" />
-          </button>
-        )}
-      </div>
-    </Link>
-  )
-}
-
-// Fuzzy-matches a post's text against a song's lyric lines to recover
-// the exact start/end timestamp of the line it quotes — same matching
-// strategy as SnippetIconButton in app/feed/page.tsx. Used here so
-// Resonance can play the actual quoted moment instead of falling back
-// to the first few seconds of the song, and so it can show real cover
-// art pulled from the songs table instead of nothing.
-function matchLineInSong(song: Song | undefined, text: string | undefined) {
-  if (!song || !text) return null
-  const needle = text.toLowerCase().trim()
-  const match = song.lyricLines?.find(l =>
-    l.text.toLowerCase().includes(needle) || needle.includes(l.text.toLowerCase())
-  )
-  return match || null
-}
-
 // ── Resonance row ────────────────────────────────────────────────────
 function ResonanceSection({ posts, songs, selectedVibe, onSelectVibe }: {
   posts: Post[]
@@ -533,69 +316,21 @@ function ResonanceSection({ posts, songs, selectedVibe, onSelectVibe }: {
 
   const playResonance = (post: Post, e: React.MouseEvent) => {
     e.preventDefault()
-    if (!post.audioUrl || !post.songId) return
-
-    const song = songsById.get(post.songId)
-    let startSec = post.snippetStart
-    let endSec = post.snippetEnd
-
-    // Only fuzzy-match when the post doesn't already carry exact
-    // timestamps — this is the fix for Resonance playing the whole
-    // song: previously this fell straight to a 0–5s default whenever
-    // snippetStart/snippetEnd were missing, which is most posts.
-    if (startSec == null || endSec == null) {
-      const matched = matchLineInSong(song, post.text)
-      startSec = matched ? matched.startSec : 0
-      endSec = matched ? matched.endSec : 5
-    }
-
-    void enginePlaySnippet({
-      songId: post.songId,
-      audioUrl: post.audioUrl,
-      title: post.knowledge?.song || song?.title || '',
-      artist: post.knowledge?.artist || song?.artist || '',
-      artwork: post.knowledge?.artwork ?? song?.artwork ?? null,
-      lineIndex: 0,
-      lineText: post.text || '',
-      startSec,
-      endSec,
-      vibe: null,
-      source: 'music-resonance-row',
-    })
+    if (!post.songId) return
+    playResonancePost(post, songsById.get(post.songId))
   }
 
   const queueResonance = (post: Post, mode: 'next' | 'add') => {
     if (!requireAuth()) return
-    if (!post.audioUrl || !post.songId) return
-    const song = songsById.get(post.songId)
-    let startSec = post.snippetStart
-    let endSec = post.snippetEnd
-    if (startSec == null || endSec == null) {
-      const matched = matchLineInSong(song, post.text)
-      startSec = matched ? matched.startSec : 0
-      endSec = matched ? matched.endSec : 5
-    }
-    const item = snippetToQueueItem({
-      songId: post.songId,
-      audioUrl: post.audioUrl,
-      title: post.knowledge?.song || song?.title || '',
-      artist: post.knowledge?.artist || song?.artist || '',
-      artwork: post.knowledge?.artwork ?? song?.artwork ?? null,
-      lineIndex: 0,
-      lineText: post.text || '',
-      startSec,
-      endSec,
-      vibe: null,
-    })
-    if (mode === 'next') queuePlayNext(item)
-    else queueAdd(item)
+    if (!post.songId) return
+    queueResonancePost(post, songsById.get(post.songId), mode)
   }
 
   if (resonances.length === 0) return null
 
   return (
     <section style={{ marginBottom: '40px' }}>
-      <RowHeader title="Resonance" subtitle="What people are saying, using songs" viewMoreHref="/feed" />
+      <RowHeader title="Resonance" subtitle="What people are saying, using songs" viewMoreHref="/discover/resonance" />
       <div className="row-scroll">
         {resonances.map(post => (
           <ResonanceCard key={post.id} post={post} isPlaying={playingId === post.id} isBuffering={bufferingId === post.id} onPlay={(e) => playResonance(post, e)} onSelectVibe={onSelectVibe} onPlayNext={() => queueResonance(post, 'next')} onAddQueue={() => queueResonance(post, 'add')} />
@@ -1150,57 +885,7 @@ export default function DiscoverPage() {
   }, [])
 
   useEffect(() => {
-    const moments: LyricMoment[] = []
-    const seenRanges = new Set<string>()
-
-    momentRows.forEach((row) => {
-      if (!row.vibes || row.vibes.length === 0) return
-
-      const atoms = songAtomsBySongId[row.songId]
-      const built = atoms?.length
-        ? buildCatalogLyricUnits(atoms, row.lineIndex)
-        : buildCatalogLyricUnits(
-            [{
-              lineIndex: row.lineIndex,
-              text: row.text,
-              startSec: row.startSec,
-              endSec: row.endSec,
-              vibes: row.vibes,
-            }],
-            row.lineIndex,
-          )
-      if (!built) return
-
-      const unit =
-        wordCount(built.single.text) <= SHORT_LINE_WORDS
-          ? built.window
-          : built.single
-
-      if (wordCount(unit.text) < MIN_MOMENT_WORDS) return
-
-      const rangeKey = `${row.songId}_${unit.startLineIndex}_${unit.endLineIndex}`
-      if (seenRanges.has(rangeKey)) return
-      seenRanges.add(rangeKey)
-
-      moments.push({
-        line: unit.text,
-        lineId: unit.centerLineIndex,
-        start: unit.startSec,
-        end: unit.endSec,
-        songId: row.songId,
-        songTitle: row.songTitle,
-        artist: row.artist,
-        artwork: row.artwork,
-        audioUrl: row.audioUrl,
-        // Prefer unit union (window may carry neighbor tags); fall back to row.
-        vibes: unit.vibes.length > 0 ? unit.vibes : row.vibes,
-      })
-    })
-    for (let i = moments.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [moments[i], moments[j]] = [moments[j], moments[i]]
-    }
-    setAllMoments(moments)
+    setAllMoments(buildLyricMomentsFromRows(momentRows, songAtomsBySongId))
   }, [momentRows, songAtomsBySongId])
 
   useEffect(() => {
@@ -1239,41 +924,13 @@ export default function DiscoverPage() {
     playingRef.current = true
     setTimeout(() => { playingRef.current = false }, 80)
 
-    const queueItems = pool.filter(m => m.audioUrl).map(m => ({
-      kind: 'snippet' as const,
-      songId: m.songId, audioUrl: m.audioUrl!, title: m.songTitle, artist: m.artist,
-      artwork: m.artwork ?? null, lineIndex: m.lineId, lineText: m.line,
-      startSec: m.start, endSec: m.end, vibe: (m.vibes && m.vibes[0]) || null,
-    }))
-    const idx = queueItems.findIndex(q => q.songId === moment.songId && q.lineIndex === moment.lineId)
-    setQueue(queueItems, idx >= 0 ? idx : 0)
     setActiveMixtapeVibe(mixtapeVibe ?? null)
-
-    void enginePlaySnippet({
-      songId: moment.songId, audioUrl: moment.audioUrl, title: moment.songTitle, artist: moment.artist,
-      artwork: moment.artwork ?? null, lineIndex: moment.lineId, lineText: moment.line,
-      startSec: moment.start, endSec: moment.end, vibe: (moment.vibes && moment.vibes[0]) || null,
-      source: 'music-board',
-    })
+    playLyricMomentPool(moment, pool)
   }, [])
 
   const queueMoment = useCallback((moment: LyricMoment, mode: 'next' | 'add') => {
     if (!requireAuth()) return
-    if (!moment.audioUrl) return
-    const item = snippetToQueueItem({
-      songId: moment.songId,
-      audioUrl: moment.audioUrl,
-      title: moment.songTitle,
-      artist: moment.artist,
-      artwork: moment.artwork ?? null,
-      lineIndex: moment.lineId,
-      lineText: moment.line,
-      startSec: moment.start,
-      endSec: moment.end,
-      vibe: (moment.vibes && moment.vibes[0]) || null,
-    })
-    if (mode === 'next') queuePlayNext(item)
-    else queueAdd(item)
+    queueLyricMoment(moment, mode)
   }, [requireAuth])
 
   // FIX: tapping a Mixtape's play circle now checks whether that exact
