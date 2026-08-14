@@ -1,5 +1,5 @@
 'use client'
-import Link from 'next/link'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import { useState } from 'react'
 import type { Notification } from '@/hooks/useNotifications'
 import { useNotifications } from '@/hooks/useNotifications'
@@ -136,13 +136,13 @@ export function NotificationItem({
         background: unread ? 'rgba(232,197,71,0.06)' : 'transparent',
         borderRadius: '8px',
       }}>
-        <Link href={hrefFor(notification)} style={{ flexShrink: 0 }}>{avatar}</Link>
+        <PendingNavLink href={hrefFor(notification)} indicator="tint" style={{ flexShrink: 0, borderRadius: '50%' }}>{avatar}</PendingNavLink>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Link href={hrefFor(notification)} style={{ textDecoration: 'none' }}>
+          <PendingNavLink href={hrefFor(notification)} indicator="tint" style={{ textDecoration: 'none', borderRadius: '6px' }}>
             <p style={{ fontFamily: font, fontSize: '0.78rem', color: 'var(--text)', margin: 0, lineHeight: 1.4 }}>
               {messageFor(notification)}
             </p>
-          </Link>
+          </PendingNavLink>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '4px 0 10px' }}>
             <TypeIcon type={notification.type} />
             <RelativeTime
@@ -182,7 +182,7 @@ export function NotificationItem({
   }
 
   return (
-    <Link
+    <PendingNavLink
       href={hrefFor(notification)}
       onClick={onNavigate}
       style={{
@@ -209,6 +209,6 @@ export function NotificationItem({
       {unread && (
         <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--gold)', flexShrink: 0, marginTop: '6px' }} />
       )}
-    </Link>
+    </PendingNavLink>
   )
 }

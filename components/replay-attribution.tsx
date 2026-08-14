@@ -1,5 +1,5 @@
 'use client'
-import Link from 'next/link'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import { ReplayIcon } from '@/components/icons'
 import { PostCard, type PostCardProps } from '@/components/post-card'
 import { useState } from 'react'
@@ -72,12 +72,13 @@ export function ReplayAttribution({
         }}>
           Replayed by{' '}
           {username ? (
-            <Link
+            <PendingNavLink
               href={`/profile/${username}`}
+              indicator="tint"
               style={{ color: 'var(--gold)', textDecoration: 'none' }}
             >
               {label}
-            </Link>
+            </PendingNavLink>
           ) : (
             <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
           )}

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { PendingNavLink } from '@/components/pending-nav-link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useSongs, Song } from '@/hooks/useSongs'
@@ -442,7 +443,7 @@ function ArtistsSection() {
       ) : (
         <div className="row-scroll">
           {artists.map(artist => (
-            <Link key={artist.id} href={`/profile/${artist.username || ''}`} style={{ flexShrink: 0, width: '96px', textAlign: 'center', textDecoration: 'none' }}>
+            <PendingNavLink key={artist.id} href={`/profile/${artist.username || ''}`} style={{ flexShrink: 0, width: '96px', textAlign: 'center', textDecoration: 'none', borderRadius: '12px' }}>
               <div style={{ width: '84px', height: '84px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 10px', border: '1px solid rgba(232,197,71,0.25)', background: 'linear-gradient(135deg, rgba(232,197,71,0.2), rgba(232,197,71,0.05))' }}>
                 {artist.avatarUrl ? (
                   <img src={artist.avatarUrl} alt={artist.displayName || artist.username || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -457,7 +458,7 @@ function ArtistsSection() {
               <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
                 {artist.displayName || artist.username}
               </p>
-            </Link>
+            </PendingNavLink>
           ))}
         </div>
       )}
@@ -802,12 +803,12 @@ function SearchResults({
           <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>Matching lyrics</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {matchedLines.map((m, i) => (
-              <Link key={i} href={`/song/${m.songId}?t=${Math.floor(m.start)}`} style={{ textDecoration: 'none' }}>
+              <PendingNavLink key={i} href={`/song/${m.songId}?t=${Math.floor(m.start)}`} style={{ textDecoration: 'none', borderRadius: '12px' }}>
                 <div style={{ padding: '14px 18px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px' }}>
                   <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)', marginBottom: '6px' }}>&ldquo;{m.line}&rdquo;</p>
                   <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>{m.songTitle} · {m.artist}</p>
                 </div>
-              </Link>
+              </PendingNavLink>
             ))}
           </div>
         </section>

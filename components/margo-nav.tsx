@@ -10,6 +10,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { HubIconButton, LibraryNavLink } from '@/components/hub-menu'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesAppNav } from '@/lib/chrome-mode'
+import { PendingNavLink } from '@/components/pending-nav-link'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -262,10 +263,10 @@ export function MargoNav() {
                     padding: '6px', zIndex: 60,
                   }}>
                     {avatarDropdownItems.map(({ href, label }) => (
-                      <Link
+                      <PendingNavLink
                         key={href}
                         href={href}
-                        onClick={() => setAvatarMenuOpen(false)}
+                        indicator="tint"
                         style={{
                           display: 'flex', alignItems: 'center',
                           minHeight: 'var(--margo-touch-min)',
@@ -278,7 +279,7 @@ export function MargoNav() {
                         }}
                       >
                         {label}
-                      </Link>
+                      </PendingNavLink>
                     ))}
                     <div style={{ height: '1px', background: 'var(--border)', margin: '6px 4px' }} />
                     <button
