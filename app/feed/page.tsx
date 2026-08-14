@@ -40,10 +40,11 @@ export default function FeedPage() {
   const { posts: livePosts, loading, reload } = usePosts({ enabled: feedLive })
   const {
     items: posts,
+    seeded,
     pendingCount,
     flushPending,
     applyImmediate,
-  } = useNewItemsBuffer(livePosts)
+  } = useNewItemsBuffer(livePosts, { settleEmpty: !loading })
   const { songCount, artistCount, openSongs, openArtists } = useContentUpdates({
     enabled: feedLive,
   })
@@ -493,6 +494,7 @@ export default function FeedPage() {
     setSelectedSort(prev => (prev === rank ? 'NEW' : rank))
   }
 
+  const listReady = seeded && !loading
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
   return (
@@ -578,9 +580,9 @@ export default function FeedPage() {
       </div>
 
       <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px var(--margo-page-padding-bottom)' }}>
-        {loading && <FeedPostSkeletonList count={4} />}
+        {!listReady && <FeedPostSkeletonList count={4} />}
 
-        {!loading && feedItems.length === 0 && !(searchQuery.trim() && people.length > 0) && (
+        {listReady && feedItems.length === 0 && !(searchQuery.trim() && people.length > 0) && (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '16px' }}>
               {searchQuery ? `No lyrics found for "${searchQuery}"` : `No ${selectedVibe === 'ALL' ? '' : selectedVibe.toLowerCase()} lyrics yet`}
@@ -623,7 +625,7 @@ export default function FeedPage() {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {feedItems.map(item => {
+          {listReady && feedItems.map(item => {
             const post = item.post
             const cardProps = {
               post,
@@ -658,7 +660,7 @@ export default function FeedPage() {
           })}
         </div>
 
-        {!loading && feedItems.length > 0 && (
+        {listReady && feedItems.length > 0 && (
           <div style={{ textAlign: 'center', marginTop: '48px' }}>
             <div style={{ height: '1px', width: '96px', background: 'linear-gradient(to right, transparent, var(--border), transparent)', margin: '0 auto 16px' }} />
             <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--text-muted)' }}>you&apos;ve felt them all</p>

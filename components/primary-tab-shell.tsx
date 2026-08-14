@@ -385,7 +385,8 @@ export function PrimaryTabShell({
 
     const onScroll = () => {
       if (el.getAttribute('data-margo-primary-tab-active') !== '1') return
-      if (getComputedStyle(el).display === 'none') return
+      const cs = getComputedStyle(el)
+      if (cs.display === 'none' || cs.visibility === 'hidden') return
       persistScroll(frozenScrollRef.current, tabId, el.scrollTop)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
@@ -441,7 +442,7 @@ export function PrimaryTabShell({
               aria-hidden={!isCommittedActive}
               style={{
                 ...paneStyle(painted, isCommittedActive),
-                display: onPrimarySurface ? undefined : 'none',
+                visibility: onPrimarySurface ? undefined : 'hidden',
               }}
             >
               {node}

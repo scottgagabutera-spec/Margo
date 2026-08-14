@@ -1,11 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { scrollActiveTo } from '@/components/primary-tab-shell'
 
 export interface UseNewItemsBufferResult<T extends { id: string }> {
   /** Stable list shown in the UI (may lag live while scrolled). */
   items: T[]
+  /** False until the first real snapshot (or a confirmed empty live list). */
+  seeded: boolean
   /** Count of brand-new items waiting to be revealed. */
   pendingCount: number
   /** Merge pending into the list and scroll to top (pill tap). */
@@ -28,26 +30,29 @@ export interface UseNewItemsBufferResult<T extends { id: string }> {
  */
 export function useNewItemsBuffer<T extends { id: string }>(
   liveItems: T[],
-  _options?: { scrollThresholdPx?: number }
+  options?: { scrollThresholdPx?: number; settleEmpty?: boolean }
 ): UseNewItemsBufferResult<T> {
+  const settleEmpty = options?.settleEmpty === true
   const liveRef = useRef(liveItems)
   liveRef.current = liveItems
 
   const [displayed, setDisplayed] = useState<T[]>(liveItems)
   const [pendingIds, setPendingIds] = useState<string[]>([])
+  const [seeded, setSeeded] = useState(liveItems.length > 0)
   const displayedRef = useRef(displayed)
   displayedRef.current = displayed
-  const seededRef = useRef(false)
+  const seededRef = useRef(seeded)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const live = liveItems
 
     if (!seededRef.current) {
-      if (live.length === 0) return
+      if (live.length === 0 && !settleEmpty) return
       seededRef.current = true
       displayedRef.current = live
       setDisplayed(live)
       setPendingIds([])
+      setSeeded(true)
       return
     }
 
@@ -83,25 +88,30 @@ export function useNewItemsBuffer<T extends { id: string }>(
       for (const item of brandNew) next.add(item.id)
       return [...next].filter((id) => liveById.has(id))
     })
-  }, [liveItems])
+  }, [liveItems, settleEmpty])
 
   const flushPending = useCallback(() => {
     const next = liveRef.current
     displayedRef.current = next
+    seededRef.current = true
     setDisplayed(next)
     setPendingIds([])
+    setSeeded(true)
     scrollActiveTo(0, 'smooth')
   }, [])
 
   const applyImmediate = useCallback((snapshot?: T[]) => {
     const next = snapshot ?? liveRef.current
     displayedRef.current = next
+    seededRef.current = true
     setDisplayed(next)
     setPendingIds([])
+    setSeeded(true)
   }, [])
 
   return {
     items: displayed,
+    seeded,
     pendingCount: pendingIds.length,
     flushPending,
     applyImmediate,

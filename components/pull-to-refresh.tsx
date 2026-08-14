@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { LoadingRing } from '@/components/loading-ring'
 import { RefreshArrowIcon } from '@/components/icons'
 import { readActiveScrollTop } from '@/components/primary-tab-shell'
@@ -33,6 +34,8 @@ export function PullToRefresh({
 }: PullToRefreshProps) {
   const [pull, setPull] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
   const startY = useRef(0)
   const pulling = useRef(false)
   const pullRef = useRef(0)
@@ -118,17 +121,16 @@ export function PullToRefresh({
   const progress = Math.min(1, pull / THRESHOLD)
   const ready = pull >= THRESHOLD && !refreshing
 
-  return (
-    <>
+  const indicator = (
       <div
         aria-hidden={!refreshing && pull === 0}
         aria-label={refreshing ? 'Refreshing' : ready ? 'Release to refresh' : 'Pull to refresh'}
         style={{
           position: 'fixed',
-          top: 0,
+          top: 'var(--nav-height, 72px)',
           left: 0,
           right: 0,
-          zIndex: 60,
+          zIndex: 40,
           height: pull,
           display: 'flex',
           alignItems: 'flex-end',
@@ -177,6 +179,11 @@ export function PullToRefresh({
           </div>
         </div>
       </div>
+  )
+
+  return (
+    <>
+      {mounted ? createPortal(indicator, document.body) : null}
       {children}
     </>
   )
