@@ -16,7 +16,7 @@ const DEFAULT_TOP_PX = 80
  */
 export function useIsNearTop(thresholdPx: number = DEFAULT_TOP_PX) {
   const pathname = usePathname()
-  const [nearTop, setNearTop] = useState(true)
+  const [nearTop, setNearTop] = useState(() => readActiveScrollTop() <= thresholdPx)
 
   useEffect(() => {
     const update = () => setNearTop(readActiveScrollTop() <= thresholdPx)
@@ -79,6 +79,7 @@ export function useNewItemsBuffer<T extends { id: string }>(
     const live = liveItems
 
     if (!seededRef.current) {
+      if (live.length === 0) return
       seededRef.current = true
       displayedRef.current = live
       setDisplayed(live)
@@ -87,6 +88,8 @@ export function useNewItemsBuffer<T extends { id: string }>(
     }
 
     const prev = displayedRef.current
+    if (live.length === 0 && prev.length > 0) return
+
     if (prev.length === 0) {
       displayedRef.current = live
       setDisplayed(live)
@@ -110,8 +113,8 @@ export function useNewItemsBuffer<T extends { id: string }>(
     }
 
     if (nearTopRef.current) {
-      displayedRef.current = live
-      setDisplayed(live)
+      displayedRef.current = [...brandNew, ...refreshed]
+      setDisplayed(displayedRef.current)
       setPendingIds([])
       return
     }

@@ -1,13 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
-import MargoLogo from '@/components/MargoLogo'
 import { LoadingRing } from '@/components/loading-ring'
+import { RefreshArrowIcon } from '@/components/icons'
 import { readActiveScrollTop } from '@/components/primary-tab-shell'
 
 const THRESHOLD = 80
 const MAX_PULL = 130
-const font = 'var(--font-lora), serif'
 
 interface PullToRefreshProps {
   onRefresh: () => void | Promise<void>
@@ -21,7 +20,7 @@ interface PullToRefreshProps {
 /**
  * Lightweight pull-to-refresh for primary scroll pages.
  * Touch-driven (does not rely on browser overscroll bounce).
- * Indicator: static Margo mark + LoadingRing (progress / ready / spin).
+ * Indicator: circular refresh arrow (pull) → gold ring spinner (refresh).
  *
  * "At top" uses the active primary-tab pane scrollTop when keepalive
  * scrollports are mounted; falls back to window on full-nav routes.
@@ -118,12 +117,12 @@ export function PullToRefresh({
 
   const progress = Math.min(1, pull / THRESHOLD)
   const ready = pull >= THRESHOLD && !refreshing
-  const ringState = refreshing ? 'spinning' : ready ? 'ready' : 'progress'
 
   return (
     <>
       <div
-        aria-hidden
+        aria-hidden={!refreshing && pull === 0}
+        aria-label={refreshing ? 'Refreshing' : ready ? 'Release to refresh' : 'Pull to refresh'}
         style={{
           position: 'fixed',
           top: 0,
@@ -142,10 +141,9 @@ export function PullToRefresh({
         <div
           style={{
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: '8px',
-            paddingBottom: '12px',
+            justifyContent: 'center',
+            paddingBottom: '10px',
             opacity: Math.max(progress, refreshing ? 1 : 0),
             transform: `scale(${0.75 + progress * 0.25}) translateY(${(1 - progress) * 8}px)`,
             transition: refreshing ? 'opacity 150ms var(--ease-out)' : undefined,
@@ -165,26 +163,18 @@ export function PullToRefresh({
               transition: 'background 150ms var(--ease-out), border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out)',
             }}
           >
-            <LoadingRing
-              size={36}
-              strokeWidth={2}
-              state={ringState}
-              progress={progress}
-            >
-              <MargoLogo tier="mark" size={18} />
-            </LoadingRing>
+            {refreshing ? (
+              <LoadingRing size={22} strokeWidth={2} state="spinning" />
+            ) : (
+              <span style={{
+                display: 'flex',
+                transform: `rotate(${progress * 180}deg)`,
+                transition: ready ? 'transform 150ms var(--ease-out)' : undefined,
+              }}>
+                <RefreshArrowIcon size={20} color="var(--gold)" />
+              </span>
+            )}
           </div>
-          <span
-            style={{
-              fontFamily: font,
-              fontSize: '0.6rem',
-              letterSpacing: '1.5px',
-              textTransform: 'uppercase',
-              color: 'var(--gold)',
-            }}
-          >
-            {refreshing ? 'Refreshing…' : ready ? 'Release' : 'Pull to refresh'}
-          </span>
         </div>
       </div>
       {children}
