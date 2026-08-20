@@ -542,7 +542,7 @@ function ComposeInner() {
             {isPrivateSave ? 'Saved privately.' : 'Send this to someone.'}
           </p>
           <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '32px', letterSpacing: '0.5px' }}>
-            {isPrivateSave ? 'Only you can see this — it stays off the Feed.' : 'Want to share it beyond Margo?'}
+            {isPrivateSave ? 'Only you can see this — it stays off the Feed.' : 'This Moment is ready to send.'}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
             <button
@@ -553,7 +553,7 @@ function ComposeInner() {
                 fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
                 border: 'none', cursor: 'pointer', boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
               }}
-            >Share as Card</button>
+            >{isPrivateSave ? 'Share as Card' : 'Send as card'}</button>
             <button
               onClick={() => router.push(isPrivateSave ? (identity?.username ? '/profile/' + identity.username : '/feed') : '/feed')}
               style={{
@@ -566,10 +566,7 @@ function ComposeInner() {
         </div>
         <CardExportModal
           open={showExport}
-          onOpenChange={(o) => {
-            setShowExport(o)
-            if (!o) router.push(isPrivateSave ? (identity?.username ? '/profile/' + identity.username : '/feed') : '/feed')
-          }}
+          onOpenChange={setShowExport}
           lyric={lyric} song={songName} artist={artistName} postId={postedId || undefined}
         />
       </main>
