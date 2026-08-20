@@ -8,7 +8,7 @@ interface KeyboardSafeCtaBarProps {
   children: ReactNode
   /**
    * When true (keyboard open / tab bar hidden), sit on --margo-keyboard-inset.
-   * When false, clear the mobile tab bar via --margo-tabbar-h.
+   * When false, clear tab bar + mini-player via --margo-page-bottom.
    */
   keyboardOpen?: boolean
 }
@@ -17,6 +17,12 @@ interface KeyboardSafeCtaBarProps {
  * Pins primary actions above the on-screen keyboard using
  * --margo-keyboard-inset from useVisualViewport.
  * Reusable for Compose and future form flows.
+ *
+ * When the keyboard is closed, pad by --margo-page-bottom (tab bar +
+ * mini-player) so Continue / primary actions stay above the player
+ * overlay instead of sitting in the same band (player z-index is higher).
+ * When the keyboard is open the tab bar is already height 0 and this bar
+ * sits on the keyboard inset, so extra chrome padding is omitted.
  */
 export function KeyboardSafeCtaBar({ children, keyboardOpen = false }: KeyboardSafeCtaBarProps) {
   const style: CSSProperties = {
@@ -30,7 +36,7 @@ export function KeyboardSafeCtaBar({ children, keyboardOpen = false }: KeyboardS
     paddingRight: '24px',
     paddingBottom: keyboardOpen
       ? '12px'
-      : 'calc(12px + var(--margo-tabbar-h, 0px))',
+      : 'calc(12px + var(--margo-page-bottom, var(--margo-tabbar-h, 0px)))',
     background: 'linear-gradient(to top, var(--bg) 55%, transparent)',
     pointerEvents: 'none',
     transition: 'bottom 120ms var(--ease-out), padding-bottom 120ms var(--ease-out)',
