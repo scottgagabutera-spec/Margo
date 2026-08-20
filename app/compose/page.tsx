@@ -701,6 +701,9 @@ function ComposeInner() {
                 loading={linesLoading}
                 songTitle={songName}
                 artistName={artistName}
+                audioUrl={linkedAudioUrl}
+                songId={linkedSongId}
+                artwork={selectedSong?.artwork || null}
                 stickySkip
                 onPick={(line) => {
                   setSnippetStart(line.startSec)
