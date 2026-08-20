@@ -12,6 +12,7 @@ import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/sear
 import { useIdentity } from '@/hooks/useIdentity'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
 import { CardExportModal } from '@/components/card-export-modal'
+import { ComposeSendTo } from '@/components/compose-send-to'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
@@ -123,6 +124,8 @@ function ComposeInner() {
   const [suggestedVibe, setSuggestedVibe] = useState<Vibe | null>(null)
   const [emotionLoading, setEmotionLoading] = useState(false)
   const [showExport, setShowExport] = useState(false)
+  const [showSendTo, setShowSendTo] = useState(false)
+  const [sentToName, setSentToName] = useState<string | null>(null)
   const [postedId, setPostedId] = useState<string | null>(null)
   const [completionMode, setCompletionMode] = useState<'public' | 'private' | null>(null)
   const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
@@ -520,6 +523,8 @@ function ComposeInner() {
     setPostedId(null)
     setCompletionMode(null)
     setShowExport(false)
+    setShowSendTo(false)
+    setSentToName(null)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
     setSnippetStart(null)
@@ -542,24 +547,54 @@ function ComposeInner() {
             {isPrivateSave ? 'Saved privately.' : 'Send this to someone.'}
           </p>
           <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '32px', letterSpacing: '0.5px' }}>
-            {isPrivateSave ? 'Only you can see this — it stays off the Feed.' : 'This Moment is ready to send.'}
+            {isPrivateSave
+              ? 'Only you can see this — it stays off the Feed.'
+              : (sentToName ? 'Sent to ' + sentToName + '.' : 'This Moment is ready to send.')}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+            {!isPrivateSave && (
+              <button
+                type="button"
+                onClick={() => { if (postedId) setShowSendTo(true) }}
+                style={{
+                  padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
+                  background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
+                  borderRadius: '50px', fontFamily: font, fontWeight: 700,
+                  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+                  border: 'none', cursor: postedId ? 'pointer' : 'default',
+                  boxShadow: '0 6px 28px var(--gold-glow)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxSizing: 'border-box',
+                  opacity: postedId ? 1 : 0.5,
+                }}
+              >Send to someone</button>
+            )}
             <button
+              type="button"
               onClick={() => { setShowExport(true) }}
               style={{
-                padding: '15px 28px', background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
+                padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
+                background: isPrivateSave ? 'var(--gold)' : 'transparent',
+                color: isPrivateSave ? 'var(--text-on-gold, var(--bg))' : 'var(--gold)',
                 borderRadius: '50px', fontFamily: font, fontWeight: 700,
                 fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
-                border: 'none', cursor: 'pointer', boxShadow: '0 6px 28px rgba(232,197,71,0.28)',
+                border: isPrivateSave ? 'none' : '1px solid var(--gold-border)',
+                cursor: 'pointer',
+                boxShadow: isPrivateSave ? '0 6px 28px var(--gold-glow)' : 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxSizing: 'border-box',
               }}
             >{isPrivateSave ? 'Share as Card' : 'Send as card'}</button>
             <button
+              type="button"
               onClick={() => router.push(isPrivateSave ? (identity?.username ? '/profile/' + identity.username : '/feed') : '/feed')}
               style={{
-                padding: '13px 28px', background: 'transparent', color: 'var(--text-secondary, var(--text-2))',
+                padding: '13px 28px', minHeight: 'var(--margo-touch-min)',
+                background: 'transparent', color: 'var(--text-secondary, var(--text-2))',
                 border: '1px solid var(--border-hi)', borderRadius: '50px', fontFamily: font,
                 fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxSizing: 'border-box',
               }}
             >{isPrivateSave ? 'Back to your profile' : 'See it on the Feed'}</button>
           </div>
@@ -569,6 +604,17 @@ function ComposeInner() {
           onOpenChange={setShowExport}
           lyric={lyric} song={songName} artist={artistName} postId={postedId || undefined}
         />
+        {!isPrivateSave && postedId && (
+          <ComposeSendTo
+            open={showSendTo}
+            onOpenChange={setShowSendTo}
+            postId={postedId}
+            lyric={lyric}
+            song={songName}
+            artist={artistName}
+            onSent={setSentToName}
+          />
+        )}
       </main>
     )
   }
