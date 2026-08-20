@@ -26,7 +26,7 @@ export default function AboutPage() {
             <p style={{ marginBottom: '1.4em' }}>Margo is a music first social space built for that. A place where conversation starts with a line from a song.</p>
 
             <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>Talk in lyrics</h2>
-            <p style={{ marginBottom: '1.4em' }}>Post a lyric. Tag the feeling behind it. Resonate when someone else's line hits. Reply with a Lyric Back so the conversation stays in music. Replay what stays with you.</p>
+            <p style={{ marginBottom: '1.4em' }}>Find a line. Hear it. Send it. Pick a line that says how you feel, hear that part of the song, and send it to someone. If they want to reply, they send a line back. That is a Lyric Back. No comment box.</p>
             <p style={{ marginBottom: '1.4em' }}>When you find something worth keeping, export a card, copy the text, or share a link back to Margo.</p>
 
             <h2 style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1.15rem', fontWeight: 600, fontStyle: 'italic', color: 'var(--text)', margin: '2.4em 0 0.8em' }}>A real social space</h2>

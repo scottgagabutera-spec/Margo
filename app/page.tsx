@@ -21,7 +21,7 @@ const FOOTER_EXPLORE = [
 ] as const
 
 const FOOTER_TALK = [
-  { label: 'Share a Lyric', href: '/compose' },
+  { label: 'Send a line', href: '/compose' },
 ] as const
 
 const FOOTER_ARTISTS = [
@@ -285,9 +285,9 @@ function Exchange({ pair, spacing = '40px' }: { pair: ExchangePair; spacing?: st
 }
 
 const HOW_IT_WORKS = [
-  { n: '1', title: 'Post a lyric', text: 'Pick a line that says how you feel. Tag the vibe.' },
-  { n: '2', title: 'Get a Lyric Back', text: 'Someone replies with a line of their own.' },
-  { n: '3', title: 'Discover the artist', text: 'Follow, listen, hear the whole song.' },
+  { n: '1', title: 'Find a line', text: 'Pick a line that says how you feel. Tag the vibe.' },
+  { n: '2', title: 'Hear it', text: 'Tap the line and hear that part of the song.' },
+  { n: '3', title: 'Send it', text: 'Send it to someone.' },
 ];
 
 export default function Home() {
@@ -452,7 +452,7 @@ export default function Home() {
         </div>
 
         <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'10px', width:'100%', maxWidth:'290px', marginBottom:'16px'}}>
-          <a href="/feed" style={{
+          <a href="/compose" style={{
             padding:'17px 28px',
             background:'var(--gold)',
             color:'var(--bg)',
@@ -470,7 +470,7 @@ export default function Home() {
             justifyContent:'center',
             boxShadow:'0 6px 28px rgba(232,197,71,0.28)',
             transition:'all 150ms ease',
-          }}>See What&apos;s Live</a>
+          }}>Send a line</a>
         </div>
       </section>
 

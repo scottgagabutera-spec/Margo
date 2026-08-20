@@ -1,20 +1,20 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Share a Lyric — Say It With a Song',
+  title: 'Send a line — Say It With a Song',
   description:
-    'Find a lyric that says what you feel. Search any song, pick your emotion, and share it on Margo. Say it with a song.',
+    'Find a line that says what you feel. Hear it, then send it to someone.',
   alternates: { canonical: 'https://trymargo.com/compose' },
   openGraph: {
-    title: 'Share a Lyric on Margo',
-    description: 'Find a lyric that says what you feel. Search any song, pick your emotion, and post it on Margo.',
+    title: 'Send a line on Margo',
+    description: 'Find a line that says what you feel. Hear it, then send it to someone.',
     url: 'https://trymargo.com/compose',
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Share a Lyric on Margo',
-    description: 'Say it with a song. Find a lyric, pick your emotion, post it.',
+    title: 'Send a line on Margo',
+    description: 'Find a line. Hear it. Send it to someone.',
     images: ['/og-image.png'],
   },
 }

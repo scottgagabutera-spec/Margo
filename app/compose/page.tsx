@@ -539,7 +539,7 @@ function ComposeInner() {
       <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', paddingTop: '80px' }}>
           <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--text)', marginBottom: '8px' }}>
-            {isPrivateSave ? 'Saved privately.' : 'Your lyric is live.'}
+            {isPrivateSave ? 'Saved privately.' : 'Send this to someone.'}
           </p>
           <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '32px', letterSpacing: '0.5px' }}>
             {isPrivateSave ? 'Only you can see this — it stays off the Feed.' : 'Want to share it beyond Margo?'}
