@@ -837,7 +837,7 @@ function ComposeInner() {
           <div style={{ display: step === 4 ? 'block' : 'none' }}>
             <button style={backBtnStyle} onClick={() => setStep(3)}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Ready to share?</h1>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Ready to send?</h1>
               <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                 {committedLines.length > 0 ? 'Your multi-line moment is set to go' : 'Your lyric is set to go'}
               </p>
@@ -874,7 +874,7 @@ function ComposeInner() {
                 {!editingName ? (
                   <>
                     <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text)', marginBottom: '4px' }}>
-                      You'll post as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
+                      You'll send as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
                     </p>
                     <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
                       We gave you this name — it's yours on Margo. You can change how it's shown anytime.
@@ -978,7 +978,7 @@ function ComposeInner() {
               onClick={() => handlePost(false)}
               disabled={posting || identityLoading}
               style={{ ...keyboardSafePrimaryBtnStyle, opacity: posting ? 0.7 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
-            >{posting ? 'Posting…' : 'Post to Feed'}</button>
+            >{posting ? 'Sending…' : 'Send'}</button>
             <button
               type="button"
               onClick={() => handlePost(true)}
