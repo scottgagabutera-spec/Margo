@@ -16,7 +16,8 @@ import {
   ShareIcon,
 } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
-import { EditPostModal } from '@/components/edit-post-modal'
+import { EditMomentModal } from '@/components/edit-moment-modal'
+import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
 import {
   playSnippet,
   stop,
@@ -449,6 +450,8 @@ export function PostCard({
   const cardRef = useRef<HTMLDivElement>(null)
   const isOwner = !!user?.id && !!post.authorUid && post.authorUid === user.id
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deletedLocally, setDeletedLocally] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportBusy, setReportBusy] = useState(false)
@@ -509,6 +512,13 @@ export function PostCard({
 
   const rawAvatarUrl = (post.authorAvatarUrl || authorProfile?.avatarUrl || '').trim()
   const avatarUrl = rawAvatarUrl && !avatarBroken ? rawAvatarUrl : null
+
+  // Optimistic — the server delete already succeeded by the time this is
+  // set. Other open surfaces reconcile via their own Realtime subscription
+  // (usePosts/useEchoes already listen for postgres_changes on posts).
+  if (deletedLocally) {
+    return null
+  }
 
   if (hiddenLocally && isCompact) {
     return (
@@ -790,11 +800,18 @@ export function PostCard({
                       }}
                     >{hideBusy ? 'Hiding…' : 'Hide reply'}</button>
                   )}
-                  {isOwner && !isCompact && (
-                    <p style={{
-                      margin: 0, padding: '10px 14px', fontFamily: 'var(--font-lora), serif',
-                      fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic',
-                    }}>Use edit to change this lyric.</p>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setMenuOpen(false); setDeleteOpen(true) }}
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'left',
+                        padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
+                        color: '#ff6b6b', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                        cursor: 'pointer', borderRadius: '8px',
+                      }}
+                    >Delete</button>
                   )}
                   {reportMsg && (
                     <p style={{
@@ -875,13 +892,20 @@ export function PostCard({
       </div>
 
       {isOwner && (
-        <EditPostModal
+        <EditMomentModal
           open={editOpen}
           onOpenChange={setEditOpen}
           postId={post.id}
-          initialText={post.text || ''}
-          songId={post.songId || null}
+          lines={resolveMomentLines(post)}
           echoCount={echoCount}
+        />
+      )}
+      {isOwner && (
+        <DeleteMomentDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          postId={post.id}
+          onDeleted={() => setDeletedLocally(true)}
         />
       )}
 
