@@ -88,19 +88,36 @@ function resolveGeistFontFamily(): string {
   return v ? `${v}, sans-serif` : 'sans-serif'
 }
 
+const MARGO_GOLD = '#E8C547'
+const MARGO_INK = '#0B0B0D'
+
 /* ─── Draw the Margo Symbol on canvas (Tier 2 — card-export rule) ─────
- * Card exports use the Symbol only: gold circle + dark M-waveform + dash.
- * No wordmark — MARGO_BRAND.md's logo-usage table specifies Symbol (not
- * Lockup) for card export. Colors are the canonical brand constants,
- * never derived from the poster theme — the mark must read the same way
- * on every background, per "Never recolor or redraw." (Previously this
- * function drew the full Lockup, including the wordmark, and filled the
- * circle with the theme's `accent`, which for the gold theme is dark —
- * producing a dark circle with a dark M on top of it, i.e. the M
- * "disappearing" that prompted this fix.) */
-function drawMargoSymbol(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
-  const MARGO_GOLD = '#E8C547'
-  const MARGO_INK = '#0B0B0D'
+ * Card exports use the Symbol only: circle + M-waveform + dash. No
+ * wordmark — MARGO_BRAND.md's logo-usage table specifies Symbol (not
+ * Lockup) for card export, and "trymargo.com" already carries the brand
+ * cue in a more socially useful (typeable/linkable) form than a second,
+ * redundant wordmark would.
+ *
+ * Two canonical, brand-approved treatments — not a random recolor:
+ *   'on-dark'  — gold circle (#E8C547), dark M/dash (#0B0B0D). The
+ *                literal brand mark, for dark export backgrounds.
+ *   'on-light' — inverted: dark circle (#0B0B0D), gold M/dash (#E8C547),
+ *                for light/gold export backgrounds. Same two canonical
+ *                colors, same construction, only which element carries
+ *                which color changes — this is not a new color, and it's
+ *                the same "dark ink on light bg, gold on dark bg" rule
+ *                the trymargo.com watermark text already follows a few
+ *                lines below. Previously the circle was always filled
+ *                with the theme's `accent` (dark for the gold theme),
+ *                producing a dark circle with the already-dark M drawn
+ *                on top of it — zero internal contrast, which is why the
+ *                mark read as "lost" on gold exports. Inverting for
+ *                light backgrounds gives the mark its own contrast
+ *                against any background instead of relying on alpha
+ *                blending to save a same-hue-as-background circle. */
+function drawMargoSymbol(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, variant: 'on-dark' | 'on-light' = 'on-dark') {
+  const circleColor = variant === 'on-light' ? MARGO_INK : MARGO_GOLD
+  const markColor = variant === 'on-light' ? MARGO_GOLD : MARGO_INK
   const r = size / 2
   const cx = x + r, cy = y + r
   const sc = size / 80
@@ -108,9 +125,9 @@ function drawMargoSymbol(ctx: CanvasRenderingContext2D, x: number, y: number, si
   ctx.save()
   ctx.beginPath()
   ctx.arc(cx, cy, r, 0, Math.PI * 2)
-  ctx.fillStyle = MARGO_GOLD
+  ctx.fillStyle = circleColor
   ctx.fill()
-  ctx.strokeStyle = MARGO_INK
+  ctx.strokeStyle = markColor
   ctx.lineWidth = 5 * sc
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
@@ -124,7 +141,7 @@ function drawMargoSymbol(ctx: CanvasRenderingContext2D, x: number, y: number, si
   ctx.lineTo(cx + (63 - 40) * sc, cy + (57 - 40) * sc)
   ctx.stroke()
   // Dash
-  ctx.fillStyle = MARGO_INK
+  ctx.fillStyle = markColor
   ctx.globalAlpha = 0.55
   const dw = 10 * sc, dh = 3.5 * sc
   ctx.beginPath()
@@ -602,10 +619,10 @@ async function drawMomentPoster(
   ctx.textBaseline = 'middle'
   ctx.fillText('trymargo.com', W / 2, H - Math.round(bottomBandH * 0.42))
 
-  // Margo Symbol — bottom-left, ghost opacity per brand rule, canonical
-  // gold + dark colors regardless of theme (see drawMargoSymbol).
+  // Margo Symbol — bottom-left, ghost opacity per brand rule, background-
+  // aware canonical treatment (see drawMargoSymbol).
   ctx.globalAlpha = 0.18
-  drawMargoSymbol(ctx, logoPad, H - logoPad - markSize, markSize)
+  drawMargoSymbol(ctx, logoPad, H - logoPad - markSize, markSize, light ? 'on-light' : 'on-dark')
   ctx.globalAlpha = 1
 }
 
@@ -640,12 +657,12 @@ async function drawDualCard(
   ctx.fillStyle = vig
   ctx.fillRect(0, 0, W, H)
 
-  // Margo Symbol — top left, Symbol only (no wordmark), canonical colors
+  // Margo Symbol — top left, Symbol only (no wordmark), background-aware
   const logoBase = Math.min(W, H)
   const markSize = Math.round(logoBase * 0.028)
   const logoPad = Math.round(logoBase * 0.052)
   ctx.globalAlpha = 0.28
-  drawMargoSymbol(ctx, logoPad, logoPad, markSize)
+  drawMargoSymbol(ctx, logoPad, logoPad, markSize, isLight ? 'on-light' : 'on-dark')
   ctx.globalAlpha = 1
 
   // Layout
@@ -998,12 +1015,27 @@ export function CardExportModal({
     color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase',
   }
 
+  // Compact-but-premium button base: touch-target height comes from
+  // minHeight, not padding, so tightening padding never drops below the
+  // 44px accessible minimum — the goal is less air AROUND controls, not
+  // smaller tap targets.
+  const btnBase: React.CSSProperties = {
+    minHeight: 'var(--margo-touch-min)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: '0 14px', borderRadius: '50px', fontFamily: 'var(--font-lora), serif',
+    fontSize: '0.58rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+    boxSizing: 'border-box',
+  }
+
   return (
     <div
       style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(7,6,10,0.88)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0' }}
       onClick={() => onOpenChange(false)}
     >
-      {/* Sheet */}
+      {/* Sheet — the poster gets the space; chrome around it stays tight so
+          this fits a phone viewport without the user scrolling past
+          buttons just to reach the next control. Outer scroll stays only
+          as a fallback for content that genuinely can't fit (e.g. a
+          multi-line carousel on a very short viewport). */}
       <div
         onClick={e => e.stopPropagation()}
         style={{
@@ -1012,17 +1044,16 @@ export function CardExportModal({
           border: '1px solid rgba(255,255,255,0.07)',
           borderBottom: 'none',
           borderRadius: '24px 24px 0 0',
-          /* 32px content pad + live tab bar / mini-player / safe-area clearance */
-          padding: '0 0 calc(32px + var(--margo-page-bottom))',
+          padding: '0 0 calc(14px + var(--margo-page-bottom))',
           display: 'flex', flexDirection: 'column',
-          maxHeight: '92dvh', overflowY: 'auto',
+          maxHeight: '94dvh', overflowY: 'auto',
         }}
       >
         {/* Handle */}
-        <div style={{ width: '36px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', margin: '12px auto 0', flexShrink: 0 }} />
+        <div style={{ width: '36px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', margin: '10px auto 0', flexShrink: 0 }} />
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px 0' }}>
           <p style={sectionLabelStyle}>
             {isDualCard ? 'Lyric Back Card' : 'Share your Moment'}
           </p>
@@ -1030,133 +1061,137 @@ export function CardExportModal({
             type="button"
             aria-label="Close"
             onClick={() => onOpenChange(false)}
-            style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+            style={{ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box' }}
           ><CloseIcon size={14} color="var(--text-secondary)" /></button>
         </div>
 
-        {/* Combined poster preview — the default, most prominent presentation */}
-        <div style={{ margin: '14px 20px 0', borderRadius: '12px', overflow: 'hidden', background: '#07060A', position: 'relative', maxHeight: '320px', overflowY: 'auto' }}>
+        {/* Combined poster preview — the dominant element. Height responds
+            to the viewport instead of a flat cap, so Story/portrait gets
+            real visible room instead of a cramped scroll window. */}
+        <div style={{ margin: '10px 16px 0', borderRadius: '12px', overflow: 'hidden', background: '#07060A', position: 'relative', maxHeight: 'min(46dvh, 380px)', overflowY: 'auto' }}>
           <canvas
             ref={canvasRef}
             style={{ width: '100%', aspectRatio: `${activeShape.w} / ${activeShape.h}`, display: 'block' }}
           />
         </div>
 
-        {/* Theme row */}
-        <div style={{ padding: '16px 20px 0' }}>
-          <p style={{ ...sectionLabelStyle, marginBottom: '10px' }}>Theme</p>
-          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
-            {THEMES.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setTheme(t.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '5px 10px', borderRadius: '50px', flexShrink: 0,
-                  background: theme === t.id ? 'rgba(232,197,71,0.12)' : 'transparent',
-                  border: theme === t.id ? '1px solid rgba(232,197,71,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                  cursor: 'pointer', transition: 'all 150ms ease',
-                }}
-              >
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: t.bg, border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
-                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: theme === t.id ? '#E8C547' : 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>
-                  {t.label}
-                </span>
-              </button>
-            ))}
+        {/* Theme + Shape — one compact row each, tight to the poster above
+            them rather than separated by large section gaps. */}
+        <div style={{ display: 'flex', gap: '10px', padding: '10px 16px 0' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ ...sectionLabelStyle, marginBottom: '6px' }}>Theme</p>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {THEMES.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setTheme(t.id)}
+                  style={{
+                    ...btnBase, flex: 1, gap: '6px', padding: '0 8px',
+                    background: theme === t.id ? 'rgba(232,197,71,0.12)' : 'rgba(255,255,255,0.03)',
+                    border: theme === t.id ? '1px solid rgba(232,197,71,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                    transition: 'all 150ms ease', textTransform: 'none', letterSpacing: 0,
+                  }}
+                >
+                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: t.bg, border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.7rem', color: theme === t.id ? '#E8C547' : 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {t.label.replace('Margo ', '')}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ ...sectionLabelStyle, marginBottom: '6px' }}>Shape</p>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {SHAPES.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setShape(s.id)}
+                  aria-label={`${s.label} (${s.ratio})`}
+                  style={{
+                    ...btnBase, flex: 1, padding: '0 6px',
+                    background: shape === s.id ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.03)',
+                    border: shape === s.id ? '1px solid rgba(232,197,71,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                    transition: 'all 150ms ease', textTransform: 'none', letterSpacing: 0,
+                    color: shape === s.id ? '#E8C547' : 'rgba(255,255,255,0.5)', fontSize: '0.7rem',
+                  }}
+                >{s.label}</button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Shape row */}
-        <div style={{ padding: '14px 20px 0' }}>
-          <p style={{ ...sectionLabelStyle, marginBottom: '10px' }}>Shape</p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {SHAPES.map(s => (
-              <button
-                key={s.id}
-                onClick={() => setShape(s.id)}
-                style={{
-                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  padding: '10px 8px', borderRadius: '12px', cursor: 'pointer',
-                  background: shape === s.id ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.03)',
-                  border: shape === s.id ? '1px solid rgba(232,197,71,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                  transition: 'all 150ms ease',
-                }}
-              >
-                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: shape === s.id ? '#E8C547' : 'rgba(255,255,255,0.5)', marginBottom: '2px' }}>{s.label}</span>
-                <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', color: 'var(--text-muted)' }}>{s.ratio}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Primary export action */}
-        <div style={{ display: 'flex', gap: '10px', padding: '16px 20px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '16px' }}>
+        {/* Primary export action — the poster is the hero; this is one
+            clear, compact CTA plus two lightweight secondary controls, not
+            three equally-weighted buttons. */}
+        <div style={{ display: 'flex', gap: '8px', padding: '12px 16px 0' }}>
           <button
             onClick={handleSave}
-            style={{ flex: 2, padding: '13px', background: '#E8C547', color: '#07060A', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}
+            style={{ ...btnBase, flex: 2, background: '#E8C547', color: '#07060A', border: 'none', fontWeight: 700 }}
           >{isDualCard ? 'Save Card' : 'Export Moment'}</button>
           <button
             onClick={handleCopy}
-            style={{ flex: 1, padding: '13px', background: 'rgba(255,255,255,0.05)', color: copied ? '#E8C547' : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 600, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer', transition: 'color 150ms ease' }}
+            style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: copied ? '#E8C547' : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, transition: 'color 150ms ease' }}
           >{copied ? 'Copied' : 'Copy'}</button>
           <button
             onClick={handleShare}
-            style={{ flex: 1, padding: '13px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 600, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}
+            style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}
           >Share</button>
         </div>
 
         {/* Individual-card carousel — optional secondary presentation,
             only when the Moment actually has more than one line. The
             combined poster above remains the default; this never appears
-            before the user has already seen it. */}
+            before the user has already seen it. Visually subordinate: a
+            small preview and two compact ghost buttons, not another set
+            of primary-weight CTAs. */}
         {isMulti && (
-          <div style={{ padding: '20px 20px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '20px' }}>
-            <p style={sectionLabelStyle}>Want to share the lines separately?</p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '6px 0 0' }}>
-              Swipe through the individual cards.
-            </p>
-
-            <div style={{ margin: '14px 0 0', borderRadius: '12px', overflow: 'hidden', background: '#07060A', maxHeight: '220px', overflowY: 'auto' }}>
-              <canvas
-                ref={carouselCanvasRef}
-                style={{ width: '100%', aspectRatio: `${activeShape.w} / ${activeShape.h}`, display: 'block' }}
-              />
+          <div style={{ padding: '12px 16px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
+              <p style={sectionLabelStyle}>Share the lines separately?</p>
+              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                {carouselIndex + 1} / {momentLines.length}
+              </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', margin: '14px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
               <button
                 type="button"
                 aria-label="Previous card"
                 onClick={() => setCarouselIndex(i => (i - 1 + momentLines.length) % momentLines.length)}
-                style={{ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                style={{ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', flexShrink: 0, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxSizing: 'border-box' }}
               >
                 <span style={{ display: 'flex', transform: 'rotate(180deg)' }}>
                   <ChevronRightIcon size={16} color="var(--text-secondary)" />
                 </span>
               </button>
-              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-secondary)', minWidth: '92px', textAlign: 'center' }}>
-                Card {carouselIndex + 1} of {momentLines.length}
-              </span>
+
+              <div style={{ flex: 1, borderRadius: '10px', overflow: 'hidden', background: '#07060A', maxHeight: 'min(30dvh, 220px)' }}>
+                <canvas
+                  ref={carouselCanvasRef}
+                  style={{ width: '100%', aspectRatio: `${activeShape.w} / ${activeShape.h}`, display: 'block' }}
+                />
+              </div>
+
               <button
                 type="button"
                 aria-label="Next card"
                 onClick={() => setCarouselIndex(i => (i + 1) % momentLines.length)}
-                style={{ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                style={{ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', flexShrink: 0, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxSizing: 'border-box' }}
               >
                 <ChevronRightIcon size={16} color="var(--text-secondary)" />
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', paddingBottom: '4px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button
                 onClick={() => handleExportCard(carouselIndex)}
-                style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 600, fontSize: '0.58rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}
-              >Export this card</button>
+                style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)', fontWeight: 600 }}
+              >This card</button>
               <button
                 onClick={handleExportAllCards}
-                style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 600, fontSize: '0.58rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}
-              >Export all cards</button>
+                style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)', fontWeight: 600 }}
+              >All cards</button>
             </div>
           </div>
         )}
