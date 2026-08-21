@@ -211,7 +211,7 @@ export function ComposeLinePicker({
                 fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
                 letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer',
               }}
-            >Continue without a snippet</button>
+            >Continue without hearing it</button>
           )}
         </div>
       )}

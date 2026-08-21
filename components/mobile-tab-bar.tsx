@@ -103,7 +103,7 @@ export function MobileTabBar() {
 
       <Link
         href="/compose"
-        aria-label="Share a lyric"
+        aria-label="Send a line"
         {...composeLink}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',

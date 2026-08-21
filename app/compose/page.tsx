@@ -673,7 +673,7 @@ function ComposeInner() {
               <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                 {committedLines.length > 0
                   ? 'Catalog moment or search — same flow as the first line'
-                  : 'Search by lyric, song, or artist'}
+                  : 'Search a song, artist, or line'}
               </p>
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
@@ -746,8 +746,10 @@ function ComposeInner() {
                   }
                 }}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                  <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Set the stage</h1>
-                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Enter the lyric that moves you</p>
+                  <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Your line</h1>
+                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    {selectedSong?.source === 'margo' ? 'Change a word if you need to.' : 'Type the lyric'}
+                  </p>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                   <div>
@@ -761,11 +763,6 @@ function ComposeInner() {
                       style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                 </div>
-                {snippetStart != null && snippetEnd != null && selectedSong?.source === 'margo' && (
-                  <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--gold)', opacity: 0.85, textAlign: 'center', marginBottom: '12px' }}>
-                    Snippet locked to a Margo lyric line
-                  </p>
-                )}
                 <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '256px', height: '128px', background: 'rgba(232,197,71,0.1)', filter: 'blur(40px)', pointerEvents: 'none' }} />
                   <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
@@ -786,10 +783,10 @@ function ComposeInner() {
             )}
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
-                {emotionLoading ? 'Reading the room…' : 'How does it feel?'}
+                {emotionLoading ? 'Finding the feeling…' : 'How does this feel?'}
               </h1>
               <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                {emotionLoading ? 'Finding the right vibe for your lyric' : suggestedVibe ? 'We sensed something — confirm or change it' : 'Pick the vibe that fits'}
+                {emotionLoading ? 'Finding the right vibe for your lyric' : suggestedVibe ? 'We picked one. Change it if that’s not it.' : 'Pick one.'}
               </p>
             </div>
 
@@ -888,7 +885,7 @@ function ComposeInner() {
                   </>
                 ) : (
                   <>
-                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Choose how your name appears on posts.</p>
+                    <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Choose how your name appears.</p>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value.slice(0, 30))} maxLength={30} autoFocus
                         style={{ flex: 1, height: '44px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, fontSize: '0.9rem', outline: 'none' }} />
@@ -923,7 +920,7 @@ function ComposeInner() {
               setLinePickComplete(true)
             }}
             style={keyboardSafePrimaryBtnStyle}
-          >Continue without a snippet</button>
+          >Continue without hearing it</button>
         </KeyboardSafeCtaBar>
       )}
 
@@ -966,7 +963,7 @@ function ComposeInner() {
               border: selectedVibe ? 'none' : '1px solid var(--border)',
               boxShadow: selectedVibe ? keyboardSafePrimaryBtnStyle.boxShadow : 'none',
             }}
-          >{selectedVibe ? 'Post with ' + VIBE_LABELS[selectedVibe] : 'Select a vibe to continue'}</button>
+          >{selectedVibe ? 'Continue' : 'Select a vibe to continue'}</button>
         </KeyboardSafeCtaBar>
       )}
 
