@@ -182,7 +182,7 @@ export function ComposeLinePicker({
           Pick the line
         </h1>
         <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-          {canHear ? 'Tap a line to hear it' : 'Tap the lyric that matches the moment'}
+          {canHear ? 'Tap a line to hear it' : 'Pick the line you want'}
         </p>
         <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
           {artistName} · {songTitle}

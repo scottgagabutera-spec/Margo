@@ -667,14 +667,9 @@ function ComposeInner() {
               </div>
             )}
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: committedLines.length > 0 ? '8px' : 0 }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: 0 }}>
                 {committedLines.length > 0 ? 'Add another line' : 'Find your lyric'}
               </h1>
-              {committedLines.length > 0 && (
-                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Catalog moment or search — same flow as the first line
-                </p>
-              )}
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
               <div style={{ position: 'relative' }}>
@@ -766,7 +761,7 @@ function ComposeInner() {
                 <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '256px', height: '128px', background: 'rgba(232,197,71,0.1)', filter: 'blur(40px)', pointerEvents: 'none' }} />
                   <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-                    placeholder="Type your lyric here..." rows={4}
+                    rows={4}
                     style={{ width: '100%', background: 'transparent', fontSize: '1.5rem', fontFamily: font, fontStyle: 'italic', color: 'var(--gold)', textAlign: 'center', lineHeight: 1.6, border: 'none', outline: 'none', resize: 'none', position: 'relative', zIndex: 10, boxSizing: 'border-box' }} />
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '16px', position: 'relative', zIndex: 10 }}>
                     <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)' }}>{lyric.length}/140</span>
@@ -782,12 +777,14 @@ function ComposeInner() {
               <button style={backBtnStyle} onClick={() => setStep(2)}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             )}
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: emotionLoading ? 0 : '8px' }}>
                 {emotionLoading ? 'Finding the feeling…' : 'How does this feel?'}
               </h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                {emotionLoading ? 'Finding the right vibe for your lyric' : suggestedVibe ? 'We picked one. Change it if that’s not it.' : 'Pick one.'}
-              </p>
+              {!emotionLoading && (
+                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  {suggestedVibe ? 'We picked one. Change it if that’s not it.' : 'Pick one.'}
+                </p>
+              )}
             </div>
 
             <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '24px', marginBottom: '24px', textAlign: 'center' }}>
@@ -963,7 +960,7 @@ function ComposeInner() {
               border: selectedVibe ? 'none' : '1px solid var(--border)',
               boxShadow: selectedVibe ? keyboardSafePrimaryBtnStyle.boxShadow : 'none',
             }}
-          >{selectedVibe ? 'Continue' : 'Select a vibe to continue'}</button>
+          >Continue</button>
         </KeyboardSafeCtaBar>
       )}
 
