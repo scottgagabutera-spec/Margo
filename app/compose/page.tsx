@@ -3,7 +3,8 @@ import { Suspense } from 'react'
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import type { CSSProperties } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeftIcon, SearchIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
@@ -85,6 +86,63 @@ const backBtnStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
   transition: 'color 150ms ease',
 }
+const actionCaptionStyle: CSSProperties = {
+  fontFamily: UI_FONT, fontSize: '0.68rem',
+  color: 'var(--text-secondary, var(--text-2))', margin: '8px 0 0', lineHeight: 1.4,
+}
+
+type MomentLineDraft = { lyric: string; songName: string; artistName: string }
+
+/**
+ * The Moment preview shared by "Ready to send" and the post-Send
+ * completion screen — one composition, reused, so the preview the user
+ * approves is the same object they see confirmed as sent. Every line gets
+ * equal lyric + song/artist treatment (matching how PostCard renders a
+ * published multi-line Moment) rather than only the last line looking
+ * "real" and earlier lines reading as plain draft text.
+ */
+function ComposeMomentCard({
+  lines,
+  vibeLabel,
+  style,
+}: {
+  lines: MomentLineDraft[]
+  vibeLabel?: string | null
+  style?: CSSProperties
+}) {
+  const multi = lines.length > 1
+  return (
+    <ComposeLyricCard style={style}>
+      {lines.map((line, i) => (
+        <div key={i}>
+          {multi && i > 0 && (
+            <p style={{
+              margin: '14px 0 10px', fontFamily: UI_FONT, fontSize: '0.58rem', fontWeight: 700,
+              letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-on-gold-muted)',
+              textAlign: 'center',
+            }}>stitch</p>
+          )}
+          <div style={multi ? { borderLeft: '1px solid rgba(7,6,10,0.18)', paddingLeft: '12px' } : undefined}>
+            <p style={composeLyricTextStyle}>&ldquo;{line.lyric}&rdquo;</p>
+            <div style={{ marginTop: '8px' }}>
+              <SongMeta
+                title={line.songName}
+                artist={line.artistName}
+                titleStyle={{ color: 'var(--text-on-gold)', ...(multi ? { fontSize: '0.78rem' } : null) }}
+                artistStyle={{ color: 'var(--text-on-gold-muted)', ...(multi ? { fontSize: '0.66rem' } : null) }}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+      {vibeLabel && (
+        <div style={{ position: 'relative', height: '22px', marginTop: '14px' }}>
+          <VibeTag label={vibeLabel} color="var(--text-on-gold)" variant="dark" />
+        </div>
+      )}
+    </ComposeLyricCard>
+  )
+}
 
 function ComposeInner() {
   const router = useRouter()
@@ -140,6 +198,16 @@ function ComposeInner() {
   const [linkedAudioUrl, setLinkedAudioUrl] = useState<string | null>(null)
   /** Lines already stacked via “Add another line” (current draft is separate). */
   const [committedLines, setCommittedLines] = useState<ComposeLineDraft[]>([])
+  // Committed lines + the in-progress draft, as the full Moment the user is
+  // building — shared by the "Ready to send" preview and the post-Send
+  // completion screen so both render the exact same object.
+  const momentLines = useMemo<MomentLineDraft[]>(
+    () => [
+      ...committedLines.map((l) => ({ lyric: l.lyric, songName: l.songName, artistName: l.artistName })),
+      { lyric, songName, artistName },
+    ],
+    [committedLines, lyric, songName, artistName]
+  )
   // Exact snippet timing — either passed in directly from the player's
   // share sheet (exact), or matched at post time against the linked
   // song's real lyric_lines via matchLyricLine (best-effort, may be null
@@ -585,59 +653,73 @@ function ComposeInner() {
             }}
           >Done</button>
           <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--text)', marginBottom: '8px' }}>
-            {isPrivateSave ? 'Saved privately.' : 'Send this to someone.'}
+            {isPrivateSave ? 'Saved privately.' : 'Sent.'}
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '32px', letterSpacing: '0.5px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '28px', letterSpacing: '0.5px' }}>
             {isPrivateSave
               ? 'Only you can see this — it stays off the Feed.'
-              : (sentToName ? 'Sent to ' + sentToName + '.' : 'This Moment is ready to send.')}
+              : (sentToName ? 'Sent to ' + sentToName + '.' : 'Your Moment is now on Margo.')}
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+          <ComposeMomentCard
+            lines={momentLines}
+            vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : null}
+            style={{ marginBottom: '28px', textAlign: 'left' }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', marginBottom: '24px' }}>
             {!isPrivateSave && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => { if (postedId) setShowSendTo(true) }}
+                  style={{
+                    width: '100%', padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
+                    background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
+                    borderRadius: '50px', fontFamily: font, fontWeight: 700,
+                    fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+                    border: 'none', cursor: postedId ? 'pointer' : 'default',
+                    boxShadow: '0 6px 28px var(--gold-glow)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxSizing: 'border-box',
+                    opacity: postedId ? 1 : 0.5,
+                  }}
+                >Send to someone</button>
+                <p style={actionCaptionStyle}>Send this Moment directly to someone</p>
+              </div>
+            )}
+            <div>
               <button
                 type="button"
-                onClick={() => { if (postedId) setShowSendTo(true) }}
+                onClick={() => { setShowExport(true) }}
                 style={{
-                  padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
-                  background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
+                  width: '100%', padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
+                  background: isPrivateSave ? 'var(--gold)' : 'transparent',
+                  color: isPrivateSave ? 'var(--text-on-gold, var(--bg))' : 'var(--gold)',
                   borderRadius: '50px', fontFamily: font, fontWeight: 700,
                   fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
-                  border: 'none', cursor: postedId ? 'pointer' : 'default',
-                  boxShadow: '0 6px 28px var(--gold-glow)',
+                  border: isPrivateSave ? 'none' : '1px solid var(--gold-border)',
+                  cursor: 'pointer',
+                  boxShadow: isPrivateSave ? '0 6px 28px var(--gold-glow)' : 'none',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxSizing: 'border-box',
-                  opacity: postedId ? 1 : 0.5,
                 }}
-              >Send to someone</button>
-            )}
-            <button
-              type="button"
-              onClick={() => { setShowExport(true) }}
-              style={{
-                padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
-                background: isPrivateSave ? 'var(--gold)' : 'transparent',
-                color: isPrivateSave ? 'var(--text-on-gold, var(--bg))' : 'var(--gold)',
-                borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
-                border: isPrivateSave ? 'none' : '1px solid var(--gold-border)',
-                cursor: 'pointer',
-                boxShadow: isPrivateSave ? '0 6px 28px var(--gold-glow)' : 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxSizing: 'border-box',
-              }}
-            >{isPrivateSave ? 'Share as Card' : 'Send as card'}</button>
-            <button
-              type="button"
-              onClick={() => router.push(isPrivateSave ? (identity?.username ? '/profile/' + identity.username : '/feed') : '/feed')}
-              style={{
-                padding: '13px 28px', minHeight: 'var(--margo-touch-min)',
-                background: 'transparent', color: 'var(--text-secondary, var(--text-2))',
-                border: '1px solid var(--border-hi)', borderRadius: '50px', fontFamily: font,
-                fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxSizing: 'border-box',
-              }}
-            >{isPrivateSave ? 'Back to your profile' : 'See it on the Feed'}</button>
+              >Share as card</button>
+              <p style={actionCaptionStyle}>Share your Moment outside Margo</p>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => router.push(isPrivateSave ? (identity?.username ? '/profile/' + identity.username : '/feed') : '/feed')}
+                style={{
+                  width: '100%', padding: '13px 28px', minHeight: 'var(--margo-touch-min)',
+                  background: 'transparent', color: 'var(--text-secondary, var(--text-2))',
+                  border: '1px solid var(--border-hi)', borderRadius: '50px', fontFamily: font,
+                  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxSizing: 'border-box',
+                }}
+              >{isPrivateSave ? 'Back to your profile' : 'See it on Feed'}</button>
+              {!isPrivateSave && <p style={actionCaptionStyle}>View your Moment on Margo</p>}
+            </div>
           </div>
         </div>
         <CardExportModal
@@ -920,8 +1002,24 @@ function ComposeInner() {
                   </ComposeLyricCard>
 
                   {/* Reserves exactly as much space as the sticky Continue bar
-                      actually measures — --margo-cta-bar-h, not a guessed number. */}
-                  <div style={{ flexShrink: 0, height: 'var(--margo-cta-bar-h, 0px)' }} />
+                      actually measures — --margo-cta-bar-h, not a guessed number.
+                      While idle (chromeHidden false — right after picking a
+                      line, before the keyboard/focus hides the floating
+                      player), also reserves the floating pill/orb's own
+                      exclusion zone above the tab bar, so the still-playing
+                      snippet's pill sits in blank space below the card
+                      instead of overlapping its lyric/metadata. Once typing
+                      starts, the pill already hides itself (globals.css,
+                      html[data-margo-keyboard="1"]) and this collapses back
+                      to just the CTA-bar reserve so the card keeps its full
+                      typing-mode height. */}
+                  <div style={{
+                    flexShrink: 0,
+                    height: chromeHidden
+                      ? 'var(--margo-cta-bar-h, 0px)'
+                      : 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 68px)',
+                    transition: 'height 150ms ease',
+                  }} />
                 </div>
               </div>
             )}
@@ -1016,44 +1114,11 @@ function ComposeInner() {
               </p>
             </div>
 
-            {(committedLines.length > 0) && (
-              <div style={{
-                marginBottom: '16px', padding: '12px 14px',
-                border: '1px solid var(--border)', borderRadius: '12px',
-              }}>
-                {committedLines.map((line, i) => (
-                  <p key={`c-${i}`} style={{
-                    fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem',
-                    color: 'var(--text-secondary)', margin: '0 0 8px', lineHeight: 1.4,
-                  }}>
-                    &ldquo;{line.lyric}&rdquo;
-                  </p>
-                ))}
-              </div>
-            )}
-
-            <ComposeLyricCard style={{ marginBottom: '32px' }}>
-              <p style={composeLyricTextStyle}>&ldquo;{lyric}&rdquo;</p>
-              <div style={{ marginTop: '12px' }}>
-                <SongMeta
-                  title={songName} artist={artistName}
-                  titleStyle={{ color: 'var(--text-on-gold)' }}
-                  artistStyle={{ color: 'var(--text-on-gold-muted)' }}
-                />
-              </div>
-              {selectedVibe && (
-                // Normal-flow placement below the metadata, not pinned to the
-                // card's outer corner. The floating mini-player and this card
-                // are two independent coordinate systems (viewport-fixed vs.
-                // scrolling), so an absolutely positioned tag risks visually
-                // colliding with the player. VibeTag's own bottom-right offset
-                // is relative to this small wrapper instead of the whole card,
-                // so it settles just under the metadata instead.
-                <div style={{ position: 'relative', height: '22px', marginTop: '12px' }}>
-                  <VibeTag label={VIBE_LABELS[selectedVibe]} color="var(--text-on-gold)" variant="dark" />
-                </div>
-              )}
-            </ComposeLyricCard>
+            <ComposeMomentCard
+              lines={momentLines}
+              vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : null}
+              style={{ marginBottom: '32px' }}
+            />
 
             {/* Display name banner — shown until customized once, or dismissed */}
             {showNameBanner && identity && (
