@@ -667,14 +667,14 @@ function ComposeInner() {
               </div>
             )}
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: committedLines.length > 0 ? '8px' : 0 }}>
                 {committedLines.length > 0 ? 'Add another line' : 'Find your lyric'}
               </h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                {committedLines.length > 0
-                  ? 'Catalog moment or search — same flow as the first line'
-                  : 'Search a song, artist, or line'}
-              </p>
+              {committedLines.length > 0 && (
+                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  Catalog moment or search — same flow as the first line
+                </p>
+              )}
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
               <div style={{ position: 'relative' }}>
