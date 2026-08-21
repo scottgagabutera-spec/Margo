@@ -23,6 +23,7 @@ export function MiniPlayerFeedChrome({
   onTogglePlay,
   onToOrb,
   onToPill,
+  onClose,
 }: {
   mode: 'pill' | 'orb'
   artwork: string | null
@@ -35,6 +36,8 @@ export function MiniPlayerFeedChrome({
   onTogglePlay: () => void
   onToOrb: () => void
   onToPill: () => void
+  /** Dismiss/end-listening — same action as the expanded sheet's end-listening control. */
+  onClose: () => void
 }) {
   if (mode === 'orb') {
     return (
@@ -45,6 +48,7 @@ export function MiniPlayerFeedChrome({
         progress={progress}
         vibeColor={vibeColor}
         onTap={onToPill}
+        onClose={onClose}
       />
     )
   }
@@ -60,7 +64,43 @@ export function MiniPlayerFeedChrome({
       onExpand={onExpand}
       onTogglePlay={onTogglePlay}
       onToOrb={onToOrb}
+      onClose={onClose}
     />
+  )
+}
+
+/**
+ * Small, visually secondary dismiss control shared by the pill and orb.
+ * A 44px touch box (brand's Tier 5 pattern) around a quiet 20px circle —
+ * distinct from play/pause (playback) and the artwork/title tap target
+ * (expand). Never the loudest thing in the corner.
+ */
+function DismissButton({ onClose, offset }: { onClose: () => void; offset: number }) {
+  return (
+    <button
+      type="button"
+      aria-label="End listening"
+      data-no-drag
+      onClick={(e) => { e.stopPropagation(); onClose() }}
+      style={{
+        position: 'absolute', top: `${-offset}px`, right: `${-offset}px`,
+        width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+        zIndex: 1,
+      }}
+    >
+      <span style={{
+        width: '20px', height: '20px', borderRadius: '50%',
+        background: 'var(--margo-bar)', border: '1px solid rgba(255,255,255,0.14)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'var(--text-muted)',
+      }}>
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      </span>
+    </button>
   )
 }
 
@@ -74,6 +114,7 @@ function FeedPill({
   onExpand,
   onTogglePlay,
   onToOrb,
+  onClose,
 }: {
   artwork: string | null
   title: string
@@ -84,6 +125,7 @@ function FeedPill({
   onExpand: () => void
   onTogglePlay: () => void
   onToOrb: () => void
+  onClose: () => void
 }) {
   const dragRef = useRef<{ startY: number; startTime: number } | null>(null)
   const [offset, setOffset] = useState(0)
@@ -261,6 +303,8 @@ function FeedPill({
       >
         <PlayPauseIcon playing={playing} buffering={buffering} size={12} color="#07060A" />
       </button>
+
+      <DismissButton onClose={onClose} offset={20} />
     </div>
   )
 }
@@ -272,6 +316,7 @@ function FeedOrb({
   progress,
   vibeColor,
   onTap,
+  onClose,
 }: {
   artwork: string | null
   playing: boolean
@@ -279,6 +324,7 @@ function FeedOrb({
   progress: number
   vibeColor: string
   onTap: () => void
+  onClose: () => void
 }) {
   const size = 52
   const stroke = 2.5
@@ -288,11 +334,11 @@ function FeedOrb({
   const dashOffset = c * (1 - pct)
 
   return (
-    <button
-      type="button"
+    // Outer element is a plain div, not a button — FeedOrb's tap target
+    // and the dismiss control are two separate buttons, and buttons can't
+    // nest inside each other.
+    <div
       className="mp-feed-orb"
-      aria-label={playing || buffering ? 'Expand player chrome' : 'Show player'}
-      onClick={onTap}
       style={{
         position: 'fixed',
         right: '14px',
@@ -300,61 +346,74 @@ function FeedOrb({
         zIndex: 90,
         width: `${size}px`,
         height: `${size}px`,
-        borderRadius: '50%',
-        border: 'none',
-        padding: 0,
-        background: 'transparent',
-        cursor: 'pointer',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
       }}
     >
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        style={{ position: 'absolute', inset: 0 }}
-        aria-hidden
-      >
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="rgba(255,255,255,0.12)"
-          strokeWidth={stroke}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={vibeColor}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={dashOffset}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </svg>
-      <div
+      <button
+        type="button"
+        aria-label={playing || buffering ? 'Expand player chrome' : 'Show player'}
+        onClick={onTap}
         style={{
-          position: 'absolute',
-          inset: '5px',
+          position: 'relative',
+          width: `${size}px`,
+          height: `${size}px`,
           borderRadius: '50%',
-          overflow: 'hidden',
-          background: 'var(--margo-bar)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          border: 'none',
+          padding: 0,
+          background: 'transparent',
+          cursor: 'pointer',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         }}
       >
-        {artwork ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={artwork} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <PlayPauseIcon playing={playing} buffering={buffering} size={14} color="var(--gold)" />
-        )}
-      </div>
-    </button>
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          style={{ position: 'absolute', inset: 0 }}
+          aria-hidden
+        >
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth={stroke}
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke={vibeColor}
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            strokeDasharray={c}
+            strokeDashoffset={dashOffset}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        </svg>
+        <div
+          style={{
+            position: 'absolute',
+            inset: '5px',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            background: 'var(--margo-bar)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {artwork ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={artwork} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <PlayPauseIcon playing={playing} buffering={buffering} size={14} color="var(--gold)" />
+          )}
+        </div>
+      </button>
+
+      <DismissButton onClose={onClose} offset={16} />
+    </div>
   )
 }

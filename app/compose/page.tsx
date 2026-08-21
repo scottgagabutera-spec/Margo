@@ -931,7 +931,16 @@ function ComposeInner() {
                 />
               </div>
               {selectedVibe && (
-                <VibeTag label={VIBE_LABELS[selectedVibe]} color="var(--text-on-gold)" variant="dark" />
+                // Normal-flow placement below the metadata, not pinned to the
+                // card's outer corner. The floating mini-player and this card
+                // are two independent coordinate systems (viewport-fixed vs.
+                // scrolling), so an absolutely positioned tag risks visually
+                // colliding with the player. VibeTag's own bottom-right offset
+                // is relative to this small wrapper instead of the whole card,
+                // so it settles just under the metadata instead.
+                <div style={{ position: 'relative', height: '22px', marginTop: '12px' }}>
+                  <VibeTag label={VIBE_LABELS[selectedVibe]} color="var(--text-on-gold)" variant="dark" />
+                </div>
               )}
             </ComposeLyricCard>
 

@@ -128,21 +128,188 @@ function wrapText(ctx: CanvasRenderingContext2D, txt: string, maxW: number): str
   return lines
 }
 
+/* ─── Composition engine ────────────────────────────────────────────
+ * Every export is a Margo Moment, not an instance of "the gold template".
+ * Vibe family + lyric length decide which of a small set of art-directed
+ * archetypes is *appropriate* for this Moment (a weighted likelihood, not
+ * a fixed lookup); the Moment's own identity (its post id, or its content
+ * when no id exists yet) then picks a specific archetype and decorative
+ * motif from within that weighted range. Two Moments of the same vibe and
+ * length can still look different from each other. The same Moment always
+ * renders the same way, every time it's reopened — deterministic, not
+ * random-per-render.
+ *
+ * This is deliberately NOT "vibe = color". Color stays Margo Gold / Margo
+ * Dark. Vibe and length influence alignment, scale, negative space, and
+ * which (if any) geometric motif appears — the composition, not the palette. */
+
+type Archetype = 'centered' | 'bold' | 'editorial'
+type Motif = 'arc' | 'diagonal' | 'letterform' | 'word' | 'none'
+type LengthBucket = 'short' | 'medium' | 'long'
+type VibeFamily = 'uplifting' | 'reflective' | 'heavy' | 'release'
+
+/** Same grouping used for the Feeling screen's pill order. */
+const VIBE_FAMILY: Record<string, VibeFamily> = {
+  chill: 'uplifting', hope: 'uplifting', healing: 'uplifting', grateful: 'uplifting',
+  joy: 'uplifting', love: 'uplifting', hype: 'uplifting', proud: 'uplifting',
+  spiritual: 'reflective', nostalgia: 'reflective',
+  heartbreak: 'heavy', pain: 'heavy', loneliness: 'heavy', lost: 'heavy', rage: 'heavy',
+  'send it': 'release', 'let out': 'release',
+}
+
+/** Which archetype is *likely* for a vibe family — not which one it always gets. */
+const FAMILY_BASE_WEIGHTS: Record<VibeFamily, Record<Archetype, number>> = {
+  uplifting:  { centered: 50, bold: 30, editorial: 20 },
+  reflective: { centered: 60, bold: 15, editorial: 25 },
+  heavy:      { centered: 20, bold: 25, editorial: 55 },
+  release:    { centered: 15, bold: 60, editorial: 25 },
+}
+
+/** Length shifts those odds further — a long lyric should strongly favor
+ * the column-based Editorial archetype regardless of vibe, and a short
+ * lyric shouldn't be stranded in a sparse column. */
+const LENGTH_MULTIPLIER: Record<LengthBucket, Record<Archetype, number>> = {
+  short:  { centered: 1.2, bold: 1.3, editorial: 0.5 },
+  medium: { centered: 1,   bold: 1,   editorial: 1 },
+  long:   { centered: 0.8, bold: 0.7, editorial: 2.0 },
+}
+
+/** Each archetype's compatible decorative primitives — including "none",
+ * so a plain, undecorated card stays a real possibility, not a rarity. */
+const ARCHETYPE_MOTIF_WEIGHTS: Record<Archetype, Record<Motif, number>> = {
+  centered:  { arc: 40, letterform: 30, none: 30, diagonal: 0, word: 0 },
+  bold:      { diagonal: 50, letterform: 25, none: 25, arc: 0, word: 0 },
+  editorial: { word: 40, arc: 30, none: 30, diagonal: 0, letterform: 0 },
+}
+
+function lengthBucketOf(lyric: string): LengthBucket {
+  const n = (lyric || '').trim().length
+  if (n < 60) return 'short'
+  if (n < 110) return 'medium'
+  return 'long'
+}
+
+/** Small deterministic string hash — reproducible, not cryptographic. */
+function hashSeed(input: string): number {
+  let h = 0
+  for (let i = 0; i < input.length; i++) {
+    h = (h * 31 + input.charCodeAt(i)) >>> 0
+  }
+  return h
+}
+
+function pickWeighted<T extends string>(weights: Record<T, number>, pick0to999: number): T {
+  const entries = Object.entries(weights) as [T, number][]
+  const total = entries.reduce((sum, [, w]) => sum + w, 0)
+  let cursor = (pick0to999 / 1000) * total
+  for (const [key, weight] of entries) {
+    cursor -= weight
+    if (cursor <= 0) return key
+  }
+  return entries[entries.length - 1][0]
+}
+
+interface Composition {
+  archetype: Archetype
+  motif: Motif
+}
+
+function composeMoment(vibeLabel: string | null | undefined, lyric: string, seedKey: string): Composition {
+  const family = VIBE_FAMILY[(vibeLabel || '').toLowerCase().trim()] || 'uplifting'
+  const bucket = lengthBucketOf(lyric)
+  const base = FAMILY_BASE_WEIGHTS[family]
+  const mult = LENGTH_MULTIPLIER[bucket]
+  const weights: Record<Archetype, number> = {
+    centered: base.centered * mult.centered,
+    bold: base.bold * mult.bold,
+    editorial: base.editorial * mult.editorial,
+  }
+  // Independent salted hashes, not two slices of one hash — post ids are
+  // often sequential/similar-looking, and integer-dividing a single hash
+  // to derive a second value correlates badly in exactly that case (a run
+  // of nearby ids would all land on the same motif). Hashing the seed key
+  // with a different suffix per decision keeps them properly independent.
+  const archetype = pickWeighted<Archetype>(weights, hashSeed(`${seedKey}:archetype`) % 1000)
+  const motif = pickWeighted<Motif>(ARCHETYPE_MOTIF_WEIGHTS[archetype], hashSeed(`${seedKey}:motif`) % 1000)
+  return { archetype, motif }
+}
+
+/* ─── Decorative motif primitives — small, quiet, never louder than the lyric ─ */
+
+function drawArcMotif(ctx: CanvasRenderingContext2D, cx: number, cy: number, radius: number, color: string, alpha: number) {
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.strokeStyle = color
+  ctx.lineWidth = Math.max(1, radius * 0.012)
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius, Math.PI * 0.15, Math.PI * 1.35)
+  ctx.stroke()
+  ctx.restore()
+}
+
+function drawDiagonalMotif(ctx: CanvasRenderingContext2D, W: number, H: number, color: string, alpha: number) {
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.strokeStyle = color
+  ctx.lineWidth = Math.max(6, Math.min(W, H) * 0.02)
+  ctx.beginPath()
+  ctx.moveTo(W * 0.62, -20)
+  ctx.lineTo(W + 20, H * 0.38)
+  ctx.stroke()
+  ctx.restore()
+}
+
+function drawLetterformMotif(ctx: CanvasRenderingContext2D, cx: number, cy: number, letter: string, size: number, color: string, alpha: number, family: string) {
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.fillStyle = color
+  ctx.font = `700 ${Math.round(size)}px ${family}`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(letter.toUpperCase(), cx, cy)
+  ctx.restore()
+}
+
+function drawWordMotif(ctx: CanvasRenderingContext2D, cx: number, cy: number, maxWidth: number, word: string, color: string, alpha: number, family: string) {
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.fillStyle = color
+  const upper = word.toUpperCase()
+  let fontSize = Math.round(maxWidth / Math.max(1, upper.length * 0.62))
+  ctx.font = `700 ${fontSize}px ${family}`
+  const measured = ctx.measureText(upper).width
+  if (measured > maxWidth && measured > 0) {
+    fontSize = Math.round(fontSize * (maxWidth / measured))
+    ctx.font = `700 ${fontSize}px ${family}`
+  }
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(upper, cx, cy)
+  ctx.restore()
+}
+
 /* ─── Draw single-lyric card ────────────────────────────────── *
  * The Moment's export identity: Lora italic lyric (hero), Geist for
- * everything else — song/artist follow SongMeta's hierarchy, vibe is
- * a small restrained caption, logo watermark sits bottom-left per
- * brand rule (previously top-left — a real fix, not a style choice). */
+ * everything else — song/artist follow SongMeta's hierarchy, logo
+ * watermark bottom-left per brand rule. Composition (alignment, scale,
+ * motif) comes from composeMoment() above — this function lays out
+ * whichever archetype it's given; it doesn't choose one. */
 async function drawSingleCard(
   ctx: CanvasRenderingContext2D,
   W: number, H: number,
   lyric: string, song: string, artist: string,
   theme: ExportTheme,
   vibeLabel?: string | null,
+  seedKey?: string,
 ) {
   await waitForFonts()
   const geist = resolveGeistFontFamily()
   const { bg, ink, inkMuted, accent, light } = theme
+  const { archetype, motif } = composeMoment(vibeLabel, lyric, seedKey || `${lyric}|${song}|${artist}`)
+  const bucket = lengthBucketOf(lyric)
+  const lengthScale = bucket === 'long' ? 0.82 : bucket === 'short' ? 1.05 : 1
+  const motifColor = light ? 'rgba(7,6,10,1)' : accent
+  const motifAlpha = motif === 'letterform' ? 0.05 : motif === 'word' ? 0.07 : 0.16
 
   // Flat background — clean and confident, not a busy poster
   ctx.fillStyle = bg
@@ -162,60 +329,127 @@ async function drawSingleCard(
   ctx.lineWidth = 2
   ctx.strokeRect(44, 44, W - 88, H - 88)
 
-  // Lyric — the hero
-  const lyricFS = Math.round(Math.min(W, H) * 0.044)
-  ctx.font = `italic ${lyricFS}px Lora, serif`
-  ctx.fillStyle = ink
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  const maxW = W - Math.round(W * 0.22)
-  const lines = wrapText(ctx, lyric, maxW)
-  const lineH = lyricFS * 1.45
-  const totalH = lines.length * lineH
-  let y = (H - totalH) / 2 + lyricFS * 0.5 + Math.round(H * 0.02)
-  for (const l of lines) { ctx.fillText(l, W / 2, y); y += lineH }
-
-  const metaBaseY = H - Math.round(H * 0.168)
-
-  // Vibe — small, restrained caption, not a color treatment
-  if (vibeLabel) {
-    const vibeFS = Math.round(Math.min(W, H) * 0.016)
-    ctx.font = `700 ${vibeFS}px ${geist}`
-    ctx.fillStyle = accent
-    ctx.globalAlpha = 0.82
-    ctx.letterSpacing = '2px'
-    ctx.fillText(vibeLabel.toUpperCase(), W / 2, metaBaseY - vibeFS * 1.9)
-    ctx.letterSpacing = '0px'
-    ctx.globalAlpha = 1
+  // Decorative motif — drawn behind the lyric, per archetype
+  if (archetype === 'centered') {
+    if (motif === 'arc') drawArcMotif(ctx, W / 2, H / 2, Math.min(W, H) * 0.36, motifColor, motifAlpha)
+    else if (motif === 'letterform') drawLetterformMotif(ctx, W / 2, H / 2, (song || lyric || 'M').charAt(0), Math.min(W, H) * 0.62, motifColor, motifAlpha, geist)
+  } else if (archetype === 'bold') {
+    if (motif === 'diagonal') drawDiagonalMotif(ctx, W, H, motifColor, motifAlpha)
+    else if (motif === 'letterform') drawLetterformMotif(ctx, W * 0.82, H * 0.78, (song || lyric || 'M').charAt(0), Math.min(W, H) * 0.5, motifColor, motifAlpha, geist)
+  } else {
+    if (motif === 'word' && vibeLabel) drawWordMotif(ctx, W * 0.76, H * 0.5, W * 0.38, vibeLabel, motifColor, motifAlpha, geist)
+    else if (motif === 'arc') drawArcMotif(ctx, W * 0.78, H * 0.55, Math.min(W, H) * 0.3, motifColor, motifAlpha)
   }
 
-  // Song name — Geist, SongMeta's actual casing/weight (no manual letter-spacing hack)
-  const songFS = Math.round(Math.min(W, H) * 0.028)
-  ctx.font = `700 ${songFS}px ${geist}`
-  ctx.fillStyle = ink
-  ctx.fillText(song || '', W / 2, metaBaseY)
+  if (archetype === 'centered') {
+    // Lyric — centered, the closest to a quiet, breathing composition
+    const lyricFS = Math.round(Math.min(W, H) * 0.044 * lengthScale)
+    ctx.font = `italic ${lyricFS}px Lora, serif`
+    ctx.fillStyle = ink
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const maxW = W - Math.round(W * 0.22)
+    const lines = wrapText(ctx, lyric, maxW)
+    const lineH = lyricFS * 1.45
+    const totalH = lines.length * lineH
+    let y = (H - totalH) / 2 + lyricFS * 0.5 + Math.round(H * 0.02)
+    for (const l of lines) { ctx.fillText(l, W / 2, y); y += lineH }
 
-  // Artist name — Geist, lighter, muted (SongMeta's artist tier)
-  const artistFS = Math.round(Math.min(W, H) * 0.02)
-  ctx.font = `400 ${artistFS}px ${geist}`
-  ctx.fillStyle = inkMuted
-  ctx.fillText(artist || '', W / 2, metaBaseY + songFS + 10)
+    const metaBaseY = H - Math.round(H * 0.168)
+    if (vibeLabel) {
+      const vibeFS = Math.round(Math.min(W, H) * 0.016)
+      ctx.font = `700 ${vibeFS}px ${geist}`
+      ctx.fillStyle = accent
+      ctx.globalAlpha = 0.82
+      ctx.letterSpacing = '2px'
+      ctx.fillText(vibeLabel.toUpperCase(), W / 2, metaBaseY - vibeFS * 1.9)
+      ctx.letterSpacing = '0px'
+      ctx.globalAlpha = 1
+    }
+    const songFS = Math.round(Math.min(W, H) * 0.028)
+    ctx.font = `700 ${songFS}px ${geist}`
+    ctx.fillStyle = ink
+    ctx.fillText(song || '', W / 2, metaBaseY)
+    const artistFS = Math.round(Math.min(W, H) * 0.02)
+    ctx.font = `400 ${artistFS}px ${geist}`
+    ctx.fillStyle = inkMuted
+    ctx.fillText(artist || '', W / 2, metaBaseY + songFS + 10)
 
-  // Divider
-  ctx.strokeStyle = light ? 'rgba(7,6,10,0.18)' : `${accent}33`
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(W / 2 - 100, H - Math.round(H * 0.1))
-  ctx.lineTo(W / 2 + 100, H - Math.round(H * 0.1))
-  ctx.stroke()
+    ctx.strokeStyle = light ? 'rgba(7,6,10,0.18)' : `${accent}33`
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(W / 2 - 100, H - Math.round(H * 0.1))
+    ctx.lineTo(W / 2 + 100, H - Math.round(H * 0.1))
+    ctx.stroke()
+  } else if (archetype === 'bold') {
+    // Lyric — left-aligned, larger, upper frame. More visual energy.
+    const lyricFS = Math.round(Math.min(W, H) * 0.044 * 1.15 * lengthScale)
+    const hPad = Math.round(W * 0.1)
+    ctx.font = `italic ${lyricFS}px Lora, serif`
+    ctx.fillStyle = ink
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'alphabetic'
+    const maxW = W - hPad - Math.round(W * 0.14)
+    const lines = wrapText(ctx, lyric, maxW)
+    const lineH = lyricFS * 1.35
+    let y = Math.round(H * 0.3)
+    for (const l of lines) { ctx.fillText(l, hPad, y); y += lineH }
 
-  // Watermark — Geist now, not Lora (it's UI chrome, not a lyric)
+    const metaY = H - Math.round(H * 0.1)
+    const songFS = Math.round(Math.min(W, H) * 0.024)
+    if (vibeLabel) {
+      const vibeFS = Math.round(Math.min(W, H) * 0.015)
+      ctx.font = `700 ${vibeFS}px ${geist}`
+      ctx.fillStyle = accent
+      ctx.globalAlpha = 0.85
+      ctx.letterSpacing = '2px'
+      ctx.fillText(vibeLabel.toUpperCase(), hPad, metaY - songFS - 14)
+      ctx.letterSpacing = '0px'
+      ctx.globalAlpha = 1
+    }
+    ctx.font = `700 ${songFS}px ${geist}`
+    ctx.fillStyle = ink
+    ctx.fillText(song || '', hPad, metaY)
+    const artistFS = Math.round(Math.min(W, H) * 0.018)
+    ctx.font = `400 ${artistFS}px ${geist}`
+    ctx.fillStyle = inkMuted
+    ctx.fillText(artist || '', hPad, metaY + artistFS + 8)
+  } else {
+    // Editorial column — left-aligned, narrower, runs down the page.
+    // Handles long lyrics most gracefully of the three archetypes.
+    const lyricFS = Math.round(Math.min(W, H) * 0.044 * 0.92 * lengthScale)
+    const hPad = Math.round(W * 0.12)
+    const colWidth = Math.round(W * 0.5)
+    ctx.font = `italic ${lyricFS}px Lora, serif`
+    ctx.fillStyle = ink
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'alphabetic'
+    const lines = wrapText(ctx, lyric, colWidth)
+    const lineH = lyricFS * 1.4
+    const totalH = lines.length * lineH
+    let y = Math.max(Math.round(H * 0.24), (H - totalH) / 2)
+    for (const l of lines) { ctx.fillText(l, hPad, y); y += lineH }
+
+    y += 10
+    const songFS = Math.round(Math.min(W, H) * 0.024)
+    ctx.font = `700 ${songFS}px ${geist}`
+    ctx.fillStyle = ink
+    ctx.fillText(song || '', hPad, y)
+    const artistFS = Math.round(Math.min(W, H) * 0.018)
+    ctx.font = `400 ${artistFS}px ${geist}`
+    ctx.fillStyle = inkMuted
+    ctx.fillText(artist || '', hPad, y + artistFS + 8)
+  }
+
+  // Watermark — same anchor for every archetype, a constant brand cue
   const wmFS = Math.round(Math.min(W, H) * 0.018)
   ctx.font = `400 ${wmFS}px ${geist}`
   ctx.fillStyle = light ? 'rgba(7,6,10,0.55)' : 'rgba(232,197,71,0.7)'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
   ctx.fillText('trymargo.com', W / 2, H - Math.round(H * 0.068))
 
-  // Ghost logo — bottom-left, opacity 0.18, per brand rule (was top-left)
+  // Ghost logo — bottom-left, opacity 0.18, per brand rule
   const logoBase = Math.min(W, H)
   const markSize = Math.round(logoBase * 0.032)
   const logoPad  = Math.round(logoBase * 0.052)
@@ -456,9 +690,11 @@ export function CardExportModal({
         activeTheme
       )
     } else {
-      await drawSingleCard(ctx, w, h, lyric, song, artist, activeTheme, vibeLabel)
+      // postId as the composition seed when it exists — same Moment,
+      // same archetype/motif every time it's reopened.
+      await drawSingleCard(ctx, w, h, lyric, song, artist, activeTheme, vibeLabel, postId)
     }
-  }, [theme, shape, lyric, song, artist, parentLyric, parentSong, parentArtist, isDualCard, activeTheme, activeShape, vibeLabel])
+  }, [theme, shape, lyric, song, artist, parentLyric, parentSong, parentArtist, isDualCard, activeTheme, activeShape, vibeLabel, postId])
 
   useEffect(() => {
     if (open) renderCanvas()

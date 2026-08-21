@@ -274,6 +274,7 @@ export function MiniPlayer() {
           onTogglePlay={() => void togglePlayPause()}
           onToOrb={() => setFeedChrome('orb')}
           onToPill={() => setFeedChrome('pill')}
+          onClose={endSession}
         />
       )}
 
