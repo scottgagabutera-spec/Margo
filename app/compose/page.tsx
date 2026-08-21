@@ -23,6 +23,7 @@ import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-ly
 import { SongMeta } from '@/components/song-meta'
 import { VibeTag } from '@/components/vibe-tag'
 import { UI_FONT } from '@/lib/fonts'
+import { useAudioEngine } from '@/hooks/useAudioEngine'
 
 const supabase = createClient()
 
@@ -151,10 +152,27 @@ function ComposeInner() {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchGenRef = useRef(0)
   const composeRootRef = useRef<HTMLElement | null>(null)
+  const lyricTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [searchFocused, setSearchFocused] = useState(false)
+
+  // Mini player publishes its own mount state via the audio engine — reuse
+  // that instead of guessing from Compose's own snippet state, since a
+  // player may already be running from elsewhere when Compose is opened.
+  const { mode: audioEngineMode } = useAudioEngine()
+  const playerActive = audioEngineMode !== 'idle'
+
+  // Plain textarea rows don't grow with content — resize to fit whenever
+  // the lyric changes (typed, pasted, or pre-filled from a hosted pick).
+  useEffect(() => {
+    const el = lyricTextareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [lyric, step])
 
   // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
   // and hides the mobile tab bar while typing / search sheet is open.
@@ -618,6 +636,7 @@ function ComposeInner() {
           open={showExport}
           onOpenChange={setShowExport}
           lyric={lyric} song={songName} artist={artistName} postId={postedId || undefined}
+          vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : undefined}
         />
         {!isPrivateSave && postedId && (
           <ComposeSendTo
@@ -643,10 +662,7 @@ function ComposeInner() {
 
   return (
     <main ref={composeRootRef} style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
-      <div style={{ position: 'fixed', top: '25%', left: '25%', width: '384px', height: '384px', background: 'rgba(232,197,71,0.05)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
-      <div style={{ position: 'fixed', bottom: '25%', right: '25%', width: '256px', height: '256px', background: 'rgba(232,197,71,0.08)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
-
-      <div style={{ paddingTop: '120px', paddingBottom: 'calc(var(--margo-page-padding-bottom) + 88px)', paddingLeft: '24px', paddingRight: '24px' }}>
+      <div style={{ paddingTop: playerActive ? '88px' : '120px', paddingBottom: 'calc(var(--margo-page-padding-bottom) + 88px)', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
           {/* ── Step 1: Search ── */}
@@ -682,7 +698,7 @@ function ComposeInner() {
               </div>
             )}
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: 0 }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: 0 }}>
                 {committedLines.length > 0 ? 'Add another line' : 'Find your lyric'}
               </h1>
             </div>
@@ -690,8 +706,16 @@ function ComposeInner() {
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={20} color="var(--text-disabled)" /></span>
                 <input type="text" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
                   placeholder="Search by lyric, song or artist..."
-                  style={{ width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px', background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
+                  style={{
+                    width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px',
+                    background: searchFocused ? 'var(--gold-faint)' : 'var(--surface-2)',
+                    border: `1px solid ${searchFocused ? 'var(--gold-border)' : 'var(--border)'}`,
+                    borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: font, outline: 'none', boxSizing: 'border-box',
+                    transition: 'background 150ms ease, border-color 150ms ease',
+                  }} />
               </div>
               <ComposeSearchDropdown
                 open={showResults}
@@ -755,15 +779,15 @@ function ComposeInner() {
                     setSnippetEnd(null)
                   }
                 }}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
-                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                  <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Your line</h1>
+                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                  <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Your line</h1>
                   <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                     {selectedSong?.source === 'margo' ? 'Change a word if you need to.' : 'Type the lyric'}
                   </p>
                 </div>
-                <ComposeLyricCard hasAudio={!!linkedAudioUrl}>
-                  <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-                    rows={3}
+                <ComposeLyricCard hasAudio={!!linkedAudioUrl} style={{ padding: playerActive ? '16px' : '24px' }}>
+                  <textarea ref={lyricTextareaRef} value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
+                    rows={2}
                     style={{
                       ...composeLyricTextStyle,
                       width: '100%',
@@ -771,6 +795,7 @@ function ComposeInner() {
                       border: 'none',
                       outline: 'none',
                       resize: 'none',
+                      overflow: 'hidden',
                       boxSizing: 'border-box',
                     }} />
                   <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -800,7 +825,7 @@ function ComposeInner() {
               setStep(2)
             }}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: emotionLoading ? 0 : '8px' }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: emotionLoading ? 0 : '8px' }}>
                 {emotionLoading ? 'Finding the feeling…' : 'How does this feel?'}
               </h1>
               {!emotionLoading && (
@@ -810,7 +835,7 @@ function ComposeInner() {
               )}
             </div>
 
-            <ComposeLyricCard hasAudio={!!linkedAudioUrl} style={{ marginBottom: '24px' }}>
+            <ComposeLyricCard hasAudio={!!linkedAudioUrl} style={{ marginBottom: '24px', padding: playerActive ? '16px' : '24px' }}>
               <p style={composeLyricTextStyle}>&ldquo;{lyric}&rdquo;</p>
               <div style={{ marginTop: '12px' }}>
                 <SongMeta title={songName} artist={artistName} />
@@ -836,8 +861,8 @@ function ComposeInner() {
                         fontFamily: font, fontWeight: 600,
                         fontSize: '0.7rem', cursor: 'pointer', transition: 'all 150ms ease',
                         background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
-                        color: selectedVibe === vibe ? 'var(--bg)' : 'var(--gold)',
-                        border: selectedVibe === vibe ? '1px solid var(--gold)' : '1px solid var(--gold-border)',
+                        color: selectedVibe === vibe ? 'var(--bg)' : 'var(--text-secondary)',
+                        border: selectedVibe === vibe ? '1px solid var(--gold)' : '1px solid var(--border-hi)',
                         position: 'relative',
                       }}>
                       {VIBE_LABELS[vibe]}
@@ -860,7 +885,7 @@ function ComposeInner() {
               onClick={() => { if (!posting) setStep(3) }}
             ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Ready to send?</h1>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Ready to send?</h1>
               <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                 {committedLines.length > 0 ? 'Your multi-line moment is set to go' : 'Your lyric is set to go'}
               </p>
@@ -882,7 +907,7 @@ function ComposeInner() {
               </div>
             )}
 
-            <ComposeLyricCard hasAudio={!!linkedAudioUrl} style={{ marginBottom: '32px' }}>
+            <ComposeLyricCard hasAudio={!!linkedAudioUrl} style={{ marginBottom: '32px', padding: playerActive ? '16px' : '24px' }}>
               <p style={composeLyricTextStyle}>&ldquo;{lyric}&rdquo;</p>
               <div style={{ marginTop: '12px' }}>
                 <SongMeta title={songName} artist={artistName} />
@@ -894,7 +919,7 @@ function ComposeInner() {
 
             {/* Display name banner — shown until customized once, or dismissed */}
             {showNameBanner && identity && (
-              <div style={{ background: 'rgba(232,197,71,0.06)', border: '1px solid rgba(232,197,71,0.2)', borderRadius: '16px', padding: '20px 24px', marginBottom: '24px' }}>
+              <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px 24px', marginBottom: '24px' }}>
                 {!editingName ? (
                   <>
                     <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text)', marginBottom: '4px' }}>

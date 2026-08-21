@@ -11,26 +11,38 @@ interface CardExportModalProps {
   song?: string
   artist?: string
   postId?: string
+  /** Selected vibe label (e.g. "Heartbreak") — small accent caption. Compose only. */
+  vibeLabel?: string | null
   // Lyric Back dual-card: if these are present, canvas draws parent + reply
   parentLyric?: string
   parentSong?: string
   parentArtist?: string
 }
 
-/* ─── Themes ────────────────────────────────────────────────── */
-const THEMES = [
-  { id: 'violet',  label: 'Violet',  color: '#E8C547', bg: '#0E0B1A' },
-  { id: 'purple',  label: 'Purple',  color: '#c77dff', bg: '#0d0014' },
-  { id: 'ocean',   label: 'Ocean',   color: '#00e5ff', bg: '#050e1a' },
-  { id: 'ember',   label: 'Ember',   color: '#ff6b6b', bg: '#1a0505' },
-  { id: 'forest',  label: 'Forest',  color: '#50fa7b', bg: '#051a0d' },
-  { id: 'bone',    label: 'Bone',    color: '#B8901A', bg: '#f5f1e8' },
+/* ─── Themes ─────────────────────────────────────────────────
+ * Two Margo-native themes only. Gold is the export's signature —
+ * loud here on purpose, unlike the app's own restrained gold usage.
+ * `light` drives ink/vignette/frame decisions instead of string-
+ * matching a specific background hex. */
+interface ExportTheme {
+  id: string
+  label: string
+  bg: string
+  ink: string
+  inkMuted: string
+  accent: string
+  light: boolean
+}
+
+const THEMES: ExportTheme[] = [
+  { id: 'gold', label: 'Margo Gold', bg: '#E8C547', ink: '#07060A', inkMuted: 'rgba(7,6,10,0.62)', accent: '#07060A', light: true },
+  { id: 'dark', label: 'Margo Dark', bg: '#07060A', ink: '#F4F1ED', inkMuted: 'rgba(244,241,237,0.6)', accent: '#E8C547', light: false },
 ]
 
 /* ─── Shapes ────────────────────────────────────────────────── */
 const SHAPES = [
   { id: 'square',   label: 'Square',  ratio: '1:1',   w: 1080, h: 1080 },
-  { id: 'vertical', label: 'Story',   ratio: '4:5',   w: 1080, h: 1350 },
+  { id: 'vertical', label: 'Story',   ratio: '9:16',  w: 1080, h: 1920 },
   { id: 'wide',     label: 'Wide',    ratio: '16:9',  w: 1920, h: 1080 },
 ]
 
@@ -38,6 +50,18 @@ const SHAPES = [
 async function waitForFonts() {
   if (typeof document === 'undefined') return
   try { await (document as any).fonts.ready } catch {}
+}
+
+/**
+ * next/font/local (the `geist` package) generates a hashed font-family
+ * name, not a literal "Geist" — unlike next/font/google's Lora/Sora,
+ * which keep their real names. Canvas can't read CSS variables, so
+ * resolve the actual loaded family from the CSS var it publishes.
+ */
+function resolveGeistFontFamily(): string {
+  if (typeof document === 'undefined') return 'sans-serif'
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--font-geist-sans').trim()
+  return v ? `${v}, sans-serif` : 'sans-serif'
 }
 
 /* ─── Draw Margo lockup on canvas ───────────────────────────── */
@@ -104,49 +128,44 @@ function wrapText(ctx: CanvasRenderingContext2D, txt: string, maxW: number): str
   return lines
 }
 
-/* ─── Draw single-lyric card ────────────────────────────────── */
+/* ─── Draw single-lyric card ────────────────────────────────── *
+ * The Moment's export identity: Lora italic lyric (hero), Geist for
+ * everything else — song/artist follow SongMeta's hierarchy, vibe is
+ * a small restrained caption, logo watermark sits bottom-left per
+ * brand rule (previously top-left — a real fix, not a style choice). */
 async function drawSingleCard(
   ctx: CanvasRenderingContext2D,
   W: number, H: number,
   lyric: string, song: string, artist: string,
-  themeColor: string, themeBg: string,
-  opacity: number = 1
+  theme: ExportTheme,
+  vibeLabel?: string | null,
 ) {
   await waitForFonts()
+  const geist = resolveGeistFontFamily()
+  const { bg, ink, inkMuted, accent, light } = theme
 
-  // Background
-  const grad = ctx.createRadialGradient(W * 0.5, H * 0.38, 0, W * 0.5, H * 0.38, W * 0.85)
-  grad.addColorStop(0, themeBg === '#f5f1e8' ? '#f5f1e8' : '#16131F')
-  grad.addColorStop(1, themeBg)
-  ctx.globalAlpha = opacity
-  ctx.fillStyle = grad
+  // Flat background — clean and confident, not a busy poster
+  ctx.fillStyle = bg
   ctx.fillRect(0, 0, W, H)
 
-  // Vignette
-  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.85)
-  vig.addColorStop(0, 'rgba(0,0,0,0)')
-  vig.addColorStop(1, 'rgba(0,0,0,0.32)')
-  ctx.fillStyle = vig
-  ctx.fillRect(0, 0, W, H)
-  ctx.globalAlpha = 1
+  // Subtle vignette only on the dark theme; the gold theme stays flat
+  if (!light) {
+    const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.88)
+    vig.addColorStop(0, 'rgba(0,0,0,0)')
+    vig.addColorStop(1, 'rgba(0,0,0,0.26)')
+    ctx.fillStyle = vig
+    ctx.fillRect(0, 0, W, H)
+  }
 
-  // Gold border
-  ctx.strokeStyle = `${themeColor}38`
+  // Frame
+  ctx.strokeStyle = light ? 'rgba(7,6,10,0.16)' : 'rgba(232,197,71,0.22)'
   ctx.lineWidth = 2
   ctx.strokeRect(44, 44, W - 88, H - 88)
 
-  // Logo — ghost watermark
-  const logoBase = Math.min(W, H)
-  const markSize = Math.round(logoBase * 0.032)
-  const logoPad  = Math.round(logoBase * 0.052)
-  ctx.globalAlpha = 0.32
-  drawMargoLockup(ctx, logoPad, logoPad, markSize, themeColor)
-  ctx.globalAlpha = 1
-
-  // Lyric text
+  // Lyric — the hero
   const lyricFS = Math.round(Math.min(W, H) * 0.044)
   ctx.font = `italic ${lyricFS}px Lora, serif`
-  ctx.fillStyle = themeBg === '#f5f1e8' ? '#1a1a1a' : '#FFFFFF'
+  ctx.fillStyle = ink
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   const maxW = W - Math.round(W * 0.22)
@@ -156,46 +175,71 @@ async function drawSingleCard(
   let y = (H - totalH) / 2 + lyricFS * 0.5 + Math.round(H * 0.02)
   for (const l of lines) { ctx.fillText(l, W / 2, y); y += lineH }
 
-  // Song name
-  const songFS = Math.round(Math.min(W, H) * 0.028)
-  ctx.font = `700 ${songFS}px Bebas Neue, sans-serif`
-  ctx.fillStyle = themeBg === '#f5f1e8' ? '#1a1a1a' : 'rgba(255,255,255,0.9)'
-  ctx.letterSpacing = '3px'
-  ctx.fillText((song || '').toUpperCase(), W / 2, H - Math.round(H * 0.168))
-  ctx.letterSpacing = '0px'
+  const metaBaseY = H - Math.round(H * 0.168)
 
-  // Artist name
-  const artistFS = Math.round(Math.min(W, H) * 0.022)
-  ctx.font = `400 ${artistFS}px Lora, serif`
-  ctx.fillStyle = themeBg === '#f5f1e8' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)'
-  ctx.fillText(artist || '', W / 2, H - Math.round(H * 0.168) + songFS + 12)
+  // Vibe — small, restrained caption, not a color treatment
+  if (vibeLabel) {
+    const vibeFS = Math.round(Math.min(W, H) * 0.016)
+    ctx.font = `700 ${vibeFS}px ${geist}`
+    ctx.fillStyle = accent
+    ctx.globalAlpha = 0.82
+    ctx.letterSpacing = '2px'
+    ctx.fillText(vibeLabel.toUpperCase(), W / 2, metaBaseY - vibeFS * 1.9)
+    ctx.letterSpacing = '0px'
+    ctx.globalAlpha = 1
+  }
+
+  // Song name — Geist, SongMeta's actual casing/weight (no manual letter-spacing hack)
+  const songFS = Math.round(Math.min(W, H) * 0.028)
+  ctx.font = `700 ${songFS}px ${geist}`
+  ctx.fillStyle = ink
+  ctx.fillText(song || '', W / 2, metaBaseY)
+
+  // Artist name — Geist, lighter, muted (SongMeta's artist tier)
+  const artistFS = Math.round(Math.min(W, H) * 0.02)
+  ctx.font = `400 ${artistFS}px ${geist}`
+  ctx.fillStyle = inkMuted
+  ctx.fillText(artist || '', W / 2, metaBaseY + songFS + 10)
 
   // Divider
-  ctx.strokeStyle = `${themeColor}33`
+  ctx.strokeStyle = light ? 'rgba(7,6,10,0.18)' : `${accent}33`
   ctx.lineWidth = 1
   ctx.beginPath()
-  ctx.moveTo(W / 2 - 110, H - Math.round(H * 0.1))
-  ctx.lineTo(W / 2 + 110, H - Math.round(H * 0.1))
+  ctx.moveTo(W / 2 - 100, H - Math.round(H * 0.1))
+  ctx.lineTo(W / 2 + 100, H - Math.round(H * 0.1))
   ctx.stroke()
 
-  // Watermark
-  const wmFS = Math.round(Math.min(W, H) * 0.02)
-  ctx.font = `400 ${wmFS}px Lora, serif`
-  ctx.fillStyle = `${themeColor}99`
+  // Watermark — Geist now, not Lora (it's UI chrome, not a lyric)
+  const wmFS = Math.round(Math.min(W, H) * 0.018)
+  ctx.font = `400 ${wmFS}px ${geist}`
+  ctx.fillStyle = light ? 'rgba(7,6,10,0.55)' : 'rgba(232,197,71,0.7)'
   ctx.fillText('trymargo.com', W / 2, H - Math.round(H * 0.068))
+
+  // Ghost logo — bottom-left, opacity 0.18, per brand rule (was top-left)
+  const logoBase = Math.min(W, H)
+  const markSize = Math.round(logoBase * 0.032)
+  const logoPad  = Math.round(logoBase * 0.052)
+  ctx.globalAlpha = 0.18
+  drawMargoLockup(ctx, logoPad, H - logoPad - markSize, markSize, accent)
+  ctx.globalAlpha = 1
 }
 
-/* ─── Draw dual-card — chat bubble layout ───────────────────── */
+/* ─── Draw dual-card — chat bubble layout ─────────────────────
+ * Lyric Back's reply card. Composition/colors intentionally untouched
+ * in this pass — only threading the new theme shape through so both
+ * Margo Gold and Margo Dark keep rendering correctly. */
 async function drawDualCard(
   ctx: CanvasRenderingContext2D,
   W: number, H: number,
   parentLyric: string, parentSong: string, parentArtist: string,
   replyLyric: string, replySong: string, replyArtist: string,
-  themeColor: string, themeBg: string
+  theme: ExportTheme,
 ) {
   await waitForFonts()
 
-  const isLight = themeBg === '#f5f1e8'
+  const themeColor = theme.accent
+  const themeBg = theme.bg
+  const isLight = theme.light
 
   // Background
   const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.4, W * 0.9)
@@ -375,9 +419,10 @@ export function CardExportModal({
   open, onOpenChange,
   lyric = '', song = '', artist = '',
   postId,
+  vibeLabel,
   parentLyric, parentSong, parentArtist,
 }: CardExportModalProps) {
-  const [theme, setTheme] = useState('violet')
+  const [theme, setTheme] = useState('gold')
   const [shape, setShape] = useState('square')
   const [copied, setCopied] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -408,12 +453,12 @@ export function CardExportModal({
         ctx, w, h,
         parentLyric!, parentSong!, parentArtist!,
         lyric, song, artist,
-        activeTheme.color, activeTheme.bg
+        activeTheme
       )
     } else {
-      await drawSingleCard(ctx, w, h, lyric, song, artist, activeTheme.color, activeTheme.bg)
+      await drawSingleCard(ctx, w, h, lyric, song, artist, activeTheme, vibeLabel)
     }
-  }, [theme, shape, lyric, song, artist, parentLyric, parentSong, parentArtist, isDualCard, activeTheme, activeShape])
+  }, [theme, shape, lyric, song, artist, parentLyric, parentSong, parentArtist, isDualCard, activeTheme, activeShape, vibeLabel])
 
   useEffect(() => {
     if (open) renderCanvas()
@@ -522,7 +567,7 @@ export function CardExportModal({
                   cursor: 'pointer', transition: 'all 150ms ease',
                 }}
               >
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: t.color, flexShrink: 0 }} />
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: t.bg, border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
                 <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: theme === t.id ? '#E8C547' : 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>
                   {t.label}
                 </span>
