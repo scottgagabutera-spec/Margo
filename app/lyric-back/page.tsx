@@ -17,6 +17,7 @@ import { PostCard } from '@/components/post-card'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { BackButton } from '@/components/back-button'
 import { resolveMomentLines } from '@/lib/post-lines'
+import { isNotificationAllowed } from '@/lib/notification-prefs'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 
@@ -514,13 +515,15 @@ function LyricBackContent() {
     const parentAuthorId = respondingTo?.authorUid
     if (respondingToId && parentAuthorId && parentAuthorId !== authorId && !isPrivate) {
       try {
-        const { error: notifErr } = await supabase.from('notifications').insert({
-          recipient_id: parentAuthorId,
-          actor_id: authorId,
-          type: 'lyric_back',
-          post_id: respondingToId,
-        })
-        if (notifErr) console.error('Failed to insert lyric_back notification:', notifErr)
+        if (await isNotificationAllowed(supabase, parentAuthorId, 'lyricBack')) {
+          const { error: notifErr } = await supabase.from('notifications').insert({
+            recipient_id: parentAuthorId,
+            actor_id: authorId,
+            type: 'lyric_back',
+            post_id: respondingToId,
+          })
+          if (notifErr) console.error('Failed to insert lyric_back notification:', notifErr)
+        }
       } catch (err) {
         console.error('Failed to insert lyric_back notification:', err)
       }
@@ -1035,7 +1038,9 @@ function LyricBackContent() {
                       song: p.knowledge?.song || '',
                       artist: p.knowledge?.artist || '',
                       id: p.id,
-                      parentLyric: respondingTo?.text,
+                      parentLyric: respondingTo
+                        ? resolveMomentLines(respondingTo).map((l) => l.text).join('  /  ')
+                        : undefined,
                       parentSong: respondingTo?.knowledge?.song,
                       parentArtist: respondingTo?.knowledge?.artist,
                     })

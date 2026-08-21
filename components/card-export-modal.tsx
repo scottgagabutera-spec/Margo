@@ -680,7 +680,7 @@ async function drawDualCard(
   const tailSize   = Math.round(lFS * 0.35)
 
   // ── Helper: measure bubble height ──
-  function bubbleContentH(lyric: string, song: string, artist: string): number {
+  function bubbleContentH(lyric: string): number {
     ctx.font = `italic ${lFS}px Lora, serif`
     const lines = wrapText(ctx, lyric, bubbleW - bubblePadH * 2)
     const lyricH = lines.length * lineH
@@ -779,8 +779,8 @@ async function drawDualCard(
 
   // ── Measure total content height to centre vertically ──
   const gap = Math.round(H * 0.06)
-  const b1H = bubbleContentH(parentLyric, parentSong, parentArtist)
-  const b2H = bubbleContentH(replyLyric, replySong, replyArtist)
+  const b1H = bubbleContentH(parentLyric)
+  const b2H = bubbleContentH(replyLyric)
   const totalContent = b1H + tailSize + gap + b2H + tailSize
   const startY = topPad + Math.max(0, (footerY - 24 - topPad - totalContent) / 2)
 

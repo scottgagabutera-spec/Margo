@@ -21,12 +21,10 @@ export interface PostLine {
 export const POST_LINES_MAX = 3
 
 /** Maps a raw `post_lines` join (as returned by a Supabase select) into the
- * PostLine[] shape resolveMomentLines expects. hooks/usePost.ts and
- * lib/primary-tab-prefetch.ts each already have their own working local
- * copy of this same mapping — left as-is rather than refactored, to avoid
- * touching already-correct code for this fix. This shared version is for
- * new call sites (useOwnPrivatePosts / useProfileReplays) that didn't
- * previously join post_lines at all. */
+ * PostLine[] shape resolveMomentLines expects. Canonical mapper — shared by
+ * every query that joins post_lines (usePost.ts, primary-tab-prefetch.ts,
+ * useOwnPrivatePosts.ts, useProfileReplays.ts) rather than each keeping its
+ * own copy of the same ~20 lines. */
 export function mapPostLinesRows(raw: any[] | null | undefined): PostLine[] | undefined {
   if (!raw || raw.length === 0) return undefined
   return [...raw]

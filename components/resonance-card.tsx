@@ -8,7 +8,7 @@ import { VibeTagPill } from '@/components/vibe-tag-pill'
 import { AuthorMeta } from '@/components/username-tag'
 import { buildSnippetQueueOverflowItems } from '@/components/song-card-actions'
 import { useIdentity } from '@/hooks/useIdentity'
-import { resolveMomentLines } from '@/lib/post-lines'
+import { resolveMomentLines, type PostLine } from '@/lib/post-lines'
 import { EditMomentModal } from '@/components/edit-moment-modal'
 import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
 import type { Post } from '@/hooks/usePosts'
@@ -35,6 +35,18 @@ export function ResonanceCard({
 }) {
   const emotion = (post.emotion || '').toUpperCase()
   const hasVibeTag = (DISCOVER_VIBES as readonly string[]).includes(emotion)
+
+  // Was reading post.text directly — the position-0 mirror, so a 2/3-line
+  // Moment only ever showed its first line here. resolveMomentLines is the
+  // canonical source of truth (same helper Feed/Post Detail/Profile/Search
+  // already use); the existing single-paragraph treatment below (with its
+  // 4-line clamp) already handles arbitrary length, so joining the lines
+  // into one string is enough — no second stitch/divider UI needed in a
+  // card this compact.
+  const momentLines: PostLine[] = resolveMomentLines(post)
+  const momentText = momentLines.length > 0
+    ? momentLines.map((l) => l.text).join('  /  ')
+    : post.text || ''
 
   const { user } = useIdentity()
   const isOwner = !!user?.id && !!post.authorUid && post.authorUid === user.id
@@ -93,7 +105,7 @@ export function ResonanceCard({
           color: 'var(--text)', lineHeight: 1.5, margin: 0,
           display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           minHeight: '4.2em',
-        }}>&ldquo;{post.text}&rdquo;</p>
+        }}>&ldquo;{momentText}&rdquo;</p>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginTop: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
             {post.knowledge?.artwork && (
