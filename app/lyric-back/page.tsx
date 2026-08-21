@@ -16,6 +16,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { PostCard } from '@/components/post-card'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { BackButton } from '@/components/back-button'
+import { resolveMomentLines } from '@/lib/post-lines'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 
@@ -583,6 +584,14 @@ function LyricBackContent() {
       : respondingTo.emotion)
     : null
 
+  // The whole Moment is what Lyric Back responds to — for a 2/3-line
+  // Moment, "Responding to" must show every line, not just the position-0
+  // mirror (which is all it showed before). This does not change what a
+  // Lyric Back replies to (still the whole post, one reply) — it only
+  // fixes what the replier is shown while writing it.
+  const respondingToLines = respondingTo ? resolveMomentLines(respondingTo) : []
+  const respondingToMulti = respondingToLines.length > 1
+
   return (
     <main style={{ minHeight: '100vh', background: bg, position: 'relative' }}>
 
@@ -614,15 +623,38 @@ function LyricBackContent() {
           <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>
             Responding to
           </p>
-          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '10px' }}>
-            &ldquo;{respondingTo?.text || '—'}&rdquo;
-          </p>
-          {(respondingTo?.knowledge?.song || respondingTo?.knowledge?.artist) && (
-            <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '12px' }}>
-              {respondingTo.knowledge.song && respondingTo.knowledge.artist
-                ? `${respondingTo.knowledge.song} · ${respondingTo.knowledge.artist}`
-                : respondingTo.knowledge.song || respondingTo.knowledge.artist}
+          {respondingToLines.length === 0 ? (
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '10px' }}>
+              &ldquo;—&rdquo;
             </p>
+          ) : (
+            respondingToLines.map((line, i) => (
+              <div key={line.id || i}>
+                {respondingToMulti && i > 0 && (
+                  <p style={{
+                    margin: '10px 0 8px', fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                    letterSpacing: '1.5px', textTransform: 'uppercase', color: text3, textAlign: 'center',
+                  }}>
+                    stitch
+                  </p>
+                )}
+                <div style={respondingToMulti ? { borderLeft: '2px solid rgba(232,197,71,0.25)', paddingLeft: '12px' } : undefined}>
+                  <p style={{
+                    fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)',
+                    color: text, lineHeight: 1.5, marginBottom: (line.songTitle || line.artistName) ? '6px' : '10px',
+                  }}>
+                    &ldquo;{line.text}&rdquo;
+                  </p>
+                  {(line.songTitle || line.artistName) && (
+                    <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '12px' }}>
+                      {line.songTitle && line.artistName
+                        ? `${line.songTitle} · ${line.artistName}`
+                        : line.songTitle || line.artistName}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {respondingTo && (
