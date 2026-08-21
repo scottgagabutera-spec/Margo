@@ -90,11 +90,17 @@ function DismissButton({ onClose, offset }: { onClose: () => void; offset: numbe
         zIndex: 1,
       }}
     >
+      {/* Explicit product decision: gold, not the brand system's default
+          muted Ghost/Dismiss treatment (MARGO_BRAND.md Section 10, Tier 5).
+          Phone testing showed the dismiss control wasn't visible enough
+          against the floating player. Still visually secondary to
+          play/pause — small 20px circle vs. the 44px play/pause touch
+          target, same corner-anchored position — this only changes color. */}
       <span style={{
         width: '20px', height: '20px', borderRadius: '50%',
-        background: 'var(--margo-bar)', border: '1px solid rgba(255,255,255,0.14)',
+        background: 'var(--margo-bar)', border: '1px solid var(--gold-border)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'var(--text-muted)',
+        color: 'var(--gold)',
       }}>
         <svg width="8" height="8" viewBox="0 0 24 24" fill="none">
           <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
