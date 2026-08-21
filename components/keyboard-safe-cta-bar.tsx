@@ -1,6 +1,7 @@
 'use client'
 
 import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef } from 'react'
 
 const font = 'var(--font-lora), serif'
 
@@ -23,8 +24,30 @@ interface KeyboardSafeCtaBarProps {
  * overlay instead of sitting in the same band (player z-index is higher).
  * When the keyboard is open the tab bar is already height 0 and this bar
  * sits on the keyboard inset, so extra chrome padding is omitted.
+ *
+ * Publishes its own rendered height as --margo-cta-bar-h (same
+ * ResizeObserver-publish pattern as --margo-tabbar-h / --margo-miniplayer-h)
+ * so other fixed chrome — e.g. Compose's floating mini-player pill — can
+ * stack above it without a guessed pixel offset.
  */
 export function KeyboardSafeCtaBar({ children, keyboardOpen = false }: KeyboardSafeCtaBarProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const setH = () => {
+      document.documentElement.style.setProperty('--margo-cta-bar-h', `${el.offsetHeight}px`)
+    }
+    setH()
+    const ro = new ResizeObserver(setH)
+    ro.observe(el)
+    return () => {
+      ro.disconnect()
+      document.documentElement.style.setProperty('--margo-cta-bar-h', '0px')
+    }
+  }, [])
+
   const style: CSSProperties = {
     position: 'fixed',
     left: 0,
@@ -43,7 +66,7 @@ export function KeyboardSafeCtaBar({ children, keyboardOpen = false }: KeyboardS
   }
 
   return (
-    <div style={style}>
+    <div ref={rootRef} style={style}>
       <div
         style={{
           pointerEvents: 'auto',

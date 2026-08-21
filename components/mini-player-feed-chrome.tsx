@@ -138,7 +138,10 @@ function FeedPill({
       style={{
         position: 'fixed',
         right: '12px',
-        bottom: 'calc(var(--margo-tabbar-h, 80px) + 10px)',
+        /* Stacks above any active KeyboardSafeCtaBar (Compose's Continue)
+           as well as the tab bar — --margo-cta-bar-h is 0 wherever no such
+           bar is rendered (e.g. Feed), so this is a no-op there. */
+        bottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 10px)',
         zIndex: 90,
         display: 'flex',
         alignItems: 'center',
@@ -293,7 +296,7 @@ function FeedOrb({
       style={{
         position: 'fixed',
         right: '14px',
-        bottom: 'calc(var(--margo-tabbar-h, 80px) + 12px)',
+        bottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 12px)',
         zIndex: 90,
         width: `${size}px`,
         height: `${size}px`,

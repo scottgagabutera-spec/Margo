@@ -4,25 +4,29 @@ import type { CSSProperties, ReactNode } from 'react'
 import { LYRIC_FONT } from '@/lib/fonts'
 
 interface ComposeLyricCardProps {
-  /** True when this line has hosted Margo audio linked — mirrors post-card.tsx's tier-1 treatment. */
-  hasAudio?: boolean
   children: ReactNode
   style?: CSSProperties
 }
 
 /**
- * Shared Moment-card visual language for Compose (Your line / Feeling /
- * Ready to send). Mirrors components/post-card.tsx's real lyric card
- * background/border/radius exactly, so the draft preview reads as the
- * same object the user will see once it's an actual Moment — not a
- * separate gold form card invented for Compose alone.
+ * The Margo Gold Moment — the core visual object of the Send a line flow.
+ * Search and Pick the line are lists (scanning many items, calm/neutral
+ * chrome is correct there). The instant a line is chosen, the screen
+ * becomes about one object with full attention — that's the moment this
+ * card exists for, and it deliberately breaks from the app's otherwise
+ * black/restrained palette on purpose: gold here is the transformation
+ * from "browsing" to "this is mine now," not decoration.
+ *
+ * Shares its ink tokens (--text-on-gold / --text-on-gold-muted) with the
+ * exported card's Margo Gold theme, so Compose's Moment and the shared
+ * artifact are the same object, not visually related cousins.
  */
-export function ComposeLyricCard({ hasAudio = false, children, style }: ComposeLyricCardProps) {
+export function ComposeLyricCard({ children, style }: ComposeLyricCardProps) {
   return (
     <div
       style={{
-        background: hasAudio ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
-        border: `1px solid ${hasAudio ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
+        background: 'var(--gold)',
+        border: '1px solid rgba(7,6,10,0.16)',
         borderRadius: '18px',
         padding: '24px',
         position: 'relative',
@@ -36,12 +40,12 @@ export function ComposeLyricCard({ hasAudio = false, children, style }: ComposeL
   )
 }
 
-/** Same typography as post-card.tsx's lyric line — the one Lora italic voice. */
+/** Same voice as the exported card's Margo Gold theme — the one Lora italic text. */
 export const composeLyricTextStyle: CSSProperties = {
   fontFamily: LYRIC_FONT,
   fontStyle: 'italic',
   fontSize: 'clamp(1.1rem, 2.4vw, 1.5rem)',
-  color: 'var(--text)',
+  color: 'var(--text-on-gold)',
   lineHeight: 1.45,
   margin: 0,
   textAlign: 'left',

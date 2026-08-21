@@ -23,7 +23,6 @@ import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-ly
 import { SongMeta } from '@/components/song-meta'
 import { VibeTag } from '@/components/vibe-tag'
 import { UI_FONT } from '@/lib/fonts'
-import { useAudioEngine } from '@/hooks/useAudioEngine'
 
 const supabase = createClient()
 
@@ -158,12 +157,6 @@ function ComposeInner() {
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
-
-  // Mini player publishes its own mount state via the audio engine — reuse
-  // that instead of guessing from Compose's own snippet state, since a
-  // player may already be running from elsewhere when Compose is opened.
-  const { mode: audioEngineMode } = useAudioEngine()
-  const playerActive = audioEngineMode !== 'idle'
 
   // Plain textarea rows don't grow with content — resize to fit whenever
   // the lyric changes (typed, pasted, or pre-filled from a hosted pick).
@@ -662,7 +655,7 @@ function ComposeInner() {
 
   return (
     <main ref={composeRootRef} style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
-      <div style={{ paddingTop: playerActive ? '88px' : '120px', paddingBottom: 'calc(var(--margo-page-padding-bottom) + 88px)', paddingLeft: '24px', paddingRight: '24px' }}>
+      <div style={{ paddingTop: '88px', paddingBottom: 'calc(var(--margo-page-padding-bottom) + 88px)', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
           {/* ── Step 1: Search ── */}
@@ -703,17 +696,19 @@ function ComposeInner() {
               </h1>
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
+              <style>{`.compose-search-input::placeholder { color: var(--text-disabled); }`}</style>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={20} color="var(--text-disabled)" /></span>
                 <input type="text" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
                   placeholder="Search by lyric, song or artist..."
+                  className="compose-search-input"
                   style={{
                     width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px',
                     background: searchFocused ? 'var(--gold-faint)' : 'var(--surface-2)',
                     border: `1px solid ${searchFocused ? 'var(--gold-border)' : 'var(--border)'}`,
-                    borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: font, outline: 'none', boxSizing: 'border-box',
+                    borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: UI_FONT, outline: 'none', boxSizing: 'border-box',
                     transition: 'background 150ms ease, border-color 150ms ease',
                   }} />
               </div>
@@ -785,7 +780,7 @@ function ComposeInner() {
                     {selectedSong?.source === 'margo' ? 'Change a word if you need to.' : 'Type the lyric'}
                   </p>
                 </div>
-                <ComposeLyricCard hasAudio={!!linkedAudioUrl} style={{ padding: playerActive ? '16px' : '24px' }}>
+                <ComposeLyricCard>
                   <textarea ref={lyricTextareaRef} value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
                     rows={2}
                     style={{
@@ -800,18 +795,18 @@ function ComposeInner() {
                     }} />
                   <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div>
-                      <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
+                      <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
                       <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
-                        style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', padding: '4px 0 6px', fontFamily: UI_FONT, fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)', padding: '4px 0 6px', fontFamily: UI_FONT, fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-on-gold)', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
+                      <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
                       <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
-                        style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', padding: '4px 0 6px', fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-secondary)', outline: 'none', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)', padding: '4px 0 6px', fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-on-gold-muted)', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-                    <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-muted)' }}>{lyric.length}/140</span>
+                    <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
                   </div>
                 </ComposeLyricCard>
               </>
@@ -835,10 +830,14 @@ function ComposeInner() {
               )}
             </div>
 
-            <ComposeLyricCard hasAudio={!!linkedAudioUrl} style={{ marginBottom: '24px', padding: playerActive ? '16px' : '24px' }}>
+            <ComposeLyricCard style={{ marginBottom: '24px' }}>
               <p style={composeLyricTextStyle}>&ldquo;{lyric}&rdquo;</p>
               <div style={{ marginTop: '12px' }}>
-                <SongMeta title={songName} artist={artistName} />
+                <SongMeta
+                  title={songName} artist={artistName}
+                  titleStyle={{ color: 'var(--text-on-gold)' }}
+                  artistStyle={{ color: 'var(--text-on-gold-muted)' }}
+                />
               </div>
             </ComposeLyricCard>
 
@@ -907,13 +906,17 @@ function ComposeInner() {
               </div>
             )}
 
-            <ComposeLyricCard hasAudio={!!linkedAudioUrl} style={{ marginBottom: '32px', padding: playerActive ? '16px' : '24px' }}>
+            <ComposeLyricCard style={{ marginBottom: '32px' }}>
               <p style={composeLyricTextStyle}>&ldquo;{lyric}&rdquo;</p>
               <div style={{ marginTop: '12px' }}>
-                <SongMeta title={songName} artist={artistName} />
+                <SongMeta
+                  title={songName} artist={artistName}
+                  titleStyle={{ color: 'var(--text-on-gold)' }}
+                  artistStyle={{ color: 'var(--text-on-gold-muted)' }}
+                />
               </div>
               {selectedVibe && (
-                <VibeTag label={VIBE_LABELS[selectedVibe]} color="var(--gold)" />
+                <VibeTag label={VIBE_LABELS[selectedVibe]} color="var(--text-on-gold)" />
               )}
             </ComposeLyricCard>
 

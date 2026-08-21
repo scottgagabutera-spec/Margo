@@ -57,6 +57,10 @@ export function MiniPlayer() {
   }, [])
 
   const isOnFeed = !!pathname?.startsWith('/feed')
+  // Compose reuses Feed's compact floating pill/orb instead of the denser
+  // full-width bar — same reasoning as Feed: a single-object creation
+  // screen shouldn't have its layout pushed around by player chrome.
+  const usesFloatingChrome = isOnFeed || !!pathname?.startsWith('/compose')
 
   // Feed shows pill/orb (A.3); karaoke page owns immersive chrome.
   const isHidden =
@@ -66,9 +70,9 @@ export function MiniPlayer() {
   // Fresh play → pill; leaving Feed keeps orb preference until idle/end.
   useEffect(() => { setFeedChrome('pill') }, [songId])
 
-  // Full-width bar reserves page padding; Feed pill/orb overlays (h=0).
+  // Full-width bar reserves page padding; floating pill/orb overlays (h=0).
   useEffect(() => {
-    if (isHidden || expanded || isOnFeed) {
+    if (isHidden || expanded || usesFloatingChrome) {
       document.documentElement.style.setProperty('--margo-miniplayer-h', '0px')
       return
     }
@@ -84,7 +88,7 @@ export function MiniPlayer() {
       ro.disconnect()
       document.documentElement.style.setProperty('--margo-miniplayer-h', '0px')
     }
-  }, [isHidden, expanded, isOnFeed, songId, playing])
+  }, [isHidden, expanded, usesFloatingChrome, songId, playing])
 
   // ── Drag-to-dismiss gesture on the collapsed bar ─────────────────
   const [barOffset, setBarOffset] = useState(0)
@@ -256,8 +260,8 @@ export function MiniPlayer() {
         }
       `}</style>
 
-      {/* ── Feed collapsed: pill → orb (A.3 / D5) ───────────────── */}
-      {!expanded && isOnFeed && (
+      {/* ── Compact floating pill → orb (A.3 / D5) — Feed and Compose ── */}
+      {!expanded && usesFloatingChrome && (
         <MiniPlayerFeedChrome
           mode={feedChrome}
           artwork={artwork}
@@ -273,8 +277,8 @@ export function MiniPlayer() {
         />
       )}
 
-      {/* ── Collapsed bar (non-Feed denser chrome) ──────────────── */}
-      {!expanded && !isOnFeed && (
+      {/* ── Collapsed bar (denser chrome — everywhere else) ──────── */}
+      {!expanded && !usesFloatingChrome && (
         <div
           ref={barRef}
           className="mp-bar margo-mp-bar"

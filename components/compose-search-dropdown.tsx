@@ -1,8 +1,7 @@
 'use client'
 
 import { MusicNoteIcon } from '@/components/icons'
-
-const font = 'var(--font-lora), serif'
+import { UI_FONT } from '@/lib/fonts'
 
 export interface ComposeSearchHit {
   id: string
@@ -101,7 +100,7 @@ export function ComposeSearchDropdown({
           </div>
         )}
         {!loading && results.length === 0 && (
-          <p style={{ textAlign: 'center', padding: '20px', fontFamily: font, color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>
+          <p style={{ textAlign: 'center', padding: '20px', fontFamily: UI_FONT, color: 'var(--text-muted)', fontSize: '0.82rem' }}>
             No songs found
           </p>
         )}
@@ -129,18 +128,20 @@ export function ComposeSearchDropdown({
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              {result.artwork && (
+              {result.artwork ? (
                 <img
                   src={result.artwork}
                   alt=""
-                  style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                  style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, background: 'var(--surface-2)' }}
                 />
+              ) : (
+                <div style={{ width: '48px', height: '48px', borderRadius: '8px', flexShrink: 0, background: 'var(--surface-2)' }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontFamily: font, color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{ fontFamily: UI_FONT, color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {result.title}
                 </p>
-                <p style={{ fontFamily: font, color: 'var(--text-secondary)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{ fontFamily: UI_FONT, color: 'var(--text-secondary)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {result.artist}
                 </p>
               </div>
@@ -155,7 +156,7 @@ export function ComposeSearchDropdown({
                   textTransform: 'uppercase',
                   padding: '2px 8px',
                   borderRadius: '50px',
-                  fontFamily: font,
+                  fontFamily: UI_FONT,
                   color: isHosted ? 'var(--gold)' : 'var(--text-muted)',
                   background: isHosted ? 'var(--gold-faint)' : 'transparent',
                   border: `1px solid ${isHosted ? 'var(--gold-border)' : 'var(--border)'}`,
