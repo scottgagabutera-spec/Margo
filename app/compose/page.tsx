@@ -19,6 +19,10 @@ import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryB
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { POST_LINES_MAX, type PostLineSource } from '@/lib/post-lines'
+import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
+import { SongMeta } from '@/components/song-meta'
+import { VibeTag } from '@/components/vibe-tag'
+import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 
@@ -542,7 +546,18 @@ function ComposeInner() {
     const isPrivateSave = completionMode === 'private'
     return (
       <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', paddingTop: '80px' }}>
+        <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', paddingTop: '40px' }}>
+          <button
+            type="button"
+            onClick={resetCompose}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: font, fontSize: '0.75rem', color: 'var(--text-secondary, var(--text-2))',
+              letterSpacing: '0.5px', minHeight: 'var(--margo-touch-min)', padding: '0 12px',
+              display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+              marginBottom: '20px',
+            }}
+          >Done</button>
           <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--text)', marginBottom: '8px' }}>
             {isPrivateSave ? 'Saved privately.' : 'Send this to someone.'}
           </p>
@@ -746,36 +761,44 @@ function ComposeInner() {
                     {selectedSong?.source === 'margo' ? 'Change a word if you need to.' : 'Type the lyric'}
                   </p>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Artist</label>
-                    <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
-                      style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontFamily: font, fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>Song</label>
-                    <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
-                      style={{ width: '100%', height: '48px', padding: '0 16px', background: 'var(--gold-faint)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text)', fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
-                  </div>
-                </div>
-                <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '256px', height: '128px', background: 'rgba(232,197,71,0.1)', filter: 'blur(40px)', pointerEvents: 'none' }} />
+                <ComposeLyricCard hasAudio={!!linkedAudioUrl}>
                   <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-                    rows={4}
-                    style={{ width: '100%', background: 'transparent', fontSize: '1.5rem', fontFamily: font, fontStyle: 'italic', color: 'var(--gold)', textAlign: 'center', lineHeight: 1.6, border: 'none', outline: 'none', resize: 'none', position: 'relative', zIndex: 10, boxSizing: 'border-box' }} />
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '16px', position: 'relative', zIndex: 10 }}>
-                    <span style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--text-muted)' }}>{lyric.length}/140</span>
+                    rows={3}
+                    style={{
+                      ...composeLyricTextStyle,
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      resize: 'none',
+                      boxSizing: 'border-box',
+                    }} />
+                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
+                      <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
+                        style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', padding: '4px 0 6px', fontFamily: UI_FONT, fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
+                      <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
+                        style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', padding: '4px 0 6px', fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-secondary)', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
                   </div>
-                </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                    <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-muted)' }}>{lyric.length}/140</span>
+                  </div>
+                </ComposeLyricCard>
               </>
             )}
           </div>
 
           {/* ── Step 3: Vibe Selection ── */}
           <div style={{ display: step === 3 ? 'block' : 'none' }}>
-            {!emotionLoading && (
-              <button style={backBtnStyle} onClick={() => setStep(2)}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
-            )}
+            <button style={backBtnStyle} onClick={() => {
+              if (emotionLoading) emotionAbortRef.current?.abort()
+              setStep(2)
+            }}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: emotionLoading ? 0 : '8px' }}>
                 {emotionLoading ? 'Finding the feeling…' : 'How does this feel?'}
@@ -787,10 +810,12 @@ function ComposeInner() {
               )}
             </div>
 
-            <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '16px', padding: '24px', marginBottom: '24px', textAlign: 'center' }}>
-              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.25rem', color: 'var(--text)', marginBottom: '8px' }}>&ldquo;{lyric}&rdquo;</p>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>— {artistName}, {songName}</p>
-            </div>
+            <ComposeLyricCard hasAudio={!!linkedAudioUrl} style={{ marginBottom: '24px' }}>
+              <p style={composeLyricTextStyle}>&ldquo;{lyric}&rdquo;</p>
+              <div style={{ marginTop: '12px' }}>
+                <SongMeta title={songName} artist={artistName} />
+              </div>
+            </ComposeLyricCard>
 
             {emotionLoading && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '24px' }}>
@@ -809,7 +834,7 @@ function ComposeInner() {
                         minHeight: 'var(--margo-touch-min)', padding: '0 20px', borderRadius: '50px',
                         display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                         fontFamily: font, fontWeight: 600,
-                        fontSize: '0.82rem', cursor: 'pointer', transition: 'all 150ms ease',
+                        fontSize: '0.7rem', cursor: 'pointer', transition: 'all 150ms ease',
                         background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
                         color: selectedVibe === vibe ? 'var(--bg)' : 'var(--gold)',
                         border: selectedVibe === vibe ? '1px solid var(--gold)' : '1px solid var(--gold-border)',
@@ -829,7 +854,11 @@ function ComposeInner() {
 
           {/* ── Step 4: Preview + Post ── */}
           <div style={{ display: step === 4 ? 'block' : 'none' }}>
-            <button style={backBtnStyle} onClick={() => setStep(3)}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
+            <button
+              style={{ ...backBtnStyle, opacity: posting ? 0.4 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
+              disabled={posting}
+              onClick={() => { if (!posting) setStep(3) }}
+            ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>Ready to send?</h1>
               <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
@@ -853,14 +882,15 @@ function ComposeInner() {
               </div>
             )}
 
-            <div style={{ background: 'var(--gold-faint)', border: '1px solid var(--gold-border)', borderRadius: '20px', padding: '32px', marginBottom: '24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '256px', height: '128px', background: 'rgba(232,197,71,0.1)', filter: 'blur(40px)', pointerEvents: 'none' }} />
-              <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--gold)', marginBottom: '16px', position: 'relative', zIndex: 1 }}>&ldquo;{lyric}&rdquo;</p>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '16px', position: 'relative', zIndex: 1 }}>— {artistName}, {songName}</p>
+            <ComposeLyricCard hasAudio={!!linkedAudioUrl} style={{ marginBottom: '32px' }}>
+              <p style={composeLyricTextStyle}>&ldquo;{lyric}&rdquo;</p>
+              <div style={{ marginTop: '12px' }}>
+                <SongMeta title={songName} artist={artistName} />
+              </div>
               {selectedVibe && (
-                <span style={{ display: 'inline-block', padding: '6px 16px', background: 'rgba(232,197,71,0.15)', border: '1px solid var(--gold-border)', borderRadius: '50px', fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase', position: 'relative', zIndex: 1 }}>{VIBE_LABELS[selectedVibe]}</span>
+                <VibeTag label={VIBE_LABELS[selectedVibe]} color="var(--gold)" />
               )}
-            </div>
+            </ComposeLyricCard>
 
             {/* Display name banner — shown until customized once, or dismissed */}
             {showNameBanner && identity && (
@@ -982,12 +1012,6 @@ function ComposeInner() {
           </div>
         </KeyboardSafeCtaBar>
       )}
-
-      <CardExportModal
-        open={showExport}
-        onOpenChange={(o) => { setShowExport(o); if (!o) router.push('/feed') }}
-        lyric={lyric} song={songName} artist={artistName} postId={postedId || undefined}
-      />
     </main>
   )
 }
