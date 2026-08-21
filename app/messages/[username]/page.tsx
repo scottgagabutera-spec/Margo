@@ -14,6 +14,29 @@ function timeLabel(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
+function ThreadMessageBody({ body, mine }: { body: string; mine: boolean }) {
+  const parts = body.split(/(https?:\/\/[^\s]+)/g)
+  const linkStyle = {
+    color: mine ? 'var(--bg)' : 'var(--gold)',
+    textDecoration: 'underline' as const,
+  }
+  return (
+    <p style={{
+      fontFamily: font, fontSize: '0.82rem', margin: 0, lineHeight: 1.4,
+      whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+    }}>
+      {parts.map((part, i) => {
+        if (!/^https?:\/\//.test(part)) return <span key={i}>{part}</span>
+        const path = part.startsWith('https://trymargo.com')
+          ? (part.slice('https://trymargo.com'.length) || '/')
+          : null
+        if (path) return <Link key={i} href={path} style={linkStyle}>{part}</Link>
+        return <a key={i} href={part} style={linkStyle}>{part}</a>
+      })}
+    </p>
+  )
+}
+
 export default function ThreadPage() {
   const params = useParams<{ username: string }>()
   const { user } = useIdentity()
@@ -108,7 +131,7 @@ export default function ThreadPage() {
                   background: mine ? 'var(--gold)' : 'rgba(255,255,255,0.06)',
                   color: mine ? 'var(--bg)' : 'var(--text)',
                 }}>
-                  <p style={{ fontFamily: font, fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>{m.body}</p>
+                  <ThreadMessageBody body={m.body} mine={mine} />
                   <p style={{
                     fontFamily: font, fontSize: '0.55rem', margin: '4px 0 0',
                     color: mine ? 'rgba(11,11,11,0.55)' : 'var(--text-muted)',

@@ -16,6 +16,7 @@
   --text-muted: #8A8894;
   --text-disabled: #5C5A66;
   --text-on-gold: var(--bg);
+  --text-on-gold-muted: rgba(7,6,10,0.6);
   /* Deprecated aliases — keep as safety net only; new code must use named tokens (see MARGO_BRAND.md §4) */
   --text-2: var(--text-secondary);
   --text-3: var(--text-disabled);
@@ -487,6 +488,14 @@ html, body {
    (Compose typing / search sheet). Avoids fighting sticky CTAs. */
 @media (max-width: 639px) {
   html[data-margo-keyboard="1"] .margo-mobile-tabbar {
+    display: none !important;
+  }
+  /* Same reasoning for the floating mini-player pill/orb (Compose reuses
+     Feed's compact chrome) — hide outright while typing rather than
+     chasing the keyboard's animated position; it reappears once focus
+     clears and layout settles, avoiding stale-state jumps on Back. */
+  html[data-margo-keyboard="1"] .mp-feed-pill,
+  html[data-margo-keyboard="1"] .mp-feed-orb {
     display: none !important;
   }
 }

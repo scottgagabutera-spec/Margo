@@ -16,6 +16,8 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { PostCard } from '@/components/post-card'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { BackButton } from '@/components/back-button'
+import { resolveMomentLines } from '@/lib/post-lines'
+import { isNotificationAllowed } from '@/lib/notification-prefs'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 
@@ -453,6 +455,19 @@ function LyricBackContent() {
     // now, instead of the old flat posts/{id}/echoes nesting. A fresh
     // Lyric Back with no parent (respondingToId null) is a new top-level
     // post, same as compose's handlePost.
+    //
+    // isPrivate applies the same way whether or not this is a reply —
+    // same 'private' status compose uses for top-level Moments. A private
+    // Lyric Back still threads to its parent (parent_post_id set) but is
+    // invisible to everyone but its author: useEchoes/RLS already exclude
+    // status='private' the same way they exclude it for top-level posts,
+    // and the post_reply_status_update trigger's echo_count recompute
+    // only counts status='active' children, so a private reply never
+    // inflates the parent's visible Lyric Back count. Previously this
+    // branch forced status:'active' whenever respondingToId was set,
+    // silently ignoring isPrivate — so tapping "Keep Private" on a reply
+    // created a public, active post anyway. Fixed to match the label.
+    //
     // Resolve snippet timing against the linked song's real lyric_lines
     // — same shared matcher compose uses. Null songId or no confident
     // match just means no snippet button, not a wrong guess.
@@ -469,7 +484,7 @@ function LyricBackContent() {
     const { error: insertErr } = await supabase.from('posts').insert({
       text: lyric,
       emotion: selectedVibe,
-      status: respondingToId ? 'active' : (isPrivate ? 'private' : 'active'),
+      status: isPrivate ? 'private' : 'active',
       song_id: linkedSongId || null,
       song_title: songName,
       artist_name: artistName,
@@ -489,18 +504,26 @@ function LyricBackContent() {
       return
     }
 
+    toast.success(isPrivate ? 'Saved privately.' : 'Sent. Your Lyric Back was sent.')
+
     // Same client-insert pattern as feed resonate notifications. Only when
-    // this is a reply (parent exists) and the parent author is someone else.
+    // this is a reply (parent exists), the parent author is someone else,
+    // and the reply is actually visible to them — a private reply still
+    // threads to its parent but nobody but its author can see it, so
+    // notifying the parent author about it would point them at something
+    // they can't open.
     const parentAuthorId = respondingTo?.authorUid
-    if (respondingToId && parentAuthorId && parentAuthorId !== authorId) {
+    if (respondingToId && parentAuthorId && parentAuthorId !== authorId && !isPrivate) {
       try {
-        const { error: notifErr } = await supabase.from('notifications').insert({
-          recipient_id: parentAuthorId,
-          actor_id: authorId,
-          type: 'lyric_back',
-          post_id: respondingToId,
-        })
-        if (notifErr) console.error('Failed to insert lyric_back notification:', notifErr)
+        if (await isNotificationAllowed(supabase, parentAuthorId, 'lyricBack')) {
+          const { error: notifErr } = await supabase.from('notifications').insert({
+            recipient_id: parentAuthorId,
+            actor_id: authorId,
+            type: 'lyric_back',
+            post_id: respondingToId,
+          })
+          if (notifErr) console.error('Failed to insert lyric_back notification:', notifErr)
+        }
       } catch (err) {
         console.error('Failed to insert lyric_back notification:', err)
       }
@@ -564,6 +587,14 @@ function LyricBackContent() {
       : respondingTo.emotion)
     : null
 
+  // The whole Moment is what Lyric Back responds to — for a 2/3-line
+  // Moment, "Responding to" must show every line, not just the position-0
+  // mirror (which is all it showed before). This does not change what a
+  // Lyric Back replies to (still the whole post, one reply) — it only
+  // fixes what the replier is shown while writing it.
+  const respondingToLines = respondingTo ? resolveMomentLines(respondingTo) : []
+  const respondingToMulti = respondingToLines.length > 1
+
   return (
     <main style={{ minHeight: '100vh', background: bg, position: 'relative' }}>
 
@@ -595,15 +626,38 @@ function LyricBackContent() {
           <p style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '14px' }}>
             Responding to
           </p>
-          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '10px' }}>
-            &ldquo;{respondingTo?.text || '—'}&rdquo;
-          </p>
-          {(respondingTo?.knowledge?.song || respondingTo?.knowledge?.artist) && (
-            <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '12px' }}>
-              {respondingTo.knowledge.song && respondingTo.knowledge.artist
-                ? `${respondingTo.knowledge.song} · ${respondingTo.knowledge.artist}`
-                : respondingTo.knowledge.song || respondingTo.knowledge.artist}
+          {respondingToLines.length === 0 ? (
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', color: text, lineHeight: 1.5, marginBottom: '10px' }}>
+              &ldquo;—&rdquo;
             </p>
+          ) : (
+            respondingToLines.map((line, i) => (
+              <div key={line.id || i}>
+                {respondingToMulti && i > 0 && (
+                  <p style={{
+                    margin: '10px 0 8px', fontFamily: font, fontSize: '0.55rem', fontWeight: 700,
+                    letterSpacing: '1.5px', textTransform: 'uppercase', color: text3, textAlign: 'center',
+                  }}>
+                    stitch
+                  </p>
+                )}
+                <div style={respondingToMulti ? { borderLeft: '2px solid rgba(232,197,71,0.25)', paddingLeft: '12px' } : undefined}>
+                  <p style={{
+                    fontFamily: font, fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3vw, 1.5rem)',
+                    color: text, lineHeight: 1.5, marginBottom: (line.songTitle || line.artistName) ? '6px' : '10px',
+                  }}>
+                    &ldquo;{line.text}&rdquo;
+                  </p>
+                  {(line.songTitle || line.artistName) && (
+                    <p style={{ fontFamily: font, fontSize: '0.6rem', color: text3, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '12px' }}>
+                      {line.songTitle && line.artistName
+                        ? `${line.songTitle} · ${line.artistName}`
+                        : line.songTitle || line.artistName}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {respondingTo && (
@@ -984,7 +1038,9 @@ function LyricBackContent() {
                       song: p.knowledge?.song || '',
                       artist: p.knowledge?.artist || '',
                       id: p.id,
-                      parentLyric: respondingTo?.text,
+                      parentLyric: respondingTo
+                        ? resolveMomentLines(respondingTo).map((l) => l.text).join('  /  ')
+                        : undefined,
                       parentSong: respondingTo?.knowledge?.song,
                       parentArtist: respondingTo?.knowledge?.artist,
                     })

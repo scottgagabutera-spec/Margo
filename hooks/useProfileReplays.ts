@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/hooks/usePosts'
+import { mapPostLinesRows } from '@/lib/post-lines'
 
 const supabase = createClient()
 
@@ -32,7 +33,12 @@ const SELECT = `
     snippet_end_sec,
     profiles:author_profile_id ( username, display_name, avatar_url ),
     post_stats ( resonate_count, echo_count, replay_count ),
-    songs:song_id ( audio_url )
+    songs:song_id ( audio_url ),
+    post_lines (
+      id, position, text, song_id, song_title, artist_name, artwork_url,
+      snippet_start_sec, snippet_end_sec, source,
+      songs:song_id ( audio_url )
+    )
   )
 `
 
@@ -65,6 +71,10 @@ function mapPost(row: any): Post | null {
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
+    // Multi-line Moments join post_lines above — resolveMomentLines
+    // (used by PostCard etc.) prefers this over the mirror fields above
+    // whenever it's present, matching Feed/Post Detail/main Profile.
+    lines: mapPostLinesRows(row.post_lines),
   }
 }
 

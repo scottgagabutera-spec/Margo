@@ -5,7 +5,7 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/hooks/usePosts'
 import type { Song } from '@/hooks/useSongs'
-import type { PostLine, PostLineSource } from '@/lib/post-lines'
+import { mapPostLinesRows } from '@/lib/post-lines'
 import type { CatalogLyricAtom } from '@/lib/catalog-lyric-unit'
 import { warmProfile } from '@/lib/profile-warm'
 
@@ -66,29 +66,6 @@ const POST_SELECT = `
   )
 `
 
-function mapPostLines(raw: any[] | null | undefined): PostLine[] | undefined {
-  if (!raw || raw.length === 0) return undefined
-  return [...raw]
-    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-    .map((row) => {
-      const linked = Array.isArray(row.songs) ? row.songs[0] : row.songs
-      const source = (row.source as PostLineSource) || 'external'
-      return {
-        id: row.id,
-        position: row.position ?? 0,
-        text: row.text ?? '',
-        songId: row.song_id ?? null,
-        songTitle: row.song_title ?? null,
-        artistName: row.artist_name ?? null,
-        artworkUrl: row.artwork_url ?? null,
-        audioUrl: linked?.audio_url ?? null,
-        snippetStart: row.snippet_start_sec ?? null,
-        snippetEnd: row.snippet_end_sec ?? null,
-        source,
-      }
-    })
-}
-
 function mapPostRow(row: any): Post {
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
   const stats = Array.isArray(row.post_stats) ? row.post_stats[0] : row.post_stats
@@ -129,7 +106,7 @@ function mapPostRow(row: any): Post {
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
-    lines: mapPostLines(row.post_lines),
+    lines: mapPostLinesRows(row.post_lines),
   }
 }
 

@@ -1,6 +1,7 @@
 'use client'
 
-const font = 'var(--font-lora), serif'
+import { MusicNoteIcon } from '@/components/icons'
+import { UI_FONT } from '@/lib/fonts'
 
 export interface ComposeSearchHit {
   id: string
@@ -42,6 +43,10 @@ export function ComposeSearchDropdown({
 
   return (
     <>
+      <style>{`
+        .compose-search-row { transition: background 120ms ease; }
+        .compose-search-row:active { background: rgba(255,255,255,0.04); }
+      `}</style>
       <button
         type="button"
         aria-label="Dismiss search"
@@ -81,67 +86,88 @@ export function ComposeSearchDropdown({
         }}
       >
         {loading && (
-          <div style={{ textAlign: 'center', padding: '16px', fontFamily: font, color: 'var(--gold)', fontSize: '0.82rem' }}>
-            Searching…
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '20px' }}>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: '6px', height: '6px', borderRadius: '50%',
+                  background: 'var(--gold)', opacity: 0.5,
+                  animation: 'bounce 1s infinite', animationDelay: `${i * 150}ms`,
+                }}
+              />
+            ))}
           </div>
         )}
         {!loading && results.length === 0 && (
-          <p style={{ textAlign: 'center', padding: '20px', fontFamily: font, color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>
+          <p style={{ textAlign: 'center', padding: '20px', fontFamily: UI_FONT, color: 'var(--text-muted)', fontSize: '0.82rem' }}>
             No songs found
           </p>
         )}
-        {results.map((result) => (
-          <button
-            key={result.source + '-' + result.id}
-            type="button"
-            role="option"
-            onClick={() => onSelect(result)}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              padding: '14px 16px',
-              minHeight: 'var(--margo-touch-min)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              textAlign: 'left',
-              boxSizing: 'border-box',
-            }}
-          >
-            {result.artwork && (
-              <img
-                src={result.artwork}
-                alt=""
-                style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
-              />
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontFamily: font, color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {result.title}
-              </p>
-              <p style={{ fontFamily: font, color: 'var(--text-secondary)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {result.artist}
-              </p>
-            </div>
-            <span
+        {results.map((result) => {
+          const isHosted = result.source === 'margo'
+          return (
+            <button
+              key={result.source + '-' + result.id}
+              type="button"
+              role="option"
+              className="compose-search-row"
+              onClick={() => onSelect(result)}
               style={{
-                flexShrink: 0,
-                fontSize: '0.6rem',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                padding: '2px 8px',
-                borderRadius: '50px',
-                fontFamily: font,
-                color: result.source === 'margo' ? 'var(--gold)' : 'var(--text-muted)',
-                border: result.source === 'margo' ? '1px solid var(--gold-border)' : '1px solid var(--border)',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '14px 16px',
+                minHeight: 'var(--margo-touch-min)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+                boxSizing: 'border-box',
+                WebkitTapHighlightColor: 'transparent',
               }}
             >
-              {sourceLabel(result.source)}
-            </span>
-          </button>
-        ))}
+              {result.artwork ? (
+                <img
+                  src={result.artwork}
+                  alt=""
+                  style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, background: 'var(--surface-2)' }}
+                />
+              ) : (
+                <div style={{ width: '48px', height: '48px', borderRadius: '8px', flexShrink: 0, background: 'var(--surface-2)' }} />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontFamily: UI_FONT, color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {result.title}
+                </p>
+                <p style={{ fontFamily: UI_FONT, color: 'var(--text-secondary)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {result.artist}
+                </p>
+              </div>
+              <span
+                style={{
+                  flexShrink: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.6rem',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  padding: '2px 8px',
+                  borderRadius: '50px',
+                  fontFamily: UI_FONT,
+                  color: isHosted ? 'var(--gold)' : 'var(--text-muted)',
+                  background: isHosted ? 'var(--gold-faint)' : 'transparent',
+                  border: `1px solid ${isHosted ? 'var(--gold-border)' : 'var(--border)'}`,
+                }}
+              >
+                {isHosted && <MusicNoteIcon size={10} color="var(--gold)" />}
+                {sourceLabel(result.source)}
+              </span>
+            </button>
+          )
+        })}
       </div>
     </>
   )

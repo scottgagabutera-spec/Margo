@@ -200,7 +200,7 @@ export function MargoNav() {
               boxSizing: 'border-box',
               transition: 'all 150ms ease', flexShrink: 0, whiteSpace: 'nowrap',
               opacity: isOnCompose ? 0.75 : 1,
-            }}>Share a Lyric</Link>
+            }}>Send a line</Link>
 
             <div style={{ marginLeft: '4px' }}>
               <HubIconButton />

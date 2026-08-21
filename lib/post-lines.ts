@@ -20,6 +20,33 @@ export interface PostLine {
 
 export const POST_LINES_MAX = 3
 
+/** Maps a raw `post_lines` join (as returned by a Supabase select) into the
+ * PostLine[] shape resolveMomentLines expects. Canonical mapper — shared by
+ * every query that joins post_lines (usePost.ts, primary-tab-prefetch.ts,
+ * useOwnPrivatePosts.ts, useProfileReplays.ts) rather than each keeping its
+ * own copy of the same ~20 lines. */
+export function mapPostLinesRows(raw: any[] | null | undefined): PostLine[] | undefined {
+  if (!raw || raw.length === 0) return undefined
+  return [...raw]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((row) => {
+      const linked = Array.isArray(row.songs) ? row.songs[0] : row.songs
+      return {
+        id: row.id,
+        position: row.position ?? 0,
+        text: row.text ?? '',
+        songId: row.song_id ?? null,
+        songTitle: row.song_title ?? null,
+        artistName: row.artist_name ?? null,
+        artworkUrl: row.artwork_url ?? null,
+        audioUrl: linked?.audio_url ?? null,
+        snippetStart: row.snippet_start_sec ?? null,
+        snippetEnd: row.snippet_end_sec ?? null,
+        source: (row.source as PostLineSource) || 'external',
+      }
+    })
+}
+
 /** Prefer joined lines; otherwise synthesize position-0 from the post mirror. */
 export function resolveMomentLines(post: {
   text?: string

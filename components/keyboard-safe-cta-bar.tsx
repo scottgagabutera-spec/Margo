@@ -1,6 +1,7 @@
 'use client'
 
 import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef } from 'react'
 
 const font = 'var(--font-lora), serif'
 
@@ -8,7 +9,7 @@ interface KeyboardSafeCtaBarProps {
   children: ReactNode
   /**
    * When true (keyboard open / tab bar hidden), sit on --margo-keyboard-inset.
-   * When false, clear the mobile tab bar via --margo-tabbar-h.
+   * When false, clear tab bar + mini-player via --margo-page-bottom.
    */
   keyboardOpen?: boolean
 }
@@ -17,8 +18,36 @@ interface KeyboardSafeCtaBarProps {
  * Pins primary actions above the on-screen keyboard using
  * --margo-keyboard-inset from useVisualViewport.
  * Reusable for Compose and future form flows.
+ *
+ * When the keyboard is closed, pad by --margo-page-bottom (tab bar +
+ * mini-player) so Continue / primary actions stay above the player
+ * overlay instead of sitting in the same band (player z-index is higher).
+ * When the keyboard is open the tab bar is already height 0 and this bar
+ * sits on the keyboard inset, so extra chrome padding is omitted.
+ *
+ * Publishes its own rendered height as --margo-cta-bar-h (same
+ * ResizeObserver-publish pattern as --margo-tabbar-h / --margo-miniplayer-h)
+ * so other fixed chrome — e.g. Compose's floating mini-player pill — can
+ * stack above it without a guessed pixel offset.
  */
 export function KeyboardSafeCtaBar({ children, keyboardOpen = false }: KeyboardSafeCtaBarProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const setH = () => {
+      document.documentElement.style.setProperty('--margo-cta-bar-h', `${el.offsetHeight}px`)
+    }
+    setH()
+    const ro = new ResizeObserver(setH)
+    ro.observe(el)
+    return () => {
+      ro.disconnect()
+      document.documentElement.style.setProperty('--margo-cta-bar-h', '0px')
+    }
+  }, [])
+
   const style: CSSProperties = {
     position: 'fixed',
     left: 0,
@@ -30,14 +59,14 @@ export function KeyboardSafeCtaBar({ children, keyboardOpen = false }: KeyboardS
     paddingRight: '24px',
     paddingBottom: keyboardOpen
       ? '12px'
-      : 'calc(12px + var(--margo-tabbar-h, 0px))',
+      : 'calc(12px + var(--margo-page-bottom, var(--margo-tabbar-h, 0px)))',
     background: 'linear-gradient(to top, var(--bg) 55%, transparent)',
     pointerEvents: 'none',
     transition: 'bottom 120ms var(--ease-out), padding-bottom 120ms var(--ease-out)',
   }
 
   return (
-    <div style={style}>
+    <div ref={rootRef} style={style}>
       <div
         style={{
           pointerEvents: 'auto',

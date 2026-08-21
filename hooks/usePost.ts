@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Post } from '@/hooks/usePosts'
+import { mapPostLinesRows } from '@/lib/post-lines'
 
 const supabase = createClient()
 
@@ -42,28 +43,6 @@ const POST_SELECT = `
   )
 `
 
-function mapPostLines(raw: any[] | null | undefined) {
-  if (!raw || raw.length === 0) return undefined
-  return [...raw]
-    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-    .map((row) => {
-      const linked = Array.isArray(row.songs) ? row.songs[0] : row.songs
-      return {
-        id: row.id,
-        position: row.position ?? 0,
-        text: row.text ?? '',
-        songId: row.song_id ?? null,
-        songTitle: row.song_title ?? null,
-        artistName: row.artist_name ?? null,
-        artworkUrl: row.artwork_url ?? null,
-        audioUrl: linked?.audio_url ?? null,
-        snippetStart: row.snippet_start_sec ?? null,
-        snippetEnd: row.snippet_end_sec ?? null,
-        source: row.source || 'external',
-      }
-    })
-}
-
 function mapRow(row: any): Post {
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
   const stats = Array.isArray(row.post_stats) ? row.post_stats[0] : row.post_stats
@@ -102,7 +81,7 @@ function mapRow(row: any): Post {
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
-    lines: mapPostLines(row.post_lines),
+    lines: mapPostLinesRows(row.post_lines),
   }
 }
 

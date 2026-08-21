@@ -3,6 +3,7 @@
  * (post_replays → ReplayAttribution). Used by useRecentReplays (Feed discovery).
  */
 import type { Post } from '@/hooks/usePosts'
+import { mapPostLinesRows } from '@/lib/post-lines'
 
 export interface FeedReplay {
   id: string
@@ -43,7 +44,16 @@ export const REPLAY_FEED_SELECT = `
     parent_post_id,
     profiles:author_profile_id ( username, display_name, avatar_url ),
     post_stats ( resonate_count, echo_count, replay_count ),
-    songs:song_id ( audio_url )
+    songs:song_id ( audio_url ),
+    post_lines (
+      position,
+      text,
+      song_id,
+      song_title,
+      artist_name,
+      snippet_start_sec,
+      snippet_end_sec
+    )
   )
 `
 
@@ -88,6 +98,7 @@ export function mapReplayPost(row: any): Post | null {
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
+    lines: mapPostLinesRows(row.post_lines),
   }
 }
 

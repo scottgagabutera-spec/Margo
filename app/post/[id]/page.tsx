@@ -7,6 +7,7 @@ import { usePost } from '@/hooks/usePost'
 import { useEchoes } from '@/hooks/useEchoes'
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
+import { resolveMomentLines } from '@/lib/post-lines'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -188,9 +189,7 @@ export default function PostDetailPage() {
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
-        lyric={exportPost?.text || ''}
-        song={exportPost?.knowledge?.song || ''}
-        artist={exportPost?.knowledge?.artist || ''}
+        lines={exportPost ? resolveMomentLines(exportPost) : undefined}
         postId={exportPost?.id}
       />
     </main>

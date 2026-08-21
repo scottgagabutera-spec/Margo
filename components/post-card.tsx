@@ -16,7 +16,8 @@ import {
   ShareIcon,
 } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
-import { EditPostModal } from '@/components/edit-post-modal'
+import { EditMomentModal } from '@/components/edit-moment-modal'
+import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
 import {
   playSnippet,
   stop,
@@ -449,12 +450,12 @@ export function PostCard({
   const cardRef = useRef<HTMLDivElement>(null)
   const isOwner = !!user?.id && !!post.authorUid && post.authorUid === user.id
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deletedLocally, setDeletedLocally] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportBusy, setReportBusy] = useState(false)
   const [reportMsg, setReportMsg] = useState<string | null>(null)
-  const [hideBusy, setHideBusy] = useState(false)
-  const [hiddenLocally, setHiddenLocally] = useState(false)
   const [replayMenuOpen, setReplayMenuOpen] = useState(false)
   const [quoteOpen, setQuoteOpen] = useState(false)
   const [quoteText, setQuoteText] = useState('')
@@ -510,16 +511,11 @@ export function PostCard({
   const rawAvatarUrl = (post.authorAvatarUrl || authorProfile?.avatarUrl || '').trim()
   const avatarUrl = rawAvatarUrl && !avatarBroken ? rawAvatarUrl : null
 
-  if (hiddenLocally && isCompact) {
-    return (
-      <div style={{
-        border: '1px solid rgba(255,255,255,0.06)', borderRadius: '18px', padding: cardPadding,
-        fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.85rem',
-        color: 'var(--text-muted)', textAlign: 'center',
-      }}>
-        Reply hidden.
-      </div>
-    )
+  // Optimistic — the server delete already succeeded by the time this is
+  // set. Other open surfaces reconcile via their own Realtime subscription
+  // (usePosts/useEchoes already listen for postgres_changes on posts).
+  if (deletedLocally) {
+    return null
   }
 
   if (isRow && !rowExpanded) {
@@ -705,7 +701,7 @@ export function PostCard({
           {isOwner && (
             <button
               type="button"
-              aria-label="Edit lyric"
+              aria-label="Edit Moment"
               onClick={() => setEditOpen(true)}
               style={{
                 width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
@@ -720,168 +716,152 @@ export function PostCard({
               </svg>
             </button>
           )}
-          {!hiddenLocally && (
-            <div style={{ position: 'relative' }}>
-              <button
-                type="button"
-                aria-label="More actions"
-                aria-expanded={menuOpen}
-                onClick={() => { setMenuOpen(o => !o); setReportOpen(false); setReportMsg(null) }}
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              aria-label="More actions"
+              aria-expanded={menuOpen}
+              onClick={() => { setMenuOpen(o => !o); setReportOpen(false); setReportMsg(null) }}
+              style={{
+                width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
+              }}
+            >
+              <MoreIcon size={16} color="var(--text-secondary)" />
+            </button>
+            {menuOpen && !reportOpen && (
+              <div
+                role="menu"
                 style={{
-                  width: '44px', height: '44px', borderRadius: '50%', flexShrink: 0,
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
+                  position: 'absolute', top: '100%', right: 0, marginTop: '6px', zIndex: 20,
+                  minWidth: '160px', background: 'var(--bg)',
+                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
+                  padding: '6px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
                 }}
               >
-                <MoreIcon size={16} color="var(--text-secondary)" />
-              </button>
-              {menuOpen && !reportOpen && (
-                <div
-                  role="menu"
-                  style={{
-                    position: 'absolute', top: '100%', right: 0, marginTop: '6px', zIndex: 20,
-                    minWidth: '160px', background: 'var(--bg)',
-                    border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
-                    padding: '6px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-                  }}
-                >
-                  {!isOwner && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        if (!requireAuth()) return
-                        setReportOpen(true)
-                      }}
-                      style={{
-                        display: 'block', width: '100%', textAlign: 'left',
-                        padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
-                        color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
-                        cursor: 'pointer', borderRadius: '8px',
-                      }}
-                    >Report</button>
-                  )}
-                  {isOwner && isCompact && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      disabled={hideBusy}
-                      onClick={async () => {
-                        if (!requireAuth() || hideBusy) return
-                        setHideBusy(true)
-                        const { error } = await supabase
-                          .from('posts')
-                          .update({ status: 'hidden' })
-                          .eq('id', post.id)
-                        setHideBusy(false)
-                        if (error) {
-                          setReportMsg(error.message)
-                          return
-                        }
-                        setHiddenLocally(true)
-                        setMenuOpen(false)
-                      }}
-                      style={{
-                        display: 'block', width: '100%', textAlign: 'left',
-                        padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
-                        color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
-                        cursor: hideBusy ? 'not-allowed' : 'pointer', borderRadius: '8px',
-                      }}
-                    >{hideBusy ? 'Hiding…' : 'Hide reply'}</button>
-                  )}
-                  {isOwner && !isCompact && (
-                    <p style={{
-                      margin: 0, padding: '10px 14px', fontFamily: 'var(--font-lora), serif',
-                      fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic',
-                    }}>Use edit to change this lyric.</p>
-                  )}
-                  {reportMsg && (
-                    <p style={{
-                      margin: '6px 4px 0', fontFamily: 'var(--font-lora), serif',
-                      fontSize: '0.72rem', color: '#ff6060',
-                    }}>{reportMsg}</p>
-                  )}
-                </div>
-              )}
-              {menuOpen && reportOpen && (
-                <div
-                  style={{
-                    position: 'absolute', top: '100%', right: 0, marginTop: '6px', zIndex: 20,
-                    minWidth: '200px', background: 'var(--bg)',
-                    border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
-                    padding: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-                  }}
-                >
-                  <p style={{
-                    fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
-                    letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-muted)',
-                    margin: '0 0 8px',
-                  }}>Why report?</p>
-                  {REPORT_REASONS.map(reason => (
-                    <button
-                      key={reason}
-                      type="button"
-                      disabled={reportBusy}
-                      onClick={async () => {
-                        if (!user?.id || reportBusy) return
-                        setReportBusy(true)
-                        setReportMsg(null)
-                        const { error } = await supabase.from('post_reports').insert({
-                          post_id: post.id,
-                          reporter_id: user.id,
-                          reason,
-                        })
-                        setReportBusy(false)
-                        if (error) {
-                          const msg = String(error.message || '')
-                          setReportMsg(msg.toLowerCase().includes('duplicate') || msg.includes('unique')
-                            ? 'Already reported.'
-                            : error.message)
-                          return
-                        }
-                        setReportMsg('Thanks — we received your report.')
-                        setTimeout(() => { setMenuOpen(false); setReportOpen(false); setReportMsg(null) }, 1200)
-                      }}
-                      style={{
-                        display: 'block', width: '100%', textAlign: 'left',
-                        padding: '10px 12px', minHeight: '44px', background: 'none', border: 'none',
-                        color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
-                        cursor: reportBusy ? 'not-allowed' : 'pointer', borderRadius: '8px',
-                      }}
-                    >{reason}</button>
-                  ))}
-                  {reportMsg && (
-                    <p style={{
-                      margin: '6px 4px 0', fontFamily: 'var(--font-lora), serif',
-                      fontSize: '0.72rem', color: 'var(--gold)',
-                    }}>{reportMsg}</p>
-                  )}
+                {!isOwner && (
                   <button
                     type="button"
-                    onClick={() => { setReportOpen(false); setReportMsg(null) }}
+                    role="menuitem"
+                    onClick={() => {
+                      if (!requireAuth()) return
+                      setReportOpen(true)
+                    }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
+                      color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                      cursor: 'pointer', borderRadius: '8px',
+                    }}
+                  >Report</button>
+                )}
+                {isOwner && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setMenuOpen(false); setDeleteOpen(true) }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
+                      color: '#ff6b6b', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                      cursor: 'pointer', borderRadius: '8px',
+                    }}
+                  >Delete</button>
+                )}
+                {reportMsg && (
+                  <p style={{
+                    margin: '6px 4px 0', fontFamily: 'var(--font-lora), serif',
+                    fontSize: '0.72rem', color: '#ff6060',
+                  }}>{reportMsg}</p>
+                )}
+              </div>
+            )}
+            {menuOpen && reportOpen && (
+              <div
+                style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: '6px', zIndex: 20,
+                  minWidth: '200px', background: 'var(--bg)',
+                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
+                  padding: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+                }}
+              >
+                <p style={{
+                  fontFamily: 'var(--font-lora), serif', fontSize: '0.55rem', fontWeight: 700,
+                  letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-muted)',
+                  margin: '0 0 8px',
+                }}>Why report?</p>
+                {REPORT_REASONS.map(reason => (
+                  <button
+                    key={reason}
+                    type="button"
+                    disabled={reportBusy}
+                    onClick={async () => {
+                      if (!user?.id || reportBusy) return
+                      setReportBusy(true)
+                      setReportMsg(null)
+                      const { error } = await supabase.from('post_reports').insert({
+                        post_id: post.id,
+                        reporter_id: user.id,
+                        reason,
+                      })
+                      setReportBusy(false)
+                      if (error) {
+                        const msg = String(error.message || '')
+                        setReportMsg(msg.toLowerCase().includes('duplicate') || msg.includes('unique')
+                          ? 'Already reported.'
+                          : error.message)
+                        return
+                      }
+                      setReportMsg('Thanks — we received your report.')
+                      setTimeout(() => { setMenuOpen(false); setReportOpen(false); setReportMsg(null) }, 1200)
+                    }}
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
                       padding: '10px 12px', minHeight: '44px', background: 'none', border: 'none',
-                      color: 'var(--text-muted)', fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem',
-                      cursor: 'pointer',
+                      color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                      cursor: reportBusy ? 'not-allowed' : 'pointer', borderRadius: '8px',
                     }}
-                  >Back</button>
-                </div>
-              )}
-            </div>
-          )}
+                  >{reason}</button>
+                ))}
+                {reportMsg && (
+                  <p style={{
+                    margin: '6px 4px 0', fontFamily: 'var(--font-lora), serif',
+                    fontSize: '0.72rem', color: 'var(--gold)',
+                  }}>{reportMsg}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setReportOpen(false); setReportMsg(null) }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '10px 12px', minHeight: '44px', background: 'none', border: 'none',
+                    color: 'var(--text-muted)', fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem',
+                    cursor: 'pointer',
+                  }}
+                >Back</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {isOwner && (
-        <EditPostModal
+        <EditMomentModal
           open={editOpen}
           onOpenChange={setEditOpen}
           postId={post.id}
-          initialText={post.text || ''}
-          songId={post.songId || null}
+          lines={resolveMomentLines(post)}
           echoCount={echoCount}
+        />
+      )}
+      {isOwner && (
+        <DeleteMomentDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          postId={post.id}
+          onDeleted={() => setDeletedLocally(true)}
         />
       )}
 

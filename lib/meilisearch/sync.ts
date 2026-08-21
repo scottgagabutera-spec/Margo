@@ -38,7 +38,8 @@ export async function fetchAllMargoSearchDocuments(): Promise<MargoSearchDocumen
       id, text, emotion, song_title, artist_name, artwork_url, song_id,
       legacy_author_label, created_at, status, parent_post_id,
       profiles:author_profile_id ( username, display_name ),
-      post_stats ( resonate_count )
+      post_stats ( resonate_count ),
+      post_lines ( position, text )
     `)
     .eq('status', 'active')
     .is('parent_post_id', null)
@@ -108,7 +109,16 @@ export async function syncMargoSearchFromWebhook(payload: WebhookPayload): Promi
       await deleteMargoDocuments([`post:${row.id}`])
       return
     }
-    const doc = postToLyricDoc(row as any)
+    // The webhook payload is the raw posts row only — no join capability,
+    // unlike the full-sync query above. A dedicated post_lines fetch here
+    // keeps the incremental path consistent with full sync instead of
+    // silently re-indexing only the position-0 mirror on every edit.
+    const admin = getSupabaseAdmin()
+    const { data: postLines } = await admin
+      .from('post_lines')
+      .select('position, text')
+      .eq('post_id', row.id)
+    const doc = postToLyricDoc({ ...(row as any), post_lines: postLines || [] })
     if (doc) docs.push(doc)
   } else if (table === 'lyric_lines') {
     const admin = getSupabaseAdmin()

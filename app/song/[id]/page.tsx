@@ -589,8 +589,8 @@ export default function SongPage() {
                 <ShareIcon size={20} color="var(--gold)" />
               </div>
               <div>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Post to Margo Feed</p>
-                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Share this lyric with your emotion on the feed</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', margin: 0 }}>Send a line</p>
+                <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>Send this line to someone</p>
               </div>
             </Link>
             <button

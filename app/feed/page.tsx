@@ -5,6 +5,8 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
+import { resolveMomentLines } from '@/lib/post-lines'
+import { isNotificationAllowed } from '@/lib/notification-prefs'
 import Link from 'next/link'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -266,8 +268,9 @@ export default function FeedPage() {
     const matchesVibe = selectedVibe === 'ALL' || norm === selectedVibe
     if (!searchQuery.trim()) return matchesVibe
     const q = searchQuery.toLowerCase()
+    const momentHaystack = resolveMomentLines(p).map((l) => l.text).join(' ').toLowerCase()
     return matchesVibe && (
-      (p.text || '').toLowerCase().includes(q) ||
+      momentHaystack.includes(q) ||
       (p.knowledge?.song || '').toLowerCase().includes(q) ||
       (p.knowledge?.artist || '').toLowerCase().includes(q) ||
       (p.emotion || '').toLowerCase().includes(q) ||
@@ -328,6 +331,7 @@ export default function FeedPage() {
     if (!user?.id) return
     if (!post.authorUid || post.authorUid === user.id) return
     try {
+      if (!(await isNotificationAllowed(supabase, post.authorUid, 'resonate'))) return
       const { error } = await supabase.from('notifications').insert({
         recipient_id: post.authorUid,
         actor_id: user.id,
@@ -677,9 +681,7 @@ export default function FeedPage() {
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
-        lyric={exportPost?.text || ''}
-        song={exportPost?.knowledge?.song || ''}
-        artist={exportPost?.knowledge?.artist || ''}
+        lines={exportPost ? resolveMomentLines(exportPost) : undefined}
         postId={exportPost?.id}
       />
     </div>
