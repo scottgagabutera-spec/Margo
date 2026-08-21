@@ -2,8 +2,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Post } from '@/hooks/usePosts'
+import { mapPostLinesRows } from '@/lib/post-lines'
 
 const supabase = createClient()
+
+const PRIVATE_POST_SELECT = `
+  id, text, emotion, status, song_title, artist_name, artwork_url, created_at, author_profile_id,
+  post_lines (
+    id, position, text, song_id, song_title, artist_name, artwork_url,
+    snippet_start_sec, snippet_end_sec, source,
+    songs:song_id ( audio_url )
+  )
+`
 
 /**
  * Owner-only private lyrics (status = 'private').
@@ -19,7 +29,7 @@ export function useOwnPrivatePosts(authorId: string | null, enabled: boolean) {
     setLoading(true)
     const { data, error } = await supabase
       .from('posts')
-      .select('id, text, emotion, status, song_title, artist_name, artwork_url, created_at, author_profile_id')
+      .select(PRIVATE_POST_SELECT)
       .eq('author_profile_id', id)
       .eq('status', 'private')
       .is('parent_post_id', null)
@@ -34,7 +44,7 @@ export function useOwnPrivatePosts(authorId: string | null, enabled: boolean) {
     }
 
     setPosts(
-      (data ?? []).map((row) => ({
+      (data ?? []).map((row: any) => ({
         id: row.id,
         text: row.text ?? undefined,
         emotion: row.emotion ?? undefined,
@@ -48,6 +58,12 @@ export function useOwnPrivatePosts(authorId: string | null, enabled: boolean) {
           : undefined,
         authorUid: row.author_profile_id ?? null,
         timestamp: row.created_at ? new Date(row.created_at).getTime() : undefined,
+        // Multi-line Moments join post_lines above — resolveMomentLines
+        // (used by PostCard etc.) prefers this over the text/knowledge
+        // mirror whenever it's present, matching Feed/Post Detail/main
+        // Profile. Single-line posts have no post_lines rows, so this is
+        // undefined and the existing mirror fallback is unchanged.
+        lines: mapPostLinesRows(row.post_lines),
       }))
     )
     setLoading(false)

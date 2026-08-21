@@ -20,6 +20,35 @@ export interface PostLine {
 
 export const POST_LINES_MAX = 3
 
+/** Maps a raw `post_lines` join (as returned by a Supabase select) into the
+ * PostLine[] shape resolveMomentLines expects. hooks/usePost.ts and
+ * lib/primary-tab-prefetch.ts each already have their own working local
+ * copy of this same mapping — left as-is rather than refactored, to avoid
+ * touching already-correct code for this fix. This shared version is for
+ * new call sites (useOwnPrivatePosts / useProfileReplays) that didn't
+ * previously join post_lines at all. */
+export function mapPostLinesRows(raw: any[] | null | undefined): PostLine[] | undefined {
+  if (!raw || raw.length === 0) return undefined
+  return [...raw]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((row) => {
+      const linked = Array.isArray(row.songs) ? row.songs[0] : row.songs
+      return {
+        id: row.id,
+        position: row.position ?? 0,
+        text: row.text ?? '',
+        songId: row.song_id ?? null,
+        songTitle: row.song_title ?? null,
+        artistName: row.artist_name ?? null,
+        artworkUrl: row.artwork_url ?? null,
+        audioUrl: linked?.audio_url ?? null,
+        snippetStart: row.snippet_start_sec ?? null,
+        snippetEnd: row.snippet_end_sec ?? null,
+        source: (row.source as PostLineSource) || 'external',
+      }
+    })
+}
+
 /** Prefer joined lines; otherwise synthesize position-0 from the post mirror. */
 export function resolveMomentLines(post: {
   text?: string
