@@ -5,12 +5,12 @@ import { ChevronUpIcon } from '@/components/icons/chevron-up-icon'
 const font = 'var(--font-lora), serif'
 
 type ContentUpdatesBarProps = {
-  lyricsCount: number
   songCount: number
   artistCount: number
-  onLyrics: () => void
   onSongs: () => void
   onArtists: () => void
+  /** Extra offset when a sibling pill (e.g. new Moments) is visible above. */
+  topOffsetPx?: number
 }
 
 function lineLabel(count: number, singular: string, plural: string) {
@@ -19,21 +19,17 @@ function lineLabel(count: number, singular: string, plural: string) {
 }
 
 /**
- * One mixed rectangle under nav: lyrics / songs / artists.
- * Same quiet gold-tint recipe as the old lyrics pill (Feed EarnedTag).
+ * Compact catalog-update rows (songs / artists) on Feed.
+ * New Moments use FeedNewMomentsPill instead.
  */
 export function ContentUpdatesBar({
-  lyricsCount,
   songCount,
   artistCount,
-  onLyrics,
   onSongs,
   onArtists,
+  topOffsetPx = 0,
 }: ContentUpdatesBarProps) {
   const rows: { key: string; label: string; onClick: () => void }[] = []
-  if (lyricsCount > 0) {
-    rows.push({ key: 'lyrics', label: lineLabel(lyricsCount, 'lyric', 'lyrics'), onClick: onLyrics })
-  }
   if (songCount > 0) {
     rows.push({ key: 'songs', label: lineLabel(songCount, 'song', 'songs'), onClick: onSongs })
   }
@@ -48,19 +44,21 @@ export function ContentUpdatesBar({
       aria-live="polite"
       style={{
         position: 'fixed',
-        top: 'calc(var(--nav-height, 72px) + 10px)',
+        top: `calc(var(--nav-height, 72px) + 8px + ${topOffsetPx}px)`,
         left: '50%',
         transform: 'translateX(-50%)',
-        zIndex: 45,
-        minWidth: '168px',
-        maxWidth: 'min(320px, calc(100vw - 32px))',
+        zIndex: 44,
+        minWidth: '148px',
+        maxWidth: 'min(280px, calc(100vw - 32px))',
         boxSizing: 'border-box',
-        background: 'rgba(232,197,71,0.1)',
+        background: 'rgba(7, 6, 10, 0.82)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         color: 'var(--gold)',
         border: '1px solid var(--gold-border)',
-        borderRadius: '14px',
-        boxShadow: 'none',
-        animation: 'fadeInUp 280ms var(--ease-out) both',
+        borderRadius: '50px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
+        animation: 'fadeInUp 220ms var(--ease-out) both',
         overflow: 'hidden',
       }}
     >
@@ -72,12 +70,12 @@ export function ContentUpdatesBar({
           aria-label={`Show ${row.label}`}
           style={{
             width: '100%',
-            minHeight: 'var(--margo-touch-min)',
-            padding: '0 16px',
+            minHeight: '36px',
+            padding: '0 14px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px',
+            gap: '5px',
             boxSizing: 'border-box',
             background: 'transparent',
             color: 'var(--gold)',
@@ -85,13 +83,13 @@ export function ContentUpdatesBar({
             borderTop: i === 0 ? 'none' : '1px solid var(--gold-border)',
             fontFamily: font,
             fontWeight: 700,
-            fontSize: '0.6rem',
-            letterSpacing: '1.2px',
+            fontSize: '0.58rem',
+            letterSpacing: '1px',
             textTransform: 'uppercase',
             cursor: 'pointer',
           }}
         >
-          <ChevronUpIcon size={14} color="var(--gold)" />
+          <ChevronUpIcon size={12} color="var(--gold)" />
           {row.label}
         </button>
       ))}
