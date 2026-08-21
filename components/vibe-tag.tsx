@@ -1,15 +1,30 @@
 'use client'
 
-/** Small price-tag silhouette pinned to a card edge — vibe identity via stroke/fill color. */
-export function VibeTag({
-  label,
-  color,
-  onClick,
-}: {
+interface VibeTagProps {
   label: string
+  /** Tinted mode's fill/stroke/text color (unused in 'dark' variant). */
   color: string
   onClick?: () => void
-}) {
+  /**
+   * 'tinted' (default) — today's behavior: translucent fill + stroke + text
+   * all in `color`. Used on Feed/PostCard where the vibe carries its own
+   * per-emotion identity color.
+   * 'dark' — a quiet, dark-surface tag with warm-white text and a subtle
+   * gold hairline. For surfaces where the vibe should read as information,
+   * not another brand-color element (e.g. sitting on the gold Moment card,
+   * where gold is already doing the branding).
+   */
+  variant?: 'tinted' | 'dark'
+}
+
+/** Small price-tag silhouette pinned to a card edge — vibe identity via stroke/fill color. */
+export function VibeTag({ label, color, onClick, variant = 'tinted' }: VibeTagProps) {
+  const isDark = variant === 'dark'
+  const fill = isDark ? 'var(--surface)' : color
+  const fillOpacity = isDark ? 1 : 0.14
+  const stroke = isDark ? 'var(--gold-border)' : color
+  const textColor = isDark ? 'var(--text)' : color
+
   return (
     <button
       type="button"
@@ -48,13 +63,13 @@ export function VibeTag({
           {/* Tag body: pointed left edge + rounded right, hole near tip */}
           <path
             d="M8 1 H64 Q71 1 71 8 V14 Q71 21 64 21 H8 L1 11 Z"
-            fill={color}
-            fillOpacity={0.14}
-            stroke={color}
+            fill={fill}
+            fillOpacity={fillOpacity}
+            stroke={stroke}
             strokeWidth="1.2"
             strokeLinejoin="round"
           />
-          <circle cx="9" cy="11" r="2.2" fill="var(--bg)" stroke={color} strokeWidth="1.1" />
+          <circle cx="9" cy="11" r="2.2" fill="var(--bg)" stroke={stroke} strokeWidth="1.1" />
         </svg>
         <span
           style={{
@@ -69,7 +84,7 @@ export function VibeTag({
             fontWeight: 700,
             letterSpacing: '0.8px',
             textTransform: 'uppercase',
-            color,
+            color: textColor,
             whiteSpace: 'nowrap',
             pointerEvents: 'none',
           }}

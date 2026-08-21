@@ -57,11 +57,14 @@ type Vibe =
   | 'HEARTBREAK' | 'PAIN' | 'LONELINESS' | 'LOST'
   | 'RAGE' | 'SENDIT' | 'LETOUT'
 
+// Grouped by emotional family (uplifting, reflective, heavy, release) rather
+// than left in the Vibe type's declaration order — reads as intentional
+// instead of a random word list, at no extra vertical cost.
 const VIBES: Vibe[] = [
-  'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL',
-  'NOSTALGIA', 'JOY', 'LOVE', 'HYPE', 'PROUD',
-  'HEARTBREAK', 'PAIN', 'LONELINESS', 'LOST',
-  'RAGE', 'SENDIT', 'LETOUT',
+  'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'JOY', 'LOVE', 'HYPE', 'PROUD',
+  'SPIRITUAL', 'NOSTALGIA',
+  'HEARTBREAK', 'PAIN', 'LONELINESS', 'LOST', 'RAGE',
+  'SENDIT', 'LETOUT',
 ]
 
 const VIBE_LABELS: Record<Vibe, string> = {
@@ -830,16 +833,28 @@ function ComposeInner() {
               )}
             </div>
 
-            <ComposeLyricCard style={{ marginBottom: '24px' }}>
-              <p style={composeLyricTextStyle}>&ldquo;{lyric}&rdquo;</p>
-              <div style={{ marginTop: '12px' }}>
-                <SongMeta
-                  title={songName} artist={artistName}
-                  titleStyle={{ color: 'var(--text-on-gold)' }}
-                  artistStyle={{ color: 'var(--text-on-gold-muted)' }}
-                />
-              </div>
-            </ComposeLyricCard>
+            {/* Quiet reminder, not the full Moment — that already showed on
+                Your line and shows again on Ready to send. This screen's
+                job is the vibes; a fixed-height single-line strip keeps
+                the layout predictable no matter how long the lyric is. */}
+            <div style={{
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: '14px', padding: '14px 16px', marginBottom: '20px',
+            }}>
+              <p style={{
+                fontFamily: font, fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--text)',
+                margin: 0, lineHeight: 1.4,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                &ldquo;{lyric}&rdquo;
+              </p>
+              <p style={{
+                fontFamily: UI_FONT, fontSize: '0.7rem', color: 'var(--text-secondary)',
+                margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {songName}{artistName ? ` · ${artistName}` : ''}
+              </p>
+            </div>
 
             {emotionLoading && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '24px' }}>
@@ -851,11 +866,11 @@ function ComposeInner() {
 
             {!emotionLoading && (
               <>
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px', marginBottom: '28px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginBottom: '28px' }}>
                   {VIBES.map((vibe) => (
                     <button key={vibe} onClick={() => handleVibeSelect(vibe)}
                       style={{
-                        minHeight: 'var(--margo-touch-min)', padding: '0 20px', borderRadius: '50px',
+                        minHeight: 'var(--margo-touch-min)', padding: '0 14px', borderRadius: '50px',
                         display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
                         fontFamily: font, fontWeight: 600,
                         fontSize: '0.7rem', cursor: 'pointer', transition: 'all 150ms ease',
@@ -916,7 +931,7 @@ function ComposeInner() {
                 />
               </div>
               {selectedVibe && (
-                <VibeTag label={VIBE_LABELS[selectedVibe]} color="var(--text-on-gold)" />
+                <VibeTag label={VIBE_LABELS[selectedVibe]} color="var(--text-on-gold)" variant="dark" />
               )}
             </ComposeLyricCard>
 
