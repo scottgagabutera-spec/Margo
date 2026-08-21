@@ -14,6 +14,7 @@ import { ArtistBadge } from '@/components/artist-badge'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
+import { resolveMomentLines } from '@/lib/post-lines'
 import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
@@ -881,9 +882,7 @@ export default function ProfilePage() {
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
-        lyric={exportPost?.text || ''}
-        song={exportPost?.knowledge?.song || ''}
-        artist={exportPost?.knowledge?.artist || ''}
+        lines={exportPost ? resolveMomentLines(exportPost) : undefined}
         postId={exportPost?.id}
       />
       {profile?.avatarUrl ? (

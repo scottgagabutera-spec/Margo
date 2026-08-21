@@ -1,8 +1,28 @@
 'use client'
-import { CloseIcon } from '@/components/icons'
+import { CloseIcon, ChevronRightIcon } from '@/components/icons'
 import { recordCardExport } from '@/lib/engagement/card-exports'
+import type { PostLine } from '@/lib/post-lines'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+
+/** Compose's own draft shape (song/artist not yet a real post) or an
+ * already-created post's PostLine — CardExportModal accepts either so
+ * callers never have to remap field names just to request an export. */
+type ComposeMomentLineInput = { lyric: string; songName?: string | null; artistName?: string | null }
+type MomentLineInput = ComposeMomentLineInput | PostLine
+
+interface NormalizedLine {
+  lyric: string
+  songTitle: string
+  artistName: string
+}
+
+function normalizeLine(l: MomentLineInput): NormalizedLine {
+  if ('text' in l) {
+    return { lyric: l.text || '', songTitle: l.songTitle || '', artistName: l.artistName || '' }
+  }
+  return { lyric: l.lyric || '', songTitle: l.songName || '', artistName: l.artistName || '' }
+}
 
 interface CardExportModalProps {
   open: boolean
@@ -13,6 +33,10 @@ interface CardExportModalProps {
   postId?: string
   /** Selected vibe label (e.g. "Heartbreak") — small accent caption. Compose only. */
   vibeLabel?: string | null
+  /** Full ordered Moment — when present (and non-empty), this is the
+   * source of truth for the export; lyric/song/artist above become the
+   * fallback for single-line callers that haven't been updated. */
+  lines?: MomentLineInput[]
   // Lyric Back dual-card: if these are present, canvas draws parent + reply
   parentLyric?: string
   parentSong?: string
@@ -64,24 +88,29 @@ function resolveGeistFontFamily(): string {
   return v ? `${v}, sans-serif` : 'sans-serif'
 }
 
-/* ─── Draw Margo lockup on canvas ───────────────────────────── */
-function drawMargoLockup(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, size: number,
-  color: string
-) {
+/* ─── Draw the Margo Symbol on canvas (Tier 2 — card-export rule) ─────
+ * Card exports use the Symbol only: gold circle + dark M-waveform + dash.
+ * No wordmark — MARGO_BRAND.md's logo-usage table specifies Symbol (not
+ * Lockup) for card export. Colors are the canonical brand constants,
+ * never derived from the poster theme — the mark must read the same way
+ * on every background, per "Never recolor or redraw." (Previously this
+ * function drew the full Lockup, including the wordmark, and filled the
+ * circle with the theme's `accent`, which for the gold theme is dark —
+ * producing a dark circle with a dark M on top of it, i.e. the M
+ * "disappearing" that prompted this fix.) */
+function drawMargoSymbol(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+  const MARGO_GOLD = '#E8C547'
+  const MARGO_INK = '#0B0B0D'
   const r = size / 2
   const cx = x + r, cy = y + r
   const sc = size / 80
 
   ctx.save()
-  // Circle
   ctx.beginPath()
   ctx.arc(cx, cy, r, 0, Math.PI * 2)
-  ctx.fillStyle = color
+  ctx.fillStyle = MARGO_GOLD
   ctx.fill()
-  // M stroke
-  ctx.strokeStyle = '#0B0B0D'
+  ctx.strokeStyle = MARGO_INK
   ctx.lineWidth = 5 * sc
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
@@ -95,25 +124,16 @@ function drawMargoLockup(
   ctx.lineTo(cx + (63 - 40) * sc, cy + (57 - 40) * sc)
   ctx.stroke()
   // Dash
-  ctx.fillStyle = '#0B0B0D'
+  ctx.fillStyle = MARGO_INK
   ctx.globalAlpha = 0.55
   const dw = 10 * sc, dh = 3.5 * sc
   ctx.beginPath()
   ctx.roundRect(cx - dw / 2, cy + (60 - 40) * sc - dh / 2, dw, dh, 1.75 * sc)
   ctx.fill()
   ctx.restore()
-
-  // Wordmark
-  ctx.save()
-  ctx.fillStyle = color
-  ctx.font = `700 ${Math.round(size * 0.35)}px Sora, sans-serif`
-  ctx.textAlign = 'left'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('MARGO', x + size + Math.round(size * 0.18), cy)
-  ctx.restore()
 }
 
-/* ─── Wrap text ─────────────────────────────────────────────── */
+/* ─── Wrap / truncate text ──────────────────────────────────── */
 function wrapText(ctx: CanvasRenderingContext2D, txt: string, maxW: number): string[] {
   const words = txt.split(' ')
   const lines: string[] = []
@@ -128,9 +148,26 @@ function wrapText(ctx: CanvasRenderingContext2D, txt: string, maxW: number): str
   return lines
 }
 
+/** Binary-search truncation with ellipsis — canvas has no CSS
+ * text-overflow, so long song/artist names need this explicitly or they
+ * simply run off the canvas edge (or into the logo's protected area). */
+function truncateToWidth(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  const t = (text || '').trim()
+  if (!t) return ''
+  if (ctx.measureText(t).width <= maxWidth) return t
+  let lo = 0, hi = t.length
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2)
+    const candidate = t.slice(0, mid).trimEnd() + '…'
+    if (ctx.measureText(candidate).width <= maxWidth) lo = mid
+    else hi = mid - 1
+  }
+  return lo <= 0 ? '…' : t.slice(0, lo).trimEnd() + '…'
+}
+
 /* ─── Composition engine ────────────────────────────────────────────
  * Every export is a Margo Moment, not an instance of "the gold template".
- * Vibe family + lyric length decide which of a small set of art-directed
+ * Vibe family + content decide which of a small set of art-directed
  * archetypes is *appropriate* for this Moment (a weighted likelihood, not
  * a fixed lookup); the Moment's own identity (its post id, or its content
  * when no id exists yet) then picks a specific archetype and decorative
@@ -140,8 +177,12 @@ function wrapText(ctx: CanvasRenderingContext2D, txt: string, maxW: number): str
  * random-per-render.
  *
  * This is deliberately NOT "vibe = color". Color stays Margo Gold / Margo
- * Dark. Vibe and length influence alignment, scale, negative space, and
- * which (if any) geometric motif appears — the composition, not the palette. */
+ * Dark. Vibe and content influence alignment, scale, negative space, and
+ * which (if any) geometric motif appears — the composition, not the
+ * palette. Actual font scale, wrap width, and metadata position are then
+ * solved per-render by measuring the real content (see fitMomentComposition)
+ * rather than being fixed fractions of the canvas — a short lyric and a
+ * long lyric assigned the same archetype should still look nothing alike. */
 
 type Archetype = 'centered' | 'bold' | 'editorial'
 type Motif = 'arc' | 'diagonal' | 'letterform' | 'word' | 'none'
@@ -165,9 +206,9 @@ const FAMILY_BASE_WEIGHTS: Record<VibeFamily, Record<Archetype, number>> = {
   release:    { centered: 15, bold: 60, editorial: 25 },
 }
 
-/** Length shifts those odds further — a long lyric should strongly favor
- * the column-based Editorial archetype regardless of vibe, and a short
- * lyric shouldn't be stranded in a sparse column. */
+/** Content shifts those odds further — a long or multi-line Moment should
+ * strongly favor the column-based Editorial archetype regardless of vibe,
+ * and a short lyric shouldn't be stranded in a sparse column. */
 const LENGTH_MULTIPLIER: Record<LengthBucket, Record<Archetype, number>> = {
   short:  { centered: 1.2, bold: 1.3, editorial: 0.5 },
   medium: { centered: 1,   bold: 1,   editorial: 1 },
@@ -182,10 +223,14 @@ const ARCHETYPE_MOTIF_WEIGHTS: Record<Archetype, Record<Motif, number>> = {
   editorial: { word: 40, arc: 30, none: 30, diagonal: 0, letterform: 0 },
 }
 
-function lengthBucketOf(lyric: string): LengthBucket {
-  const n = (lyric || '').trim().length
-  if (n < 60) return 'short'
-  if (n < 110) return 'medium'
+/** Extra lines behave like additional length for archetype-weighting
+ * purposes — a 3-line Moment should lean toward Editorial the same way a
+ * long single line does. This governs which archetype/motif is likely,
+ * not the actual font scale (see aspirationalFontFraction for that). */
+function lengthBucketOf(totalChars: number, lineCount: number): LengthBucket {
+  const effective = totalChars + (lineCount - 1) * 40
+  if (effective < 60) return 'short'
+  if (effective < 130) return 'medium'
   return 'long'
 }
 
@@ -214,9 +259,10 @@ interface Composition {
   motif: Motif
 }
 
-function composeMoment(vibeLabel: string | null | undefined, lyric: string, seedKey: string): Composition {
+function composeMoment(vibeLabel: string | null | undefined, lines: NormalizedLine[], seedKey: string): Composition {
   const family = VIBE_FAMILY[(vibeLabel || '').toLowerCase().trim()] || 'uplifting'
-  const bucket = lengthBucketOf(lyric)
+  const totalChars = lines.reduce((sum, l) => sum + l.lyric.trim().length, 0)
+  const bucket = lengthBucketOf(totalChars, lines.length)
   const base = FAMILY_BASE_WEIGHTS[family]
   const mult = LENGTH_MULTIPLIER[bucket]
   const weights: Record<Archetype, number> = {
@@ -288,28 +334,127 @@ function drawWordMotif(ctx: CanvasRenderingContext2D, cx: number, cy: number, ma
   ctx.restore()
 }
 
-/* ─── Draw single-lyric card ────────────────────────────────── *
+/* ─── Content-aware fit — "measure, then place" ───────────────────────
+ * Font scale used to be a fixed fraction of canvas size, nudged ±18% by a
+ * 3-bucket length guess. That's why a 2-word lyric sat small in a huge
+ * empty square: the frame, margins, and metadata position never moved,
+ * only the font twitched slightly. This measures the *actual* rendered
+ * lyric + metadata at successively smaller scales, starting from an
+ * aspirational size the content deserves, until the whole flowed
+ * composition (every line's lyric + its own song/artist + stitch
+ * dividers) actually fits the available height. Width comes from the
+ * caller (archetype-specific column), so a short lyric can also get a
+ * narrower column instead of stretching edge-to-edge just because it's
+ * been scaled up. */
+
+/** Aspirational starting scale (fraction of min(W,H)) before any
+ * shrink-to-fit — this is what decides "a short lyric should feel like a
+ * strong visual focal point", not the shrink loop itself. */
+function aspirationalFontFraction(totalChars: number, lineCount: number): number {
+  if (lineCount === 1) {
+    if (totalChars <= 20) return 0.105
+    if (totalChars <= 45) return 0.078
+    if (totalChars <= 80) return 0.058
+    if (totalChars <= 120) return 0.046
+    return 0.036
+  }
+  // Multi-line Moments must hold every line's lyric + metadata together as
+  // one composition, so the aspirational scale starts more conservatively
+  // than a single line of the same average length would.
+  const perLine = totalChars / lineCount
+  const base = perLine <= 45 ? 0.05 : perLine <= 80 ? 0.04 : 0.032
+  return lineCount >= 3 ? base * 0.85 : base * 0.94
+}
+
+interface FittedLine {
+  wrapped: string[]
+  lyricBlockH: number
+  songText: string
+  artistText: string
+  hasMeta: boolean
+}
+
+interface FitResult {
+  lyricFS: number
+  songFS: number
+  artistFS: number
+  lyricLineH: number
+  lines: FittedLine[]
+  totalH: number
+  dividerH: number
+}
+
+function fitMomentComposition(
+  ctx: CanvasRenderingContext2D,
+  lines: NormalizedLine[],
+  geist: string,
+  maxTextWidth: number,
+  maxContentHeight: number,
+  minDim: number,
+): FitResult {
+  const totalChars = lines.reduce((s, l) => s + l.lyric.trim().length, 0)
+  let scale = aspirationalFontFraction(totalChars, lines.length)
+  const floorScale = 0.018
+  const dividerH = Math.max(20, Math.round(minDim * 0.03))
+
+  let result: FitResult | null = null
+  for (let attempt = 0; attempt < 26; attempt++) {
+    const lyricFS = Math.max(Math.round(minDim * scale), Math.round(minDim * floorScale))
+    const songFS = Math.max(10, Math.round(lyricFS * 0.6))
+    const artistFS = Math.max(9, Math.round(lyricFS * 0.44))
+    const lyricLineH = Math.round(lyricFS * 1.42)
+    const metaGap = Math.round(lyricFS * 0.24)
+
+    ctx.font = `italic ${lyricFS}px Lora, serif`
+    const fitted: FittedLine[] = lines.map((l) => {
+      const wrapped = wrapText(ctx, l.lyric.trim(), maxTextWidth)
+      const lyricBlockH = wrapped.length * lyricLineH
+      ctx.font = `700 ${songFS}px ${geist}`
+      const songText = truncateToWidth(ctx, l.songTitle, maxTextWidth)
+      ctx.font = `400 ${artistFS}px ${geist}`
+      const artistText = truncateToWidth(ctx, l.artistName, maxTextWidth)
+      ctx.font = `italic ${lyricFS}px Lora, serif`
+      const hasMeta = !!(songText || artistText)
+      return { wrapped, lyricBlockH, songText, artistText, hasMeta }
+    })
+
+    const metaBlockH = Math.round(songFS * 1.25) + Math.round(artistFS * 1.3)
+    const totalH =
+      fitted.reduce((sum, f) => sum + f.lyricBlockH + metaGap + (f.hasMeta ? metaBlockH : 0), 0) +
+      dividerH * Math.max(0, lines.length - 1)
+
+    result = { lyricFS, songFS, artistFS, lyricLineH, lines: fitted, totalH, dividerH }
+    if (totalH <= maxContentHeight || scale <= floorScale) break
+    scale *= 0.92
+  }
+  return result as FitResult
+}
+
+/* ─── Draw a Moment poster (1 or many lines) ──────────────────────────
  * The Moment's export identity: Lora italic lyric (hero), Geist for
- * everything else — song/artist follow SongMeta's hierarchy, logo
- * watermark bottom-left per brand rule. Composition (alignment, scale,
- * motif) comes from composeMoment() above — this function lays out
- * whichever archetype it's given; it doesn't choose one. */
-async function drawSingleCard(
+ * everything else — song/artist follow SongMeta's hierarchy, attached to
+ * the line they belong to rather than pinned near the canvas bottom. The
+ * Margo Symbol keeps a protected corner that content is measured to
+ * avoid. Composition (alignment, scale, motif) comes from composeMoment;
+ * exact scale/placement comes from fitMomentComposition, which measures
+ * the real content instead of assuming a fixed template. A single-line
+ * `lines` array is exactly the individual-card case — same function,
+ * same rules, so cards stay part of one visual family. */
+async function drawMomentPoster(
   ctx: CanvasRenderingContext2D,
   W: number, H: number,
-  lyric: string, song: string, artist: string,
+  lines: NormalizedLine[],
   theme: ExportTheme,
-  vibeLabel?: string | null,
-  seedKey?: string,
+  vibeLabel: string | null | undefined,
+  seedKey: string,
+  compositionOverride?: Composition,
 ) {
   await waitForFonts()
   const geist = resolveGeistFontFamily()
   const { bg, ink, inkMuted, accent, light } = theme
-  const { archetype, motif } = composeMoment(vibeLabel, lyric, seedKey || `${lyric}|${song}|${artist}`)
-  const bucket = lengthBucketOf(lyric)
-  const lengthScale = bucket === 'long' ? 0.82 : bucket === 'short' ? 1.05 : 1
-  const motifColor = light ? 'rgba(7,6,10,1)' : accent
-  const motifAlpha = motif === 'letterform' ? 0.05 : motif === 'word' ? 0.07 : 0.16
+  const composition = compositionOverride || composeMoment(vibeLabel, lines, seedKey)
+  const { archetype, motif } = composition
+  const minDim = Math.min(W, H)
 
   // Flat background — clean and confident, not a busy poster
   ctx.fillStyle = bg
@@ -329,139 +474,145 @@ async function drawSingleCard(
   ctx.lineWidth = 2
   ctx.strokeRect(44, 44, W - 88, H - 88)
 
-  // Decorative motif — drawn behind the lyric, per archetype
+  // Protected zone — the Margo Symbol's corner plus a safety margin.
+  // Content is measured to end above this band, regardless of archetype
+  // or how much text there is, so metadata can never collide with the
+  // logo the way a fixed bottom-anchored position previously could.
+  const markSize = Math.round(minDim * 0.036)
+  const logoPad = Math.round(minDim * 0.052)
+  const bottomBandH = logoPad + markSize + Math.round(minDim * 0.05)
+
+  const framePad = Math.round(minDim * 0.11)
+  const contentTop = framePad
+  const contentBottom = H - bottomBandH
+  const maxContentHeight = Math.max(1, contentBottom - contentTop)
+
+  // Per-archetype horizontal geometry — alignment/personality is still the
+  // archetype's job; the fit function below decides the actual scale.
+  let hPad: number, maxTextWidth: number
+  const align: 'center' | 'left' = archetype === 'centered' ? 'center' : 'left'
   if (archetype === 'centered') {
-    if (motif === 'arc') drawArcMotif(ctx, W / 2, H / 2, Math.min(W, H) * 0.36, motifColor, motifAlpha)
-    else if (motif === 'letterform') drawLetterformMotif(ctx, W / 2, H / 2, (song || lyric || 'M').charAt(0), Math.min(W, H) * 0.62, motifColor, motifAlpha, geist)
+    hPad = Math.round(W * 0.14)
+    maxTextWidth = W - hPad * 2
+    // A single very-short lyric shouldn't stretch edge-to-edge just
+    // because it's been scaled up — a narrower column keeps a 2-3 word
+    // line feeling composed rather than a full-bleed banner.
+    if (lines.length === 1 && lines[0].lyric.trim().length <= 24) {
+      maxTextWidth = Math.round(maxTextWidth * 0.8)
+    }
+  } else if (archetype === 'bold') {
+    hPad = Math.round(W * 0.1)
+    maxTextWidth = W - hPad - Math.round(W * 0.12)
+  } else {
+    hPad = Math.round(W * 0.12)
+    maxTextWidth = Math.round(W * (lines.length > 1 ? 0.56 : 0.5))
+  }
+
+  const fit = fitMomentComposition(ctx, lines, geist, maxTextWidth, maxContentHeight, minDim)
+  const anchorX = align === 'center' ? W / 2 : hPad
+  const textAlign: CanvasTextAlign = align
+
+  // Decorative motif — drawn behind the content, per archetype
+  const motifColor = light ? 'rgba(7,6,10,1)' : accent
+  const motifAlpha = motif === 'letterform' ? 0.05 : motif === 'word' ? 0.07 : 0.16
+  const firstLine = lines[0]
+  if (archetype === 'centered') {
+    if (motif === 'arc') drawArcMotif(ctx, W / 2, H / 2, minDim * 0.36, motifColor, motifAlpha)
+    else if (motif === 'letterform') drawLetterformMotif(ctx, W / 2, H / 2, (firstLine.songTitle || firstLine.lyric || 'M').charAt(0), minDim * 0.62, motifColor, motifAlpha, geist)
   } else if (archetype === 'bold') {
     if (motif === 'diagonal') drawDiagonalMotif(ctx, W, H, motifColor, motifAlpha)
-    else if (motif === 'letterform') drawLetterformMotif(ctx, W * 0.82, H * 0.78, (song || lyric || 'M').charAt(0), Math.min(W, H) * 0.5, motifColor, motifAlpha, geist)
+    else if (motif === 'letterform') drawLetterformMotif(ctx, W * 0.82, H * 0.78, (firstLine.songTitle || firstLine.lyric || 'M').charAt(0), minDim * 0.5, motifColor, motifAlpha, geist)
   } else {
-    if (motif === 'word' && vibeLabel) drawWordMotif(ctx, W * 0.76, H * 0.5, W * 0.38, vibeLabel, motifColor, motifAlpha, geist)
-    else if (motif === 'arc') drawArcMotif(ctx, W * 0.78, H * 0.55, Math.min(W, H) * 0.3, motifColor, motifAlpha)
+    if (motif === 'word' && vibeLabel) drawWordMotif(ctx, W * 0.78, contentTop + maxContentHeight * 0.5, W * 0.32, vibeLabel, motifColor, motifAlpha, geist)
+    else if (motif === 'arc') drawArcMotif(ctx, W * 0.8, H * 0.5, minDim * 0.28, motifColor, motifAlpha)
   }
 
-  if (archetype === 'centered') {
-    // Lyric — centered, the closest to a quiet, breathing composition
-    const lyricFS = Math.round(Math.min(W, H) * 0.044 * lengthScale)
-    ctx.font = `italic ${lyricFS}px Lora, serif`
-    ctx.fillStyle = ink
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    const maxW = W - Math.round(W * 0.22)
-    const lines = wrapText(ctx, lyric, maxW)
-    const lineH = lyricFS * 1.45
-    const totalH = lines.length * lineH
-    let y = (H - totalH) / 2 + lyricFS * 0.5 + Math.round(H * 0.02)
-    for (const l of lines) { ctx.fillText(l, W / 2, y); y += lineH }
-
-    const metaBaseY = H - Math.round(H * 0.168)
-    if (vibeLabel) {
-      const vibeFS = Math.round(Math.min(W, H) * 0.016)
-      ctx.font = `700 ${vibeFS}px ${geist}`
-      ctx.fillStyle = accent
-      ctx.globalAlpha = 0.82
-      ctx.letterSpacing = '2px'
-      ctx.fillText(vibeLabel.toUpperCase(), W / 2, metaBaseY - vibeFS * 1.9)
-      ctx.letterSpacing = '0px'
-      ctx.globalAlpha = 1
-    }
-    const songFS = Math.round(Math.min(W, H) * 0.028)
-    ctx.font = `700 ${songFS}px ${geist}`
-    ctx.fillStyle = ink
-    ctx.fillText(song || '', W / 2, metaBaseY)
-    const artistFS = Math.round(Math.min(W, H) * 0.02)
-    ctx.font = `400 ${artistFS}px ${geist}`
-    ctx.fillStyle = inkMuted
-    ctx.fillText(artist || '', W / 2, metaBaseY + songFS + 10)
-
-    ctx.strokeStyle = light ? 'rgba(7,6,10,0.18)' : `${accent}33`
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(W / 2 - 100, H - Math.round(H * 0.1))
-    ctx.lineTo(W / 2 + 100, H - Math.round(H * 0.1))
-    ctx.stroke()
-  } else if (archetype === 'bold') {
-    // Lyric — left-aligned, larger, upper frame. More visual energy.
-    const lyricFS = Math.round(Math.min(W, H) * 0.044 * 1.15 * lengthScale)
-    const hPad = Math.round(W * 0.1)
-    ctx.font = `italic ${lyricFS}px Lora, serif`
-    ctx.fillStyle = ink
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'alphabetic'
-    const maxW = W - hPad - Math.round(W * 0.14)
-    const lines = wrapText(ctx, lyric, maxW)
-    const lineH = lyricFS * 1.35
-    let y = Math.round(H * 0.3)
-    for (const l of lines) { ctx.fillText(l, hPad, y); y += lineH }
-
-    const metaY = H - Math.round(H * 0.1)
-    const songFS = Math.round(Math.min(W, H) * 0.024)
-    if (vibeLabel) {
-      const vibeFS = Math.round(Math.min(W, H) * 0.015)
-      ctx.font = `700 ${vibeFS}px ${geist}`
-      ctx.fillStyle = accent
-      ctx.globalAlpha = 0.85
-      ctx.letterSpacing = '2px'
-      ctx.fillText(vibeLabel.toUpperCase(), hPad, metaY - songFS - 14)
-      ctx.letterSpacing = '0px'
-      ctx.globalAlpha = 1
-    }
-    ctx.font = `700 ${songFS}px ${geist}`
-    ctx.fillStyle = ink
-    ctx.fillText(song || '', hPad, metaY)
-    const artistFS = Math.round(Math.min(W, H) * 0.018)
-    ctx.font = `400 ${artistFS}px ${geist}`
-    ctx.fillStyle = inkMuted
-    ctx.fillText(artist || '', hPad, metaY + artistFS + 8)
-  } else {
-    // Editorial column — left-aligned, narrower, runs down the page.
-    // Handles long lyrics most gracefully of the three archetypes.
-    const lyricFS = Math.round(Math.min(W, H) * 0.044 * 0.92 * lengthScale)
-    const hPad = Math.round(W * 0.12)
-    const colWidth = Math.round(W * 0.5)
-    ctx.font = `italic ${lyricFS}px Lora, serif`
-    ctx.fillStyle = ink
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'alphabetic'
-    const lines = wrapText(ctx, lyric, colWidth)
-    const lineH = lyricFS * 1.4
-    const totalH = lines.length * lineH
-    let y = Math.max(Math.round(H * 0.24), (H - totalH) / 2)
-    for (const l of lines) { ctx.fillText(l, hPad, y); y += lineH }
-
-    y += 10
-    const songFS = Math.round(Math.min(W, H) * 0.024)
-    ctx.font = `700 ${songFS}px ${geist}`
-    ctx.fillStyle = ink
-    ctx.fillText(song || '', hPad, y)
-    const artistFS = Math.round(Math.min(W, H) * 0.018)
-    ctx.font = `400 ${artistFS}px ${geist}`
-    ctx.fillStyle = inkMuted
-    ctx.fillText(artist || '', hPad, y + artistFS + 8)
+  // Vibe label — single-line Moments only. Multi-line compositions keep
+  // focus on the lines themselves rather than repeating the vibe.
+  if (vibeLabel && lines.length === 1) {
+    const vibeFS = Math.round(minDim * 0.016)
+    const startY = archetype === 'centered'
+      ? contentTop + Math.max(0, (maxContentHeight - fit.totalH) / 2)
+      : contentTop + Math.max(0, (maxContentHeight - fit.totalH) / 2)
+    ctx.font = `700 ${vibeFS}px ${geist}`
+    ctx.fillStyle = accent
+    ctx.globalAlpha = 0.82
+    ctx.letterSpacing = '2px'
+    ctx.textAlign = textAlign
+    ctx.fillText(vibeLabel.toUpperCase(), anchorX, Math.max(contentTop + vibeFS, startY - vibeFS * 1.4))
+    ctx.letterSpacing = '0px'
+    ctx.globalAlpha = 1
   }
 
-  // Watermark — same anchor for every archetype, a constant brand cue
-  const wmFS = Math.round(Math.min(W, H) * 0.018)
+  // Flow the lyric/metadata content — vertically centered within the
+  // protected content area for every archetype. Centering (rather than a
+  // fixed top or bottom anchor) is what lets a short lyric read as
+  // deliberate and a long one use the available height efficiently,
+  // without ever entering the logo's protected band.
+  const startY = contentTop + Math.max(0, (maxContentHeight - fit.totalH) / 2)
+
+  ctx.textAlign = textAlign
+  ctx.textBaseline = 'alphabetic'
+  let y = startY
+  fit.lines.forEach((fl, i) => {
+    ctx.font = `italic ${fit.lyricFS}px Lora, serif`
+    ctx.fillStyle = ink
+    let ly = y + fit.lyricFS * 0.92
+    for (const wline of fl.wrapped) {
+      ctx.fillText(wline, anchorX, ly)
+      ly += fit.lyricLineH
+    }
+    y += fl.lyricBlockH + Math.round(fit.lyricFS * 0.24)
+
+    if (fl.songText) {
+      ctx.font = `700 ${fit.songFS}px ${geist}`
+      ctx.fillStyle = ink
+      ctx.fillText(fl.songText, anchorX, y + fit.songFS * 0.85)
+      y += Math.round(fit.songFS * 1.25)
+    }
+    if (fl.artistText) {
+      ctx.font = `400 ${fit.artistFS}px ${geist}`
+      ctx.fillStyle = inkMuted
+      ctx.fillText(fl.artistText, anchorX, y + fit.artistFS * 0.85)
+      y += Math.round(fit.artistFS * 1.3)
+    }
+
+    if (i < fit.lines.length - 1) {
+      // Stitch divider — the same "stitch" grammar PostCard and
+      // ComposeMomentCard already use for multi-line Moments, so the
+      // exported poster and the in-app UI share one visual language.
+      const stitchFS = Math.max(10, Math.round(minDim * 0.014))
+      const stitchY = y + Math.round(fit.dividerH * 0.55)
+      ctx.font = `700 ${stitchFS}px ${geist}`
+      ctx.fillStyle = inkMuted
+      ctx.globalAlpha = 0.7
+      ctx.textAlign = 'center'
+      ctx.fillText('· stitch ·', W / 2, stitchY)
+      ctx.globalAlpha = 1
+      ctx.textAlign = textAlign
+      y += fit.dividerH
+    }
+  })
+
+  // Watermark text — same anchor for every archetype, a constant brand cue
+  const wmFS = Math.round(minDim * 0.018)
   ctx.font = `400 ${wmFS}px ${geist}`
   ctx.fillStyle = light ? 'rgba(7,6,10,0.55)' : 'rgba(232,197,71,0.7)'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('trymargo.com', W / 2, H - Math.round(H * 0.068))
+  ctx.fillText('trymargo.com', W / 2, H - Math.round(bottomBandH * 0.42))
 
-  // Ghost logo — bottom-left, opacity 0.18, per brand rule
-  const logoBase = Math.min(W, H)
-  const markSize = Math.round(logoBase * 0.032)
-  const logoPad  = Math.round(logoBase * 0.052)
+  // Margo Symbol — bottom-left, ghost opacity per brand rule, canonical
+  // gold + dark colors regardless of theme (see drawMargoSymbol).
   ctx.globalAlpha = 0.18
-  drawMargoLockup(ctx, logoPad, H - logoPad - markSize, markSize, accent)
+  drawMargoSymbol(ctx, logoPad, H - logoPad - markSize, markSize)
   ctx.globalAlpha = 1
 }
 
 /* ─── Draw dual-card — chat bubble layout ─────────────────────
  * Lyric Back's reply card. Composition/colors intentionally untouched
- * in this pass — only threading the new theme shape through so both
- * Margo Gold and Margo Dark keep rendering correctly. */
+ * in this pass — only the logo draw call was updated to the corrected
+ * Symbol-only, canonical-color implementation (same bug, same fix). */
 async function drawDualCard(
   ctx: CanvasRenderingContext2D,
   W: number, H: number,
@@ -489,12 +640,12 @@ async function drawDualCard(
   ctx.fillStyle = vig
   ctx.fillRect(0, 0, W, H)
 
-  // Ghost logo — top left
+  // Margo Symbol — top left, Symbol only (no wordmark), canonical colors
   const logoBase = Math.min(W, H)
   const markSize = Math.round(logoBase * 0.028)
-  const logoPad  = Math.round(logoBase * 0.052)
+  const logoPad = Math.round(logoBase * 0.052)
   ctx.globalAlpha = 0.28
-  drawMargoLockup(ctx, logoPad, logoPad, markSize, themeColor)
+  drawMargoSymbol(ctx, logoPad, logoPad, markSize)
   ctx.globalAlpha = 1
 
   // Layout
@@ -649,28 +800,98 @@ async function drawDualCard(
   ctx.fillText('trymargo.com', W / 2, footerY)
 }
 
+/* ─── Download helper — shared by the combined export and both
+ * individual-card export actions, so the blob→file→click dance only
+ * lives in one place. ─────────────────────────────────────────────── */
+function downloadCanvas(canvas: HTMLCanvasElement, filename: string): Promise<void> {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      if (!blob) { resolve(); return }
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = filename
+      document.body.appendChild(a); a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 5000)
+      resolve()
+    }, 'image/png')
+  })
+}
+
+function slugify(text: string, fallback: string): string {
+  const s = (text || '').trim().replace(/[^a-z0-9\s]/gi, '').split(/\s+/).slice(0, 3).join('-').toLowerCase()
+  return s || fallback
+}
+
 export function CardExportModal({
   open, onOpenChange,
   lyric = '', song = '', artist = '',
   postId,
   vibeLabel,
+  lines,
   parentLyric, parentSong, parentArtist,
 }: CardExportModalProps) {
   const [theme, setTheme] = useState('gold')
   const [shape, setShape] = useState('square')
   const [copied, setCopied] = useState(false)
+  const [carouselIndex, setCarouselIndex] = useState(0)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const carouselCanvasRef = useRef<HTMLCanvasElement>(null)
 
   const isDualCard = !!(parentLyric && parentSong && parentArtist)
   const activeTheme = THEMES.find(t => t.id === theme) || THEMES[0]
   const activeShape = SHAPES.find(s => s.id === shape) || SHAPES[0]
 
+  // The full ordered Moment — source of truth for the poster. Falls back
+  // to the singular lyric/song/artist props for callers that only ever
+  // had one line to begin with (karaoke line share, Lyric Back replies).
+  const momentLines = useMemo<NormalizedLine[]>(() => {
+    const fromProp = (lines || []).map(normalizeLine).filter(l => l.lyric.trim().length > 0)
+    if (fromProp.length > 0) return fromProp
+    if (lyric && lyric.trim()) return [{ lyric, songTitle: song, artistName: artist }]
+    return []
+  }, [lines, lyric, song, artist])
+
+  const isMulti = !isDualCard && momentLines.length > 1
+
+  // One archetype/motif decision for the whole Moment, shared by the
+  // combined poster and every individual card, so the carousel reads as
+  // one visual family instead of each card independently re-rolling its
+  // own personality from just its own (much shorter) content.
+  const composition = useMemo<Composition | null>(() => {
+    if (isDualCard || momentLines.length === 0) return null
+    const seed = postId || momentLines.map(l => `${l.lyric}|${l.songTitle}|${l.artistName}`).join('~')
+    return composeMoment(vibeLabel, momentLines, seed)
+  }, [isDualCard, momentLines, vibeLabel, postId])
+
+  useEffect(() => {
+    if (carouselIndex >= momentLines.length) setCarouselIndex(0)
+  }, [momentLines.length, carouselIndex])
+
   const url = postId ? `https://trymargo.com/post/${postId}` : 'https://trymargo.com'
   const copyText = isDualCard
     ? `"${parentLyric}" ↩ "${lyric}" — trymargo.com`
-    : lyric ? `"${lyric}" — ${artist}, ${song}` : ''
+    : momentLines.length > 0
+      ? momentLines.map(l => `"${l.lyric}"${l.artistName ? ' — ' + l.artistName : ''}${l.songTitle ? ', ' + l.songTitle : ''}`).join('  ·  ') + ' — trymargo.com'
+      : ''
 
-  /* ─── Render canvas ─────────────────────────────────────── */
+  /* ─── Render helpers ────────────────────────────────────────── */
+  const paintMoment = useCallback(async (
+    canvas: HTMLCanvasElement,
+    linesToPaint: NormalizedLine[],
+    seedKey: string,
+  ) => {
+    const { w, h } = activeShape
+    const SCALE = 2
+    canvas.width = w * SCALE
+    canvas.height = h * SCALE
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.scale(SCALE, SCALE)
+    await drawMomentPoster(ctx, w, h, linesToPaint, activeTheme, vibeLabel, seedKey, composition || undefined)
+  }, [activeShape, activeTheme, vibeLabel, composition])
+
   const renderCanvas = useCallback(async () => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -680,6 +901,7 @@ export function CardExportModal({
     canvas.height = h * SCALE
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.scale(SCALE, SCALE)
 
     if (isDualCard) {
@@ -689,38 +911,69 @@ export function CardExportModal({
         lyric, song, artist,
         activeTheme
       )
-    } else {
+    } else if (momentLines.length > 0) {
       // postId as the composition seed when it exists — same Moment,
       // same archetype/motif every time it's reopened.
-      await drawSingleCard(ctx, w, h, lyric, song, artist, activeTheme, vibeLabel, postId)
+      await drawMomentPoster(ctx, w, h, momentLines, activeTheme, vibeLabel, postId ? `${postId}:combined` : 'combined', composition || undefined)
     }
-  }, [theme, shape, lyric, song, artist, parentLyric, parentSong, parentArtist, isDualCard, activeTheme, activeShape, vibeLabel, postId])
+  }, [activeShape, activeTheme, isDualCard, parentLyric, parentSong, parentArtist, lyric, song, artist, momentLines, vibeLabel, postId, composition])
 
   useEffect(() => {
     if (open) renderCanvas()
   }, [open, renderCanvas])
 
-  /* ─── Save ──────────────────────────────────────────────── */
+  useEffect(() => {
+    if (!open || !isMulti) return
+    const canvas = carouselCanvasRef.current
+    const line = momentLines[carouselIndex]
+    if (!canvas || !line) return
+    void paintMoment(canvas, [line], postId ? `${postId}:card${carouselIndex}` : `card${carouselIndex}`)
+  }, [open, isMulti, carouselIndex, momentLines, paintMoment, postId])
+
+  /* ─── Export actions ────────────────────────────────────────── */
+  const filenameFor = useCallback((suffix?: string) => {
+    const primary = momentLines[0]
+    const base = momentLines.length > 1 ? 'Moment' : slugify(primary?.songTitle || '', 'Lyric')
+    const parts = ['MARGO', base]
+    if (suffix) parts.push(suffix)
+    parts.push(activeShape.label)
+    return `${parts.join('_')}.png`
+  }, [momentLines, activeShape])
+
   const handleSave = useCallback(async () => {
     await renderCanvas()
     const canvas = canvasRef.current
     if (!canvas) return
-    canvas.toBlob(blob => {
-      if (!blob) return
-      const slugReply = (song || 'Lyric').trim().replace(/[^a-z0-9\s]/gi, '').split(/\s+/).slice(0, 3).join('-').toLowerCase()
-      const slugParent = isDualCard ? (parentSong || '').trim().replace(/[^a-z0-9\s]/gi, '').split(/\s+/).slice(0, 3).join('-').toLowerCase() : ''
-      const slug = isDualCard ? `${slugParent}_LyricBack_${slugReply}` : slugReply
-      const filename = `MARGO_${slug}_${activeShape.label}.png`
-      const url2 = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url2; a.download = filename
-      document.body.appendChild(a); a.click()
-      document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(url2), 5000)
-      // Analytics: never await — download must not wait on network
-      void recordCardExport({ postId, theme, shape })
-    }, 'image/png')
-  }, [renderCanvas, song, isDualCard, activeShape, postId, theme, shape])
+    if (isDualCard) {
+      const slugReply = slugify(song, 'Lyric')
+      const slugParent = slugify(parentSong || '', 'Lyric')
+      await downloadCanvas(canvas, `MARGO_${slugParent}_LyricBack_${slugReply}_${activeShape.label}.png`)
+    } else {
+      await downloadCanvas(canvas, filenameFor())
+    }
+    void recordCardExport({ postId, theme, shape })
+  }, [renderCanvas, isDualCard, song, parentSong, activeShape, filenameFor, postId, theme, shape])
+
+  const handleExportCard = useCallback(async (index: number) => {
+    const line = momentLines[index]
+    if (!line) return
+    const canvas = document.createElement('canvas')
+    await paintMoment(canvas, [line], postId ? `${postId}:card${index}` : `card${index}`)
+    await downloadCanvas(canvas, filenameFor(momentLines.length > 1 ? `card${index + 1}of${momentLines.length}` : undefined))
+    void recordCardExport({ postId, theme, shape })
+  }, [momentLines, paintMoment, postId, filenameFor, theme, shape])
+
+  const handleExportAllCards = useCallback(async () => {
+    for (let i = 0; i < momentLines.length; i++) {
+      // Sequential, with a short stagger — back-to-back synchronous
+      // download triggers are the pattern browsers are most likely to
+      // flag as "this site is trying to download multiple files."
+      // eslint-disable-next-line no-await-in-loop
+      await handleExportCard(i)
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => setTimeout(resolve, 350))
+    }
+  }, [momentLines.length, handleExportCard])
 
   /* ─── Copy ──────────────────────────────────────────────── */
   const handleCopy = useCallback(() => {
@@ -740,8 +993,10 @@ export function CardExportModal({
 
   if (!open) return null
 
-  /* ─── Preview aspect ratio ──────────────────────────────── */
-  const previewAspect = activeShape.h / activeShape.w
+  const sectionLabelStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700,
+    color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase',
+  }
 
   return (
     <div
@@ -768,8 +1023,8 @@ export function CardExportModal({
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase' }}>
-            {isDualCard ? 'Lyric Back Card' : 'Share Card'}
+          <p style={sectionLabelStyle}>
+            {isDualCard ? 'Lyric Back Card' : 'Share your Moment'}
           </p>
           <button
             type="button"
@@ -779,8 +1034,8 @@ export function CardExportModal({
           ><CloseIcon size={14} color="var(--text-secondary)" /></button>
         </div>
 
-        {/* Canvas preview — scrollable so full card is reachable */}
-        <div style={{ margin: '14px 20px 0', borderRadius: '12px', overflow: 'hidden', background: '#07060A', position: 'relative', maxHeight: '260px', overflowY: 'auto' }}>
+        {/* Combined poster preview — the default, most prominent presentation */}
+        <div style={{ margin: '14px 20px 0', borderRadius: '12px', overflow: 'hidden', background: '#07060A', position: 'relative', maxHeight: '320px', overflowY: 'auto' }}>
           <canvas
             ref={canvasRef}
             style={{ width: '100%', aspectRatio: `${activeShape.w} / ${activeShape.h}`, display: 'block' }}
@@ -789,7 +1044,7 @@ export function CardExportModal({
 
         {/* Theme row */}
         <div style={{ padding: '16px 20px 0' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '10px' }}>Theme</p>
+          <p style={{ ...sectionLabelStyle, marginBottom: '10px' }}>Theme</p>
           <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
             {THEMES.map(t => (
               <button
@@ -814,7 +1069,7 @@ export function CardExportModal({
 
         {/* Shape row */}
         <div style={{ padding: '14px 20px 0' }}>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '10px' }}>Shape</p>
+          <p style={{ ...sectionLabelStyle, marginBottom: '10px' }}>Shape</p>
           <div style={{ display: 'flex', gap: '8px' }}>
             {SHAPES.map(s => (
               <button
@@ -835,12 +1090,12 @@ export function CardExportModal({
           </div>
         </div>
 
-        {/* Action buttons */}
+        {/* Primary export action */}
         <div style={{ display: 'flex', gap: '10px', padding: '16px 20px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '16px' }}>
           <button
             onClick={handleSave}
             style={{ flex: 2, padding: '13px', background: '#E8C547', color: '#07060A', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}
-          >Save Card</button>
+          >{isDualCard ? 'Save Card' : 'Export Moment'}</button>
           <button
             onClick={handleCopy}
             style={{ flex: 1, padding: '13px', background: 'rgba(255,255,255,0.05)', color: copied ? '#E8C547' : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 600, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer', transition: 'color 150ms ease' }}
@@ -850,6 +1105,61 @@ export function CardExportModal({
             style={{ flex: 1, padding: '13px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 600, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}
           >Share</button>
         </div>
+
+        {/* Individual-card carousel — optional secondary presentation,
+            only when the Moment actually has more than one line. The
+            combined poster above remains the default; this never appears
+            before the user has already seen it. */}
+        {isMulti && (
+          <div style={{ padding: '20px 20px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '20px' }}>
+            <p style={sectionLabelStyle}>Want to share the lines separately?</p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '6px 0 0' }}>
+              Swipe through the individual cards.
+            </p>
+
+            <div style={{ margin: '14px 0 0', borderRadius: '12px', overflow: 'hidden', background: '#07060A', maxHeight: '220px', overflowY: 'auto' }}>
+              <canvas
+                ref={carouselCanvasRef}
+                style={{ width: '100%', aspectRatio: `${activeShape.w} / ${activeShape.h}`, display: 'block' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px', margin: '14px 0' }}>
+              <button
+                type="button"
+                aria-label="Previous card"
+                onClick={() => setCarouselIndex(i => (i - 1 + momentLines.length) % momentLines.length)}
+                style={{ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <span style={{ display: 'flex', transform: 'rotate(180deg)' }}>
+                  <ChevronRightIcon size={16} color="var(--text-secondary)" />
+                </span>
+              </button>
+              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.75rem', color: 'var(--text-secondary)', minWidth: '92px', textAlign: 'center' }}>
+                Card {carouselIndex + 1} of {momentLines.length}
+              </span>
+              <button
+                type="button"
+                aria-label="Next card"
+                onClick={() => setCarouselIndex(i => (i + 1) % momentLines.length)}
+                style={{ width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <ChevronRightIcon size={16} color="var(--text-secondary)" />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', paddingBottom: '4px' }}>
+              <button
+                onClick={() => handleExportCard(carouselIndex)}
+                style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 600, fontSize: '0.58rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}
+              >Export this card</button>
+              <button
+                onClick={handleExportAllCards}
+                style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50px', fontFamily: 'var(--font-lora), serif', fontWeight: 600, fontSize: '0.58rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}
+              >Export all cards</button>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

@@ -725,7 +725,8 @@ function ComposeInner() {
         <CardExportModal
           open={showExport}
           onOpenChange={setShowExport}
-          lyric={lyric} song={songName} artist={artistName} postId={postedId || undefined}
+          lines={momentLines}
+          postId={postedId || undefined}
           vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : undefined}
         />
         {!isPrivateSave && postedId && (

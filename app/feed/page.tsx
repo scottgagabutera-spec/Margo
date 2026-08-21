@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
+import { resolveMomentLines } from '@/lib/post-lines'
 import Link from 'next/link'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { useAuthGate } from '@/components/supabase-auth-provider'
@@ -677,9 +678,7 @@ export default function FeedPage() {
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
-        lyric={exportPost?.text || ''}
-        song={exportPost?.knowledge?.song || ''}
-        artist={exportPost?.knowledge?.artist || ''}
+        lines={exportPost ? resolveMomentLines(exportPost) : undefined}
         postId={exportPost?.id}
       />
     </div>
