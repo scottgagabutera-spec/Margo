@@ -76,6 +76,7 @@ const VIBE_LABELS: Record<Vibe, string> = {
 }
 
 const font = 'var(--font-lora), serif'
+const YOUR_LINE_CUE = 'Write your line…'
 const backBtnStyle: React.CSSProperties = {
   background: 'none', border: 'none', cursor: 'pointer',
   fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
@@ -154,21 +155,32 @@ function ComposeInner() {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchGenRef = useRef(0)
   const composeRootRef = useRef<HTMLElement | null>(null)
-  const lyricTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
 
-  // Plain textarea rows don't grow with content — resize to fit whenever
-  // the lyric changes (typed, pasted, or pre-filled from a hosted pick).
+  // One-time "Write your line…" reveal — governs animation progress only.
+  // Visibility (show/hide) is a separate, render-time check against
+  // lyric.length so typing hides it instantly regardless of where the
+  // animation was. Keyed on entering a fresh Your-line instance (a new
+  // song pick, not every keystroke) so it plays once per draft line, not
+  // once per session and not on every character typed.
+  const [cueRevealChars, setCueRevealChars] = useState(0)
   useEffect(() => {
-    const el = lyricTextareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [lyric, step])
+    const onWritingScreen = step === 2 && !(selectedSong?.source === 'margo' && !linePickComplete)
+    if (!onWritingScreen) return
+    if (lyric.length > 0) { setCueRevealChars(YOUR_LINE_CUE.length); return }
+    setCueRevealChars(0)
+    let i = 0
+    const id = window.setInterval(() => {
+      i += 1
+      setCueRevealChars(i)
+      if (i >= YOUR_LINE_CUE.length) window.clearInterval(id)
+    }, 45)
+    return () => window.clearInterval(id)
+  }, [step, selectedSong, linePickComplete])
 
   // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
   // and hides the mobile tab bar while typing / search sheet is open.
@@ -762,57 +774,156 @@ function ComposeInner() {
                 }}
               />
             ) : (
-              <>
-                <button style={backBtnStyle} onClick={() => {
-                  if (selectedSong?.source === 'margo') {
-                    setLinePickComplete(false)
-                  } else {
-                    setStep(1)
-                    setSelectedSong(null)
-                    setArtistName('')
-                    setSongName('')
-                    setLinkedSongId(null)
-                    setLinkedAudioUrl(null)
-                    setSnippetStart(null)
-                    setSnippetEnd(null)
-                  }
-                }}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
-                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                  <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Your line</h1>
-                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                    {selectedSong?.source === 'margo' ? 'Change a word if you need to.' : 'Type the lyric'}
-                  </p>
+              // Viewport-locked writing panel — independent of the page's
+              // own scroll position, sized to --margo-vv-height (already
+              // keyboard-aware) rather than document flow. Idle vs typing
+              // is the SAME mounted tree throughout; only style values
+              // (font size, padding, flex order) change with chromeHidden,
+              // so the textarea and the Song/Artist inputs never remount —
+              // no focus loss, no stale layout, no jump. Same structure for
+              // hosted and non-hosted lines; the only difference is whether
+              // `lyric` arrives pre-filled.
+              <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0,
+                height: 'var(--margo-vv-height, 100dvh)',
+                zIndex: 10,
+                display: 'flex', flexDirection: 'column',
+                background: 'var(--bg)',
+                paddingLeft: '24px', paddingRight: '24px',
+                paddingTop: 'calc(20px + env(safe-area-inset-top, 0px))',
+                transition: 'height 150ms ease',
+                boxSizing: 'border-box',
+              }}>
+                <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+
+                  {/* Back + step label — compresses to "‹ Your line", never disappears */}
+                  <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      aria-label="Back"
+                      onClick={() => {
+                        if (selectedSong?.source === 'margo') {
+                          setLinePickComplete(false)
+                        } else {
+                          setStep(1)
+                          setSelectedSong(null)
+                          setArtistName('')
+                          setSongName('')
+                          setLinkedSongId(null)
+                          setLinkedAudioUrl(null)
+                          setSnippetStart(null)
+                          setSnippetEnd(null)
+                        }
+                      }}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center',
+                        minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
+                        padding: '0 8px', margin: '0 -8px', boxSizing: 'border-box',
+                      }}
+                    >
+                      <ArrowLeftIcon size={16} color="currentColor" />
+                      {!chromeHidden && <span style={{ fontFamily: font, fontSize: '0.82rem', marginLeft: '6px', letterSpacing: '0.5px' }}>Back</span>}
+                    </button>
+                    {chromeHidden && (
+                      <span style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)' }}>
+                        Your line
+                      </span>
+                    )}
+                  </div>
+
+                  {!chromeHidden && (
+                    <div style={{ flexShrink: 0, textAlign: 'center', margin: '16px 0 24px' }}>
+                      <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Your line</h1>
+                      <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        {selectedSong?.source === 'margo' ? 'Change a word if you need to.' : 'Type the lyric'}
+                      </p>
+                    </div>
+                  )}
+
+                  <ComposeLyricCard style={{
+                    flex: 1, minHeight: 0, overflow: 'hidden',
+                    display: 'flex', flexDirection: 'column',
+                    marginTop: chromeHidden ? '12px' : 0,
+                    padding: chromeHidden ? '16px' : '24px',
+                    transition: 'padding 150ms ease, margin 150ms ease',
+                  }}>
+                    {/* Song/Artist — same mounted <input>s throughout; CSS `order`
+                        moves them above the lyric when compact (matching "the
+                        selected lyric gets priority, metadata compresses above
+                        it") without ever unmounting either field. */}
+                    <div style={{
+                      order: chromeHidden ? 0 : 2,
+                      flexShrink: 0,
+                      display: 'flex',
+                      flexDirection: chromeHidden ? 'row' : 'column',
+                      gap: '10px',
+                      marginBottom: chromeHidden ? '10px' : 0,
+                      marginTop: chromeHidden ? 0 : '16px',
+                      transition: 'all 150ms ease',
+                    }}>
+                      <div style={{ flex: chromeHidden ? '0 0 58%' : '1', minWidth: 0 }}>
+                        <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
+                        <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
+                          style={{
+                            width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
+                            padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 600, color: 'var(--text-on-gold)', outline: 'none', boxSizing: 'border-box',
+                            fontSize: chromeHidden ? '0.8rem' : '0.95rem',
+                            overflow: 'hidden', textOverflow: 'ellipsis',
+                            transition: 'font-size 150ms ease',
+                          }} />
+                      </div>
+                      <div style={{ flex: chromeHidden ? '0 0 38%' : '1', minWidth: 0 }}>
+                        <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
+                        <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
+                          style={{
+                            width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
+                            padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 400, color: 'var(--text-on-gold-muted)', outline: 'none', boxSizing: 'border-box',
+                            fontSize: chromeHidden ? '0.7rem' : '0.75rem',
+                            overflow: 'hidden', textOverflow: 'ellipsis',
+                            transition: 'font-size 150ms ease',
+                          }} />
+                      </div>
+                    </div>
+
+                    {/* Writing region — the lyric itself, unchanged size, always
+                        the dominant object. Fills whatever space remains rather
+                        than a fixed row count, and scrolls internally for long
+                        responses instead of pushing anything else off-screen. */}
+                    <div style={{ order: 1, position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                      {lyric.length === 0 && (
+                        <span aria-hidden style={{
+                          position: 'absolute', top: 0, left: 0, right: 0,
+                          ...composeLyricTextStyle,
+                          color: 'var(--text-on-gold-muted)',
+                          pointerEvents: 'none',
+                        }}>
+                          {YOUR_LINE_CUE.slice(0, cueRevealChars)}
+                        </span>
+                      )}
+                      <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
+                        style={{
+                          ...composeLyricTextStyle,
+                          flex: 1,
+                          width: '100%',
+                          background: 'transparent',
+                          border: 'none',
+                          outline: 'none',
+                          resize: 'none',
+                          overflowY: 'auto',
+                          boxSizing: 'border-box',
+                        }} />
+                    </div>
+
+                    <div style={{ order: 3, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: chromeHidden ? '4px' : '10px' }}>
+                      <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
+                    </div>
+                  </ComposeLyricCard>
+
+                  {/* Reserves exactly as much space as the sticky Continue bar
+                      actually measures — --margo-cta-bar-h, not a guessed number. */}
+                  <div style={{ flexShrink: 0, height: 'var(--margo-cta-bar-h, 0px)' }} />
                 </div>
-                <ComposeLyricCard>
-                  <textarea ref={lyricTextareaRef} value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-                    rows={2}
-                    style={{
-                      ...composeLyricTextStyle,
-                      width: '100%',
-                      background: 'transparent',
-                      border: 'none',
-                      outline: 'none',
-                      resize: 'none',
-                      overflow: 'hidden',
-                      boxSizing: 'border-box',
-                    }} />
-                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
-                      <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
-                        style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)', padding: '4px 0 6px', fontFamily: UI_FONT, fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-on-gold)', outline: 'none', boxSizing: 'border-box' }} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
-                      <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
-                        style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)', padding: '4px 0 6px', fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-on-gold-muted)', outline: 'none', boxSizing: 'border-box' }} />
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-                    <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
-                  </div>
-                </ComposeLyricCard>
-              </>
+              </div>
             )}
           </div>
 
