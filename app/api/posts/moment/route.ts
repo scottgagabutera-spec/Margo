@@ -49,9 +49,13 @@ export async function DELETE(req: NextRequest) {
   })
 
   if (error) {
+    // Logged server-side only — the raw RPC message can include row-level
+    // detail (e.g. another user's id when an ownership check fails) that
+    // has no reason to reach the caller. The generic message is enough for
+    // the client to show a retry prompt.
     console.error('[posts/moment DELETE] failed:', error)
     return NextResponse.json(
-      { error: 'Could not delete this Moment. Please try again.', detail: error.message },
+      { error: 'Could not delete this Moment. Please try again.' },
       { status: 500 },
     )
   }
@@ -74,6 +78,20 @@ export async function PATCH(req: NextRequest) {
   if (body.lines.length > 3) {
     return NextResponse.json({ error: 'Moments can hold up to 3 lines.' }, { status: 400 })
   }
+  // Fast-fail before the DB round trip. The RPC enforces the same ceiling
+  // as the actual security boundary (this check is a cheap UX/DoS
+  // shortcut, not a substitute for it) — the client-side 140-char
+  // textarea limit in EditMomentModal is UI-only and trivially bypassed
+  // by calling this route directly.
+  const tooLong = body.lines.some((line) => {
+    const text = typeof line?.text === 'string' ? line.text : ''
+    const song = typeof line?.song_title === 'string' ? line.song_title : ''
+    const artist = typeof line?.artist_name === 'string' ? line.artist_name : ''
+    return text.length > 500 || song.length > 300 || artist.length > 300
+  })
+  if (tooLong) {
+    return NextResponse.json({ error: 'One of the lines is too long.' }, { status: 400 })
+  }
 
   const admin = getAdmin()
   if (!admin) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
@@ -87,7 +105,7 @@ export async function PATCH(req: NextRequest) {
   if (error) {
     console.error('[posts/moment PATCH] failed:', error)
     return NextResponse.json(
-      { error: 'Could not save your changes. Please try again.', detail: error.message },
+      { error: 'Could not save your changes. Please try again.' },
       { status: 500 },
     )
   }

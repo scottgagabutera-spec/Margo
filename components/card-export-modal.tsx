@@ -852,6 +852,12 @@ export function CardExportModal({
   const [shape, setShape] = useState('square')
   const [copied, setCopied] = useState(false)
   const [carouselIndex, setCarouselIndex] = useState(0)
+  // "Export all" downloads are sequential, not guaranteed — some browsers
+  // prompt for permission or silently block downloads past the first one
+  // triggered without a fresh user gesture. This surfaces progress instead
+  // of a single button press that might quietly produce fewer files than
+  // expected with no explanation.
+  const [exportAllProgress, setExportAllProgress] = useState<{ done: number; total: number } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const carouselCanvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -981,16 +987,29 @@ export function CardExportModal({
   }, [momentLines, paintMoment, postId, filenameFor, theme, shape])
 
   const handleExportAllCards = useCallback(async () => {
-    for (let i = 0; i < momentLines.length; i++) {
-      // Sequential, with a short stagger — back-to-back synchronous
-      // download triggers are the pattern browsers are most likely to
-      // flag as "this site is trying to download multiple files."
-      // eslint-disable-next-line no-await-in-loop
-      await handleExportCard(i)
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((resolve) => setTimeout(resolve, 350))
+    if (exportAllProgress) return
+    const total = momentLines.length
+    setExportAllProgress({ done: 0, total })
+    try {
+      for (let i = 0; i < total; i++) {
+        // Sequential, with a short stagger — back-to-back synchronous
+        // download triggers are the pattern browsers are most likely to
+        // flag as "this site is trying to download multiple files," and
+        // some browsers block anything past the first without prompting.
+        // There's no reliable way to detect a silently-blocked download
+        // from JS, so this can't guarantee all N files arrive — showing
+        // progress at least tells the user what was attempted instead of
+        // a single button press that might quietly produce fewer files.
+        // eslint-disable-next-line no-await-in-loop
+        await handleExportCard(i)
+        setExportAllProgress({ done: i + 1, total })
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => setTimeout(resolve, 350))
+      }
+    } finally {
+      setTimeout(() => setExportAllProgress(null), 900)
     }
-  }, [momentLines.length, handleExportCard])
+  }, [momentLines.length, handleExportCard, exportAllProgress])
 
   /* ─── Copy ──────────────────────────────────────────────── */
   const handleCopy = useCallback(() => {
@@ -1186,13 +1205,20 @@ export function CardExportModal({
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button
                 onClick={() => handleExportCard(carouselIndex)}
-                style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)', fontWeight: 600 }}
+                disabled={!!exportAllProgress}
+                style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)', fontWeight: 600, opacity: exportAllProgress ? 0.5 : 1, cursor: exportAllProgress ? 'not-allowed' : 'pointer' }}
               >This card</button>
               <button
                 onClick={handleExportAllCards}
-                style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)', fontWeight: 600 }}
-              >All cards</button>
+                disabled={!!exportAllProgress}
+                style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)', fontWeight: 600, opacity: exportAllProgress ? 0.7 : 1, cursor: exportAllProgress ? 'not-allowed' : 'pointer' }}
+              >{exportAllProgress ? `${exportAllProgress.done}/${exportAllProgress.total}…` : 'All cards'}</button>
             </div>
+            {exportAllProgress && (
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.62rem', color: 'var(--text-muted)', textAlign: 'center', margin: '6px 0 0' }}>
+                If your browser blocks multiple downloads, allow them when prompted.
+              </p>
+            )}
           </div>
         )}
 

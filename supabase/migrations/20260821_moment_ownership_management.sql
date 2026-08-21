@@ -103,6 +103,7 @@ declare
   v_owner uuid;
   v_count int;
   v_first jsonb;
+  v_line jsonb;
 begin
   if p_post_id is null or p_user_id is null then
     raise exception 'update_own_moment: p_post_id and p_user_id are required';
@@ -128,6 +129,26 @@ begin
   if coalesce(trim(v_first ->> 'text'), '') = '' then
     raise exception 'update_own_moment: first line text cannot be empty';
   end if;
+
+  -- Server-side length ceiling — the 140-char lyric limit is otherwise
+  -- only enforced client-side (EditMomentModal's textarea, same as
+  -- Compose's creation path), which is UX only and trivially bypassed by
+  -- calling this function/the API route directly with a raw payload.
+  -- 500/300 give generous headroom over the UI limit for song/artist
+  -- metadata (which isn't length-limited client-side at all) without
+  -- allowing unbounded abuse.
+  for v_line in select * from jsonb_array_elements(p_lines)
+  loop
+    if length(coalesce(v_line ->> 'text', '')) > 500 then
+      raise exception 'update_own_moment: line text exceeds maximum length';
+    end if;
+    if length(coalesce(v_line ->> 'song_title', '')) > 300 then
+      raise exception 'update_own_moment: song title exceeds maximum length';
+    end if;
+    if length(coalesce(v_line ->> 'artist_name', '')) > 300 then
+      raise exception 'update_own_moment: artist name exceeds maximum length';
+    end if;
+  end loop;
 
   update public.posts set
     text = v_first ->> 'text',

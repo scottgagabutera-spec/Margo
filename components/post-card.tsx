@@ -715,7 +715,7 @@ export function PostCard({
           {isOwner && (
             <button
               type="button"
-              aria-label="Edit lyric"
+              aria-label="Edit Moment"
               onClick={() => setEditOpen(true)}
               style={{
                 width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
