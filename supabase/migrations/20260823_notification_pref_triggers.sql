@@ -4,8 +4,8 @@
 -- Fail-open when settings are missing or the key is unset (pref !== false),
 -- matching lib/notification-prefs.ts isNotificationAllowed().
 --
--- Message trigger: NOT present in tracked migrations. See PR notes — apply the
--- message function update only after production pg_get_functiondef confirms it.
+-- notify_on_message body codified from production pg_get_functiondef (2026-08-22).
+-- Production trigger trg_notify_on_message already exists — replace function only.
 
 -- ── Preference helper ───────────────────────────────────────────────────────
 
@@ -62,6 +62,24 @@ begin
         values (new.followee_id, new.follower_id, 'follow');
       end if;
     end if;
+  end if;
+  return new;
+end;
+$function$;
+
+-- ── Message (DM) — production notify_on_message + newMessage gate ───────────
+-- Trigger trg_notify_on_message (AFTER INSERT ON messages) already exists in
+-- production; CREATE OR REPLACE updates the function it calls.
+
+create or replace function public.notify_on_message()
+ returns trigger
+ language plpgsql
+ security definer
+as $function$
+begin
+  if public.notification_pref_allows(new.recipient_id, 'newMessage') then
+    insert into notifications (recipient_id, actor_id, type, message_id)
+    values (new.recipient_id, new.sender_id, 'message', new.id);
   end if;
   return new;
 end;

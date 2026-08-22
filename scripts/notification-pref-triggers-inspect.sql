@@ -1,5 +1,6 @@
--- Run in Supabase SQL Editor to inspect production message-notification triggers.
--- Paste results back before codifying notify_on_message in a migration.
+-- Production inspection for message-notification triggers (completed 2026-08-22).
+-- Confirmed: trg_notify_on_message → notify_on_message() on public.messages.
+-- Codified in supabase/migrations/20260823_notification_pref_triggers.sql.
 
 -- 1) All triggers on public.messages
 select tgname, pg_get_triggerdef(oid) as trigger_def

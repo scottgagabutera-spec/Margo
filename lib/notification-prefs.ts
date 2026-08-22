@@ -2,9 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 /** Mirrors app/settings/page.tsx's NotificationPrefs keys for the two
  * notification types that are created from app code (resonate, lyric_back).
- * follow/follow_request are gated in DB triggers via notification_pref_allows
- * (20260823_notification_pref_triggers.sql). message requires a prod trigger
- * codification pass — not in tracked migrations yet. */
+ * follow/follow_request/message are gated in DB triggers via
+ * notification_pref_allows (20260823_notification_pref_triggers.sql). */
 export type AppCreatedNotificationPrefKey = 'resonate' | 'lyricBack'
 
 /**
