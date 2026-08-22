@@ -202,11 +202,18 @@ function ComposeInner() {
   // building — shared by the "Ready to send" preview and the post-Send
   // completion screen so both render the exact same object.
   const momentLines = useMemo<MomentLineDraft[]>(
-    () => [
-      ...committedLines.map((l) => ({ lyric: l.lyric, songName: l.songName, artistName: l.artistName })),
-      { lyric, songName, artistName },
-    ],
+    () => {
+      const lines = committedLines.map((l) => ({ lyric: l.lyric, songName: l.songName, artistName: l.artistName }))
+      if (lyric.trim() && songName.trim() && artistName.trim()) {
+        lines.push({ lyric, songName, artistName })
+      }
+      return lines
+    },
     [committedLines, lyric, songName, artistName]
+  )
+  const readyMomentLines = useMemo(
+    () => momentLines.filter((l) => l.lyric.trim() && l.songName.trim() && l.artistName.trim()),
+    [momentLines],
   )
   // Exact snippet timing — either passed in directly from the player's
   // share sheet (exact), or matched at post time against the linked
@@ -661,7 +668,7 @@ function ComposeInner() {
               : (sentToName ? 'Sent to ' + sentToName + '.' : 'Your Moment is now on Margo.')}
           </p>
           <ComposeMomentCard
-            lines={momentLines}
+            lines={readyMomentLines}
             vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : null}
             style={{ marginBottom: '28px', textAlign: 'left' }}
           />
@@ -725,7 +732,7 @@ function ComposeInner() {
         <CardExportModal
           open={showExport}
           onOpenChange={setShowExport}
-          lines={momentLines}
+          lines={readyMomentLines}
           postId={postedId || undefined}
           vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : undefined}
         />
@@ -1116,7 +1123,7 @@ function ComposeInner() {
             </div>
 
             <ComposeMomentCard
-              lines={momentLines}
+              lines={readyMomentLines}
               vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : null}
               style={{ marginBottom: '32px' }}
             />
