@@ -520,7 +520,7 @@ export default function FeedPage() {
       }}
     >
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
-      {!ptrBusy && (pendingCount > 0 || songCount > 0 || artistCount > 0) && (
+      {!ptrBusy && feedLive && (pendingCount > 0 || songCount > 0 || artistCount > 0) && (
         <ContentUpdatesBar
           lyricsCount={pendingCount}
           songCount={songCount}

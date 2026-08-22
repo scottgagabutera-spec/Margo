@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useCallback, useRef, Suspense, useEffect } from 'react'
-import { toast } from 'sonner'
 import { SearchIcon } from '@/components/icons'
 import { CardExportModal } from '@/components/card-export-modal'
 import { AuthorMeta } from '@/components/username-tag'
@@ -16,6 +15,10 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { PostCard } from '@/components/post-card'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { BackButton } from '@/components/back-button'
+import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
+import { SongMeta } from '@/components/song-meta'
+import { VibeTag } from '@/components/vibe-tag'
+import { useRouter } from 'next/navigation'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
 import type { Post } from '@/hooks/usePosts'
@@ -126,6 +129,7 @@ function echoToPost(lb: Echo): Post {
 }
 
 function LyricBackContent() {
+  const router = useRouter()
   const { user } = useIdentity()
   const { requireAuth } = useAuthGate()
   const searchParams = useSearchParams()
@@ -177,6 +181,11 @@ function LyricBackContent() {
   const [cardData, setCardData] = useState<{
     lyric: string; song: string; artist: string; id: string;
     parentLyric?: string; parentSong?: string; parentArtist?: string;
+  } | null>(null)
+  const [completionMode, setCompletionMode] = useState<'public' | 'private' | null>(null)
+  const [completedParentId, setCompletedParentId] = useState<string | null>(null)
+  const [sentSnapshot, setSentSnapshot] = useState<{
+    lyric: string; songName: string; artistName: string; vibe: Vibe
   } | null>(null)
   const emotionAbortRef = useRef<AbortController | null>(null)
   const prefillAppliedRef = useRef(false)
@@ -428,6 +437,9 @@ function LyricBackContent() {
     setSnippetEnd(null)
     setMargoLines([])
     setLinePickComplete(false)
+    setCompletionMode(null)
+    setCompletedParentId(null)
+    setSentSnapshot(null)
   }, [])
 
   /* ─── post ───────────────────────────────────────────────── */
@@ -446,31 +458,9 @@ function LyricBackContent() {
     setPosting(true)
     setPostError(null)
 
-    // Confirmed via useIdentity.ts: IdentityUser sets both `id` and `uid`
-    // to the same Supabase auth id, so user.id is always correct here.
     const authorId = user.id
+    const parentId = respondingToId || null
 
-    // Replying (respondingToId set) creates a real threaded post with
-    // parent_post_id — this is what makes reply-to-a-reply work naturally
-    // now, instead of the old flat posts/{id}/echoes nesting. A fresh
-    // Lyric Back with no parent (respondingToId null) is a new top-level
-    // post, same as compose's handlePost.
-    //
-    // isPrivate applies the same way whether or not this is a reply —
-    // same 'private' status compose uses for top-level Moments. A private
-    // Lyric Back still threads to its parent (parent_post_id set) but is
-    // invisible to everyone but its author: useEchoes/RLS already exclude
-    // status='private' the same way they exclude it for top-level posts,
-    // and the post_reply_status_update trigger's echo_count recompute
-    // only counts status='active' children, so a private reply never
-    // inflates the parent's visible Lyric Back count. Previously this
-    // branch forced status:'active' whenever respondingToId was set,
-    // silently ignoring isPrivate — so tapping "Keep Private" on a reply
-    // created a public, active post anyway. Fixed to match the label.
-    //
-    // Resolve snippet timing against the linked song's real lyric_lines
-    // — same shared matcher compose uses. Null songId or no confident
-    // match just means no snippet button, not a wrong guess.
     let resolvedStart: number | null = snippetStart
     let resolvedEnd: number | null = snippetEnd
     if (linkedSongId && (resolvedStart == null || resolvedEnd == null)) {
@@ -481,65 +471,73 @@ function LyricBackContent() {
       }
     }
 
-    const { error: insertErr } = await supabase.from('posts').insert({
-      text: lyric,
-      emotion: selectedVibe,
-      status: isPrivate ? 'private' : 'active',
-      song_id: linkedSongId || null,
-      song_title: songName,
-      artist_name: artistName,
-      artwork_url: !respondingToId ? (selectedSong?.artwork || null) : null,
-      author_profile_id: authorId,
-      parent_post_id: respondingToId || null,
-      snippet_start_sec: resolvedStart,
-      snippet_end_sec: resolvedEnd,
-    })
-
-    resetComposeForm()
-    setPosting(false)
-
-    if (insertErr) {
-      console.error('Failed to post:', insertErr)
-      toast.error('Could not send your lyric back. Please try again.')
-      return
-    }
-
-    toast.success(isPrivate ? 'Saved privately.' : 'Sent. Your Lyric Back was sent.')
-
-    // Same client-insert pattern as feed resonate notifications. Only when
-    // this is a reply (parent exists), the parent author is someone else,
-    // and the reply is actually visible to them — a private reply still
-    // threads to its parent but nobody but its author can see it, so
-    // notifying the parent author about it would point them at something
-    // they can't open.
-    const parentAuthorId = respondingTo?.authorUid
-    if (respondingToId && parentAuthorId && parentAuthorId !== authorId && !isPrivate) {
-      try {
-        if (await isNotificationAllowed(supabase, parentAuthorId, 'lyricBack')) {
-          const { error: notifErr } = await supabase.from('notifications').insert({
-            recipient_id: parentAuthorId,
-            actor_id: authorId,
-            type: 'lyric_back',
-            post_id: respondingToId,
-          })
-          if (notifErr) console.error('Failed to insert lyric_back notification:', notifErr)
-        }
-      } catch (err) {
-        console.error('Failed to insert lyric_back notification:', err)
+    try {
+      const res = await fetch('/api/posts/lyric-back', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parentPostId: parentId,
+          isPrivate,
+          text: lyric,
+          emotion: selectedVibe,
+          songId: linkedSongId || null,
+          songTitle: songName,
+          artistName,
+          artworkUrl: !parentId ? (selectedSong?.artwork || null) : null,
+          snippetStartSec: resolvedStart,
+          snippetEndSec: resolvedEnd,
+        }),
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setPostError(typeof payload.error === 'string' ? payload.error : 'Could not send your Lyric Back. Please try again.')
+        return
       }
+
+      const replyId = typeof payload.id === 'string' ? payload.id : null
+      const replyStatus = payload.status === 'private' ? 'private' : 'public'
+
+      fetch('/api/moderate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: lyric, postId: replyId }),
+      }).catch(() => {})
+
+      setSentSnapshot({
+        lyric,
+        songName,
+        artistName,
+        vibe: selectedVibe,
+      })
+      setCompletedParentId(parentId)
+      setCompletionMode(replyStatus === 'private' ? 'private' : 'public')
+
+      const parentAuthorId = respondingTo?.authorUid
+      if (parentId && parentAuthorId && parentAuthorId !== authorId && !isPrivate) {
+        try {
+          if (await isNotificationAllowed(supabase, parentAuthorId, 'lyricBack')) {
+            const { error: notifErr } = await supabase.from('notifications').insert({
+              recipient_id: parentAuthorId,
+              actor_id: authorId,
+              type: 'lyric_back',
+              post_id: parentId,
+            })
+            if (notifErr) console.error('Failed to insert lyric_back notification:', notifErr)
+          }
+        } catch (err) {
+          console.error('Failed to insert lyric_back notification:', err)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to post lyric back:', err)
+      setPostError('Could not send your Lyric Back. Please try again.')
+    } finally {
+      setPosting(false)
     }
-    // post_stats.echo_count on the parent is kept in sync automatically
-    // by the post_reply_insert trigger — no manual runTransaction needed
-    // (previously two separate Firebase transactions against
-    // postStats/{id}/echoCount and songStats/{id}/echoCount; the latter
-    // has no Supabase equivalent since song_stats tracks lyric_uses, not
-    // echo counts — flagging this as a dropped field, not silently kept).
-    //
-    // song_stats.lyric_uses now increments automatically via the
-    // post_song_link_insert trigger whenever song_id is set, same as
-    // compose — this was never possible before since lyric-back never
-    // linked a song at all.
-  }, [requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user, respondingToId, respondingTo?.authorUid, posting, resetComposeForm, linkedSongId, snippetStart, snippetEnd])
+  }, [
+    requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user,
+    respondingToId, respondingTo?.authorUid, posting, linkedSongId, snippetStart, snippetEnd,
+  ])
 
   /* ─── resonate ───────────────────────────────────────────── */
   // Echo resonates now write to the same post_resonates table as
@@ -594,6 +592,74 @@ function LyricBackContent() {
   // fixes what the replier is shown while writing it.
   const respondingToLines = respondingTo ? resolveMomentLines(respondingTo) : []
   const respondingToMulti = respondingToLines.length > 1
+
+  if (completionMode && sentSnapshot) {
+    const isPrivateSave = completionMode === 'private'
+    const parentHref = completedParentId ? `/post/${completedParentId}` : null
+    return (
+      <main style={{ minHeight: '100vh', background: bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', paddingTop: '40px' }}>
+          <button
+            type="button"
+            onClick={resetComposeForm}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: font, fontSize: '0.75rem', color: text2,
+              letterSpacing: '0.5px', minHeight: 'var(--margo-touch-min)', padding: '0 12px',
+              display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
+              marginBottom: '20px',
+            }}
+          >Done</button>
+          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: text, marginBottom: '8px' }}>
+            {isPrivateSave ? 'Saved privately.' : 'Sent.'}
+          </p>
+          <p style={{ fontFamily: font, fontSize: '0.82rem', color: text2, marginBottom: '28px', letterSpacing: '0.5px' }}>
+            {isPrivateSave
+              ? 'Only you can see this Lyric Back.'
+              : 'Your Lyric Back was added to the conversation.'}
+          </p>
+          <ComposeLyricCard style={{ marginBottom: '20px', textAlign: 'left' }}>
+            <p style={composeLyricTextStyle}>&ldquo;{sentSnapshot.lyric}&rdquo;</p>
+            <div style={{ marginTop: '8px' }}>
+              <SongMeta
+                title={sentSnapshot.songName}
+                artist={sentSnapshot.artistName}
+                titleStyle={{ color: 'var(--text-on-gold)' }}
+                artistStyle={{ color: 'var(--text-on-gold-muted)' }}
+              />
+            </div>
+            <div style={{ position: 'relative', height: '22px', marginTop: '14px' }}>
+              <VibeTag label={VIBE_LABELS[sentSnapshot.vibe]} color="var(--text-on-gold)" variant="dark" />
+            </div>
+          </ComposeLyricCard>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {parentHref && (
+              <button
+                type="button"
+                onClick={() => router.push(parentHref)}
+                style={{
+                  width: '100%', padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
+                  background: gold, color: bg, borderRadius: '50px', fontFamily: font, fontWeight: 700,
+                  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none',
+                  cursor: 'pointer', boxShadow: '0 6px 28px var(--gold-glow)',
+                }}
+              >View conversation</button>
+            )}
+            <button
+              type="button"
+              onClick={() => router.push('/feed')}
+              style={{
+                width: '100%', padding: '13px 28px', minHeight: 'var(--margo-touch-min)',
+                background: 'transparent', color: text2, border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '50px', fontFamily: font, fontSize: '0.6rem',
+                letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+              }}
+            >Back to Feed</button>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main style={{ minHeight: '100vh', background: bg, position: 'relative' }}>
