@@ -19,6 +19,7 @@ interface ArtistSongRow {
   artwork_url: string | null
   status: string
   created_at: string
+  is_ai_generated: boolean
 }
 
 interface ArtistHeader {
@@ -71,7 +72,7 @@ export default function ArtistDiscographyPage() {
 
         const { data: songRows, error: songErr } = await supabase
           .from('songs')
-          .select('id, title, artist_display_name, artwork_url, status, created_at')
+          .select('id, title, artist_display_name, artwork_url, status, created_at, is_ai_generated')
           .eq('owner_profile_id', data.id)
           .eq('status', 'live')
           .order('created_at', { ascending: false })
@@ -149,7 +150,14 @@ export default function ArtistDiscographyPage() {
       }
       renderCard={song => (
         <SongCatalogCard
-          song={{ id: song.id, title: song.title, artist: song.artist_display_name, artwork: song.artwork_url, status: song.status }}
+          song={{
+            id: song.id,
+            title: song.title,
+            artist: song.artist_display_name,
+            artwork: song.artwork_url,
+            status: song.status,
+            isAiGenerated: song.is_ai_generated ?? false,
+          }}
         />
       )}
     />

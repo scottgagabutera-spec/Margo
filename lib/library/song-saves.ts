@@ -66,6 +66,7 @@ type SongEmbed = {
   artwork_url: string | null
   audio_url: string | null
   status: string | null
+  is_ai_generated: boolean
 }
 
 function unwrapSong(raw: SongEmbed | SongEmbed[] | null | undefined): SongEmbed | null {
@@ -80,6 +81,7 @@ export type LibrarySongRow = {
   artwork: string | null
   audioUrl: string | null
   status: string | null
+  isAiGenerated: boolean
 }
 
 function toLibrarySong(embed: SongEmbed): LibrarySongRow {
@@ -90,6 +92,7 @@ function toLibrarySong(embed: SongEmbed): LibrarySongRow {
     artwork: embed.artwork_url,
     audioUrl: embed.audio_url,
     status: embed.status,
+    isAiGenerated: embed.is_ai_generated ?? false,
   }
 }
 
@@ -99,7 +102,7 @@ async function fetchShelfSongs(
 ): Promise<LibrarySongRow[]> {
   const { data, error } = await supabase
     .from(table)
-    .select('created_at, songs(id, title, artist_display_name, artwork_url, audio_url, status)')
+    .select('created_at, songs(id, title, artist_display_name, artwork_url, audio_url, status, is_ai_generated)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
   if (error) {

@@ -27,7 +27,7 @@ const POST_SELECT = `
   snippet_end_sec,
   profiles:author_profile_id ( username, avatar_url ),
   post_stats ( resonate_count, echo_count ),
-  songs:song_id ( audio_url ),
+  songs:song_id ( audio_url, is_ai_generated ),
   post_lines (
     id,
     position,
@@ -39,7 +39,7 @@ const POST_SELECT = `
     snippet_start_sec,
     snippet_end_sec,
     source,
-    songs:song_id ( audio_url )
+    songs:song_id ( audio_url, is_ai_generated )
   )
 `
 
@@ -81,6 +81,7 @@ function mapRow(row: any): Post {
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
+    isAiGenerated: linkedSong?.is_ai_generated ?? false,
     lines: mapPostLinesRows(row.post_lines),
   }
 }

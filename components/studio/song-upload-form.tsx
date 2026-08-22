@@ -67,6 +67,68 @@ function UploadIcon() {
   )
 }
 
+function AiGeneratedToggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label="AI-generated"
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      style={{
+        position: 'relative',
+        width: 44,
+        height: 26,
+        minWidth: 44,
+        minHeight: 44,
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: 0,
+        border: 'none',
+        background: 'transparent',
+        cursor: disabled ? 'default' : 'pointer',
+        boxSizing: 'border-box',
+        flexShrink: 0,
+        opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      <span
+        style={{
+          width: 44,
+          height: 26,
+          borderRadius: 50,
+          background: checked ? 'var(--gold)' : 'var(--surface-3)',
+          border: `1px solid ${checked ? 'var(--gold-border)' : 'var(--border-hi)'}`,
+          transition: 'background 150ms ease, border-color 150ms ease',
+          position: 'relative',
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: 3,
+            left: checked ? 21 : 3,
+            width: 20,
+            height: 20,
+            borderRadius: '50%',
+            background: checked ? 'var(--bg)' : 'var(--text-muted)',
+            transition: 'left 150ms ease, background 150ms ease',
+          }}
+        />
+      </span>
+    </button>
+  )
+}
+
 function extFromFile(file: File): string {
   const parts = file.name.split('.')
   return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : 'bin'
@@ -90,6 +152,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId
   const [title, setTitle] = useState('')
   const [artistName, setArtistName] = useState(artistDisplayName)
   const [description, setDescription] = useState('')
+  const [isAiGenerated, setIsAiGenerated] = useState(false)
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [artworkFile, setArtworkFile] = useState<File | null>(null)
   const [artworkPreview, setArtworkPreview] = useState<string | null>(null)
@@ -127,7 +190,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId
       setError('')
       const { data: song, error: songErr } = await supabase
         .from('songs')
-        .select('id, title, artist_display_name, description, artwork_url, audio_url, youtube_url, spotify_url, apple_music_url, soundcloud_url, audiomack_url, boomplay_url')
+        .select('id, title, artist_display_name, description, artwork_url, audio_url, is_ai_generated, youtube_url, spotify_url, apple_music_url, soundcloud_url, audiomack_url, boomplay_url')
         .eq('id', songId)
         .single()
       if (cancelled) return
@@ -140,6 +203,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId
       setTitle(song.title || '')
       setArtistName(song.artist_display_name || artistDisplayName)
       setDescription(song.description || '')
+      setIsAiGenerated(song.is_ai_generated ?? false)
       setExistingArtworkUrl(song.artwork_url)
       setExistingAudioUrl(song.audio_url)
       setArtworkPreview(song.artwork_url)
@@ -299,6 +363,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId
             soundcloud_url: soundcloudUrl.trim() || null,
             audiomack_url: audiomackUrl.trim() || null,
             boomplay_url: boomplayUrl.trim() || null,
+            is_ai_generated: isAiGenerated,
             updated_at: new Date().toISOString(),
           })
           .eq('id', songId)
@@ -384,6 +449,7 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId
         soundcloud_url: soundcloudUrl.trim() || null,
         audiomack_url: audiomackUrl.trim() || null,
         boomplay_url: boomplayUrl.trim() || null,
+        is_ai_generated: isAiGenerated,
       })
       if (insertErr) throw new Error('Could not save song: ' + insertErr.message)
 
@@ -532,6 +598,44 @@ export function SongUploadForm({ artistDisplayName, onComplete, onCancel, songId
           value={description} onChange={e => setDescription(e.target.value)}
           rows={2} placeholder="Short description shown on the music page"
           style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+          disabled={busy}
+        />
+      </div>
+
+      <div style={{
+        marginBottom: '16px',
+        padding: '14px 16px',
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+        borderRadius: '12px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: '16px',
+      }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            fontFamily: font,
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            color: 'var(--text)',
+            margin: '0 0 4px',
+          }}>
+            AI-generated
+          </p>
+          <p style={{
+            fontFamily: font,
+            fontSize: '0.75rem',
+            color: 'var(--text-muted)',
+            margin: 0,
+            lineHeight: 1.5,
+          }}>
+            Mark this if the song audio was created with AI tools. This will be shown wherever the song appears.
+          </p>
+        </div>
+        <AiGeneratedToggle
+          checked={isAiGenerated}
+          onChange={setIsAiGenerated}
           disabled={busy}
         />
       </div>

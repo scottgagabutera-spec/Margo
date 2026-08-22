@@ -6,6 +6,7 @@ import { useIsPlaying, useIsBuffering } from '@/hooks/useAudioEngine'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { SongCardActions } from '@/components/song-card-actions'
+import { AiGeneratedLabel } from '@/components/ai-generated-label'
 /**
  * Minimal shape SongCatalogCard actually needs — deliberately NOT the
  * full Song type from hooks/useSongs, so this card can be fed by any
@@ -21,6 +22,7 @@ export interface SongCardData {
   artwork?: string | null
   audioUrl?: string | null
   status?: string | null
+  isAiGenerated?: boolean
 }
 
 export function EarnedTag({ label }: { label: 'Trending' | 'Top' }) {
@@ -65,6 +67,11 @@ export function SongCatalogCard({ song, badge }: { song: SongCardData; badge?: '
       <PendingNavLink href={`/song/${song.id}`} indicator="tint" style={{ textDecoration: 'none', display: 'block', borderRadius: '8px' }}>
         <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.95rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-secondary)', marginBottom: '2px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
         <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.artist}</p>
+        {song.isAiGenerated ? (
+          <div style={{ marginTop: '4px' }}>
+            <AiGeneratedLabel show />
+          </div>
+        ) : null}
       </PendingNavLink>
     </div>
   )

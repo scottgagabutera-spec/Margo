@@ -47,6 +47,7 @@ interface ArtistSongRow {
   artist_display_name: string
   artwork_url: string | null
   status: string
+  is_ai_generated: boolean
 }
 
 type FollowStatus = null | 'pending' | 'accepted'
@@ -140,7 +141,7 @@ export default function ProfilePage() {
     setArtistSongsLoading(true)
     supabase
       .from('songs')
-      .select('id, title, artist_display_name, artwork_url, status')
+      .select('id, title, artist_display_name, artwork_url, status, is_ai_generated')
       .eq('owner_profile_id', profile.id)
       .eq('status', 'live')
       .order('created_at', { ascending: false })
@@ -704,6 +705,7 @@ export default function ProfilePage() {
                         artist: song.artist_display_name,
                         artwork: song.artwork_url,
                         status: song.status,
+                        isAiGenerated: song.is_ai_generated ?? false,
                       }
                       return (
                         <div key={song.id} style={{ flexShrink: 0, width: '130px', scrollSnapAlign: 'start' }}>

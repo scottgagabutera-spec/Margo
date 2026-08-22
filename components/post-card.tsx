@@ -282,6 +282,7 @@ function PostMomentBody({
                 <SongMeta
                   title={line.songTitle}
                   artist={line.artistName}
+                  aiGenerated={line.isAiGenerated}
                   href={line.songId ? `/song/${line.songId}` : null}
                   titleStyle={{ fontSize: '0.82rem' }}
                   artistStyle={{ fontSize: '0.7rem' }}
@@ -544,6 +545,7 @@ export function PostCard({
             <SongMeta
               title={post.knowledge?.song}
               artist={post.knowledge?.artist}
+              aiGenerated={post.isAiGenerated}
               titleStyle={{ fontSize: '0.75rem' }}
               artistStyle={{ fontSize: '0.65rem' }}
             />

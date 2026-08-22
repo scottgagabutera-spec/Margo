@@ -19,7 +19,7 @@ const SONG_SELECT = `
   id, title, artist_display_name, artwork_url, audio_url, description,
   status, coming_soon_label, order, youtube_url, spotify_url,
   apple_music_url, soundcloud_url, audiomack_url, boomplay_url,
-  duration_sec, created_at,
+  duration_sec, created_at, is_ai_generated,
   song_stats ( plays, resonate_count, lyric_uses ),
   lyric_lines (
     id, line_index, text, start_sec, end_sec,
@@ -45,6 +45,7 @@ interface RawSongRow {
   boomplay_url: string | null
   duration_sec: number | null
   created_at: string
+  is_ai_generated: boolean
   song_stats: { plays: number; resonate_count: number; lyric_uses: number }[] | null
   lyric_lines: {
     id: string
@@ -90,6 +91,7 @@ function transformRow(row: RawSongRow): Song {
     resonates: stats?.resonate_count ?? 0,
     lyricUses: stats?.lyric_uses ?? 0,
     createdAt: row.created_at,
+    isAiGenerated: row.is_ai_generated ?? false,
     lyricLines,
   }
 }
