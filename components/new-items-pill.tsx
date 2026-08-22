@@ -14,7 +14,7 @@ interface NewItemsPillProps {
 /**
  * Sticky "Show N …" control — X/Twitter timeline pattern, Margo tokens.
  * Quiet badge language (matches Feed EarnedTag), not primary-CTA weight.
- * Shared by Feed and Discover; keep list buffering in useNewItemsBuffer.
+ * Used on Discover; Feed uses FeedNewMomentsPill instead.
  */
 export function NewItemsPill({ count, onReveal, noun = 'new lyrics' }: NewItemsPillProps) {
   if (count <= 0) return null

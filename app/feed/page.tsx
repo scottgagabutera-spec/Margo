@@ -16,6 +16,7 @@ import { useNotifications } from '@/hooks/useNotifications'
 import { useMessaging } from '@/hooks/useMessaging'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { PullToRefresh } from '@/components/pull-to-refresh'
+import { FeedNewMomentsPill } from '@/components/feed-new-moments-pill'
 import { ContentUpdatesBar } from '@/components/content-updates-bar'
 import { useNewItemsBuffer } from '@/hooks/useNewItemsBuffer'
 import { useContentUpdates } from '@/hooks/useContentUpdates'
@@ -520,14 +521,16 @@ export default function FeedPage() {
       }}
     >
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
-      {!ptrBusy && feedLive && (pendingCount > 0 || songCount > 0 || artistCount > 0) && (
+      {!ptrBusy && feedLive && pendingCount > 0 && (
+        <FeedNewMomentsPill count={pendingCount} onReveal={flushPending} />
+      )}
+      {!ptrBusy && feedLive && (songCount > 0 || artistCount > 0) && (
         <ContentUpdatesBar
-          lyricsCount={pendingCount}
           songCount={songCount}
           artistCount={artistCount}
-          onLyrics={flushPending}
           onSongs={openSongs}
           onArtists={openArtists}
+          topOffsetPx={pendingCount > 0 ? 52 : 0}
         />
       )}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>

@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { LoadingRing } from '@/components/loading-ring'
-import { RefreshArrowIcon } from '@/components/icons'
+import { MargoSymbol } from '@/components/margo-symbol'
 import { readActiveScrollTop } from '@/components/primary-tab-shell'
 
-const THRESHOLD = 80
-const MAX_PULL = 130
+const THRESHOLD = 72
+const MAX_PULL = 120
+const UPDATED_FLASH_MS = 1400
 
 interface PullToRefreshProps {
   onRefresh: () => void | Promise<void>
@@ -19,12 +20,9 @@ interface PullToRefreshProps {
 }
 
 /**
- * Lightweight pull-to-refresh for primary scroll pages.
- * Touch-driven (does not rely on browser overscroll bounce).
- * Indicator: circular refresh arrow (pull) → gold ring spinner (refresh).
- *
- * "At top" uses the active primary-tab pane scrollTop when keepalive
- * scrollports are mounted; falls back to window on full-nav routes.
+ * Margo-branded pull-to-refresh for primary scroll pages.
+ * Touch-driven; uses the active primary-tab pane scrollTop when mounted.
+ * Indicator: Margo Symbol + gold ring (pull progress → spin → brief Updated).
  */
 export function PullToRefresh({
   onRefresh,
@@ -34,18 +32,26 @@ export function PullToRefresh({
 }: PullToRefreshProps) {
   const [pull, setPull] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const [showUpdated, setShowUpdated] = useState(false)
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   const startY = useRef(0)
   const pulling = useRef(false)
   const pullRef = useRef(0)
   const refreshingRef = useRef(false)
+  const updatedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onRefreshRef = useRef(onRefresh)
   const onRefreshingChangeRef = useRef(onRefreshingChange)
   onRefreshRef.current = onRefresh
   onRefreshingChangeRef.current = onRefreshingChange
 
   const atTop = useCallback(() => readActiveScrollTop() <= 2, [])
+
+  useEffect(() => {
+    return () => {
+      if (updatedTimerRef.current) clearTimeout(updatedTimerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!enabled) return
@@ -74,7 +80,7 @@ export function PullToRefresh({
         return
       }
       if (dy > 8 && e.cancelable) e.preventDefault()
-      const damped = Math.min(MAX_PULL, dy * 0.55)
+      const damped = Math.min(MAX_PULL, dy * 0.5)
       pullRef.current = damped
       setPull(damped)
     }
@@ -91,11 +97,15 @@ export function PullToRefresh({
       }
       refreshingRef.current = true
       setRefreshing(true)
+      setShowUpdated(false)
       onRefreshingChangeRef.current?.(true)
       pullRef.current = THRESHOLD
       setPull(THRESHOLD)
       try {
         await onRefreshRef.current()
+        setShowUpdated(true)
+        if (updatedTimerRef.current) clearTimeout(updatedTimerRef.current)
+        updatedTimerRef.current = setTimeout(() => setShowUpdated(false), UPDATED_FLASH_MS)
       } finally {
         refreshingRef.current = false
         setRefreshing(false)
@@ -120,65 +130,77 @@ export function PullToRefresh({
 
   const progress = Math.min(1, pull / THRESHOLD)
   const ready = pull >= THRESHOLD && !refreshing
+  const ringState = refreshing ? 'spinning' : ready ? 'ready' : 'progress'
+  const visible = refreshing || pull > 0 || showUpdated
 
   const indicator = (
+    <div
+      aria-hidden={!visible}
+      aria-label={
+        refreshing
+          ? 'Refreshing'
+          : showUpdated
+            ? 'Feed updated'
+            : ready
+              ? 'Release to refresh'
+              : 'Pull to refresh'
+      }
+      style={{
+        position: 'fixed',
+        top: 'var(--nav-height, 72px)',
+        left: 0,
+        right: 0,
+        zIndex: 40,
+        height: refreshing || showUpdated ? THRESHOLD : pull,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        transition: refreshing || pull === 0 ? 'height 260ms var(--ease-out)' : undefined,
+      }}
+    >
       <div
-        aria-hidden={!refreshing && pull === 0}
-        aria-label={refreshing ? 'Refreshing' : ready ? 'Release to refresh' : 'Pull to refresh'}
         style={{
-          position: 'fixed',
-          top: 'var(--nav-height, 72px)',
-          left: 0,
-          right: 0,
-          zIndex: 40,
-          height: pull,
           display: 'flex',
-          alignItems: 'flex-end',
+          flexDirection: 'column',
+          alignItems: 'center',
           justifyContent: 'center',
-          pointerEvents: 'none',
-          overflow: 'hidden',
-          transition: refreshing || pull === 0 ? 'height 280ms var(--ease-out)' : undefined,
+          gap: '6px',
+          paddingBottom: showUpdated && !refreshing ? '12px' : '8px',
+          opacity: showUpdated && !refreshing ? 1 : Math.max(progress, refreshing ? 1 : 0),
+          transform: showUpdated
+            ? 'translateY(0)'
+            : `scale(${0.8 + progress * 0.2}) translateY(${(1 - progress) * 6}px)`,
+          transition: 'opacity 200ms var(--ease-out), transform 200ms var(--ease-out)',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingBottom: '10px',
-            opacity: Math.max(progress, refreshing ? 1 : 0),
-            transform: `scale(${0.75 + progress * 0.25}) translateY(${(1 - progress) * 8}px)`,
-            transition: refreshing ? 'opacity 150ms var(--ease-out)' : undefined,
-          }}
+        <LoadingRing
+          size={40}
+          strokeWidth={2}
+          state={showUpdated && !refreshing ? 'ready' : ringState}
+          progress={progress}
         >
-          <div
+          <MargoSymbol size={18} />
+        </LoadingRing>
+        {showUpdated && !refreshing && (
+          <span
             style={{
-              width: 'var(--margo-touch-min)',
-              height: 'var(--margo-touch-min)',
-              borderRadius: '50%',
-              background: ready || refreshing ? 'var(--gold-faint)' : 'var(--surface-2)',
-              border: `1px solid ${ready || refreshing ? 'var(--gold-border)' : 'var(--border)'}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: ready || refreshing ? '0 0 20px var(--gold-glow)' : 'none',
-              transition: 'background 150ms var(--ease-out), border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out)',
+              fontFamily: 'var(--font-lora), serif',
+              fontSize: '0.55rem',
+              fontWeight: 700,
+              letterSpacing: '1.2px',
+              textTransform: 'uppercase',
+              color: 'var(--gold)',
+              animation: 'fadeInUp 200ms var(--ease-out) both',
             }}
           >
-            {refreshing ? (
-              <LoadingRing size={22} strokeWidth={2} state="spinning" />
-            ) : (
-              <span style={{
-                display: 'flex',
-                transform: `rotate(${progress * 180}deg)`,
-                transition: ready ? 'transform 150ms var(--ease-out)' : undefined,
-              }}>
-                <RefreshArrowIcon size={20} color="var(--gold)" />
-              </span>
-            )}
-          </div>
-        </div>
+            Updated
+          </span>
+        )}
       </div>
+    </div>
   )
 
   return (
