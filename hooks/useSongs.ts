@@ -39,6 +39,7 @@ export interface Song {
   resonates?: number
   lyricUses?: number
   createdAt?: string
+  isAiGenerated?: boolean
   /**
    * Catalog fetch is light (no embed). Full lines come from `useSong(id)`
    * or Discover phase-2 `useLyricMoments`. Kept for compatibility; usually [].

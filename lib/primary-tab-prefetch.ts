@@ -50,7 +50,7 @@ const POST_SELECT = `
   snippet_end_sec,
   profiles:author_profile_id ( username, display_name, avatar_url ),
   post_stats ( resonate_count, echo_count, replay_count ),
-  songs:song_id ( audio_url ),
+  songs:song_id ( audio_url, is_ai_generated ),
   post_lines (
     id,
     position,
@@ -62,7 +62,7 @@ const POST_SELECT = `
     snippet_start_sec,
     snippet_end_sec,
     source,
-    songs:song_id ( audio_url )
+    songs:song_id ( audio_url, is_ai_generated )
   )
 `
 
@@ -106,6 +106,7 @@ function mapPostRow(row: any): Post {
     audioUrl: linkedSong?.audio_url ?? null,
     snippetStart: row.snippet_start_sec ?? null,
     snippetEnd: row.snippet_end_sec ?? null,
+    isAiGenerated: linkedSong?.is_ai_generated ?? false,
     lines: mapPostLinesRows(row.post_lines),
   }
 }
@@ -173,7 +174,7 @@ const SONGS_SELECT_LIGHT = `
   id, title, artist_display_name, artwork_url, audio_url, description,
   status, coming_soon_label, order, youtube_url, spotify_url,
   apple_music_url, soundcloud_url, audiomack_url, boomplay_url,
-  duration_sec, created_at,
+  duration_sec, created_at, is_ai_generated,
   song_stats ( plays, resonate_count, lyric_uses )
 `
 
@@ -195,6 +196,7 @@ interface RawSongRow {
   boomplay_url: string | null
   duration_sec: number | null
   created_at: string
+  is_ai_generated: boolean
   song_stats: { plays: number; resonate_count: number; lyric_uses: number }[] | null
 }
 
@@ -221,6 +223,7 @@ export function transformSongRowLight(row: RawSongRow): Song {
     resonates: stats?.resonate_count ?? 0,
     lyricUses: stats?.lyric_uses ?? 0,
     createdAt: row.created_at,
+    isAiGenerated: row.is_ai_generated ?? false,
     lyricLines: [],
   }
 }

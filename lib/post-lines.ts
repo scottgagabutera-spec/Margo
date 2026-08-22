@@ -16,6 +16,7 @@ export interface PostLine {
   snippetStart?: number | null
   snippetEnd?: number | null
   source?: PostLineSource
+  isAiGenerated?: boolean
 }
 
 export const POST_LINES_MAX = 3
@@ -43,6 +44,7 @@ export function mapPostLinesRows(raw: any[] | null | undefined): PostLine[] | un
         snippetStart: row.snippet_start_sec ?? null,
         snippetEnd: row.snippet_end_sec ?? null,
         source: (row.source as PostLineSource) || 'external',
+        isAiGenerated: linked?.is_ai_generated ?? false,
       }
     })
 }
@@ -55,6 +57,7 @@ export function resolveMomentLines(post: {
   snippetStart?: number | null
   snippetEnd?: number | null
   knowledge?: { song?: string; artist?: string; artwork?: string | null }
+  isAiGenerated?: boolean
   lines?: PostLine[]
 }): PostLine[] {
   if (post.lines && post.lines.length > 0) {
@@ -73,6 +76,7 @@ export function resolveMomentLines(post: {
       snippetStart: post.snippetStart ?? null,
       snippetEnd: post.snippetEnd ?? null,
       source: post.songId ? 'catalog' : 'external',
+      isAiGenerated: post.isAiGenerated ?? false,
     },
   ]
 }

@@ -1,6 +1,7 @@
 'use client'
 import { CloseIcon, MusicNoteIcon, ReplayIcon, ShareIcon, CardIcon } from '@/components/icons'
 import { BackButton } from '@/components/back-button'
+import { AiGeneratedLabel } from '@/components/ai-generated-label'
 
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
@@ -358,6 +359,11 @@ export default function SongPage() {
           <div style={{ textAlign: 'center', minWidth: 0, flex: 1, padding: '0 8px' }}>
             <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song?.title || '—'}</p>
             <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-secondary)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song?.artist || '—'}</p>
+            {song?.isAiGenerated ? (
+              <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'center' }}>
+                <AiGeneratedLabel show />
+              </div>
+            ) : null}
           </div>
           <div style={{ width: '60px' }} />
         </div>

@@ -2,10 +2,12 @@
 
 import { UI_FONT } from '@/lib/fonts'
 import { PendingNavLink } from '@/components/pending-nav-link'
+import { AiGeneratedLabel } from '@/components/ai-generated-label'
 
 type SongMetaProps = {
   title?: string | null
   artist?: string | null
+  aiGenerated?: boolean
   /** stacked (default) = clear hierarchy; inline = ultra-dense chrome only */
   layout?: 'stacked' | 'inline'
   href?: string | null
@@ -22,6 +24,7 @@ type SongMetaProps = {
 export function SongMeta({
   title,
   artist,
+  aiGenerated = false,
   layout = 'stacked',
   href,
   style,
@@ -30,7 +33,7 @@ export function SongMeta({
 }: SongMetaProps) {
   const t = (title || '').trim()
   const a = (artist || '').trim()
-  if (!t && !a) return null
+  if (!t && !a && !aiGenerated) return null
 
   if (layout === 'inline') {
     const joined = [t, a].filter(Boolean).join(' · ')
@@ -40,10 +43,15 @@ export function SongMeta({
         fontSize: '0.7rem',
         color: 'var(--text-muted)',
         letterSpacing: '0.2px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        flexWrap: 'wrap',
         ...style,
         ...titleStyle,
       }}>
-        {joined}
+        {joined ? <span>{joined}</span> : null}
+        <AiGeneratedLabel show={aiGenerated} />
       </span>
     )
     if (href) {
@@ -85,6 +93,11 @@ export function SongMeta({
         }}>
           {a}
         </p>
+      ) : null}
+      {aiGenerated ? (
+        <div style={{ marginTop: a || t ? '4px' : 0 }}>
+          <AiGeneratedLabel show />
+        </div>
       ) : null}
     </div>
   )

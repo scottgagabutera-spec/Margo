@@ -33,6 +33,7 @@ export interface Post {
   audioUrl?: string | null
   snippetStart?: number | null
   snippetEnd?: number | null
+  isAiGenerated?: boolean
   /**
    * Multi-line moment segments when joined. Empty/undefined → render from
    * top-level text/song/snippet (position-0 mirror).

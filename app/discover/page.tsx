@@ -16,6 +16,7 @@ import type { Post } from '@/hooks/usePosts'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { HeartIcon } from '@/components/heart-icon'
 import { SongCardActions } from '@/components/song-card-actions'
+import { AiGeneratedLabel } from '@/components/ai-generated-label'
 import { LyricMomentCard } from '@/components/lyric-moment-card'
 import { ResonanceCard } from '@/components/resonance-card'
 import { useSongLibrarySaves } from '@/hooks/useSongLibrarySaves'
@@ -373,6 +374,11 @@ function SongRowCard({ song, badge, onPreview }: { song: Song; badge: 'Trending'
       </div>
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', fontWeight: 600, color: isActive ? 'var(--text)' : 'var(--text-secondary)', marginBottom: '2px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{song.title}</p>
       <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: 'var(--text-secondary)', margin: 0 }}>{song.artist}</p>
+      {song.isAiGenerated ? (
+        <div style={{ marginTop: '4px' }}>
+          <AiGeneratedLabel show />
+        </div>
+      ) : null}
     </div>
   )
 }
