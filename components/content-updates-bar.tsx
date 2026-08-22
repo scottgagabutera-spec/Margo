@@ -51,7 +51,7 @@ export function ContentUpdatesBar({
         minWidth: '148px',
         maxWidth: 'min(280px, calc(100vw - 32px))',
         boxSizing: 'border-box',
-        background: 'rgba(7, 6, 10, 0.82)',
+        background: 'color-mix(in srgb, var(--bg) 82%, transparent)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         color: 'var(--gold)',
@@ -70,7 +70,7 @@ export function ContentUpdatesBar({
           aria-label={`Show ${row.label}`}
           style={{
             width: '100%',
-            minHeight: '36px',
+            minHeight: 'var(--margo-touch-min)',
             padding: '0 14px',
             display: 'flex',
             alignItems: 'center',

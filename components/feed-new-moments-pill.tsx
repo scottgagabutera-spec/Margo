@@ -23,6 +23,8 @@ export function FeedNewMomentsPill({ count, onReveal }: FeedNewMomentsPillProps)
     <button
       type="button"
       onClick={onReveal}
+      role="status"
+      aria-live="polite"
       aria-label={`Show ${label}`}
       style={{
         position: 'fixed',
@@ -30,14 +32,14 @@ export function FeedNewMomentsPill({ count, onReveal }: FeedNewMomentsPillProps)
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 45,
-        minHeight: '36px',
+        minHeight: 'var(--margo-touch-min)',
         padding: '0 14px',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
         gap: '5px',
         boxSizing: 'border-box',
-        background: 'rgba(7, 6, 10, 0.82)',
+        background: 'color-mix(in srgb, var(--bg) 82%, transparent)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         color: 'var(--gold)',

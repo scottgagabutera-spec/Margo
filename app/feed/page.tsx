@@ -521,20 +521,16 @@ export default function FeedPage() {
       }}
     >
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
-<<<<<<< HEAD
-      {!ptrBusy && feedLive && (pendingCount > 0 || songCount > 0 || artistCount > 0) && (
-=======
-      {!ptrBusy && pendingCount > 0 && (
+      {!ptrBusy && feedLive && pendingCount > 0 && (
         <FeedNewMomentsPill count={pendingCount} onReveal={flushPending} />
       )}
-      {!ptrBusy && (songCount > 0 || artistCount > 0) && (
->>>>>>> 89c8c13 (feat: premium Feed new-Moments pill + Margo pull-to-refresh)
+      {!ptrBusy && feedLive && (songCount > 0 || artistCount > 0) && (
         <ContentUpdatesBar
           songCount={songCount}
           artistCount={artistCount}
           onSongs={openSongs}
           onArtists={openArtists}
-          topOffsetPx={pendingCount > 0 ? 44 : 0}
+          topOffsetPx={pendingCount > 0 ? 52 : 0}
         />
       )}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
