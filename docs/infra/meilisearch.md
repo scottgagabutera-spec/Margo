@@ -19,7 +19,15 @@ Add to `.env.local` (and Vercel):
 node scripts/meilisearch-backfill.mjs
 ```
 
-Imports all profiles, active top-level posts, and live catalog lyric lines.
+Imports all profiles, active top-level posts (including all `post_lines` for multi-line Moments), and live catalog lyric lines. Each Moment is one search document; lines 1–3 are joined into the searchable `text` field (same behavior as incremental webhook sync).
+
+Self-test (no credentials required):
+
+```bash
+node scripts/meilisearch-backfill.mjs --self-test
+```
+
+**When to run:** after deploy, off-peak, when the index is empty or needs reconciliation — not on every deploy. Requires production Meilisearch + Supabase service-role credentials in `.env.local`. Does not delete stale documents (upsert-only).
 
 ## Realtime sync (Supabase Database Webhooks)
 

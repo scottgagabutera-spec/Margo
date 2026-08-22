@@ -1,4 +1,5 @@
 import type { MargoSearchDocument } from './types'
+import { buildMomentSearchText } from './moment-search-text.mjs'
 
 export function profileToUserDoc(row: {
   id: string
@@ -64,20 +65,7 @@ export function postToLyricDoc(row: {
    * sorts by position itself rather than trusting query order. */
   post_lines?: { position?: number | null; text?: string | null }[] | null
 }): MargoSearchDocument | null {
-  const mirrorText = (row.text || '').trim()
-  const lineTexts = Array.isArray(row.post_lines) && row.post_lines.length > 0
-    ? [...row.post_lines]
-        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-        .map((l) => (l.text || '').trim())
-        .filter(Boolean)
-    : []
-  // post_lines is the source of truth when present; falls back to the
-  // mirror for the common single-line case, which has no post_lines rows
-  // at all. Joined with a plain separator (not the app's visual "stitch"
-  // divider, which belongs in UI, not a search index) so a match in line
-  // 2 or 3 is findable and the joined text still reads sensibly as a
-  // single search result line.
-  const text = lineTexts.length > 0 ? lineTexts.join(' / ') : mirrorText
+  const text = buildMomentSearchText(row.text, row.post_lines)
   if (!text) return null
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
   const username = profile?.username || row.legacy_author_label || null

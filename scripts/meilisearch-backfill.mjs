@@ -1,7 +1,15 @@
 // One-shot backfill: import all Margo searchable content into Meilisearch.
 // Run: node scripts/meilisearch-backfill.mjs
+// Self-test (no credentials): node scripts/meilisearch-backfill.mjs --self-test
 import dotenv from 'dotenv'
 import { createClient } from '@supabase/supabase-js'
+import { buildMomentSearchText, runMomentSearchTextSelfTest } from '../lib/meilisearch/moment-search-text.mjs'
+
+if (process.argv.includes('--self-test')) {
+  runMomentSearchTextSelfTest()
+  console.log('meilisearch-backfill self-test passed')
+  process.exit(0)
+}
 
 dotenv.config({ path: '.env.local' })
 
@@ -60,7 +68,7 @@ function profileToArtistDoc(row) {
 }
 
 function postToLyricDoc(row) {
-  const text = (row.text || '').trim()
+  const text = buildMomentSearchText(row.text, row.post_lines)
   if (!text) return null
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
   const username = profile?.username || row.legacy_author_label || null
@@ -145,7 +153,8 @@ async function main() {
       id, text, emotion, song_title, artist_name, artwork_url, song_id,
       legacy_author_label, created_at, status,
       profiles:author_profile_id ( username, display_name ),
-      post_stats ( resonate_count )
+      post_stats ( resonate_count ),
+      post_lines ( position, text )
     `)
     .eq('status', 'active')
     .is('parent_post_id', null)
