@@ -1,6 +1,6 @@
 'use client'
 
-import { MusicNoteIcon } from '@/components/icons'
+import { MusicNoteIcon, PlayIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 
 export interface ComposeSearchHit {
@@ -25,6 +25,8 @@ interface ComposeSearchDropdownProps {
   results: ComposeSearchHit[]
   onSelect: (result: ComposeSearchHit) => void
   onClose: () => void
+  /** Stage landing — no source badges, catalog play hint, stage empty copy. */
+  variant?: 'compose' | 'stage'
 }
 
 /**
@@ -38,8 +40,11 @@ export function ComposeSearchDropdown({
   results,
   onSelect,
   onClose,
+  variant = 'compose',
 }: ComposeSearchDropdownProps) {
   if (!open) return null
+  const isStage = variant === 'stage'
+  const displayResults = isStage ? results.slice(0, 8) : results
 
   return (
     <>
@@ -99,13 +104,14 @@ export function ComposeSearchDropdown({
             ))}
           </div>
         )}
-        {!loading && results.length === 0 && (
+        {!loading && displayResults.length === 0 && (
           <p style={{ textAlign: 'center', padding: '20px', fontFamily: UI_FONT, color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-            No songs found
+            {isStage ? 'No matches yet — try a song or artist' : 'No songs found'}
           </p>
         )}
-        {results.map((result) => {
+        {displayResults.map((result) => {
           const isHosted = result.source === 'margo'
+          const showPlayHint = isStage && isHosted && !!result.audioUrl
           return (
             <button
               key={result.source + '-' + result.id}
@@ -145,26 +151,47 @@ export function ComposeSearchDropdown({
                   {result.artist}
                 </p>
               </div>
-              <span
-                style={{
-                  flexShrink: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.6rem',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  padding: '2px 8px',
-                  borderRadius: '50px',
-                  fontFamily: UI_FONT,
-                  color: isHosted ? 'var(--gold)' : 'var(--text-muted)',
-                  background: isHosted ? 'var(--gold-faint)' : 'transparent',
-                  border: `1px solid ${isHosted ? 'var(--gold-border)' : 'var(--border)'}`,
-                }}
-              >
-                {isHosted && <MusicNoteIcon size={10} color="var(--gold)" />}
-                {sourceLabel(result.source)}
-              </span>
+              {isStage ? (
+                showPlayHint ? (
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      background: 'var(--gold-faint)',
+                      border: '1px solid var(--gold-border)',
+                    }}
+                    aria-hidden
+                  >
+                    <PlayIcon size={12} color="var(--gold)" />
+                  </span>
+                ) : null
+              ) : (
+                <span
+                  style={{
+                    flexShrink: 0,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.6rem',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    padding: '2px 8px',
+                    borderRadius: '50px',
+                    fontFamily: UI_FONT,
+                    color: isHosted ? 'var(--gold)' : 'var(--text-muted)',
+                    background: isHosted ? 'var(--gold-faint)' : 'transparent',
+                    border: `1px solid ${isHosted ? 'var(--gold-border)' : 'var(--border)'}`,
+                  }}
+                >
+                  {isHosted && <MusicNoteIcon size={10} color="var(--gold)" />}
+                  {sourceLabel(result.source)}
+                </span>
+              )}
             </button>
           )
         })}

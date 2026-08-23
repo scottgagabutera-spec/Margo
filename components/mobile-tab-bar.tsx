@@ -9,6 +9,7 @@ import { CompassIcon, PenLineIcon } from '@/components/icons'
 import { HubTabButton } from '@/components/hub-menu'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesTabBar } from '@/lib/chrome-mode'
+import { useStageChromeHidden } from '@/lib/stage-chrome'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
 
@@ -27,9 +28,10 @@ export function MobileTabBar() {
   const navRef = useRef<HTMLElement | null>(null)
 
   const shellHidden = hidesTabBar(pathname)
+  const stageHidden = useStageChromeHidden()
 
   useLayoutEffect(() => {
-    if (shellHidden) {
+    if (shellHidden || stageHidden) {
       document.documentElement.style.setProperty('--margo-tabbar-h', '0px')
       return
     }
@@ -42,7 +44,7 @@ export function MobileTabBar() {
     const ro = new ResizeObserver(setVar)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [shellHidden])
+  }, [shellHidden, stageHidden])
 
   const isOnFeed = activeTab === 'feed' || (!activeTab && pathname === '/feed')
   const isOnDiscover = activeTab === 'discover' || (!activeTab && !!pathname?.startsWith('/discover'))
@@ -69,7 +71,7 @@ export function MobileTabBar() {
     letterSpacing: '0.5px', textTransform: 'uppercase',
   }
 
-  if (shellHidden) return null
+  if (shellHidden || stageHidden) return null
 
   return (
     <nav ref={navRef} className="margo-mobile-tabbar" style={{

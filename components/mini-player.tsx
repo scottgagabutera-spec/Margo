@@ -65,7 +65,8 @@ export function MiniPlayer() {
   // Feed shows pill/orb (A.3); karaoke page owns immersive chrome.
   const isHidden =
     engineState.mode === 'idle' ||
-    pathname?.startsWith('/song/')
+    pathname?.startsWith('/song/') ||
+    pathname === '/'
 
   // Fresh play → pill; leaving Feed keeps orb preference until idle/end.
   useEffect(() => { setFeedChrome('pill') }, [songId])
