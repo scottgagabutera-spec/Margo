@@ -383,7 +383,13 @@ export function SongPreviewSheet({
             )}
 
             {moreItems.length > 0 ? (
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                <span style={{
+                  fontFamily: UI_FONT, fontSize: '0.65rem', fontWeight: 600,
+                  color: 'var(--text-muted)', letterSpacing: '0.3px',
+                }}>
+                  More
+                </span>
                 <CardOverflowMenu items={moreItems} ariaLabel="More song actions" align="right" />
               </div>
             ) : null}
