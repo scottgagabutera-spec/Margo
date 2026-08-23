@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -24,7 +24,9 @@ import {
   queueAdd,
   queuePlayNext,
 } from '@/lib/audio-engine'
-import { shareSong } from '@/lib/song-share'
+import { shareSong, getSongShareUrl } from '@/lib/song-share'
+import { captureLiteralUi } from '@/lib/export/literal-ui-capture'
+import { shareImageBlob } from '@/lib/export/share-image-blob'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 export type SongPreviewSeed = SongCardData & Partial<Omit<Song, keyof SongCardData>>
@@ -92,6 +94,7 @@ export function SongPreviewSheet({
   const { profile: ownerProfile, loading: ownerLoading } = useSongOwnerProfile(seed?.id ?? null)
   const { lines: sharedLines } = useSharedLines(seed?.title ?? null, seed?.artist ?? null)
   const [descExpanded, setDescExpanded] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const song = useMemo(() => {
     if (!seed) return null
@@ -172,6 +175,32 @@ export function SongPreviewSheet({
   ]
 
   const handleShare = async () => {
+    const card = cardRef.current
+    const shareUrl = getSongShareUrl(song.id)
+    const shareTitle = `${song.title} — ${song.artist}`
+
+    if (card) {
+      const toastId = toast.loading('Creating share image…')
+      try {
+        const blob = await captureLiteralUi(card)
+        const result = await shareImageBlob(blob, {
+          filename: `margo-song-${song.id}.png`,
+          title: shareTitle,
+          url: shareUrl,
+        })
+        toast.dismiss(toastId)
+        if (result === 'shared-file') toast.success('Shared')
+        else if (result === 'shared-url') toast.success('Link shared — image saved')
+        else if (result === 'downloaded') toast.success('Image saved — link copied')
+        else return
+        return
+      } catch (err) {
+        console.error('song preview literal export failed', err)
+        toast.dismiss(toastId)
+        toast.message('Image export failed — sharing link instead')
+      }
+    }
+
     const result = await shareSong({ id: song.id, title: song.title, artist: song.artist })
     if (result === 'copied') toast.success('Link copied')
     else if (result === 'shared') toast.success('Shared')
@@ -241,6 +270,7 @@ export function SongPreviewSheet({
       `}</style>
 
       <div
+        ref={cardRef}
         className="song-preview-card"
         onClick={e => e.stopPropagation()}
         style={{

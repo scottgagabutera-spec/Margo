@@ -15,6 +15,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useMessaging } from '@/hooks/useMessaging'
 import { MargoSearchInput } from '@/components/margo-search-input'
+import { literalExportPostCard } from '@/lib/export/literal-post-export'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { FeedNewMomentsPill } from '@/components/feed-new-moments-pill'
 import { ContentUpdatesBar } from '@/components/content-updates-bar'
@@ -492,8 +493,27 @@ export default function FeedPage() {
     }
   }
 
-  const handleExport = (post: Post) => {
+  const handleExport = (post: Post, event?: React.MouseEvent<HTMLButtonElement>) => {
     if (!requireAuth()) return
+    if (event?.altKey) {
+      const toastId = toast.loading('Creating share image…')
+      void literalExportPostCard(post.id).then((result) => {
+        toast.dismiss(toastId)
+        if (result === 'not-found') {
+          toast.error('Could not capture post')
+          return
+        }
+        if (result === 'shared-file') toast.success('Shared')
+        else if (result === 'shared-url') toast.success('Link shared — image saved')
+        else if (result === 'downloaded') toast.success('Image saved — link copied')
+        else if (result === 'failed') toast.message('Share cancelled')
+      }).catch((err) => {
+        console.error('post literal export failed', err)
+        toast.dismiss(toastId)
+        toast.error('Image export failed')
+      })
+      return
+    }
     setExportPost(post)
   }
 

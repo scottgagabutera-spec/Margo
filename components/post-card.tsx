@@ -53,7 +53,7 @@ export interface PostCardProps {
   resonateCount: number
   echoCount: number
   onResonate: (id: string) => void
-  onExport: (post: Post) => void
+  onExport: (post: Post, event?: React.MouseEvent<HTMLButtonElement>) => void
   /** feed-only ranking badges; ignored when variant is compact */
   isNew?: boolean
   isTrending?: boolean
@@ -565,6 +565,7 @@ export function PostCard({
   return (
     <div
       ref={cardRef}
+      data-margo-post-export={post.id}
       onClick={goToPost}
       style={{
         background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
@@ -965,7 +966,7 @@ export function PostCard({
           type="button"
           className="margo-feed-action"
           aria-label="Export lyric card"
-          onClick={() => onExport(post)}
+          onClick={(e) => onExport(post, e)}
           style={{
             color: 'var(--text-secondary)', transition: 'color 150ms ease',
           }}
