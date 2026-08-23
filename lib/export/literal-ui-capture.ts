@@ -1,5 +1,6 @@
 import { toBlob } from 'html-to-image'
 import { inspectImageBlob, logExportDebug } from '@/lib/export/export-debug'
+import { validateCaptureBlob } from '@/lib/export/validate-capture-blob'
 
 export type LiteralCaptureOptions = {
   /** Device pixel ratio multiplier. Default 2. */
@@ -8,6 +9,14 @@ export type LiteralCaptureOptions = {
 }
 
 type StyleRestore = () => void
+
+function waitForLayout(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve())
+    })
+  })
+}
 
 /**
  * Expand overflow/max-height constraints so the full scrollable tree is
@@ -69,10 +78,25 @@ function expandForFullCapture(root: HTMLElement): StyleRestore {
     expandedCount,
     inlineTransformCleared: !!prevTransform,
     computedTransform: computedTransform !== 'none' ? computedTransform : 'none',
-    note: prevTransform
-      ? 'inline transform cleared'
-      : 'CSS-class transform (e.g. translateY(-2vh)) is NOT cleared — only inline style',
   })
+
+  return () => { restores.forEach(fn => fn()) }
+}
+
+/** Ensure cloned/canvas inlining can fetch remote artwork with CORS during capture. */
+function applyCaptureImageCors(root: HTMLElement): StyleRestore {
+  const restores: StyleRestore[] = []
+
+  for (const img of Array.from(root.querySelectorAll('img'))) {
+    const prevAttr = img.getAttribute('crossorigin')
+    if (img.crossOrigin !== 'anonymous') {
+      img.crossOrigin = 'anonymous'
+      restores.push(() => {
+        if (prevAttr === null) img.removeAttribute('crossorigin')
+        else img.setAttribute('crossorigin', prevAttr)
+      })
+    }
+  }
 
   return () => { restores.forEach(fn => fn()) }
 }
@@ -130,27 +154,32 @@ export async function captureLiteralUi(
   }
 
   await waitForImages(element)
-  const restore = expandForFullCapture(element)
+
+  const restoreExpand = expandForFullCapture(element)
+  const restoreCors = applyCaptureImageCors(element)
 
   try {
+    await waitForImages(element)
+    await waitForLayout()
+
     const blob = await toBlob(element, {
       pixelRatio,
       cacheBust: true,
       skipFonts: false,
       backgroundColor: '#0e0c12',
+      fetchRequestInit: {
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'no-cache',
+      },
     })
+
     if (!blob) throw new Error('literal-ui-capture: toBlob returned null')
+
+    await validateCaptureBlob(blob)
 
     const diagnostics = await inspectImageBlob(blob)
     logExportDebug('literal-ui-capture:done', { attemptId, diagnostics })
-
-    if (diagnostics.byteSize < 512 || diagnostics.hasRenderedPixels === false) {
-      logExportDebug('literal-ui-capture:warn', {
-        attemptId,
-        reason: 'blob may be empty or nearly empty',
-        diagnostics,
-      })
-    }
 
     return blob
   } catch (err) {
@@ -160,7 +189,8 @@ export async function captureLiteralUi(
     })
     throw err
   } finally {
-    restore()
+    restoreCors()
+    restoreExpand()
     logExportDebug('literal-ui-capture:restored', { attemptId })
   }
 }

@@ -1,6 +1,7 @@
 import { inspectImageBlob, isExportDebugEnabled, logExportDebug } from '@/lib/export/export-debug'
+import { validateCaptureBlob } from '@/lib/export/validate-capture-blob'
 
-export type ShareImageResult = 'shared-file' | 'shared-url' | 'downloaded' | 'failed'
+export type ShareImageResult = 'shared-file' | 'downloaded' | 'failed'
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
@@ -14,8 +15,9 @@ function downloadBlob(blob: Blob, filename: string): void {
 }
 
 /**
- * Native share with image file when supported; otherwise download PNG.
- * Optionally copies `url` to clipboard after download fallback.
+ * Share a validated PNG via native file share when supported.
+ * Otherwise download the PNG and copy the optional Margo URL to clipboard.
+ * Never opens a URL-only native share sheet after successful image generation.
  */
 export async function shareImageBlob(
   blob: Blob,
@@ -23,16 +25,19 @@ export async function shareImageBlob(
     filename: string
     title?: string
     text?: string
+    /** Copied to clipboard on download fallback — not passed to navigator.share with files. */
     url?: string
-    /** Correlates concurrent share attempts in debug logs. */
     attemptId?: string
   },
 ): Promise<ShareImageResult> {
   const attemptId = opts.attemptId ?? `share-${Date.now()}`
-  const file = new File([blob], opts.filename, { type: blob.type || 'image/png' })
+
+  await validateCaptureBlob(blob)
+
+  const file = new File([blob], opts.filename, { type: 'image/png' })
   const canShareFiles = typeof navigator !== 'undefined' && navigator.canShare
     ? navigator.canShare({ files: [file] })
-    : null
+    : false
 
   if (isExportDebugEnabled()) {
     const diagnostics = await inspectImageBlob(blob, {
@@ -44,42 +49,22 @@ export async function shareImageBlob(
       attemptId,
       diagnostics,
       hasNavigatorShare: typeof navigator !== 'undefined' && !!navigator.share,
-      optsUrl: opts.url ?? null,
     })
   }
 
-  if (typeof navigator !== 'undefined' && navigator.share) {
+  if (typeof navigator !== 'undefined' && navigator.share && canShareFiles) {
     try {
-      if (canShareFiles) {
-        logExportDebug('share-image-blob:branch', {
-          attemptId,
-          branch: 'navigator.share(files+url)',
-          note: 'files and url are both passed — Android may prefer url over image',
-        })
-        await navigator.share({
-          files: [file],
-          title: opts.title,
-          text: opts.text,
-          url: opts.url,
-        })
-        logExportDebug('share-image-blob:result', { attemptId, result: 'shared-file' })
-        return 'shared-file'
-      }
-      if (opts.url) {
-        logExportDebug('share-image-blob:branch', {
-          attemptId,
-          branch: 'navigator.share(url-only) + downloadBlob',
-          note: 'canShare(files) was false — native sheet gets URL, not the PNG',
-        })
-        await navigator.share({
-          title: opts.title,
-          text: opts.text,
-          url: opts.url,
-        })
-        downloadBlob(blob, opts.filename)
-        logExportDebug('share-image-blob:result', { attemptId, result: 'shared-url' })
-        return 'shared-url'
-      }
+      logExportDebug('share-image-blob:branch', {
+        attemptId,
+        branch: 'navigator.share(files only)',
+      })
+      await navigator.share({
+        files: [file],
+        title: opts.title,
+        text: opts.text,
+      })
+      logExportDebug('share-image-blob:result', { attemptId, result: 'shared-file' })
+      return 'shared-file'
     } catch (err) {
       const name = (err as Error)?.name
       logExportDebug('share-image-blob:error', {
@@ -99,7 +84,7 @@ export async function shareImageBlob(
   } else {
     logExportDebug('share-image-blob:branch', {
       attemptId,
-      branch: 'no navigator.share → download fallback',
+      branch: canShareFiles ? 'no navigator.share → download fallback' : 'canShare(files)=false → download fallback',
     })
   }
 

@@ -24,7 +24,7 @@ import {
   queueAdd,
   queuePlayNext,
 } from '@/lib/audio-engine'
-import { shareSong, getSongShareUrl } from '@/lib/song-share'
+import { getSongShareUrl } from '@/lib/song-share'
 import { captureLiteralUi } from '@/lib/export/literal-ui-capture'
 import { logExportDebug } from '@/lib/export/export-debug'
 import { shareImageBlob } from '@/lib/export/share-image-blob'
@@ -186,57 +186,49 @@ export function SongPreviewSheet({
       logExportDebug('song-preview-sheet:share', {
         attemptId,
         branch: 'ignored-concurrent-tap',
-        note: 'previous share still in progress — concurrent captures can corrupt expand/restore',
+        note: 'previous share still in progress',
       })
+      return
+    }
+
+    if (!card) {
+      toast.error('Could not create share image')
       return
     }
 
     logExportDebug('song-preview-sheet:share', {
       attemptId,
-      hasCardRef: !!card,
-      cardConnected: card?.isConnected ?? false,
+      hasCardRef: true,
+      cardConnected: card.isConnected,
     })
 
-    if (card) {
-      shareInProgressRef.current = true
-      const toastId = toast.loading('Creating share image…')
-      try {
-        const blob = await captureLiteralUi(card, { attemptId })
-        const result = await shareImageBlob(blob, {
-          filename: `margo-song-${song.id}.png`,
-          title: shareTitle,
-          url: shareUrl,
-          attemptId,
-        })
-        toast.dismiss(toastId)
-        logExportDebug('song-preview-sheet:share', { attemptId, branch: 'literal-export', result })
-        if (result === 'shared-file') toast.success('Shared')
-        else if (result === 'shared-url') toast.success('Link shared — image saved')
-        else if (result === 'downloaded') toast.success('Image saved — link copied')
-        else return
-        return
-      } catch (err) {
-        console.error('song preview literal export failed', err)
-        logExportDebug('song-preview-sheet:share', {
-          attemptId,
-          branch: 'capture-failed → shareSong(url-only)',
-          error: (err as Error)?.message ?? String(err),
-        })
-        toast.dismiss(toastId)
-        toast.message('Image export failed — sharing link instead')
-      } finally {
-        shareInProgressRef.current = false
-      }
+    shareInProgressRef.current = true
+    const toastId = toast.loading('Creating share image…')
+    try {
+      const blob = await captureLiteralUi(card, { attemptId })
+      const result = await shareImageBlob(blob, {
+        filename: `margo-song-${song.id}.png`,
+        title: shareTitle,
+        url: shareUrl,
+        attemptId,
+      })
+      toast.dismiss(toastId)
+      logExportDebug('song-preview-sheet:share', { attemptId, branch: 'literal-export', result })
+      if (result === 'shared-file') toast.success('Shared')
+      else if (result === 'downloaded') toast.success('Image saved · Link copied')
+      else if (result === 'failed') toast.message('Share cancelled')
+    } catch (err) {
+      console.error('song preview literal export failed', err)
+      logExportDebug('song-preview-sheet:share', {
+        attemptId,
+        branch: 'capture-failed',
+        error: (err as Error)?.message ?? String(err),
+      })
+      toast.dismiss(toastId)
+      toast.error('Could not create share image')
+    } finally {
+      shareInProgressRef.current = false
     }
-
-    logExportDebug('song-preview-sheet:share', {
-      attemptId,
-      branch: 'shareSong(url-only)',
-      reason: card ? 'capture threw' : 'cardRef missing',
-    })
-    const result = await shareSong({ id: song.id, title: song.title, artist: song.artist })
-    if (result === 'copied') toast.success('Link copied')
-    else if (result === 'shared') toast.success('Shared')
   }
 
   const closeBtn: CSSProperties = {
@@ -358,7 +350,14 @@ export function SongPreviewSheet({
               boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
             }}>
               {song.artwork ? (
-                <Image src={song.artwork} alt="" fill style={{ objectFit: 'cover' }} sizes={`${COVER_SIZE}px`} />
+                <Image
+                  src={song.artwork}
+                  alt=""
+                  fill
+                  crossOrigin="anonymous"
+                  style={{ objectFit: 'cover' }}
+                  sizes={`${COVER_SIZE}px`}
+                />
               ) : (
                 <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--gold-faint), rgba(255,255,255,0.03))' }} />
               )}
@@ -546,6 +545,7 @@ export function SongPreviewSheet({
                         <img
                           src={ownerProfile.avatarUrl}
                           alt=""
+                          crossOrigin="anonymous"
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : (

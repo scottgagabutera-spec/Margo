@@ -504,7 +504,6 @@ export default function FeedPage() {
           return
         }
         if (result === 'shared-file') toast.success('Shared')
-        else if (result === 'shared-url') toast.success('Link shared — image saved')
         else if (result === 'downloaded') toast.success('Image saved — link copied')
         else if (result === 'failed') toast.message('Share cancelled')
       }).catch((err) => {
