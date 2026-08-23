@@ -6,7 +6,6 @@ import { useIsPlaying, useIsBuffering } from '@/hooks/useAudioEngine'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { SongCardActions } from '@/components/song-card-actions'
-import { AiGeneratedLabel } from '@/components/ai-generated-label'
 /**
  * Minimal shape SongCatalogCard actually needs — deliberately NOT the
  * full Song type from hooks/useSongs, so this card can be fed by any
@@ -112,11 +111,6 @@ export function SongCatalogCard({
         {song.title}
       </p>
       <p style={cardArtistStyle}>{song.artist}</p>
-      {song.isAiGenerated ? (
-        <div style={{ marginTop: '4px' }}>
-          <AiGeneratedLabel show />
-        </div>
-      ) : null}
     </>
   )
 

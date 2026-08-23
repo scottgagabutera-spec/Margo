@@ -17,9 +17,46 @@ type SongMetaProps = {
   artistStyle?: React.CSSProperties
 }
 
+function ArtistCreditLine({
+  artist,
+  aiGenerated,
+  style,
+}: {
+  artist: string
+  aiGenerated: boolean
+  style?: React.CSSProperties
+}) {
+  return (
+    <p style={{
+      margin: 0,
+      fontFamily: UI_FONT,
+      fontSize: '0.75rem',
+      fontWeight: 400,
+      color: 'var(--text-secondary)',
+      lineHeight: 1.3,
+      display: 'flex',
+      alignItems: 'baseline',
+      minWidth: 0,
+      ...style,
+    }}>
+      <span style={{
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        minWidth: 0,
+        flex: '1 1 auto',
+      }}>
+        {artist}
+      </span>
+      {aiGenerated ? <AiGeneratedLabel show suffix /> : null}
+    </p>
+  )
+}
+
 /**
  * Canonical song title vs artist hierarchy (D3).
  * Title: --text, semibold, larger. Artist: --text-secondary, regular, smaller.
+ * AI provenance: quiet suffix on the artist line when applicable.
  */
 export function SongMeta({
   title,
@@ -44,14 +81,14 @@ export function SongMeta({
         color: 'var(--text-muted)',
         letterSpacing: '0.2px',
         display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
+        alignItems: 'baseline',
         flexWrap: 'wrap',
+        minWidth: 0,
         ...style,
         ...titleStyle,
       }}>
-        {joined ? <span>{joined}</span> : null}
-        <AiGeneratedLabel show={aiGenerated} />
+        {joined ? <span style={{ minWidth: 0 }}>{joined}</span> : null}
+        {aiGenerated ? <AiGeneratedLabel show suffix={!!joined} /> : null}
       </span>
     )
     if (href) {
@@ -79,25 +116,15 @@ export function SongMeta({
         </p>
       ) : null}
       {a ? (
-        <p style={{
-          margin: t ? '2px 0 0' : 0,
-          fontFamily: UI_FONT,
-          fontSize: '0.75rem',
-          fontWeight: 400,
-          color: 'var(--text-secondary)',
-          lineHeight: 1.3,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          ...artistStyle,
-        }}>
-          {a}
-        </p>
-      ) : null}
-      {aiGenerated ? (
-        <div style={{ marginTop: a || t ? '4px' : 0 }}>
+        <ArtistCreditLine
+          artist={a}
+          aiGenerated={aiGenerated}
+          style={{ margin: t ? '2px 0 0' : 0, ...artistStyle }}
+        />
+      ) : aiGenerated ? (
+        <p style={{ margin: t ? '2px 0 0' : 0, ...artistStyle }}>
           <AiGeneratedLabel show />
-        </div>
+        </p>
       ) : null}
     </div>
   )
