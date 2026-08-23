@@ -4,7 +4,7 @@ import { UI_FONT } from '@/lib/fonts'
 
 /**
  * Inline disclosure for songs the artist marked as AI-generated.
- * Quiet supporting meta — not an earned badge or CTA chip.
+ * Plain supporting metadata — no frame, border, or background.
  * Renders nothing when `show` is false — callers gate on the boolean.
  */
 export function AiGeneratedLabel({
@@ -19,16 +19,11 @@ export function AiGeneratedLabel({
   return (
     <span
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
+        display: 'inline-block',
         fontFamily: UI_FONT,
-        fontSize: '0.65rem',
-        fontWeight: 500,
+        fontSize: '0.6rem',
+        fontWeight: 400,
         letterSpacing: '0.2px',
-        padding: '2px 8px',
-        borderRadius: '6px',
-        background: 'var(--gold-faint)',
-        border: '1px solid var(--border)',
         color: 'var(--text-muted)',
         lineHeight: 1.25,
         whiteSpace: 'nowrap',
