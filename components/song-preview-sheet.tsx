@@ -57,7 +57,7 @@ export function SongPreviewSheet({
   const router = useRouter()
   const { requireAuth } = useAuthGate()
   const { isLiked, isListenLater, toggleLike, toggleListenLater } = useSongLibrarySaves()
-  const { song: fetched, loading: songLoading } = useSong(seed?.id ?? null)
+  const { song: fetched } = useSong(seed?.id ?? null)
   const { profile: ownerProfile } = useSongOwnerProfile(seed?.id ?? null)
   const [aboutOpen, setAboutOpen] = useState(false)
 
@@ -265,13 +265,6 @@ export function SongPreviewSheet({
                 lineHeight: 1.55, margin: '0 0 14px', textAlign: 'center',
               }}>
                 {description}
-              </p>
-            ) : songLoading ? (
-              <p style={{
-                fontFamily: UI_FONT, fontSize: '0.75rem', color: 'var(--text-muted)',
-                margin: '0 0 14px', textAlign: 'center',
-              }}>
-                Loading…
               </p>
             ) : null}
 
