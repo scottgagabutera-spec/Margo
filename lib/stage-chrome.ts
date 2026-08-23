@@ -45,7 +45,7 @@ export function useStageSearchPublisher(open: boolean) {
 
 const STAGE_IDLE_ATTR = 'data-margo-stage-idle'
 
-/** Vertically center idle Stage (headline + search) between nav and tab bar. */
+/** Modest idle offset — headline/search sit slightly below the header, not centered. */
 export function useStageIdlePublisher(idle: boolean) {
   useLayoutEffect(() => {
     const root = document.documentElement

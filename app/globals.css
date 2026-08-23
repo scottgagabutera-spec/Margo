@@ -296,9 +296,8 @@ html[data-margo-stage-search] .margo-landing-footer {
 }
 
 html[data-margo-stage-idle] .margo-stage-zone {
-  justify-content: center;
-  padding-top: clamp(24px, 6vh, 56px);
-  padding-bottom: calc(var(--margo-tabbar-h, 0px) + 16px);
+  /* Slight downward nudge from the header — not full vertical centering. */
+  padding-top: clamp(40px, 4vh, 48px);
 }
 
 .margo-landing-nav {
