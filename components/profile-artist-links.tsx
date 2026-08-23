@@ -37,7 +37,7 @@ const ICONS: Record<ArtistLinkKey, ComponentType<MargoIconProps>> = {
 }
 
 const SOCIAL_KEYS: ArtistLinkKey[] = ['instagram', 'tiktok', 'youtube', 'x']
-const STREAMING_KEYS: ArtistLinkKey[] = ['spotify', 'appleMusic', 'soundcloud', 'audiomack', 'boomplay', 'linktree']
+const LISTEN_KEYS: ArtistLinkKey[] = ['spotify', 'appleMusic', 'soundcloud', 'audiomack', 'boomplay', 'linktree']
 
 export function ProfileArtistLinks({
   links,
@@ -64,9 +64,9 @@ export function ProfileArtistLinks({
 
   if (resolvedVariant === 'preview') {
     const social = items.filter((i) => SOCIAL_KEYS.includes(i.key))
-    const streaming = items.filter((i) => STREAMING_KEYS.includes(i.key))
+    const listen = items.filter((i) => LISTEN_KEYS.includes(i.key))
 
-    if (social.length === 0 && streaming.length === 0 && !margoProfileUsername) return null
+    if (social.length === 0 && listen.length === 0 && !margoProfileUsername) return null
 
     const textLink: CSSProperties = {
       fontFamily: font,
@@ -77,35 +77,50 @@ export function ProfileArtistLinks({
       lineHeight: 1.4,
     }
 
-    const renderRow = (rowItems: typeof items) => {
+    const groupLabel: CSSProperties = {
+      fontFamily: font,
+      fontSize: '0.65rem',
+      fontWeight: 400,
+      color: 'var(--text-muted)',
+      marginRight: '8px',
+      flexShrink: 0,
+    }
+
+    const renderGroup = (label: string, rowItems: typeof items) => {
       if (rowItems.length === 0) return null
       return (
-        <p style={{ margin: '0 0 6px', lineHeight: 1.5 }}>
-          {rowItems.map((item, idx) => (
-            <span key={item.key}>
-              {idx > 0 ? (
-                <span style={{ color: 'var(--text-muted)', margin: '0 5px' }}>·</span>
-              ) : null}
-              <a
-                href={item.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={textLink}
-                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)' }}
-                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)' }}
-              >
-                {item.label}
-              </a>
-            </span>
-          ))}
+        <p style={{
+          margin: '0 0 6px', lineHeight: 1.5,
+          display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0 2px',
+        }}>
+          <span style={groupLabel}>{label}</span>
+          <span>
+            {rowItems.map((item, idx) => (
+              <span key={item.key}>
+                {idx > 0 ? (
+                  <span style={{ color: 'var(--text-muted)', margin: '0 5px' }}>·</span>
+                ) : null}
+                <a
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={textLink}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)' }}
+                >
+                  {item.label}
+                </a>
+              </span>
+            ))}
+          </span>
         </p>
       )
     }
 
     return (
       <div>
-        {renderRow(social)}
-        {renderRow(streaming)}
+        {renderGroup('Follow', social)}
+        {renderGroup('Listen', listen)}
         {margoProfileUsername ? (
           <Link
             href={`/profile/${margoProfileUsername}`}
@@ -114,7 +129,7 @@ export function ProfileArtistLinks({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              marginTop: social.length || streaming.length ? '2px' : 0,
+              marginTop: social.length || listen.length ? '2px' : 0,
               padding: '6px 0',
               minHeight: '32px',
               textDecoration: 'none',

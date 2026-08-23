@@ -14,6 +14,7 @@ import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useSongOwnerProfile } from '@/hooks/useSongOwnerProfile'
 import { useSongPreviewEnrich } from '@/hooks/useSongPreviewEnrich'
+import { useSongResonate } from '@/hooks/useSongResonate'
 import { useSongLibrarySaves } from '@/hooks/useSongLibrarySaves'
 import { useSharedLines } from '@/hooks/useSharedLines'
 import type { Song } from '@/hooks/useSongs'
@@ -33,15 +34,6 @@ function formatNum(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
   return String(n)
 }
-
-const SONG_STREAMING_LINKS: { key: keyof Song; label: string }[] = [
-  { key: 'spotifyUrl', label: 'Spotify' },
-  { key: 'appleMusicUrl', label: 'Apple Music' },
-  { key: 'youtubeUrl', label: 'YouTube' },
-  { key: 'soundcloudUrl', label: 'SoundCloud' },
-  { key: 'audiomackUrl', label: 'Audiomack' },
-  { key: 'boomplayUrl', label: 'Boomplay' },
-]
 
 const COVER_SIZE = 96
 const ACTION_H = 40
@@ -95,7 +87,7 @@ export function SongPreviewSheet({
 }) {
   const router = useRouter()
   const { requireAuth } = useAuthGate()
-  const { isLiked, isListenLater, toggleLike, toggleListenLater } = useSongLibrarySaves()
+  const { isListenLater, toggleListenLater } = useSongLibrarySaves()
   const { enrich } = useSongPreviewEnrich(seed?.id ?? null)
   const { profile: ownerProfile, loading: ownerLoading } = useSongOwnerProfile(seed?.id ?? null)
   const { lines: sharedLines } = useSharedLines(seed?.title ?? null, seed?.artist ?? null)
@@ -105,6 +97,11 @@ export function SongPreviewSheet({
     if (!seed) return null
     return { ...seed, ...enrich, lyricLines: seed.lyricLines ?? [] } as Song
   }, [seed, enrich])
+
+  const { resonated, displayCount: resonateCount, toggleResonate } = useSongResonate(
+    seed?.id ?? null,
+    song?.resonates ?? seed?.resonates ?? 0,
+  )
 
   useEffect(() => {
     if (!seed) return
@@ -128,19 +125,12 @@ export function SongPreviewSheet({
   if (!seed || !song) return null
 
   const isActive = song.status === 'live' || song.status === 'active'
-  const liked = isLiked(song.id)
   const later = isListenLater(song.id)
   const canQueue = !!(song.audioUrl && isActive)
   const description = (song.description || '').trim()
   const artistUsername = artistUsernameHint || ownerProfile?.username || null
   const artistBio = (ownerProfile?.bio || '').trim()
   const topSharedLine = sharedLines[0]?.line?.trim() || ''
-
-  const statsParts = [
-    `${formatNum(song.plays || 0)} plays`,
-    `${formatNum(song.lyricUses || 0)} lyric uses`,
-    `${formatNum(song.resonates || 0)} resonates`,
-  ]
 
   const handlePlayAndLyrics = () => {
     if (!requireAuth()) return
@@ -181,37 +171,43 @@ export function SongPreviewSheet({
     },
   ]
 
-  const streamingItems: CardOverflowItem[] = SONG_STREAMING_LINKS.flatMap(({ key, label }) => {
-    const href = song[key] as string | null | undefined
-    if (!href) return []
-    return [{
-      id: `stream-${key}`,
-      label: `Open on ${label}`,
-      onSelect: () => { window.open(href, '_blank', 'noopener,noreferrer') },
-    }]
-  })
-
   const handleShare = async () => {
     const result = await shareSong({ id: song.id, title: song.title, artist: song.artist })
     if (result === 'copied') toast.success('Link copied')
     else if (result === 'shared') toast.success('Shared')
   }
 
-  const ghostBtn: CSSProperties = {
+  const closeBtn: CSSProperties = {
     width: ACTION_H,
     height: ACTION_H,
     borderRadius: '50%',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid var(--border-hi)',
+    background: 'transparent',
+    border: 'none',
     color: 'var(--text-secondary)',
     cursor: 'pointer',
     flexShrink: 0,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    transition: 'background 150ms ease',
+    transition: 'background 150ms ease, color 150ms ease',
     boxSizing: 'border-box',
     padding: 0,
+  }
+
+  const topUtilityBtn: CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
+    padding: '6px 8px',
+    border: 'none',
+    background: 'none',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+    fontFamily: UI_FONT,
+    fontSize: '0.7rem',
+    fontWeight: 500,
+    transition: 'color 150ms ease',
+    flexShrink: 0,
   }
 
   const descLong = description.length > 140
@@ -234,12 +230,10 @@ export function SongPreviewSheet({
         @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
         @keyframes scaleIn { from { transform: translateY(8px) scale(0.98); opacity: 0 } to { transform: translateY(0) scale(1); opacity: 1 } }
         .song-preview-play-btn:active { transform: scale(0.98); }
-        .song-preview-ghost-btn:active { background: rgba(255,255,255,0.1) !important; }
-        .song-preview-share-btn:active { background: rgba(255,255,255,0.08) !important; }
+        .song-preview-top-btn:active { opacity: 0.75; }
         @media (hover: hover) and (pointer: fine) {
           .song-preview-play-btn:hover { filter: brightness(1.06); }
-          .song-preview-ghost-btn:hover { background: rgba(255,255,255,0.09) !important; }
-          .song-preview-share-btn:hover { background: rgba(255,255,255,0.07) !important; }
+          .song-preview-top-btn:hover { color: var(--text) !important; }
         }
         @media (max-width: 639px) {
           .song-preview-card { transform: translateY(-2vh); }
@@ -266,14 +260,24 @@ export function SongPreviewSheet({
       >
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          padding: '10px 12px 0', flexShrink: 0,
+          gap: '2px', padding: '10px 8px 0', flexShrink: 0,
         }}>
           <button
             type="button"
-            className="song-preview-ghost-btn"
+            className="song-preview-top-btn"
+            onClick={() => { void handleShare() }}
+            aria-label="Share song"
+            style={topUtilityBtn}
+          >
+            <ShareIcon size={15} color="currentColor" />
+            Share
+          </button>
+          <button
+            type="button"
+            className="song-preview-top-btn"
             onClick={onClose}
             aria-label="Close"
-            style={ghostBtn}
+            style={closeBtn}
           >
             <CloseIcon size={18} color="currentColor" />
           </button>
@@ -324,7 +328,31 @@ export function SongPreviewSheet({
                 fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 400,
                 color: 'var(--text-muted)', margin: 0, lineHeight: 1.35,
               }}>
-                {statsParts.join(' · ')}
+                {formatNum(song.plays || 0)} plays · {formatNum(song.lyricUses || 0)} lyric uses ·{' '}
+                <button
+                  type="button"
+                  onClick={() => { void toggleResonate() }}
+                  aria-pressed={resonated}
+                  aria-label={resonated ? 'Remove resonate' : 'Resonate with song'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    padding: 0,
+                    border: 'none',
+                    background: 'none',
+                    fontFamily: 'inherit',
+                    fontSize: 'inherit',
+                    fontWeight: 'inherit',
+                    lineHeight: 'inherit',
+                    color: resonated ? 'var(--gold)' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    verticalAlign: 'baseline',
+                  }}
+                >
+                  <HeartIcon filled={resonated} size={12} color="currentColor" />
+                  {formatNum(resonateCount)}
+                </button>
               </p>
             </div>
           </div>
@@ -383,7 +411,7 @@ export function SongPreviewSheet({
           {/* Actions */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px',
-            marginTop: '14px', flexWrap: 'wrap',
+            marginTop: '14px',
           }}>
             {isActive ? (
               <button
@@ -415,22 +443,6 @@ export function SongPreviewSheet({
               </div>
             )}
 
-            <button
-              type="button"
-              className="song-preview-ghost-btn"
-              onClick={() => { void toggleLike(song.id) }}
-              aria-pressed={liked}
-              aria-label={liked ? 'Unlike song' : 'Like song'}
-              style={{
-                ...ghostBtn,
-                background: liked ? 'var(--gold-faint)' : 'rgba(255,255,255,0.05)',
-                borderColor: liked ? 'var(--gold-border)' : 'var(--border-hi)',
-                color: liked ? 'var(--gold)' : 'var(--text-secondary)',
-              }}
-            >
-              <HeartIcon filled={liked} size={18} color="currentColor" />
-            </button>
-
             <CardOverflowMenu
               items={libraryItems}
               ariaLabel="Library"
@@ -438,42 +450,7 @@ export function SongPreviewSheet({
               label="Library"
               compact
             />
-
-            <button
-              type="button"
-              className="song-preview-share-btn"
-              onClick={() => { void handleShare() }}
-              aria-label="Share song"
-              style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                gap: '5px', height: ACTION_H, padding: '0 12px',
-                borderRadius: '50px', border: '1px solid var(--border-hi)',
-                background: 'rgba(255,255,255,0.04)',
-                color: 'var(--text-secondary)',
-                fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 600,
-                cursor: 'pointer', transition: 'background 150ms ease',
-                flexShrink: 0,
-              }}
-            >
-              <ShareIcon size={15} color="currentColor" />
-              Share
-            </button>
           </div>
-
-          {streamingItems.length > 0 ? (
-            <div style={{
-              display: 'flex', justifyContent: 'flex-start', alignItems: 'center',
-              gap: '6px', marginTop: '10px',
-            }}>
-              <span style={{
-                fontFamily: UI_FONT, fontSize: '0.65rem', fontWeight: 400,
-                color: 'var(--text-muted)',
-              }}>
-                Listen elsewhere
-              </span>
-              <CardOverflowMenu items={streamingItems} ariaLabel="Listen elsewhere" align="left" compact />
-            </div>
-          ) : null}
 
           {/* Artist block — always reserved */}
           <div style={{
