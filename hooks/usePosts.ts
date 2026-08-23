@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useVisibleAuthorIds } from '@/hooks/useVisibleAuthorIds'
 import {
   PRIMARY_TAB_STALE_MS,
@@ -52,10 +53,12 @@ export type UsePostsOptions = {
 
 export function usePosts(options: UsePostsOptions = {}) {
   const enabled = options.enabled ?? true
+  const { loading: authLoading } = useAuthGate()
   const cached = peekFeedPostsCache()
   const [posts, setPosts] = useState<Post[]>(cached?.data ?? [])
   const [loading, setLoading] = useState(!cached)
   const lastLoadedAtRef = useRef(cached?.loadedAt ?? 0)
+  const prevAuthLoadingRef = useRef<boolean | null>(null)
 
   const load = useCallback(async (force = false): Promise<Post[]> => {
     const mapped = await warmFeedPosts({ force })
@@ -98,6 +101,21 @@ export function usePosts(options: UsePostsOptions = {}) {
       if (channel) void supabase.removeChannel(channel)
     }
   }, [enabled, load])
+
+  // After OAuth (and cold /feed loads), the first fetch can finish before
+  // /api/auth/me hydrates the in-memory bearer. visibilityReady stays false
+  // until authLoading clears — refetch once when hydration finishes so Feed
+  // populates without a tab switch. warmFeedPosts dedupes concurrent loads.
+  useEffect(() => {
+    if (!enabled) return
+
+    const prev = prevAuthLoadingRef.current
+    prevAuthLoadingRef.current = authLoading
+
+    if (prev === true && authLoading === false) {
+      void load(true)
+    }
+  }, [enabled, authLoading, load])
 
   const authorUids = useMemo(() => posts.map(p => p.authorUid), [posts])
   const { ids: visibleAuthorIds, ready: visibilityReady } = useVisibleAuthorIds(authorUids)
