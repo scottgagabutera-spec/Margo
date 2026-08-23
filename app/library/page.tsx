@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useLibraryShelves } from '@/hooks/useLibraryShelves'
 import { BackButton } from '@/components/back-button'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
+import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-preview-sheet'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { playSongsAsSession } from '@/lib/library/play-songs-session'
 import {
@@ -76,7 +78,7 @@ function EmptyCopy({ children, href, linkLabel }: { children: string; href: stri
   )
 }
 
-function SongGrid({ songs }: { songs: SongCardData[] }) {
+function SongGrid({ songs, onSelect }: { songs: SongCardData[]; onSelect: (song: SongCardData) => void }) {
   return (
     <div style={{
       display: 'grid',
@@ -84,7 +86,7 @@ function SongGrid({ songs }: { songs: SongCardData[] }) {
       gap: '16px',
     }}>
       {songs.map(song => (
-        <SongCatalogCard key={song.id} song={song} />
+        <SongCatalogCard key={song.id} song={song} onSelect={onSelect} />
       ))}
     </div>
   )
@@ -145,6 +147,11 @@ export default function LibraryPage() {
   const { liked, listenLater, playlists, loading } = useLibraryShelves(
     isSignedIn ? user.id : null,
   )
+  const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
+
+  const handleSongSelect = (card: SongCardData) => {
+    setPreviewSong(card)
+  }
 
   const playShelf = (songs: SongCardData[]) => {
     if (!requireAuth()) return
@@ -233,7 +240,7 @@ export default function LibraryPage() {
                   Songs you save for later show up here. On a song card, open ⋯ and tap Listen Later.
                 </EmptyCopy>
               ) : (
-                <SongGrid songs={listenLater} />
+                <SongGrid songs={listenLater} onSelect={handleSongSelect} />
               )}
             </section>
 
@@ -252,7 +259,7 @@ export default function LibraryPage() {
                   Songs you like from Discover live here. Tap the heart on a song card.
                 </EmptyCopy>
               ) : (
-                <SongGrid songs={liked} />
+                <SongGrid songs={liked} onSelect={handleSongSelect} />
               )}
             </section>
 
@@ -281,6 +288,9 @@ export default function LibraryPage() {
           </div>
         )}
       </div>
+      {previewSong ? (
+        <SongPreviewSheet song={previewSong} onClose={() => setPreviewSong(null)} />
+      ) : null}
     </main>
   )
 }

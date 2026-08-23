@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useLyricMoments } from '@/hooks/useLyricMoments'
 import { CatalogGrid, CatalogSortOption } from '@/components/catalog-grid'
-import { SongCatalogCard } from '@/components/song-catalog-card'
+import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
+import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-preview-sheet'
 import { BackButton } from '@/components/back-button'
 import { catalogRankIds } from '@/lib/catalog-rank'
 
@@ -65,6 +66,12 @@ export default function SongsCatalogPage() {
   const { moments } = useLyricMoments()
   const [sort, setSort] = useState('trending')
   const [vibe, setVibe] = useState('ALL')
+  const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
+
+  const handleSelect = (card: SongCardData) => {
+    const full = songs.find(s => s.id === card.id)
+    setPreviewSong(full ?? card)
+  }
 
   const songIdsForVibe = useMemo(() => {
     if (vibe === 'ALL') return null
@@ -100,6 +107,7 @@ export default function SongsCatalogPage() {
   }, [vibeFiltered, sort])
 
   return (
+    <>
     <CatalogGrid
       items={sorted}
       loading={loading}
@@ -117,8 +125,13 @@ export default function SongsCatalogPage() {
         <SongCatalogCard
           song={song}
           badge={topIds.has(song.id) ? 'Top' : trendingIds.has(song.id) ? 'Trending' : null}
+          onSelect={handleSelect}
         />
       )}
     />
+    {previewSong ? (
+      <SongPreviewSheet song={previewSong} onClose={() => setPreviewSong(null)} />
+    ) : null}
+    </>
   )
 }

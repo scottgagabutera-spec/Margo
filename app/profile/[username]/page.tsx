@@ -12,6 +12,7 @@ import { useProfileReplays } from '@/hooks/useProfileReplays'
 import { useAuthorLyricBacks } from '@/hooks/useAuthorLyricBacks'
 import { ArtistBadge } from '@/components/artist-badge'
 import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
+import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-preview-sheet'
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
 import { resolveMomentLines } from '@/lib/post-lines'
@@ -76,6 +77,7 @@ export default function ProfilePage() {
   const [followStatus, setFollowStatus] = useState<FollowStatus>(null)
   const [followBusy, setFollowBusy] = useState(false)
   const [avatarLightboxOpen, setAvatarLightboxOpen] = useState(false)
+  const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
 
   // ── Discography — public, live-only catalog for this profile, if
   // they're an artist. Only the total count + a small preview slice are
@@ -709,7 +711,7 @@ export default function ProfilePage() {
                       }
                       return (
                         <div key={song.id} style={{ flexShrink: 0, width: '130px', scrollSnapAlign: 'start' }}>
-                          <SongCatalogCard song={cardData} />
+                          <SongCatalogCard song={cardData} onSelect={setPreviewSong} />
                         </div>
                       )
                     })}
@@ -893,6 +895,13 @@ export default function ProfilePage() {
           onClose={() => setAvatarLightboxOpen(false)}
           src={profile.avatarUrl}
           alt={profile.displayName || profile.username}
+        />
+      ) : null}
+      {previewSong ? (
+        <SongPreviewSheet
+          song={previewSong}
+          onClose={() => setPreviewSong(null)}
+          artistUsernameHint={profile?.username}
         />
       ) : null}
     </main>

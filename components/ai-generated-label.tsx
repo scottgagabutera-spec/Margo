@@ -3,7 +3,8 @@
 import { UI_FONT } from '@/lib/fonts'
 
 /**
- * Inline disclosure chip for songs the artist marked as AI-generated.
+ * Inline disclosure for songs the artist marked as AI-generated.
+ * Quiet supporting meta — not an earned badge or CTA chip.
  * Renders nothing when `show` is false — callers gate on the boolean.
  */
 export function AiGeneratedLabel({
@@ -21,16 +22,15 @@ export function AiGeneratedLabel({
         display: 'inline-flex',
         alignItems: 'center',
         fontFamily: UI_FONT,
-        fontSize: '0.58rem',
-        fontWeight: 700,
-        letterSpacing: '0.8px',
-        textTransform: 'uppercase',
-        padding: '2px 7px',
-        borderRadius: '50px',
-        background: 'rgba(7,6,10,0.55)',
-        border: '1px solid var(--gold-border)',
-        color: 'rgba(232,197,71,0.88)',
-        lineHeight: 1.2,
+        fontSize: '0.65rem',
+        fontWeight: 500,
+        letterSpacing: '0.2px',
+        padding: '2px 8px',
+        borderRadius: '6px',
+        background: 'var(--gold-faint)',
+        border: '1px solid var(--border)',
+        color: 'var(--text-muted)',
+        lineHeight: 1.25,
         whiteSpace: 'nowrap',
         flexShrink: 0,
         ...style,
