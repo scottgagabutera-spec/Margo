@@ -23,6 +23,7 @@ export function CardOverflowMenu({
   align = 'right',
   icon = 'more',
   label,
+  compact = false,
 }: {
   items: CardOverflowItem[]
   ariaLabel?: string
@@ -31,6 +32,8 @@ export function CardOverflowMenu({
   icon?: 'more' | 'library'
   /** Optional text beside icon (pill trigger). */
   label?: string
+  /** Slightly smaller trigger for compact toolbars (e.g. song preview). */
+  compact?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
@@ -85,6 +88,7 @@ export function CardOverflowMenu({
 
   const TriggerIcon = icon === 'library' ? LibraryIcon : MoreIcon
   const isPill = !!label
+  const touchSize = compact ? 40 : 'var(--margo-touch-min)'
 
   const panel = open && typeof document !== 'undefined'
     ? createPortal(
@@ -169,11 +173,11 @@ export function CardOverflowMenu({
           setOpen(o => !o)
         }}
         style={{
-          width: isPill ? 'auto' : 'var(--margo-touch-min)',
-          height: 'var(--margo-touch-min)',
-          minWidth: isPill ? undefined : 'var(--margo-touch-min)',
-          minHeight: 'var(--margo-touch-min)',
-          padding: isPill ? '0 14px' : 0,
+          width: isPill ? 'auto' : touchSize,
+          height: touchSize,
+          minWidth: isPill ? undefined : touchSize,
+          minHeight: touchSize,
+          padding: isPill ? (compact ? '0 12px' : '0 14px') : 0,
           borderRadius: isPill ? '50px' : '50%',
           border: '1px solid var(--border-hi)',
           background: 'var(--margo-bar)',
@@ -182,12 +186,12 @@ export function CardOverflowMenu({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: isPill ? '6px' : 0,
+          gap: isPill ? '5px' : 0,
           boxSizing: 'border-box',
           fontFamily: UI_FONT,
-          fontSize: isPill ? '0.65rem' : undefined,
+          fontSize: isPill ? (compact ? '0.7rem' : '0.65rem') : undefined,
           fontWeight: isPill ? 600 : undefined,
-          letterSpacing: isPill ? '0.3px' : undefined,
+          letterSpacing: isPill ? '0.2px' : undefined,
         }}
       >
         <TriggerIcon size={16} color="var(--text-secondary)" />

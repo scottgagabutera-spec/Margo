@@ -36,27 +36,123 @@ const ICONS: Record<ArtistLinkKey, ComponentType<MargoIconProps>> = {
   linktree: LinktreeIcon,
 }
 
+const SOCIAL_KEYS: ArtistLinkKey[] = ['instagram', 'tiktok', 'youtube', 'x']
+const LISTEN_KEYS: ArtistLinkKey[] = ['spotify', 'appleMusic', 'soundcloud', 'audiomack', 'boomplay', 'linktree']
+
 export function ProfileArtistLinks({
   links,
   compact = false,
+  variant = compact ? 'compact' : 'default',
   margoProfileUsername,
+  onMargoProfileClick,
 }: {
   links: ArtistApplicationLinks | null | undefined
-  /** Smaller icon row for song preview / compact surfaces. */
+  /** @deprecated Use variant="compact" */
   compact?: boolean
-  /** When set, appends Margo symbol linking to the artist profile. */
+  variant?: 'default' | 'compact' | 'preview'
+  /** When set, appends Margo symbol linking to the artist profile (compact/default only). */
   margoProfileUsername?: string | null
+  onMargoProfileClick?: () => void
 }) {
+  const resolvedVariant = variant === 'default' && compact ? 'compact' : variant
+
   const items = ARTIST_LINK_FIELDS.flatMap((field) => {
     const href = links?.[field.key]
     if (!href) return []
     return [{ ...field, href }]
   })
 
+  if (resolvedVariant === 'preview') {
+    const social = items.filter((i) => SOCIAL_KEYS.includes(i.key))
+    const listen = items.filter((i) => LISTEN_KEYS.includes(i.key))
+
+    if (social.length === 0 && listen.length === 0 && !margoProfileUsername) return null
+
+    const textLink: CSSProperties = {
+      fontFamily: font,
+      fontSize: '0.7rem',
+      fontWeight: 400,
+      color: 'var(--text-secondary)',
+      textDecoration: 'none',
+      lineHeight: 1.4,
+    }
+
+    const groupLabel: CSSProperties = {
+      fontFamily: font,
+      fontSize: '0.65rem',
+      fontWeight: 400,
+      color: 'var(--text-muted)',
+      marginRight: '8px',
+      flexShrink: 0,
+    }
+
+    const renderGroup = (label: string, rowItems: typeof items) => {
+      if (rowItems.length === 0) return null
+      return (
+        <p style={{
+          margin: '0 0 6px', lineHeight: 1.5,
+          display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0 2px',
+        }}>
+          <span style={groupLabel}>{label}</span>
+          <span>
+            {rowItems.map((item, idx) => (
+              <span key={item.key}>
+                {idx > 0 ? (
+                  <span style={{ color: 'var(--text-muted)', margin: '0 5px' }}>·</span>
+                ) : null}
+                <a
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={textLink}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)' }}
+                >
+                  {item.label}
+                </a>
+              </span>
+            ))}
+          </span>
+        </p>
+      )
+    }
+
+    return (
+      <div>
+        {renderGroup('Follow', social)}
+        {renderGroup('Listen', listen)}
+        {margoProfileUsername ? (
+          <Link
+            href={`/profile/${margoProfileUsername}`}
+            onClick={onMargoProfileClick}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginTop: social.length || listen.length ? '2px' : 0,
+              padding: '6px 0',
+              minHeight: '32px',
+              textDecoration: 'none',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <MargoSymbol size={16} variant="gold" />
+            <span style={{
+              fontFamily: font, fontSize: '0.72rem', fontWeight: 500,
+              color: 'var(--text-secondary)',
+            }}>
+              Profile on Margo
+            </span>
+          </Link>
+        ) : null}
+      </div>
+    )
+  }
+
   if (items.length === 0 && !margoProfileUsername) return null
 
-  const iconSize = compact ? 16 : 18
-  const btnSize = compact ? 36 : undefined
+  const iconSize = resolvedVariant === 'compact' ? 16 : 18
+  const btnSize = resolvedVariant === 'compact' ? 36 : undefined
 
   const linkStyle = (size?: number): CSSProperties => ({
     width: size ?? 'var(--margo-touch-min)',
@@ -76,14 +172,14 @@ export function ProfileArtistLinks({
   })
 
   return (
-    <div style={{ marginBottom: compact ? 0 : '24px' }}>
-      {!compact ? (
+    <div style={{ marginBottom: resolvedVariant === 'compact' ? 0 : '24px' }}>
+      {resolvedVariant === 'default' ? (
         <p style={{
           fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)',
           textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '10px',
         }}>Listen &amp; follow</p>
       ) : null}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? '5px' : '6px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: resolvedVariant === 'compact' ? '5px' : '6px' }}>
         {items.map((item) => {
           const Icon = ICONS[item.key]
           return (
@@ -107,7 +203,7 @@ export function ProfileArtistLinks({
             title="Artist on Margo"
             style={linkStyle(btnSize)}
           >
-            <MargoSymbol size={compact ? 18 : 20} variant="gold" />
+            <MargoSymbol size={resolvedVariant === 'compact' ? 18 : 20} variant="gold" />
           </Link>
         ) : null}
       </div>
