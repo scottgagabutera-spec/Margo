@@ -503,11 +503,8 @@ export default function FeedPage() {
           toast.error('Could not capture post')
           return
         }
-        if (result === 'shared-file') toast.success('Shared')
-        else if (result === 'saved-image') toast.success('Image saved')
-        else if (result === 'failed') toast.message('Share cancelled')
-        else if (typeof result === 'object' && result.type === 'share-ready') {
-          toast.success('Image ready — tap Share image')
+        if (result.type === 'image-ready') {
+          toast.success('Image ready — use Share image or Save image')
         }
       }).catch((err) => {
         console.error('post literal export failed', err)

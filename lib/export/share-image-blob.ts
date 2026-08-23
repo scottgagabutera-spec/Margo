@@ -1,11 +1,13 @@
 import { inspectImageBlob, isExportDebugEnabled, logExportDebug } from '@/lib/export/export-debug'
 import { validateCaptureBlob } from '@/lib/export/validate-capture-blob'
 
-export type ShareImageResult =
-  | 'shared-file'
-  | 'saved-image'
-  | 'failed'
-  | { type: 'share-ready'; file: File; blob: Blob; filename: string }
+/** Validated PNG ready for explicit user-chosen share/save/link actions. */
+export type PreparedShareImage = {
+  file: File
+  blob: Blob
+  filename: string
+  canShareFiles: boolean
+}
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
@@ -18,14 +20,9 @@ function downloadBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 5000)
 }
 
-function isMobileShareContext(): boolean {
-  if (typeof navigator === 'undefined') return false
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-}
-
 /**
- * Share a PNG file via Web Share. Payload is **files only** — no url/title/text
- * so Android targets cannot prefer a link over the image.
+ * Share a PNG file via Web Share. Payload is **files only** — no url/title/text.
+ * Must be called from a fresh user gesture (e.g. "Share image" tap).
  */
 export async function sharePngFile(file: File): Promise<'shared' | 'cancelled' | 'failed'> {
   if (typeof navigator === 'undefined' || !navigator.share) return 'failed'
@@ -34,8 +31,10 @@ export async function sharePngFile(file: File): Promise<'shared' | 'cancelled' |
   try {
     logExportDebug('share-image-blob:share-png-file', {
       payload: { filesOnly: true, name: file.name, type: file.type, size: file.size },
+      canShareFiles: true,
     })
     await navigator.share({ files: [file] })
+    logExportDebug('share-image-blob:result', { result: 'shared-file' })
     return 'shared'
   } catch (err) {
     const name = (err as Error)?.name
@@ -49,25 +48,33 @@ export async function sharePngFile(file: File): Promise<'shared' | 'cancelled' |
 }
 
 export function downloadPngBlob(blob: Blob, filename: string): void {
+  logExportDebug('share-image-blob:download', { filename, byteSize: blob.size })
   downloadBlob(blob, filename)
 }
 
+export function createSharePngFile(blob: Blob, filename: string): File {
+  return new File([blob], filename, {
+    type: 'image/png',
+    lastModified: Date.now(),
+  })
+}
+
 /**
- * After a validated PNG exists, share or save it.
- * Never opens a URL-only native share sheet. Never auto-copies a link.
+ * Validate capture and prepare a File for sharing.
+ * Does NOT call navigator.share or download — caller shows explicit user actions.
  */
-export async function shareImageBlob(
+export async function prepareShareImage(
   blob: Blob,
   opts: {
     filename: string
     attemptId?: string
   },
-): Promise<ShareImageResult> {
+): Promise<PreparedShareImage> {
   const attemptId = opts.attemptId ?? `share-${Date.now()}`
 
   await validateCaptureBlob(blob)
 
-  const file = new File([blob], opts.filename, { type: 'image/png' })
+  const file = createSharePngFile(blob, opts.filename)
   const canShareFiles = typeof navigator !== 'undefined' && navigator.canShare
     ? navigator.canShare({ files: [file] })
     : false
@@ -78,46 +85,25 @@ export async function shareImageBlob(
       file,
       canShareFiles,
     })
-    logExportDebug('share-image-blob:pre', {
+    logExportDebug('share-image-blob:prepared', {
       attemptId,
       diagnostics,
       hasNavigatorShare: typeof navigator !== 'undefined' && !!navigator.share,
-      isMobileShareContext: isMobileShareContext(),
       canShareFiles,
+      branch: 'image-ready (awaiting explicit user action)',
     })
   }
 
-  // Mobile: defer native share to a fresh user tap (async capture expires gesture).
-  if (canShareFiles && isMobileShareContext()) {
-    logExportDebug('share-image-blob:branch', {
-      attemptId,
-      branch: 'mobile-share-ready (deferred user tap)',
-    })
-    return { type: 'share-ready', file, blob, filename: opts.filename }
-  }
+  return { file, blob, filename: opts.filename, canShareFiles }
+}
 
-  if (canShareFiles) {
-    const shared = await sharePngFile(file)
-    if (shared === 'shared') {
-      logExportDebug('share-image-blob:result', { attemptId, result: 'shared-file' })
-      return 'shared-file'
-    }
-    if (shared === 'cancelled') {
-      logExportDebug('share-image-blob:result', { attemptId, result: 'failed' })
-      return 'failed'
-    }
-    logExportDebug('share-image-blob:branch', {
-      attemptId,
-      branch: 'desktop-share-failed → share-ready',
-    })
-    return { type: 'share-ready', file, blob, filename: opts.filename }
-  }
+/** @deprecated Use prepareShareImage — kept for feed experiment compat */
+export type ShareImageResult = PreparedShareImage & { type: 'image-ready' }
 
-  logExportDebug('share-image-blob:branch', {
-    attemptId,
-    branch: 'canShare(files)=false → download only',
-  })
-  downloadBlob(blob, opts.filename)
-  logExportDebug('share-image-blob:result', { attemptId, result: 'saved-image' })
-  return 'saved-image'
+export async function shareImageBlob(
+  blob: Blob,
+  opts: { filename: string; attemptId?: string },
+): Promise<ShareImageResult> {
+  const prepared = await prepareShareImage(blob, opts)
+  return { type: 'image-ready', ...prepared }
 }
