@@ -9,7 +9,7 @@ import { StageSearchField } from '@/components/stage/stage-search-field'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
-import { useStageChromePublisher, useStageSearchPublisher } from '@/lib/stage-chrome'
+import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher } from '@/lib/stage-chrome'
 import { HEADLINES, resolveHeadlineVariant, type HeadlineVariant } from '@/lib/stage-headline-variant'
 import { saveMomentImage } from '@/lib/moment-export/save-moment-image'
 import { playSnippet } from '@/lib/audio-engine'
@@ -90,6 +90,7 @@ export function StageLanding() {
 
   useStageChromePublisher(showResults || !!selectedSong)
   useStageSearchPublisher(showResults)
+  useStageIdlePublisher(!selectedSong)
 
   const fetchEmotion = useCallback(async (text: string) => {
     if (!text.trim()) return
@@ -502,29 +503,24 @@ export function StageLanding() {
             aria-hidden={!hasMoment}
           >
             {hasMoment && (
-              <StageMomentCard
-                lyric={lyric}
-                songTitle={songName}
-                artistName={artistName}
-                artwork={selectedSong.artwork}
-                vibeLabel={vibeLabel}
-                canPlay={canPlay}
-                playing={playing}
-                buffering={buffering}
-                onPlay={handlePlay}
-                listenUrl={!canPlay ? appleMusicSearchUrl(songName, artistName) : null}
-              />
+              <>
+                <StageMomentCard
+                  lyric={lyric}
+                  songTitle={songName}
+                  artistName={artistName}
+                  artwork={selectedSong.artwork}
+                  vibeLabel={vibeLabel}
+                  canPlay={canPlay}
+                  playing={playing}
+                  buffering={buffering}
+                  onPlay={handlePlay}
+                  listenUrl={!canPlay ? appleMusicSearchUrl(songName, artistName) : null}
+                />
+                <StageSendBar onSaveImage={handleSaveImage} saving={saving} signedIn={signedIn} />
+              </>
             )}
           </div>
         </div>
-      )}
-
-      {hasMoment && (
-        <StageSendBar onSaveImage={handleSaveImage} saving={saving} signedIn={signedIn} />
-      )}
-
-      {hasMoment && (
-        <div style={{ height: 'calc(var(--margo-touch-min) + 56px + env(safe-area-inset-bottom))' }} aria-hidden />
       )}
     </section>
   )

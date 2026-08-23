@@ -42,3 +42,15 @@ export function useStageSearchPublisher(open: boolean) {
     return () => root.removeAttribute(STAGE_SEARCH_ATTR)
   }, [open])
 }
+
+const STAGE_IDLE_ATTR = 'data-margo-stage-idle'
+
+/** Vertically center idle Stage (headline + search) between nav and tab bar. */
+export function useStageIdlePublisher(idle: boolean) {
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    if (idle) root.setAttribute(STAGE_IDLE_ATTR, '1')
+    else root.removeAttribute(STAGE_IDLE_ATTR)
+    return () => root.removeAttribute(STAGE_IDLE_ATTR)
+  }, [idle])
+}

@@ -54,6 +54,7 @@
   --stage-scrim: rgba(7, 6, 10, 0.62);
   --stage-search-h: 48px;
   --stage-footer-gap: clamp(48px, 12vh, 96px);
+  --stage-moment-to-actions: 22px;
 }
 @media (min-width: 640px) {
   :root {
@@ -292,6 +293,12 @@
 html[data-margo-stage-search] .margo-landing-footer {
   opacity: 0;
   pointer-events: none;
+}
+
+html[data-margo-stage-idle] .margo-stage-zone {
+  justify-content: center;
+  padding-top: clamp(24px, 6vh, 56px);
+  padding-bottom: calc(var(--margo-tabbar-h, 0px) + 16px);
 }
 
 .margo-landing-nav {
