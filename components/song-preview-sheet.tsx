@@ -26,6 +26,7 @@ import {
 } from '@/lib/audio-engine'
 import { shareSong, getSongShareUrl } from '@/lib/song-share'
 import { captureLiteralUi } from '@/lib/export/literal-ui-capture'
+import { logExportDebug } from '@/lib/export/export-debug'
 import { shareImageBlob } from '@/lib/export/share-image-blob'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
@@ -95,6 +96,7 @@ export function SongPreviewSheet({
   const { lines: sharedLines } = useSharedLines(seed?.title ?? null, seed?.artist ?? null)
   const [descExpanded, setDescExpanded] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
+  const shareInProgressRef = useRef(false)
 
   const song = useMemo(() => {
     if (!seed) return null
@@ -175,20 +177,39 @@ export function SongPreviewSheet({
   ]
 
   const handleShare = async () => {
+    const attemptId = `song-preview-${song.id}-${Date.now()}`
     const card = cardRef.current
     const shareUrl = getSongShareUrl(song.id)
     const shareTitle = `${song.title} — ${song.artist}`
 
+    if (shareInProgressRef.current) {
+      logExportDebug('song-preview-sheet:share', {
+        attemptId,
+        branch: 'ignored-concurrent-tap',
+        note: 'previous share still in progress — concurrent captures can corrupt expand/restore',
+      })
+      return
+    }
+
+    logExportDebug('song-preview-sheet:share', {
+      attemptId,
+      hasCardRef: !!card,
+      cardConnected: card?.isConnected ?? false,
+    })
+
     if (card) {
+      shareInProgressRef.current = true
       const toastId = toast.loading('Creating share image…')
       try {
-        const blob = await captureLiteralUi(card)
+        const blob = await captureLiteralUi(card, { attemptId })
         const result = await shareImageBlob(blob, {
           filename: `margo-song-${song.id}.png`,
           title: shareTitle,
           url: shareUrl,
+          attemptId,
         })
         toast.dismiss(toastId)
+        logExportDebug('song-preview-sheet:share', { attemptId, branch: 'literal-export', result })
         if (result === 'shared-file') toast.success('Shared')
         else if (result === 'shared-url') toast.success('Link shared — image saved')
         else if (result === 'downloaded') toast.success('Image saved — link copied')
@@ -196,11 +217,23 @@ export function SongPreviewSheet({
         return
       } catch (err) {
         console.error('song preview literal export failed', err)
+        logExportDebug('song-preview-sheet:share', {
+          attemptId,
+          branch: 'capture-failed → shareSong(url-only)',
+          error: (err as Error)?.message ?? String(err),
+        })
         toast.dismiss(toastId)
         toast.message('Image export failed — sharing link instead')
+      } finally {
+        shareInProgressRef.current = false
       }
     }
 
+    logExportDebug('song-preview-sheet:share', {
+      attemptId,
+      branch: 'shareSong(url-only)',
+      reason: card ? 'capture threw' : 'cardRef missing',
+    })
     const result = await shareSong({ id: song.id, title: song.title, artist: song.artist })
     if (result === 'copied') toast.success('Link copied')
     else if (result === 'shared') toast.success('Shared')

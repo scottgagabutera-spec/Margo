@@ -1,8 +1,10 @@
 import { toBlob } from 'html-to-image'
+import { inspectImageBlob, logExportDebug } from '@/lib/export/export-debug'
 
 export type LiteralCaptureOptions = {
   /** Device pixel ratio multiplier. Default 2. */
   pixelRatio?: number
+  attemptId?: string
 }
 
 type StyleRestore = () => void
@@ -13,6 +15,7 @@ type StyleRestore = () => void
  */
 function expandForFullCapture(root: HTMLElement): StyleRestore {
   const restores: StyleRestore[] = []
+  let expandedCount = 0
 
   const visit = (el: HTMLElement) => {
     const computed = window.getComputedStyle(el)
@@ -24,6 +27,7 @@ function expandForFullCapture(root: HTMLElement): StyleRestore {
       (computed.maxHeight && computed.maxHeight !== 'none')
 
     if (needsExpand) {
+      expandedCount += 1
       const prev = {
         overflow: el.style.overflow,
         overflowY: el.style.overflowY,
@@ -55,18 +59,30 @@ function expandForFullCapture(root: HTMLElement): StyleRestore {
   visit(root)
 
   const prevTransform = root.style.transform
+  const computedTransform = window.getComputedStyle(root).transform
   if (prevTransform) {
     root.style.transform = 'none'
     restores.push(() => { root.style.transform = prevTransform })
   }
+
+  logExportDebug('literal-ui-capture:expand', {
+    expandedCount,
+    inlineTransformCleared: !!prevTransform,
+    computedTransform: computedTransform !== 'none' ? computedTransform : 'none',
+    note: prevTransform
+      ? 'inline transform cleared'
+      : 'CSS-class transform (e.g. translateY(-2vh)) is NOT cleared — only inline style',
+  })
 
   return () => { restores.forEach(fn => fn()) }
 }
 
 async function waitForImages(root: HTMLElement): Promise<void> {
   const imgs = Array.from(root.querySelectorAll('img'))
-  await Promise.all(imgs.map(img => {
+  const pending: string[] = []
+  await Promise.all(imgs.map((img, i) => {
     if (img.complete && img.naturalWidth > 0) return Promise.resolve()
+    pending.push(`img[${i}] src=${img.currentSrc || img.src || '(empty)'}`)
     return new Promise<void>((resolve) => {
       const done = () => resolve()
       img.addEventListener('load', done, { once: true })
@@ -74,6 +90,18 @@ async function waitForImages(root: HTMLElement): Promise<void> {
       setTimeout(done, 4000)
     })
   }))
+  if (pending.length) {
+    logExportDebug('literal-ui-capture:images-waited', { pending })
+  }
+}
+
+function countImages(root: HTMLElement): { total: number; loaded: number; crossOrigin: string[] } {
+  const imgs = Array.from(root.querySelectorAll('img'))
+  return {
+    total: imgs.length,
+    loaded: imgs.filter(img => img.complete && img.naturalWidth > 0).length,
+    crossOrigin: imgs.map(img => img.crossOrigin || '(default)'),
+  }
 }
 
 /**
@@ -85,9 +113,20 @@ export async function captureLiteralUi(
   options: LiteralCaptureOptions = {},
 ): Promise<Blob> {
   const pixelRatio = options.pixelRatio ?? 2
+  const attemptId = options.attemptId ?? `capture-${Date.now()}`
+
+  logExportDebug('literal-ui-capture:start', {
+    attemptId,
+    connected: element.isConnected,
+    offsetSize: { w: element.offsetWidth, h: element.offsetHeight },
+    images: countImages(element),
+  })
 
   if (typeof document !== 'undefined') {
-    try { await document.fonts.ready } catch { /* ignore */ }
+    try {
+      await document.fonts.ready
+      logExportDebug('literal-ui-capture:fonts', { attemptId, status: document.fonts.status })
+    } catch { /* ignore */ }
   }
 
   await waitForImages(element)
@@ -101,8 +140,27 @@ export async function captureLiteralUi(
       backgroundColor: '#0e0c12',
     })
     if (!blob) throw new Error('literal-ui-capture: toBlob returned null')
+
+    const diagnostics = await inspectImageBlob(blob)
+    logExportDebug('literal-ui-capture:done', { attemptId, diagnostics })
+
+    if (diagnostics.byteSize < 512 || diagnostics.hasRenderedPixels === false) {
+      logExportDebug('literal-ui-capture:warn', {
+        attemptId,
+        reason: 'blob may be empty or nearly empty',
+        diagnostics,
+      })
+    }
+
     return blob
+  } catch (err) {
+    logExportDebug('literal-ui-capture:error', {
+      attemptId,
+      error: (err as Error)?.message ?? String(err),
+    })
+    throw err
   } finally {
     restore()
+    logExportDebug('literal-ui-capture:restored', { attemptId })
   }
 }
