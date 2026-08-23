@@ -27,7 +27,7 @@ import {
 import { getSongShareUrl } from '@/lib/song-share'
 import { captureLiteralUi } from '@/lib/export/literal-ui-capture'
 import { logExportDebug } from '@/lib/export/export-debug'
-import { shareImageBlob } from '@/lib/export/share-image-blob'
+import { shareImageBlob, sharePngFile, downloadPngBlob } from '@/lib/export/share-image-blob'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 export type SongPreviewSeed = SongCardData & Partial<Omit<Song, keyof SongCardData>>
@@ -180,7 +180,6 @@ export function SongPreviewSheet({
     const attemptId = `song-preview-${song.id}-${Date.now()}`
     const card = cardRef.current
     const shareUrl = getSongShareUrl(song.id)
-    const shareTitle = `${song.title} — ${song.artist}`
 
     if (shareInProgressRef.current) {
       logExportDebug('song-preview-sheet:share', {
@@ -208,15 +207,60 @@ export function SongPreviewSheet({
       const blob = await captureLiteralUi(card, { attemptId })
       const result = await shareImageBlob(blob, {
         filename: `margo-song-${song.id}.png`,
-        title: shareTitle,
-        url: shareUrl,
         attemptId,
       })
       toast.dismiss(toastId)
       logExportDebug('song-preview-sheet:share', { attemptId, branch: 'literal-export', result })
-      if (result === 'shared-file') toast.success('Shared')
-      else if (result === 'downloaded') toast.success('Image saved · Link copied')
-      else if (result === 'failed') toast.message('Share cancelled')
+
+      const copyLinkAction = {
+        label: 'Copy link',
+        onClick: () => {
+          void navigator.clipboard?.writeText(shareUrl).then(() => {
+            toast.success('Link copied')
+          }).catch(() => {
+            toast.error('Could not copy link')
+          })
+        },
+      }
+
+      if (result === 'shared-file') {
+        toast.success('Shared')
+        return
+      }
+
+      if (result === 'failed') {
+        toast.message('Share cancelled')
+        return
+      }
+
+      if (result === 'saved-image') {
+        toast.success('Image saved', { action: copyLinkAction })
+        return
+      }
+
+      if (result.type === 'share-ready') {
+        toast.success('Image ready', {
+          description: 'Share the image — not a link',
+          action: {
+            label: 'Share image',
+            onClick: () => {
+              void (async () => {
+                const shared = await sharePngFile(result.file)
+                if (shared === 'shared') {
+                  toast.success('Shared')
+                  return
+                }
+                if (shared === 'cancelled') {
+                  toast.message('Share cancelled')
+                  return
+                }
+                downloadPngBlob(result.blob, result.filename)
+                toast.success('Image saved', { action: copyLinkAction })
+              })()
+            },
+          },
+        })
+      }
     } catch (err) {
       console.error('song preview literal export failed', err)
       logExportDebug('song-preview-sheet:share', {

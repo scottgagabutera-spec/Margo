@@ -1,7 +1,11 @@
 import { inspectImageBlob, isExportDebugEnabled, logExportDebug } from '@/lib/export/export-debug'
 import { validateCaptureBlob } from '@/lib/export/validate-capture-blob'
 
-export type ShareImageResult = 'shared-file' | 'downloaded' | 'failed'
+export type ShareImageResult =
+  | 'shared-file'
+  | 'saved-image'
+  | 'failed'
+  | { type: 'share-ready'; file: File; blob: Blob; filename: string }
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
@@ -14,19 +18,48 @@ function downloadBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 5000)
 }
 
+function isMobileShareContext(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+}
+
 /**
- * Share a validated PNG via native file share when supported.
- * Otherwise download the PNG and copy the optional Margo URL to clipboard.
- * Never opens a URL-only native share sheet after successful image generation.
+ * Share a PNG file via Web Share. Payload is **files only** — no url/title/text
+ * so Android targets cannot prefer a link over the image.
+ */
+export async function sharePngFile(file: File): Promise<'shared' | 'cancelled' | 'failed'> {
+  if (typeof navigator === 'undefined' || !navigator.share) return 'failed'
+  if (!navigator.canShare?.({ files: [file] })) return 'failed'
+
+  try {
+    logExportDebug('share-image-blob:share-png-file', {
+      payload: { filesOnly: true, name: file.name, type: file.type, size: file.size },
+    })
+    await navigator.share({ files: [file] })
+    return 'shared'
+  } catch (err) {
+    const name = (err as Error)?.name
+    logExportDebug('share-image-blob:share-png-file-error', {
+      errorName: name,
+      errorMessage: (err as Error)?.message ?? String(err),
+    })
+    if (name === 'AbortError') return 'cancelled'
+    return 'failed'
+  }
+}
+
+export function downloadPngBlob(blob: Blob, filename: string): void {
+  downloadBlob(blob, filename)
+}
+
+/**
+ * After a validated PNG exists, share or save it.
+ * Never opens a URL-only native share sheet. Never auto-copies a link.
  */
 export async function shareImageBlob(
   blob: Blob,
   opts: {
     filename: string
-    title?: string
-    text?: string
-    /** Copied to clipboard on download fallback — not passed to navigator.share with files. */
-    url?: string
     attemptId?: string
   },
 ): Promise<ShareImageResult> {
@@ -49,53 +82,42 @@ export async function shareImageBlob(
       attemptId,
       diagnostics,
       hasNavigatorShare: typeof navigator !== 'undefined' && !!navigator.share,
+      isMobileShareContext: isMobileShareContext(),
+      canShareFiles,
     })
   }
 
-  if (typeof navigator !== 'undefined' && navigator.share && canShareFiles) {
-    try {
-      logExportDebug('share-image-blob:branch', {
-        attemptId,
-        branch: 'navigator.share(files only)',
-      })
-      await navigator.share({
-        files: [file],
-        title: opts.title,
-        text: opts.text,
-      })
-      logExportDebug('share-image-blob:result', { attemptId, result: 'shared-file' })
-      return 'shared-file'
-    } catch (err) {
-      const name = (err as Error)?.name
-      logExportDebug('share-image-blob:error', {
-        attemptId,
-        errorName: name,
-        errorMessage: (err as Error)?.message ?? String(err),
-      })
-      if (name === 'AbortError') {
-        logExportDebug('share-image-blob:result', { attemptId, result: 'failed' })
-        return 'failed'
-      }
-      logExportDebug('share-image-blob:branch', {
-        attemptId,
-        branch: 'share-threw-non-abort → download fallback',
-      })
-    }
-  } else {
+  // Mobile: defer native share to a fresh user tap (async capture expires gesture).
+  if (canShareFiles && isMobileShareContext()) {
     logExportDebug('share-image-blob:branch', {
       attemptId,
-      branch: canShareFiles ? 'no navigator.share → download fallback' : 'canShare(files)=false → download fallback',
+      branch: 'mobile-share-ready (deferred user tap)',
     })
+    return { type: 'share-ready', file, blob, filename: opts.filename }
   }
 
+  if (canShareFiles) {
+    const shared = await sharePngFile(file)
+    if (shared === 'shared') {
+      logExportDebug('share-image-blob:result', { attemptId, result: 'shared-file' })
+      return 'shared-file'
+    }
+    if (shared === 'cancelled') {
+      logExportDebug('share-image-blob:result', { attemptId, result: 'failed' })
+      return 'failed'
+    }
+    logExportDebug('share-image-blob:branch', {
+      attemptId,
+      branch: 'desktop-share-failed → share-ready',
+    })
+    return { type: 'share-ready', file, blob, filename: opts.filename }
+  }
+
+  logExportDebug('share-image-blob:branch', {
+    attemptId,
+    branch: 'canShare(files)=false → download only',
+  })
   downloadBlob(blob, opts.filename)
-
-  if (opts.url && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(opts.url)
-    } catch { /* soft fail */ }
-  }
-
-  logExportDebug('share-image-blob:result', { attemptId, result: 'downloaded' })
-  return 'downloaded'
+  logExportDebug('share-image-blob:result', { attemptId, result: 'saved-image' })
+  return 'saved-image'
 }

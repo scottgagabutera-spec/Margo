@@ -18,7 +18,5 @@ export async function literalExportPostCard(postId: string): Promise<ShareImageR
   const blob = await captureLiteralUi(el)
   return shareImageBlob(blob, {
     filename: `margo-post-${postId}.png`,
-    title: 'Margo',
-    url: getPostShareUrl(postId),
   })
 }
