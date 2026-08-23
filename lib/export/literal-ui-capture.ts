@@ -1,4 +1,5 @@
 import { toBlob } from 'html-to-image'
+import { swapImagesToProxyForCapture } from '@/lib/export/artwork-proxy/client'
 import { inspectImageBlob, logExportDebug } from '@/lib/export/export-debug'
 import { validateCaptureBlob } from '@/lib/export/validate-capture-blob'
 
@@ -83,24 +84,6 @@ function expandForFullCapture(root: HTMLElement): StyleRestore {
   return () => { restores.forEach(fn => fn()) }
 }
 
-/** Ensure cloned/canvas inlining can fetch remote artwork with CORS during capture. */
-function applyCaptureImageCors(root: HTMLElement): StyleRestore {
-  const restores: StyleRestore[] = []
-
-  for (const img of Array.from(root.querySelectorAll('img'))) {
-    const prevAttr = img.getAttribute('crossorigin')
-    if (img.crossOrigin !== 'anonymous') {
-      img.crossOrigin = 'anonymous'
-      restores.push(() => {
-        if (prevAttr === null) img.removeAttribute('crossorigin')
-        else img.setAttribute('crossorigin', prevAttr)
-      })
-    }
-  }
-
-  return () => { restores.forEach(fn => fn()) }
-}
-
 async function waitForImages(root: HTMLElement): Promise<void> {
   const imgs = Array.from(root.querySelectorAll('img'))
   const pending: string[] = []
@@ -156,10 +139,10 @@ export async function captureLiteralUi(
   await waitForImages(element)
 
   const restoreExpand = expandForFullCapture(element)
-  const restoreCors = applyCaptureImageCors(element)
+  let restoreProxy: StyleRestore = () => {}
 
   try {
-    await waitForImages(element)
+    restoreProxy = await swapImagesToProxyForCapture(element)
     await waitForLayout()
 
     const blob = await toBlob(element, {
@@ -167,11 +150,6 @@ export async function captureLiteralUi(
       cacheBust: true,
       skipFonts: false,
       backgroundColor: '#0e0c12',
-      fetchRequestInit: {
-        mode: 'cors',
-        credentials: 'omit',
-        cache: 'no-cache',
-      },
     })
 
     if (!blob) throw new Error('literal-ui-capture: toBlob returned null')
@@ -189,7 +167,7 @@ export async function captureLiteralUi(
     })
     throw err
   } finally {
-    restoreCors()
+    restoreProxy()
     restoreExpand()
     logExportDebug('literal-ui-capture:restored', { attemptId })
   }

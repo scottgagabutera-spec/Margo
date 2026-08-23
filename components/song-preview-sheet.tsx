@@ -354,7 +354,6 @@ export function SongPreviewSheet({
                   src={song.artwork}
                   alt=""
                   fill
-                  crossOrigin="anonymous"
                   style={{ objectFit: 'cover' }}
                   sizes={`${COVER_SIZE}px`}
                 />
@@ -545,7 +544,6 @@ export function SongPreviewSheet({
                         <img
                           src={ownerProfile.avatarUrl}
                           alt=""
-                          crossOrigin="anonymous"
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : (
