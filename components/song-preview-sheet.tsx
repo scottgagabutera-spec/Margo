@@ -315,15 +315,16 @@ export function SongPreviewSheet({
               <p style={{
                 fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400,
                 color: 'var(--text-secondary)', margin: '0 0 3px', lineHeight: 1.3,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'baseline', minWidth: 0,
               }}>
-                {song.artist}
+                <span style={{
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  minWidth: 0, flex: '1 1 auto',
+                }}>
+                  {song.artist}
+                </span>
+                {song.isAiGenerated ? <AiGeneratedLabel show suffix /> : null}
               </p>
-              {song.isAiGenerated ? (
-                <div style={{ marginBottom: '3px' }}>
-                  <AiGeneratedLabel show />
-                </div>
-              ) : null}
               <p style={{
                 fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 400,
                 color: 'var(--text-muted)', margin: 0, lineHeight: 1.35,
