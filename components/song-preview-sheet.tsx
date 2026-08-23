@@ -1,18 +1,21 @@
 'use client'
 
-import { useEffect, useMemo, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { CloseIcon, ChevronRightIcon, ShareIcon } from '@/components/icons'
+import { PlayIcon } from '@/components/icons/play-icon'
 import { AiGeneratedLabel } from '@/components/ai-generated-label'
 import { CardOverflowMenu, type CardOverflowItem } from '@/components/card-overflow-menu'
 import { HeartIcon } from '@/components/heart-icon'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { useSong } from '@/hooks/useSong'
 import { useSongOwnerProfile } from '@/hooks/useSongOwnerProfile'
+import { useSongPreviewEnrich } from '@/hooks/useSongPreviewEnrich'
 import { useSongLibrarySaves } from '@/hooks/useSongLibrarySaves'
+import { useSharedLines } from '@/hooks/useSharedLines'
 import type { Song } from '@/hooks/useSongs'
 import type { SongCardData } from '@/components/song-catalog-card'
 import {
@@ -21,7 +24,7 @@ import {
   queuePlayNext,
 } from '@/lib/audio-engine'
 import { shareSong } from '@/lib/song-share'
-import { UI_FONT } from '@/lib/fonts'
+import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 export type SongPreviewSeed = SongCardData & Partial<Omit<Song, keyof SongCardData>>
 
@@ -41,10 +44,45 @@ const SONG_STREAMING_LINKS: { key: keyof Song; label: string }[] = [
 ]
 
 const COVER_SIZE = 96
+const ACTION_H = 40
+
+function ArtistSkeleton() {
+  const bar = (w: string, h: number, mb = 0): CSSProperties => ({
+    width: w,
+    height: h,
+    borderRadius: '6px',
+    background: 'rgba(255,255,255,0.06)',
+    marginBottom: mb,
+  })
+
+  return (
+    <div aria-hidden style={{ minHeight: '118px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+        <div style={{
+          width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+          background: 'rgba(255,255,255,0.06)',
+        }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={bar('72%', 12, 6)} />
+        </div>
+      </div>
+      <div style={bar('100%', 10, 5)} />
+      <div style={bar('88%', 10, 10)} />
+      <div style={{ display: 'flex', gap: '6px' }}>
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} style={{
+            width: '14px', height: '14px', borderRadius: '50%',
+            background: 'rgba(255,255,255,0.05)',
+          }} />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 /**
- * Compact song preview — mini profile before Play & Lyrics.
- * Mobile: bottom sheet. Desktop: centered card. Does not auto-play.
+ * Centered song profile card — compact preview before Play & Lyrics.
+ * Does not auto-play.
  */
 export function SongPreviewSheet({
   song: seed,
@@ -58,14 +96,20 @@ export function SongPreviewSheet({
   const router = useRouter()
   const { requireAuth } = useAuthGate()
   const { isLiked, isListenLater, toggleLike, toggleListenLater } = useSongLibrarySaves()
-  const { song: fetched } = useSong(seed?.id ?? null)
-  const { profile: ownerProfile } = useSongOwnerProfile(seed?.id ?? null)
+  const { enrich } = useSongPreviewEnrich(seed?.id ?? null)
+  const { profile: ownerProfile, loading: ownerLoading } = useSongOwnerProfile(seed?.id ?? null)
+  const { lines: sharedLines } = useSharedLines(seed?.title ?? null, seed?.artist ?? null)
+  const [descExpanded, setDescExpanded] = useState(false)
 
   const song = useMemo(() => {
     if (!seed) return null
-    if (fetched) return { ...seed, ...fetched, lyricLines: fetched.lyricLines }
-    return { ...seed, lyricLines: seed.lyricLines ?? [] } as Song
-  }, [seed, fetched])
+    return { ...seed, ...enrich, lyricLines: seed.lyricLines ?? [] } as Song
+  }, [seed, enrich])
+
+  useEffect(() => {
+    if (!seed) return
+    setDescExpanded(false)
+  }, [seed?.id])
 
   useEffect(() => {
     if (!seed) return
@@ -90,6 +134,13 @@ export function SongPreviewSheet({
   const description = (song.description || '').trim()
   const artistUsername = artistUsernameHint || ownerProfile?.username || null
   const artistBio = (ownerProfile?.bio || '').trim()
+  const topSharedLine = sharedLines[0]?.line?.trim() || ''
+
+  const statsParts = [
+    `${formatNum(song.plays || 0)} plays`,
+    `${formatNum(song.lyricUses || 0)} lyric uses`,
+    `${formatNum(song.resonates || 0)} resonates`,
+  ]
 
   const handlePlayAndLyrics = () => {
     if (!requireAuth()) return
@@ -140,18 +191,17 @@ export function SongPreviewSheet({
     }]
   })
 
-  const metaLine = `${formatNum(song.plays || 0)} plays · ${formatNum(song.lyricUses || 0)} lyric uses`
-  const showArtistCard = !!(artistUsername || ownerProfile)
-
-  const handleShare = () => {
-    void shareSong({ id: song.id, title: song.title, artist: song.artist })
+  const handleShare = async () => {
+    const result = await shareSong({ id: song.id, title: song.title, artist: song.artist })
+    if (result === 'copied') toast.success('Link copied')
+    else if (result === 'shared') toast.success('Shared')
   }
 
   const ghostBtn: CSSProperties = {
-    width: 'var(--margo-touch-min)',
-    height: 'var(--margo-touch-min)',
+    width: ACTION_H,
+    height: ACTION_H,
     borderRadius: '50%',
-    background: 'rgba(255,255,255,0.06)',
+    background: 'rgba(255,255,255,0.05)',
     border: '1px solid var(--border-hi)',
     color: 'var(--text-secondary)',
     cursor: 'pointer',
@@ -159,10 +209,12 @@ export function SongPreviewSheet({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    transition: 'all 150ms ease',
+    transition: 'background 150ms ease',
     boxSizing: 'border-box',
     padding: 0,
   }
+
+  const descLong = description.length > 140
 
   return (
     <div
@@ -173,219 +225,266 @@ export function SongPreviewSheet({
       className="margo-preview-scrim"
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-        paddingBottom: 'var(--margo-page-bottom)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '12px',
         animation: 'fadeInOverlay 250ms ease forwards',
       }}
     >
       <style>{`
         @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes slideUp { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-        .song-preview-play-btn:active { transform: scale(1.02); }
+        @keyframes scaleIn { from { transform: translateY(8px) scale(0.98); opacity: 0 } to { transform: translateY(0) scale(1); opacity: 1 } }
+        .song-preview-play-btn:active { transform: scale(0.98); }
         .song-preview-ghost-btn:active { background: rgba(255,255,255,0.1) !important; }
-        .song-preview-secondary-btn:active { background: rgba(255,255,255,0.08) !important; }
+        .song-preview-share-btn:active { background: rgba(255,255,255,0.08) !important; }
         @media (hover: hover) and (pointer: fine) {
-          .song-preview-play-btn:hover { transform: scale(1.02); box-shadow: 0 6px 24px var(--gold-glow) !important; }
-          .song-preview-ghost-btn:hover { background: rgba(255,255,255,0.1) !important; }
-          .song-preview-secondary-btn:hover { background: rgba(255,255,255,0.07) !important; }
+          .song-preview-play-btn:hover { filter: brightness(1.06); }
+          .song-preview-ghost-btn:hover { background: rgba(255,255,255,0.09) !important; }
+          .song-preview-share-btn:hover { background: rgba(255,255,255,0.07) !important; }
         }
-        @media (min-width: 1024px) {
-          .song-preview-sheet { border-radius: 20px; max-width: 520px; margin: auto; }
-          .song-preview-wrap { align-items: center; padding-bottom: 0 !important; }
-          .margo-preview-scrim { padding-bottom: 0 !important; }
+        @media (max-width: 639px) {
+          .song-preview-card { transform: translateY(-2vh); }
         }
       `}</style>
+
       <div
-        className="song-preview-wrap"
-        onClick={onClose}
-        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+        className="song-preview-card"
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'linear-gradient(160deg, rgba(28,24,36,0.98) 0%, rgba(14,12,18,0.99) 100%)',
+          border: '1px solid var(--border-hi)',
+          width: 'min(400px, calc(100% - 24px))',
+          maxWidth: '440px',
+          maxHeight: 'min(92dvh, calc(100dvh - 24px))',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          position: 'relative',
+          borderRadius: '20px',
+          animation: 'scaleIn 280ms cubic-bezier(0.22, 1, 0.36, 1) forwards',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
+        }}
       >
-        <div
-          className="song-preview-sheet"
-          onClick={e => e.stopPropagation()}
-          style={{
-            background: 'linear-gradient(160deg, rgba(28,24,36,0.98) 0%, rgba(14,12,18,0.99) 100%)',
-            border: '1px solid var(--border-hi)',
-            width: '100%',
-            maxHeight: 'min(90dvh, calc(100dvh - var(--margo-page-bottom) - 8px))',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            position: 'relative',
-            animation: 'slideUp 320ms cubic-bezier(0.34,1.56,0.64,1) forwards',
-            borderRadius: '20px 20px 0 0',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0', flexShrink: 0 }}>
-            <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'var(--border-hi)' }} />
-          </div>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+          padding: '10px 12px 0', flexShrink: 0,
+        }}>
+          <button
+            type="button"
+            className="song-preview-ghost-btn"
+            onClick={onClose}
+            aria-label="Close"
+            style={ghostBtn}
+          >
+            <CloseIcon size={18} color="currentColor" />
+          </button>
+        </div>
 
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-            gap: '8px', padding: '4px 16px 0', flexShrink: 0,
-          }}>
-            <button
-              type="button"
-              className="song-preview-ghost-btn"
-              onClick={handleShare}
-              aria-label="Share song"
-              style={ghostBtn}
-            >
-              <ShareIcon size={18} color="currentColor" />
-            </button>
-            <button
-              type="button"
-              className="song-preview-ghost-btn"
-              onClick={onClose}
-              aria-label="Close"
-              style={ghostBtn}
-            >
-              <CloseIcon size={18} color="currentColor" />
-            </button>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 4px', WebkitOverflowScrolling: 'touch', minHeight: 0 }}>
-            <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-              <div style={{
-                position: 'relative', width: COVER_SIZE, height: COVER_SIZE, flexShrink: 0,
-                borderRadius: '12px', overflow: 'hidden',
-                boxShadow: '0 8px 28px rgba(0,0,0,0.45)',
-              }}>
-                {song.artwork ? (
-                  <Image src={song.artwork} alt="" fill style={{ objectFit: 'cover' }} sizes={`${COVER_SIZE}px`} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--gold-faint), rgba(255,255,255,0.03))' }} />
-                )}
-              </div>
-              <div style={{ minWidth: 0, flex: 1, paddingTop: '2px' }}>
-                <h2
-                  id="song-preview-title"
-                  style={{
-                    fontFamily: UI_FONT, fontSize: '0.95rem', fontWeight: 600,
-                    color: 'var(--text)', margin: '0 0 3px', lineHeight: 1.25,
-                    overflow: 'hidden', textOverflow: 'ellipsis',
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                  }}
-                >
-                  {song.title}
-                </h2>
-                <p style={{
-                  fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400,
-                  color: 'var(--text-secondary)', margin: '0 0 4px', lineHeight: 1.3,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {song.artist}
-                </p>
-                {song.isAiGenerated ? (
-                  <div style={{ marginBottom: '4px' }}>
-                    <AiGeneratedLabel show />
-                  </div>
-                ) : null}
-                <p style={{
-                  fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 400,
-                  color: 'var(--text-muted)', margin: 0, lineHeight: 1.35,
-                }}>
-                  {metaLine}
-                </p>
-              </div>
+        <div style={{
+          flex: 1, overflowY: 'auto', padding: '4px 18px 16px',
+          WebkitOverflowScrolling: 'touch', minHeight: 0,
+        }}>
+          {/* Song identity */}
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+            <div style={{
+              position: 'relative', width: COVER_SIZE, height: COVER_SIZE, flexShrink: 0,
+              borderRadius: '12px', overflow: 'hidden',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}>
+              {song.artwork ? (
+                <Image src={song.artwork} alt="" fill style={{ objectFit: 'cover' }} sizes={`${COVER_SIZE}px`} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--gold-faint), rgba(255,255,255,0.03))' }} />
+              )}
             </div>
-
-            {description ? (
+            <div style={{ minWidth: 0, flex: 1, paddingTop: '1px' }}>
+              <h2
+                id="song-preview-title"
+                style={{
+                  fontFamily: UI_FONT, fontSize: '1.05rem', fontWeight: 600,
+                  color: 'var(--text)', margin: '0 0 3px', lineHeight: 1.25,
+                  overflow: 'hidden', textOverflow: 'ellipsis',
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                }}
+              >
+                {song.title}
+              </h2>
               <p style={{
-                fontFamily: UI_FONT, fontSize: '0.82rem', fontWeight: 400,
-                color: 'var(--text-secondary)', lineHeight: 1.5,
-                margin: '12px 0 0',
-                overflow: 'hidden', display: '-webkit-box',
-                WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+                fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400,
+                color: 'var(--text-secondary)', margin: '0 0 3px', lineHeight: 1.3,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {song.artist}
+              </p>
+              {song.isAiGenerated ? (
+                <div style={{ marginBottom: '3px' }}>
+                  <AiGeneratedLabel show />
+                </div>
+              ) : null}
+              <p style={{
+                fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 400,
+                color: 'var(--text-muted)', margin: 0, lineHeight: 1.35,
+              }}>
+                {statsParts.join(' · ')}
+              </p>
+            </div>
+          </div>
+
+          {/* Description */}
+          {description ? (
+            <div style={{ marginTop: '12px' }}>
+              <p style={{
+                fontFamily: UI_FONT, fontSize: '0.8rem', fontWeight: 400,
+                color: 'var(--text-secondary)', lineHeight: 1.48,
+                margin: 0,
+                overflow: descExpanded ? 'visible' : 'hidden',
+                display: descExpanded ? 'block' : '-webkit-box',
+                WebkitLineClamp: descExpanded ? undefined : 3,
+                WebkitBoxOrient: 'vertical',
               }}>
                 {description}
               </p>
-            ) : null}
-          </div>
-
-          <div style={{
-            flexShrink: 0,
-            padding: '10px 20px calc(14px + var(--margo-safe-bottom))',
-            borderTop: '1px solid var(--border)',
-            background: 'linear-gradient(180deg, rgba(14,12,18,0.92), rgba(14,12,18,0.99))',
-            display: 'flex', flexDirection: 'column', gap: '8px',
-          }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <button
-                type="button"
-                className="song-preview-secondary-btn"
-                onClick={() => { void toggleLike(song.id) }}
-                aria-pressed={liked}
-                style={{
-                  flex: 1, padding: '10px 12px',
-                  background: liked ? 'var(--gold-faint)' : 'rgba(255,255,255,0.04)',
-                  border: '1px solid ' + (liked ? 'var(--gold-border)' : 'var(--border-hi)'),
-                  borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.65rem',
-                  cursor: 'pointer',
-                  color: liked ? 'var(--gold)' : 'var(--text-secondary)',
-                  minHeight: 'var(--margo-touch-min)',
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                  transition: 'all 150ms ease',
-                }}
-              >
-                <HeartIcon filled={liked} size={14} color="currentColor" />
-                {liked ? 'Liked' : 'Like'}
-              </button>
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-                <CardOverflowMenu
-                  items={libraryItems}
-                  ariaLabel="Library"
-                  icon="library"
-                  label="Library"
-                />
-              </div>
+              {descLong && !descExpanded ? (
+                <button
+                  type="button"
+                  onClick={() => setDescExpanded(true)}
+                  style={{
+                    marginTop: '4px', padding: 0, border: 'none', background: 'none',
+                    fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 500,
+                    color: 'var(--text-muted)', cursor: 'pointer',
+                  }}
+                >
+                  More
+                </button>
+              ) : null}
             </div>
+          ) : null}
 
+          {/* Economical lyric social proof */}
+          {topSharedLine ? (
+            <div style={{ marginTop: description ? '10px' : '12px' }}>
+              <p style={{
+                fontFamily: UI_FONT, fontSize: '0.65rem', fontWeight: 400,
+                color: 'var(--text-muted)', margin: '0 0 4px', lineHeight: 1.3,
+              }}>
+                Most shared line
+              </p>
+              <p style={{
+                fontFamily: LYRIC_FONT, fontSize: '0.85rem', fontWeight: 400,
+                color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0,
+                overflow: 'hidden', display: '-webkit-box',
+                WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                fontStyle: 'italic',
+              }}>
+                {topSharedLine}
+              </p>
+            </div>
+          ) : null}
+
+          {/* Actions */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            marginTop: '14px', flexWrap: 'wrap',
+          }}>
             {isActive ? (
               <button
                 type="button"
                 className="song-preview-play-btn"
                 onClick={handlePlayAndLyrics}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  padding: '12px 18px', background: 'var(--gold)', color: 'var(--bg)',
-                  borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.7rem',
-                  letterSpacing: '0.5px', border: 'none',
-                  minHeight: 'var(--margo-touch-min)', transition: 'all 200ms ease', cursor: 'pointer',
-                  boxShadow: '0 4px 20px var(--gold-glow)', width: '100%',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+                  padding: '0 18px', height: ACTION_H,
+                  background: 'var(--gold)', color: 'var(--bg)',
+                  borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.7rem',
+                  border: 'none', cursor: 'pointer', transition: 'transform 150ms ease, background 150ms ease',
+                  flexShrink: 0,
                 }}
               >
+                <PlayIcon size={16} color="var(--bg)" />
                 Play &amp; Lyrics
-                <ChevronRightIcon size={16} color="var(--bg)" />
               </button>
             ) : (
               <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '12px 18px', background: 'rgba(255,255,255,0.04)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 18px', height: ACTION_H,
+                background: 'rgba(255,255,255,0.04)',
                 border: '1px solid var(--border)', borderRadius: '50px',
                 fontFamily: UI_FONT, fontWeight: 600, fontSize: '0.7rem',
-                color: 'var(--text-muted)', minHeight: 'var(--margo-touch-min)',
+                color: 'var(--text-muted)',
               }}>
                 {song.comingSoonLabel || 'Coming Soon'}
               </div>
             )}
 
-            {streamingItems.length > 0 ? (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
-                <span style={{
-                  fontFamily: UI_FONT, fontSize: '0.6rem', fontWeight: 500,
-                  color: 'var(--text-muted)',
-                }}>
-                  Listen elsewhere
-                </span>
-                <CardOverflowMenu items={streamingItems} ariaLabel="Listen elsewhere" align="right" />
-              </div>
-            ) : null}
+            <button
+              type="button"
+              className="song-preview-ghost-btn"
+              onClick={() => { void toggleLike(song.id) }}
+              aria-pressed={liked}
+              aria-label={liked ? 'Unlike song' : 'Like song'}
+              style={{
+                ...ghostBtn,
+                background: liked ? 'var(--gold-faint)' : 'rgba(255,255,255,0.05)',
+                borderColor: liked ? 'var(--gold-border)' : 'var(--border-hi)',
+                color: liked ? 'var(--gold)' : 'var(--text-secondary)',
+              }}
+            >
+              <HeartIcon filled={liked} size={18} color="currentColor" />
+            </button>
 
-            {showArtistCard ? (
-              <div style={{
-                marginTop: '4px', paddingTop: '10px', borderTop: '1px solid var(--border)',
+            <CardOverflowMenu
+              items={libraryItems}
+              ariaLabel="Library"
+              icon="library"
+              label="Library"
+              compact
+            />
+
+            <button
+              type="button"
+              className="song-preview-share-btn"
+              onClick={() => { void handleShare() }}
+              aria-label="Share song"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                gap: '5px', height: ACTION_H, padding: '0 12px',
+                borderRadius: '50px', border: '1px solid var(--border-hi)',
+                background: 'rgba(255,255,255,0.04)',
+                color: 'var(--text-secondary)',
+                fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 600,
+                cursor: 'pointer', transition: 'background 150ms ease',
+                flexShrink: 0,
+              }}
+            >
+              <ShareIcon size={15} color="currentColor" />
+              Share
+            </button>
+          </div>
+
+          {streamingItems.length > 0 ? (
+            <div style={{
+              display: 'flex', justifyContent: 'flex-start', alignItems: 'center',
+              gap: '6px', marginTop: '10px',
+            }}>
+              <span style={{
+                fontFamily: UI_FONT, fontSize: '0.65rem', fontWeight: 400,
+                color: 'var(--text-muted)',
               }}>
+                Listen elsewhere
+              </span>
+              <CardOverflowMenu items={streamingItems} ariaLabel="Listen elsewhere" align="left" compact />
+            </div>
+          ) : null}
+
+          {/* Artist block — always reserved */}
+          <div style={{
+            marginTop: '16px', paddingTop: '14px',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            minHeight: '118px',
+          }}>
+            {ownerLoading && !ownerProfile ? (
+              <ArtistSkeleton />
+            ) : (
+              <>
                 {artistUsername ? (
                   <Link
                     href={`/profile/${artistUsername}`}
@@ -393,7 +492,7 @@ export function SongPreviewSheet({
                     style={{
                       display: 'flex', alignItems: 'center', gap: '10px',
                       textDecoration: 'none', color: 'inherit', marginBottom: artistBio ? '6px' : '8px',
-                      minHeight: 'var(--margo-touch-min)',
+                      minHeight: '40px',
                     }}
                   >
                     <div style={{
@@ -427,7 +526,7 @@ export function SongPreviewSheet({
                 ) : (
                   <p style={{
                     fontFamily: UI_FONT, fontSize: '0.82rem', fontWeight: 600,
-                    color: 'var(--text)', margin: '0 0 6px', textAlign: 'left',
+                    color: 'var(--text)', margin: '0 0 6px',
                   }}>
                     {ownerProfile?.displayName || song.artist}
                   </p>
@@ -444,11 +543,12 @@ export function SongPreviewSheet({
                 ) : null}
                 <ProfileArtistLinks
                   links={ownerProfile?.artistLinks}
-                  compact
+                  variant="preview"
                   margoProfileUsername={artistUsername}
+                  onMargoProfileClick={onClose}
                 />
-              </div>
-            ) : null}
+              </>
+            )}
           </div>
         </div>
       </div>

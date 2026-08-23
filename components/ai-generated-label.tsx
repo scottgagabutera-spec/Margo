@@ -21,7 +21,7 @@ export function AiGeneratedLabel({
       style={{
         display: 'inline-block',
         fontFamily: UI_FONT,
-        fontSize: '0.6rem',
+        fontSize: '0.625rem',
         fontWeight: 400,
         letterSpacing: '0.2px',
         color: 'var(--text-muted)',
