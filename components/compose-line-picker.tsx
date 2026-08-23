@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from '@/components/icons'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { playSnippet, warmUrl } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
+import { UI_FONT } from '@/lib/fonts'
 
 export interface ComposeLyricLine {
   lineIndex: number
@@ -12,7 +13,7 @@ export interface ComposeLyricLine {
   endSec: number
 }
 
-const font = 'var(--font-lora), serif'
+const lyricFont = 'var(--font-lora), serif'
 
 function formatTime(s: number) {
   const m = Math.floor(s / 60)
@@ -34,6 +35,8 @@ interface ComposeLinePickerProps {
   audioUrl?: string | null
   songId?: string | null
   artwork?: string | null
+  /** Stage landing — quieter chrome, smaller title. */
+  variant?: 'compose' | 'stage'
 }
 
 function ComposeLineRow({
@@ -44,6 +47,8 @@ function ComposeLineRow({
   songId,
   artwork,
   onPick,
+  stage = false,
+  isLast = false,
 }: {
   line: ComposeLyricLine
   songTitle: string
@@ -52,11 +57,12 @@ function ComposeLineRow({
   songId: string | null
   artwork: string | null
   onPick: (line: ComposeLyricLine) => void
+  stage?: boolean
+  isLast?: boolean
 }) {
   const { playing, buffering } = useSnippetPlaybackUi(songId || audioUrl, line.lineIndex)
 
   const handlePick = () => {
-    // play() must stay inside this tap for iOS. Call before onPick/unmount.
     void playSnippet({
       songId: songId || audioUrl,
       audioUrl,
@@ -72,6 +78,9 @@ function ComposeLineRow({
     onPick(line)
   }
 
+  const playSize = stage ? 28 : 44
+  const playIconSize = 14
+
   return (
     <button
       type="button"
@@ -80,12 +89,12 @@ function ComposeLineRow({
         width: '100%',
         display: 'flex',
         alignItems: 'flex-start',
-        gap: '14px',
-        padding: '14px 16px',
+        gap: stage ? '12px' : '14px',
+        padding: stage ? '12px 14px' : '14px 16px',
         minHeight: 'var(--margo-touch-min)',
         background: playing ? 'var(--gold-faint)' : 'none',
         border: 'none',
-        borderBottom: '1px solid var(--border)',
+        borderBottom: isLast ? 'none' : '1px solid var(--border)',
         cursor: 'pointer',
         textAlign: 'left',
         boxSizing: 'border-box',
@@ -93,8 +102,8 @@ function ComposeLineRow({
     >
       <span
         style={{
-          width: 'var(--margo-touch-min)',
-          height: 'var(--margo-touch-min)',
+          width: `${playSize}px`,
+          height: `${playSize}px`,
           borderRadius: '50%',
           flexShrink: 0,
           display: 'flex',
@@ -103,44 +112,59 @@ function ComposeLineRow({
           background: playing ? 'var(--gold-glow)' : 'var(--gold-faint)',
           border: '1px solid var(--gold-border)',
           boxSizing: 'border-box',
+          marginTop: stage ? '2px' : 0,
         }}
       >
-        <PlayPauseIcon playing={playing} buffering={buffering} size={16} color="var(--gold)" />
+        <PlayPauseIcon playing={playing} buffering={buffering} size={playIconSize} color="var(--gold)" />
       </span>
+      {!stage ? (
+        <span
+          style={{
+            fontFamily: lyricFont,
+            fontSize: '0.6rem',
+            color: 'var(--gold)',
+            letterSpacing: '0.5px',
+            flexShrink: 0,
+            paddingTop: '4px',
+            minWidth: '36px',
+          }}
+        >
+          {formatTime(line.startSec)}
+        </span>
+      ) : null}
       <span
         style={{
-          fontFamily: font,
-          fontSize: '0.6rem',
-          color: 'var(--gold)',
-          letterSpacing: '0.5px',
-          flexShrink: 0,
-          paddingTop: '4px',
-          minWidth: '36px',
-        }}
-      >
-        {formatTime(line.startSec)}
-      </span>
-      <span
-        style={{
-          fontFamily: font,
+          fontFamily: lyricFont,
           fontStyle: 'italic',
           fontSize: '0.95rem',
           color: 'var(--text)',
           lineHeight: 1.45,
-          paddingTop: '2px',
+          paddingTop: stage ? '4px' : '2px',
+          flex: 1,
+          minWidth: 0,
         }}
       >
         {line.text}
       </span>
+      {stage ? (
+        <span
+          style={{
+            fontFamily: UI_FONT,
+            fontSize: '0.65rem',
+            color: 'var(--text-muted)',
+            flexShrink: 0,
+            paddingTop: '6px',
+          }}
+        >
+          {formatTime(line.startSec)}
+        </span>
+      ) : null}
     </button>
   )
 }
 
 /**
  * Tap-to-pick a real lyric_lines row for a Margo catalog song.
- * Timing comes straight from the row — no fuzzy match.
- * When audioUrl is passed, the same tap plays that line's snippet.
- * List height uses dvh + --margo-vv-height so iOS keyboard open remains scrollable.
  */
 export function ComposeLinePicker({
   lines,
@@ -154,9 +178,11 @@ export function ComposeLinePicker({
   audioUrl = null,
   songId = null,
   artwork = null,
+  variant = 'compose',
 }: ComposeLinePickerProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const canHear = !!audioUrl
+  const isStage = variant === 'stage'
 
   useEffect(() => {
     if (!audioUrl || loading || lines.length === 0) return
@@ -170,34 +196,53 @@ export function ComposeLinePicker({
         onClick={onBack}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          fontFamily: font, fontSize: '0.82rem',
-          color: 'var(--text-secondary)', letterSpacing: '0.5px',
-          marginBottom: '32px', padding: '0 12px', minHeight: 'var(--margo-touch-min)',
+          fontFamily: isStage ? UI_FONT : lyricFont,
+          fontSize: '0.82rem',
+          color: 'var(--text-secondary)', letterSpacing: '0.3px',
+          marginBottom: isStage ? '20px' : '32px',
+          padding: '0 4px', minHeight: 'var(--margo-touch-min)',
           display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
         }}
       ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
 
-      <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-        <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--gold)', marginBottom: '8px' }}>
-          Pick the line
+      <div style={{ textAlign: isStage ? 'left' : 'center', marginBottom: isStage ? '20px' : '28px' }}>
+        <h1 style={{
+          fontFamily: lyricFont,
+          fontStyle: 'italic',
+          fontSize: isStage ? 'clamp(1.5rem, 4vw, 1.75rem)' : '2rem',
+          color: isStage ? 'var(--text)' : 'var(--gold)',
+          marginBottom: '6px',
+          fontWeight: 400,
+          lineHeight: 1.15,
+        }}>
+          {isStage ? 'Choose a line' : 'Pick the line'}
         </h1>
-        <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-          {canHear ? 'Tap a line to hear it' : 'Pick the line you want'}
+        <p style={{
+          fontFamily: isStage ? UI_FONT : lyricFont,
+          fontSize: isStage ? '0.78rem' : '0.82rem',
+          color: 'var(--text-secondary)',
+          marginBottom: isStage ? 0 : '4px',
+        }}>
+          {canHear
+            ? (isStage ? 'Tap to preview' : 'Tap a line to hear it')
+            : (isStage ? 'Tap the line you mean' : 'Pick the line you want')}
         </p>
-        <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-          {artistName} · {songTitle}
-        </p>
+        {!isStage ? (
+          <p style={{ fontFamily: lyricFont, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            {artistName} · {songTitle}
+          </p>
+        ) : null}
       </div>
 
       {loading && (
-        <p style={{ textAlign: 'center', fontFamily: font, color: 'var(--gold)', fontSize: '0.82rem' }}>
+        <p style={{ textAlign: isStage ? 'left' : 'center', fontFamily: isStage ? UI_FONT : lyricFont, color: 'var(--gold)', fontSize: '0.82rem' }}>
           Loading lyrics…
         </p>
       )}
 
       {!loading && lines.length === 0 && (
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: stickySkip ? 0 : '20px' }}>
+        <div style={{ textAlign: isStage ? 'left' : 'center' }}>
+          <p style={{ fontFamily: lyricFont, fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: stickySkip ? 0 : '20px' }}>
             No synced lyrics for this song yet.
           </p>
           {onSkip && !stickySkip && (
@@ -208,7 +253,7 @@ export function ComposeLinePicker({
                 minHeight: 'var(--margo-touch-min)', padding: '0 24px',
                 display: 'inline-flex', alignItems: 'center',
                 background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))', borderRadius: '50px',
-                fontFamily: font, fontWeight: 700, fontSize: '0.6rem',
+                fontFamily: lyricFont, fontWeight: 700, fontSize: '0.6rem',
                 letterSpacing: '1px', textTransform: 'uppercase', border: 'none', cursor: 'pointer',
               }}
             >Continue without hearing it</button>
@@ -226,11 +271,11 @@ export function ComposeLinePicker({
             touchAction: 'pan-y',
             WebkitOverflowScrolling: 'touch',
             border: '1px solid var(--border)',
-            borderRadius: '16px',
-            background: 'var(--surface)',
+            borderRadius: isStage ? '14px' : '16px',
+            background: isStage ? 'var(--surface-elevated)' : 'var(--surface)',
           }}
         >
-          {lines.map((line) => (
+          {lines.map((line, index) => (
             canHear ? (
               <ComposeLineRow
                 key={line.lineIndex}
@@ -241,6 +286,8 @@ export function ComposeLinePicker({
                 songId={songId}
                 artwork={artwork}
                 onPick={onPick}
+                stage={isStage}
+                isLast={index === lines.length - 1}
               />
             ) : (
               <button
@@ -251,12 +298,12 @@ export function ComposeLinePicker({
                   width: '100%',
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: '14px',
-                  padding: '14px 16px',
+                  gap: '12px',
+                  padding: isStage ? '12px 14px' : '14px 16px',
                   minHeight: 'var(--margo-touch-min)',
                   background: 'none',
                   border: 'none',
-                  borderBottom: '1px solid var(--border)',
+                  borderBottom: index < lines.length - 1 ? '1px solid var(--border)' : 'none',
                   cursor: 'pointer',
                   textAlign: 'left',
                   boxSizing: 'border-box',
@@ -264,10 +311,10 @@ export function ComposeLinePicker({
               >
                 <span
                   style={{
-                    fontFamily: font,
-                    fontSize: '0.6rem',
-                    color: 'var(--gold)',
-                    letterSpacing: '0.5px',
+                    fontFamily: isStage ? UI_FONT : lyricFont,
+                    fontSize: '0.65rem',
+                    color: isStage ? 'var(--text-muted)' : 'var(--gold)',
+                    letterSpacing: '0.3px',
                     flexShrink: 0,
                     paddingTop: '4px',
                     minWidth: '36px',
@@ -277,11 +324,12 @@ export function ComposeLinePicker({
                 </span>
                 <span
                   style={{
-                    fontFamily: font,
+                    fontFamily: lyricFont,
                     fontStyle: 'italic',
                     fontSize: '0.95rem',
                     color: 'var(--text)',
                     lineHeight: 1.45,
+                    flex: 1,
                   }}
                 >
                   {line.text}

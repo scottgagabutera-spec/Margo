@@ -13,7 +13,7 @@ interface StageSearchFieldProps {
 }
 
 /**
- * Stage search field — label inside the field, gold focus treatment.
+ * Stage search field — single-voice placeholder, gold border on focus only.
  */
 export function StageSearchField({
   value,
@@ -24,44 +24,24 @@ export function StageSearchField({
 }: StageSearchFieldProps) {
   const [focused, setFocused] = useState(false)
   const inputId = useId()
-  const hasValue = value.length > 0
-  const showFloatingLabel = !hasValue
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
-      {showFloatingLabel && (
-      <label
-        htmlFor={inputId}
-        style={{
-          position: 'absolute',
-          left: '20px',
-          top: '10px',
-          fontFamily: UI_FONT,
-          fontSize: '0.72rem',
-          fontWeight: 600,
-          color: focused ? 'var(--gold)' : 'var(--text-secondary)',
-          letterSpacing: '0.3px',
-          pointerEvents: 'none',
-          transition: 'opacity 150ms ease, color 150ms ease',
-          opacity: focused ? 1 : 0.85,
-          zIndex: 1,
-        }}
-      >
-        What do you want to say?
-      </label>
-      )}
       <span
         style={{
           position: 'absolute',
-          right: '18px',
+          right: '14px',
           top: '50%',
           transform: 'translateY(-50%)',
           pointerEvents: 'none',
           display: 'flex',
-          opacity: 0.45,
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '24px',
+          height: '24px',
         }}
       >
-        <SearchIcon size={18} color="var(--text-muted)" />
+        <SearchIcon size={16} color={focused ? 'var(--text-muted)' : 'var(--text-disabled)'} />
       </span>
       <input
         id={inputId}
@@ -72,7 +52,7 @@ export function StageSearchField({
         spellCheck={false}
         value={value}
         disabled={disabled}
-        placeholder="Song, artist, or line…"
+        placeholder="Search a song or artist"
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => {
           setFocused(true)
@@ -85,24 +65,22 @@ export function StageSearchField({
         className="stage-search-input"
         style={{
           width: '100%',
-          height: 'var(--stage-search-h, 56px)',
-          padding: showFloatingLabel ? '26px 48px 10px 20px' : '0 48px 0 20px',
-          background: focused ? 'var(--gold-faint)' : 'var(--surface-2)',
+          height: 'var(--stage-search-h, 48px)',
+          padding: '0 44px 0 16px',
+          background: 'var(--surface-2)',
           border: '1px solid ' + (focused ? 'var(--gold-border)' : 'var(--border)'),
-          borderRadius: '16px',
+          borderRadius: '12px',
           color: 'var(--text)',
-          fontSize: '1rem',
+          fontSize: '0.95rem',
+          fontWeight: 400,
           fontFamily: UI_FONT,
           outline: 'none',
           boxSizing: 'border-box',
-          transition: 'background 150ms ease, border-color 150ms ease, padding 150ms ease',
+          transition: 'border-color 150ms ease',
         }}
       />
       <style>{`
-        @media (min-width: 640px) {
-          :root { --stage-search-h: 64px; }
-        }
-        .stage-search-input::placeholder { color: var(--text-disabled); }
+        .stage-search-input::placeholder { color: var(--text-muted); }
         .stage-search-input::-webkit-search-cancel-button { display: none; }
       `}</style>
     </div>

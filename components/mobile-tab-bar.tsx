@@ -29,6 +29,7 @@ export function MobileTabBar() {
 
   const shellHidden = hidesTabBar(pathname)
   const stageHidden = useStageChromeHidden()
+  const isLanding = pathname === '/'
 
   useLayoutEffect(() => {
     if (shellHidden || stageHidden) {
@@ -74,14 +75,15 @@ export function MobileTabBar() {
   if (shellHidden || stageHidden) return null
 
   return (
-    <nav ref={navRef} className="margo-mobile-tabbar" style={{
+    <nav ref={navRef} className={'margo-mobile-tabbar' + (isLanding ? ' margo-mobile-tabbar--landing' : '')} style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
       display: 'none',
       gridTemplateColumns: 'repeat(5, 1fr)',
       alignItems: 'center',
       padding: '8px 12px calc(8px + env(safe-area-inset-bottom))',
       background: 'var(--bg)',
-      boxShadow: '0 -1px 24px rgba(0,0,0,0.35)',
+      boxShadow: isLanding ? 'none' : '0 -1px 24px rgba(0,0,0,0.35)',
+      borderTop: isLanding ? '1px solid var(--border)' : 'none',
     }}>
       <Link href="/feed" style={tabStyle(isOnFeed)} {...feedLink}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -141,6 +143,12 @@ export function MobileTabBar() {
       <style>{`
         @media (max-width: 639px) {
           .margo-mobile-tabbar { display: grid !important; }
+        }
+        .margo-mobile-tabbar--landing a:not([aria-label="Send a line"]) {
+          color: var(--text-muted);
+        }
+        .margo-mobile-tabbar--landing a[aria-label="Send a line"] {
+          box-shadow: 0 2px 10px var(--gold-glow);
         }
       `}</style>
     </nav>

@@ -30,3 +30,15 @@ export function useStageChromePublisher(active: boolean) {
     return () => root.removeAttribute(STAGE_ATTR)
   }, [active])
 }
+
+const STAGE_SEARCH_ATTR = 'data-margo-stage-search'
+
+/** Dim/hide footer while Stage search dropdown is open. */
+export function useStageSearchPublisher(open: boolean) {
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    if (open) root.setAttribute(STAGE_SEARCH_ATTR, '1')
+    else root.removeAttribute(STAGE_SEARCH_ATTR)
+    return () => root.removeAttribute(STAGE_SEARCH_ATTR)
+  }, [open])
+}

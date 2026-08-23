@@ -18,8 +18,9 @@ export function StageSendBar({ onSaveImage, saving = false, signedIn = false }: 
         right: 0,
         bottom: 0,
         zIndex: 45,
-        padding: '12px 20px calc(12px + env(safe-area-inset-bottom))',
-        background: 'linear-gradient(to top, var(--bg) 70%, transparent)',
+        padding: '10px 20px calc(10px + env(safe-area-inset-bottom))',
+        background: 'var(--bg)',
+        borderTop: '1px solid var(--border)',
         boxSizing: 'border-box',
       }}
     >
@@ -29,7 +30,7 @@ export function StageSendBar({ onSaveImage, saving = false, signedIn = false }: 
           margin: '0 auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '6px',
         }}
       >
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -37,25 +38,24 @@ export function StageSendBar({ onSaveImage, saving = false, signedIn = false }: 
             type="button"
             disabled
             aria-disabled="true"
-            title={signedIn ? 'Coming soon' : 'Available after sign in'}
+            title={signedIn ? 'Coming soon' : undefined}
             style={{
               flex: 1,
               minHeight: 'var(--margo-touch-min)',
-              padding: '0 20px',
+              padding: '0 16px',
               borderRadius: '50px',
               border: '1px solid var(--border)',
-              background: 'var(--surface)',
-              color: 'var(--text-muted)',
+              background: 'transparent',
+              color: 'var(--text-disabled)',
               fontFamily: UI_FONT,
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              letterSpacing: '0.8px',
-              textTransform: 'uppercase',
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              letterSpacing: '0.2px',
               cursor: 'not-allowed',
-              opacity: 0.65,
+              opacity: 0.55,
             }}
           >
-            Send
+            {signedIn ? 'Send' : 'Sign in to send'}
           </button>
           <button
             type="button"
@@ -64,22 +64,20 @@ export function StageSendBar({ onSaveImage, saving = false, signedIn = false }: 
             style={{
               flex: 1,
               minHeight: 'var(--margo-touch-min)',
-              padding: '0 20px',
+              padding: '0 16px',
               borderRadius: '50px',
               border: 'none',
               background: 'var(--gold)',
               color: 'var(--text-on-gold, var(--bg))',
               fontFamily: UI_FONT,
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              letterSpacing: '0.8px',
-              textTransform: 'uppercase',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              letterSpacing: '0.2px',
               cursor: saving ? 'wait' : 'pointer',
               opacity: saving ? 0.7 : 1,
-              boxShadow: '0 4px 20px var(--gold-glow)',
             }}
           >
-            {saving ? 'Saving…' : 'Save image'}
+            {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
         {!signedIn && (
@@ -92,7 +90,7 @@ export function StageSendBar({ onSaveImage, saving = false, signedIn = false }: 
               color: 'var(--text-muted)',
             }}
           >
-            Available after sign in
+            Sign in to send lines
           </p>
         )}
       </div>

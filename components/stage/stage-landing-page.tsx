@@ -146,18 +146,7 @@ export function StageLandingPage() {
         </a>
       </nav>
 
-      <section
-        style={{
-          position: 'relative',
-          zIndex: 5,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          padding: '32px 24px 48px',
-          maxWidth: '56rem',
-          margin: '0 auto',
-        }}
-      >
+      <section className="margo-stage-zone">
         <StageLanding />
       </section>
 
@@ -165,8 +154,9 @@ export function StageLandingPage() {
         className="margo-landing-footer"
         style={{
           position: 'relative',
-          zIndex: 10,
-          padding: '24px 24px calc(var(--margo-page-padding-bottom) + 32px)',
+          zIndex: 1,
+          marginTop: 'var(--stage-footer-gap)',
+          padding: '0 24px calc(var(--margo-page-padding-bottom) + 32px)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'stretch',

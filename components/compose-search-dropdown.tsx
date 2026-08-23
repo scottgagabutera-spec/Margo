@@ -29,10 +29,22 @@ interface ComposeSearchDropdownProps {
   variant?: 'compose' | 'stage'
 }
 
+const STAGE_PLAY_HINT = {
+  flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '28px',
+  height: '28px',
+  borderRadius: '50%',
+  background: 'var(--gold-faint)',
+  border: '1px solid var(--gold-border)',
+} as const
+
 /**
  * Inline song-search dropdown — anchored under the search field.
  * Keyboard-safe maxHeight (dvh + --margo-vv-height), contained scroll,
- * transparent outside-tap dismiss (no scrim).
+ * outside-tap dismiss.
  */
 export function ComposeSearchDropdown({
   open,
@@ -50,7 +62,10 @@ export function ComposeSearchDropdown({
     <>
       <style>{`
         .compose-search-row { transition: background 120ms ease; }
-        .compose-search-row:active { background: rgba(255,255,255,0.04); }
+        .compose-search-row:active { background: rgba(255,255,255,0.06); }
+        .compose-search-row--stage:not(:last-child) {
+          border-bottom: 1px solid var(--border);
+        }
       `}</style>
       <button
         type="button"
@@ -63,7 +78,7 @@ export function ComposeSearchDropdown({
           border: 'none',
           padding: 0,
           margin: 0,
-          background: 'transparent',
+          background: isStage ? 'var(--stage-scrim)' : 'transparent',
           cursor: 'default',
         }}
       />
@@ -75,19 +90,19 @@ export function ComposeSearchDropdown({
           top: '100%',
           left: 0,
           right: 0,
-          marginTop: '8px',
-          /* Above mobile tab bar (z 50) so results aren't painted under it */
+          marginTop: '6px',
           zIndex: 55,
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '16px',
+          background: isStage ? 'var(--surface-elevated)' : 'var(--surface)',
+          border: `1px solid ${isStage ? 'var(--border-hi)' : 'var(--border)'}`,
+          borderRadius: isStage ? '14px' : '16px',
           overflowY: 'auto',
           overscrollBehavior: 'contain',
           touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch',
-          /* Cap height so the list ends above tab bar + mini-player */
           maxHeight: 'min(52dvh, calc(var(--margo-vv-height, 100dvh) * 0.42), 420px, calc(var(--margo-vv-height, 100dvh) - var(--margo-page-bottom) - 160px))',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.28)',
+          boxShadow: isStage
+            ? '0 0 0 1px rgba(0,0,0,0.4), 0 16px 40px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.35)'
+            : '0 12px 32px rgba(0,0,0,0.28)',
         }}
       >
         {loading && (
@@ -105,29 +120,31 @@ export function ComposeSearchDropdown({
           </div>
         )}
         {!loading && displayResults.length === 0 && (
-          <p style={{ textAlign: 'center', padding: '20px', fontFamily: UI_FONT, color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-            {isStage ? 'No matches yet — try a song or artist' : 'No songs found'}
+          <p style={{ textAlign: 'center', padding: '18px', fontFamily: UI_FONT, color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+            No songs found
           </p>
         )}
-        {displayResults.map((result) => {
+        {displayResults.map((result, index) => {
           const isHosted = result.source === 'margo'
           const showPlayHint = isStage && isHosted && !!result.audioUrl
+          const isLast = index === displayResults.length - 1
           return (
             <button
               key={result.source + '-' + result.id}
               type="button"
               role="option"
-              className="compose-search-row"
+              className={'compose-search-row' + (isStage ? ' compose-search-row--stage' : '')}
               onClick={() => onSelect(result)}
               style={{
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '16px',
-                padding: '14px 16px',
+                gap: isStage ? '12px' : '16px',
+                padding: isStage ? '12px 14px' : '14px 16px',
                 minHeight: 'var(--margo-touch-min)',
                 background: 'none',
                 border: 'none',
+                borderBottom: !isStage && !isLast ? '1px solid var(--border)' : 'none',
                 cursor: 'pointer',
                 textAlign: 'left',
                 boxSizing: 'border-box',
@@ -138,36 +155,54 @@ export function ComposeSearchDropdown({
                 <img
                   src={result.artwork}
                   alt=""
-                  style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, background: 'var(--surface-2)' }}
+                  style={{
+                    width: isStage ? '44px' : '48px',
+                    height: isStage ? '44px' : '48px',
+                    borderRadius: isStage ? '6px' : '8px',
+                    objectFit: 'cover',
+                    flexShrink: 0,
+                    background: 'var(--surface-2)',
+                  }}
                 />
               ) : (
-                <div style={{ width: '48px', height: '48px', borderRadius: '8px', flexShrink: 0, background: 'var(--surface-2)' }} />
+                <div
+                  style={{
+                    width: isStage ? '44px' : '48px',
+                    height: isStage ? '44px' : '48px',
+                    borderRadius: isStage ? '6px' : '8px',
+                    flexShrink: 0,
+                    background: 'var(--surface-2)',
+                  }}
+                />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontFamily: UI_FONT, color: 'var(--text)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{
+                  fontFamily: UI_FONT,
+                  color: 'var(--text)',
+                  fontSize: isStage ? '0.9rem' : '0.95rem',
+                  fontWeight: 600,
+                  marginBottom: '2px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
                   {result.title}
                 </p>
-                <p style={{ fontFamily: UI_FONT, color: 'var(--text-secondary)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{
+                  fontFamily: UI_FONT,
+                  color: 'var(--text-secondary)',
+                  fontSize: isStage ? '0.78rem' : '0.82rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
                   {result.artist}
                 </p>
               </div>
               {isStage ? (
                 showPlayHint ? (
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      background: 'var(--gold-faint)',
-                      border: '1px solid var(--gold-border)',
-                    }}
-                    aria-hidden
-                  >
-                    <PlayIcon size={12} color="var(--gold)" />
+                  <span style={STAGE_PLAY_HINT} aria-hidden>
+                    <PlayIcon size={14} color="var(--gold)" />
                   </span>
                 ) : null
               ) : (

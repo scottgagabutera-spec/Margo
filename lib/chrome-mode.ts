@@ -2,7 +2,7 @@
  * App chrome modes (design epic D1 + landing tab restore):
  * - app — MargoNav + MobileTabBar (+ mini-player when playing)
  * - immersive — karaoke `/song/[id]`: hide shell chrome (nav + tab bar)
- * - marketing — landing `/`: Stage front door (landing nav only; tab bar hidden)
+ * - marketing — landing `/`: Stage front door (landing nav; tab bar shown at rest)
  */
 export type MargoChromeMode = 'app' | 'immersive' | 'marketing'
 
@@ -18,10 +18,9 @@ export function hidesAppNav(pathname: string | null | undefined): boolean {
   return mode === 'immersive' || mode === 'marketing'
 }
 
-/** Hide MobileTabBar on immersive karaoke and the Stage landing (`/`). */
+/** Hide MobileTabBar on immersive karaoke only. Stage landing shows tab bar at rest. */
 export function hidesTabBar(pathname: string | null | undefined): boolean {
-  const mode = chromeModeForPath(pathname)
-  return mode === 'immersive' || mode === 'marketing'
+  return chromeModeForPath(pathname) === 'immersive'
 }
 
 /** @deprecated Prefer hidesAppNav / hidesTabBar — kept for call-site migration. */

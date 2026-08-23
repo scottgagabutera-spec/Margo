@@ -9,7 +9,7 @@ import { StageSearchField } from '@/components/stage/stage-search-field'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
-import { useStageChromePublisher } from '@/lib/stage-chrome'
+import { useStageChromePublisher, useStageSearchPublisher } from '@/lib/stage-chrome'
 import { HEADLINES, resolveHeadlineVariant, type HeadlineVariant } from '@/lib/stage-headline-variant'
 import { saveMomentImage } from '@/lib/moment-export/save-moment-image'
 import { playSnippet } from '@/lib/audio-engine'
@@ -38,7 +38,7 @@ const VIBE_LABELS: Record<Vibe, string> = {
 }
 
 const font = 'var(--font-lora), serif'
-const SUBHEAD = 'Find a song. Pick the line. Send it to someone.'
+const SUBHEAD = "Pick a line. Send it to someone who'll feel it."
 
 function appleMusicSearchUrl(song: string, artist: string) {
   return 'https://music.apple.com/search?term=' + encodeURIComponent(song + ' ' + artist)
@@ -65,7 +65,6 @@ export function StageLanding() {
   const [linesLoading, setLinesLoading] = useState(false)
   const [linePickComplete, setLinePickComplete] = useState(false)
   const [vibeLabel, setVibeLabel] = useState<string | null>(null)
-  const [stageInteracting, setStageInteracting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [momentVisible, setMomentVisible] = useState(false)
 
@@ -89,7 +88,8 @@ export function StageLanding() {
     setHeadlineVariant(resolveHeadlineVariant())
   }, [])
 
-  useStageChromePublisher(stageInteracting)
+  useStageChromePublisher(showResults || !!selectedSong)
+  useStageSearchPublisher(showResults)
 
   const fetchEmotion = useCallback(async (text: string) => {
     if (!text.trim()) return
@@ -183,7 +183,6 @@ export function StageLanding() {
   }, [])
 
   const handleSearchChange = useCallback((value: string) => {
-    setStageInteracting(true)
     setSearchQuery(value)
     if (value.length < 2) {
       if (searchTimerRef.current) {
@@ -286,7 +285,6 @@ export function StageLanding() {
   }, [])
 
   const handleSelectSong = useCallback(async (result: SearchResult) => {
-    setStageInteracting(true)
     setSelectedSong(result)
     setArtistName(result.artist)
     setSongName(result.title)
@@ -384,16 +382,16 @@ export function StageLanding() {
   return (
     <section style={{ position: 'relative', zIndex: 5, width: '100%', maxWidth: '480px', margin: '0 auto' }}>
       {!selectedSong && (
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <h1
             style={{
               fontFamily: font,
-              fontSize: 'clamp(1.75rem, 6vw, 2.35rem)',
+              fontSize: 'clamp(1.65rem, 5.5vw, 2.35rem)',
               fontWeight: 400,
-              lineHeight: 1.2,
+              lineHeight: 1.15,
               letterSpacing: '-0.02em',
               color: 'var(--text)',
-              marginBottom: '12px',
+              marginBottom: '10px',
             }}
           >
             {headline}
@@ -401,9 +399,9 @@ export function StageLanding() {
           <p
             style={{
               fontFamily: font,
-              fontSize: '0.9rem',
-              color: 'var(--text-2)',
-              lineHeight: 1.6,
+              fontSize: 'clamp(0.82rem, 2.5vw, 0.88rem)',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.5,
               margin: 0,
               fontStyle: 'italic',
             }}
@@ -418,7 +416,6 @@ export function StageLanding() {
           <StageSearchField
             value={searchQuery}
             onChange={handleSearchChange}
-            onFocus={() => setStageInteracting(true)}
           />
           <ComposeSearchDropdown
             variant="stage"
@@ -441,6 +438,7 @@ export function StageLanding() {
           {showLinePicker && (
             <div style={{ width: '100%' }}>
               <ComposeLinePicker
+                variant="stage"
                 lines={margoLines}
                 loading={linesLoading}
                 songTitle={songName}
@@ -462,34 +460,23 @@ export function StageLanding() {
 
           {showWriteLine && (
             <div style={{ width: '100%' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontFamily: UI_FONT,
-                  fontSize: '0.72rem',
-                  color: 'var(--text-secondary)',
-                  marginBottom: '8px',
-                }}
-              >
-                Write the line…
-              </label>
               <textarea
                 value={lyric}
                 onChange={(e) => handleWriteLineChange(e.target.value)}
                 maxLength={140}
                 rows={3}
-                placeholder="Write the line…"
+                placeholder="Type the line…"
                 autoFocus={selectedSong.source !== 'margo'}
                 style={{
                   width: '100%',
                   padding: '14px 16px',
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
-                  borderRadius: '14px',
+                  borderRadius: '12px',
                   color: 'var(--text)',
                   fontFamily: font,
                   fontStyle: 'italic',
-                  fontSize: '1rem',
+                  fontSize: '0.95rem',
                   lineHeight: 1.5,
                   resize: 'none',
                   outline: 'none',
@@ -537,7 +524,7 @@ export function StageLanding() {
       )}
 
       {hasMoment && (
-        <div style={{ height: 'calc(var(--margo-touch-min) + 48px + env(safe-area-inset-bottom))' }} aria-hidden />
+        <div style={{ height: 'calc(var(--margo-touch-min) + 56px + env(safe-area-inset-bottom))' }} aria-hidden />
       )}
     </section>
   )

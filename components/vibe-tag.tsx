@@ -13,17 +13,19 @@ interface VibeTagProps {
    * gold hairline. For surfaces where the vibe should read as information,
    * not another brand-color element (e.g. sitting on the gold Moment card,
    * where gold is already doing the branding).
+   * 'on-gold' — ink hairline + muted ink text on the gold Moment card.
    */
-  variant?: 'tinted' | 'dark'
+  variant?: 'tinted' | 'dark' | 'on-gold'
 }
 
 /** Small price-tag silhouette pinned to a card edge — vibe identity via stroke/fill color. */
 export function VibeTag({ label, color, onClick, variant = 'tinted' }: VibeTagProps) {
   const isDark = variant === 'dark'
-  const fill = isDark ? 'var(--surface)' : color
-  const fillOpacity = isDark ? 1 : 0.14
-  const stroke = isDark ? 'var(--gold-border)' : color
-  const textColor = isDark ? 'var(--text)' : color
+  const isOnGold = variant === 'on-gold'
+  const fill = isOnGold ? 'rgba(7,6,10,0.08)' : isDark ? 'var(--surface)' : color
+  const fillOpacity = isOnGold ? 1 : isDark ? 1 : 0.14
+  const stroke = isOnGold ? 'rgba(7,6,10,0.18)' : isDark ? 'var(--gold-border)' : color
+  const textColor = isOnGold ? 'var(--text-on-gold)' : isDark ? 'var(--text)' : color
 
   return (
     <button

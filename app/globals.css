@@ -49,6 +49,16 @@
   --margo-player-tray-padding-bottom: calc(44px + var(--margo-safe-bottom));
   --margo-player-footer-padding-bottom: calc(36px + var(--margo-safe-bottom));
   --margo-player-share-sheet-padding-bottom: calc(48px + var(--margo-safe-bottom));
+  /* Stage landing (Phase 0) */
+  --surface-elevated: #121018;
+  --stage-scrim: rgba(7, 6, 10, 0.62);
+  --stage-search-h: 48px;
+  --stage-footer-gap: clamp(48px, 12vh, 96px);
+}
+@media (min-width: 640px) {
+  :root {
+    --stage-search-h: 52px;
+  }
 }
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -259,6 +269,29 @@
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
+}
+
+.margo-stage-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 32px 24px 0;
+  min-height: calc(100dvh - 64px - var(--margo-tabbar-h, 0px));
+  box-sizing: border-box;
+}
+@media (min-width: 640px) {
+  .margo-stage-zone {
+    min-height: calc(100dvh - 72px);
+    padding-top: 40px;
+  }
+}
+
+html[data-margo-stage-search] .margo-landing-footer {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .margo-landing-nav {
