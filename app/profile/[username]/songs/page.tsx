@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CatalogGrid, CatalogSortOption } from '@/components/catalog-grid'
-import { SongCatalogCard } from '@/components/song-catalog-card'
+import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-card'
+import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-preview-sheet'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 import { BackButton } from '@/components/back-button'
 
@@ -42,6 +43,11 @@ export default function ArtistDiscographyPage() {
   const [songs, setSongs] = useState<ArtistSongRow[]>([])
   const [loading, setLoading] = useState(true)
   const [sort, setSort] = useState('newest')
+  const [previewSong, setPreviewSong] = useState<SongPreviewSeed | null>(null)
+
+  const handleSelect = (card: SongCardData) => {
+    setPreviewSong(card)
+  }
 
   useEffect(() => {
     let active = true
@@ -104,6 +110,7 @@ export default function ArtistDiscographyPage() {
   }
 
   return (
+    <>
     <CatalogGrid
       items={sorted}
       loading={loading}
@@ -158,8 +165,17 @@ export default function ArtistDiscographyPage() {
             status: song.status,
             isAiGenerated: song.is_ai_generated ?? false,
           }}
+          onSelect={handleSelect}
         />
       )}
     />
+    {previewSong ? (
+      <SongPreviewSheet
+        song={previewSong}
+        onClose={() => setPreviewSong(null)}
+        artistUsernameHint={artist?.username}
+      />
+    ) : null}
+    </>
   )
 }

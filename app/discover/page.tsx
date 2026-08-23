@@ -4,11 +4,9 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
 import { useSongs, Song } from '@/hooks/useSongs'
 import { useLyricMoments } from '@/hooks/useLyricMoments'
 import type { LyricMomentRow } from '@/hooks/useLyricMoments'
-import { useSharedLines } from '@/hooks/useSharedLines'
 import { useIsPlaying, useIsBuffering } from '@/hooks/useAudioEngine'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { usePosts } from '@/hooks/usePosts'
@@ -17,12 +15,12 @@ import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { HeartIcon } from '@/components/heart-icon'
 import { SongCardActions } from '@/components/song-card-actions'
 import { AiGeneratedLabel } from '@/components/ai-generated-label'
+import { SongPreviewSheet } from '@/components/song-preview-sheet'
 import { LyricMomentCard } from '@/components/lyric-moment-card'
 import { ResonanceCard } from '@/components/resonance-card'
-import { useSongLibrarySaves } from '@/hooks/useSongLibrarySaves'
 import { CloseIcon } from '@/components/icons'
 import { SaveQueueButton } from '@/components/save-queue-button'
-import { stop as engineStop, warmUrls, subscribeAudioEngine, togglePlayPause, queuePlayNext, queueAdd, fullSongToQueueItem } from '@/lib/audio-engine'
+import { stop as engineStop, warmUrls, subscribeAudioEngine, togglePlayPause } from '@/lib/audio-engine'
 import { DISCOVER_VIBES, discoverVibeColor } from '@/lib/discover-vibes'
 import { buildLyricMomentsFromRows, type LyricMoment } from '@/lib/lyric-moments-board'
 import { playLyricMomentPool, queueLyricMoment } from '@/lib/lyric-moment-playback'
@@ -41,12 +39,6 @@ import { catalogRankIds } from '@/lib/catalog-rank'
 import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
-
-function formatNum(n: number): string {
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
-  return String(n)
-}
 
 const VIBES = DISCOVER_VIBES
 function vibeColor(vibe: string | null | undefined): string {
@@ -471,284 +463,6 @@ function ArtistsSection() {
   )
 }
 
-// ── Song Preview Sheet ───────────────────────────────────────────────
-// href now points at /song/[id] — the permanent canonical content
-// route — instead of /music/player?id=&au=. No audio URL passed
-// through the URL anymore; the song page fetches everything it needs
-// from useSong(id).
-function SongPreview({ song, onClose }: {
-  song: Song; onClose: () => void
-}) {
-  const { lines } = useSharedLines(song.title, song.artist)
-  const { requireAuth } = useAuthGate()
-  const { isLiked, isListenLater, toggleLike, toggleListenLater } = useSongLibrarySaves()
-  const router = useRouter()
-  const isActive = song.status === 'live' || song.status === 'active'
-  const liked = isLiked(song.id)
-  const later = isListenLater(song.id)
-
-  const handlePlayNow = () => {
-    if (!requireAuth()) return
-    router.push(`/song/${song.id}`)
-  }
-
-  const handlePlayNext = () => {
-    if (!requireAuth()) return
-    if (!song.audioUrl) return
-    queuePlayNext(
-      fullSongToQueueItem({
-        id: song.id,
-        audioUrl: song.audioUrl,
-        title: song.title,
-        artist: song.artist,
-        artwork: song.artwork ?? null,
-      }),
-    )
-  }
-
-  const handleAddToQueue = () => {
-    if (!requireAuth()) return
-    if (!song.audioUrl) return
-    queueAdd(
-      fullSongToQueueItem({
-        id: song.id,
-        audioUrl: song.audioUrl,
-        title: song.title,
-        artist: song.artist,
-        artwork: song.artwork ?? null,
-      }),
-    )
-  }
-
-  const metaBits = [
-    `${formatNum(song.plays || 0)} plays`,
-    `${formatNum(song.lyricUses || 0)} lyric uses`,
-  ]
-
-  return (
-    <div
-      onClick={onClose}
-      className="margo-preview-scrim"
-      style={{
-        position: 'fixed', inset: 0, zIndex: 100,
-        // Mode A sheet rule: sit above app chrome (not pad as if chrome shows through).
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-        paddingBottom: 'var(--margo-page-bottom)',
-        animation: 'fadeInOverlay 250ms ease forwards',
-      }}
-    >
-      <style>{`
-        @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes slideUp { from { transform: translateY(40px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-        .play-btn:active { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
-        .close-btn:active { background: rgba(255,255,255,0.1) !important; }
-        @media (hover: hover) and (pointer: fine) {
-          .play-btn:hover { transform: scale(1.04); box-shadow: 0 8px 36px rgba(232,197,71,0.4) !important; }
-          .close-btn:hover { background: rgba(255,255,255,0.1) !important; }
-        }
-        @media (min-width: 1024px) {
-          .preview-sheet { border-radius: 20px; max-width: 520px; margin: auto; }
-          .preview-wrap { align-items: center; padding-bottom: 0 !important; }
-          .margo-preview-scrim { padding-bottom: 0 !important; }
-        }
-      `}</style>
-      <div
-        className="preview-wrap"
-        onClick={onClose}
-        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
-      >
-        <div
-          className="preview-sheet"
-          onClick={e => e.stopPropagation()}
-          style={{
-            background: 'linear-gradient(160deg, rgba(28,24,36,0.98) 0%, rgba(14,12,18,0.99) 100%)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            width: '100%',
-            maxHeight: 'min(90dvh, calc(100dvh - var(--margo-page-bottom) - 8px))',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            position: 'relative',
-            animation: 'slideUp 320ms cubic-bezier(0.34,1.56,0.64,1) forwards',
-            borderRadius: '20px 20px 0 0',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0', flexShrink: 0 }}>
-            <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.15)' }} />
-          </div>
-
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-            padding: '12px 20px 0 28px', flexShrink: 0, gap: '12px',
-          }}>
-            <div style={{ minWidth: 0, flex: 1, paddingTop: '4px' }}>
-              <p style={{
-                fontFamily: UI_FONT, fontSize: '1.25rem', fontWeight: 600,
-                color: 'var(--text)', margin: '0 0 4px', lineHeight: 1.2,
-              }}>{song.title}</p>
-              <p style={{
-                fontFamily: UI_FONT, fontSize: '0.82rem',
-                color: 'var(--text-secondary)', margin: 0, letterSpacing: '0.3px',
-              }}>{song.artist}</p>
-            </div>
-            <button
-              type="button"
-              className="close-btn"
-              onClick={onClose}
-              aria-label="Close"
-              style={{
-                width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%',
-                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.55)', cursor: 'pointer', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 150ms ease', boxSizing: 'border-box',
-              }}
-            >
-              <CloseIcon size={18} color="currentColor" />
-            </button>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 8px', WebkitOverflowScrolling: 'touch' }}>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: '16px' }}>
-              {song.artwork && (
-                <div style={{
-                  position: 'relative', width: '88px', height: '88px', flexShrink: 0,
-                  borderRadius: '10px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-                }}>
-                  <Image src={song.artwork} alt={song.title} fill style={{ objectFit: 'cover' }} />
-                </div>
-              )}
-              <p style={{
-                fontFamily: UI_FONT, fontSize: '0.7rem', color: 'var(--text-muted)',
-                letterSpacing: '0.2px', margin: '8px 0 0', lineHeight: 1.5,
-              }}>
-                {metaBits.join(' · ')}
-              </p>
-            </div>
-
-            {lines[0] && (
-              <div style={{
-                padding: '16px 20px', background: 'rgba(232,197,71,0.04)',
-                border: '1px solid rgba(232,197,71,0.15)', borderRadius: '12px',
-              }}>
-                <p style={{
-                  fontFamily: LYRIC_FONT, fontStyle: 'italic', fontSize: '1.1rem',
-                  color: 'var(--text)', lineHeight: 1.65, margin: 0,
-                }}>&ldquo;{lines[0].line}&rdquo;</p>
-                <p style={{
-                  fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--gold)',
-                  letterSpacing: '1px', textTransform: 'uppercase', marginTop: '10px', marginBottom: 0,
-                }}>
-                  Most shared line · {lines[0].uses} {lines[0].uses === 1 ? 'use' : 'uses'}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div style={{
-            flexShrink: 0,
-            padding: '12px 28px calc(16px + var(--margo-safe-bottom))',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            background: 'linear-gradient(180deg, rgba(14,12,18,0.92), rgba(14,12,18,0.99))',
-            display: 'flex', flexDirection: 'column', gap: '10px',
-          }}>
-            <button
-              type="button"
-              onClick={() => { void toggleLike(song.id) }}
-              style={{
-                width: '100%', padding: '14px',
-                background: liked ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.04)',
-                border: '1px solid ' + (liked ? 'rgba(232,197,71,0.4)' : 'rgba(255,255,255,0.1)'),
-                borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.6rem',
-                letterSpacing: '1.5px', textTransform: 'uppercase', cursor: 'pointer',
-                transition: 'all 200ms ease', color: liked ? 'var(--gold)' : 'rgba(255,255,255,0.6)',
-                minHeight: 'var(--margo-touch-min)',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              }}
-            >
-              <HeartIcon filled={liked} size={14} color="currentColor" /> {liked ? 'Liked' : 'Like'}
-            </button>
-            {isActive ? (
-              <>
-                <button
-                  type="button"
-                  className="play-btn"
-                  onClick={handlePlayNow}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                    padding: '16px 28px', background: 'var(--gold)', color: 'var(--bg)',
-                    borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.6rem',
-                    letterSpacing: '1.5px', textTransform: 'uppercase', border: 'none',
-                    minHeight: '52px', transition: 'all 200ms ease', cursor: 'pointer',
-                    boxShadow: '0 6px 28px rgba(232,197,71,0.28)', width: '100%',
-                  }}
-                >
-                  <PlayPauseIcon playing={false} size={14} color="var(--bg)" /> Play Now
-                </button>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={handlePlayNext}
-                    style={{
-                      flex: 1, padding: '12px',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.55rem',
-                      letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
-                      color: 'var(--text-secondary)', minHeight: 'var(--margo-touch-min)',
-                    }}
-                  >
-                    Play Next
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAddToQueue}
-                    style={{
-                      flex: 1, padding: '12px',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.55rem',
-                      letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
-                      color: 'var(--text-secondary)', minHeight: 'var(--margo-touch-min)',
-                    }}
-                  >
-                    Add to Queue
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { void toggleListenLater(song.id) }}
-                  style={{
-                    width: '100%', padding: '12px',
-                    background: later ? 'rgba(232,197,71,0.08)' : 'rgba(255,255,255,0.04)',
-                    border: '1px solid ' + (later ? 'rgba(232,197,71,0.35)' : 'rgba(255,255,255,0.1)'),
-                    borderRadius: '50px', fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.55rem',
-                    letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
-                    color: later ? 'var(--gold)' : 'var(--text-secondary)', minHeight: 'var(--margo-touch-min)',
-                  }}
-                >
-                  {later ? 'In Listen Later' : 'Listen Later'}
-                </button>
-              </>
-            ) : (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '16px 28px', background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50px',
-                fontFamily: UI_FONT, fontWeight: 700, fontSize: '0.6rem',
-                letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-muted)',
-                minHeight: '52px',
-              }}>
-                {song.comingSoonLabel || 'Coming Soon'}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Search results ───────────────────────────────────────────────────
 // Client-side interim search across song title/artist AND lyric line
 // text. This is a stopgap for real Postgres full-text/trigram search
@@ -1029,7 +743,7 @@ export default function DiscoverPage() {
       `}</style>
 
       {preview && (
-        <SongPreview
+        <SongPreviewSheet
           song={preview}
           onClose={() => setPreview(null)}
         />
