@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { MoreIcon } from '@/components/icons'
+import { LibraryIcon, MoreIcon } from '@/components/icons'
 import { UI_FONT } from '@/lib/fonts'
 
 export type CardOverflowItem = {
@@ -21,10 +21,16 @@ export function CardOverflowMenu({
   items,
   ariaLabel = 'More actions',
   align = 'right',
+  icon = 'more',
+  label,
 }: {
   items: CardOverflowItem[]
   ariaLabel?: string
   align?: 'left' | 'right'
+  /** Trigger glyph — default ⋯ overflow. */
+  icon?: 'more' | 'library'
+  /** Optional text beside icon (pill trigger). */
+  label?: string
 }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
@@ -76,6 +82,9 @@ export function CardOverflowMenu({
   }, [open])
 
   if (items.length === 0) return null
+
+  const TriggerIcon = icon === 'library' ? LibraryIcon : MoreIcon
+  const isPill = !!label
 
   const panel = open && typeof document !== 'undefined'
     ? createPortal(
@@ -160,9 +169,12 @@ export function CardOverflowMenu({
           setOpen(o => !o)
         }}
         style={{
-          width: 'var(--margo-touch-min)',
+          width: isPill ? 'auto' : 'var(--margo-touch-min)',
           height: 'var(--margo-touch-min)',
-          borderRadius: '50%',
+          minWidth: isPill ? undefined : 'var(--margo-touch-min)',
+          minHeight: 'var(--margo-touch-min)',
+          padding: isPill ? '0 14px' : 0,
+          borderRadius: isPill ? '50px' : '50%',
           border: '1px solid var(--border-hi)',
           background: 'var(--margo-bar)',
           color: 'var(--text-secondary)',
@@ -170,11 +182,16 @@ export function CardOverflowMenu({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: 0,
+          gap: isPill ? '6px' : 0,
           boxSizing: 'border-box',
+          fontFamily: UI_FONT,
+          fontSize: isPill ? '0.65rem' : undefined,
+          fontWeight: isPill ? 600 : undefined,
+          letterSpacing: isPill ? '0.3px' : undefined,
         }}
       >
-        <MoreIcon size={16} color="var(--text-secondary)" />
+        <TriggerIcon size={16} color="var(--text-secondary)" />
+        {label ? <span>{label}</span> : null}
       </button>
       {panel}
     </div>
