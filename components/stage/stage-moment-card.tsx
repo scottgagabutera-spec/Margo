@@ -237,42 +237,78 @@ export function StageMomentCard({
             paddingBottom: vibePickerOpen ? '4px' : 0,
           }}
         >
-          {canCycleTheme ? (
-            <button
-              type="button"
-              aria-label={`Card color: ${theme.label}. Tap to change.`}
-              title={`Color: ${theme.label}`}
-              onClick={() => onThemeChange?.(cycleStageCardTheme(cardThemeId).id)}
-              style={{
-                position: 'absolute',
-                bottom: '-9px',
-                right: vibeLabel ? '92px' : '14px',
-                zIndex: 5,
-                width: '22px',
-                height: '22px',
-                borderRadius: '50%',
-                padding: 0,
-                border: `1.5px solid ${theme.border}`,
-                background: theme.swatch,
-                cursor: 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            />
-          ) : null}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '-9px',
+              right: '14px',
+              zIndex: 5,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+            }}
+          >
+            {canCycleTheme ? (
+              <button
+                type="button"
+                aria-label={`Color: ${theme.label}. Tap to change.`}
+                onClick={() => onThemeChange?.(cycleStageCardTheme(cardThemeId).id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: 0,
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                  flexShrink: 0,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: UI_FONT,
+                    fontSize: '0.56rem',
+                    fontWeight: 600,
+                    letterSpacing: '0.5px',
+                    textTransform: 'uppercase',
+                    color: theme.inkMuted,
+                    lineHeight: 1,
+                  }}
+                >
+                  Color
+                </span>
+                <span
+                  aria-hidden
+                  style={{
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    border: `2px solid ${theme.ink}`,
+                    background: theme.swatch,
+                    boxShadow: theme.markVariant === 'on-light'
+                      ? 'inset 0 0 0 1.5px rgba(255,255,255,0.55)'
+                      : 'inset 0 0 0 1.5px rgba(255,255,255,0.14)',
+                    flexShrink: 0,
+                  }}
+                />
+              </button>
+            ) : null}
 
-          {vibeLabel ? (
-            <VibeTag
-              label={vibeLabel}
-              color={theme.ink}
-              variant="on-gold"
-              surfaceInk={theme.ink}
-              surfaceInkMuted={vibeTagStroke}
-              surfaceTagFill={vibeTagFill}
-              surfaceHoleFill={theme.bg}
-              onClick={canPickVibe ? () => setVibePickerOpen((open) => !open) : undefined}
-            />
-          ) : null}
+            {vibeLabel ? (
+              <VibeTag
+                label={vibeLabel}
+                color={theme.ink}
+                variant="on-gold"
+                layout="inline"
+                surfaceInk={theme.ink}
+                surfaceInkMuted={vibeTagStroke}
+                surfaceTagFill={vibeTagFill}
+                surfaceHoleFill={theme.bg}
+                onClick={canPickVibe ? () => setVibePickerOpen((open) => !open) : undefined}
+              />
+            ) : null}
+          </div>
 
           {vibePickerOpen && canPickVibe ? (
             <div

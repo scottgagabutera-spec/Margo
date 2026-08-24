@@ -20,10 +20,22 @@ interface VibeTagProps {
   surfaceInkMuted?: string
   surfaceTagFill?: string
   surfaceHoleFill?: string
+  /** corner = pinned to card bottom-right; inline = sits in a flex row */
+  layout?: 'corner' | 'inline'
 }
 
 /** Small price-tag silhouette pinned to a card edge — vibe identity via stroke/fill color. */
-export function VibeTag({ label, color, onClick, variant = 'tinted', surfaceInk, surfaceInkMuted, surfaceTagFill, surfaceHoleFill }: VibeTagProps) {
+export function VibeTag({
+  label,
+  color,
+  onClick,
+  variant = 'tinted',
+  surfaceInk,
+  surfaceInkMuted,
+  surfaceTagFill,
+  surfaceHoleFill,
+  layout = 'corner',
+}: VibeTagProps) {
   const isDark = variant === 'dark'
   const isOnGold = variant === 'on-gold'
   const ink = surfaceInk || 'var(--text-on-gold)'
@@ -33,29 +45,32 @@ export function VibeTag({ label, color, onClick, variant = 'tinted', surfaceInk,
   const stroke = isOnGold ? inkMuted : isDark ? 'var(--gold-border)' : color
   const textColor = isOnGold ? ink : isDark ? 'var(--text)' : color
 
+  const isInline = layout === 'inline'
+
   return (
     <button
       type="button"
       data-no-card-nav
-      aria-label={`Vibe: ${label}`}
+      aria-label={onClick ? `Vibe: ${label}. Tap to change.` : `Vibe: ${label}`}
       onClick={(e) => {
         e.stopPropagation()
         onClick?.()
       }}
       style={{
-        position: 'absolute',
-        bottom: '-9px',
-        right: '14px',
+        position: isInline ? 'relative' : 'absolute',
+        bottom: isInline ? undefined : '-9px',
+        right: isInline ? undefined : '14px',
         zIndex: 4,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '28px',
-        padding: '0 2px 0 0',
+        padding: isInline ? 0 : '0 2px 0 0',
         background: 'none',
         border: 'none',
         cursor: onClick ? 'pointer' : 'default',
         WebkitTapHighlightColor: 'transparent',
+        flexShrink: 0,
       }}
     >
       <span style={{ position: 'relative', display: 'inline-block', height: '22px' }}>
