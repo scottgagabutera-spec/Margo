@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import { ComposeLyricCard } from '@/components/compose-lyric-card'
 import { VibeTag } from '@/components/vibe-tag'
@@ -13,6 +14,10 @@ interface StageMomentCardProps {
   artistName: string
   artwork?: string | null
   vibeLabel?: string | null
+  /** AI-suggested vibe — shows a dot on that option in the picker */
+  suggestedVibeLabel?: string | null
+  vibeOptions?: string[]
+  onVibeSelect?: (label: string) => void
   canPlay: boolean
   playing?: boolean
   buffering?: boolean
@@ -33,6 +38,22 @@ const playControlStyle: CSSProperties = {
   flexShrink: 0,
 }
 
+const markBadgeStyle: CSSProperties = {
+  position: 'absolute',
+  top: '16px',
+  right: '16px',
+  width: '34px',
+  height: '34px',
+  borderRadius: '50%',
+  background: 'rgba(7,6,10,0.1)',
+  border: '1px solid rgba(7,6,10,0.16)',
+  boxShadow: '0 1px 0 rgba(255,255,255,0.22) inset',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  pointerEvents: 'none',
+}
+
 /**
  * Gold Moment for The Stage — lyric-dominant, not a Feed post.
  */
@@ -42,6 +63,9 @@ export function StageMomentCard({
   artistName,
   artwork,
   vibeLabel,
+  suggestedVibeLabel,
+  vibeOptions = [],
+  onVibeSelect,
   canPlay,
   playing = false,
   buffering = false,
@@ -49,18 +73,26 @@ export function StageMomentCard({
   listenUrl,
   style,
 }: StageMomentCardProps) {
+  const [vibePickerOpen, setVibePickerOpen] = useState(false)
   const metaLine = [songTitle, artistName].filter(Boolean).join(' · ')
+  const canPickVibe = vibeOptions.length > 0 && !!onVibeSelect
 
   return (
     <ComposeLyricCard
       style={{
+        position: 'relative',
         textAlign: 'left',
         borderRadius: '16px',
         padding: '20px 20px 18px',
+        paddingRight: '52px',
         background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 28%), var(--gold)',
         ...style,
       }}
     >
+      <div style={markBadgeStyle} aria-hidden>
+        <MargoSymbol size={22} variant="ink" />
+      </div>
+
       <p
         style={{
           fontFamily: LYRIC_FONT,
@@ -112,9 +144,9 @@ export function StageMomentCard({
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
           marginTop: '16px',
           gap: '12px',
+          minHeight: 'var(--margo-touch-min)',
         }}
       >
         {canPlay ? (
@@ -151,15 +183,79 @@ export function StageMomentCard({
           >
             Listen ↗
           </a>
-        ) : (
-          <span />
-        )}
-        <MargoSymbol size={20} variant="ink" style={{ opacity: 0.32 }} />
+        ) : null}
       </div>
 
       {vibeLabel ? (
-        <div style={{ position: 'relative', height: '22px', marginTop: '12px' }}>
-          <VibeTag label={vibeLabel} color="var(--text-on-gold)" variant="on-gold" />
+        <div style={{ position: 'relative', height: vibePickerOpen ? 'auto' : '22px', marginTop: '12px' }}>
+          <VibeTag
+            label={vibeLabel}
+            color="var(--text-on-gold)"
+            variant="on-gold"
+            onClick={canPickVibe ? () => setVibePickerOpen((open) => !open) : undefined}
+          />
+          {vibePickerOpen && canPickVibe ? (
+            <div
+              role="listbox"
+              aria-label="Choose a vibe"
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                marginTop: '14px',
+                paddingBottom: '4px',
+              }}
+            >
+              {vibeOptions.map((option) => {
+                const selected = option === vibeLabel
+                const suggested = option === suggestedVibeLabel && !selected
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      onVibeSelect?.(option)
+                      setVibePickerOpen(false)
+                    }}
+                    style={{
+                      position: 'relative',
+                      minHeight: '32px',
+                      padding: '0 12px',
+                      borderRadius: '50px',
+                      border: selected
+                        ? '1px solid rgba(7,6,10,0.35)'
+                        : '1px solid rgba(7,6,10,0.16)',
+                      background: selected ? 'rgba(7,6,10,0.14)' : 'rgba(7,6,10,0.06)',
+                      color: 'var(--text-on-gold)',
+                      fontFamily: UI_FONT,
+                      fontSize: '0.68rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {option}
+                    {suggested ? (
+                      <span
+                        aria-hidden
+                        style={{
+                          position: 'absolute',
+                          top: '-4px',
+                          right: '-4px',
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: 'var(--text-on-gold)',
+                          border: '1.5px solid var(--gold)',
+                        }}
+                      />
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </ComposeLyricCard>

@@ -926,7 +926,7 @@ function computeStageCardHeight(
   const rowH = Math.max(28 * s, 44 * s)
   const vibeGap = 12 * s
   const vibeOverhang = 9 * s
-  const contentW = W - padX * 2
+  const contentW = W - padX * 2 - Math.round(24 * s) - 8 * s
 
   const line = lines[0]
   if (!line) return Math.round(padT + padB + lyricLH)
@@ -941,6 +941,28 @@ function computeStageCardHeight(
   const vibeH = vibeLabel ? vibeGap + 22 * s + vibeOverhang : 0
 
   return Math.ceil(padT + lyricH + metaH + artH + rowGap + rowH + vibeH + padB)
+}
+
+function drawStageMarkBadge(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  light: boolean,
+) {
+  const r = size / 2
+  const cx = x + r
+  const cy = y + r
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.fillStyle = light ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.12)'
+  ctx.fill()
+  ctx.strokeStyle = light ? 'rgba(7,6,10,0.16)' : 'rgba(255,255,255,0.2)'
+  ctx.lineWidth = 1
+  ctx.stroke()
+  drawMargoSymbol(ctx, x, y, size, light ? 'on-light' : 'on-dark')
+  ctx.restore()
 }
 
 export async function drawStageMomentCard(
@@ -971,8 +993,9 @@ export async function drawStageMomentCard(
   const rowGap = 16 * s
   const rowH = Math.max(28 * s, 44 * s)
   const listenFS = Math.round(11.5 * s)
-  const markSize = 20 * s
-  const contentW = W - padX * 2
+  const markSize = Math.round(24 * s)
+  const markInset = 16 * s
+  const contentW = W - padX * 2 - markSize - 8 * s
 
   const line = lines[0]
   if (!line) return
@@ -994,6 +1017,8 @@ export async function drawStageMomentCard(
   ctx.lineWidth = 1
   drawRoundedRectPath(ctx, 0.5, 0.5, W - 1, H - 1, radius)
   ctx.stroke()
+
+  drawStageMarkBadge(ctx, W - markInset - markSize, markInset, markSize, light)
 
   let y = padT
 
@@ -1033,9 +1058,6 @@ export async function drawStageMomentCard(
     ctx.fillText('Listen ↗', padX, rowY + rowH * 0.62)
   }
 
-  ctx.globalAlpha = 0.32
-  drawMargoSymbol(ctx, W - padX - markSize, rowY + (rowH - markSize) / 2, markSize, light ? 'on-light' : 'on-dark')
-  ctx.globalAlpha = 1
   y = rowY + rowH
 
   if (vibeLabel) {

@@ -38,6 +38,14 @@ const VIBE_LABELS: Record<Vibe, string> = {
   LOST: 'Lost', RAGE: 'Rage', SENDIT: 'Send It', LETOUT: 'Let Out',
 }
 
+const STAGE_VIBES: Vibe[] = [
+  'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'SPIRITUAL', 'NOSTALGIA',
+  'JOY', 'LOVE', 'HYPE', 'PROUD', 'HEARTBREAK', 'PAIN', 'LONELINESS',
+  'LOST', 'RAGE', 'SENDIT', 'LETOUT',
+]
+
+const STAGE_VIBE_OPTIONS = STAGE_VIBES.map((v) => VIBE_LABELS[v])
+
 const font = 'var(--font-lora), serif'
 const SUBHEAD = "Pick a line. Send it to someone who'll feel it."
 
@@ -62,6 +70,8 @@ export function StageLanding() {
   const [linesLoading, setLinesLoading] = useState(false)
   const [linePickComplete, setLinePickComplete] = useState(false)
   const [vibeLabel, setVibeLabel] = useState<string | null>(null)
+  const [suggestedVibeLabel, setSuggestedVibeLabel] = useState<string | null>(null)
+  const [vibeUserPicked, setVibeUserPicked] = useState(false)
   const [saving, setSaving] = useState(false)
   const [momentVisible, setMomentVisible] = useState(false)
 
@@ -121,16 +131,19 @@ export function StageLanding() {
       const data = await res.json()
       if (data.emotion) {
         const vibe = data.emotion as Vibe
-        setVibeLabel(VIBE_LABELS[vibe] || data.emotion)
+        const label = VIBE_LABELS[vibe] || data.emotion
+        setSuggestedVibeLabel(label)
+        if (!vibeUserPicked) setVibeLabel(label)
       }
     } catch (e: unknown) {
       if (e instanceof Error && e.name === 'AbortError') return
     }
-  }, [])
+  }, [vibeUserPicked])
 
   const revealMoment = useCallback((text: string, options?: { animate?: boolean; fetchVibe?: boolean }) => {
     const animate = options?.animate ?? true
     const fetchVibe = options?.fetchVibe ?? true
+    if (fetchVibe) setVibeUserPicked(false)
     if (animate) {
       setMomentVisible(false)
       window.requestAnimationFrame(() => {
@@ -251,6 +264,8 @@ export function StageLanding() {
     setLinesLoading(false)
     setLinePickComplete(false)
     setVibeLabel(null)
+    setSuggestedVibeLabel(null)
+    setVibeUserPicked(false)
     setMomentVisible(false)
     setSearchQuery('')
     setShowResults(false)
@@ -274,6 +289,8 @@ export function StageLanding() {
     setMomentVisible(false)
     setLyric('')
     setVibeLabel(null)
+    setSuggestedVibeLabel(null)
+    setVibeUserPicked(false)
     if (artwork) {
       setSelectedSong((prev) => (prev ? { ...prev, artwork } : prev))
     }
@@ -313,6 +330,8 @@ export function StageLanding() {
     setMomentVisible(false)
     setLyric('')
     setVibeLabel(null)
+    setSuggestedVibeLabel(null)
+    setVibeUserPicked(false)
 
     if (result.source === 'margo') {
       await enterCatalog(result.margoSongId!, result.audioUrl || null, result.title, result.artist, result.artwork)
@@ -361,6 +380,8 @@ export function StageLanding() {
     } else {
       setMomentVisible(false)
       setVibeLabel(null)
+      setSuggestedVibeLabel(null)
+      setVibeUserPicked(false)
     }
   }, [revealMoment, momentVisible])
 
@@ -538,6 +559,12 @@ export function StageLanding() {
                   artistName={artistName}
                   artwork={selectedSong.artwork}
                   vibeLabel={vibeLabel}
+                  suggestedVibeLabel={suggestedVibeLabel}
+                  vibeOptions={STAGE_VIBE_OPTIONS}
+                  onVibeSelect={(label) => {
+                    setVibeLabel(label)
+                    setVibeUserPicked(true)
+                  }}
                   canPlay={listen?.canPlayInline ?? false}
                   playing={playing}
                   buffering={buffering}
