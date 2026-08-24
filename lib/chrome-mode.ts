@@ -9,6 +9,7 @@ export type MargoChromeMode = 'app' | 'immersive' | 'marketing'
 export function chromeModeForPath(pathname: string | null | undefined): MargoChromeMode {
   if (!pathname || pathname === '/') return 'marketing'
   if (pathname.startsWith('/song/')) return 'immersive'
+  if (pathname.startsWith('/m/')) return 'immersive'
   return 'app'
 }
 
