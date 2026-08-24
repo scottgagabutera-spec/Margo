@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
+import { resolveMargoMomentFromPost } from '@/lib/moment'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
 import Link from 'next/link'
@@ -684,8 +685,7 @@ export default function FeedPage() {
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
-        lines={exportPost ? resolveMomentLines(exportPost) : undefined}
-        postId={exportPost?.id}
+        moment={exportPost ? resolveMargoMomentFromPost(exportPost) : null}
       />
     </div>
     </PullToRefresh>

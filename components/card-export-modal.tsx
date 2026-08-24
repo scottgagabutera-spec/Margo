@@ -4,16 +4,26 @@ import { recordCardExport } from '@/lib/engagement/card-exports'
 import {
   THEMES,
   SHAPES,
-  composeMoment,
   drawMomentPoster,
   drawDualCard,
   renderMomentToCanvas,
   normalizeLine,
   type NormalizedLine,
   type MomentLineInput,
-  type Composition,
 } from '@/lib/moment-export/render-moment'
 import { downloadCanvas, slugify } from '@/lib/moment-export/save-moment-image'
+import type { MargoMoment } from '@/lib/moment/types'
+import {
+  buildLyricBackNativeSharePayload,
+  buildLyricBackShareText,
+  buildMargoMomentFromExportProps,
+  buildMomentShareText,
+  copyMomentShareText,
+  getMomentShareUrl,
+  resolveMomentComposition,
+  margoMomentToPostLines,
+  shareMomentNative,
+} from '@/lib/moment'
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 interface CardExportModalProps {
   open: boolean
@@ -24,6 +34,8 @@ interface CardExportModalProps {
   postId?: string
   /** Selected vibe label (e.g. "Heartbreak") — small accent caption. Compose only. */
   vibeLabel?: string | null
+  /** Canonical Moment — when present, source of truth for export + share. */
+  moment?: MargoMoment | null
   /** Full ordered Moment — when present (and non-empty), this is the
    * source of truth for the export; lyric/song/artist above become the
    * fallback for single-line callers that haven't been updated. */
@@ -39,6 +51,7 @@ export function CardExportModal({
   lyric = '', song = '', artist = '',
   postId,
   vibeLabel,
+  moment: momentProp,
   lines,
   parentLyric, parentSong, parentArtist,
 }: CardExportModalProps) {
@@ -59,37 +72,50 @@ export function CardExportModal({
   const activeTheme = THEMES.find(t => t.id === theme) || THEMES[0]
   const activeShape = SHAPES.find(s => s.id === shape) || SHAPES[0]
 
+  const resolvedMoment = momentProp ?? null
+  const resolvedPostId = resolvedMoment?.postId ?? postId
+  const resolvedVibeLabel = resolvedMoment?.vibeLabel ?? vibeLabel
+
+  const lineSource = resolvedMoment
+    ? margoMomentToPostLines(resolvedMoment)
+    : lines
+
   // The full ordered Moment — source of truth for the poster. Falls back
   // to the singular lyric/song/artist props for callers that only ever
   // had one line to begin with (karaoke line share, Lyric Back replies).
   const momentLines = useMemo<NormalizedLine[]>(() => {
-    const fromProp = (lines || []).map(normalizeLine).filter(l => l.lyric.trim().length > 0)
+    const fromProp = (lineSource || []).map(normalizeLine).filter(l => l.lyric.trim().length > 0)
     if (fromProp.length > 0) return fromProp
     if (lyric && lyric.trim()) return [{ lyric, songTitle: song, artistName: artist }]
     return []
-  }, [lines, lyric, song, artist])
+  }, [lineSource, lyric, song, artist])
 
   const isMulti = !isDualCard && momentLines.length > 1
 
-  // One archetype/motif decision for the whole Moment, shared by the
-  // combined poster and every individual card, so the carousel reads as
-  // one visual family instead of each card independently re-rolling its
-  // own personality from just its own (much shorter) content.
-  const composition = useMemo<Composition | null>(() => {
-    if (isDualCard || momentLines.length === 0) return null
-    const seed = postId || momentLines.map(l => `${l.lyric}|${l.songTitle}|${l.artistName}`).join('~')
-    return composeMoment(vibeLabel, momentLines, seed)
-  }, [isDualCard, momentLines, vibeLabel, postId])
+  const effectiveMoment = useMemo<MargoMoment | null>(() => {
+    if (resolvedMoment) return resolvedMoment
+    if (momentLines.length === 0) return null
+    return buildMargoMomentFromExportProps({
+      lines: momentLines,
+      postId: resolvedPostId,
+      vibeLabel: resolvedVibeLabel,
+    })
+  }, [resolvedMoment, momentLines, resolvedPostId, resolvedVibeLabel])
+
+  const composition = useMemo(() => {
+    if (isDualCard || !effectiveMoment) return null
+    return resolveMomentComposition(effectiveMoment)
+  }, [isDualCard, effectiveMoment])
 
   useEffect(() => {
     if (carouselIndex >= momentLines.length) setCarouselIndex(0)
   }, [momentLines.length, carouselIndex])
 
-  const url = postId ? `https://trymargo.com/post/${postId}` : 'https://trymargo.com'
+  const url = getMomentShareUrl(resolvedPostId)
   const copyText = isDualCard
-    ? `"${parentLyric}" ↩ "${lyric}" — trymargo.com`
-    : momentLines.length > 0
-      ? momentLines.map(l => `"${l.lyric}"${l.artistName ? ' — ' + l.artistName : ''}${l.songTitle ? ', ' + l.songTitle : ''}`).join('  ·  ') + ' — trymargo.com'
+    ? buildLyricBackShareText({ parentLyric: parentLyric!, replyLyric: lyric })
+    : effectiveMoment
+      ? buildMomentShareText(effectiveMoment)
       : ''
 
   /* ─── Render helpers ────────────────────────────────────────── */
@@ -102,10 +128,10 @@ export function CardExportModal({
       lines: linesToPaint,
       themeId: activeTheme.id,
       shapeId: activeShape.id,
-      vibeLabel,
+      vibeLabel: resolvedVibeLabel,
       seedKey,
     })
-  }, [activeShape, activeTheme, vibeLabel])
+  }, [activeShape, activeTheme, resolvedVibeLabel])
 
   const renderCanvas = useCallback(async () => {
     const canvas = canvasRef.current
@@ -129,9 +155,9 @@ export function CardExportModal({
     } else if (momentLines.length > 0) {
       // postId as the composition seed when it exists — same Moment,
       // same archetype/motif every time it's reopened.
-      await drawMomentPoster(ctx, w, h, momentLines, activeTheme, vibeLabel, postId ? `${postId}:combined` : 'combined', composition || undefined)
+      await drawMomentPoster(ctx, w, h, momentLines, activeTheme, resolvedVibeLabel, resolvedPostId ? `${resolvedPostId}:combined` : 'combined', composition || undefined)
     }
-  }, [activeShape, activeTheme, isDualCard, parentLyric, parentSong, parentArtist, lyric, song, artist, momentLines, vibeLabel, postId, composition])
+  }, [activeShape, activeTheme, isDualCard, parentLyric, parentSong, parentArtist, lyric, song, artist, momentLines, resolvedVibeLabel, resolvedPostId, composition])
 
   useEffect(() => {
     if (open) renderCanvas()
@@ -142,8 +168,8 @@ export function CardExportModal({
     const canvas = carouselCanvasRef.current
     const line = momentLines[carouselIndex]
     if (!canvas || !line) return
-    void paintMoment(canvas, [line], postId ? `${postId}:card${carouselIndex}` : `card${carouselIndex}`)
-  }, [open, isMulti, carouselIndex, momentLines, paintMoment, postId])
+    void paintMoment(canvas, [line], resolvedPostId ? `${resolvedPostId}:card${carouselIndex}` : `card${carouselIndex}`)
+  }, [open, isMulti, carouselIndex, momentLines, paintMoment, resolvedPostId])
 
   /* ─── Export actions ────────────────────────────────────────── */
   const filenameFor = useCallback((suffix?: string) => {
@@ -166,17 +192,17 @@ export function CardExportModal({
     } else {
       await downloadCanvas(canvas, filenameFor())
     }
-    void recordCardExport({ postId, theme, shape })
-  }, [renderCanvas, isDualCard, song, parentSong, activeShape, filenameFor, postId, theme, shape])
+    void recordCardExport({ postId: resolvedPostId, theme, shape })
+  }, [renderCanvas, isDualCard, song, parentSong, activeShape, filenameFor, resolvedPostId, theme, shape])
 
   const handleExportCard = useCallback(async (index: number) => {
     const line = momentLines[index]
     if (!line) return
     const canvas = document.createElement('canvas')
-    await paintMoment(canvas, [line], postId ? `${postId}:card${index}` : `card${index}`)
+    await paintMoment(canvas, [line], resolvedPostId ? `${resolvedPostId}:card${index}` : `card${index}`)
     await downloadCanvas(canvas, filenameFor(momentLines.length > 1 ? `card${index + 1}of${momentLines.length}` : undefined))
-    void recordCardExport({ postId, theme, shape })
-  }, [momentLines, paintMoment, postId, filenameFor, theme, shape])
+    void recordCardExport({ postId: resolvedPostId, theme, shape })
+  }, [momentLines, paintMoment, resolvedPostId, filenameFor, theme, shape])
 
   const handleExportAllCards = useCallback(async () => {
     if (exportAllProgress) return
@@ -205,19 +231,37 @@ export function CardExportModal({
 
   /* ─── Copy ──────────────────────────────────────────────── */
   const handleCopy = useCallback(() => {
-    if (typeof navigator !== 'undefined') navigator.clipboard.writeText(copyText)
+    if (effectiveMoment) {
+      void copyMomentShareText(effectiveMoment).then((ok) => {
+        if (!ok && typeof navigator !== 'undefined') navigator.clipboard.writeText(copyText)
+      })
+    } else if (typeof navigator !== 'undefined') {
+      navigator.clipboard.writeText(copyText)
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }, [copyText])
+  }, [copyText, effectiveMoment])
 
   /* ─── Share ─────────────────────────────────────────────── */
   const handleShare = useCallback(async () => {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try { await navigator.share({ title: 'MARGO', text: copyText.substring(0, 60), url }); return }
-      catch (e: any) { if (e.name === 'AbortError') return }
+    if (isDualCard && parentLyric) {
+      const payload = buildLyricBackNativeSharePayload(
+        { parentLyric, replyLyric: lyric },
+        resolvedPostId,
+      )
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try { await navigator.share(payload); return }
+        catch (e: unknown) { if ((e as Error).name === 'AbortError') return }
+      }
+      if (typeof navigator !== 'undefined') navigator.clipboard.writeText(payload.url)
+      return
+    }
+    if (effectiveMoment) {
+      await shareMomentNative(effectiveMoment)
+      return
     }
     if (typeof navigator !== 'undefined') navigator.clipboard.writeText(url)
-  }, [copyText, url])
+  }, [isDualCard, parentLyric, lyric, resolvedPostId, effectiveMoment, url])
 
   if (!open) return null
 

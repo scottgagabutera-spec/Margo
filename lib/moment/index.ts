@@ -1,0 +1,56 @@
+export type {
+  MargoMoment,
+  MargoMomentLine,
+  MargoMomentAuthor,
+  MomentThemeId,
+  MomentShapeId,
+  MomentStatus,
+  NormalizedMomentLine,
+} from '@/lib/moment/types'
+export {
+  DEFAULT_MOMENT_THEME_ID,
+  DEFAULT_MOMENT_SHAPE_ID,
+} from '@/lib/moment/types'
+
+export type { MomentComposition, MomentArchetype, MomentMotif, Composition } from '@/lib/moment/compose'
+export { composeMoment, hashMomentSeed } from '@/lib/moment/compose'
+
+export { normalizeEmotionKey, emotionToVibeLabel } from '@/lib/moment/vibe'
+
+export type {
+  PostLikeForMoment,
+  ComposeLineDraftLike,
+  StageMomentInput,
+  ResolveMargoMomentOptions,
+  ExportPropsMomentInput,
+  EphemeralSeedFormat,
+} from '@/lib/moment/resolve'
+export {
+  resolveMargoMomentFromPost,
+  resolveMargoMomentFromComposeDrafts,
+  resolveMargoMomentFromStage,
+  resolveMomentComposition,
+  buildMomentSeedKey,
+  buildMargoMomentFromExportProps,
+  margoMomentLineToNormalized,
+  margoMomentToNormalizedLines,
+  margoMomentToPostLines,
+} from '@/lib/moment/resolve'
+
+export type {
+  LyricBackShareInput,
+  NativeSharePayload,
+  NativeShareResult,
+} from '@/lib/moment/share'
+export {
+  MARGO_SITE_ORIGIN,
+  getMomentShareUrl,
+  buildMomentShareText,
+  buildLyricBackShareText,
+  buildNativeSharePayload,
+  buildLyricBackNativeSharePayload,
+  canNativeShare,
+  canShareImageFiles,
+  shareMomentNative,
+  copyMomentShareText,
+} from '@/lib/moment/share'

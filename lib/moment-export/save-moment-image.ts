@@ -1,3 +1,5 @@
+import type { MargoMoment } from '@/lib/moment/types'
+import { margoMomentToPostLines } from '@/lib/moment/resolve'
 import {
   normalizeLine,
   renderMomentToCanvas,
@@ -43,6 +45,35 @@ export interface SaveMomentImageOptions {
   shapeId?: string
   seedKey?: string
   filename?: string
+}
+
+function normalizedFromMoment(moment: MargoMoment): NormalizedLine[] {
+  return margoMomentToPostLines(moment)
+    .map(normalizeLine)
+    .filter((l) => l.lyric.trim().length > 0)
+}
+
+export async function saveMargoMomentImage(
+  moment: MargoMoment,
+  options?: { filename?: string },
+): Promise<void> {
+  const normalized = normalizedFromMoment(moment)
+  if (normalized.length === 0) return
+
+  const canvas = document.createElement('canvas')
+  await renderMomentToCanvas(canvas, {
+    lines: normalized,
+    themeId: moment.themeId,
+    shapeId: moment.shapeId,
+    vibeLabel: moment.vibeLabel,
+    seedKey: moment.seedKey,
+  })
+
+  const primary = normalized[0]
+  const base = normalized.length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
+  const shapeLabel = moment.shapeId === 'vertical' ? 'Story' : moment.shapeId === 'wide' ? 'Wide' : 'Square'
+  const filename = options?.filename ?? `MARGO_${base}_${shapeLabel}.png`
+  await downloadCanvas(canvas, filename)
 }
 
 export async function saveMomentImage(options: SaveMomentImageOptions): Promise<void> {

@@ -11,7 +11,8 @@ import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher } from '@/lib/stage-chrome'
 import { HEADLINES, resolveHeadlineVariant, type HeadlineVariant } from '@/lib/stage-headline-variant'
-import { saveMomentImage } from '@/lib/moment-export/save-moment-image'
+import { resolveMargoMomentFromStage } from '@/lib/moment'
+import { saveMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -367,16 +368,26 @@ export function StageLanding() {
     if (!hasMoment) return
     setSaving(true)
     try {
-      await saveMomentImage({
-        lines: [{ lyric, songName, artistName, artworkUrl: selectedSong?.artwork || null }],
+      const moment = resolveMargoMomentFromStage({
+        lyric,
+        songName,
+        artistName,
+        artworkUrl: selectedSong?.artwork || null,
+        songId: linkedSongId,
+        audioUrl: linkedAudioUrl,
+        snippetStart,
+        snippetEnd,
         vibeLabel,
-        themeId: 'gold',
-        shapeId: 'square',
+        source: linkedSongId ? 'catalog' : 'external',
       })
+      await saveMargoMomentImage(moment)
     } finally {
       setSaving(false)
     }
-  }, [hasMoment, lyric, songName, artistName, vibeLabel])
+  }, [
+    hasMoment, lyric, songName, artistName, selectedSong?.artwork,
+    linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, vibeLabel,
+  ])
 
   const headline = headlineVariant ? HEADLINES[headlineVariant] : HEADLINES.a
 

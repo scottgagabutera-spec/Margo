@@ -1,14 +1,17 @@
 import type { PostLine } from '@/lib/post-lines'
+import {
+  composeMoment,
+  type MomentComposition,
+} from '@/lib/moment/compose'
+import type { NormalizedMomentLine } from '@/lib/moment/types'
 
 export type ComposeMomentLineInput = { lyric: string; songName?: string | null; artistName?: string | null; artworkUrl?: string | null }
 export type MomentLineInput = ComposeMomentLineInput | PostLine
 
-export interface NormalizedLine {
-  lyric: string
-  songTitle: string
-  artistName: string
-  artworkUrl?: string | null
-}
+export type NormalizedLine = NormalizedMomentLine
+
+export type Composition = MomentComposition
+export { composeMoment }
 
 export function normalizeLine(l: MomentLineInput): NormalizedLine {
   if ('text' in l) {
@@ -194,121 +197,6 @@ function truncateToWidth(ctx: CanvasRenderingContext2D, text: string, maxWidth: 
   return lo <= 0 ? '…' : t.slice(0, lo).trimEnd() + '…'
 }
 
-/* ─── Composition engine ────────────────────────────────────────────
- * Every export is a Margo Moment, not an instance of "the gold template".
- * Vibe family + content decide which of a small set of art-directed
- * archetypes is *appropriate* for this Moment (a weighted likelihood, not
- * a fixed lookup); the Moment's own identity (its post id, or its content
- * when no id exists yet) then picks a specific archetype and decorative
- * motif from within that weighted range. Two Moments of the same vibe and
- * length can still look different from each other. The same Moment always
- * renders the same way, every time it's reopened — deterministic, not
- * random-per-render.
- *
- * This is deliberately NOT "vibe = color". Color stays Margo Gold / Margo
- * Dark. Vibe and content influence alignment, scale, negative space, and
- * which (if any) geometric motif appears — the composition, not the
- * palette. Actual font scale, wrap width, and metadata position are then
- * solved per-render by measuring the real content (see fitMomentComposition)
- * rather than being fixed fractions of the canvas — a short lyric and a
- * long lyric assigned the same archetype should still look nothing alike. */
-
-type Archetype = 'centered' | 'bold' | 'editorial'
-type Motif = 'arc' | 'diagonal' | 'letterform' | 'word' | 'none'
-type LengthBucket = 'short' | 'medium' | 'long'
-type VibeFamily = 'uplifting' | 'reflective' | 'heavy' | 'release'
-
-/** Same grouping used for the Feeling screen's pill order. */
-const VIBE_FAMILY: Record<string, VibeFamily> = {
-  chill: 'uplifting', hope: 'uplifting', healing: 'uplifting', grateful: 'uplifting',
-  joy: 'uplifting', love: 'uplifting', hype: 'uplifting', proud: 'uplifting',
-  spiritual: 'reflective', nostalgia: 'reflective',
-  heartbreak: 'heavy', pain: 'heavy', loneliness: 'heavy', lost: 'heavy', rage: 'heavy',
-  'send it': 'release', 'let out': 'release',
-}
-
-/** Which archetype is *likely* for a vibe family — not which one it always gets. */
-const FAMILY_BASE_WEIGHTS: Record<VibeFamily, Record<Archetype, number>> = {
-  uplifting:  { centered: 50, bold: 30, editorial: 20 },
-  reflective: { centered: 60, bold: 15, editorial: 25 },
-  heavy:      { centered: 20, bold: 25, editorial: 55 },
-  release:    { centered: 15, bold: 60, editorial: 25 },
-}
-
-/** Content shifts those odds further — a long or multi-line Moment should
- * strongly favor the column-based Editorial archetype regardless of vibe,
- * and a short lyric shouldn't be stranded in a sparse column. */
-const LENGTH_MULTIPLIER: Record<LengthBucket, Record<Archetype, number>> = {
-  short:  { centered: 1.2, bold: 1.3, editorial: 0.5 },
-  medium: { centered: 1,   bold: 1,   editorial: 1 },
-  long:   { centered: 0.8, bold: 0.7, editorial: 2.0 },
-}
-
-/** Each archetype's compatible decorative primitives — including "none",
- * so a plain, undecorated card stays a real possibility, not a rarity. */
-const ARCHETYPE_MOTIF_WEIGHTS: Record<Archetype, Record<Motif, number>> = {
-  centered:  { arc: 40, letterform: 30, none: 30, diagonal: 0, word: 0 },
-  bold:      { diagonal: 50, letterform: 25, none: 25, arc: 0, word: 0 },
-  editorial: { word: 40, arc: 30, none: 30, diagonal: 0, letterform: 0 },
-}
-
-/** Extra lines behave like additional length for archetype-weighting
- * purposes — a 3-line Moment should lean toward Editorial the same way a
- * long single line does. This governs which archetype/motif is likely,
- * not the actual font scale (see aspirationalFontFraction for that). */
-function lengthBucketOf(totalChars: number, lineCount: number): LengthBucket {
-  const effective = totalChars + (lineCount - 1) * 40
-  if (effective < 60) return 'short'
-  if (effective < 130) return 'medium'
-  return 'long'
-}
-
-/** Small deterministic string hash — reproducible, not cryptographic. */
-function hashSeed(input: string): number {
-  let h = 0
-  for (let i = 0; i < input.length; i++) {
-    h = (h * 31 + input.charCodeAt(i)) >>> 0
-  }
-  return h
-}
-
-function pickWeighted<T extends string>(weights: Record<T, number>, pick0to999: number): T {
-  const entries = Object.entries(weights) as [T, number][]
-  const total = entries.reduce((sum, [, w]) => sum + w, 0)
-  let cursor = (pick0to999 / 1000) * total
-  for (const [key, weight] of entries) {
-    cursor -= weight
-    if (cursor <= 0) return key
-  }
-  return entries[entries.length - 1][0]
-}
-
-export interface Composition {
-  archetype: Archetype
-  motif: Motif
-}
-
-export function composeMoment(vibeLabel: string | null | undefined, lines: NormalizedLine[], seedKey: string): Composition {
-  const family = VIBE_FAMILY[(vibeLabel || '').toLowerCase().trim()] || 'uplifting'
-  const totalChars = lines.reduce((sum, l) => sum + l.lyric.trim().length, 0)
-  const bucket = lengthBucketOf(totalChars, lines.length)
-  const base = FAMILY_BASE_WEIGHTS[family]
-  const mult = LENGTH_MULTIPLIER[bucket]
-  const weights: Record<Archetype, number> = {
-    centered: base.centered * mult.centered,
-    bold: base.bold * mult.bold,
-    editorial: base.editorial * mult.editorial,
-  }
-  // Independent salted hashes, not two slices of one hash — post ids are
-  // often sequential/similar-looking, and integer-dividing a single hash
-  // to derive a second value correlates badly in exactly that case (a run
-  // of nearby ids would all land on the same motif). Hashing the seed key
-  // with a different suffix per decision keeps them properly independent.
-  const archetype = pickWeighted<Archetype>(weights, hashSeed(`${seedKey}:archetype`) % 1000)
-  const motif = pickWeighted<Motif>(ARCHETYPE_MOTIF_WEIGHTS[archetype], hashSeed(`${seedKey}:motif`) % 1000)
-  return { archetype, motif }
-}
-
 /* ─── Decorative motif primitives — small, quiet, never louder than the lyric ─ */
 
 function drawArcMotif(ctx: CanvasRenderingContext2D, cx: number, cy: number, radius: number, color: string, alpha: number) {
@@ -476,7 +364,7 @@ export async function drawMomentPoster(
   theme: ExportTheme,
   vibeLabel: string | null | undefined,
   seedKey: string,
-  compositionOverride?: Composition,
+  compositionOverride?: MomentComposition,
 ) {
   await waitForFonts()
   const geist = resolveGeistFontFamily()

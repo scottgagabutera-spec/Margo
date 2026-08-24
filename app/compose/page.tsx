@@ -20,6 +20,7 @@ import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryB
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { POST_LINES_MAX, type PostLineSource } from '@/lib/post-lines'
+import { resolveMargoMomentFromComposeDrafts } from '@/lib/moment'
 import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
 import { SongMeta } from '@/components/song-meta'
 import { VibeTag } from '@/components/vibe-tag'
@@ -480,6 +481,18 @@ function ComposeInner() {
     geniusId: selectedSong?.source && selectedSong.source !== 'margo' ? selectedSong.id : null,
   }), [lyric, songName, artistName, linkedSongId, linkedAudioUrl, selectedSong, snippetStart, snippetEnd])
 
+  const exportMoment = useMemo(() => {
+    const drafts = [...committedLines]
+    const draft = buildCurrentDraft()
+    if (draft.lyric && draft.songName && draft.artistName) drafts.push(draft)
+    return resolveMargoMomentFromComposeDrafts(drafts, {
+      postId: postedId,
+      vibeLabel: selectedVibe ? VIBE_LABELS[selectedVibe] : null,
+      emotion: selectedVibe ? selectedVibe.toLowerCase() : null,
+      status: completionMode === 'private' ? 'private' : completionMode === 'public' ? 'active' : null,
+    })
+  }, [committedLines, buildCurrentDraft, postedId, selectedVibe, completionMode])
+
   const clearDraftFields = useCallback(() => {
     setSearchQuery('')
     setShowResults(false)
@@ -732,9 +745,7 @@ function ComposeInner() {
         <CardExportModal
           open={showExport}
           onOpenChange={setShowExport}
-          lines={readyMomentLines}
-          postId={postedId || undefined}
-          vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : undefined}
+          moment={exportMoment}
         />
         {!isPrivateSave && postedId && (
           <ComposeSendTo

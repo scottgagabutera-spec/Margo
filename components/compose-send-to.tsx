@@ -8,6 +8,8 @@ import { useMessaging, type ConversationPartner } from '@/hooks/useMessaging'
 import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
 import { MargoSearchInput } from '@/components/margo-search-input'
 
+import { getMomentShareUrl } from '@/lib/moment'
+
 const supabase = createClient()
 const font = 'var(--font-lora), serif'
 
@@ -17,7 +19,7 @@ function momentMessageBody(lyric: string, song: string, artist: string, postId: 
   const trimmed = lyric.trim()
   const quoted = trimmed.startsWith('"') ? trimmed : '"' + trimmed + '"'
   const meta = [song.trim(), artist.trim()].filter(Boolean).join(' · ')
-  const url = 'https://trymargo.com/post/' + postId
+  const url = getMomentShareUrl(postId)
   return [quoted, meta, url].filter(Boolean).join('\n')
 }
 
