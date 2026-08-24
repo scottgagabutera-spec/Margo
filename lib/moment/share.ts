@@ -20,7 +20,7 @@ export function isMomentRecipientShareable(moment: MargoMoment): boolean {
   return moment.status === 'active'
 }
 
-/** Plain-text fallback for clipboard and share sheets. */
+/** Human-readable share body — lyric + meta, no URL. */
 export function buildMomentShareText(
   moment: MargoMoment,
   options?: { siteSuffix?: boolean; includeUrl?: boolean },
@@ -29,21 +29,31 @@ export function buildMomentShareText(
   const includeUrl = options?.includeUrl === true
   const parts = moment.lines.map((line) => {
     const meta: string[] = []
-    if (line.artistName) meta.push(line.artistName)
     if (line.songTitle) meta.push(line.songTitle)
-    const suffix = meta.length > 0 ? ` — ${meta.join(', ')}` : ''
+    if (line.artistName) meta.push(line.artistName)
+    const suffix = meta.length > 0 ? ` — ${meta.join(' · ')}` : ''
     return `"${line.lyric}"${suffix}`
   })
-  const body = parts.join('  ·  ')
+  const body = parts.join('\n')
   const url = moment.postId ? getMomentShareUrl(moment.postId) : null
 
   if (includeUrl && url) {
-    const cta = 'Open on Margo → trymargo.com/m/…'
-    return body ? `${body}\n\n${cta}\n${url}` : url
+    return body ? `${body}\n\n${buildMomentLinkCta(moment)}\n${url}` : url
   }
   if (!includeSuffix) return body
-  if (url) return body ? `${body}\n\nListen on Margo` : 'Listen on Margo'
+  if (url) return body ? `${body}\n\n${buildMomentLinkCta(moment)}` : buildMomentLinkCta(moment)
   return body ? `${body} — trymargo.com` : 'trymargo.com'
+}
+
+/** Short CTA label recipients see instead of a raw UUID path. */
+export function buildMomentLinkCta(moment: MargoMoment): string {
+  const primary = moment.lines[0]
+  const snippet = primary?.lyric?.trim()
+  if (snippet) {
+    const short = snippet.length > 42 ? `${snippet.slice(0, 41).trimEnd()}…` : snippet
+    return `↳ Open “${short}” on Margo`
+  }
+  return '↳ Open this Moment on Margo'
 }
 
 export function buildLyricBackShareText(input: LyricBackShareInput): string {
@@ -56,13 +66,17 @@ export interface NativeSharePayload {
   url: string
 }
 
-/** Standard Web Share API payload — URL + full lyric text (separate fields). */
+/** Standard Web Share API payload — lyric in text, URL separate for OG preview. */
 export function buildNativeSharePayload(moment: MargoMoment): NativeSharePayload {
   const url = getMomentShareUrl(moment.postId)
   const text = buildMomentShareText(moment, { siteSuffix: false })
+  const primary = moment.lines[0]
+  const title = primary?.lyric
+    ? `"${primary.lyric.length > 48 ? `${primary.lyric.slice(0, 47).trimEnd()}…` : primary.lyric}"`
+    : 'A Moment on Margo'
   return {
-    title: 'MARGO',
-    text,
+    title,
+    text: text ? `${text}\n\n${buildMomentLinkCta(moment)}` : buildMomentLinkCta(moment),
     url,
   }
 }
@@ -130,6 +144,11 @@ export async function shareMomentNative(moment: MargoMoment): Promise<NativeShar
 }
 
 export async function copyMomentShareText(moment: MargoMoment): Promise<boolean> {
+  return copyMomentShareLink(moment)
+}
+
+/** Copy lyric + branded CTA; URL on its own line for paste apps that need it. */
+export async function copyMomentShareLink(moment: MargoMoment): Promise<boolean> {
   if (!isMomentRecipientShareable(moment)) return false
   if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return false
   try {

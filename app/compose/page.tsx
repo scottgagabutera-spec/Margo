@@ -11,8 +11,8 @@ import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
-import { CardExportModal } from '@/components/card-export-modal'
 import { ComposeSendTo } from '@/components/compose-send-to'
+import { MomentShareStudio } from '@/components/moment-share-studio'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
@@ -89,11 +89,6 @@ const backBtnStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
   transition: 'color 150ms ease',
 }
-const actionCaptionStyle: CSSProperties = {
-  fontFamily: UI_FONT, fontSize: '0.62rem',
-  color: 'var(--text-secondary, var(--text-2))', margin: '4px 0 0', lineHeight: 1.35,
-}
-
 type MomentLineDraft = { lyric: string; songName: string; artistName: string }
 
 /**
@@ -192,7 +187,6 @@ function ComposeInner() {
   const [selectedVibe, setSelectedVibe] = useState<Vibe | null>(null)
   const [suggestedVibe, setSuggestedVibe] = useState<Vibe | null>(null)
   const [emotionLoading, setEmotionLoading] = useState(false)
-  const [showExport, setShowExport] = useState(false)
   const [showSendTo, setShowSendTo] = useState(false)
   const [sentToName, setSentToName] = useState<string | null>(null)
   const [postedId, setPostedId] = useState<string | null>(null)
@@ -607,7 +601,6 @@ function ComposeInner() {
     setSuggestedVibe(null)
     setPostedId(null)
     setCompletionMode(null)
-    setShowExport(false)
     setShowSendTo(false)
     setSentToName(null)
     setLinkedSongId(null)
@@ -626,105 +619,69 @@ function ComposeInner() {
   if (completionMode) {
     const isPrivateSave = completionMode === 'private'
     return (
-      <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-        <div style={{ maxWidth: '400px', width: '100%', textAlign: 'center', paddingTop: '24px' }}>
-          <button
-            type="button"
-            onClick={resetCompose}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontFamily: font, fontSize: '0.68rem', color: 'var(--text-secondary, var(--text-2))',
-              letterSpacing: '0.5px', minHeight: '36px', padding: '0 10px',
-              display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-              marginBottom: '12px',
-            }}
-          >Done</button>
-          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.25rem', color: 'var(--text)', marginBottom: '6px' }}>
+      <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', padding: '16px 16px var(--margo-page-padding-bottom)' }}>
+        <div style={{ maxWidth: '400px', width: '100%', margin: '0 auto', paddingTop: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <button
+              type="button"
+              onClick={resetCompose}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: font, fontSize: '0.68rem', color: 'var(--text-secondary, var(--text-2))',
+                letterSpacing: '0.5px', minHeight: '36px', padding: '0 4px',
+              }}
+            >Done</button>
+            {!isPrivateSave && (
+              <button
+                type="button"
+                onClick={() => router.push('/feed')}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontFamily: font, fontSize: '0.62rem', color: 'var(--gold)',
+                  letterSpacing: '0.6px', textTransform: 'uppercase', minHeight: '36px', padding: '0 4px',
+                }}
+              >See on Feed</button>
+            )}
+          </div>
+
+          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.2rem', color: 'var(--text)', marginBottom: '4px' }}>
             {isPrivateSave ? 'Saved privately.' : 'Sent.'}
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '18px', letterSpacing: '0.3px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '16px' }}>
             {isPrivateSave
               ? 'Only you can see this — it stays off the Feed.'
-              : (sentToName ? 'Sent to ' + sentToName + '.' : 'Your Moment is now on Margo.')}
+              : (sentToName ? 'Sent to ' + sentToName + '.' : 'Your Moment is on Margo. Share it below.')}
           </p>
-          <ComposeMomentCard
-            lines={readyMomentLines}
-            vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : null}
-            style={{ marginBottom: '18px', textAlign: 'left' }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-            {!isPrivateSave && (
-              <div>
-                <button
-                  type="button"
-                  onClick={() => { if (postedId) setShowSendTo(true) }}
-                  style={{
-                    width: '100%', padding: '11px 20px', minHeight: '40px',
-                    background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
-                    borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                    fontSize: '0.56rem', letterSpacing: '0.9px', textTransform: 'uppercase',
-                    border: 'none', cursor: postedId ? 'pointer' : 'default',
-                    boxShadow: '0 6px 28px var(--gold-glow)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxSizing: 'border-box',
-                    opacity: postedId ? 1 : 0.5,
-                  }}
-                >Send to someone</button>
-                <p style={actionCaptionStyle}>Send this Moment directly to someone</p>
-              </div>
-            )}
-            <div>
+
+          <MomentShareStudio moment={exportMoment} compact />
+
+          {!isPrivateSave && postedId && (
+            <>
               <button
                 type="button"
-                onClick={() => { setShowExport(true) }}
+                onClick={() => setShowSendTo((v) => !v)}
                 style={{
-                  width: '100%', padding: '11px 20px', minHeight: '40px',
-                  background: isPrivateSave ? 'var(--gold)' : 'transparent',
-                  color: isPrivateSave ? 'var(--text-on-gold, var(--bg))' : 'var(--gold)',
+                  width: '100%', marginTop: '14px', padding: '10px 16px', minHeight: '38px',
+                  background: showSendTo ? 'rgba(232,197,71,0.1)' : 'transparent',
+                  color: 'var(--gold)',
                   borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                  fontSize: '0.56rem', letterSpacing: '0.9px', textTransform: 'uppercase',
-                  border: isPrivateSave ? 'none' : '1px solid var(--gold-border)',
-                  cursor: 'pointer',
-                  boxShadow: isPrivateSave ? '0 6px 28px var(--gold-glow)' : 'none',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxSizing: 'border-box',
+                  fontSize: '0.54rem', letterSpacing: '0.9px', textTransform: 'uppercase',
+                  border: '1px solid var(--gold-border)', cursor: 'pointer',
                 }}
-              >Share as card</button>
-              <p style={actionCaptionStyle}>Share your Moment outside Margo</p>
-            </div>
-            <div>
-              <button
-                type="button"
-                onClick={() => router.push(isPrivateSave ? (identity?.username ? '/profile/' + identity.username : '/feed') : '/feed')}
-                style={{
-                  width: '100%', padding: '10px 20px', minHeight: '38px',
-                  background: 'transparent', color: 'var(--text-secondary, var(--text-2))',
-                  border: '1px solid var(--border-hi)', borderRadius: '50px', fontFamily: font,
-                  fontSize: '0.56rem', letterSpacing: '0.9px', textTransform: 'uppercase', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxSizing: 'border-box',
-                }}
-              >{isPrivateSave ? 'Back to your profile' : 'See it on Feed'}</button>
-              {!isPrivateSave && <p style={actionCaptionStyle}>View your Moment on Margo</p>}
-            </div>
-          </div>
+              >{showSendTo ? 'Hide send to someone' : 'Send to someone on Margo'}</button>
+              <ComposeSendTo
+                open={showSendTo}
+                onOpenChange={setShowSendTo}
+                variant="inline"
+                postId={postedId}
+                lyric={lyric}
+                song={songName}
+                artist={artistName}
+                onSent={setSentToName}
+              />
+            </>
+          )}
         </div>
-        <CardExportModal
-          open={showExport}
-          onOpenChange={setShowExport}
-          moment={exportMoment}
-        />
-        {!isPrivateSave && postedId && (
-          <ComposeSendTo
-            open={showSendTo}
-            onOpenChange={setShowSendTo}
-            postId={postedId}
-            lyric={lyric}
-            song={songName}
-            artist={artistName}
-            onSent={setSentToName}
-          />
-        )}
       </main>
     )
   }

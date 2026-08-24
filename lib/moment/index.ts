@@ -71,6 +71,7 @@ export {
   MARGO_SITE_ORIGIN,
   getMomentShareUrl,
   buildMomentShareText,
+  buildMomentLinkCta,
   buildLyricBackShareText,
   buildNativeSharePayload,
   buildLyricBackNativeSharePayload,
@@ -79,4 +80,5 @@ export {
   isMomentRecipientShareable,
   shareMomentNative,
   copyMomentShareText,
+  copyMomentShareLink,
 } from '@/lib/moment/share'

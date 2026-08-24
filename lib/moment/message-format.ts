@@ -10,13 +10,32 @@ export interface ParsedMomentMessage {
 const MOMENT_URL_RE =
   /https?:\/\/(?:www\.)?(?:trymargo\.com|[\w.-]+\.vercel\.app)\/m\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i
 
-export function parseMomentMessageBody(body: string): ParsedMomentMessage | null {
-  const urlMatch = body.match(MOMENT_URL_RE)
-  if (!urlMatch) return null
+const MOMENT_MAGIC_RE =
+  /margo-moment:([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i
 
-  const postId = urlMatch[1]
-  const withoutUrl = body.replace(urlMatch[0], '').trim()
-  const lines = withoutUrl.split('\n').map((l) => l.trim()).filter(Boolean)
+export function buildMomentMessageBody(
+  lyric: string,
+  song: string,
+  artist: string,
+  postId: string,
+): string {
+  const trimmed = lyric.trim()
+  const quoted = trimmed.startsWith('"') ? trimmed : `"${trimmed}"`
+  const meta = [song.trim(), artist.trim()].filter(Boolean).join(' · ')
+  return [quoted, meta, `margo-moment:${postId}`].filter(Boolean).join('\n')
+}
+
+export function parseMomentMessageBody(body: string): ParsedMomentMessage | null {
+  const magicMatch = body.match(MOMENT_MAGIC_RE)
+  const urlMatch = body.match(MOMENT_URL_RE)
+  const postId = magicMatch?.[1] || urlMatch?.[1]
+  if (!postId) return null
+
+  const withoutMeta = body
+    .replace(MOMENT_MAGIC_RE, '')
+    .replace(MOMENT_URL_RE, '')
+    .trim()
+  const lines = withoutMeta.split('\n').map((l) => l.trim()).filter(Boolean)
   if (lines.length === 0) return null
 
   const lyric = lines[0].replace(/^["“]|["”]$/g, '')
