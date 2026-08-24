@@ -19,6 +19,8 @@ interface MomentActionMenuProps {
   variant?: 'primary' | 'secondary'
   busy?: boolean
   disabled?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function MomentActionMenu({
@@ -27,8 +29,15 @@ export function MomentActionMenu({
   variant = 'secondary',
   busy = false,
   disabled = false,
+  open: controlledOpen,
+  onOpenChange,
 }: MomentActionMenuProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = (next: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(next)
+    onOpenChange?.(next)
+  }
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -36,18 +45,25 @@ export function MomentActionMenu({
     const onDoc = (e: MouseEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
     }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [open])
 
   const isPrimary = variant === 'primary'
 
   return (
-    <div ref={rootRef} style={{ position: 'relative', width: '100%' }}>
+    <div ref={rootRef} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
       <button
         type="button"
         disabled={disabled || busy}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(!open)}
         aria-expanded={open}
         style={{
           width: '100%',
@@ -89,7 +105,7 @@ export function MomentActionMenu({
             left: 0,
             right: 0,
             top: 'calc(100% + 6px)',
-            zIndex: 30,
+            zIndex: 50,
             display: 'flex',
             flexDirection: 'column',
             gap: '4px',

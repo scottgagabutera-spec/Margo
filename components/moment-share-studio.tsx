@@ -74,6 +74,7 @@ export function MomentShareStudio({
   const [lineIndex, setLineIndex] = useState(0)
   const [busy, setBusy] = useState(false)
   const [canShareImg, setCanShareImg] = useState(false)
+  const [openMenu, setOpenMenu] = useState<'save' | 'share' | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const isDualCard = !!(parentLyric && parentSong && parentArtist)
@@ -306,15 +307,26 @@ export function MomentShareStudio({
         </>
       ) : null}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <MomentActionMenu label="Save" items={saveItems} variant="primary" busy={busy} />
-        <MomentActionMenu
-          label="Share"
-          items={shareItems.length > 0 ? shareItems : [{ id: 'none', label: 'Not available', disabled: true, onClick: () => {} }]}
-          variant="secondary"
-          busy={busy}
-          disabled={shareItems.length === 0}
-        />
+      <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', alignItems: 'flex-start' }}>
+          <MomentActionMenu
+            label="Save"
+            items={saveItems}
+            variant="primary"
+            busy={busy}
+            open={openMenu === 'save'}
+            onOpenChange={(next) => setOpenMenu(next ? 'save' : null)}
+          />
+          <MomentActionMenu
+            label="Share"
+            items={shareItems.length > 0 ? shareItems : [{ id: 'none', label: 'Not available', disabled: true, onClick: () => {} }]}
+            variant="secondary"
+            busy={busy}
+            disabled={shareItems.length === 0}
+            open={openMenu === 'share'}
+            onOpenChange={(next) => setOpenMenu(next ? 'share' : null)}
+          />
+        </div>
       </div>
     </div>
   )

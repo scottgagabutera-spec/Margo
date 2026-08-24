@@ -188,7 +188,6 @@ function ComposeInner() {
   const [suggestedVibe, setSuggestedVibe] = useState<Vibe | null>(null)
   const [emotionLoading, setEmotionLoading] = useState(false)
   const [showSendTo, setShowSendTo] = useState(false)
-  const [sentToName, setSentToName] = useState<string | null>(null)
   const [postedId, setPostedId] = useState<string | null>(null)
   const [completionMode, setCompletionMode] = useState<'public' | 'private' | null>(null)
   const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
@@ -602,7 +601,6 @@ function ComposeInner() {
     setPostedId(null)
     setCompletionMode(null)
     setShowSendTo(false)
-    setSentToName(null)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
     setSnippetStart(null)
@@ -631,17 +629,6 @@ function ComposeInner() {
                 letterSpacing: '0.5px', minHeight: '36px', padding: '0 4px',
               }}
             >Done</button>
-            {!isPrivateSave && (
-              <button
-                type="button"
-                onClick={() => router.push('/feed')}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontFamily: font, fontSize: '0.62rem', color: 'var(--gold)',
-                  letterSpacing: '0.6px', textTransform: 'uppercase', minHeight: '36px', padding: '0 4px',
-                }}
-              >See on Feed</button>
-            )}
           </div>
 
           <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.2rem', color: 'var(--text)', marginBottom: '4px' }}>
@@ -650,37 +637,87 @@ function ComposeInner() {
           <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '16px' }}>
             {isPrivateSave
               ? 'Only you can see this — it stays off the Feed.'
-              : (sentToName ? 'Sent to ' + sentToName + '.' : 'Your Moment is on Margo. Share it below.')}
+              : 'Your Moment is on Margo. Save, share, or send it below.'}
           </p>
 
           <MomentShareStudio moment={exportMoment} compact />
 
           {!isPrivateSave && postedId && (
-            <>
+            <ComposeSendTo
+              open={showSendTo}
+              onOpenChange={setShowSendTo}
+              variant="popover"
+              postId={postedId}
+              lyric={lyric}
+              song={songName}
+              artist={artistName}
+              onSent={() => {}}
+            />
+          )}
+
+          <div style={{
+            marginTop: '20px',
+            paddingTop: '16px',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}>
+            <p style={{
+              fontFamily: font,
+              fontSize: '0.54rem',
+              fontWeight: 700,
+              color: 'var(--text-secondary)',
+              letterSpacing: '1.4px',
+              textTransform: 'uppercase',
+              margin: '0 0 4px',
+              textAlign: 'center',
+            }}>
+              What&apos;s next
+            </p>
+            {!isPrivateSave && (
               <button
                 type="button"
-                onClick={() => setShowSendTo((v) => !v)}
+                onClick={() => router.push('/feed')}
                 style={{
-                  width: '100%', marginTop: '14px', padding: '10px 16px', minHeight: '38px',
-                  background: showSendTo ? 'rgba(232,197,71,0.1)' : 'transparent',
-                  color: 'var(--gold)',
-                  borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                  fontSize: '0.54rem', letterSpacing: '0.9px', textTransform: 'uppercase',
-                  border: '1px solid var(--gold-border)', cursor: 'pointer',
+                  width: '100%',
+                  minHeight: '42px',
+                  borderRadius: '50px',
+                  border: 'none',
+                  background: 'var(--gold)',
+                  color: 'var(--bg)',
+                  fontFamily: font,
+                  fontSize: '0.58rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.9px',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
                 }}
-              >{showSendTo ? 'Hide send to someone' : 'Send to someone on Margo'}</button>
-              <ComposeSendTo
-                open={showSendTo}
-                onOpenChange={setShowSendTo}
-                variant="inline"
-                postId={postedId}
-                lyric={lyric}
-                song={songName}
-                artist={artistName}
-                onSent={setSentToName}
-              />
-            </>
-          )}
+              >
+                View on Feed
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={resetCompose}
+              style={{
+                width: '100%',
+                minHeight: '40px',
+                borderRadius: '50px',
+                border: '1px solid var(--border)',
+                background: 'transparent',
+                color: 'var(--text)',
+                fontFamily: font,
+                fontSize: '0.58rem',
+                fontWeight: 700,
+                letterSpacing: '0.9px',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+              }}
+            >
+              Share another lyric
+            </button>
+          </div>
         </div>
       </main>
     )

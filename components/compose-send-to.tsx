@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CloseIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -26,32 +26,37 @@ function personFromHit(hit: ProfileSearchHit): Person {
 function PersonRow({
   person,
   disabled,
-  onPick,
+  selected,
+  onSelect,
   compact = false,
 }: {
   person: Person
   disabled: boolean
-  onPick: (person: Person) => void
+  selected: boolean
+  onSelect: (person: Person) => void
   compact?: boolean
 }) {
   const avatarSize = compact ? '36px' : '40px'
   return (
     <button
       type="button"
-      onClick={() => onPick(person)}
+      onClick={() => onSelect(person)}
       disabled={disabled}
+      aria-pressed={selected}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
         width: '100%',
-        minHeight: compact ? '40px' : '44px',
-        padding: compact ? '4px 2px' : '6px 4px',
-        background: 'none',
-        border: 'none',
+        minHeight: compact ? '44px' : '48px',
+        padding: compact ? '6px 8px' : '8px 10px',
+        background: selected ? 'rgba(232,197,71,0.12)' : 'transparent',
+        border: selected ? '1px solid var(--gold-border)' : '1px solid transparent',
+        borderRadius: '12px',
         cursor: disabled ? 'default' : 'pointer',
         textAlign: 'left',
         opacity: disabled ? 0.5 : 1,
+        transition: 'background 120ms ease, border-color 120ms ease',
       }}
     >
       <div style={{
@@ -84,6 +89,21 @@ function PersonRow({
           @{person.username}
         </p>
       </div>
+      <div style={{
+        width: '22px',
+        height: '22px',
+        borderRadius: '50%',
+        flexShrink: 0,
+        border: selected ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
+        background: selected ? 'var(--gold)' : 'transparent',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        {selected && (
+          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--bg)', lineHeight: 1 }}>✓</span>
+        )}
+      </div>
     </button>
   )
 }
@@ -97,7 +117,9 @@ function SendToPanel({
   recentsCount,
   error,
   sending,
-  onPick,
+  selected,
+  onSelect,
+  onConfirm,
   compact,
 }: {
   query: string
@@ -108,7 +130,9 @@ function SendToPanel({
   recentsCount: number
   error: string | null
   sending: boolean
-  onPick: (person: Person) => void
+  selected: Person | null
+  onSelect: (person: Person) => void
+  onConfirm: () => void
   compact?: boolean
 }) {
   return (
@@ -132,8 +156,11 @@ function SendToPanel({
       )}
 
       <div style={{
-        flex: 1, minHeight: compact ? '180px' : '240px',
-        overflowY: 'auto', padding: compact ? '0' : '0 12px',
+        flex: 1,
+        minHeight: compact ? '140px' : '200px',
+        maxHeight: compact ? '200px' : '280px',
+        overflowY: 'auto',
+        padding: compact ? '0 2px' : '0 12px',
         WebkitOverflowScrolling: 'touch',
       }}>
         {!showSearch && recentsCount > 0 && (
@@ -169,10 +196,44 @@ function SendToPanel({
             key={person.id}
             person={person}
             disabled={sending}
-            onPick={onPick}
+            selected={selected?.id === person.id}
+            onSelect={onSelect}
             compact={compact}
           />
         ))}
+      </div>
+
+      <div style={{
+        flexShrink: 0,
+        padding: compact ? '10px 0 0' : '10px 16px 12px',
+        borderTop: '1px solid var(--border)',
+        marginTop: compact ? '8px' : 0,
+      }}>
+        <button
+          type="button"
+          disabled={!selected || sending}
+          onClick={onConfirm}
+          style={{
+            width: '100%',
+            minHeight: '42px',
+            borderRadius: '50px',
+            border: 'none',
+            background: !selected || sending ? 'rgba(232,197,71,0.35)' : 'var(--gold)',
+            color: 'var(--bg)',
+            fontFamily: font,
+            fontSize: '0.58rem',
+            fontWeight: 700,
+            letterSpacing: '0.9px',
+            textTransform: 'uppercase',
+            cursor: !selected || sending ? 'default' : 'pointer',
+          }}
+        >
+          {sending
+            ? 'Sending…'
+            : selected
+              ? 'Send to ' + selected.displayName
+              : 'Choose someone'}
+        </button>
       </div>
     </>
   )
@@ -195,8 +256,8 @@ export function ComposeSendTo({
   song: string
   artist: string
   onSent: (name: string) => void
-  /** inline = embedded panel on Sent screen; modal = overlay */
-  variant?: 'modal' | 'inline'
+  /** popover = anchored panel (no layout shift); modal = overlay; inline deprecated */
+  variant?: 'modal' | 'inline' | 'popover'
 }) {
   const { user } = useIdentity()
   const { conversations, applyOutboundMessage } = useMessaging()
@@ -205,9 +266,12 @@ export function ComposeSendTo({
   const [searching, setSearching] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Person | null>(null)
+  const [lastSentName, setLastSentName] = useState<string | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   const myId = user?.id
-  const isOpen = variant === 'inline' ? open : open
+  const isOpen = open
 
   useEffect(() => {
     if (!isOpen) return
@@ -215,7 +279,24 @@ export function ComposeSendTo({
     setHits([])
     setError(null)
     setSending(false)
+    setSelected(null)
   }, [isOpen])
+
+  useEffect(() => {
+    if (variant !== 'popover' || !isOpen) return
+    const onDoc = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) onOpenChange(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [variant, isOpen, onOpenChange])
 
   useEffect(() => {
     if (variant === 'modal' && !open) return
@@ -291,10 +372,10 @@ export function ComposeSendTo({
       senderId: data.sender_id,
     })
     setSending(false)
+    setLastSentName(person.displayName)
     onSent(person.displayName)
-    if (variant === 'modal') onOpenChange(false)
-    else setQuery('')
-  }, [myId, sending, lyric, song, artist, postId, applyOutboundMessage, onSent, onOpenChange, variant])
+    onOpenChange(false)
+  }, [myId, sending, lyric, song, artist, postId, applyOutboundMessage, onSent, onOpenChange])
 
   const panel = (
     <SendToPanel
@@ -306,10 +387,87 @@ export function ComposeSendTo({
       recentsCount={recents.length}
       error={error}
       sending={sending}
-      onPick={sendTo}
-      compact={variant === 'inline'}
+      selected={selected}
+      onSelect={setSelected}
+      onConfirm={() => { if (selected) void sendTo(selected) }}
+      compact={variant === 'popover' || variant === 'inline'}
     />
   )
+
+  if (variant === 'popover') {
+    return (
+      <div ref={rootRef} style={{ position: 'relative', marginTop: '12px' }}>
+        <button
+          type="button"
+          onClick={() => onOpenChange(!open)}
+          aria-expanded={open}
+          style={{
+            width: '100%',
+            padding: '10px 16px',
+            minHeight: '40px',
+            background: open ? 'rgba(232,197,71,0.1)' : 'transparent',
+            color: 'var(--gold)',
+            borderRadius: '50px',
+            fontFamily: font,
+            fontWeight: 700,
+            fontSize: '0.54rem',
+            letterSpacing: '0.9px',
+            textTransform: 'uppercase',
+            border: '1px solid var(--gold-border)',
+            cursor: 'pointer',
+          }}
+        >
+          Send to someone on Margo
+        </button>
+
+        {open && (
+          <div style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 'calc(100% + 8px)',
+            zIndex: 40,
+            borderRadius: '16px',
+            border: '1px solid var(--border)',
+            background: 'var(--surface)',
+            boxShadow: '0 20px 48px rgba(0,0,0,0.5)',
+            padding: '12px',
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            <p style={{
+              fontFamily: font,
+              fontSize: '0.54rem',
+              fontWeight: 700,
+              color: 'var(--gold)',
+              letterSpacing: '1.6px',
+              textTransform: 'uppercase',
+              margin: '0 0 8px',
+            }}>
+              Send to someone
+            </p>
+            {panel}
+          </div>
+        )}
+
+        {lastSentName && !open && (
+          <p style={{
+            fontFamily: font,
+            fontSize: '0.78rem',
+            color: 'var(--gold)',
+            textAlign: 'center',
+            margin: '10px 0 0',
+            padding: '10px 14px',
+            borderRadius: '12px',
+            background: 'rgba(232,197,71,0.08)',
+            border: '1px solid var(--gold-border)',
+          }}>
+            Sent to {lastSentName}.
+          </p>
+        )}
+      </div>
+    )
+  }
 
   if (variant === 'inline') {
     if (!open) return null
