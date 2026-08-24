@@ -8,16 +8,17 @@ export interface LyricBackShareInput {
 }
 
 export function getMomentShareUrl(postId?: string | null): string {
-  if (postId) return `${MARGO_SITE_ORIGIN}/post/${postId}`
+  if (postId) return `${MARGO_SITE_ORIGIN}/m/${postId}`
   return MARGO_SITE_ORIGIN
 }
 
 /** Plain-text fallback for clipboard and share sheets. */
 export function buildMomentShareText(
   moment: MargoMoment,
-  options?: { siteSuffix?: boolean },
+  options?: { siteSuffix?: boolean; includeUrl?: boolean },
 ): string {
   const includeSuffix = options?.siteSuffix !== false
+  const includeUrl = options?.includeUrl === true
   const parts = moment.lines.map((line) => {
     const meta: string[] = []
     if (line.artistName) meta.push(line.artistName)
@@ -26,7 +27,13 @@ export function buildMomentShareText(
     return `"${line.lyric}"${suffix}`
   })
   const body = parts.join('  ·  ')
+  const url = moment.postId ? getMomentShareUrl(moment.postId) : null
+
+  if (includeUrl && url) {
+    return body ? `${body}\n${url}` : url
+  }
   if (!includeSuffix) return body
+  if (url) return body ? `${body}\n${url}` : url
   return body ? `${body} — trymargo.com` : 'trymargo.com'
 }
 
@@ -40,13 +47,13 @@ export interface NativeSharePayload {
   url: string
 }
 
-/** Standard Web Share API payload — URL + text, no custom MIME types. */
+/** Standard Web Share API payload — URL + full lyric text (separate fields). */
 export function buildNativeSharePayload(moment: MargoMoment): NativeSharePayload {
   const url = getMomentShareUrl(moment.postId)
-  const text = buildMomentShareText(moment)
+  const text = buildMomentShareText(moment, { siteSuffix: false })
   return {
     title: 'MARGO',
-    text: text.substring(0, 60),
+    text,
     url,
   }
 }
@@ -58,7 +65,7 @@ export function buildLyricBackNativeSharePayload(
   const url = getMomentShareUrl(postId)
   return {
     title: 'MARGO',
-    text: buildLyricBackShareText(input).substring(0, 60),
+    text: buildLyricBackShareText(input),
     url,
   }
 }
@@ -100,7 +107,8 @@ export async function shareMomentNative(moment: MargoMoment): Promise<NativeShar
 
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
     try {
-      await navigator.clipboard.writeText(payload.url)
+      const fallback = buildMomentShareText(moment, { includeUrl: true })
+      await navigator.clipboard.writeText(fallback)
       return 'copied'
     } catch {
       return 'failed'
@@ -113,7 +121,7 @@ export async function shareMomentNative(moment: MargoMoment): Promise<NativeShar
 export async function copyMomentShareText(moment: MargoMoment): Promise<boolean> {
   if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return false
   try {
-    await navigator.clipboard.writeText(buildMomentShareText(moment))
+    await navigator.clipboard.writeText(buildMomentShareText(moment, { includeUrl: true }))
     return true
   } catch {
     return false

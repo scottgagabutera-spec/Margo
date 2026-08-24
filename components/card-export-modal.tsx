@@ -11,7 +11,7 @@ import {
   type NormalizedLine,
   type MomentLineInput,
 } from '@/lib/moment-export/render-moment'
-import { downloadCanvas, slugify } from '@/lib/moment-export/save-moment-image'
+import { downloadCanvas, slugify, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import type { MargoMoment } from '@/lib/moment/types'
 import {
   buildLyricBackNativeSharePayload,
@@ -22,6 +22,7 @@ import {
   getMomentShareUrl,
   resolveMomentComposition,
   margoMomentToPostLines,
+  canShareImageFiles,
   shareMomentNative,
 } from '@/lib/moment'
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
@@ -65,6 +66,7 @@ export function CardExportModal({
   // of a single button press that might quietly produce fewer files than
   // expected with no explanation.
   const [exportAllProgress, setExportAllProgress] = useState<{ done: number; total: number } | null>(null)
+  const [canShareImg, setCanShareImg] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const carouselCanvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -106,6 +108,10 @@ export function CardExportModal({
     if (isDualCard || !effectiveMoment) return null
     return resolveMomentComposition(effectiveMoment)
   }, [isDualCard, effectiveMoment])
+
+  useEffect(() => {
+    if (open) setCanShareImg(canShareImageFiles())
+  }, [open])
 
   useEffect(() => {
     if (carouselIndex >= momentLines.length) setCarouselIndex(0)
@@ -263,6 +269,11 @@ export function CardExportModal({
     if (typeof navigator !== 'undefined') navigator.clipboard.writeText(url)
   }, [isDualCard, parentLyric, lyric, resolvedPostId, effectiveMoment, url])
 
+  const handleShareImage = useCallback(async () => {
+    if (!effectiveMoment || isDualCard) return
+    await shareMargoMomentImage(effectiveMoment)
+  }, [effectiveMoment, isDualCard])
+
   if (!open) return null
 
   const sectionLabelStyle: React.CSSProperties = {
@@ -379,19 +390,25 @@ export function CardExportModal({
         {/* Primary export action — the poster is the hero; this is one
             clear, compact CTA plus two lightweight secondary controls, not
             three equally-weighted buttons. */}
-        <div style={{ display: 'flex', gap: '8px', padding: '12px 16px 0' }}>
+        <div style={{ display: 'flex', gap: '8px', padding: '12px 16px 0', flexWrap: 'wrap' }}>
           <button
             onClick={handleSave}
-            style={{ ...btnBase, flex: 2, background: '#E8C547', color: '#07060A', border: 'none', fontWeight: 700 }}
+            style={{ ...btnBase, flex: '2 1 120px', background: '#E8C547', color: '#07060A', border: 'none', fontWeight: 700 }}
           >{isDualCard ? 'Save Card' : 'Export Moment'}</button>
           <button
             onClick={handleCopy}
-            style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: copied ? '#E8C547' : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, transition: 'color 150ms ease' }}
+            style={{ ...btnBase, flex: '1 1 72px', background: 'rgba(255,255,255,0.05)', color: copied ? '#E8C547' : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, transition: 'color 150ms ease' }}
           >{copied ? 'Copied' : 'Copy'}</button>
           <button
             onClick={handleShare}
-            style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}
+            style={{ ...btnBase, flex: '1 1 72px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}
           >Share</button>
+          {canShareImg && !isDualCard ? (
+            <button
+              onClick={handleShareImage}
+              style={{ ...btnBase, flex: '1 1 100px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}
+            >Share image</button>
+          ) : null}
         </div>
 
         {/* Individual-card carousel — optional secondary presentation,
