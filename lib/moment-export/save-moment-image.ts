@@ -53,6 +53,27 @@ function normalizedFromMoment(moment: MargoMoment): NormalizedLine[] {
     .filter((l) => l.lyric.trim().length > 0)
 }
 
+function renderOptionsFromMoment(moment: MargoMoment): {
+  themeId: string
+  shapeId: string
+  vibeLabel?: string | null
+  seedKey: string
+  variant: 'poster' | 'stage-card'
+  canPlayInline?: boolean
+  hasExternalListen?: boolean
+} {
+  const isStageCard = moment.status === 'ephemeral'
+  return {
+    themeId: moment.themeId,
+    shapeId: moment.shapeId,
+    vibeLabel: moment.vibeLabel,
+    seedKey: moment.seedKey,
+    variant: isStageCard ? 'stage-card' : 'poster',
+    canPlayInline: moment.listen?.canPlayInline ?? false,
+    hasExternalListen: !!(moment.listen?.externalUrl && !moment.listen?.canPlayInline),
+  }
+}
+
 export async function saveMargoMomentImage(
   moment: MargoMoment,
   options?: { filename?: string },
@@ -61,17 +82,17 @@ export async function saveMargoMomentImage(
   if (normalized.length === 0) return
 
   const canvas = document.createElement('canvas')
+  const renderOpts = renderOptionsFromMoment(moment)
   await renderMomentToCanvas(canvas, {
     lines: normalized,
-    themeId: moment.themeId,
-    shapeId: moment.shapeId,
-    vibeLabel: moment.vibeLabel,
-    seedKey: moment.seedKey,
+    ...renderOpts,
   })
 
   const primary = normalized[0]
   const base = normalized.length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
-  const shapeLabel = moment.shapeId === 'vertical' ? 'Story' : moment.shapeId === 'wide' ? 'Wide' : 'Square'
+  const shapeLabel = renderOpts.variant === 'stage-card'
+    ? 'Moment'
+    : moment.shapeId === 'vertical' ? 'Story' : moment.shapeId === 'wide' ? 'Wide' : 'Square'
   const filename = options?.filename ?? `MARGO_${base}_${shapeLabel}.png`
   await downloadCanvas(canvas, filename)
 }
@@ -84,12 +105,10 @@ export async function renderMargoMomentPngFile(
   if (normalized.length === 0) return null
 
   const canvas = document.createElement('canvas')
+  const renderOpts = renderOptionsFromMoment(moment)
   await renderMomentToCanvas(canvas, {
     lines: normalized,
-    themeId: moment.themeId,
-    shapeId: moment.shapeId,
-    vibeLabel: moment.vibeLabel,
-    seedKey: moment.seedKey,
+    ...renderOpts,
   })
 
   const blob = await new Promise<Blob | null>((resolve) => {
@@ -99,7 +118,9 @@ export async function renderMargoMomentPngFile(
 
   const primary = normalized[0]
   const base = normalized.length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
-  const shapeLabel = moment.shapeId === 'vertical' ? 'Story' : moment.shapeId === 'wide' ? 'Wide' : 'Square'
+  const shapeLabel = renderOpts.variant === 'stage-card'
+    ? 'Moment'
+    : moment.shapeId === 'vertical' ? 'Story' : moment.shapeId === 'wide' ? 'Wide' : 'Square'
   return new File([blob], `MARGO_${base}_${shapeLabel}.png`, { type: 'image/png' })
 }
 

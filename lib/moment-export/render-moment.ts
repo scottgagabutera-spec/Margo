@@ -786,12 +786,299 @@ export interface RenderMomentOptions {
   vibeLabel?: string | null
   seedKey?: string
   scale?: number
+  /** stage-card matches StageMomentCard UI; poster is the full export poster */
+  variant?: 'poster' | 'stage-card'
+  canPlayInline?: boolean
+  hasExternalListen?: boolean
+}
+
+/** Stage card export width — height is content-driven (not a 1080×1080 poster). */
+export const STAGE_CARD_EXPORT_WIDTH = 1080
+
+function drawRoundedRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  const radius = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.lineTo(x + w - radius, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius)
+  ctx.lineTo(x + w, y + h - radius)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
+  ctx.lineTo(x + radius, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius)
+  ctx.lineTo(x, y + radius)
+  ctx.quadraticCurveTo(x, y, x + radius, y)
+  ctx.closePath()
+}
+
+function drawVibeTagOnGold(
+  ctx: CanvasRenderingContext2D,
+  rightX: number,
+  bottomY: number,
+  label: string,
+  geist: string,
+  scale: number,
+) {
+  const tagH = 22 * scale
+  const tagFS = Math.max(10, Math.round(7.7 * scale))
+  ctx.font = `700 ${tagFS}px ${geist}`
+  const textW = ctx.measureText(label.toUpperCase()).width
+  const tagW = Math.max(72 * scale, textW + 36 * scale)
+  const x = rightX - tagW
+  const y = bottomY - tagH
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.moveTo(x + 8 * scale, y)
+  ctx.lineTo(x + tagW - 8 * scale, y)
+  ctx.quadraticCurveTo(x + tagW, y, x + tagW, y + 7 * scale)
+  ctx.lineTo(x + tagW, y + tagH - 7 * scale)
+  ctx.quadraticCurveTo(x + tagW, y + tagH, x + tagW - 8 * scale, y + tagH)
+  ctx.lineTo(x + 8 * scale, y + tagH)
+  ctx.lineTo(x + 1 * scale, y + tagH / 2)
+  ctx.closePath()
+  ctx.fillStyle = 'rgba(7,6,10,0.08)'
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(7,6,10,0.18)'
+  ctx.lineWidth = 1.2 * scale
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.arc(x + 9 * scale, y + tagH / 2, 2.2 * scale, 0, Math.PI * 2)
+  ctx.fillStyle = MARGO_GOLD
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(7,6,10,0.18)'
+  ctx.stroke()
+  ctx.fillStyle = 'rgba(7,6,10,0.85)'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(label.toUpperCase(), x + tagW / 2 + 4 * scale, y + tagH / 2 + 0.5 * scale)
+  ctx.restore()
+}
+
+function drawPlayControl(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  ink: string,
+) {
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(7,6,10,0.1)'
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(7,6,10,0.14)'
+  ctx.lineWidth = 1
+  ctx.stroke()
+  const cx = x + size / 2
+  const cy = y + size / 2
+  ctx.fillStyle = ink
+  ctx.beginPath()
+  ctx.moveTo(cx - size * 0.12, cy - size * 0.18)
+  ctx.lineTo(cx + size * 0.2, cy)
+  ctx.lineTo(cx - size * 0.12, cy + size * 0.18)
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
+}
+
+/**
+ * Stage Moment card — matches StageMomentCard / ComposeLyricCard layout.
+ * Content-hugging height at STAGE_CARD_EXPORT_WIDTH (not a square poster).
+ */
+export async function measureStageMomentCardHeight(
+  lines: NormalizedLine[],
+  vibeLabel: string | null | undefined,
+  width = STAGE_CARD_EXPORT_WIDTH,
+): Promise<number> {
+  if (typeof document === 'undefined') return Math.round(width * 0.72)
+  await waitForFonts()
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return Math.round(width * 0.72)
+  return computeStageCardHeight(ctx, lines, vibeLabel, width)
+}
+
+function computeStageCardHeight(
+  ctx: CanvasRenderingContext2D,
+  lines: NormalizedLine[],
+  vibeLabel: string | null | undefined,
+  W: number,
+): number {
+  const REF_W = 400
+  const s = W / REF_W
+  const padT = 20 * s
+  const padB = 18 * s
+  const padX = 20 * s
+  const lyricFS = Math.round(29.6 * s)
+  const lyricLH = lyricFS * 1.35
+  const metaFS = Math.round(12 * s)
+  const metaGap = 14 * s
+  const artSize = Math.round(48 * s)
+  const artGap = 14 * s
+  const rowGap = 16 * s
+  const rowH = Math.max(28 * s, 44 * s)
+  const vibeGap = 12 * s
+  const vibeOverhang = 9 * s
+  const contentW = W - padX * 2
+
+  const line = lines[0]
+  if (!line) return Math.round(padT + padB + lyricLH)
+
+  ctx.font = `italic ${lyricFS}px Lora, serif`
+  const lyricLines = wrapText(ctx, line.lyric, contentW)
+  const lyricH = lyricLines.length * lyricLH
+
+  const metaLine = [line.songTitle, line.artistName].filter(Boolean).join(' · ')
+  const metaH = metaLine ? metaGap + metaFS * 1.3 : 0
+  const artH = line.artworkUrl ? artGap + artSize : 0
+  const vibeH = vibeLabel ? vibeGap + 22 * s + vibeOverhang : 0
+
+  return Math.ceil(padT + lyricH + metaH + artH + rowGap + rowH + vibeH + padB)
+}
+
+export async function drawStageMomentCard(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  lines: NormalizedLine[],
+  theme: ExportTheme,
+  vibeLabel: string | null | undefined,
+  options?: { canPlayInline?: boolean; hasExternalListen?: boolean },
+) {
+  await waitForFonts()
+  const geist = resolveGeistFontFamily()
+  const { ink, inkMuted, light } = theme
+  const REF_W = 400
+  const s = W / REF_W
+  const padT = 20 * s
+  const padB = 18 * s
+  const padX = 20 * s
+  const radius = 16 * s
+  const lyricFS = Math.round(29.6 * s)
+  const lyricLH = lyricFS * 1.35
+  const metaFS = Math.round(12 * s)
+  const metaGap = 14 * s
+  const artSize = Math.round(48 * s)
+  const artRadius = 8 * s
+  const artGap = 14 * s
+  const rowGap = 16 * s
+  const rowH = Math.max(28 * s, 44 * s)
+  const listenFS = Math.round(11.5 * s)
+  const markSize = 20 * s
+  const contentW = W - padX * 2
+
+  const line = lines[0]
+  if (!line) return
+
+  // Card background — gold + subtle top highlight (matches Stage gradient)
+  ctx.save()
+  drawRoundedRectPath(ctx, 0, 0, W, H, radius)
+  ctx.clip()
+  ctx.fillStyle = light ? MARGO_GOLD : theme.bg
+  ctx.fillRect(0, 0, W, H)
+  const highlight = ctx.createLinearGradient(0, 0, 0, H * 0.28)
+  highlight.addColorStop(0, 'rgba(255,255,255,0.06)')
+  highlight.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = highlight
+  ctx.fillRect(0, 0, W, H)
+  ctx.restore()
+
+  ctx.strokeStyle = 'rgba(7,6,10,0.16)'
+  ctx.lineWidth = 1
+  drawRoundedRectPath(ctx, 0.5, 0.5, W - 1, H - 1, radius)
+  ctx.stroke()
+
+  let y = padT
+
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
+  ctx.font = `italic ${lyricFS}px Lora, serif`
+  ctx.fillStyle = ink
+  for (const wline of wrapText(ctx, line.lyric, contentW)) {
+    y += lyricFS * 0.92
+    ctx.fillText(wline, padX, y)
+    y += lyricLH - lyricFS * 0.92
+  }
+
+  const metaLine = [line.songTitle, line.artistName].filter(Boolean).join(' · ')
+  if (metaLine) {
+    y += metaGap
+    ctx.font = `400 ${metaFS}px ${geist}`
+    ctx.fillStyle = inkMuted
+    ctx.fillText(truncateToWidth(ctx, metaLine, contentW), padX, y + metaFS)
+    y += metaFS * 1.3
+  }
+
+  if (line.artworkUrl) {
+    y += artGap
+    const artworkImg = await loadArtworkImage(line.artworkUrl)
+    drawArtworkTile(ctx, artworkImg, padX, y, artSize, artRadius, light)
+    y += artSize
+  }
+
+  y += rowGap
+  const rowY = y
+  if (options?.canPlayInline) {
+    drawPlayControl(ctx, padX, rowY + (rowH - 28 * s) / 2, 28 * s, ink)
+  } else if (options?.hasExternalListen) {
+    ctx.font = `600 ${listenFS}px ${geist}`
+    ctx.fillStyle = ink
+    ctx.fillText('Listen ↗', padX, rowY + rowH * 0.62)
+  }
+
+  ctx.globalAlpha = 0.32
+  drawMargoSymbol(ctx, W - padX - markSize, rowY + (rowH - markSize) / 2, markSize, light ? 'on-light' : 'on-dark')
+  ctx.globalAlpha = 1
+  y = rowY + rowH
+
+  if (vibeLabel) {
+    y += 12 * s
+    drawVibeTagOnGold(ctx, W - padX, H - padB + 9 * s, vibeLabel, geist, s)
+  }
+}
+
+async function renderStageMomentCardToCanvas(
+  canvas: HTMLCanvasElement,
+  options: RenderMomentOptions,
+): Promise<void> {
+  const theme = THEMES.find((t) => t.id === (options.themeId || 'gold')) || THEMES[0]
+  const W = STAGE_CARD_EXPORT_WIDTH
+  const SCALE = options.scale ?? 2
+
+  const measureCanvas = document.createElement('canvas')
+  const measureCtx = measureCanvas.getContext('2d')
+  if (!measureCtx) return
+  const H = computeStageCardHeight(measureCtx, options.lines, options.vibeLabel, W)
+
+  canvas.width = W * SCALE
+  canvas.height = H * SCALE
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.scale(SCALE, SCALE)
+
+  await drawStageMomentCard(ctx, W, H, options.lines, theme, options.vibeLabel, {
+    canPlayInline: options.canPlayInline,
+    hasExternalListen: options.hasExternalListen,
+  })
 }
 
 export async function renderMomentToCanvas(
   canvas: HTMLCanvasElement,
   options: RenderMomentOptions,
 ): Promise<void> {
+  if (options.variant === 'stage-card') {
+    await renderStageMomentCardToCanvas(canvas, options)
+    return
+  }
+
   const theme = THEMES.find((t) => t.id === (options.themeId || 'gold')) || THEMES[0]
   const shape = SHAPES.find((s) => s.id === (options.shapeId || 'square')) || SHAPES[0]
   const { w, h } = shape
