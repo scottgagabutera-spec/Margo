@@ -21,6 +21,8 @@ interface MomentActionMenuProps {
   disabled?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  /** Open menu above the trigger (for modals / bottom sheets). */
+  dropUp?: boolean
 }
 
 export function MomentActionMenu({
@@ -31,6 +33,7 @@ export function MomentActionMenu({
   disabled = false,
   open: controlledOpen,
   onOpenChange,
+  dropUp = false,
 }: MomentActionMenuProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const open = controlledOpen ?? internalOpen
@@ -104,7 +107,9 @@ export function MomentActionMenu({
             position: 'absolute',
             left: 0,
             right: 0,
-            top: 'calc(100% + 6px)',
+            ...(dropUp
+              ? { bottom: 'calc(100% + 6px)' }
+              : { top: 'calc(100% + 6px)' }),
             zIndex: 50,
             display: 'flex',
             flexDirection: 'column',

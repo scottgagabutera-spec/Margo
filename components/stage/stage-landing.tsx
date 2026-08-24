@@ -658,6 +658,7 @@ export function StageLanding() {
                   sentPostId={sentPostId}
                   onNativeShare={handleNativeShare}
                   onOpenSendTo={() => setShowSendTo(true)}
+                  hasSnippet={canPlay}
                 />
                 {sentPostId ? (
                   <ComposeSendTo

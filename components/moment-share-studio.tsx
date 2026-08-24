@@ -54,6 +54,8 @@ interface MomentShareStudioProps {
   parentSong?: string
   parentArtist?: string
   compact?: boolean
+  /** modal = feed card export sheet: pinned actions, menus open upward */
+  layout?: 'default' | 'modal'
 }
 
 export function MomentShareStudio({
@@ -68,6 +70,7 @@ export function MomentShareStudio({
   parentSong,
   parentArtist,
   compact = false,
+  layout = 'default',
 }: MomentShareStudioProps) {
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [exportVibeLabel, setExportVibeLabel] = useState<string | null>(null)
@@ -259,8 +262,12 @@ export function MomentShareStudio({
     })
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? '10px' : '12px' }}>
+  const isModal = layout === 'modal'
+  const gap = isModal ? '14px' : (compact ? '10px' : '12px')
+  const dropUp = isModal
+
+  const cardSection = (
+    <>
       {isDualCard ? (
         <div style={{ borderRadius: '12px', overflow: 'hidden', background: '#07060A' }}>
           <canvas ref={canvasRef} style={{ width: '100%', aspectRatio: '1 / 1', display: 'block' }} />
@@ -306,28 +313,75 @@ export function MomentShareStudio({
           />
         </>
       ) : null}
+    </>
+  )
 
-      <div style={{ position: 'relative' }}>
-        <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', alignItems: 'flex-start' }}>
-          <MomentActionMenu
-            label="Save"
-            items={saveItems}
-            variant="primary"
-            busy={busy}
-            open={openMenu === 'save'}
-            onOpenChange={(next) => setOpenMenu(next ? 'save' : null)}
-          />
-          <MomentActionMenu
-            label="Share"
-            items={shareItems.length > 0 ? shareItems : [{ id: 'none', label: 'Not available', disabled: true, onClick: () => {} }]}
-            variant="secondary"
-            busy={busy}
-            disabled={shareItems.length === 0}
-            open={openMenu === 'share'}
-            onOpenChange={(next) => setOpenMenu(next ? 'share' : null)}
-          />
+  const actionRow = (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'row',
+        flexWrap: 'nowrap',
+        gap: '8px',
+        alignItems: 'flex-start',
+        width: '100%',
+      }}>
+        <MomentActionMenu
+          label="Save"
+          items={saveItems}
+          variant="primary"
+          busy={busy}
+          dropUp={dropUp}
+          open={openMenu === 'save'}
+          onOpenChange={(next) => setOpenMenu(next ? 'save' : null)}
+        />
+        <MomentActionMenu
+          label="Share"
+          items={shareItems.length > 0 ? shareItems : [{ id: 'none', label: 'Not available', disabled: true, onClick: () => {} }]}
+          variant="secondary"
+          busy={busy}
+          disabled={shareItems.length === 0}
+          dropUp={dropUp}
+          open={openMenu === 'share'}
+          onOpenChange={(next) => setOpenMenu(next ? 'share' : null)}
+        />
+      </div>
+    </div>
+  )
+
+  if (isModal) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: 0,
+        gap,
+      }}>
+        <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          {cardSection}
+        </div>
+        <div style={{ flexShrink: 0, paddingTop: '4px' }}>
+          <p style={{
+            fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+            fontSize: '0.68rem',
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+            margin: '0 0 10px',
+            lineHeight: 1.4,
+          }}>
+            Save to your photos or share outside Margo
+          </p>
+          {actionRow}
         </div>
       </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap }}>
+      {cardSection}
+      {actionRow}
     </div>
   )
 }

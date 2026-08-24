@@ -45,7 +45,7 @@ export function CardExportModal({
         position: 'fixed', inset: 0, zIndex: 200,
         background: 'rgba(7,6,10,0.92)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '16px',
+        padding: '12px',
         overscrollBehavior: 'none',
       }}
       onClick={() => onOpenChange(false)}
@@ -53,32 +53,46 @@ export function CardExportModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: '400px',
+          width: '100%',
+          maxWidth: '460px',
+          minHeight: 'min(72dvh, 580px)',
+          maxHeight: 'min(92dvh, 720px)',
           background: 'var(--surface, #0F0E13)',
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '20px',
-          display: 'flex', flexDirection: 'column',
-          maxHeight: 'min(90dvh, 680px)',
+          display: 'flex',
+          flexDirection: 'column',
           overflow: 'hidden',
           boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
         }}
       >
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 16px 8px', flexShrink: 0,
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+          padding: '16px 18px 8px', flexShrink: 0, gap: '12px',
         }}>
-          <p style={{
-            fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
-            color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase', margin: 0,
-          }}>
-            Share your Moment
-          </p>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{
+              fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
+              color: 'var(--gold)', letterSpacing: '1.8px', textTransform: 'uppercase', margin: '0 0 6px',
+            }}>
+              Share your Moment
+            </p>
+            <p style={{
+              fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+              fontSize: '0.78rem',
+              color: 'var(--text-secondary)',
+              margin: 0,
+              lineHeight: 1.45,
+            }}>
+              Adjust color and vibe, then tap Save or Share below.
+            </p>
+          </div>
           <button
             type="button"
             aria-label="Close"
             onClick={() => onOpenChange(false)}
             style={{
-              width: '36px', height: '36px', borderRadius: '50%',
+              width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
               background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
             }}
@@ -86,8 +100,12 @@ export function CardExportModal({
         </div>
 
         <div style={{
-          flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 16px 16px',
-          WebkitOverflowScrolling: 'touch',
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '0 18px 18px',
+          overflow: 'hidden',
         }}>
           <MomentShareStudio
             moment={moment}
@@ -100,7 +118,7 @@ export function CardExportModal({
             parentLyric={parentLyric}
             parentSong={parentSong}
             parentArtist={parentArtist}
-            compact
+            layout="modal"
           />
         </div>
       </div>
