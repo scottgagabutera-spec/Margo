@@ -1,7 +1,8 @@
 'use client'
 import { toast } from 'sonner'
 import { CloseIcon } from '@/components/icons'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { usePosts } from '@/hooks/usePosts'
 import type { Post } from '@/hooks/usePosts'
 import { CardExportModal } from '@/components/card-export-modal'
@@ -41,6 +42,17 @@ const MIN_TRENDING_ENGAGE = 4
 const MIN_TRENDING_AGE_HOURS = 3
 
 export default function FeedPage() {
+  return (
+    <Suspense fallback={<FeedPostSkeletonList count={4} />}>
+      <FeedPageInner />
+    </Suspense>
+  )
+}
+
+function FeedPageInner() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const highlightParam = searchParams.get('highlight')
   const { isTabActive } = usePrimaryTab()
   const feedLive = isTabActive('feed')
   const { posts: livePosts, loading, reload } = usePosts({ enabled: feedLive })
@@ -85,6 +97,9 @@ export default function FeedPage() {
   const postStatsLoadedAtRef = useRef(0)
   const resonatesLoadedAtRef = useRef(0)
   const replaysLoadedAtRef = useRef(0)
+  const highlightHandledRef = useRef<string | null>(null)
+  const [sharedLabel, setSharedLabel] = useState(false)
+  const [highlightPostId, setHighlightPostId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!feedLive) return
@@ -513,6 +528,37 @@ export default function FeedPage() {
   const listReady = seeded && !loading
   const hasActiveFilter = selectedVibe !== 'ALL' || selectedSort !== 'NEW'
 
+  useEffect(() => {
+    if (!highlightParam || !feedLive) return
+    void reload()
+  }, [highlightParam, feedLive, reload])
+
+  useEffect(() => {
+    if (!highlightParam || !listReady) return
+    const found = posts.some((p) => p.id === highlightParam)
+    if (!found) return
+    if (highlightHandledRef.current === highlightParam) return
+    highlightHandledRef.current = highlightParam
+
+    setHighlightPostId(highlightParam)
+    setSharedLabel(true)
+    router.replace('/feed', { scroll: false })
+
+    const scrollTimer = window.setTimeout(() => {
+      const el = document.getElementById(`feed-post-${highlightParam}`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 120)
+
+    const labelTimer = window.setTimeout(() => setSharedLabel(false), 2600)
+    const glowTimer = window.setTimeout(() => setHighlightPostId(null), 3200)
+
+    return () => {
+      window.clearTimeout(scrollTimer)
+      window.clearTimeout(labelTimer)
+      window.clearTimeout(glowTimer)
+    }
+  }, [highlightParam, listReady, posts, router])
+
   return (
     <PullToRefresh
       onRefreshingChange={setPtrBusy}
@@ -610,6 +656,18 @@ export default function FeedPage() {
       </div>
 
       <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px var(--margo-page-padding-bottom)' }}>
+        {sharedLabel && (
+          <p style={{
+            fontFamily: 'var(--font-lora), serif',
+            fontStyle: 'italic',
+            fontSize: '0.92rem',
+            color: 'var(--gold)',
+            textAlign: 'center',
+            margin: '0 0 20px',
+          }}>
+            Moment shared
+          </p>
+        )}
         {!listReady && <FeedPostSkeletonList count={4} />}
 
         {listReady && feedItems.length === 0 && !(searchQuery.trim() && people.length > 0) && (
@@ -686,7 +744,14 @@ export default function FeedPage() {
                 />
               )
             }
-            return <PostCard key={item.key} {...cardProps} />
+            return (
+              <PostCard
+                key={item.key}
+                {...cardProps}
+                domId={`feed-post-${post.id}`}
+                highlightShared={highlightPostId === post.id}
+              />
+            )
           })}
         </div>
 

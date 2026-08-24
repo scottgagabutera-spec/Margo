@@ -413,6 +413,22 @@ html[data-margo-stage-idle] .margo-stage-zone {
   height: 18px;
   flex-shrink: 0;
 }
+@keyframes margo-feed-shared-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(232, 197, 71, 0.45);
+    border-color: var(--gold-border);
+  }
+  35% {
+    box-shadow: 0 0 0 3px rgba(232, 197, 71, 0.28);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(232, 197, 71, 0);
+  }
+}
+.margo-feed-post--shared {
+  animation: margo-feed-shared-glow 2.8s ease-out;
+}
+
 .margo-feed-action__badge {
   position: absolute;
   top: -7px;

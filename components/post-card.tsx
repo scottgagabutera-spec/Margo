@@ -67,6 +67,10 @@ export interface PostCardProps {
   onQuoteReplay?: (id: string, quoteText: string) => void
   /** When true, skip whole-card navigate (e.g. already on /post/[id]). */
   disableCardNav?: boolean
+  /** Optional DOM id for scroll/highlight (e.g. feed-post-{id}). */
+  domId?: string
+  /** Brief highlight after the user just published this Moment. */
+  highlightShared?: boolean
 }
 
 const EMOTION_COLORS: Record<string, string> = {
@@ -437,6 +441,8 @@ export function PostCard({
   variant = 'feed',
   replayed = false, replayCount = 0, onReplay, onQuoteReplay,
   disableCardNav = false,
+  domId,
+  highlightShared = false,
 }: PostCardProps) {
   const router = useRouter()
   const { requireAuth } = useAuthGate()
@@ -564,7 +570,9 @@ export function PostCard({
 
   return (
     <div
+      id={domId}
       ref={cardRef}
+      className={highlightShared ? 'margo-feed-post--shared' : undefined}
       onClick={goToPost}
       style={{
         background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
