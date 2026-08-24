@@ -7,6 +7,8 @@ import { useThread } from '@/hooks/useThread'
 import { KeyboardSafeCtaBar } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { BackButton } from '@/components/back-button'
+import { MomentMessageCard } from '@/components/moment-message-card'
+import { parseMomentMessageBody } from '@/lib/moment/message-format'
 
 const font = 'var(--font-lora), serif'
 
@@ -15,6 +17,11 @@ function timeLabel(iso: string) {
 }
 
 function ThreadMessageBody({ body, mine }: { body: string; mine: boolean }) {
+  const moment = parseMomentMessageBody(body)
+  if (moment) {
+    return <MomentMessageCard moment={moment} mine={mine} />
+  }
+
   const parts = body.split(/(https?:\/\/[^\s]+)/g)
   const linkStyle = {
     color: mine ? 'var(--bg)' : 'var(--gold)',
@@ -29,9 +36,11 @@ function ThreadMessageBody({ body, mine }: { body: string; mine: boolean }) {
         if (!/^https?:\/\//.test(part)) return <span key={i}>{part}</span>
         const path = part.startsWith('https://trymargo.com')
           ? (part.slice('https://trymargo.com'.length) || '/')
-          : null
-        if (path) return <Link key={i} href={path} style={linkStyle}>{part}</Link>
-        return <a key={i} href={part} style={linkStyle}>{part}</a>
+          : part.includes('/m/')
+            ? part.replace(/^https?:\/\/[^/]+/, '')
+            : null
+        if (path) return <Link key={i} href={path} style={linkStyle}>Open on Margo</Link>
+        return <a key={i} href={part} style={linkStyle} rel="noopener noreferrer">Link</a>
       })}
     </p>
   )
@@ -40,7 +49,7 @@ function ThreadMessageBody({ body, mine }: { body: string; mine: boolean }) {
 export default function ThreadPage() {
   const params = useParams<{ username: string }>()
   const { user } = useIdentity()
-  const { partner, messages, loading, canSend, sending, sendMessage } = useThread(params.username)
+  const { partner, messages, loading, loadError, canSend, sending, sendMessage } = useThread(params.username)
   const [draft, setDraft] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   // Same chrome stack as Compose: --margo-keyboard-inset + data-margo-keyboard
@@ -81,35 +90,45 @@ export default function ThreadPage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
       <div style={{
         position: 'sticky', top: 0, zIndex: 20, background: 'var(--bg)',
-        padding: '70px 20px 12px', boxShadow: '0 1px 24px rgba(0,0,0,0.35)',
-        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: 'calc(var(--nav-height, 72px) + 8px) 16px 12px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        display: 'grid',
+        gridTemplateColumns: '44px 1fr 44px',
+        alignItems: 'center', gap: '8px',
       }}>
         <BackButton fallbackHref="/messages" label="Back" />
-        {partner && (
-          <>
-            <div style={{
-              width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-              background: partner.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-              border: '1px solid rgba(232,197,71,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              {partner.avatarUrl ? (
-                <img src={partner.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{ fontFamily: font, fontSize: '0.65rem', fontWeight: 700, color: 'var(--bg)' }}>
-                  {partner.displayName.slice(0, 2).toUpperCase()}
-                </span>
-              )}
-            </div>
-            <span style={{ fontFamily: font, fontSize: '0.9rem', color: 'var(--text)' }}>{partner.displayName}</span>
-          </>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', minWidth: 0 }}>
+          {partner && (
+            <>
+              <div style={{
+                width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                background: partner.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+                border: '1px solid rgba(232,197,71,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {partner.avatarUrl ? (
+                  <img src={partner.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontFamily: font, fontSize: '0.6rem', fontWeight: 700, color: 'var(--bg)' }}>
+                    {partner.displayName.slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <span style={{
+                fontFamily: font, fontSize: '0.85rem', color: 'var(--text)',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {partner.displayName}
+              </span>
+            </>
+          )}
+        </div>
+        <div aria-hidden style={{ width: '44px' }} />
       </div>
 
       <div style={{
         flex: 1, maxWidth: '560px', width: '100%', margin: '0 auto',
         padding: '16px 20px',
-        // Clear fixed KeyboardSafeCtaBar + tab bar (Compose uses the same stack).
         paddingBottom: 'calc(88px + var(--margo-tabbar-h, 0px))',
         display: 'flex', flexDirection: 'column', gap: '10px',
       }}>
@@ -121,13 +140,27 @@ export default function ThreadPage() {
               ))}
             </div>
           </div>
+        ) : loadError ? (
+          <p style={{
+            fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem',
+            color: 'var(--text-secondary)', textAlign: 'center', padding: '48px 16px',
+          }}>
+            {loadError}
+          </p>
+        ) : messages.length === 0 ? (
+          <p style={{
+            fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem',
+            color: 'var(--text-secondary)', textAlign: 'center', padding: '48px 16px',
+          }}>
+            No messages yet.
+          </p>
         ) : (
           messages.map(m => {
             const mine = m.senderId === user.id
             return (
               <div key={m.id} style={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
                 <div style={{
-                  maxWidth: '75%', padding: '10px 14px', borderRadius: '16px',
+                  maxWidth: '82%', padding: '10px 14px', borderRadius: '16px',
                   background: mine ? 'var(--gold)' : 'rgba(255,255,255,0.06)',
                   color: mine ? 'var(--bg)' : 'var(--text)',
                 }}>

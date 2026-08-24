@@ -6,6 +6,13 @@ import { useMessaging } from '@/hooks/useMessaging'
 
 const supabase = createClient()
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value)
+}
+
 export interface ThreadMessage {
   id: string
   senderId: string
@@ -45,13 +52,14 @@ export interface ThreadPartner {
  * On successful send / mark-read, updates MessagingProvider locally so
  * the inbox preview and nav badge stay in sync without a remount.
  */
-export function useThread(otherUsername: string) {
+export function useThread(partnerKey: string) {
   const { user } = useIdentity()
   const userId = user?.id
   const { applyOutboundMessage, clearUnreadForPartner } = useMessaging()
   const [partner, setPartner] = useState<ThreadPartner | null>(null)
   const [messages, setMessages] = useState<ThreadMessage[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [canSend, setCanSend] = useState(true)
   const [sending, setSending] = useState(false)
 
@@ -79,7 +87,7 @@ export function useThread(otherUsername: string) {
   }, [clearUnreadForPartner])
 
   useEffect(() => {
-    if (!userId || !otherUsername) {
+    if (!userId || !partnerKey) {
       setLoading(false)
       return
     }
@@ -91,22 +99,36 @@ export function useThread(otherUsername: string) {
 
     async function run() {
       setLoading(true)
+      setLoadError(null)
       const timeoutMs = 15_000
       let timedOut = false
       const watchdog = setTimeout(() => {
         timedOut = true
         setLoading(false)
+        setLoadError('This conversation is taking too long to load.')
       }, timeoutMs)
       try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('id, username, display_name, avatar_url, who_can_message')
-          .eq('username', otherUsername)
-          .maybeSingle()
+        const profileQuery = isUuid(partnerKey)
+          ? supabase
+              .from('profiles')
+              .select('id, username, display_name, avatar_url, who_can_message')
+              .eq('id', partnerKey)
+              .maybeSingle()
+          : supabase
+              .from('profiles')
+              .select('id, username, display_name, avatar_url, who_can_message')
+              .eq('username', partnerKey)
+              .maybeSingle()
+
+        const { data: profile, error } = await profileQuery
 
         // Cancelled / timed-out mount — do not keep applying results.
         if (!active || timedOut) return
-        if (error || !profile) return
+        if (error || !profile) {
+          setLoadError('Could not open this conversation.')
+          setLoading(false)
+          return
+        }
 
         const other: ThreadPartner = {
           id: profile.id,
@@ -175,7 +197,7 @@ export function useThread(otherUsername: string) {
       active = false
       if (channel) void supabase.removeChannel(channel)
     }
-  }, [userId, otherUsername, loadThread, clearUnreadForPartner])
+  }, [userId, partnerKey, loadThread, clearUnreadForPartner])
 
   const sendMessage = useCallback(async (body: string) => {
     if (!userId || !partner || !body.trim()) return
@@ -221,5 +243,5 @@ export function useThread(otherUsername: string) {
     })
   }, [userId, partner, applyOutboundMessage])
 
-  return { partner, messages, loading, canSend, sending, sendMessage }
+  return { partner, messages, loading, loadError, canSend, sending, sendMessage }
 }

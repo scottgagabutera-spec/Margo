@@ -94,6 +94,7 @@ export function CardExportModal({
   }, [lineSource, lyric, song, artist])
 
   const isMulti = !isDualCard && momentLines.length > 1
+  const useStageCardPreview = !isDualCard && momentLines.length === 1 && shape === 'square'
 
   const effectiveMoment = useMemo<MargoMoment | null>(() => {
     if (resolvedMoment) return resolvedMoment
@@ -132,19 +133,33 @@ export function CardExportModal({
     canvas: HTMLCanvasElement,
     linesToPaint: NormalizedLine[],
     seedKey: string,
+    forcePoster = false,
   ) => {
+    const stageCard = !forcePoster && linesToPaint.length === 1 && shape === 'square'
     await renderMomentToCanvas(canvas, {
       lines: linesToPaint,
       themeId: activeTheme.id,
       shapeId: activeShape.id,
       vibeLabel: resolvedVibeLabel,
       seedKey,
+      variant: stageCard ? 'stage-card' : undefined,
     })
-  }, [activeShape, activeTheme, resolvedVibeLabel])
+  }, [activeShape, activeTheme, resolvedVibeLabel, shape])
 
   const renderCanvas = useCallback(async () => {
     const canvas = canvasRef.current
     if (!canvas) return
+
+    if (!isDualCard && momentLines.length === 1 && shape === 'square') {
+      await renderMomentToCanvas(canvas, {
+        lines: momentLines,
+        themeId: activeTheme.id,
+        vibeLabel: resolvedVibeLabel,
+        variant: 'stage-card',
+      })
+      return
+    }
+
     const { w, h } = activeShape
     const SCALE = 2
     canvas.width = w * SCALE
@@ -162,11 +177,9 @@ export function CardExportModal({
         activeTheme
       )
     } else if (momentLines.length > 0) {
-      // postId as the composition seed when it exists — same Moment,
-      // same archetype/motif every time it's reopened.
       await drawMomentPoster(ctx, w, h, momentLines, activeTheme, resolvedVibeLabel, resolvedPostId ? `${resolvedPostId}:combined` : 'combined', composition || undefined)
     }
-  }, [activeShape, activeTheme, isDualCard, parentLyric, parentSong, parentArtist, lyric, song, artist, momentLines, resolvedVibeLabel, resolvedPostId, composition])
+  }, [activeShape, activeTheme, isDualCard, parentLyric, parentSong, parentArtist, lyric, song, artist, momentLines, resolvedVibeLabel, resolvedPostId, composition, shape])
 
   useEffect(() => {
     if (open) renderCanvas()
@@ -299,32 +312,28 @@ export function CardExportModal({
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(7,6,10,0.88)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0' }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(7,6,10,0.88)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '16px',
+      }}
       onClick={() => onOpenChange(false)}
     >
-      {/* Sheet — the poster gets the space; chrome around it stays tight so
-          this fits a phone viewport without the user scrolling past
-          buttons just to reach the next control. Outer scroll stays only
-          as a fallback for content that genuinely can't fit (e.g. a
-          multi-line carousel on a very short viewport). */}
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: '480px',
+          width: '100%', maxWidth: '440px',
           background: 'var(--surface, #0F0E13)',
           border: '1px solid rgba(255,255,255,0.07)',
-          borderBottom: 'none',
-          borderRadius: '24px 24px 0 0',
-          padding: '0 0 calc(14px + var(--margo-page-bottom))',
+          borderRadius: '20px',
+          padding: '0 0 16px',
           display: 'flex', flexDirection: 'column',
-          maxHeight: '94dvh', overflowY: 'auto',
+          maxHeight: 'min(90dvh, 720px)', overflowY: 'auto',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.45)',
         }}
       >
-        {/* Handle */}
-        <div style={{ width: '36px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', margin: '10px auto 0', flexShrink: 0 }} />
-
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0' }}>
           <p style={sectionLabelStyle}>
             {isDualCard ? 'Lyric Back Card' : 'Share your Moment'}
           </p>
@@ -336,13 +345,21 @@ export function CardExportModal({
           ><CloseIcon size={14} color="var(--text-secondary)" /></button>
         </div>
 
-        {/* Combined poster preview — the dominant element. Height responds
-            to the viewport instead of a flat cap, so Story/portrait gets
-            real visible room instead of a cramped scroll window. */}
-        <div style={{ margin: '10px 16px 0', borderRadius: '12px', overflow: 'hidden', background: '#07060A', position: 'relative', maxHeight: 'min(46dvh, 380px)', overflowY: 'auto' }}>
+        <div style={{
+          margin: '10px 16px 0', borderRadius: '12px', overflow: 'hidden',
+          background: '#07060A', position: 'relative',
+          maxHeight: useStageCardPreview ? 'min(42dvh, 340px)' : 'min(40dvh, 320px)',
+          overflowY: 'auto',
+        }}>
           <canvas
             ref={canvasRef}
-            style={{ width: '100%', aspectRatio: `${activeShape.w} / ${activeShape.h}`, display: 'block' }}
+            style={{
+              width: '100%',
+              display: 'block',
+              ...(useStageCardPreview
+                ? { height: 'auto' }
+                : { aspectRatio: `${activeShape.w} / ${activeShape.h}` }),
+            }}
           />
         </div>
 
@@ -392,30 +409,29 @@ export function CardExportModal({
           </div>
         </div>
 
-        {/* Primary export action — the poster is the hero; this is one
-            clear, compact CTA plus two lightweight secondary controls, not
-            three equally-weighted buttons. */}
-        <div style={{ display: 'flex', gap: '8px', padding: '12px 16px 0', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 16px 0' }}>
           <button
             onClick={handleSave}
-            style={{ ...btnBase, flex: '2 1 120px', background: '#E8C547', color: '#07060A', border: 'none', fontWeight: 700 }}
+            style={{ ...btnBase, width: '100%', background: '#E8C547', color: '#07060A', border: 'none', fontWeight: 700 }}
           >{isDualCard ? 'Save Card' : 'Export Moment'}</button>
-          <button
-            onClick={handleCopy}
-            disabled={!canShareUrl && !isDualCard}
-            style={{ ...btnBase, flex: '1 1 72px', background: 'rgba(255,255,255,0.05)', color: copied ? '#E8C547' : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, transition: 'color 150ms ease', opacity: (!canShareUrl && !isDualCard) ? 0.4 : 1, cursor: (!canShareUrl && !isDualCard) ? 'not-allowed' : 'pointer' }}
-          >{copied ? 'Copied' : 'Copy'}</button>
-          <button
-            onClick={handleShare}
-            disabled={!canShareUrl && !isDualCard}
-            style={{ ...btnBase, flex: '1 1 72px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, opacity: (!canShareUrl && !isDualCard) ? 0.4 : 1, cursor: (!canShareUrl && !isDualCard) ? 'not-allowed' : 'pointer' }}
-          >Share</button>
-          {canShareImg && !isDualCard ? (
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button
-              onClick={handleShareImage}
-              style={{ ...btnBase, flex: '1 1 100px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}
-            >Share image</button>
-          ) : null}
+              onClick={handleCopy}
+              disabled={!canShareUrl && !isDualCard}
+              style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: copied ? '#E8C547' : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, transition: 'color 150ms ease', opacity: (!canShareUrl && !isDualCard) ? 0.4 : 1, cursor: (!canShareUrl && !isDualCard) ? 'not-allowed' : 'pointer' }}
+            >{copied ? 'Copied' : 'Copy'}</button>
+            <button
+              onClick={handleShare}
+              disabled={!canShareUrl && !isDualCard}
+              style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, opacity: (!canShareUrl && !isDualCard) ? 0.4 : 1, cursor: (!canShareUrl && !isDualCard) ? 'not-allowed' : 'pointer' }}
+            >Share</button>
+            {canShareImg && !isDualCard ? (
+              <button
+                onClick={handleShareImage}
+                style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}
+              >Image</button>
+            ) : null}
+          </div>
         </div>
 
         {/* Individual-card carousel — optional secondary presentation,

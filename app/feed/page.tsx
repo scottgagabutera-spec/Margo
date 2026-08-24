@@ -37,6 +37,8 @@ const FEED_STALE_MS = 60_000
 // ── Earned-tag thresholds (feed ranking only) ─────────────────────────
 const NEW_WINDOW_HOURS = 24
 const RANK_BADGE_COUNT = 5
+const MIN_TRENDING_ENGAGE = 4
+const MIN_TRENDING_AGE_HOURS = 3
 
 export default function FeedPage() {
   const { isTabActive } = usePrimaryTab()
@@ -239,7 +241,9 @@ export default function FeedPage() {
     const newIds = new Set(posts.filter(p => getAge(p) < NEW_WINDOW_HOURS).map(p => p.id))
     const trendingIds = new Set(
       [...posts]
-        .filter(p => getEngagement(p) > 0)
+        .filter(p => !newIds.has(p.id))
+        .filter(p => getAge(p) >= MIN_TRENDING_AGE_HOURS)
+        .filter(p => getEngagement(p) >= MIN_TRENDING_ENGAGE)
         .sort((a, b) => getScoreFor(b, 'TRENDING') - getScoreFor(a, 'TRENDING'))
         .slice(0, RANK_BADGE_COUNT)
         .map(p => p.id)
@@ -523,7 +527,19 @@ export default function FeedPage() {
     >
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', paddingTop: 'var(--nav-height, 72px)' }}>
       {!ptrBusy && feedLive && pendingCount > 0 && (
-        <FeedNewMomentsPill count={pendingCount} onReveal={flushPending} />
+        <div style={{
+          position: 'sticky',
+          top: 'calc(var(--nav-height, 72px) + 88px)',
+          zIndex: 25,
+          maxWidth: '720px',
+          margin: '0 auto',
+          padding: '0 20px 8px',
+          pointerEvents: 'none',
+        }}>
+          <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center' }}>
+            <FeedNewMomentsPill count={pendingCount} onReveal={flushPending} variant="inline" />
+          </div>
+        </div>
       )}
       {!ptrBusy && feedLive && (songCount > 0 || artistCount > 0) && (
         <ContentUpdatesBar

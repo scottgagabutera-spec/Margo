@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import type { MargoMoment } from '@/lib/moment/types'
-import { MARGO_SITE_ORIGIN } from '@/lib/moment/share'
+import { MARGO_SITE_ORIGIN } from '@/lib/moment/site-origin'
 
 export function getMomentPageUrl(postId: string): string {
   return `${MARGO_SITE_ORIGIN}/m/${postId}`

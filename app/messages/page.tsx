@@ -5,6 +5,7 @@ import { PendingNavLink } from '@/components/pending-nav-link'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useConversations } from '@/hooks/useConversations'
 import { RelativeTime } from '@/components/relative-time'
+import { formatMessagePreview } from '@/lib/moment/message-format'
 
 const font = 'var(--font-lora), serif'
 
@@ -73,7 +74,7 @@ export default function MessagesPage() {
                 {list.map(c => (
                   <PendingNavLink
                     key={c.otherUser.id}
-                    href={`/messages/${c.otherUser.username}`}
+                    href={`/messages/${c.otherUser.id}`}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '12px',
                       padding: '10px 8px', textDecoration: 'none',
@@ -103,7 +104,8 @@ export default function MessagesPage() {
                         fontFamily: font, fontSize: '0.72rem', color: c.unreadCount > 0 ? 'var(--text)' : 'var(--text-secondary)',
                         margin: '2px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       }}>
-                        {c.lastMessage.senderId !== c.otherUser.id ? 'You: ' : ''}{c.lastMessage.body}
+                        {c.lastMessage.senderId !== c.otherUser.id ? 'You: ' : ''}
+                        {formatMessagePreview(c.lastMessage.body)}
                       </p>
                     </div>
                     <RelativeTime

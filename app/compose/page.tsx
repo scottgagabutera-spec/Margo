@@ -90,8 +90,8 @@ const backBtnStyle: React.CSSProperties = {
   transition: 'color 150ms ease',
 }
 const actionCaptionStyle: CSSProperties = {
-  fontFamily: UI_FONT, fontSize: '0.68rem',
-  color: 'var(--text-secondary, var(--text-2))', margin: '8px 0 0', lineHeight: 1.4,
+  fontFamily: UI_FONT, fontSize: '0.62rem',
+  color: 'var(--text-secondary, var(--text-2))', margin: '4px 0 0', lineHeight: 1.35,
 }
 
 type MomentLineDraft = { lyric: string; songName: string; artistName: string }
@@ -626,23 +626,23 @@ function ComposeInner() {
   if (completionMode) {
     const isPrivateSave = completionMode === 'private'
     return (
-      <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', paddingTop: '40px' }}>
+      <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+        <div style={{ maxWidth: '400px', width: '100%', textAlign: 'center', paddingTop: '24px' }}>
           <button
             type="button"
             onClick={resetCompose}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              fontFamily: font, fontSize: '0.75rem', color: 'var(--text-secondary, var(--text-2))',
-              letterSpacing: '0.5px', minHeight: 'var(--margo-touch-min)', padding: '0 12px',
+              fontFamily: font, fontSize: '0.68rem', color: 'var(--text-secondary, var(--text-2))',
+              letterSpacing: '0.5px', minHeight: '36px', padding: '0 10px',
               display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-              marginBottom: '20px',
+              marginBottom: '12px',
             }}
           >Done</button>
-          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--text)', marginBottom: '8px' }}>
+          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.25rem', color: 'var(--text)', marginBottom: '6px' }}>
             {isPrivateSave ? 'Saved privately.' : 'Sent.'}
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '28px', letterSpacing: '0.5px' }}>
+          <p style={{ fontFamily: font, fontSize: '0.75rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '18px', letterSpacing: '0.3px' }}>
             {isPrivateSave
               ? 'Only you can see this — it stays off the Feed.'
               : (sentToName ? 'Sent to ' + sentToName + '.' : 'Your Moment is now on Margo.')}
@@ -650,19 +650,19 @@ function ComposeInner() {
           <ComposeMomentCard
             lines={readyMomentLines}
             vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : null}
-            style={{ marginBottom: '28px', textAlign: 'left' }}
+            style={{ marginBottom: '18px', textAlign: 'left' }}
           />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
             {!isPrivateSave && (
               <div>
                 <button
                   type="button"
                   onClick={() => { if (postedId) setShowSendTo(true) }}
                   style={{
-                    width: '100%', padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
+                    width: '100%', padding: '11px 20px', minHeight: '40px',
                     background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
                     borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                    fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+                    fontSize: '0.56rem', letterSpacing: '0.9px', textTransform: 'uppercase',
                     border: 'none', cursor: postedId ? 'pointer' : 'default',
                     boxShadow: '0 6px 28px var(--gold-glow)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -678,11 +678,11 @@ function ComposeInner() {
                 type="button"
                 onClick={() => { setShowExport(true) }}
                 style={{
-                  width: '100%', padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
+                  width: '100%', padding: '11px 20px', minHeight: '40px',
                   background: isPrivateSave ? 'var(--gold)' : 'transparent',
                   color: isPrivateSave ? 'var(--text-on-gold, var(--bg))' : 'var(--gold)',
                   borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
+                  fontSize: '0.56rem', letterSpacing: '0.9px', textTransform: 'uppercase',
                   border: isPrivateSave ? 'none' : '1px solid var(--gold-border)',
                   cursor: 'pointer',
                   boxShadow: isPrivateSave ? '0 6px 28px var(--gold-glow)' : 'none',
@@ -697,10 +697,10 @@ function ComposeInner() {
                 type="button"
                 onClick={() => router.push(isPrivateSave ? (identity?.username ? '/profile/' + identity.username : '/feed') : '/feed')}
                 style={{
-                  width: '100%', padding: '13px 28px', minHeight: 'var(--margo-touch-min)',
+                  width: '100%', padding: '10px 20px', minHeight: '38px',
                   background: 'transparent', color: 'var(--text-secondary, var(--text-2))',
                   border: '1px solid var(--border-hi)', borderRadius: '50px', fontFamily: font,
-                  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                  fontSize: '0.56rem', letterSpacing: '0.9px', textTransform: 'uppercase', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxSizing: 'border-box',
                 }}

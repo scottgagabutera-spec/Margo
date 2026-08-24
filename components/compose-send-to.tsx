@@ -192,39 +192,39 @@ export function ComposeSendTo({
 
   if (!open) return null
 
+  const sheetStyle: React.CSSProperties = {
+    width: '100%',
+    maxWidth: '420px',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '20px',
+    padding: '0 0 20px',
+    display: 'flex',
+    flexDirection: 'column',
+    maxHeight: 'min(78dvh, 560px)',
+    boxShadow: '0 24px 64px rgba(0,0,0,0.45)',
+  }
+
   return (
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
         background: 'var(--margo-scrim)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px',
       }}
       onClick={() => { if (!sending) onOpenChange(false) }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '100%', maxWidth: '480px',
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderBottom: 'none',
-          borderRadius: '24px 24px 0 0',
-          padding: '0 0 calc(32px + var(--margo-page-bottom))',
-          display: 'flex', flexDirection: 'column',
-          maxHeight: '92dvh',
-        }}
+        style={sheetStyle}
       >
         <div style={{
-          width: '36px', height: '4px', background: 'var(--border-hi)',
-          borderRadius: '2px', margin: '12px auto 0', flexShrink: 0,
-        }} />
-
-        <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px 8px 20px',
+          padding: '14px 16px 10px',
         }}>
           <p style={{
-            fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
+            fontFamily: font, fontSize: '0.58rem', fontWeight: 700,
             color: 'var(--text-secondary)', letterSpacing: '2px', textTransform: 'uppercase',
             margin: 0,
           }}>
@@ -236,18 +236,19 @@ export function ComposeSendTo({
             onClick={() => onOpenChange(false)}
             disabled={sending}
             style={{
-              width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)',
-              borderRadius: '50%', background: 'none', border: 'none',
+              width: '36px', height: '36px',
+              borderRadius: '50%', background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--border)',
               cursor: sending ? 'default' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: 0,
             }}
           >
-            <CloseIcon size={16} color="var(--text-secondary)" />
+            <CloseIcon size={14} color="var(--text-secondary)" />
           </button>
         </div>
 
-        <div style={{ padding: '0 20px 12px' }}>
+        <div style={{ padding: '0 16px 10px' }}>
           <MargoSearchInput
             value={query}
             onChange={setQuery}

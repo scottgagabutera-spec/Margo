@@ -1,15 +1,17 @@
 import type { MargoMoment } from '@/lib/moment/types'
+import { MARGO_SITE_ORIGIN, resolveMomentShareOrigin } from '@/lib/moment/site-origin'
 
-export const MARGO_SITE_ORIGIN = 'https://trymargo.com'
+export { MARGO_SITE_ORIGIN } from '@/lib/moment/site-origin'
 
 export interface LyricBackShareInput {
   parentLyric: string
   replyLyric: string
 }
 
-export function getMomentShareUrl(postId?: string | null): string {
-  if (postId) return `${MARGO_SITE_ORIGIN}/m/${postId}`
-  return MARGO_SITE_ORIGIN
+export function getMomentShareUrl(postId?: string | null, origin?: string): string {
+  const base = origin || resolveMomentShareOrigin()
+  if (postId) return `${base}/m/${postId}`
+  return base
 }
 
 /** Whether a persisted Moment can be shared via /m/{id} to recipients. */
@@ -36,10 +38,11 @@ export function buildMomentShareText(
   const url = moment.postId ? getMomentShareUrl(moment.postId) : null
 
   if (includeUrl && url) {
-    return body ? `${body}\n${url}` : url
+    const cta = 'Open on Margo → trymargo.com/m/…'
+    return body ? `${body}\n\n${cta}\n${url}` : url
   }
   if (!includeSuffix) return body
-  if (url) return body ? `${body}\n${url}` : url
+  if (url) return body ? `${body}\n\nListen on Margo` : 'Listen on Margo'
   return body ? `${body} — trymargo.com` : 'trymargo.com'
 }
 
