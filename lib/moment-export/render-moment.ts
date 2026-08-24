@@ -3,6 +3,7 @@ import {
   composeMoment,
   type MomentComposition,
 } from '@/lib/moment/compose'
+import { getStageCardTheme, type StageCardTheme } from '@/lib/moment/stage-theme'
 import type { NormalizedMomentLine } from '@/lib/moment/types'
 
 export type ComposeMomentLineInput = { lyric: string; songName?: string | null; artistName?: string | null; artworkUrl?: string | null }
@@ -166,18 +167,42 @@ function drawArtworkTile(
 }
 
 /* ─── Wrap / truncate text ──────────────────────────────────── */
+function breakLongToken(ctx: CanvasRenderingContext2D, token: string, maxW: number): string[] {
+  if (!token) return []
+  if (ctx.measureText(token).width <= maxW) return [token]
+  const chunks: string[] = []
+  let chunk = ''
+  for (const ch of token) {
+    const test = chunk + ch
+    if (ctx.measureText(test).width > maxW && chunk) {
+      chunks.push(chunk)
+      chunk = ch
+    } else {
+      chunk = test
+    }
+  }
+  if (chunk) chunks.push(chunk)
+  return chunks
+}
+
 function wrapText(ctx: CanvasRenderingContext2D, txt: string, maxW: number): string[] {
-  const words = txt.split(' ')
+  const words = txt.split(/\s+/).filter(Boolean)
   const lines: string[] = []
   let line = ''
   for (const word of words) {
-    const test = line ? line + ' ' + word : word
-    if (ctx.measureText(test).width > maxW && line) {
-      lines.push(line); line = word
-    } else { line = test }
+    const segments = breakLongToken(ctx, word, maxW)
+    for (const segment of segments) {
+      const test = line ? line + ' ' + segment : segment
+      if (ctx.measureText(test).width > maxW && line) {
+        lines.push(line)
+        line = segment
+      } else {
+        line = test
+      }
+    }
   }
   if (line) lines.push(line)
-  return lines
+  return lines.length > 0 ? lines : ['']
 }
 
 /** Binary-search truncation with ellipsis — canvas has no CSS
@@ -788,8 +813,6 @@ export interface RenderMomentOptions {
   scale?: number
   /** stage-card matches StageMomentCard UI; poster is the full export poster */
   variant?: 'poster' | 'stage-card'
-  canPlayInline?: boolean
-  hasExternalListen?: boolean
 }
 
 /** Stage card export width — height is content-driven (not a 1080×1080 poster). */
@@ -817,13 +840,14 @@ function drawRoundedRectPath(
   ctx.closePath()
 }
 
-function drawVibeTagOnGold(
+function drawVibeTagOnStage(
   ctx: CanvasRenderingContext2D,
   rightX: number,
   bottomY: number,
   label: string,
   geist: string,
   scale: number,
+  theme: StageCardTheme,
 ) {
   const tagH = 22 * scale
   const tagFS = Math.max(10, Math.round(7.7 * scale))
@@ -832,6 +856,9 @@ function drawVibeTagOnGold(
   const tagW = Math.max(72 * scale, textW + 36 * scale)
   const x = rightX - tagW
   const y = bottomY - tagH
+  const tagFill = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.08)' : 'rgba(255,255,255,0.1)'
+  const tagStroke = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.18)' : 'rgba(255,255,255,0.2)'
+  const holeFill = theme.markVariant === 'on-light' ? theme.bg : theme.ink
 
   ctx.save()
   ctx.beginPath()
@@ -843,48 +870,22 @@ function drawVibeTagOnGold(
   ctx.lineTo(x + 8 * scale, y + tagH)
   ctx.lineTo(x + 1 * scale, y + tagH / 2)
   ctx.closePath()
-  ctx.fillStyle = 'rgba(7,6,10,0.08)'
+  ctx.fillStyle = tagFill
   ctx.fill()
-  ctx.strokeStyle = 'rgba(7,6,10,0.18)'
+  ctx.strokeStyle = tagStroke
   ctx.lineWidth = 1.2 * scale
   ctx.stroke()
   ctx.beginPath()
   ctx.arc(x + 9 * scale, y + tagH / 2, 2.2 * scale, 0, Math.PI * 2)
-  ctx.fillStyle = MARGO_GOLD
+  ctx.fillStyle = holeFill
   ctx.fill()
-  ctx.strokeStyle = 'rgba(7,6,10,0.18)'
+  ctx.strokeStyle = tagStroke
   ctx.stroke()
-  ctx.fillStyle = 'rgba(7,6,10,0.85)'
+  ctx.fillStyle = theme.ink
+  ctx.globalAlpha = 0.9
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(label.toUpperCase(), x + tagW / 2 + 4 * scale, y + tagH / 2 + 0.5 * scale)
-  ctx.restore()
-}
-
-function drawPlayControl(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-  ink: string,
-) {
-  ctx.save()
-  ctx.beginPath()
-  ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2)
-  ctx.fillStyle = 'rgba(7,6,10,0.1)'
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(7,6,10,0.14)'
-  ctx.lineWidth = 1
-  ctx.stroke()
-  const cx = x + size / 2
-  const cy = y + size / 2
-  ctx.fillStyle = ink
-  ctx.beginPath()
-  ctx.moveTo(cx - size * 0.12, cy - size * 0.18)
-  ctx.lineTo(cx + size * 0.2, cy)
-  ctx.lineTo(cx - size * 0.12, cy + size * 0.18)
-  ctx.closePath()
-  ctx.fill()
   ctx.restore()
 }
 
@@ -922,8 +923,6 @@ function computeStageCardHeight(
   const metaGap = 14 * s
   const artSize = Math.round(48 * s)
   const artGap = 14 * s
-  const rowGap = 16 * s
-  const rowH = Math.max(28 * s, 44 * s)
   const vibeGap = 12 * s
   const vibeOverhang = 9 * s
   const contentW = W - padX * 2 - Math.round(24 * s) - 8 * s
@@ -935,12 +934,15 @@ function computeStageCardHeight(
   const lyricLines = wrapText(ctx, line.lyric, contentW)
   const lyricH = lyricLines.length * lyricLH
 
-  const metaLine = [line.songTitle, line.artistName].filter(Boolean).join(' · ')
-  const metaH = metaLine ? metaGap + metaFS * 1.3 : 0
+  const hasSong = !!(line.songTitle || '').trim()
+  const hasArtist = !!(line.artistName || '').trim()
+  const metaH = (hasSong || hasArtist)
+    ? metaGap + (hasSong ? metaFS * 1.25 : 0) + (hasArtist ? Math.round(metaFS * 0.92) * 1.3 : 0)
+    : 0
   const artH = line.artworkUrl ? artGap + artSize : 0
   const vibeH = vibeLabel ? vibeGap + 22 * s + vibeOverhang : 0
 
-  return Math.ceil(padT + lyricH + metaH + artH + rowGap + rowH + vibeH + padB)
+  return Math.ceil(padT + lyricH + metaH + artH + vibeH + padB)
 }
 
 function drawStageMarkBadge(
@@ -948,7 +950,7 @@ function drawStageMarkBadge(
   x: number,
   y: number,
   size: number,
-  light: boolean,
+  theme: StageCardTheme,
 ) {
   const r = size / 2
   const cx = x + r
@@ -956,12 +958,12 @@ function drawStageMarkBadge(
   ctx.save()
   ctx.beginPath()
   ctx.arc(cx, cy, r, 0, Math.PI * 2)
-  ctx.fillStyle = light ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.12)'
+  ctx.fillStyle = theme.badgeFill
   ctx.fill()
-  ctx.strokeStyle = light ? 'rgba(7,6,10,0.16)' : 'rgba(255,255,255,0.2)'
+  ctx.strokeStyle = theme.badgeStroke
   ctx.lineWidth = 1
   ctx.stroke()
-  drawMargoSymbol(ctx, x, y, size, light ? 'on-light' : 'on-dark')
+  drawMargoSymbol(ctx, x, y, size, theme.markVariant)
   ctx.restore()
 }
 
@@ -970,13 +972,14 @@ export async function drawStageMomentCard(
   W: number,
   H: number,
   lines: NormalizedLine[],
-  theme: ExportTheme,
+  themeId: string | null | undefined,
   vibeLabel: string | null | undefined,
-  options?: { canPlayInline?: boolean; hasExternalListen?: boolean },
 ) {
   await waitForFonts()
   const geist = resolveGeistFontFamily()
-  const { ink, inkMuted, light } = theme
+  const theme = getStageCardTheme(themeId)
+  const { ink, inkMuted } = theme
+  const light = theme.markVariant === 'on-light'
   const REF_W = 400
   const s = W / REF_W
   const padT = 20 * s
@@ -986,13 +989,11 @@ export async function drawStageMomentCard(
   const lyricFS = Math.round(29.6 * s)
   const lyricLH = lyricFS * 1.35
   const metaFS = Math.round(12 * s)
+  const artistFS = Math.round(metaFS * 0.92)
   const metaGap = 14 * s
   const artSize = Math.round(48 * s)
   const artRadius = 8 * s
   const artGap = 14 * s
-  const rowGap = 16 * s
-  const rowH = Math.max(28 * s, 44 * s)
-  const listenFS = Math.round(11.5 * s)
   const markSize = Math.round(24 * s)
   const markInset = 16 * s
   const contentW = W - padX * 2 - markSize - 8 * s
@@ -1000,25 +1001,24 @@ export async function drawStageMomentCard(
   const line = lines[0]
   if (!line) return
 
-  // Card background — gold + subtle top highlight (matches Stage gradient)
   ctx.save()
   drawRoundedRectPath(ctx, 0, 0, W, H, radius)
   ctx.clip()
-  ctx.fillStyle = light ? MARGO_GOLD : theme.bg
+  ctx.fillStyle = theme.bg
   ctx.fillRect(0, 0, W, H)
   const highlight = ctx.createLinearGradient(0, 0, 0, H * 0.28)
-  highlight.addColorStop(0, 'rgba(255,255,255,0.06)')
+  highlight.addColorStop(0, light ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)')
   highlight.addColorStop(1, 'rgba(255,255,255,0)')
   ctx.fillStyle = highlight
   ctx.fillRect(0, 0, W, H)
   ctx.restore()
 
-  ctx.strokeStyle = 'rgba(7,6,10,0.16)'
+  ctx.strokeStyle = theme.border
   ctx.lineWidth = 1
   drawRoundedRectPath(ctx, 0.5, 0.5, W - 1, H - 1, radius)
   ctx.stroke()
 
-  drawStageMarkBadge(ctx, W - markInset - markSize, markInset, markSize, light)
+  drawStageMarkBadge(ctx, W - markInset - markSize, markInset, markSize, theme)
 
   let y = padT
 
@@ -1032,37 +1032,32 @@ export async function drawStageMomentCard(
     y += lyricLH - lyricFS * 0.92
   }
 
-  const metaLine = [line.songTitle, line.artistName].filter(Boolean).join(' · ')
-  if (metaLine) {
+  const songTitle = (line.songTitle || '').trim()
+  const artistName = (line.artistName || '').trim()
+  if (songTitle || artistName) {
     y += metaGap
-    ctx.font = `400 ${metaFS}px ${geist}`
-    ctx.fillStyle = inkMuted
-    ctx.fillText(truncateToWidth(ctx, metaLine, contentW), padX, y + metaFS)
-    y += metaFS * 1.3
+    if (songTitle) {
+      ctx.font = `700 ${metaFS}px ${geist}`
+      ctx.fillStyle = ink
+      ctx.fillText(truncateToWidth(ctx, songTitle, contentW), padX, y + metaFS)
+      y += metaFS * 1.25
+    }
+    if (artistName) {
+      ctx.font = `400 ${artistFS}px ${geist}`
+      ctx.fillStyle = inkMuted
+      ctx.fillText(truncateToWidth(ctx, artistName, contentW), padX, y + artistFS)
+      y += artistFS * 1.3
+    }
   }
 
   if (line.artworkUrl) {
     y += artGap
     const artworkImg = await loadArtworkImage(line.artworkUrl)
     drawArtworkTile(ctx, artworkImg, padX, y, artSize, artRadius, light)
-    y += artSize
   }
-
-  y += rowGap
-  const rowY = y
-  if (options?.canPlayInline) {
-    drawPlayControl(ctx, padX, rowY + (rowH - 28 * s) / 2, 28 * s, ink)
-  } else if (options?.hasExternalListen) {
-    ctx.font = `600 ${listenFS}px ${geist}`
-    ctx.fillStyle = ink
-    ctx.fillText('Listen ↗', padX, rowY + rowH * 0.62)
-  }
-
-  y = rowY + rowH
 
   if (vibeLabel) {
-    y += 12 * s
-    drawVibeTagOnGold(ctx, W - padX, H - padB + 9 * s, vibeLabel, geist, s)
+    drawVibeTagOnStage(ctx, W - padX, H - padB + 9 * s, vibeLabel, geist, s, theme)
   }
 }
 
@@ -1070,7 +1065,6 @@ async function renderStageMomentCardToCanvas(
   canvas: HTMLCanvasElement,
   options: RenderMomentOptions,
 ): Promise<void> {
-  const theme = THEMES.find((t) => t.id === (options.themeId || 'gold')) || THEMES[0]
   const W = STAGE_CARD_EXPORT_WIDTH
   const SCALE = options.scale ?? 2
 
@@ -1086,10 +1080,7 @@ async function renderStageMomentCardToCanvas(
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.scale(SCALE, SCALE)
 
-  await drawStageMomentCard(ctx, W, H, options.lines, theme, options.vibeLabel, {
-    canPlayInline: options.canPlayInline,
-    hasExternalListen: options.hasExternalListen,
-  })
+  await drawStageMomentCard(ctx, W, H, options.lines, options.themeId, options.vibeLabel)
 }
 
 export async function renderMomentToCanvas(

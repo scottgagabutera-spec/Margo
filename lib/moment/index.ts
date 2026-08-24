@@ -12,6 +12,13 @@ export {
   DEFAULT_MOMENT_SHAPE_ID,
 } from '@/lib/moment/types'
 
+export type { StageCardThemeId, StageCardTheme } from '@/lib/moment/stage-theme'
+export {
+  STAGE_CARD_THEMES,
+  getStageCardTheme,
+  cycleStageCardTheme,
+} from '@/lib/moment/stage-theme'
+
 export type { MomentComposition, MomentArchetype, MomentMotif, Composition } from '@/lib/moment/compose'
 export { composeMoment, hashMomentSeed } from '@/lib/moment/compose'
 

@@ -7,6 +7,11 @@ import { VibeTag } from '@/components/vibe-tag'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
+import {
+  cycleStageCardTheme,
+  getStageCardTheme,
+  type StageCardThemeId,
+} from '@/lib/moment/stage-theme'
 
 interface StageMomentCardProps {
   lyric: string
@@ -18,6 +23,8 @@ interface StageMomentCardProps {
   suggestedVibeLabel?: string | null
   vibeOptions?: string[]
   onVibeSelect?: (label: string) => void
+  cardThemeId?: StageCardThemeId
+  onThemeChange?: (id: StageCardThemeId) => void
   canPlay: boolean
   playing?: boolean
   buffering?: boolean
@@ -33,25 +40,7 @@ const playControlStyle: CSSProperties = {
   width: '28px',
   height: '28px',
   borderRadius: '50%',
-  background: 'rgba(7,6,10,0.1)',
-  border: '1px solid rgba(7,6,10,0.14)',
   flexShrink: 0,
-}
-
-const markBadgeStyle: CSSProperties = {
-  position: 'absolute',
-  top: '16px',
-  right: '16px',
-  width: '34px',
-  height: '34px',
-  borderRadius: '50%',
-  background: 'rgba(7,6,10,0.1)',
-  border: '1px solid rgba(7,6,10,0.16)',
-  boxShadow: '0 1px 0 rgba(255,255,255,0.22) inset',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  pointerEvents: 'none',
 }
 
 /**
@@ -66,6 +55,8 @@ export function StageMomentCard({
   suggestedVibeLabel,
   vibeOptions = [],
   onVibeSelect,
+  cardThemeId = 'gold',
+  onThemeChange,
   canPlay,
   playing = false,
   buffering = false,
@@ -74,8 +65,12 @@ export function StageMomentCard({
   style,
 }: StageMomentCardProps) {
   const [vibePickerOpen, setVibePickerOpen] = useState(false)
-  const metaLine = [songTitle, artistName].filter(Boolean).join(' · ')
+  const theme = getStageCardTheme(cardThemeId)
   const canPickVibe = vibeOptions.length > 0 && !!onVibeSelect
+  const canCycleTheme = !!onThemeChange
+  const markVariant = theme.markVariant === 'on-light' ? 'ink' : 'gold'
+  const vibeTagFill = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.08)' : 'rgba(255,255,255,0.1)'
+  const vibeTagStroke = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.18)' : 'rgba(255,255,255,0.2)'
 
   return (
     <ComposeLyricCard
@@ -85,12 +80,32 @@ export function StageMomentCard({
         borderRadius: '16px',
         padding: '20px 20px 18px',
         paddingRight: '52px',
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 28%), var(--gold)',
+        background: `linear-gradient(180deg, ${theme.markVariant === 'on-light' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)'} 0%, transparent 28%), ${theme.bg}`,
+        border: `1px solid ${theme.border}`,
         ...style,
       }}
     >
-      <div style={markBadgeStyle} aria-hidden>
-        <MargoSymbol size={22} variant="ink" />
+      <div
+        style={{
+          position: 'absolute',
+          top: '16px',
+          right: '16px',
+          width: '34px',
+          height: '34px',
+          borderRadius: '50%',
+          background: theme.badgeFill,
+          border: `1px solid ${theme.badgeStroke}`,
+          boxShadow: theme.markVariant === 'on-light'
+            ? '0 1px 0 rgba(255,255,255,0.22) inset'
+            : '0 1px 0 rgba(255,255,255,0.08) inset',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+        }}
+        aria-hidden
+      >
+        <MargoSymbol size={22} variant={markVariant} />
       </div>
 
       <p
@@ -98,31 +113,54 @@ export function StageMomentCard({
           fontFamily: LYRIC_FONT,
           fontStyle: 'italic',
           fontSize: 'clamp(1.35rem, 4.8vw, 1.85rem)',
-          color: 'var(--text-on-gold)',
+          color: theme.ink,
           lineHeight: 1.35,
           margin: 0,
           textAlign: 'left',
+          overflowWrap: 'anywhere',
+          wordBreak: 'break-word',
         }}
       >
         {lyric}
       </p>
 
-      {metaLine ? (
-        <p
-          style={{
-            margin: '14px 0 0',
-            fontFamily: UI_FONT,
-            fontSize: '0.75rem',
-            fontWeight: 400,
-            color: 'var(--text-on-gold-muted)',
-            lineHeight: 1.3,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {metaLine}
-        </p>
+      {(songTitle || artistName) ? (
+        <div style={{ marginTop: '14px', minWidth: 0 }}>
+          {songTitle ? (
+            <p
+              style={{
+                margin: 0,
+                fontFamily: UI_FONT,
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                color: theme.ink,
+                lineHeight: 1.25,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {songTitle}
+            </p>
+          ) : null}
+          {artistName ? (
+            <p
+              style={{
+                margin: songTitle ? '3px 0 0' : 0,
+                fontFamily: UI_FONT,
+                fontSize: '0.72rem',
+                fontWeight: 400,
+                color: theme.inkMuted,
+                lineHeight: 1.25,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {artistName}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {artwork ? (
@@ -140,70 +178,112 @@ export function StageMomentCard({
         />
       ) : null}
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          marginTop: '16px',
-          gap: '12px',
-          minHeight: 'var(--margo-touch-min)',
-        }}
-      >
-        {canPlay ? (
-          <button
-            type="button"
-            onClick={onPlay}
-            aria-label={playing ? 'Pause' : 'Play'}
-            style={{
-              ...playControlStyle,
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          >
-            <PlayPauseIcon playing={playing} buffering={buffering} size={14} color="var(--text-on-gold)" />
-          </button>
-        ) : listenUrl ? (
-          <a
-            href={listenUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              minHeight: 'var(--margo-touch-min)',
-              padding: '0 4px',
-              textDecoration: 'none',
-              fontFamily: UI_FONT,
-              fontSize: '0.72rem',
-              fontWeight: 600,
-              letterSpacing: '0.2px',
-              color: 'var(--text-on-gold)',
-            }}
-          >
-            Listen ↗
-          </a>
-        ) : null}
-      </div>
+      {(canPlay || listenUrl) ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginTop: '16px',
+            gap: '12px',
+            minHeight: 'var(--margo-touch-min)',
+          }}
+        >
+          {canPlay ? (
+            <button
+              type="button"
+              onClick={onPlay}
+              aria-label={playing ? 'Pause' : 'Play'}
+              style={{
+                ...playControlStyle,
+                background: theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.12)',
+                border: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.16)'}`,
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              <PlayPauseIcon playing={playing} buffering={buffering} size={14} color={theme.ink} />
+            </button>
+          ) : listenUrl ? (
+            <a
+              href={listenUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                minHeight: 'var(--margo-touch-min)',
+                padding: '0 4px',
+                textDecoration: 'none',
+                fontFamily: UI_FONT,
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                letterSpacing: '0.2px',
+                color: theme.ink,
+              }}
+            >
+              Listen ↗
+            </a>
+          ) : null}
+        </div>
+      ) : null}
 
-      {vibeLabel ? (
-        <div style={{ position: 'relative', height: vibePickerOpen ? 'auto' : '22px', marginTop: '12px' }}>
-          <VibeTag
-            label={vibeLabel}
-            color="var(--text-on-gold)"
-            variant="on-gold"
-            onClick={canPickVibe ? () => setVibePickerOpen((open) => !open) : undefined}
-          />
+      {(vibeLabel || canCycleTheme) ? (
+        <div
+          style={{
+            position: 'relative',
+            marginTop: '12px',
+            minHeight: vibePickerOpen ? 'auto' : '22px',
+            paddingBottom: vibePickerOpen ? '4px' : 0,
+          }}
+        >
+          {canCycleTheme ? (
+            <button
+              type="button"
+              aria-label={`Card color: ${theme.label}. Tap to change.`}
+              title={`Color: ${theme.label}`}
+              onClick={() => onThemeChange?.(cycleStageCardTheme(cardThemeId).id)}
+              style={{
+                position: 'absolute',
+                bottom: '-9px',
+                right: vibeLabel ? '92px' : '14px',
+                zIndex: 5,
+                width: '22px',
+                height: '22px',
+                borderRadius: '50%',
+                padding: 0,
+                border: `1.5px solid ${theme.border}`,
+                background: theme.swatch,
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            />
+          ) : null}
+
+          {vibeLabel ? (
+            <VibeTag
+              label={vibeLabel}
+              color={theme.ink}
+              variant="on-gold"
+              surfaceInk={theme.ink}
+              surfaceInkMuted={vibeTagStroke}
+              surfaceTagFill={vibeTagFill}
+              surfaceHoleFill={theme.bg}
+              onClick={canPickVibe ? () => setVibePickerOpen((open) => !open) : undefined}
+            />
+          ) : null}
+
           {vibePickerOpen && canPickVibe ? (
             <div
               role="listbox"
               aria-label="Choose a vibe"
               style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '8px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+                gap: '6px',
                 marginTop: '14px',
-                paddingBottom: '4px',
+                width: '100%',
               }}
             >
               {vibeOptions.map((option) => {
@@ -221,18 +301,23 @@ export function StageMomentCard({
                     }}
                     style={{
                       position: 'relative',
-                      minHeight: '32px',
-                      padding: '0 12px',
+                      minHeight: '26px',
+                      padding: '0 4px',
                       borderRadius: '50px',
                       border: selected
-                        ? '1px solid rgba(7,6,10,0.35)'
-                        : '1px solid rgba(7,6,10,0.16)',
-                      background: selected ? 'rgba(7,6,10,0.14)' : 'rgba(7,6,10,0.06)',
-                      color: 'var(--text-on-gold)',
+                        ? `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.35)' : 'rgba(255,255,255,0.35)'}`
+                        : `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.16)' : 'rgba(255,255,255,0.16)'}`,
+                      background: selected
+                        ? (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.14)')
+                        : (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.06)' : 'rgba(255,255,255,0.06)'),
+                      color: theme.ink,
                       fontFamily: UI_FONT,
-                      fontSize: '0.68rem',
+                      fontSize: '0.58rem',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                     }}
                   >
                     {option}
@@ -241,13 +326,13 @@ export function StageMomentCard({
                         aria-hidden
                         style={{
                           position: 'absolute',
-                          top: '-4px',
-                          right: '-4px',
-                          width: '8px',
-                          height: '8px',
+                          top: '-3px',
+                          right: '-3px',
+                          width: '7px',
+                          height: '7px',
                           borderRadius: '50%',
-                          background: 'var(--text-on-gold)',
-                          border: '1.5px solid var(--gold)',
+                          background: theme.ink,
+                          border: `1.5px solid ${theme.bg}`,
                         }}
                       />
                     ) : null}

@@ -69,8 +69,6 @@ function renderOptionsFromMoment(moment: MargoMoment): {
     vibeLabel: moment.vibeLabel,
     seedKey: moment.seedKey,
     variant: isStageCard ? 'stage-card' : 'poster',
-    canPlayInline: moment.listen?.canPlayInline ?? false,
-    hasExternalListen: !!(moment.listen?.externalUrl && !moment.listen?.canPlayInline),
   }
 }
 

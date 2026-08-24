@@ -12,6 +12,7 @@ import { StageSendBar } from '@/components/stage/stage-send-bar'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher } from '@/lib/stage-chrome'
 import { HEADLINES, resolveHeadlineVariant, type HeadlineVariant } from '@/lib/stage-headline-variant'
 import { resolveMargoMomentFromStage } from '@/lib/moment'
+import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import { saveMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
@@ -72,6 +73,7 @@ export function StageLanding() {
   const [vibeLabel, setVibeLabel] = useState<string | null>(null)
   const [suggestedVibeLabel, setSuggestedVibeLabel] = useState<string | null>(null)
   const [vibeUserPicked, setVibeUserPicked] = useState(false)
+  const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [saving, setSaving] = useState(false)
   const [momentVisible, setMomentVisible] = useState(false)
 
@@ -266,6 +268,7 @@ export function StageLanding() {
     setVibeLabel(null)
     setSuggestedVibeLabel(null)
     setVibeUserPicked(false)
+    setCardThemeId('gold')
     setMomentVisible(false)
     setSearchQuery('')
     setShowResults(false)
@@ -417,14 +420,14 @@ export function StageLanding() {
         vibeLabel,
         source: linkedSongId ? 'catalog' : 'external',
         externalListenUrl: selectedSong?.externalListenUrl ?? null,
-      })
+      }, { themeId: cardThemeId })
       await saveMargoMomentImage(moment)
     } finally {
       setSaving(false)
     }
   }, [
     hasMoment, lyric, songName, artistName, selectedSong?.artwork,
-    linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, vibeLabel, selectedSong?.externalListenUrl,
+    linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, vibeLabel, selectedSong?.externalListenUrl, cardThemeId,
   ])
 
   const headline = headlineVariant ? HEADLINES[headlineVariant] : HEADLINES.a
@@ -565,6 +568,8 @@ export function StageLanding() {
                     setVibeLabel(label)
                     setVibeUserPicked(true)
                   }}
+                  cardThemeId={cardThemeId}
+                  onThemeChange={setCardThemeId}
                   canPlay={listen?.canPlayInline ?? false}
                   playing={playing}
                   buffering={buffering}
