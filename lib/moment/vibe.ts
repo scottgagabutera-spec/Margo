@@ -51,3 +51,10 @@ export function vibeLabelToEmotion(label: string | null | undefined): string | n
   }
   return label.trim().toUpperCase().replace(/\s+/g, '')
 }
+
+/** Ordered vibe labels for Stage-style pickers (export modal, landing). */
+export const MOMENT_VIBE_PICKER_OPTIONS: string[] = [
+  'Chill', 'Hope', 'Healing', 'Grateful', 'Spiritual', 'Nostalgia',
+  'Joy', 'Love', 'Hype', 'Proud', 'Heartbreak', 'Pain', 'Loneliness',
+  'Lost', 'Rage', 'Send It', 'Let Out',
+]

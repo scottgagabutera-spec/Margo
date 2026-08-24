@@ -62,7 +62,9 @@ function renderOptionsFromMoment(moment: MargoMoment): {
   canPlayInline?: boolean
   hasExternalListen?: boolean
 } {
-  const isStageCard = moment.status === 'ephemeral'
+  // One export format — Stage card (landing Save PNG). Works on every platform
+  // as a square-ish image; Story/Wide poster variants removed from share UI.
+  const isStageCard = moment.lines.length <= 1
   return {
     themeId: moment.themeId,
     shapeId: moment.shapeId,

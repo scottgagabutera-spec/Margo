@@ -26,6 +26,7 @@ export {
   normalizeEmotionKey,
   emotionToVibeLabel,
   vibeLabelToEmotion,
+  MOMENT_VIBE_PICKER_OPTIONS,
 } from '@/lib/moment/vibe'
 
 export type { MomentPersistLine, PersistMomentPostInput } from '@/lib/moment/persist'
