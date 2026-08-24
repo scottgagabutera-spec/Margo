@@ -1,6 +1,7 @@
 import { resolveMomentLines, type PostLine, type PostLineSource } from '@/lib/post-lines'
 import { composeMoment } from '@/lib/moment/compose'
 import { emotionToVibeLabel } from '@/lib/moment/vibe'
+import { resolveMomentListen } from '@/lib/moment/listen'
 import type {
   MargoMoment,
   MargoMomentAuthor,
@@ -32,6 +33,14 @@ export interface PostLikeForMoment {
   authorUid?: string | null
   authorAvatarUrl?: string | null
   authorDisplayName?: string | null
+  youtubeMeta?: {
+    youtubeUrl?: string | null
+    thumbnail?: string | null
+  } | null
+  /** Catalog external URLs from joined song row */
+  appleMusicUrl?: string | null
+  spotifyUrl?: string | null
+  youtubeUrlFromSong?: string | null
 }
 
 export interface ComposeLineDraftLike {
@@ -57,6 +66,8 @@ export interface StageMomentInput {
   snippetEnd?: number | null
   vibeLabel?: string | null
   source?: PostLineSource
+  /** iTunes trackViewUrl or other external listen URL from search */
+  externalListenUrl?: string | null
 }
 
 export interface ResolveMargoMomentOptions {
@@ -69,7 +80,10 @@ export interface ResolveMargoMomentOptions {
   postId?: string | null
 }
 
-function postLineToMomentLine(line: PostLine): MargoMomentLine {
+function postLineToMomentLine(
+  line: PostLine,
+  songUrls?: { appleMusicUrl?: string | null; spotifyUrl?: string | null; youtubeUrl?: string | null },
+): MargoMomentLine {
   return {
     lyric: line.text,
     songTitle: line.songTitle || '',
@@ -82,6 +96,9 @@ function postLineToMomentLine(line: PostLine): MargoMomentLine {
     source: line.source,
     isAiGenerated: line.isAiGenerated ?? false,
     position: line.position,
+    appleMusicUrl: songUrls?.appleMusicUrl ?? null,
+    spotifyUrl: songUrls?.spotifyUrl ?? null,
+    youtubeUrl: songUrls?.youtubeUrl ?? null,
   }
 }
 
@@ -176,7 +193,12 @@ export function resolveMargoMomentFromPost(
   options: ResolveMargoMomentOptions = {},
 ): MargoMoment {
   const postLines = resolveMomentLines(post)
-  const lines = postLines.map(postLineToMomentLine)
+  const rootSongUrls = {
+    appleMusicUrl: post.appleMusicUrl ?? null,
+    spotifyUrl: post.spotifyUrl ?? null,
+    youtubeUrl: post.youtubeUrlFromSong ?? null,
+  }
+  const lines = postLines.map((line) => postLineToMomentLine(line, rootSongUrls))
   const vibeFromEmotion = emotionToVibeLabel(post.emotion)
   const author: MargoMomentAuthor | null = post.authorUid || post.username
     ? {
@@ -189,7 +211,7 @@ export function resolveMargoMomentFromPost(
 
   const seedKey = options.seedKey ?? buildMomentSeedKey(post.id, lines)
 
-  return {
+  const moment: MargoMoment = {
     lines,
     vibeLabel: options.vibeLabel ?? vibeFromEmotion,
     emotion: post.emotion ?? null,
@@ -200,6 +222,15 @@ export function resolveMargoMomentFromPost(
     seedKey,
     status: options.status ?? postStatusToMomentStatus(post.status),
   }
+
+  moment.listen = resolveMomentListen(moment, {
+    youtubeUrl: post.youtubeMeta?.youtubeUrl ?? null,
+    appleMusicUrl: post.appleMusicUrl ?? null,
+    spotifyUrl: post.spotifyUrl ?? null,
+    youtubeUrlFromSong: post.youtubeUrlFromSong ?? null,
+  })
+
+  return moment
 }
 
 export function resolveMargoMomentFromComposeDrafts(
@@ -258,7 +289,7 @@ export function resolveMargoMomentFromStage(
   // (render-moment default before seedKey was passed explicitly).
   const seedKey = options.seedKey ?? buildMomentSeedKey(null, lines, { ephemeralFormat: 'lyric-song' })
 
-  return {
+  const moment: MargoMoment = {
     lines,
     vibeLabel: options.vibeLabel ?? input.vibeLabel ?? null,
     author: options.author ?? null,
@@ -268,6 +299,12 @@ export function resolveMargoMomentFromStage(
     seedKey,
     status: 'ephemeral',
   }
+
+  moment.listen = resolveMomentListen(moment, {
+    itunesTrackUrl: input.externalListenUrl ?? null,
+  })
+
+  return moment
 }
 
 /** Map canonical lines back to PostLine shape for existing export components. */

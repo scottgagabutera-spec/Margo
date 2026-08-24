@@ -42,6 +42,16 @@ export type {
   NativeSharePayload,
   NativeShareResult,
 } from '@/lib/moment/share'
+export type {
+  MomentListenContext,
+  MomentListenResolution,
+  MomentListenMode,
+} from '@/lib/moment/listen'
+export {
+  resolveMomentListen,
+  appleMusicSearchUrl,
+} from '@/lib/moment/listen'
+
 export {
   MARGO_SITE_ORIGIN,
   getMomentShareUrl,

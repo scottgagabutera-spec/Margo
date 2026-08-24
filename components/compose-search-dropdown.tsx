@@ -11,6 +11,8 @@ export interface ComposeSearchHit {
   source: 'margo' | 'genius' | 'apple'
   margoSongId?: string
   audioUrl?: string | null
+  /** Real external listen URL from search (iTunes trackViewUrl or Genius page) */
+  externalListenUrl?: string | null
 }
 
 function sourceLabel(s: ComposeSearchHit['source']) {

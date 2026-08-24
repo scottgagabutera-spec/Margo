@@ -22,6 +22,7 @@ interface SearchResult {
   artwork: string | null
   artworkFull: string | null
   geniusUrl: string | null
+  trackViewUrl: string | null
   id: number | null
   source: string
 }
@@ -43,6 +44,7 @@ async function searchGenius(query: string, apiKey: string): Promise<SearchResult
       artwork: s.song_art_image_thumbnail_url || s.header_image_thumbnail_url || null,
       artworkFull: s.song_art_image_url || s.header_image_url || null,
       geniusUrl: s.url || null,
+      trackViewUrl: null,
       id: s.id,
       source: 'genius',
     }
@@ -63,6 +65,7 @@ async function searchItunes(query: string): Promise<SearchResult[]> {
     artwork: t.artworkUrl100 || null,
     artworkFull: t.artworkUrl100 ? t.artworkUrl100.replace('100x100bb', '600x600bb') : null,
     geniusUrl: null,
+    trackViewUrl: t.trackViewUrl || null,
     id: null,
     source: 'apple',
   }))

@@ -1,5 +1,6 @@
 import type { PostLineSource } from '@/lib/post-lines'
 import type { MomentComposition } from '@/lib/moment/compose'
+import type { MomentListenResolution } from '@/lib/moment/listen'
 
 /** Visual theme ids — matches THEMES in render-moment.ts */
 export type MomentThemeId = 'gold' | 'dark'
@@ -26,6 +27,10 @@ export interface MargoMomentLine {
   source?: PostLineSource
   isAiGenerated?: boolean
   position?: number
+  /** Catalog song external URLs — used by resolveMomentListen() */
+  appleMusicUrl?: string | null
+  spotifyUrl?: string | null
+  youtubeUrl?: string | null
 }
 
 export interface MargoMomentAuthor {
@@ -57,6 +62,8 @@ export interface MargoMoment {
    * When omitted, resolveMomentComposition() derives it from lines + vibe + seed.
    */
   composition?: MomentComposition | null
+  /** Resolved listen destination — set when loading/sharing, not stored in DB */
+  listen?: MomentListenResolution | null
 }
 
 /** Normalized line shape used by the canvas renderer */

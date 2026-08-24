@@ -41,10 +41,6 @@ const VIBE_LABELS: Record<Vibe, string> = {
 const font = 'var(--font-lora), serif'
 const SUBHEAD = "Pick a line. Send it to someone who'll feel it."
 
-function appleMusicSearchUrl(song: string, artist: string) {
-  return 'https://music.apple.com/search?term=' + encodeURIComponent(song + ' ' + artist)
-}
-
 export function StageLanding() {
   const { user } = useIdentity()
   const signedIn = !!user && !user.isAnonymous
@@ -80,6 +76,23 @@ export function StageLanding() {
   const showWriteLine = isExternalOrManualWrite && !showLinePicker
   const hasMoment = momentVisible && lyric.trim().length > 0 && !!songName && !!artistName
   const canPlay = !!(linkedAudioUrl && linkedSongId && snippetStart != null && snippetEnd != null)
+
+  const stageMoment = hasMoment
+    ? resolveMargoMomentFromStage({
+        lyric,
+        songName,
+        artistName,
+        artworkUrl: selectedSong?.artwork || null,
+        songId: linkedSongId,
+        audioUrl: linkedAudioUrl,
+        snippetStart,
+        snippetEnd,
+        vibeLabel,
+        source: linkedSongId ? 'catalog' : 'external',
+        externalListenUrl: selectedSong?.externalListenUrl ?? null,
+      })
+    : null
+  const listen = stageMoment?.listen ?? null
 
   const playbackKey = linkedSongId || linkedAudioUrl || ''
   const lineIndex = margoLines.find((l) => l.text === lyric)?.lineIndex ?? 0
@@ -166,12 +179,15 @@ export function StageLanding() {
       const externalMapped: SearchResult[] = (geniusRes.results || []).map((r: Record<string, unknown>) => {
         const rawSource = String(r.source || '').toLowerCase()
         const source: Source = (rawSource === 'itunes' || rawSource === 'apple') ? 'apple' : 'genius'
+        const trackViewUrl = typeof r.trackViewUrl === 'string' ? r.trackViewUrl : null
+        const geniusUrl = typeof r.geniusUrl === 'string' ? r.geniusUrl : null
         return {
           id: String(r.id || r.song),
           title: String(r.song || ''),
           artist: String(r.artist || ''),
           artwork: String(r.artwork || ''),
           source,
+          externalListenUrl: trackViewUrl || geniusUrl || null,
         }
       }).filter((r: SearchResult) => !margoKeys.has(songMatchKey(r.title, r.artist)))
 
@@ -379,6 +395,7 @@ export function StageLanding() {
         snippetEnd,
         vibeLabel,
         source: linkedSongId ? 'catalog' : 'external',
+        externalListenUrl: selectedSong?.externalListenUrl ?? null,
       })
       await saveMargoMomentImage(moment)
     } finally {
@@ -386,7 +403,7 @@ export function StageLanding() {
     }
   }, [
     hasMoment, lyric, songName, artistName, selectedSong?.artwork,
-    linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, vibeLabel,
+    linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, vibeLabel, selectedSong?.externalListenUrl,
   ])
 
   const headline = headlineVariant ? HEADLINES[headlineVariant] : HEADLINES.a
@@ -521,11 +538,11 @@ export function StageLanding() {
                   artistName={artistName}
                   artwork={selectedSong.artwork}
                   vibeLabel={vibeLabel}
-                  canPlay={canPlay}
+                  canPlay={listen?.canPlayInline ?? false}
                   playing={playing}
                   buffering={buffering}
                   onPlay={handlePlay}
-                  listenUrl={!canPlay ? appleMusicSearchUrl(songName, artistName) : null}
+                  listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
                 />
                 <StageSendBar onSaveImage={handleSaveImage} saving={saving} signedIn={signedIn} />
               </>
