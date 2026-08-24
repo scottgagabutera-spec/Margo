@@ -25,6 +25,7 @@ const MOMENT_POST_SELECT = `
   created_at,
   snippet_start_sec,
   snippet_end_sec,
+  external_listen_url,
   profiles:author_profile_id ( username, avatar_url, display_name ),
   songs:song_id (
     audio_url,
@@ -90,6 +91,7 @@ function mapRowToPostLike(row: Record<string, unknown>): PostLikeForMoment {
     appleMusicUrl: (songRecord?.apple_music_url as string) ?? null,
     spotifyUrl: (songRecord?.spotify_url as string) ?? null,
     youtubeUrlFromSong: (songRecord?.youtube_url as string) ?? null,
+    externalListenUrl: (row.external_listen_url as string) ?? null,
     lines: mapPostLinesRows(row.post_lines as Parameters<typeof mapPostLinesRows>[0]),
   }
 }

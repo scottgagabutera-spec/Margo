@@ -41,6 +41,8 @@ export interface PostLikeForMoment {
   appleMusicUrl?: string | null
   spotifyUrl?: string | null
   youtubeUrlFromSong?: string | null
+  /** Direct external listen URL stored on post (Apple trackViewUrl, etc.) */
+  externalListenUrl?: string | null
 }
 
 export interface ComposeLineDraftLike {
@@ -228,6 +230,7 @@ export function resolveMargoMomentFromPost(
     appleMusicUrl: post.appleMusicUrl ?? null,
     spotifyUrl: post.spotifyUrl ?? null,
     youtubeUrlFromSong: post.youtubeUrlFromSong ?? null,
+    itunesTrackUrl: post.externalListenUrl ?? null,
   })
 
   return moment
@@ -287,17 +290,17 @@ export function resolveMargoMomentFromStage(
 
   // Stage Save historically keyed composition on lyric|songTitle only
   // (render-moment default before seedKey was passed explicitly).
-  const seedKey = options.seedKey ?? buildMomentSeedKey(null, lines, { ephemeralFormat: 'lyric-song' })
+  const seedKey = options.seedKey ?? buildMomentSeedKey(options.postId ?? null, lines, { ephemeralFormat: 'lyric-song' })
 
   const moment: MargoMoment = {
     lines,
     vibeLabel: options.vibeLabel ?? input.vibeLabel ?? null,
     author: options.author ?? null,
-    postId: null,
+    postId: options.postId ?? null,
     themeId: options.themeId ?? DEFAULT_MOMENT_THEME_ID,
     shapeId: options.shapeId ?? DEFAULT_MOMENT_SHAPE_ID,
     seedKey,
-    status: 'ephemeral',
+    status: options.status ?? (options.postId ? 'active' : 'ephemeral'),
   }
 
   moment.listen = resolveMomentListen(moment, {

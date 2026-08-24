@@ -41,3 +41,13 @@ export function emotionToVibeLabel(emotion: string | null | undefined): string |
   const key = normalizeEmotionKey(emotion)
   return VIBE_LABELS[key] || emotion.trim()
 }
+
+/** Human vibe label (e.g. "Grateful") → stored emotion key (e.g. GRATEFUL). */
+export function vibeLabelToEmotion(label: string | null | undefined): string | null {
+  if (!label?.trim()) return null
+  const normalized = label.trim().toLowerCase()
+  for (const [key, human] of Object.entries(VIBE_LABELS)) {
+    if (human.toLowerCase() === normalized) return key.toUpperCase()
+  }
+  return label.trim().toUpperCase().replace(/\s+/g, '')
+}

@@ -8,7 +8,6 @@ import type { CSSProperties } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeftIcon, SearchIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
-import { matchLyricLine } from '@/lib/lyric-match'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
@@ -19,8 +18,9 @@ import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { POST_LINES_MAX, type PostLineSource } from '@/lib/post-lines'
+import { POST_LINES_MAX } from '@/lib/post-lines'
 import { resolveMargoMomentFromComposeDrafts } from '@/lib/moment'
+import { persistMomentPost } from '@/lib/moment/persist'
 import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
 import { SongMeta } from '@/components/song-meta'
 import { VibeTag } from '@/components/vibe-tag'
@@ -41,6 +41,7 @@ type ComposeLineDraft = {
   snippetEnd: number | null
   source: Source | null
   geniusId: string | null
+  externalListenUrl: string | null
 }
 
 interface SearchResult {
@@ -51,6 +52,7 @@ interface SearchResult {
   source: Source
   margoSongId?: string
   audioUrl?: string | null
+  externalListenUrl?: string | null
 }
 
 type Vibe =
@@ -311,12 +313,15 @@ function ComposeInner() {
       const externalMapped: SearchResult[] = (geniusRes.results || []).map((r: any) => {
         const rawSource = String(r.source || '').toLowerCase()
         const source: Source = (rawSource === 'itunes' || rawSource === 'apple') ? 'apple' : 'genius'
+        const trackViewUrl = typeof r.trackViewUrl === 'string' ? r.trackViewUrl : null
+        const geniusUrl = typeof r.geniusUrl === 'string' ? r.geniusUrl : null
         return {
           id: String(r.id || r.song),
           title: r.song,
           artist: r.artist,
           artwork: r.artwork || '',
           source,
+          externalListenUrl: trackViewUrl || geniusUrl || null,
         }
       }).filter((r: SearchResult) => !margoKeys.has(songMatchKey(r.title, r.artist)))
 
@@ -479,6 +484,7 @@ function ComposeInner() {
     snippetEnd,
     source: selectedSong?.source || (linkedSongId ? 'margo' : null),
     geniusId: selectedSong?.source && selectedSong.source !== 'margo' ? selectedSong.id : null,
+    externalListenUrl: selectedSong?.externalListenUrl ?? null,
   }), [lyric, songName, artistName, linkedSongId, linkedAudioUrl, selectedSong, snippetStart, snippetEnd])
 
   const exportMoment = useMemo(() => {
@@ -544,77 +550,38 @@ function ComposeInner() {
     const authorId = user.id
 
     try {
-      const resolvedLines: ComposeLineDraft[] = []
-      for (const line of lines) {
-        let resolvedStart = line.snippetStart
-        let resolvedEnd = line.snippetEnd
-        if ((resolvedStart == null || resolvedEnd == null) && line.linkedSongId) {
-          const match = await matchLyricLine(supabase, line.linkedSongId, line.lyric)
-          if (match) {
-            resolvedStart = match.startSec
-            resolvedEnd = match.endSec
-          }
-        }
-        resolvedLines.push({ ...line, snippetStart: resolvedStart, snippetEnd: resolvedEnd })
+      const lines: ComposeLineDraft[] = [...committedLines]
+      const draft = buildCurrentDraft()
+      if (draft.lyric && draft.songName && draft.artistName) {
+        lines.push(draft)
+      }
+      if (lines.length === 0) return
+      if (lines.length > POST_LINES_MAX) {
+        setPostError(`Moments can hold up to ${POST_LINES_MAX} lines.`)
+        return
       }
 
-      const mirror = resolvedLines[0]
-      const { data, error: insertErr } = await supabase
-        .from('posts')
-        .insert({
-          text: mirror.lyric,
-          emotion: selectedVibe || null,
-          status: isPrivate ? 'private' : 'active',
-          flag_count: 0,
-          song_id: mirror.linkedSongId || null,
-          song_title: mirror.songName,
-          artist_name: mirror.artistName,
-          artwork_url: mirror.artwork || null,
-          genius_id: mirror.geniusId || null,
-          author_profile_id: authorId,
-          parent_post_id: null,
-          lang: navigator.language.split('-')[0] || 'en',
-          snippet_start_sec: mirror.snippetStart,
-          snippet_end_sec: mirror.snippetEnd,
-        })
-        .select('id')
-        .single()
-
-      if (insertErr) throw insertErr
-
-      const newPostId = data.id
-      setPostedId(newPostId)
-
-      const lineRows = resolvedLines.map((line, position) => {
-        const source: PostLineSource = line.linkedSongId
-          ? 'catalog'
-          : (line.source === 'margo' ? 'catalog' : 'external')
-        return {
-          post_id: newPostId,
-          position,
-          text: line.lyric,
-          song_id: line.linkedSongId || null,
-          song_title: line.songName,
-          artist_name: line.artistName,
-          artwork_url: line.artwork || null,
-          snippet_start_sec: line.snippetStart,
-          snippet_end_sec: line.snippetEnd,
-          source,
-        }
+      const { postId: newPostId } = await persistMomentPost(supabase, {
+        lines: lines.map((line) => ({
+          lyric: line.lyric,
+          songName: line.songName,
+          artistName: line.artistName,
+          linkedSongId: line.linkedSongId,
+          linkedAudioUrl: line.linkedAudioUrl,
+          artwork: line.artwork,
+          snippetStart: line.snippetStart,
+          snippetEnd: line.snippetEnd,
+          source: line.source,
+          geniusId: line.geniusId,
+          externalListenUrl: line.externalListenUrl,
+        })),
+        emotion: selectedVibe || null,
+        status: isPrivate ? 'private' : 'active',
+        authorId,
+        lang: navigator.language.split('-')[0] || 'en',
       })
 
-      const { error: linesErr } = await supabase.from('post_lines').insert(lineRows)
-      if (linesErr) {
-        console.error('Failed to insert post_lines:', linesErr)
-        // Post row already exists — surface soft error but continue completion.
-      }
-
-      fetch('/api/moderate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: mirror.lyric, postId: newPostId }),
-      }).catch(() => {})
-
+      setPostedId(newPostId)
       setPosting(false)
       setCompletionMode(isPrivate ? 'private' : 'public')
       resetComposeViewport()

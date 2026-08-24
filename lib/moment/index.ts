@@ -22,7 +22,14 @@ export {
 export type { MomentComposition, MomentArchetype, MomentMotif, Composition } from '@/lib/moment/compose'
 export { composeMoment, hashMomentSeed } from '@/lib/moment/compose'
 
-export { normalizeEmotionKey, emotionToVibeLabel } from '@/lib/moment/vibe'
+export {
+  normalizeEmotionKey,
+  emotionToVibeLabel,
+  vibeLabelToEmotion,
+} from '@/lib/moment/vibe'
+
+export type { MomentPersistLine, PersistMomentPostInput } from '@/lib/moment/persist'
+export { persistMomentPost } from '@/lib/moment/persist'
 
 export type {
   PostLikeForMoment,
@@ -68,6 +75,7 @@ export {
   buildLyricBackNativeSharePayload,
   canNativeShare,
   canShareImageFiles,
+  isMomentRecipientShareable,
   shareMomentNative,
   copyMomentShareText,
 } from '@/lib/moment/share'

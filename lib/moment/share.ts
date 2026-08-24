@@ -12,6 +12,12 @@ export function getMomentShareUrl(postId?: string | null): string {
   return MARGO_SITE_ORIGIN
 }
 
+/** Whether a persisted Moment can be shared via /m/{id} to recipients. */
+export function isMomentRecipientShareable(moment: MargoMoment): boolean {
+  if (!moment.postId) return false
+  return moment.status === 'active'
+}
+
 /** Plain-text fallback for clipboard and share sheets. */
 export function buildMomentShareText(
   moment: MargoMoment,
@@ -94,6 +100,8 @@ export type NativeShareResult = 'shared' | 'copied' | 'failed'
 
 /** Invoke native share with text+url; clipboard URL fallback. */
 export async function shareMomentNative(moment: MargoMoment): Promise<NativeShareResult> {
+  if (!isMomentRecipientShareable(moment)) return 'failed'
+
   const payload = buildNativeSharePayload(moment)
 
   if (canNativeShare()) {
@@ -119,6 +127,7 @@ export async function shareMomentNative(moment: MargoMoment): Promise<NativeShar
 }
 
 export async function copyMomentShareText(moment: MargoMoment): Promise<boolean> {
+  if (!isMomentRecipientShareable(moment)) return false
   if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return false
   try {
     await navigator.clipboard.writeText(buildMomentShareText(moment, { includeUrl: true }))
