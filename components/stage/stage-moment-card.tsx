@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import { ComposeLyricCard } from '@/components/compose-lyric-card'
-import { VibeTag } from '@/components/vibe-tag'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
@@ -43,6 +42,44 @@ const playControlStyle: CSSProperties = {
   flexShrink: 0,
 }
 
+function footerLabelStyle(inkMuted: string): CSSProperties {
+  return {
+    fontFamily: UI_FONT,
+    fontSize: '0.56rem',
+    fontWeight: 600,
+    letterSpacing: '0.5px',
+    textTransform: 'uppercase',
+    color: inkMuted,
+    lineHeight: 1,
+    flexShrink: 0,
+  }
+}
+
+function footerChipStyle(theme: ReturnType<typeof getStageCardTheme>): CSSProperties {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '22px',
+    maxWidth: '88px',
+    padding: '0 10px',
+    borderRadius: '50px',
+    border: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.18)' : 'rgba(255,255,255,0.2)'}`,
+    background: theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.08)' : 'rgba(255,255,255,0.1)',
+    fontFamily: UI_FONT,
+    fontSize: '0.56rem',
+    fontWeight: 700,
+    letterSpacing: '0.4px',
+    textTransform: 'uppercase',
+    color: theme.ink,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    flexShrink: 1,
+    minWidth: 0,
+  }
+}
+
 /**
  * Gold Moment for The Stage — lyric-dominant, not a Feed post.
  */
@@ -69,8 +106,7 @@ export function StageMomentCard({
   const canPickVibe = vibeOptions.length > 0 && !!onVibeSelect
   const canCycleTheme = !!onThemeChange
   const markVariant = theme.markVariant === 'on-light' ? 'ink' : 'gold'
-  const vibeTagFill = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.08)' : 'rgba(255,255,255,0.1)'
-  const vibeTagStroke = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.18)' : 'rgba(255,255,255,0.2)'
+  const showFooter = vibeLabel || canCycleTheme
 
   return (
     <ComposeLyricCard
@@ -228,88 +264,8 @@ export function StageMomentCard({
         </div>
       ) : null}
 
-      {(vibeLabel || canCycleTheme) ? (
-        <div
-          style={{
-            position: 'relative',
-            marginTop: '12px',
-            minHeight: vibePickerOpen ? 'auto' : '22px',
-            paddingBottom: vibePickerOpen ? '4px' : 0,
-          }}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '-9px',
-              right: '14px',
-              zIndex: 5,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-            }}
-          >
-            {canCycleTheme ? (
-              <button
-                type="button"
-                aria-label={`Color: ${theme.label}. Tap to change.`}
-                onClick={() => onThemeChange?.(cycleStageCardTheme(cardThemeId).id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: 0,
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  WebkitTapHighlightColor: 'transparent',
-                  flexShrink: 0,
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: UI_FONT,
-                    fontSize: '0.56rem',
-                    fontWeight: 600,
-                    letterSpacing: '0.5px',
-                    textTransform: 'uppercase',
-                    color: theme.inkMuted,
-                    lineHeight: 1,
-                  }}
-                >
-                  Color
-                </span>
-                <span
-                  aria-hidden
-                  style={{
-                    width: '22px',
-                    height: '22px',
-                    borderRadius: '50%',
-                    border: `2px solid ${theme.ink}`,
-                    background: theme.swatch,
-                    boxShadow: theme.markVariant === 'on-light'
-                      ? 'inset 0 0 0 1.5px rgba(255,255,255,0.55)'
-                      : 'inset 0 0 0 1.5px rgba(255,255,255,0.14)',
-                    flexShrink: 0,
-                  }}
-                />
-              </button>
-            ) : null}
-
-            {vibeLabel ? (
-              <VibeTag
-                label={vibeLabel}
-                color={theme.ink}
-                variant="on-gold"
-                layout="inline"
-                surfaceInk={theme.ink}
-                surfaceInkMuted={vibeTagStroke}
-                surfaceTagFill={vibeTagFill}
-                surfaceHoleFill={theme.bg}
-                onClick={canPickVibe ? () => setVibePickerOpen((open) => !open) : undefined}
-              />
-            ) : null}
-          </div>
-
+      {showFooter ? (
+        <div style={{ marginTop: '16px' }}>
           {vibePickerOpen && canPickVibe ? (
             <div
               role="listbox"
@@ -318,8 +274,10 @@ export function StageMomentCard({
                 display: 'grid',
                 gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
                 gap: '6px',
-                marginTop: '14px',
+                marginBottom: '14px',
                 width: '100%',
+                paddingBottom: '2px',
+                borderBottom: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.1)'}`,
               }}
             >
               {vibeOptions.map((option) => {
@@ -377,6 +335,77 @@ export function StageMomentCard({
               })}
             </div>
           ) : null}
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: '16px',
+              minHeight: '22px',
+            }}
+          >
+            {canCycleTheme ? (
+              <button
+                type="button"
+                aria-label={`Color: ${theme.label}. Tap to change.`}
+                onClick={() => onThemeChange?.(cycleStageCardTheme(cardThemeId).id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: 0,
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                  flexShrink: 0,
+                }}
+              >
+                <span style={footerLabelStyle(theme.inkMuted)}>Color</span>
+                <span
+                  aria-hidden
+                  style={{
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    border: `2px solid ${theme.ink}`,
+                    background: theme.swatch,
+                    boxShadow: theme.markVariant === 'on-light'
+                      ? 'inset 0 0 0 1.5px rgba(255,255,255,0.55)'
+                      : 'inset 0 0 0 1.5px rgba(255,255,255,0.14)',
+                    flexShrink: 0,
+                  }}
+                />
+              </button>
+            ) : null}
+
+            {vibeLabel ? (
+              <button
+                type="button"
+                aria-label={canPickVibe ? `Vibe: ${vibeLabel}. Tap to change.` : `Vibe: ${vibeLabel}`}
+                onClick={canPickVibe ? () => setVibePickerOpen((open) => !open) : undefined}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: 0,
+                  border: 'none',
+                  background: 'none',
+                  cursor: canPickVibe ? 'pointer' : 'default',
+                  WebkitTapHighlightColor: 'transparent',
+                  flexShrink: 0,
+                  maxWidth: '100%',
+                  minWidth: 0,
+                }}
+              >
+                <span style={footerLabelStyle(theme.inkMuted)}>Vibe</span>
+                <span style={footerChipStyle(theme)} title={vibeLabel}>
+                  {vibeLabel}
+                </span>
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </ComposeLyricCard>

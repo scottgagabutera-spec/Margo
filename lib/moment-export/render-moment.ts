@@ -840,7 +840,7 @@ function drawRoundedRectPath(
   ctx.closePath()
 }
 
-function drawVibeTagOnStage(
+function drawStageVibePill(
   ctx: CanvasRenderingContext2D,
   rightX: number,
   bottomY: number,
@@ -849,43 +849,43 @@ function drawVibeTagOnStage(
   scale: number,
   theme: StageCardTheme,
 ) {
-  const tagH = 22 * scale
-  const tagFS = Math.max(10, Math.round(7.7 * scale))
-  ctx.font = `700 ${tagFS}px ${geist}`
-  const textW = ctx.measureText(label.toUpperCase()).width
-  const tagW = Math.max(72 * scale, textW + 36 * scale)
-  const x = rightX - tagW
-  const y = bottomY - tagH
+  const pillH = 22 * scale
+  const pillFS = Math.max(9, Math.round(7.2 * scale))
+  const maxPillW = 96 * scale
+  const padH = 10 * scale
   const tagFill = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.08)' : 'rgba(255,255,255,0.1)'
   const tagStroke = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.18)' : 'rgba(255,255,255,0.2)'
-  const holeFill = theme.markVariant === 'on-light' ? theme.bg : theme.ink
+
+  ctx.font = `700 ${pillFS}px ${geist}`
+  const display = truncateToWidth(ctx, label.toUpperCase(), maxPillW - padH * 2)
+  const textW = ctx.measureText(display).width
+  const pillW = Math.min(maxPillW, Math.max(52 * scale, textW + padH * 2))
+  const x = rightX - pillW
+  const y = bottomY - pillH
+  const r = pillH / 2
 
   ctx.save()
   ctx.beginPath()
-  ctx.moveTo(x + 8 * scale, y)
-  ctx.lineTo(x + tagW - 8 * scale, y)
-  ctx.quadraticCurveTo(x + tagW, y, x + tagW, y + 7 * scale)
-  ctx.lineTo(x + tagW, y + tagH - 7 * scale)
-  ctx.quadraticCurveTo(x + tagW, y + tagH, x + tagW - 8 * scale, y + tagH)
-  ctx.lineTo(x + 8 * scale, y + tagH)
-  ctx.lineTo(x + 1 * scale, y + tagH / 2)
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + pillW - r, y)
+  ctx.quadraticCurveTo(x + pillW, y, x + pillW, y + r)
+  ctx.lineTo(x + pillW, y + pillH - r)
+  ctx.quadraticCurveTo(x + pillW, y + pillH, x + pillW - r, y + pillH)
+  ctx.lineTo(x + r, y + pillH)
+  ctx.quadraticCurveTo(x, y + pillH, x, y + pillH - r)
+  ctx.lineTo(x, y + r)
+  ctx.quadraticCurveTo(x, y, x + r, y)
   ctx.closePath()
   ctx.fillStyle = tagFill
   ctx.fill()
   ctx.strokeStyle = tagStroke
   ctx.lineWidth = 1.2 * scale
   ctx.stroke()
-  ctx.beginPath()
-  ctx.arc(x + 9 * scale, y + tagH / 2, 2.2 * scale, 0, Math.PI * 2)
-  ctx.fillStyle = holeFill
-  ctx.fill()
-  ctx.strokeStyle = tagStroke
-  ctx.stroke()
   ctx.fillStyle = theme.ink
-  ctx.globalAlpha = 0.9
+  ctx.globalAlpha = 0.92
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(label.toUpperCase(), x + tagW / 2 + 4 * scale, y + tagH / 2 + 0.5 * scale)
+  ctx.fillText(display, x + pillW / 2, y + pillH / 2 + 0.5 * scale)
   ctx.restore()
 }
 
@@ -923,8 +923,8 @@ function computeStageCardHeight(
   const metaGap = 14 * s
   const artSize = Math.round(48 * s)
   const artGap = 14 * s
-  const vibeGap = 12 * s
-  const vibeOverhang = 9 * s
+  const vibeGap = 14 * s
+  const vibeRowH = 22 * s
   const contentW = W - padX * 2 - Math.round(24 * s) - 8 * s
 
   const line = lines[0]
@@ -940,7 +940,7 @@ function computeStageCardHeight(
     ? metaGap + (hasSong ? metaFS * 1.25 : 0) + (hasArtist ? Math.round(metaFS * 0.92) * 1.3 : 0)
     : 0
   const artH = line.artworkUrl ? artGap + artSize : 0
-  const vibeH = vibeLabel ? vibeGap + 22 * s + vibeOverhang : 0
+  const vibeH = vibeLabel ? vibeGap + vibeRowH : 0
 
   return Math.ceil(padT + lyricH + metaH + artH + vibeH + padB)
 }
@@ -1057,7 +1057,7 @@ export async function drawStageMomentCard(
   }
 
   if (vibeLabel) {
-    drawVibeTagOnStage(ctx, W - padX, H - padB + 9 * s, vibeLabel, geist, s, theme)
+    drawStageVibePill(ctx, W - padX, H - padB, vibeLabel, geist, s, theme)
   }
 }
 
