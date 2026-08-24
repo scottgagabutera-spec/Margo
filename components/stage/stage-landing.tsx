@@ -9,14 +9,17 @@ import { StageSearchField } from '@/components/stage/stage-search-field'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
+import { ComposeSendTo } from '@/components/compose-send-to'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher } from '@/lib/stage-chrome'
 import { HEADLINES, resolveHeadlineVariant, type HeadlineVariant } from '@/lib/stage-headline-variant'
-import { resolveMargoMomentFromStage } from '@/lib/moment'
+import { resolveMargoMomentFromStage, shareMomentNative, vibeLabelToEmotion } from '@/lib/moment'
+import { persistMomentPost } from '@/lib/moment/persist'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import { saveMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
@@ -52,6 +55,7 @@ const SUBHEAD = "Pick a line. Send it to someone who'll feel it."
 
 export function StageLanding() {
   const { user } = useIdentity()
+  const { requireAuth } = useAuthGate()
   const signedIn = !!user && !user.isAnonymous
 
   const [headlineVariant, setHeadlineVariant] = useState<HeadlineVariant | null>(null)
@@ -75,6 +79,9 @@ export function StageLanding() {
   const [vibeUserPicked, setVibeUserPicked] = useState(false)
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [saving, setSaving] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sentPostId, setSentPostId] = useState<string | null>(null)
+  const [showSendTo, setShowSendTo] = useState(false)
   const [momentVisible, setMomentVisible] = useState(false)
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -269,6 +276,8 @@ export function StageLanding() {
     setSuggestedVibeLabel(null)
     setVibeUserPicked(false)
     setCardThemeId('gold')
+    setSentPostId(null)
+    setShowSendTo(false)
     setMomentVisible(false)
     setSearchQuery('')
     setShowResults(false)
@@ -430,6 +439,70 @@ export function StageLanding() {
     linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, vibeLabel, selectedSong?.externalListenUrl, cardThemeId,
   ])
 
+  const buildPersistedStageMoment = useCallback((postId: string) => {
+    return resolveMargoMomentFromStage({
+      lyric,
+      songName,
+      artistName,
+      artworkUrl: selectedSong?.artwork || null,
+      songId: linkedSongId,
+      audioUrl: linkedAudioUrl,
+      snippetStart,
+      snippetEnd,
+      vibeLabel,
+      source: linkedSongId ? 'catalog' : 'external',
+      externalListenUrl: selectedSong?.externalListenUrl ?? null,
+    }, {
+      postId,
+      themeId: cardThemeId,
+      status: 'active',
+    })
+  }, [
+    lyric, songName, artistName, selectedSong?.artwork, linkedSongId,
+    linkedAudioUrl, snippetStart, snippetEnd, vibeLabel,
+    selectedSong?.externalListenUrl, cardThemeId,
+  ])
+
+  const handleSend = useCallback(async () => {
+    if (!hasMoment || !requireAuth() || !user) return
+    setSending(true)
+    try {
+      const { postId } = await persistMomentPost(supabase, {
+        lines: [{
+          lyric: lyric.trim(),
+          songName: songName.trim(),
+          artistName: artistName.trim(),
+          linkedSongId,
+          linkedAudioUrl,
+          artwork: selectedSong?.artwork || null,
+          snippetStart,
+          snippetEnd,
+          source: selectedSong?.source || (linkedSongId ? 'margo' : null),
+          geniusId: selectedSong?.source && selectedSong.source !== 'margo' ? selectedSong.id : null,
+          externalListenUrl: selectedSong?.externalListenUrl ?? null,
+        }],
+        emotion: vibeLabelToEmotion(vibeLabel),
+        status: 'active',
+        authorId: user.id,
+        lang: typeof navigator !== 'undefined' ? navigator.language.split('-')[0] || 'en' : 'en',
+      })
+      setSentPostId(postId)
+    } catch (e) {
+      console.error('Stage send failed:', e)
+    } finally {
+      setSending(false)
+    }
+  }, [
+    hasMoment, requireAuth, user, lyric, songName, artistName, linkedSongId,
+    linkedAudioUrl, selectedSong, snippetStart, snippetEnd, vibeLabel,
+  ])
+
+  const handleNativeShare = useCallback(async () => {
+    if (!sentPostId) return
+    const moment = buildPersistedStageMoment(sentPostId)
+    await shareMomentNative(moment)
+  }, [sentPostId, buildPersistedStageMoment])
+
   const headline = headlineVariant ? HEADLINES[headlineVariant] : HEADLINES.a
 
   return (
@@ -576,7 +649,27 @@ export function StageLanding() {
                   onPlay={handlePlay}
                   listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
                 />
-                <StageSendBar onSaveImage={handleSaveImage} saving={saving} signedIn={signedIn} />
+                <StageSendBar
+                  onSaveImage={handleSaveImage}
+                  saving={saving}
+                  signedIn={signedIn}
+                  onSend={handleSend}
+                  sending={sending}
+                  sentPostId={sentPostId}
+                  onNativeShare={handleNativeShare}
+                  onOpenSendTo={() => setShowSendTo(true)}
+                />
+                {sentPostId ? (
+                  <ComposeSendTo
+                    open={showSendTo}
+                    onOpenChange={setShowSendTo}
+                    postId={sentPostId}
+                    lyric={lyric}
+                    song={songName}
+                    artist={artistName}
+                    onSent={() => setShowSendTo(false)}
+                  />
+                ) : null}
               </>
             )}
           </div>

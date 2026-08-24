@@ -23,6 +23,7 @@ import {
   resolveMomentComposition,
   margoMomentToPostLines,
   canShareImageFiles,
+  isMomentRecipientShareable,
   shareMomentNative,
 } from '@/lib/moment'
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
@@ -103,6 +104,8 @@ export function CardExportModal({
       vibeLabel: resolvedVibeLabel,
     })
   }, [resolvedMoment, momentLines, resolvedPostId, resolvedVibeLabel])
+
+  const canShareUrl = effectiveMoment ? isMomentRecipientShareable(effectiveMoment) : false
 
   const composition = useMemo(() => {
     if (isDualCard || !effectiveMoment) return null
@@ -237,6 +240,7 @@ export function CardExportModal({
 
   /* ─── Copy ──────────────────────────────────────────────── */
   const handleCopy = useCallback(() => {
+    if (!canShareUrl) return
     if (effectiveMoment) {
       void copyMomentShareText(effectiveMoment).then((ok) => {
         if (!ok && typeof navigator !== 'undefined') navigator.clipboard.writeText(copyText)
@@ -246,7 +250,7 @@ export function CardExportModal({
     }
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }, [copyText, effectiveMoment])
+  }, [copyText, effectiveMoment, canShareUrl])
 
   /* ─── Share ─────────────────────────────────────────────── */
   const handleShare = useCallback(async () => {
@@ -263,11 +267,12 @@ export function CardExportModal({
       return
     }
     if (effectiveMoment) {
+      if (!canShareUrl) return
       await shareMomentNative(effectiveMoment)
       return
     }
     if (typeof navigator !== 'undefined') navigator.clipboard.writeText(url)
-  }, [isDualCard, parentLyric, lyric, resolvedPostId, effectiveMoment, url])
+  }, [isDualCard, parentLyric, lyric, resolvedPostId, effectiveMoment, url, canShareUrl])
 
   const handleShareImage = useCallback(async () => {
     if (!effectiveMoment || isDualCard) return
@@ -397,11 +402,13 @@ export function CardExportModal({
           >{isDualCard ? 'Save Card' : 'Export Moment'}</button>
           <button
             onClick={handleCopy}
-            style={{ ...btnBase, flex: '1 1 72px', background: 'rgba(255,255,255,0.05)', color: copied ? '#E8C547' : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, transition: 'color 150ms ease' }}
+            disabled={!canShareUrl && !isDualCard}
+            style={{ ...btnBase, flex: '1 1 72px', background: 'rgba(255,255,255,0.05)', color: copied ? '#E8C547' : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, transition: 'color 150ms ease', opacity: (!canShareUrl && !isDualCard) ? 0.4 : 1, cursor: (!canShareUrl && !isDualCard) ? 'not-allowed' : 'pointer' }}
           >{copied ? 'Copied' : 'Copy'}</button>
           <button
             onClick={handleShare}
-            style={{ ...btnBase, flex: '1 1 72px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}
+            disabled={!canShareUrl && !isDualCard}
+            style={{ ...btnBase, flex: '1 1 72px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600, opacity: (!canShareUrl && !isDualCard) ? 0.4 : 1, cursor: (!canShareUrl && !isDualCard) ? 'not-allowed' : 'pointer' }}
           >Share</button>
           {canShareImg && !isDualCard ? (
             <button
