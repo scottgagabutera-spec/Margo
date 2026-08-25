@@ -387,7 +387,7 @@ const navBtnStyle: React.CSSProperties = {
   borderRadius: '50%',
   flexShrink: 0,
   background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.1)',
+  border: '1px solid var(--border-hi)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

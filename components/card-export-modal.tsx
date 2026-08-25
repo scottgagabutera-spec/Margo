@@ -38,7 +38,7 @@ export function CardExportModal({
       heightMode="auto"
       maxHeight="calc(100dvh - max(28px, calc(12px + env(safe-area-inset-top, 0px))) - calc(12px + var(--margo-tabbar-h, 64px) + 28px))"
       panelOverflow="visible"
-      contentOverflow="visible"
+      contentOverflow="auto"
     >
       <MomentShareStudio
         moment={moment}

@@ -561,10 +561,9 @@ html, body {
     display: none !important;
   }
   /* Same reasoning for the floating mini-player pill/orb (Compose reuses
-     Feed's compact chrome) — hide outright while typing rather than
-     chasing the keyboard's animated position; it reappears once focus
-     clears and layout settles, avoiding stale-state jumps on Back. */
-  html[data-margo-keyboard="1"] .mp-feed-pill,
+     Feed's compact chrome) — hide on Feed while typing. Compose keeps the
+     draggable pill visible so users can reposition it above the keyboard. */
+  html[data-margo-keyboard="1"] .mp-feed-pill:not(.mp-feed-pill--compose),
   html[data-margo-keyboard="1"] .mp-feed-orb {
     display: none !important;
   }

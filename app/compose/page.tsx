@@ -492,6 +492,11 @@ function ComposeInner() {
   }, [])
 
   const handleStep1Back = useCallback(() => {
+    const onResume = !!selectedSong && (lyric.trim().length > 0 || linePickComplete)
+    if (onResume) {
+      setStep(2)
+      return
+    }
     if (committedLines.length > 0) {
       const last = committedLines[committedLines.length - 1]
       setCommittedLines((prev) => prev.slice(0, -1))
@@ -500,7 +505,7 @@ function ComposeInner() {
       return
     }
     if (selectedSong) clearCurrentSongPick()
-  }, [committedLines, selectedSong, restoreLineToDraft, clearCurrentSongPick])
+  }, [committedLines, selectedSong, lyric, linePickComplete, restoreLineToDraft, clearCurrentSongPick])
 
   const handleYourLineBack = useCallback(() => {
     if (selectedSong?.source === 'margo' && margoLines.length > 0) {

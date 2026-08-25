@@ -13,7 +13,7 @@ export interface MargoSheetProps {
   heightMode?: 'auto' | 'fixed'
   maxHeight?: string
   closeDisabled?: boolean
-  /** Card export menus expand outside the panel */
+  /** Card export menus expand outside the panel body */
   panelOverflow?: 'visible' | 'hidden'
   contentOverflow?: 'visible' | 'hidden' | 'auto'
   bottomInset?: 'tabbar' | 'tabbar-tight'
@@ -23,7 +23,12 @@ const SCRIM = 'rgba(7,6,10,0.92)'
 
 /**
  * Top-anchored sheet with safe-area padding — shared by Card modal, Send-to, etc.
- * Grows downward from below the status bar; never vertically centers tall content.
+ *
+ * Architecture:
+ * - Fixed viewport frame (no page scroll)
+ * - Header always visible (never scrolls away)
+ * - Body scrolls internally when content exceeds max height
+ * - Panel grows downward; never vertically centered
  */
 export function MargoSheet({
   open,
@@ -51,8 +56,21 @@ export function MargoSheet({
     ? 'calc(12px + var(--margo-tabbar-h, 64px) + 16px)'
     : 'calc(12px + var(--margo-tabbar-h, 64px) + 28px)'
 
+  const panelMaxHeight = heightMode === 'fixed'
+    ? maxHeight
+    : `min(${maxHeight}, calc(100dvh - max(28px, calc(12px + env(safe-area-inset-top, 0px))) - ${bottomPad}))`
+
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex, overscrollBehavior: 'none' }}>
+    <div
+      className="margo-sheet-root"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex,
+        overscrollBehavior: 'none',
+        overflow: 'hidden',
+      }}
+    >
       <button
         type="button"
         aria-label="Close"
@@ -66,25 +84,31 @@ export function MargoSheet({
         }}
       />
       <div
+        className="margo-sheet-frame"
         style={{
           position: 'relative',
           zIndex: 1,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'flex-start',
-          minHeight: '100%',
+          height: '100%',
+          maxHeight: '100dvh',
+          boxSizing: 'border-box',
           padding: '12px',
-          paddingTop: 'max(28px, calc(12px + env(safe-area-inset-top, 0px)))',
+          paddingTop: 'max(32px, calc(16px + env(safe-area-inset-top, 0px)))',
           paddingBottom: bottomPad,
           pointerEvents: 'none',
+          overflow: 'hidden',
         }}
       >
         <div
+          className="margo-sheet-panel"
           onClick={(e) => e.stopPropagation()}
           style={{
             width: '100%',
             maxWidth: '460px',
-            ...(heightMode === 'fixed' ? { height: maxHeight, maxHeight } : { maxHeight }),
+            maxHeight: panelMaxHeight,
+            ...(heightMode === 'fixed' ? { height: panelMaxHeight } : {}),
             background: 'var(--surface, #0F0E13)',
             border: '1px solid var(--border)',
             borderRadius: '20px',
@@ -93,16 +117,20 @@ export function MargoSheet({
             overflow: panelOverflow,
             boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
             pointerEvents: 'auto',
+            flexShrink: 0,
           }}
         >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '18px 18px 12px',
-            flexShrink: 0,
-            gap: '12px',
-          }}>
+          <div
+            className="margo-sheet-header"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '18px 18px 12px',
+              flexShrink: 0,
+              gap: '12px',
+            }}
+          >
             <p style={{
               fontFamily: 'var(--font-lora), serif',
               fontSize: '0.58rem',
@@ -111,6 +139,7 @@ export function MargoSheet({
               letterSpacing: '1.8px',
               textTransform: 'uppercase',
               margin: 0,
+              lineHeight: 1.3,
             }}>
               {title}
             </p>
@@ -137,18 +166,31 @@ export function MargoSheet({
               <CloseIcon size={14} color="var(--text-secondary)" />
             </button>
           </div>
-          <div style={{
-            flex: heightMode === 'fixed' ? 1 : undefined,
-            minHeight: heightMode === 'fixed' ? 0 : undefined,
-            display: heightMode === 'fixed' ? 'flex' : undefined,
-            flexDirection: heightMode === 'fixed' ? 'column' : undefined,
-            padding: '0 18px 20px',
-            overflow: contentOverflow,
-          }}>
+          <div
+            className="margo-sheet-body"
+            style={{
+              flex: 1,
+              minHeight: 0,
+              padding: '0 18px 20px',
+              overflow: contentOverflow,
+              overflowX: panelOverflow === 'visible' ? 'visible' : undefined,
+            }}
+          >
             {children}
           </div>
         </div>
       </div>
+      <style>{`
+        @media (min-width: 640px) {
+          .margo-sheet-frame {
+            padding-top: max(48px, calc(24px + env(safe-area-inset-top, 0px))) !important;
+            align-items: flex-start;
+          }
+          .margo-sheet-panel {
+            max-width: 480px;
+          }
+        }
+      `}</style>
     </div>
   )
 }
