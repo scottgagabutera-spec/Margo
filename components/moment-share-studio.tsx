@@ -263,8 +263,7 @@ export function MomentShareStudio({
   }
 
   const isModal = layout === 'modal'
-  const gap = isModal ? '14px' : (compact ? '10px' : '12px')
-  const dropUp = isModal
+  const gap = isModal ? '12px' : (compact ? '10px' : '12px')
 
   const cardSection = (
     <>
@@ -331,7 +330,6 @@ export function MomentShareStudio({
           items={saveItems}
           variant="primary"
           busy={busy}
-          dropUp={dropUp}
           open={openMenu === 'save'}
           onOpenChange={(next) => setOpenMenu(next ? 'save' : null)}
         />
@@ -341,7 +339,6 @@ export function MomentShareStudio({
           variant="secondary"
           busy={busy}
           disabled={shareItems.length === 0}
-          dropUp={dropUp}
           open={openMenu === 'share'}
           onOpenChange={(next) => setOpenMenu(next ? 'share' : null)}
         />
@@ -351,17 +348,9 @@ export function MomentShareStudio({
 
   if (isModal) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        minHeight: 0,
-        gap,
-      }}>
-        <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          {cardSection}
-        </div>
-        <div style={{ flexShrink: 0, paddingTop: '4px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap }}>
+        {cardSection}
+        <div style={{ flexShrink: 0 }}>
           <p style={{
             fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
             fontSize: '0.68rem',
@@ -370,7 +359,7 @@ export function MomentShareStudio({
             margin: '0 0 10px',
             lineHeight: 1.4,
           }}>
-            Save to your photos or share outside Margo
+            Tap Save or Share — choose an option below
           </p>
           {actionRow}
         </div>

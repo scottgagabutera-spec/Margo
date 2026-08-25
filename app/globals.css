@@ -290,14 +290,22 @@
   }
 }
 
-html[data-margo-stage-search] .margo-landing-footer {
+html[data-margo-stage-search] .margo-landing-footer,
+html[data-margo-stage-moment] .margo-landing-footer {
   opacity: 0;
   pointer-events: none;
+  transform: translateY(12px);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+@keyframes margo-bounce-dot {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+  40% { transform: translateY(-4px); opacity: 1; }
 }
 
 html[data-margo-stage-idle] .margo-stage-zone {
-  /* Slight downward nudge from the header — not full vertical centering. */
-  padding-top: clamp(40px, 4vh, 48px);
+  justify-content: center;
+  padding-top: clamp(24px, 5vh, 40px);
 }
 
 .margo-landing-nav {

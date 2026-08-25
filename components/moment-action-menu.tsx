@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ChevronRightIcon } from '@/components/icons'
 
 const font = 'var(--font-lora), serif'
 
@@ -21,7 +20,7 @@ interface MomentActionMenuProps {
   disabled?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
-  /** Open menu above the trigger (for modals / bottom sheets). */
+  /** Open menu above the trigger — rarely used; default opens downward. */
   dropUp?: boolean
 }
 
@@ -91,12 +90,8 @@ export function MomentActionMenu({
         }}
       >
         {busy ? 'Please wait…' : label}
-        <span style={{
-          display: 'inline-flex',
-          transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
-          transition: 'transform 150ms ease',
-        }}>
-          <ChevronRightIcon size={12} color={isPrimary ? 'var(--bg)' : 'var(--text-secondary)'} />
+        <span aria-hidden style={{ fontSize: '10px', lineHeight: 1, opacity: 0.75 }}>
+          {open ? '▴' : '▾'}
         </span>
       </button>
 

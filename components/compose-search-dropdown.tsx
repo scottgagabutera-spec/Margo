@@ -115,7 +115,7 @@ export function ComposeSearchDropdown({
                 style={{
                   width: '6px', height: '6px', borderRadius: '50%',
                   background: 'var(--gold)', opacity: 0.5,
-                  animation: 'bounce 1s infinite', animationDelay: `${i * 150}ms`,
+                  animation: 'margo-bounce-dot 1s ease-in-out infinite', animationDelay: `${i * 150}ms`,
                 }}
               />
             ))}

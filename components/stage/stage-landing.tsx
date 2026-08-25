@@ -10,12 +10,13 @@ import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
 import { ComposeSendTo } from '@/components/compose-send-to'
-import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher } from '@/lib/stage-chrome'
-import { HEADLINES, resolveHeadlineVariant, type HeadlineVariant } from '@/lib/stage-headline-variant'
-import { resolveMargoMomentFromStage, shareMomentNative, vibeLabelToEmotion } from '@/lib/moment'
+import MargoLogo from '@/components/MargoLogo'
+import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
+import { resolveMargoMomentFromStage, shareMomentNative, vibeLabelToEmotion, copyMomentShareLink, canShareImageFiles } from '@/lib/moment'
 import { persistMomentPost } from '@/lib/moment/persist'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
-import { saveMargoMomentImage } from '@/lib/moment-export/save-moment-image'
+import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
+import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -51,14 +52,12 @@ const STAGE_VIBES: Vibe[] = [
 const STAGE_VIBE_OPTIONS = STAGE_VIBES.map((v) => VIBE_LABELS[v])
 
 const font = 'var(--font-lora), serif'
-const SUBHEAD = "Pick a line. Send it to someone who'll feel it."
 
 export function StageLanding() {
   const { user } = useIdentity()
   const { requireAuth } = useAuthGate()
   const signedIn = !!user && !user.isAnonymous
 
-  const [headlineVariant, setHeadlineVariant] = useState<HeadlineVariant | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -79,6 +78,7 @@ export function StageLanding() {
   const [vibeUserPicked, setVibeUserPicked] = useState(false)
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [saving, setSaving] = useState(false)
+  const [shareBusy, setShareBusy] = useState(false)
   const [sending, setSending] = useState(false)
   const [sentPostId, setSentPostId] = useState<string | null>(null)
   const [showSendTo, setShowSendTo] = useState(false)
@@ -117,13 +117,10 @@ export function StageLanding() {
   const lineIndex = margoLines.find((l) => l.text === lyric)?.lineIndex ?? 0
   const { playing, buffering } = useSnippetPlaybackUi(canPlay ? playbackKey : null, canPlay ? lineIndex : null)
 
-  useEffect(() => {
-    setHeadlineVariant(resolveHeadlineVariant())
-  }, [])
-
   useStageChromePublisher(showResults || !!selectedSong)
   useStageSearchPublisher(showResults)
   useStageIdlePublisher(!selectedSong)
+  useStageMomentPublisher(hasMoment)
 
   const fetchEmotion = useCallback(async (text: string) => {
     if (!text.trim()) return
@@ -500,39 +497,124 @@ export function StageLanding() {
   const handleNativeShare = useCallback(async () => {
     if (!sentPostId) return
     const moment = buildPersistedStageMoment(sentPostId)
-    await shareMomentNative(moment)
+    setShareBusy(true)
+    try {
+      await shareMomentNative(moment)
+    } finally {
+      setShareBusy(false)
+    }
   }, [sentPostId, buildPersistedStageMoment])
 
-  const headline = headlineVariant ? HEADLINES[headlineVariant] : HEADLINES.a
+  const handleCopyLink = useCallback(async () => {
+    if (!sentPostId) return
+    const moment = buildPersistedStageMoment(sentPostId)
+    setShareBusy(true)
+    try {
+      await copyMomentShareLink(moment)
+    } finally {
+      setShareBusy(false)
+    }
+  }, [sentPostId, buildPersistedStageMoment])
+
+  const buildExportMoment = useCallback((postId?: string) => {
+    return resolveMargoMomentFromStage({
+      lyric,
+      songName,
+      artistName,
+      artworkUrl: selectedSong?.artwork || null,
+      songId: linkedSongId,
+      audioUrl: linkedAudioUrl,
+      snippetStart,
+      snippetEnd,
+      vibeLabel,
+      source: linkedSongId ? 'catalog' : 'external',
+      externalListenUrl: selectedSong?.externalListenUrl ?? null,
+    }, {
+      postId: postId ?? null,
+      themeId: cardThemeId,
+    })
+  }, [
+    lyric, songName, artistName, selectedSong?.artwork, linkedSongId,
+    linkedAudioUrl, snippetStart, snippetEnd, vibeLabel,
+    selectedSong?.externalListenUrl, cardThemeId,
+  ])
+
+  const handleShareImage = useCallback(async () => {
+    if (!hasMoment) return
+    setShareBusy(true)
+    try {
+      await shareMargoMomentImage(buildExportMoment(sentPostId ?? undefined))
+    } finally {
+      setShareBusy(false)
+    }
+  }, [hasMoment, buildExportMoment, sentPostId])
+
+  const canShareImg = canShareImageFiles()
+
+  const saveItems: MomentActionMenuItem[] = [
+    { id: 'png', label: 'Save as image', onClick: () => { void handleSaveImage() } },
+    { id: 'pdf', label: 'Save as PDF', hint: 'Coming soon', disabled: true, onClick: () => {} },
+    {
+      id: 'gif',
+      label: 'Save as GIF',
+      hint: canPlay ? 'Animated snippet' : 'Needs a playable snippet',
+      disabled: !canPlay,
+      onClick: () => {},
+    },
+  ]
+
+  const shareItems: MomentActionMenuItem[] = []
+  if (canShareImg) {
+    shareItems.push({ id: 'img', label: 'Share image', onClick: () => { void handleShareImage() } })
+  }
+  if (sentPostId) {
+    shareItems.push({
+      id: 'link',
+      label: 'Share link',
+      hint: 'Lyric preview — not a raw URL',
+      onClick: () => { void handleNativeShare() },
+    })
+    shareItems.push({
+      id: 'copy',
+      label: 'Copy link',
+      hint: 'Beautiful text for paste',
+      onClick: () => { void handleCopyLink() },
+    })
+  } else {
+    shareItems.push({
+      id: 'link-wait',
+      label: 'Share link',
+      hint: 'Send to Margo first',
+      disabled: true,
+      onClick: () => {},
+    })
+    shareItems.push({
+      id: 'copy-wait',
+      label: 'Copy link',
+      hint: 'Send to Margo first',
+      disabled: true,
+      onClick: () => {},
+    })
+  }
 
   return (
     <section style={{ position: 'relative', zIndex: 5, width: '100%', maxWidth: '480px', margin: '0 auto' }}>
       {!selectedSong && (
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <h1
-            style={{
-              fontFamily: font,
-              fontSize: 'clamp(1.65rem, 5.5vw, 2.35rem)',
-              fontWeight: 400,
-              lineHeight: 1.15,
-              letterSpacing: '-0.02em',
-              color: 'var(--text)',
-              marginBottom: '10px',
-            }}
-          >
-            {headline}
-          </h1>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+            <MargoLogo tier="lockup" size={52} rings wordmark />
+          </div>
           <p
             style={{
               fontFamily: font,
-              fontSize: 'clamp(0.82rem, 2.5vw, 0.88rem)',
-              color: 'var(--text-secondary)',
-              lineHeight: 1.5,
+              fontSize: '0.72rem',
+              color: 'var(--text-muted)',
+              lineHeight: 1.45,
               margin: 0,
               fontStyle: 'italic',
             }}
           >
-            {SUBHEAD}
+            Search a song. Pick your line.
           </p>
         </div>
       )}
@@ -542,6 +624,7 @@ export function StageLanding() {
           <StageSearchField
             value={searchQuery}
             onChange={handleSearchChange}
+            loading={searchLoading}
           />
           <ComposeSearchDropdown
             variant="stage"
@@ -622,8 +705,8 @@ export function StageLanding() {
               transform: hasMoment ? 'translateY(0)' : 'translateY(6px)',
               transition: 'opacity 200ms ease, transform 200ms ease',
               pointerEvents: hasMoment ? 'auto' : 'none',
-              maxHeight: hasMoment ? '2000px' : '0',
-              overflow: 'hidden',
+              maxHeight: hasMoment ? 'none' : '0',
+              overflow: hasMoment ? 'visible' : 'hidden',
             }}
             aria-hidden={!hasMoment}
           >
@@ -650,15 +733,15 @@ export function StageLanding() {
                   listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
                 />
                 <StageSendBar
-                  onSaveImage={handleSaveImage}
+                  saveItems={saveItems}
+                  shareItems={shareItems}
                   saving={saving}
+                  shareBusy={shareBusy}
                   signedIn={signedIn}
-                  onSend={handleSend}
+                  onSendToMargo={handleSend}
                   sending={sending}
                   sentPostId={sentPostId}
-                  onNativeShare={handleNativeShare}
                   onOpenSendTo={() => setShowSendTo(true)}
-                  hasSnippet={canPlay}
                 />
                 {sentPostId ? (
                   <ComposeSendTo

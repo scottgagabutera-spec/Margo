@@ -44,6 +44,17 @@ export function useStageSearchPublisher(open: boolean) {
 }
 
 const STAGE_IDLE_ATTR = 'data-margo-stage-idle'
+const STAGE_MOMENT_ATTR = 'data-margo-stage-moment'
+
+/** Hide footer while a Stage Moment card is visible. */
+export function useStageMomentPublisher(active: boolean) {
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    if (active) root.setAttribute(STAGE_MOMENT_ATTR, '1')
+    else root.removeAttribute(STAGE_MOMENT_ATTR)
+    return () => root.removeAttribute(STAGE_MOMENT_ATTR)
+  }, [active])
+}
 
 /** Modest idle offset — headline/search sit slightly below the header, not centered. */
 export function useStageIdlePublisher(idle: boolean) {

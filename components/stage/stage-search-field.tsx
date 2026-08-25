@@ -10,6 +10,7 @@ interface StageSearchFieldProps {
   onFocus?: () => void
   onBlur?: () => void
   disabled?: boolean
+  loading?: boolean
 }
 
 /**
@@ -21,6 +22,7 @@ export function StageSearchField({
   onFocus,
   onBlur,
   disabled = false,
+  loading = false,
 }: StageSearchFieldProps) {
   const [focused, setFocused] = useState(false)
   const inputId = useId()
@@ -37,11 +39,29 @@ export function StageSearchField({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: '24px',
+          width: loading ? '32px' : '24px',
           height: '24px',
+          gap: loading ? '3px' : 0,
         }}
       >
-        <SearchIcon size={16} color={focused ? 'var(--text-muted)' : 'var(--text-disabled)'} />
+        {loading ? (
+          [0, 1, 2].map((i) => (
+            <span
+              key={i}
+              aria-hidden
+              style={{
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: 'var(--gold)',
+                animation: 'margo-bounce-dot 1s ease-in-out infinite',
+                animationDelay: `${i * 140}ms`,
+              }}
+            />
+          ))
+        ) : (
+          <SearchIcon size={16} color={focused ? 'var(--text-muted)' : 'var(--text-disabled)'} />
+        )}
       </span>
       <input
         id={inputId}
@@ -63,6 +83,7 @@ export function StageSearchField({
           onBlur?.()
         }}
         className="stage-search-input"
+        aria-busy={loading}
         style={{
           width: '100%',
           height: 'var(--stage-search-h, 48px)',

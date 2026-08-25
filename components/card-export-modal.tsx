@@ -55,14 +55,12 @@ export function CardExportModal({
         style={{
           width: '100%',
           maxWidth: '460px',
-          minHeight: 'min(72dvh, 580px)',
-          maxHeight: 'min(92dvh, 720px)',
           background: 'var(--surface, #0F0E13)',
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: '20px',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
+          overflow: 'visible',
           boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
         }}
       >
@@ -84,7 +82,7 @@ export function CardExportModal({
               margin: 0,
               lineHeight: 1.45,
             }}>
-              Adjust color and vibe, then tap Save or Share below.
+              Tap Save ▾ or Share ▾ — menus open below.
             </p>
           </div>
           <button
@@ -100,12 +98,8 @@ export function CardExportModal({
         </div>
 
         <div style={{
-          flex: 1,
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '0 18px 18px',
-          overflow: 'hidden',
+          padding: '0 18px 20px',
+          overflow: 'visible',
         }}>
           <MomentShareStudio
             moment={moment}
