@@ -602,7 +602,7 @@ export function StageLanding() {
       {!selectedSong && (
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
-            <MargoLogo tier="lockup" size={52} rings wordmark />
+            <MargoLogo wordmarkOnly size={52} />
           </div>
           <p
             style={{

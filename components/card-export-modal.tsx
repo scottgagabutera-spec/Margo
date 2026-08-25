@@ -46,6 +46,9 @@ export function CardExportModal({
         background: 'rgba(7,6,10,0.92)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '12px',
+        paddingTop: 'clamp(20px, 7vh, 48px)',
+        /* Nudge modal slightly above center so Save/Share dropdowns clear the tab bar */
+        paddingBottom: 'calc(12px + var(--margo-tabbar-h, 64px) + 28px)',
         overscrollBehavior: 'none',
       }}
       onClick={() => onOpenChange(false)}

@@ -64,7 +64,7 @@ export function StageLandingPage() {
         }}
       >
         <a href="/" style={{ textDecoration: 'none' }}>
-          <MargoLogo tier="lockup" size={36} rings wordmark />
+          <MargoLogo tier="lockup" size={36} rings />
         </a>
         <a
           href="/signin"

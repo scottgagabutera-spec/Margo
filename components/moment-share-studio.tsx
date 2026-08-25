@@ -264,6 +264,8 @@ export function MomentShareStudio({
 
   const isModal = layout === 'modal'
   const gap = isModal ? '12px' : (compact ? '10px' : '12px')
+  /** Room for Save/Share menus below the action row (current 3 save items + headroom). */
+  const modalMenuReservePx = openMenu ? 168 : 20
 
   const cardSection = (
     <>
@@ -350,7 +352,7 @@ export function MomentShareStudio({
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap }}>
         {cardSection}
-        <div style={{ flexShrink: 0 }}>
+        <div style={{ flexShrink: 0, paddingBottom: modalMenuReservePx, transition: 'padding-bottom 180ms ease' }}>
           <p style={{
             fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
             fontSize: '0.68rem',

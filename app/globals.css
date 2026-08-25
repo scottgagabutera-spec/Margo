@@ -304,8 +304,9 @@ html[data-margo-stage-moment] .margo-landing-footer {
 }
 
 html[data-margo-stage-idle] .margo-stage-zone {
-  justify-content: center;
-  padding-top: clamp(24px, 5vh, 40px);
+  justify-content: flex-start;
+  /* Google-like upper-center: below nav, not dead center */
+  padding-top: clamp(72px, 19vh, 152px);
 }
 
 .margo-landing-nav {
