@@ -575,11 +575,8 @@ function ComposeInner() {
             }}
           >Done</button>
 
-          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', marginBottom: '6px' }}>
+          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', marginBottom: '16px' }}>
             Saved privately.
-          </p>
-          <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '16px' }}>
-            Only you can see this. Save or share below.
           </p>
 
           <MomentShareStudio moment={exportMoment} compact />
@@ -888,7 +885,7 @@ function ComposeInner() {
             </div>
 
             {/* Quiet reminder, not the full Moment — that already showed on
-                Your line and shows again on Ready to send. This screen's
+                Your line and shows again on Ready to post. This screen's
                 job is the vibes; a fixed-height single-line strip keeps
                 the layout predictable no matter how long the lyric is. */}
             <div style={{
@@ -953,7 +950,7 @@ function ComposeInner() {
               onClick={() => { if (!posting) setStep(3) }}
             ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Ready to send?</h1>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Ready to post?</h1>
               <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                 {committedLines.length > 0 ? 'Your multi-line moment is set to go' : 'Your lyric is set to go'}
               </p>
@@ -971,7 +968,7 @@ function ComposeInner() {
                 {!editingName ? (
                   <>
                     <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text)', marginBottom: '4px' }}>
-                      You'll send as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
+                      You'll post as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
                     </p>
                     <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
                       We gave you this name — it's yours on Margo. You can change how it's shown anytime.
@@ -1075,7 +1072,7 @@ function ComposeInner() {
               onClick={() => handlePost(false)}
               disabled={posting || identityLoading}
               style={{ ...keyboardSafePrimaryBtnStyle, opacity: posting ? 0.7 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
-            >{posting ? 'Sending…' : 'Send'}</button>
+            >{posting ? 'Posting…' : 'Post to Margo'}</button>
             <button
               type="button"
               onClick={() => handlePost(true)}

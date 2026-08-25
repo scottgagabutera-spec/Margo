@@ -91,7 +91,7 @@ export function CardExportModal({
             fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
             color: 'var(--gold)', letterSpacing: '1.8px', textTransform: 'uppercase', margin: 0,
           }}>
-            Share your Moment
+            Your Moment
           </p>
           <button
             type="button"

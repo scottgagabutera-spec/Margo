@@ -29,7 +29,7 @@ import {
   MOMENT_VIBE_PICKER_OPTIONS,
   shareMomentNative,
 } from '@/lib/moment'
-import { buildMomentShareActionItems } from '@/lib/moment/share-action-items'
+import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
 import { useRef } from 'react'
 
 function momentHasSnippet(moment: MargoMoment): boolean {
@@ -230,31 +230,22 @@ export function MomentShareStudio({
   }, [exportMoment, canShareUrl])
 
   const saveItems: MomentActionMenuItem[] = isDualCard
-    ? [{ id: 'png', label: 'Save as image', onClick: saveImage }]
-    : [
-      { id: 'png', label: 'Save as image', onClick: saveImage },
-      { id: 'pdf', label: 'Save as PDF', hint: 'Coming soon', disabled: true, onClick: () => {} },
-      {
-        id: 'gif',
-        label: 'Save as GIF',
-        hint: hasSnippet ? 'Animated snippet' : 'Needs a playable snippet',
-        disabled: !hasSnippet,
-        onClick: () => {},
-      },
-    ]
+    ? buildMomentExportActionItems({ onExportImage: saveImage, showFormats: false })
+    : buildMomentExportActionItems({
+      onExportImage: saveImage,
+      hasPlayableSnippet: hasSnippet,
+    })
 
   const shareItems: MomentActionMenuItem[] = isDualCard
     ? [
       {
         id: 'link',
         label: 'Share link',
-        hint: 'Lyric preview — not a raw URL',
         onClick: () => { void shareLink() },
       },
       {
         id: 'copy',
         label: 'Copy link',
-        hint: 'Beautiful text for paste',
         onClick: () => { void copyLink() },
       },
     ]
@@ -268,7 +259,7 @@ export function MomentShareStudio({
 
   const isModal = layout === 'modal'
   const gap = isModal ? '12px' : (compact ? '10px' : '12px')
-  /** Room for Save/Share menus below the action row (current 3 save items + headroom). */
+  /** Room for Export/Share menus below the action row (current 3 export items + headroom). */
   const modalMenuReservePx = 168
   const modalMenuZIndex = 212
   const modalMenuScrimZIndex = 211
@@ -334,7 +325,7 @@ export function MomentShareStudio({
         width: '100%',
       }}>
         <MomentActionMenu
-          label="Save"
+          label="Export"
           items={saveItems}
           variant="primary"
           busy={busy}

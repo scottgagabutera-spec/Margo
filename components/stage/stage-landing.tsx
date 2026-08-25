@@ -17,7 +17,7 @@ import { persistMomentPost } from '@/lib/moment/persist'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
-import { buildMomentShareActionItems } from '@/lib/moment/share-action-items'
+import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -553,17 +553,10 @@ export function StageLanding() {
 
   const canShareImg = canShareImageFiles()
 
-  const saveItems: MomentActionMenuItem[] = [
-    { id: 'png', label: 'Save as image', onClick: () => { void handleSaveImage() } },
-    { id: 'pdf', label: 'Save as PDF', hint: 'Coming soon', disabled: true, onClick: () => {} },
-    {
-      id: 'gif',
-      label: 'Save as GIF',
-      hint: canPlay ? 'Animated snippet' : 'Needs a playable snippet',
-      disabled: !canPlay,
-      onClick: () => {},
-    },
-  ]
+  const saveItems: MomentActionMenuItem[] = buildMomentExportActionItems({
+    onExportImage: () => { void handleSaveImage() },
+    hasPlayableSnippet: canPlay,
+  })
 
   const shareItems = buildMomentShareActionItems({
     canShareImage: canShareImg,
