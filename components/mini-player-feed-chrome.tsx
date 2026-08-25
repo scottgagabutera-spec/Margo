@@ -1,11 +1,77 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { MusicNoteIcon } from '@/components/icons'
+import { useFloatingPosition } from '@/hooks/useFloatingPosition'
 
 const PILL_SWIPE_DISTANCE = 36
 const PILL_SWIPE_VELOCITY = 0.45
+
+function composeChromeInsets() {
+  if (typeof document === 'undefined') return { top: 56, right: 12, bottom: 96, left: 12 }
+  const style = getComputedStyle(document.documentElement)
+  const tabbar = parseFloat(style.getPropertyValue('--margo-tabbar-h')) || 0
+  const cta = parseFloat(style.getPropertyValue('--margo-cta-bar-h')) || 0
+  return { top: 56, right: 12, bottom: tabbar + cta + 16, left: 12 }
+}
+
+function isInteractiveTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement && !!target.closest('button, a, [data-no-drag]')
+}
+
+/** Compose pill: only play/dismiss block drag — the rest of the shell follows the finger. */
+function isComposeDragBlocker(target: EventTarget | null) {
+  return target instanceof HTMLElement && !!target.closest('[data-no-drag]')
+}
+
+function ComposeFloatingShell({
+  className,
+  children,
+  onExpand,
+}: {
+  className: string
+  children: ReactNode
+  onExpand: () => void
+}) {
+  const shellRef = useRef<HTMLDivElement>(null)
+  const float = useFloatingPosition({
+    storageKey: 'margo-compose-player-pos',
+    elementRef: shellRef,
+    getViewportInsets: composeChromeInsets,
+  })
+
+  useEffect(() => {
+    float.setOnTap(onExpand)
+    return () => float.setOnTap(null)
+  }, [float.setOnTap, onExpand])
+
+  useEffect(() => {
+    float.reclamp()
+  }, [float.reclamp])
+
+  return (
+    <div
+      ref={shellRef}
+      className={className}
+      style={{
+        position: 'fixed',
+        left: `${float.x}px`,
+        top: `${float.y}px`,
+        zIndex: 95,
+        touchAction: 'none',
+        cursor: float.isDragging ? 'grabbing' : 'grab',
+        userSelect: 'none',
+      }}
+      onPointerDown={(e) => float.onPointerDown(e, isComposeDragBlocker(e.target))}
+      onPointerMove={float.onPointerMove}
+      onPointerUp={float.onPointerUp}
+      onPointerCancel={float.onPointerCancel}
+    >
+      {children}
+    </div>
+  )
+}
 
 /**
  * Feed-only collapsed chrome (D5 / A.3): floating pill → swipe-down orb.
@@ -13,6 +79,7 @@ const PILL_SWIPE_VELOCITY = 0.45
  */
 export function MiniPlayerFeedChrome({
   mode,
+  layout = 'feed',
   artwork,
   title,
   playing,
@@ -26,6 +93,7 @@ export function MiniPlayerFeedChrome({
   onClose,
 }: {
   mode: 'pill' | 'orb'
+  layout?: 'feed' | 'compose'
   artwork: string | null
   title: string
   playing: boolean
@@ -39,6 +107,24 @@ export function MiniPlayerFeedChrome({
   /** Dismiss/end-listening — same action as the expanded sheet's end-listening control. */
   onClose: () => void
 }) {
+  if (layout === 'compose') {
+    return (
+      <ComposeFloatingShell className="mp-feed-pill mp-feed-pill--compose" onExpand={onExpand}>
+        <ComposePillInner
+          artwork={artwork}
+          title={title}
+          playing={playing}
+          buffering={buffering}
+          progress={progress}
+          vibeColor={vibeColor}
+          onExpand={onExpand}
+          onTogglePlay={onTogglePlay}
+          onClose={onClose}
+        />
+      </ComposeFloatingShell>
+    )
+  }
+
   if (mode === 'orb') {
     return (
       <FeedOrb
@@ -137,8 +223,7 @@ function FeedPill({
   const [offset, setOffset] = useState(0)
   const [animating, setAnimating] = useState(false)
 
-  const isInteractive = (target: EventTarget | null) =>
-    target instanceof HTMLElement && !!target.closest('button')
+  const isInteractive = (target: EventTarget | null) => isInteractiveTarget(target)
 
   const onStart = (clientY: number, target: EventTarget | null) => {
     if (isInteractive(target)) return
@@ -420,6 +505,154 @@ function FeedOrb({
       </button>
 
       <DismissButton onClose={onClose} offset={16} />
+    </div>
+  )
+}
+
+/** Compose: draggable pill — no swipe-to-orb (free positioning instead). */
+function ComposePillInner({
+  artwork,
+  title,
+  playing,
+  buffering,
+  progress,
+  vibeColor,
+  onExpand,
+  onTogglePlay,
+  onClose,
+}: {
+  artwork: string | null
+  title: string
+  playing: boolean
+  buffering: boolean
+  progress: number
+  vibeColor: string
+  onExpand: () => void
+  onTogglePlay: () => void
+  onClose: () => void
+}) {
+  return (
+    <div
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        maxWidth: 'min(200px, calc(100vw - 24px))',
+        minHeight: 'var(--margo-touch-min)',
+        padding: '6px 8px 6px 6px',
+        borderRadius: '999px',
+        background: 'var(--margo-bar)',
+        border: `1px solid ${vibeColor}35`,
+        boxShadow: '0 8px 28px rgba(0,0,0,0.45)',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          left: '10px',
+          right: '10px',
+          top: '3px',
+          height: '2px',
+          borderRadius: '1px',
+          background: 'rgba(255,255,255,0.06)',
+          overflow: 'hidden',
+          pointerEvents: 'none',
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: `${Math.max(0, Math.min(100, progress))}%`,
+            background: vibeColor,
+            borderRadius: '1px',
+          }}
+        />
+      </div>
+
+      <div
+        aria-label={`Expand player · ${title || 'Now playing'}`}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onExpand() }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          minWidth: 0,
+          flex: 1,
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          cursor: 'grab',
+          color: 'inherit',
+          textAlign: 'left',
+        }}
+      >
+        <div
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            flexShrink: 0,
+            background: 'rgba(255,255,255,0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {artwork ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={artwork} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <MusicNoteIcon size={14} color="var(--gold)" />
+          )}
+        </div>
+        <span
+          style={{
+            fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+            fontSize: '0.72rem',
+            fontWeight: 600,
+            color: 'var(--text)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            minWidth: 0,
+          }}
+        >
+          {title || 'Now playing'}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        aria-label={playing ? 'Pause' : 'Play'}
+        data-no-drag
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onTogglePlay() }}
+        style={{
+          width: 'var(--margo-touch-min)',
+          height: 'var(--margo-touch-min)',
+          borderRadius: '50%',
+          border: 'none',
+          background: 'var(--gold)',
+          color: '#07060A',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          boxSizing: 'border-box',
+          padding: 0,
+        }}
+      >
+        <PlayPauseIcon playing={playing} buffering={buffering} size={12} color="#07060A" />
+      </button>
+
+      <DismissButton onClose={onClose} offset={20} />
     </div>
   )
 }

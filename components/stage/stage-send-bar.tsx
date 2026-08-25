@@ -26,7 +26,7 @@ const rowStyle: React.CSSProperties = {
 }
 
 /**
- * Save ▾ + Share ▾ (same as card modal). Send to Margo is a separate row below.
+ * Export ▾ + Share ▾ (same as card modal). Post to Margo is a separate row below.
  */
 export function StageSendBar({
   saveItems,
@@ -76,7 +76,7 @@ export function StageSendBar({
     >
       <div style={rowStyle}>
         <MomentActionMenu
-          label="Save"
+          label="Export"
           items={saveItems}
           variant="primary"
           busy={saving}
@@ -102,7 +102,7 @@ export function StageSendBar({
             disabled={sending || busy}
             style={publishButtonStyle}
           >
-            {sending ? 'Sending…' : 'Send to Margo'}
+            {sending ? 'Posting…' : 'Post to Margo'}
           </button>
         ) : (
           <a
@@ -115,7 +115,7 @@ export function StageSendBar({
               textDecoration: 'none',
             }}
           >
-            Sign in to send
+            Sign in to post
           </a>
         )
       ) : (

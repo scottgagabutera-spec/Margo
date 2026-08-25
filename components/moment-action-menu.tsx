@@ -75,7 +75,7 @@ export function MomentActionMenu({
           minHeight: '40px',
           padding: '0 16px',
           borderRadius: '50px',
-          border: isPrimary ? 'none' : '1px solid rgba(255,255,255,0.12)',
+          border: isPrimary ? 'none' : '1px solid var(--border-hi)',
           background: isPrimary ? 'var(--gold)' : 'rgba(255,255,255,0.05)',
           color: isPrimary ? 'var(--bg)' : 'var(--text)',
           fontFamily: font,
@@ -93,9 +93,7 @@ export function MomentActionMenu({
         }}
       >
         {busy ? 'Please wait…' : label}
-        <span aria-hidden style={{ fontSize: '10px', lineHeight: 1, opacity: 0.75 }}>
-          {open ? '▴' : '▾'}
-        </span>
+        <span aria-hidden style={{ fontSize: '10px', lineHeight: 1, opacity: 0.75 }}>▾</span>
       </button>
 
       {open && (
@@ -115,7 +113,7 @@ export function MomentActionMenu({
             padding: '6px',
             borderRadius: '14px',
             background: 'var(--surface, #121018)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid var(--border-hi)',
             boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
           }}
         >

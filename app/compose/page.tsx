@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import type { CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeftIcon, SearchIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
@@ -176,8 +177,11 @@ function ComposeInner() {
   // song pick, not every keystroke) so it plays once per draft line, not
   // once per session and not on every character typed.
   const [cueRevealChars, setCueRevealChars] = useState(0)
+  const [portalMounted, setPortalMounted] = useState(false)
+  useEffect(() => setPortalMounted(true), [])
   useEffect(() => {
-    const onWritingScreen = step === 2 && !(selectedSong?.source === 'margo' && !linePickComplete)
+    const onMargoCatalog = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
+    const onWritingScreen = step === 2 && !(onMargoCatalog && !linePickComplete)
     if (!onWritingScreen) return
     if (lyric.length > 0) { setCueRevealChars(YOUR_LINE_CUE.length); return }
     setCueRevealChars(0)
@@ -188,7 +192,7 @@ function ComposeInner() {
       if (i >= YOUR_LINE_CUE.length) window.clearInterval(id)
     }, 45)
     return () => window.clearInterval(id)
-  }, [step, selectedSong, linePickComplete])
+  }, [step, selectedSong, linkedSongId, linePickComplete, lyric.length])
 
   // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
   // and hides the mobile tab bar while typing / search sheet is open.
@@ -453,6 +457,77 @@ function ComposeInner() {
     setLinePickComplete(false)
   }, [])
 
+  const restoreLineToDraft = useCallback((line: ComposeLineDraft) => {
+    setLyric(line.lyric)
+    setSongName(line.songName)
+    setArtistName(line.artistName)
+    setLinkedSongId(line.linkedSongId)
+    setLinkedAudioUrl(line.linkedAudioUrl)
+    setSnippetStart(line.snippetStart)
+    setSnippetEnd(line.snippetEnd)
+    setLinePickComplete(true)
+    setMargoLines([])
+    setLinesLoading(false)
+    const src = line.source || (line.linkedSongId ? 'margo' : 'genius')
+    setSelectedSong({
+      id: line.linkedSongId || line.geniusId || 'draft',
+      title: line.songName,
+      artist: line.artistName,
+      artwork: line.artwork || '',
+      source: src,
+      margoSongId: line.linkedSongId || undefined,
+      audioUrl: line.linkedAudioUrl,
+      externalListenUrl: line.externalListenUrl,
+    })
+  }, [])
+
+  const clearCurrentSongPick = useCallback(() => {
+    setSelectedSong(null)
+    setArtistName('')
+    setSongName('')
+    setLyric('')
+    setLinkedSongId(null)
+    setLinkedAudioUrl(null)
+    setSnippetStart(null)
+    setSnippetEnd(null)
+    setMargoLines([])
+    setLinesLoading(false)
+    setLinePickComplete(false)
+  }, [])
+
+  const handleStep1Back = useCallback(() => {
+    const onResume = !!selectedSong && (lyric.trim().length > 0 || linePickComplete)
+    if (onResume) {
+      setStep(2)
+      return
+    }
+    if (committedLines.length > 0) {
+      const last = committedLines[committedLines.length - 1]
+      setCommittedLines((prev) => prev.slice(0, -1))
+      restoreLineToDraft(last)
+      setStep(2)
+      return
+    }
+    if (selectedSong) clearCurrentSongPick()
+  }, [committedLines, selectedSong, lyric, linePickComplete, restoreLineToDraft, clearCurrentSongPick])
+
+  const handleYourLineBack = useCallback(() => {
+    // Margo catalog — always return to line picker (even when lines list is empty).
+    const onMargoCatalog = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
+    if (onMargoCatalog) {
+      setLinePickComplete(false)
+      resetComposeViewport()
+      return
+    }
+    setStep(1)
+    resetComposeViewport()
+  }, [linkedSongId, selectedSong, resetComposeViewport])
+
+  const handleLinePickerBack = useCallback(() => {
+    setStep(1)
+    clearCurrentSongPick()
+  }, [clearCurrentSongPick])
+
   const handleAddAnotherLine = useCallback(() => {
     if (!requireAuth()) return
     if (!lyric.trim() || !songName.trim() || !artistName.trim()) return
@@ -575,11 +650,8 @@ function ComposeInner() {
             }}
           >Done</button>
 
-          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', marginBottom: '6px' }}>
+          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', marginBottom: '16px' }}>
             Saved privately.
-          </p>
-          <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '16px' }}>
-            Only you can see this. Save or share below.
           </p>
 
           <MomentShareStudio moment={exportMoment} compact />
@@ -592,8 +664,10 @@ function ComposeInner() {
   // displayName at least once, or dismissed it for this compose session.
   const showNameBanner = step === 4 && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
-  const showLinePicker = step === 2 && selectedSong?.source === 'margo' && !linePickComplete
-
+  const showStep1Resume = step === 1 && !!selectedSong && (lyric.trim().length > 0 || linePickComplete || committedLines.length > 0)
+  const isMargoCatalogFlow = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
+  const showLinePicker = step === 2 && isMargoCatalogFlow && !linePickComplete
+  const showYourLinePanel = step === 2 && !showLinePicker
 
   return (
     <main ref={composeRootRef} style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
@@ -602,6 +676,13 @@ function ComposeInner() {
 
           {/* ── Step 1: Search ── */}
           <div style={{ display: step === 1 ? 'block' : 'none' }}>
+            {(committedLines.length > 0 || showStep1Resume) && (
+              <button
+                type="button"
+                onClick={handleStep1Back}
+                style={backBtnStyle}
+              ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
+            )}
             {committedLines.length > 0 && (
               <div style={{
                 marginBottom: '28px', padding: '14px 16px',
@@ -632,6 +713,47 @@ function ComposeInner() {
                 ))}
               </div>
             )}
+            {showStep1Resume ? (
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                  <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>
+                    {committedLines.length > 0 ? 'Add another line' : 'Your song'}
+                  </h1>
+                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    {songName}{artistName ? (' · ' + artistName) : ''}
+                  </p>
+                </div>
+                {lyric.trim() ? (
+                  <p style={{
+                    fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)',
+                    textAlign: 'center', margin: '0 0 20px', lineHeight: 1.45,
+                  }}>
+                    &ldquo;{lyric}&rdquo;
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  style={{
+                    width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none',
+                    background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
+                    fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
+                    textTransform: 'uppercase', cursor: 'pointer', marginBottom: '10px',
+                  }}
+                >Continue writing</button>
+                <button
+                  type="button"
+                  onClick={clearCurrentSongPick}
+                  style={{
+                    width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px',
+                    border: '1px solid var(--border-hi)', background: 'transparent',
+                    color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
+                    letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                  }}
+                >Choose a different song</button>
+              </div>
+            ) : (
+              <>
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: 0 }}>
                 {committedLines.length > 0 ? 'Add another line' : 'Find your lyric'}
@@ -662,213 +784,11 @@ function ComposeInner() {
                 onClose={() => setShowResults(false)}
               />
             </div>
-          </div>
-
-          {/* ── Step 2: Line picker (Margo) or lyric input ── */}
-          <div style={{ display: step === 2 ? 'block' : 'none' }}>
-            {showLinePicker ? (
-              <ComposeLinePicker
-                lines={margoLines}
-                loading={linesLoading}
-                songTitle={songName}
-                artistName={artistName}
-                audioUrl={linkedAudioUrl}
-                songId={linkedSongId}
-                artwork={selectedSong?.artwork || null}
-                stickySkip
-                onPick={(line) => {
-                  setSnippetStart(line.startSec)
-                  setSnippetEnd(line.endSec)
-                  setLyric((line.text || '').slice(0, 140))
-                  setLinePickComplete(true)
-                }}
-                onSkip={() => {
-                  setSnippetStart(null)
-                  setSnippetEnd(null)
-                  setLinePickComplete(true)
-                }}
-                onBack={() => {
-                  setStep(1)
-                  setSelectedSong(null)
-                  setArtistName('')
-                  setSongName('')
-                  setLinkedSongId(null)
-                  setLinkedAudioUrl(null)
-                  setMargoLines([])
-                  setLinePickComplete(false)
-                  setSnippetStart(null)
-                  setSnippetEnd(null)
-                }}
-              />
-            ) : (
-              // Viewport-locked writing panel — independent of the page's
-              // own scroll position, sized to --margo-vv-height (already
-              // keyboard-aware) rather than document flow. Idle vs typing
-              // is the SAME mounted tree throughout; only style values
-              // (font size, padding, flex order) change with chromeHidden,
-              // so the textarea and the Song/Artist inputs never remount —
-              // no focus loss, no stale layout, no jump. Same structure for
-              // hosted and non-hosted lines; the only difference is whether
-              // `lyric` arrives pre-filled.
-              <div style={{
-                position: 'fixed', top: 0, left: 0, right: 0,
-                height: 'var(--margo-vv-height, 100dvh)',
-                zIndex: 10,
-                display: 'flex', flexDirection: 'column',
-                background: 'var(--bg)',
-                paddingLeft: '24px', paddingRight: '24px',
-                paddingTop: 'calc(20px + env(safe-area-inset-top, 0px))',
-                transition: 'height 150ms ease',
-                boxSizing: 'border-box',
-              }}>
-                <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-
-                  {/* Back + step label — compresses to "‹ Your line", never disappears */}
-                  <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      aria-label="Back"
-                      onClick={() => {
-                        if (selectedSong?.source === 'margo') {
-                          setLinePickComplete(false)
-                        } else {
-                          setStep(1)
-                          setSelectedSong(null)
-                          setArtistName('')
-                          setSongName('')
-                          setLinkedSongId(null)
-                          setLinkedAudioUrl(null)
-                          setSnippetStart(null)
-                          setSnippetEnd(null)
-                        }
-                      }}
-                      style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center',
-                        minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
-                        padding: '0 8px', margin: '0 -8px', boxSizing: 'border-box',
-                      }}
-                    >
-                      <ArrowLeftIcon size={16} color="currentColor" />
-                      {!chromeHidden && <span style={{ fontFamily: font, fontSize: '0.82rem', marginLeft: '6px', letterSpacing: '0.5px' }}>Back</span>}
-                    </button>
-                    {chromeHidden && (
-                      <span style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)' }}>
-                        Your line
-                      </span>
-                    )}
-                  </div>
-
-                  {!chromeHidden && (
-                    <div style={{ flexShrink: 0, textAlign: 'center', margin: '16px 0 24px' }}>
-                      <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Your line</h1>
-                      <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                        {selectedSong?.source === 'margo' ? 'Change a word if you need to.' : 'Type the lyric'}
-                      </p>
-                    </div>
-                  )}
-
-                  <ComposeLyricCard style={{
-                    flex: 1, minHeight: 0, overflow: 'hidden',
-                    display: 'flex', flexDirection: 'column',
-                    marginTop: chromeHidden ? '12px' : 0,
-                    padding: chromeHidden ? '16px' : '24px',
-                    transition: 'padding 150ms ease, margin 150ms ease',
-                  }}>
-                    {/* Song/Artist — same mounted <input>s throughout; CSS `order`
-                        moves them above the lyric when compact (matching "the
-                        selected lyric gets priority, metadata compresses above
-                        it") without ever unmounting either field. */}
-                    <div style={{
-                      order: chromeHidden ? 0 : 2,
-                      flexShrink: 0,
-                      display: 'flex',
-                      flexDirection: chromeHidden ? 'row' : 'column',
-                      gap: '10px',
-                      marginBottom: chromeHidden ? '10px' : 0,
-                      marginTop: chromeHidden ? 0 : '16px',
-                      transition: 'all 150ms ease',
-                    }}>
-                      <div style={{ flex: chromeHidden ? '0 0 58%' : '1', minWidth: 0 }}>
-                        <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
-                        <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
-                          style={{
-                            width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
-                            padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 600, color: 'var(--text-on-gold)', outline: 'none', boxSizing: 'border-box',
-                            fontSize: chromeHidden ? '0.8rem' : '0.95rem',
-                            overflow: 'hidden', textOverflow: 'ellipsis',
-                            transition: 'font-size 150ms ease',
-                          }} />
-                      </div>
-                      <div style={{ flex: chromeHidden ? '0 0 38%' : '1', minWidth: 0 }}>
-                        <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
-                        <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
-                          style={{
-                            width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
-                            padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 400, color: 'var(--text-on-gold-muted)', outline: 'none', boxSizing: 'border-box',
-                            fontSize: chromeHidden ? '0.7rem' : '0.75rem',
-                            overflow: 'hidden', textOverflow: 'ellipsis',
-                            transition: 'font-size 150ms ease',
-                          }} />
-                      </div>
-                    </div>
-
-                    {/* Writing region — the lyric itself, unchanged size, always
-                        the dominant object. Fills whatever space remains rather
-                        than a fixed row count, and scrolls internally for long
-                        responses instead of pushing anything else off-screen. */}
-                    <div style={{ order: 1, position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                      {lyric.length === 0 && (
-                        <span aria-hidden style={{
-                          position: 'absolute', top: 0, left: 0, right: 0,
-                          ...composeLyricTextStyle,
-                          color: 'var(--text-on-gold-muted)',
-                          pointerEvents: 'none',
-                        }}>
-                          {YOUR_LINE_CUE.slice(0, cueRevealChars)}
-                        </span>
-                      )}
-                      <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
-                        style={{
-                          ...composeLyricTextStyle,
-                          flex: 1,
-                          width: '100%',
-                          background: 'transparent',
-                          border: 'none',
-                          outline: 'none',
-                          resize: 'none',
-                          overflowY: 'auto',
-                          boxSizing: 'border-box',
-                        }} />
-                    </div>
-
-                    <div style={{ order: 3, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: chromeHidden ? '4px' : '10px' }}>
-                      <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
-                    </div>
-                  </ComposeLyricCard>
-
-                  {/* Reserves exactly as much space as the sticky Continue bar
-                      actually measures — --margo-cta-bar-h, not a guessed number.
-                      While idle (chromeHidden false — right after picking a
-                      line, before the keyboard/focus hides the floating
-                      player), also reserves the floating pill/orb's own
-                      exclusion zone above the tab bar, so the still-playing
-                      snippet's pill sits in blank space below the card
-                      instead of overlapping its lyric/metadata. Once typing
-                      starts, the pill already hides itself (globals.css,
-                      html[data-margo-keyboard="1"]) and this collapses back
-                      to just the CTA-bar reserve so the card keeps its full
-                      typing-mode height. */}
-                  <div style={{
-                    flexShrink: 0,
-                    height: chromeHidden
-                      ? 'var(--margo-cta-bar-h, 0px)'
-                      : 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 68px)',
-                    transition: 'height 150ms ease',
-                  }} />
-                </div>
-              </div>
+              </>
             )}
           </div>
+
+          {/* Step 2 UI is portaled (line picker + Your line) — see below main */}
 
           {/* ── Step 3: Vibe Selection ── */}
           <div style={{ display: step === 3 ? 'block' : 'none' }}>
@@ -880,15 +800,15 @@ function ComposeInner() {
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: emotionLoading ? 0 : '8px' }}>
                 {emotionLoading ? 'Finding the feeling…' : 'How does this feel?'}
               </h1>
-              {!emotionLoading && (
+              {!emotionLoading && suggestedVibe && (
                 <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  {suggestedVibe ? 'We picked one. Change it if that’s not it.' : 'Pick one.'}
+                  Change it if you&apos;d like.
                 </p>
               )}
             </div>
 
             {/* Quiet reminder, not the full Moment — that already showed on
-                Your line and shows again on Ready to send. This screen's
+                Your line and shows again on Ready to post. This screen's
                 job is the vibes; a fixed-height single-line strip keeps
                 the layout predictable no matter how long the lyric is. */}
             <div style={{
@@ -953,10 +873,12 @@ function ComposeInner() {
               onClick={() => { if (!posting) setStep(3) }}
             ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Ready to send?</h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                {committedLines.length > 0 ? 'Your multi-line moment is set to go' : 'Your lyric is set to go'}
-              </p>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: committedLines.length > 0 ? '8px' : 0 }}>Ready to post?</h1>
+              {committedLines.length > 0 && (
+                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  A few lines, one moment.
+                </p>
+              )}
             </div>
 
             <ComposeReadyPreview
@@ -971,7 +893,7 @@ function ComposeInner() {
                 {!editingName ? (
                   <>
                     <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text)', marginBottom: '4px' }}>
-                      You'll send as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
+                      You'll post as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
                     </p>
                     <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
                       We gave you this name — it's yours on Margo. You can change how it's shown anytime.
@@ -1010,8 +932,8 @@ function ComposeInner() {
       </div>
 
       {/* Sticky primary actions — VisualViewport pins above keyboard */}
-      {showLinePicker && !linesLoading && margoLines.length === 0 && (
-        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
+      {showLinePicker && !linesLoading && margoLines.length === 0 && portalMounted && createPortal(
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden} zIndex={85}>
           <button
             type="button"
             onClick={() => {
@@ -1021,11 +943,54 @@ function ComposeInner() {
             }}
             style={keyboardSafePrimaryBtnStyle}
           >Continue without hearing it</button>
-        </KeyboardSafeCtaBar>
+        </KeyboardSafeCtaBar>,
+        document.body,
       )}
 
-      {step === 2 && !showLinePicker && (
-        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
+      {portalMounted && showLinePicker && createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0,
+          height: 'var(--margo-vv-height, 100dvh)',
+          zIndex: 80,
+          display: 'flex', flexDirection: 'column',
+          background: 'var(--bg)',
+          paddingLeft: '24px', paddingRight: '24px',
+          paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+          paddingBottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 16px)',
+          boxSizing: 'border-box',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}>
+          <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
+            <ComposeLinePicker
+              lines={margoLines}
+              loading={linesLoading}
+              songTitle={songName}
+              artistName={artistName}
+              audioUrl={linkedAudioUrl}
+              songId={linkedSongId}
+              artwork={selectedSong?.artwork || null}
+              stickySkip
+              onPick={(line) => {
+                setSnippetStart(line.startSec)
+                setSnippetEnd(line.endSec)
+                setLyric((line.text || '').slice(0, 140))
+                setLinePickComplete(true)
+              }}
+              onSkip={() => {
+                setSnippetStart(null)
+                setSnippetEnd(null)
+                setLinePickComplete(true)
+              }}
+              onBack={handleLinePickerBack}
+            />
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {showYourLinePanel && portalMounted && createPortal(
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden} zIndex={85}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
               type="button"
@@ -1045,7 +1010,8 @@ function ComposeInner() {
               >Add another line</button>
             )}
           </div>
-        </KeyboardSafeCtaBar>
+        </KeyboardSafeCtaBar>,
+        document.body,
       )}
 
       {step === 3 && !emotionLoading && (
@@ -1075,7 +1041,7 @@ function ComposeInner() {
               onClick={() => handlePost(false)}
               disabled={posting || identityLoading}
               style={{ ...keyboardSafePrimaryBtnStyle, opacity: posting ? 0.7 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
-            >{posting ? 'Sending…' : 'Send'}</button>
+            >{posting ? 'Posting…' : 'Post to Margo'}</button>
             <button
               type="button"
               onClick={() => handlePost(true)}
@@ -1084,6 +1050,130 @@ function ComposeInner() {
             >Keep Private</button>
           </div>
         </KeyboardSafeCtaBar>
+      )}
+
+      {portalMounted && showYourLinePanel && createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0,
+          height: 'var(--margo-vv-height, 100dvh)',
+          zIndex: 80,
+          display: 'flex', flexDirection: 'column',
+          background: 'var(--bg)',
+          paddingLeft: '24px', paddingRight: '24px',
+          paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+          transition: 'height 150ms ease',
+          boxSizing: 'border-box',
+        }}>
+          <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                aria-label="Back"
+                onClick={handleYourLineBack}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center',
+                  minWidth: 'var(--margo-touch-min)', minHeight: 'var(--margo-touch-min)',
+                  padding: '0 8px', margin: '0 -8px', boxSizing: 'border-box',
+                }}
+              >
+                <ArrowLeftIcon size={16} color="currentColor" />
+                <span style={{ fontFamily: font, fontSize: '0.82rem', marginLeft: '6px', letterSpacing: '0.5px' }}>Back</span>
+              </button>
+              {chromeHidden && (
+                <span style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)', marginLeft: '4px' }}>
+                  Your line
+                </span>
+              )}
+            </div>
+
+            {!chromeHidden && (
+              <div style={{ flexShrink: 0, textAlign: 'center', margin: '16px 0 24px' }}>
+                <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Your line</h1>
+              </div>
+            )}
+
+            <ComposeLyricCard style={{
+              flex: 1, minHeight: 0, overflow: 'hidden',
+              display: 'flex', flexDirection: 'column',
+              marginTop: chromeHidden ? '12px' : 0,
+              padding: chromeHidden ? '16px' : '24px',
+              transition: 'padding 150ms ease, margin 150ms ease',
+            }}>
+              <div style={{
+                order: chromeHidden ? 0 : 2,
+                flexShrink: 0,
+                display: 'flex',
+                flexDirection: chromeHidden ? 'row' : 'column',
+                gap: '10px',
+                marginBottom: chromeHidden ? '10px' : 0,
+                marginTop: chromeHidden ? 0 : '16px',
+                transition: 'all 150ms ease',
+              }}>
+                <div style={{ flex: chromeHidden ? '0 0 58%' : '1', minWidth: 0 }}>
+                  <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
+                  <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
+                    style={{
+                      width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
+                      padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 600, color: 'var(--text-on-gold)', outline: 'none', boxSizing: 'border-box',
+                      fontSize: chromeHidden ? '0.8rem' : '0.95rem',
+                      overflow: 'hidden', textOverflow: 'ellipsis',
+                      transition: 'font-size 150ms ease',
+                    }} />
+                </div>
+                <div style={{ flex: chromeHidden ? '0 0 38%' : '1', minWidth: 0 }}>
+                  <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
+                  <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
+                    style={{
+                      width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
+                      padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 400, color: 'var(--text-on-gold-muted)', outline: 'none', boxSizing: 'border-box',
+                      fontSize: chromeHidden ? '0.7rem' : '0.75rem',
+                      overflow: 'hidden', textOverflow: 'ellipsis',
+                      transition: 'font-size 150ms ease',
+                    }} />
+                </div>
+              </div>
+
+              <div style={{ order: 1, position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                {lyric.length === 0 && (
+                  <span aria-hidden style={{
+                    position: 'absolute', top: 0, left: 0, right: 0,
+                    ...composeLyricTextStyle,
+                    color: 'var(--text-on-gold-muted)',
+                    pointerEvents: 'none',
+                  }}>
+                    {YOUR_LINE_CUE.slice(0, cueRevealChars)}
+                  </span>
+                )}
+                <textarea value={lyric} onChange={(e) => setLyric(e.target.value.slice(0, 140))}
+                  style={{
+                    ...composeLyricTextStyle,
+                    flex: 1,
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'none',
+                    overflowY: 'auto',
+                    boxSizing: 'border-box',
+                  }} />
+              </div>
+
+              <div style={{ order: 3, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: chromeHidden ? '4px' : '10px' }}>
+                <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
+              </div>
+            </ComposeLyricCard>
+
+            <div style={{
+              flexShrink: 0,
+              height: chromeHidden
+                ? 'var(--margo-cta-bar-h, 0px)'
+                : 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 68px)',
+              transition: 'height 150ms ease',
+            }} />
+          </div>
+        </div>,
+        document.body,
       )}
     </main>
   )

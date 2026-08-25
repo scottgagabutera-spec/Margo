@@ -29,6 +29,7 @@ import {
   MOMENT_VIBE_PICKER_OPTIONS,
   shareMomentNative,
 } from '@/lib/moment'
+import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
 import { useRef } from 'react'
 
 function momentHasSnippet(moment: MargoMoment): boolean {
@@ -229,42 +230,36 @@ export function MomentShareStudio({
   }, [exportMoment, canShareUrl])
 
   const saveItems: MomentActionMenuItem[] = isDualCard
-    ? [{ id: 'png', label: 'Save as image', onClick: saveImage }]
-    : [
-      { id: 'png', label: 'Save as image', onClick: saveImage },
-      { id: 'pdf', label: 'Save as PDF', hint: 'Coming soon', disabled: true, onClick: () => {} },
+    ? buildMomentExportActionItems({ onExportImage: saveImage, showFormats: false })
+    : buildMomentExportActionItems({
+      onExportImage: saveImage,
+      hasPlayableSnippet: hasSnippet,
+    })
+
+  const shareItems: MomentActionMenuItem[] = isDualCard
+    ? [
       {
-        id: 'gif',
-        label: 'Save as GIF',
-        hint: hasSnippet ? 'Animated snippet' : 'Needs a playable snippet',
-        disabled: !hasSnippet,
-        onClick: () => {},
+        id: 'link',
+        label: 'Share link',
+        onClick: () => { void shareLink() },
+      },
+      {
+        id: 'copy',
+        label: 'Copy link',
+        onClick: () => { void copyLink() },
       },
     ]
-
-  const shareItems: MomentActionMenuItem[] = [
-    ...(canShareImg && !isDualCard
-      ? [{ id: 'img', label: 'Share image', onClick: shareImage }]
-      : []),
-  ]
-  if (canShareUrl || isDualCard) {
-    shareItems.push({
-      id: 'link',
-      label: 'Share link',
-      hint: 'Lyric preview — not a raw URL',
-      onClick: shareLink,
+    : buildMomentShareActionItems({
+      canShareImage: canShareImg,
+      linksActive: canShareUrl,
+      onShareImage: () => { void shareImage() },
+      onShareLink: () => { void shareLink() },
+      onCopyLink: () => { void copyLink() },
     })
-    shareItems.push({
-      id: 'copy',
-      label: 'Copy link',
-      hint: 'Beautiful text for paste',
-      onClick: copyLink,
-    })
-  }
 
   const isModal = layout === 'modal'
   const gap = isModal ? '12px' : (compact ? '10px' : '12px')
-  /** Room for Save/Share menus below the action row (current 3 save items + headroom). */
+  /** Room for Export/Share menus below the action row (current 3 export items + headroom). */
   const modalMenuReservePx = 168
   const modalMenuZIndex = 212
   const modalMenuScrimZIndex = 211
@@ -330,7 +325,7 @@ export function MomentShareStudio({
         width: '100%',
       }}>
         <MomentActionMenu
-          label="Save"
+          label="Export"
           items={saveItems}
           variant="primary"
           busy={busy}
@@ -372,16 +367,6 @@ export function MomentShareStudio({
         ) : null}
         {cardSection}
         <div style={{ position: 'relative', zIndex: modalMenuZIndex, flexShrink: 0, paddingBottom: modalMenuReservePx }}>
-          <p style={{
-            fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-            fontSize: '0.68rem',
-            color: 'var(--text-muted)',
-            textAlign: 'center',
-            margin: '0 0 10px',
-            lineHeight: 1.4,
-          }}>
-            Tap Save or Share — choose an option below
-          </p>
           {actionRow}
         </div>
       </div>
@@ -402,7 +387,7 @@ const navBtnStyle: React.CSSProperties = {
   borderRadius: '50%',
   flexShrink: 0,
   background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.1)',
+  border: '1px solid var(--border-hi)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

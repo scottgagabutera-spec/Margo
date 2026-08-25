@@ -49,11 +49,41 @@ export async function DELETE(req: NextRequest) {
   })
 
   if (error) {
-    // Logged server-side only — the raw RPC message can include row-level
-    // detail (e.g. another user's id when an ownership check fails) that
-    // has no reason to reach the caller. The generic message is enough for
-    // the client to show a retry prompt.
-    console.error('[posts/moment DELETE] failed:', error)
+    console.error('[posts/moment DELETE] rpc failed:', error)
+
+    const rpcMissing = /delete_own_post|42883|does not exist/i.test(
+      `${error.message || ''} ${error.code || ''}`,
+    )
+
+    if (rpcMissing) {
+      const supabase = await createServerSupabase()
+      const { data: owned, error: ownerErr } = await supabase
+        .from('posts')
+        .select('id')
+        .eq('id', body.postId)
+        .eq('author_profile_id', userId)
+        .maybeSingle()
+
+      if (ownerErr || !owned) {
+        return NextResponse.json({ error: 'Could not delete this Moment. Please try again.' }, { status: 403 })
+      }
+
+      const { error: deleteErr } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', body.postId)
+        .eq('author_profile_id', userId)
+
+      if (deleteErr) {
+        console.error('[posts/moment DELETE] rls fallback failed:', deleteErr)
+        return NextResponse.json(
+          { error: 'Could not delete this Moment. Please try again.' },
+          { status: 500 },
+        )
+      }
+      return NextResponse.json({ success: true })
+    }
+
     return NextResponse.json(
       { error: 'Could not delete this Moment. Please try again.' },
       { status: 500 },

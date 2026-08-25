@@ -60,7 +60,8 @@ export function MiniPlayer() {
   // Compose reuses Feed's compact floating pill/orb instead of the denser
   // full-width bar — same reasoning as Feed: a single-object creation
   // screen shouldn't have its layout pushed around by player chrome.
-  const usesFloatingChrome = isOnFeed || !!pathname?.startsWith('/compose')
+  const isOnCompose = !!pathname?.startsWith('/compose')
+  const usesFloatingChrome = isOnFeed || isOnCompose
 
   // Feed shows pill/orb (A.3); karaoke page owns immersive chrome.
   const isHidden =
@@ -265,6 +266,7 @@ export function MiniPlayer() {
       {!expanded && usesFloatingChrome && (
         <MiniPlayerFeedChrome
           mode={feedChrome}
+          layout={isOnCompose ? 'compose' : 'feed'}
           artwork={artwork}
           title={title || ''}
           playing={playing}
