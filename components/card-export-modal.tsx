@@ -62,7 +62,7 @@ export function CardExportModal({
           alignItems: 'flex-start',
           minHeight: '100%',
           padding: '12px',
-          paddingTop: 'clamp(20px, 7vh, 48px)',
+          paddingTop: 'max(28px, calc(12px + env(safe-area-inset-top, 0px)))',
           /* Top-anchored sheet: vibe expansion grows downward, not by re-centering */
           paddingBottom: 'calc(12px + var(--margo-tabbar-h, 64px) + 28px)',
           pointerEvents: 'none',
@@ -84,26 +84,15 @@ export function CardExportModal({
         }}
       >
         <div style={{
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-          padding: '16px 18px 8px', flexShrink: 0, gap: '12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '18px 18px 12px', flexShrink: 0, gap: '12px',
         }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{
-              fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
-              color: 'var(--gold)', letterSpacing: '1.8px', textTransform: 'uppercase', margin: '0 0 6px',
-            }}>
-              Share your Moment
-            </p>
-            <p style={{
-              fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-              fontSize: '0.78rem',
-              color: 'var(--text-secondary)',
-              margin: 0,
-              lineHeight: 1.45,
-            }}>
-              Tap Save ▾ or Share ▾ — menus open below.
-            </p>
-          </div>
+          <p style={{
+            fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', fontWeight: 700,
+            color: 'var(--gold)', letterSpacing: '1.8px', textTransform: 'uppercase', margin: 0,
+          }}>
+            Share your Moment
+          </p>
           <button
             type="button"
             aria-label="Close"

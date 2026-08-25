@@ -93,9 +93,7 @@ export function MomentActionMenu({
         }}
       >
         {busy ? 'Please wait…' : label}
-        <span aria-hidden style={{ fontSize: '10px', lineHeight: 1, opacity: 0.75 }}>
-          {open ? '▴' : '▾'}
-        </span>
+        <span aria-hidden style={{ fontSize: '10px', lineHeight: 1, opacity: 0.75 }}>▾</span>
       </button>
 
       {open && (

@@ -8,11 +8,14 @@ import { useMessaging, type ConversationPartner } from '@/hooks/useMessaging'
 import { searchProfiles, type ProfileSearchHit } from '@/lib/search-profiles'
 import { MargoSearchInput } from '@/components/margo-search-input'
 import { buildMomentMessageBody } from '@/lib/moment/message-format'
+import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
 const font = 'var(--font-lora), serif'
+const SEARCH_PAGE = 24
 
 type Person = ConversationPartner
+type SheetPhase = 'pick' | 'success'
 
 function personFromHit(hit: ProfileSearchHit): Person {
   return {
@@ -23,67 +26,71 @@ function personFromHit(hit: ProfileSearchHit): Person {
   }
 }
 
+function PersonAvatar({ person, size = 40 }: { person: Person; size?: number }) {
+  const px = `${size}px`
+  return (
+    <div style={{
+      width: px, height: px, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+      background: person.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
+      border: '1px solid var(--gold-border)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {person.avatarUrl ? (
+        <img src={person.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <span style={{ fontFamily: font, fontSize: '0.68rem', fontWeight: 700, color: 'var(--bg)' }}>
+          {(person.displayName || person.username || '??').slice(0, 2).toUpperCase()}
+        </span>
+      )}
+    </div>
+  )
+}
+
 function PersonRow({
   person,
   disabled,
   selected,
-  onSelect,
-  compact = false,
+  onToggle,
 }: {
   person: Person
   disabled: boolean
   selected: boolean
-  onSelect: (person: Person) => void
-  compact?: boolean
+  onToggle: (person: Person) => void
 }) {
-  const avatarSize = compact ? '36px' : '40px'
   return (
     <button
       type="button"
-      onClick={() => onSelect(person)}
+      onClick={() => onToggle(person)}
       disabled={disabled}
       aria-pressed={selected}
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
+        gap: '12px',
         width: '100%',
-        minHeight: compact ? '44px' : '48px',
-        padding: compact ? '6px 8px' : '8px 10px',
-        background: selected ? 'rgba(232,197,71,0.12)' : 'transparent',
+        minHeight: '52px',
+        padding: '8px 10px',
+        background: selected ? 'rgba(232,197,71,0.1)' : 'rgba(255,255,255,0.02)',
         border: selected ? '1px solid var(--gold-border)' : '1px solid transparent',
-        borderRadius: '12px',
+        borderRadius: '14px',
         cursor: disabled ? 'default' : 'pointer',
         textAlign: 'left',
         opacity: disabled ? 0.5 : 1,
         transition: 'background 120ms ease, border-color 120ms ease',
       }}
     >
-      <div style={{
-        width: avatarSize, height: avatarSize, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-        background: person.avatarUrl ? 'none' : 'linear-gradient(135deg, var(--gold), var(--gold-2))',
-        border: '1px solid var(--gold-border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {person.avatarUrl ? (
-          <img src={person.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <span style={{ fontFamily: font, fontSize: '0.68rem', fontWeight: 700, color: 'var(--bg)' }}>
-            {(person.displayName || person.username || '??').slice(0, 2).toUpperCase()}
-          </span>
-        )}
-      </div>
+      <PersonAvatar person={person} size={42} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          fontFamily: font, fontSize: compact ? '0.82rem' : '0.88rem',
+          fontFamily: UI_FONT, fontSize: '0.88rem', fontWeight: 600,
           color: 'var(--text)', margin: 0, lineHeight: 1.2,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {person.displayName}
         </p>
         <p style={{
-          fontFamily: font, fontSize: '0.68rem', color: 'var(--text-secondary)',
-          margin: '1px 0 0', lineHeight: 1.2,
+          fontFamily: UI_FONT, fontSize: '0.72rem', color: 'var(--text-secondary)',
+          margin: '2px 0 0', lineHeight: 1.2,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           @{person.username}
@@ -94,17 +101,78 @@ function PersonRow({
         height: '22px',
         borderRadius: '50%',
         flexShrink: 0,
-        border: selected ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
+        border: selected ? 'none' : '1.5px solid rgba(255,255,255,0.18)',
         background: selected ? 'var(--gold)' : 'transparent',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        {selected && (
+        {selected ? (
           <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--bg)', lineHeight: 1 }}>✓</span>
-        )}
+        ) : null}
       </div>
     </button>
+  )
+}
+
+function SelectedPersonChip({
+  person,
+  disabled,
+  onClear,
+}: {
+  person: Person
+  disabled: boolean
+  onClear: () => void
+}) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      padding: '10px 12px',
+      borderRadius: '14px',
+      background: 'rgba(232,197,71,0.08)',
+      border: '1px solid var(--gold-border)',
+      marginBottom: '12px',
+    }}>
+      <PersonAvatar person={person} size={36} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          fontFamily: UI_FONT, fontSize: '0.82rem', fontWeight: 600,
+          color: 'var(--text)', margin: 0, lineHeight: 1.2,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {person.displayName}
+        </p>
+        <p style={{
+          fontFamily: UI_FONT, fontSize: '0.68rem', color: 'var(--text-secondary)',
+          margin: '1px 0 0', lineHeight: 1.2,
+        }}>
+          Tap again in the list to change
+        </p>
+      </div>
+      <button
+        type="button"
+        aria-label="Clear selection"
+        disabled={disabled}
+        onClick={onClear}
+        style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          flexShrink: 0,
+          border: '1px solid var(--border)',
+          background: 'rgba(255,255,255,0.04)',
+          cursor: disabled ? 'default' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 0,
+        }}
+      >
+        <CloseIcon size={12} color="var(--text-secondary)" />
+      </button>
+    </div>
   )
 }
 
@@ -118,7 +186,8 @@ function SendToPanel({
   error,
   sending,
   selected,
-  onSelect,
+  onTogglePerson,
+  onClearSelection,
   onConfirm,
   compact,
 }: {
@@ -131,83 +200,96 @@ function SendToPanel({
   error: string | null
   sending: boolean
   selected: Person | null
-  onSelect: (person: Person) => void
+  onTogglePerson: (person: Person) => void
+  onClearSelection: () => void
   onConfirm: () => void
   compact?: boolean
 }) {
   return (
     <>
-      <div style={{ padding: compact ? '0 0 8px' : '0 16px 8px', flexShrink: 0 }}>
+      <div style={{ padding: compact ? '0 0 10px' : '0 16px 10px', flexShrink: 0 }}>
         <MargoSearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Find someone"
+          placeholder="Search by name or @username"
         />
       </div>
 
-      {error && (
+      {selected ? (
+        <div style={{ padding: compact ? '0 0 4px' : '0 16px 4px', flexShrink: 0 }}>
+          <SelectedPersonChip
+            person={selected}
+            disabled={sending}
+            onClear={onClearSelection}
+          />
+        </div>
+      ) : null}
+
+      {error ? (
         <p style={{
           fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem',
-          color: 'var(--text-secondary)', textAlign: 'center',
+          color: '#ff8a8a', textAlign: 'center',
           margin: '0 16px 8px',
         }}>
           {error}
         </p>
-      )}
+      ) : null}
 
       <div style={{
         flex: 1,
-        minHeight: compact ? '140px' : '200px',
-        maxHeight: compact ? '200px' : '280px',
+        minHeight: compact ? '160px' : '220px',
         overflowY: 'auto',
         padding: compact ? '0 2px' : '0 12px',
         WebkitOverflowScrolling: 'touch',
       }}>
-        {!showSearch && recentsCount > 0 && (
+        {!showSearch && recentsCount > 0 ? (
           <p style={{
             fontFamily: font, fontSize: '0.54rem', fontWeight: 700,
             color: 'var(--gold)', letterSpacing: '1.6px', textTransform: 'uppercase',
-            margin: '2px 4px 6px',
+            margin: '2px 4px 8px',
           }}>
             Recent
           </p>
-        )}
+        ) : null}
 
-        {showSearch && searching && list.length === 0 && (
+        {showSearch && searching && list.length === 0 ? (
           <p style={{
             fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem',
-            color: 'var(--text-secondary)', textAlign: 'center', padding: '20px 8px',
+            color: 'var(--text-secondary)', textAlign: 'center', padding: '24px 8px',
           }}>
             Searching…
           </p>
-        )}
+        ) : null}
 
-        {list.length === 0 && !searching && (
+        {list.length === 0 && !searching ? (
           <p style={{
             fontFamily: font, fontStyle: 'italic', fontSize: '0.75rem',
-            color: 'var(--text-secondary)', textAlign: 'center', padding: '20px 8px',
+            color: 'var(--text-secondary)', textAlign: 'center', padding: '24px 12px', lineHeight: 1.5,
           }}>
-            {showSearch ? 'No one matched that name.' : 'Search for someone on Margo'}
+            {showSearch
+              ? 'No one matched that search.'
+              : 'Search for someone on Margo — your recent chats appear here.'}
           </p>
-        )}
+        ) : null}
 
-        {list.map((person) => (
-          <PersonRow
-            key={person.id}
-            person={person}
-            disabled={sending}
-            selected={selected?.id === person.id}
-            onSelect={onSelect}
-            compact={compact}
-          />
-        ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {list.map((person) => (
+            <PersonRow
+              key={person.id}
+              person={person}
+              disabled={sending}
+              selected={selected?.id === person.id}
+              onToggle={onTogglePerson}
+            />
+          ))}
+        </div>
       </div>
 
       <div style={{
         flexShrink: 0,
-        padding: compact ? '10px 0 0' : '10px 16px 12px',
+        padding: compact ? '12px 0 0' : '12px 16px 16px',
         borderTop: '1px solid var(--border)',
-        marginTop: compact ? '8px' : 0,
+        marginTop: '8px',
       }}>
         <button
           type="button"
@@ -215,7 +297,7 @@ function SendToPanel({
           onClick={onConfirm}
           style={{
             width: '100%',
-            minHeight: '42px',
+            minHeight: 'var(--margo-touch-min)',
             borderRadius: '50px',
             border: 'none',
             background: !selected || sending ? 'rgba(232,197,71,0.35)' : 'var(--gold)',
@@ -231,7 +313,7 @@ function SendToPanel({
           {sending
             ? 'Sending…'
             : selected
-              ? 'Send to ' + selected.displayName
+              ? `Send to ${selected.displayName}`
               : 'Choose someone'}
         </button>
       </div>
@@ -256,7 +338,6 @@ export function ComposeSendTo({
   song: string
   artist: string
   onSent: (name: string) => void
-  /** popover = anchored panel (no layout shift); modal = overlay; inline deprecated */
   variant?: 'modal' | 'inline' | 'popover'
 }) {
   const { user } = useIdentity()
@@ -267,6 +348,8 @@ export function ComposeSendTo({
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Person | null>(null)
+  const [phase, setPhase] = useState<SheetPhase>('pick')
+  const [successName, setSuccessName] = useState<string | null>(null)
   const [lastSentName, setLastSentName] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -280,6 +363,8 @@ export function ComposeSendTo({
     setError(null)
     setSending(false)
     setSelected(null)
+    setPhase('pick')
+    setSuccessName(null)
   }, [isOpen])
 
   useEffect(() => {
@@ -318,7 +403,7 @@ export function ComposeSendTo({
     let cancelled = false
     setSearching(true)
     const t = window.setTimeout(() => {
-      void searchProfiles(supabase, q, 16).then((rows) => {
+      void searchProfiles(supabase, q, SEARCH_PAGE).then((rows) => {
         if (cancelled) return
         setHits(rows.filter((row) => row.id !== myId))
         setSearching(false)
@@ -333,10 +418,15 @@ export function ComposeSendTo({
   const recents = conversations
     .map((c) => c.otherUser)
     .filter((p) => p.id && p.id !== myId && p.username !== 'unknown')
-    .slice(0, 12)
+    .slice(0, 20)
 
   const showSearch = query.trim().length >= 2
   const list: Person[] = showSearch ? hits.map(personFromHit) : recents
+
+  const togglePerson = useCallback((person: Person) => {
+    setSelected((prev) => (prev?.id === person.id ? null : person))
+    setError(null)
+  }, [])
 
   const sendTo = useCallback(async (person: Person) => {
     if (!myId || sending) return
@@ -358,7 +448,7 @@ export function ComposeSendTo({
       const blocked = /policy|permission|violates|42501|row-level/i.test(raw)
       setError(
         blocked
-          ? person.displayName + " isn't accepting messages right now"
+          ? `${person.displayName} isn't accepting messages right now`
           : "Couldn't send. Try again."
       )
       setSending(false)
@@ -373,11 +463,82 @@ export function ComposeSendTo({
     })
     setSending(false)
     setLastSentName(person.displayName)
-    onSent(person.displayName)
-    onOpenChange(false)
-  }, [myId, sending, lyric, song, artist, postId, applyOutboundMessage, onSent, onOpenChange])
+    setSuccessName(person.displayName)
+    setPhase('success')
+  }, [myId, sending, lyric, song, artist, postId, applyOutboundMessage])
 
-  const panel = (
+  const panel = phase === 'success' && successName ? (
+    <div style={{
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '32px 24px 24px',
+      textAlign: 'center',
+      gap: '14px',
+    }}>
+      <div style={{
+        width: '52px',
+        height: '52px',
+        borderRadius: '50%',
+        background: 'rgba(232,197,71,0.12)',
+        border: '1px solid var(--gold-border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '1.25rem',
+        color: 'var(--gold)',
+      }}>
+        ✓
+      </div>
+      <p style={{
+        fontFamily: font,
+        fontStyle: 'italic',
+        fontSize: '1.05rem',
+        color: 'var(--text)',
+        margin: 0,
+        lineHeight: 1.4,
+      }}>
+        Sent to {successName}
+      </p>
+      <p style={{
+        fontFamily: UI_FONT,
+        fontSize: '0.78rem',
+        color: 'var(--text-secondary)',
+        margin: 0,
+        lineHeight: 1.45,
+        maxWidth: '280px',
+      }}>
+        They&apos;ll see your Moment in Messages.
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          if (successName) onSent(successName)
+          onOpenChange(false)
+        }}
+        style={{
+          marginTop: '8px',
+          minWidth: '140px',
+          minHeight: 'var(--margo-touch-min)',
+          padding: '0 24px',
+          borderRadius: '50px',
+          border: 'none',
+          background: 'var(--gold)',
+          color: 'var(--bg)',
+          fontFamily: font,
+          fontSize: '0.58rem',
+          fontWeight: 700,
+          letterSpacing: '0.9px',
+          textTransform: 'uppercase',
+          cursor: 'pointer',
+        }}
+      >
+        Done
+      </button>
+    </div>
+  ) : (
     <SendToPanel
       query={query}
       setQuery={setQuery}
@@ -388,7 +549,8 @@ export function ComposeSendTo({
       error={error}
       sending={sending}
       selected={selected}
-      onSelect={setSelected}
+      onTogglePerson={togglePerson}
+      onClearSelection={() => setSelected(null)}
       onConfirm={() => { if (selected) void sendTo(selected) }}
       compact={variant === 'popover' || variant === 'inline'}
     />
@@ -417,7 +579,7 @@ export function ComposeSendTo({
             cursor: 'pointer',
           }}
         >
-          Send to someone on Margo
+          Send to someone
         </button>
 
         {open && (
@@ -434,18 +596,8 @@ export function ComposeSendTo({
             padding: '12px',
             display: 'flex',
             flexDirection: 'column',
+            maxHeight: 'min(70dvh, 520px)',
           }}>
-            <p style={{
-              fontFamily: font,
-              fontSize: '0.54rem',
-              fontWeight: 700,
-              color: 'var(--gold)',
-              letterSpacing: '1.6px',
-              textTransform: 'uppercase',
-              margin: '0 0 8px',
-            }}>
-              Send to someone
-            </p>
             {panel}
           </div>
         )}
@@ -480,15 +632,9 @@ export function ComposeSendTo({
         padding: '12px',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '220px',
+        minHeight: '280px',
+        maxHeight: 'min(70dvh, 520px)',
       }}>
-        <p style={{
-          fontFamily: font, fontSize: '0.54rem', fontWeight: 700,
-          color: 'var(--gold)', letterSpacing: '1.6px', textTransform: 'uppercase',
-          margin: '0 0 8px',
-        }}>
-          Send to someone
-        </p>
         {panel}
       </div>
     )
@@ -497,60 +643,93 @@ export function ComposeSendTo({
   if (!open) return null
 
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(7,6,10,0.92)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '12px',
-        overscrollBehavior: 'none',
-      }}
-      onClick={() => { if (!sending) onOpenChange(false) }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 210, overscrollBehavior: 'none' }}>
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={() => { if (!sending) onOpenChange(false) }}
         style={{
-          width: '100%',
-          maxWidth: '460px',
-          height: 'min(86dvh, 640px)',
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '18px',
+          position: 'absolute',
+          inset: 0,
+          border: 'none',
+          background: 'rgba(7,6,10,0.92)',
+          cursor: 'default',
+        }}
+      />
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
           display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+          minHeight: '100%',
+          padding: '12px',
+          paddingTop: 'max(28px, calc(12px + env(safe-area-inset-top, 0px)))',
+          paddingBottom: 'calc(12px + var(--margo-tabbar-h, 64px) + 16px)',
+          pointerEvents: 'none',
         }}
       >
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 14px 6px', flexShrink: 0,
-        }}>
-          <p style={{
-            fontFamily: font, fontSize: '0.54rem', fontWeight: 700,
-            color: 'var(--text-secondary)', letterSpacing: '1.8px', textTransform: 'uppercase',
-            margin: 0,
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: '100%',
+            maxWidth: '460px',
+            height: 'min(82dvh, 620px)',
+            background: 'var(--surface, #0F0E13)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+            pointerEvents: 'auto',
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '18px 18px 12px',
+            flexShrink: 0,
+            gap: '12px',
           }}>
-            Send to someone
-          </p>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={() => onOpenChange(false)}
-            disabled={sending}
-            style={{
-              width: '34px', height: '34px',
-              borderRadius: '50%', background: 'rgba(255,255,255,0.05)',
-              border: '1px solid var(--border)',
-              cursor: sending ? 'default' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-            }}
-          >
-            <CloseIcon size={14} color="var(--text-secondary)" />
-          </button>
-        </div>
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          {panel}
+            <p style={{
+              fontFamily: font,
+              fontSize: '0.58rem',
+              fontWeight: 700,
+              color: 'var(--gold)',
+              letterSpacing: '1.8px',
+              textTransform: 'uppercase',
+              margin: 0,
+            }}>
+              Send to someone
+            </p>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => onOpenChange(false)}
+              disabled={sending}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                flexShrink: 0,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                cursor: sending ? 'default' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+              }}
+            >
+              <CloseIcon size={14} color="var(--text-secondary)" />
+            </button>
+          </div>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            {panel}
+          </div>
         </div>
       </div>
     </div>

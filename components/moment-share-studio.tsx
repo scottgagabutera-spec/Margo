@@ -29,6 +29,7 @@ import {
   MOMENT_VIBE_PICKER_OPTIONS,
   shareMomentNative,
 } from '@/lib/moment'
+import { buildMomentShareActionItems } from '@/lib/moment/share-action-items'
 import { useRef } from 'react'
 
 function momentHasSnippet(moment: MargoMoment): boolean {
@@ -242,25 +243,28 @@ export function MomentShareStudio({
       },
     ]
 
-  const shareItems: MomentActionMenuItem[] = [
-    ...(canShareImg && !isDualCard
-      ? [{ id: 'img', label: 'Share image', onClick: shareImage }]
-      : []),
-  ]
-  if (canShareUrl || isDualCard) {
-    shareItems.push({
-      id: 'link',
-      label: 'Share link',
-      hint: 'Lyric preview — not a raw URL',
-      onClick: shareLink,
+  const shareItems: MomentActionMenuItem[] = isDualCard
+    ? [
+      {
+        id: 'link',
+        label: 'Share link',
+        hint: 'Lyric preview — not a raw URL',
+        onClick: () => { void shareLink() },
+      },
+      {
+        id: 'copy',
+        label: 'Copy link',
+        hint: 'Beautiful text for paste',
+        onClick: () => { void copyLink() },
+      },
+    ]
+    : buildMomentShareActionItems({
+      canShareImage: canShareImg,
+      linksActive: canShareUrl,
+      onShareImage: () => { void shareImage() },
+      onShareLink: () => { void shareLink() },
+      onCopyLink: () => { void copyLink() },
     })
-    shareItems.push({
-      id: 'copy',
-      label: 'Copy link',
-      hint: 'Beautiful text for paste',
-      onClick: copyLink,
-    })
-  }
 
   const isModal = layout === 'modal'
   const gap = isModal ? '12px' : (compact ? '10px' : '12px')
@@ -372,16 +376,6 @@ export function MomentShareStudio({
         ) : null}
         {cardSection}
         <div style={{ position: 'relative', zIndex: modalMenuZIndex, flexShrink: 0, paddingBottom: modalMenuReservePx }}>
-          <p style={{
-            fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-            fontSize: '0.68rem',
-            color: 'var(--text-muted)',
-            textAlign: 'center',
-            margin: '0 0 10px',
-            lineHeight: 1.4,
-          }}>
-            Tap Save or Share — choose an option below
-          </p>
           {actionRow}
         </div>
       </div>

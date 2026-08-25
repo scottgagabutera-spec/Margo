@@ -17,6 +17,7 @@ import { persistMomentPost } from '@/lib/moment/persist'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
+import { buildMomentShareActionItems } from '@/lib/moment/share-action-items'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -82,6 +83,7 @@ export function StageLanding() {
   const [sending, setSending] = useState(false)
   const [sentPostId, setSentPostId] = useState<string | null>(null)
   const [showSendTo, setShowSendTo] = useState(false)
+  const [sentToName, setSentToName] = useState<string | null>(null)
   const [momentVisible, setMomentVisible] = useState(false)
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -563,39 +565,13 @@ export function StageLanding() {
     },
   ]
 
-  const shareItems: MomentActionMenuItem[] = []
-  if (canShareImg) {
-    shareItems.push({ id: 'img', label: 'Share image', onClick: () => { void handleShareImage() } })
-  }
-  if (sentPostId) {
-    shareItems.push({
-      id: 'link',
-      label: 'Share link',
-      hint: 'Lyric preview — not a raw URL',
-      onClick: () => { void handleNativeShare() },
-    })
-    shareItems.push({
-      id: 'copy',
-      label: 'Copy link',
-      hint: 'Beautiful text for paste',
-      onClick: () => { void handleCopyLink() },
-    })
-  } else {
-    shareItems.push({
-      id: 'link-wait',
-      label: 'Share link',
-      hint: 'Send to Margo first',
-      disabled: true,
-      onClick: () => {},
-    })
-    shareItems.push({
-      id: 'copy-wait',
-      label: 'Copy link',
-      hint: 'Send to Margo first',
-      disabled: true,
-      onClick: () => {},
-    })
-  }
+  const shareItems = buildMomentShareActionItems({
+    canShareImage: canShareImg,
+    linksActive: !!sentPostId,
+    onShareImage: () => { void handleShareImage() },
+    onShareLink: () => { void handleNativeShare() },
+    onCopyLink: () => { void handleCopyLink() },
+  })
 
   return (
     <section style={{ position: 'relative', zIndex: 5, width: '100%', maxWidth: '480px', margin: '0 auto' }}>
@@ -744,15 +720,36 @@ export function StageLanding() {
                   onOpenSendTo={() => setShowSendTo(true)}
                 />
                 {sentPostId ? (
-                  <ComposeSendTo
-                    open={showSendTo}
-                    onOpenChange={setShowSendTo}
-                    postId={sentPostId}
-                    lyric={lyric}
-                    song={songName}
-                    artist={artistName}
-                    onSent={() => setShowSendTo(false)}
-                  />
+                  <>
+                    {sentToName ? (
+                      <p style={{
+                        fontFamily: font,
+                        fontSize: '0.78rem',
+                        color: 'var(--gold)',
+                        textAlign: 'center',
+                        margin: '4px 0 0',
+                        padding: '10px 14px',
+                        borderRadius: '12px',
+                        background: 'rgba(232,197,71,0.08)',
+                        border: '1px solid var(--gold-border)',
+                        lineHeight: 1.45,
+                      }}>
+                        Sent to {sentToName}.
+                      </p>
+                    ) : null}
+                    <ComposeSendTo
+                      open={showSendTo}
+                      onOpenChange={setShowSendTo}
+                      postId={sentPostId}
+                      lyric={lyric}
+                      song={songName}
+                      artist={artistName}
+                      onSent={(name) => {
+                        setSentToName(name)
+                        setShowSendTo(false)
+                      }}
+                    />
+                  </>
                 ) : null}
               </>
             )}
