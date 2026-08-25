@@ -20,12 +20,19 @@ function isInteractiveTarget(target: EventTarget | null) {
   return target instanceof HTMLElement && !!target.closest('button, a, [data-no-drag]')
 }
 
+/** Compose pill: only play/dismiss block drag — the rest of the shell follows the finger. */
+function isComposeDragBlocker(target: EventTarget | null) {
+  return target instanceof HTMLElement && !!target.closest('[data-no-drag]')
+}
+
 function ComposeFloatingShell({
   className,
   children,
+  onExpand,
 }: {
   className: string
   children: ReactNode
+  onExpand: () => void
 }) {
   const shellRef = useRef<HTMLDivElement>(null)
   const float = useFloatingPosition({
@@ -33,6 +40,11 @@ function ComposeFloatingShell({
     elementRef: shellRef,
     getViewportInsets: composeChromeInsets,
   })
+
+  useEffect(() => {
+    float.setOnTap(onExpand)
+    return () => float.setOnTap(null)
+  }, [float.setOnTap, onExpand])
 
   useEffect(() => {
     float.reclamp()
@@ -46,13 +58,15 @@ function ComposeFloatingShell({
         position: 'fixed',
         left: `${float.x}px`,
         top: `${float.y}px`,
-        zIndex: 90,
+        zIndex: 95,
         touchAction: 'none',
-        cursor: 'grab',
+        cursor: float.isDragging ? 'grabbing' : 'grab',
+        userSelect: 'none',
       }}
-      onPointerDown={(e) => float.onPointerDown(e, isInteractiveTarget(e.target))}
+      onPointerDown={(e) => float.onPointerDown(e, isComposeDragBlocker(e.target))}
       onPointerMove={float.onPointerMove}
       onPointerUp={float.onPointerUp}
+      onPointerCancel={float.onPointerCancel}
     >
       {children}
     </div>
@@ -95,7 +109,7 @@ export function MiniPlayerFeedChrome({
 }) {
   if (layout === 'compose') {
     return (
-      <ComposeFloatingShell className="mp-feed-pill mp-feed-pill--compose">
+      <ComposeFloatingShell className="mp-feed-pill mp-feed-pill--compose" onExpand={onExpand}>
         <ComposePillInner
           artwork={artwork}
           title={title}
@@ -558,11 +572,11 @@ function ComposePillInner({
         />
       </div>
 
-      <button
-        type="button"
+      <div
         aria-label={`Expand player · ${title || 'Now playing'}`}
-        data-no-drag
-        onClick={onExpand}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onExpand() }}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -572,7 +586,7 @@ function ComposePillInner({
           background: 'none',
           border: 'none',
           padding: 0,
-          cursor: 'pointer',
+          cursor: 'grab',
           color: 'inherit',
           textAlign: 'left',
         }}
@@ -611,13 +625,14 @@ function ComposePillInner({
         >
           {title || 'Now playing'}
         </span>
-      </button>
+      </div>
 
       <button
         type="button"
         aria-label={playing ? 'Pause' : 'Play'}
         data-no-drag
-        onClick={onTogglePlay}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onTogglePlay() }}
         style={{
           width: 'var(--margo-touch-min)',
           height: 'var(--margo-touch-min)',

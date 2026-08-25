@@ -17,6 +17,8 @@ export interface UseFloatingPositionOptions {
   enabled?: boolean
 }
 
+const TAP_SLOP_PX = 6
+
 function readStored(key: string): { x: number; y: number } | null {
   if (typeof window === 'undefined') return null
   try {
@@ -40,9 +42,18 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n))
 }
 
+function viewportSize() {
+  if (typeof window === 'undefined') return { width: 390, height: 844 }
+  const vv = window.visualViewport
+  return {
+    width: vv?.width ?? window.innerWidth,
+    height: vv?.height ?? window.innerHeight,
+  }
+}
+
 /**
  * Bounded drag positioning for floating utilities (Compose mini-player).
- * Stores position in sessionStorage; re-clamps on resize / keyboard.
+ * Document-level pointer tracking for 1:1 finger follow; persists in sessionStorage.
  */
 export function useFloatingPosition({
   storageKey,
@@ -52,17 +63,22 @@ export function useFloatingPosition({
   enabled = true,
 }: UseFloatingPositionOptions) {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const dragRef = useRef<{
     pointerId: number
     startX: number
     startY: number
     originX: number
     originY: number
+    moved: boolean
   } | null>(null)
+  const onTapRef = useRef<(() => void) | null>(null)
+  const clampPositionRef = useRef<(x: number, y: number) => { x: number; y: number }>(() => ({ x: 0, y: 0 }))
+  const defaultPositionRef = useRef<() => { x: number; y: number }>(() => ({ x: 0, y: 0 }))
+  const cleanupDragRef = useRef<(() => void) | null>(null)
 
   const getInsets = useCallback(() => {
-    const base = getViewportInsets?.() ?? { top: 8, right: 8, bottom: 8, left: 8 }
-    return base
+    return getViewportInsets?.() ?? { top: 8, right: 8, bottom: 8, left: 8 }
   }, [getViewportInsets])
 
   const getBounds = useCallback((): FloatingBounds => {
@@ -76,11 +92,7 @@ export function useFloatingPosition({
   const defaultPosition = useCallback(() => {
     const { width, height } = getBounds()
     const insets = getInsets()
-    const vv = typeof window !== 'undefined'
-      ? (window.visualViewport ?? { width: window.innerWidth, height: window.innerHeight, offsetLeft: 0, offsetTop: 0 })
-      : { width: 390, height: 844, offsetLeft: 0, offsetTop: 0 }
-    const vw = vv.width
-    const vh = vv.height
+    const { width: vw, height: vh } = viewportSize()
     const x = vw - width - defaultInset.right - insets.right
     const y = vh - height - defaultInset.bottom - insets.bottom
     return {
@@ -92,14 +104,15 @@ export function useFloatingPosition({
   const clampPosition = useCallback((x: number, y: number) => {
     const { width, height } = getBounds()
     const insets = getInsets()
-    const vv = typeof window !== 'undefined'
-      ? (window.visualViewport ?? { width: window.innerWidth, height: window.innerHeight })
-      : { width: 390, height: 844 }
+    const { width: vw, height: vh } = viewportSize()
     return {
-      x: clamp(x, insets.left, vv.width - width - insets.right),
-      y: clamp(y, insets.top, vv.height - height - insets.bottom),
+      x: clamp(x, insets.left, vw - width - insets.right),
+      y: clamp(y, insets.top, vh - height - insets.bottom),
     }
   }, [getBounds, getInsets])
+
+  defaultPositionRef.current = defaultPosition
+  clampPositionRef.current = clampPosition
 
   const resolved = position ?? defaultPosition()
 
@@ -130,51 +143,114 @@ export function useFloatingPosition({
     }
   }, [enabled, reclamp])
 
+  useEffect(() => () => {
+    cleanupDragRef.current?.()
+    cleanupDragRef.current = null
+  }, [])
+
+  const endDrag = useCallback((pointerId: number, clientX: number, clientY: number) => {
+    const drag = dragRef.current
+    if (!drag || drag.pointerId !== pointerId) return
+
+    const dx = clientX - drag.startX
+    const dy = clientY - drag.startY
+    const moved = drag.moved || Math.abs(dx) > TAP_SLOP_PX || Math.abs(dy) > TAP_SLOP_PX
+    dragRef.current = null
+    setIsDragging(false)
+    cleanupDragRef.current?.()
+    cleanupDragRef.current = null
+
+    if (moved) {
+      setPosition((prev) => {
+        const next = prev ?? defaultPositionRef.current()
+        writeStored(storageKey, next)
+        return next
+      })
+      return
+    }
+    onTapRef.current?.()
+  }, [storageKey])
+
   const onPointerDown = useCallback((e: React.PointerEvent, isInteractive: boolean) => {
     if (!enabled || isInteractive) return
-    const target = e.currentTarget as HTMLElement
-    target.setPointerCapture(e.pointerId)
+    e.preventDefault()
+
+    const pointerId = e.pointerId
     dragRef.current = {
-      pointerId: e.pointerId,
+      pointerId,
       startX: e.clientX,
       startY: e.clientY,
       originX: resolved.x,
       originY: resolved.y,
+      moved: false,
     }
-  }, [enabled, resolved.x, resolved.y])
+    setIsDragging(false)
+
+    const onMove = (ev: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag || drag.pointerId !== ev.pointerId) return
+      const dx = ev.clientX - drag.startX
+      const dy = ev.clientY - drag.startY
+      if (!drag.moved && (Math.abs(dx) > 0 || Math.abs(dy) > 0)) {
+        drag.moved = true
+        setIsDragging(true)
+      }
+      if (!drag.moved) return
+      ev.preventDefault()
+      setPosition(clampPositionRef.current(drag.originX + dx, drag.originY + dy))
+    }
+
+    const onUp = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return
+      endDrag(pointerId, ev.clientX, ev.clientY)
+    }
+
+    cleanupDragRef.current?.()
+    document.addEventListener('pointermove', onMove, { passive: false })
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onUp)
+    cleanupDragRef.current = () => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onUp)
+    }
+  }, [enabled, endDrag, resolved.x, resolved.y])
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     const drag = dragRef.current
     if (!drag || drag.pointerId !== e.pointerId) return
     const dx = e.clientX - drag.startX
     const dy = e.clientY - drag.startY
+    if (!drag.moved && (Math.abs(dx) > 0 || Math.abs(dy) > 0)) {
+      drag.moved = true
+      setIsDragging(true)
+    }
+    if (!drag.moved) return
+    e.preventDefault()
     setPosition(clampPosition(drag.originX + dx, drag.originY + dy))
   }, [clampPosition])
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
-    const drag = dragRef.current
-    if (!drag || drag.pointerId !== e.pointerId) return
-    dragRef.current = null
-    setPosition((prev) => {
-      const next = prev ?? defaultPosition()
-      writeStored(storageKey, next)
-      return next
-    })
-  }, [defaultPosition, storageKey])
+    endDrag(e.pointerId, e.clientX, e.clientY)
+  }, [endDrag])
 
-  const resetPosition = useCallback(() => {
-    setPosition(null)
-    writeStored(storageKey, null)
-  }, [storageKey])
+  const onPointerCancel = useCallback((e: React.PointerEvent) => {
+    endDrag(e.pointerId, e.clientX, e.clientY)
+  }, [endDrag])
+
+  const setOnTap = useCallback((fn: (() => void) | null) => {
+    onTapRef.current = fn
+  }, [])
 
   return {
     x: resolved.x,
     y: resolved.y,
-    isCustom: position !== null,
+    isDragging,
     onPointerDown,
     onPointerMove,
     onPointerUp,
-    resetPosition,
+    onPointerCancel,
+    setOnTap,
     reclamp,
   }
 }

@@ -36,7 +36,7 @@ export function CardExportModal({
       title="Your Moment"
       zIndex={200}
       heightMode="auto"
-      maxHeight="calc(100dvh - max(28px, calc(12px + env(safe-area-inset-top, 0px))) - calc(12px + var(--margo-tabbar-h, 64px) + 28px))"
+      maxHeight="min(82dvh, 620px)"
       panelOverflow="visible"
       contentOverflow="auto"
     >

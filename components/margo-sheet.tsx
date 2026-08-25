@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { CloseIcon } from '@/components/icons'
 
 export interface MargoSheetProps {
@@ -20,15 +21,11 @@ export interface MargoSheetProps {
 }
 
 const SCRIM = 'rgba(7,6,10,0.92)'
+const HEADER_APPROX_PX = 70
 
 /**
- * Top-anchored sheet with safe-area padding — shared by Card modal, Send-to, etc.
- *
- * Architecture:
- * - Fixed viewport frame (no page scroll)
- * - Header always visible (never scrolls away)
- * - Body scrolls internally when content exceeds max height
- * - Panel grows downward; never vertically centered
+ * Top-anchored sheet — portaled to body so it clears tab-pane stacking.
+ * Header never scrolls away; body scrolls when tall.
  */
 export function MargoSheet({
   open,
@@ -43,24 +40,37 @@ export function MargoSheet({
   contentOverflow = 'auto',
   bottomInset = 'tabbar',
 }: MargoSheetProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => setMounted(true), [])
+
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    document.documentElement.setAttribute('data-margo-sheet-open', '1')
+    return () => {
+      document.body.style.overflow = prev
+      document.documentElement.removeAttribute('data-margo-sheet-open')
+    }
   }, [open])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   const bottomPad = bottomInset === 'tabbar-tight'
     ? 'calc(12px + var(--margo-tabbar-h, 64px) + 16px)'
     : 'calc(12px + var(--margo-tabbar-h, 64px) + 28px)'
 
+  const topPad = 'max(16px, env(safe-area-inset-top, 0px))'
   const panelMaxHeight = heightMode === 'fixed'
     ? maxHeight
-    : `min(${maxHeight}, calc(100dvh - max(28px, calc(12px + env(safe-area-inset-top, 0px))) - ${bottomPad}))`
+    : `min(${maxHeight}, calc(100dvh - ${topPad} - 12px - ${bottomPad}))`
 
-  return (
+  const bodyMaxHeight = heightMode === 'fixed'
+    ? undefined
+    : `calc(${panelMaxHeight} - ${HEADER_APPROX_PX}px)`
+
+  return createPortal(
     <div
       className="margo-sheet-root"
       style={{
@@ -86,16 +96,15 @@ export function MargoSheet({
       <div
         className="margo-sheet-frame"
         style={{
-          position: 'relative',
+          position: 'absolute',
+          inset: 0,
           zIndex: 1,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'flex-start',
-          height: '100%',
-          maxHeight: '100dvh',
           boxSizing: 'border-box',
           padding: '12px',
-          paddingTop: 'max(32px, calc(16px + env(safe-area-inset-top, 0px)))',
+          paddingTop: `calc(12px + ${topPad})`,
           paddingBottom: bottomPad,
           pointerEvents: 'none',
           overflow: 'hidden',
@@ -108,13 +117,13 @@ export function MargoSheet({
             width: '100%',
             maxWidth: '460px',
             maxHeight: panelMaxHeight,
-            ...(heightMode === 'fixed' ? { height: panelMaxHeight } : {}),
+            ...(heightMode === 'fixed' ? { height: panelMaxHeight } : { height: 'fit-content' }),
             background: 'var(--surface, #0F0E13)',
             border: '1px solid var(--border)',
             borderRadius: '20px',
             display: 'flex',
             flexDirection: 'column',
-            overflow: panelOverflow,
+            overflow: 'hidden',
             boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
             pointerEvents: 'auto',
             flexShrink: 0,
@@ -129,6 +138,8 @@ export function MargoSheet({
               padding: '18px 18px 12px',
               flexShrink: 0,
               gap: '12px',
+              background: 'var(--surface, #0F0E13)',
+              borderRadius: '20px 20px 0 0',
             }}
           >
             <p style={{
@@ -169,11 +180,13 @@ export function MargoSheet({
           <div
             className="margo-sheet-body"
             style={{
-              flex: 1,
+              flex: heightMode === 'fixed' ? 1 : '0 1 auto',
               minHeight: 0,
+              maxHeight: bodyMaxHeight,
               padding: '0 18px 20px',
-              overflow: contentOverflow,
-              overflowX: panelOverflow === 'visible' ? 'visible' : undefined,
+              overflowY: contentOverflow === 'visible' ? 'visible' : 'auto',
+              overflowX: panelOverflow === 'visible' ? 'visible' : 'hidden',
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             {children}
@@ -183,14 +196,14 @@ export function MargoSheet({
       <style>{`
         @media (min-width: 640px) {
           .margo-sheet-frame {
-            padding-top: max(48px, calc(24px + env(safe-area-inset-top, 0px))) !important;
-            align-items: flex-start;
+            padding-top: calc(20px + max(16px, env(safe-area-inset-top, 0px))) !important;
           }
           .margo-sheet-panel {
             max-width: 480px;
           }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body,
   )
 }

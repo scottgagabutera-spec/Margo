@@ -569,6 +569,13 @@ html, body {
   }
 }
 
+/* Card / send-to sheets own the viewport — hide feed mini-player X behind them */
+html[data-margo-sheet-open="1"] .mp-feed-pill,
+html[data-margo-sheet-open="1"] .mp-feed-orb {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /*
  * Phase 2.0 — static touch-action for primary-tab swipe.
  * pan-y from the first sample: browser owns vertical scroll; horizontal is

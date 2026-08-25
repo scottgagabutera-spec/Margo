@@ -12,6 +12,7 @@ interface KeyboardSafeCtaBarProps {
    * When false, clear tab bar + mini-player via --margo-page-bottom.
    */
   keyboardOpen?: boolean
+  zIndex?: number
 }
 
 /**
@@ -30,7 +31,7 @@ interface KeyboardSafeCtaBarProps {
  * so other fixed chrome — e.g. Compose's floating mini-player pill — can
  * stack above it without a guessed pixel offset.
  */
-export function KeyboardSafeCtaBar({ children, keyboardOpen = false }: KeyboardSafeCtaBarProps) {
+export function KeyboardSafeCtaBar({ children, keyboardOpen = false, zIndex = 55 }: KeyboardSafeCtaBarProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export function KeyboardSafeCtaBar({ children, keyboardOpen = false }: KeyboardS
     left: 0,
     right: 0,
     bottom: 'var(--margo-keyboard-inset, 0px)',
-    zIndex: 55,
+    zIndex,
     paddingTop: '12px',
     paddingLeft: '24px',
     paddingRight: '24px',
