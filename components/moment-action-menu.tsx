@@ -22,6 +22,8 @@ interface MomentActionMenuProps {
   onOpenChange?: (open: boolean) => void
   /** Open menu above the trigger — rarely used; default opens downward. */
   dropUp?: boolean
+  /** z-index for the open menu panel (modal contexts need > scrim). */
+  menuZIndex?: number
 }
 
 export function MomentActionMenu({
@@ -33,6 +35,7 @@ export function MomentActionMenu({
   open: controlledOpen,
   onOpenChange,
   dropUp = false,
+  menuZIndex = 50,
 }: MomentActionMenuProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const open = controlledOpen ?? internalOpen
@@ -105,7 +108,7 @@ export function MomentActionMenu({
             ...(dropUp
               ? { bottom: 'calc(100% + 6px)' }
               : { top: 'calc(100% + 6px)' }),
-            zIndex: 50,
+            zIndex: menuZIndex,
             display: 'flex',
             flexDirection: 'column',
             gap: '4px',

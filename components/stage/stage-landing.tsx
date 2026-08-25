@@ -614,7 +614,7 @@ export function StageLanding() {
               fontStyle: 'italic',
             }}
           >
-            Search a song. Pick your line.
+            Expression through a line of music.
           </p>
         </div>
       )}

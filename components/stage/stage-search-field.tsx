@@ -72,7 +72,7 @@ export function StageSearchField({
         spellCheck={false}
         value={value}
         disabled={disabled}
-        placeholder="Search a song or artist"
+        placeholder="Search by lyric, song or artist…"
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => {
           setFocused(true)

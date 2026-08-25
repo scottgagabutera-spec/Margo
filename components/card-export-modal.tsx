@@ -40,19 +40,34 @@ export function CardExportModal({
   if (!open) return null
 
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(7,6,10,0.92)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '12px',
-        paddingTop: 'clamp(20px, 7vh, 48px)',
-        /* Nudge modal slightly above center so Save/Share dropdowns clear the tab bar */
-        paddingBottom: 'calc(12px + var(--margo-tabbar-h, 64px) + 28px)',
-        overscrollBehavior: 'none',
-      }}
-      onClick={() => onOpenChange(false)}
-    >
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, overscrollBehavior: 'none' }}>
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={() => onOpenChange(false)}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          border: 'none',
+          background: 'rgba(7,6,10,0.92)',
+          cursor: 'default',
+        }}
+      />
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100%',
+          padding: '12px',
+          paddingTop: 'clamp(20px, 7vh, 48px)',
+          /* Nudge modal slightly above center so Save/Share dropdowns clear the tab bar */
+          paddingBottom: 'calc(12px + var(--margo-tabbar-h, 64px) + 28px)',
+          pointerEvents: 'none',
+        }}
+      >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -65,6 +80,7 @@ export function CardExportModal({
           flexDirection: 'column',
           overflow: 'visible',
           boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+          pointerEvents: 'auto',
         }}
       >
         <div style={{
@@ -118,6 +134,7 @@ export function CardExportModal({
             layout="modal"
           />
         </div>
+      </div>
       </div>
     </div>
   )

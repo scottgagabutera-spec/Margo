@@ -265,7 +265,9 @@ export function MomentShareStudio({
   const isModal = layout === 'modal'
   const gap = isModal ? '12px' : (compact ? '10px' : '12px')
   /** Room for Save/Share menus below the action row (current 3 save items + headroom). */
-  const modalMenuReservePx = openMenu ? 168 : 20
+  const modalMenuReservePx = 168
+  const modalMenuZIndex = 212
+  const modalMenuScrimZIndex = 211
 
   const cardSection = (
     <>
@@ -334,6 +336,7 @@ export function MomentShareStudio({
           busy={busy}
           open={openMenu === 'save'}
           onOpenChange={(next) => setOpenMenu(next ? 'save' : null)}
+          menuZIndex={isModal ? modalMenuZIndex : undefined}
         />
         <MomentActionMenu
           label="Share"
@@ -343,6 +346,7 @@ export function MomentShareStudio({
           disabled={shareItems.length === 0}
           open={openMenu === 'share'}
           onOpenChange={(next) => setOpenMenu(next ? 'share' : null)}
+          menuZIndex={isModal ? modalMenuZIndex : undefined}
         />
       </div>
     </div>
@@ -350,9 +354,24 @@ export function MomentShareStudio({
 
   if (isModal) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap }}>
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap }}>
+        {openMenu ? (
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setOpenMenu(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: modalMenuScrimZIndex,
+              border: 'none',
+              background: 'rgba(7,6,10,0.42)',
+              cursor: 'default',
+            }}
+          />
+        ) : null}
         {cardSection}
-        <div style={{ flexShrink: 0, paddingBottom: modalMenuReservePx, transition: 'padding-bottom 180ms ease' }}>
+        <div style={{ position: 'relative', zIndex: modalMenuZIndex, flexShrink: 0, paddingBottom: modalMenuReservePx }}>
           <p style={{
             fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
             fontSize: '0.68rem',
