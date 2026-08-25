@@ -96,7 +96,7 @@ function HubTile({
         gap: '8px',
         padding: '14px 12px',
         borderRadius: '12px',
-        border: pending ? '1px solid var(--gold-border)' : '1px solid rgba(255,255,255,0.08)',
+        border: pending ? '1px solid var(--gold-border)' : '1px solid var(--border)',
         background: pending ? 'var(--gold-faint)' : 'rgba(255,255,255,0.02)',
         textDecoration: 'none',
         position: 'relative',

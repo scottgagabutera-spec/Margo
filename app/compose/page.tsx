@@ -453,6 +453,68 @@ function ComposeInner() {
     setLinePickComplete(false)
   }, [])
 
+  const restoreLineToDraft = useCallback((line: ComposeLineDraft) => {
+    setLyric(line.lyric)
+    setSongName(line.songName)
+    setArtistName(line.artistName)
+    setLinkedSongId(line.linkedSongId)
+    setLinkedAudioUrl(line.linkedAudioUrl)
+    setSnippetStart(line.snippetStart)
+    setSnippetEnd(line.snippetEnd)
+    setLinePickComplete(true)
+    setMargoLines([])
+    setLinesLoading(false)
+    const src = line.source || (line.linkedSongId ? 'margo' : 'genius')
+    setSelectedSong({
+      id: line.linkedSongId || line.geniusId || 'draft',
+      title: line.songName,
+      artist: line.artistName,
+      artwork: line.artwork || '',
+      source: src,
+      margoSongId: line.linkedSongId || undefined,
+      audioUrl: line.linkedAudioUrl,
+      externalListenUrl: line.externalListenUrl,
+    })
+  }, [])
+
+  const clearCurrentSongPick = useCallback(() => {
+    setSelectedSong(null)
+    setArtistName('')
+    setSongName('')
+    setLyric('')
+    setLinkedSongId(null)
+    setLinkedAudioUrl(null)
+    setSnippetStart(null)
+    setSnippetEnd(null)
+    setMargoLines([])
+    setLinesLoading(false)
+    setLinePickComplete(false)
+  }, [])
+
+  const handleStep1Back = useCallback(() => {
+    if (committedLines.length > 0) {
+      const last = committedLines[committedLines.length - 1]
+      setCommittedLines((prev) => prev.slice(0, -1))
+      restoreLineToDraft(last)
+      setStep(2)
+      return
+    }
+    if (selectedSong) clearCurrentSongPick()
+  }, [committedLines, selectedSong, restoreLineToDraft, clearCurrentSongPick])
+
+  const handleYourLineBack = useCallback(() => {
+    if (selectedSong?.source === 'margo' && margoLines.length > 0) {
+      setLinePickComplete(false)
+      return
+    }
+    setStep(1)
+  }, [selectedSong, margoLines.length])
+
+  const handleLinePickerBack = useCallback(() => {
+    setStep(1)
+    clearCurrentSongPick()
+  }, [clearCurrentSongPick])
+
   const handleAddAnotherLine = useCallback(() => {
     if (!requireAuth()) return
     if (!lyric.trim() || !songName.trim() || !artistName.trim()) return
@@ -589,6 +651,7 @@ function ComposeInner() {
   // displayName at least once, or dismissed it for this compose session.
   const showNameBanner = step === 4 && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
+  const showStep1Resume = step === 1 && !!selectedSong && (lyric.trim().length > 0 || linePickComplete || committedLines.length > 0)
   const showLinePicker = step === 2 && selectedSong?.source === 'margo' && !linePickComplete
 
 
@@ -599,6 +662,13 @@ function ComposeInner() {
 
           {/* ── Step 1: Search ── */}
           <div style={{ display: step === 1 ? 'block' : 'none' }}>
+            {(committedLines.length > 0 || showStep1Resume) && (
+              <button
+                type="button"
+                onClick={handleStep1Back}
+                style={backBtnStyle}
+              ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
+            )}
             {committedLines.length > 0 && (
               <div style={{
                 marginBottom: '28px', padding: '14px 16px',
@@ -629,6 +699,47 @@ function ComposeInner() {
                 ))}
               </div>
             )}
+            {showStep1Resume ? (
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                  <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>
+                    {committedLines.length > 0 ? 'Add another line' : 'Your song'}
+                  </h1>
+                  <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    {songName}{artistName ? (' · ' + artistName) : ''}
+                  </p>
+                </div>
+                {lyric.trim() ? (
+                  <p style={{
+                    fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text)',
+                    textAlign: 'center', margin: '0 0 20px', lineHeight: 1.45,
+                  }}>
+                    &ldquo;{lyric}&rdquo;
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  style={{
+                    width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none',
+                    background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
+                    fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px',
+                    textTransform: 'uppercase', cursor: 'pointer', marginBottom: '10px',
+                  }}
+                >Continue writing</button>
+                <button
+                  type="button"
+                  onClick={clearCurrentSongPick}
+                  style={{
+                    width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px',
+                    border: '1px solid var(--border-hi)', background: 'transparent',
+                    color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem',
+                    letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
+                  }}
+                >Choose a different song</button>
+              </div>
+            ) : (
+              <>
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: 0 }}>
                 {committedLines.length > 0 ? 'Add another line' : 'Find your lyric'}
@@ -659,6 +770,8 @@ function ComposeInner() {
                 onClose={() => setShowResults(false)}
               />
             </div>
+              </>
+            )}
           </div>
 
           {/* ── Step 2: Line picker (Margo) or lyric input ── */}
@@ -684,18 +797,7 @@ function ComposeInner() {
                   setSnippetEnd(null)
                   setLinePickComplete(true)
                 }}
-                onBack={() => {
-                  setStep(1)
-                  setSelectedSong(null)
-                  setArtistName('')
-                  setSongName('')
-                  setLinkedSongId(null)
-                  setLinkedAudioUrl(null)
-                  setMargoLines([])
-                  setLinePickComplete(false)
-                  setSnippetStart(null)
-                  setSnippetEnd(null)
-                }}
+                onBack={handleLinePickerBack}
               />
             ) : (
               // Viewport-locked writing panel — independent of the page's
@@ -723,21 +825,9 @@ function ComposeInner() {
                   {/* Back + step label — compresses to "‹ Your line", never disappears */}
                   <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
+                      type="button"
                       aria-label="Back"
-                      onClick={() => {
-                        if (selectedSong?.source === 'margo') {
-                          setLinePickComplete(false)
-                        } else {
-                          setStep(1)
-                          setSelectedSong(null)
-                          setArtistName('')
-                          setSongName('')
-                          setLinkedSongId(null)
-                          setLinkedAudioUrl(null)
-                          setSnippetStart(null)
-                          setSnippetEnd(null)
-                        }
-                      }}
+                      onClick={handleYourLineBack}
                       style={{
                         background: 'none', border: 'none', cursor: 'pointer',
                         color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center',
@@ -746,10 +836,10 @@ function ComposeInner() {
                       }}
                     >
                       <ArrowLeftIcon size={16} color="currentColor" />
-                      {!chromeHidden && <span style={{ fontFamily: font, fontSize: '0.82rem', marginLeft: '6px', letterSpacing: '0.5px' }}>Back</span>}
+                      <span style={{ fontFamily: font, fontSize: '0.82rem', marginLeft: '6px', letterSpacing: '0.5px' }}>Back</span>
                     </button>
                     {chromeHidden && (
-                      <span style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)' }}>
+                      <span style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)', marginLeft: '4px' }}>
                         Your line
                       </span>
                     )}
@@ -758,9 +848,6 @@ function ComposeInner() {
                   {!chromeHidden && (
                     <div style={{ flexShrink: 0, textAlign: 'center', margin: '16px 0 24px' }}>
                       <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Your line</h1>
-                      <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                        {selectedSong?.source === 'margo' ? 'Change a word if you need to.' : 'Type the lyric'}
-                      </p>
                     </div>
                   )}
 
@@ -877,9 +964,9 @@ function ComposeInner() {
               <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: emotionLoading ? 0 : '8px' }}>
                 {emotionLoading ? 'Finding the feeling…' : 'How does this feel?'}
               </h1>
-              {!emotionLoading && (
+              {!emotionLoading && suggestedVibe && (
                 <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  {suggestedVibe ? 'We picked one. Change it if that’s not it.' : 'Pick one.'}
+                  Change it if you&apos;d like.
                 </p>
               )}
             </div>
@@ -950,10 +1037,12 @@ function ComposeInner() {
               onClick={() => { if (!posting) setStep(3) }}
             ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Ready to post?</h1>
-              <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                {committedLines.length > 0 ? 'Your multi-line moment is set to go' : 'Your lyric is set to go'}
-              </p>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: committedLines.length > 0 ? '8px' : 0 }}>Ready to post?</h1>
+              {committedLines.length > 0 && (
+                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  A few lines, one moment.
+                </p>
+              )}
             </div>
 
             <ComposeReadyPreview
