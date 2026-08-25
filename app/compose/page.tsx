@@ -180,7 +180,8 @@ function ComposeInner() {
   const [portalMounted, setPortalMounted] = useState(false)
   useEffect(() => setPortalMounted(true), [])
   useEffect(() => {
-    const onWritingScreen = step === 2 && !(selectedSong?.source === 'margo' && !linePickComplete)
+    const onMargoCatalog = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
+    const onWritingScreen = step === 2 && !(onMargoCatalog && !linePickComplete)
     if (!onWritingScreen) return
     if (lyric.length > 0) { setCueRevealChars(YOUR_LINE_CUE.length); return }
     setCueRevealChars(0)
@@ -191,7 +192,7 @@ function ComposeInner() {
       if (i >= YOUR_LINE_CUE.length) window.clearInterval(id)
     }, 45)
     return () => window.clearInterval(id)
-  }, [step, selectedSong, linePickComplete])
+  }, [step, selectedSong, linkedSongId, linePickComplete, lyric.length])
 
   // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
   // and hides the mobile tab bar while typing / search sheet is open.
@@ -511,12 +512,16 @@ function ComposeInner() {
   }, [committedLines, selectedSong, lyric, linePickComplete, restoreLineToDraft, clearCurrentSongPick])
 
   const handleYourLineBack = useCallback(() => {
-    if (selectedSong?.source === 'margo' && margoLines.length > 0) {
+    // Margo catalog — always return to line picker (even when lines list is empty).
+    const onMargoCatalog = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
+    if (onMargoCatalog) {
       setLinePickComplete(false)
+      resetComposeViewport()
       return
     }
     setStep(1)
-  }, [selectedSong, margoLines.length])
+    resetComposeViewport()
+  }, [linkedSongId, selectedSong, resetComposeViewport])
 
   const handleLinePickerBack = useCallback(() => {
     setStep(1)
@@ -660,7 +665,8 @@ function ComposeInner() {
   const showNameBanner = step === 4 && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
   const showStep1Resume = step === 1 && !!selectedSong && (lyric.trim().length > 0 || linePickComplete || committedLines.length > 0)
-  const showLinePicker = step === 2 && selectedSong?.source === 'margo' && !linePickComplete
+  const isMargoCatalogFlow = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
+  const showLinePicker = step === 2 && isMargoCatalogFlow && !linePickComplete
   const showYourLinePanel = step === 2 && !showLinePicker
 
   return (
@@ -782,33 +788,7 @@ function ComposeInner() {
             )}
           </div>
 
-          {/* ── Step 2: Line picker (Margo) or lyric input ── */}
-          <div style={{ display: step === 2 ? 'block' : 'none' }}>
-            {showLinePicker ? (
-              <ComposeLinePicker
-                lines={margoLines}
-                loading={linesLoading}
-                songTitle={songName}
-                artistName={artistName}
-                audioUrl={linkedAudioUrl}
-                songId={linkedSongId}
-                artwork={selectedSong?.artwork || null}
-                stickySkip
-                onPick={(line) => {
-                  setSnippetStart(line.startSec)
-                  setSnippetEnd(line.endSec)
-                  setLyric((line.text || '').slice(0, 140))
-                  setLinePickComplete(true)
-                }}
-                onSkip={() => {
-                  setSnippetStart(null)
-                  setSnippetEnd(null)
-                  setLinePickComplete(true)
-                }}
-                onBack={handleLinePickerBack}
-              />
-            ) : null}
-          </div>
+          {/* Step 2 UI is portaled (line picker + Your line) — see below main */}
 
           {/* ── Step 3: Vibe Selection ── */}
           <div style={{ display: step === 3 ? 'block' : 'none' }}>
@@ -952,8 +932,8 @@ function ComposeInner() {
       </div>
 
       {/* Sticky primary actions — VisualViewport pins above keyboard */}
-      {showLinePicker && !linesLoading && margoLines.length === 0 && (
-        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
+      {showLinePicker && !linesLoading && margoLines.length === 0 && portalMounted && createPortal(
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden} zIndex={85}>
           <button
             type="button"
             onClick={() => {
@@ -963,7 +943,50 @@ function ComposeInner() {
             }}
             style={keyboardSafePrimaryBtnStyle}
           >Continue without hearing it</button>
-        </KeyboardSafeCtaBar>
+        </KeyboardSafeCtaBar>,
+        document.body,
+      )}
+
+      {portalMounted && showLinePicker && createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0,
+          height: 'var(--margo-vv-height, 100dvh)',
+          zIndex: 80,
+          display: 'flex', flexDirection: 'column',
+          background: 'var(--bg)',
+          paddingLeft: '24px', paddingRight: '24px',
+          paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+          paddingBottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 16px)',
+          boxSizing: 'border-box',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}>
+          <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
+            <ComposeLinePicker
+              lines={margoLines}
+              loading={linesLoading}
+              songTitle={songName}
+              artistName={artistName}
+              audioUrl={linkedAudioUrl}
+              songId={linkedSongId}
+              artwork={selectedSong?.artwork || null}
+              stickySkip
+              onPick={(line) => {
+                setSnippetStart(line.startSec)
+                setSnippetEnd(line.endSec)
+                setLyric((line.text || '').slice(0, 140))
+                setLinePickComplete(true)
+              }}
+              onSkip={() => {
+                setSnippetStart(null)
+                setSnippetEnd(null)
+                setLinePickComplete(true)
+              }}
+              onBack={handleLinePickerBack}
+            />
+          </div>
+        </div>,
+        document.body,
       )}
 
       {showYourLinePanel && portalMounted && createPortal(
