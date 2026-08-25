@@ -1,7 +1,7 @@
-const SITE_ORIGIN = 'https://trymargo.com'
+import { MARGO_SITE_ORIGIN } from '@/lib/moment/share'
 
 export function getSongShareUrl(songId: string): string {
-  return `${SITE_ORIGIN}/song/${songId}`
+  return `${MARGO_SITE_ORIGIN}/song/${songId}`
 }
 
 export async function shareSong(opts: {

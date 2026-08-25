@@ -10,6 +10,8 @@ interface MargoLogoProps {
   size?: number
   rings?: boolean
   wordmark?: boolean
+  /** Wordmark only — no circular M mark (hero / search lockup). */
+  wordmarkOnly?: boolean
 }
 
 export default function MargoLogo({
@@ -17,9 +19,27 @@ export default function MargoLogo({
   size = 32,
   rings = false,
   wordmark = false,
+  wordmarkOnly = false,
 }: MargoLogoProps) {
   // Scale wordmark with symbol: 28px → 14px, 36px → 18px (0.5 × mark)
   const wordmarkPx = Math.max(11, Math.round(size * 0.5))
+
+  if (wordmarkOnly) {
+    return (
+      <span style={{
+        fontFamily: 'var(--font-sora), sans-serif',
+        fontWeight: 700,
+        fontSize: `${wordmarkPx}px`,
+        letterSpacing: '2px',
+        color: '#E8C547',
+        textTransform: 'uppercase',
+        lineHeight: 1,
+        display: 'inline-block',
+      }}>
+        MARGO
+      </span>
+    )
+  }
 
   return (
     <>

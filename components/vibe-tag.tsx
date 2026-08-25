@@ -13,41 +13,64 @@ interface VibeTagProps {
    * gold hairline. For surfaces where the vibe should read as information,
    * not another brand-color element (e.g. sitting on the gold Moment card,
    * where gold is already doing the branding).
+   * 'on-gold' — ink hairline + muted ink text on the gold Moment card.
    */
-  variant?: 'tinted' | 'dark'
+  variant?: 'tinted' | 'dark' | 'on-gold'
+  surfaceInk?: string
+  surfaceInkMuted?: string
+  surfaceTagFill?: string
+  surfaceHoleFill?: string
+  /** corner = pinned to card bottom-right; inline = sits in a flex row */
+  layout?: 'corner' | 'inline'
 }
 
 /** Small price-tag silhouette pinned to a card edge — vibe identity via stroke/fill color. */
-export function VibeTag({ label, color, onClick, variant = 'tinted' }: VibeTagProps) {
+export function VibeTag({
+  label,
+  color,
+  onClick,
+  variant = 'tinted',
+  surfaceInk,
+  surfaceInkMuted,
+  surfaceTagFill,
+  surfaceHoleFill,
+  layout = 'corner',
+}: VibeTagProps) {
   const isDark = variant === 'dark'
-  const fill = isDark ? 'var(--surface)' : color
-  const fillOpacity = isDark ? 1 : 0.14
-  const stroke = isDark ? 'var(--gold-border)' : color
-  const textColor = isDark ? 'var(--text)' : color
+  const isOnGold = variant === 'on-gold'
+  const ink = surfaceInk || 'var(--text-on-gold)'
+  const inkMuted = surfaceInkMuted || 'rgba(7,6,10,0.18)'
+  const fill = isOnGold ? (surfaceTagFill || 'rgba(7,6,10,0.08)') : isDark ? 'var(--surface)' : color
+  const fillOpacity = isOnGold ? 1 : isDark ? 1 : 0.14
+  const stroke = isOnGold ? inkMuted : isDark ? 'var(--gold-border)' : color
+  const textColor = isOnGold ? ink : isDark ? 'var(--text)' : color
+
+  const isInline = layout === 'inline'
 
   return (
     <button
       type="button"
       data-no-card-nav
-      aria-label={`Vibe: ${label}`}
+      aria-label={onClick ? `Vibe: ${label}. Tap to change.` : `Vibe: ${label}`}
       onClick={(e) => {
         e.stopPropagation()
         onClick?.()
       }}
       style={{
-        position: 'absolute',
-        bottom: '-9px',
-        right: '14px',
+        position: isInline ? 'relative' : 'absolute',
+        bottom: isInline ? undefined : '-9px',
+        right: isInline ? undefined : '14px',
         zIndex: 4,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '28px',
-        padding: '0 2px 0 0',
+        padding: isInline ? 0 : '0 2px 0 0',
         background: 'none',
         border: 'none',
         cursor: onClick ? 'pointer' : 'default',
         WebkitTapHighlightColor: 'transparent',
+        flexShrink: 0,
       }}
     >
       <span style={{ position: 'relative', display: 'inline-block', height: '22px' }}>
@@ -69,7 +92,7 @@ export function VibeTag({ label, color, onClick, variant = 'tinted' }: VibeTagPr
             strokeWidth="1.2"
             strokeLinejoin="round"
           />
-          <circle cx="9" cy="11" r="2.2" fill="var(--bg)" stroke={stroke} strokeWidth="1.1" />
+          <circle cx="9" cy="11" r="2.2" fill={surfaceHoleFill || (isOnGold ? 'var(--bg)' : 'var(--bg)')} stroke={stroke} strokeWidth="1.1" />
         </svg>
         <span
           style={{

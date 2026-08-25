@@ -8,21 +8,20 @@ import type { CSSProperties } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeftIcon, SearchIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
-import { matchLyricLine } from '@/lib/lyric-match'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
-import { CardExportModal } from '@/components/card-export-modal'
-import { ComposeSendTo } from '@/components/compose-send-to'
+import { MomentShareStudio } from '@/components/moment-share-studio'
+import { ComposeReadyPreview } from '@/components/compose-ready-preview'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { POST_LINES_MAX, type PostLineSource } from '@/lib/post-lines'
+import { POST_LINES_MAX } from '@/lib/post-lines'
+import { resolveMargoMomentFromComposeDrafts } from '@/lib/moment'
+import { persistMomentPost } from '@/lib/moment/persist'
 import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
-import { SongMeta } from '@/components/song-meta'
-import { VibeTag } from '@/components/vibe-tag'
 import { UI_FONT } from '@/lib/fonts'
 
 const supabase = createClient()
@@ -40,6 +39,7 @@ type ComposeLineDraft = {
   snippetEnd: number | null
   source: Source | null
   geniusId: string | null
+  externalListenUrl: string | null
 }
 
 interface SearchResult {
@@ -50,6 +50,7 @@ interface SearchResult {
   source: Source
   margoSongId?: string
   audioUrl?: string | null
+  externalListenUrl?: string | null
 }
 
 type Vibe =
@@ -86,63 +87,7 @@ const backBtnStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
   transition: 'color 150ms ease',
 }
-const actionCaptionStyle: CSSProperties = {
-  fontFamily: UI_FONT, fontSize: '0.68rem',
-  color: 'var(--text-secondary, var(--text-2))', margin: '8px 0 0', lineHeight: 1.4,
-}
-
 type MomentLineDraft = { lyric: string; songName: string; artistName: string }
-
-/**
- * The Moment preview shared by "Ready to send" and the post-Send
- * completion screen — one composition, reused, so the preview the user
- * approves is the same object they see confirmed as sent. Every line gets
- * equal lyric + song/artist treatment (matching how PostCard renders a
- * published multi-line Moment) rather than only the last line looking
- * "real" and earlier lines reading as plain draft text.
- */
-function ComposeMomentCard({
-  lines,
-  vibeLabel,
-  style,
-}: {
-  lines: MomentLineDraft[]
-  vibeLabel?: string | null
-  style?: CSSProperties
-}) {
-  const multi = lines.length > 1
-  return (
-    <ComposeLyricCard style={style}>
-      {lines.map((line, i) => (
-        <div key={i}>
-          {multi && i > 0 && (
-            <p style={{
-              margin: '14px 0 10px', fontFamily: UI_FONT, fontSize: '0.58rem', fontWeight: 700,
-              letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-on-gold-muted)',
-              textAlign: 'center',
-            }}>stitch</p>
-          )}
-          <div style={multi ? { borderLeft: '1px solid rgba(7,6,10,0.18)', paddingLeft: '12px' } : undefined}>
-            <p style={composeLyricTextStyle}>&ldquo;{line.lyric}&rdquo;</p>
-            <div style={{ marginTop: '8px' }}>
-              <SongMeta
-                title={line.songName}
-                artist={line.artistName}
-                titleStyle={{ color: 'var(--text-on-gold)', ...(multi ? { fontSize: '0.78rem' } : null) }}
-                artistStyle={{ color: 'var(--text-on-gold-muted)', ...(multi ? { fontSize: '0.66rem' } : null) }}
-              />
-            </div>
-          </div>
-        </div>
-      ))}
-      {vibeLabel && (
-        <div style={{ position: 'relative', height: '22px', marginTop: '14px' }}>
-          <VibeTag label={vibeLabel} color="var(--text-on-gold)" variant="dark" />
-        </div>
-      )}
-    </ComposeLyricCard>
-  )
-}
 
 function ComposeInner() {
   const router = useRouter()
@@ -189,18 +134,13 @@ function ComposeInner() {
   const [selectedVibe, setSelectedVibe] = useState<Vibe | null>(null)
   const [suggestedVibe, setSuggestedVibe] = useState<Vibe | null>(null)
   const [emotionLoading, setEmotionLoading] = useState(false)
-  const [showExport, setShowExport] = useState(false)
-  const [showSendTo, setShowSendTo] = useState(false)
-  const [sentToName, setSentToName] = useState<string | null>(null)
   const [postedId, setPostedId] = useState<string | null>(null)
-  const [completionMode, setCompletionMode] = useState<'public' | 'private' | null>(null)
+  const [completionMode, setCompletionMode] = useState<'private' | null>(null)
   const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
   const [linkedAudioUrl, setLinkedAudioUrl] = useState<string | null>(null)
   /** Lines already stacked via “Add another line” (current draft is separate). */
   const [committedLines, setCommittedLines] = useState<ComposeLineDraft[]>([])
-  // Committed lines + the in-progress draft, as the full Moment the user is
-  // building — shared by the "Ready to send" preview and the post-Send
-  // completion screen so both render the exact same object.
+  // Committed lines + the in-progress draft for multi-line compose.
   const momentLines = useMemo<MomentLineDraft[]>(
     () => {
       const lines = committedLines.map((l) => ({ lyric: l.lyric, songName: l.songName, artistName: l.artistName }))
@@ -209,16 +149,9 @@ function ComposeInner() {
       }
       return lines
     },
-    [committedLines, lyric, songName, artistName]
-  )
-  const readyMomentLines = useMemo(
-    () => momentLines.filter((l) => l.lyric.trim() && l.songName.trim() && l.artistName.trim()),
-    [momentLines],
+    [committedLines, lyric, songName, artistName],
   )
   // Exact snippet timing — either passed in directly from the player's
-  // share sheet (exact), or matched at post time against the linked
-  // song's real lyric_lines via matchLyricLine (best-effort, may be null
-  // if nothing matches confidently).
   const [snippetStart, setSnippetStart] = useState<number | null>(null)
   const [snippetEnd, setSnippetEnd] = useState<number | null>(null)
   const [margoLines, setMargoLines] = useState<ComposeLyricLine[]>([])
@@ -310,12 +243,15 @@ function ComposeInner() {
       const externalMapped: SearchResult[] = (geniusRes.results || []).map((r: any) => {
         const rawSource = String(r.source || '').toLowerCase()
         const source: Source = (rawSource === 'itunes' || rawSource === 'apple') ? 'apple' : 'genius'
+        const trackViewUrl = typeof r.trackViewUrl === 'string' ? r.trackViewUrl : null
+        const geniusUrl = typeof r.geniusUrl === 'string' ? r.geniusUrl : null
         return {
           id: String(r.id || r.song),
           title: r.song,
           artist: r.artist,
           artwork: r.artwork || '',
           source,
+          externalListenUrl: trackViewUrl || geniusUrl || null,
         }
       }).filter((r: SearchResult) => !margoKeys.has(songMatchKey(r.title, r.artist)))
 
@@ -478,7 +414,27 @@ function ComposeInner() {
     snippetEnd,
     source: selectedSong?.source || (linkedSongId ? 'margo' : null),
     geniusId: selectedSong?.source && selectedSong.source !== 'margo' ? selectedSong.id : null,
+    externalListenUrl: selectedSong?.externalListenUrl ?? null,
   }), [lyric, songName, artistName, linkedSongId, linkedAudioUrl, selectedSong, snippetStart, snippetEnd])
+
+  const allLineDrafts = useMemo(() => {
+    const lines: ComposeLineDraft[] = [...committedLines]
+    const draft = buildCurrentDraft()
+    if (draft.lyric && draft.songName && draft.artistName) lines.push(draft)
+    return lines
+  }, [committedLines, buildCurrentDraft])
+
+  const exportMoment = useMemo(() => {
+    const drafts = [...committedLines]
+    const draft = buildCurrentDraft()
+    if (draft.lyric && draft.songName && draft.artistName) drafts.push(draft)
+    return resolveMargoMomentFromComposeDrafts(drafts, {
+      postId: postedId,
+      vibeLabel: selectedVibe ? VIBE_LABELS[selectedVibe] : null,
+      emotion: selectedVibe ? selectedVibe.toLowerCase() : null,
+      status: completionMode === 'private' ? 'private' : null,
+    })
+  }, [committedLines, buildCurrentDraft, postedId, selectedVibe, completionMode])
 
   const clearDraftFields = useCallback(() => {
     setSearchQuery('')
@@ -510,6 +466,30 @@ function ComposeInner() {
     buildCurrentDraft, clearDraftFields, resetComposeViewport,
   ])
 
+  const resetCompose = () => {
+    setStep(1)
+    setSearchQuery('')
+    setSelectedSong(null)
+    setArtistName('')
+    setSongName('')
+    setLyric('')
+    setSelectedVibe(null)
+    setSuggestedVibe(null)
+    setPostedId(null)
+    setCompletionMode(null)
+    setLinkedSongId(null)
+    setLinkedAudioUrl(null)
+    setSnippetStart(null)
+    setSnippetEnd(null)
+    setMargoLines([])
+    setLinesLoading(false)
+    setLinePickComplete(false)
+    setPosting(false)
+    setPostError(null)
+    setBannerDismissed(false)
+    setCommittedLines([])
+  }
+
   const handlePost = useCallback(async (isPrivate: boolean) => {
     if (!requireAuth()) return
     if (!identity || !user) { setPostError('Still setting things up — try again in a moment.'); return }
@@ -531,80 +511,46 @@ function ComposeInner() {
     const authorId = user.id
 
     try {
-      const resolvedLines: ComposeLineDraft[] = []
-      for (const line of lines) {
-        let resolvedStart = line.snippetStart
-        let resolvedEnd = line.snippetEnd
-        if ((resolvedStart == null || resolvedEnd == null) && line.linkedSongId) {
-          const match = await matchLyricLine(supabase, line.linkedSongId, line.lyric)
-          if (match) {
-            resolvedStart = match.startSec
-            resolvedEnd = match.endSec
-          }
-        }
-        resolvedLines.push({ ...line, snippetStart: resolvedStart, snippetEnd: resolvedEnd })
+      const lines: ComposeLineDraft[] = [...committedLines]
+      const draft = buildCurrentDraft()
+      if (draft.lyric && draft.songName && draft.artistName) {
+        lines.push(draft)
+      }
+      if (lines.length === 0) return
+      if (lines.length > POST_LINES_MAX) {
+        setPostError(`Moments can hold up to ${POST_LINES_MAX} lines.`)
+        return
       }
 
-      const mirror = resolvedLines[0]
-      const { data, error: insertErr } = await supabase
-        .from('posts')
-        .insert({
-          text: mirror.lyric,
-          emotion: selectedVibe || null,
-          status: isPrivate ? 'private' : 'active',
-          flag_count: 0,
-          song_id: mirror.linkedSongId || null,
-          song_title: mirror.songName,
-          artist_name: mirror.artistName,
-          artwork_url: mirror.artwork || null,
-          genius_id: mirror.geniusId || null,
-          author_profile_id: authorId,
-          parent_post_id: null,
-          lang: navigator.language.split('-')[0] || 'en',
-          snippet_start_sec: mirror.snippetStart,
-          snippet_end_sec: mirror.snippetEnd,
-        })
-        .select('id')
-        .single()
-
-      if (insertErr) throw insertErr
-
-      const newPostId = data.id
-      setPostedId(newPostId)
-
-      const lineRows = resolvedLines.map((line, position) => {
-        const source: PostLineSource = line.linkedSongId
-          ? 'catalog'
-          : (line.source === 'margo' ? 'catalog' : 'external')
-        return {
-          post_id: newPostId,
-          position,
-          text: line.lyric,
-          song_id: line.linkedSongId || null,
-          song_title: line.songName,
-          artist_name: line.artistName,
-          artwork_url: line.artwork || null,
-          snippet_start_sec: line.snippetStart,
-          snippet_end_sec: line.snippetEnd,
-          source,
-        }
+      const { postId: newPostId } = await persistMomentPost(supabase, {
+        lines: lines.map((line) => ({
+          lyric: line.lyric,
+          songName: line.songName,
+          artistName: line.artistName,
+          linkedSongId: line.linkedSongId,
+          linkedAudioUrl: line.linkedAudioUrl,
+          artwork: line.artwork,
+          snippetStart: line.snippetStart,
+          snippetEnd: line.snippetEnd,
+          source: line.source,
+          geniusId: line.geniusId,
+          externalListenUrl: line.externalListenUrl,
+        })),
+        emotion: selectedVibe || null,
+        status: isPrivate ? 'private' : 'active',
+        authorId,
+        lang: navigator.language.split('-')[0] || 'en',
       })
 
-      const { error: linesErr } = await supabase.from('post_lines').insert(lineRows)
-      if (linesErr) {
-        console.error('Failed to insert post_lines:', linesErr)
-        // Post row already exists — surface soft error but continue completion.
-      }
-
-      fetch('/api/moderate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: mirror.lyric, postId: newPostId }),
-      }).catch(() => {})
-
+      setPostedId(newPostId)
       setPosting(false)
-      setCompletionMode(isPrivate ? 'private' : 'public')
-      resetComposeViewport()
+      if (isPrivate) {
+        setCompletionMode('private')
+        resetComposeViewport()
+      } else {
+        router.push(`/feed?highlight=${encodeURIComponent(newPostId)}`)
+        resetCompose()
+      }
     } catch (e) {
       console.error('Failed to post:', e)
       setPostError('Something went wrong. Please try again.')
@@ -612,141 +558,32 @@ function ComposeInner() {
     }
   }, [
     requireAuth, identity, user, buildCurrentDraft, committedLines,
-    selectedVibe, resetComposeViewport,
+    selectedVibe, resetComposeViewport, router,
   ])
 
-
-  const resetCompose = () => {
-    setStep(1)
-    setSearchQuery('')
-    setSelectedSong(null)
-    setArtistName('')
-    setSongName('')
-    setLyric('')
-    setSelectedVibe(null)
-    setSuggestedVibe(null)
-    setPostedId(null)
-    setCompletionMode(null)
-    setShowExport(false)
-    setShowSendTo(false)
-    setSentToName(null)
-    setLinkedSongId(null)
-    setLinkedAudioUrl(null)
-    setSnippetStart(null)
-    setSnippetEnd(null)
-    setMargoLines([])
-    setLinesLoading(false)
-    setLinePickComplete(false)
-    setPosting(false)
-    setPostError(null)
-    setBannerDismissed(false)
-    setCommittedLines([])
-  }
-
-  if (completionMode) {
-    const isPrivateSave = completionMode === 'private'
+  if (completionMode === 'private') {
     return (
-      <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', paddingTop: '40px' }}>
+      <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', padding: '16px 16px var(--margo-page-padding-bottom)' }}>
+        <div style={{ maxWidth: '400px', width: '100%', margin: '0 auto', paddingTop: '16px' }}>
           <button
             type="button"
             onClick={resetCompose}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              fontFamily: font, fontSize: '0.75rem', color: 'var(--text-secondary, var(--text-2))',
-              letterSpacing: '0.5px', minHeight: 'var(--margo-touch-min)', padding: '0 12px',
-              display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-              marginBottom: '20px',
+              fontFamily: font, fontSize: '0.68rem', color: 'var(--text-secondary, var(--text-2))',
+              letterSpacing: '0.5px', minHeight: '36px', padding: '0 4px', marginBottom: '12px',
             }}
           >Done</button>
-          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: 'var(--text)', marginBottom: '8px' }}>
-            {isPrivateSave ? 'Saved privately.' : 'Sent.'}
+
+          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', marginBottom: '6px' }}>
+            Saved privately.
           </p>
-          <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '28px', letterSpacing: '0.5px' }}>
-            {isPrivateSave
-              ? 'Only you can see this — it stays off the Feed.'
-              : (sentToName ? 'Sent to ' + sentToName + '.' : 'Your Moment is now on Margo.')}
+          <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary, var(--text-2))', marginBottom: '16px' }}>
+            Only you can see this. Save or share below.
           </p>
-          <ComposeMomentCard
-            lines={readyMomentLines}
-            vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : null}
-            style={{ marginBottom: '28px', textAlign: 'left' }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', marginBottom: '24px' }}>
-            {!isPrivateSave && (
-              <div>
-                <button
-                  type="button"
-                  onClick={() => { if (postedId) setShowSendTo(true) }}
-                  style={{
-                    width: '100%', padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
-                    background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
-                    borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                    fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
-                    border: 'none', cursor: postedId ? 'pointer' : 'default',
-                    boxShadow: '0 6px 28px var(--gold-glow)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxSizing: 'border-box',
-                    opacity: postedId ? 1 : 0.5,
-                  }}
-                >Send to someone</button>
-                <p style={actionCaptionStyle}>Send this Moment directly to someone</p>
-              </div>
-            )}
-            <div>
-              <button
-                type="button"
-                onClick={() => { setShowExport(true) }}
-                style={{
-                  width: '100%', padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
-                  background: isPrivateSave ? 'var(--gold)' : 'transparent',
-                  color: isPrivateSave ? 'var(--text-on-gold, var(--bg))' : 'var(--gold)',
-                  borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase',
-                  border: isPrivateSave ? 'none' : '1px solid var(--gold-border)',
-                  cursor: 'pointer',
-                  boxShadow: isPrivateSave ? '0 6px 28px var(--gold-glow)' : 'none',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxSizing: 'border-box',
-                }}
-              >Share as card</button>
-              <p style={actionCaptionStyle}>Share your Moment outside Margo</p>
-            </div>
-            <div>
-              <button
-                type="button"
-                onClick={() => router.push(isPrivateSave ? (identity?.username ? '/profile/' + identity.username : '/feed') : '/feed')}
-                style={{
-                  width: '100%', padding: '13px 28px', minHeight: 'var(--margo-touch-min)',
-                  background: 'transparent', color: 'var(--text-secondary, var(--text-2))',
-                  border: '1px solid var(--border-hi)', borderRadius: '50px', fontFamily: font,
-                  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxSizing: 'border-box',
-                }}
-              >{isPrivateSave ? 'Back to your profile' : 'See it on Feed'}</button>
-              {!isPrivateSave && <p style={actionCaptionStyle}>View your Moment on Margo</p>}
-            </div>
-          </div>
+
+          <MomentShareStudio moment={exportMoment} compact />
         </div>
-        <CardExportModal
-          open={showExport}
-          onOpenChange={setShowExport}
-          lines={readyMomentLines}
-          postId={postedId || undefined}
-          vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : undefined}
-        />
-        {!isPrivateSave && postedId && (
-          <ComposeSendTo
-            open={showSendTo}
-            onOpenChange={setShowSendTo}
-            postId={postedId}
-            lyric={lyric}
-            song={songName}
-            artist={artistName}
-            onSent={setSentToName}
-          />
-        )}
       </main>
     )
   }
@@ -1122,10 +959,10 @@ function ComposeInner() {
               </p>
             </div>
 
-            <ComposeMomentCard
-              lines={readyMomentLines}
+            <ComposeReadyPreview
+              drafts={allLineDrafts}
               vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : null}
-              style={{ marginBottom: '32px' }}
+              suggestedVibeLabel={suggestedVibe ? VIBE_LABELS[suggestedVibe] : null}
             />
 
             {/* Display name banner — shown until customized once, or dismissed */}

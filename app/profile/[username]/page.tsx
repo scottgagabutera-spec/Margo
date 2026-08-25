@@ -15,7 +15,7 @@ import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-ca
 import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-preview-sheet'
 import { PostCard } from '@/components/post-card'
 import { CardExportModal } from '@/components/card-export-modal'
-import { resolveMomentLines } from '@/lib/post-lines'
+import { resolveMargoMomentFromPost } from '@/lib/moment'
 import { MoreIcon } from '@/components/icons'
 import type { Post } from '@/hooks/usePosts'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
@@ -886,8 +886,7 @@ export default function ProfilePage() {
       <CardExportModal
         open={!!exportPost}
         onOpenChange={(o) => { if (!o) setExportPost(null) }}
-        lines={exportPost ? resolveMomentLines(exportPost) : undefined}
-        postId={exportPost?.id}
+        moment={exportPost ? resolveMargoMomentFromPost(exportPost) : null}
       />
       {profile?.avatarUrl ? (
         <ProfileImageLightbox

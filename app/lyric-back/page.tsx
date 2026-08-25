@@ -782,7 +782,7 @@ function LyricBackContent() {
                 type="text"
                 value={searchQuery}
                 onChange={e => handleSearch(e.target.value)}
-                placeholder={catalogOnly ? 'Search Margo songs and artists…' : 'Search by lyric, song or artist...'}
+                placeholder="Search by lyric, song or artist…"
                 style={{
                   width: '100%', height: '44px', paddingLeft: '40px', paddingRight: '14px',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
