@@ -266,76 +266,6 @@ export function StageMomentCard({
 
       {showFooter ? (
         <div style={{ marginTop: '16px' }}>
-          {vibePickerOpen && canPickVibe ? (
-            <div
-              role="listbox"
-              aria-label="Choose a vibe"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-                gap: '6px',
-                marginBottom: '14px',
-                width: '100%',
-                paddingBottom: '2px',
-                borderBottom: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.1)'}`,
-              }}
-            >
-              {vibeOptions.map((option) => {
-                const selected = option === vibeLabel
-                const suggested = option === suggestedVibeLabel && !selected
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    onClick={() => {
-                      onVibeSelect?.(option)
-                      setVibePickerOpen(false)
-                    }}
-                    style={{
-                      position: 'relative',
-                      minHeight: '26px',
-                      padding: '0 4px',
-                      borderRadius: '50px',
-                      border: selected
-                        ? `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.35)' : 'rgba(255,255,255,0.35)'}`
-                        : `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.16)' : 'rgba(255,255,255,0.16)'}`,
-                      background: selected
-                        ? (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.14)')
-                        : (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.06)' : 'rgba(255,255,255,0.06)'),
-                      color: theme.ink,
-                      fontFamily: UI_FONT,
-                      fontSize: '0.58rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {option}
-                    {suggested ? (
-                      <span
-                        aria-hidden
-                        style={{
-                          position: 'absolute',
-                          top: '-3px',
-                          right: '-3px',
-                          width: '7px',
-                          height: '7px',
-                          borderRadius: '50%',
-                          background: theme.ink,
-                          border: `1.5px solid ${theme.bg}`,
-                        }}
-                      />
-                    ) : null}
-                  </button>
-                )
-              })}
-            </div>
-          ) : null}
-
           <div
             style={{
               display: 'flex',
@@ -406,6 +336,77 @@ export function StageMomentCard({
               </button>
             ) : null}
           </div>
+
+          {vibePickerOpen && canPickVibe ? (
+            <div
+              role="listbox"
+              aria-label="Choose a vibe"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+                gap: '6px',
+                marginTop: '14px',
+                width: '100%',
+                paddingBottom: '2px',
+                borderTop: `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.1)'}`,
+                paddingTop: '14px',
+              }}
+            >
+              {vibeOptions.map((option) => {
+                const selected = option === vibeLabel
+                const suggested = option === suggestedVibeLabel && !selected
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      onVibeSelect?.(option)
+                      setVibePickerOpen(false)
+                    }}
+                    style={{
+                      position: 'relative',
+                      minHeight: '26px',
+                      padding: '0 4px',
+                      borderRadius: '50px',
+                      border: selected
+                        ? `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.35)' : 'rgba(255,255,255,0.35)'}`
+                        : `1px solid ${theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.16)' : 'rgba(255,255,255,0.16)'}`,
+                      background: selected
+                        ? (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.14)')
+                        : (theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.06)' : 'rgba(255,255,255,0.06)'),
+                      color: theme.ink,
+                      fontFamily: UI_FONT,
+                      fontSize: '0.58rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {option}
+                    {suggested ? (
+                      <span
+                        aria-hidden
+                        style={{
+                          position: 'absolute',
+                          top: '-3px',
+                          right: '-3px',
+                          width: '7px',
+                          height: '7px',
+                          borderRadius: '50%',
+                          background: theme.ink,
+                          border: `1.5px solid ${theme.bg}`,
+                        }}
+                      />
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </ComposeLyricCard>

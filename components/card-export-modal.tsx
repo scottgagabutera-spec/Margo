@@ -58,12 +58,12 @@ export function CardExportModal({
           position: 'relative',
           zIndex: 1,
           display: 'flex',
-          alignItems: 'center',
           justifyContent: 'center',
+          alignItems: 'flex-start',
           minHeight: '100%',
           padding: '12px',
           paddingTop: 'clamp(20px, 7vh, 48px)',
-          /* Nudge modal slightly above center so Save/Share dropdowns clear the tab bar */
+          /* Top-anchored sheet: vibe expansion grows downward, not by re-centering */
           paddingBottom: 'calc(12px + var(--margo-tabbar-h, 64px) + 28px)',
           pointerEvents: 'none',
         }}
