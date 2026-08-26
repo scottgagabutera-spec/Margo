@@ -371,7 +371,7 @@ export default function AccountSettingsPage() {
 
   if (authLoading || loading) {
     return (
-      <div style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
+      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
         Loading your settings.
       </div>
     )
@@ -379,7 +379,7 @@ export default function AccountSettingsPage() {
 
   if (!user) {
     return (
-      <div style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
+      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
         Sign in to view account settings.
       </div>
     )
@@ -387,7 +387,7 @@ export default function AccountSettingsPage() {
 
   if (!profile) {
     return (
-      <div style={{ padding: '120px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
+      <div style={{ padding: 'calc(var(--nav-height, 72px) + 24px) 24px', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: font }}>
         Could not load your profile. Try refreshing the page.
       </div>
     )
@@ -398,7 +398,7 @@ export default function AccountSettingsPage() {
       style={{
         maxWidth: 640,
         margin: '0 auto',
-        padding: '120px 24px var(--margo-page-padding-bottom)',
+        padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)',
       }}
     >
       <div style={{ marginBottom: '24px' }}>

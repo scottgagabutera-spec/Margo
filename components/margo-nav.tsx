@@ -154,7 +154,10 @@ export function MargoNav() {
   return (
     <nav ref={navElRef} className="margo-nav-bar" style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-      padding: '14px 24px',
+      paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+      paddingRight: '24px',
+      paddingBottom: '14px',
+      paddingLeft: '24px',
       background: 'var(--bg)',
       boxShadow: '0 1px 24px rgba(0,0,0,0.35)',
     }}>

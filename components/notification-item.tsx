@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { Notification } from '@/hooks/useNotifications'
 import { useNotifications } from '@/hooks/useNotifications'
 import { RelativeTime } from '@/components/relative-time'
+import { notificationHref } from '@/lib/navigation/notification-routes'
 
 const font = 'var(--font-lora), serif'
 
@@ -22,20 +23,6 @@ function messageFor(n: Notification) {
     case 'removed': return `Your artist status was removed`
     case 'restored': return `Your artist account was restored to good standing`
     default: return `${name} did something`
-  }
-}
-
-function hrefFor(n: Notification) {
-  switch (n.type) {
-    case 'message': return n.actor ? `/messages/${n.actor.username}` : '/messages'
-    case 'resonate': return n.postId ? `/post/${n.postId}` : '/feed'
-    case 'lyric_back': return n.postId ? `/post/${n.postId}` : '/feed'
-    case 'follow': return n.actor ? `/profile/${n.actor.username}` : '/feed'
-    case 'follow_request': return n.actor ? `/profile/${n.actor.username}` : '/feed'
-    case 'artist_approved': return '/studio'
-    case 'artist_rejected': return '/apply-artist'
-    case 'warned': case 'frozen': case 'removed': case 'restored': return '/settings'
-    default: return '/feed'
   }
 }
 
@@ -136,9 +123,9 @@ export function NotificationItem({
         background: unread ? 'rgba(232,197,71,0.06)' : 'transparent',
         borderRadius: '8px',
       }}>
-        <PendingNavLink href={hrefFor(notification)} indicator="tint" style={{ flexShrink: 0, borderRadius: '50%' }}>{avatar}</PendingNavLink>
+        <PendingNavLink href={notificationHref(notification)} indicator="tint" style={{ flexShrink: 0, borderRadius: '50%' }}>{avatar}</PendingNavLink>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <PendingNavLink href={hrefFor(notification)} indicator="tint" style={{ textDecoration: 'none', borderRadius: '6px' }}>
+          <PendingNavLink href={notificationHref(notification)} indicator="tint" style={{ textDecoration: 'none', borderRadius: '6px' }}>
             <p style={{ fontFamily: font, fontSize: '0.78rem', color: 'var(--text)', margin: 0, lineHeight: 1.4 }}>
               {messageFor(notification)}
             </p>
@@ -183,7 +170,7 @@ export function NotificationItem({
 
   return (
     <PendingNavLink
-      href={hrefFor(notification)}
+      href={notificationHref(notification)}
       onClick={onNavigate}
       style={{
         display: 'flex', alignItems: 'flex-start', gap: '10px',

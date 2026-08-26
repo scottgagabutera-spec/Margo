@@ -37,7 +37,7 @@ export default function ApplyArtistPage() {
   if (identity.isArtist) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-        <div style={{ maxWidth: '420px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom, 80px)', textAlign: 'center' }}>
+        <div style={{ maxWidth: '420px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)', textAlign: 'center' }}>
           <div style={{ marginBottom: '24px', textAlign: 'left' }}>
             <BackButton fallbackHref={ownProfileHref} />
           </div>
@@ -74,7 +74,7 @@ export default function ApplyArtistPage() {
   if (status === 'pending') {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-        <div style={{ maxWidth: '420px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom, 80px)', textAlign: 'center' }}>
+        <div style={{ maxWidth: '420px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)', textAlign: 'center' }}>
           <div style={{ marginBottom: '24px', textAlign: 'left' }}>
             <BackButton fallbackHref={ownProfileHref} />
           </div>
@@ -94,7 +94,7 @@ export default function ApplyArtistPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom, 80px)' }}>
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)' }}>
         <div style={{ marginBottom: '24px' }}>
           <BackButton fallbackHref={ownProfileHref} />
         </div>

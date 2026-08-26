@@ -11,18 +11,18 @@ export default function SigninPage() {
   const [mode, setMode] = useState<'signup' | 'signin'>('signin')
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative', overflow: 'hidden' }}>
       {/* Back button sits below the global nav's logo instead of colliding
           with it — the nav renders fixed at the top of every page via the
           root layout, so this needs its own clearance rather than pinning
           to the very top of the viewport. */}
-      <div style={{ position: 'fixed', top: '72px', left: '20px', zIndex: 60 }}>
+      <div style={{ position: 'fixed', top: 'calc(var(--nav-height, 72px) + 8px)', left: '20px', zIndex: 60 }}>
         <BackButton fallbackHref="/" />
       </div>
 
       <style jsx>{`
         .signin-shell {
-          min-height: 100vh;
+          min-height: 100dvh;
           display: grid;
           grid-template-columns: 1.1fr 1fr;
         }

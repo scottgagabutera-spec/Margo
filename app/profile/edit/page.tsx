@@ -159,7 +159,7 @@ export default function EditProfilePage() {
     <main style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <div style={{ position: 'fixed', top: '20%', left: '20%', width: '320px', height: '320px', background: 'rgba(232,197,71,0.05)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
-      <div style={{ paddingTop: '120px', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '24px', paddingRight: '24px' }}>
+      <div style={{ paddingTop: 'calc(var(--nav-height, 72px) + 24px)', paddingBottom: 'var(--margo-page-padding-bottom)', paddingLeft: '24px', paddingRight: '24px' }}>
         <div style={{ maxWidth: '560px', margin: '0 auto' }}>
           <div style={{ marginBottom: '16px' }}>
             <BackButton fallbackHref={`/profile/${identity.username}`} />

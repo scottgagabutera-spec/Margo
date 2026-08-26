@@ -356,7 +356,7 @@ export function PrimaryTabShell({
           }
         })
       }
-      window.scrollTo(0, 0)
+      window.scrollTo(0, 0) // reset document scroll; primary panes are position:fixed
     }
 
     for (const el of paneElsRef.current.values()) {

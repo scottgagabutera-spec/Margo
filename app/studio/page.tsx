@@ -125,7 +125,7 @@ export default function StudioPage() {
   if (!identity?.isArtist) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-        <div style={{ maxWidth: '520px', margin: '0 auto', padding: '120px 24px 80px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '520px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)', textAlign: 'center' }}>
           <p style={{ fontFamily: font, fontSize: '0.6rem', color: 'var(--gold)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '16px' }}>
             Studio
           </p>
@@ -160,7 +160,7 @@ export default function StudioPage() {
     const isRemoved = identity.artistStatus === 'removed'
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-        <div style={{ maxWidth: '460px', margin: '0 auto', padding: '120px 24px 80px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '460px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)', textAlign: 'center' }}>
           <div style={{ marginBottom: '24px' }}>
             <PauseCircleIcon />
           </div>
@@ -187,7 +187,7 @@ export default function StudioPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <div style={{ maxWidth: '860px', margin: '0 auto', padding: '100px 24px var(--margo-page-padding-bottom, 80px)' }}>
+      <div style={{ maxWidth: '860px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 24px) 24px var(--margo-page-padding-bottom)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
           <BackButton fallbackHref="/feed" />
           <div>
