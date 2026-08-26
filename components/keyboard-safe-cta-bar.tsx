@@ -12,6 +12,8 @@ interface KeyboardSafeCtaBarProps {
    * When false, clear tab bar + mini-player via --margo-page-bottom.
    */
   keyboardOpen?: boolean
+  /** Opaque bar surface (e.g. DM composer). Default keeps Compose fade gradient. */
+  solidBackground?: boolean
   zIndex?: number
   /** Inner content max width — defaults to 640px (Compose). */
   contentMaxWidth?: number | string
@@ -36,6 +38,7 @@ interface KeyboardSafeCtaBarProps {
 export function KeyboardSafeCtaBar({
   children,
   keyboardOpen = false,
+  solidBackground = false,
   zIndex = 55,
   contentMaxWidth = 640,
 }: KeyboardSafeCtaBarProps) {
@@ -68,9 +71,10 @@ export function KeyboardSafeCtaBar({
     paddingBottom: keyboardOpen
       ? '12px'
       : 'calc(12px + var(--margo-page-bottom, var(--margo-tabbar-h, 0px)))',
-    background: 'linear-gradient(to top, var(--bg) 55%, transparent)',
+    background: solidBackground
+      ? 'var(--bg)'
+      : 'linear-gradient(to top, var(--bg) 55%, transparent)',
     pointerEvents: 'none',
-    transition: 'bottom 120ms var(--ease-out), padding-bottom 120ms var(--ease-out)',
   }
 
   return (

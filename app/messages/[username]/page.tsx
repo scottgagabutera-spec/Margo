@@ -59,14 +59,14 @@ export default function ThreadPage() {
   const [draft, setDraft] = useState('')
   const [isMobile, setIsMobile] = useState(false)
 
-  const { keyboardOpen, chromeHidden } = useKeyboardSafeChrome()
+  const { keyboardOpen } = useKeyboardSafeChrome()
 
   const threadReady = !!partner && !loading && !loadError
   const { scrollRef, handleScroll, scrollToLatestAfterSend } = useConversationScroll({
     ready: threadReady,
     loading,
     messagesLength: messages.length,
-    keyboardOpen: keyboardOpen || chromeHidden,
+    keyboardOpen,
   })
 
   const isSignedIn = !!user && !user.isAnonymous
@@ -122,7 +122,8 @@ export default function ThreadPage() {
 
   const composer = (
     <KeyboardSafeCtaBar
-      keyboardOpen={keyboardOpen || chromeHidden}
+      keyboardOpen={keyboardOpen}
+      solidBackground
       contentMaxWidth={560}
     >
       {!canSend ? (

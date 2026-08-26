@@ -78,14 +78,20 @@ export function useConversationScroll({
 
   // Composer height / viewport changes (--margo-cta-bar-h updates)
   useEffect(() => {
+    let rafId = 0
     const onViewportChange = () => {
       if (!initialScrolledRef.current) return
       if (!isNearBottomRef.current) return
-      scrollToLatest('auto')
+      if (rafId) cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        rafId = 0
+        scrollToLatest('auto')
+      })
     }
     window.visualViewport?.addEventListener('resize', onViewportChange)
     window.addEventListener('resize', onViewportChange)
     return () => {
+      if (rafId) cancelAnimationFrame(rafId)
       window.visualViewport?.removeEventListener('resize', onViewportChange)
       window.removeEventListener('resize', onViewportChange)
     }
