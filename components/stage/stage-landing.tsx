@@ -14,6 +14,7 @@ import MargoLogo from '@/components/MargoLogo'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
 import { resolveMargoMomentFromStage, canShareImageFiles } from '@/lib/moment'
 import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
+import { saveMargoMomentPdf, shareMargoMomentPdf } from '@/lib/moment-export/save-moment-pdf'
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import { MomentActionMenu } from '@/components/moment-action-menu'
 import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
@@ -518,17 +519,40 @@ export function StageLanding() {
     }
   }, [hasMoment, buildExportMoment])
 
+  const handleSavePdf = useCallback(async () => {
+    if (!hasMoment) return
+    setSaving(true)
+    try {
+      await saveMargoMomentPdf(buildExportMoment())
+    } finally {
+      setSaving(false)
+    }
+  }, [hasMoment, buildExportMoment])
+
+  const handleSharePdf = useCallback(async () => {
+    if (!hasMoment) return
+    setShareBusy(true)
+    try {
+      await shareMargoMomentPdf(buildExportMoment())
+    } finally {
+      setShareBusy(false)
+    }
+  }, [hasMoment, buildExportMoment])
+
   const canShareImg = canShareImageFiles()
 
   const saveItems: MomentActionMenuItem[] = buildMomentExportActionItems({
     onExportImage: () => { void handleSaveImage() },
+    onExportPdf: () => { void handleSavePdf() },
     hasPlayableSnippet: canPlay,
   })
 
   const shareItems = buildMomentShareActionItems({
     canShareImage: canShareImg,
+    canSharePdf: canShareImg,
     linksActive: false,
     onShareImage: () => { void handleShareImage() },
+    onSharePdf: () => { void handleSharePdf() },
     onShareLink: () => {},
     onCopyLink: () => {},
   })

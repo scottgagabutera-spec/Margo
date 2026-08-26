@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { setBrowserAccessToken } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { SignupLegalNotice } from '@/components/signup-legal-notice'
 import type { AuthError } from '@supabase/supabase-js'
 
 const font = 'var(--font-lora), serif'
@@ -51,7 +52,11 @@ export function AuthForm({ mode, onSuccess, onSwitchMode }: AuthFormProps) {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          ...(mode === 'signup' ? { acceptedTerms: true } : {}),
+        }),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -97,6 +102,8 @@ export function AuthForm({ mode, onSuccess, onSwitchMode }: AuthFormProps) {
           {mode === 'signup' ? 'Create your account' : 'Sign in'}
         </h1>
       </div>
+
+      {mode === 'signup' ? <SignupLegalNotice /> : null}
 
       <button
         onClick={() => handleOAuthSubmit('google')}

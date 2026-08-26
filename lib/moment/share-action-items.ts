@@ -2,6 +2,7 @@ import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 
 export interface BuildMomentExportActionItemsInput {
   onExportImage: () => void
+  onExportPdf?: () => void
   /** When false, only Image (e.g. lyric-back dual card). */
   showFormats?: boolean
   hasPlayableSnippet?: boolean
@@ -11,6 +12,7 @@ export interface BuildMomentExportActionItemsInput {
 /** Export ▾ submenu: Image / PDF / GIF — shared by Stage + Card modal. */
 export function buildMomentExportActionItems({
   onExportImage,
+  onExportPdf,
   showFormats = true,
   hasPlayableSnippet = false,
   onExportGif = () => {},
@@ -20,7 +22,12 @@ export function buildMomentExportActionItems({
   ]
   if (!showFormats) return items
   items.push(
-    { id: 'pdf', label: 'PDF', hint: 'Coming soon', disabled: true, onClick: () => {} },
+    {
+      id: 'pdf',
+      label: 'PDF',
+      onClick: onExportPdf ?? (() => {}),
+      disabled: !onExportPdf,
+    },
     {
       id: 'gif',
       label: 'GIF',
@@ -33,8 +40,10 @@ export function buildMomentExportActionItems({
 
 export interface BuildMomentShareActionItemsInput {
   canShareImage: boolean
+  canSharePdf?: boolean
   linksActive: boolean
   onShareImage: () => void
+  onSharePdf?: () => void
   onShareLink: () => void
   onCopyLink: () => void
   /** When false, link/copy rows are omitted (not shown disabled). */
@@ -48,8 +57,10 @@ export interface BuildMomentShareActionItemsInput {
  */
 export function buildMomentShareActionItems({
   canShareImage,
+  canSharePdf = false,
   linksActive,
   onShareImage,
+  onSharePdf,
   onShareLink,
   onCopyLink,
   showPendingLinks = false,
@@ -59,6 +70,10 @@ export function buildMomentShareActionItems({
 
   if (canShareImage) {
     items.push({ id: 'img', label: 'Share image', onClick: onShareImage })
+  }
+
+  if (canSharePdf && onSharePdf) {
+    items.push({ id: 'pdf', label: 'Share PDF', onClick: onSharePdf })
   }
 
   if (linksActive) {

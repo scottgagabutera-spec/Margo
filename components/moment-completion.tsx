@@ -67,8 +67,11 @@ export function MomentCompletion({
             moment={moment}
             compact
             onShareMenuOpen={() => trackEvent('share_opened', { mode })}
-            onShared={() => trackEvent('moment_shared', { mode })}
-            onExported={() => trackEvent('moment_exported', { mode })}
+            onShared={(details) => trackEvent('moment_shared', {
+              mode,
+              ...(details?.format ? { format: details.format } : {}),
+            })}
+            onExported={(format) => trackEvent('moment_exported', { mode, format })}
           />
         )}
 

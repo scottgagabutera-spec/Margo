@@ -5,6 +5,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { touchLastSeen } from '@/lib/engagement/last-seen'
 import { sanitizeArtistLinks } from '@/lib/artist-links'
+import { mergeLegalConsentIntoSettings } from '@/lib/legal/consent'
 import type { ArtistApplicationLinks } from '@/lib/artist-music-group'
 
 const supabase = createClient()
@@ -148,6 +149,16 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
     const meta = su.user_metadata || {}
     const realName: string | null = meta.full_name || meta.name || null
     const avatarUrl: string | null = meta.avatar_url || meta.picture || null
+    const settings = mergeLegalConsentIntoSettings(
+      meta.terms_accepted_at
+        ? {
+            legal: {
+              termsAcceptedAt: meta.terms_accepted_at,
+              termsVersion: meta.terms_version || null,
+            },
+          }
+        : null,
+    )
 
     let username = generateUsername()
     for (let attempts = 0; attempts < 5; attempts++) {
@@ -158,6 +169,7 @@ export function IdentityProvider({ children }: { children: ReactNode }) {
           username,
           display_name: realName || username,
           avatar_url: avatarUrl,
+          settings,
         })
         .select()
         .single()
