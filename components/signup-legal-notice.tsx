@@ -27,7 +27,7 @@ export function SignupConsentCheckbox({
         display: 'flex',
         alignItems: 'flex-start',
         gap: '12px',
-        marginBottom: '20px',
+        marginBottom: '16px',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,
       }}
@@ -47,7 +47,7 @@ export function SignupConsentCheckbox({
       />
       <span style={{
         fontFamily: font,
-        fontSize: '0.78rem',
+        fontSize: '0.74rem',
         lineHeight: 1.55,
         color: 'var(--text-secondary)',
       }}>

@@ -820,8 +820,12 @@ export interface RenderMomentOptions {
   scale?: number
   /** stage-card matches StageMomentCard UI; poster is the full export poster */
   variant?: 'poster' | 'stage-card'
-  /** Draw the Stage play control when a snippet exists (shared by image + PDF export). */
+  /** Draw the Stage play control when a listen destination exists. */
   showPlayControl?: boolean
+  listenBarLabel?: string
+  listenBarHint?: string
+  /** Flat opaque card background — brighter PNG/PDF export. */
+  flatExportBackground?: boolean
 }
 
 /** Stage card export width — height is content-driven (not a 1080×1080 poster). */
@@ -988,6 +992,8 @@ function drawStageListenBar(
   theme: StageCardTheme,
   geist: string,
   scale: number,
+  label = 'Listen on Margo',
+  hint = 'Opens in browser',
 ): void {
   const radius = height / 2
   const stroke = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.18)'
@@ -1027,12 +1033,12 @@ function drawStageListenBar(
   ctx.fillStyle = theme.ink
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  ctx.fillText('Listen on Margo', playX + playSize + 12 * scale, cy)
+  ctx.fillText(label, playX + playSize + 12 * scale, cy)
 
   const hintFS = Math.max(8, Math.round(8.5 * scale))
   ctx.font = `500 ${hintFS}px ${geist}`
   ctx.fillStyle = theme.inkMuted
-  ctx.fillText('Opens in browser', playX + playSize + 12 * scale, cy + labelFS * 0.95)
+  ctx.fillText(hint, playX + playSize + 12 * scale, cy + labelFS * 0.95)
   ctx.restore()
 }
 
@@ -1043,17 +1049,19 @@ function fillStageCardBackground(
   radius: number,
   theme: StageCardTheme,
   light: boolean,
+  flat = false,
 ): void {
-  // Opaque full-canvas fill — avoids transparent corners that darken in PDF/PNG viewers.
   ctx.save()
   ctx.fillStyle = theme.bg
   ctx.fillRect(0, 0, W, H)
 
-  const gradient = ctx.createLinearGradient(0, 0, 0, H * 0.28)
-  gradient.addColorStop(0, light ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)')
-  gradient.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, W, H)
+  if (!flat) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, H * 0.28)
+    gradient.addColorStop(0, light ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)')
+    gradient.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, W, H)
+  }
   ctx.restore()
 
   ctx.strokeStyle = theme.border
@@ -1070,6 +1078,9 @@ export async function drawStageMomentCard(
   themeId: string | null | undefined,
   vibeLabel: string | null | undefined,
   showPlayControl = false,
+  listenBarLabel?: string,
+  listenBarHint?: string,
+  flatExportBackground = false,
 ): Promise<MomentExportPlayRegion | null> {
   await waitForFonts()
   const geist = resolveGeistFontFamily()
@@ -1099,7 +1110,7 @@ export async function drawStageMomentCard(
 
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
-  fillStageCardBackground(ctx, W, H, radius, theme, light)
+  fillStageCardBackground(ctx, W, H, radius, theme, light, flatExportBackground)
 
   drawStageMarkBadge(ctx, W - markInset - markSize, markInset, markSize, theme)
 
@@ -1145,7 +1156,7 @@ export async function drawStageMomentCard(
     y += 16 * s
     const barH = 52 * s
     const barW = W - padX * 2
-    drawStageListenBar(ctx, padX, y, barW, barH, theme, geist, s)
+    drawStageListenBar(ctx, padX, y, barW, barH, theme, geist, s, listenBarLabel, listenBarHint)
     playRegion = { x: padX, y, w: barW, h: barH }
     y += barH
   }
@@ -1190,6 +1201,9 @@ async function renderStageMomentCardToCanvas(
     options.themeId,
     options.vibeLabel,
     options.showPlayControl,
+    options.listenBarLabel,
+    options.listenBarHint,
+    options.flatExportBackground,
   )
 }
 

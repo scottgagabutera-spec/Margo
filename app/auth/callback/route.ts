@@ -6,12 +6,13 @@ import {
   OAUTH_INTENT_COOKIE,
   OAUTH_TERMS_PENDING_COOKIE,
 } from '@/lib/legal/oauth-intent'
+import { userNeedsTermsAcceptance } from '@/lib/legal/oauth-new-user'
 
 /**
  * OAuth PKCE callback (Google / Discord).
  * Exchanges ?code= for a session using the httpOnly PKCE verifier cookie
  * set by GET /api/auth/oauth/[provider], then writes session cookies on
- * the /feed redirect. Browser rehydrate via GET /api/auth/me.
+ * the redirect. Browser rehydrate via GET /api/auth/me.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -21,12 +22,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/signin?error=auth`)
   }
 
-  const redirectTo = NextResponse.redirect(`${origin}/feed`)
   const termsPending = request.cookies.get(OAUTH_TERMS_PENDING_COOKIE)?.value === '1'
   const oauthIntent = request.cookies.get(OAUTH_INTENT_COOKIE)?.value
 
-  redirectTo.cookies.set(OAUTH_TERMS_PENDING_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
-  redirectTo.cookies.set(OAUTH_INTENT_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
+  const pendingCookies: {
+    name: string
+    value: string
+    options: Parameters<NextResponse['cookies']['set']>[2]
+  }[] = []
+  const pendingHeaders: [string, string][] = []
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,20 +43,22 @@ export async function GET(request: NextRequest) {
         },
         setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            redirectTo.cookies.set(name, value, options)
+            pendingCookies.push({ name, value, options })
           })
           Object.entries(headers).forEach(([key, value]) => {
-            redirectTo.headers.set(key, value)
+            pendingHeaders.push([key, value])
           })
         },
       },
-    }
+    },
   )
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
     console.error('exchangeCodeForSession failed:', error.message)
-    const errTarget = oauthIntent === 'signup' ? `${origin}/signin?mode=signup&error=auth` : `${origin}/signin?error=auth`
+    const errTarget = oauthIntent === 'signup'
+      ? `${origin}/signin?mode=signup&error=auth`
+      : `${origin}/signin?error=auth`
     return NextResponse.redirect(errTarget)
   }
 
@@ -72,5 +78,20 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return redirectTo
+  let redirectTarget = `${origin}/feed`
+  if (!termsPending && data.user && userNeedsTermsAcceptance(data.user)) {
+    redirectTarget = `${origin}/signin?step=terms`
+  }
+
+  const response = NextResponse.redirect(redirectTarget)
+  response.cookies.set(OAUTH_TERMS_PENDING_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
+  response.cookies.set(OAUTH_INTENT_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
+  pendingCookies.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options)
+  })
+  pendingHeaders.forEach(([key, value]) => {
+    response.headers.set(key, value)
+  })
+
+  return response
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { MomentRecipientView } from '@/components/moment/moment-recipient-view'
 import { loadPublicMomentById } from '@/lib/moment/load'
@@ -28,10 +29,12 @@ export default async function MomentRecipientPage({ params }: MomentPageProps) {
   if (!loaded) notFound()
 
   return (
-    <MomentRecipientView
-      moment={loaded.moment}
-      senderLabel={loaded.senderLabel}
-      artworkUrl={loaded.artworkUrl}
-    />
+    <Suspense fallback={<div style={{ minHeight: '100dvh', background: 'var(--bg)' }} />}>
+      <MomentRecipientView
+        moment={loaded.moment}
+        senderLabel={loaded.senderLabel}
+        artworkUrl={loaded.artworkUrl}
+      />
+    </Suspense>
   )
 }

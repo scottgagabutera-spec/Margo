@@ -6,6 +6,8 @@ import {
 } from '@/lib/moment-export/moment-export-canvas'
 import { slugify } from '@/lib/moment-export/save-moment-image'
 
+const PDF_MARGIN = 28
+
 function exportFilename(moment: MargoMoment, ext: 'pdf' | 'png'): string {
   const primary = moment.lines[0]
   const base = moment.lines.length > 1
@@ -20,26 +22,45 @@ function canvasToDataUrl(canvas: HTMLCanvasElement): string {
 
 function buildPdfFromExport(result: MomentExportCanvasResult): jsPDF {
   const { canvas, width, height, playRegion, playLinkUrl, playLinkLabel } = result
-  const footerH = playLinkUrl ? 28 : 0
-  const pageH = height + footerH
-  const orientation = width >= pageH ? 'landscape' : 'portrait'
+  const footerH = playLinkUrl ? 24 : 0
+  const pageW = width + PDF_MARGIN * 2
+  const pageH = height + PDF_MARGIN * 2 + footerH
+  const orientation = pageW >= pageH ? 'landscape' : 'portrait'
   const pdf = new jsPDF({
     orientation,
     unit: 'px',
-    format: [width, pageH],
+    format: [pageW, pageH],
     compress: false,
   })
 
-  pdf.addImage(canvasToDataUrl(canvas), 'PNG', 0, 0, width, height, undefined, 'SLOW')
+  pdf.setFillColor(255, 255, 255)
+  pdf.rect(0, 0, pageW, pageH, 'F')
+
+  pdf.addImage(
+    canvasToDataUrl(canvas),
+    'PNG',
+    PDF_MARGIN,
+    PDF_MARGIN,
+    width,
+    height,
+    undefined,
+    'SLOW',
+  )
 
   if (playRegion && playLinkUrl) {
-    pdf.link(playRegion.x, playRegion.y, playRegion.w, playRegion.h, { url: playLinkUrl })
+    pdf.link(
+      playRegion.x + PDF_MARGIN,
+      playRegion.y + PDF_MARGIN,
+      playRegion.w,
+      playRegion.h,
+      { url: playLinkUrl },
+    )
   }
 
   if (playLinkUrl && playLinkLabel) {
     pdf.setFontSize(9)
-    pdf.setTextColor(55, 55, 55)
-    pdf.textWithLink(playLinkLabel, 16, height + 18, { url: playLinkUrl })
+    pdf.setTextColor(30, 30, 30)
+    pdf.textWithLink(playLinkLabel, PDF_MARGIN, pageH - 10, { url: playLinkUrl })
   }
 
   return pdf

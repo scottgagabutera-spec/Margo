@@ -20,15 +20,19 @@ export function isMessageThreadPath(pathname: string | null | undefined): boolea
   return parts.length === 2 && parts[0] === 'messages'
 }
 
+function isAuthPath(pathname: string | null | undefined): boolean {
+  return pathname === '/signin'
+}
+
 /** Hide fixed MargoNav (marketing uses landing nav; immersive is chrome-free). */
 export function hidesAppNav(pathname: string | null | undefined): boolean {
   const mode = chromeModeForPath(pathname)
-  return mode === 'immersive' || mode === 'marketing'
+  return mode === 'immersive' || mode === 'marketing' || isAuthPath(pathname)
 }
 
-/** Hide MobileTabBar on immersive karaoke only. Stage landing shows tab bar at rest. */
+/** Hide MobileTabBar on immersive karaoke and sign-in (full-screen auth). */
 export function hidesTabBar(pathname: string | null | undefined): boolean {
-  return chromeModeForPath(pathname) === 'immersive'
+  return chromeModeForPath(pathname) === 'immersive' || isAuthPath(pathname)
 }
 
 /** @deprecated Prefer hidesAppNav / hidesTabBar — kept for call-site migration. */
