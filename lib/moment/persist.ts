@@ -111,6 +111,11 @@ export async function persistMomentPost(
   const { error: linesErr } = await supabase.from('post_lines').insert(lineRows)
   if (linesErr) {
     console.error('persistMomentPost: post_lines insert failed:', linesErr)
+    const { error: deleteErr } = await supabase.from('posts').delete().eq('id', postId)
+    if (deleteErr) {
+      console.error('persistMomentPost: orphan post cleanup failed:', deleteErr)
+    }
+    throw linesErr
   }
 
   fetch('/api/moderate', {

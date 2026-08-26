@@ -57,6 +57,9 @@ interface MomentShareStudioProps {
   compact?: boolean
   /** modal = feed card export sheet: pinned actions, menus open upward */
   layout?: 'default' | 'modal'
+  onShareMenuOpen?: () => void
+  onShared?: () => void
+  onExported?: () => void
 }
 
 export function MomentShareStudio({
@@ -72,6 +75,9 @@ export function MomentShareStudio({
   parentArtist,
   compact = false,
   layout = 'default',
+  onShareMenuOpen,
+  onShared,
+  onExported,
 }: MomentShareStudioProps) {
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [exportVibeLabel, setExportVibeLabel] = useState<string | null>(null)
@@ -183,20 +189,22 @@ export function MomentShareStudio({
     try {
       await saveMargoMomentImage(exportMoment)
       void recordCardExport({ postId: resolvedPostId, theme: cardThemeId, shape: 'square' })
+      onExported?.()
     } finally {
       setBusy(false)
     }
-  }, [isDualCard, renderDualCanvas, song, parentSong, exportMoment, resolvedPostId, cardThemeId])
+  }, [isDualCard, renderDualCanvas, song, parentSong, exportMoment, resolvedPostId, cardThemeId, onExported])
 
   const shareImage = useCallback(async () => {
     if (!exportMoment || isDualCard) return
     setBusy(true)
     try {
       await shareMargoMomentImage(exportMoment)
+      onShared?.()
     } finally {
       setBusy(false)
     }
-  }, [exportMoment, isDualCard])
+  }, [exportMoment, isDualCard, onShared])
 
   const shareLink = useCallback(async () => {
     if (isDualCard && parentLyric) {
@@ -214,20 +222,22 @@ export function MomentShareStudio({
     setBusy(true)
     try {
       await shareMomentNative(exportMoment)
+      onShared?.()
     } finally {
       setBusy(false)
     }
-  }, [isDualCard, parentLyric, lyric, resolvedPostId, exportMoment, canShareUrl])
+  }, [isDualCard, parentLyric, lyric, resolvedPostId, exportMoment, canShareUrl, onShared])
 
   const copyLink = useCallback(async () => {
     if (!exportMoment || !canShareUrl) return
     setBusy(true)
     try {
       await copyMomentShareLink(exportMoment)
+      onShared?.()
     } finally {
       setBusy(false)
     }
-  }, [exportMoment, canShareUrl])
+  }, [exportMoment, canShareUrl, onShared])
 
   const saveItems: MomentActionMenuItem[] = isDualCard
     ? buildMomentExportActionItems({ onExportImage: saveImage, showFormats: false })
@@ -340,7 +350,10 @@ export function MomentShareStudio({
           busy={busy}
           disabled={shareItems.length === 0}
           open={openMenu === 'share'}
-          onOpenChange={(next) => setOpenMenu(next ? 'share' : null)}
+          onOpenChange={(next) => {
+            if (next) onShareMenuOpen?.()
+            setOpenMenu(next ? 'share' : null)
+          }}
           menuZIndex={isModal ? modalMenuZIndex : undefined}
         />
       </div>
