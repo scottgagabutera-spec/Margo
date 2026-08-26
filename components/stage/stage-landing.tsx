@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { ComposeSearchDropdown, type ComposeSearchHit } from '@/components/compose-search-dropdown'
@@ -9,20 +10,18 @@ import { StageSearchField } from '@/components/stage/stage-search-field'
 import { StageSongChip } from '@/components/stage/stage-song-chip'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { StageSendBar } from '@/components/stage/stage-send-bar'
-import { ComposeSendTo } from '@/components/compose-send-to'
 import MargoLogo from '@/components/MargoLogo'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
-import { resolveMargoMomentFromStage, shareMomentNative, vibeLabelToEmotion, copyMomentShareLink, canShareImageFiles } from '@/lib/moment'
-import { persistMomentPost } from '@/lib/moment/persist'
-import type { StageCardThemeId } from '@/lib/moment/stage-theme'
+import { resolveMargoMomentFromStage, canShareImageFiles } from '@/lib/moment'
 import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
+import { MomentActionMenu } from '@/components/moment-action-menu'
 import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
-import { useAuthGate } from '@/components/supabase-auth-provider'
 import { UI_FONT } from '@/lib/fonts'
+import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
 const supabase = createClient()
 
@@ -54,9 +53,31 @@ const STAGE_VIBE_OPTIONS = STAGE_VIBES.map((v) => VIBE_LABELS[v])
 
 const font = 'var(--font-lora), serif'
 
+function buildComposePrefillUrl(params: {
+  lyric: string
+  song: string
+  artist: string
+  artwork?: string | null
+  songId?: string | null
+  audioUrl?: string | null
+  start?: number | null
+  end?: number | null
+}): string {
+  const q = new URLSearchParams()
+  q.set('lyric', params.lyric)
+  q.set('song', params.song)
+  q.set('artist', params.artist)
+  if (params.artwork) q.set('artwork', params.artwork)
+  if (params.songId) q.set('songId', params.songId)
+  if (params.audioUrl) q.set('audioUrl', params.audioUrl)
+  if (params.start != null) q.set('start', String(params.start))
+  if (params.end != null) q.set('end', String(params.end))
+  return `/compose?${q.toString()}`
+}
+
 export function StageLanding() {
+  const router = useRouter()
   const { user } = useIdentity()
-  const { requireAuth } = useAuthGate()
   const signedIn = !!user && !user.isAnonymous
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -80,10 +101,6 @@ export function StageLanding() {
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [saving, setSaving] = useState(false)
   const [shareBusy, setShareBusy] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [sentPostId, setSentPostId] = useState<string | null>(null)
-  const [showSendTo, setShowSendTo] = useState(false)
-  const [sentToName, setSentToName] = useState<string | null>(null)
   const [momentVisible, setMomentVisible] = useState(false)
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -275,8 +292,6 @@ export function StageLanding() {
     setSuggestedVibeLabel(null)
     setVibeUserPicked(false)
     setCardThemeId('gold')
-    setSentPostId(null)
-    setShowSendTo(false)
     setMomentVisible(false)
     setSearchQuery('')
     setShowResults(false)
@@ -376,12 +391,45 @@ export function StageLanding() {
 
   const handleLinePick = useCallback((line: ComposeLyricLine) => {
     const text = (line.text || '').slice(0, 140)
+    if (signedIn) {
+      router.push(buildComposePrefillUrl({
+        lyric: text,
+        song: songName,
+        artist: artistName,
+        artwork: selectedSong?.artwork || null,
+        songId: linkedSongId,
+        audioUrl: linkedAudioUrl,
+        start: line.startSec,
+        end: line.endSec,
+      }))
+      return
+    }
     setSnippetStart(line.startSec)
     setSnippetEnd(line.endSec)
     setLyric(text)
     setLinePickComplete(true)
     revealMoment(text, { animate: true, fetchVibe: true })
-  }, [revealMoment])
+  }, [
+    signedIn, router, songName, artistName, selectedSong?.artwork,
+    linkedSongId, linkedAudioUrl, revealMoment,
+  ])
+
+  const navigateToCompose = useCallback(() => {
+    if (!lyric.trim() || !songName.trim() || !artistName.trim()) return
+    router.push(buildComposePrefillUrl({
+      lyric: lyric.trim(),
+      song: songName.trim(),
+      artist: artistName.trim(),
+      artwork: selectedSong?.artwork || null,
+      songId: linkedSongId,
+      audioUrl: linkedAudioUrl,
+      start: snippetStart,
+      end: snippetEnd,
+    }))
+  }, [
+    router, lyric, songName, artistName, selectedSong?.artwork,
+    linkedSongId, linkedAudioUrl, snippetStart, snippetEnd,
+  ])
 
   const handleWriteLineChange = useCallback((value: string) => {
     const next = value.slice(0, 140)
@@ -438,7 +486,7 @@ export function StageLanding() {
     linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, vibeLabel, selectedSong?.externalListenUrl, cardThemeId,
   ])
 
-  const buildPersistedStageMoment = useCallback((postId: string) => {
+  const buildExportMoment = useCallback(() => {
     return resolveMargoMomentFromStage({
       lyric,
       songName,
@@ -452,87 +500,6 @@ export function StageLanding() {
       source: linkedSongId ? 'catalog' : 'external',
       externalListenUrl: selectedSong?.externalListenUrl ?? null,
     }, {
-      postId,
-      themeId: cardThemeId,
-      status: 'active',
-    })
-  }, [
-    lyric, songName, artistName, selectedSong?.artwork, linkedSongId,
-    linkedAudioUrl, snippetStart, snippetEnd, vibeLabel,
-    selectedSong?.externalListenUrl, cardThemeId,
-  ])
-
-  const handleSend = useCallback(async () => {
-    if (!hasMoment || !requireAuth() || !user) return
-    setSending(true)
-    try {
-      const { postId } = await persistMomentPost(supabase, {
-        lines: [{
-          lyric: lyric.trim(),
-          songName: songName.trim(),
-          artistName: artistName.trim(),
-          linkedSongId,
-          linkedAudioUrl,
-          artwork: selectedSong?.artwork || null,
-          snippetStart,
-          snippetEnd,
-          source: selectedSong?.source || (linkedSongId ? 'margo' : null),
-          geniusId: selectedSong?.source && selectedSong.source !== 'margo' ? selectedSong.id : null,
-          externalListenUrl: selectedSong?.externalListenUrl ?? null,
-        }],
-        emotion: vibeLabelToEmotion(vibeLabel),
-        status: 'active',
-        authorId: user.id,
-        lang: typeof navigator !== 'undefined' ? navigator.language.split('-')[0] || 'en' : 'en',
-      })
-      setSentPostId(postId)
-    } catch (e) {
-      console.error('Stage send failed:', e)
-    } finally {
-      setSending(false)
-    }
-  }, [
-    hasMoment, requireAuth, user, lyric, songName, artistName, linkedSongId,
-    linkedAudioUrl, selectedSong, snippetStart, snippetEnd, vibeLabel,
-  ])
-
-  const handleNativeShare = useCallback(async () => {
-    if (!sentPostId) return
-    const moment = buildPersistedStageMoment(sentPostId)
-    setShareBusy(true)
-    try {
-      await shareMomentNative(moment)
-    } finally {
-      setShareBusy(false)
-    }
-  }, [sentPostId, buildPersistedStageMoment])
-
-  const handleCopyLink = useCallback(async () => {
-    if (!sentPostId) return
-    const moment = buildPersistedStageMoment(sentPostId)
-    setShareBusy(true)
-    try {
-      await copyMomentShareLink(moment)
-    } finally {
-      setShareBusy(false)
-    }
-  }, [sentPostId, buildPersistedStageMoment])
-
-  const buildExportMoment = useCallback((postId?: string) => {
-    return resolveMargoMomentFromStage({
-      lyric,
-      songName,
-      artistName,
-      artworkUrl: selectedSong?.artwork || null,
-      songId: linkedSongId,
-      audioUrl: linkedAudioUrl,
-      snippetStart,
-      snippetEnd,
-      vibeLabel,
-      source: linkedSongId ? 'catalog' : 'external',
-      externalListenUrl: selectedSong?.externalListenUrl ?? null,
-    }, {
-      postId: postId ?? null,
       themeId: cardThemeId,
     })
   }, [
@@ -545,11 +512,11 @@ export function StageLanding() {
     if (!hasMoment) return
     setShareBusy(true)
     try {
-      await shareMargoMomentImage(buildExportMoment(sentPostId ?? undefined))
+      await shareMargoMomentImage(buildExportMoment())
     } finally {
       setShareBusy(false)
     }
-  }, [hasMoment, buildExportMoment, sentPostId])
+  }, [hasMoment, buildExportMoment])
 
   const canShareImg = canShareImageFiles()
 
@@ -560,10 +527,10 @@ export function StageLanding() {
 
   const shareItems = buildMomentShareActionItems({
     canShareImage: canShareImg,
-    linksActive: !!sentPostId,
+    linksActive: false,
     onShareImage: () => { void handleShareImage() },
-    onShareLink: () => { void handleNativeShare() },
-    onCopyLink: () => { void handleCopyLink() },
+    onShareLink: () => {},
+    onCopyLink: () => {},
   })
 
   return (
@@ -701,49 +668,62 @@ export function StageLanding() {
                   onPlay={handlePlay}
                   listenUrl={listen && !listen.canPlayInline ? listen.externalUrl : null}
                 />
-                <StageSendBar
-                  saveItems={saveItems}
-                  shareItems={shareItems}
-                  saving={saving}
-                  shareBusy={shareBusy}
-                  signedIn={signedIn}
-                  onSendToMargo={handleSend}
-                  sending={sending}
-                  sentPostId={sentPostId}
-                  onOpenSendTo={() => setShowSendTo(true)}
-                />
-                {sentPostId ? (
-                  <>
-                    {sentToName ? (
-                      <p style={{
-                        fontFamily: font,
-                        fontSize: '0.78rem',
-                        color: 'var(--gold)',
-                        textAlign: 'center',
-                        margin: '4px 0 0',
-                        padding: '10px 14px',
-                        borderRadius: '12px',
-                        background: 'rgba(232,197,71,0.08)',
-                        border: '1px solid var(--gold-border)',
-                        lineHeight: 1.45,
-                      }}>
-                        Sent to {sentToName}.
-                      </p>
-                    ) : null}
-                    <ComposeSendTo
-                      open={showSendTo}
-                      onOpenChange={setShowSendTo}
-                      postId={sentPostId}
-                      lyric={lyric}
-                      song={songName}
-                      artist={artistName}
-                      onSent={(name) => {
-                        setSentToName(name)
-                        setShowSendTo(false)
+                {signedIn ? (
+                  <div style={{ width: '100%', marginTop: 'var(--stage-moment-to-actions, 22px)' }}>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      flexWrap: 'nowrap',
+                      gap: '8px',
+                      width: '100%',
+                      alignItems: 'flex-start',
+                      marginBottom: '10px',
+                    }}>
+                      <MomentActionMenu
+                        label="Export"
+                        items={saveItems}
+                        variant="primary"
+                        busy={saving}
+                      />
+                      <MomentActionMenu
+                        label="Share"
+                        items={shareItems.length > 0 ? shareItems : [{ id: 'none', label: 'Not available', disabled: true, onClick: () => {} }]}
+                        variant="secondary"
+                        busy={shareBusy}
+                        disabled={shareItems.length === 0}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={navigateToCompose}
+                      style={{
+                        width: '100%',
+                        minHeight: 'var(--margo-touch-min)',
+                        padding: '0 20px',
+                        borderRadius: '50px',
+                        border: 'none',
+                        background: 'var(--gold)',
+                        color: 'var(--text-on-gold, var(--bg))',
+                        fontFamily: UI_FONT,
+                        fontSize: '0.56rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.9px',
+                        textTransform: 'uppercase',
+                        cursor: 'pointer',
                       }}
-                    />
-                  </>
-                ) : null}
+                    >
+                      Send this line
+                    </button>
+                  </div>
+                ) : (
+                  <StageSendBar
+                    saveItems={saveItems}
+                    shareItems={shareItems}
+                    saving={saving}
+                    shareBusy={shareBusy}
+                    signedIn={false}
+                  />
+                )}
               </>
             )}
           </div>

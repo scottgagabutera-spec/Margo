@@ -6,13 +6,14 @@ export const dynamic = 'force-dynamic'
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { ArrowLeftIcon, SearchIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
 import { usePrimaryTab } from '@/components/primary-tab-shell'
-import { MomentShareStudio } from '@/components/moment-share-studio'
+import { MomentCompletion } from '@/components/moment-completion'
+import { ComposeSendTo } from '@/components/compose-send-to'
 import { ComposeReadyPreview } from '@/components/compose-ready-preview'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
@@ -22,6 +23,7 @@ import { useAuthGate } from '@/components/supabase-auth-provider'
 import { POST_LINES_MAX } from '@/lib/post-lines'
 import { resolveMargoMomentFromComposeDrafts } from '@/lib/moment'
 import { persistMomentPost } from '@/lib/moment/persist'
+import { trackEvent } from '@/lib/analytics/track'
 import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
 import { UI_FONT } from '@/lib/fonts'
 
@@ -90,13 +92,21 @@ const backBtnStyle: React.CSSProperties = {
 }
 type MomentLineDraft = { lyric: string; songName: string; artistName: string }
 
+type CompletionMode = 'send' | 'public' | 'private'
+
 function ComposeInner() {
-  const router = useRouter()
   const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
   const { requireAuth } = useAuthGate()
   const { isTabActive } = usePrimaryTab()
   const composeLive = isTabActive('compose')
   const searchParams = useSearchParams()
+  const composeStartedRef = useRef(false)
+  useEffect(() => {
+    if (composeStartedRef.current) return
+    composeStartedRef.current = true
+    trackEvent('compose_started')
+  }, [])
+
   useEffect(() => {
     const lyricParam = searchParams.get('lyric')
     const songParam = searchParams.get('song')
@@ -136,7 +146,9 @@ function ComposeInner() {
   const [suggestedVibe, setSuggestedVibe] = useState<Vibe | null>(null)
   const [emotionLoading, setEmotionLoading] = useState(false)
   const [postedId, setPostedId] = useState<string | null>(null)
-  const [completionMode, setCompletionMode] = useState<'private' | null>(null)
+  const [completionMode, setCompletionMode] = useState<CompletionMode | null>(null)
+  const [showSendTo, setShowSendTo] = useState(false)
+  const [sentToName, setSentToName] = useState<string | null>(null)
   const [linkedSongId, setLinkedSongId] = useState<string | null>(null)
   const [linkedAudioUrl, setLinkedAudioUrl] = useState<string | null>(null)
   /** Lines already stacked via “Add another line” (current draft is separate). */
@@ -370,6 +382,10 @@ function ComposeInner() {
     setStep(2)
   }, [])
 
+  const handleLyricSelected = useCallback(() => {
+    trackEvent('lyric_selected')
+  }, [])
+
   const handleLyricComplete = useCallback(async () => {
     if (lyric.trim().length === 0) return
     if (emotionAbortRef.current) emotionAbortRef.current.abort()
@@ -379,6 +395,7 @@ function ComposeInner() {
     setSelectedVibe(null)
     setSuggestedVibe(null)
     setStep(3)
+    handleLyricSelected()
     try {
       const res = await fetch('/api/emotion', {
         method: 'POST',
@@ -396,7 +413,7 @@ function ComposeInner() {
     } finally {
       setEmotionLoading(false)
     }
-  }, [lyric])
+  }, [lyric, handleLyricSelected])
 
   const handleVibeSelect = useCallback((vibe: Vibe) => {
     setSelectedVibe(vibe)
@@ -436,7 +453,7 @@ function ComposeInner() {
       postId: postedId,
       vibeLabel: selectedVibe ? VIBE_LABELS[selectedVibe] : null,
       emotion: selectedVibe ? selectedVibe.toLowerCase() : null,
-      status: completionMode === 'private' ? 'private' : null,
+      status: completionMode === 'private' ? 'private' : 'active',
     })
   }, [committedLines, buildCurrentDraft, postedId, selectedVibe, completionMode])
 
@@ -552,6 +569,8 @@ function ComposeInner() {
     setSuggestedVibe(null)
     setPostedId(null)
     setCompletionMode(null)
+    setShowSendTo(false)
+    setSentToName(null)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
     setSnippetStart(null)
@@ -565,98 +584,151 @@ function ComposeInner() {
     setCommittedLines([])
   }
 
-  const handlePost = useCallback(async (isPrivate: boolean) => {
-    if (!requireAuth()) return
-    if (!identity || !user) { setPostError('Still setting things up — try again in a moment.'); return }
+  const persistMoment = useCallback(async (status: 'active' | 'private') => {
+    if (!requireAuth()) return null
+    if (!identity || !user) {
+      setPostError('Still setting things up — try again in a moment.')
+      return null
+    }
 
-    const draft = buildCurrentDraft()
+    if (postedId) {
+      if (status === 'private') {
+        const { error } = await supabase
+          .from('posts')
+          .update({ status: 'private' })
+          .eq('id', postedId)
+        if (error) throw error
+      }
+      return postedId
+    }
+
     const lines: ComposeLineDraft[] = [...committedLines]
+    const draft = buildCurrentDraft()
     if (draft.lyric && draft.songName && draft.artistName) {
       lines.push(draft)
     }
-    if (lines.length === 0) return
+    if (lines.length === 0) return null
     if (lines.length > POST_LINES_MAX) {
       setPostError(`Moments can hold up to ${POST_LINES_MAX} lines.`)
-      return
+      return null
     }
 
+    const authorId = user.id
+    const { postId: newPostId } = await persistMomentPost(supabase, {
+      lines: lines.map((line) => ({
+        lyric: line.lyric,
+        songName: line.songName,
+        artistName: line.artistName,
+        linkedSongId: line.linkedSongId,
+        linkedAudioUrl: line.linkedAudioUrl,
+        artwork: line.artwork,
+        snippetStart: line.snippetStart,
+        snippetEnd: line.snippetEnd,
+        source: line.source,
+        geniusId: line.geniusId,
+        externalListenUrl: line.externalListenUrl,
+      })),
+      emotion: selectedVibe || null,
+      status,
+      authorId,
+      lang: navigator.language.split('-')[0] || 'en',
+    })
+
+    setPostedId(newPostId)
+    trackEvent('moment_created', { status })
+    return newPostId
+  }, [
+    requireAuth, identity, user, postedId, buildCurrentDraft, committedLines,
+    selectedVibe,
+  ])
+
+  const handleSendToSomeone = useCallback(async () => {
     setPosting(true)
     setPostError(null)
-
-    const authorId = user.id
-
     try {
-      const lines: ComposeLineDraft[] = [...committedLines]
-      const draft = buildCurrentDraft()
-      if (draft.lyric && draft.songName && draft.artistName) {
-        lines.push(draft)
-      }
-      if (lines.length === 0) return
-      if (lines.length > POST_LINES_MAX) {
-        setPostError(`Moments can hold up to ${POST_LINES_MAX} lines.`)
+      const postId = await persistMoment('active')
+      if (!postId) {
+        setPosting(false)
         return
       }
-
-      const { postId: newPostId } = await persistMomentPost(supabase, {
-        lines: lines.map((line) => ({
-          lyric: line.lyric,
-          songName: line.songName,
-          artistName: line.artistName,
-          linkedSongId: line.linkedSongId,
-          linkedAudioUrl: line.linkedAudioUrl,
-          artwork: line.artwork,
-          snippetStart: line.snippetStart,
-          snippetEnd: line.snippetEnd,
-          source: line.source,
-          geniusId: line.geniusId,
-          externalListenUrl: line.externalListenUrl,
-        })),
-        emotion: selectedVibe || null,
-        status: isPrivate ? 'private' : 'active',
-        authorId,
-        lang: navigator.language.split('-')[0] || 'en',
-      })
-
-      setPostedId(newPostId)
       setPosting(false)
-      if (isPrivate) {
-        setCompletionMode('private')
-        resetComposeViewport()
-      } else {
-        router.push(`/feed?highlight=${encodeURIComponent(newPostId)}`)
-        resetCompose()
-      }
+      trackEvent('send_opened')
+      setShowSendTo(true)
     } catch (e) {
-      console.error('Failed to post:', e)
+      console.error('Failed to persist moment for send:', e)
       setPostError('Something went wrong. Please try again.')
       setPosting(false)
     }
-  }, [
-    requireAuth, identity, user, buildCurrentDraft, committedLines,
-    selectedVibe, resetComposeViewport, router,
-  ])
+  }, [persistMoment])
 
-  if (completionMode === 'private') {
+  const handlePostToFeed = useCallback(async () => {
+    setPosting(true)
+    setPostError(null)
+    try {
+      const postId = await persistMoment('active')
+      if (!postId) {
+        setPosting(false)
+        return
+      }
+      setPosting(false)
+      trackEvent('moment_posted_public')
+      setCompletionMode('public')
+      resetComposeViewport()
+    } catch (e) {
+      console.error('Failed to post to feed:', e)
+      setPostError('Something went wrong. Please try again.')
+      setPosting(false)
+    }
+  }, [persistMoment, resetComposeViewport])
+
+  const handleKeepPrivate = useCallback(async () => {
+    setPosting(true)
+    setPostError(null)
+    try {
+      const postId = await persistMoment('private')
+      if (!postId) {
+        setPosting(false)
+        return
+      }
+      setPosting(false)
+      trackEvent('moment_saved_private')
+      setCompletionMode('private')
+      resetComposeViewport()
+    } catch (e) {
+      console.error('Failed to save private moment:', e)
+      setPostError('Something went wrong. Please try again.')
+      setPosting(false)
+    }
+  }, [persistMoment, resetComposeViewport])
+
+  const handleSendComplete = useCallback((name: string) => {
+    trackEvent('moment_sent_dm')
+    setSentToName(name)
+    setShowSendTo(false)
+    setCompletionMode('send')
+    resetComposeViewport()
+  }, [resetComposeViewport])
+
+  const primaryLine = useMemo(() => {
+    const draft = buildCurrentDraft()
+    if (draft.lyric && draft.songName && draft.artistName) {
+      return { lyric: draft.lyric, song: draft.songName, artist: draft.artistName }
+    }
+    const last = committedLines[committedLines.length - 1]
+    if (last) {
+      return { lyric: last.lyric, song: last.songName, artist: last.artistName }
+    }
+    return { lyric: '', song: '', artist: '' }
+  }, [buildCurrentDraft, committedLines])
+
+  if (completionMode) {
     return (
-      <main ref={composeRootRef} style={{ minHeight: '100vh', background: 'var(--bg)', padding: '16px 16px var(--margo-page-padding-bottom)' }}>
-        <div style={{ maxWidth: '400px', width: '100%', margin: '0 auto', paddingTop: '16px' }}>
-          <button
-            type="button"
-            onClick={resetCompose}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontFamily: font, fontSize: '0.68rem', color: 'var(--text-secondary, var(--text-2))',
-              letterSpacing: '0.5px', minHeight: '36px', padding: '0 4px', marginBottom: '12px',
-            }}
-          >Done</button>
-
-          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', marginBottom: '16px' }}>
-            Saved privately.
-          </p>
-
-          <MomentShareStudio moment={exportMoment} compact />
-        </div>
-      </main>
+      <MomentCompletion
+        mode={completionMode}
+        moment={exportMoment}
+        onDone={resetCompose}
+        sentToName={sentToName}
+      />
     )
   }
 
@@ -873,10 +945,15 @@ function ComposeInner() {
               onClick={() => { if (!posting) setStep(3) }}
             ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: committedLines.length > 0 ? '8px' : 0 }}>Ready to post?</h1>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: committedLines.length > 0 ? '8px' : 0 }}>Ready to send?</h1>
               {committedLines.length > 0 && (
                 <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  A few lines, one moment.
+                  Send it to someone, post to Feed, or keep it private.
+                </p>
+              )}
+              {committedLines.length === 0 && (
+                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                  Send it to someone, post to Feed, or keep it private.
                 </p>
               )}
             </div>
@@ -893,7 +970,7 @@ function ComposeInner() {
                 {!editingName ? (
                   <>
                     <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text)', marginBottom: '4px' }}>
-                      You'll post as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
+                      You&apos;ll share as <strong style={{ color: 'var(--gold)' }}>{identity.displayName}</strong>
                     </p>
                     <p style={{ fontFamily: font, fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
                       We gave you this name — it's yours on Margo. You can change how it's shown anytime.
@@ -976,6 +1053,7 @@ function ComposeInner() {
                 setSnippetEnd(line.endSec)
                 setLyric((line.text || '').slice(0, 140))
                 setLinePickComplete(true)
+                handleLyricSelected()
               }}
               onSkip={() => {
                 setSnippetStart(null)
@@ -1038,18 +1116,41 @@ function ComposeInner() {
           <div style={{ opacity: buttonsBlocked ? 0.4 : 1, pointerEvents: buttonsBlocked ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
               type="button"
-              onClick={() => handlePost(false)}
+              onClick={() => { void handleSendToSomeone() }}
               disabled={posting || identityLoading}
               style={{ ...keyboardSafePrimaryBtnStyle, opacity: posting ? 0.7 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
-            >{posting ? 'Posting…' : 'Post to Margo'}</button>
+            >{posting ? 'Saving…' : 'Send to someone'}</button>
             <button
               type="button"
-              onClick={() => handlePost(true)}
-              disabled={posting}
+              onClick={() => { void handlePostToFeed() }}
+              disabled={posting || identityLoading}
               style={keyboardSafeSecondaryBtnStyle}
+            >{posting ? 'Posting…' : 'Post to Feed'}</button>
+            <button
+              type="button"
+              onClick={() => { void handleKeepPrivate() }}
+              disabled={posting}
+              style={{
+                ...keyboardSafeSecondaryBtnStyle,
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--text-muted)',
+              }}
             >Keep Private</button>
           </div>
         </KeyboardSafeCtaBar>
+      )}
+
+      {step === 4 && postedId && (
+        <ComposeSendTo
+          open={showSendTo}
+          onOpenChange={setShowSendTo}
+          postId={postedId}
+          lyric={primaryLine.lyric}
+          song={primaryLine.song}
+          artist={primaryLine.artist}
+          onSent={handleSendComplete}
+        />
       )}
 
       {portalMounted && showYourLinePanel && createPortal(
