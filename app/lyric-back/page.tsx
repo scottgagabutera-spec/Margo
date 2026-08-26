@@ -21,6 +21,7 @@ import { VibeTag } from '@/components/vibe-tag'
 import { useRouter } from 'next/navigation'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
+import { trackEvent } from '@/lib/analytics/track'
 import type { Post } from '@/hooks/usePosts'
 import type { Echo } from '@/hooks/useEchoes'
 
@@ -149,6 +150,13 @@ function LyricBackContent() {
   // Was useEchoes(postId): broke nesting when legacy ?echoId= was present —
   // PostCard now uses ?postId={replyId}, so respondingToId===postId in that path.
   const { echoes, loading: echoesLoading } = useEchoes(respondingToId)
+  const openedRef = useRef(false)
+
+  useEffect(() => {
+    if (openedRef.current || !respondingToId) return
+    openedRef.current = true
+    trackEvent('lyric_back_opened', { postId: respondingToId })
+  }, [respondingToId])
 
   const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
@@ -511,6 +519,7 @@ function LyricBackContent() {
       })
       setCompletedParentId(parentId)
       setCompletionMode(replyStatus === 'private' ? 'private' : 'public')
+      trackEvent('lyric_back_sent', { private: replyStatus === 'private' })
 
       const parentAuthorId = respondingTo?.authorUid
       if (parentId && parentAuthorId && parentAuthorId !== authorId && !isPrivate) {

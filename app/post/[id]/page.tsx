@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
 import { usePost } from '@/hooks/usePost'
 import { useEchoes } from '@/hooks/useEchoes'
 import { PostCard } from '@/components/post-card'
@@ -140,20 +139,8 @@ export default function PostDetailPage() {
             onResonate={toggleResonate}
             onExport={handleExport}
             disableCardNav
+            threadDetail
           />
-          <Link
-            href={`/lyric-back?postId=${post.id}`}
-            style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              minHeight: 'var(--margo-touch-min)',
-              fontFamily: font, fontSize: '0.6rem', fontWeight: 700,
-              letterSpacing: '1.5px', textTransform: 'uppercase',
-              color: 'var(--bg)', background: 'var(--gold)',
-              borderRadius: '50px', textDecoration: 'none',
-            }}
-          >
-            Lyric Back
-          </Link>
 
           {echoes.length > 0 && (
             <div style={{ marginTop: '12px' }}>

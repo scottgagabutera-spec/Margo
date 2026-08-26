@@ -1,6 +1,6 @@
 import { track as vercelTrack } from '@vercel/analytics'
 
-/** PR 1 compose/send completion events. */
+/** Phase 3 analytics events. */
 export type MargoAnalyticsEvent =
   | 'compose_started'
   | 'lyric_selected'
@@ -12,6 +12,9 @@ export type MargoAnalyticsEvent =
   | 'share_opened'
   | 'moment_shared'
   | 'moment_exported'
+  | 'moment_opened'
+  | 'lyric_back_opened'
+  | 'lyric_back_sent'
 
 export function trackEvent(
   event: MargoAnalyticsEvent,
