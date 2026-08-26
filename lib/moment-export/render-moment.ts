@@ -804,6 +804,13 @@ function slugify(text: string, fallback: string): string {
   return s || fallback
 }
 
+export interface MomentExportPlayRegion {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 export interface RenderMomentOptions {
   lines: NormalizedLine[]
   themeId?: string
@@ -813,6 +820,12 @@ export interface RenderMomentOptions {
   scale?: number
   /** stage-card matches StageMomentCard UI; poster is the full export poster */
   variant?: 'poster' | 'stage-card'
+  /** Draw the Stage play control when a listen destination exists. */
+  showPlayControl?: boolean
+  listenBarLabel?: string
+  listenBarHint?: string
+  /** Flat opaque card background — brighter PNG/PDF export. */
+  flatExportBackground?: boolean
 }
 
 /** Stage card export width — height is content-driven (not a 1080×1080 poster). */
@@ -882,7 +895,7 @@ function drawStageVibePill(
   ctx.lineWidth = 1.2 * scale
   ctx.stroke()
   ctx.fillStyle = theme.ink
-  ctx.globalAlpha = 0.92
+  ctx.globalAlpha = 1
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(display, x + pillW / 2, y + pillH / 2 + 0.5 * scale)
@@ -897,13 +910,14 @@ export async function measureStageMomentCardHeight(
   lines: NormalizedLine[],
   vibeLabel: string | null | undefined,
   width = STAGE_CARD_EXPORT_WIDTH,
+  showPlayControl = false,
 ): Promise<number> {
   if (typeof document === 'undefined') return Math.round(width * 0.72)
   await waitForFonts()
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   if (!ctx) return Math.round(width * 0.72)
-  return computeStageCardHeight(ctx, lines, vibeLabel, width)
+  return computeStageCardHeight(ctx, lines, vibeLabel, width, showPlayControl)
 }
 
 function computeStageCardHeight(
@@ -911,6 +925,7 @@ function computeStageCardHeight(
   lines: NormalizedLine[],
   vibeLabel: string | null | undefined,
   W: number,
+  showPlayControl = false,
 ): number {
   const REF_W = 400
   const s = W / REF_W
@@ -940,9 +955,10 @@ function computeStageCardHeight(
     ? metaGap + (hasSong ? metaFS * 1.25 : 0) + (hasArtist ? Math.round(metaFS * 0.92) * 1.3 : 0)
     : 0
   const artH = line.artworkUrl ? artGap + artSize : 0
+  const listenBarH = showPlayControl ? 16 * s + 52 * s : 0
   const vibeH = vibeLabel ? vibeGap + vibeRowH : 0
 
-  return Math.ceil(padT + lyricH + metaH + artH + vibeH + padB)
+  return Math.ceil(padT + lyricH + metaH + artH + listenBarH + vibeH + padB)
 }
 
 function drawStageMarkBadge(
@@ -967,6 +983,93 @@ function drawStageMarkBadge(
   ctx.restore()
 }
 
+function drawStageListenBar(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  theme: StageCardTheme,
+  geist: string,
+  scale: number,
+  label = 'Listen on Margo',
+  hint = 'Opens in browser',
+): void {
+  const radius = height / 2
+  const stroke = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.18)'
+  const fill = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.08)' : 'rgba(255,255,255,0.12)'
+
+  ctx.save()
+  drawRoundedRectPath(ctx, x, y, width, height, radius)
+  ctx.fillStyle = fill
+  ctx.fill()
+  ctx.strokeStyle = stroke
+  ctx.lineWidth = 1
+  ctx.stroke()
+
+  const playSize = Math.min(height - 10 * scale, 28 * scale)
+  const playX = x + 8 * scale
+  const playY = y + (height - playSize) / 2
+  const r = playSize / 2
+  const cx = playX + r
+  const cy = playY + r
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.fillStyle = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.12)' : 'rgba(255,255,255,0.16)'
+  ctx.fill()
+
+  const tri = playSize * 0.28
+  ctx.fillStyle = theme.ink
+  ctx.beginPath()
+  ctx.moveTo(cx - tri * 0.35, cy - tri * 0.55)
+  ctx.lineTo(cx + tri * 0.65, cy)
+  ctx.lineTo(cx - tri * 0.35, cy + tri * 0.55)
+  ctx.closePath()
+  ctx.fill()
+
+  const labelFS = Math.max(10, Math.round(10.5 * scale))
+  ctx.font = `700 ${labelFS}px ${geist}`
+  ctx.fillStyle = theme.ink
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(label, playX + playSize + 12 * scale, cy)
+
+  const hintFS = Math.max(8, Math.round(8.5 * scale))
+  ctx.font = `500 ${hintFS}px ${geist}`
+  ctx.fillStyle = theme.inkMuted
+  ctx.fillText(hint, playX + playSize + 12 * scale, cy + labelFS * 0.95)
+  ctx.restore()
+}
+
+function fillStageCardBackground(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  radius: number,
+  theme: StageCardTheme,
+  light: boolean,
+  flat = false,
+): void {
+  ctx.save()
+  ctx.fillStyle = theme.bg
+  ctx.fillRect(0, 0, W, H)
+
+  if (!flat) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, H * 0.28)
+    gradient.addColorStop(0, light ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)')
+    gradient.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, W, H)
+  }
+  ctx.restore()
+
+  ctx.strokeStyle = theme.border
+  ctx.lineWidth = 1
+  drawRoundedRectPath(ctx, 0.5, 0.5, W - 1, H - 1, radius)
+  ctx.stroke()
+}
+
 export async function drawStageMomentCard(
   ctx: CanvasRenderingContext2D,
   W: number,
@@ -974,7 +1077,11 @@ export async function drawStageMomentCard(
   lines: NormalizedLine[],
   themeId: string | null | undefined,
   vibeLabel: string | null | undefined,
-) {
+  showPlayControl = false,
+  listenBarLabel?: string,
+  listenBarHint?: string,
+  flatExportBackground = false,
+): Promise<MomentExportPlayRegion | null> {
   await waitForFonts()
   const geist = resolveGeistFontFamily()
   const theme = getStageCardTheme(themeId)
@@ -999,24 +1106,11 @@ export async function drawStageMomentCard(
   const contentW = W - padX * 2 - markSize - 8 * s
 
   const line = lines[0]
-  if (!line) return
+  if (!line) return null
 
-  ctx.save()
-  drawRoundedRectPath(ctx, 0, 0, W, H, radius)
-  ctx.clip()
-  ctx.fillStyle = theme.bg
-  ctx.fillRect(0, 0, W, H)
-  const highlight = ctx.createLinearGradient(0, 0, 0, H * 0.28)
-  highlight.addColorStop(0, light ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)')
-  highlight.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.fillStyle = highlight
-  ctx.fillRect(0, 0, W, H)
-  ctx.restore()
-
-  ctx.strokeStyle = theme.border
-  ctx.lineWidth = 1
-  drawRoundedRectPath(ctx, 0.5, 0.5, W - 1, H - 1, radius)
-  ctx.stroke()
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  fillStageCardBackground(ctx, W, H, radius, theme, light, flatExportBackground)
 
   drawStageMarkBadge(ctx, W - markInset - markSize, markInset, markSize, theme)
 
@@ -1054,42 +1148,71 @@ export async function drawStageMomentCard(
     y += artGap
     const artworkImg = await loadArtworkImage(line.artworkUrl)
     drawArtworkTile(ctx, artworkImg, padX, y, artSize, artRadius, light)
+    y += artSize
+  }
+
+  let playRegion: MomentExportPlayRegion | null = null
+  if (showPlayControl) {
+    y += 16 * s
+    const barH = 52 * s
+    const barW = W - padX * 2
+    drawStageListenBar(ctx, padX, y, barW, barH, theme, geist, s, listenBarLabel, listenBarHint)
+    playRegion = { x: padX, y, w: barW, h: barH }
+    y += barH
   }
 
   if (vibeLabel) {
     drawStageVibePill(ctx, W - padX, H - padB, vibeLabel, geist, s, theme)
   }
+
+  return playRegion
 }
 
 async function renderStageMomentCardToCanvas(
   canvas: HTMLCanvasElement,
   options: RenderMomentOptions,
-): Promise<void> {
+): Promise<MomentExportPlayRegion | null> {
   const W = STAGE_CARD_EXPORT_WIDTH
   const SCALE = options.scale ?? 2
 
   const measureCanvas = document.createElement('canvas')
   const measureCtx = measureCanvas.getContext('2d')
-  if (!measureCtx) return
-  const H = computeStageCardHeight(measureCtx, options.lines, options.vibeLabel, W)
+  if (!measureCtx) return null
+  const H = computeStageCardHeight(
+    measureCtx,
+    options.lines,
+    options.vibeLabel,
+    W,
+    options.showPlayControl,
+  )
 
   canvas.width = W * SCALE
   canvas.height = H * SCALE
   const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  if (!ctx) return null
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.scale(SCALE, SCALE)
 
-  await drawStageMomentCard(ctx, W, H, options.lines, options.themeId, options.vibeLabel)
+  return drawStageMomentCard(
+    ctx,
+    W,
+    H,
+    options.lines,
+    options.themeId,
+    options.vibeLabel,
+    options.showPlayControl,
+    options.listenBarLabel,
+    options.listenBarHint,
+    options.flatExportBackground,
+  )
 }
 
 export async function renderMomentToCanvas(
   canvas: HTMLCanvasElement,
   options: RenderMomentOptions,
-): Promise<void> {
+): Promise<MomentExportPlayRegion | null> {
   if (options.variant === 'stage-card') {
-    await renderStageMomentCardToCanvas(canvas, options)
-    return
+    return renderStageMomentCardToCanvas(canvas, options)
   }
 
   const theme = THEMES.find((t) => t.id === (options.themeId || 'gold')) || THEMES[0]
@@ -1099,10 +1222,11 @@ export async function renderMomentToCanvas(
   canvas.width = w * SCALE
   canvas.height = h * SCALE
   const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  if (!ctx) return null
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.scale(SCALE, SCALE)
   const seedKey = options.seedKey || options.lines.map((l) => l.lyric + '|' + l.songTitle).join('~') || 'moment'
   const composition = composeMoment(options.vibeLabel, options.lines, seedKey)
   await drawMomentPoster(ctx, w, h, options.lines, theme, options.vibeLabel, seedKey, composition)
+  return null
 }

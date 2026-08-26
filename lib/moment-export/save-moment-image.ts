@@ -6,6 +6,7 @@ import {
   type MomentLineInput,
   type NormalizedLine,
 } from '@/lib/moment-export/render-moment'
+import { renderMomentExportCanvas } from '@/lib/moment-export/moment-export-canvas'
 
 export function downloadCanvas(canvas: HTMLCanvasElement, filename: string): Promise<void> {
   return new Promise((resolve) => {
@@ -53,24 +54,26 @@ function normalizedFromMoment(moment: MargoMoment): NormalizedLine[] {
     .filter((l) => l.lyric.trim().length > 0)
 }
 
-function renderOptionsFromMoment(moment: MargoMoment): {
-  themeId: string
-  shapeId: string
-  vibeLabel?: string | null
-  seedKey: string
-  variant: 'poster' | 'stage-card'
-  canPlayInline?: boolean
-  hasExternalListen?: boolean
-} {
-  // One export format — Stage card (landing Save PNG). Works on every platform
-  // as a square-ish image; Story/Wide poster variants removed from share UI.
+function momentHasSnippet(moment: MargoMoment): boolean {
+  const line = moment.lines[0]
+  if (!line) return false
+  return !!(
+    line.audioUrl
+    && line.snippetStart != null
+    && line.snippetEnd != null
+    && line.snippetEnd > line.snippetStart
+  )
+}
+
+function renderOptionsFromMoment(moment: MargoMoment) {
   const isStageCard = moment.lines.length <= 1
   return {
     themeId: moment.themeId,
     shapeId: moment.shapeId,
     vibeLabel: moment.vibeLabel,
     seedKey: moment.seedKey,
-    variant: isStageCard ? 'stage-card' : 'poster',
+    variant: isStageCard ? ('stage-card' as const) : ('poster' as const),
+    showPlayControl: isStageCard && momentHasSnippet(moment),
   }
 }
 
@@ -78,46 +81,34 @@ export async function saveMargoMomentImage(
   moment: MargoMoment,
   options?: { filename?: string },
 ): Promise<void> {
-  const normalized = normalizedFromMoment(moment)
-  if (normalized.length === 0) return
+  const result = await renderMomentExportCanvas(moment)
+  if (!result) return
 
-  const canvas = document.createElement('canvas')
+  const primary = normalizedFromMoment(moment)[0]
   const renderOpts = renderOptionsFromMoment(moment)
-  await renderMomentToCanvas(canvas, {
-    lines: normalized,
-    ...renderOpts,
-  })
-
-  const primary = normalized[0]
-  const base = normalized.length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
+  const base = normalizedFromMoment(moment).length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
   const shapeLabel = renderOpts.variant === 'stage-card'
     ? 'Moment'
     : moment.shapeId === 'vertical' ? 'Story' : moment.shapeId === 'wide' ? 'Wide' : 'Square'
   const filename = options?.filename ?? `MARGO_${base}_${shapeLabel}.png`
-  await downloadCanvas(canvas, filename)
+  await downloadCanvas(result.canvas, filename)
 }
 
 export async function renderMargoMomentPngFile(
   moment: MargoMoment,
 ): Promise<File | null> {
   if (typeof document === 'undefined') return null
-  const normalized = normalizedFromMoment(moment)
-  if (normalized.length === 0) return null
-
-  const canvas = document.createElement('canvas')
-  const renderOpts = renderOptionsFromMoment(moment)
-  await renderMomentToCanvas(canvas, {
-    lines: normalized,
-    ...renderOpts,
-  })
+  const result = await renderMomentExportCanvas(moment)
+  if (!result) return null
 
   const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((b) => resolve(b), 'image/png')
+    result.canvas.toBlob((b) => resolve(b), 'image/png')
   })
   if (!blob) return null
 
-  const primary = normalized[0]
-  const base = normalized.length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
+  const primary = normalizedFromMoment(moment)[0]
+  const renderOpts = renderOptionsFromMoment(moment)
+  const base = normalizedFromMoment(moment).length > 1 ? 'Moment' : slugify(primary.songTitle || '', 'Lyric')
   const shapeLabel = renderOpts.variant === 'stage-card'
     ? 'Moment'
     : moment.shapeId === 'vertical' ? 'Story' : moment.shapeId === 'wide' ? 'Wide' : 'Square'

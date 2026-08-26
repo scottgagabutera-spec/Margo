@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useCallback, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { ComposeLyricCard } from '@/components/compose-lyric-card'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
@@ -26,8 +27,10 @@ export function MomentRecipientView({
   artworkUrl,
 }: MomentRecipientViewProps) {
   const { user } = useIdentity()
+  const searchParams = useSearchParams()
   const signedIn = !!user && !user.isAnonymous
   const openedRef = useRef(false)
+  const autoplayRef = useRef(false)
   const primary = moment.lines[0]
   const listen = moment.listen
   const canPlay = listen?.canPlayInline ?? false
@@ -56,6 +59,14 @@ export function MomentRecipientView({
       source: 'feed',
     })
   }, [canPlay, listen, primary, artworkUrl])
+
+  useEffect(() => {
+    if (autoplayRef.current) return
+    if (searchParams.get('play') !== '1') return
+    if (!canPlay) return
+    autoplayRef.current = true
+    void handlePlay()
+  }, [searchParams, canPlay, handlePlay])
 
   useEffect(() => {
     if (openedRef.current) return

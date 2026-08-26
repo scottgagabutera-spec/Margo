@@ -18,6 +18,10 @@ import {
   shareMargoMomentImage,
   slugify,
 } from '@/lib/moment-export/save-moment-image'
+import {
+  saveMargoMomentPdf,
+  shareMargoMomentPdf,
+} from '@/lib/moment-export/save-moment-pdf'
 import type { MargoMoment } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import {
@@ -58,8 +62,8 @@ interface MomentShareStudioProps {
   /** modal = feed card export sheet: pinned actions, menus open upward */
   layout?: 'default' | 'modal'
   onShareMenuOpen?: () => void
-  onShared?: () => void
-  onExported?: () => void
+  onShared?: (details?: { format?: 'image' | 'pdf' }) => void
+  onExported?: (format: 'image' | 'pdf') => void
 }
 
 export function MomentShareStudio({
@@ -84,6 +88,7 @@ export function MomentShareStudio({
   const [lineIndex, setLineIndex] = useState(0)
   const [busy, setBusy] = useState(false)
   const [canShareImg, setCanShareImg] = useState(false)
+  const [canSharePdfFiles, setCanSharePdfFiles] = useState(false)
   const [openMenu, setOpenMenu] = useState<'save' | 'share' | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -151,6 +156,7 @@ export function MomentShareStudio({
       tid === 'blush' || tid === 'sage' || tid === 'dusk' || tid === 'gold' ? tid : 'gold'
     setCardThemeId(stageTheme)
     setCanShareImg(canShareImageFiles())
+    setCanSharePdfFiles(canShareImageFiles())
   }, [momentProp?.vibeLabel, momentProp?.themeId, vibeLabel])
 
   const renderDualCanvas = useCallback(async () => {
@@ -189,18 +195,41 @@ export function MomentShareStudio({
     try {
       await saveMargoMomentImage(exportMoment)
       void recordCardExport({ postId: resolvedPostId, theme: cardThemeId, shape: 'square' })
-      onExported?.()
+      onExported?.('image')
     } finally {
       setBusy(false)
     }
   }, [isDualCard, renderDualCanvas, song, parentSong, exportMoment, resolvedPostId, cardThemeId, onExported])
+
+  const savePdf = useCallback(async () => {
+    if (!exportMoment || isDualCard) return
+    setBusy(true)
+    try {
+      await saveMargoMomentPdf(exportMoment)
+      void recordCardExport({ postId: resolvedPostId, theme: cardThemeId, shape: 'square' })
+      onExported?.('pdf')
+    } finally {
+      setBusy(false)
+    }
+  }, [exportMoment, isDualCard, resolvedPostId, cardThemeId, onExported])
 
   const shareImage = useCallback(async () => {
     if (!exportMoment || isDualCard) return
     setBusy(true)
     try {
       await shareMargoMomentImage(exportMoment)
-      onShared?.()
+      onShared?.({ format: 'image' })
+    } finally {
+      setBusy(false)
+    }
+  }, [exportMoment, isDualCard, onShared])
+
+  const sharePdf = useCallback(async () => {
+    if (!exportMoment || isDualCard) return
+    setBusy(true)
+    try {
+      const result = await shareMargoMomentPdf(exportMoment)
+      if (result === 'shared') onShared?.({ format: 'pdf' })
     } finally {
       setBusy(false)
     }
@@ -222,7 +251,7 @@ export function MomentShareStudio({
     setBusy(true)
     try {
       await shareMomentNative(exportMoment)
-      onShared?.()
+      onShared?.({})
     } finally {
       setBusy(false)
     }
@@ -233,7 +262,7 @@ export function MomentShareStudio({
     setBusy(true)
     try {
       await copyMomentShareLink(exportMoment)
-      onShared?.()
+      onShared?.({})
     } finally {
       setBusy(false)
     }
@@ -243,6 +272,7 @@ export function MomentShareStudio({
     ? buildMomentExportActionItems({ onExportImage: saveImage, showFormats: false })
     : buildMomentExportActionItems({
       onExportImage: saveImage,
+      onExportPdf: () => { void savePdf() },
       hasPlayableSnippet: hasSnippet,
     })
 
@@ -261,8 +291,10 @@ export function MomentShareStudio({
     ]
     : buildMomentShareActionItems({
       canShareImage: canShareImg,
+      canSharePdf: canSharePdfFiles,
       linksActive: canShareUrl,
       onShareImage: () => { void shareImage() },
+      onSharePdf: () => { void sharePdf() },
       onShareLink: () => { void shareLink() },
       onCopyLink: () => { void copyLink() },
     })
