@@ -1,9 +1,22 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
+import {
+  OAUTH_INTENT_COOKIE,
+  OAUTH_TERMS_PENDING_COOKIE,
+  parseOAuthIntent,
+} from '@/lib/legal/oauth-intent'
 
 const ALLOWED = new Set(['google', 'discord'] as const)
 type OAuthProvider = 'google' | 'discord'
+
+const OAUTH_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  path: '/',
+  maxAge: 60 * 10,
+}
 
 /**
  * Auth core — server-initiated OAuth PKCE start.
@@ -22,6 +35,12 @@ export async function GET(
     return NextResponse.redirect(`${origin}/signin?error=auth`)
   }
   const provider = raw as OAuthProvider
+  const intent = parseOAuthIntent(request.nextUrl.searchParams.get('intent'))
+  const termsAcknowledged = request.nextUrl.searchParams.get('terms') === '1'
+
+  if (intent === 'signup' && !termsAcknowledged) {
+    return NextResponse.redirect(`${origin}/signin?mode=signup&error=terms`)
+  }
 
   // Collect Set-Cookie during signInWithOAuth, then attach to the final redirect.
   const pendingCookies: {
@@ -66,6 +85,10 @@ export async function GET(
   }
 
   const redirect = NextResponse.redirect(data.url)
+  redirect.cookies.set(OAUTH_INTENT_COOKIE, intent, OAUTH_COOKIE_OPTS)
+  if (intent === 'signup' && termsAcknowledged) {
+    redirect.cookies.set(OAUTH_TERMS_PENDING_COOKIE, '1', OAUTH_COOKIE_OPTS)
+  }
   pendingCookies.forEach(({ name, value, options }) => {
     redirect.cookies.set(name, value, options)
   })

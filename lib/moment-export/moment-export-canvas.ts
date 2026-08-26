@@ -21,6 +21,8 @@ export interface MomentExportCanvasResult {
   height: number
   playRegion: MomentExportPlayRegion | null
   playLinkUrl: string | null
+  /** Human-readable listen destination shown in PDF when a snippet link exists. */
+  playLinkLabel: string | null
 }
 
 function normalizedFromMoment(moment: MargoMoment): NormalizedLine[] {
@@ -42,14 +44,15 @@ function momentHasSnippet(moment: MargoMoment): boolean {
 
 function renderOptionsFromMoment(moment: MargoMoment) {
   const isStageCard = moment.lines.length <= 1
-  const showPlayControl = isStageCard && momentHasSnippet(moment)
+  const playLinkUrl = isStageCard && momentHasSnippet(moment) ? getMomentPlayLinkUrl(moment) : null
   return {
     themeId: moment.themeId,
     shapeId: moment.shapeId,
     vibeLabel: moment.vibeLabel,
     seedKey: moment.seedKey,
     variant: isStageCard ? ('stage-card' as const) : ('poster' as const),
-    showPlayControl,
+    showPlayControl: !!playLinkUrl,
+    playLinkUrl,
   }
 }
 
@@ -78,7 +81,7 @@ export async function renderMomentExportCanvas(
 
   const width = canvas.width / scale
   const height = canvas.height / scale
-  const playLinkUrl = renderOpts.showPlayControl ? getMomentPlayLinkUrl(moment) : null
+  const playLinkUrl = renderOpts.playLinkUrl
 
   return {
     canvas,
@@ -86,5 +89,6 @@ export async function renderMomentExportCanvas(
     height,
     playRegion: playLinkUrl ? playRegion : null,
     playLinkUrl,
+    playLinkLabel: playLinkUrl ? 'Listen on Margo — opens in your browser' : null,
   }
 }

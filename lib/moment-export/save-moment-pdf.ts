@@ -15,23 +15,31 @@ function exportFilename(moment: MargoMoment, ext: 'pdf' | 'png'): string {
 }
 
 function canvasToDataUrl(canvas: HTMLCanvasElement): string {
-  return canvas.toDataURL('image/png')
+  return canvas.toDataURL('image/png', 1.0)
 }
 
 function buildPdfFromExport(result: MomentExportCanvasResult): jsPDF {
-  const { canvas, width, height, playRegion, playLinkUrl } = result
-  const orientation = width >= height ? 'landscape' : 'portrait'
+  const { canvas, width, height, playRegion, playLinkUrl, playLinkLabel } = result
+  const footerH = playLinkUrl ? 28 : 0
+  const pageH = height + footerH
+  const orientation = width >= pageH ? 'landscape' : 'portrait'
   const pdf = new jsPDF({
     orientation,
     unit: 'px',
-    format: [width, height],
-    compress: true,
+    format: [width, pageH],
+    compress: false,
   })
 
-  pdf.addImage(canvasToDataUrl(canvas), 'PNG', 0, 0, width, height, undefined, 'FAST')
+  pdf.addImage(canvasToDataUrl(canvas), 'PNG', 0, 0, width, height, undefined, 'SLOW')
 
   if (playRegion && playLinkUrl) {
     pdf.link(playRegion.x, playRegion.y, playRegion.w, playRegion.h, { url: playLinkUrl })
+  }
+
+  if (playLinkUrl && playLinkLabel) {
+    pdf.setFontSize(9)
+    pdf.setTextColor(55, 55, 55)
+    pdf.textWithLink(playLinkLabel, 16, height + 18, { url: playLinkUrl })
   }
 
   return pdf

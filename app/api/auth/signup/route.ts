@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { buildLegalConsentSettings } from '@/lib/legal/consent'
+import { buildLegalConsentSettings, mergeLegalConsentIntoSettings } from '@/lib/legal/consent'
 
 /**
  * Auth core — password sign-up on the server (httpOnly cookies when a

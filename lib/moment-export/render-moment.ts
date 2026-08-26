@@ -891,7 +891,7 @@ function drawStageVibePill(
   ctx.lineWidth = 1.2 * scale
   ctx.stroke()
   ctx.fillStyle = theme.ink
-  ctx.globalAlpha = 0.92
+  ctx.globalAlpha = 1
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(display, x + pillW / 2, y + pillH / 2 + 0.5 * scale)
@@ -951,10 +951,10 @@ function computeStageCardHeight(
     ? metaGap + (hasSong ? metaFS * 1.25 : 0) + (hasArtist ? Math.round(metaFS * 0.92) * 1.3 : 0)
     : 0
   const artH = line.artworkUrl ? artGap + artSize : 0
-  const playH = showPlayControl ? 16 * s + Math.max(44 * s, 28 * s) : 0
+  const listenBarH = showPlayControl ? 16 * s + 52 * s : 0
   const vibeH = vibeLabel ? vibeGap + vibeRowH : 0
 
-  return Math.ceil(padT + lyricH + metaH + artH + playH + vibeH + padB)
+  return Math.ceil(padT + lyricH + metaH + artH + listenBarH + vibeH + padB)
 }
 
 function drawStageMarkBadge(
@@ -979,31 +979,41 @@ function drawStageMarkBadge(
   ctx.restore()
 }
 
-function drawStagePlayControl(
+function drawStageListenBar(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  size: number,
+  width: number,
+  height: number,
   theme: StageCardTheme,
   geist: string,
   scale: number,
-) {
-  const r = size / 2
-  const cx = x + r
-  const cy = y + r
-  const stroke = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.16)'
-  const fill = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.12)'
+): void {
+  const radius = height / 2
+  const stroke = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.14)' : 'rgba(255,255,255,0.18)'
+  const fill = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.08)' : 'rgba(255,255,255,0.12)'
 
   ctx.save()
-  ctx.beginPath()
-  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  drawRoundedRectPath(ctx, x, y, width, height, radius)
   ctx.fillStyle = fill
   ctx.fill()
   ctx.strokeStyle = stroke
   ctx.lineWidth = 1
   ctx.stroke()
 
-  const tri = size * 0.28
+  const playSize = Math.min(height - 10 * scale, 28 * scale)
+  const playX = x + 8 * scale
+  const playY = y + (height - playSize) / 2
+  const r = playSize / 2
+  const cx = playX + r
+  const cy = playY + r
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.fillStyle = theme.markVariant === 'on-light' ? 'rgba(7,6,10,0.12)' : 'rgba(255,255,255,0.16)'
+  ctx.fill()
+
+  const tri = playSize * 0.28
   ctx.fillStyle = theme.ink
   ctx.beginPath()
   ctx.moveTo(cx - tri * 0.35, cy - tri * 0.55)
@@ -1012,13 +1022,44 @@ function drawStagePlayControl(
   ctx.closePath()
   ctx.fill()
 
-  const labelFS = Math.max(9, Math.round(9 * scale))
-  ctx.font = `600 ${labelFS}px ${geist}`
-  ctx.fillStyle = theme.inkMuted
+  const labelFS = Math.max(10, Math.round(10.5 * scale))
+  ctx.font = `700 ${labelFS}px ${geist}`
+  ctx.fillStyle = theme.ink
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  ctx.fillText('Play snippet', x + size + 10 * scale, cy)
+  ctx.fillText('Listen on Margo', playX + playSize + 12 * scale, cy)
+
+  const hintFS = Math.max(8, Math.round(8.5 * scale))
+  ctx.font = `500 ${hintFS}px ${geist}`
+  ctx.fillStyle = theme.inkMuted
+  ctx.fillText('Opens in browser', playX + playSize + 12 * scale, cy + labelFS * 0.95)
   ctx.restore()
+}
+
+function fillStageCardBackground(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  radius: number,
+  theme: StageCardTheme,
+  light: boolean,
+): void {
+  // Opaque full-canvas fill — avoids transparent corners that darken in PDF/PNG viewers.
+  ctx.save()
+  ctx.fillStyle = theme.bg
+  ctx.fillRect(0, 0, W, H)
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, H * 0.28)
+  gradient.addColorStop(0, light ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)')
+  gradient.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, W, H)
+  ctx.restore()
+
+  ctx.strokeStyle = theme.border
+  ctx.lineWidth = 1
+  drawRoundedRectPath(ctx, 0.5, 0.5, W - 1, H - 1, radius)
+  ctx.stroke()
 }
 
 export async function drawStageMomentCard(
@@ -1056,22 +1097,9 @@ export async function drawStageMomentCard(
   const line = lines[0]
   if (!line) return null
 
-  ctx.save()
-  drawRoundedRectPath(ctx, 0, 0, W, H, radius)
-  ctx.clip()
-  ctx.fillStyle = theme.bg
-  ctx.fillRect(0, 0, W, H)
-  const highlight = ctx.createLinearGradient(0, 0, 0, H * 0.28)
-  highlight.addColorStop(0, light ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)')
-  highlight.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.fillStyle = highlight
-  ctx.fillRect(0, 0, W, H)
-  ctx.restore()
-
-  ctx.strokeStyle = theme.border
-  ctx.lineWidth = 1
-  drawRoundedRectPath(ctx, 0.5, 0.5, W - 1, H - 1, radius)
-  ctx.stroke()
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  fillStageCardBackground(ctx, W, H, radius, theme, light)
 
   drawStageMarkBadge(ctx, W - markInset - markSize, markInset, markSize, theme)
 
@@ -1115,11 +1143,11 @@ export async function drawStageMomentCard(
   let playRegion: MomentExportPlayRegion | null = null
   if (showPlayControl) {
     y += 16 * s
-    const playSize = 28 * s
-    const rowH = Math.max(44 * s, playSize)
-    drawStagePlayControl(ctx, padX, y + (rowH - playSize) / 2, playSize, theme, geist, s)
-    playRegion = { x: padX, y, w: Math.min(W - padX * 2, 180 * s), h: rowH }
-    y += rowH
+    const barH = 52 * s
+    const barW = W - padX * 2
+    drawStageListenBar(ctx, padX, y, barW, barH, theme, geist, s)
+    playRegion = { x: padX, y, w: barW, h: barH }
+    y += barH
   }
 
   if (vibeLabel) {

@@ -1,6 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
+import { buildLegalConsentSettings } from '@/lib/legal/consent'
+import {
+  OAUTH_INTENT_COOKIE,
+  OAUTH_TERMS_PENDING_COOKIE,
+} from '@/lib/legal/oauth-intent'
 
 /**
  * OAuth PKCE callback (Google / Discord).
@@ -17,6 +22,11 @@ export async function GET(request: NextRequest) {
   }
 
   const redirectTo = NextResponse.redirect(`${origin}/feed`)
+  const termsPending = request.cookies.get(OAUTH_TERMS_PENDING_COOKIE)?.value === '1'
+  const oauthIntent = request.cookies.get(OAUTH_INTENT_COOKIE)?.value
+
+  redirectTo.cookies.set(OAUTH_TERMS_PENDING_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
+  redirectTo.cookies.set(OAUTH_INTENT_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,10 +49,27 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
     console.error('exchangeCodeForSession failed:', error.message)
-    return NextResponse.redirect(`${origin}/signin?error=auth`)
+    const errTarget = oauthIntent === 'signup' ? `${origin}/signin?mode=signup&error=auth` : `${origin}/signin?error=auth`
+    return NextResponse.redirect(errTarget)
+  }
+
+  if (termsPending && data.user) {
+    const existingTerms = data.user.user_metadata?.terms_accepted_at
+    if (!existingTerms) {
+      const legal = buildLegalConsentSettings()
+      const { error: metaErr } = await supabase.auth.updateUser({
+        data: {
+          terms_accepted_at: legal.termsAcceptedAt,
+          terms_version: legal.termsVersion,
+        },
+      })
+      if (metaErr) {
+        console.error('Failed to record OAuth terms consent:', metaErr.message)
+      }
+    }
   }
 
   return redirectTo
