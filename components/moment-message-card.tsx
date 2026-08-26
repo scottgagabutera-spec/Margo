@@ -8,9 +8,12 @@ const font = 'var(--font-lora), serif'
 export function MomentMessageCard({
   moment,
   mine,
+  embedded = false,
 }: {
   moment: ParsedMomentMessage
   mine: boolean
+  /** Inside a DM bubble — omit inner card chrome to avoid double-wrap. */
+  embedded?: boolean
 }) {
   const ink = mine ? 'var(--bg)' : 'var(--text)'
   const muted = mine ? 'rgba(11,11,11,0.62)' : 'var(--text-secondary)'
@@ -19,20 +22,24 @@ export function MomentMessageCard({
   const cardBorder = mine ? 'rgba(11,11,11,0.18)' : 'rgba(232,197,71,0.22)'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: embedded ? '8px' : '10px' }}>
       <div
-        style={{
-          borderRadius: '12px',
-          padding: '12px 14px',
-          background: cardBg,
-          border: `1px solid ${cardBorder}`,
-        }}
+        style={
+          embedded
+            ? { margin: 0 }
+            : {
+                borderRadius: '12px',
+                padding: '12px 14px',
+                background: cardBg,
+                border: `1px solid ${cardBorder}`,
+              }
+        }
       >
         <p
           style={{
             fontFamily: font,
             fontStyle: 'italic',
-            fontSize: '0.9rem',
+            fontSize: embedded ? '0.82rem' : '0.9rem',
             lineHeight: 1.45,
             margin: 0,
             color: ink,

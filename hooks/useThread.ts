@@ -3,15 +3,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useMessaging } from '@/hooks/useMessaging'
+import { isPartnerUuid } from '@/lib/messages/partner-key'
 
 const supabase = createClient()
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-
-function isUuid(value: string): boolean {
-  return UUID_RE.test(value)
-}
 
 export interface ThreadMessage {
   id: string
@@ -108,7 +102,7 @@ export function useThread(partnerKey: string) {
         setLoadError('This conversation is taking too long to load.')
       }, timeoutMs)
       try {
-        const profileQuery = isUuid(partnerKey)
+        const profileQuery = isPartnerUuid(partnerKey)
           ? supabase
               .from('profiles')
               .select('id, username, display_name, avatar_url, who_can_message')

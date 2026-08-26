@@ -13,6 +13,13 @@ export function chromeModeForPath(pathname: string | null | undefined): MargoChr
   return 'app'
 }
 
+/** `/messages/[partnerKey]` — DM thread (not the inbox list). */
+export function isMessageThreadPath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false
+  const parts = pathname.split('?')[0].split('/').filter(Boolean)
+  return parts.length === 2 && parts[0] === 'messages'
+}
+
 /** Hide fixed MargoNav (marketing uses landing nav; immersive is chrome-free). */
 export function hidesAppNav(pathname: string | null | undefined): boolean {
   const mode = chromeModeForPath(pathname)

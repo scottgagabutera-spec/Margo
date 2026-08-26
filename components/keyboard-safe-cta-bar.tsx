@@ -13,6 +13,8 @@ interface KeyboardSafeCtaBarProps {
    */
   keyboardOpen?: boolean
   zIndex?: number
+  /** Inner content max width — defaults to 640px (Compose). */
+  contentMaxWidth?: number | string
 }
 
 /**
@@ -31,7 +33,12 @@ interface KeyboardSafeCtaBarProps {
  * so other fixed chrome — e.g. Compose's floating mini-player pill — can
  * stack above it without a guessed pixel offset.
  */
-export function KeyboardSafeCtaBar({ children, keyboardOpen = false, zIndex = 55 }: KeyboardSafeCtaBarProps) {
+export function KeyboardSafeCtaBar({
+  children,
+  keyboardOpen = false,
+  zIndex = 55,
+  contentMaxWidth = 640,
+}: KeyboardSafeCtaBarProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -71,7 +78,7 @@ export function KeyboardSafeCtaBar({ children, keyboardOpen = false, zIndex = 55
       <div
         style={{
           pointerEvents: 'auto',
-          maxWidth: '640px',
+          maxWidth: typeof contentMaxWidth === 'number' ? `${contentMaxWidth}px` : contentMaxWidth,
           margin: '0 auto',
           display: 'flex',
           flexDirection: 'column',
