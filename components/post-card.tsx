@@ -47,6 +47,29 @@ export type PostCardVariant = 'feed' | 'compact' | 'row'
 
 const REPORT_REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Other'] as const
 
+function isLyricBackAllowed(post: Post): boolean {
+  return (post.status ?? 'active') === 'active'
+}
+
+const primaryLyricBackBtnStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '100%',
+  minHeight: 'var(--margo-touch-min)',
+  fontFamily: 'var(--font-lora), serif',
+  fontSize: '0.6rem',
+  fontWeight: 700,
+  letterSpacing: '1.5px',
+  textTransform: 'uppercase',
+  color: 'var(--bg)',
+  background: 'var(--gold)',
+  borderRadius: '50px',
+  textDecoration: 'none',
+  marginBottom: '12px',
+  boxSizing: 'border-box',
+}
+
 export interface PostCardProps {
   post: Post
   resonated: boolean
@@ -67,6 +90,8 @@ export interface PostCardProps {
   onQuoteReplay?: (id: string, quoteText: string) => void
   /** When true, skip whole-card navigate (e.g. already on /post/[id]). */
   disableCardNav?: boolean
+  /** Post thread header on /post/[id] — primary Lyric Back CTA layout. */
+  threadDetail?: boolean
   /** Optional DOM id for scroll/highlight (e.g. feed-post-{id}). */
   domId?: string
   /** Brief highlight after the user just published this Moment. */
@@ -441,6 +466,7 @@ export function PostCard({
   variant = 'feed',
   replayed = false, replayCount = 0, onReplay, onQuoteReplay,
   disableCardNav = false,
+  threadDetail = false,
   domId,
   highlightShared = false,
 }: PostCardProps) {
@@ -456,6 +482,8 @@ export function PostCard({
   const audioUrl = post.audioUrl || null
   const cardRef = useRef<HTMLDivElement>(null)
   const isOwner = !!user?.id && !!post.authorUid && post.authorUid === user.id
+  const lyricBackAllowed = isLyricBackAllowed(post)
+  const lyricBackHref = `/lyric-back?postId=${post.id}`
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletedLocally, setDeletedLocally] = useState(false)
@@ -903,28 +931,39 @@ export function PostCard({
       )}
 
       {/* Suggested Lyric Back — on-demand underline; fetches only on tap. */}
-      <PostCardSuggestedReply
-        postId={post.id}
-        onAcceptSuggested={(s) => {
-          if (!requireAuth()) return
-          const q = new URLSearchParams({
-            postId: post.id,
-            lyric: s.text,
-            song: s.songTitle,
-            artist: s.artistName,
-            songId: s.songId,
-            start: String(s.startSec),
-            end: String(s.endSec),
-          })
-          if (s.artworkUrl) q.set('artwork', s.artworkUrl)
-          if (s.audioUrl) q.set('audioUrl', s.audioUrl)
-          router.push(`/lyric-back?${q.toString()}`)
-        }}
-        onOpenSuggestedSearch={() => {
-          if (!requireAuth()) return
-          router.push(`/lyric-back?postId=${encodeURIComponent(post.id)}&catalogOnly=1`)
-        }}
-      />
+      {lyricBackAllowed ? (
+        <PostCardSuggestedReply
+          postId={post.id}
+          onAcceptSuggested={(s) => {
+            if (!requireAuth()) return
+            const q = new URLSearchParams({
+              postId: post.id,
+              lyric: s.text,
+              song: s.songTitle,
+              artist: s.artistName,
+              songId: s.songId,
+              start: String(s.startSec),
+              end: String(s.endSec),
+            })
+            if (s.artworkUrl) q.set('artwork', s.artworkUrl)
+            if (s.audioUrl) q.set('audioUrl', s.audioUrl)
+            router.push(`/lyric-back?${q.toString()}`)
+          }}
+          onOpenSuggestedSearch={() => {
+            if (!requireAuth()) return
+            router.push(`/lyric-back?postId=${encodeURIComponent(post.id)}&catalogOnly=1`)
+          }}
+        />
+      ) : null}
+
+      {threadDetail && lyricBackAllowed ? (
+        <PendingNavLink
+          href={lyricBackHref}
+          style={primaryLyricBackBtnStyle}
+        >
+          Lyric Back
+        </PendingNavLink>
+      ) : null}
 
       <div data-no-card-nav>
       <div className="margo-feed-actions">
@@ -950,24 +989,26 @@ export function PostCard({
           <span className="margo-feed-action__label">Resonate</span>
         </button>
 
-        <PendingNavLink
-          href={`/lyric-back?postId=${post.id}`}
-          className="margo-feed-action"
-          aria-label="Lyric Back"
-          indicator="tint"
-          style={{
-            color: 'var(--text-secondary)',
-            transition: 'color 150ms ease',
-          }}
-        >
-          <span className="margo-feed-action__icon-wrap">
-            <LyricBackIcon size={18} color="var(--text-secondary)" />
-            {echoCount > 0 ? (
-              <span className="margo-feed-action__badge">{echoCount}</span>
-            ) : null}
-          </span>
-          <span className="margo-feed-action__label">Lyric Back</span>
-        </PendingNavLink>
+        {!threadDetail && lyricBackAllowed ? (
+          <PendingNavLink
+            href={lyricBackHref}
+            className="margo-feed-action"
+            aria-label="Lyric Back"
+            indicator="tint"
+            style={{
+              color: 'var(--text-secondary)',
+              transition: 'color 150ms ease',
+            }}
+          >
+            <span className="margo-feed-action__icon-wrap">
+              <LyricBackIcon size={18} color="var(--text-secondary)" />
+              {echoCount > 0 ? (
+                <span className="margo-feed-action__badge">{echoCount}</span>
+              ) : null}
+            </span>
+            <span className="margo-feed-action__label">Lyric Back</span>
+          </PendingNavLink>
+        ) : null}
 
         <button
           type="button"
@@ -984,6 +1025,7 @@ export function PostCard({
           <span className="margo-feed-action__label">Card</span>
         </button>
 
+        {onReplay ? (
         <div style={{ position: 'relative', flex: '1 1 0', minWidth: 0 }}>
           <button
             type="button"
@@ -1110,6 +1152,7 @@ export function PostCard({
             </div>
           )}
         </div>
+        ) : null}
       </div>
 
       </div>

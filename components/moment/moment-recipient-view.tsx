@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { ComposeLyricCard } from '@/components/compose-lyric-card'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { VibeTag } from '@/components/vibe-tag'
 import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
+import { useIdentity } from '@/hooks/useIdentity'
+import { trackEvent } from '@/lib/analytics/track'
 import type { MargoMoment } from '@/lib/moment/types'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 
@@ -23,6 +25,9 @@ export function MomentRecipientView({
   senderLabel,
   artworkUrl,
 }: MomentRecipientViewProps) {
+  const { user } = useIdentity()
+  const signedIn = !!user && !user.isAnonymous
+  const openedRef = useRef(false)
   const primary = moment.lines[0]
   const listen = moment.listen
   const canPlay = listen?.canPlayInline ?? false
@@ -51,6 +56,12 @@ export function MomentRecipientView({
       source: 'feed',
     })
   }, [canPlay, listen, primary, artworkUrl])
+
+  useEffect(() => {
+    if (openedRef.current) return
+    openedRef.current = true
+    trackEvent('moment_opened', { postId: moment.postId ?? null })
+  }, [moment.postId])
 
   return (
     <div
@@ -276,7 +287,7 @@ export function MomentRecipientView({
 
       <div style={{ marginTop: 'auto', paddingTop: '12px' }}>
         <Link
-          href="/"
+          href={signedIn ? '/compose' : '/'}
           style={{
             display: 'flex',
             alignItems: 'center',
