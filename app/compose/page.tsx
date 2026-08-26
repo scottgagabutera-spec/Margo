@@ -591,7 +591,16 @@ function ComposeInner() {
       return null
     }
 
-    if (postedId) return postedId
+    if (postedId) {
+      if (status === 'private') {
+        const { error } = await supabase
+          .from('posts')
+          .update({ status: 'private' })
+          .eq('id', postedId)
+        if (error) throw error
+      }
+      return postedId
+    }
 
     const lines: ComposeLineDraft[] = [...committedLines]
     const draft = buildCurrentDraft()
@@ -638,7 +647,10 @@ function ComposeInner() {
     setPostError(null)
     try {
       const postId = await persistMoment('active')
-      if (!postId) return
+      if (!postId) {
+        setPosting(false)
+        return
+      }
       setPosting(false)
       trackEvent('send_opened')
       setShowSendTo(true)
@@ -654,7 +666,10 @@ function ComposeInner() {
     setPostError(null)
     try {
       const postId = await persistMoment('active')
-      if (!postId) return
+      if (!postId) {
+        setPosting(false)
+        return
+      }
       setPosting(false)
       trackEvent('moment_posted_public')
       setCompletionMode('public')
@@ -671,7 +686,10 @@ function ComposeInner() {
     setPostError(null)
     try {
       const postId = await persistMoment('private')
-      if (!postId) return
+      if (!postId) {
+        setPosting(false)
+        return
+      }
       setPosting(false)
       trackEvent('moment_saved_private')
       setCompletionMode('private')
