@@ -1502,7 +1502,7 @@ function AdminShell() {
         style={{
           maxWidth: '1100px',
           margin: '0 auto',
-          padding: '88px 24px 80px',
+          padding: 'calc(var(--nav-height, 72px) + 16px) 24px var(--margo-page-padding-bottom)',
           display: 'grid',
           gridTemplateColumns: '200px 1fr',
           gap: '32px',
@@ -1510,7 +1510,7 @@ function AdminShell() {
         }}
         className="admin-shell-grid"
       >
-        <aside style={{ position: 'sticky', top: 88 }}>
+        <aside style={{ position: 'sticky', top: 'calc(var(--nav-height, 72px) + 16px)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
             <BackButton fallbackHref="/feed" />
             <div>
@@ -1565,7 +1565,7 @@ function AdminShell() {
           .admin-shell-grid {
             grid-template-columns: 1fr !important;
             gap: 0 !important;
-            padding-top: 72px !important;
+            padding-top: calc(var(--nav-height, 72px) + 16px) !important;
           }
           .admin-shell-grid > aside {
             display: none !important;

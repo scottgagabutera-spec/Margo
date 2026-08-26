@@ -110,7 +110,8 @@ export default function SearchPage() {
 
   return (
     <div style={{
-      maxWidth: '640px', margin: '0 auto', padding: '20px 16px var(--margo-page-padding-bottom)',
+      maxWidth: '640px', margin: '0 auto',
+      padding: 'calc(var(--nav-height, 72px) + 20px) 16px var(--margo-page-padding-bottom)',
     }}>
       <div style={{ marginBottom: '12px' }}>
         <BackButton fallbackHref="/feed" />

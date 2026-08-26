@@ -111,7 +111,7 @@ export default function PostDetailPage() {
   return (
     <main style={{
       minHeight: '100vh', background: 'var(--bg)',
-      padding: '24px 20px var(--margo-page-padding-bottom)',
+      padding: 'calc(var(--nav-height, 72px) + 24px) 20px var(--margo-page-padding-bottom)',
       maxWidth: '640px', margin: '0 auto',
     }}>
       <div style={{ marginBottom: '16px' }}>

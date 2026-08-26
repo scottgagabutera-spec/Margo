@@ -19,7 +19,7 @@ export default function MessagesPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <main style={{ maxWidth: '560px', margin: '0 auto', padding: '88px 20px var(--margo-page-padding-bottom)' }}>
+      <main style={{ maxWidth: '560px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 16px) 20px var(--margo-page-padding-bottom)' }}>
         <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.4rem', color: 'var(--text)', marginBottom: '20px' }}>
           Messages
         </h1>
@@ -74,7 +74,7 @@ export default function MessagesPage() {
                 {list.map(c => (
                   <PendingNavLink
                     key={c.otherUser.id}
-                    href={`/messages/${c.otherUser.id}`}
+                    href={`/messages/${c.otherUser.username}`}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '12px',
                       padding: '10px 8px', textDecoration: 'none',

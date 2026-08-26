@@ -3,13 +3,16 @@ import { useRouter } from 'next/navigation'
 
 const font = 'var(--font-lora), serif'
 
+/**
+ * In-app back for depth routes. When `fallbackHref` is set it is the logical
+ * parent (e.g. thread → /messages), not browser history. Device/browser back
+ * is unchanged — this button never calls router.back().
+ */
 export function BackButton({ fallbackHref, label = 'Back' }: { fallbackHref?: string; label?: string }) {
   const router = useRouter()
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      router.back()
-    } else if (fallbackHref) {
+    if (fallbackHref) {
       router.push(fallbackHref)
     } else {
       router.push('/feed')

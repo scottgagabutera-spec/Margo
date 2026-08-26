@@ -24,7 +24,7 @@ export default function PrivacyPage() {
         <div style={{ position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%', filter: 'blur(80px)', opacity: 0.06, width: '500px', height: '500px', background: 'var(--gold)', top: '-100px', right: '-100px' }} />
         <div style={{ position: 'fixed', pointerEvents: 'none', zIndex: 0, borderRadius: '50%', filter: 'blur(80px)', opacity: 0.06, width: '400px', height: '400px', background: '#6B4EFF', bottom: '-100px', left: '-100px' }} />
 
-        <div style={{ maxWidth: '680px', margin: '0 auto', padding: '88px 24px 120px', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '680px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 16px) 24px 120px', position: 'relative', zIndex: 1 }}>
           <div style={{ marginBottom: '16px' }}>
             <BackButton fallbackHref="/" />
           </div>

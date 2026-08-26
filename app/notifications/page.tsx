@@ -26,7 +26,7 @@ export default function NotificationsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <main style={{ maxWidth: '560px', margin: '0 auto', padding: '88px 20px var(--margo-page-padding-bottom)' }}>
+      <main style={{ maxWidth: '560px', margin: '0 auto', padding: 'calc(var(--nav-height, 72px) + 16px) 20px var(--margo-page-padding-bottom)' }}>
         <h1 style={{
           fontFamily: font, fontStyle: 'italic', fontSize: '1.4rem',
           color: 'var(--text)', marginBottom: '24px',

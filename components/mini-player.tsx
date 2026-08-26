@@ -18,6 +18,7 @@ import { MusicNoteIcon } from '@/components/icons'
 import { SessionQueueList } from '@/components/session-queue-list'
 import { MiniPlayerFeedChrome } from '@/components/mini-player-feed-chrome'
 import { useAudioEngine, useQueueNavigation, usePlaybackProgress } from '@/hooks/useAudioEngine'
+import { isMessageThreadPath } from '@/lib/chrome-mode'
 
 const VIBE_COLORS: Record<string, string> = {
   love: '#FF6B9D', heartbreak: '#ff6060', hope: '#7B9FFF',
@@ -72,9 +73,25 @@ export function MiniPlayer() {
   // Fresh play → pill; leaving Feed keeps orb preference until idle/end.
   useEffect(() => { setFeedChrome('pill') }, [songId])
 
+  const [keyboardChrome, setKeyboardChrome] = useState(false)
+  const isOnMessageThread = isMessageThreadPath(pathname)
+  // Full-width bar (z-index 90) stacks above the DM composer (z-index 55).
+  // Hide it while the keyboard is open on a thread so it does not occlude the composer.
+  const suppressCollapsedBar = isOnMessageThread && keyboardChrome
+
+  useEffect(() => {
+    const sync = () => {
+      setKeyboardChrome(document.documentElement.hasAttribute('data-margo-keyboard'))
+    }
+    sync()
+    const mo = new MutationObserver(sync)
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-margo-keyboard'] })
+    return () => mo.disconnect()
+  }, [])
+
   // Full-width bar reserves page padding; floating pill/orb overlays (h=0).
   useEffect(() => {
-    if (isHidden || expanded || usesFloatingChrome) {
+    if (isHidden || expanded || usesFloatingChrome || suppressCollapsedBar) {
       document.documentElement.style.setProperty('--margo-miniplayer-h', '0px')
       return
     }
@@ -90,7 +107,7 @@ export function MiniPlayer() {
       ro.disconnect()
       document.documentElement.style.setProperty('--margo-miniplayer-h', '0px')
     }
-  }, [isHidden, expanded, usesFloatingChrome, songId, playing])
+  }, [isHidden, expanded, usesFloatingChrome, suppressCollapsedBar, songId, playing])
 
   // ── Drag-to-dismiss gesture on the collapsed bar ─────────────────
   const [barOffset, setBarOffset] = useState(0)
@@ -282,7 +299,7 @@ export function MiniPlayer() {
       )}
 
       {/* ── Collapsed bar (denser chrome — everywhere else) ──────── */}
-      {!expanded && !usesFloatingChrome && (
+      {!expanded && !usesFloatingChrome && !suppressCollapsedBar && (
         <div
           ref={barRef}
           className="mp-bar margo-mp-bar"

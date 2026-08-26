@@ -599,3 +599,9 @@ html[data-margo-sheet-open="1"] .mp-feed-orb {
     touch-action: pan-y;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .margo-mp-bar {
+    transition: none !important;
+  }
+}

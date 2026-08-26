@@ -9,7 +9,7 @@ import { signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { HubIconButton, LibraryNavLink } from '@/components/hub-menu'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
-import { hidesAppNav } from '@/lib/chrome-mode'
+import { hidesAppNav, isMessageThreadPath } from '@/lib/chrome-mode'
 import { PendingNavLink } from '@/components/pending-nav-link'
 
 const font = 'var(--font-geist-sans), system-ui, sans-serif'
@@ -81,7 +81,16 @@ export function MargoNav() {
   const isOnDiscover = activeTab === 'discover' || (!activeTab && !!pathname?.startsWith('/discover'))
   const isOnCompose = activeTab === 'compose' || (!activeTab && pathname === '/compose')
   const isOnSignin = pathname === '/signin'
-  const shellHidden = hidesAppNav(pathname)
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const sync = () => setIsMobile(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+  const shellHidden =
+    hidesAppNav(pathname) || (isMobile && isMessageThreadPath(pathname))
 
   const isSignedIn = !!user && !user.isAnonymous
   const applicationStatus = application?.status ?? 'none'
@@ -145,7 +154,10 @@ export function MargoNav() {
   return (
     <nav ref={navElRef} className="margo-nav-bar" style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-      padding: '14px 24px',
+      paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+      paddingRight: '24px',
+      paddingBottom: '14px',
+      paddingLeft: '24px',
       background: 'var(--bg)',
       boxShadow: '0 1px 24px rgba(0,0,0,0.35)',
     }}>

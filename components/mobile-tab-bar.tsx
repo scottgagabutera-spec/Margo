@@ -38,13 +38,26 @@ export function MobileTabBar() {
     }
     const el = navRef.current
     if (!el) return
-    const setVar = () => {
+
+    const publishHeight = () => {
+      // CSS hides the bar while keyboard-safe chrome is active; ResizeObserver
+      // does not always fire on display:none toggles, so read the attribute.
+      if (document.documentElement.hasAttribute('data-margo-keyboard')) {
+        document.documentElement.style.setProperty('--margo-tabbar-h', '0px')
+        return
+      }
       document.documentElement.style.setProperty('--margo-tabbar-h', `${el.offsetHeight}px`)
     }
-    setVar()
-    const ro = new ResizeObserver(setVar)
+
+    publishHeight()
+    const ro = new ResizeObserver(publishHeight)
     ro.observe(el)
-    return () => ro.disconnect()
+    const mo = new MutationObserver(publishHeight)
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-margo-keyboard'] })
+    return () => {
+      ro.disconnect()
+      mo.disconnect()
+    }
   }, [shellHidden, stageHidden])
 
   const isOnFeed = activeTab === 'feed' || (!activeTab && pathname === '/feed')
