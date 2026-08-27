@@ -288,7 +288,7 @@ export default function SongPage() {
   // start/end are the currently-playing lyric line's exact real timing —
   // passing them through means compose can skip snippet-matching
   // entirely for this entry point and store them as-is.
-  const composeUrl = `/compose?lyric=${encodeURIComponent(currentLyric?.line || '')}&song=${encodeURIComponent(song?.title || '')}&artist=${encodeURIComponent(song?.artist || '')}&artwork=${encodeURIComponent(song?.artwork || '')}&songId=${encodeURIComponent(songId || '')}&audioUrl=${encodeURIComponent(song?.audioUrl || '')}&start=${currentLyric?.start ?? ''}&end=${currentLyric?.end ?? ''}`
+  const composeUrl = `/compose?lyric=${encodeURIComponent(currentLyric?.line || '')}&song=${encodeURIComponent(song?.title || '')}&artist=${encodeURIComponent(song?.artist || '')}&artwork=${encodeURIComponent(song?.artwork || '')}&songId=${encodeURIComponent(songId || '')}&audioUrl=${encodeURIComponent(song?.audioUrl || '')}&start=${currentLyric?.start ?? ''}&end=${currentLyric?.end ?? ''}&phase=moment&source=karaoke`
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

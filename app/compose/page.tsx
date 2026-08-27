@@ -17,15 +17,35 @@ import { ComposeSendTo } from '@/components/compose-send-to'
 import { ComposeReadyPreview } from '@/components/compose-ready-preview'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
+import { MomentShareStudio } from '@/components/moment-share-studio'
+import { MargoSheet } from '@/components/margo-sheet'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { POST_LINES_MAX } from '@/lib/post-lines'
-import { resolveMargoMomentFromComposeDrafts } from '@/lib/moment'
+import { resolveMargoMomentFromComposeDrafts, emotionToVibeLabel, vibeLabelToEmotion } from '@/lib/moment'
 import { persistMomentPost } from '@/lib/moment/persist'
 import { trackEvent } from '@/lib/analytics/track'
 import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
 import { UI_FONT } from '@/lib/fonts'
+import { MARGO_EXPRESSION_TAGLINE } from '@/lib/margo-expression'
+import type { StageCardThemeId } from '@/lib/moment/stage-theme'
+import {
+  clearMomentDraft,
+  consumeComposePendingAction,
+  consumeComposePendingSendRecipient,
+  createEmptyMomentDraft,
+  disarmComposePendingAction,
+  hasMeaningfulDraftWork,
+  loadMomentDraft,
+  saveMomentDraft,
+  setComposePendingAction,
+  setComposePendingSendRecipient,
+  type ComposePendingAction,
+  type ComposePendingSendRecipient,
+  type MomentDraft,
+  type MomentPhase,
+} from '@/lib/moment-draft'
 
 const supabase = createClient()
 
@@ -62,22 +82,17 @@ type Vibe =
   | 'HEARTBREAK' | 'PAIN' | 'LONELINESS' | 'LOST'
   | 'RAGE' | 'SENDIT' | 'LETOUT'
 
-// Grouped by emotional family (uplifting, reflective, heavy, release) rather
-// than left in the Vibe type's declaration order — reads as intentional
-// instead of a random word list, at no extra vertical cost.
-const VIBES: Vibe[] = [
-  'CHILL', 'HOPE', 'HEALING', 'GRATEFUL', 'JOY', 'LOVE', 'HYPE', 'PROUD',
-  'SPIRITUAL', 'NOSTALGIA',
-  'HEARTBREAK', 'PAIN', 'LONELINESS', 'LOST', 'RAGE',
-  'SENDIT', 'LETOUT',
-]
+type CompletionMode = 'send' | 'public' | 'private'
 
-const VIBE_LABELS: Record<Vibe, string> = {
-  CHILL: 'Chill', HOPE: 'Hope', HEALING: 'Healing',
-  GRATEFUL: 'Grateful', SPIRITUAL: 'Spiritual', NOSTALGIA: 'Nostalgia',
-  JOY: 'Joy', LOVE: 'Love', HYPE: 'Hype', PROUD: 'Proud',
-  HEARTBREAK: 'Heartbreak', PAIN: 'Pain', LONELINESS: 'Loneliness',
-  LOST: 'Lost', RAGE: 'Rage', SENDIT: 'Send It', LETOUT: 'Let Out',
+function vibeKeyToLabel(vibe: Vibe | null): string | null {
+  if (!vibe) return null
+  return emotionToVibeLabel(vibe.toLowerCase())
+}
+
+function labelToVibeKey(label: string): Vibe | null {
+  const emotion = vibeLabelToEmotion(label)
+  if (!emotion) return null
+  return emotion.toUpperCase() as Vibe
 }
 
 const font = 'var(--font-lora), serif'
@@ -92,48 +107,101 @@ const backBtnStyle: React.CSSProperties = {
 }
 type MomentLineDraft = { lyric: string; songName: string; artistName: string }
 
-type CompletionMode = 'send' | 'public' | 'private'
+function buildDraftSnapshot(state: {
+  entryPoint: string
+  phase: MomentPhase
+  selectMode: 'picker' | 'write' | null
+  committedLines: ComposeLineDraft[]
+  lyric: string
+  songName: string
+  artistName: string
+  selectedSong: SearchResult | null
+  linkedSongId: string | null
+  linkedAudioUrl: string | null
+  snippetStart: number | null
+  snippetEnd: number | null
+  linePickComplete: boolean
+  selectedVibe: Vibe | null
+  suggestedVibe: Vibe | null
+  vibeUserPicked: boolean
+  themeId: StageCardThemeId
+  parentPostId: string | null
+  pendingAction: ComposePendingAction | null
+  pendingSendRecipient: ComposePendingSendRecipient | null
+  persistedPostId: string | null
+  searchQuery: string
+}): MomentDraft {
+  return {
+    version: 1,
+    entryPoint: state.entryPoint,
+    phase: state.phase,
+    selectMode: state.selectMode,
+    committedLines: state.committedLines,
+    lyric: state.lyric,
+    songName: state.songName,
+    artistName: state.artistName,
+    selectedSong: state.selectedSong
+      ? {
+          id: state.selectedSong.id,
+          title: state.selectedSong.title,
+          artist: state.selectedSong.artist,
+          artwork: state.selectedSong.artwork,
+          source: state.selectedSong.source,
+          margoSongId: state.selectedSong.margoSongId,
+          audioUrl: state.selectedSong.audioUrl,
+          externalListenUrl: state.selectedSong.externalListenUrl,
+        }
+      : null,
+    linkedSongId: state.linkedSongId,
+    linkedAudioUrl: state.linkedAudioUrl,
+    snippetStart: state.snippetStart,
+    snippetEnd: state.snippetEnd,
+    linePickComplete: state.linePickComplete,
+    vibe: state.selectedVibe,
+    vibeSuggested: state.suggestedVibe,
+    vibeUserPicked: state.vibeUserPicked,
+    themeId: state.themeId,
+    parentPostId: state.parentPostId,
+    pendingAction: state.pendingAction,
+    pendingSendRecipient: state.pendingSendRecipient,
+    persistedPostId: state.persistedPostId,
+    searchQuery: state.searchQuery,
+  }
+}
 
 function ComposeInner() {
   const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
-  const { requireAuth } = useAuthGate()
+  const { requireAuth, authGateOpen } = useAuthGate()
   const { isTabActive } = usePrimaryTab()
   const composeLive = isTabActive('compose')
   const searchParams = useSearchParams()
   const composeStartedRef = useRef(false)
+  const prefillHandledRef = useRef(false)
+  const draftRestoredRef = useRef(false)
+  const prevAuthGateOpenRef = useRef(false)
   useEffect(() => {
     if (composeStartedRef.current) return
     composeStartedRef.current = true
     trackEvent('compose_started')
   }, [])
 
-  useEffect(() => {
-    const lyricParam = searchParams.get('lyric')
-    const songParam = searchParams.get('song')
-    const artistParam = searchParams.get('artist')
-    if (lyricParam && songParam && artistParam) {
-      const artworkParam = searchParams.get('artwork')
-      setLyric(lyricParam)
-      setSongName(songParam)
-      setArtistName(artistParam)
-      if (artworkParam) setSelectedSong({ id: 'player', title: songParam, artist: artistParam, artwork: artworkParam, source: 'apple' })
-      const songIdParam = searchParams.get('songId')
-      const audioUrlParam = searchParams.get('audioUrl')
-      if (songIdParam) setLinkedSongId(songIdParam)
-      if (audioUrlParam) setLinkedAudioUrl(audioUrlParam)
-      // Exact snippet timing from the player's share sheet — already
-      // known precisely there (it's the currently-playing lyric line),
-      // so no matching needed at all for this entry point.
-      const startParam = searchParams.get('start')
-      const endParam = searchParams.get('end')
-      if (startParam) setSnippetStart(parseFloat(startParam))
-      if (endParam) setSnippetEnd(parseFloat(endParam))
-      if (songIdParam) setLinePickComplete(true)
-      setStep(3)
-    }
-  }, [])
+  const [entryPoint, setEntryPoint] = useState('pen')
+  const [phase, setPhase] = useState<MomentPhase>('find')
+  const [selectMode, setSelectMode] = useState<'picker' | 'write' | null>(null)
+  const [pendingAction, setPendingActionState] = useState<ComposePendingAction | null>(null)
+  const [pendingSendRecipient, setPendingSendRecipientState] = useState<ComposePendingSendRecipient | null>(null)
+  const [autoSendPerson, setAutoSendPerson] = useState<{
+    id: string
+    username: string
+    displayName: string
+    avatarUrl: string | null
+  } | null>(null)
+  const [themeId, setThemeId] = useState<StageCardThemeId>('gold')
+  const [vibeUserPicked, setVibeUserPicked] = useState(false)
+  const [parentPostId] = useState<string | null>(searchParams.get('parentPostId'))
+  const [showExportStudio, setShowExportStudio] = useState(false)
+  const [startOverConfirm, setStartOverConfirm] = useState(false)
 
-  const [step, setStep] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [showResults, setShowResults] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -191,9 +259,92 @@ function ComposeInner() {
   const [cueRevealChars, setCueRevealChars] = useState(0)
   const [portalMounted, setPortalMounted] = useState(false)
   useEffect(() => setPortalMounted(true), [])
+
+  useEffect(() => {
+    if (prefillHandledRef.current) return
+    const lyricParam = searchParams.get('lyric')
+    const songParam = searchParams.get('song')
+    const artistParam = searchParams.get('artist')
+    if (lyricParam && songParam && artistParam) {
+      prefillHandledRef.current = true
+      draftRestoredRef.current = true
+      setEntryPoint(searchParams.get('source') || 'landing')
+      const artworkParam = searchParams.get('artwork')
+      setLyric(lyricParam)
+      setSongName(songParam)
+      setArtistName(artistParam)
+      if (artworkParam) {
+        setSelectedSong({
+          id: 'player',
+          title: songParam,
+          artist: artistParam,
+          artwork: artworkParam,
+          source: 'apple',
+        })
+      }
+      const songIdParam = searchParams.get('songId')
+      const audioUrlParam = searchParams.get('audioUrl')
+      if (songIdParam) setLinkedSongId(songIdParam)
+      if (audioUrlParam) setLinkedAudioUrl(audioUrlParam)
+      const startParam = searchParams.get('start')
+      const endParam = searchParams.get('end')
+      if (startParam) setSnippetStart(parseFloat(startParam))
+      if (endParam) setSnippetEnd(parseFloat(endParam))
+      setLinePickComplete(true)
+      setSelectMode('write')
+      setPhase('moment')
+      return
+    }
+    if (draftRestoredRef.current) return
+    const saved = loadMomentDraft()
+    if (saved && hasMeaningfulDraftWork(saved)) {
+      draftRestoredRef.current = true
+      prefillHandledRef.current = true
+      setEntryPoint(saved.entryPoint)
+      setPhase(saved.phase === 'success' ? 'find' : saved.phase)
+      setSelectMode(saved.selectMode)
+      setCommittedLines(saved.committedLines as ComposeLineDraft[])
+      setLyric(saved.lyric)
+      setSongName(saved.songName)
+      setArtistName(saved.artistName)
+      setLinkedSongId(saved.linkedSongId)
+      setLinkedAudioUrl(saved.linkedAudioUrl)
+      setSnippetStart(saved.snippetStart)
+      setSnippetEnd(saved.snippetEnd)
+      setLinePickComplete(saved.linePickComplete)
+      setSelectedVibe(saved.vibe as Vibe | null)
+      setSuggestedVibe(saved.vibeSuggested as Vibe | null)
+      setVibeUserPicked(saved.vibeUserPicked)
+      setThemeId(saved.themeId)
+      if (saved.pendingAction) {
+        setPendingActionState(saved.pendingAction)
+        setComposePendingAction(saved.pendingAction)
+      }
+      if (saved.pendingSendRecipient) {
+        setPendingSendRecipientState(saved.pendingSendRecipient)
+        setComposePendingSendRecipient(saved.pendingSendRecipient)
+      }
+      setPostedId(saved.persistedPostId ?? null)
+      setSearchQuery(saved.searchQuery || '')
+      if (saved.selectedSong) {
+        setSelectedSong({
+          id: saved.selectedSong.id,
+          title: saved.selectedSong.title,
+          artist: saved.selectedSong.artist,
+          artwork: saved.selectedSong.artwork,
+          source: saved.selectedSong.source,
+          margoSongId: saved.selectedSong.margoSongId,
+          audioUrl: saved.selectedSong.audioUrl,
+          externalListenUrl: saved.selectedSong.externalListenUrl,
+        })
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     const onMargoCatalog = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
-    const onWritingScreen = step === 2 && !(onMargoCatalog && !linePickComplete)
+    const onWritingScreen = phase === 'select' && !(onMargoCatalog && !linePickComplete)
     if (!onWritingScreen) return
     if (lyric.length > 0) { setCueRevealChars(YOUR_LINE_CUE.length); return }
     setCueRevealChars(0)
@@ -204,7 +355,7 @@ function ComposeInner() {
       if (i >= YOUR_LINE_CUE.length) window.clearInterval(id)
     }, 45)
     return () => window.clearInterval(id)
-  }, [step, selectedSong, linkedSongId, linePickComplete, lyric.length])
+  }, [phase, selectedSong, linkedSongId, linePickComplete, lyric.length])
 
   // Must run before any early return (Rules of Hooks). Publishes --margo-keyboard-inset
   // and hides the mobile tab bar while typing / search sheet is open.
@@ -221,7 +372,7 @@ function ComposeInner() {
 
   useEffect(() => {
     resetComposeViewport()
-  }, [step, linePickComplete, resetComposeViewport])
+  }, [phase, linePickComplete, resetComposeViewport])
 
   const runSearch = useCallback(async (value: string) => {
     const gen = ++searchGenRef.current
@@ -320,9 +471,10 @@ function ComposeInner() {
       setLinkedSongId(songId)
       setLinkedAudioUrl(audioUrl)
       setLinePickComplete(false)
+      setSelectMode('picker')
       setMargoLines([])
       setLinesLoading(true)
-      setStep(2)
+      setPhase('select')
       try {
         const { data, error } = await supabase
           .from('lyric_lines')
@@ -358,6 +510,7 @@ function ComposeInner() {
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
     setLinePickComplete(true)
+    setSelectMode('write')
     setMargoLines([])
 
     try {
@@ -379,50 +532,58 @@ function ComposeInner() {
       console.error('Song rematch failed:', e)
     }
 
-    setStep(2)
+    setPhase('select')
   }, [])
 
   const handleLyricSelected = useCallback(() => {
     trackEvent('lyric_selected')
   }, [])
 
-  const handleLyricComplete = useCallback(async () => {
-    if (lyric.trim().length === 0) return
+  const fetchEmotionSuggestion = useCallback(async (text: string, preserveUserVibe: boolean) => {
+    if (!text.trim()) return
     if (emotionAbortRef.current) emotionAbortRef.current.abort()
     const controller = new AbortController()
     emotionAbortRef.current = controller
     setEmotionLoading(true)
-    setSelectedVibe(null)
-    setSuggestedVibe(null)
-    setStep(3)
-    handleLyricSelected()
+    if (!preserveUserVibe) {
+      setSuggestedVibe(null)
+    }
     try {
       const res = await fetch('/api/emotion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lyric }),
+        body: JSON.stringify({ lyric: text }),
         signal: controller.signal,
       })
       const data = await res.json()
       if (data.emotion) {
         setSuggestedVibe(data.emotion as Vibe)
-        setSelectedVibe(data.emotion as Vibe)
+        if (!preserveUserVibe) setSelectedVibe(data.emotion as Vibe)
       }
-    } catch (e: any) {
-      if (e?.name !== 'AbortError') console.error('Emotion fetch failed:', e)
+    } catch (e: unknown) {
+      if ((e as { name?: string })?.name !== 'AbortError') console.error('Emotion fetch failed:', e)
     } finally {
       setEmotionLoading(false)
     }
-  }, [lyric, handleLyricSelected])
-
-  const handleVibeSelect = useCallback((vibe: Vibe) => {
-    setSelectedVibe(vibe)
   }, [])
 
-  const handleConfirmVibe = useCallback(() => {
-    if (!selectedVibe) return
-    setStep(4)
-  }, [selectedVibe])
+  const enterMoment = useCallback(() => {
+    if (!lyric.trim()) return
+    handleLyricSelected()
+    setPhase('moment')
+    void fetchEmotionSuggestion(lyric, vibeUserPicked)
+  }, [lyric, handleLyricSelected, fetchEmotionSuggestion, vibeUserPicked])
+
+  const handleLyricComplete = useCallback(() => {
+    enterMoment()
+  }, [enterMoment])
+
+  const handleVibeLabelSelect = useCallback((label: string) => {
+    const vibe = labelToVibeKey(label)
+    if (!vibe) return
+    setSelectedVibe(vibe)
+    setVibeUserPicked(true)
+  }, [])
 
   const buildCurrentDraft = useCallback((): ComposeLineDraft => ({
     lyric: lyric.trim(),
@@ -451,11 +612,12 @@ function ComposeInner() {
     if (draft.lyric && draft.songName && draft.artistName) drafts.push(draft)
     return resolveMargoMomentFromComposeDrafts(drafts, {
       postId: postedId,
-      vibeLabel: selectedVibe ? VIBE_LABELS[selectedVibe] : null,
+      vibeLabel: selectedVibe ? vibeKeyToLabel(selectedVibe) : null,
       emotion: selectedVibe ? selectedVibe.toLowerCase() : null,
+      themeId,
       status: completionMode === 'private' ? 'private' : 'active',
     })
-  }, [committedLines, buildCurrentDraft, postedId, selectedVibe, completionMode])
+  }, [committedLines, buildCurrentDraft, postedId, selectedVibe, themeId, completionMode])
 
   const clearDraftFields = useCallback(() => {
     setSearchQuery('')
@@ -512,21 +674,17 @@ function ComposeInner() {
     setLinePickComplete(false)
   }, [])
 
-  const handleStep1Back = useCallback(() => {
+  const handleFindBack = useCallback(() => {
     const onResume = !!selectedSong && (lyric.trim().length > 0 || linePickComplete)
     if (onResume) {
-      setStep(2)
+      setPhase('select')
       return
     }
     if (committedLines.length > 0) {
-      const last = committedLines[committedLines.length - 1]
-      setCommittedLines((prev) => prev.slice(0, -1))
-      restoreLineToDraft(last)
-      setStep(2)
+      setPhase('moment')
       return
     }
-    if (selectedSong) clearCurrentSongPick()
-  }, [committedLines, selectedSong, lyric, linePickComplete, restoreLineToDraft, clearCurrentSongPick])
+  }, [committedLines.length, selectedSong, lyric, linePickComplete])
 
   const handleYourLineBack = useCallback(() => {
     // Margo catalog — always return to line picker (even when lines list is empty).
@@ -536,30 +694,69 @@ function ComposeInner() {
       resetComposeViewport()
       return
     }
-    setStep(1)
+    setPhase('find')
     resetComposeViewport()
   }, [linkedSongId, selectedSong, resetComposeViewport])
 
   const handleLinePickerBack = useCallback(() => {
-    setStep(1)
-    clearCurrentSongPick()
-  }, [clearCurrentSongPick])
+    setPhase('find')
+    resetComposeViewport()
+  }, [resetComposeViewport])
 
   const handleAddAnotherLine = useCallback(() => {
-    if (!requireAuth()) return
     if (!lyric.trim() || !songName.trim() || !artistName.trim()) return
     if (committedLines.length + 1 >= POST_LINES_MAX) return
     setCommittedLines((prev) => [...prev, buildCurrentDraft()])
     clearDraftFields()
-    setStep(1)
+    setPhase('find')
     resetComposeViewport()
   }, [
-    requireAuth, lyric, songName, artistName, committedLines.length,
+    lyric, songName, artistName, committedLines.length,
     buildCurrentDraft, clearDraftFields, resetComposeViewport,
   ])
 
-  const resetCompose = () => {
-    setStep(1)
+  const handleChangeSong = useCallback(() => {
+    if (lyric.trim() && !window.confirm('Change song? Your current line will be cleared.')) return
+    clearCurrentSongPick()
+    setSelectMode(null)
+    setPhase('find')
+    resetComposeViewport()
+  }, [lyric, clearCurrentSongPick, resetComposeViewport])
+
+  const handleRemoveCommittedLine = useCallback((index: number) => {
+    setCommittedLines((prev) => prev.filter((_, i) => i !== index))
+  }, [])
+
+  const handleStartOver = useCallback(() => {
+    const snapshot = buildDraftSnapshot({
+      entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+      selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
+      selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingAction,
+      pendingSendRecipient, persistedPostId: postedId, searchQuery,
+    })
+    if (!hasMeaningfulDraftWork(snapshot)) {
+      resetCompose(true)
+      return
+    }
+    setStartOverConfirm(true)
+  }, [
+    entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+    selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
+    selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingAction,
+    pendingSendRecipient, postedId, searchQuery,
+  ])
+
+  const confirmStartOver = useCallback(() => {
+    setStartOverConfirm(false)
+    resetCompose(true)
+  }, [])
+
+  const resetCompose = (createAnother = false) => {
+    clearMomentDraft()
+    setComposePendingAction(null)
+    setPhase('find')
+    setSelectMode(null)
+    setEntryPoint(createAnother ? 'pen' : entryPoint)
     setSearchQuery('')
     setSelectedSong(null)
     setArtistName('')
@@ -567,9 +764,15 @@ function ComposeInner() {
     setLyric('')
     setSelectedVibe(null)
     setSuggestedVibe(null)
+    setVibeUserPicked(false)
+    setThemeId('gold')
+    setPendingActionState(null)
+    setPendingSendRecipientState(null)
+    setAutoSendPerson(null)
     setPostedId(null)
     setCompletionMode(null)
     setShowSendTo(false)
+    setShowExportStudio(false)
     setSentToName(null)
     setLinkedSongId(null)
     setLinkedAudioUrl(null)
@@ -582,10 +785,10 @@ function ComposeInner() {
     setPostError(null)
     setBannerDismissed(false)
     setCommittedLines([])
+    setStartOverConfirm(false)
   }
 
   const persistMoment = useCallback(async (status: 'active' | 'private') => {
-    if (!requireAuth()) return null
     if (!identity || !user) {
       setPostError('Still setting things up — try again in a moment.')
       return null
@@ -637,75 +840,190 @@ function ComposeInner() {
     setPostedId(newPostId)
     trackEvent('moment_created', { status })
     return newPostId
+  }, [identity, user, postedId, buildCurrentDraft, committedLines, selectedVibe])
+
+  const runPendingAction = useCallback((action: ComposePendingAction) => {
+    if (action === 'post') {
+      void (async () => {
+        setPosting(true)
+        setPostError(null)
+        try {
+          const postId = await persistMoment('active')
+          if (!postId) { setPosting(false); return }
+          setPosting(false)
+          trackEvent('moment_posted_public')
+          setPhase('success')
+          setCompletionMode('public')
+          clearMomentDraft()
+          resetComposeViewport()
+        } catch (e) {
+          console.error('Failed to post to feed:', e)
+          setPostError('Something went wrong. Please try again.')
+          setPosting(false)
+        }
+      })()
+      return
+    }
+    if (action === 'private') {
+      void (async () => {
+        setPosting(true)
+        setPostError(null)
+        try {
+          const postId = await persistMoment('private')
+          if (!postId) { setPosting(false); return }
+          setPosting(false)
+          trackEvent('moment_saved_private')
+          setPhase('success')
+          setCompletionMode('private')
+          clearMomentDraft()
+          resetComposeViewport()
+        } catch (e) {
+          console.error('Failed to save private moment:', e)
+          setPostError('Something went wrong. Please try again.')
+          setPosting(false)
+        }
+      })()
+    }
+  }, [persistMoment, resetComposeViewport])
+
+  const gateAction = useCallback((action: ComposePendingAction, runner: () => void) => {
+    if (user) {
+      runner()
+      return
+    }
+    setPendingActionState(action)
+    setComposePendingAction(action)
+    saveMomentDraft(buildDraftSnapshot({
+      entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+      selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
+      selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingAction: action,
+      pendingSendRecipient, persistedPostId: postedId, searchQuery,
+    }))
+    requireAuth({ returnTo: '/compose' })
   }, [
-    requireAuth, identity, user, postedId, buildCurrentDraft, committedLines,
-    selectedVibe,
+    user, entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+    selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
+    selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingSendRecipient,
+    postedId, searchQuery, requireAuth,
   ])
 
-  const handleSendToSomeone = useCallback(async () => {
-    setPosting(true)
-    setPostError(null)
-    try {
-      const postId = await persistMoment('active')
-      if (!postId) {
-        setPosting(false)
-        return
-      }
-      setPosting(false)
+  const handleSendToSomeone = useCallback(() => {
+    trackEvent('send_opened')
+    setPhase('action')
+    setShowSendTo(true)
+  }, [])
+
+  const handleSendAuthRequired = useCallback((person: {
+    id: string
+    username: string
+    displayName: string
+    avatarUrl: string | null
+  }) => {
+    const recipient: ComposePendingSendRecipient = {
+      id: person.id,
+      username: person.username,
+      displayName: person.displayName,
+      avatarUrl: person.avatarUrl,
+    }
+    setPendingActionState('send')
+    setComposePendingAction('send')
+    setComposePendingSendRecipient(recipient)
+    setPendingSendRecipientState(recipient)
+    saveMomentDraft(buildDraftSnapshot({
+      entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+      selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
+      selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId,
+      pendingAction: 'send', pendingSendRecipient: recipient,
+      persistedPostId: postedId, searchQuery,
+    }))
+    requireAuth({ returnTo: '/compose' })
+  }, [
+    entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+    selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
+    selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId,
+    postedId, searchQuery, requireAuth,
+  ])
+
+  const handlePostToFeed = useCallback(() => {
+    gateAction('post', () => runPendingAction('post'))
+  }, [gateAction, runPendingAction])
+
+  const handleKeepPrivate = useCallback(() => {
+    gateAction('private', () => runPendingAction('private'))
+  }, [gateAction, runPendingAction])
+
+  const handleAddLineFromMoment = useCallback(() => {
+    handleAddAnotherLine()
+  }, [handleAddAnotherLine])
+
+  const tryResumePendingAction = useCallback(() => {
+    if (!user || identityLoading) return
+    const action = consumeComposePendingAction()
+    if (!action) return
+    setPendingActionState(null)
+    if (action === 'send') {
+      const recipient = consumeComposePendingSendRecipient()
+      setPendingSendRecipientState(null)
       trackEvent('send_opened')
+      setPhase('action')
       setShowSendTo(true)
-    } catch (e) {
-      console.error('Failed to persist moment for send:', e)
-      setPostError('Something went wrong. Please try again.')
-      setPosting(false)
+      if (recipient) setAutoSendPerson(recipient)
+      return
     }
-  }, [persistMoment])
+    runPendingAction(action)
+  }, [user, identityLoading, runPendingAction])
 
-  const handlePostToFeed = useCallback(async () => {
-    setPosting(true)
-    setPostError(null)
-    try {
-      const postId = await persistMoment('active')
-      if (!postId) {
-        setPosting(false)
-        return
-      }
-      setPosting(false)
-      trackEvent('moment_posted_public')
-      setCompletionMode('public')
-      resetComposeViewport()
-    } catch (e) {
-      console.error('Failed to post to feed:', e)
-      setPostError('Something went wrong. Please try again.')
-      setPosting(false)
+  useEffect(() => {
+    if (phase === 'moment' && lyric.trim() && !emotionLoading && !selectedVibe && !vibeUserPicked) {
+      void fetchEmotionSuggestion(lyric, false)
     }
-  }, [persistMoment, resetComposeViewport])
+  }, [phase, lyric, emotionLoading, selectedVibe, vibeUserPicked, fetchEmotionSuggestion])
 
-  const handleKeepPrivate = useCallback(async () => {
-    setPosting(true)
-    setPostError(null)
-    try {
-      const postId = await persistMoment('private')
-      if (!postId) {
-        setPosting(false)
-        return
-      }
-      setPosting(false)
-      trackEvent('moment_saved_private')
-      setCompletionMode('private')
-      resetComposeViewport()
-    } catch (e) {
-      console.error('Failed to save private moment:', e)
-      setPostError('Something went wrong. Please try again.')
-      setPosting(false)
+  useEffect(() => {
+    if (completionMode) return
+    saveMomentDraft(buildDraftSnapshot({
+      entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+      selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
+      selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingAction,
+      pendingSendRecipient, persistedPostId: postedId, searchQuery,
+    }))
+  }, [
+    completionMode, entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+    selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
+    selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingAction,
+    pendingSendRecipient, postedId, searchQuery,
+  ])
+
+  useEffect(() => {
+    tryResumePendingAction()
+  }, [tryResumePendingAction])
+
+  useEffect(() => {
+    const wasOpen = prevAuthGateOpenRef.current
+    prevAuthGateOpenRef.current = authGateOpen
+    if (wasOpen && !authGateOpen && !user) {
+      setPendingActionState(null)
+      setPendingSendRecipientState(null)
+      setAutoSendPerson(null)
     }
-  }, [persistMoment, resetComposeViewport])
+  }, [authGateOpen, user])
+
+  const handleAutoSendConsumed = useCallback(() => {
+    setAutoSendPerson(null)
+    disarmComposePendingAction()
+    setPendingActionState(null)
+    setPendingSendRecipientState(null)
+  }, [])
 
   const handleSendComplete = useCallback((name: string) => {
     trackEvent('moment_sent_dm')
     setSentToName(name)
     setShowSendTo(false)
+    setPhase('success')
     setCompletionMode('send')
+    setPendingActionState(null)
+    setComposePendingAction(null)
+    clearMomentDraft()
     resetComposeViewport()
   }, [resetComposeViewport])
 
@@ -734,12 +1052,12 @@ function ComposeInner() {
 
   // Show the name banner on step 4 until the person has customized their
   // displayName at least once, or dismissed it for this compose session.
-  const showNameBanner = step === 4 && !!identity && identity.displayName === identity.username && !bannerDismissed
+  const showNameBanner = phase === 'moment' && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
-  const showStep1Resume = step === 1 && !!selectedSong && (lyric.trim().length > 0 || linePickComplete || committedLines.length > 0)
+  const showStep1Resume = phase === 'find' && !!selectedSong && (lyric.trim().length > 0 || linePickComplete || committedLines.length > 0)
   const isMargoCatalogFlow = !!(linkedSongId && (selectedSong?.source === 'margo' || selectedSong?.margoSongId))
-  const showLinePicker = step === 2 && isMargoCatalogFlow && !linePickComplete
-  const showYourLinePanel = step === 2 && !showLinePicker
+  const showLinePicker = phase === 'select' && isMargoCatalogFlow && !linePickComplete
+  const showYourLinePanel = phase === 'select' && !showLinePicker
 
   return (
     <main ref={composeRootRef} style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
@@ -747,11 +1065,11 @@ function ComposeInner() {
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
           {/* ── Step 1: Search ── */}
-          <div style={{ display: step === 1 ? 'block' : 'none' }}>
+          <div style={{ display: phase === 'find' ? 'block' : 'none' }}>
             {(committedLines.length > 0 || showStep1Resume) && (
               <button
                 type="button"
-                onClick={handleStep1Back}
+                onClick={handleFindBack}
                 style={backBtnStyle}
               ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
             )}
@@ -805,7 +1123,7 @@ function ComposeInner() {
                 ) : null}
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
+                  onClick={() => setPhase('select')}
                   style={{
                     width: '100%', minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none',
                     background: 'var(--gold)', color: 'var(--text-on-gold, var(--bg))',
@@ -827,9 +1145,24 @@ function ComposeInner() {
             ) : (
               <>
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: 0 }}>
-                {committedLines.length > 0 ? 'Add another line' : 'Find your lyric'}
+              <h1 style={{
+                fontFamily: font,
+                fontStyle: 'italic',
+                fontSize: '1.65rem',
+                lineHeight: 1.35,
+                color: 'var(--text)',
+                margin: 0,
+                maxWidth: '18rem',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+              }}>
+                {committedLines.length > 0 ? 'Add another line' : MARGO_EXPRESSION_TAGLINE}
               </h1>
+              {committedLines.length === 0 ? (
+                <p style={{ fontFamily: UI_FONT, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45, margin: '10px 0 0' }}>
+                  Search a song, pick your line, then send when you&apos;re ready.
+                </p>
+              ) : null}
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
               <style>{`.compose-search-input::placeholder { color: var(--text-disabled); }`}</style>
@@ -862,107 +1195,70 @@ function ComposeInner() {
 
           {/* Step 2 UI is portaled (line picker + Your line) — see below main */}
 
-          {/* ── Step 3: Vibe Selection ── */}
-          <div style={{ display: step === 3 ? 'block' : 'none' }}>
-            <button style={backBtnStyle} onClick={() => {
-              if (emotionLoading) emotionAbortRef.current?.abort()
-              setStep(2)
-            }}><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: emotionLoading ? 0 : '8px' }}>
-                {emotionLoading ? 'Finding the feeling…' : 'How does this feel?'}
-              </h1>
-              {!emotionLoading && suggestedVibe && (
-                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Change it if you&apos;d like.
-                </p>
-              )}
-            </div>
-
-            {/* Quiet reminder, not the full Moment — that already showed on
-                Your line and shows again on Ready to post. This screen's
-                job is the vibes; a fixed-height single-line strip keeps
-                the layout predictable no matter how long the lyric is. */}
-            <div style={{
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              borderRadius: '14px', padding: '14px 16px', marginBottom: '20px',
-            }}>
-              <p style={{
-                fontFamily: font, fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--text)',
-                margin: 0, lineHeight: 1.4,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                &ldquo;{lyric}&rdquo;
-              </p>
-              <p style={{
-                fontFamily: UI_FONT, fontSize: '0.7rem', color: 'var(--text-secondary)',
-                margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {songName}{artistName ? ` · ${artistName}` : ''}
-              </p>
-            </div>
-
-            {emotionLoading && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '24px' }}>
-                {[0,1,2].map(i => (
-                  <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)', opacity: 0.5, animation: 'bounce 1s infinite', animationDelay: i * 150 + 'ms' }} />
-                ))}
-              </div>
-            )}
-
-            {!emotionLoading && (
-              <>
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginBottom: '28px' }}>
-                  {VIBES.map((vibe) => (
-                    <button key={vibe} onClick={() => handleVibeSelect(vibe)}
-                      style={{
-                        minHeight: 'var(--margo-touch-min)', padding: '0 14px', borderRadius: '50px',
-                        display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-                        fontFamily: font, fontWeight: 600,
-                        fontSize: '0.7rem', cursor: 'pointer', transition: 'all 150ms ease',
-                        background: selectedVibe === vibe ? 'var(--gold)' : 'transparent',
-                        color: selectedVibe === vibe ? 'var(--bg)' : 'var(--text-secondary)',
-                        border: selectedVibe === vibe ? '1px solid var(--gold)' : '1px solid var(--border-hi)',
-                        position: 'relative',
-                      }}>
-                      {VIBE_LABELS[vibe]}
-                      {suggestedVibe === vibe && selectedVibe !== vibe && (
-                        <span style={{ position: 'absolute', top: '-6px', right: '-6px', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--gold)', border: '2px solid var(--bg)' }} />
-                      )}
-                    </button>
-                  ))}
-                </div>
-                {/* Primary confirm lives in KeyboardSafeCtaBar */}
-              </>
-            )}
-          </div>
-
-          {/* ── Step 4: Preview + Post ── */}
-          <div style={{ display: step === 4 ? 'block' : 'none' }}>
-            <button
-              style={{ ...backBtnStyle, opacity: posting ? 0.4 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
-              disabled={posting}
-              onClick={() => { if (!posting) setStep(3) }}
-            ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: committedLines.length > 0 ? '8px' : 0 }}>Ready to send?</h1>
-              {committedLines.length > 0 && (
-                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Send it to someone, post to Feed, or keep it private.
-                </p>
-              )}
-              {committedLines.length === 0 && (
-                <p style={{ fontFamily: font, fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
-                  Send it to someone, post to Feed, or keep it private.
-                </p>
-              )}
+          {/* ── MOMENT hub ── */}
+          <div style={{ display: phase === 'moment' || phase === 'action' ? 'block' : 'none' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <button
+                style={{ ...backBtnStyle, marginBottom: 0, opacity: posting ? 0.4 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
+                disabled={posting}
+                onClick={() => { if (!posting) setPhase('select') }}
+              ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
+              <button
+                type="button"
+                onClick={handleStartOver}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontFamily: font, fontSize: '0.72rem', color: 'var(--text-muted)',
+                  minHeight: 'var(--margo-touch-min)', padding: '0 8px',
+                }}
+              >Start over</button>
             </div>
 
             <ComposeReadyPreview
               drafts={allLineDrafts}
-              vibeLabel={selectedVibe ? VIBE_LABELS[selectedVibe] : null}
-              suggestedVibeLabel={suggestedVibe ? VIBE_LABELS[suggestedVibe] : null}
+              vibeLabel={selectedVibe ? vibeKeyToLabel(selectedVibe) : null}
+              suggestedVibeLabel={suggestedVibe ? vibeKeyToLabel(suggestedVibe) : null}
+              emotionLoading={emotionLoading}
+              onVibeSelect={handleVibeLabelSelect}
+              cardThemeId={themeId}
+              onThemeChange={setThemeId}
             />
+
+            {committedLines.length > 0 && (
+              <div style={{ margin: '20px 0', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                <p style={{ fontFamily: font, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--gold)', margin: '0 0 8px' }}>
+                  Moment so far · {committedLines.length}/{POST_LINES_MAX} lines
+                </p>
+                {committedLines.map((line, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <p style={{ flex: 1, fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
+                      {i + 1}. &ldquo;{line.lyric}&rdquo;
+                    </p>
+                    <button type="button" onClick={() => handleRemoveCommittedLine(i)}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: UI_FONT, fontSize: '0.65rem', cursor: 'pointer', flexShrink: 0 }}>
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              <button type="button" onClick={() => setShowExportStudio(true)}
+                style={{ padding: '8px 14px', borderRadius: '50px', border: '1px solid var(--gold-border)', background: 'transparent', color: 'var(--gold)', fontFamily: font, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', cursor: 'pointer' }}>
+                Export / share
+              </button>
+              <button type="button" onClick={handleChangeSong}
+                style={{ padding: '8px 14px', borderRadius: '50px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.58rem', letterSpacing: '0.8px', textTransform: 'uppercase', cursor: 'pointer' }}>
+                Change song
+              </button>
+              {committedLines.length + 1 < POST_LINES_MAX && (
+                <button type="button" onClick={handleAddLineFromMoment}
+                  style={{ padding: '8px 14px', borderRadius: '50px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.58rem', letterSpacing: '0.8px', textTransform: 'uppercase', cursor: 'pointer' }}>
+                  Add another line
+                </button>
+              )}
+            </div>
 
             {/* Display name banner — shown until customized once, or dismissed */}
             {showNameBanner && identity && (
@@ -1053,12 +1349,16 @@ function ComposeInner() {
                 setSnippetEnd(line.endSec)
                 setLyric((line.text || '').slice(0, 140))
                 setLinePickComplete(true)
+                setSelectMode('write')
                 handleLyricSelected()
+                setPhase('moment')
+                void fetchEmotionSuggestion((line.text || '').slice(0, 140), vibeUserPicked)
               }}
               onSkip={() => {
                 setSnippetStart(null)
                 setSnippetEnd(null)
                 setLinePickComplete(true)
+                setSelectMode('write')
               }}
               onBack={handleLinePickerBack}
             />
@@ -1092,26 +1392,8 @@ function ComposeInner() {
         document.body,
       )}
 
-      {step === 3 && !emotionLoading && (
-        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
-          <button
-            type="button"
-            onClick={handleConfirmVibe}
-            disabled={!selectedVibe}
-            style={{
-              ...keyboardSafePrimaryBtnStyle,
-              opacity: selectedVibe ? 1 : 0.5,
-              cursor: selectedVibe ? 'pointer' : 'not-allowed',
-              background: selectedVibe ? 'var(--gold)' : 'transparent',
-              color: selectedVibe ? 'var(--text-on-gold, var(--bg))' : 'var(--text-muted)',
-              border: selectedVibe ? 'none' : '1px solid var(--border)',
-              boxShadow: selectedVibe ? keyboardSafePrimaryBtnStyle.boxShadow : 'none',
-            }}
-          >Continue</button>
-        </KeyboardSafeCtaBar>
-      )}
 
-      {step === 4 && (
+      {phase === 'moment' && (
         <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
           <div style={{ opacity: buttonsBlocked ? 0.4 : 1, pointerEvents: buttonsBlocked ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
@@ -1119,7 +1401,7 @@ function ComposeInner() {
               onClick={() => { void handleSendToSomeone() }}
               disabled={posting || identityLoading}
               style={{ ...keyboardSafePrimaryBtnStyle, opacity: posting ? 0.7 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
-            >{posting ? 'Saving…' : 'Send to someone'}</button>
+            >Send to someone</button>
             <button
               type="button"
               onClick={() => { void handlePostToFeed() }}
@@ -1141,16 +1423,56 @@ function ComposeInner() {
         </KeyboardSafeCtaBar>
       )}
 
-      {step === 4 && postedId && (
-        <ComposeSendTo
-          open={showSendTo}
-          onOpenChange={setShowSendTo}
-          postId={postedId}
-          lyric={primaryLine.lyric}
-          song={primaryLine.song}
-          artist={primaryLine.artist}
-          onSent={handleSendComplete}
-        />
+      <ComposeSendTo
+        open={showSendTo}
+        onOpenChange={(open) => {
+          setShowSendTo(open)
+          if (!open) {
+            setPhase('moment')
+            disarmComposePendingAction()
+            setPendingActionState(null)
+            setPendingSendRecipientState(null)
+            setAutoSendPerson(null)
+          }
+        }}
+        persistPost={() => persistMoment('active')}
+        lyric={primaryLine.lyric}
+        song={primaryLine.song}
+        artist={primaryLine.artist}
+        onSent={handleSendComplete}
+        onAuthRequired={handleSendAuthRequired}
+        autoSendPerson={autoSendPerson}
+        onAutoSendConsumed={handleAutoSendConsumed}
+      />
+
+      <MargoSheet
+        open={showExportStudio}
+        onOpenChange={setShowExportStudio}
+        title="Export your Moment"
+        zIndex={200}
+        heightMode="auto"
+        bottomInset="tabbar-tight"
+      >
+        <MomentShareStudio moment={exportMoment} compact />
+      </MargoSheet>
+
+      {startOverConfirm && (
+        <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(7,6,10,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '20px', padding: '24px', maxWidth: '360px', width: '100%' }}>
+            <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.1rem', color: 'var(--text)', margin: '0 0 8px' }}>Start over?</p>
+            <p style={{ fontFamily: font, fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.45 }}>This will discard your current Moment.</p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button type="button" onClick={confirmStartOver}
+                style={{ flex: 1, minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: 'none', background: 'var(--gold)', color: 'var(--bg)', fontFamily: font, fontWeight: 700, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
+                Start over
+              </button>
+              <button type="button" onClick={() => setStartOverConfirm(false)}
+                style={{ flex: 1, minHeight: 'var(--margo-touch-min)', borderRadius: '50px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {portalMounted && showYourLinePanel && createPortal(

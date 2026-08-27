@@ -23,6 +23,8 @@ interface AuthFormProps {
   onSuccess?: () => void
   onSwitchMode?: (mode: AuthMode) => void
   externalError?: string | null
+  /** Post-OAuth redirect path (e.g. /compose) — set by auth gate. */
+  oauthReturnTo?: string | null
 }
 
 interface TermsCompletionFormProps {
@@ -189,7 +191,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
   )
 }
 
-export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthFormProps) {
+export function AuthForm({ mode, onSuccess, onSwitchMode, externalError, oauthReturnTo }: AuthFormProps) {
   const { rehydrate } = useAuthGate()
   const emailId = useId()
   const passwordId = useId()
@@ -278,6 +280,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthF
     const params = new URLSearchParams()
     params.set('intent', isSignup ? 'signup' : 'signin')
     if (isSignup) params.set('terms', '1')
+    if (oauthReturnTo?.startsWith('/')) params.set('returnTo', oauthReturnTo)
     window.location.assign(`/api/auth/oauth/${provider}?${params.toString()}`)
   }
 

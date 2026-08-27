@@ -6,6 +6,10 @@ import {
   OAUTH_INTENT_COOKIE,
   OAUTH_TERMS_PENDING_COOKIE,
 } from '@/lib/legal/oauth-intent'
+import {
+  OAUTH_RETURN_COOKIE,
+  sanitizeOAuthReturnPath,
+} from '@/lib/oauth-return'
 
 /**
  * OAuth PKCE callback (Google / Discord).
@@ -78,7 +82,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  let redirectTarget = `${origin}/feed`
+  const oauthReturn = sanitizeOAuthReturnPath(
+    request.cookies.get(OAUTH_RETURN_COOKIE)?.value,
+  )
+
+  let redirectTarget = oauthReturn ? `${origin}${oauthReturn}` : `${origin}/feed`
   if (user && userNeedsTermsAcceptance(user)) {
     redirectTarget = `${origin}/signin?step=terms`
   }
@@ -86,6 +94,7 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(redirectTarget)
   response.cookies.set(OAUTH_TERMS_PENDING_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
   response.cookies.set(OAUTH_INTENT_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
+  response.cookies.set(OAUTH_RETURN_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
   pendingCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, options)
   })

@@ -29,11 +29,25 @@ type Props = {
   drafts: ComposeReadyLineDraft[]
   vibeLabel: string | null
   suggestedVibeLabel?: string | null
+  emotionLoading?: boolean
+  onVibeSelect?: (label: string) => void
+  cardThemeId?: StageCardThemeId
+  onThemeChange?: (id: StageCardThemeId) => void
 }
 
-export function ComposeReadyPreview({ drafts, vibeLabel, suggestedVibeLabel }: Props) {
+export function ComposeReadyPreview({
+  drafts,
+  vibeLabel,
+  suggestedVibeLabel,
+  emotionLoading = false,
+  onVibeSelect,
+  cardThemeId: cardThemeIdProp,
+  onThemeChange: onThemeChangeProp,
+}: Props) {
   const [lineIndex, setLineIndex] = useState(0)
-  const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
+  const [cardThemeIdLocal, setCardThemeIdLocal] = useState<StageCardThemeId>('gold')
+  const cardThemeId = cardThemeIdProp ?? cardThemeIdLocal
+  const setCardThemeId = onThemeChangeProp ?? setCardThemeIdLocal
 
   const validDrafts = useMemo(
     () => drafts.filter((d) => d.lyric.trim() && d.songName.trim() && d.artistName.trim()),
@@ -123,9 +137,10 @@ export function ComposeReadyPreview({ drafts, vibeLabel, suggestedVibeLabel }: P
         songTitle={draft.songName}
         artistName={draft.artistName}
         artwork={draft.artwork}
-        vibeLabel={vibeLabel}
+        vibeLabel={emotionLoading && !vibeLabel ? 'Finding…' : vibeLabel}
         suggestedVibeLabel={suggestedVibeLabel}
         vibeOptions={MOMENT_VIBE_PICKER_OPTIONS}
+        onVibeSelect={onVibeSelect}
         cardThemeId={cardThemeId}
         onThemeChange={setCardThemeId}
         canPlay={canPlayInline}

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { AuthForm } from '@/components/auth-form'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const font = 'var(--font-lora), serif'
 
@@ -10,17 +11,13 @@ interface AuthGateModalProps {
 }
 
 /**
- * Dismissible sign-up/sign-in prompt shown by requireAuth() (see
- * supabase-auth-provider.tsx) whenever someone taps a gated action —
- * post, resonate, lyric back, card export, or full song play — without
- * an account. "Maybe Later" and the X both simply close the modal;
- * neither retries the original action, matching the simplest version
- * of this flow (the person just taps again if they change their mind).
+ * Dismissible sign-up/sign-in prompt shown by requireAuth().
+ * On success, Compose consumes its pending action via sessionStorage resume.
  */
 export function AuthGateModal({ open, onOpenChange }: AuthGateModalProps) {
   const [mode, setMode] = useState<'signup' | 'signin'>('signup')
+  const { authReturnTo } = useAuthGate()
 
-  // Reset to signup each time the modal opens fresh.
   useEffect(() => {
     if (open) setMode('signup')
   }, [open])
@@ -70,6 +67,7 @@ export function AuthGateModal({ open, onOpenChange }: AuthGateModalProps) {
           mode={mode}
           onSuccess={() => onOpenChange(false)}
           onSwitchMode={setMode}
+          oauthReturnTo={authReturnTo}
         />
 
         <button
