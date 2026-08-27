@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
+import { userNeedsTermsAcceptance } from '@/lib/legal/consent'
+import { isConsentEnforcementExemptPath } from '@/lib/legal/consent-paths'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -34,7 +36,15 @@ export async function proxy(request: NextRequest) {
 
   // Refresh the httpOnly session cookie when present.
   // Do not run code between createServerClient and getUser().
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const pathname = request.nextUrl.pathname
+  if (user && userNeedsTermsAcceptance(user) && !isConsentEnforcementExemptPath(pathname)) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/signin'
+    url.search = 'step=terms'
+    return NextResponse.redirect(url)
+  }
 
   return supabaseResponse
 }

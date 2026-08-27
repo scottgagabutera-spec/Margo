@@ -12,6 +12,8 @@ import {
 } from '@/lib/supabase/auth-broadcast'
 import type { User } from '@supabase/supabase-js'
 import { AuthGateModal } from '@/components/auth-gate-modal'
+import { LegalConsentEnforcer } from '@/components/legal-consent-enforcer'
+import { Suspense } from 'react'
 
 const supabase = createClient()
 
@@ -36,6 +38,8 @@ interface AuthGateContextValue {
   loading: boolean
   /** True when the signed-in user has an email/password identity. */
   hasPasswordAuth: boolean
+  /** Server-derived: Margo Terms/Privacy acceptance still required. */
+  needsTermsAcceptance: boolean
   requireAuth: () => boolean
   /** Re-read httpOnly session → memory access token (after login/logout). */
   rehydrate: (opts?: RehydrateOptions) => Promise<void>
@@ -52,6 +56,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [hasPasswordAuth, setHasPasswordAuth] = useState(false)
+  const [needsTermsAcceptance, setNeedsTermsAcceptance] = useState(false)
   const [gateOpen, setGateOpen] = useState(false)
   const userRef = useRef<User | null>(null)
   const applyingRemoteRef = useRef(false)
@@ -64,6 +69,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     user?: { id: string; email?: string | null; is_anonymous?: boolean } | null
     access_token?: string
     has_password_auth?: boolean
+    needs_terms_acceptance?: boolean
   } | null) => {
     if (body?.access_token && body?.user) {
       setBrowserAccessToken(body.access_token)
@@ -73,12 +79,14 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         is_anonymous: body.user.is_anonymous,
       } as User)
       setHasPasswordAuth(body.has_password_auth === true)
+      setNeedsTermsAcceptance(body.needs_terms_acceptance === true)
       setGateOpen(false)
       return
     }
     setBrowserAccessToken(null)
     setUser(null)
     setHasPasswordAuth(false)
+    setNeedsTermsAcceptance(false)
   }, [])
 
   const rehydrate = useCallback(async (opts?: RehydrateOptions) => {
@@ -266,9 +274,12 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, [user])
 
   return (
-    <AuthGateContext.Provider value={{ user, loading, hasPasswordAuth, requireAuth, rehydrate }}>
+    <AuthGateContext.Provider value={{ user, loading, hasPasswordAuth, needsTermsAcceptance, requireAuth, rehydrate }}>
       {children}
       <AuthGateModal open={gateOpen} onOpenChange={setGateOpen} />
+      <Suspense fallback={null}>
+        <LegalConsentEnforcer />
+      </Suspense>
     </AuthGateContext.Provider>
   )
 }

@@ -15,7 +15,7 @@ const linkStyle: React.CSSProperties = {
   textUnderlineOffset: '2px',
 }
 
-function PolicyLinks() {
+export function PolicyLinks() {
   return (
     <>
       <Link href="/terms" target="_blank" rel="noopener noreferrer" style={linkStyle}>

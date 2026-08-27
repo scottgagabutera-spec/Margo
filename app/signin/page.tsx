@@ -1,10 +1,11 @@
 'use client'
 
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthForm, TermsCompletionForm, type AuthMode } from '@/components/auth-form'
 import { BackButton } from '@/components/back-button'
 import MargoLogo from '@/components/MargoLogo'
+import { useAuthGate } from '@/components/supabase-auth-provider'
 
 const lora = 'var(--font-lora), serif'
 const ui = 'var(--font-geist-sans), system-ui, sans-serif'
@@ -34,6 +35,7 @@ export default function SigninPage() {
 function SigninPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, loading, needsTermsAcceptance } = useAuthGate()
   const initialMode = parseMode(searchParams.get('mode'))
   const isTermsStep = searchParams.get('step') === 'terms'
   const [mode, setMode] = useState<AuthMode>(initialMode)
@@ -42,6 +44,13 @@ function SigninPageInner() {
     () => parseAuthError(searchParams.get('error')),
     [searchParams],
   )
+
+  useEffect(() => {
+    if (loading) return
+    if (isTermsStep && user && !needsTermsAcceptance) {
+      router.replace('/feed')
+    }
+  }, [loading, isTermsStep, user, needsTermsAcceptance, router])
 
   return (
     <div style={{

@@ -1,12 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseCookieOptions } from '@/lib/supabase/cookie-options'
-import { buildLegalConsentSettings } from '@/lib/legal/consent'
+import { buildLegalConsentSettings, hasTermsAcceptanceRecorded, userNeedsTermsAcceptance } from '@/lib/legal/consent'
 import {
   OAUTH_INTENT_COOKIE,
   OAUTH_TERMS_PENDING_COOKIE,
 } from '@/lib/legal/oauth-intent'
-import { userNeedsTermsAcceptance } from '@/lib/legal/oauth-new-user'
 
 /**
  * OAuth PKCE callback (Google / Discord).
@@ -62,24 +61,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errTarget)
   }
 
-  if (termsPending && data.user) {
-    const existingTerms = data.user.user_metadata?.terms_accepted_at
-    if (!existingTerms) {
-      const legal = buildLegalConsentSettings()
-      const { error: metaErr } = await supabase.auth.updateUser({
-        data: {
-          terms_accepted_at: legal.termsAcceptedAt,
-          terms_version: legal.termsVersion,
-        },
-      })
-      if (metaErr) {
-        console.error('Failed to record OAuth terms consent:', metaErr.message)
-      }
+  let user = data.user
+
+  if (termsPending && user && !hasTermsAcceptanceRecorded(user.user_metadata as Record<string, unknown>)) {
+    const legal = buildLegalConsentSettings()
+    const { data: updateData, error: metaErr } = await supabase.auth.updateUser({
+      data: {
+        terms_accepted_at: legal.termsAcceptedAt,
+        terms_version: legal.termsVersion,
+      },
+    })
+    if (metaErr) {
+      console.error('Failed to record OAuth terms consent:', metaErr.message)
+    } else if (updateData.user) {
+      user = updateData.user
     }
   }
 
   let redirectTarget = `${origin}/feed`
-  if (!termsPending && data.user && userNeedsTermsAcceptance(data.user)) {
+  if (user && userNeedsTermsAcceptance(user)) {
     redirectTarget = `${origin}/signin?step=terms`
   }
 
