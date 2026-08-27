@@ -44,6 +44,12 @@ const nextConfig = {
         destination: '/privacy',
         permanent: true,
       },
+      // Marketing Stage — canonical route is `/`; keep `/landing` as alias.
+      {
+        source: '/landing',
+        destination: '/',
+        permanent: true,
+      },
     ]
   },
 }
