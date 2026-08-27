@@ -50,17 +50,8 @@ export async function downloadMargoMomentVideo(
   moment: MargoMoment,
   onProgress?: (message: string) => void,
   signal?: AbortSignal,
-): Promise<void> {
-  const out = await getOrCreateMomentVideoFile(moment, onProgress, signal)
-  if (!out) return
-  const url = URL.createObjectURL(out.file)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = out.file.name
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  setTimeout(() => URL.revokeObjectURL(url), 5000)
+): Promise<MomentVideoFileResult | null> {
+  return getOrCreateMomentVideoFile(moment, onProgress, signal)
 }
 
 /** Returns preview URL for share sheet — caller shows playable preview before sharing. */

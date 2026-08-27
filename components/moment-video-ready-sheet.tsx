@@ -2,25 +2,29 @@
 
 import { useEffect, useRef } from 'react'
 
-interface MomentVideoSharePreviewProps {
+export type MomentVideoReadyMode = 'save' | 'share'
+
+interface MomentVideoReadySheetProps {
   open: boolean
+  mode: MomentVideoReadyMode
   previewUrl: string | null
   filename: string
   busy?: boolean
-  onShare: () => void
+  onPrimary: () => void
   onClose: () => void
 }
 
 const font = 'var(--font-lora), serif'
 
-export function MomentVideoSharePreview({
+export function MomentVideoReadySheet({
   open,
+  mode,
   previewUrl,
   filename,
   busy = false,
-  onShare,
+  onPrimary,
   onClose,
-}: MomentVideoSharePreviewProps) {
+}: MomentVideoReadySheetProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -32,11 +36,19 @@ export function MomentVideoSharePreview({
 
   if (!open || !previewUrl) return null
 
+  const title = mode === 'save' ? 'Your Moment is ready' : 'Preview your Moment'
+  const primaryLabel = mode === 'save'
+    ? (busy ? 'Saving…' : 'Save video')
+    : (busy ? 'Sharing…' : 'Share video')
+  const hint = mode === 'save'
+    ? 'Tap Save video to download to your device.'
+    : 'Listen, then share when it feels right.'
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Preview Moment video before sharing"
+      aria-label={mode === 'save' ? 'Save Moment video' : 'Share Moment video'}
       style={{
         position: 'fixed',
         inset: 0,
@@ -72,7 +84,17 @@ export function MomentVideoSharePreview({
           color: 'var(--text)',
           textAlign: 'center',
         }}>
-          Preview your Moment
+          {title}
+        </p>
+        <p style={{
+          margin: 0,
+          fontFamily: font,
+          fontSize: '0.62rem',
+          color: 'var(--text-muted)',
+          textAlign: 'center',
+          lineHeight: 1.4,
+        }}>
+          {hint}
         </p>
         <video
           ref={videoRef}
@@ -106,11 +128,11 @@ export function MomentVideoSharePreview({
           </button>
           <button
             type="button"
-            onClick={onShare}
+            onClick={onPrimary}
             disabled={busy}
             style={primaryBtn}
           >
-            {busy ? 'Sharing…' : 'Share video'}
+            {primaryLabel}
           </button>
         </div>
       </div>

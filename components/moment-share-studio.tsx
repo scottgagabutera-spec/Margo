@@ -30,7 +30,6 @@ import {
   shareMomentNative,
 } from '@/lib/moment'
 import {
-  downloadMargoMomentVideo,
   prepareMargoMomentVideoShare,
   sharePreparedMomentVideo,
   canShareVideoFiles,
@@ -38,7 +37,16 @@ import {
 import { probeMomentVideoCapability } from '@/lib/moment-export/video/capabilities'
 import { momentHasPlayableSnippet } from '@/lib/moment-export/timeline/build-moment-timeline'
 import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
-import { MomentVideoSharePreview } from '@/components/moment-video-share-preview'
+import { MomentVideoReadySheet, type MomentVideoReadyMode } from '@/components/moment-video-ready-sheet'
+import { triggerFileDownload } from '@/lib/moment-export/trigger-file-download'
+import {
+  toastMomentExportFailed,
+  toastMomentImageSaved,
+  toastMomentLinkCopied,
+  toastMomentShared,
+  toastMomentShareFailed,
+  toastMomentVideoSaved,
+} from '@/lib/moment-export/moment-export-toasts'
 
 interface MomentShareStudioProps {
   moment?: MargoMoment | null
@@ -86,7 +94,8 @@ export function MomentShareStudio({
   const [canShareVid, setCanShareVid] = useState(false)
   const [canExportVideo, setCanExportVideo] = useState(false)
   const [videoUnavailableHint, setVideoUnavailableHint] = useState('Not available on this device')
-  const [videoSharePreview, setVideoSharePreview] = useState<{
+  const [videoReadySheet, setVideoReadySheet] = useState<{
+    mode: MomentVideoReadyMode
     previewUrl: string
     file: File
   } | null>(null)
@@ -201,6 +210,7 @@ export function MomentShareStudio({
       const slugParent = slugify(parentSong || '', 'Lyric')
       await downloadCanvas(canvas, `MARGO_${slugParent}_LyricBack_${slugReply}.png`)
       void recordCardExport({ postId: resolvedPostId, theme: 'gold', shape: 'square' })
+      toastMomentImageSaved()
       return
     }
     if (!exportMoment) return
@@ -208,7 +218,10 @@ export function MomentShareStudio({
     try {
       await saveMargoMomentImage(exportMoment)
       void recordCardExport({ postId: resolvedPostId, theme: cardThemeId, shape: 'square' })
+      toastMomentImageSaved()
       onExported?.()
+    } catch {
+      toastMomentExportFailed('image')
     } finally {
       setExportBusy(false)
     }
@@ -218,30 +231,36 @@ export function MomentShareStudio({
     if (!exportMoment || isDualCard) return
     setShareBusy(true)
     try {
-      await shareMargoMomentImage(exportMoment)
-      onShared?.()
+      const result = await shareMargoMomentImage(exportMoment)
+      if (result === 'shared') {
+        toastMomentShared()
+        onShared?.()
+      } else {
+        toastMomentShareFailed()
+      }
     } finally {
       setShareBusy(false)
     }
   }, [exportMoment, isDualCard, onShared])
 
-  const runVideoEncode = useCallback(async (
-    onSuccess?: (file: File, previewUrl: string) => void | Promise<void>,
-  ) => {
-    if (!exportMoment || isDualCard || !canExportVideo || !hasSnippet) return
+  const prepareVideo = useCallback(async () => {
+    if (!exportMoment || isDualCard || !canExportVideo || !hasSnippet) return null
     videoAbortRef.current?.abort()
     const ac = new AbortController()
     videoAbortRef.current = ac
     setVideoProgress('Creating your Moment…')
     try {
       const out = await prepareMargoMomentVideoShare(exportMoment, setVideoProgress, ac.signal)
-      if (!out) return
-      await onSuccess?.(out.file, out.previewUrl)
+      if (!out) {
+        toastMomentExportFailed('video')
+        return null
+      }
+      return out
     } catch (err) {
       if ((err as Error)?.name !== 'AbortError') {
-        setVideoProgress('Could not create video. Try saving an image instead.')
-        await new Promise((r) => setTimeout(r, 2800))
+        toastMomentExportFailed('video')
       }
+      return null
     } finally {
       setVideoProgress(null)
       if (videoAbortRef.current === ac) videoAbortRef.current = null
@@ -249,46 +268,67 @@ export function MomentShareStudio({
   }, [exportMoment, isDualCard, canExportVideo, hasSnippet])
 
   const saveVideo = useCallback(async () => {
-    if (!exportMoment) return
     setExportBusy(true)
     try {
-      await downloadMargoMomentVideo(exportMoment, setVideoProgress)
-      onExported?.()
-    } catch (err) {
-      if ((err as Error)?.name !== 'AbortError') {
-        setVideoProgress('Could not create video. Try saving an image instead.')
-        await new Promise((r) => setTimeout(r, 2800))
-        setVideoProgress(null)
-      }
+      const out = await prepareVideo()
+      if (!out) return
+      setVideoReadySheet({
+        mode: 'save',
+        file: out.file,
+        previewUrl: out.previewUrl,
+      })
     } finally {
       setExportBusy(false)
     }
-  }, [exportMoment, onExported])
+  }, [prepareVideo])
 
   const shareVideo = useCallback(async () => {
     setShareBusy(true)
     try {
-      await runVideoEncode((file, previewUrl) => {
-        setVideoSharePreview({ file, previewUrl })
+      const out = await prepareVideo()
+      if (!out) return
+      setVideoReadySheet({
+        mode: 'share',
+        file: out.file,
+        previewUrl: out.previewUrl,
       })
     } finally {
       setShareBusy(false)
     }
-  }, [runVideoEncode])
+  }, [prepareVideo])
 
-  const confirmShareVideo = useCallback(async () => {
-    if (!videoSharePreview) return
+  const confirmVideoReady = useCallback(async () => {
+    if (!videoReadySheet) return
+    if (videoReadySheet.mode === 'save') {
+      setExportBusy(true)
+      try {
+        const result = await triggerFileDownload(videoReadySheet.file)
+        if (result !== 'failed') {
+          toastMomentVideoSaved(result)
+          setVideoReadySheet(null)
+          onExported?.()
+        } else {
+          toastMomentExportFailed('video')
+        }
+      } finally {
+        setExportBusy(false)
+      }
+      return
+    }
     setShareBusy(true)
     try {
-      const result = await sharePreparedMomentVideo(videoSharePreview.file)
+      const result = await sharePreparedMomentVideo(videoReadySheet.file)
       if (result === 'shared') {
-        setVideoSharePreview(null)
+        toastMomentShared()
+        setVideoReadySheet(null)
         onShared?.()
+      } else {
+        toastMomentShareFailed()
       }
     } finally {
       setShareBusy(false)
     }
-  }, [videoSharePreview, onShared])
+  }, [videoReadySheet, onExported, onShared])
 
   const shareLink = useCallback(async () => {
     if (isDualCard && parentLyric) {
@@ -306,7 +346,10 @@ export function MomentShareStudio({
     setShareBusy(true)
     try {
       await shareMomentNative(exportMoment)
+      toastMomentShared()
       onShared?.()
+    } catch {
+      toastMomentShareFailed()
     } finally {
       setShareBusy(false)
     }
@@ -316,8 +359,13 @@ export function MomentShareStudio({
     if (!exportMoment || !canShareUrl) return
     setShareBusy(true)
     try {
-      await copyMomentShareLink(exportMoment)
-      onShared?.()
+      const ok = await copyMomentShareLink(exportMoment)
+      if (ok) {
+        toastMomentLinkCopied()
+        onShared?.()
+      } else {
+        toastMomentShareFailed()
+      }
     } finally {
       setShareBusy(false)
     }
@@ -467,17 +515,22 @@ export function MomentShareStudio({
     </p>
   ) : null
 
+  const videoReadySheetEl = (
+    <MomentVideoReadySheet
+      open={!!videoReadySheet}
+      mode={videoReadySheet?.mode ?? 'save'}
+      previewUrl={videoReadySheet?.previewUrl ?? null}
+      filename={videoReadySheet?.file.name ?? 'MARGO_Moment.mp4'}
+      busy={videoReadySheet?.mode === 'save' ? exportBusy : shareBusy}
+      onPrimary={() => { void confirmVideoReady() }}
+      onClose={() => setVideoReadySheet(null)}
+    />
+  )
+
   if (isModal) {
     return (
       <>
-        <MomentVideoSharePreview
-          open={!!videoSharePreview}
-          previewUrl={videoSharePreview?.previewUrl ?? null}
-          filename={videoSharePreview?.file.name ?? 'MARGO_Moment.mp4'}
-          busy={shareBusy}
-          onShare={() => { void confirmShareVideo() }}
-          onClose={() => setVideoSharePreview(null)}
-        />
+        {videoReadySheetEl}
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap }}>
         {openMenu ? (
           <button
@@ -506,14 +559,7 @@ export function MomentShareStudio({
 
   return (
     <>
-      <MomentVideoSharePreview
-        open={!!videoSharePreview}
-        previewUrl={videoSharePreview?.previewUrl ?? null}
-        filename={videoSharePreview?.file.name ?? 'MARGO_Moment.mp4'}
-        busy={shareBusy}
-        onShare={() => { void confirmShareVideo() }}
-        onClose={() => setVideoSharePreview(null)}
-      />
+      {videoReadySheetEl}
       <div style={{ display: 'flex', flexDirection: 'column', gap }}>
       {cardSection}
       {progressBanner}
