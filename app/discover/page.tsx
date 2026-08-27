@@ -770,7 +770,7 @@ export default function DiscoverPage() {
             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
               <SaveQueueButton defaultTitle={takeover.label} />
               <Link
-                href={`/compose?lyric=${encodeURIComponent(takeoverMoment.line)}&song=${encodeURIComponent(takeoverMoment.songTitle)}&artist=${encodeURIComponent(takeoverMoment.artist)}&songId=${encodeURIComponent(takeoverMoment.songId)}&audioUrl=${encodeURIComponent(takeoverMoment.audioUrl || '')}&start=${takeoverMoment.start}&end=${takeoverMoment.end}`}
+                href={`/compose?lyric=${encodeURIComponent(takeoverMoment.line)}&song=${encodeURIComponent(takeoverMoment.songTitle)}&artist=${encodeURIComponent(takeoverMoment.artist)}&songId=${encodeURIComponent(takeoverMoment.songId)}&audioUrl=${encodeURIComponent(takeoverMoment.audioUrl || '')}&start=${takeoverMoment.start}&end=${takeoverMoment.end}&phase=moment&source=discover`}
                 onClick={(e) => { if (!requireAuth()) e.preventDefault() }}
                 style={{
                   padding: '10px 20px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',

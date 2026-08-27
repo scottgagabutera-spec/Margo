@@ -72,6 +72,7 @@ function buildComposePrefillUrl(params: {
   if (params.audioUrl) q.set('audioUrl', params.audioUrl)
   if (params.start != null) q.set('start', String(params.start))
   if (params.end != null) q.set('end', String(params.end))
+  q.set('phase', 'moment')
   return `/compose?${q.toString()}`
 }
 

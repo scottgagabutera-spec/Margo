@@ -6,6 +6,11 @@ import {
   OAUTH_TERMS_PENDING_COOKIE,
   parseOAuthIntent,
 } from '@/lib/legal/oauth-intent'
+import {
+  OAUTH_RETURN_COOKIE,
+  OAUTH_RETURN_COOKIE_OPTS,
+  sanitizeOAuthReturnPath,
+} from '@/lib/oauth-return'
 
 const ALLOWED = new Set(['google', 'discord'] as const)
 type OAuthProvider = 'google' | 'discord'
@@ -37,6 +42,7 @@ export async function GET(
   const provider = raw as OAuthProvider
   const intent = parseOAuthIntent(request.nextUrl.searchParams.get('intent'))
   const termsAcknowledged = request.nextUrl.searchParams.get('terms') === '1'
+  const returnTo = sanitizeOAuthReturnPath(request.nextUrl.searchParams.get('returnTo'))
 
   if (intent === 'signup' && !termsAcknowledged) {
     return NextResponse.redirect(`${origin}/signin?mode=signup&error=terms`)
@@ -88,6 +94,9 @@ export async function GET(
   redirect.cookies.set(OAUTH_INTENT_COOKIE, intent, OAUTH_COOKIE_OPTS)
   if (intent === 'signup' && termsAcknowledged) {
     redirect.cookies.set(OAUTH_TERMS_PENDING_COOKIE, '1', OAUTH_COOKIE_OPTS)
+  }
+  if (returnTo) {
+    redirect.cookies.set(OAUTH_RETURN_COOKIE, returnTo, OAUTH_RETURN_COOKIE_OPTS)
   }
   pendingCookies.forEach(({ name, value, options }) => {
     redirect.cookies.set(name, value, options)

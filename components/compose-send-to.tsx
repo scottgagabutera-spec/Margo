@@ -325,20 +325,24 @@ function SendToPanel({
 export function ComposeSendTo({
   open,
   onOpenChange,
-  postId,
+  postId: postIdProp,
   lyric,
   song,
   artist,
   onSent,
+  persistPost,
   variant = 'modal',
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  postId: string
+  /** When omitted, `persistPost` is called on confirm before sending. */
+  postId?: string | null
   lyric: string
   song: string
   artist: string
   onSent: (name: string) => void
+  /** Create the post at send time (avoids orphan posts when the sheet is closed). */
+  persistPost?: () => Promise<string | null>
   variant?: 'modal' | 'inline' | 'popover'
 }) {
   const { user } = useIdentity()
@@ -353,6 +357,12 @@ export function ComposeSendTo({
   const [successName, setSuccessName] = useState<string | null>(null)
   const [lastSentName, setLastSentName] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+
+  const [resolvedPostId, setResolvedPostId] = useState<string | null>(postIdProp ?? null)
+
+  useEffect(() => {
+    setResolvedPostId(postIdProp ?? null)
+  }, [postIdProp])
 
   const myId = user?.id
   const isOpen = open
@@ -433,6 +443,28 @@ export function ComposeSendTo({
     if (!myId || sending) return
     setSending(true)
     setError(null)
+
+    let postId = resolvedPostId
+    if (!postId && persistPost) {
+      try {
+        postId = await persistPost()
+      } catch {
+        setError("Couldn't save your Moment. Try again.")
+        setSending(false)
+        return
+      }
+      if (!postId) {
+        setSending(false)
+        return
+      }
+      setResolvedPostId(postId)
+    }
+    if (!postId) {
+      setError("Couldn't send — Moment not saved.")
+      setSending(false)
+      return
+    }
+
     const body = buildMomentMessageBody(lyric, song, artist, postId)
     const { data, error: insertErr } = await supabase
       .from('messages')
@@ -466,7 +498,7 @@ export function ComposeSendTo({
     setLastSentName(person.displayName)
     setSuccessName(person.displayName)
     setPhase('success')
-  }, [myId, sending, lyric, song, artist, postId, applyOutboundMessage])
+  }, [myId, sending, lyric, song, artist, resolvedPostId, persistPost, applyOutboundMessage])
 
   const panel = phase === 'success' && successName ? (
     <div style={{
