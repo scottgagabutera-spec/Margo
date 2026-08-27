@@ -4,7 +4,6 @@ import { Suspense } from 'react'
 export const dynamic = 'force-dynamic'
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { ArrowLeftIcon, SearchIcon } from '@/components/icons'
@@ -34,7 +33,6 @@ import {
   clearMomentDraft,
   consumeComposePendingAction,
   consumeComposePendingSendRecipient,
-  createEmptyMomentDraft,
   disarmComposePendingAction,
   hasMeaningfulDraftWork,
   loadMomentDraft,
@@ -105,8 +103,6 @@ const backBtnStyle: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
   transition: 'color 150ms ease',
 }
-type MomentLineDraft = { lyric: string; songName: string; artistName: string }
-
 function buildDraftSnapshot(state: {
   entryPoint: string
   phase: MomentPhase
@@ -221,17 +217,6 @@ function ComposeInner() {
   const [linkedAudioUrl, setLinkedAudioUrl] = useState<string | null>(null)
   /** Lines already stacked via “Add another line” (current draft is separate). */
   const [committedLines, setCommittedLines] = useState<ComposeLineDraft[]>([])
-  // Committed lines + the in-progress draft for multi-line compose.
-  const momentLines = useMemo<MomentLineDraft[]>(
-    () => {
-      const lines = committedLines.map((l) => ({ lyric: l.lyric, songName: l.songName, artistName: l.artistName }))
-      if (lyric.trim() && songName.trim() && artistName.trim()) {
-        lines.push({ lyric, songName, artistName })
-      }
-      return lines
-    },
-    [committedLines, lyric, songName, artistName],
-  )
   // Exact snippet timing — either passed in directly from the player's
   const [snippetStart, setSnippetStart] = useState<number | null>(null)
   const [snippetEnd, setSnippetEnd] = useState<number | null>(null)
@@ -634,30 +619,6 @@ function ComposeInner() {
     setMargoLines([])
     setLinesLoading(false)
     setLinePickComplete(false)
-  }, [])
-
-  const restoreLineToDraft = useCallback((line: ComposeLineDraft) => {
-    setLyric(line.lyric)
-    setSongName(line.songName)
-    setArtistName(line.artistName)
-    setLinkedSongId(line.linkedSongId)
-    setLinkedAudioUrl(line.linkedAudioUrl)
-    setSnippetStart(line.snippetStart)
-    setSnippetEnd(line.snippetEnd)
-    setLinePickComplete(true)
-    setMargoLines([])
-    setLinesLoading(false)
-    const src = line.source || (line.linkedSongId ? 'margo' : 'genius')
-    setSelectedSong({
-      id: line.linkedSongId || line.geniusId || 'draft',
-      title: line.songName,
-      artist: line.artistName,
-      artwork: line.artwork || '',
-      source: src,
-      margoSongId: line.linkedSongId || undefined,
-      audioUrl: line.linkedAudioUrl,
-      externalListenUrl: line.externalListenUrl,
-    })
   }, [])
 
   const clearCurrentSongPick = useCallback(() => {

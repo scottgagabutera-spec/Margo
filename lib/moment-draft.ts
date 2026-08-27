@@ -67,33 +67,6 @@ const STORAGE_KEY = 'margo_compose_draft_v1'
 const PENDING_ACTION_KEY = 'margo_compose_pending_action'
 const PENDING_SEND_RECIPIENT_KEY = 'margo_compose_pending_send_recipient'
 
-export function createEmptyMomentDraft(entryPoint = 'pen'): MomentDraft {
-  return {
-    version: 1,
-    entryPoint,
-    phase: 'find',
-    selectMode: null,
-    committedLines: [],
-    lyric: '',
-    songName: '',
-    artistName: '',
-    selectedSong: null,
-    linkedSongId: null,
-    linkedAudioUrl: null,
-    snippetStart: null,
-    snippetEnd: null,
-    linePickComplete: false,
-    vibe: null,
-    vibeSuggested: null,
-    vibeUserPicked: false,
-    themeId: 'gold',
-    parentPostId: null,
-    pendingAction: null,
-    persistedPostId: null,
-    searchQuery: '',
-  }
-}
-
 export function hasMeaningfulDraftWork(draft: MomentDraft): boolean {
   if (draft.committedLines.length > 0) return true
   if (draft.lyric.trim()) return true
@@ -169,7 +142,7 @@ export function setComposePendingAction(action: ComposePendingAction | null): vo
   }
 }
 
-export function peekComposePendingAction(): ComposePendingAction | null {
+function peekComposePendingAction(): ComposePendingAction | null {
   if (typeof window === 'undefined') return null
   try {
     const v = sessionStorage.getItem(PENDING_ACTION_KEY)
@@ -201,7 +174,7 @@ export function setComposePendingSendRecipient(
   }
 }
 
-export function peekComposePendingSendRecipient(): ComposePendingSendRecipient | null {
+function peekComposePendingSendRecipient(): ComposePendingSendRecipient | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = sessionStorage.getItem(PENDING_SEND_RECIPIENT_KEY)
