@@ -13,6 +13,7 @@ import {
 import type { User } from '@supabase/supabase-js'
 import { AuthGateModal } from '@/components/auth-gate-modal'
 import { LegalConsentEnforcer } from '@/components/legal-consent-enforcer'
+import { disarmComposePendingAction } from '@/lib/moment-draft'
 import { Suspense } from 'react'
 
 const supabase = createClient()
@@ -34,8 +35,6 @@ type RehydrateOptions = {
 }
 
 type RequireAuthOptions = {
-  /** Called after sign-in succeeds (modal or OAuth return). */
-  onSuccess?: () => void
   /** OAuth return path (defaults to current location). */
   returnTo?: string
 }
@@ -48,6 +47,8 @@ interface AuthGateContextValue {
   /** Server-derived: Margo Terms/Privacy acceptance still required. */
   needsTermsAcceptance: boolean
   requireAuth: (opts?: RequireAuthOptions) => boolean
+  /** Whether the auth gate modal is currently open. */
+  authGateOpen: boolean
   /** OAuth return path set when the auth gate last opened. */
   authReturnTo: string | null
   /** Re-read httpOnly session → memory access token (after login/logout). */
@@ -71,7 +72,6 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const userRef = useRef<User | null>(null)
   const applyingRemoteRef = useRef(false)
   const inflightRef = useRef<Promise<void> | null>(null)
-  const authResumeRef = useRef<(() => void) | null>(null)
   /** Last successful /api/auth/me (ms since epoch) — gates redundant focus soft. */
   const lastOkAtRef = useRef(0)
   userRef.current = user
@@ -280,7 +280,6 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
   const requireAuth = useCallback((opts?: RequireAuthOptions): boolean => {
     if (user) return true
-    authResumeRef.current = opts?.onSuccess ?? null
     const fallback =
       typeof window !== 'undefined'
         ? `${window.location.pathname}${window.location.search}`
@@ -290,19 +289,17 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     return false
   }, [user])
 
-  // Resume gated action after authentication succeeds.
-  useEffect(() => {
-    if (!user) return
-    const resume = authResumeRef.current
-    if (!resume) return
-    authResumeRef.current = null
-    queueMicrotask(() => resume())
-  }, [user])
+  const handleGateOpenChange = useCallback((open: boolean) => {
+    if (!open && !userRef.current) {
+      disarmComposePendingAction()
+    }
+    setGateOpen(open)
+  }, [])
 
   return (
-    <AuthGateContext.Provider value={{ user, loading, hasPasswordAuth, needsTermsAcceptance, requireAuth, authReturnTo, rehydrate }}>
+    <AuthGateContext.Provider value={{ user, loading, hasPasswordAuth, needsTermsAcceptance, requireAuth, authGateOpen: gateOpen, authReturnTo, rehydrate }}>
       {children}
-      <AuthGateModal open={gateOpen} onOpenChange={setGateOpen} />
+      <AuthGateModal open={gateOpen} onOpenChange={handleGateOpenChange} />
       <Suspense fallback={null}>
         <LegalConsentEnforcer />
       </Suspense>

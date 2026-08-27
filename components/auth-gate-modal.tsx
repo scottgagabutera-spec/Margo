@@ -12,7 +12,7 @@ interface AuthGateModalProps {
 
 /**
  * Dismissible sign-up/sign-in prompt shown by requireAuth().
- * On success, the provider resumes the gated action automatically.
+ * On success, Compose consumes its pending action via sessionStorage resume.
  */
 export function AuthGateModal({ open, onOpenChange }: AuthGateModalProps) {
   const [mode, setMode] = useState<'signup' | 'signin'>('signup')

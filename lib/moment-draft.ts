@@ -4,6 +4,13 @@ export type MomentPhase = 'find' | 'select' | 'moment' | 'refine' | 'action' | '
 
 export type ComposePendingAction = 'send' | 'post' | 'private' | 'add-line'
 
+export type ComposePendingSendRecipient = {
+  id: string
+  username: string
+  displayName: string
+  avatarUrl: string | null
+}
+
 export type ComposeLineDraft = {
   lyric: string
   songName: string
@@ -51,12 +58,14 @@ export type MomentDraft = {
   themeId: StageCardThemeId
   parentPostId?: string | null
   pendingAction: ComposePendingAction | null
+  pendingSendRecipient?: ComposePendingSendRecipient | null
   persistedPostId?: string | null
   searchQuery?: string
 }
 
 const STORAGE_KEY = 'margo_compose_draft_v1'
 const PENDING_ACTION_KEY = 'margo_compose_pending_action'
+const PENDING_SEND_RECIPIENT_KEY = 'margo_compose_pending_send_recipient'
 
 export function createEmptyMomentDraft(entryPoint = 'pen'): MomentDraft {
   return {
@@ -126,6 +135,25 @@ export function clearMomentDraft(): void {
   try {
     sessionStorage.removeItem(STORAGE_KEY)
     sessionStorage.removeItem(PENDING_ACTION_KEY)
+    sessionStorage.removeItem(PENDING_SEND_RECIPIENT_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+/** Clears armed pending action (and send recipient) without discarding the Moment draft. */
+export function disarmComposePendingAction(): void {
+  if (typeof window === 'undefined') return
+  setComposePendingAction(null)
+  setComposePendingSendRecipient(null)
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    if (!raw) return
+    const parsed = JSON.parse(raw) as MomentDraft
+    if (parsed?.version !== 1) return
+    parsed.pendingAction = null
+    parsed.pendingSendRecipient = null
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(parsed))
   } catch {
     // ignore
   }
@@ -156,4 +184,38 @@ export function consumeComposePendingAction(): ComposePendingAction | null {
   const action = peekComposePendingAction()
   setComposePendingAction(null)
   return action
+}
+
+export function setComposePendingSendRecipient(
+  recipient: ComposePendingSendRecipient | null,
+): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (!recipient) {
+      sessionStorage.removeItem(PENDING_SEND_RECIPIENT_KEY)
+      return
+    }
+    sessionStorage.setItem(PENDING_SEND_RECIPIENT_KEY, JSON.stringify(recipient))
+  } catch {
+    // ignore
+  }
+}
+
+export function peekComposePendingSendRecipient(): ComposePendingSendRecipient | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = sessionStorage.getItem(PENDING_SEND_RECIPIENT_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as ComposePendingSendRecipient
+    if (!parsed?.id) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+export function consumeComposePendingSendRecipient(): ComposePendingSendRecipient | null {
+  const recipient = peekComposePendingSendRecipient()
+  setComposePendingSendRecipient(null)
+  return recipient
 }

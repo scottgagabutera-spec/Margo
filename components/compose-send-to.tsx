@@ -331,6 +331,9 @@ export function ComposeSendTo({
   artist,
   onSent,
   persistPost,
+  onAuthRequired,
+  autoSendPerson = null,
+  onAutoSendConsumed,
   variant = 'modal',
 }: {
   open: boolean
@@ -343,6 +346,11 @@ export function ComposeSendTo({
   onSent: (name: string) => void
   /** Create the post at send time (avoids orphan posts when the sheet is closed). */
   persistPost?: () => Promise<string | null>
+  /** Called when confirm is tapped but the user is not signed in. */
+  onAuthRequired?: (person: Person) => void
+  /** After auth resume — send to this person exactly once. */
+  autoSendPerson?: Person | null
+  onAutoSendConsumed?: () => void
   variant?: 'modal' | 'inline' | 'popover'
 }) {
   const { user } = useIdentity()
@@ -357,6 +365,7 @@ export function ComposeSendTo({
   const [successName, setSuccessName] = useState<string | null>(null)
   const [lastSentName, setLastSentName] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+  const autoSendStartedRef = useRef(false)
 
   const [resolvedPostId, setResolvedPostId] = useState<string | null>(postIdProp ?? null)
 
@@ -376,6 +385,7 @@ export function ComposeSendTo({
     setSelected(null)
     setPhase('pick')
     setSuccessName(null)
+    autoSendStartedRef.current = false
   }, [isOpen])
 
   useEffect(() => {
@@ -440,7 +450,11 @@ export function ComposeSendTo({
   }, [])
 
   const sendTo = useCallback(async (person: Person) => {
-    if (!myId || sending) return
+    if (sending) return
+    if (!myId) {
+      onAuthRequired?.(person)
+      return
+    }
     setSending(true)
     setError(null)
 
@@ -498,7 +512,20 @@ export function ComposeSendTo({
     setLastSentName(person.displayName)
     setSuccessName(person.displayName)
     setPhase('success')
-  }, [myId, sending, lyric, song, artist, resolvedPostId, persistPost, applyOutboundMessage])
+  }, [myId, sending, lyric, song, artist, resolvedPostId, persistPost, applyOutboundMessage, onAuthRequired])
+
+  useEffect(() => {
+    if (!open) {
+      autoSendStartedRef.current = false
+      return
+    }
+    if (!autoSendPerson || !myId || autoSendStartedRef.current) return
+    autoSendStartedRef.current = true
+    setSelected(autoSendPerson)
+    void sendTo(autoSendPerson).finally(() => {
+      onAutoSendConsumed?.()
+    })
+  }, [open, autoSendPerson, myId, sendTo, onAutoSendConsumed])
 
   const panel = phase === 'success' && successName ? (
     <div style={{

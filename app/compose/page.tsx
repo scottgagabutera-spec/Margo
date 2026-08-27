@@ -33,12 +33,16 @@ import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import {
   clearMomentDraft,
   consumeComposePendingAction,
+  consumeComposePendingSendRecipient,
   createEmptyMomentDraft,
+  disarmComposePendingAction,
   hasMeaningfulDraftWork,
   loadMomentDraft,
   saveMomentDraft,
   setComposePendingAction,
+  setComposePendingSendRecipient,
   type ComposePendingAction,
+  type ComposePendingSendRecipient,
   type MomentDraft,
   type MomentPhase,
 } from '@/lib/moment-draft'
@@ -123,6 +127,7 @@ function buildDraftSnapshot(state: {
   themeId: StageCardThemeId
   parentPostId: string | null
   pendingAction: ComposePendingAction | null
+  pendingSendRecipient: ComposePendingSendRecipient | null
   persistedPostId: string | null
   searchQuery: string
 }): MomentDraft {
@@ -158,6 +163,7 @@ function buildDraftSnapshot(state: {
     themeId: state.themeId,
     parentPostId: state.parentPostId,
     pendingAction: state.pendingAction,
+    pendingSendRecipient: state.pendingSendRecipient,
     persistedPostId: state.persistedPostId,
     searchQuery: state.searchQuery,
   }
@@ -165,13 +171,14 @@ function buildDraftSnapshot(state: {
 
 function ComposeInner() {
   const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
-  const { requireAuth } = useAuthGate()
+  const { requireAuth, authGateOpen } = useAuthGate()
   const { isTabActive } = usePrimaryTab()
   const composeLive = isTabActive('compose')
   const searchParams = useSearchParams()
   const composeStartedRef = useRef(false)
   const prefillHandledRef = useRef(false)
   const draftRestoredRef = useRef(false)
+  const prevAuthGateOpenRef = useRef(false)
   useEffect(() => {
     if (composeStartedRef.current) return
     composeStartedRef.current = true
@@ -182,6 +189,13 @@ function ComposeInner() {
   const [phase, setPhase] = useState<MomentPhase>('find')
   const [selectMode, setSelectMode] = useState<'picker' | 'write' | null>(null)
   const [pendingAction, setPendingActionState] = useState<ComposePendingAction | null>(null)
+  const [pendingSendRecipient, setPendingSendRecipientState] = useState<ComposePendingSendRecipient | null>(null)
+  const [autoSendPerson, setAutoSendPerson] = useState<{
+    id: string
+    username: string
+    displayName: string
+    avatarUrl: string | null
+  } | null>(null)
   const [themeId, setThemeId] = useState<StageCardThemeId>('gold')
   const [vibeUserPicked, setVibeUserPicked] = useState(false)
   const [parentPostId] = useState<string | null>(searchParams.get('parentPostId'))
@@ -302,7 +316,14 @@ function ComposeInner() {
       setSuggestedVibe(saved.vibeSuggested as Vibe | null)
       setVibeUserPicked(saved.vibeUserPicked)
       setThemeId(saved.themeId)
-      setPendingActionState(saved.pendingAction)
+      if (saved.pendingAction) {
+        setPendingActionState(saved.pendingAction)
+        setComposePendingAction(saved.pendingAction)
+      }
+      if (saved.pendingSendRecipient) {
+        setPendingSendRecipientState(saved.pendingSendRecipient)
+        setComposePendingSendRecipient(saved.pendingSendRecipient)
+      }
       setPostedId(saved.persistedPostId ?? null)
       setSearchQuery(saved.searchQuery || '')
       if (saved.selectedSong) {
@@ -711,7 +732,7 @@ function ComposeInner() {
       entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
       selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
       selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingAction,
-      persistedPostId: postedId, searchQuery,
+      pendingSendRecipient, persistedPostId: postedId, searchQuery,
     })
     if (!hasMeaningfulDraftWork(snapshot)) {
       resetCompose(true)
@@ -722,7 +743,7 @@ function ComposeInner() {
     entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
     selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
     selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingAction,
-    postedId, searchQuery,
+    pendingSendRecipient, postedId, searchQuery,
   ])
 
   const confirmStartOver = useCallback(() => {
@@ -746,6 +767,8 @@ function ComposeInner() {
     setVibeUserPicked(false)
     setThemeId('gold')
     setPendingActionState(null)
+    setPendingSendRecipientState(null)
+    setAutoSendPerson(null)
     setPostedId(null)
     setCompletionMode(null)
     setShowSendTo(false)
@@ -820,12 +843,6 @@ function ComposeInner() {
   }, [identity, user, postedId, buildCurrentDraft, committedLines, selectedVibe])
 
   const runPendingAction = useCallback((action: ComposePendingAction) => {
-    if (action === 'send') {
-      trackEvent('send_opened')
-      setPhase('action')
-      setShowSendTo(true)
-      return
-    }
     if (action === 'post') {
       void (async () => {
         setPosting(true)
@@ -837,6 +854,7 @@ function ComposeInner() {
           trackEvent('moment_posted_public')
           setPhase('success')
           setCompletionMode('public')
+          clearMomentDraft()
           resetComposeViewport()
         } catch (e) {
           console.error('Failed to post to feed:', e)
@@ -857,6 +875,7 @@ function ComposeInner() {
           trackEvent('moment_saved_private')
           setPhase('success')
           setCompletionMode('private')
+          clearMomentDraft()
           resetComposeViewport()
         } catch (e) {
           console.error('Failed to save private moment:', e)
@@ -864,41 +883,66 @@ function ComposeInner() {
           setPosting(false)
         }
       })()
-      return
     }
-    if (action === 'add-line') {
-      handleAddAnotherLine()
-    }
-  }, [persistMoment, resetComposeViewport, handleAddAnotherLine])
+  }, [persistMoment, resetComposeViewport])
 
   const gateAction = useCallback((action: ComposePendingAction, runner: () => void) => {
+    if (user) {
+      runner()
+      return
+    }
     setPendingActionState(action)
     setComposePendingAction(action)
     saveMomentDraft(buildDraftSnapshot({
       entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
       selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
       selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingAction: action,
-      persistedPostId: postedId, searchQuery,
+      pendingSendRecipient, persistedPostId: postedId, searchQuery,
     }))
-    if (!requireAuth({
-      returnTo: '/compose',
-      onSuccess: () => runPendingAction(action),
-    })) return
-    runner()
+    requireAuth({ returnTo: '/compose' })
   }, [
-    entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+    user, entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
     selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
-    selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, postedId, searchQuery,
-    requireAuth, runPendingAction,
+    selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingSendRecipient,
+    postedId, searchQuery, requireAuth,
   ])
 
   const handleSendToSomeone = useCallback(() => {
-    gateAction('send', () => {
-      trackEvent('send_opened')
-      setPhase('action')
-      setShowSendTo(true)
-    })
-  }, [gateAction])
+    trackEvent('send_opened')
+    setPhase('action')
+    setShowSendTo(true)
+  }, [])
+
+  const handleSendAuthRequired = useCallback((person: {
+    id: string
+    username: string
+    displayName: string
+    avatarUrl: string | null
+  }) => {
+    const recipient: ComposePendingSendRecipient = {
+      id: person.id,
+      username: person.username,
+      displayName: person.displayName,
+      avatarUrl: person.avatarUrl,
+    }
+    setPendingActionState('send')
+    setComposePendingAction('send')
+    setComposePendingSendRecipient(recipient)
+    setPendingSendRecipientState(recipient)
+    saveMomentDraft(buildDraftSnapshot({
+      entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+      selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
+      selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId,
+      pendingAction: 'send', pendingSendRecipient: recipient,
+      persistedPostId: postedId, searchQuery,
+    }))
+    requireAuth({ returnTo: '/compose' })
+  }, [
+    entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
+    selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
+    selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId,
+    postedId, searchQuery, requireAuth,
+  ])
 
   const handlePostToFeed = useCallback(() => {
     gateAction('post', () => runPendingAction('post'))
@@ -909,8 +953,25 @@ function ComposeInner() {
   }, [gateAction, runPendingAction])
 
   const handleAddLineFromMoment = useCallback(() => {
-    gateAction('add-line', () => handleAddAnotherLine())
-  }, [gateAction, handleAddAnotherLine])
+    handleAddAnotherLine()
+  }, [handleAddAnotherLine])
+
+  const tryResumePendingAction = useCallback(() => {
+    if (!user || identityLoading) return
+    const action = consumeComposePendingAction()
+    if (!action) return
+    setPendingActionState(null)
+    if (action === 'send') {
+      const recipient = consumeComposePendingSendRecipient()
+      setPendingSendRecipientState(null)
+      trackEvent('send_opened')
+      setPhase('action')
+      setShowSendTo(true)
+      if (recipient) setAutoSendPerson(recipient)
+      return
+    }
+    runPendingAction(action)
+  }, [user, identityLoading, runPendingAction])
 
   useEffect(() => {
     if (phase === 'moment' && lyric.trim() && !emotionLoading && !selectedVibe && !vibeUserPicked) {
@@ -924,22 +985,35 @@ function ComposeInner() {
       entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
       selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
       selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingAction,
-      persistedPostId: postedId, searchQuery,
+      pendingSendRecipient, persistedPostId: postedId, searchQuery,
     }))
   }, [
     completionMode, entryPoint, phase, selectMode, committedLines, lyric, songName, artistName,
     selectedSong, linkedSongId, linkedAudioUrl, snippetStart, snippetEnd, linePickComplete,
     selectedVibe, suggestedVibe, vibeUserPicked, themeId, parentPostId, pendingAction,
-    postedId, searchQuery,
+    pendingSendRecipient, postedId, searchQuery,
   ])
 
   useEffect(() => {
-    if (!user || identityLoading) return
-    const action = consumeComposePendingAction() || pendingAction
-    if (!action) return
+    tryResumePendingAction()
+  }, [tryResumePendingAction])
+
+  useEffect(() => {
+    const wasOpen = prevAuthGateOpenRef.current
+    prevAuthGateOpenRef.current = authGateOpen
+    if (wasOpen && !authGateOpen && !user) {
+      setPendingActionState(null)
+      setPendingSendRecipientState(null)
+      setAutoSendPerson(null)
+    }
+  }, [authGateOpen, user])
+
+  const handleAutoSendConsumed = useCallback(() => {
+    setAutoSendPerson(null)
+    disarmComposePendingAction()
     setPendingActionState(null)
-    runPendingAction(action)
-  }, [user, identityLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+    setPendingSendRecipientState(null)
+  }, [])
 
   const handleSendComplete = useCallback((name: string) => {
     trackEvent('moment_sent_dm')
@@ -1355,8 +1429,10 @@ function ComposeInner() {
           setShowSendTo(open)
           if (!open) {
             setPhase('moment')
+            disarmComposePendingAction()
             setPendingActionState(null)
-            setComposePendingAction(null)
+            setPendingSendRecipientState(null)
+            setAutoSendPerson(null)
           }
         }}
         persistPost={() => persistMoment('active')}
@@ -1364,6 +1440,9 @@ function ComposeInner() {
         song={primaryLine.song}
         artist={primaryLine.artist}
         onSent={handleSendComplete}
+        onAuthRequired={handleSendAuthRequired}
+        autoSendPerson={autoSendPerson}
+        onAutoSendConsumed={handleAutoSendConsumed}
       />
 
       <MargoSheet
