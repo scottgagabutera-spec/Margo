@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   if (body.acceptedTerms !== true) {
     return NextResponse.json(
-      { error: 'You must agree to the Terms of Service and acknowledge the Privacy Policy.' },
+      { error: 'You must agree to the Terms of Service and Privacy Policy.' },
       { status: 400 },
     )
   }

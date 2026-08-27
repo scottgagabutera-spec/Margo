@@ -5,7 +5,13 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { setBrowserAccessToken } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { SignupConsentCheckbox } from '@/components/signup-legal-notice'
+import {
+  CONSENT_REQUIRED_MESSAGE,
+  SignupConsentCheckbox,
+  SignupConsentGate,
+  SignupConsentIntro,
+  TermsCompletionIntro,
+} from '@/components/signup-legal-notice'
 
 const lora = 'var(--font-lora), serif'
 const ui = 'var(--font-geist-sans), system-ui, sans-serif'
@@ -61,6 +67,11 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
+const inputDisabledStyle: React.CSSProperties = {
+  opacity: 0.55,
+  cursor: 'not-allowed',
+}
+
 const oauthBtnBase: React.CSSProperties = {
   width: '100%',
   height: '42px',
@@ -74,6 +85,7 @@ const oauthBtnBase: React.CSSProperties = {
   fontWeight: 500,
   cursor: 'pointer',
   boxSizing: 'border-box',
+  transition: 'opacity 200ms ease',
 }
 
 const primaryBtnStyle: React.CSSProperties = {
@@ -103,7 +115,7 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
 
   const handleSubmit = async () => {
     if (!termsAccepted) {
-      setError('Please agree to the Terms of Service and acknowledge the Privacy Policy.')
+      setError(CONSENT_REQUIRED_MESSAGE)
       return
     }
     setLoading(true)
@@ -133,32 +145,27 @@ export function TermsCompletionForm({ onSuccess, externalError }: TermsCompletio
 
   return (
     <div style={{ width: '100%' }}>
-      <header style={{ marginBottom: '32px', textAlign: 'center' }}>
+      <header style={{ marginBottom: '28px', textAlign: 'center' }}>
         <h1 style={{
           fontFamily: lora,
           fontSize: '1.55rem',
           color: 'var(--text)',
           fontWeight: 400,
-          margin: '0 0 10px',
+          margin: '0 0 14px',
         }}>
-          One last step
+          Finish creating your account
         </h1>
-        <p style={{
-          fontFamily: ui,
-          fontSize: '0.82rem',
-          color: 'var(--text-secondary)',
-          margin: 0,
-          lineHeight: 1.5,
-        }}>
-          Before you continue, please accept our policies.
-        </p>
+        <TermsCompletionIntro />
       </header>
 
-      <SignupConsentCheckbox
-        checked={termsAccepted}
-        onChange={setTermsAccepted}
-        disabled={loading}
-      />
+      <div style={{ marginBottom: '20px' }}>
+        <SignupConsentCheckbox
+          id="terms-completion-consent"
+          checked={termsAccepted}
+          onChange={setTermsAccepted}
+          disabled={loading}
+        />
+      </div>
 
       {(error || externalError) ? (
         <p role="alert" style={{ fontFamily: ui, fontSize: '0.78rem', color: '#ff7070', margin: '0 0 16px', lineHeight: 1.45 }}>
@@ -191,6 +198,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthF
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [termsAccepted, setTermsAccepted] = useState(false)
+  const [consentAttention, setConsentAttention] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -199,14 +207,23 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthF
   }, [isSignup])
 
   useEffect(() => {
+    if (isSignup && !termsAccepted) {
+      setConsentAttention(true)
+      return
+    }
+    setConsentAttention(false)
+  }, [isSignup, termsAccepted])
+
+  useEffect(() => {
     if (externalError) setError(externalError)
   }, [externalError])
 
   const signupBlocked = isSignup && !termsAccepted
+  const oauthDisabled = loading || signupBlocked
 
   const handleEmailSubmit = async () => {
     if (isSignup && !termsAccepted) {
-      setError('Please agree to the Terms of Service and acknowledge the Privacy Policy.')
+      setError(CONSENT_REQUIRED_MESSAGE)
       return
     }
 
@@ -253,7 +270,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthF
 
   const handleOAuthSubmit = (provider: 'google' | 'discord') => {
     if (isSignup && !termsAccepted) {
-      setError('Please agree to the Terms of Service and acknowledge the Privacy Policy before continuing.')
+      setError(CONSENT_REQUIRED_MESSAGE)
       return
     }
     setLoading(true)
@@ -268,7 +285,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthF
 
   return (
     <div style={{ width: '100%' }}>
-      <header style={{ marginBottom: isSignup ? '22px' : '28px', textAlign: 'center' }}>
+      <header style={{ marginBottom: isSignup ? '18px' : '28px', textAlign: 'center' }}>
         <h1 style={{
           fontFamily: lora,
           fontSize: '1.55rem',
@@ -276,22 +293,37 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthF
           fontWeight: 400,
           margin: 0,
         }}>
-          {isSignup ? 'Create account' : 'Sign in'}
+          {isSignup ? 'Create your account' : 'Sign in'}
         </h1>
       </header>
+
+      {isSignup ? (
+        <>
+          <SignupConsentIntro />
+          <SignupConsentGate highlight={consentAttention && !termsAccepted}>
+            <SignupConsentCheckbox
+              id="signup-consent"
+              checked={termsAccepted}
+              onChange={setTermsAccepted}
+              disabled={loading}
+            />
+          </SignupConsentGate>
+        </>
+      ) : null}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '22px' }}>
         <button
           type="button"
           onClick={() => handleOAuthSubmit('google')}
-          disabled={loading || signupBlocked}
+          disabled={oauthDisabled}
+          aria-disabled={oauthDisabled}
           style={{
             ...oauthBtnBase,
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.1)',
             color: 'var(--text)',
-            opacity: loading || signupBlocked ? 0.55 : 1,
-            cursor: loading || signupBlocked ? 'not-allowed' : 'pointer',
+            opacity: oauthDisabled ? 0.55 : 1,
+            cursor: oauthDisabled ? 'not-allowed' : 'pointer',
           }}
         >
           <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden>
@@ -306,14 +338,15 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthF
         <button
           type="button"
           onClick={() => handleOAuthSubmit('discord')}
-          disabled={loading || signupBlocked}
+          disabled={oauthDisabled}
+          aria-disabled={oauthDisabled}
           style={{
             ...oauthBtnBase,
             background: 'rgba(88,101,242,0.1)',
             border: '1px solid rgba(88,101,242,0.28)',
             color: 'var(--text)',
-            opacity: loading || signupBlocked ? 0.55 : 1,
-            cursor: loading || signupBlocked ? 'not-allowed' : 'pointer',
+            opacity: oauthDisabled ? 0.55 : 1,
+            cursor: oauthDisabled ? 'not-allowed' : 'pointer',
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="#5865F2" aria-hidden>
@@ -338,8 +371,13 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthF
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void handleEmailSubmit()}
-            style={inputStyle}
+            onKeyDown={(e) => e.key === 'Enter' && !signupBlocked && void handleEmailSubmit()}
+            disabled={signupBlocked}
+            aria-disabled={signupBlocked}
+            style={{
+              ...inputStyle,
+              ...(signupBlocked ? inputDisabledStyle : {}),
+            }}
           />
         </div>
         <div>
@@ -350,18 +388,15 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthF
             autoComplete={isSignup ? 'new-password' : 'current-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void handleEmailSubmit()}
-            style={inputStyle}
+            onKeyDown={(e) => e.key === 'Enter' && !signupBlocked && void handleEmailSubmit()}
+            disabled={signupBlocked}
+            aria-disabled={signupBlocked}
+            style={{
+              ...inputStyle,
+              ...(signupBlocked ? inputDisabledStyle : {}),
+            }}
           />
         </div>
-
-        {isSignup ? (
-          <SignupConsentCheckbox
-            checked={termsAccepted}
-            onChange={setTermsAccepted}
-            disabled={loading}
-          />
-        ) : null}
 
         {(error || externalError) ? (
           <p role="alert" style={{ fontFamily: ui, fontSize: '0.78rem', color: '#ff7070', margin: 0, lineHeight: 1.45 }}>
@@ -373,6 +408,7 @@ export function AuthForm({ mode, onSuccess, onSwitchMode, externalError }: AuthF
           type="button"
           onClick={() => { void handleEmailSubmit() }}
           disabled={primaryDisabled}
+          aria-disabled={primaryDisabled}
           style={{
             ...primaryBtnStyle,
             cursor: primaryDisabled ? 'not-allowed' : 'pointer',
