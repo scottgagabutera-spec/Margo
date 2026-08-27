@@ -33,16 +33,9 @@ export {
 } from '@/lib/moment-export/layout/resolve-stage-card-layout'
 
 export {
-  createVerticalLayoutMeasure,
   resolveGeistFontFamily,
-  resolveVerticalMomentLayout,
   waitForExportFonts,
-} from '@/lib/moment-export/layout/resolve-vertical-layout'
-
-export type {
-  ResolvedVerticalMomentLayout,
-  VerticalLayoutInput,
-} from '@/lib/moment-export/layout/resolve-vertical-layout'
+} from '@/lib/moment-export/layout/export-fonts'
 
 export type {
   LayoutBackground,

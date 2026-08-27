@@ -10,7 +10,7 @@ import fs from 'fs'
 import path from 'path'
 import http from 'http'
 
-const OUT_DIR = '/opt/cursor/artifacts'
+const OUT_DIR = '/tmp/moment-video-artifacts'
 const SAMPLE_AUDIO = 'https://audio.trymargo.com/Margo/audio/Formidable.mp3'
 const TEST_PORT = 9876
 const BUNDLE_PATH = path.join(OUT_DIR, 'moment-video-test-bundle.mjs')

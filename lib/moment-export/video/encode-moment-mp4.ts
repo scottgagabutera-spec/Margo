@@ -1,11 +1,12 @@
 import type { MargoMoment } from '@/lib/moment/types'
 import { buildMomentTimeline, momentHasPlayableSnippet } from '@/lib/moment-export/timeline/build-moment-timeline'
 import {
-  createVerticalLayoutMeasure,
+  buildCanvasTextMeasure,
+  resolveStageCardLayout,
+  STAGE_CARD_EXPORT_WIDTH,
   resolveGeistFontFamily,
-  resolveVerticalMomentLayout,
   waitForExportFonts,
-} from '@/lib/moment-export/layout/resolve-vertical-layout'
+} from '@/lib/moment-export/layout'
 import { renderMomentFrame } from '@/lib/moment-export/video/render-moment-frame'
 import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
 import {
@@ -13,11 +14,7 @@ import {
   truncateAudioBuffer,
 } from '@/lib/moment-export/video/fetch-audio-snippet'
 import { ensureAacEncoderRegistered } from '@/lib/moment-export/video/capabilities'
-import {
-  MOMENT_VIDEO_FPS,
-  MOMENT_VIDEO_HEIGHT,
-  MOMENT_VIDEO_WIDTH,
-} from '@/lib/moment-export/video/constants'
+import { MOMENT_VIDEO_FPS } from '@/lib/moment-export/video/constants'
 
 export interface EncodeMomentProgress {
   phase: 'prepare' | 'audio' | 'frames' | 'finalize'
@@ -33,6 +30,8 @@ export interface EncodeMomentResult {
   encodeMs: number
   videoCodec: string
   audioCodec: string
+  width: number
+  height: number
 }
 
 export async function encodeMargoMomentMp4(
@@ -69,19 +68,28 @@ export async function encodeMargoMomentMp4(
 
   await waitForExportFonts()
   const geistFamily = resolveGeistFontFamily()
-  const measure = createVerticalLayoutMeasure()
-  const layout = resolveVerticalMomentLayout({
+  const measureCanvas = document.createElement('canvas')
+  const measureCtx = measureCanvas.getContext('2d')
+  if (!measureCtx) throw new Error('Canvas is not available')
+  const measure = buildCanvasTextMeasure(measureCtx)
+
+  const layout = resolveStageCardLayout({
     lyric: line.lyric,
     songTitle: line.songTitle,
     artistName: line.artistName,
     artworkUrl: line.artworkUrl,
     vibeLabel: moment.vibeLabel,
     themeId: moment.themeId,
-    geistFamily,
-  }, measure)
+    outputWidthPx: STAGE_CARD_EXPORT_WIDTH,
+    includeVibePill: !!moment.vibeLabel?.trim(),
+  }, measure, geistFamily)
 
   const timeline = buildMomentTimeline(moment)
   const artworkImage = await loadMomentArtwork(line.artworkUrl)
+
+  const exportLayout = layout.outputHeight % 2 === 0
+    ? layout
+    : { ...layout, outputHeight: layout.outputHeight + 1 }
 
   onProgress?.({ phase: 'audio' })
   const audioBuffer = await fetchAndDecodeAudioSnippet(
@@ -94,10 +102,12 @@ export async function encodeMargoMomentMp4(
 
   const frameCount = Math.max(1, Math.round(timeline.durationSec * MOMENT_VIDEO_FPS))
   const frameDuration = 1 / MOMENT_VIDEO_FPS
+  const W = exportLayout.outputWidth
+  const H = exportLayout.outputHeight
 
   const canvas = document.createElement('canvas')
-  canvas.width = MOMENT_VIDEO_WIDTH
-  canvas.height = MOMENT_VIDEO_HEIGHT
+  canvas.width = W
+  canvas.height = H
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas is not available')
 
@@ -132,9 +142,9 @@ export async function encodeMargoMomentMp4(
       throw new DOMException('Aborted', 'AbortError')
     }
     const timeSec = frame / MOMENT_VIDEO_FPS
-    renderMomentFrame(ctx, layout, timeline, assets, timeSec)
+    renderMomentFrame(ctx, exportLayout, timeline, assets, timeSec)
     await videoSource.add(timeSec, frameDuration)
-    if (frame % 15 === 0) {
+    if (frame % 30 === 0) {
       onProgress?.({ phase: 'frames', frame, frameCount })
     }
   }
@@ -154,5 +164,7 @@ export async function encodeMargoMomentMp4(
     encodeMs: performance.now() - t0,
     videoCodec,
     audioCodec,
+    width: W,
+    height: H,
   }
 }

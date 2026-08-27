@@ -1,7 +1,7 @@
 import type { MomentTimeline } from '@/lib/moment-export/timeline/types'
 import { wordRevealProgress } from '@/lib/moment-export/timeline/build-moment-timeline'
 import { clamp01, easeOutCubic, windowProgress } from '@/lib/moment-export/timeline/interpolate'
-import type { ResolvedVerticalMomentLayout } from '@/lib/moment-export/layout/resolve-vertical-layout'
+import type { ResolvedStageCardLayout } from '@/lib/moment-export/layout/types'
 import type { LayoutLyricBlock } from '@/lib/moment-export/layout/types'
 import type { StageCardTheme } from '@/lib/moment/stage-theme'
 
@@ -12,7 +12,7 @@ export interface MomentFrameAssets {
   artworkImage: HTMLImageElement | null
 }
 
-function drawRoundedRect(
+function drawRoundedRectPath(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -78,7 +78,7 @@ function drawMargoSymbol(
 
 function drawMarkBadge(
   ctx: CanvasRenderingContext2D,
-  layout: ResolvedVerticalMomentLayout,
+  layout: ResolvedStageCardLayout,
   theme: StageCardTheme,
   alpha: number,
 ) {
@@ -112,7 +112,7 @@ function drawMarkBadge(
 
 function drawVibePill(
   ctx: CanvasRenderingContext2D,
-  layout: ResolvedVerticalMomentLayout,
+  layout: ResolvedStageCardLayout,
   theme: StageCardTheme,
   alpha: number,
 ) {
@@ -126,7 +126,7 @@ function drawVibePill(
 
   ctx.save()
   ctx.globalAlpha = alpha
-  drawRoundedRect(ctx, x, y, width, height, r)
+  drawRoundedRectPath(ctx, x, y, width, height, r)
   ctx.fillStyle = tagFill
   ctx.fill()
   ctx.strokeStyle = tagStroke
@@ -179,18 +179,12 @@ function globalAlphaAt(timeSec: number, timeline: MomentTimeline): number {
   return bg * endFade
 }
 
-function artworkScaleAt(timeSec: number, timeline: MomentTimeline): number {
-  const t = clamp01(timeSec / timeline.durationSec)
-  return timeline.artworkScaleStart
-    + (timeline.artworkScaleEnd - timeline.artworkScaleStart) * easeOutCubic(t)
-}
-
 /**
- * Deterministic frame renderer — same inputs always produce the same pixels at timeSec.
+ * Deterministic animated frame — same geometry as PNG stage card export.
  */
 export function renderMomentFrame(
   ctx: CanvasRenderingContext2D,
-  layout: ResolvedVerticalMomentLayout,
+  layout: ResolvedStageCardLayout,
   timeline: MomentTimeline,
   assets: MomentFrameAssets,
   timeSec: number,
@@ -204,44 +198,24 @@ export function renderMomentFrame(
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, W, H)
 
-  ctx.fillStyle = layout.background.base
-  ctx.fillRect(0, 0, W, H)
-
-  if (assets.artworkImage) {
-    const bgAlpha = 0.26 * easeOutCubic(clamp01(timeSec / timeline.bgFadeEndSec))
-    const scale = artworkScaleAt(timeSec, timeline)
-    ctx.save()
-    ctx.globalAlpha = bgAlpha
-    const img = assets.artworkImage
-    const coverScale = Math.max(W / img.width, H / img.height) * scale
-    const dw = img.width * coverScale
-    const dh = img.height * coverScale
-    ctx.filter = 'blur(32px) brightness(0.5)'
-    ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh)
-    ctx.filter = 'none'
-    ctx.restore()
-  }
-
-  const vignette = ctx.createRadialGradient(W / 2, H * 0.38, H * 0.08, W / 2, H * 0.38, H * 0.78)
-  vignette.addColorStop(0, 'rgba(0,0,0,0)')
-  vignette.addColorStop(1, 'rgba(0,0,0,0.38)')
-  ctx.fillStyle = vignette
-  ctx.fillRect(0, 0, W, H)
-
-  const panel = layout.panel
   ctx.save()
-  ctx.globalAlpha = alpha * 0.98
-  drawRoundedRect(ctx, panel.x, panel.y, panel.width, panel.height, panel.borderRadius)
+  ctx.globalAlpha = alpha
+  drawRoundedRectPath(ctx, 0, 0, W, H, layout.borderRadius)
+  ctx.clip()
   ctx.fillStyle = layout.background.base
-  ctx.fill()
-  const highlight = ctx.createLinearGradient(0, panel.y, 0, panel.y + panel.height * layout.background.highlightHeightFraction)
+  ctx.fillRect(0, 0, W, H)
+  const highlight = ctx.createLinearGradient(0, 0, 0, H * layout.background.highlightHeightFraction)
   highlight.addColorStop(0, `rgba(255,255,255,${layout.background.highlightTopOpacity})`)
   highlight.addColorStop(1, 'rgba(255,255,255,0)')
   ctx.fillStyle = highlight
-  ctx.fillRect(panel.x, panel.y, panel.width, panel.height * layout.background.highlightHeightFraction)
+  ctx.fillRect(0, 0, W, H)
+  ctx.restore()
+
+  ctx.save()
+  ctx.globalAlpha = alpha
   ctx.strokeStyle = layout.background.border
   ctx.lineWidth = 1
-  drawRoundedRect(ctx, panel.x + 0.5, panel.y + 0.5, panel.width - 1, panel.height - 1, panel.borderRadius)
+  drawRoundedRectPath(ctx, 0.5, 0.5, W - 1, H - 1, layout.borderRadius)
   ctx.stroke()
   ctx.restore()
 
@@ -259,7 +233,7 @@ export function renderMomentFrame(
 
     const word = timing.word
     const space = ' '
-    const lift = (1 - p) * 12
+    const lift = (1 - p) * 10
     const emphasisScale = timing.emphasis ? 1 + p * 0.02 : 1
 
     ctx.save()
@@ -281,23 +255,23 @@ export function renderMomentFrame(
   if (layout.meta && metaP > 0) {
     ctx.save()
     ctx.globalAlpha = alpha * metaP
-    const lift = (1 - metaP) * 8
+    const lift = (1 - metaP) * 6
     if (layout.meta.song) {
       const s = layout.meta.song
       ctx.font = `${s.style.fontWeight} ${s.style.fontSize}px ${s.style.fontFamily}`
       ctx.fillStyle = s.style.color
-      ctx.fillText(s.text, lyric.x, s.y + s.style.fontSize - lift)
+      ctx.fillText(s.text, layout.padding.left, s.y + s.style.fontSize - lift)
     }
     if (layout.meta.artist) {
       const a = layout.meta.artist
       ctx.font = `${a.style.fontWeight} ${a.style.fontSize}px ${a.style.fontFamily}`
       ctx.fillStyle = a.style.color
-      ctx.fillText(a.text, lyric.x, a.y + a.style.fontSize - lift)
+      ctx.fillText(a.text, layout.padding.left, a.y + a.style.fontSize - lift)
     }
     ctx.restore()
   }
 
-  if (layout.artwork && assets.artworkImage) {
+  if (layout.artwork) {
     const art = layout.artwork
     const artP = windowProgress(
       timeSec,
@@ -309,22 +283,18 @@ export function renderMomentFrame(
       ctx.save()
       ctx.globalAlpha = alpha * artP
       ctx.beginPath()
-      ctx.roundRect(art.x, art.y - (1 - artP) * 6, art.width, art.height, radius)
+      ctx.roundRect(art.x, art.y - (1 - artP) * 5, art.width, art.height, radius)
       ctx.clip()
-      ctx.drawImage(assets.artworkImage, art.x, art.y - (1 - artP) * 6, art.width, art.height)
+      if (assets.artworkImage) {
+        ctx.drawImage(assets.artworkImage, art.x, art.y - (1 - artP) * 5, art.width, art.height)
+      } else {
+        ctx.fillStyle = light ? 'rgba(7,6,10,0.1)' : 'rgba(255,255,255,0.08)'
+        ctx.fill()
+      }
       ctx.restore()
     }
   }
 
   const vibeP = windowProgress(timeSec, timeline.vibeRevealStartSec, timeline.vibeRevealDurationSec)
   drawVibePill(ctx, layout, theme, alpha * vibeP)
-
-  ctx.save()
-  ctx.globalAlpha = alpha * 0.65
-  ctx.font = `400 ${Math.round(W * 0.022)}px ${layout.geistFamily}`
-  ctx.fillStyle = theme.inkMuted
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('trymargo.com', W / 2, layout.watermarkY)
-  ctx.restore()
 }

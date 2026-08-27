@@ -16,10 +16,12 @@ import { resolveMargoMomentFromStage, canShareImageFiles } from '@/lib/moment'
 import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
 import {
   downloadMargoMomentVideo,
-  shareMargoMomentVideo,
+  prepareMargoMomentVideoShare,
+  sharePreparedMomentVideo,
   canShareVideoFiles,
 } from '@/lib/moment-export/save-moment-video'
 import { probeMomentVideoCapability } from '@/lib/moment-export/video/capabilities'
+import { MomentVideoSharePreview } from '@/components/moment-video-share-preview'
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import { MomentActionMenu } from '@/components/moment-action-menu'
 import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
@@ -113,6 +115,10 @@ export function StageLanding() {
   const [canShareVid, setCanShareVid] = useState(false)
   const [videoUnavailableHint, setVideoUnavailableHint] = useState('Not available on this device')
   const videoAbortRef = useRef<AbortController | null>(null)
+  const [videoSharePreview, setVideoSharePreview] = useState<{
+    previewUrl: string
+    file: File
+  } | null>(null)
   const [momentVisible, setMomentVisible] = useState(false)
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -544,45 +550,66 @@ export function StageLanding() {
     }
   }, [])
 
-  const runVideoAction = useCallback(async (
-    action: (
-      moment: ReturnType<typeof buildExportMoment>,
-      onProgress?: (message: string) => void,
-      signal?: AbortSignal,
-    ) => Promise<unknown>,
+  const runVideoEncode = useCallback(async (
+    onReady: (file: File, previewUrl: string) => void | Promise<void>,
   ) => {
     if (!hasMoment || !canExportVideo || !canPlay) return
     videoAbortRef.current?.abort()
     const ac = new AbortController()
     videoAbortRef.current = ac
-    setSaving(true)
     setVideoProgress('Creating your Moment…')
     try {
-      await action(buildExportMoment(), setVideoProgress, ac.signal)
+      const out = await prepareMargoMomentVideoShare(buildExportMoment(), setVideoProgress, ac.signal)
+      if (!out) return
+      await onReady(out.file, out.previewUrl)
     } catch (err) {
       if ((err as Error)?.name !== 'AbortError') {
         setVideoProgress('Could not create video. Try saving an image instead.')
         await new Promise((r) => setTimeout(r, 2800))
       }
     } finally {
-      setSaving(false)
       setVideoProgress(null)
       if (videoAbortRef.current === ac) videoAbortRef.current = null
     }
   }, [hasMoment, canExportVideo, canPlay, buildExportMoment])
 
   const handleSaveVideo = useCallback(async () => {
-    await runVideoAction(downloadMargoMomentVideo)
-  }, [runVideoAction])
+    if (!hasMoment) return
+    setSaving(true)
+    try {
+      await downloadMargoMomentVideo(buildExportMoment(), setVideoProgress)
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        setVideoProgress('Could not create video. Try saving an image instead.')
+        await new Promise((r) => setTimeout(r, 2800))
+        setVideoProgress(null)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }, [hasMoment, buildExportMoment])
 
   const handleShareVideo = useCallback(async () => {
     setShareBusy(true)
     try {
-      await runVideoAction(shareMargoMomentVideo)
+      await runVideoEncode((file, previewUrl) => {
+        setVideoSharePreview({ file, previewUrl })
+      })
     } finally {
       setShareBusy(false)
     }
-  }, [runVideoAction])
+  }, [runVideoEncode])
+
+  const confirmShareVideo = useCallback(async () => {
+    if (!videoSharePreview) return
+    setShareBusy(true)
+    try {
+      const result = await sharePreparedMomentVideo(videoSharePreview.file)
+      if (result === 'shared') setVideoSharePreview(null)
+    } finally {
+      setShareBusy(false)
+    }
+  }, [videoSharePreview])
 
   const canShareImg = canShareImageFiles()
 
@@ -605,6 +632,15 @@ export function StageLanding() {
   })
 
   return (
+    <>
+      <MomentVideoSharePreview
+        open={!!videoSharePreview}
+        previewUrl={videoSharePreview?.previewUrl ?? null}
+        filename={videoSharePreview?.file.name ?? 'MARGO_Moment.mp4'}
+        busy={shareBusy}
+        onShare={() => { void confirmShareVideo() }}
+        onClose={() => setVideoSharePreview(null)}
+      />
     <section style={{ position: 'relative', zIndex: 5, width: '100%', maxWidth: '480px', margin: '0 auto' }}>
       {!selectedSong && (
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
@@ -818,5 +854,6 @@ export function StageLanding() {
         </div>
       )}
     </section>
+    </>
   )
 }

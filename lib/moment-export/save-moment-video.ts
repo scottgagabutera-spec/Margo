@@ -1,31 +1,49 @@
 import type { MargoMoment } from '@/lib/moment/types'
-import { slugify } from '@/lib/moment-export/save-moment-image'
 import { momentHasPlayableSnippet } from '@/lib/moment-export/timeline/build-moment-timeline'
 import { canShareVideoFiles } from '@/lib/moment-export/video/capabilities'
+import {
+  getCachedMomentVideo,
+  setCachedMomentVideo,
+} from '@/lib/moment-export/video/moment-video-cache'
 
-export type ShareMomentVideoResult = 'shared' | 'failed'
+export type ShareMomentVideoResult = 'shared' | 'failed' | 'preview'
 
-function videoFilename(moment: MargoMoment): string {
-  const primary = moment.lines[0]
-  const base = slugify(primary?.songTitle || '', 'Lyric')
-  return `MARGO_${base}_Moment.mp4`
+export interface MomentVideoFileResult {
+  file: File
+  previewUrl: string
+  fromCache: boolean
 }
 
-export async function renderMargoMomentMp4File(
+function progressMessage(
+  p: { phase: string; frame?: number; frameCount?: number },
+): string {
+  if (p.phase === 'audio') return 'Loading audio…'
+  if (p.phase === 'frames' && p.frameCount) {
+    return `Creating your Moment… ${Math.round(((p.frame ?? 0) / p.frameCount) * 100)}%`
+  }
+  if (p.phase === 'finalize') return 'Finishing…'
+  return 'Creating your Moment…'
+}
+
+export async function getOrCreateMomentVideoFile(
   moment: MargoMoment,
   onProgress?: (message: string) => void,
   signal?: AbortSignal,
-): Promise<File | null> {
+): Promise<MomentVideoFileResult | null> {
   if (typeof document === 'undefined' || !momentHasPlayableSnippet(moment)) return null
+
+  const cached = getCachedMomentVideo(moment)
+  if (cached) {
+    onProgress?.('Ready')
+    return { file: cached.file, previewUrl: cached.previewUrl, fromCache: true }
+  }
+
   const { encodeMargoMomentMp4 } = await import('@/lib/moment-export/video/encode-moment-mp4')
   const result = await encodeMargoMomentMp4(moment, (p) => {
-    if (p.phase === 'audio') onProgress?.('Loading audio…')
-    else if (p.phase === 'frames' && p.frameCount) {
-      onProgress?.(`Creating your Moment… ${Math.round(((p.frame ?? 0) / p.frameCount) * 100)}%`)
-    } else if (p.phase === 'finalize') onProgress?.('Finishing…')
-    else onProgress?.('Creating your Moment…')
+    onProgress?.(progressMessage(p))
   }, signal)
-  return new File([result.blob], videoFilename(moment), { type: 'video/mp4' })
+  const entry = setCachedMomentVideo(moment, result)
+  return { file: entry.file, previewUrl: entry.previewUrl, fromCache: false }
 }
 
 export async function downloadMargoMomentVideo(
@@ -33,26 +51,29 @@ export async function downloadMargoMomentVideo(
   onProgress?: (message: string) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const file = await renderMargoMomentMp4File(moment, onProgress, signal)
-  if (!file) return
-  const url = URL.createObjectURL(file)
+  const out = await getOrCreateMomentVideoFile(moment, onProgress, signal)
+  if (!out) return
+  const url = URL.createObjectURL(out.file)
   const a = document.createElement('a')
   a.href = url
-  a.download = file.name
+  a.download = out.file.name
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   setTimeout(() => URL.revokeObjectURL(url), 5000)
 }
 
-export async function shareMargoMomentVideo(
+/** Returns preview URL for share sheet — caller shows playable preview before sharing. */
+export async function prepareMargoMomentVideoShare(
   moment: MargoMoment,
   onProgress?: (message: string) => void,
   signal?: AbortSignal,
-): Promise<ShareMomentVideoResult> {
+): Promise<MomentVideoFileResult | null> {
+  return getOrCreateMomentVideoFile(moment, onProgress, signal)
+}
+
+export async function sharePreparedMomentVideo(file: File): Promise<ShareMomentVideoResult> {
   if (typeof navigator === 'undefined' || !navigator.share) return 'failed'
-  const file = await renderMargoMomentMp4File(moment, onProgress, signal)
-  if (!file) return 'failed'
   if (!canShareVideoFiles()) return 'failed'
   try {
     await navigator.share({ files: [file], title: 'MARGO Moment' })
