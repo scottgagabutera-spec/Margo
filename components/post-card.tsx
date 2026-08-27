@@ -7,14 +7,16 @@ import { PlayPauseIcon } from '@/components/play-pause-icon'
 import {
   CardIcon,
   ChevronRightIcon,
+  EditIcon,
   HeartFilledIcon,
   HeartIcon,
   LyricBackIcon,
   MoreIcon,
   MusicNoteIcon,
+  PlayIcon,
   ReplayIcon,
-  ShareIcon,
 } from '@/components/icons'
+import { FEED_ARTWORK_THUMB_PX } from '@/lib/feed/layout'
 import type { Post } from '@/hooks/usePosts'
 import { EditMomentModal } from '@/components/edit-moment-modal'
 import { DeleteMomentDialog } from '@/components/delete-moment-dialog'
@@ -189,10 +191,16 @@ function SnippetIconButton({ audioUrl, songId, postText, songTitle, artist, artw
     })
   }
 
+  const snippetLabel = isThisPlaying
+    ? (isBuffering ? 'Loading audio snippet' : 'Pause lyric snippet')
+    : 'Play lyric snippet'
+
   return (
     <button
       ref={btnRef}
+      type="button"
       onClick={toggle}
+      aria-label={snippetLabel}
       style={{
         width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
         background: isThisPlaying ? 'rgba(232,197,71,0.2)' : 'rgba(232,197,71,0.1)',
@@ -216,16 +224,21 @@ function PostMomentBody({
 }) {
   const lines = resolveMomentLines(post)
   const multi = lines.length > 1
+  const externalListenHref = post.youtubeMeta?.youtubeUrl
+    || ((post.knowledge?.song || post.knowledge?.artist)
+      ? `https://music.apple.com/search?term=${encodeURIComponent(`${post.knowledge?.song || ''} ${post.knowledge?.artist || ''}`.trim())}`
+      : null)
+  const externalListenLabel = post.youtubeMeta?.youtubeUrl ? 'Watch on YouTube' : 'Open in Apple Music'
 
   return (
-    <div style={{ marginBottom: multi ? '8px' : '16px' }}>
+    <div style={{ marginBottom: multi ? '8px' : '12px' }}>
       {lines.map((line, i) => {
         const hasAudio = !!line.audioUrl
         const hasMeta = !!(line.songTitle || line.artistName)
-        // Catalog/Tier1 lines put play in the lyric row, so show the 56×56
-        // thumb beside attribution instead (external compact already has it
-        // right of the lyric when there's no audio).
-        const showAttrArtwork = hasAudio && !!line.artworkUrl
+        const showBesideLyric = isCompact && !!(line.artworkUrl || post.knowledge?.artwork) && !hasAudio
+        const metaArtwork = line.artworkUrl || post.knowledge?.artwork || null
+        const metaYoutubeThumb = !metaArtwork ? post.youtubeMeta?.thumbnail : undefined
+        const showMetaArtwork = !!(metaArtwork || metaYoutubeThumb) && (hasAudio || !isCompact)
         return (
           <div key={line.id || `line-${line.position}-${i}`}>
             {multi && i > 0 ? (
@@ -248,15 +261,10 @@ function PostMomentBody({
               gap: '12px',
               ...(multi ? { borderLeft: '2px solid rgba(232,197,71,0.25)', paddingLeft: '12px' } : null),
             }}>
-              <p style={{
-                fontFamily: LYRIC_FONT,
-                fontStyle: 'italic',
-                fontSize: isCompact ? '1rem' : 'clamp(1.1rem, 2.4vw, 1.5rem)',
-                color: 'var(--text)',
-                lineHeight: 1.45,
-                flex: 1,
-                margin: 0,
-              }}>
+              <p
+                className={isCompact ? 'margo-feed-lyric margo-feed-lyric--compact' : 'margo-feed-lyric'}
+                style={{ flex: 1 }}
+              >
                 &ldquo;{line.text}&rdquo;
               </p>
               {hasAudio && line.audioUrl ? (
@@ -270,13 +278,13 @@ function PostMomentBody({
                   snippetStart={line.snippetStart}
                   snippetEnd={line.snippetEnd}
                 />
-              ) : isCompact && line.artworkUrl ? (
+              ) : showBesideLyric ? (
                 <PostThumbnail
-                  artwork={line.artworkUrl}
+                  artwork={line.artworkUrl || post.knowledge?.artwork}
                   alt=""
                   style={{
-                    width: '56px',
-                    height: '56px',
+                    width: `${FEED_ARTWORK_THUMB_PX}px`,
+                    height: `${FEED_ARTWORK_THUMB_PX}px`,
                     borderRadius: '8px',
                     objectFit: 'cover',
                     flexShrink: 0,
@@ -291,16 +299,17 @@ function PostMomentBody({
                 alignItems: 'center',
                 gap: '10px',
                 marginTop: '8px',
-                marginBottom: multi && i < lines.length - 1 ? '0' : '12px',
+                marginBottom: multi && i < lines.length - 1 ? '0' : '10px',
               }}>
-                {showAttrArtwork ? (
+                {showMetaArtwork ? (
                   <PostThumbnail
-                    artwork={line.artworkUrl}
+                    artwork={metaArtwork}
+                    youtubeThumbnail={metaYoutubeThumb}
                     alt=""
                     loading="lazy"
                     style={{
-                      width: '56px',
-                      height: '56px',
+                      width: `${FEED_ARTWORK_THUMB_PX}px`,
+                      height: `${FEED_ARTWORK_THUMB_PX}px`,
                       borderRadius: '8px',
                       objectFit: 'cover',
                       flexShrink: 0,
@@ -316,6 +325,31 @@ function PostMomentBody({
                   titleStyle={{ fontSize: '0.82rem' }}
                   artistStyle={{ fontSize: '0.7rem' }}
                 />
+                {!hasAudio && externalListenHref && i === lines.length - 1 ? (
+                  <Link
+                    href={externalListenHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-no-card-nav
+                    aria-label={externalListenLabel}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      width: 'var(--margo-touch-min)',
+                      height: 'var(--margo-touch-min)',
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      marginLeft: 'auto',
+                      background: 'rgba(232,197,71,0.12)',
+                      border: '1px solid rgba(232,197,71,0.28)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <PlayIcon size={16} color="var(--gold)" />
+                  </Link>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -402,6 +436,8 @@ function Tier1Player({ audioUrl, songId, postText }: {
         <button
           onMouseDown={e => e.preventDefault()}
           onClick={toggle}
+          type="button"
+          aria-label={playing ? (isBuffering ? 'Loading full song' : 'Pause full song') : 'Play full song'}
           style={{
             width: 'var(--margo-touch-min)', height: 'var(--margo-touch-min)', borderRadius: '50%', flexShrink: 0,
             background: 'var(--gold)', border: 'none', cursor: 'pointer',
@@ -645,7 +681,7 @@ export function PostCard({
           : 'linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent)',
       }} />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '8px' }}>
         {(() => {
           const profileUsername = (authorProfile?.username || post.username || '').replace(/^@/, '')
           const profileHref = profileUsername ? `/profile/${profileUsername}` : null
@@ -748,10 +784,7 @@ export function PostCard({
                 alignItems: 'center', justifyContent: 'center', padding: 0, boxSizing: 'border-box',
               }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-              </svg>
+              <EditIcon size={14} color="currentColor" />
             </button>
           )}
           <div style={{ position: 'relative' }}>
@@ -904,31 +937,6 @@ export function PostCard({
       )}
 
       <PostMomentBody post={post} isCompact={isCompact} />
-
-      {/* Layout A: external/static cover after lyric when no playable catalog audio on the card mirror. */}
-      {!isTier1 && (post.youtubeMeta?.thumbnail || post.knowledge?.artwork) && (
-        <Link
-          href={post.youtubeMeta?.youtubeUrl || `https://music.apple.com/search?term=${encodeURIComponent((post.knowledge?.song || '') + ' ' + (post.knowledge?.artist || ''))}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={post.youtubeMeta?.youtubeUrl ? 'Watch on YouTube' : 'Open in Apple Music'}
-          style={{ display: 'block', marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', textDecoration: 'none' }}
-        >
-          <div style={{ position: 'relative' }}>
-            <PostThumbnail
-              youtubeThumbnail={post.youtubeMeta?.thumbnail}
-              artwork={post.knowledge?.artwork}
-              alt=""
-              style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }}
-            />
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ShareIcon size={16} color="var(--bg)" />
-              </div>
-            </div>
-          </div>
-        </Link>
-      )}
 
       {/* Suggested Lyric Back — on-demand underline; fetches only on tap. */}
       {lyricBackAllowed ? (

@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react'
 import { ComposeLyricCard } from '@/components/compose-lyric-card'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
+import { ShareIcon } from '@/components/icons'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
 import {
   lyricDisplayText,
@@ -298,7 +299,6 @@ export function StageMomentCard({
                 alignItems: 'center',
                 gap: '6px',
                 minHeight: 'var(--margo-touch-min)',
-                padding: '0 4px',
                 textDecoration: 'none',
                 fontFamily: UI_FONT,
                 fontSize: '0.72rem',
@@ -307,7 +307,7 @@ export function StageMomentCard({
                 color: theme.ink,
               }}
             >
-              Listen ↗
+              Listen <ShareIcon size={12} color="currentColor" />
             </a>
           ) : null}
         </div>

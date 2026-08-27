@@ -55,9 +55,11 @@
   --stage-search-h: 48px;
   --stage-footer-gap: clamp(48px, 12vh, 96px);
   --stage-moment-to-actions: 22px;
+  --margo-feed-max-width: 720px;
 }
 @media (min-width: 640px) {
   :root {
+    --margo-feed-max-width: 880px;
     --stage-search-h: 52px;
   }
 }
@@ -314,6 +316,43 @@ html[data-margo-stage-idle] .margo-stage-zone {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+/* Landing auth entry — desktop only; mobile uses bottom tab Sign In */
+.margo-landing-nav__account {
+  display: none;
+}
+@media (min-width: 640px) {
+  .margo-landing-nav__account {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* Feed lyric — mobile-first; larger on desktop without stretching line length */
+.margo-feed-lyric {
+  font-family: var(--font-lora), serif;
+  font-style: italic;
+  color: var(--text);
+  line-height: 1.45;
+  margin: 0;
+  font-size: clamp(1.15rem, 2.8vw, 1.5rem);
+}
+@media (min-width: 640px) {
+  .margo-feed-lyric {
+    font-size: clamp(1.3rem, 1.65vw, 1.8rem);
+  }
+}
+.margo-feed-lyric--compact {
+  font-size: 1rem;
+}
+
+.margo-feed-column {
+  max-width: var(--margo-feed-max-width);
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 @media (max-width: 639px) {
   .margo-landing-nav {
     backdrop-filter: none !important;

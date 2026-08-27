@@ -165,7 +165,7 @@ export function MargoNav() {
         display: 'flex', alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
+        <Link href="/feed" {...feedLink} style={{ textDecoration: 'none', flexShrink: 0 }}>
           <MargoLogo tier="symbol" size={28} wordmark={showWordmark} rings />
         </Link>
 

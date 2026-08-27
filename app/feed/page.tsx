@@ -577,9 +577,9 @@ function FeedPageInner() {
           position: 'sticky',
           top: 'calc(var(--nav-height, 72px) + 88px)',
           zIndex: 25,
-          maxWidth: '720px',
+          maxWidth: 'var(--margo-feed-max-width)',
           margin: '0 auto',
-          padding: '0 20px 8px',
+          padding: '0 24px 8px',
           pointerEvents: 'none',
         }}>
           <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center' }}>
@@ -612,8 +612,8 @@ function FeedPageInner() {
           (and by extension the feed content below it) drift under the
           nav. Now reads the same measured value MargoNav publishes,
           so this can't drift out of sync again. */}
-      <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 56px) 20px 0' }}>
-        <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+      <div style={{ position: 'sticky', top: 'var(--nav-height, 72px)', zIndex: 30, background: 'var(--bg)', padding: 'clamp(20px, 5vw, 56px) 24px 0' }}>
+        <div className="margo-feed-column">
           <div style={{ paddingBottom: hasActiveFilter ? '10px' : '20px' }}>
             <MargoSearchInput
               value={searchQuery}
@@ -655,7 +655,7 @@ function FeedPageInner() {
         </div>
       </div>
 
-      <main style={{ position: 'relative', zIndex: 5, maxWidth: '720px', margin: '0 auto', padding: '32px 24px var(--margo-page-padding-bottom)' }}>
+      <main className="margo-feed-column" style={{ position: 'relative', zIndex: 5, padding: '32px 24px var(--margo-page-padding-bottom)' }}>
         {sharedLabel && (
           <p style={{
             fontFamily: 'var(--font-lora), serif',

@@ -36,7 +36,7 @@ function bone(
 /** Feed-shaped post cards (avatar + lyric lines + action row). */
 export function FeedPostSkeletonList({ count = 4 }: { count?: number }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <PulseStyle />
       {Array.from({ length: count }, (_, i) => (
         <div
@@ -46,7 +46,7 @@ export function FeedPostSkeletonList({ count = 4 }: { count?: number }) {
             borderBottom: '1px solid var(--border)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
             <div style={bone({ width: 40, height: 40, borderRadius: '50%', border: 'none' }, i * 60)} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={bone({ height: 10, width: '36%', borderRadius: 4, border: 'none' }, i * 60 + 40)} />
@@ -218,7 +218,7 @@ export function LandingRedirectSkeleton() {
         style={{
           position: 'relative',
           zIndex: 5,
-          maxWidth: 720,
+          maxWidth: 'var(--margo-feed-max-width)',
           margin: '0 auto',
           padding: '88px 24px var(--margo-page-padding-bottom)',
         }}
