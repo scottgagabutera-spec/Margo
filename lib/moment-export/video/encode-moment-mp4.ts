@@ -14,7 +14,13 @@ import {
   truncateAudioBuffer,
 } from '@/lib/moment-export/video/fetch-audio-snippet'
 import { ensureAacEncoderRegistered } from '@/lib/moment-export/video/capabilities'
-import { MOMENT_VIDEO_FPS } from '@/lib/moment-export/video/constants'
+import {
+  MOMENT_VIDEO_FPS,
+  MOMENT_VIDEO_BITRATE,
+  MOMENT_VIDEO_AUDIO_BITRATE,
+  MOMENT_VIDEO_MAX_DURATION_SEC,
+  MOMENT_VIDEO_POSTER_HOLD_SEC,
+} from '@/lib/moment-export/video/constants'
 
 export interface EncodeMomentProgress {
   phase: 'prepare' | 'audio' | 'frames' | 'finalize'
@@ -84,7 +90,6 @@ export async function encodeMargoMomentMp4(
     includeVibePill: !!moment.vibeLabel?.trim(),
   }, measure, geistFamily)
 
-  const timeline = buildMomentTimeline(moment)
   const artworkImage = await loadMomentArtwork(line.artworkUrl)
 
   const exportLayout = layout.outputHeight % 2 === 0
@@ -98,9 +103,13 @@ export async function encodeMargoMomentMp4(
     line.snippetEnd!,
     signal,
   )
-  const exportAudio = truncateAudioBuffer(audioBuffer, timeline.durationSec)
+  const audioDurationSec = Math.min(audioBuffer.duration, MOMENT_VIDEO_MAX_DURATION_SEC)
+  const exportTimeline = buildMomentTimeline(moment, audioDurationSec)
+  const exportAudio = truncateAudioBuffer(audioBuffer, audioDurationSec)
+  const holdSec = MOMENT_VIDEO_POSTER_HOLD_SEC
+  const totalDurationSec = audioDurationSec + holdSec
 
-  const frameCount = Math.max(1, Math.round(timeline.durationSec * MOMENT_VIDEO_FPS))
+  const frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
   const frameDuration = 1 / MOMENT_VIDEO_FPS
   const W = exportLayout.outputWidth
   const H = exportLayout.outputHeight
@@ -118,11 +127,11 @@ export async function encodeMargoMomentMp4(
 
   const videoSource = new CanvasSource(canvas, {
     codec: videoCodec,
-    quality: new Quality({ bitrate: 4_200_000 }),
+    quality: new Quality({ bitrate: MOMENT_VIDEO_BITRATE }),
   })
   const audioSource = new AudioBufferSource({
     codec: audioCodec,
-    quality: new Quality({ bitrate: 128_000 }),
+    quality: new Quality({ bitrate: MOMENT_VIDEO_AUDIO_BITRATE }),
   })
 
   output.addVideoTrack(videoSource, { frameRate: MOMENT_VIDEO_FPS })
@@ -142,7 +151,8 @@ export async function encodeMargoMomentMp4(
       throw new DOMException('Aborted', 'AbortError')
     }
     const timeSec = frame / MOMENT_VIDEO_FPS
-    renderMomentFrame(ctx, exportLayout, timeline, assets, timeSec)
+    const renderTimeSec = Math.min(timeSec, Math.max(0, audioDurationSec - 1 / MOMENT_VIDEO_FPS))
+    renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec)
     await videoSource.add(timeSec, frameDuration)
     if (frame % 30 === 0) {
       onProgress?.({ phase: 'frames', frame, frameCount })
@@ -158,7 +168,7 @@ export async function encodeMargoMomentMp4(
   const blob = new Blob([buffer], { type: 'video/mp4' })
   return {
     blob,
-    durationSec: timeline.durationSec,
+    durationSec: totalDurationSec,
     frameCount,
     fileSizeBytes: blob.size,
     encodeMs: performance.now() - t0,

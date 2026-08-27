@@ -641,7 +641,7 @@ export function StageLanding() {
       if (result === 'shared') {
         toastMomentShared()
         setVideoReadySheet(null)
-      } else {
+      } else if (result !== 'cancelled') {
         toastMomentShareFailed()
       }
     } finally {

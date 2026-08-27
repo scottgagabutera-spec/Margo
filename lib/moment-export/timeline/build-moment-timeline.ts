@@ -54,6 +54,11 @@ export function snippetDurationSec(moment: MargoMoment): number {
   return Math.min(MOMENT_VIDEO_MAX_DURATION_SEC, span)
 }
 
+function clampSnippetDurationSec(durationSec: number): number {
+  if (!Number.isFinite(durationSec) || durationSec <= 0) return MOMENT_VIDEO_MAX_DURATION_SEC
+  return Math.min(MOMENT_VIDEO_MAX_DURATION_SEC, durationSec)
+}
+
 export function momentHasPlayableSnippet(moment: MargoMoment): boolean {
   if (moment.lines.length !== 1) return false
   const line = moment.lines[0]
@@ -66,13 +71,18 @@ export function momentHasPlayableSnippet(moment: MargoMoment): boolean {
 }
 
 /** Build a deterministic timeline from a single-line Margo Moment. */
-export function buildMomentTimeline(moment: MargoMoment): MomentTimeline {
+export function buildMomentTimeline(
+  moment: MargoMoment,
+  durationOverrideSec?: number,
+): MomentTimeline {
   const line = moment.lines[0]
   const lyric = (line?.lyric || '').trim()
   const words = splitWords(lyric)
-  const durationSec = snippetDurationSec(moment)
+  const durationSec = clampSnippetDurationSec(
+    durationOverrideSec ?? snippetDurationSec(moment),
+  )
 
-  const bgFadeEndSec = Math.min(0.45, durationSec * 0.06)
+  const bgFadeEndSec = Math.min(0.25, durationSec * 0.04)
   const wordRevealStart = 0.28
   const wordRevealSpan = Math.min(
     durationSec * 0.38,
@@ -86,11 +96,6 @@ export function buildMomentTimeline(moment: MargoMoment): MomentTimeline {
   const metaRevealDurationSec = 0.55
   const vibeRevealStartSec = metaRevealStartSec + metaRevealDurationSec * 0.55
   const vibeRevealDurationSec = 0.5
-  const endFadeDurationSec = Math.min(1.1, durationSec * 0.12)
-  const endFadeStartSec = Math.max(
-    vibeRevealStartSec + vibeRevealDurationSec,
-    durationSec - endFadeDurationSec,
-  )
 
   return {
     durationSec,
@@ -101,8 +106,6 @@ export function buildMomentTimeline(moment: MargoMoment): MomentTimeline {
     metaRevealDurationSec,
     vibeRevealStartSec,
     vibeRevealDurationSec,
-    endFadeStartSec,
-    endFadeDurationSec,
     artworkScaleStart: 1.04,
     artworkScaleEnd: 1.07,
   }

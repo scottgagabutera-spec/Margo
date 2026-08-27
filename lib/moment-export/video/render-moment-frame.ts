@@ -172,11 +172,7 @@ function computeWordPositions(
 }
 
 function globalAlphaAt(timeSec: number, timeline: MomentTimeline): number {
-  const bg = easeOutCubic(clamp01(timeSec / timeline.bgFadeEndSec))
-  const endFade = timeSec >= timeline.endFadeStartSec
-    ? 1 - easeOutCubic((timeSec - timeline.endFadeStartSec) / timeline.endFadeDurationSec)
-    : 1
-  return bg * endFade
+  return easeOutCubic(clamp01(timeSec / timeline.bgFadeEndSec))
 }
 
 /**

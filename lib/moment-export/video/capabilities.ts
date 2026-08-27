@@ -115,14 +115,13 @@ export async function ensureAacEncoderRegistered(): Promise<void> {
   }
 }
 
-export function canShareVideoFiles(): boolean {
+export function canShareVideoFiles(file?: File): boolean {
   if (typeof navigator === 'undefined' || !navigator.share) return false
   if (typeof navigator.canShare !== 'function') return true
+  if (!file) return true
   try {
-    return navigator.canShare({
-      files: [new File([], 'probe.mp4', { type: 'video/mp4' })],
-    })
+    return navigator.canShare({ files: [file] })
   } catch {
-    return false
+    return true
   }
 }

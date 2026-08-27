@@ -20,8 +20,6 @@ export interface MomentTimeline {
   metaRevealDurationSec: number
   vibeRevealStartSec: number
   vibeRevealDurationSec: number
-  endFadeStartSec: number
-  endFadeDurationSec: number
   /** Gentle artwork scale over the clip */
   artworkScaleStart: number
   artworkScaleEnd: number

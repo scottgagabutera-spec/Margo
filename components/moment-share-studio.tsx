@@ -322,7 +322,7 @@ export function MomentShareStudio({
         toastMomentShared()
         setVideoReadySheet(null)
         onShared?.()
-      } else {
+      } else if (result !== 'cancelled') {
         toastMomentShareFailed()
       }
     } finally {
