@@ -19,11 +19,9 @@ type SongMetaProps = {
 
 function ArtistCreditLine({
   artist,
-  aiGenerated,
   style,
 }: {
   artist: string
-  aiGenerated: boolean
   style?: React.CSSProperties
 }) {
   return (
@@ -34,21 +32,13 @@ function ArtistCreditLine({
       fontWeight: 400,
       color: 'var(--text-secondary)',
       lineHeight: 1.3,
-      display: 'flex',
-      alignItems: 'baseline',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
       minWidth: 0,
       ...style,
     }}>
-      <span style={{
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-        minWidth: 0,
-        flex: '1 1 auto',
-      }}>
-        {artist}
-      </span>
-      {aiGenerated ? <AiGeneratedLabel show suffix /> : null}
+      {artist}
     </p>
   )
 }
@@ -56,7 +46,7 @@ function ArtistCreditLine({
 /**
  * Canonical song title vs artist hierarchy (D3).
  * Title: --text, semibold, larger. Artist: --text-secondary, regular, smaller.
- * AI provenance: quiet suffix on the artist line when applicable.
+ * AI provenance: quiet "(AI-generated)" in brackets after the song title.
  */
 export function SongMeta({
   title,
@@ -73,7 +63,6 @@ export function SongMeta({
   if (!t && !a && !aiGenerated) return null
 
   if (layout === 'inline') {
-    const joined = [t, a].filter(Boolean).join(' · ')
     const node = (
       <span style={{
         fontFamily: UI_FONT,
@@ -87,8 +76,9 @@ export function SongMeta({
         ...style,
         ...titleStyle,
       }}>
-        {joined ? <span style={{ minWidth: 0 }}>{joined}</span> : null}
-        {aiGenerated ? <AiGeneratedLabel show suffix={!!joined} /> : null}
+        {t ? <span style={{ minWidth: 0 }}>{t}</span> : null}
+        {aiGenerated ? <AiGeneratedLabel show spaced={!!t} /> : null}
+        {a ? <span>{(t || aiGenerated) ? ' · ' : ''}{a}</span> : null}
       </span>
     )
     if (href) {
@@ -99,7 +89,7 @@ export function SongMeta({
 
   const body = (
     <div style={{ minWidth: 0, ...style }}>
-      {t ? (
+      {(t || aiGenerated) ? (
         <p style={{
           margin: 0,
           fontFamily: UI_FONT,
@@ -107,24 +97,33 @@ export function SongMeta({
           fontWeight: 600,
           color: 'var(--text)',
           lineHeight: 1.3,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          display: 'flex',
+          alignItems: 'baseline',
+          minWidth: 0,
           ...titleStyle,
         }}>
-          {t}
+          {t ? (
+            <span style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              minWidth: 0,
+              flex: '1 1 auto',
+            }}>
+              {t}
+            </span>
+          ) : null}
+          {aiGenerated ? <AiGeneratedLabel show spaced={!!t} /> : null}
         </p>
       ) : null}
       {a ? (
         <ArtistCreditLine
           artist={a}
-          aiGenerated={aiGenerated}
-          style={{ margin: t ? '2px 0 0' : 0, ...artistStyle }}
+          style={{
+            margin: (t || aiGenerated) ? '2px 0 0' : 0,
+            ...artistStyle,
+          }}
         />
-      ) : aiGenerated ? (
-        <p style={{ margin: t ? '2px 0 0' : 0, ...artistStyle }}>
-          <AiGeneratedLabel show />
-        </p>
       ) : null}
     </div>
   )

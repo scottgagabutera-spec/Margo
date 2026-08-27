@@ -357,21 +357,36 @@ export default function SongPage() {
         <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <BackButton fallbackHref="/discover" />
           <div style={{ textAlign: 'center', minWidth: 0, flex: 1, padding: '0 8px' }}>
-            <p style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song?.title || '—'}</p>
+            <p style={{
+              fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+              fontSize: '0.95rem',
+              fontWeight: 600,
+              color: 'var(--text)',
+              margin: 0,
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'center',
+              minWidth: 0,
+            }}>
+              <span style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: 0,
+                flex: '1 1 auto',
+              }}>
+                {song?.title || '—'}
+              </span>
+              {song?.isAiGenerated ? <AiGeneratedLabel show spaced={false} /> : null}
+            </p>
             <p style={{
               fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
               fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-secondary)',
               margin: '2px 0 0', lineHeight: 1.3,
-              display: 'flex', alignItems: 'baseline', justifyContent: 'center',
-              minWidth: 0, overflow: 'hidden',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              minWidth: 0,
             }}>
-              <span style={{
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                minWidth: 0, flex: '0 1 auto',
-              }}>
-                {song?.artist || '—'}
-              </span>
-              {song?.isAiGenerated ? <AiGeneratedLabel show suffix /> : null}
+              {song?.artist || '—'}
             </p>
           </div>
           <div style={{ width: '60px' }} />

@@ -7,16 +7,16 @@ import { UI_FONT } from '@/lib/fonts'
  * Plain supporting metadata — no frame, border, or background.
  * Renders nothing when `show` is false — callers gate on the boolean.
  *
- * Use `suffix` on artist/credit lines: "Artist Name · AI-generated"
+ * Default: small muted "(AI-generated)" immediately after the song title.
  */
 export function AiGeneratedLabel({
   show = true,
-  suffix = false,
+  spaced = true,
   style,
 }: {
   show?: boolean
-  /** Prefix with " · " for inline artist-line provenance. */
-  suffix?: boolean
+  /** Narrow space before the bracket when following a title. */
+  spaced?: boolean
   style?: React.CSSProperties
 }) {
   if (!show) return null
@@ -26,7 +26,7 @@ export function AiGeneratedLabel({
       style={{
         display: 'inline',
         fontFamily: UI_FONT,
-        fontSize: '0.65rem',
+        fontSize: '0.52rem',
         fontWeight: 400,
         letterSpacing: 0,
         color: 'var(--text-muted)',
@@ -36,8 +36,7 @@ export function AiGeneratedLabel({
         ...style,
       }}
     >
-      {suffix ? ' · ' : null}
-      AI-generated
+      {spaced ? '\u2009' : null}(AI-generated)
     </span>
   )
 }

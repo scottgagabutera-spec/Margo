@@ -5,7 +5,7 @@ import { useRef, useLayoutEffect, type CSSProperties } from 'react'
 import { usePathname } from 'next/navigation'
 import { useIdentity } from '@/hooks/useIdentity'
 import { useAudioEngine } from '@/hooks/useAudioEngine'
-import { CompassIcon, PenLineIcon } from '@/components/icons'
+import { CompassIcon, FeedIcon, PenLineIcon } from '@/components/icons'
 import { HubTabButton } from '@/components/hub-menu'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesTabBar } from '@/lib/chrome-mode'
@@ -99,9 +99,7 @@ export function MobileTabBar() {
       borderTop: isLanding ? '1px solid var(--border)' : 'none',
     }}>
       <Link href="/feed" style={tabStyle(isOnFeed)} {...feedLink}>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <path d="M3 9L10 3l7 6v7a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1V9Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-        </svg>
+        <FeedIcon size={20} color="currentColor" />
         <span style={labelStyle}>Feed</span>
       </Link>
 
