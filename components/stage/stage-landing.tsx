@@ -14,6 +14,12 @@ import MargoLogo from '@/components/MargoLogo'
 import { useStageChromePublisher, useStageSearchPublisher, useStageIdlePublisher, useStageMomentPublisher } from '@/lib/stage-chrome'
 import { resolveMargoMomentFromStage, canShareImageFiles } from '@/lib/moment'
 import { saveMargoMomentImage, shareMargoMomentImage } from '@/lib/moment-export/save-moment-image'
+import {
+  downloadMargoMomentVideo,
+  shareMargoMomentVideo,
+  canShareVideoFiles,
+} from '@/lib/moment-export/save-moment-video'
+import { probeMomentVideoCapability } from '@/lib/moment-export/video/capabilities'
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import { MomentActionMenu } from '@/components/moment-action-menu'
 import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
@@ -102,6 +108,11 @@ export function StageLanding() {
   const [cardThemeId, setCardThemeId] = useState<StageCardThemeId>('gold')
   const [saving, setSaving] = useState(false)
   const [shareBusy, setShareBusy] = useState(false)
+  const [videoProgress, setVideoProgress] = useState<string | null>(null)
+  const [canExportVideo, setCanExportVideo] = useState(false)
+  const [canShareVid, setCanShareVid] = useState(false)
+  const [videoUnavailableHint, setVideoUnavailableHint] = useState('Not available on this device')
+  const videoAbortRef = useRef<AbortController | null>(null)
   const [momentVisible, setMomentVisible] = useState(false)
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -519,17 +530,76 @@ export function StageLanding() {
     }
   }, [hasMoment, buildExportMoment])
 
+  useEffect(() => {
+    setCanShareVid(canShareVideoFiles())
+    let cancelled = false
+    void probeMomentVideoCapability().then((cap) => {
+      if (cancelled) return
+      setCanExportVideo(cap.canExport)
+      if (cap.reason) setVideoUnavailableHint(cap.reason)
+    })
+    return () => {
+      cancelled = true
+      videoAbortRef.current?.abort()
+    }
+  }, [])
+
+  const runVideoAction = useCallback(async (
+    action: (
+      moment: ReturnType<typeof buildExportMoment>,
+      onProgress?: (message: string) => void,
+      signal?: AbortSignal,
+    ) => Promise<unknown>,
+  ) => {
+    if (!hasMoment || !canExportVideo || !canPlay) return
+    videoAbortRef.current?.abort()
+    const ac = new AbortController()
+    videoAbortRef.current = ac
+    setSaving(true)
+    setVideoProgress('Creating your Moment…')
+    try {
+      await action(buildExportMoment(), setVideoProgress, ac.signal)
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        setVideoProgress('Could not create video. Try saving an image instead.')
+        await new Promise((r) => setTimeout(r, 2800))
+      }
+    } finally {
+      setSaving(false)
+      setVideoProgress(null)
+      if (videoAbortRef.current === ac) videoAbortRef.current = null
+    }
+  }, [hasMoment, canExportVideo, canPlay, buildExportMoment])
+
+  const handleSaveVideo = useCallback(async () => {
+    await runVideoAction(downloadMargoMomentVideo)
+  }, [runVideoAction])
+
+  const handleShareVideo = useCallback(async () => {
+    setShareBusy(true)
+    try {
+      await runVideoAction(shareMargoMomentVideo)
+    } finally {
+      setShareBusy(false)
+    }
+  }, [runVideoAction])
+
   const canShareImg = canShareImageFiles()
 
   const saveItems: MomentActionMenuItem[] = buildMomentExportActionItems({
     onExportImage: () => { void handleSaveImage() },
     hasPlayableSnippet: canPlay,
+    canExportVideo,
+    videoUnavailableHint,
+    onExportVideo: () => { void handleSaveVideo() },
   })
 
   const shareItems = buildMomentShareActionItems({
     canShareImage: canShareImg,
+    canShareVideo: canShareVid && canExportVideo && canPlay,
     linksActive: false,
     onShareImage: () => { void handleShareImage() },
+    onShareVideo: () => { void handleShareVideo() },
     onShareLink: () => {},
     onCopyLink: () => {},
   })
@@ -671,6 +741,23 @@ export function StageLanding() {
                 />
                 {signedIn ? (
                   <div style={{ width: '100%', marginTop: 'var(--stage-moment-to-actions, 22px)' }}>
+                    {videoProgress ? (
+                      <p
+                        role="status"
+                        aria-live="polite"
+                        style={{
+                          margin: '0 0 10px',
+                          fontFamily: font,
+                          fontSize: '0.68rem',
+                          fontStyle: 'italic',
+                          color: 'var(--text-secondary)',
+                          textAlign: 'center',
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {videoProgress}
+                      </p>
+                    ) : null}
                     <div style={{
                       display: 'flex',
                       flexDirection: 'row',

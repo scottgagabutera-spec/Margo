@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronRightIcon } from '@/components/icons'
 import { StageMomentCard } from '@/components/stage/stage-moment-card'
 import { MomentActionMenu, type MomentActionMenuItem } from '@/components/moment-action-menu'
@@ -29,19 +29,14 @@ import {
   MOMENT_VIBE_PICKER_OPTIONS,
   shareMomentNative,
 } from '@/lib/moment'
+import {
+  downloadMargoMomentVideo,
+  shareMargoMomentVideo,
+  canShareVideoFiles,
+} from '@/lib/moment-export/save-moment-video'
+import { probeMomentVideoCapability } from '@/lib/moment-export/video/capabilities'
+import { momentHasPlayableSnippet } from '@/lib/moment-export/timeline/build-moment-timeline'
 import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
-import { useRef } from 'react'
-
-function momentHasSnippet(moment: MargoMoment): boolean {
-  const line = moment.lines[0]
-  if (!line) return false
-  return !!(
-    line.audioUrl
-    && line.snippetStart != null
-    && line.snippetEnd != null
-    && line.snippetEnd > line.snippetStart
-  )
-}
 
 interface MomentShareStudioProps {
   moment?: MargoMoment | null
@@ -83,9 +78,14 @@ export function MomentShareStudio({
   const [exportVibeLabel, setExportVibeLabel] = useState<string | null>(null)
   const [lineIndex, setLineIndex] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [videoProgress, setVideoProgress] = useState<string | null>(null)
   const [canShareImg, setCanShareImg] = useState(false)
+  const [canShareVid, setCanShareVid] = useState(false)
+  const [canExportVideo, setCanExportVideo] = useState(false)
+  const [videoUnavailableHint, setVideoUnavailableHint] = useState('Not available on this device')
   const [openMenu, setOpenMenu] = useState<'save' | 'share' | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const videoAbortRef = useRef<AbortController | null>(null)
 
   const isDualCard = !!(parentLyric && parentSong && parentArtist)
   const activeTheme = THEMES[0]
@@ -142,7 +142,7 @@ export function MomentShareStudio({
   }, [baseMoment, previewLine, isDualCard, cardThemeId, exportVibeLabel, vibeLabel, resolvedPostId, previewIndex])
 
   const canShareUrl = exportMoment ? isMomentRecipientShareable(exportMoment) : false
-  const hasSnippet = exportMoment ? momentHasSnippet(exportMoment) : false
+  const hasSnippet = exportMoment ? momentHasPlayableSnippet(exportMoment) : false
 
   useEffect(() => {
     setExportVibeLabel(momentProp?.vibeLabel ?? vibeLabel ?? null)
@@ -151,7 +151,19 @@ export function MomentShareStudio({
       tid === 'blush' || tid === 'sage' || tid === 'dusk' || tid === 'gold' ? tid : 'gold'
     setCardThemeId(stageTheme)
     setCanShareImg(canShareImageFiles())
+    setCanShareVid(canShareVideoFiles())
+    let cancelled = false
+    void probeMomentVideoCapability().then((cap) => {
+      if (cancelled) return
+      setCanExportVideo(cap.canExport)
+      if (cap.reason) setVideoUnavailableHint(cap.reason)
+    })
+    return () => { cancelled = true }
   }, [momentProp?.vibeLabel, momentProp?.themeId, vibeLabel])
+
+  useEffect(() => () => {
+    videoAbortRef.current?.abort()
+  }, [])
 
   const renderDualCanvas = useCallback(async () => {
     const canvas = canvasRef.current
@@ -206,6 +218,43 @@ export function MomentShareStudio({
     }
   }, [exportMoment, isDualCard, onShared])
 
+  const runVideoAction = useCallback(async (
+    action: (
+      moment: MargoMoment,
+      onProgress?: (message: string) => void,
+      signal?: AbortSignal,
+    ) => Promise<unknown>,
+    onSuccess?: () => void,
+  ) => {
+    if (!exportMoment || isDualCard || !canExportVideo || !hasSnippet) return
+    videoAbortRef.current?.abort()
+    const ac = new AbortController()
+    videoAbortRef.current = ac
+    setBusy(true)
+    setVideoProgress('Creating your Moment…')
+    try {
+      await action(exportMoment, setVideoProgress, ac.signal)
+      onSuccess?.()
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        setVideoProgress('Could not create video. Try saving an image instead.')
+        await new Promise((r) => setTimeout(r, 2800))
+      }
+    } finally {
+      setBusy(false)
+      setVideoProgress(null)
+      if (videoAbortRef.current === ac) videoAbortRef.current = null
+    }
+  }, [exportMoment, isDualCard, canExportVideo, hasSnippet])
+
+  const saveVideo = useCallback(async () => {
+    await runVideoAction(downloadMargoMomentVideo, onExported)
+  }, [runVideoAction, onExported])
+
+  const shareVideo = useCallback(async () => {
+    await runVideoAction(shareMargoMomentVideo, onShared)
+  }, [runVideoAction, onShared])
+
   const shareLink = useCallback(async () => {
     if (isDualCard && parentLyric) {
       const payload = buildLyricBackNativeSharePayload(
@@ -244,6 +293,9 @@ export function MomentShareStudio({
     : buildMomentExportActionItems({
       onExportImage: saveImage,
       hasPlayableSnippet: hasSnippet,
+      canExportVideo,
+      videoUnavailableHint,
+      onExportVideo: () => { void saveVideo() },
     })
 
   const shareItems: MomentActionMenuItem[] = isDualCard
@@ -261,8 +313,10 @@ export function MomentShareStudio({
     ]
     : buildMomentShareActionItems({
       canShareImage: canShareImg,
+      canShareVideo: canShareVid && canExportVideo && hasSnippet,
       linksActive: canShareUrl,
       onShareImage: () => { void shareImage() },
+      onShareVideo: () => { void shareVideo() },
       onShareLink: () => { void shareLink() },
       onCopyLink: () => { void copyLink() },
     })
@@ -360,6 +414,24 @@ export function MomentShareStudio({
     </div>
   )
 
+  const progressBanner = videoProgress ? (
+    <p
+      role="status"
+      aria-live="polite"
+      style={{
+        margin: 0,
+        fontFamily: 'var(--font-lora), serif',
+        fontSize: '0.68rem',
+        fontStyle: 'italic',
+        color: 'var(--text-secondary)',
+        textAlign: 'center',
+        lineHeight: 1.4,
+      }}
+    >
+      {videoProgress}
+    </p>
+  ) : null
+
   if (isModal) {
     return (
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap }}>
@@ -380,6 +452,7 @@ export function MomentShareStudio({
         ) : null}
         {cardSection}
         <div style={{ position: 'relative', zIndex: modalMenuZIndex, flexShrink: 0, paddingBottom: modalMenuReservePx }}>
+          {progressBanner}
           {actionRow}
         </div>
       </div>
@@ -389,6 +462,7 @@ export function MomentShareStudio({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap }}>
       {cardSection}
+      {progressBanner}
       {actionRow}
     </div>
   )

@@ -5,36 +5,51 @@ export interface BuildMomentExportActionItemsInput {
   /** When false, only Image (e.g. lyric-back dual card). */
   showFormats?: boolean
   hasPlayableSnippet?: boolean
-  onExportGif?: () => void
+  canExportVideo?: boolean
+  videoUnavailableHint?: string
+  onExportVideo?: () => void
 }
 
-/** Export ▾ submenu: Image / PDF / GIF — shared by Stage + Card modal. */
+/** Export ▾ submenu: Image / Video / PDF — shared by Stage + Card modal. */
 export function buildMomentExportActionItems({
   onExportImage,
   showFormats = true,
   hasPlayableSnippet = false,
-  onExportGif = () => {},
+  canExportVideo = false,
+  videoUnavailableHint = 'Not available on this device',
+  onExportVideo = () => {},
 }: BuildMomentExportActionItemsInput): MomentActionMenuItem[] {
   const items: MomentActionMenuItem[] = [
     { id: 'png', label: 'Image', onClick: onExportImage },
   ]
   if (!showFormats) return items
+
+  const videoEnabled = hasPlayableSnippet && canExportVideo
+  let videoHint: string | undefined
+  if (!hasPlayableSnippet) {
+    videoHint = 'Needs a playable snippet'
+  } else if (!canExportVideo) {
+    videoHint = videoUnavailableHint
+  }
+
   items.push(
-    { id: 'pdf', label: 'PDF', hint: 'Coming soon', disabled: true, onClick: () => {} },
     {
-      id: 'gif',
-      label: 'GIF',
-      ...(hasPlayableSnippet ? {} : { hint: 'Needs a playable snippet', disabled: true }),
-      onClick: onExportGif,
+      id: 'video',
+      label: 'Video',
+      ...(videoEnabled ? {} : { hint: videoHint, disabled: true }),
+      onClick: onExportVideo,
     },
+    { id: 'pdf', label: 'PDF', hint: 'Coming soon', disabled: true, onClick: () => {} },
   )
   return items
 }
 
 export interface BuildMomentShareActionItemsInput {
   canShareImage: boolean
+  canShareVideo?: boolean
   linksActive: boolean
   onShareImage: () => void
+  onShareVideo?: () => void
   onShareLink: () => void
   onCopyLink: () => void
   /** When false, link/copy rows are omitted (not shown disabled). */
@@ -48,8 +63,10 @@ export interface BuildMomentShareActionItemsInput {
  */
 export function buildMomentShareActionItems({
   canShareImage,
+  canShareVideo = false,
   linksActive,
   onShareImage,
+  onShareVideo = () => {},
   onShareLink,
   onCopyLink,
   showPendingLinks = false,
@@ -59,6 +76,10 @@ export function buildMomentShareActionItems({
 
   if (canShareImage) {
     items.push({ id: 'img', label: 'Share image', onClick: onShareImage })
+  }
+
+  if (canShareVideo) {
+    items.push({ id: 'vid', label: 'Share video', onClick: onShareVideo })
   }
 
   if (linksActive) {
