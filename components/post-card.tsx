@@ -13,8 +13,8 @@ import {
   LyricBackIcon,
   MoreIcon,
   MusicNoteIcon,
-  PlayIcon,
   ReplayIcon,
+  ShareIcon,
 } from '@/components/icons'
 import { FEED_ARTWORK_THUMB_PX } from '@/lib/feed/layout'
 import type { Post } from '@/hooks/usePosts'
@@ -233,12 +233,12 @@ function PostMomentBody({
   return (
     <div style={{ marginBottom: multi ? '8px' : '12px' }}>
       {lines.map((line, i) => {
-        const hasAudio = !!line.audioUrl
+        const hasCatalogAudio = !!(line.songId && line.audioUrl)
         const hasMeta = !!(line.songTitle || line.artistName)
-        const showBesideLyric = isCompact && !!(line.artworkUrl || post.knowledge?.artwork) && !hasAudio
+        const showBesideLyric = isCompact && !!(line.artworkUrl || post.knowledge?.artwork) && !hasCatalogAudio
         const metaArtwork = line.artworkUrl || post.knowledge?.artwork || null
         const metaYoutubeThumb = !metaArtwork ? post.youtubeMeta?.thumbnail : undefined
-        const showMetaArtwork = !!(metaArtwork || metaYoutubeThumb) && (hasAudio || !isCompact)
+        const showMetaArtwork = !!(metaArtwork || metaYoutubeThumb) && (hasCatalogAudio || !isCompact)
         return (
           <div key={line.id || `line-${line.position}-${i}`}>
             {multi && i > 0 ? (
@@ -267,7 +267,7 @@ function PostMomentBody({
               >
                 &ldquo;{line.text}&rdquo;
               </p>
-              {hasAudio && line.audioUrl ? (
+              {hasCatalogAudio && line.audioUrl ? (
                 <SnippetIconButton
                   audioUrl={line.audioUrl}
                   songId={line.songId || null}
@@ -325,7 +325,7 @@ function PostMomentBody({
                   titleStyle={{ fontSize: '0.82rem' }}
                   artistStyle={{ fontSize: '0.7rem' }}
                 />
-                {!hasAudio && externalListenHref && i === lines.length - 1 ? (
+                {!hasCatalogAudio && externalListenHref && i === lines.length - 1 ? (
                   <Link
                     href={externalListenHref}
                     target="_blank"
@@ -339,15 +339,15 @@ function PostMomentBody({
                       borderRadius: '50%',
                       flexShrink: 0,
                       marginLeft: 'auto',
-                      background: 'rgba(232,197,71,0.12)',
-                      border: '1px solid rgba(232,197,71,0.28)',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.12)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       textDecoration: 'none',
                     }}
                   >
-                    <PlayIcon size={16} color="var(--gold)" />
+                    <ShareIcon size={14} color="var(--text-secondary)" />
                   </Link>
                 ) : null}
               </div>
@@ -514,7 +514,7 @@ export function PostCard({
   const emotion = normalizeEmotion(post.emotion || '').toLowerCase()
   const color = EMOTION_COLORS[emotion] || 'var(--text-disabled)'
   const label = VIBE_LABELS[emotion] || post.emotion || ''
-  const isTier1 = !!post.audioUrl
+  const isTier1 = !!(post.songId && post.audioUrl)
   const audioUrl = post.audioUrl || null
   const cardRef = useRef<HTMLDivElement>(null)
   const isOwner = !!user?.id && !!post.authorUid && post.authorUid === user.id

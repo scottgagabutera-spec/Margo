@@ -312,18 +312,18 @@ export function SongPreviewSheet({
               >
                 {song.title}
               </h2>
+              {song.isAiGenerated ? (
+                <p style={{ margin: '0 0 2px', lineHeight: 1.2 }}>
+                  <AiGeneratedLabel show />
+                </p>
+              ) : null}
               <p style={{
                 fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400,
                 color: 'var(--text-secondary)', margin: '0 0 3px', lineHeight: 1.3,
-                display: 'flex', alignItems: 'baseline', minWidth: 0,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                minWidth: 0,
               }}>
-                <span style={{
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  minWidth: 0, flex: '1 1 auto',
-                }}>
-                  {song.artist}
-                </span>
-                {song.isAiGenerated ? <AiGeneratedLabel show suffix /> : null}
+                {song.artist}
               </p>
               <p style={{
                 fontFamily: UI_FONT, fontSize: '0.7rem', fontWeight: 400,

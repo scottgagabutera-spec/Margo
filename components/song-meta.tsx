@@ -19,11 +19,9 @@ type SongMetaProps = {
 
 function ArtistCreditLine({
   artist,
-  aiGenerated,
   style,
 }: {
   artist: string
-  aiGenerated: boolean
   style?: React.CSSProperties
 }) {
   return (
@@ -34,21 +32,13 @@ function ArtistCreditLine({
       fontWeight: 400,
       color: 'var(--text-secondary)',
       lineHeight: 1.3,
-      display: 'flex',
-      alignItems: 'baseline',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
       minWidth: 0,
       ...style,
     }}>
-      <span style={{
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-        minWidth: 0,
-        flex: '1 1 auto',
-      }}>
-        {artist}
-      </span>
-      {aiGenerated ? <AiGeneratedLabel show suffix /> : null}
+      {artist}
     </p>
   )
 }
@@ -56,7 +46,7 @@ function ArtistCreditLine({
 /**
  * Canonical song title vs artist hierarchy (D3).
  * Title: --text, semibold, larger. Artist: --text-secondary, regular, smaller.
- * AI provenance: quiet suffix on the artist line when applicable.
+ * AI provenance: quiet line under the title (stable regardless of artist length).
  */
 export function SongMeta({
   title,
@@ -115,16 +105,19 @@ export function SongMeta({
           {t}
         </p>
       ) : null}
+      {aiGenerated ? (
+        <p style={{ margin: t ? '1px 0 0' : 0, lineHeight: 1.2 }}>
+          <AiGeneratedLabel show />
+        </p>
+      ) : null}
       {a ? (
         <ArtistCreditLine
           artist={a}
-          aiGenerated={aiGenerated}
-          style={{ margin: t ? '2px 0 0' : 0, ...artistStyle }}
+          style={{
+            margin: (t || aiGenerated) ? '2px 0 0' : 0,
+            ...artistStyle,
+          }}
         />
-      ) : aiGenerated ? (
-        <p style={{ margin: t ? '2px 0 0' : 0, ...artistStyle }}>
-          <AiGeneratedLabel show />
-        </p>
       ) : null}
     </div>
   )
