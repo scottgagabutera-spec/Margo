@@ -1,11 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { ComposeLyricCard } from '@/components/compose-lyric-card'
 import { MargoSymbol } from '@/components/margo-symbol'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
 import { LYRIC_FONT, UI_FONT } from '@/lib/fonts'
+import {
+  lyricDisplayText,
+  stageCardLyricStyle,
+  stageCardMarkStyle,
+  stageCardShellStyle,
+  useStageCardLayout,
+} from '@/hooks/useStageCardLayout'
 import {
   cycleStageCardTheme,
   getStageCardTheme,
@@ -102,72 +109,110 @@ export function StageMomentCard({
   style,
 }: StageMomentCardProps) {
   const [vibePickerOpen, setVibePickerOpen] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [cardWidth, setCardWidth] = useState<number | null>(null)
   const theme = getStageCardTheme(cardThemeId)
   const canPickVibe = vibeOptions.length > 0 && !!onVibeSelect
   const canCycleTheme = !!onThemeChange
   const markVariant = theme.markVariant === 'on-light' ? 'ink' : 'gold'
   const showFooter = vibeLabel || canCycleTheme
 
-  return (
-    <ComposeLyricCard
-      style={{
-        position: 'relative',
-        textAlign: 'left',
+  const layout = useStageCardLayout({
+    lyric,
+    songTitle,
+    artistName,
+    artworkUrl: artwork,
+    vibeLabel,
+    themeId: cardThemeId,
+    includeVibePill: false,
+  }, cardWidth)
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width
+      if (w && w > 0) setCardWidth(w)
+    })
+    ro.observe(el)
+    setCardWidth(el.getBoundingClientRect().width)
+    return () => ro.disconnect()
+  }, [])
+
+  const shellStyle = layout
+    ? stageCardShellStyle(layout)
+    : {
+        position: 'relative' as const,
+        textAlign: 'left' as const,
         borderRadius: '16px',
-        padding: '20px 20px 18px',
-        paddingRight: '52px',
+        padding: '20px 52px 18px 20px',
         background: `linear-gradient(180deg, ${theme.markVariant === 'on-light' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)'} 0%, transparent 28%), ${theme.bg}`,
         border: `1px solid ${theme.border}`,
+      }
+
+  const lyricStyle = layout
+    ? stageCardLyricStyle(layout)
+    : {
+        fontFamily: LYRIC_FONT,
+        fontStyle: 'italic' as const,
+        fontSize: 'clamp(1.35rem, 4.8vw, 1.85rem)',
+        color: theme.ink,
+        lineHeight: 1.35,
+        margin: 0,
+        whiteSpace: 'pre-line' as const,
+        overflowWrap: 'anywhere' as const,
+        wordBreak: 'break-word' as const,
+      }
+
+  const markStyle = layout ? stageCardMarkStyle(layout) : {
+    position: 'absolute' as const,
+    top: '16px',
+    right: '16px',
+    width: '34px',
+    height: '34px',
+    borderRadius: '50%',
+    background: theme.badgeFill,
+    border: `1px solid ${theme.badgeStroke}`,
+    boxShadow: theme.markVariant === 'on-light'
+      ? '0 1px 0 rgba(255,255,255,0.22) inset'
+      : '0 1px 0 rgba(255,255,255,0.08) inset',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none' as const,
+  }
+
+  const markSymbolSize = layout?.mark.symbolSize ?? 22
+  const metaSongSize = layout?.meta?.song?.style.fontSize
+  const metaArtistSize = layout?.meta?.artist?.style.fontSize
+  const artSize = layout?.artwork?.width ?? 48
+  const artRadius = artSize * (8 / 48)
+  const metaMarginTop = layout?.meta ? (layout.meta.y - layout.lyric.y - layout.lyric.height) : 14
+
+  return (
+    <div ref={cardRef}>
+    <ComposeLyricCard
+      style={{
+        ...shellStyle,
         ...style,
       }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          top: '16px',
-          right: '16px',
-          width: '34px',
-          height: '34px',
-          borderRadius: '50%',
-          background: theme.badgeFill,
-          border: `1px solid ${theme.badgeStroke}`,
-          boxShadow: theme.markVariant === 'on-light'
-            ? '0 1px 0 rgba(255,255,255,0.22) inset'
-            : '0 1px 0 rgba(255,255,255,0.08) inset',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-        }}
-        aria-hidden
-      >
-        <MargoSymbol size={22} variant={markVariant} />
+      <div style={markStyle} aria-hidden>
+        <MargoSymbol size={markSymbolSize} variant={markVariant} />
       </div>
 
-      <p
-        style={{
-          fontFamily: LYRIC_FONT,
-          fontStyle: 'italic',
-          fontSize: 'clamp(1.35rem, 4.8vw, 1.85rem)',
-          color: theme.ink,
-          lineHeight: 1.35,
-          margin: 0,
-          textAlign: 'left',
-          overflowWrap: 'anywhere',
-          wordBreak: 'break-word',
-        }}
-      >
-        {lyric}
+      <p style={lyricStyle}>
+        {layout ? lyricDisplayText(layout) : lyric}
       </p>
 
       {(songTitle || artistName) ? (
-        <div style={{ marginTop: '14px', minWidth: 0 }}>
+        <div style={{ marginTop: metaMarginTop, minWidth: 0 }}>
           {songTitle ? (
             <p
               style={{
                 margin: 0,
                 fontFamily: UI_FONT,
-                fontSize: '0.78rem',
+                fontSize: metaSongSize ?? '0.78rem',
                 fontWeight: 700,
                 color: theme.ink,
                 lineHeight: 1.25,
@@ -176,7 +221,7 @@ export function StageMomentCard({
                 whiteSpace: 'nowrap',
               }}
             >
-              {songTitle}
+              {layout?.meta?.song?.text ?? songTitle}
             </p>
           ) : null}
           {artistName ? (
@@ -184,7 +229,7 @@ export function StageMomentCard({
               style={{
                 margin: songTitle ? '3px 0 0' : 0,
                 fontFamily: UI_FONT,
-                fontSize: '0.72rem',
+                fontSize: metaArtistSize ?? '0.72rem',
                 fontWeight: 400,
                 color: theme.inkMuted,
                 lineHeight: 1.25,
@@ -193,7 +238,7 @@ export function StageMomentCard({
                 whiteSpace: 'nowrap',
               }}
             >
-              {artistName}
+              {layout?.meta?.artist?.text ?? artistName}
             </p>
           ) : null}
         </div>
@@ -204,11 +249,15 @@ export function StageMomentCard({
           src={artwork}
           alt=""
           style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '8px',
+            width: artSize,
+            height: artSize,
+            borderRadius: artRadius,
             objectFit: 'cover',
-            marginTop: '14px',
+            marginTop: layout?.artwork
+              ? layout.artwork.y - (layout.meta
+                ? layout.meta.y + layout.meta.height
+                : layout.lyric.y + layout.lyric.height)
+              : 14,
             display: 'block',
           }}
         />
@@ -410,5 +459,6 @@ export function StageMomentCard({
         </div>
       ) : null}
     </ComposeLyricCard>
+    </div>
   )
 }

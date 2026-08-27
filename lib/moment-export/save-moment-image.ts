@@ -63,7 +63,8 @@ function renderOptionsFromMoment(moment: MargoMoment): {
   hasExternalListen?: boolean
 } {
   // One export format — Stage card (landing Save PNG). Works on every platform
-  // as a square-ish image; Story/Wide poster variants removed from share UI.
+  // as a square-ish image. Multi-line (>1) still uses legacy poster renderer
+  // until resolveMomentLayout unifies all segment counts — see layout/index.ts.
   const isStageCard = moment.lines.length <= 1
   return {
     themeId: moment.themeId,
