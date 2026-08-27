@@ -26,6 +26,7 @@ import { persistMomentPost } from '@/lib/moment/persist'
 import { trackEvent } from '@/lib/analytics/track'
 import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-lyric-card'
 import { UI_FONT } from '@/lib/fonts'
+import { MARGO_EXPRESSION_TAGLINE } from '@/lib/margo-expression'
 
 const supabase = createClient()
 
@@ -827,9 +828,30 @@ function ComposeInner() {
             ) : (
               <>
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: 0 }}>
-                {committedLines.length > 0 ? 'Add another line' : 'Find your lyric'}
+              <h1 style={{
+                fontFamily: font,
+                fontStyle: 'italic',
+                fontSize: '1.65rem',
+                lineHeight: 1.35,
+                color: 'var(--text)',
+                margin: 0,
+                maxWidth: '18rem',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+              }}>
+                {committedLines.length > 0 ? 'Add another line' : MARGO_EXPRESSION_TAGLINE}
               </h1>
+              {committedLines.length === 0 ? (
+                <p style={{
+                  fontFamily: UI_FONT,
+                  fontSize: '0.72rem',
+                  color: 'var(--text-muted)',
+                  lineHeight: 1.45,
+                  margin: '10px 0 0',
+                }}>
+                  Search a song, pick your line, then send when you&apos;re ready.
+                </p>
+              ) : null}
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
               <style>{`.compose-search-input::placeholder { color: var(--text-disabled); }`}</style>

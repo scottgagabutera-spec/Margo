@@ -21,6 +21,7 @@ import { playSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT } from '@/lib/fonts'
+import { MARGO_EXPRESSION_TAGLINE } from '@/lib/margo-expression'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 
 const supabase = createClient()
@@ -550,7 +551,7 @@ export function StageLanding() {
               fontStyle: 'italic',
             }}
           >
-            Expression through a line of music.
+            {MARGO_EXPRESSION_TAGLINE}
           </p>
         </div>
       )}
