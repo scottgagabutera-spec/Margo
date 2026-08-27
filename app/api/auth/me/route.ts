@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { nowMs, perfLog, perfRequested } from '@/lib/perf-trace'
+import { userNeedsTermsAcceptance } from '@/lib/legal/consent'
 
 /**
  * Auth core — bootstrap memory access token from httpOnly cookies.
@@ -49,6 +50,8 @@ export async function GET(request: Request) {
     (identity) => identity.provider === 'email',
   )
 
+  const needs_terms_acceptance = userNeedsTermsAcceptance(user)
+
   const totalMs = Math.round(nowMs() - t0)
   const body: Record<string, unknown> = {
     user: {
@@ -57,6 +60,7 @@ export async function GET(request: Request) {
       is_anonymous: user.is_anonymous ?? false,
     },
     has_password_auth,
+    needs_terms_acceptance,
     access_token: session.access_token,
   }
 
