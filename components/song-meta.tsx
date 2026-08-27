@@ -46,7 +46,7 @@ function ArtistCreditLine({
 /**
  * Canonical song title vs artist hierarchy (D3).
  * Title: --text, semibold, larger. Artist: --text-secondary, regular, smaller.
- * AI provenance: quiet line under the title (stable regardless of artist length).
+ * AI provenance: quiet "(AI-generated)" in brackets after the song title.
  */
 export function SongMeta({
   title,
@@ -63,7 +63,6 @@ export function SongMeta({
   if (!t && !a && !aiGenerated) return null
 
   if (layout === 'inline') {
-    const joined = [t, a].filter(Boolean).join(' · ')
     const node = (
       <span style={{
         fontFamily: UI_FONT,
@@ -77,8 +76,9 @@ export function SongMeta({
         ...style,
         ...titleStyle,
       }}>
-        {joined ? <span style={{ minWidth: 0 }}>{joined}</span> : null}
-        {aiGenerated ? <AiGeneratedLabel show suffix={!!joined} /> : null}
+        {t ? <span style={{ minWidth: 0 }}>{t}</span> : null}
+        {aiGenerated ? <AiGeneratedLabel show spaced={!!t} /> : null}
+        {a ? <span>{(t || aiGenerated) ? ' · ' : ''}{a}</span> : null}
       </span>
     )
     if (href) {
@@ -89,7 +89,7 @@ export function SongMeta({
 
   const body = (
     <div style={{ minWidth: 0, ...style }}>
-      {t ? (
+      {(t || aiGenerated) ? (
         <p style={{
           margin: 0,
           fontFamily: UI_FONT,
@@ -97,17 +97,23 @@ export function SongMeta({
           fontWeight: 600,
           color: 'var(--text)',
           lineHeight: 1.3,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          display: 'flex',
+          alignItems: 'baseline',
+          minWidth: 0,
           ...titleStyle,
         }}>
-          {t}
-        </p>
-      ) : null}
-      {aiGenerated ? (
-        <p style={{ margin: t ? '1px 0 0' : 0, lineHeight: 1.2 }}>
-          <AiGeneratedLabel show />
+          {t ? (
+            <span style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              minWidth: 0,
+              flex: '1 1 auto',
+            }}>
+              {t}
+            </span>
+          ) : null}
+          {aiGenerated ? <AiGeneratedLabel show spaced={!!t} /> : null}
         </p>
       ) : null}
       {a ? (

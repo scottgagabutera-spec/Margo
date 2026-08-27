@@ -301,22 +301,28 @@ export function SongPreviewSheet({
               )}
             </div>
             <div style={{ minWidth: 0, flex: 1, paddingTop: '1px' }}>
-              <h2
-                id="song-preview-title"
-                style={{
-                  fontFamily: UI_FONT, fontSize: '1.05rem', fontWeight: 600,
-                  color: 'var(--text)', margin: '0 0 3px', lineHeight: 1.25,
-                  overflow: 'hidden', textOverflow: 'ellipsis',
-                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                }}
-              >
-                {song.title}
-              </h2>
-              {song.isAiGenerated ? (
-                <p style={{ margin: '0 0 2px', lineHeight: 1.2 }}>
-                  <AiGeneratedLabel show />
-                </p>
-              ) : null}
+              <div style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 0,
+                minWidth: 0,
+                margin: '0 0 3px',
+              }}>
+                <h2
+                  id="song-preview-title"
+                  style={{
+                    fontFamily: UI_FONT, fontSize: '1.05rem', fontWeight: 600,
+                    color: 'var(--text)', margin: 0, lineHeight: 1.25,
+                    overflow: 'hidden', textOverflow: 'ellipsis',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                    minWidth: 0,
+                    flex: '1 1 auto',
+                  }}
+                >
+                  {song.title}
+                </h2>
+                {song.isAiGenerated ? <AiGeneratedLabel show spaced={false} /> : null}
+              </div>
               <p style={{
                 fontFamily: UI_FONT, fontSize: '0.75rem', fontWeight: 400,
                 color: 'var(--text-secondary)', margin: '0 0 3px', lineHeight: 1.3,

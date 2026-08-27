@@ -339,15 +339,15 @@ function PostMomentBody({
                       borderRadius: '50%',
                       flexShrink: 0,
                       marginLeft: 'auto',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.12)',
+                      background: 'rgba(232,197,71,0.08)',
+                      border: '1px solid rgba(232,197,71,0.22)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       textDecoration: 'none',
                     }}
                   >
-                    <ShareIcon size={14} color="var(--text-secondary)" />
+                    <ShareIcon size={14} color="var(--gold)" />
                   </Link>
                 ) : null}
               </div>
