@@ -29,7 +29,11 @@ export function toastMomentLinkCopied(): void {
   toast.success('Link copied.')
 }
 
-export function toastMomentExportFailed(kind: 'image' | 'video'): void {
+export function toastMomentExportFailed(kind: 'image' | 'video', detail?: string): void {
+  if (kind === 'video' && detail?.includes('audio')) {
+    toast.error("Couldn't load audio for this Moment. Try again in a moment.")
+    return
+  }
   toast.error(
     kind === 'video'
       ? "Couldn't create your video. Try saving an image instead."

@@ -258,7 +258,7 @@ export function MomentShareStudio({
       return out
     } catch (err) {
       if ((err as Error)?.name !== 'AbortError') {
-        toastMomentExportFailed('video')
+        toastMomentExportFailed('video', (err as Error)?.message)
       }
       return null
     } finally {

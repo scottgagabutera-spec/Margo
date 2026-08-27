@@ -24,8 +24,16 @@ export async function fetchAndDecodeAudioSnippet(
   endSec: number,
   signal?: AbortSignal,
 ): Promise<AudioBuffer> {
-  const res = await fetch(audioUrl, { signal })
-  if (!res.ok) throw new Error(`Could not load audio (${res.status})`)
+  const { resolveExportMediaFetchUrl } = await import('@/lib/moment-export/video/resolve-export-media-url')
+  const fetchUrl = resolveExportMediaFetchUrl(audioUrl)
+  let res: Response
+  try {
+    res = await fetch(fetchUrl, { signal })
+  } catch (err) {
+    const msg = (err as Error)?.message || 'Network error'
+    throw new Error(`Could not load audio for video export (${msg})`)
+  }
+  if (!res.ok) throw new Error(`Could not load audio for video export (${res.status})`)
   const raw = await res.arrayBuffer()
   const ctx = new AudioContext()
   try {
