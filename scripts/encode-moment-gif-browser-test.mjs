@@ -155,7 +155,7 @@ async function main() {
     r.gifFile = fpath
     r.fileSizeKB = Math.round(r.fileSizeBytes / 1024)
     r.validGif = r.magic === 'GIF' && r.mimeType === 'image/gif'
-    r.widthOk = r.width === 720
+    r.widthOk = r.width === 1080
     r.fpsOk = r.fps === 12
     r.holdOk = r.durationSec === (r.id === 'dur-10s' ? 12 : r.id === 'dur-18s' ? 20 : 32)
     if (!r.validGif || !r.widthOk || !r.fpsOk) allOk = false
