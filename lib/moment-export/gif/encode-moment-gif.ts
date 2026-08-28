@@ -18,6 +18,7 @@ import {
 } from '@/lib/moment-export/gif/constants'
 import {
   exportTotalDurationSec,
+  completedCardRenderTimeSec,
   resolveExportRenderTimeSec,
 } from '@/lib/moment-export/video/export-frame-timing'
 
@@ -94,6 +95,7 @@ export async function encodeMargoMomentGif(
   const artworkImage = await loadMomentArtwork(line.artworkUrl)
   const audioDurationSec = snippetDurationSec(moment)
   const timeline = buildMomentTimeline(moment, audioDurationSec)
+  const posterRenderSec = completedCardRenderTimeSec(timeline)
   const totalDurationSec = exportTotalDurationSec(audioDurationSec)
   const frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_GIF_FPS))
   const delayMs = 1000 / MOMENT_GIF_FPS
@@ -118,7 +120,7 @@ export async function encodeMargoMomentGif(
   const samples: Uint8Array[] = []
   for (const idx of sampleIndices) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-    const renderTimeSec = resolveExportRenderTimeSec(idx, MOMENT_GIF_FPS, audioDurationSec)
+    const renderTimeSec = resolveExportRenderTimeSec(idx, MOMENT_GIF_FPS, posterRenderSec)
     renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec)
     samples.push(subsampleRgba(ctx.getImageData(0, 0, W, H).data))
   }
@@ -129,7 +131,7 @@ export async function encodeMargoMomentGif(
 
   for (let frame = 0; frame < frameCount; frame++) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-    const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_GIF_FPS, audioDurationSec)
+    const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_GIF_FPS, posterRenderSec)
     renderMomentFrame(ctx, layout, timeline, { artworkImage }, renderTimeSec)
     const rgba = ctx.getImageData(0, 0, W, H).data
     const index = applyPalette(rgba, globalPalette, { format: PALETTE_FORMAT })

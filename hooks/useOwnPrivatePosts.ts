@@ -11,7 +11,7 @@ const PRIVATE_POST_SELECT = `
   post_lines (
     id, position, text, song_id, song_title, artist_name, artwork_url,
     snippet_start_sec, snippet_end_sec, source,
-    songs:song_id ( audio_url, is_ai_generated )
+    songs:song_id ( audio_url, artwork_url, is_ai_generated )
   )
 `
 

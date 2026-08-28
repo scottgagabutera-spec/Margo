@@ -24,6 +24,7 @@ import {
 } from '@/lib/moment-export/video/constants'
 import {
   exportTotalDurationSec,
+  completedCardRenderTimeSec,
   resolveExportRenderTimeSec,
 } from '@/lib/moment-export/video/export-frame-timing'
 
@@ -95,21 +96,23 @@ export async function encodeMargoMomentMp4(
     includeVibePill: !!moment.vibeLabel?.trim(),
   }, measure, geistFamily)
 
-  const artworkImage = await loadMomentArtwork(line.artworkUrl)
-
+  onProgress?.({ phase: 'audio' })
+  const [artworkImage, audioBuffer] = await Promise.all([
+    loadMomentArtwork(line.artworkUrl),
+    fetchAndDecodeAudioSnippet(
+      line.audioUrl!,
+      line.snippetStart!,
+      line.snippetEnd!,
+      signal,
+    ),
+  ])
+  const audioDurationSec = Math.min(audioBuffer.duration, MOMENT_VIDEO_MAX_DURATION_SEC)
+  const exportTimeline = buildMomentTimeline(moment, audioDurationSec)
+  const posterRenderSec = completedCardRenderTimeSec(exportTimeline)
   const exportLayout = layout.outputHeight % 2 === 0
     ? layout
     : { ...layout, outputHeight: layout.outputHeight + 1 }
 
-  onProgress?.({ phase: 'audio' })
-  const audioBuffer = await fetchAndDecodeAudioSnippet(
-    line.audioUrl!,
-    line.snippetStart!,
-    line.snippetEnd!,
-    signal,
-  )
-  const audioDurationSec = Math.min(audioBuffer.duration, MOMENT_VIDEO_MAX_DURATION_SEC)
-  const exportTimeline = buildMomentTimeline(moment, audioDurationSec)
   const exportAudio = prependSilence(
     truncateAudioBuffer(audioBuffer, audioDurationSec),
     MOMENT_EXPORT_INTRO_HOLD_SEC,
@@ -158,7 +161,7 @@ export async function encodeMargoMomentMp4(
       throw new DOMException('Aborted', 'AbortError')
     }
     const timeSec = frame / MOMENT_VIDEO_FPS
-    const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_VIDEO_FPS, audioDurationSec)
+    const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_VIDEO_FPS, posterRenderSec)
     renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec)
     await videoSource.add(timeSec, frameDuration)
     if (frame % 30 === 0) {

@@ -29,6 +29,7 @@ const MOMENT_POST_SELECT = `
   profiles:author_profile_id ( username, avatar_url, display_name ),
   songs:song_id (
     audio_url,
+    artwork_url,
     is_ai_generated,
     apple_music_url,
     spotify_url,

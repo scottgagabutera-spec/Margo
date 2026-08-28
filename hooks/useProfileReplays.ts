@@ -33,11 +33,11 @@ const SELECT = `
     snippet_end_sec,
     profiles:author_profile_id ( username, display_name, avatar_url ),
     post_stats ( resonate_count, echo_count, replay_count ),
-    songs:song_id ( audio_url, is_ai_generated ),
+    songs:song_id ( audio_url, artwork_url, is_ai_generated ),
     post_lines (
       id, position, text, song_id, song_title, artist_name, artwork_url,
       snippet_start_sec, snippet_end_sec, source,
-      songs:song_id ( audio_url, is_ai_generated )
+      songs:song_id ( audio_url, artwork_url, is_ai_generated )
     )
   )
 `

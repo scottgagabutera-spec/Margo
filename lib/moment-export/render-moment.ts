@@ -10,6 +10,7 @@ import {
   STAGE_CARD_EXPORT_WIDTH,
 } from '@/lib/moment-export/layout'
 import { renderStageCardFrame } from '@/lib/moment-export/render-stage-card-frame'
+import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
 
 export { STAGE_CARD_EXPORT_WIDTH }
 
@@ -906,7 +907,7 @@ async function renderStageMomentCardToCanvas(
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.scale(SCALE, SCALE)
 
-  const artworkImg = line.artworkUrl ? await loadArtworkImage(line.artworkUrl) : null
+  const artworkImg = await loadMomentArtwork(line.artworkUrl)
   renderStageCardFrame(ctx, layout, { artworkImage: artworkImg })
 }
 

@@ -50,7 +50,7 @@ const POST_SELECT = `
   snippet_end_sec,
   profiles:author_profile_id ( username, display_name, avatar_url ),
   post_stats ( resonate_count, echo_count, replay_count ),
-  songs:song_id ( audio_url, is_ai_generated ),
+  songs:song_id ( audio_url, artwork_url, is_ai_generated ),
   post_lines (
     id,
     position,
@@ -62,7 +62,7 @@ const POST_SELECT = `
     snippet_start_sec,
     snippet_end_sec,
     source,
-    songs:song_id ( audio_url, is_ai_generated )
+    songs:song_id ( audio_url, artwork_url, is_ai_generated )
   )
 `
 
@@ -76,11 +76,11 @@ function mapPostRow(row: any): Post {
     text: row.text ?? undefined,
     emotion: row.emotion ?? undefined,
     status: row.status ?? undefined,
-    knowledge: (row.song_title || row.artist_name || row.artwork_url)
+    knowledge: (row.song_title || row.artist_name || row.artwork_url || linkedSong?.artwork_url)
       ? {
           song: row.song_title ?? undefined,
           artist: row.artist_name ?? undefined,
-          artwork: row.artwork_url ?? null,
+          artwork: row.artwork_url ?? linkedSong?.artwork_url ?? null,
         }
       : undefined,
     youtubeMeta: row.youtube_video_id

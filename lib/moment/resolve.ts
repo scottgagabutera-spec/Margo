@@ -200,7 +200,14 @@ export function resolveMargoMomentFromPost(
     spotifyUrl: post.spotifyUrl ?? null,
     youtubeUrl: post.youtubeUrlFromSong ?? null,
   }
-  const lines = postLines.map((line) => postLineToMomentLine(line, rootSongUrls))
+  const postArtwork = post.knowledge?.artwork ?? null
+  const lines = postLines.map((line) => {
+    const mapped = postLineToMomentLine(line, rootSongUrls)
+    return {
+      ...mapped,
+      artworkUrl: mapped.artworkUrl ?? postArtwork,
+    }
+  })
   const vibeFromEmotion = emotionToVibeLabel(post.emotion)
   const author: MargoMomentAuthor | null = post.authorUid || post.username
     ? {
