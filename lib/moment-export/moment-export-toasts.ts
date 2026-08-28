@@ -21,6 +21,22 @@ export function toastMomentVideoSaved(result: FileDownloadResult): void {
   toast.error("Couldn't save your video. Try again.")
 }
 
+export function toastMomentGifSaved(result: FileDownloadResult): void {
+  if (result === 'shared') {
+    toast.success('Tap Save to Files to keep your GIF.')
+    return
+  }
+  if (result === 'opened') {
+    toast.success('GIF opened — save it from your browser.')
+    return
+  }
+  if (result === 'downloaded') {
+    toast.success('GIF saved.')
+    return
+  }
+  toast.error("Couldn't save your GIF. Try again.")
+}
+
 export function toastMomentShared(): void {
   toast.success('Shared.')
 }
@@ -29,7 +45,7 @@ export function toastMomentLinkCopied(): void {
   toast.success('Link copied.')
 }
 
-export function toastMomentExportFailed(kind: 'image' | 'video', detail?: string): void {
+export function toastMomentExportFailed(kind: 'image' | 'video' | 'gif', detail?: string): void {
   if (kind === 'video' && detail?.includes('audio')) {
     toast.error("Couldn't load audio for this Moment. Try again in a moment.")
     return
@@ -37,7 +53,9 @@ export function toastMomentExportFailed(kind: 'image' | 'video', detail?: string
   toast.error(
     kind === 'video'
       ? "Couldn't create your video. Try saving an image instead."
-      : "Couldn't save your Moment. Try again.",
+      : kind === 'gif'
+        ? "Couldn't create your GIF. Try saving an image instead."
+        : "Couldn't save your Moment. Try again.",
   )
 }
 

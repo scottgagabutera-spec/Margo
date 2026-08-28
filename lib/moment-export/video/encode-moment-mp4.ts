@@ -12,6 +12,7 @@ import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
 import {
   fetchAndDecodeAudioSnippet,
   truncateAudioBuffer,
+  prependSilence,
 } from '@/lib/moment-export/video/fetch-audio-snippet'
 import { ensureAacEncoderRegistered } from '@/lib/moment-export/video/capabilities'
 import {
@@ -19,8 +20,12 @@ import {
   MOMENT_VIDEO_BITRATE,
   MOMENT_VIDEO_AUDIO_BITRATE,
   MOMENT_VIDEO_MAX_DURATION_SEC,
-  MOMENT_VIDEO_POSTER_HOLD_SEC,
+  MOMENT_EXPORT_INTRO_HOLD_SEC,
 } from '@/lib/moment-export/video/constants'
+import {
+  exportTotalDurationSec,
+  resolveExportRenderTimeSec,
+} from '@/lib/moment-export/video/export-frame-timing'
 
 export interface EncodeMomentProgress {
   phase: 'prepare' | 'audio' | 'frames' | 'finalize'
@@ -105,9 +110,11 @@ export async function encodeMargoMomentMp4(
   )
   const audioDurationSec = Math.min(audioBuffer.duration, MOMENT_VIDEO_MAX_DURATION_SEC)
   const exportTimeline = buildMomentTimeline(moment, audioDurationSec)
-  const exportAudio = truncateAudioBuffer(audioBuffer, audioDurationSec)
-  const holdSec = MOMENT_VIDEO_POSTER_HOLD_SEC
-  const totalDurationSec = audioDurationSec + holdSec
+  const exportAudio = prependSilence(
+    truncateAudioBuffer(audioBuffer, audioDurationSec),
+    MOMENT_EXPORT_INTRO_HOLD_SEC,
+  )
+  const totalDurationSec = exportTotalDurationSec(audioDurationSec)
 
   const frameCount = Math.max(1, Math.round(totalDurationSec * MOMENT_VIDEO_FPS))
   const frameDuration = 1 / MOMENT_VIDEO_FPS
@@ -151,7 +158,7 @@ export async function encodeMargoMomentMp4(
       throw new DOMException('Aborted', 'AbortError')
     }
     const timeSec = frame / MOMENT_VIDEO_FPS
-    const renderTimeSec = Math.min(timeSec, Math.max(0, audioDurationSec - 1 / MOMENT_VIDEO_FPS))
+    const renderTimeSec = resolveExportRenderTimeSec(frame, MOMENT_VIDEO_FPS, audioDurationSec)
     renderMomentFrame(ctx, exportLayout, exportTimeline, assets, renderTimeSec)
     await videoSource.add(timeSec, frameDuration)
     if (frame % 30 === 0) {

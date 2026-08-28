@@ -34,10 +34,20 @@ import {
   sharePreparedMomentVideo,
   canShareVideoFiles,
 } from '@/lib/moment-export/save-moment-video'
+import {
+  prepareMargoMomentGifShare,
+  sharePreparedMomentGif,
+  canShareGifFiles,
+} from '@/lib/moment-export/save-moment-gif'
+import { canExportMomentGif } from '@/lib/moment-export/gif/capabilities'
 import { probeMomentVideoCapability } from '@/lib/moment-export/video/capabilities'
 import { momentHasPlayableSnippet } from '@/lib/moment-export/timeline/build-moment-timeline'
 import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
-import { MomentVideoReadySheet, type MomentVideoReadyMode } from '@/components/moment-video-ready-sheet'
+import {
+  MomentVideoReadySheet,
+  type MomentVideoReadyMode,
+  type MomentMediaReadyFormat,
+} from '@/components/moment-video-ready-sheet'
 import { triggerFileDownload } from '@/lib/moment-export/trigger-file-download'
 import {
   toastMomentExportFailed,
@@ -46,6 +56,7 @@ import {
   toastMomentShared,
   toastMomentShareFailed,
   toastMomentVideoSaved,
+  toastMomentGifSaved,
 } from '@/lib/moment-export/moment-export-toasts'
 
 interface MomentShareStudioProps {
@@ -92,16 +103,20 @@ export function MomentShareStudio({
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
   const [canShareImg, setCanShareImg] = useState(false)
   const [canShareVid, setCanShareVid] = useState(false)
+  const [canShareGif, setCanShareGif] = useState(false)
   const [canExportVideo, setCanExportVideo] = useState(false)
+  const [canExportGif, setCanExportGif] = useState(false)
   const [videoUnavailableHint, setVideoUnavailableHint] = useState('Not available on this device')
-  const [videoReadySheet, setVideoReadySheet] = useState<{
+  const [mediaReadySheet, setMediaReadySheet] = useState<{
     mode: MomentVideoReadyMode
+    format: MomentMediaReadyFormat
     previewUrl: string
     file: File
   } | null>(null)
   const [openMenu, setOpenMenu] = useState<'save' | 'share' | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const videoAbortRef = useRef<AbortController | null>(null)
+  const gifAbortRef = useRef<AbortController | null>(null)
 
   const isDualCard = !!(parentLyric && parentSong && parentArtist)
   const activeTheme = THEMES[0]
@@ -168,6 +183,8 @@ export function MomentShareStudio({
     setCardThemeId(stageTheme)
     setCanShareImg(canShareImageFiles())
     setCanShareVid(canShareVideoFiles())
+    setCanShareGif(canShareGifFiles())
+    setCanExportGif(canExportMomentGif())
     let cancelled = false
     void probeMomentVideoCapability().then((cap) => {
       if (cancelled) return
@@ -179,6 +196,7 @@ export function MomentShareStudio({
 
   useEffect(() => () => {
     videoAbortRef.current?.abort()
+    gifAbortRef.current?.abort()
   }, [])
 
   const renderDualCanvas = useCallback(async () => {
@@ -245,6 +263,7 @@ export function MomentShareStudio({
 
   const prepareVideo = useCallback(async () => {
     if (!exportMoment || isDualCard || !canExportVideo || !hasSnippet) return null
+    gifAbortRef.current?.abort()
     videoAbortRef.current?.abort()
     const ac = new AbortController()
     videoAbortRef.current = ac
@@ -272,8 +291,9 @@ export function MomentShareStudio({
     try {
       const out = await prepareVideo()
       if (!out) return
-      setVideoReadySheet({
+      setMediaReadySheet({
         mode: 'save',
+        format: 'video',
         file: out.file,
         previewUrl: out.previewUrl,
       })
@@ -287,8 +307,9 @@ export function MomentShareStudio({
     try {
       const out = await prepareVideo()
       if (!out) return
-      setVideoReadySheet({
+      setMediaReadySheet({
         mode: 'share',
+        format: 'video',
         file: out.file,
         previewUrl: out.previewUrl,
       })
@@ -297,18 +318,77 @@ export function MomentShareStudio({
     }
   }, [prepareVideo])
 
-  const confirmVideoReady = useCallback(async () => {
-    if (!videoReadySheet) return
-    if (videoReadySheet.mode === 'save') {
+  const prepareGif = useCallback(async () => {
+    if (!exportMoment || isDualCard || !canExportGif || !hasSnippet) return null
+    videoAbortRef.current?.abort()
+    gifAbortRef.current?.abort()
+    const ac = new AbortController()
+    gifAbortRef.current = ac
+    setVideoProgress('Creating your Moment…')
+    try {
+      const out = await prepareMargoMomentGifShare(exportMoment, setVideoProgress, ac.signal)
+      if (!out) {
+        toastMomentExportFailed('gif')
+        return null
+      }
+      return out
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        toastMomentExportFailed('gif', (err as Error)?.message)
+      }
+      return null
+    } finally {
+      setVideoProgress(null)
+      if (gifAbortRef.current === ac) gifAbortRef.current = null
+    }
+  }, [exportMoment, isDualCard, canExportGif, hasSnippet])
+
+  const saveGif = useCallback(async () => {
+    setExportBusy(true)
+    try {
+      const out = await prepareGif()
+      if (!out) return
+      setMediaReadySheet({
+        mode: 'save',
+        format: 'gif',
+        file: out.file,
+        previewUrl: out.previewUrl,
+      })
+    } finally {
+      setExportBusy(false)
+    }
+  }, [prepareGif])
+
+  const shareGif = useCallback(async () => {
+    setShareBusy(true)
+    try {
+      const out = await prepareGif()
+      if (!out) return
+      setMediaReadySheet({
+        mode: 'share',
+        format: 'gif',
+        file: out.file,
+        previewUrl: out.previewUrl,
+      })
+    } finally {
+      setShareBusy(false)
+    }
+  }, [prepareGif])
+
+  const confirmMediaReady = useCallback(async () => {
+    if (!mediaReadySheet) return
+    const { format, mode, file } = mediaReadySheet
+    if (mode === 'save') {
       setExportBusy(true)
       try {
-        const result = await triggerFileDownload(videoReadySheet.file)
+        const result = await triggerFileDownload(file)
         if (result !== 'failed') {
-          toastMomentVideoSaved(result)
-          setVideoReadySheet(null)
+          if (format === 'gif') toastMomentGifSaved(result)
+          else toastMomentVideoSaved(result)
+          setMediaReadySheet(null)
           onExported?.()
         } else {
-          toastMomentExportFailed('video')
+          toastMomentExportFailed(format)
         }
       } finally {
         setExportBusy(false)
@@ -317,10 +397,12 @@ export function MomentShareStudio({
     }
     setShareBusy(true)
     try {
-      const result = await sharePreparedMomentVideo(videoReadySheet.file)
+      const result = format === 'gif'
+        ? await sharePreparedMomentGif(file)
+        : await sharePreparedMomentVideo(file)
       if (result === 'shared') {
         toastMomentShared()
-        setVideoReadySheet(null)
+        setMediaReadySheet(null)
         onShared?.()
       } else if (result !== 'cancelled') {
         toastMomentShareFailed()
@@ -328,7 +410,7 @@ export function MomentShareStudio({
     } finally {
       setShareBusy(false)
     }
-  }, [videoReadySheet, onExported, onShared])
+  }, [mediaReadySheet, onExported, onShared])
 
   const shareLink = useCallback(async () => {
     if (isDualCard && parentLyric) {
@@ -379,6 +461,8 @@ export function MomentShareStudio({
       canExportVideo,
       videoUnavailableHint,
       onExportVideo: () => { void saveVideo() },
+      canExportGif,
+      onExportGif: () => { void saveGif() },
     })
 
   const shareItems: MomentActionMenuItem[] = isDualCard
@@ -397,17 +481,19 @@ export function MomentShareStudio({
     : buildMomentShareActionItems({
       canShareImage: canShareImg,
       canShareVideo: canShareVid && canExportVideo && hasSnippet,
+      canShareGif: canShareGif && canExportGif && hasSnippet,
       linksActive: canShareUrl,
       onShareImage: () => { void shareImage() },
       onShareVideo: () => { void shareVideo() },
+      onShareGif: () => { void shareGif() },
       onShareLink: () => { void shareLink() },
       onCopyLink: () => { void copyLink() },
     })
 
   const isModal = layout === 'modal'
   const gap = isModal ? '12px' : (compact ? '10px' : '12px')
-  /** Room for Export/Share menus below the action row (current 3 export items + headroom). */
-  const modalMenuReservePx = 168
+  /** Room for Export/Share menus below the action row (Image / Video / GIF / PDF + headroom). */
+  const modalMenuReservePx = 200
   const modalMenuZIndex = 212
   const modalMenuScrimZIndex = 211
 
@@ -515,22 +601,23 @@ export function MomentShareStudio({
     </p>
   ) : null
 
-  const videoReadySheetEl = (
+  const mediaReadySheetEl = (
     <MomentVideoReadySheet
-      open={!!videoReadySheet}
-      mode={videoReadySheet?.mode ?? 'save'}
-      previewUrl={videoReadySheet?.previewUrl ?? null}
-      filename={videoReadySheet?.file.name ?? 'MARGO_Moment.mp4'}
-      busy={videoReadySheet?.mode === 'save' ? exportBusy : shareBusy}
-      onPrimary={() => { void confirmVideoReady() }}
-      onClose={() => setVideoReadySheet(null)}
+      open={!!mediaReadySheet}
+      mode={mediaReadySheet?.mode ?? 'save'}
+      format={mediaReadySheet?.format ?? 'video'}
+      previewUrl={mediaReadySheet?.previewUrl ?? null}
+      filename={mediaReadySheet?.file.name ?? 'MARGO_Moment.mp4'}
+      busy={mediaReadySheet?.mode === 'save' ? exportBusy : shareBusy}
+      onPrimary={() => { void confirmMediaReady() }}
+      onClose={() => setMediaReadySheet(null)}
     />
   )
 
   if (isModal) {
     return (
       <>
-        {videoReadySheetEl}
+        {mediaReadySheetEl}
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap }}>
         {openMenu ? (
           <button
@@ -559,7 +646,7 @@ export function MomentShareStudio({
 
   return (
     <>
-      {videoReadySheetEl}
+      {mediaReadySheetEl}
       <div style={{ display: 'flex', flexDirection: 'column', gap }}>
       {cardSection}
       {progressBanner}
