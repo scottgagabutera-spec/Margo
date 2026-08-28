@@ -1,12 +1,4 @@
 import type { MargoMoment } from '@/lib/moment/types'
-import { momentHasPlayableSnippet } from '@/lib/moment-export/timeline/build-moment-timeline'
-import { resolveMomentListen } from '@/lib/moment/listen'
-import { getSongShareUrl } from '@/lib/song-share'
-import {
-  getMomentShareUrl,
-  isMomentRecipientShareable,
-  MARGO_SITE_ORIGIN,
-} from '@/lib/moment/share'
 
 export interface MomentFileShareCaption {
   title: string
@@ -20,33 +12,12 @@ function primaryLyricTitle(moment: MargoMoment): string {
   return `"${short}"`
 }
 
-/** Category-aware caption for native file shares (image / video / GIF). */
+/** Minimal caption for native file shares (image / video / GIF): lyric + song + artist only. */
 export function buildMomentFileShareCaption(moment: MargoMoment): MomentFileShareCaption {
   const primary = moment.lines[0]
   const lyric = primary?.lyric?.trim() ?? ''
   const meta = [primary?.songTitle, primary?.artistName].filter(Boolean).join(' · ')
-  const body = lyric ? `"${lyric}"${meta ? ` — ${meta}` : ''}` : meta
-
-  let ctaLine: string
-
-  if (momentHasPlayableSnippet(moment)) {
-    if (isMomentRecipientShareable(moment)) {
-      ctaLine = `Hear this line on Margo\n${getMomentShareUrl(moment.postId)}`
-    } else if (primary?.songId) {
-      ctaLine = `Hear this line on Margo\n${getSongShareUrl(primary.songId)}`
-    } else {
-      ctaLine = `Made with Margo\n${MARGO_SITE_ORIGIN}`
-    }
-  } else {
-    const listen = moment.listen ?? resolveMomentListen(moment)
-    if (listen.externalUrl) {
-      ctaLine = `Listen to the full song\n${listen.externalUrl}`
-    } else {
-      ctaLine = `Made with Margo\n${MARGO_SITE_ORIGIN}`
-    }
-  }
-
-  const text = body ? `${body}\n\n${ctaLine}` : ctaLine
+  const text = lyric ? `"${lyric}"${meta ? ` — ${meta}` : ''}` : meta
   return { title: primaryLyricTitle(moment), text }
 }
 
