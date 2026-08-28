@@ -3,10 +3,12 @@
 import { useEffect, useRef } from 'react'
 
 export type MomentVideoReadyMode = 'save' | 'share'
+export type MomentMediaReadyFormat = 'video' | 'gif'
 
 interface MomentVideoReadySheetProps {
   open: boolean
   mode: MomentVideoReadyMode
+  format?: MomentMediaReadyFormat
   previewUrl: string | null
   filename: string
   busy?: boolean
@@ -19,6 +21,7 @@ const font = 'var(--font-lora), serif'
 export function MomentVideoReadySheet({
   open,
   mode,
+  format = 'video',
   previewUrl,
   filename,
   busy = false,
@@ -28,27 +31,30 @@ export function MomentVideoReadySheet({
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
-    if (!open || !previewUrl || !videoRef.current) return
+    if (!open || !previewUrl || format !== 'video' || !videoRef.current) return
     const video = videoRef.current
     video.load()
     void video.play().catch(() => {})
-  }, [open, previewUrl])
+  }, [open, previewUrl, format])
 
   if (!open || !previewUrl) return null
 
+  const mediaLabel = format === 'gif' ? 'GIF' : 'video'
   const title = mode === 'save' ? 'Your Moment is ready' : 'Preview your Moment'
   const primaryLabel = mode === 'save'
-    ? (busy ? 'Saving…' : 'Save video')
-    : (busy ? 'Sharing…' : 'Share video')
+    ? (busy ? 'Saving…' : `Save ${mediaLabel}`)
+    : (busy ? 'Sharing…' : `Share ${mediaLabel}`)
   const hint = mode === 'save'
-    ? 'Tap Save video to download to your device.'
-    : 'Listen, then share when it feels right.'
+    ? `Tap Save ${mediaLabel} to download to your device.`
+    : format === 'gif'
+      ? 'Preview, then share when it feels right.'
+      : 'Listen, then share when it feels right.'
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={mode === 'save' ? 'Save Moment video' : 'Share Moment video'}
+      aria-label={mode === 'save' ? `Save Moment ${mediaLabel}` : `Share Moment ${mediaLabel}`}
       style={{
         position: 'fixed',
         inset: 0,
@@ -96,18 +102,31 @@ export function MomentVideoReadySheet({
         }}>
           {hint}
         </p>
-        <video
-          ref={videoRef}
-          src={previewUrl}
-          controls
-          playsInline
-          style={{
-            width: '100%',
-            borderRadius: '12px',
-            display: 'block',
-            background: '#07060A',
-          }}
-        />
+        {format === 'gif' ? (
+          <img
+            src={previewUrl}
+            alt="Moment GIF preview"
+            style={{
+              width: '100%',
+              borderRadius: '12px',
+              display: 'block',
+              background: '#07060A',
+            }}
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            src={previewUrl}
+            controls
+            playsInline
+            style={{
+              width: '100%',
+              borderRadius: '12px',
+              display: 'block',
+              background: '#07060A',
+            }}
+          />
+        )}
         <p style={{
           margin: 0,
           fontFamily: font,

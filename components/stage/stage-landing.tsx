@@ -19,8 +19,18 @@ import {
   sharePreparedMomentVideo,
   canShareVideoFiles,
 } from '@/lib/moment-export/save-moment-video'
+import {
+  prepareMargoMomentGifShare,
+  sharePreparedMomentGif,
+  canShareGifFiles,
+} from '@/lib/moment-export/save-moment-gif'
+import { canExportMomentGif } from '@/lib/moment-export/gif/capabilities'
 import { probeMomentVideoCapability } from '@/lib/moment-export/video/capabilities'
-import { MomentVideoReadySheet, type MomentVideoReadyMode } from '@/components/moment-video-ready-sheet'
+import {
+  MomentVideoReadySheet,
+  type MomentVideoReadyMode,
+  type MomentMediaReadyFormat,
+} from '@/components/moment-video-ready-sheet'
 import { triggerFileDownload } from '@/lib/moment-export/trigger-file-download'
 import {
   toastMomentExportFailed,
@@ -28,6 +38,7 @@ import {
   toastMomentShared,
   toastMomentShareFailed,
   toastMomentVideoSaved,
+  toastMomentGifSaved,
 } from '@/lib/moment-export/moment-export-toasts'
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import { MomentActionMenu } from '@/components/moment-action-menu'
@@ -119,11 +130,15 @@ export function StageLanding() {
   const [shareBusy, setShareBusy] = useState(false)
   const [videoProgress, setVideoProgress] = useState<string | null>(null)
   const [canExportVideo, setCanExportVideo] = useState(false)
+  const [canExportGif, setCanExportGif] = useState(false)
   const [canShareVid, setCanShareVid] = useState(false)
+  const [canShareGif, setCanShareGif] = useState(false)
   const [videoUnavailableHint, setVideoUnavailableHint] = useState('Not available on this device')
   const videoAbortRef = useRef<AbortController | null>(null)
-  const [videoReadySheet, setVideoReadySheet] = useState<{
+  const gifAbortRef = useRef<AbortController | null>(null)
+  const [mediaReadySheet, setMediaReadySheet] = useState<{
     mode: MomentVideoReadyMode
+    format: MomentMediaReadyFormat
     previewUrl: string
     file: File
   } | null>(null)
@@ -551,6 +566,8 @@ export function StageLanding() {
 
   useEffect(() => {
     setCanShareVid(canShareVideoFiles())
+    setCanShareGif(canShareGifFiles())
+    setCanExportGif(canExportMomentGif())
     let cancelled = false
     void probeMomentVideoCapability().then((cap) => {
       if (cancelled) return
@@ -560,11 +577,13 @@ export function StageLanding() {
     return () => {
       cancelled = true
       videoAbortRef.current?.abort()
+      gifAbortRef.current?.abort()
     }
   }, [])
 
   const prepareVideo = useCallback(async () => {
     if (!hasMoment || !canExportVideo || !canPlay) return null
+    gifAbortRef.current?.abort()
     videoAbortRef.current?.abort()
     const ac = new AbortController()
     videoAbortRef.current = ac
@@ -593,8 +612,9 @@ export function StageLanding() {
     try {
       const out = await prepareVideo()
       if (!out) return
-      setVideoReadySheet({
+      setMediaReadySheet({
         mode: 'save',
+        format: 'video',
         file: out.file,
         previewUrl: out.previewUrl,
       })
@@ -608,8 +628,9 @@ export function StageLanding() {
     try {
       const out = await prepareVideo()
       if (!out) return
-      setVideoReadySheet({
+      setMediaReadySheet({
         mode: 'share',
+        format: 'video',
         file: out.file,
         previewUrl: out.previewUrl,
       })
@@ -618,17 +639,77 @@ export function StageLanding() {
     }
   }, [prepareVideo])
 
-  const confirmVideoReady = useCallback(async () => {
-    if (!videoReadySheet) return
-    if (videoReadySheet.mode === 'save') {
+  const prepareGif = useCallback(async () => {
+    if (!hasMoment || !canExportGif || !canPlay) return null
+    videoAbortRef.current?.abort()
+    gifAbortRef.current?.abort()
+    const ac = new AbortController()
+    gifAbortRef.current = ac
+    setVideoProgress('Creating your Moment…')
+    try {
+      const out = await prepareMargoMomentGifShare(buildExportMoment(), setVideoProgress, ac.signal)
+      if (!out) {
+        toastMomentExportFailed('gif')
+        return null
+      }
+      return out
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        toastMomentExportFailed('gif', (err as Error)?.message)
+      }
+      return null
+    } finally {
+      setVideoProgress(null)
+      if (gifAbortRef.current === ac) gifAbortRef.current = null
+    }
+  }, [hasMoment, canExportGif, canPlay, buildExportMoment])
+
+  const handleSaveGif = useCallback(async () => {
+    if (!hasMoment) return
+    setSaving(true)
+    try {
+      const out = await prepareGif()
+      if (!out) return
+      setMediaReadySheet({
+        mode: 'save',
+        format: 'gif',
+        file: out.file,
+        previewUrl: out.previewUrl,
+      })
+    } finally {
+      setSaving(false)
+    }
+  }, [hasMoment, prepareGif])
+
+  const handleShareGif = useCallback(async () => {
+    setShareBusy(true)
+    try {
+      const out = await prepareGif()
+      if (!out) return
+      setMediaReadySheet({
+        mode: 'share',
+        format: 'gif',
+        file: out.file,
+        previewUrl: out.previewUrl,
+      })
+    } finally {
+      setShareBusy(false)
+    }
+  }, [prepareGif])
+
+  const confirmMediaReady = useCallback(async () => {
+    if (!mediaReadySheet) return
+    const { format, mode, file } = mediaReadySheet
+    if (mode === 'save') {
       setSaving(true)
       try {
-        const result = await triggerFileDownload(videoReadySheet.file)
+        const result = await triggerFileDownload(file)
         if (result !== 'failed') {
-          toastMomentVideoSaved(result)
-          setVideoReadySheet(null)
+          if (format === 'gif') toastMomentGifSaved(result)
+          else toastMomentVideoSaved(result)
+          setMediaReadySheet(null)
         } else {
-          toastMomentExportFailed('video')
+          toastMomentExportFailed(format)
         }
       } finally {
         setSaving(false)
@@ -637,17 +718,19 @@ export function StageLanding() {
     }
     setShareBusy(true)
     try {
-      const result = await sharePreparedMomentVideo(videoReadySheet.file)
+      const result = format === 'gif'
+        ? await sharePreparedMomentGif(file)
+        : await sharePreparedMomentVideo(file)
       if (result === 'shared') {
         toastMomentShared()
-        setVideoReadySheet(null)
+        setMediaReadySheet(null)
       } else if (result !== 'cancelled') {
         toastMomentShareFailed()
       }
     } finally {
       setShareBusy(false)
     }
-  }, [videoReadySheet])
+  }, [mediaReadySheet])
 
   const canShareImg = canShareImageFiles()
 
@@ -657,14 +740,18 @@ export function StageLanding() {
     canExportVideo,
     videoUnavailableHint,
     onExportVideo: () => { void handleSaveVideo() },
+    canExportGif,
+    onExportGif: () => { void handleSaveGif() },
   })
 
   const shareItems = buildMomentShareActionItems({
     canShareImage: canShareImg,
     canShareVideo: canShareVid && canExportVideo && canPlay,
+    canShareGif: canShareGif && canExportGif && canPlay,
     linksActive: false,
     onShareImage: () => { void handleShareImage() },
     onShareVideo: () => { void handleShareVideo() },
+    onShareGif: () => { void handleShareGif() },
     onShareLink: () => {},
     onCopyLink: () => {},
   })
@@ -672,13 +759,14 @@ export function StageLanding() {
   return (
     <>
       <MomentVideoReadySheet
-        open={!!videoReadySheet}
-        mode={videoReadySheet?.mode ?? 'save'}
-        previewUrl={videoReadySheet?.previewUrl ?? null}
-        filename={videoReadySheet?.file.name ?? 'MARGO_Moment.mp4'}
-        busy={videoReadySheet?.mode === 'save' ? saving : shareBusy}
-        onPrimary={() => { void confirmVideoReady() }}
-        onClose={() => setVideoReadySheet(null)}
+        open={!!mediaReadySheet}
+        mode={mediaReadySheet?.mode ?? 'save'}
+        format={mediaReadySheet?.format ?? 'video'}
+        previewUrl={mediaReadySheet?.previewUrl ?? null}
+        filename={mediaReadySheet?.file.name ?? 'MARGO_Moment.mp4'}
+        busy={mediaReadySheet?.mode === 'save' ? saving : shareBusy}
+        onPrimary={() => { void confirmMediaReady() }}
+        onClose={() => setMediaReadySheet(null)}
       />
     <section style={{ position: 'relative', zIndex: 5, width: '100%', maxWidth: '480px', margin: '0 auto' }}>
       {!selectedSong && (
