@@ -18,7 +18,7 @@ import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-l
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
 import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
-import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
+import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle, keyboardSafeCompactActionStyle, keyboardSafeSplitSecondaryStyle } from '@/components/keyboard-safe-cta-bar'
 import { useKeyboardSafeChrome } from '@/hooks/useVisualViewport'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { POST_LINES_MAX } from '@/lib/post-lines'
@@ -46,6 +46,7 @@ import {
 } from '@/lib/moment-draft'
 
 const supabase = createClient()
+const composeChromeEase = '280ms cubic-bezier(0.4, 0, 0.2, 1)'
 
 type Source = 'margo' | 'genius' | 'apple'
 
@@ -1022,7 +1023,15 @@ function ComposeInner() {
 
   return (
     <main ref={composeRootRef} style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
-      <div style={{ paddingTop: 'calc(var(--nav-height, 72px) + 16px)', paddingBottom: 'calc(var(--margo-page-padding-bottom) + 88px)', paddingLeft: '24px', paddingRight: '24px' }}>
+      <div style={{
+        paddingTop: 'calc(var(--nav-height, 72px) + 16px)',
+        paddingBottom: phase === 'moment'
+          ? 'calc(var(--margo-cta-bar-h, 148px) + 12px)'
+          : 'calc(var(--margo-page-padding-bottom) + 88px)',
+        paddingLeft: '24px',
+        paddingRight: '24px',
+        transition: `padding-bottom ${composeChromeEase}`,
+      }}>
         <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
           {/* ── Step 1: Search ── */}
@@ -1204,24 +1213,6 @@ function ComposeInner() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              <button type="button" onClick={() => setShowExportStudio(true)}
-                style={{ padding: '8px 14px', borderRadius: '50px', border: '1px solid var(--gold-border)', background: 'transparent', color: 'var(--gold)', fontFamily: font, fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', cursor: 'pointer' }}>
-                Export / share
-              </button>
-              <button type="button" onClick={handleChangeSong}
-                style={{ padding: '8px 14px', borderRadius: '50px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.58rem', letterSpacing: '0.8px', textTransform: 'uppercase', cursor: 'pointer' }}>
-                Change song
-              </button>
-              {committedLines.length + 1 < POST_LINES_MAX && (
-                <button type="button" onClick={handleAddLineFromMoment}
-                  style={{ padding: '8px 14px', borderRadius: '50px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontFamily: font, fontSize: '0.58rem', letterSpacing: '0.8px', textTransform: 'uppercase', cursor: 'pointer' }}>
-                  Add another line
-                </button>
-              )}
-            </div>
-
-            {/* Display name banner — shown until customized once, or dismissed */}
             {showNameBanner && identity && (
               <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px 24px', marginBottom: '24px' }}>
                 {!editingName ? (
@@ -1259,7 +1250,7 @@ function ComposeInner() {
               <p style={{ fontFamily: font, fontSize: '0.82rem', color: '#ff6b6b', textAlign: 'center', marginBottom: '16px' }}>{postError}</p>
             )}
 
-            {/* Post actions live in KeyboardSafeCtaBar */}
+            {/* Post + minor actions live in KeyboardSafeCtaBar */}
           </div>
 
         </div>
@@ -1355,31 +1346,45 @@ function ComposeInner() {
 
 
       {phase === 'moment' && (
-        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden}>
-          <div style={{ opacity: buttonsBlocked ? 0.4 : 1, pointerEvents: buttonsBlocked ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <KeyboardSafeCtaBar keyboardOpen={keyboardOpen || chromeHidden} dense>
+          <div style={{ opacity: buttonsBlocked ? 0.4 : 1, pointerEvents: buttonsBlocked ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button type="button" onClick={() => setShowExportStudio(true)} style={keyboardSafeCompactActionStyle}>
+                Export
+              </button>
+              <button type="button" onClick={handleChangeSong} style={keyboardSafeCompactActionStyle}>
+                Change song
+              </button>
+              {committedLines.length + 1 < POST_LINES_MAX && (
+                <button type="button" onClick={handleAddLineFromMoment} style={keyboardSafeCompactActionStyle}>
+                  Add line
+                </button>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => { void handleSendToSomeone() }}
               disabled={posting || identityLoading}
               style={{ ...keyboardSafePrimaryBtnStyle, opacity: posting ? 0.7 : 1, cursor: posting ? 'not-allowed' : 'pointer' }}
             >Send to someone</button>
-            <button
-              type="button"
-              onClick={() => { void handlePostToFeed() }}
-              disabled={posting || identityLoading}
-              style={keyboardSafeSecondaryBtnStyle}
-            >{posting ? 'Posting…' : 'Post to Feed'}</button>
-            <button
-              type="button"
-              onClick={() => { void handleKeepPrivate() }}
-              disabled={posting}
-              style={{
-                ...keyboardSafeSecondaryBtnStyle,
-                background: 'transparent',
-                border: '1px solid var(--border)',
-                color: 'var(--text-muted)',
-              }}
-            >Keep Private</button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => { void handlePostToFeed() }}
+                disabled={posting || identityLoading}
+                style={keyboardSafeSplitSecondaryStyle}
+              >{posting ? 'Posting…' : 'Post to Feed'}</button>
+              <button
+                type="button"
+                onClick={() => { void handleKeepPrivate() }}
+                disabled={posting}
+                style={{
+                  ...keyboardSafeSplitSecondaryStyle,
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-muted)',
+                }}
+              >Keep Private</button>
+            </div>
           </div>
         </KeyboardSafeCtaBar>
       )}
@@ -1445,7 +1450,6 @@ function ComposeInner() {
           background: 'var(--bg)',
           paddingLeft: '24px', paddingRight: '24px',
           paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
-          transition: 'height 150ms ease',
           boxSizing: 'border-box',
         }}>
           <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -1464,61 +1468,70 @@ function ComposeInner() {
                 <ArrowLeftIcon size={16} color="currentColor" />
                 <span style={{ fontFamily: font, fontSize: '0.82rem', marginLeft: '6px', letterSpacing: '0.5px' }}>Back</span>
               </button>
-              {chromeHidden && (
-                <span style={{ fontFamily: font, fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)', marginLeft: '4px' }}>
-                  Your line
-                </span>
-              )}
+              <span style={{
+                fontFamily: font, fontStyle: 'italic', fontSize: '0.95rem', color: 'var(--text)',
+                marginLeft: '4px',
+                opacity: chromeHidden ? 1 : 0,
+                maxWidth: chromeHidden ? 200 : 0,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                transition: `opacity ${composeChromeEase}, max-width ${composeChromeEase}`,
+              }}>
+                Your line
+              </span>
             </div>
 
-            {!chromeHidden && (
-              <div style={{ flexShrink: 0, textAlign: 'center', margin: '16px 0 24px' }}>
-                <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', marginBottom: '8px' }}>Your line</h1>
-              </div>
-            )}
+            <div style={{
+              flexShrink: 0,
+              textAlign: 'center',
+              overflow: 'hidden',
+              maxHeight: chromeHidden ? 0 : 72,
+              opacity: chromeHidden ? 0 : 1,
+              marginTop: chromeHidden ? 0 : 16,
+              marginBottom: chromeHidden ? 0 : 24,
+              transition: `max-height ${composeChromeEase}, opacity 220ms ease, margin ${composeChromeEase}`,
+            }}>
+              <h1 style={{ fontFamily: font, fontStyle: 'italic', fontSize: '2rem', color: 'var(--text)', margin: 0 }}>Your line</h1>
+            </div>
 
             <ComposeLyricCard style={{
               flex: 1, minHeight: 0, overflow: 'hidden',
               display: 'flex', flexDirection: 'column',
-              marginTop: chromeHidden ? '12px' : 0,
-              padding: chromeHidden ? '16px' : '24px',
-              transition: 'padding 150ms ease, margin 150ms ease',
+              padding: chromeHidden ? '18px 20px' : '24px',
+              transition: `padding ${composeChromeEase}`,
             }}>
               <div style={{
-                order: chromeHidden ? 0 : 2,
                 flexShrink: 0,
                 display: 'flex',
-                flexDirection: chromeHidden ? 'row' : 'column',
+                flexDirection: 'row',
                 gap: '10px',
-                marginBottom: chromeHidden ? '10px' : 0,
-                marginTop: chromeHidden ? 0 : '16px',
-                transition: 'all 150ms ease',
+                marginBottom: '12px',
               }}>
-                <div style={{ flex: chromeHidden ? '0 0 58%' : '1', minWidth: 0 }}>
+                <div style={{ flex: '0 0 58%', minWidth: 0 }}>
                   <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Song</label>
                   <input type="text" value={songName} onChange={(e) => setSongName(e.target.value)}
                     style={{
                       width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
                       padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 600, color: 'var(--text-on-gold)', outline: 'none', boxSizing: 'border-box',
-                      fontSize: chromeHidden ? '0.8rem' : '0.95rem',
+                      fontSize: chromeHidden ? '0.82rem' : '0.9rem',
                       overflow: 'hidden', textOverflow: 'ellipsis',
-                      transition: 'font-size 150ms ease',
+                      transition: `font-size ${composeChromeEase}`,
                     }} />
                 </div>
-                <div style={{ flex: chromeHidden ? '0 0 38%' : '1', minWidth: 0 }}>
+                <div style={{ flex: '1 1 38%', minWidth: 0 }}>
                   <label style={{ display: 'block', fontFamily: UI_FONT, fontSize: '0.6rem', color: 'var(--text-on-gold-muted)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Artist</label>
                   <input type="text" value={artistName} onChange={(e) => setArtistName(e.target.value)}
                     style={{
                       width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(7,6,10,0.18)',
                       padding: '4px 0 6px', fontFamily: UI_FONT, fontWeight: 400, color: 'var(--text-on-gold-muted)', outline: 'none', boxSizing: 'border-box',
-                      fontSize: chromeHidden ? '0.7rem' : '0.75rem',
+                      fontSize: chromeHidden ? '0.72rem' : '0.78rem',
                       overflow: 'hidden', textOverflow: 'ellipsis',
-                      transition: 'font-size 150ms ease',
+                      transition: `font-size ${composeChromeEase}`,
                     }} />
                 </div>
               </div>
 
-              <div style={{ order: 1, position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                 {lyric.length === 0 && (
                   <span aria-hidden style={{
                     position: 'absolute', top: 0, left: 0, right: 0,
@@ -1543,7 +1556,7 @@ function ComposeInner() {
                   }} />
               </div>
 
-              <div style={{ order: 3, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: chromeHidden ? '4px' : '10px' }}>
+              <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
                 <span style={{ fontFamily: UI_FONT, fontSize: '0.65rem', color: 'var(--text-on-gold-muted)' }}>{lyric.length}/140</span>
               </div>
             </ComposeLyricCard>
@@ -1553,7 +1566,7 @@ function ComposeInner() {
               height: chromeHidden
                 ? 'var(--margo-cta-bar-h, 0px)'
                 : 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 68px)',
-              transition: 'height 150ms ease',
+              transition: `height ${composeChromeEase}`,
             }} />
           </div>
         </div>,
