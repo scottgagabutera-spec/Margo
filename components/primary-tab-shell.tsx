@@ -329,12 +329,10 @@ export function PrimaryTabShell({
   const activeTabRef = useRef<PrimaryTabId | null>(activeTab)
   const peekMetaRef = useRef<{ id: PrimaryTabId; dir: PrimaryTabPeekDir } | null>(null)
   const stripOffsetRef = useRef(0)
-  const lastPrimaryTabRef = useRef<PrimaryTabId | null>(activeTab)
   const [, setCacheVersion] = useState(0)
   const [peekTab, setPeekTabState] = useState<PrimaryTabId | null>(null)
 
   activeTabRef.current = activeTab
-  if (activeTab) lastPrimaryTabRef.current = activeTab
 
   // Seed cache only after the App Router has committed this tab, so we never
   // freeze a loading fallback as the keepalive tree.
@@ -606,7 +604,6 @@ export function PrimaryTabShell({
   const cached = [...cacheRef.current.entries()]
   const showSkeleton = !!activeTab && !cacheRef.current.has(activeTab)
   const onPrimarySurface = routeTab !== null || optimisticTab !== null
-  const heldOffSurface = onPrimarySurface ? null : lastPrimaryTabRef.current
 
   return (
     <PrimaryTabContext.Provider value={ctx}>
@@ -614,8 +611,7 @@ export function PrimaryTabShell({
       {cached.map(([id, node]) => {
         const isCommittedActive = activeTab === id
         const isPeek = peekTab === id
-        const held = heldOffSurface === id
-        const painted = isCommittedActive || isPeek || held
+        const painted = isCommittedActive || isPeek
         return (
           <Activity key={id} mode={painted ? 'visible' : 'hidden'}>
             <div
@@ -628,7 +624,7 @@ export function PrimaryTabShell({
               aria-hidden={!isCommittedActive}
               style={{
                 ...paneStyle(painted, isCommittedActive),
-                ...(held ? { opacity: 0, zIndex: -1, pointerEvents: 'none' as const } : null),
+                visibility: onPrimarySurface ? undefined : 'hidden',
               }}
             >
               {node}
@@ -646,9 +642,7 @@ export function PrimaryTabShell({
         </div>
       )}
 
-      {activeTab === null ? (
-        <div style={{ position: 'relative', zIndex: 4, minHeight: '100%' }}>{children}</div>
-      ) : null}
+      {activeTab === null ? children : null}
     </PrimaryTabContext.Provider>
   )
 }

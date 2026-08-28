@@ -19,7 +19,7 @@ import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-ly
 import { SongMeta } from '@/components/song-meta'
 import { VibeTag } from '@/components/vibe-tag'
 import { useRouter } from 'next/navigation'
-import { toastMomentPosted, toastMomentPrivate, toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
+import { toastMomentPrivate, toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
 import { trackEvent } from '@/lib/analytics/track'
@@ -190,11 +190,6 @@ function LyricBackContent() {
   const [cardData, setCardData] = useState<{
     lyric: string; song: string; artist: string; id: string;
     parentLyric?: string; parentSong?: string; parentArtist?: string;
-  } | null>(null)
-  const [completionMode, setCompletionMode] = useState<'public' | 'private' | null>(null)
-  const [completedParentId, setCompletedParentId] = useState<string | null>(null)
-  const [sentSnapshot, setSentSnapshot] = useState<{
-    lyric: string; songName: string; artistName: string; vibe: Vibe
   } | null>(null)
   const emotionAbortRef = useRef<AbortController | null>(null)
   const prefillAppliedRef = useRef(false)
@@ -446,9 +441,6 @@ function LyricBackContent() {
     setSnippetEnd(null)
     setMargoLines([])
     setLinePickComplete(false)
-    setCompletionMode(null)
-    setCompletedParentId(null)
-    setSentSnapshot(null)
   }, [])
 
   /* ─── post ───────────────────────────────────────────────── */
@@ -512,13 +504,6 @@ function LyricBackContent() {
         body: JSON.stringify({ text: lyric, postId: replyId }),
       }).catch(() => {})
 
-      setSentSnapshot({
-        lyric,
-        songName,
-        artistName,
-        vibe: selectedVibe,
-      })
-      setCompletedParentId(parentId)
       trackEvent('lyric_back_sent', { private: replyStatus === 'private' })
       if (replyStatus === 'private') toastMomentPrivate()
       else toastMomentSent()
@@ -605,74 +590,6 @@ function LyricBackContent() {
   // fixes what the replier is shown while writing it.
   const respondingToLines = respondingTo ? resolveMomentLines(respondingTo) : []
   const respondingToMulti = respondingToLines.length > 1
-
-  if (completionMode && sentSnapshot) {
-    const isPrivateSave = completionMode === 'private'
-    const parentHref = completedParentId ? `/post/${completedParentId}` : null
-    return (
-      <main style={{ minHeight: '100vh', background: bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', paddingTop: '40px' }}>
-          <button
-            type="button"
-            onClick={resetComposeForm}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontFamily: font, fontSize: '0.75rem', color: text2,
-              letterSpacing: '0.5px', minHeight: 'var(--margo-touch-min)', padding: '0 12px',
-              display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box',
-              marginBottom: '20px',
-            }}
-          >Done</button>
-          <p style={{ fontFamily: font, fontStyle: 'italic', fontSize: '1.5rem', color: text, marginBottom: '8px' }}>
-            {isPrivateSave ? 'Saved privately.' : 'Sent.'}
-          </p>
-          <p style={{ fontFamily: font, fontSize: '0.82rem', color: text2, marginBottom: '28px', letterSpacing: '0.5px' }}>
-            {isPrivateSave
-              ? 'Only you can see this Lyric Back.'
-              : 'Your Lyric Back was added to the conversation.'}
-          </p>
-          <ComposeLyricCard style={{ marginBottom: '20px', textAlign: 'left' }}>
-            <p style={composeLyricTextStyle}>&ldquo;{sentSnapshot.lyric}&rdquo;</p>
-            <div style={{ marginTop: '8px' }}>
-              <SongMeta
-                title={sentSnapshot.songName}
-                artist={sentSnapshot.artistName}
-                titleStyle={{ color: 'var(--text-on-gold)' }}
-                artistStyle={{ color: 'var(--text-on-gold-muted)' }}
-              />
-            </div>
-            <div style={{ position: 'relative', height: '22px', marginTop: '14px' }}>
-              <VibeTag label={VIBE_LABELS[sentSnapshot.vibe]} color="var(--text-on-gold)" variant="dark" />
-            </div>
-          </ComposeLyricCard>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {parentHref && (
-              <button
-                type="button"
-                onClick={() => router.push(parentHref)}
-                style={{
-                  width: '100%', padding: '15px 28px', minHeight: 'var(--margo-touch-min)',
-                  background: gold, color: bg, borderRadius: '50px', fontFamily: font, fontWeight: 700,
-                  fontSize: '0.6rem', letterSpacing: '1px', textTransform: 'uppercase', border: 'none',
-                  cursor: 'pointer', boxShadow: '0 6px 28px var(--gold-glow)',
-                }}
-              >View conversation</button>
-            )}
-            <button
-              type="button"
-              onClick={() => router.push('/feed')}
-              style={{
-                width: '100%', padding: '13px 28px', minHeight: 'var(--margo-touch-min)',
-                background: 'transparent', color: text2, border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '50px', fontFamily: font, fontSize: '0.6rem',
-                letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
-              }}
-            >Back to Feed</button>
-          </div>
-        </div>
-      </main>
-    )
-  }
 
   return (
     <main style={{ minHeight: '100vh', background: bg, position: 'relative' }}>
