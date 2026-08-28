@@ -1,5 +1,6 @@
 import type { MargoMoment } from '@/lib/moment/types'
 import { momentHasPlayableSnippet } from '@/lib/moment-export/timeline/build-moment-timeline'
+import { shareMomentFile, type ShareMomentFileResult } from '@/lib/moment/file-share'
 import {
   getCachedMomentGif,
   setCachedMomentGif,
@@ -60,22 +61,14 @@ export async function prepareMargoMomentGifShare(
   return getOrCreateMomentGifFile(moment, onProgress, signal)
 }
 
-export async function sharePreparedMomentGif(file: File): Promise<ShareMomentGifResult> {
-  if (typeof navigator === 'undefined' || !navigator.share) return 'failed'
-  if (typeof navigator.canShare === 'function') {
-    try {
-      if (!navigator.canShare({ files: [file] })) return 'failed'
-    } catch {
-      /* Some Android builds reject canShare probes — still try share below */
-    }
-  }
-  try {
-    await navigator.share({ files: [file], title: 'MARGO Moment' })
-    return 'shared'
-  } catch (err) {
-    if ((err as Error)?.name === 'AbortError') return 'cancelled'
-    return 'failed'
-  }
+export async function sharePreparedMomentGif(
+  file: File,
+  moment: MargoMoment,
+): Promise<ShareMomentGifResult> {
+  const result: ShareMomentFileResult = await shareMomentFile(file, moment)
+  if (result === 'shared') return 'shared'
+  if (result === 'cancelled') return 'cancelled'
+  return 'failed'
 }
 
 export { canShareGifFiles } from '@/lib/moment-export/gif/capabilities'

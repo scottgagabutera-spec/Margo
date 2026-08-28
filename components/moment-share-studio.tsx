@@ -395,11 +395,12 @@ export function MomentShareStudio({
       }
       return
     }
+    if (!exportMoment) return
     setShareBusy(true)
     try {
       const result = format === 'gif'
-        ? await sharePreparedMomentGif(file)
-        : await sharePreparedMomentVideo(file)
+        ? await sharePreparedMomentGif(file, exportMoment)
+        : await sharePreparedMomentVideo(file, exportMoment)
       if (result === 'shared') {
         toastMomentShared()
         setMediaReadySheet(null)
@@ -410,7 +411,7 @@ export function MomentShareStudio({
     } finally {
       setShareBusy(false)
     }
-  }, [mediaReadySheet, onExported, onShared])
+  }, [mediaReadySheet, exportMoment, onExported, onShared])
 
   const shareLink = useCallback(async () => {
     if (isDualCard && parentLyric) {

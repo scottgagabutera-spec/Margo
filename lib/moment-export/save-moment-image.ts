@@ -1,4 +1,5 @@
 import type { MargoMoment } from '@/lib/moment/types'
+import { shareMomentFile } from '@/lib/moment/file-share'
 import { margoMomentToPostLines } from '@/lib/moment/resolve'
 import {
   normalizeLine,
@@ -134,21 +135,8 @@ export async function shareMargoMomentImage(moment: MargoMoment): Promise<ShareM
   const file = await renderMargoMomentPngFile(moment)
   if (!file) return 'failed'
 
-  if (typeof navigator.canShare === 'function') {
-    try {
-      if (!navigator.canShare({ files: [file] })) return 'failed'
-    } catch {
-      return 'failed'
-    }
-  }
-
-  try {
-    await navigator.share({ files: [file], title: 'MARGO' })
-    return 'shared'
-  } catch (err) {
-    if ((err as Error)?.name === 'AbortError') return 'failed'
-    return 'failed'
-  }
+  const result = await shareMomentFile(file, moment)
+  return result === 'shared' ? 'shared' : 'failed'
 }
 
 export async function saveMomentImage(options: SaveMomentImageOptions): Promise<void> {

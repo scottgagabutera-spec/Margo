@@ -718,9 +718,10 @@ export function StageLanding() {
     }
     setShareBusy(true)
     try {
+      const moment = buildExportMoment()
       const result = format === 'gif'
-        ? await sharePreparedMomentGif(file)
-        : await sharePreparedMomentVideo(file)
+        ? await sharePreparedMomentGif(file, moment)
+        : await sharePreparedMomentVideo(file, moment)
       if (result === 'shared') {
         toastMomentShared()
         setMediaReadySheet(null)
@@ -730,7 +731,7 @@ export function StageLanding() {
     } finally {
       setShareBusy(false)
     }
-  }, [mediaReadySheet])
+  }, [mediaReadySheet, buildExportMoment])
 
   const canShareImg = canShareImageFiles()
 

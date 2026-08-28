@@ -15,13 +15,14 @@ import { loadMomentArtwork } from '@/lib/moment-export/video/load-artwork'
 import {
   MOMENT_GIF_EXPORT_WIDTH,
   MOMENT_GIF_FPS,
+  MOMENT_GIF_PALETTE_FORMAT,
 } from '@/lib/moment-export/gif/constants'
 import {
   exportTotalDurationSec,
   resolveExportRenderTimeSec,
 } from '@/lib/moment-export/video/export-frame-timing'
 
-const PALETTE_FORMAT = 'rgb565'
+const PALETTE_FORMAT = MOMENT_GIF_PALETTE_FORMAT
 
 export interface EncodeMomentGifProgress {
   phase: 'prepare' | 'frames' | 'finalize'
