@@ -134,7 +134,7 @@ export function CardOverflowMenu({
                 border: 'none',
                 color: item.disabled ? 'var(--text-muted)' : 'var(--text)',
                 fontFamily: UI_FONT,
-                fontSize: '0.82rem',
+                fontSize: '0.7rem',
                 cursor: item.disabled ? 'default' : 'pointer',
                 borderRadius: '8px',
                 opacity: item.disabled ? 0.45 : 1,

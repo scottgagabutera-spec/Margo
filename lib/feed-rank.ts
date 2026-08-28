@@ -1,20 +1,21 @@
 /**
- * Feed earned badges — Twitter/TikTok velocity, not "everything new is Trending".
+ * Feed earned badges — Twitter/TikTok velocity vs Spotify Top.
  *
- * New = recency only (quiet metadata).
- * Trending = velocity + mixed engagement (plays, lyric-backs, replays, resonates).
- * Top = lifetime engagement with a real floor.
+ * New = recency only (quiet). Not an engagement rank.
+ * Trending = velocity: mixed signals, high floor, not brand-new.
+ * Top = lifetime: strictly higher than Trending. Established posts only.
  *
- * If the catalog is too small to meet floors, badges stay off. That is
- * intentional: empty is better than decorating every fresh post.
+ * Floors are absolute, not "top N of whatever is on screen".
+ * If nobody meets the bar, there is no badge.
  */
 
 export const NEW_WINDOW_HOURS = 24
 export const RANK_BADGE_COUNT = 3
-export const MIN_TRENDING_ENGAGE = 24
-export const MIN_TRENDING_AGE_HOURS = 6
-export const MIN_TRENDING_SIGNAL_KINDS = 2
-export const MIN_TOP_ENGAGE = 40
+export const MIN_TRENDING_ENGAGE = 120
+export const MIN_TRENDING_AGE_HOURS = 12
+export const MIN_TRENDING_SIGNAL_KINDS = 3
+export const MIN_TOP_ENGAGE = 360
+export const MIN_TOP_SIGNAL_KINDS = 3
 
 export type RankStats = {
   views?: number
@@ -31,14 +32,14 @@ export function postEngagement(stats: RankStats | undefined): number {
     + ((s.replayCount || 0) * 6)
 }
 
-/** Distinct engagement kinds with a small floor each — blocks 1-view "Top". */
+/** Distinct engagement kinds — blocks single-signal inflation. */
 export function engagementSignalKinds(stats: RankStats | undefined): number {
   const s = stats || {}
   let n = 0
-  if ((s.views || 0) >= 8) n += 1
-  if ((s.resonateCount || 0) >= 2) n += 1
-  if ((s.echoCount || 0) >= 1) n += 1
-  if ((s.replayCount || 0) >= 2) n += 1
+  if ((s.views || 0) >= 40) n += 1
+  if ((s.resonateCount || 0) >= 8) n += 1
+  if ((s.echoCount || 0) >= 4) n += 1
+  if ((s.replayCount || 0) >= 6) n += 1
   return n
 }
 
@@ -59,28 +60,26 @@ export function feedRankIds<T extends { id: string; timestamp?: number }>(
     posts.filter((p) => postAgeHours(p.timestamp) < NEW_WINDOW_HOURS).map((p) => p.id),
   )
 
-  const trendingCandidates = posts
-    .filter((p) => !newIds.has(p.id))
-    .filter((p) => postAgeHours(p.timestamp) >= MIN_TRENDING_AGE_HOURS)
-    .filter((p) => postEngagement(statsById[p.id]) >= MIN_TRENDING_ENGAGE)
-    .filter((p) => engagementSignalKinds(statsById[p.id]) >= MIN_TRENDING_SIGNAL_KINDS)
-
-  const trendingIds = new Set(
-    trendingCandidates.length >= 2
-      ? [...trendingCandidates]
-          .sort((a, b) => (
-            trendingScore(postEngagement(statsById[b.id]), postAgeHours(b.timestamp))
-            - trendingScore(postEngagement(statsById[a.id]), postAgeHours(a.timestamp))
-          ))
-          .slice(0, RANK_BADGE_COUNT)
-          .map((p) => p.id)
-      : [],
-  )
-
   const topIds = new Set(
     [...posts]
+      .filter((p) => !newIds.has(p.id))
       .filter((p) => postEngagement(statsById[p.id]) >= MIN_TOP_ENGAGE)
+      .filter((p) => engagementSignalKinds(statsById[p.id]) >= MIN_TOP_SIGNAL_KINDS)
       .sort((a, b) => postEngagement(statsById[b.id]) - postEngagement(statsById[a.id]))
+      .slice(0, RANK_BADGE_COUNT)
+      .map((p) => p.id),
+  )
+
+  const trendingIds = new Set(
+    [...posts]
+      .filter((p) => !newIds.has(p.id) && !topIds.has(p.id))
+      .filter((p) => postAgeHours(p.timestamp) >= MIN_TRENDING_AGE_HOURS)
+      .filter((p) => postEngagement(statsById[p.id]) >= MIN_TRENDING_ENGAGE)
+      .filter((p) => engagementSignalKinds(statsById[p.id]) >= MIN_TRENDING_SIGNAL_KINDS)
+      .sort((a, b) => (
+        trendingScore(postEngagement(statsById[b.id]), postAgeHours(b.timestamp))
+        - trendingScore(postEngagement(statsById[a.id]), postAgeHours(a.timestamp))
+      ))
       .slice(0, RANK_BADGE_COUNT)
       .map((p) => p.id),
   )

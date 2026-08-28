@@ -3,8 +3,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDownIcon } from '@/components/icons'
+import { UI_FONT } from '@/lib/fonts'
 
-const font = 'var(--font-lora), serif'
+const font = UI_FONT
 const MENU_GAP_PX = 6
 const MENU_VIEW_PAD_PX = 12
 
@@ -93,8 +94,9 @@ export function MomentActionMenu({
 
   useEffect(() => {
     if (!open) return
-    const onDoc = (e: MouseEvent) => {
-      const t = e.target as Node
+    const onDoc = (e: Event) => {
+      const t = e.target
+      if (!(t instanceof Node)) return
       if (triggerRef.current?.contains(t)) return
       if (menuRef.current?.contains(t)) return
       setOpen(false)
@@ -102,11 +104,16 @@ export function MomentActionMenu({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
+    const onScroll = () => setOpen(false)
     document.addEventListener('mousedown', onDoc)
+    document.addEventListener('touchstart', onDoc, { passive: true })
     document.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', onScroll, true)
     return () => {
       document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('touchstart', onDoc)
       document.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', onScroll, true)
     }
   }, [open])
 
@@ -218,10 +225,10 @@ export function MomentActionMenu({
             >
               <span style={{
                 fontFamily: font,
-                fontSize: '0.6rem',
-                fontWeight: 700,
-                letterSpacing: '0.8px',
-                textTransform: 'uppercase',
+                fontSize: '0.7rem',
+                fontWeight: 500,
+                letterSpacing: 0,
+                textTransform: 'none',
                 color: item.disabled ? 'var(--text-muted)' : 'var(--text)',
               }}>
                 {item.label}

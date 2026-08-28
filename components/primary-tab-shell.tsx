@@ -83,25 +83,37 @@ export function scrollActiveTo(top: number, behavior: ScrollBehavior = 'auto') {
   }
 }
 
-function readFeedResumeY(): number | undefined {
+function readFeedResume(): { y: number; anchorId?: string | null } | undefined {
   try {
     const raw = localStorage.getItem(FEED_RESUME_KEY)
     if (!raw) return undefined
-    const parsed = JSON.parse(raw) as { y?: number; at?: number }
+    const parsed = JSON.parse(raw) as { y?: number; at?: number; anchorId?: string | null }
     if (typeof parsed.y !== 'number' || typeof parsed.at !== 'number') return undefined
     if (Date.now() - parsed.at > FEED_RESUME_MAX_MS) return undefined
-    return parsed.y
+    return { y: parsed.y, anchorId: parsed.anchorId ?? null }
   } catch {
     return undefined
   }
 }
 
-function writeFeedResumeY(y: number) {
+function writeFeedResume(y: number, anchorId?: string | null) {
   try {
-    localStorage.setItem(FEED_RESUME_KEY, JSON.stringify({ y, at: Date.now() }))
+    localStorage.setItem(FEED_RESUME_KEY, JSON.stringify({ y, anchorId: anchorId || null, at: Date.now() }))
   } catch {
     /* private mode */
   }
+}
+
+function findFeedAnchorId(pane: HTMLElement): string | null {
+  const paneTop = pane.getBoundingClientRect().top
+  const nodes = pane.querySelectorAll('[id^="feed-post-"]')
+  for (const node of nodes) {
+    const r = node.getBoundingClientRect()
+    if (r.bottom > paneTop + 72) {
+      return node.id.slice('feed-post-'.length)
+    }
+  }
+  return null
 }
 
 function readStoredScrollMap(): Partial<Record<PrimaryTabId, number>> {
@@ -113,8 +125,8 @@ function readStoredScrollMap(): Partial<Record<PrimaryTabId, number>> {
     map = {}
   }
   if (map.feed == null) {
-    const y = readFeedResumeY()
-    if (y != null) map.feed = y
+    const resume = readFeedResume()
+    if (resume) map.feed = resume.y
   }
   return map
 }
@@ -125,18 +137,41 @@ function writeStoredScrollMap(map: Partial<Record<PrimaryTabId, number>>) {
   } catch {
     /* private mode */
   }
-  if (typeof map.feed === 'number') writeFeedResumeY(map.feed)
+  if (typeof map.feed === 'number') {
+    const prev = readFeedResume()
+    writeFeedResume(map.feed, prev?.anchorId)
+  }
 }
+
+let frozenScrollLive: Partial<Record<PrimaryTabId, number>> = {}
 
 function persistScroll(
   frozen: Partial<Record<PrimaryTabId, number>>,
   id: PrimaryTabId,
-  y: number
+  y: number,
+  anchorId?: string | null,
 ) {
   frozen[id] = y
+  frozenScrollLive = frozen
   const map = readStoredScrollMap()
   map[id] = y
   writeStoredScrollMap(map)
+  if (id === 'feed') writeFeedResume(y, anchorId)
+}
+
+/** Snapshot the active pane before navigating to a post / other screen. */
+export function persistActivePrimaryScroll() {
+  const el = getActivePrimaryScrollEl()
+  if (!el) return
+  const id = el.getAttribute('data-margo-primary-tab') as PrimaryTabId | null
+  if (!id) return
+  const anchor = id === 'feed' ? findFeedAnchorId(el) : null
+  persistScroll(frozenScrollLive, id, el.scrollTop, anchor)
+}
+
+/** After posting, land at the top of Feed — not the previous mid-scroll. */
+export function clearPrimaryTabScroll(id: PrimaryTabId) {
+  persistScroll(frozenScrollLive, id, 0, null)
 }
 
 /** Re-apply stored pane scroll after list content remounts (skeleton → posts). */
@@ -145,7 +180,22 @@ export function restoreActivePrimaryScroll() {
   if (!el) return
   const id = el.getAttribute('data-margo-primary-tab') as PrimaryTabId | null
   if (!id) return
-  const target = readStoredScrollMap()[id]
+  if (id === 'feed') {
+    const resume = readFeedResume()
+    if (resume?.anchorId) {
+      const node = document.getElementById('feed-post-' + resume.anchorId)
+      if (node && el.contains(node)) {
+        const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top
+        el.scrollTop += delta
+        return
+      }
+    }
+    if (resume && resume.y >= 1) {
+      el.scrollTop = resume.y
+      return
+    }
+  }
+  const target = frozenScrollLive[id] ?? readStoredScrollMap()[id]
   if (target == null || target < 1) return
   if (Math.abs(el.scrollTop - target) > 1) {
     el.scrollTop = target
@@ -234,14 +284,16 @@ export function PrimaryTabShell({
   const cacheRef = useRef(new Map<PrimaryTabId, ReactNode>())
   const paneElsRef = useRef(new Map<PrimaryTabId, HTMLElement | null>())
   const prevTabRef = useRef<PrimaryTabId | null>(null)
-  const frozenScrollRef = useRef<Partial<Record<PrimaryTabId, number>>>({})
+  const frozenScrollRef = useRef(frozenScrollLive)
   const activeTabRef = useRef<PrimaryTabId | null>(activeTab)
   const peekMetaRef = useRef<{ id: PrimaryTabId; dir: PrimaryTabPeekDir } | null>(null)
   const stripOffsetRef = useRef(0)
+  const lastPrimaryTabRef = useRef<PrimaryTabId | null>(activeTab)
   const [, setCacheVersion] = useState(0)
   const [peekTab, setPeekTabState] = useState<PrimaryTabId | null>(null)
 
   activeTabRef.current = activeTab
+  if (activeTab) lastPrimaryTabRef.current = activeTab
 
   // Seed cache only after the App Router has committed this tab, so we never
   // freeze a loading fallback as the keepalive tree.
@@ -434,8 +486,8 @@ export function PrimaryTabShell({
     const onScroll = () => {
       if (el.getAttribute('data-margo-primary-tab-active') !== '1') return
       const cs = getComputedStyle(el)
-      if (cs.display === 'none' || cs.visibility === 'hidden') return
-      persistScroll(frozenScrollRef.current, tabId, el.scrollTop)
+      if (cs.display === 'none' || Number(cs.opacity) === 0) return
+      persistScroll(frozenScrollRef.current, tabId, el.scrollTop, tabId === 'feed' ? findFeedAnchorId(el) : null)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
@@ -447,8 +499,13 @@ export function PrimaryTabShell({
       for (const [id, pane] of paneElsRef.current) {
         if (!pane) continue
         const cs = getComputedStyle(pane)
-        if (cs.display === 'none' || cs.visibility === 'hidden') continue
-        persistScroll(frozenScrollRef.current, id, pane.scrollTop)
+        if (cs.display === 'none' || Number(cs.opacity) === 0) continue
+        persistScroll(
+          frozenScrollRef.current,
+          id,
+          pane.scrollTop,
+          id === 'feed' ? findFeedAnchorId(pane) : null,
+        )
       }
     }
     const onVisibility = () => {
@@ -490,6 +547,7 @@ export function PrimaryTabShell({
   const cached = [...cacheRef.current.entries()]
   const showSkeleton = !!activeTab && !cacheRef.current.has(activeTab)
   const onPrimarySurface = routeTab !== null || optimisticTab !== null
+  const heldOffSurface = onPrimarySurface ? null : lastPrimaryTabRef.current
 
   return (
     <PrimaryTabContext.Provider value={ctx}>
@@ -497,7 +555,8 @@ export function PrimaryTabShell({
       {cached.map(([id, node]) => {
         const isCommittedActive = activeTab === id
         const isPeek = peekTab === id
-        const painted = isCommittedActive || isPeek
+        const held = heldOffSurface === id
+        const painted = isCommittedActive || isPeek || held
         return (
           <Activity key={id} mode={painted ? 'visible' : 'hidden'}>
             <div
@@ -510,7 +569,7 @@ export function PrimaryTabShell({
               aria-hidden={!isCommittedActive}
               style={{
                 ...paneStyle(painted, isCommittedActive),
-                visibility: onPrimarySurface ? undefined : 'hidden',
+                ...(held ? { opacity: 0, zIndex: -1, pointerEvents: 'none' as const } : null),
               }}
             >
               {node}
@@ -528,7 +587,9 @@ export function PrimaryTabShell({
         </div>
       )}
 
-      {activeTab === null ? children : null}
+      {activeTab === null ? (
+        <div style={{ position: 'relative', zIndex: 4, minHeight: '100%' }}>{children}</div>
+      ) : null}
     </PrimaryTabContext.Provider>
   )
 }

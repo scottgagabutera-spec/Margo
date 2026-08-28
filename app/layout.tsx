@@ -195,16 +195,22 @@ export default function RootLayout({
         </SupabaseAuthProvider>
         <Toaster
           theme="dark"
-          position="bottom-center"
-          offset={0}
+          position="top-center"
+          offset={80}
+          visibleToasts={1}
+          duration={2400}
           toastOptions={{
             style: {
               fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+              fontSize: '0.7rem',
+              fontWeight: 500,
+              letterSpacing: '0.2px',
               background: 'var(--surface)',
-              color: 'var(--text)',
-              border: '1px solid var(--gold-border)',
-              borderRadius: '12px',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: '50px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+              padding: '10px 16px',
             },
             classNames: {
               error: 'margo-toast-error',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PlayPauseIcon } from '@/components/play-pause-icon'
@@ -30,6 +30,8 @@ import {
 import { useAudioEngine } from '@/hooks/useAudioEngine'
 import { useWarmAudioUrlOnVisible } from '@/hooks/useWarmAudioUrl'
 import { useAuthGate } from '@/components/supabase-auth-provider'
+import { persistActivePrimaryScroll } from '@/components/primary-tab-shell'
+import { useDismissibleLayer } from '@/hooks/useDismissibleLayer'
 import { UsernameTag } from '@/components/username-tag'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { RelativeTime } from '@/components/relative-time'
@@ -532,39 +534,22 @@ export function PostCard({
   const [quoteOpen, setQuoteOpen] = useState(false)
   const [quoteText, setQuoteText] = useState('')
   const replayWrapRef = useRef<HTMLDivElement>(null)
+  const moreWrapRef = useRef<HTMLDivElement>(null)
   const [rowExpanded, setRowExpanded] = useState(false)
   const [avatarBroken, setAvatarBroken] = useState(false)
   useEffect(() => { setAvatarBroken(false) }, [post.authorAvatarUrl, post.authorUid])
-
-  useEffect(() => {
-    if (!replayMenuOpen) return
-    const close = () => {
-      setReplayMenuOpen(false)
-      setQuoteOpen(false)
-      setQuoteText('')
-    }
-    const onPointer = (e: MouseEvent | TouchEvent) => {
-      const node = replayWrapRef.current
-      if (!node) return
-      const target = e.target
-      if (target instanceof Node && node.contains(target)) return
-      close()
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close()
-    }
-    const onScroll = () => close()
-    document.addEventListener('mousedown', onPointer)
-    document.addEventListener('touchstart', onPointer, { passive: true })
-    document.addEventListener('keydown', onKey)
-    window.addEventListener('scroll', onScroll, true)
-    return () => {
-      document.removeEventListener('mousedown', onPointer)
-      document.removeEventListener('touchstart', onPointer)
-      document.removeEventListener('keydown', onKey)
-      window.removeEventListener('scroll', onScroll, true)
-    }
-  }, [replayMenuOpen])
+  const closeReplayMenu = useCallback(() => {
+    setReplayMenuOpen(false)
+    setQuoteOpen(false)
+    setQuoteText('')
+  }, [])
+  const closeMoreMenu = useCallback(() => {
+    setMenuOpen(false)
+    setReportOpen(false)
+    setReportMsg(null)
+  }, [])
+  useDismissibleLayer(replayMenuOpen, closeReplayMenu, replayWrapRef)
+  useDismissibleLayer(menuOpen, closeMoreMenu, moreWrapRef)
   // row collapses to a dense one-liner; expand renders the compact card in place
   const isRow = variant === 'row'
   const isCompact = variant === 'compact' || (isRow && rowExpanded)
@@ -661,6 +646,7 @@ export function PostCard({
     if (disableCardNav || isRow) return
     const t = e.target as HTMLElement | null
     if (t?.closest?.('a, button, textarea, input, [data-no-card-nav]')) return
+    persistActivePrimaryScroll()
     router.push('/post/' + post.id)
   }
 
@@ -670,6 +656,9 @@ export function PostCard({
       ref={cardRef}
       className={highlightShared ? 'margo-feed-post--shared' : undefined}
       onClick={goToPost}
+      onPointerDown={() => {
+        if (!disableCardNav && !isRow) persistActivePrimaryScroll()
+      }}
       style={{
         background: isTier1 ? 'rgba(232,197,71,0.04)' : 'rgba(255,255,255,0.02)',
         border: `1px solid ${isTier1 ? 'rgba(232,197,71,0.22)' : 'rgba(255,255,255,0.06)'}`,
@@ -800,8 +789,8 @@ export function PostCard({
           {variant === 'feed' && (isNew || isTrending || isTop) && (
             <div style={{ display: 'flex', gap: '6px' }}>
               {isNew && <EarnedTag label="New" onClick={() => onSelectRank?.('NEW')} />}
-              {isTrending && !isNew && <EarnedTag label="Trending" onClick={() => onSelectRank?.('TRENDING')} />}
-              {isTop && !isNew && !isTrending && <EarnedTag label="Top" onClick={() => onSelectRank?.('TOP')} />}
+              {isTop && !isNew && <EarnedTag label="Top" onClick={() => onSelectRank?.('TOP')} />}
+              {isTrending && !isNew && !isTop && <EarnedTag label="Trending" onClick={() => onSelectRank?.('TRENDING')} />}
             </div>
           )}
           {isOwner && (
@@ -819,7 +808,7 @@ export function PostCard({
               <EditIcon size={14} color="currentColor" />
             </button>
           )}
-          <div style={{ position: 'relative' }}>
+          <div ref={moreWrapRef} style={{ position: 'relative' }}>
             <button
               type="button"
               aria-label="More actions"
@@ -855,7 +844,7 @@ export function PostCard({
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
                       padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
-                      color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                      color: 'var(--text)', fontFamily: UI_FONT, fontSize: '0.7rem',
                       cursor: 'pointer', borderRadius: '8px',
                     }}
                   >Report</button>
@@ -868,7 +857,7 @@ export function PostCard({
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
                       padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
-                      color: '#ff6b6b', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                      color: 'var(--text-secondary)', fontFamily: UI_FONT, fontSize: '0.7rem',
                       cursor: 'pointer', borderRadius: '8px',
                     }}
                   >Delete</button>
@@ -923,7 +912,7 @@ export function PostCard({
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
                       padding: '10px 12px', minHeight: '44px', background: 'none', border: 'none',
-                      color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                      color: 'var(--text)', fontFamily: UI_FONT, fontSize: '0.7rem',
                       cursor: reportBusy ? 'not-allowed' : 'pointer', borderRadius: '8px',
                     }}
                   >{reason}</button>
@@ -987,10 +976,12 @@ export function PostCard({
             })
             if (s.artworkUrl) q.set('artwork', s.artworkUrl)
             if (s.audioUrl) q.set('audioUrl', s.audioUrl)
+            persistActivePrimaryScroll()
             router.push(`/lyric-back?${q.toString()}`)
           }}
           onOpenSuggestedSearch={() => {
             if (!requireAuth()) return
+            persistActivePrimaryScroll()
             router.push(`/lyric-back?postId=${encodeURIComponent(post.id)}&catalogOnly=1`)
           }}
         />

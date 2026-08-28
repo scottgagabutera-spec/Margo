@@ -19,6 +19,7 @@ import { ComposeLyricCard, composeLyricTextStyle } from '@/components/compose-ly
 import { SongMeta } from '@/components/song-meta'
 import { VibeTag } from '@/components/vibe-tag'
 import { useRouter } from 'next/navigation'
+import { toastMomentPosted, toastMomentPrivate, toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
 import { resolveMomentLines } from '@/lib/post-lines'
 import { isNotificationAllowed } from '@/lib/notification-prefs'
 import { trackEvent } from '@/lib/analytics/track'
@@ -518,8 +519,10 @@ function LyricBackContent() {
         vibe: selectedVibe,
       })
       setCompletedParentId(parentId)
-      setCompletionMode(replyStatus === 'private' ? 'private' : 'public')
       trackEvent('lyric_back_sent', { private: replyStatus === 'private' })
+      if (replyStatus === 'private') toastMomentPrivate()
+      else toastMomentSent()
+      router.push(parentId ? `/post/${parentId}` : '/feed')
 
       const parentAuthorId = respondingTo?.authorUid
       if (parentId && parentAuthorId && parentAuthorId !== authorId && !isPrivate) {
@@ -546,6 +549,7 @@ function LyricBackContent() {
   }, [
     requireAuth, artistName, songName, lyric, selectedVibe, selectedSong, user,
     respondingToId, respondingTo?.authorUid, posting, linkedSongId, snippetStart, snippetEnd,
+    router,
   ])
 
   /* ─── resonate ───────────────────────────────────────────── */

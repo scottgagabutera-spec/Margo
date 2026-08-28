@@ -7,7 +7,7 @@ import { useIdentity } from '@/hooks/useIdentity'
 import { useArtistApplication } from '@/hooks/useArtistApplication'
 import { signOutBrowser } from '@/lib/supabase/client'
 import { useAuthGate } from '@/components/supabase-auth-provider'
-import { HubIconButton, LibraryNavLink } from '@/components/hub-menu'
+import { HubIconButton, HomeNavLink, LibraryNavLink } from '@/components/hub-menu'
 import { usePrimaryTab, usePrimaryTabLinkProps } from '@/components/primary-tab-shell'
 import { hidesAppNav, isMessageThreadPath } from '@/lib/chrome-mode'
 import { PendingNavLink } from '@/components/pending-nav-link'
@@ -171,6 +171,7 @@ export function MargoNav() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {/* Top-bar Library for signed-in; Hub is bottom-tab on mobile, icon in desktop-nav. */}
+          <HomeNavLink />
           {isSignedIn && <LibraryNavLink />}
 
           <div style={{ display: 'none' }} className="margo-desktop-nav">

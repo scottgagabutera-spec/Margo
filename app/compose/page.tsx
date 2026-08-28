@@ -5,13 +5,13 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { ArrowLeftIcon, CardIcon, CloseIcon, MusicNoteIcon, PenLineIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
-import { usePrimaryTab } from '@/components/primary-tab-shell'
-import { MomentCompletion } from '@/components/moment-completion'
+import { usePrimaryTab, clearPrimaryTabScroll } from '@/components/primary-tab-shell'
+import { toastMomentPosted, toastMomentPrivate, toastMomentSent } from '@/lib/moment-export/moment-export-toasts'
 import { ComposeSendTo } from '@/components/compose-send-to'
 import { ComposeReadyPreview } from '@/components/compose-ready-preview'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
@@ -322,9 +322,10 @@ function buildDraftSnapshot(state: {
 function ComposeInner() {
   const { user, identity, loading: identityLoading, updateDisplayName } = useIdentity()
   const { requireAuth, authGateOpen } = useAuthGate()
-  const { isTabActive } = usePrimaryTab()
+  const { isTabActive, navigatePrimaryTab } = usePrimaryTab()
   const composeLive = isTabActive('compose')
   const searchParams = useSearchParams()
+  const router = useRouter()
   const composeStartedRef = useRef(false)
   const prefillHandledRef = useRef(false)
   const draftRestoredRef = useRef(false)
@@ -915,6 +916,16 @@ function ComposeInner() {
     setStartOverConfirm(false)
   }
 
+  const finishToFeed = (kind: 'public' | 'private' | 'send', sentName?: string | null) => {
+    resetComposeViewport()
+    resetCompose()
+    if (kind === 'public') toastMomentPosted()
+    else if (kind === 'private') toastMomentPrivate()
+    else toastMomentSent(sentName)
+    clearPrimaryTabScroll('feed')
+    if (!navigatePrimaryTab('/feed')) router.push('/feed')
+  }
+
   const persistMoment = useCallback(async (status: 'active' | 'private') => {
     if (!identity || !user) {
       setPostError('Still setting things up — try again in a moment.')
@@ -979,10 +990,7 @@ function ComposeInner() {
           if (!postId) { setPosting(false); return }
           setPosting(false)
           trackEvent('moment_posted_public')
-          setPhase('success')
-          setCompletionMode('public')
-          clearMomentDraft()
-          resetComposeViewport()
+          finishToFeed('public')
         } catch (e) {
           console.error('Failed to post to feed:', e)
           setPostError('Something went wrong. Please try again.')
@@ -1000,10 +1008,7 @@ function ComposeInner() {
           if (!postId) { setPosting(false); return }
           setPosting(false)
           trackEvent('moment_saved_private')
-          setPhase('success')
-          setCompletionMode('private')
-          clearMomentDraft()
-          resetComposeViewport()
+          finishToFeed('private')
         } catch (e) {
           console.error('Failed to save private moment:', e)
           setPostError('Something went wrong. Please try again.')
@@ -1011,7 +1016,7 @@ function ComposeInner() {
         }
       })()
     }
-  }, [persistMoment, resetComposeViewport])
+  }, [persistMoment, finishToFeed])
 
   const gateAction = useCallback((action: ComposePendingAction, runner: () => void) => {
     if (user) {
@@ -1144,15 +1149,9 @@ function ComposeInner() {
 
   const handleSendComplete = useCallback((name: string) => {
     trackEvent('moment_sent_dm')
-    setSentToName(name)
     setShowSendTo(false)
-    setPhase('success')
-    setCompletionMode('send')
-    setPendingActionState(null)
-    setComposePendingAction(null)
-    clearMomentDraft()
-    resetComposeViewport()
-  }, [resetComposeViewport])
+    finishToFeed('send', name)
+  }, [finishToFeed])
 
   const primaryLine = useMemo(() => {
     const draft = buildCurrentDraft()
@@ -1166,19 +1165,6 @@ function ComposeInner() {
     return { lyric: '', song: '', artist: '' }
   }, [buildCurrentDraft, committedLines])
 
-  if (completionMode) {
-    return (
-      <MomentCompletion
-        mode={completionMode}
-        moment={exportMoment}
-        onDone={resetCompose}
-        sentToName={sentToName}
-      />
-    )
-  }
-
-  // Show the name banner on step 4 until the person has customized their
-  // displayName at least once, or dismissed it for this compose session.
   const showNameBanner = phase === 'moment' && !!identity && identity.displayName === identity.username && !bannerDismissed
   const buttonsBlocked = showNameBanner && editingName
   const showStep1Resume = phase === 'find' && !!selectedSong && (lyric.trim().length > 0 || linePickComplete || committedLines.length > 0)

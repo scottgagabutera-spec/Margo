@@ -1,21 +1,37 @@
 import { toast } from 'sonner'
 import type { FileDownloadResult } from '@/lib/moment-export/trigger-file-download'
 
+function quietToast(message: string) {
+  toast(message, { duration: 2400 })
+}
+
+export function toastMomentPosted(): void {
+  quietToast('Posted')
+}
+
+export function toastMomentPrivate(): void {
+  quietToast('Saved')
+}
+
+export function toastMomentSent(name?: string | null): void {
+  quietToast(name ? `Sent to ${name}` : 'Sent')
+}
+
 export function toastMomentImageSaved(): void {
-  toast.success('Moment saved.')
+  quietToast('Saved')
 }
 
 export function toastMomentVideoSaved(result: FileDownloadResult): void {
   if (result === 'shared') {
-    toast.success('Tap Save to Files to keep your video.')
+    quietToast('Save from the share sheet')
     return
   }
   if (result === 'opened') {
-    toast.success('Video opened — save it from your browser.')
+    quietToast('Opened — save from the browser')
     return
   }
   if (result === 'downloaded') {
-    toast.success('Video saved.')
+    quietToast('Saved')
     return
   }
   toast.error("Couldn't save your video. Try again.")
@@ -23,26 +39,26 @@ export function toastMomentVideoSaved(result: FileDownloadResult): void {
 
 export function toastMomentGifSaved(result: FileDownloadResult): void {
   if (result === 'shared') {
-    toast.success('Tap Save to Files to keep your GIF.')
+    quietToast('Save from the share sheet')
     return
   }
   if (result === 'opened') {
-    toast.success('GIF opened — save it from your browser.')
+    quietToast('Opened — save from the browser')
     return
   }
   if (result === 'downloaded') {
-    toast.success('GIF saved.')
+    quietToast('Saved')
     return
   }
   toast.error("Couldn't save your GIF. Try again.")
 }
 
 export function toastMomentShared(): void {
-  toast.success('Shared.')
+  quietToast('Shared')
 }
 
 export function toastMomentLinkCopied(): void {
-  toast.success('Link copied.')
+  quietToast('Copied')
 }
 
 export function toastMomentExportFailed(kind: 'image' | 'video' | 'gif', detail?: string): void {

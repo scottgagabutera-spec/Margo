@@ -17,7 +17,7 @@ import { createPortal } from 'react-dom'
 import { useAuthGate } from '@/components/supabase-auth-provider'
 import { useHubSurfaces } from '@/hooks/useHubSurfaces'
 import { readActiveScrollTop } from '@/components/primary-tab-shell'
-import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon } from '@/components/icons'
+import { BellIcon, HubGridIcon, LibraryIcon, MessagesIcon, HomeIcon } from '@/components/icons'
 import { LoadingRing } from '@/components/loading-ring'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { UI_FONT } from '@/lib/fonts'
@@ -526,6 +526,34 @@ export function HubTabButton({ style, labelStyle }: { style: CSSProperties; labe
       </span>
       <span style={labelStyle}>Hub</span>
     </button>
+  )
+}
+
+export function HomeNavLink() {
+  const pathname = usePathname()
+  const active = pathname === '/'
+  return (
+    <PendingNavLink
+      href="/"
+      aria-label="Home"
+      ringSize={18}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: TOUCH,
+        height: TOUCH,
+        position: 'relative',
+        boxSizing: 'border-box',
+        flexShrink: 0,
+        borderRadius: '8px',
+      }}
+    >
+      <HomeIcon
+        size={20}
+        color={active ? 'var(--gold)' : 'rgba(255,255,255,0.5)'}
+      />
+    </PendingNavLink>
   )
 }
 
