@@ -82,7 +82,7 @@ export interface BuildMomentShareActionItemsInput {
 
 /**
  * Shared Share ▾ menu items for Stage + Card modal.
- * Pre-publish: image only. Post-publish: image + link + copy.
+ * Export file shares only (image / video / GIF) — no link rows for now.
  */
 export function buildMomentShareActionItems({
   canShareImage,
