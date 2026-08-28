@@ -106,7 +106,7 @@ export function ComposeReadyPreview({
   if (!draft) return null
 
   return (
-    <div style={{ marginBottom: '32px' }}>
+    <div style={{ marginBottom: '16px' }}>
       {isMulti && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <button
