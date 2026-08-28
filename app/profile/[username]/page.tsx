@@ -23,6 +23,7 @@ import { UI_FONT, LYRIC_FONT } from '@/lib/fonts'
 import { ProfileArtistLinks } from '@/components/profile-artist-links'
 import { ProfileImageLightbox } from '@/components/profile-image-lightbox'
 import { peekProfileCache, warmProfile, type WarmProfileRow } from '@/lib/profile-warm'
+import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 
 const supabase = createClient()
 
@@ -704,7 +705,11 @@ export default function ProfilePage() {
                       const cardData: SongCardData = {
                         id: song.id,
                         title: song.title,
-                        artist: song.artist_display_name,
+                        artist: resolvePublicArtistCredit({
+                          artistDisplayName: song.artist_display_name,
+                          ownerDisplayName: profile.displayName,
+                          ownerUsername: profile.username,
+                        }),
                         artwork: song.artwork_url,
                         status: song.status,
                         isAiGenerated: song.is_ai_generated ?? false,

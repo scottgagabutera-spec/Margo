@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { stripHandlePrefix } from '@/lib/artist-identity'
 
 export interface ProfileSearchHit {
   id: string
@@ -10,7 +11,7 @@ export interface ProfileSearchHit {
 }
 
 function sanitizeIlike(query: string): string {
-  return (query || '').replace(/[%_"'\\]/g, '').trim()
+  return stripHandlePrefix((query || '').replace(/[%_"'\\]/g, ''))
 }
 
 /**

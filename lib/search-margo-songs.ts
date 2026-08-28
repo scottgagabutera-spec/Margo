@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { embedProfile, resolvePublicArtistCredit, stripHandlePrefix } from '@/lib/artist-identity'
 
 export interface MargoSongHit {
   id: string
@@ -10,7 +11,8 @@ export interface MargoSongHit {
 
 function sanitizeIlike(query: string): string {
   // Strip ILIKE wildcards / quotes so user input can't broaden or break the filter.
-  return (query || '').replace(/[%_"'\\]/g, '').trim()
+  // "@trymargo" must match username trymargo.
+  return stripHandlePrefix((query || '').replace(/[%_"'\\]/g, ''))
 }
 
 /**
@@ -59,11 +61,17 @@ function rowToHit(row: {
   artist_display_name: string
   artwork_url: string | null
   audio_url: string | null
+  profiles?: { username?: string | null; display_name?: string | null } | { username?: string | null; display_name?: string | null }[] | null
 }): MargoSongHit {
+  const profile = embedProfile(row.profiles)
   return {
     id: row.id,
     title: row.title,
-    artist: row.artist_display_name,
+    artist: resolvePublicArtistCredit({
+      artistDisplayName: row.artist_display_name,
+      ownerDisplayName: profile.display_name,
+      ownerUsername: profile.username,
+    }),
     artwork: row.artwork_url || '',
     audioUrl: row.audio_url || null,
   }

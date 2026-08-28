@@ -39,6 +39,8 @@ export type PrimaryTabId = 'feed' | 'discover' | 'compose' | 'you'
 export type PrimaryTabPeekDir = 'prev' | 'next'
 
 const SCROLL_STORAGE_KEY = 'margo-primary-tab-scroll'
+const FEED_RESUME_KEY = 'margo-feed-resume'
+const FEED_RESUME_MAX_MS = 12 * 60 * 60 * 1000
 
 export function resolvePrimaryTabId(
   pathname: string | null,
@@ -81,14 +83,40 @@ export function scrollActiveTo(top: number, behavior: ScrollBehavior = 'auto') {
   }
 }
 
+function readFeedResumeY(): number | undefined {
+  try {
+    const raw = localStorage.getItem(FEED_RESUME_KEY)
+    if (!raw) return undefined
+    const parsed = JSON.parse(raw) as { y?: number; at?: number }
+    if (typeof parsed.y !== 'number' || typeof parsed.at !== 'number') return undefined
+    if (Date.now() - parsed.at > FEED_RESUME_MAX_MS) return undefined
+    return parsed.y
+  } catch {
+    return undefined
+  }
+}
+
+function writeFeedResumeY(y: number) {
+  try {
+    localStorage.setItem(FEED_RESUME_KEY, JSON.stringify({ y, at: Date.now() }))
+  } catch {
+    /* private mode */
+  }
+}
+
 function readStoredScrollMap(): Partial<Record<PrimaryTabId, number>> {
+  let map: Partial<Record<PrimaryTabId, number>> = {}
   try {
     const raw = sessionStorage.getItem(SCROLL_STORAGE_KEY)
-    if (!raw) return {}
-    return JSON.parse(raw) as Partial<Record<PrimaryTabId, number>>
+    if (raw) map = JSON.parse(raw) as Partial<Record<PrimaryTabId, number>>
   } catch {
-    return {}
+    map = {}
   }
+  if (map.feed == null) {
+    const y = readFeedResumeY()
+    if (y != null) map.feed = y
+  }
+  return map
 }
 
 function writeStoredScrollMap(map: Partial<Record<PrimaryTabId, number>>) {
@@ -97,6 +125,7 @@ function writeStoredScrollMap(map: Partial<Record<PrimaryTabId, number>>) {
   } catch {
     /* private mode */
   }
+  if (typeof map.feed === 'number') writeFeedResumeY(map.feed)
 }
 
 function persistScroll(
@@ -108,6 +137,19 @@ function persistScroll(
   const map = readStoredScrollMap()
   map[id] = y
   writeStoredScrollMap(map)
+}
+
+/** Re-apply stored pane scroll after list content remounts (skeleton → posts). */
+export function restoreActivePrimaryScroll() {
+  const el = getActivePrimaryScrollEl()
+  if (!el) return
+  const id = el.getAttribute('data-margo-primary-tab') as PrimaryTabId | null
+  if (!id) return
+  const target = readStoredScrollMap()[id]
+  if (target == null || target < 1) return
+  if (Math.abs(el.scrollTop - target) > 1) {
+    el.scrollTop = target
+  }
 }
 
 function isModifiedClick(event: MouseEvent<HTMLAnchorElement>): boolean {
@@ -286,6 +328,12 @@ export function PrimaryTabShell({
       setCacheVersion(v => v + 1)
     }
     if (id === activeTabRef.current && routeTab === id && !href.includes('?')) {
+      const y = readActiveScrollTop()
+      if (y > 24) {
+        scrollActiveTo(0, 'smooth')
+      } else if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('margo:primary-tab-reselect', { detail: { id } }))
+      }
       return true
     }
     endPeek()
@@ -393,6 +441,26 @@ export function PrimaryTabShell({
     onScroll()
     return () => el.removeEventListener('scroll', onScroll)
   }, [activeTab, pathname])
+
+  useEffect(() => {
+    const persistVisible = () => {
+      for (const [id, pane] of paneElsRef.current) {
+        if (!pane) continue
+        const cs = getComputedStyle(pane)
+        if (cs.display === 'none' || cs.visibility === 'hidden') continue
+        persistScroll(frozenScrollRef.current, id, pane.scrollTop)
+      }
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') persistVisible()
+    }
+    window.addEventListener('pagehide', persistVisible)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('pagehide', persistVisible)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
 
   const ctx = useMemo<PrimaryTabContextValue>(
     () => ({

@@ -8,6 +8,7 @@ import { SongCatalogCard, type SongCardData } from '@/components/song-catalog-ca
 import { SongPreviewSheet, type SongPreviewSeed } from '@/components/song-preview-sheet'
 import { ArtistBadge, type ArtistStatus } from '@/components/artist-badge'
 import { BackButton } from '@/components/back-button'
+import { resolvePublicArtistCredit } from '@/lib/artist-identity'
 
 const supabase = createClient()
 
@@ -160,7 +161,11 @@ export default function ArtistDiscographyPage() {
           song={{
             id: song.id,
             title: song.title,
-            artist: song.artist_display_name,
+            artist: resolvePublicArtistCredit({
+              artistDisplayName: song.artist_display_name,
+              ownerDisplayName: artist?.displayName,
+              ownerUsername: artist?.username,
+            }),
             artwork: song.artwork_url,
             status: song.status,
             isAiGenerated: song.is_ai_generated ?? false,

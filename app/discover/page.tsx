@@ -91,10 +91,11 @@ function EarnedTag({ label }: { label: 'Trending' | 'Top' }) {
   return (
     <span style={{
       position: 'absolute', top: '8px', left: '8px',
-      fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.55rem', fontWeight: 700,
-      letterSpacing: '1px', textTransform: 'uppercase', padding: '3px 8px',
-      borderRadius: '50px', background: 'rgba(7,6,10,0.75)',
-      border: '1px solid var(--gold-border)', color: 'var(--gold)',
+      fontFamily: UI_FONT, fontSize: '0.6rem', fontWeight: 400,
+      letterSpacing: 0, textTransform: 'none', padding: 0,
+      background: 'none',
+      border: 'none', color: 'var(--text-muted)',
+      textShadow: '0 1px 8px var(--bg)',
       zIndex: 2,
     }}>{label}</span>
   )

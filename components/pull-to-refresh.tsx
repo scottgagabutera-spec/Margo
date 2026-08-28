@@ -187,11 +187,11 @@ export function PullToRefresh({
         {showUpdated && !refreshing && (
           <span
             style={{
-              fontFamily: 'var(--font-lora), serif',
-              fontSize: '0.55rem',
-              fontWeight: 700,
-              letterSpacing: '1.2px',
-              textTransform: 'uppercase',
+          fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+          fontSize: '0.6rem',
+          fontWeight: 600,
+          letterSpacing: '0.8px',
+          textTransform: 'uppercase',
               color: 'var(--gold)',
               animation: 'fadeInUp 200ms var(--ease-out) both',
             }}
@@ -206,7 +206,15 @@ export function PullToRefresh({
   return (
     <>
       {mounted ? createPortal(indicator, document.body) : null}
-      {children}
+      <div
+        style={{
+          transform: pull > 0 || refreshing ? `translateY(${refreshing ? THRESHOLD : pull}px)` : undefined,
+          transition: refreshing || pull === 0 ? 'transform 260ms var(--ease-out)' : 'none',
+          willChange: pull > 0 || refreshing ? 'transform' : undefined,
+        }}
+      >
+        {children}
+      </div>
     </>
   )
 }

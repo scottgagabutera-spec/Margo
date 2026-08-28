@@ -22,6 +22,7 @@ import { LoadingRing } from '@/components/loading-ring'
 import { PendingNavLink } from '@/components/pending-nav-link'
 import { UI_FONT } from '@/lib/fonts'
 import type { HubSurface, HubSurfaceId } from '@/lib/hub/surfaces'
+import { MargoSymbol } from '@/components/margo-symbol'
 
 /** UI chrome — MARGO_BRAND §3 Geist Sans */
 const font = UI_FONT
@@ -42,6 +43,7 @@ function TileIcon({ kind }: { kind: HubSurfaceId }) {
   const color = 'var(--gold)'
   if (kind === 'library') return <LibraryIcon size={18} color={color} />
   if (kind === 'messages') return <MessagesIcon size={18} color={color} />
+  if (kind === 'stage') return <MargoSymbol size={18} />
   return <BellIcon size={18} color={color} />
 }
 
@@ -76,9 +78,9 @@ function HubTile({
   locked: boolean
   onBeginNavigate: (href: string) => boolean
 }) {
-  const { href, id, label, unread, wide } = surface
+  const { href, id, label, unread, wide, public: isPublic } = surface
   const badge = signedIn ? badgeLabel(unread) : ''
-  const dest = signedIn ? href : '/signin'
+  const dest = signedIn || isPublic ? href : '/signin'
   return (
     <Link
       href={dest}
@@ -103,7 +105,7 @@ function HubTile({
         minHeight: '112px',
         boxSizing: 'border-box',
         gridColumn: wide ? '1 / -1' : undefined,
-        opacity: signedIn ? (locked ? 0.45 : 1) : 0.85,
+        opacity: signedIn || isPublic ? (locked ? 0.45 : 1) : 0.85,
         pointerEvents: locked ? 'none' : 'auto',
         transition: 'background 80ms var(--ease-out), border-color 80ms var(--ease-out)',
       }}
@@ -219,7 +221,7 @@ function HubTiles({
               lineHeight: 1.4,
             }}
           >
-            Sign in to see your Messages, Music Library, and Notifications
+            Sign in to see your Messages, Music Library, and Notifications. The Stage is open without an account.
           </p>
           <Link
             href="/signin"
@@ -248,7 +250,7 @@ function HubTiles({
         </div>
       )}
       {surfaces.map((surface) => {
-        const dest = signedIn ? surface.href : '/signin'
+        const dest = signedIn || surface.public ? surface.href : '/signin'
         return (
           <HubTile
             key={surface.id}

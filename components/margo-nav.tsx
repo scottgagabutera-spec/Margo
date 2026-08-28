@@ -106,7 +106,7 @@ export function MargoNav() {
     setAvatarMenuOpen(false)
     await signOutBrowser()
     await rehydrate()
-    router.push('/feed')
+    router.push('/')
   }
 
   useEffect(() => { setAvatarMenuOpen(false) }, [pathname])

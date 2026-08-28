@@ -120,14 +120,22 @@ export function usePosts(options: UsePostsOptions = {}) {
   const authorUids = useMemo(() => posts.map(p => p.authorUid), [posts])
   const { ids: visibleAuthorIds, ready: visibilityReady } = useVisibleAuthorIds(authorUids)
 
+  const lastVisibleRef = useRef<Post[]>([])
+
   const visiblePosts = useMemo(() => {
-    if (!visibilityReady) return []
-    return posts.filter(p => !p.authorUid || visibleAuthorIds.has(p.authorUid))
+    if (!visibilityReady) {
+      return lastVisibleRef.current.length > 0 ? lastVisibleRef.current : []
+    }
+    const next = posts.filter(p => !p.authorUid || visibleAuthorIds.has(p.authorUid))
+    lastVisibleRef.current = next
+    return next
   }, [posts, visibleAuthorIds, visibilityReady])
+
+  const waitingOnPrivacy = posts.length > 0 && !visibilityReady && lastVisibleRef.current.length === 0
 
   return {
     posts: visiblePosts,
-    loading: loading || (posts.length > 0 && !visibilityReady),
+    loading: loading || waitingOnPrivacy,
     reload: () => load(true),
   }
 }

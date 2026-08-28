@@ -486,10 +486,11 @@ function EarnedTag({ label, onClick }: { label: 'New' | 'Trending' | 'Top'; onCl
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick() }}
       style={{
-        fontFamily: 'var(--font-geist-sans), system-ui, sans-serif', fontSize: '0.55rem', fontWeight: 700,
-        letterSpacing: '1.2px', textTransform: 'uppercase', padding: '3px 9px',
-        borderRadius: '50px', background: 'rgba(232,197,71,0.1)',
-        border: '1px solid var(--gold-border)', color: 'var(--gold)',
+        fontFamily: UI_FONT, fontSize: '0.6rem', fontWeight: 400,
+        letterSpacing: 0, textTransform: 'none', padding: '0 2px',
+        minHeight: 'var(--margo-touch-min)',
+        borderRadius: 0, background: 'none',
+        border: 'none', color: 'var(--text-muted)',
         cursor: 'pointer', flexShrink: 0,
       }}
     >{label}</button>
@@ -530,9 +531,40 @@ export function PostCard({
   const [replayMenuOpen, setReplayMenuOpen] = useState(false)
   const [quoteOpen, setQuoteOpen] = useState(false)
   const [quoteText, setQuoteText] = useState('')
+  const replayWrapRef = useRef<HTMLDivElement>(null)
   const [rowExpanded, setRowExpanded] = useState(false)
   const [avatarBroken, setAvatarBroken] = useState(false)
   useEffect(() => { setAvatarBroken(false) }, [post.authorAvatarUrl, post.authorUid])
+
+  useEffect(() => {
+    if (!replayMenuOpen) return
+    const close = () => {
+      setReplayMenuOpen(false)
+      setQuoteOpen(false)
+      setQuoteText('')
+    }
+    const onPointer = (e: MouseEvent | TouchEvent) => {
+      const node = replayWrapRef.current
+      if (!node) return
+      const target = e.target
+      if (target instanceof Node && node.contains(target)) return
+      close()
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close()
+    }
+    const onScroll = () => close()
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('touchstart', onPointer, { passive: true })
+    document.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('touchstart', onPointer)
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', onScroll, true)
+    }
+  }, [replayMenuOpen])
   // row collapses to a dense one-liner; expand renders the compact card in place
   const isRow = variant === 'row'
   const isCompact = variant === 'compact' || (isRow && rowExpanded)
@@ -1034,7 +1066,7 @@ export function PostCard({
         </button>
 
         {onReplay ? (
-        <div style={{ position: 'relative', flex: '1 1 0', minWidth: 0 }}>
+        <div ref={replayWrapRef} style={{ position: 'relative', flex: '1 1 0', minWidth: 0 }}>
           <button
             type="button"
             className="margo-feed-action"
@@ -1079,8 +1111,8 @@ export function PostCard({
                 }}
                 style={{
                   display: 'block', width: '100%', textAlign: 'left',
-                  padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
-                  color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                  padding: '10px 12px', minHeight: '44px', background: 'none', border: 'none',
+                  color: 'var(--text)', fontFamily: UI_FONT, fontSize: '0.7rem',
                   cursor: 'pointer', borderRadius: '8px',
                 }}
               >{replayed ? 'Undo Replay' : 'Replay'}</button>
@@ -1093,8 +1125,8 @@ export function PostCard({
                 }}
                 style={{
                   display: 'block', width: '100%', textAlign: 'left',
-                  padding: '12px 14px', minHeight: '44px', background: 'none', border: 'none',
-                  color: 'var(--text)', fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                  padding: '10px 12px', minHeight: '44px', background: 'none', border: 'none',
+                  color: 'var(--text)', fontFamily: UI_FONT, fontSize: '0.7rem',
                   cursor: 'pointer', borderRadius: '8px',
                 }}
               >Add your take</button>
@@ -1116,7 +1148,7 @@ export function PostCard({
                 rows={3}
                 style={{
                   width: '100%', boxSizing: 'border-box', resize: 'vertical',
-                  fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem',
+                  fontFamily: LYRIC_FONT, fontSize: '0.82rem',
                   color: 'var(--text)', background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
                   padding: '10px', outline: 'none', marginBottom: '8px',
@@ -1137,8 +1169,8 @@ export function PostCard({
                   style={{
                     flex: 1, minHeight: '44px', padding: '0 12px',
                     background: 'var(--gold)', border: 'none', borderRadius: '8px',
-                    color: 'var(--bg)', fontFamily: 'var(--font-lora), serif',
-                    fontSize: '0.75rem', fontWeight: 700, letterSpacing: '1px',
+                    color: 'var(--bg)', fontFamily: UI_FONT,
+                    fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px',
                     textTransform: 'uppercase', cursor: 'pointer',
                   }}
                 >Submit</button>
@@ -1152,8 +1184,8 @@ export function PostCard({
                   style={{
                     flex: 1, minHeight: '44px', padding: '0 12px',
                     background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px',
-                    color: 'var(--text-muted)', fontFamily: 'var(--font-lora), serif',
-                    fontSize: '0.75rem', cursor: 'pointer',
+                    color: 'var(--text-muted)', fontFamily: UI_FONT,
+                    fontSize: '0.65rem', cursor: 'pointer',
                   }}
                 >Cancel</button>
               </div>
