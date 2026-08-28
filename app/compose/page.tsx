@@ -140,9 +140,11 @@ const momentSplitSecondaryStyle: React.CSSProperties = {
   minWidth: 0,
   whiteSpace: 'nowrap',
   letterSpacing: '0.7px',
+  background: 'var(--surface-2)',
 }
 const momentSplitPrivateStyle: React.CSSProperties = {
   ...momentSplitSecondaryStyle,
+  background: 'transparent',
   border: '1px solid var(--border)',
   color: 'var(--text-muted)',
 }
