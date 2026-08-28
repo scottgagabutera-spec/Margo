@@ -57,3 +57,20 @@ export function truncateAudioBuffer(buffer: AudioBuffer, maxDurationSec: number)
   }
   return out
 }
+
+export function prependSilence(buffer: AudioBuffer, durationSec: number): AudioBuffer {
+  const sampleRate = buffer.sampleRate
+  const padSamples = Math.max(0, Math.round(durationSec * sampleRate))
+  if (padSamples === 0) return buffer
+  const out = new AudioBuffer({
+    numberOfChannels: buffer.numberOfChannels,
+    length: padSamples + buffer.length,
+    sampleRate,
+  })
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const padded = new Float32Array(out.length)
+    padded.set(buffer.getChannelData(ch), padSamples)
+    out.copyToChannel(padded, ch)
+  }
+  return out
+}

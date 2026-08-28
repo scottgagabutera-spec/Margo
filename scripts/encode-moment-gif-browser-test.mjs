@@ -157,7 +157,7 @@ async function main() {
     r.validGif = r.magic === 'GIF' && r.mimeType === 'image/gif'
     r.widthOk = r.width === 720
     r.fpsOk = r.fps === 12
-    r.holdOk = r.durationSec === (r.id === 'dur-10s' ? 11 : r.id === 'dur-18s' ? 19 : 31)
+    r.holdOk = r.durationSec === (r.id === 'dur-10s' ? 12 : r.id === 'dur-18s' ? 20 : 32)
     if (!r.validGif || !r.widthOk || !r.fpsOk) allOk = false
     console.log(
       r.id.padEnd(12),

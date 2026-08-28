@@ -1,4 +1,5 @@
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
+import { MOMENT_CLIP_EXPORT_HINT } from '@/lib/moment-export/export-hints'
 
 export interface BuildMomentExportActionItemsInput {
   onExportImage: () => void
@@ -33,7 +34,7 @@ export function buildMomentExportActionItems({
   const videoEnabled = hasPlayableSnippet && canExportVideo
   let videoHint: string | undefined
   if (!hasPlayableSnippet) {
-    videoHint = 'Needs a playable snippet'
+    videoHint = MOMENT_CLIP_EXPORT_HINT
   } else if (!canExportVideo) {
     videoHint = videoUnavailableHint
   }
@@ -41,7 +42,7 @@ export function buildMomentExportActionItems({
   const gifEnabled = hasPlayableSnippet && canExportGif
   let gifHint: string | undefined
   if (!hasPlayableSnippet) {
-    gifHint = 'Needs a playable snippet'
+    gifHint = MOMENT_CLIP_EXPORT_HINT
   } else if (!canExportGif) {
     gifHint = gifUnavailableHint
   }
