@@ -750,6 +750,23 @@ export async function playSnippet(request: PlaySnippetRequest): Promise<void> {
   })
 }
 
+/** Pause if this snippet is already the active session; otherwise start it. */
+export function playOrToggleSnippet(request: PlaySnippetRequest): void {
+  const s = getAudioEngineState()
+  const sn = s.snippet
+  const sameTrack = s.mode === 'snippet' && s.songId === request.songId
+  const sameSnippet = !!sn && (
+    (!!request.lineText && sn.lineText === request.lineText) ||
+    sn.lineIndex === request.lineIndex ||
+    (sn.startSec === request.startSec && sn.endSec === request.endSec)
+  )
+  if (sameTrack && sameSnippet) {
+    togglePlayPause()
+    return
+  }
+  void playSnippet(request)
+}
+
 export async function playFull(request: PlayFullRequest): Promise<void> {
   const generation = bumpSession()
   _qualifiedPlayFired = false
@@ -1092,6 +1109,7 @@ export const audioEngine = {
   getState: getAudioEngineState,
   attachAudioElements,
   playSnippet,
+  playOrToggleSnippet,
   playFull,
   togglePlayPause,
   stop,

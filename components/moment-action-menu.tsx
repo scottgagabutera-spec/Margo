@@ -21,6 +21,8 @@ interface MomentActionMenuProps {
   items: MomentActionMenuItem[]
   variant?: 'primary' | 'secondary'
   busy?: boolean
+  /** Replaces the generic busy copy — e.g. video export progress. */
+  busyLabel?: string | null
   disabled?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -38,6 +40,7 @@ export function MomentActionMenu({
   items,
   variant = 'secondary',
   busy = false,
+  busyLabel = null,
   disabled = false,
   open: controlledOpen,
   onOpenChange,
@@ -140,7 +143,14 @@ export function MomentActionMenu({
           boxSizing: 'border-box',
         }}
       >
-        {busy ? 'Please wait…' : label}
+        <span style={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          maxWidth: '100%',
+        }}>
+          {busy ? (busyLabel || 'Please wait…') : label}
+        </span>
         <span
           aria-hidden
           style={{

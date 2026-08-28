@@ -21,13 +21,9 @@ import {
 import type { MargoMoment } from '@/lib/moment/types'
 import type { StageCardThemeId } from '@/lib/moment/stage-theme'
 import {
-  buildLyricBackNativeSharePayload,
   buildMargoMomentFromExportProps,
   canShareImageFiles,
-  copyMomentShareLink,
-  isMomentRecipientShareable,
   MOMENT_VIBE_PICKER_OPTIONS,
-  shareMomentNative,
 } from '@/lib/moment'
 import {
   prepareMargoMomentVideoShare,
@@ -52,7 +48,6 @@ import { triggerFileDownload } from '@/lib/moment-export/trigger-file-download'
 import {
   toastMomentExportFailed,
   toastMomentImageSaved,
-  toastMomentLinkCopied,
   toastMomentShared,
   toastMomentShareFailed,
   toastMomentVideoSaved,
@@ -172,7 +167,6 @@ export function MomentShareStudio({
     }
   }, [baseMoment, previewLine, isDualCard, cardThemeId, exportVibeLabel, vibeLabel, resolvedPostId, previewIndex])
 
-  const canShareUrl = exportMoment ? isMomentRecipientShareable(exportMoment) : false
   const hasSnippet = exportMoment ? momentHasPlayableSnippet(exportMoment) : false
 
   useEffect(() => {
@@ -246,9 +240,48 @@ export function MomentShareStudio({
   }, [isDualCard, renderDualCanvas, song, parentSong, exportMoment, resolvedPostId, cardThemeId, onExported])
 
   const shareImage = useCallback(async () => {
-    if (!exportMoment || isDualCard) return
     setShareBusy(true)
     try {
+      if (isDualCard) {
+        await renderDualCanvas()
+        const canvas = canvasRef.current
+        if (!canvas || typeof navigator === 'undefined' || !navigator.share) {
+          toastMomentShareFailed()
+          return
+        }
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), 'image/png')
+        })
+        if (!blob) {
+          toastMomentShareFailed()
+          return
+        }
+        const file = new File(
+          [blob],
+          `MARGO_${slugify(parentSong || '', 'Lyric')}_LyricBack_${slugify(song, 'Lyric')}.png`,
+          { type: 'image/png' },
+        )
+        if (typeof navigator.canShare === 'function') {
+          try {
+            if (!navigator.canShare({ files: [file] })) {
+              toastMomentShareFailed()
+              return
+            }
+          } catch {
+            toastMomentShareFailed()
+            return
+          }
+        }
+        try {
+          await navigator.share({ files: [file], title: 'MARGO' })
+          toastMomentShared()
+          onShared?.()
+        } catch (err) {
+          if ((err as Error)?.name !== 'AbortError') toastMomentShareFailed()
+        }
+        return
+      }
+      if (!exportMoment) return
       const result = await shareMargoMomentImage(exportMoment)
       if (result === 'shared') {
         toastMomentShared()
@@ -259,7 +292,7 @@ export function MomentShareStudio({
     } finally {
       setShareBusy(false)
     }
-  }, [exportMoment, isDualCard, onShared])
+  }, [isDualCard, renderDualCanvas, parentSong, song, exportMoment, onShared])
 
   const prepareVideo = useCallback(async () => {
     if (!exportMoment || isDualCard || !canExportVideo || !hasSnippet) return null
@@ -412,47 +445,6 @@ export function MomentShareStudio({
     }
   }, [mediaReadySheet, onExported, onShared])
 
-  const shareLink = useCallback(async () => {
-    if (isDualCard && parentLyric) {
-      const payload = buildLyricBackNativeSharePayload(
-        { parentLyric, replyLyric: lyric },
-        resolvedPostId,
-      )
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        try { await navigator.share(payload); return }
-        catch (e: unknown) { if ((e as Error).name === 'AbortError') return }
-      }
-      return
-    }
-    if (!exportMoment || !canShareUrl) return
-    setShareBusy(true)
-    try {
-      await shareMomentNative(exportMoment)
-      toastMomentShared()
-      onShared?.()
-    } catch {
-      toastMomentShareFailed()
-    } finally {
-      setShareBusy(false)
-    }
-  }, [isDualCard, parentLyric, lyric, resolvedPostId, exportMoment, canShareUrl, onShared])
-
-  const copyLink = useCallback(async () => {
-    if (!exportMoment || !canShareUrl) return
-    setShareBusy(true)
-    try {
-      const ok = await copyMomentShareLink(exportMoment)
-      if (ok) {
-        toastMomentLinkCopied()
-        onShared?.()
-      } else {
-        toastMomentShareFailed()
-      }
-    } finally {
-      setShareBusy(false)
-    }
-  }, [exportMoment, canShareUrl, onShared])
-
   const saveItems: MomentActionMenuItem[] = isDualCard
     ? buildMomentExportActionItems({ onExportImage: saveImage, showFormats: false })
     : buildMomentExportActionItems({
@@ -465,30 +457,14 @@ export function MomentShareStudio({
       onExportGif: () => { void saveGif() },
     })
 
-  const shareItems: MomentActionMenuItem[] = isDualCard
-    ? [
-      {
-        id: 'link',
-        label: 'Share link',
-        onClick: () => { void shareLink() },
-      },
-      {
-        id: 'copy',
-        label: 'Copy link',
-        onClick: () => { void copyLink() },
-      },
-    ]
-    : buildMomentShareActionItems({
-      canShareImage: canShareImg,
-      canShareVideo: canShareVid && canExportVideo && hasSnippet,
-      canShareGif: canShareGif && canExportGif && hasSnippet,
-      linksActive: canShareUrl,
-      onShareImage: () => { void shareImage() },
-      onShareVideo: () => { void shareVideo() },
-      onShareGif: () => { void shareGif() },
-      onShareLink: () => { void shareLink() },
-      onCopyLink: () => { void copyLink() },
-    })
+  const shareItems: MomentActionMenuItem[] = buildMomentShareActionItems({
+    canShareImage: canShareImg,
+    canShareVideo: !isDualCard && canShareVid && canExportVideo && hasSnippet,
+    canShareGif: !isDualCard && canShareGif && canExportGif && hasSnippet,
+    onShareImage: () => { void shareImage() },
+    onShareVideo: () => { void shareVideo() },
+    onShareGif: () => { void shareGif() },
+  })
 
   const isModal = layout === 'modal'
   const gap = isModal ? '12px' : (compact ? '10px' : '12px')
@@ -560,6 +536,7 @@ export function MomentShareStudio({
           items={saveItems}
           variant="primary"
           busy={exportBusy}
+          busyLabel={videoProgress}
           open={openMenu === 'save'}
           onOpenChange={(next) => setOpenMenu(next ? 'save' : null)}
           menuZIndex={isModal ? modalMenuZIndex : undefined}
@@ -569,6 +546,7 @@ export function MomentShareStudio({
           items={shareItems.length > 0 ? shareItems : [{ id: 'none', label: 'Not available', disabled: true, onClick: () => {} }]}
           variant="secondary"
           busy={shareBusy}
+          busyLabel={videoProgress}
           disabled={shareItems.length === 0}
           open={openMenu === 'share'}
           onOpenChange={(next) => {

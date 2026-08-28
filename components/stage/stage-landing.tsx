@@ -43,7 +43,7 @@ import {
 import type { MomentActionMenuItem } from '@/components/moment-action-menu'
 import { MomentActionMenu } from '@/components/moment-action-menu'
 import { buildMomentExportActionItems, buildMomentShareActionItems } from '@/lib/moment/share-action-items'
-import { playSnippet } from '@/lib/audio-engine'
+import { playOrToggleSnippet } from '@/lib/audio-engine'
 import { useSnippetPlaybackUi } from '@/hooks/useAudioEngine'
 import { useIdentity } from '@/hooks/useIdentity'
 import { UI_FONT } from '@/lib/fonts'
@@ -175,7 +175,7 @@ export function StageLanding() {
 
   const playbackKey = linkedSongId || linkedAudioUrl || ''
   const lineIndex = margoLines.find((l) => l.text === lyric)?.lineIndex ?? 0
-  const { playing, buffering } = useSnippetPlaybackUi(canPlay ? playbackKey : null, canPlay ? lineIndex : null)
+  const { playing, buffering } = useSnippetPlaybackUi(canPlay ? playbackKey : null, canPlay ? lyric : null)
 
   useStageChromePublisher(showResults || !!selectedSong)
   useStageSearchPublisher(showResults)
@@ -487,7 +487,7 @@ export function StageLanding() {
 
   const handlePlay = useCallback(() => {
     if (!canPlay || !linkedAudioUrl) return
-    void playSnippet({
+    playOrToggleSnippet({
       songId: linkedSongId || linkedAudioUrl,
       audioUrl: linkedAudioUrl,
       title: songName,
@@ -748,12 +748,9 @@ export function StageLanding() {
     canShareImage: canShareImg,
     canShareVideo: canShareVid && canExportVideo && canPlay,
     canShareGif: canShareGif && canExportGif && canPlay,
-    linksActive: false,
     onShareImage: () => { void handleShareImage() },
     onShareVideo: () => { void handleShareVideo() },
     onShareGif: () => { void handleShareGif() },
-    onShareLink: () => {},
-    onCopyLink: () => {},
   })
 
   return (
@@ -935,12 +932,14 @@ export function StageLanding() {
                         items={saveItems}
                         variant="primary"
                         busy={saving}
+                        busyLabel={videoProgress}
                       />
                       <MomentActionMenu
                         label="Share"
                         items={shareItems.length > 0 ? shareItems : [{ id: 'none', label: 'Not available', disabled: true, onClick: () => {} }]}
                         variant="secondary"
                         busy={shareBusy}
+                        busyLabel={videoProgress}
                         disabled={shareItems.length === 0}
                       />
                     </div>
@@ -972,6 +971,7 @@ export function StageLanding() {
                     shareItems={shareItems}
                     saving={saving}
                     shareBusy={shareBusy}
+                    videoProgress={videoProgress}
                     signedIn={false}
                   />
                 )}

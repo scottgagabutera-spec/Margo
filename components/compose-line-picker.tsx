@@ -37,6 +37,8 @@ interface ComposeLinePickerProps {
   artwork?: string | null
   /** Stage landing — quieter chrome, smaller title. */
   variant?: 'compose' | 'stage'
+  /** When true, parent owns Back / title (Compose overlay under the nav mark). */
+  hideHeader?: boolean
 }
 
 function ComposeLineRow({
@@ -179,6 +181,7 @@ export function ComposeLinePicker({
   songId = null,
   artwork = null,
   variant = 'compose',
+  hideHeader = false,
 }: ComposeLinePickerProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const canHear = !!audioUrl
@@ -191,6 +194,7 @@ export function ComposeLinePicker({
 
   return (
     <div>
+      {!hideHeader ? (
       <button
         type="button"
         onClick={onBack}
@@ -204,8 +208,10 @@ export function ComposeLinePicker({
           display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
         }}
       ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
+      ) : null}
 
       <div style={{ textAlign: isStage ? 'left' : 'center', marginBottom: isStage ? '20px' : '28px' }}>
+        {!hideHeader ? (
         <h1 style={{
           fontFamily: lyricFont,
           fontStyle: 'italic',
@@ -217,6 +223,7 @@ export function ComposeLinePicker({
         }}>
           {isStage ? 'Choose a line' : 'Pick the line'}
         </h1>
+        ) : null}
         <p style={{
           fontFamily: isStage ? UI_FONT : lyricFont,
           fontSize: isStage ? '0.78rem' : '0.82rem',

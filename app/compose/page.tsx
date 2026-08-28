@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
-import { ArrowLeftIcon, CardIcon, MusicNoteIcon, PenLineIcon, SearchIcon } from '@/components/icons'
+import { ArrowLeftIcon, CardIcon, CloseIcon, MusicNoteIcon, PenLineIcon } from '@/components/icons'
 import { createClient } from '@/lib/supabase/client'
 import { matchLiveCatalogSong, searchMargoSongs, songMatchKey } from '@/lib/search-margo-songs'
 import { useIdentity } from '@/hooks/useIdentity'
@@ -16,6 +16,7 @@ import { ComposeSendTo } from '@/components/compose-send-to'
 import { ComposeReadyPreview } from '@/components/compose-ready-preview'
 import { ComposeLinePicker, type ComposeLyricLine } from '@/components/compose-line-picker'
 import { ComposeSearchDropdown } from '@/components/compose-search-dropdown'
+import { StageSearchField } from '@/components/stage/stage-search-field'
 import { MomentShareStudio } from '@/components/moment-share-studio'
 import { MargoSheet } from '@/components/margo-sheet'
 import { KeyboardSafeCtaBar, keyboardSafePrimaryBtnStyle, keyboardSafeSecondaryBtnStyle } from '@/components/keyboard-safe-cta-bar'
@@ -147,6 +148,55 @@ const momentSplitPrivateStyle: React.CSSProperties = {
   background: 'transparent',
   border: '1px solid var(--border)',
   color: 'var(--text-muted)',
+}
+
+function ComposeDismissButton({
+  onClick,
+  label = 'Cancel',
+}: {
+  onClick: () => void
+  label?: string
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      style={{
+        width: 'var(--margo-touch-min)',
+        height: 'var(--margo-touch-min)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: 'var(--text-muted)',
+        padding: 0,
+        flexShrink: 0,
+      }}
+    >
+      <CloseIcon size={18} color="currentColor" />
+    </button>
+  )
+}
+
+const composeOverlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  top: 'var(--nav-height, 72px)',
+  left: 0,
+  right: 0,
+  height: 'calc(var(--margo-vv-height, 100dvh) - var(--nav-height, 72px))',
+  zIndex: 80,
+  display: 'flex',
+  flexDirection: 'column',
+  background: 'var(--bg)',
+  paddingLeft: '24px',
+  paddingRight: '24px',
+  paddingTop: '12px',
+  boxSizing: 'border-box',
+  overflowY: 'auto',
+  WebkitOverflowScrolling: 'touch',
 }
 
 function ComposeTopBar({
@@ -337,7 +387,6 @@ function ComposeInner() {
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [bannerDismissed, setBannerDismissed] = useState(false)
-  const [searchFocused, setSearchFocused] = useState(false)
 
   // One-time "Write your line…" reveal — governs animation progress only.
   // Visibility (show/hide) is a separate, render-time check against
@@ -763,6 +812,19 @@ function ComposeInner() {
     resetComposeViewport()
   }, [linkedSongId, selectedSong, resetComposeViewport])
 
+  const handleCancelLine = useCallback(() => {
+    if (committedLines.length > 0) {
+      clearDraftFields()
+      setPhase('moment')
+      resetComposeViewport()
+      return
+    }
+    clearCurrentSongPick()
+    setSelectMode(null)
+    setPhase('find')
+    resetComposeViewport()
+  }, [committedLines.length, clearDraftFields, clearCurrentSongPick, resetComposeViewport])
+
   const handleLinePickerBack = useCallback(() => {
     setPhase('find')
     resetComposeViewport()
@@ -1139,11 +1201,13 @@ function ComposeInner() {
           {/* ── Step 1: Search ── */}
           <div style={{ display: phase === 'find' ? 'block' : 'none' }}>
             {(committedLines.length > 0 || showStep1Resume) && (
-              <button
-                type="button"
-                onClick={handleFindBack}
-                style={backBtnStyle}
-              ><ArrowLeftIcon size={16} color="currentColor" /> Back</button>
+              <ComposeTopBar
+                onBack={handleFindBack}
+                title={committedLines.length > 0 ? 'Add another line' : undefined}
+                trailing={committedLines.length > 0 ? (
+                  <ComposeDismissButton onClick={handleCancelLine} label="Cancel adding a line" />
+                ) : undefined}
+              />
             )}
             {committedLines.length > 0 && (
               <div style={{
@@ -1159,19 +1223,23 @@ function ComposeInner() {
                   Moment so far · {committedLines.length}/{POST_LINES_MAX} lines
                 </p>
                 {committedLines.map((line, i) => (
-                  <p key={i} style={{
-                    fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem',
-                    color: 'var(--text)', margin: '0 0 8px', lineHeight: 1.4,
-                  }}>
-                    {i + 1}. &ldquo;{line.lyric}&rdquo;
-                    <span style={{
-                      display: 'block', fontStyle: 'normal', fontSize: '0.6rem',
-                      color: 'var(--text-muted)', letterSpacing: '1px',
-                      textTransform: 'uppercase', marginTop: '4px',
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <p style={{
+                      flex: 1, minWidth: 0,
+                      fontFamily: font, fontStyle: 'italic', fontSize: '0.9rem',
+                      color: 'var(--text)', margin: 0, lineHeight: 1.4,
                     }}>
-                      {line.songName} · {line.artistName}
-                    </span>
-                  </p>
+                      {i + 1}. &ldquo;{line.lyric}&rdquo;
+                      <span style={{
+                        display: 'block', fontStyle: 'normal', fontSize: '0.6rem',
+                        color: 'var(--text-muted)', letterSpacing: '1px',
+                        textTransform: 'uppercase', marginTop: '4px',
+                      }}>
+                        {line.songName} · {line.artistName}
+                      </span>
+                    </p>
+                    <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
+                  </div>
                 ))}
               </div>
             )}
@@ -1237,22 +1305,11 @@ function ComposeInner() {
               ) : null}
             </div>
             <div style={{ position: 'relative', zIndex: 50 }}>
-              <style>{`.compose-search-input::placeholder { color: var(--text-disabled); }`}</style>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><SearchIcon size={20} color="var(--text-disabled)" /></span>
-                <input type="text" value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setSearchFocused(false)}
-                  placeholder="Search by lyric, song or artist..."
-                  className="compose-search-input"
-                  style={{
-                    width: '100%', height: '64px', paddingLeft: '56px', paddingRight: '24px',
-                    background: searchFocused ? 'var(--gold-faint)' : 'var(--surface-2)',
-                    border: `1px solid ${searchFocused ? 'var(--gold-border)' : 'var(--border)'}`,
-                    borderRadius: '16px', color: 'var(--text)', fontSize: '1rem', fontFamily: UI_FONT, outline: 'none', boxSizing: 'border-box',
-                    transition: 'background 150ms ease, border-color 150ms ease',
-                  }} />
-              </div>
+              <StageSearchField
+                value={searchQuery}
+                onChange={handleSearchChange}
+                loading={searchLoading}
+              />
               <ComposeSearchDropdown
                 open={showResults}
                 loading={searchLoading}
@@ -1303,13 +1360,10 @@ function ComposeInner() {
                 </p>
                 {committedLines.map((line, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <p style={{ flex: 1, fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
+                    <p style={{ flex: 1, minWidth: 0, fontFamily: font, fontStyle: 'italic', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
                       {i + 1}. &ldquo;{line.lyric}&rdquo;
                     </p>
-                    <button type="button" onClick={() => handleRemoveCommittedLine(i)}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: UI_FONT, fontSize: '0.65rem', cursor: 'pointer', flexShrink: 0 }}>
-                      Remove
-                    </button>
+                    <ComposeDismissButton onClick={() => handleRemoveCommittedLine(i)} label={`Remove line ${i + 1}`} />
                   </div>
                 ))}
               </div>
@@ -1419,20 +1473,17 @@ function ComposeInner() {
 
       {portalMounted && showLinePicker && createPortal(
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0,
-          height: 'var(--margo-vv-height, 100dvh)',
-          zIndex: 80,
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--bg)',
-          paddingLeft: '24px', paddingRight: '24px',
-          paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+          ...composeOverlayStyle,
           paddingBottom: 'calc(var(--margo-cta-bar-h, 0px) + var(--margo-tabbar-h, 80px) + 16px)',
-          boxSizing: 'border-box',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
         }}>
           <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto' }}>
+            <ComposeTopBar
+              onBack={handleLinePickerBack}
+              title="Pick the line"
+              trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
+            />
             <ComposeLinePicker
+              hideHeader
               lines={margoLines}
               loading={linesLoading}
               songTitle={songName}
@@ -1595,18 +1646,16 @@ function ComposeInner() {
 
       {portalMounted && showYourLinePanel && createPortal(
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0,
-          height: 'var(--margo-vv-height, 100dvh)',
-          zIndex: 80,
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--bg)',
-          paddingLeft: '24px', paddingRight: '24px',
-          paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+          ...composeOverlayStyle,
           paddingBottom: 'var(--margo-cta-bar-h, 120px)',
-          boxSizing: 'border-box',
+          overflowY: 'hidden',
         }}>
           <div style={{ maxWidth: '640px', width: '100%', margin: '0 auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <ComposeTopBar onBack={handleYourLineBack} title="Your line" />
+            <ComposeTopBar
+              onBack={handleYourLineBack}
+              title="Your line"
+              trailing={<ComposeDismissButton onClick={handleCancelLine} label="Cancel line" />}
+            />
 
             <ComposeLyricCard style={{
               flex: 1, minHeight: 0, overflow: 'hidden',

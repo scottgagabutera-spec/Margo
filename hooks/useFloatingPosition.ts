@@ -12,8 +12,13 @@ export interface UseFloatingPositionOptions {
   elementRef: React.RefObject<HTMLElement | null>
   /** Default anchor: bottom-right offset from edges (px). */
   defaultInset?: { right: number; bottom: number }
-  /** Extra padding inside the usable viewport (safe areas + chrome). */
+  /** Extra padding inside the usable viewport (safe areas + chrome). Sets the default rest position. */
   getViewportInsets?: () => { top: number; right: number; bottom: number; left: number }
+  /**
+   * Drag clamp — defaults to getViewportInsets.
+   * Pass a looser bottom inset so the pill can move below its default rest (e.g. into the CTA band).
+   */
+  getClampInsets?: () => { top: number; right: number; bottom: number; left: number }
   enabled?: boolean
 }
 
@@ -60,6 +65,7 @@ export function useFloatingPosition({
   elementRef,
   defaultInset = { right: 12, bottom: 10 },
   getViewportInsets,
+  getClampInsets,
   enabled = true,
 }: UseFloatingPositionOptions) {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
@@ -80,6 +86,10 @@ export function useFloatingPosition({
   const getInsets = useCallback(() => {
     return getViewportInsets?.() ?? { top: 8, right: 8, bottom: 8, left: 8 }
   }, [getViewportInsets])
+
+  const getClamp = useCallback(() => {
+    return getClampInsets?.() ?? getInsets()
+  }, [getClampInsets, getInsets])
 
   const getBounds = useCallback((): FloatingBounds => {
     const el = elementRef.current
@@ -103,13 +113,13 @@ export function useFloatingPosition({
 
   const clampPosition = useCallback((x: number, y: number) => {
     const { width, height } = getBounds()
-    const insets = getInsets()
+    const insets = getClamp()
     const { width: vw, height: vh } = viewportSize()
     return {
       x: clamp(x, insets.left, vw - width - insets.right),
       y: clamp(y, insets.top, vh - height - insets.bottom),
     }
-  }, [getBounds, getInsets])
+  }, [getBounds, getClamp])
 
   defaultPositionRef.current = defaultPosition
   clampPositionRef.current = clampPosition
