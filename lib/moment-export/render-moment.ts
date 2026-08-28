@@ -141,16 +141,6 @@ function drawMargoSymbol(ctx: CanvasRenderingContext2D, x: number, y: number, si
 }
 
 /* ─── Artwork tile — matches Stage Moment card (rounded square beside lyric) ─ */
-async function loadArtworkImage(url: string): Promise<HTMLImageElement | null> {
-  if (!url || typeof document === 'undefined') return null
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => resolve(img)
-    img.onerror = () => resolve(null)
-    img.src = url
-  })
-}
 
 function drawArtworkTile(
   ctx: CanvasRenderingContext2D,
@@ -460,7 +450,7 @@ export async function drawMomentPoster(
 
   const primaryArtworkUrl = lines.length === 1 ? (lines[0].artworkUrl || '').trim() : ''
   const hasArtwork = primaryArtworkUrl.length > 0
-  const artworkImg = hasArtwork ? await loadArtworkImage(primaryArtworkUrl) : null
+  const artworkImg = hasArtwork ? await loadMomentArtwork(primaryArtworkUrl) : null
   const artSize = Math.round(minDim * 0.052)
   const artRadius = Math.round(artSize * 0.18)
   const artGap = Math.round(minDim * 0.013)
