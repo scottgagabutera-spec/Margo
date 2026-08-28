@@ -4,28 +4,6 @@ import type { ResolvedStageCardLayout } from '@/lib/moment-export/layout/types'
 const MARGO_GOLD = '#E8C547'
 const MARGO_INK = '#0B0B0D'
 
-function drawRoundedRectPath(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  const radius = Math.min(r, w / 2, h / 2)
-  ctx.beginPath()
-  ctx.moveTo(x + radius, y)
-  ctx.lineTo(x + w - radius, y)
-  ctx.quadraticCurveTo(x + w, y, x + w, y + radius)
-  ctx.lineTo(x + w, y + h - radius)
-  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
-  ctx.lineTo(x + radius, y + h)
-  ctx.quadraticCurveTo(x, y + h, x, y + h - radius)
-  ctx.lineTo(x, y + radius)
-  ctx.quadraticCurveTo(x, y, x + radius, y)
-  ctx.closePath()
-}
-
 function drawMargoSymbol(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -157,9 +135,6 @@ export function renderStageCardFrame(
   const { outputWidth: W, outputHeight: H, theme } = layout
   const light = layout.background.onLight
 
-  ctx.save()
-  drawRoundedRectPath(ctx, 0, 0, W, H, layout.borderRadius)
-  ctx.clip()
   ctx.fillStyle = layout.background.base
   ctx.fillRect(0, 0, W, H)
   const highlight = ctx.createLinearGradient(0, 0, 0, H * layout.background.highlightHeightFraction)
@@ -167,12 +142,10 @@ export function renderStageCardFrame(
   highlight.addColorStop(1, 'rgba(255,255,255,0)')
   ctx.fillStyle = highlight
   ctx.fillRect(0, 0, W, H)
-  ctx.restore()
 
   ctx.strokeStyle = layout.background.border
   ctx.lineWidth = 1
-  drawRoundedRectPath(ctx, 0.5, 0.5, W - 1, H - 1, layout.borderRadius)
-  ctx.stroke()
+  ctx.strokeRect(0.5, 0.5, W - 1, H - 1)
 
   drawMarkBadge(ctx, layout, theme)
 
