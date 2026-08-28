@@ -12,6 +12,8 @@ interface KeyboardSafeCtaBarProps {
    * When false, clear tab bar + mini-player via --margo-page-bottom.
    */
   keyboardOpen?: boolean
+  /** Tighter padding/gap for multi-row compose footers. */
+  dense?: boolean
   /** Opaque bar surface (e.g. DM composer). Default keeps Compose fade gradient. */
   solidBackground?: boolean
   zIndex?: number
@@ -38,6 +40,7 @@ interface KeyboardSafeCtaBarProps {
 export function KeyboardSafeCtaBar({
   children,
   keyboardOpen = false,
+  dense = false,
   solidBackground = false,
   zIndex = 55,
   contentMaxWidth = 640,
@@ -65,12 +68,12 @@ export function KeyboardSafeCtaBar({
     right: 0,
     bottom: 'var(--margo-keyboard-inset, 0px)',
     zIndex,
-    paddingTop: '12px',
+    paddingTop: dense ? '8px' : '12px',
     paddingLeft: '24px',
     paddingRight: '24px',
     paddingBottom: keyboardOpen
-      ? '12px'
-      : 'calc(12px + var(--margo-page-bottom, var(--margo-tabbar-h, 0px)))',
+      ? (dense ? '8px' : '12px')
+      : `calc(${dense ? '8px' : '12px'} + var(--margo-page-bottom, var(--margo-tabbar-h, 0px)))`,
     background: solidBackground
       ? 'var(--bg)'
       : 'linear-gradient(to top, var(--bg) 55%, transparent)',
@@ -87,7 +90,7 @@ export function KeyboardSafeCtaBar({
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'stretch',
-          gap: '10px',
+          gap: dense ? '8px' : '10px',
           fontFamily: font,
         }}
       >
@@ -125,4 +128,34 @@ export const keyboardSafeSecondaryBtnStyle: CSSProperties = {
   border: '1px solid var(--border-hi)',
   boxShadow: 'none',
   fontWeight: 600,
+}
+
+/** Compact tertiary actions in a sticky compose footer (Export, Change song, etc.). */
+export const keyboardSafeCompactActionStyle: CSSProperties = {
+  flex: '1 1 0',
+  minHeight: '36px',
+  padding: '0 8px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxSizing: 'border-box',
+  background: 'transparent',
+  color: 'var(--text-secondary)',
+  borderRadius: '50px',
+  border: '1px solid var(--border)',
+  fontFamily: 'var(--font-lora), serif',
+  fontWeight: 600,
+  fontSize: '0.56rem',
+  letterSpacing: '0.6px',
+  textTransform: 'uppercase',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+}
+
+/** Split row for two secondary primaries (Post / Private). */
+export const keyboardSafeSplitSecondaryStyle: CSSProperties = {
+  ...keyboardSafeSecondaryBtnStyle,
+  flex: 1,
+  minHeight: '40px',
+  fontSize: '0.58rem',
 }
