@@ -1,21 +1,50 @@
 /**
- * Feed earned badges — Twitter/TikTok velocity vs Spotify Top.
+ * Feed earned badges.
  *
- * New = recency only (quiet). Not an engagement rank.
- * Trending = velocity: mixed signals, high floor, not brand-new.
- * Top = lifetime: strictly higher than Trending. Established posts only.
+ * What the data actually is (not what the labels wish it were):
+ * - views: feed impressions at ~50% visibility. Client sessionStorage
+ *   only; RPC increment_post_view is not unique per user/device.
+ *   These are not song plays (plays require 30s karaoke, session PK).
+ * - resonates: unique (post_id, actor_id)
+ * - lyric backs / echoes: count of visible child posts (not unique authors)
+ * - replays: unique (post_id, replayer_id)
  *
- * Floors are absolute, not "top N of whatever is on screen".
- * If nobody meets the bar, there is no badge.
+ * There are no time-bucketed counters, so Trending velocity is
+ * costlyEngage / (ageHours + 2)^1.4 — a decayed lifetime mix, not
+ * "engagement in the last N hours."
+ *
+ * Eligibility uses costly unique-ish actions only. Views never unlock
+ * a badge. One tap cannot qualify. If nobody meets the bar, no badge.
+ *
+ * New = recency only, and only if Trending/Top were not earned.
+ * Trending = mixed recent momentum (2 of 3 costly kinds).
+ * Top = all 3 costly kinds, higher floor, at least 24h old.
  */
 
 export const NEW_WINDOW_HOURS = 24
 export const RANK_BADGE_COUNT = 3
-export const MIN_TRENDING_ENGAGE = 120
-export const MIN_TRENDING_AGE_HOURS = 12
-export const MIN_TRENDING_SIGNAL_KINDS = 3
-export const MIN_TOP_ENGAGE = 360
+
+/** Distinct people who resonated. */
+export const MIN_KIND_RESONATES = 8
+/** Visible Lyric Backs. */
+export const MIN_KIND_ECHOES = 4
+/** Distinct people who replayed. */
+export const MIN_KIND_REPLAYS = 6
+
+/**
+ * 2-kind floor at the kind gates: 8×4 + 6×6 = 68.
+ * 80 means a little more than the gates — two verbs, not a near-miss.
+ */
+export const MIN_TRENDING_ENGAGE = 80
+export const MIN_TRENDING_SIGNAL_KINDS = 2
+
+/**
+ * 3-kind floor at the kind gates: 8×4 + 4×5 + 6×6 = 88.
+ * 200 is 2.5× Trending and more than 2× that 3-kind minimum.
+ */
+export const MIN_TOP_ENGAGE = 200
 export const MIN_TOP_SIGNAL_KINDS = 3
+export const MIN_TOP_AGE_HOURS = 24
 
 export type RankStats = {
   views?: number
@@ -24,22 +53,21 @@ export type RankStats = {
   replayCount?: number
 }
 
+/** Costly mix only. Views are impressions and are not eligibility. */
 export function postEngagement(stats: RankStats | undefined): number {
   const s = stats || {}
-  return (s.views || 0)
-    + ((s.resonateCount || 0) * 4)
+  return ((s.resonateCount || 0) * 4)
     + ((s.echoCount || 0) * 5)
     + ((s.replayCount || 0) * 6)
 }
 
-/** Distinct engagement kinds — blocks single-signal inflation. */
+/** Distinct costly kinds — views are not a kind. */
 export function engagementSignalKinds(stats: RankStats | undefined): number {
   const s = stats || {}
   let n = 0
-  if ((s.views || 0) >= 40) n += 1
-  if ((s.resonateCount || 0) >= 8) n += 1
-  if ((s.echoCount || 0) >= 4) n += 1
-  if ((s.replayCount || 0) >= 6) n += 1
+  if ((s.resonateCount || 0) >= MIN_KIND_RESONATES) n += 1
+  if ((s.echoCount || 0) >= MIN_KIND_ECHOES) n += 1
+  if ((s.replayCount || 0) >= MIN_KIND_REPLAYS) n += 1
   return n
 }
 
@@ -56,13 +84,9 @@ export function feedRankIds<T extends { id: string; timestamp?: number }>(
   posts: T[],
   statsById: Record<string, RankStats | undefined>,
 ): { newIds: Set<string>; trendingIds: Set<string>; topIds: Set<string> } {
-  const newIds = new Set(
-    posts.filter((p) => postAgeHours(p.timestamp) < NEW_WINDOW_HOURS).map((p) => p.id),
-  )
-
   const topIds = new Set(
     [...posts]
-      .filter((p) => !newIds.has(p.id))
+      .filter((p) => postAgeHours(p.timestamp) >= MIN_TOP_AGE_HOURS)
       .filter((p) => postEngagement(statsById[p.id]) >= MIN_TOP_ENGAGE)
       .filter((p) => engagementSignalKinds(statsById[p.id]) >= MIN_TOP_SIGNAL_KINDS)
       .sort((a, b) => postEngagement(statsById[b.id]) - postEngagement(statsById[a.id]))
@@ -72,8 +96,7 @@ export function feedRankIds<T extends { id: string; timestamp?: number }>(
 
   const trendingIds = new Set(
     [...posts]
-      .filter((p) => !newIds.has(p.id) && !topIds.has(p.id))
-      .filter((p) => postAgeHours(p.timestamp) >= MIN_TRENDING_AGE_HOURS)
+      .filter((p) => !topIds.has(p.id))
       .filter((p) => postEngagement(statsById[p.id]) >= MIN_TRENDING_ENGAGE)
       .filter((p) => engagementSignalKinds(statsById[p.id]) >= MIN_TRENDING_SIGNAL_KINDS)
       .sort((a, b) => (
@@ -81,6 +104,13 @@ export function feedRankIds<T extends { id: string; timestamp?: number }>(
         - trendingScore(postEngagement(statsById[a.id]), postAgeHours(a.timestamp))
       ))
       .slice(0, RANK_BADGE_COUNT)
+      .map((p) => p.id),
+  )
+
+  const newIds = new Set(
+    posts
+      .filter((p) => postAgeHours(p.timestamp) < NEW_WINDOW_HOURS)
+      .filter((p) => !trendingIds.has(p.id) && !topIds.has(p.id))
       .map((p) => p.id),
   )
 

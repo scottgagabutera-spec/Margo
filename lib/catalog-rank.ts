@@ -2,7 +2,9 @@
  * Catalog song rank badges (Discover home + /discover/songs).
  *
  * Absolute floors, not relative "everyone in this row".
- * Trending = plays/resonates velocity. Top = lyric uses, higher bar.
+ * Plays are qualified karaoke listens (30s / 50%, session PK) — not snippets.
+ * Trending = plays + 3× unique song resonates, floor 80.
+ * Top = lyric uses, floor 25.
  */
 export function songEngagement(plays: number, resonates: number): number {
   return (plays || 0) + (resonates || 0) * 3

@@ -788,9 +788,9 @@ export function PostCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           {variant === 'feed' && (isNew || isTrending || isTop) && (
             <div style={{ display: 'flex', gap: '6px' }}>
-              {isNew && <EarnedTag label="New" onClick={() => onSelectRank?.('NEW')} />}
-              {isTop && !isNew && <EarnedTag label="Top" onClick={() => onSelectRank?.('TOP')} />}
-              {isTrending && !isNew && !isTop && <EarnedTag label="Trending" onClick={() => onSelectRank?.('TRENDING')} />}
+              {isTop && <EarnedTag label="Top" onClick={() => onSelectRank?.('TOP')} />}
+              {isTrending && !isTop && <EarnedTag label="Trending" onClick={() => onSelectRank?.('TRENDING')} />}
+              {isNew && !isTop && !isTrending && <EarnedTag label="New" onClick={() => onSelectRank?.('NEW')} />}
             </div>
           )}
           {isOwner && (

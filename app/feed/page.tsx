@@ -217,8 +217,9 @@ function FeedPageInner() {
     }
   }, [feedLive, user?.id])
 
-  // Feed rank: New = recency. Trending/Top need real mixed engagement
-  // (views, resonates, lyric-backs, replays) — see lib/feed-rank.ts.
+  // Feed rank: New = recency only. Trending/Top need mixed costly
+  // actions (resonates, lyric-backs, replays) — views never unlock a
+  // badge. See lib/feed-rank.ts.
   const { newIds, trendingIds, topIds } = useMemo(
     () => feedRankIds(posts, postStats),
     [posts, postStats],
@@ -372,7 +373,7 @@ function FeedPageInner() {
           .eq('post_id', postId)
           .eq('replayer_id', myId)
         if (error) throw error
-        toast.success('Replay removed')
+        toast('Replay removed')
       } catch (err) {
         console.error('Failed to un-replay:', err)
         setReplayed(prev => {
@@ -401,7 +402,7 @@ function FeedPageInner() {
         quote_text: null,
       })
       if (error) throw error
-      toast.success('Replayed')
+      toast('Replayed')
     } catch (err) {
       console.error('Failed to replay:', err)
       setReplayed(prev => {
@@ -448,7 +449,7 @@ function FeedPageInner() {
         })
         if (error) throw error
       }
-      toast.success('Replayed')
+      toast('Replayed')
     } catch (err) {
       console.error('Failed to quote-replay:', err)
       if (!already) {
@@ -512,15 +513,31 @@ function FeedPageInner() {
   }, [highlightParam, listReady, posts, router])
 
   const restoredScrollRef = useRef(false)
+  const restoreTriesRef = useRef(0)
 
   useLayoutEffect(() => {
     if (!feedLive) {
       restoredScrollRef.current = false
+      restoreTriesRef.current = 0
       return
     }
     if (!listReady || highlightParam || restoredScrollRef.current) return
-    restoreActivePrimaryScroll()
-    restoredScrollRef.current = true
+    restoreTriesRef.current += 1
+    const result = restoreActivePrimaryScroll()
+    const done = result.anchored
+      || (result.applied && !result.waitingForAnchor)
+      || restoreTriesRef.current >= 6
+    if (done) {
+      restoredScrollRef.current = true
+      return
+    }
+    const frame = window.requestAnimationFrame(() => {
+      const next = restoreActivePrimaryScroll()
+      if (next.anchored || (next.applied && !next.waitingForAnchor)) {
+        restoredScrollRef.current = true
+      }
+    })
+    return () => window.cancelAnimationFrame(frame)
   }, [feedLive, listReady, posts.length, highlightParam])
 
   useEffect(() => {

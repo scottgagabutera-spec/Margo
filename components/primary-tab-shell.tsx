@@ -137,10 +137,6 @@ function writeStoredScrollMap(map: Partial<Record<PrimaryTabId, number>>) {
   } catch {
     /* private mode */
   }
-  if (typeof map.feed === 'number') {
-    const prev = readFeedResume()
-    writeFeedResume(map.feed, prev?.anchorId)
-  }
 }
 
 let frozenScrollLive: Partial<Record<PrimaryTabId, number>> = {}
@@ -151,12 +147,38 @@ function persistScroll(
   y: number,
   anchorId?: string | null,
 ) {
+  if (id === 'feed') {
+    const prev = readFeedResume()
+    const nextAnchor = anchorId === undefined ? (prev?.anchorId ?? null) : anchorId
+    // Skeleton / hidden pane often reports y=0 with no post nodes.
+    // Do not clobber a real resume. Explicit clear passes anchorId null.
+    const keepResume = y < 1 && anchorId === undefined && !!prev && (prev.y >= 1 || !!prev.anchorId)
+    if (keepResume) {
+      frozen[id] = prev.y
+      frozenScrollLive = frozen
+      const map = readStoredScrollMap()
+      map[id] = prev.y
+      writeStoredScrollMap(map)
+      return
+    }
+    frozen[id] = y
+    frozenScrollLive = frozen
+    const map = readStoredScrollMap()
+    map[id] = y
+    writeStoredScrollMap(map)
+    writeFeedResume(y, nextAnchor)
+    return
+  }
+
   frozen[id] = y
   frozenScrollLive = frozen
   const map = readStoredScrollMap()
   map[id] = y
   writeStoredScrollMap(map)
-  if (id === 'feed') writeFeedResume(y, anchorId)
+}
+
+function feedAnchorFromPane(el: HTMLElement): string | undefined {
+  return findFeedAnchorId(el) || undefined
 }
 
 /** Snapshot the active pane before navigating to a post / other screen. */
@@ -165,8 +187,12 @@ export function persistActivePrimaryScroll() {
   if (!el) return
   const id = el.getAttribute('data-margo-primary-tab') as PrimaryTabId | null
   if (!id) return
-  const anchor = id === 'feed' ? findFeedAnchorId(el) : null
-  persistScroll(frozenScrollLive, id, el.scrollTop, anchor)
+  persistScroll(
+    frozenScrollLive,
+    id,
+    el.scrollTop,
+    id === 'feed' ? feedAnchorFromPane(el) : undefined,
+  )
 }
 
 /** After posting, land at the top of Feed — not the previous mid-scroll. */
@@ -174,12 +200,24 @@ export function clearPrimaryTabScroll(id: PrimaryTabId) {
   persistScroll(frozenScrollLive, id, 0, null)
 }
 
+export type PrimaryScrollRestore = {
+  applied: boolean
+  anchored: boolean
+  waitingForAnchor: boolean
+}
+
+const SCROLL_RESTORE_NONE: PrimaryScrollRestore = {
+  applied: false,
+  anchored: false,
+  waitingForAnchor: false,
+}
+
 /** Re-apply stored pane scroll after list content remounts (skeleton → posts). */
-export function restoreActivePrimaryScroll() {
+export function restoreActivePrimaryScroll(): PrimaryScrollRestore {
   const el = getActivePrimaryScrollEl()
-  if (!el) return
+  if (!el) return SCROLL_RESTORE_NONE
   const id = el.getAttribute('data-margo-primary-tab') as PrimaryTabId | null
-  if (!id) return
+  if (!id) return SCROLL_RESTORE_NONE
   if (id === 'feed') {
     const resume = readFeedResume()
     if (resume?.anchorId) {
@@ -187,19 +225,22 @@ export function restoreActivePrimaryScroll() {
       if (node && el.contains(node)) {
         const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top
         el.scrollTop += delta
-        return
+        return { applied: true, anchored: true, waitingForAnchor: false }
       }
+      if (resume.y >= 1) el.scrollTop = resume.y
+      return { applied: resume.y >= 1, anchored: false, waitingForAnchor: true }
     }
     if (resume && resume.y >= 1) {
       el.scrollTop = resume.y
-      return
+      return { applied: true, anchored: false, waitingForAnchor: false }
     }
   }
   const target = frozenScrollLive[id] ?? readStoredScrollMap()[id]
-  if (target == null || target < 1) return
+  if (target == null || target < 1) return SCROLL_RESTORE_NONE
   if (Math.abs(el.scrollTop - target) > 1) {
     el.scrollTop = target
   }
+  return { applied: true, anchored: false, waitingForAnchor: false }
 }
 
 function isModifiedClick(event: MouseEvent<HTMLAnchorElement>): boolean {
@@ -435,7 +476,12 @@ export function PrimaryTabShell({
       const prior = frozen[prev]
       const live = el?.scrollTop ?? 0
       const y = prior != null ? (live === 0 ? prior : live) : live
-      persistScroll(frozen, prev, y)
+      persistScroll(
+        frozen,
+        prev,
+        y,
+        prev === 'feed' && el && live > 0 ? feedAnchorFromPane(el) : undefined,
+      )
       if (el && Math.abs(el.scrollTop - y) > 1) {
         el.scrollTop = y
       }
@@ -444,17 +490,25 @@ export function PrimaryTabShell({
     if (activeTab) {
       const el = paneElsRef.current.get(activeTab)
       if (el) {
-        const target =
-          frozen[activeTab] ?? readStoredScrollMap()[activeTab] ?? el.scrollTop
-        if (target != null && Math.abs(el.scrollTop - target) > 1) {
-          el.scrollTop = target
-        }
-        frozen[activeTab] = target
-        requestAnimationFrame(() => {
-          if (Math.abs(el.scrollTop - target) > 1) {
+        if (activeTab === 'feed') {
+          restoreActivePrimaryScroll()
+          frozen[activeTab] = el.scrollTop
+          requestAnimationFrame(() => {
+            restoreActivePrimaryScroll()
+          })
+        } else {
+          const target =
+            frozen[activeTab] ?? readStoredScrollMap()[activeTab] ?? el.scrollTop
+          if (target != null && Math.abs(el.scrollTop - target) > 1) {
             el.scrollTop = target
           }
-        })
+          frozen[activeTab] = target
+          requestAnimationFrame(() => {
+            if (Math.abs(el.scrollTop - target) > 1) {
+              el.scrollTop = target
+            }
+          })
+        }
       }
       window.scrollTo(0, 0) // reset document scroll; primary panes are position:fixed
     }
@@ -487,7 +541,12 @@ export function PrimaryTabShell({
       if (el.getAttribute('data-margo-primary-tab-active') !== '1') return
       const cs = getComputedStyle(el)
       if (cs.display === 'none' || Number(cs.opacity) === 0) return
-      persistScroll(frozenScrollRef.current, tabId, el.scrollTop, tabId === 'feed' ? findFeedAnchorId(el) : null)
+      persistScroll(
+        frozenScrollRef.current,
+        tabId,
+        el.scrollTop,
+        tabId === 'feed' ? feedAnchorFromPane(el) : undefined,
+      )
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
@@ -504,7 +563,7 @@ export function PrimaryTabShell({
           frozenScrollRef.current,
           id,
           pane.scrollTop,
-          id === 'feed' ? findFeedAnchorId(pane) : null,
+          id === 'feed' ? feedAnchorFromPane(pane) : undefined,
         )
       }
     }
