@@ -1,8 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { ChevronDownIcon } from '@/components/icons'
 
 const font = 'var(--font-lora), serif'
+const MENU_GAP_PX = 6
+const MENU_VIEW_PAD_PX = 12
 
 export interface MomentActionMenuItem {
   id: string
@@ -20,12 +24,15 @@ interface MomentActionMenuProps {
   disabled?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
-  /** Open menu above the trigger — rarely used; default opens downward. */
-  dropUp?: boolean
-  /** z-index for the open menu panel (modal contexts need > scrim). */
+  /** z-index for the portaled menu (sheets need > sheet). */
   menuZIndex?: number
 }
 
+/**
+ * Downward dropdown, portaled to body so sheet overflow cannot clip it.
+ * Never reserves empty space when closed. Never opens upward.
+ * If the viewport below the trigger is short, the menu scrolls inside.
+ */
 export function MomentActionMenu({
   label,
   items,
@@ -34,21 +41,60 @@ export function MomentActionMenu({
   disabled = false,
   open: controlledOpen,
   onOpenChange,
-  dropUp = false,
-  menuZIndex = 50,
+  menuZIndex = 220,
 }: MomentActionMenuProps) {
   const [internalOpen, setInternalOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 240 })
   const open = controlledOpen ?? internalOpen
   const setOpen = (next: boolean) => {
     if (controlledOpen === undefined) setInternalOpen(next)
     onOpenChange?.(next)
   }
-  const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => setMounted(true), [])
+
+  useLayoutEffect(() => {
+    if (!open) return
+    const update = () => {
+      const el = triggerRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      const vv = typeof window !== 'undefined' ? window.visualViewport : null
+      const viewTop = vv?.offsetTop ?? 0
+      const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight
+      const top = r.bottom + MENU_GAP_PX
+      const maxHeight = Math.max(120, viewBottom - top - MENU_VIEW_PAD_PX)
+      setPos({
+        top: Math.max(viewTop + MENU_VIEW_PAD_PX, top),
+        left: r.left,
+        width: r.width,
+        maxHeight,
+      })
+    }
+    update()
+    const vv = window.visualViewport
+    vv?.addEventListener('resize', update)
+    vv?.addEventListener('scroll', update)
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      vv?.removeEventListener('resize', update)
+      vv?.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
     const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (triggerRef.current?.contains(t)) return
+      if (menuRef.current?.contains(t)) return
+      setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
@@ -64,22 +110,24 @@ export function MomentActionMenu({
   const isPrimary = variant === 'primary'
 
   return (
-    <div ref={rootRef} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+    <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled || busy}
         onClick={() => setOpen(!open)}
         aria-expanded={open}
+        aria-haspopup="menu"
         style={{
           width: '100%',
-          minHeight: '40px',
+          minHeight: 'var(--margo-touch-min)',
           padding: '0 16px',
           borderRadius: '50px',
           border: isPrimary ? 'none' : '1px solid var(--border-hi)',
-          background: isPrimary ? 'var(--gold)' : 'rgba(255,255,255,0.05)',
-          color: isPrimary ? 'var(--bg)' : 'var(--text)',
+          background: isPrimary ? 'var(--gold)' : 'var(--surface-2)',
+          color: isPrimary ? 'var(--text-on-gold, var(--bg))' : 'var(--text)',
           fontFamily: font,
-          fontSize: '0.56rem',
+          fontSize: '0.6rem',
           fontWeight: 700,
           letterSpacing: '0.9px',
           textTransform: 'uppercase',
@@ -93,28 +141,40 @@ export function MomentActionMenu({
         }}
       >
         {busy ? 'Please wait…' : label}
-        <span aria-hidden style={{ fontSize: '10px', lineHeight: 1, opacity: 0.75 }}>▾</span>
+        <span
+          aria-hidden
+          style={{
+            display: 'inline-flex',
+            transform: open ? 'rotate(180deg)' : 'none',
+            transition: 'transform 150ms ease',
+          }}
+        >
+          <ChevronDownIcon size={12} color="currentColor" />
+        </span>
       </button>
 
-      {open && (
+      {mounted && open && createPortal(
         <div
+          ref={menuRef}
           role="menu"
           style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            ...(dropUp
-              ? { bottom: 'calc(100% + 6px)' }
-              : { top: 'calc(100% + 6px)' }),
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            maxHeight: pos.maxHeight,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
             zIndex: menuZIndex,
             display: 'flex',
             flexDirection: 'column',
             gap: '4px',
             padding: '6px',
             borderRadius: '14px',
-            background: 'var(--surface, #121018)',
+            background: 'var(--surface)',
             border: '1px solid var(--border-hi)',
             boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
+            boxSizing: 'border-box',
           }}
         >
           {items.map((item) => (
@@ -130,7 +190,7 @@ export function MomentActionMenu({
               }}
               style={{
                 width: '100%',
-                minHeight: '38px',
+                minHeight: 'var(--margo-touch-min)',
                 padding: '8px 12px',
                 borderRadius: '10px',
                 border: 'none',
@@ -141,12 +201,14 @@ export function MomentActionMenu({
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'flex-start',
+                justifyContent: 'center',
                 gap: '2px',
+                boxSizing: 'border-box',
               }}
             >
               <span style={{
                 fontFamily: font,
-                fontSize: '0.62rem',
+                fontSize: '0.6rem',
                 fontWeight: 700,
                 letterSpacing: '0.8px',
                 textTransform: 'uppercase',
@@ -167,7 +229,8 @@ export function MomentActionMenu({
               ) : null}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

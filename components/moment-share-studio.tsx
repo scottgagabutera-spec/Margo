@@ -71,7 +71,7 @@ interface MomentShareStudioProps {
   parentSong?: string
   parentArtist?: string
   compact?: boolean
-  /** modal = feed card export sheet: pinned actions, menus open upward */
+  /** modal = feed / compose export sheet: preview then actions; menus portal downward */
   layout?: 'default' | 'modal'
   onShareMenuOpen?: () => void
   onShared?: () => void
@@ -492,10 +492,8 @@ export function MomentShareStudio({
 
   const isModal = layout === 'modal'
   const gap = isModal ? '12px' : (compact ? '10px' : '12px')
-  /** Room for Export/Share menus below the action row (Image / Video / GIF / PDF + headroom). */
-  const modalMenuReservePx = 200
-  const modalMenuZIndex = 212
-  const modalMenuScrimZIndex = 211
+  const modalMenuZIndex = 230
+  const modalMenuScrimZIndex = 210
 
   const cardSection = (
     <>
@@ -635,7 +633,7 @@ export function MomentShareStudio({
           />
         ) : null}
         {cardSection}
-        <div style={{ position: 'relative', zIndex: modalMenuZIndex, flexShrink: 0, paddingBottom: modalMenuReservePx }}>
+        <div style={{ position: 'relative', zIndex: 1, flexShrink: 0 }}>
           {progressBanner}
           {actionRow}
         </div>
